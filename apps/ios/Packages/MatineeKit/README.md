@@ -5,10 +5,13 @@ as the Android app's `ui/kit` draws it in Compose. A screen built from it
 looks like the web app, not like stock SwiftUI. iOS 18 and tvOS 18, Swift 6,
 no dependencies.
 
-Where the kit and the web disagree, the web wins: `packages/ui/src/components`
+Where the kit and the web disagree on look, the web wins: `packages/ui/src/components`
 and `packages/ui/src/styles/globals.css`. Android's kit
-(`apps/android/.../ui/kit`) shows how that design was made fit for a finger;
-the kit keeps its component names where SwiftUI doesn't already use them.
+(`apps/android/.../ui/kit`) shows how that design was made fit for a finger,
+and Android's screens are the reference for how a phone page is laid out
+(`Matinee/UI/README.md`): the kit's bars and list rows take their
+measures from Android's `TopBar` and Settings rows. The kit keeps
+Android's component names where SwiftUI doesn't already use them.
 
 ## The rules
 
@@ -75,6 +78,7 @@ hiding the system bar would otherwise lose.
 | `palette.destructive`, `success`, `warning`, `info`, `live`, `*Soft`                                                      | Status colors and their 12% tints                                                                                                                                                                                                                                                                                                                       |
 | `palette.popoverGlass`, `.glassBackground(in:)`                                                                           | The web's `glass`: the popover at 65% (84% in light) over a blur; solid under Reduce Transparency                                                                                                                                                                                                                                                       |
 | `.textStyle(.sm, weight: .medium, tracking: .tight)`                                                                      | The web's type scale in Red Hat Text: `.xs` 12/16, `.sm` 14/20, `.base` 16/24, `.lg` 18/28, `.xl` 20/28, `.xl2` 24/32, `.xl3` 30/36, `.xl4` 36/40, `.xl5` 48/48, and globals.css's `.px9` … `.px32` (`text-13px` is `.px13`). Sizes and line heights grow with Dynamic Type; `.keepsWordsWhole(text, size)` steps a long word down rather than break it |
+| `.pageTitleStyle()`                                                                                                       | A page's title, Android's `titleLarge`: `.xl` semibold, tight. `TopBar` sets every pushed page's name in it, and Settings' section headings and `SectionTitle` take it too                                                                                                                                  |
 | `.monoTextStyle(.xl4, weight: .semibold, tracking: Tracking.codeEm)`                                                      | The web's `font-mono` (SF Mono) at a size of the scale, with its line height, for a code to type elsewhere or a log                                                                                                                                                                                                                                     |
 | `Radius.sm` 6, `.md` 8, `.lg` 10, `.xl` 14, `.xl2` 18; `RoundedRectangle.kit(_:)`, or `.kit(_:)` where a shape goes       | The web's radius scale, circular corners as the web's                                                                                                                                                                                                                                                                                                   |
 | `Space.s1` 4 … `Space.s16` 64, `Space.gutter` 16, `Space.section` 32                                                      | Tailwind's 4-point steps (`gap-2.5` is `Space.s2_5`)                                                                                                                                                                                                                                                                                                    |
@@ -115,7 +119,8 @@ disabled. Every pressable thing takes 44 points to hit.
 - `FormField("Label", help:, error:) { control }`: a label over a control,
   help or the error under it.
 - `Select("Label", selection: $value, options: [(value, "Name")], size:)`:
-  the web's Select, its list in a dropdown as wide as it.
+  the web's Select, its list in a dropdown as wide as it. On a phone a
+  setting takes `SelectRow` instead, Android's value at the row's end.
 - `SegmentedControl([(value, "Name")], selection: $value)`: a few short
   choices; stacks when they don't fit.
 - `Switch(isOn: $on, label: "For VoiceOver")`, 44 by 24.
@@ -128,16 +133,23 @@ disabled. Every pressable thing takes 44 points to hit.
 
 ### Lists
 
+Laid out as Android's Settings rows (`SettingsRows.kt`), in the web's
+colors and radii: rows 16 in and 14 above and below, names in `text-base`,
+a value or a line of detail muted.
+
 - `ListSection("Title", titleStyle: .heading | .label, footer:) { rows } action: { }`:
-  the web's bordered block, hairlines between rows. There is no `List`.
-- `ListRow("Title", subtitle:, icon:, iconTile:, value:, accessory: .chevron | .check(on) | .none, destructive:) { action } trailing: { }`.
+  a bordered block, hairlines between rows, 14 under a heading in
+  `pageTitleStyle()`, and a muted footer 8 under it. There is no `List`.
+- `ListRow("Title", subtitle:, icon:, iconTile:, value:, accessory: .chevron | .check(on) | .none, destructive:) { action } trailing: { }`:
+  Android's LinkRow; a destructive row drops the chevron.
 - `SwitchRow("Title", subtitle:, icon:, isOn: $on)`: the whole row toggles.
-- `SelectRow("Title", selection:, options:, stacked:)`: the Select under the
-  name (the web on a phone), or its value at the end (`stacked: false`).
+- `SelectRow("Title", selection:, options:, stacked:)`: Android's
+  PickerRow, its value at the end, opening a menu there; `stacked: true`
+  puts the web's Select under the name instead.
 - `ValueRow("Title", value:)`.
 - `InputRow("Title", text: $text, placeholder:, kind:, help:, error:) { trailing }`:
-  the web's InputField, the name over a `MatineeTextField`, help or the
-  error under it.
+  Android's TextRow, the name muted over a `MatineeTextField`, help or
+  the error under it.
 - `ListBlock { }`: the block alone.
 
 ### Overlays
@@ -193,9 +205,10 @@ disabled. Every pressable thing takes 44 points to hit.
 
 ### Bars
 
-- `TopBar("Title", leading: .back | .close | .none, centered:, onLeading:, onHome:) { actions }`
-  and `.topBar(…)`: the web's phone bar, 64 tall. `onHome` adds the house
-  beside Back.
+- `TopBar("Title", leading: .back | .close | .none, onLeading:, onHome:) { actions }`
+  and `.topBar(…)`: Android's `TopBar`, 64 tall, the name after Back in
+  `pageTitleStyle()`. It's the one page title; there's no centered or
+  smaller variant. `onHome` adds the house beside Back.
 - `BottomBar([TabBarItem(id, label:, icon:)], accessory:, selection:) { id in }`,
   `TabBarItem(id, label:) { selected in picture }` for the avatar, and
   `.bottomBar(bar)`: the web's floating tab capsule and search circle, with

@@ -34,17 +34,12 @@ struct LibrariesSettings: View {
     let busy = librariesBusy(loader.state.value ?? [])
     AdminPage(Str.settingsAdminLibraries) {
       AdminLoaded(loader) { list in
-        SettingsSection(Str.webLibrariesTitle) {
+        VStack(alignment: .leading, spacing: 0) {
           if list.isEmpty {
-            EmptyState(title: Str.webLibrariesEmptyTitle, description: Str.webLibrariesEmptyDescription) {
-              addButton
-            }
-            .overlay {
-              RoundedRectangle.kit(Radius.xl).strokeBorder(palette.border, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-            }
+            Text(Str.webLibrariesEmptyTitle).textStyle(.base, weight: .semibold).foregroundStyle(palette.foreground)
+            Text(Str.webLibrariesEmptyDescription).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+              .padding(.top, Space.s1)
           } else {
-            // Over the list, full width, as the web puts its action on a phone.
-            addButton
             ListBlock {
               ForEach(list, id: \.id) { library in
                 LibraryRow(library: library, state: libraryState(library, providers: providers.state.value)) {
@@ -53,6 +48,9 @@ struct LibrariesSettings: View {
               }
             }
           }
+          // Under the list, full width, as Android has it.
+          MatineeButton(Str.webLibrariesAdd, icon: .folderPlus, fullWidth: true) { nav.libraryEditor(nil) }
+            .padding(.top, Space.s4)
         }
       }
     }
@@ -89,10 +87,6 @@ struct LibrariesSettings: View {
     .confirming($confirmation)
   }
 
-  private var addButton: some View {
-    MatineeButton(Str.webLibrariesAdd, icon: .plus, fullWidth: true) { nav.libraryEditor(nil) }
-  }
-
   private func scan(_ library: Library) {
     guard let api else { return }
     saver(snackbar) {
@@ -125,8 +119,8 @@ struct LibrariesSettings: View {
   }
 }
 
-/// A library: its kind's icon on a tile, its name, and what it holds or what
-/// the server is doing to it, with a spinner while that runs.
+/// A library, as Android's row: its kind's icon, its name, and what it
+/// holds or what the server is doing to it, with a spinner while that runs.
 private struct LibraryRow: View {
   let library: Library
   let state: LibraryState
@@ -136,11 +130,10 @@ private struct LibraryRow: View {
   var body: some View {
     let busy = state == .scanning || library.refreshing
     ListRow(
-      library.name, subtitle: status, icon: library.kind == LibraryKind.shows ? .tv : .film, iconTile: true,
+      library.name, subtitle: status, icon: library.kind == LibraryKind.shows ? .tv : .film,
       accessory: ListRowAccessory.none, action: onOpen
     ) {
-      if busy { Spinner(size: 16, tint: palette.accent) }
-      LucideIcon(.ellipsis, size: 18, tint: palette.mutedForeground)
+      if busy { Spinner(size: 18, tint: palette.accent).padding(.leading, Space.s3_5) }
     }
     .accessibilityHint(Str.webLibrariesActions(library.name))
   }
@@ -259,7 +252,7 @@ private struct LibraryEditor: View {
   }
 
   private var details: some View {
-    VStack(alignment: .leading, spacing: Space.s3) {
+    VStack(alignment: .leading, spacing: Space.s2) {
       ListBlock {
         InputRow(Str.webLibrariesDialogName, text: $draft.name, placeholder: Str.webLibrariesDialogNamePlaceholder)
           .focused($naming)
@@ -295,19 +288,19 @@ private struct LibraryEditor: View {
       }
       ForEach(draft.paths, id: \.self) { path in
         HStack(spacing: Space.s3) {
-          LucideIcon(.server, size: 18, tint: palette.mutedForeground).frame(width: 24)
+          LucideIcon(.server, size: 18, tint: palette.mutedForeground)
           Text(path).textStyle(.sm).foregroundStyle(palette.foreground).lineLimit(2).truncationMode(.middle)
             .frame(maxWidth: .infinity, alignment: .leading)
           RoundIconButton(
-            .x, label: Str.webLibrariesDialogRemoveFolder(path), look: .ghost, size: 32, iconSize: 16,
-            tint: palette.mutedForeground
+            .x, label: Str.webLibrariesDialogRemoveFolder(path), look: .ghost, size: 44, iconSize: 20,
+            tint: palette.foreground
           ) {
             withMotion(Motion.exit) { draft.remove(path) }
           }
         }
         .padding(.leading, Space.s4)
-        .padding(.trailing, Space.s2)
-        .frame(minHeight: 52)
+        .padding(.trailing, Space.s1)
+        .padding(.vertical, Space.s0_5)
       }
       AdminActionRow(title: Str.webLibrariesDialogAddFolder, icon: .folderPlus) {
         // The name's keyboard would open again over the editor when the picker hands back.
@@ -368,18 +361,20 @@ struct FolderPickerScreen: View {
       PathField(path: current?.path ?? path ?? "/") { path = $0 }
         .id(current?.path ?? path)
         .padding(.horizontal, Space.gutter)
-        .padding(.top, Space.s2)
-        .padding(.bottom, Space.s3)
+        .padding(.bottom, Space.s2)
         .frame(maxWidth: ADMIN_COLUMN)
       ZStack {
         if let current {
           ScrollView {
-            ListBlock {
+            // The folders down the page, without a block, as Android lists them.
+            LazyVStack(spacing: 0) {
               if let parent = current.parent {
                 FolderRow(name: "..", up: true, label: Str.webLibrariesBrowserParent) { path = parent }
               }
               if current.directories.isEmpty {
-                EmptyRow(Str.webLibrariesBrowserEmpty)
+                Note(Str.webLibrariesBrowserEmpty)
+                  .padding(.horizontal, Space.gutter)
+                  .padding(.vertical, Space.s4)
               }
               ForEach(current.directories, id: \.path) { directory in
                 FolderRow(
@@ -388,7 +383,6 @@ struct FolderPickerScreen: View {
                 ) { path = directory.path }
               }
             }
-            .padding(.horizontal, Space.gutter)
             .padding(.bottom, Space.s6)
             .frame(maxWidth: ADMIN_COLUMN)
             .frame(maxWidth: .infinity)
@@ -440,23 +434,20 @@ struct FolderPickerScreen: View {
       }
     var adds: String?
     if case .adds(let path, _) = state { adds = path }
-    return VStack(spacing: 0) {
-      Separator()
-      VStack(alignment: .leading, spacing: Space.s2_5) {
-        Note(note)
-        MatineeButton(look: .primary, fullWidth: true) {
-          if let adds { add(adds) }
-        } label: {
-          Text(button).textStyle(.sm, weight: .medium).lineLimit(1).truncationMode(.middle)
-        }
-        .disabled(adds == nil)
+    return VStack(alignment: .leading, spacing: Space.s2_5) {
+      Note(note)
+      MatineeButton(look: .primary, fullWidth: true) {
+        if let adds { add(adds) }
+      } label: {
+        Text(button).textStyle(.sm, weight: .medium).lineLimit(1).truncationMode(.middle)
       }
-      .padding(.horizontal, Space.gutter)
-      .padding(.vertical, Space.s3)
-      .frame(maxWidth: ADMIN_COLUMN)
-      .frame(maxWidth: .infinity)
+      .disabled(adds == nil)
     }
-    .background(palette.popover.ignoresSafeArea(edges: .bottom))
+    .padding(.horizontal, Space.gutter)
+    .padding(.vertical, Space.s3)
+    .frame(maxWidth: ADMIN_COLUMN)
+    .frame(maxWidth: .infinity)
+    .background(palette.card.ignoresSafeArea(edges: .bottom))
   }
 }
 
@@ -510,15 +501,19 @@ private struct FolderRow: View {
 
   var body: some View {
     Pressable(action: onOpen) {
-      HStack(spacing: Space.s3) {
-        if up { LucideIcon(.arrowLeft, size: 18, tint: palette.mutedForeground).frame(width: 24) }
+      HStack(spacing: 0) {
+        if up {
+          LucideIcon(.arrowLeft, size: 16, tint: palette.mutedForeground)
+          Spacer().frame(width: Space.s3_5)
+        }
         Text(name).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(1)
           .frame(maxWidth: .infinity, alignment: .leading)
         // Room for the add button, which sits over the row outside its own tap.
-        if onAdd != nil { Color.clear.frame(width: TouchTarget, height: 1) }
+        if onAdd != nil { Color.clear.frame(width: TouchTarget + Space.s1, height: 1) }
         if !up { LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground) }
       }
-      .padding(.horizontal, Space.s4)
+      .padding(.horizontal, Space.gutter)
+      .padding(.vertical, Space.s0_5)
       .frame(minHeight: 52)
       .contentShape(Rectangle())
     }
@@ -526,10 +521,10 @@ private struct FolderRow: View {
     .overlay(alignment: .trailing) {
       if let onAdd {
         RoundIconButton(
-          .folderPlus, label: Str.webLibrariesBrowserAddNamed(name), look: .ghost, size: 36, iconSize: 18,
+          .folderPlus, label: Str.webLibrariesBrowserAddNamed(name), look: .ghost, size: 44, iconSize: 20,
           tint: palette.mutedForeground, action: onAdd
         )
-        .padding(.trailing, Space.s4 + 16 + Space.s3 - 4)
+        .padding(.trailing, Space.gutter + 16 + Space.s1)
       }
     }
   }

@@ -159,28 +159,13 @@ private func taskNext(_ task: ScheduledTask) -> String {
   return task.nextRunAt.map { "\(schedule) · \(relativeTime($0))" } ?? schedule
 }
 
-/// The dot before a queue's status: the accent while it works, the warning
-/// color while it's paused, the danger color with failures, else quiet.
-private struct StatusDot: View {
-  let queue: JobQueueStatus
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    let color =
-      queue.failed > 0
-      ? palette.destructive
-      : queue.paused ? palette.warning : queue.active > 0 ? palette.accent : palette.foregroundFaint
-    Circle().fill(color).frame(width: 6, height: 6).accessibilityHidden(true)
-  }
-}
-
 /// A task's last run, or how far it is now, and its schedule, with a bar while it runs.
 private struct TaskLines: View {
   let task: ScheduledTask
   @Environment(\.palette) private var palette
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 2) {
+    VStack(alignment: .leading, spacing: 0) {
       Text(taskRun(task)).textStyle(.px13)
         .foregroundStyle(taskFailed(task) ? palette.destructive : palette.mutedForeground)
       if task.startedAt == nil {
@@ -194,7 +179,7 @@ private struct TaskLines: View {
   }
 }
 
-/// Runs the task now, or stops the run going on: the web's outlined Run now.
+/// Runs the task now, or stops the run going on, as Android's bare icon.
 private struct TaskButton: View {
   let task: ScheduledTask
   let onAction: (TaskAction) -> Void
@@ -202,8 +187,8 @@ private struct TaskButton: View {
   var body: some View {
     let running = task.startedAt != nil
     RoundIconButton(
-      running ? .x : .playOutline, label: running ? Str.webJobsTaskCancel : Str.webJobsTaskRun, look: .outline,
-      size: 36, iconSize: 16
+      running ? .x : .playOutline, label: running ? Str.webJobsTaskCancel : Str.webJobsTaskRun, look: .ghost,
+      size: 44, iconSize: 20
     ) { onAction(running ? .cancel : .run) }
   }
 }
@@ -219,32 +204,29 @@ private struct QueueRow: View {
 
   var body: some View {
     Pressable(action: onOpen) {
-      HStack(alignment: .top, spacing: Space.s3) {
-        VStack(alignment: .leading, spacing: 2) {
+      HStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
           Text(queueName(queue)).textStyle(.base).foregroundStyle(palette.foreground)
-          HStack(spacing: Space.s1_5) {
-            StatusDot(queue: queue)
-            Text(queueStatus(queue)).textStyle(.sm)
-              .foregroundStyle(queue.failed > 0 ? palette.destructive : palette.mutedForeground)
-          }
-          if let task { TaskLines(task: task).padding(.top, 2) }
+          Text(queueStatus(queue)).textStyle(.px13).lineLimit(1)
+            .foregroundStyle(queue.failed > 0 ? palette.destructive : palette.mutedForeground)
+          if let task { TaskLines(task: task) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         // The run button sits over this, outside the row's own button.
-        if task != nil { Color.clear.frame(width: TouchTarget, height: 36) }
-        LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground).frame(height: 24)
+        if task != nil { Color.clear.frame(width: TouchTarget, height: TouchTarget) }
+        LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground)
       }
-      .padding(.horizontal, Space.s4)
+      .padding(.leading, Space.s4)
+      .padding(.trailing, Space.s3)
       .padding(.vertical, Space.s3)
       .contentShape(Rectangle())
     }
     .accessibilityElement(children: .combine)
     .accessibilityHint(Str.webJobsQueueDetails)
-    .overlay(alignment: .topTrailing) {
+    .overlay(alignment: .trailing) {
       if let task {
         TaskButton(task: task, onAction: onTask)
-          .padding(.top, Space.s3 - 6)
-          .padding(.trailing, Space.s4 + 16 + Space.s3 + 4)
+          .padding(.trailing, Space.s3 + 16)
       }
     }
   }
@@ -257,22 +239,23 @@ private struct TaskRow: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    HStack(alignment: .top, spacing: Space.s3) {
-      VStack(alignment: .leading, spacing: 2) {
+    HStack(spacing: Space.s2) {
+      VStack(alignment: .leading, spacing: 0) {
         Text(taskName(task)).textStyle(.base).foregroundStyle(palette.foreground)
         TaskLines(task: task)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .accessibilityElement(children: .combine)
-      TaskButton(task: task, onAction: onAction).padding(.top, -6)
+      TaskButton(task: task, onAction: onAction)
     }
-    .padding(.horizontal, Space.s4)
+    .padding(.leading, Space.s4)
+    .padding(.trailing, Space.s2)
     .padding(.vertical, Space.s3)
   }
 }
 
 /// How many jobs `queue` runs at once, `value` as it's edited, stepped
-/// between one and its maximum with the web's outlined minus and plus.
+/// between one and its maximum with Android's chevrons either side.
 private struct ConcurrencyRow: View {
   let queue: JobQueueStatus
   @Binding var value: Int
@@ -281,8 +264,8 @@ private struct ConcurrencyRow: View {
 
   var body: some View {
     let name = queueName(queue)
-    let text = VStack(alignment: .leading, spacing: 2) {
-      Text(name).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
+    let text = VStack(alignment: .leading, spacing: 0) {
+      Text(name).textStyle(.base).foregroundStyle(palette.foreground)
       Text(Str.webJobsConcurrencyLimits(String(queue.defaultConcurrency), String(queue.maxConcurrency)))
         .textStyle(.px13).foregroundStyle(palette.mutedForeground)
     }
@@ -300,9 +283,10 @@ private struct ConcurrencyRow: View {
         }
       }
     }
-    .padding(.horizontal, Space.s4)
-    .padding(.vertical, Space.s2_5)
-    .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+    .padding(.leading, Space.s4)
+    .padding(.trailing, Space.s2)
+    .padding(.vertical, Space.s2)
+    .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
     // VoiceOver reads the number as the row's value and steps it with a swipe.
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(name)
@@ -318,18 +302,18 @@ private struct ConcurrencyRow: View {
 
   private var stepper: some View {
     let name = queueName(queue)
-    return HStack(spacing: Space.s1_5) {
+    return HStack(spacing: 0) {
       RoundIconButton(
-        .minus, label: Str.webJobsConcurrencyDecrease(name), look: .outline, size: 32, iconSize: 16
+        .chevronLeft, label: Str.webJobsConcurrencyDecrease(name), look: .ghost, size: 44, iconSize: 20
       ) { value -= 1 }
       .disabled(value <= 1)
-      Text(String(value)).textStyle(.base, weight: .medium).monospacedDigit()
+      Text(String(value)).textStyle(.base, weight: .semibold).monospacedDigit()
         .foregroundStyle(palette.foreground)
-        .frame(minWidth: 32)
+        .frame(minWidth: 36)
         .contentTransition(.numericText(value: Double(value)))
         .motion(Motion.color, value: value)
       RoundIconButton(
-        .plus, label: Str.webJobsConcurrencyIncrease(name), look: .outline, size: 32, iconSize: 16
+        .chevronRight, label: Str.webJobsConcurrencyIncrease(name), look: .ghost, size: 44, iconSize: 20
       ) { value += 1 }
       .disabled(value >= queue.maxConcurrency)
     }

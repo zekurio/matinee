@@ -4,17 +4,16 @@ import SwiftUI
 import UIKit
 
 /*
- * AppearanceSettings.kt, drawn as the web's appearance panel
- * (appearance-panel.tsx, color-scheme-picker.tsx): the app's language, then
- * the color scheme as three miniatures of the app, in Matinee's colors with
- * the server's accent. Android 12 and later can take the wallpaper's
- * colors instead; iOS has nothing like it, so that switch isn't here. The
- * web has no palettes of its own to pick yet, only the accent the server's
- * admins choose, so neither has the app.
+ * AppearanceSettings.kt: the color scheme as three miniatures of the app,
+ * in Matinee's colors with the server's accent, drawn as the web's
+ * (color-scheme-picker.tsx). Android 12 and later can take the
+ * wallpaper's colors instead; iOS has nothing like it, so that switch
+ * isn't here. The web has no palettes of its own to pick yet, only the
+ * accent the server's admins choose, so neither has the app.
  *
- * The language is iOS's to pick, in the app's page of the Settings app, as
- * Android keeps it in its per-app language setting; the row says which it
- * is and opens that page.
+ * After it, what Android's page lacks: the app's language. It's iOS's to
+ * pick, in the app's page of the Settings app, as Android keeps it in its
+ * per-app language setting; the row says which it is and opens that page.
  */
 
 /// Settings' Appearance page.
@@ -26,15 +25,15 @@ struct AppearancePage: View {
 
   var body: some View {
     SettingsScaffold(Str.settingsPageAppearance) {
+      SettingsSection(Str.webAppearanceColorScheme) {
+        SchemePicker(theme: theme)
+      }
       ListSection(Str.webAppearanceLanguage) {
         ListRow(
           Str.webAppearanceLanguageTitle, subtitle: Str.iosAppearanceLanguageDescription, value: appLanguage
         ) {
           if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
         }
-      }
-      SettingsSection(Str.webAppearanceColorScheme) {
-        SchemePicker(theme: theme)
       }
     }
     // An accent an admin changed since the app started comes in when the page opens.
@@ -59,10 +58,10 @@ private struct SchemePicker: View {
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
-    // Side by side, as the web's `grid-cols-3`; at the accessibility sizes the
+    // Side by side, 10 apart, as Android's; at the accessibility sizes the
     // names no longer fit under a third of a phone, so the cards stack.
-    let layout = dynamicType.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: Space.s2))
-      : AnyLayout(HStackLayout(alignment: .top, spacing: Space.s2))
+    let layout = dynamicType.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: Space.s2_5))
+      : AnyLayout(HStackLayout(alignment: .top, spacing: Space.s2_5))
     layout {
       ForEach(ThemeMode.allCases, id: \.self) { mode in
         card(mode, light: theme.light, dark: theme.dark)
@@ -106,7 +105,7 @@ private struct SchemePicker: View {
         }
         .frame(width: dynamicType.isAccessibilitySize ? 128 : nil)
         Text(label(mode))
-          .textStyle(.xs, weight: .medium)
+          .textStyle(.px13, weight: .medium)
           .foregroundStyle(selected ? palette.foreground : palette.mutedForeground)
           .lineLimit(dynamicType.isAccessibilitySize ? nil : 1)
           .padding(.horizontal, Space.s0_5)

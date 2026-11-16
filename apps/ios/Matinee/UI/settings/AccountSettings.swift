@@ -6,10 +6,12 @@ import SwiftUI
 import UIKit
 
 /*
- * Settings, Account, as the web's account panel (account-panel.tsx,
- * sessions.tsx) with Android's way to sign in a TV: the profile, the
- * passkeys and the single sign-on account the person signs in with, then
- * signing in another device and the places the account is signed in.
+ * Settings, Account, as Android's: signing in another device, then the
+ * places the account is signed in, each its own card with a way to sign
+ * it out. Before them, what Android's page lacks, in the manner of the
+ * rows around it: the profile (picture, display name, and what others
+ * see), and the passkeys and the single sign-on account the person signs
+ * in with.
  *
  * What only a browser can do stays on the web: adding a passkey (iOS
  * binds passkeys to domains the app declares, which a self-hosted server
@@ -44,8 +46,7 @@ struct AccountPage: View {
         LinkedAccountSection(provider: provider.displayName, account: linked, loader: oidc)
       }
       ListBlock {
-        ListRow(
-          Str.linkTitle, subtitle: Str.linkRowDescription, icon: .scanQrCode, iconTile: true, action: nav.linkDevice)
+        ListRow(Str.linkTitle, subtitle: Str.linkRowDescription, icon: .scanQrCode, action: nav.linkDevice)
       }
       SessionsSection(sessions: sessions)
     }
@@ -275,24 +276,29 @@ private struct DisplayNameField: View {
 
 // MARK: Passkeys and single sign-on
 
-/// The icon tile at the start of a row of the account's, as the web's RowIcon:
-/// `size-9 rounded-lg bg-secondary`, a 16-point glyph.
+/// The icon tile at the start of a card of the account's, as Android's
+/// session card: 40 square, `rounded-lg`, `bg-secondary`, a 20-point glyph.
 struct RowIcon: View {
   let icon: Lucide
+  var size: CGFloat = 40
   @Environment(\.palette) private var palette
 
-  init(_ icon: Lucide) { self.icon = icon }
+  init(_ icon: Lucide, size: CGFloat = 40) {
+    self.icon = icon
+    self.size = size
+  }
 
   var body: some View {
-    LucideIcon(icon, size: 16, tint: palette.mutedForeground)
-      .frame(width: 36, height: 36)
+    LucideIcon(icon, size: 20, tint: palette.mutedForeground)
+      .frame(width: size, height: size)
       .background(palette.secondary, in: RoundedRectangle.kit(Radius.lg))
   }
 }
 
-/// A row of the account's, as the web's ListItem with a RowIcon: its tile,
-/// a name in `text-sm font-medium` and a line under it, and what can be
-/// done with it at its end.
+/// A card of the account's, as Android's SessionRow: a bordered block of
+/// its own, 14 in, its tile, a name in `text-base` with a badge after it
+/// and a line under it in `text-13px` muted, and what can be done with it
+/// at its end.
 struct AccountItemRow<Badge: View, Trailing: View>: View {
   let icon: Lucide
   let title: String
@@ -303,16 +309,16 @@ struct AccountItemRow<Badge: View, Trailing: View>: View {
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
-    HStack(spacing: Space.s3) {
+    HStack(spacing: Space.s3_5) {
       RowIcon(icon)
       VStack(alignment: .leading, spacing: 0) {
         // At the large text sizes the badge goes under the name rather than squeeze it.
         if dynamicType.isAccessibilitySize {
-          Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
+          Text(title).textStyle(.base).foregroundStyle(palette.foreground)
           badge()
         } else {
           HStack(spacing: Space.s2) {
-            Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground).lineLimit(1)
+            Text(title).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(1)
             badge()
           }
         }
@@ -325,10 +331,10 @@ struct AccountItemRow<Badge: View, Trailing: View>: View {
       .accessibilityElement(children: .combine)
       trailing()
     }
-    .padding(.leading, Space.s4)
-    .padding(.trailing, Space.s2)
-    .padding(.vertical, Space.s2_5)
-    .frame(minHeight: 56)
+    .padding(Space.s3_5)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(palette.foreground.opacity(0.02), in: PanelShape)
+    .overlay { PanelShape.strokeBorder(palette.border) }
   }
 }
 
@@ -350,17 +356,15 @@ private struct PasskeysSection: View {
 
   var body: some View {
     SettingsSection(Str.webOidcPasskeysTitle) {
-      ListBlock {
-        ForEach(passkeys, id: \.id) { passkey in
-          AccountItemRow(
-            icon: .keyRound, title: passkey.name ?? Str.iosAccountPasskeysUnnamed, detail: detail(passkey)
-          ) {
-            if removable {
-              RoundIconButton(
-                .trash, label: passkey.name.map(Str.iosAccountPasskeysRemoveNamed) ?? Str.iosAccountPasskeysRemove,
-                look: .ghost
-              ) { removing = passkey }
-            }
+      ForEach(passkeys, id: \.id) { passkey in
+        AccountItemRow(
+          icon: .keyRound, title: passkey.name ?? Str.iosAccountPasskeysUnnamed, detail: detail(passkey)
+        ) {
+          if removable {
+            RoundIconButton(
+              .trash, label: passkey.name.map(Str.iosAccountPasskeysRemoveNamed) ?? Str.iosAccountPasskeysRemove,
+              look: .ghost, size: 40, iconSize: 18
+            ) { removing = passkey }
           }
         }
       }
@@ -400,14 +404,12 @@ private struct LinkedAccountSection: View {
 
   var body: some View {
     SettingsSection(provider) {
-      ListBlock {
-        AccountItemRow(
-          icon: .link, title: account.label ?? provider,
-          detail: account.signsIn
-            ? Str.iosAccountOidcLinked(formatInstant(account.createdAt)) : Str.iosAccountOidcStale(provider)
-        ) {
-          MatineeButton(Str.iosAccountOidcUnlink, look: .ghost, size: .md, pending: busy, action: unlink)
-        }
+      AccountItemRow(
+        icon: .link, title: account.label ?? provider,
+        detail: account.signsIn
+          ? Str.iosAccountOidcLinked(formatInstant(account.createdAt)) : Str.iosAccountOidcStale(provider)
+      ) {
+        MatineeButton(Str.iosAccountOidcUnlink, look: .ghost, size: .md, pending: busy, action: unlink)
       }
     }
   }
@@ -425,46 +427,36 @@ private struct LinkedAccountSection: View {
 
 // MARK: Sessions
 
-/// Where the account is signed in, each but this one with a way to sign it
-/// out, and signing the others out at once, as the web's Sessions.
+/// Where the account is signed in, as Android's: the heading, then each
+/// place a card of its own, the page's 28 apart, each but this one with a
+/// way to sign it out at once, as Android's. Signing the others out
+/// together, which Android lacks, follows in a block of its own, as
+/// Android puts Remove all downloads, and asks first.
 private struct SessionsSection: View {
   let sessions: Loader<[Session]>
-  @State private var signingOut: Session?
   @State private var signingOutOthers = false
   @Environment(\.api) private var api
   @Environment(\.snackbar) private var snackbar
+  @Environment(\.palette) private var palette
 
   var body: some View {
-    SettingsSection(Str.accountSessionsTitle) {
+    VStack(alignment: .leading, spacing: SETTINGS_SPACING) {
+      Text(Str.accountSessionsTitle).pageTitleStyle().foregroundStyle(palette.foreground)
+        .accessibilityAddTraits(.isHeader)
       switch sessions.state {
       case .loading:
-        Skeleton(radius: Radius.xl).frame(height: 64)
+        Skeleton(radius: Radius.xl).frame(height: 70)
       case .failed(let message, let disconnected):
         ErrorSection(Str.accountSessionsFailed, message, disconnected: disconnected, onRetry: sessions.reload)
       case .ready(let list):
-        ListBlock {
-          ForEach(list, id: \.id) { item in
-            SessionRow(session: item) { signingOut = item }
-          }
+        ForEach(list, id: \.id) { item in
+          SessionRow(session: item) { signOut(item) }
         }
         if list.contains(where: { !$0.current }) {
-          MatineeButton(
-            Str.webUsersMenuSignOutOthers, icon: .logOut, look: .outline, fullWidth: true
-          ) { signingOutOthers = true }
+          ListBlock {
+            ListRow(Str.webUsersMenuSignOutOthers, icon: .logOut, destructive: true) { signingOutOthers = true }
+          }
         }
-      }
-    }
-    .confirmDialog(
-      isPresented: Binding(get: { signingOut != nil }, set: { if !$0 { signingOut = nil } }),
-      title: signingOut.map { Str.iosAccountSessionsSignOutTitle(sessionName($0)) }
-        ?? Str.iosAccountSessionsSignOutTitleUnnamed,
-      message: Str.iosAccountSessionsSignOutDescription, confirm: Str.shellSignOut
-    ) {
-      guard let api, let item = signingOut else { return }
-      signingOut = nil
-      launchShowing(snackbar, Str.accountSessionsSignOutFailed) {
-        try await api.account.sessions.revoke(id: item.id)
-        sessions.reload()
       }
     }
     .confirmDialog(
@@ -482,6 +474,14 @@ private struct SessionsSection: View {
       .onAppear { if debugOpens("signout-others") { signingOutOthers = true } }
     #endif
   }
+
+  private func signOut(_ item: Session) {
+    guard let api else { return }
+    launchShowing(snackbar, Str.accountSessionsSignOutFailed) {
+      try await api.account.sessions.revoke(id: item.id)
+      sessions.reload()
+    }
+  }
 }
 
 private struct SessionRow: View {
@@ -496,7 +496,9 @@ private struct SessionRow: View {
       }
     } trailing: {
       if !session.current {
-        RoundIconButton(.logOut, label: Str.accountSessionsSignOutNamed(name), look: .ghost, action: onSignOut)
+        RoundIconButton(
+          .logOut, label: Str.accountSessionsSignOutNamed(name), look: .ghost, size: 40, iconSize: 18,
+          action: onSignOut)
       }
     }
   }

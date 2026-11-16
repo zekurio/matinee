@@ -42,10 +42,11 @@ struct ArtProgressBar: View {
   }
 }
 
-/// A rail's or a page section's heading, the web's `text-xl font-semibold
-/// tracking-tight`, and with `action` a link to the whole list, with a
-/// chevron after it. With `count`, how many titles it holds follows on its
-/// baseline, `text-sm` muted, as the web's search and person pages have it.
+/// A rail's or a page section's heading, as Android's: the page's title
+/// style (`pageTitleStyle()`, Android's `titleLarge`), and with `action` a
+/// link to the whole list, with a chevron after it. With `count`, how many
+/// titles it holds follows on its baseline, `text-sm` muted, as Android's
+/// search page has it.
 struct SectionTitle: View {
   let title: String
   var count: Int?
@@ -73,14 +74,14 @@ struct SectionTitle: View {
     if let count {
       HStack(alignment: .firstTextBaseline, spacing: Space.s2) {
         Text(title)
-          .textStyle(.xl, weight: .semibold, tracking: .tight)
+          .pageTitleStyle()
           .foregroundStyle(palette.foreground)
         Text(Str.browseTitleCount(count)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
       }
     } else {
       HStack(spacing: Space.s1) {
         Text(title)
-          .textStyle(.xl, weight: .semibold, tracking: .tight)
+          .pageTitleStyle()
           .lineLimit(1)
           .foregroundStyle(palette.foreground)
         if action != nil { LucideIcon(.chevronRight, size: 20, tint: palette.mutedForeground) }

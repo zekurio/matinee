@@ -2818,12 +2818,6 @@ nonisolated enum Str {
   static var iosAccountPictureRemove: String { tr("ios_account_picture_remove", table: "iOS") }
   /// Profile
   static var iosAccountProfileTitle: String { tr("ios_account_profile_title", table: "iOS") }
-  /// It has to sign in again to use Matinee.
-  static var iosAccountSessionsSignOutDescription: String { tr("ios_account_sessions_sign_out_description", table: "iOS") }
-  /// Sign out %@?
-  static func iosAccountSessionsSignOutTitle(_ p1: String) -> String { tr("ios_account_sessions_sign_out_title", table: "iOS", p1) }
-  /// Sign out this session?
-  static var iosAccountSessionsSignOutTitleUnnamed: String { tr("ios_account_sessions_sign_out_title_unnamed", table: "iOS") }
   /// Couldn't change what your profile shows
   static var iosAccountSharingFailed: String { tr("ios_account_sharing_failed", table: "iOS") }
   /// Show my favorites

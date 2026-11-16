@@ -57,16 +57,17 @@ private struct BrandingForm: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Space.section) {
+    VStack(alignment: .leading, spacing: SETTINGS_SPACING) {
       SettingsSection(Str.webBrandingTitle) {
         Presets(form: $form.accents)
+          .padding(.bottom, Space.s4 - Space.s3_5)
         ListBlock {
           ColorRow(title: Str.webBrandingModeLight, label: Str.webBrandingAccentLight, value: $form.accents.light)
           ColorRow(title: Str.webBrandingModeDark, label: Str.webBrandingAccentDark, value: $form.accents.dark)
         }
       }
 
-      VStack(alignment: .leading, spacing: Space.s3) {
+      VStack(alignment: .leading, spacing: Space.s2) {
         ListSection(Str.webBrandingBackdropTitle) {
           SwitchRow(Str.webBrandingBackdropEnabled, isOn: $form.backdrop.enabled)
           Group {
@@ -90,14 +91,16 @@ private struct BrandingForm: View {
   }
 }
 
-/// The starting points, Matinee's own first: each the light accent and the
-/// dark one split on a diagonal, ringed when it's what the fields hold.
+/// The starting points, Matinee's own first, in a row across the page as
+/// Android's: each the light accent and the dark one split on a diagonal,
+/// ringed when it's what the fields hold.
 private struct Presets: View {
   @Binding var form: AccentDraft
 
   var body: some View {
-    LazyVGrid(columns: [GridItem(.adaptive(minimum: TouchTarget, maximum: TouchTarget), spacing: 0)], spacing: 0) {
+    HStack(spacing: 0) {
       ForEach(Array(ACCENT_PRESETS.enumerated()), id: \.offset) { index, preset in
+        if index > 0 { Spacer(minLength: 0) }
         Swatch(
           light: preset.light, dark: preset.dark, selected: form.picked(preset),
           name: index == 0 ? Str.webBrandingDefault : "\(preset.light) / \(preset.dark)"
@@ -107,8 +110,8 @@ private struct Presets: View {
         }
       }
     }
-    // The first swatch's ring lines up with the page's edge, as the web's.
-    .padding(.horizontal, -(TouchTarget - 32) / 2)
+    // The first and last swatches' rings line up with the page's edges.
+    .padding(.horizontal, -(TouchTarget - 40) / 2)
     .accessibilityElement(children: .contain)
     .accessibilityLabel(Str.webBrandingPresets)
   }
@@ -154,9 +157,9 @@ private nonisolated struct DiagonalHalf: Shape {
 
 private func hexColor(_ hex: String) -> Color { RGB(hex: hex)?.color ?? .clear }
 
-/// An appearance's accent: its name, then the hex value with the color it
-/// names beside it, as the web's HexColorInput. A value that isn't a color
-/// yet turns the field red and holds the save.
+/// An appearance's accent, as Android's ColorRow: its name, then the hex
+/// value with the color it names beside it in one field at the row's end.
+/// A value that isn't a color yet turns the field red and holds the save.
 private struct ColorRow: View {
   let title: String
   let label: String
@@ -165,33 +168,35 @@ private struct ColorRow: View {
 
   var body: some View {
     let parsed = normalizeHex(value)
-    VStack(alignment: .leading, spacing: Space.s2_5) {
-      Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
+    HStack(spacing: Space.s3) {
+      Text(title).textStyle(.base).foregroundStyle(palette.foreground)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityHidden(true)
-      HStack(spacing: Space.s2) {
-        MatineeTextField(
-          "#rrggbb", text: Binding(get: { value }, set: { value = String($0.prefix(7)) }), isError: parsed == nil
-        )
-        .keyboardType(.asciiCapable)
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        .submitLabel(.done)
-        .accessibilityLabel(label)
-        RoundedRectangle.kit(Radius.lg)
+      MatineeTextField(
+        "#rrggbb", text: Binding(get: { value }, set: { value = String($0.prefix(7)) }), isError: parsed == nil
+      ) {
+        Circle()
           .fill(parsed.map(hexColor) ?? .clear)
-          .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.foreground.opacity(0.15)) }
-          .frame(width: TouchTarget, height: TouchTarget)
+          .overlay { Circle().strokeBorder(palette.foreground.opacity(0.15)) }
+          .frame(width: 20, height: 20)
+          .padding(.trailing, Space.s2_5)
           .accessibilityHidden(true)
           .motion(Motion.color, value: parsed)
       }
+      .keyboardType(.asciiCapable)
+      .textInputAutocapitalization(.never)
+      .autocorrectionDisabled()
+      .submitLabel(.done)
+      .accessibilityLabel(label)
+      .frame(width: 160)
     }
     .padding(.horizontal, Space.s4)
     .padding(.vertical, Space.s2_5)
   }
 }
 
-/// A number set by a slider, as the web's SliderRow: its name, then the
-/// slider with what it's set to at its end.
+/// A number set by a slider: its name, then the slider with what it's set
+/// to at its end. Android has no slider here, nor the backdrop it sets.
 private struct SliderRow: View {
   let title: String
   let value: Double
@@ -202,7 +207,7 @@ private struct SliderRow: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Space.s1) {
-      Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
+      Text(title).textStyle(.base).foregroundStyle(palette.foreground)
         .accessibilityHidden(true)
       HStack(spacing: Space.s3) {
         MatineeSlider(
@@ -214,7 +219,7 @@ private struct SliderRow: View {
       }
     }
     .padding(.horizontal, Space.s4)
-    .padding(.vertical, Space.s2_5)
+    .padding(.vertical, Space.s3_5)
   }
 }
 

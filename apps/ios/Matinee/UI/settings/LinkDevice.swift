@@ -14,9 +14,10 @@ import UIKit
  * as ZXing does on Android. A device without a camera, like the simulator,
  * gets only the field, as an Android TV does.
  *
- * Drawn as the web's /link page (device-link.tsx, device-card.tsx): the
- * device in a bordered card with its tile, whose account it joins, the code
- * in the web's `font-mono`, and Approve over Cancel, full width for a thumb.
+ * Laid out as Android's LinkDeviceScreen, in the web's look
+ * (device-link.tsx, device-card.tsx): the device in a bordered card with
+ * its tile, whose account it joins, the code in the web's `font-mono`, and
+ * Approve over Cancel, full width for a thumb.
  */
 
 /// The contract's `DevicePlatform` by name, the same in every language, as the web's `platformLabel`.
@@ -74,11 +75,11 @@ struct LinkDeviceScreen: View {
       .frame(maxWidth: 440)
       .frame(maxWidth: .infinity)
       .padding(.horizontal, Space.gutter)
-      .padding(.top, Space.s6)
-      .padding(.bottom, Space.s8)
+      .padding(.top, Space.s2)
+      .padding(.bottom, Space.s6)
     }
     .scrollDismissesKeyboard(.interactively)
-    .topBar(Str.linkTitle, centered: true)
+    .topBar(Str.linkTitle)
   }
 }
 
@@ -403,7 +404,7 @@ private struct ApproveStep: View {
         Spinner(size: 28, tint: palette.accent)
           .frame(maxWidth: .infinity, minHeight: 160)
       case .waiting(let request):
-        VStack(alignment: .leading, spacing: Space.s4) {
+        VStack(alignment: .leading, spacing: 0) {
           DeviceCard(request: request)
           VStack(alignment: .leading, spacing: Space.s1_5) {
             Text(emphasized(Str.linkWants(name), name, font: nameFont, color: palette.foreground))
@@ -413,7 +414,8 @@ private struct ApproveStep: View {
               .textStyle(.sm)
               .foregroundStyle(palette.mutedForeground)
           }
-          VStack(spacing: Space.s2) {
+          .padding(.top, Space.s5)
+          VStack(spacing: Space.s2_5) {
             MatineeButton(Str.linkApprove, icon: .check, pending: approving, fullWidth: true, action: approve)
             if let approveError {
               Text(approveError).textStyle(.px13).foregroundStyle(palette.destructive)
@@ -421,8 +423,9 @@ private struct ApproveStep: View {
             }
             MatineeButton(Str.commonCancel, look: .ghost, fullWidth: true, action: onAgain)
           }
-          .padding(.top, Space.s2)
+          .padding(.top, Space.s6)
           Text(Str.linkWarning).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+            .padding(.top, Space.s5)
         }
       case .approved(let request):
         Outcome(
@@ -514,31 +517,30 @@ private func deviceLabel(_ request: DeviceRequest) -> String {
   request.deviceName ?? Str.accountDeviceApp(platformLabel(request.platform))
 }
 
-/// The device a code belongs to, as the web's DeviceCard: `rounded-xl border
-/// px-4 py-3`, its tile, and its name over what it runs on.
+/// The device a code belongs to, as Android's DeviceCard: a bordered block
+/// 14 in, its 44-point tile, and its name over what it runs on.
 private struct DeviceCard: View {
   let request: DeviceRequest
   @Environment(\.palette) private var palette
 
   var body: some View {
-    HStack(spacing: Space.s3) {
-      RowIcon(platformIcon(request.platform))
+    HStack(spacing: Space.s3_5) {
+      RowIcon(platformIcon(request.platform), size: 44)
       VStack(alignment: .leading, spacing: 0) {
-        Text(deviceLabel(request)).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
+        Text(deviceLabel(request)).textStyle(.base, weight: .medium).foregroundStyle(palette.foreground)
         Text(platformLabel(request.platform)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-    .padding(.horizontal, Space.s4)
-    .padding(.vertical, Space.s3)
+    .padding(Space.s3_5)
     .background(palette.foreground.opacity(0.02), in: PanelShape)
     .overlay { PanelShape.strokeBorder(palette.border) }
     .accessibilityElement(children: .combine)
   }
 }
 
-/// How checking a code ended, with what to do next: the web's frame, its
-/// icon over a heading and what it means, then the way on.
+/// How checking a code ended, with what to do next, as Android's: its icon
+/// over a heading and what it means, then the way on.
 private struct Outcome<Actions: View>: View {
   let icon: Lucide
   let tint: Color
@@ -550,19 +552,19 @@ private struct Outcome<Actions: View>: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      LucideIcon(icon, size: 32, tint: tint)
-        .padding(.top, Space.s4)
-      Text(title).textStyle(.xl, weight: .semibold, tracking: .tight).foregroundStyle(palette.foreground)
+      LucideIcon(icon, size: 36, tint: tint)
+        .padding(.top, Space.s6)
+      Text(title).textStyle(.px22, weight: .semibold, tracking: .tight).foregroundStyle(palette.foreground)
         .accessibilityAddTraits(.isHeader)
         .padding(.top, Space.s4)
       Text(description).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-        .padding(.top, Space.s1_5)
+        .padding(.top, Space.s2)
       if let detail {
         Text(detail).textStyle(.sm).foregroundStyle(palette.mutedForeground)
           .padding(.top, Space.s2)
       }
       actions()
-        .padding(.top, Space.s6)
+        .padding(.top, Space.s7)
     }
   }
 }

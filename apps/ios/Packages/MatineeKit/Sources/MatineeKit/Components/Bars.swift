@@ -13,17 +13,16 @@ public enum TopBarLeading: Sendable {
   case none
 }
 
-/// The top of a page opened from a tab, as the web's PhoneTopBar and
-/// Android's `TopBar`: Back, the page's name in `text-xl font-semibold
-/// tracking-tight`, and what the page can do, on the page's background,
-/// 64 tall. `centered` centers the name over a hairline, as the web's
-/// settings sheet has it. Back does `onLeading`, or dismisses the page.
-/// With `onHome`, a house beside Back goes to the app's first page, as the
-/// web's bar has it on a page with no name of its own.
+/// The top of a page opened from a tab, as Android's `TopBar`: Back, the
+/// page's name after it in `pageTitleStyle()`, and what the page can do, on
+/// the page's background, 64 tall. It's the only way a pushed page shows
+/// its name, so every page's title is the same size in the same place, as
+/// on Android; there is no centered or smaller variant. Back does
+/// `onLeading`, or dismisses the page. With `onHome`, a house beside Back
+/// goes to the app's first page, as Android's bar has it.
 public struct TopBar<Actions: View>: View {
   let title: String?
   let leading: TopBarLeading
-  let centered: Bool
   let onLeading: (() -> Void)?
   let onHome: (() -> Void)?
   @ViewBuilder let actions: () -> Actions
@@ -32,55 +31,42 @@ public struct TopBar<Actions: View>: View {
   @Environment(\.locale) private var locale
 
   public init(
-    _ title: String?, leading: TopBarLeading = .back, centered: Bool = false, onLeading: (() -> Void)? = nil,
+    _ title: String?, leading: TopBarLeading = .back, onLeading: (() -> Void)? = nil,
     onHome: (() -> Void)? = nil, @ViewBuilder actions: @escaping () -> Actions
   ) {
     self.title = title
     self.leading = leading
-    self.centered = centered
     self.onLeading = onLeading
     self.onHome = onHome
     self.actions = actions
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
-      ZStack {
-        if centered, let title {
-          Text(title)
-            .textStyle(.base, weight: .semibold, tracking: .tight)
-            .lineLimit(1)
-            .padding(.horizontal, 56)
-            .accessibilityAddTraits(.isHeader)
-        }
-        HStack(spacing: 0) {
-          switch leading {
-          case .back, .close:
-            RoundIconButton(
-              leading == .back ? .arrowLeft : .x,
-              label: leading == .back ? KitText.back(locale) : KitText.close(locale), look: .ghost, size: 48,
-              iconSize: leading == .back ? 24 : 22
-            ) { (onLeading ?? { dismiss() })() }
-          case .none: EmptyView()
-          }
-          if let onHome {
-            RoundIconButton(.house, label: KitText.home(locale), look: .ghost, size: 48, iconSize: 22, action: onHome)
-          }
-          if !centered, let title {
-            Text(title)
-              .textStyle(.xl, weight: .semibold, tracking: .tight)
-              .lineLimit(1)
-              .padding(.leading, leading == .none ? Space.gutter - 4 : 4)
-              .accessibilityAddTraits(.isHeader)
-          }
-          Spacer(minLength: 0)
-          HStack(spacing: 0) { actions() }
-        }
-        .padding(.horizontal, 4)
+    HStack(spacing: 0) {
+      switch leading {
+      case .back, .close:
+        RoundIconButton(
+          leading == .back ? .arrowLeft : .x,
+          label: leading == .back ? KitText.back(locale) : KitText.close(locale), look: .ghost, size: 48,
+          iconSize: leading == .back ? 24 : 22
+        ) { (onLeading ?? { dismiss() })() }
+      case .none: EmptyView()
       }
-      .frame(height: centered ? 56 : 64)
-      if centered { Separator() }
+      if let onHome {
+        RoundIconButton(.house, label: KitText.home(locale), look: .ghost, size: 48, iconSize: 22, action: onHome)
+      }
+      if let title {
+        Text(title)
+          .pageTitleStyle()
+          .lineLimit(1)
+          .padding(.leading, leading == .none ? Space.gutter - 4 : 4)
+          .accessibilityAddTraits(.isHeader)
+      }
+      Spacer(minLength: 0)
+      HStack(spacing: 0) { actions() }
     }
+    .padding(.horizontal, 4)
+    .frame(height: 64)
     .foregroundStyle(palette.foreground)
     .background(palette.background.ignoresSafeArea(edges: .top))
   }
@@ -88,10 +74,10 @@ public struct TopBar<Actions: View>: View {
 
 extension TopBar where Actions == EmptyView {
   public init(
-    _ title: String?, leading: TopBarLeading = .back, centered: Bool = false, onLeading: (() -> Void)? = nil,
+    _ title: String?, leading: TopBarLeading = .back, onLeading: (() -> Void)? = nil,
     onHome: (() -> Void)? = nil
   ) {
-    self.init(title, leading: leading, centered: centered, onLeading: onLeading, onHome: onHome) { EmptyView() }
+    self.init(title, leading: leading, onLeading: onLeading, onHome: onHome) { EmptyView() }
   }
 }
 
@@ -101,7 +87,7 @@ extension View {
   /// back that hiding it would otherwise take away. The page scrolls under
   /// nothing: the bar stays put above it.
   public func topBar<Actions: View>(
-    _ title: String?, leading: TopBarLeading = .back, centered: Bool = false, onLeading: (() -> Void)? = nil,
+    _ title: String?, leading: TopBarLeading = .back, onLeading: (() -> Void)? = nil,
     onHome: (() -> Void)? = nil, @ViewBuilder actions: @escaping () -> Actions
   ) -> some View {
     self
@@ -110,16 +96,16 @@ extension View {
         .background(SwipeBack())
       #endif
       .safeAreaInset(edge: .top, spacing: 0) {
-        TopBar(title, leading: leading, centered: centered, onLeading: onLeading, onHome: onHome, actions: actions)
+        TopBar(title, leading: leading, onLeading: onLeading, onHome: onHome, actions: actions)
       }
       .pageBackground()
   }
 
   public func topBar(
-    _ title: String?, leading: TopBarLeading = .back, centered: Bool = false, onLeading: (() -> Void)? = nil,
+    _ title: String?, leading: TopBarLeading = .back, onLeading: (() -> Void)? = nil,
     onHome: (() -> Void)? = nil
   ) -> some View {
-    topBar(title, leading: leading, centered: centered, onLeading: onLeading, onHome: onHome) { EmptyView() }
+    topBar(title, leading: leading, onLeading: onLeading, onHome: onHome) { EmptyView() }
   }
 
   /// Hides the system's navigation bar on a page that draws its own top,

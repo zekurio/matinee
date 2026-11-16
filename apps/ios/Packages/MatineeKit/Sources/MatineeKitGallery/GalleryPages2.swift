@@ -281,7 +281,7 @@ struct NavigationPage: View {
             RoundIconButton(.listFilter, label: "Filter", look: .ghost, size: 48, iconSize: 22) {}
           }
           .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.border) }
-          TopBar("Settings", leading: .close, centered: true)
+          TopBar("Settings", leading: .close)
             .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.border) }
           TopBar("Home", leading: .none) {
             RoundIconButton(.search, label: "Search", look: .ghost, size: 48, iconSize: 22) {}

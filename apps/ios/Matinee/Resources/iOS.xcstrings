@@ -343,60 +343,6 @@
         }
       }
     },
-    "ios_account_sessions_sign_out_description" : {
-      "comment" : "The web's account.sessions.signOutDescription.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sie muss sich erneut anmelden, um Matinee zu nutzen."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "It has to sign in again to use Matinee."
-          }
-        }
-      }
-    },
-    "ios_account_sessions_sign_out_title" : {
-      "comment" : "%@ is the session's name. The web's account.sessions.signOutTitle.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ abmelden?"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign out %@?"
-          }
-        }
-      }
-    },
-    "ios_account_sessions_sign_out_title_unnamed" : {
-      "comment" : "The web's account.sessions.signOutTitleUnnamed.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese Sitzung abmelden?"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign out this session?"
-          }
-        }
-      }
-    },
     "ios_account_sharing_failed" : {
       "comment" : "The web's account.sharing.failed.",
       "extractionState" : "manual",

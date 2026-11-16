@@ -23,10 +23,10 @@ struct PlaybackDiagnosticsSection: View {
       if let text, let latest = report?.latest {
         ValueRow(Str.diagnosticsLatest, value: statusLabel(latest))
         ListRow(Str.diagnosticsShow) { open = true }
-        ListRow(Str.diagnosticsCopy, accessory: ListRowAccessory.none) {
+        ListRow(Str.diagnosticsCopy) {
           copyText(text, snackbar: snackbar, copied: Str.diagnosticsCopied)
         }
-        ListRow(Str.iosDiagnosticsShare, accessory: ListRowAccessory.none) {
+        ListRow(Str.iosDiagnosticsShare) {
           shareText(text, subject: Str.diagnosticsTitle)
         }
         ListRow(Str.diagnosticsClear, destructive: true) {

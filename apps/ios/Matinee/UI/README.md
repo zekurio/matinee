@@ -1,12 +1,28 @@
 # Building a screen
 
 The app's screens build from [MatineeKit](../../Packages/MatineeKit/README.md)
-and the shared components here, take their data from MatineeCore, and follow
-the Android phone app's screens (`apps/android/.../ui/`), checked against the
-web app, which is where the design comes from. Where Android and the web
-disagree, the web wins on look and Android on what suits a touch screen.
-`home/` is the worked example: read it before you start, and hold your
-screen to it.
+and the shared components here, and take their data from MatineeCore.
+
+- **On an iPhone, the Android phone app is the reference for a page's
+  layout** (`apps/android/.../ui/`): what is on the page, in what order,
+  how it is grouped, how big its title is and where it sits, what a row
+  looks like and what tapping it does. A person moving between the two
+  phones should find the same page. The Kotlin is precise about sizes,
+  paddings, and text styles; port them.
+- **The web is the reference for the visual language**, which Android's
+  kit takes from it too: colours, the type family, radii, the look of a
+  button or a field. MatineeKit carries that; a page rarely needs to
+  change it.
+- **iOS conventions stay where the platform requires them**: the edge
+  swipe back, safe areas, Dynamic Type, VoiceOver, system pickers and
+  permission prompts. The iPad, which Android's phone layout doesn't
+  cover, keeps its own wider layouts, after the web's.
+
+Where the iPhone page has something Android's lacks and the person would
+miss (Account's profile, passkeys, and sessions; the engine choice; an
+admin page's extra fields), keep it and fit it into Android's layout in
+the manner of the rows around it. `home/` is the worked example: read it
+before you start, and hold your screen to it.
 
 Read the kit's README first. Everything below assumes it.
 
@@ -70,7 +86,11 @@ struct LibraryScreen: View {
    names where Swift allows, so the two read side by side. Start the file
    with a comment naming the Kotlin it ports.
 2. **Its top.** A page opened from a tab: `.topBar(title) { actions }`, the
-   kit's 64-point bar with Back. A page that draws art to the top:
+   kit's 64-point bar with Back and the page's name after it, as Android's
+   `TopBar`. It is the only page title there is: every pushed page's name
+   is the same size in the same place, `pageTitleStyle()`, Android's
+   `titleLarge`, and there is no centered or smaller variant. A page that
+   draws art to the top:
    `.hidesSystemNavigationBar()` and `ItemTopBar(parent:onParent:)` over the
    art, and `.statusBarScrim()` on its `ScrollView`. A tab's first page
    draws its own top and gets the tabs from the shell. Never the system's
@@ -122,7 +142,7 @@ example; `gallery/` shows them in every state (`just gallery`).
 | A person                                                 | `PersonCard(name, role:, photo:)`; `ProfileAvatar(name, url:, size:)` for an account                                                       |
 | A picture from the server                                | `Picture(sources)` in an `ArtFrame(toneKey, aspect:)`; it fades in over its blur hash, and falls back to the next source, then the tone    |
 | How far in, watched                                      | `ArtProgressBar(progress:)` and `WatchedBadge()` over art; the kit's `ProgressBar` elsewhere                                               |
-| A section's heading                                      | `SectionTitle(title, count:, action:)`; `count` puts how many titles after it                                                              |
+| A section's heading                                      | `SectionTitle(title, count:, action:)`, in `pageTitleStyle()`; `count` puts how many titles after it                                       |
 | A tab's first page's name                                | `PageHeading(title) { actions }`                                                                                                           |
 | A card's long press and a page's "more"                  | Cards have it. `ActionsButton(target)` on a page, `.cardMenu(target)` on anything else: the actions sheet for an `ActionTarget`            |
 | When something was watched                               | `actions?.askWatched(name) { at in … }`                                                                                                    |
@@ -130,6 +150,7 @@ example; `gallery/` shows them in every state (`just gallery`).
 | Filters                                                  | `FilterButton`, `ActiveFilterChips`, `.filterSheet { FilterSection { ChoiceChips / ToggleChips }; RangeField; OptionRow }`, `.optionSheet` |
 | A QR code                                                | `QrCode(text, label:, size:)`                                                                                                              |
 | Nothing to show                                          | The kit's `EmptyState(icon:title:description:)`                                                                                            |
+| A settings page                                          | `SettingsScaffold(title) { ListSection { rows } }`, `SettingsSection`, `ChoiceRow`: Android's `SettingsScaffold`, `Section`, `PickerRow`   |
 | Wrapping chips                                           | `FlowRow(spacing:lineSpacing:) { … }`                                                                                                      |
 
 Lay pages out on `@Environment(\.gutter)`, the page's side margin for the
@@ -252,7 +273,6 @@ build. Pass them after `just dev` or `just gallery`.
 | Player    | `-player.gesture hold`                                                      | A gesture's note: `brightness`, `volume`, `seek`, `hold`                                                                                                                                                                                  |
 | Player    | `-player.engine mpv`                                                        | The engine for this launch: `avPlayer` or `mpv`                                                                                                                                                                                           |
 
-Check an iPhone and an iPad (both orientations), light and dark, German,
-right to left, a large text size, and VoiceOver's reading of your cards and
-controls, and compare with the web app at the same width and with the
-Android screen.
+Check an iPhone against the Android screen first, then an iPad (both
+orientations), light and dark, German, right to left, a large text size,
+and VoiceOver's reading of your cards and controls.

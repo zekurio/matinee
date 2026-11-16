@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// A setting typed in, as the web's InputField: its name in `text-sm
-/// font-medium`, the `MatineeTextField` under it at full width (the web's
-/// `split` layout at phone width), and under that a line of help in
-/// `text-13px` muted, or the error in the danger color, which opens and
-/// closes rather than jumps. VoiceOver reads the name, and the help or the
-/// error, with the field.
+/// A setting typed in, as Android's TextRow: its name in `text-sm` muted,
+/// the `MatineeTextField` 6 under it at full width, and under that a line
+/// of help in `text-13px` muted, or the error in the danger color, which
+/// opens and closes rather than jumps. VoiceOver reads the name, and the
+/// help or the error, with the field.
 ///
 ///     InputRow("Issuer URL", text: $issuer, placeholder: "https://auth.example.com", error: issuerError)
 ///       .keyboardType(.URL)
@@ -39,8 +38,8 @@ public struct InputRow<Trailing: View>: View {
 
   public var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
-        .padding(.bottom, Space.s2_5)
+      Text(title).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+        .padding(.bottom, Space.s1_5)
         .accessibilityHidden(true)
       MatineeTextField(placeholder, text: $text, kind: kind, isError: error != nil, trailing: trailing)
         .accessibilityLabel(title)
@@ -48,18 +47,18 @@ public struct InputRow<Trailing: View>: View {
       Reveal(error != nil) {
         Text(shownError).textStyle(.px13).foregroundStyle(palette.destructive)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.top, Space.s2)
+          .padding(.top, Space.s1)
       }
       .accessibilityHidden(true)
       if let help, error == nil {
         Text(help).textStyle(.px13).foregroundStyle(palette.mutedForeground)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.top, Space.s2)
+          .padding(.top, Space.s1)
           .accessibilityHidden(true)
       }
     }
     .padding(.horizontal, Space.s4)
-    .padding(.vertical, Space.s2_5)
+    .padding(.vertical, Space.s3)
     .frame(maxWidth: .infinity, alignment: .leading)
     .onChange(of: error, initial: true) { _, error in if let error { shownError = error } }
   }

@@ -3,20 +3,22 @@ import MatineeKit
 import SwiftUI
 
 /*
- * SettingsRows.kt: the page and the rows Settings is built from, drawn by
- * MatineeKit as the web's settings sheet draws them at phone width
- * (settings-panel.tsx, setting-controls.tsx): sections 32 apart under a
- * heading, each a bordered block of rows split by hairlines.
+ * SettingsRows.kt: the page and the rows Settings is built from, laid out
+ * as Android's Settings: the kit's top bar with the page's name, then
+ * sections 28 apart, each a heading in the page's title style over a
+ * bordered block of rows split by hairlines.
  *
- * The pages use the kit's `ListSection`, `ListRow`, `SwitchRow`, and
- * `ValueRow` directly; what's here is what Settings adds to them: the
- * page, a titled group, a choice that sits beside its name on a wide page,
- * and the line a block shows when it has no rows.
+ * The pages use the kit's `ListSection`, `ListRow` (Android's LinkRow),
+ * `SwitchRow`, `ValueRow`, and `SelectRow` (Android's PickerRow) directly,
+ * which take Android's row measures; what's here is what Settings adds to
+ * them: the page, a titled group, a choice that sits beside its name on an
+ * iPad, and the line a block shows when it has no rows.
  */
 
 extension EnvironmentValues {
-  /// The page is wide enough for a choice to sit beside its name, as the
-  /// web's `split` rows do from a container of 32rem.
+  /// The page is an iPad's, wide enough for a choice to sit beside its
+  /// name, as the web's `split` rows do from a container of 32rem. A phone
+  /// keeps Android's value at the row's end, whichever way it's held.
   @Entry var settingsWide = false
 }
 
@@ -24,34 +26,31 @@ extension EnvironmentValues {
 /// an iPad, as the web's settings dialog caps its panel.
 let SETTINGS_COLUMN: CGFloat = 720
 
-/// A Settings page: its top bar, then its sections down a column, 32 apart,
-/// as the web's settings sheet on a phone (`px-4 py-6`, `gap-8`). The bar's
-/// title is centered over a hairline, as the web's phone settings and iOS's
-/// own settings pages have it. Across an iPad the column stays at most
-/// `SETTINGS_COLUMN` wide, in the middle. The admin pages are `AdminPage`s,
-/// drawn as the web's admin panels.
+/// A Settings page, as Android's `SettingsScaffold`: the kit's top bar with
+/// the page's name at its start, then its sections down a column, 28
+/// apart, 8 under the bar and 20 over the end. Across an iPad the column
+/// stays at most `SETTINGS_COLUMN` wide, in the middle. The admin pages
+/// are `AdminPage`s, which lay out the same.
 struct SettingsScaffold<Content: View>: View {
   let title: String
-  var spacing: CGFloat = Space.section
   @ViewBuilder let content: () -> Content
   @State private var wide = false
   @State private var position = ScrollPosition(edge: .top)
+  @Environment(\.shellStyle) private var shellStyle
 
-  /// `spacing` is what's between the sections, the web's `gap-8` unless given.
-  init(_ title: String, spacing: CGFloat = Space.section, @ViewBuilder content: @escaping () -> Content) {
+  init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
     self.title = title
-    self.spacing = spacing
     self.content = content
   }
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: spacing) { content() }
+      VStack(alignment: .leading, spacing: SETTINGS_SPACING) { content() }
         .frame(maxWidth: SETTINGS_COLUMN, alignment: .leading)
         .onGeometryChange(for: Bool.self) { $0.size.width >= 512 } action: { wide = $0 }
         .padding(.horizontal, Space.gutter)
-        .padding(.top, Space.s6)
-        .padding(.bottom, Space.s8)
+        .padding(.top, Space.s2)
+        .padding(.bottom, Space.s5)
         .frame(maxWidth: .infinity)
     }
     .scrollDismissesKeyboard(.interactively)
@@ -64,29 +63,34 @@ struct SettingsScaffold<Content: View>: View {
         if to == "bottom" { position.scrollTo(edge: .bottom) } else if let y = Double(to) { position.scrollTo(y: y) }
       }
     #endif
-    .environment(\.settingsWide, wide)
-    .topBar(title, centered: true)
+    .environment(\.settingsWide, wide && shellStyle == .tablet)
+    .topBar(title)
   }
 }
 
-/// A titled group of settings, as the web's SettingsSubsection: its heading
-/// in `text-base font-semibold tracking-tight`, 12 over what it holds.
-/// Android's `Section`, renamed, as SwiftUI has one. For a block of rows
-/// alone, `ListSection` says the same in one.
+/// What's between a Settings page's sections, as Android's 28.
+let SETTINGS_SPACING: CGFloat = Space.s7
+
+/// A titled group of settings, as Android's `Section`: its heading in the
+/// page's title style, 14 over what it holds. Renamed, as SwiftUI has a
+/// `Section`. For a block of rows alone, `ListSection` says the same in one.
 struct SettingsSection<Content: View>: View {
   let title: String
+  var spacing: CGFloat = Space.s3_5
   @ViewBuilder let content: () -> Content
   @Environment(\.palette) private var palette
 
-  init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
+  /// `spacing` is between what the section holds, as well as under its heading.
+  init(_ title: String, spacing: CGFloat = Space.s3_5, @ViewBuilder content: @escaping () -> Content) {
     self.title = title
+    self.spacing = spacing
     self.content = content
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Space.s3) {
+    VStack(alignment: .leading, spacing: spacing) {
       Text(title)
-        .textStyle(.base, weight: .semibold, tracking: .tight)
+        .pageTitleStyle()
         .foregroundStyle(palette.foreground)
         .accessibilityAddTraits(.isHeader)
       content()
@@ -99,11 +103,11 @@ struct SettingsSection<Content: View>: View {
 /// `rounded-xl border bg-foreground/[0.02]`, for a block drawn by hand.
 let PanelShape = RoundedRectangle.kit(Radius.xl)
 
-/// A choice among `options`, as the web's SelectRow in its `split` layout:
-/// the name, and the Select under it on a phone, or beside it, 288 wide, on
-/// a page with room, as an iPad's. At the accessibility text sizes it stays
-/// under the name. One that isn't `enabled`, as a choice with only one
-/// option the server allows, shows its value as text, as the web's FixedRow.
+/// A choice among `options`, as Android's PickerRow: the name, and the
+/// value at the row's end, the row opening a menu of them. On an iPad the
+/// web's Select sits beside the name instead, 288 wide. One that isn't
+/// `enabled`, as a choice with only one option the server allows, shows
+/// its value as text.
 struct ChoiceRow<Value: Hashable>: View {
   let title: String
   let options: [(Value, String)]
@@ -125,7 +129,7 @@ struct ChoiceRow<Value: Hashable>: View {
       ValueRow(title, value: options.first { $0.0 == selection }?.1 ?? options.first?.1 ?? "")
     } else if wide && !dynamicType.isAccessibilitySize {
       HStack(spacing: Space.s6) {
-        Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
+        Text(title).textStyle(.base).foregroundStyle(palette.foreground)
           .frame(maxWidth: .infinity, alignment: .leading)
           .accessibilityHidden(true)
         Select(title, selection: $selection, options: options).frame(width: 288)
@@ -134,7 +138,7 @@ struct ChoiceRow<Value: Hashable>: View {
       .padding(.vertical, Space.s2_5)
       .frame(minHeight: 52)
     } else {
-      SelectRow(title, selection: $selection, options: options, stacked: true)
+      SelectRow(title, selection: $selection, options: options)
     }
   }
 }
@@ -155,7 +159,7 @@ extension ChoiceRow {
 #endif
 
 /// What a block of rows says when it has none, such as no folders yet:
-/// `text-sm` muted, where its first row would be.
+/// `text-sm` muted, 16 in, where its first row would be, as Android's.
 struct EmptyRow: View {
   let text: String
   @Environment(\.palette) private var palette

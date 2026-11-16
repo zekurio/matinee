@@ -19,10 +19,10 @@ let ADMIN_COLUMN: CGFloat = 680
 
 // MARK: - Pages
 
-/// An admin page: the kit's top bar, then its sections down the page, 32
-/// apart as the web's, within the gutter, in a column the web's width on
-/// an iPad. `onBack` replaces going back, as a page with unsaved edits
-/// does; `actions` sit at the bar's end.
+/// An admin page, as Android's admin pages on `SettingsScaffold`: the
+/// kit's top bar, then its sections down the page, 28 apart, within the
+/// gutter, in a column the web's width on an iPad. `onBack` replaces going
+/// back, as a page with unsaved edits does; `actions` sit at the bar's end.
 struct AdminPage<Content: View, Actions: View>: View {
   let title: String
   var onBack: (() -> Void)?
@@ -41,10 +41,10 @@ struct AdminPage<Content: View, Actions: View>: View {
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: Space.section) { content() }
+      VStack(alignment: .leading, spacing: SETTINGS_SPACING) { content() }
         .padding(.horizontal, Space.gutter)
         .padding(.top, Space.s2)
-        .padding(.bottom, Space.s10)
+        .padding(.bottom, Space.s5)
         .frame(maxWidth: ADMIN_COLUMN)
         .frame(maxWidth: .infinity)
     }
@@ -249,7 +249,7 @@ private struct SaveBar: View {
 
   private var status: some View {
     VStack(alignment: .leading, spacing: 2) {
-      Text(statusText).textStyle(.sm, weight: .medium)
+      Text(statusText).textStyle(.sm)
         .foregroundStyle(isFailed ? palette.destructive : palette.foreground)
       if case .failed(let message?) = feedback {
         Text(message).textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(3)
@@ -340,7 +340,7 @@ private struct HoldsBack: UIViewControllerRepresentable {
 // MARK: - Rows and words
 
 /// A line under a section: what the server found or what a change will do,
-/// `text-13px` muted, as the web's SettingNote, or in `color`, as a warning.
+/// `text-13px` muted, as Android's Note, or in `color`, as a warning.
 struct Note: View {
   let text: String
   var color: Color?
@@ -354,12 +354,12 @@ struct Note: View {
   var body: some View {
     Text(text).textStyle(.px13).foregroundStyle(color ?? palette.mutedForeground)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.horizontal, Space.s1)
   }
 }
 
-/// A row in a block that does something, such as Add folder or Detect
-/// again: its icon and words in the accent, the whole row one tap.
+/// A row in a block that does something, such as Add folder, as Android's:
+/// its icon, 18, and words in `text-base`, both in the accent, the whole
+/// row one tap.
 struct AdminActionRow: View {
   let title: String
   let icon: Lucide
@@ -377,12 +377,12 @@ struct AdminActionRow: View {
             LucideIcon(icon, size: 18, tint: palette.accent)
           }
         }
-        .frame(width: 24)
-        Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.accent)
+        .frame(width: 18)
+        Text(title).textStyle(.base).foregroundStyle(palette.accent)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
       .padding(.horizontal, Space.s4)
-      .padding(.vertical, Space.s2_5)
+      .padding(.vertical, Space.s3_5)
       .frame(minHeight: 52)
       .contentShape(Rectangle())
     }

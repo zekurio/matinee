@@ -80,10 +80,10 @@ private struct AppLogSection: View {
   var body: some View {
     ListSection(Str.logsTitle) {
       ListRow(Str.logsShow, subtitle: Str.logsNote) { withLog { shown = $0 } }
-      ListRow(Str.logsCopy, accessory: ListRowAccessory.none) {
+      ListRow(Str.logsCopy) {
         withLog { copyText($0, snackbar: snackbar, copied: Str.logsCopied) }
       }
-      ListRow(Str.logsShare, accessory: ListRowAccessory.none) {
+      ListRow(Str.logsShare) {
         withLog { shareText($0, subject: Str.logsTitle) }
       }
     }

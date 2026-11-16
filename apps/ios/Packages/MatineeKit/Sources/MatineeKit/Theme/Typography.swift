@@ -186,6 +186,15 @@ extension View {
     modifier(TextStyleModifier(size: size, weight: weight, tracking: tracking))
   }
 
+  /// A page's title, as Android's `TopBar` sets it (`titleLarge`, the web's
+  /// `text-xl font-semibold tracking-tight`). The kit's `TopBar` draws every
+  /// pushed page's title in it, and Settings' section headings take it too,
+  /// as Android's `Section` does; nothing else sets a page's title, so the
+  /// two phones' titles can't drift apart.
+  public func pageTitleStyle() -> some View {
+    textStyle(.xl, weight: .semibold, tracking: .tight)
+  }
+
   /// The font alone, without the scale's line height, for text in a frame
   /// of fixed size, like a badge's.
   func textFont(_ size: TextSize, weight: Font.Weight = .regular) -> some View {

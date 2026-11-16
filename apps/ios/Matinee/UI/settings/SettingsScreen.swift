@@ -10,10 +10,11 @@ import SwiftUI
  * words for the choices are in SettingsData.swift, the page and its rows
  * in SettingsRows.swift.
  *
- * The first page reads as the web's phone settings menu: the account it
- * edits first, with its picture, then the categories in blocks, the
- * server's settings for an admin, and the ways out at the end. Android's
- * offline switch and server block are there too, as the web has neither.
+ * The first page is Android's: offline mode on top, then the categories
+ * in two blocks, what follows the account and what stays on this device,
+ * the server's settings for an admin, and the server with the ways out.
+ * The Account row carries the account's picture and name, which Android's
+ * lacks, in the place Android's Account row has.
  */
 
 /// A category of Settings, as Findroid and the web's phone menu list them:
@@ -85,7 +86,7 @@ private struct PageRow: View {
   }
 }
 
-/// Settings' first page: the account, offline mode, the categories in two
+/// Settings' first page, as Android's: offline mode, the categories in two
 /// blocks, what follows the account and what stays on this device, then the
 /// server's settings for an admin, and the server with the ways out.
 struct SettingsScreen: View {
@@ -94,17 +95,18 @@ struct SettingsScreen: View {
   @Environment(\.offline) private var offline
 
   var body: some View {
-    // The web's phone menu spaces its blocks 20 apart, closer than a page's sections.
-    SettingsScaffold(Str.shellSettings, spacing: Space.s5) {
-      // The sessions and the profile live on the server.
-      if let user, !offline {
-        ListBlock { AccountRow(user: user) }
-      }
-      // As Findroid has it: the app starts with the downloads and leaves the server alone.
+    SettingsScaffold(Str.shellSettings) {
+      // On top, as Findroid has it: the app starts with the downloads and leaves the server alone.
       ListBlock {
-        OfflineRow()
+        SwitchRow(
+          Str.settingsOfflineMode, icon: .cloudOff,
+          isOn: Binding(get: { session.offlineMode }, set: { on in Task { await session.setOfflineMode(on) } }))
       }
       ListBlock {
+        // The sessions and the profile live on the server.
+        if let user, !offline {
+          AccountRow(user: user)
+        }
         PageRow(.appearance)
         PageRow(.playback)
         PageRow(.subtitles)
@@ -114,7 +116,7 @@ struct SettingsScreen: View {
         PageRow(.about)
       }
       if user?.isAdmin == true && !offline {
-        ListSection(Str.settingsAdmin, titleStyle: .label) {
+        ListSection(Str.settingsAdmin) {
           ForEach(SettingsPage.allCases.filter(\.admin), id: \.self) { PageRow($0) }
         }
       }
@@ -123,32 +125,8 @@ struct SettingsScreen: View {
   }
 }
 
-/// Offline mode, on the first page with the categories around it, so it
-/// reads as they do: the icon and the name in `text-base`, the switch at its
-/// end. A tap anywhere on the row flips it.
-private struct OfflineRow: View {
-  @Environment(MatineeSession.self) private var session
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    let on = Binding(get: { session.offlineMode }, set: { on in Task { await session.setOfflineMode(on) } })
-    HStack(spacing: Space.s3) {
-      LucideIcon(.cloudOff, size: 20, tint: palette.mutedForeground).frame(minWidth: 24)
-      Text(Str.settingsOfflineMode).textStyle(.base).foregroundStyle(palette.foreground)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      Switch(isOn: on, label: Str.settingsOfflineMode)
-    }
-    .padding(.horizontal, Space.s4)
-    .padding(.vertical, Space.s2_5)
-    .frame(minHeight: 56)
-    .contentShape(Rectangle())
-    .onTapGesture { on.wrappedValue.toggle() }
-    .accessibilityElement(children: .combine)
-  }
-}
-
-/// The account the settings edit, first on the page as the web's phone menu
-/// has it: its picture, its name, and what the row opens.
+/// Android's Account row, with the account's picture in place of its icon
+/// and its name over the page's: what the row opens, and whose it is.
 private struct AccountRow: View {
   let user: User
   @Environment(\.api) private var api
@@ -159,18 +137,19 @@ private struct AccountRow: View {
     Pressable {
       nav.settingsPage(SettingsPage.account.key)
     } label: {
-      HStack(spacing: Space.s3) {
+      HStack(spacing: 0) {
         ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 40)
+        Spacer().frame(width: Space.s3_5)
         VStack(alignment: .leading, spacing: 0) {
-          Text(user.name).textStyle(.base, weight: .medium).foregroundStyle(palette.foreground)
+          Text(user.name).textStyle(.base).foregroundStyle(palette.foreground)
           Text(Str.settingsPageAccount).textStyle(.px13).foregroundStyle(palette.mutedForeground)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground)
+        LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground).padding(.leading, Space.s1)
       }
       .padding(.horizontal, Space.s4)
-      .padding(.vertical, Space.s2_5)
-      .frame(minHeight: 64)
+      .padding(.vertical, Space.s3)
+      .frame(minHeight: 52)
       .contentShape(Rectangle())
     }
     .accessibilityElement(children: .combine)
@@ -183,7 +162,7 @@ struct SettingsServerSection: View {
   @Environment(MatineeSession.self) private var session
 
   var body: some View {
-    ListSection(Str.settingsServer, titleStyle: .label) {
+    ListSection(Str.settingsServer) {
       ListRow(server, subtitle: Str.iosSettingsVersion(appVersion), icon: .server)
       // Full rows, so the two ways out are easy to hit; signing out in red, as it ends the session.
       ChangeServerRow()
@@ -528,10 +507,12 @@ private struct SubtitlePreview: View {
       ],
       startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    // A phone's frame is a video's 16:9; across an iPad's wider column, a
-    // film's 2.39:1, so the sample doesn't stand taller than the rows under it.
-    .aspectRatio(wide ? 2.39 : 16 / 9, contentMode: .fit)
+    // A phone's frame is Android's, 140 tall across the column; across an
+    // iPad's wider column, a film's 2.39:1, so the sample doesn't stand
+    // taller than the rows under it.
+    .aspectRatio(wide ? 2.39 : nil, contentMode: .fit)
     .frame(maxWidth: .infinity)
+    .frame(height: wide ? nil : 140)
     .overlay(alignment: .bottom) {
       // The player's own cue line, so the sample is what plays, at a phone
       // player's size scaled to the frame's width.
@@ -572,10 +553,12 @@ struct DownloadsSettingsPage: View {
     SettingsScaffold(Str.downloadsTitle) {
       if off {
         VStack(alignment: .leading, spacing: Space.s1) {
-          Text(Str.downloadsOffTitle).textStyle(.base, weight: .semibold, tracking: .tight)
+          Text(Str.downloadsOffTitle).textStyle(.base, weight: .semibold)
             .foregroundStyle(palette.foreground)
           Text(Str.downloadsOffDescription).textStyle(.sm).foregroundStyle(palette.mutedForeground)
         }
+        // Android's 20 to the block under it, closer than a section.
+        .padding(.bottom, Space.s5 - SETTINGS_SPACING)
       }
       ListBlock {
         ValueRow(
@@ -613,7 +596,7 @@ struct DownloadsSettingsPage: View {
       }
       if !items.isEmpty {
         ListBlock {
-          ListRow(Str.downloadsRemoveAll, icon: .trash, destructive: true) { confirm = true }
+          ListRow(Str.downloadsRemoveAll, destructive: true) { confirm = true }
         }
       }
     }

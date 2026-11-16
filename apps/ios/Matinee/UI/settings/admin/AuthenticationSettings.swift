@@ -5,8 +5,11 @@ import UIKit
 
 /*
  * AuthenticationSettings.kt: passkeys, and the OpenID Connect provider for
- * single sign-on, laid out as the web's authentication panel. The draft
- * and its checks are MatineeCore's (Admin/AuthForms.swift).
+ * single sign-on, laid out as Android's: each a heading over its switches,
+ * the provider's fields in a block of their own under them, and the
+ * claims most providers never need behind a switch. The access claims,
+ * which Android lacks, follow in a section of their own. The draft and its
+ * checks are MatineeCore's (Admin/AuthForms.swift).
  */
 
 /// How people sign in: passkeys, and the OpenID Connect provider for single
@@ -49,13 +52,11 @@ private struct AuthForm: View {
     let saved = form.saved
     let defaults = saved.defaults
     let provider = nonBlank(form.oidc.displayName) ?? nonBlank(defaults.displayName) ?? Str.webOidcTitle
-    VStack(alignment: .leading, spacing: Space.section) {
-      VStack(alignment: .leading, spacing: Space.s3) {
-        ListSection(Str.webOidcPasskeysTitle) {
-          SwitchRow(Str.webOidcEnabled, icon: .keyRound, isOn: $form.passkeys.enabled)
-          SwitchRow(
-            Str.webOidcPasskeysAllowSignUp, subtitle: Str.webOidcPasskeysAllowSignUpHint,
-            isOn: $form.passkeys.allowSignUp)
+    VStack(alignment: .leading, spacing: SETTINGS_SPACING) {
+      VStack(alignment: .leading, spacing: Space.s2) {
+        ListSection(Str.webOidcPasskeysTitle, footer: Str.webOidcPasskeysAllowSignUpHint) {
+          SwitchRow(Str.webOidcPasskeysTitle, icon: .keyRound, isOn: $form.passkeys.enabled)
+          SwitchRow(Str.webOidcPasskeysAllowSignUp, isOn: $form.passkeys.allowSignUp)
         }
         // Accounts that can only sign in with a passkey, told before they're locked out.
         if !form.passkeys.enabled && saved.unlinkedUsers > 0 {
@@ -63,10 +64,17 @@ private struct AuthForm: View {
         }
       }
 
-      VStack(alignment: .leading, spacing: Space.s3) {
-        ListSection(Str.webOidcTitle) {
+      SettingsSection(Str.webOidcTitle, spacing: 0) {
+        ListBlock {
           SwitchRow(Str.webOidcEnabled, icon: .logIn, isOn: $form.oidc.enabled)
           SwitchRow(Str.webOidcAllowSignUp, isOn: $form.oidc.allowSignUp)
+        }
+        .padding(.top, Space.s3_5)
+        if !form.oidc.enabled && saved.ssoOnlyUsers > 0 {
+          Note(Str.webOidcSsoOnly(saved.ssoOnlyUsers, provider), color: palette.destructive)
+            .padding(.top, Space.s2)
+        }
+        ListBlock {
           InputRow(
             Str.webOidcFieldDisplayName, text: $form.oidc.displayName,
             placeholder: nonBlank(defaults.displayName) ?? Str.webOidcTitle)
@@ -98,36 +106,12 @@ private struct AuthForm: View {
           .textContentType(.password)
           RedirectRow(url: saved.callbackUrl)
         }
-        if !form.oidc.enabled && saved.ssoOnlyUsers > 0 {
-          Note(Str.webOidcSsoOnly(saved.ssoOnlyUsers, provider), color: palette.destructive)
-        }
-      }
-
-      ListSection(Str.webOidcAccessTitle) {
-        InputRow(
-          Str.webOidcFieldGroupsClaim, text: $form.oidc.groupsClaim,
-          placeholder: nonBlank(defaults.groupsClaim) ?? Str.webOidcClaimOff, help: Str.webOidcGroupsClaimDescription)
-        InputRow(
-          Str.webOidcFieldPolicyClaim, text: $form.oidc.policyClaim,
-          placeholder: nonBlank(defaults.policyClaim) ?? Str.webOidcClaimOff, help: Str.webOidcPolicyClaimDescription)
-        SwitchRow(
-          Str.webOidcSignOutRefused, subtitle: Str.webOidcSignOutRefusedDescription, isOn: $form.oidc.signOutRefused)
-      }
-
-      SettingsSection(Str.webOidcAdvanced) {
-        // What most providers never need, behind a button as on the web.
-        MatineeButton(look: .outline, fullWidth: true) {
-          withMotion(Motion.enter) { advanced.toggle() }
-        } label: {
-          HStack(spacing: Space.s1_5) {
-            Text(advanced ? Str.webOidcAdvancedHide : Str.webOidcAdvancedShow).textStyle(.sm, weight: .medium)
-            LucideIcon(.chevronDown, size: 16, scales: false)
-              .rotationEffect(.degrees(advanced ? 180 : 0))
-          }
-        }
-        .accessibilityValue(advanced ? Str.webOidcAdvancedHide : Str.webOidcAdvancedShow)
-        Reveal(advanced) {
-          ListBlock {
+        .padding(.top, Space.s3)
+        ListBlock {
+          SwitchRow(
+            Str.webOidcAdvanced, icon: .settings,
+            isOn: Binding(get: { advanced }, set: { on in withMotion(Motion.enter) { advanced = on } }))
+          if advanced {
             InputRow(
               Str.webOidcFieldScopes, text: $form.oidc.scopes,
               placeholder: nonBlank(defaults.scopes) ?? "openid profile email",
@@ -142,8 +126,19 @@ private struct AuthForm: View {
               Str.webOidcFieldRoleClaim, text: $form.oidc.roleClaim,
               placeholder: nonBlank(defaults.roleClaim) ?? Str.webOidcClaimOff)
           }
-          .padding(.top, Space.s1)
         }
+        .padding(.top, Space.s3)
+      }
+
+      ListSection(Str.webOidcAccessTitle) {
+        InputRow(
+          Str.webOidcFieldGroupsClaim, text: $form.oidc.groupsClaim,
+          placeholder: nonBlank(defaults.groupsClaim) ?? Str.webOidcClaimOff, help: Str.webOidcGroupsClaimDescription)
+        InputRow(
+          Str.webOidcFieldPolicyClaim, text: $form.oidc.policyClaim,
+          placeholder: nonBlank(defaults.policyClaim) ?? Str.webOidcClaimOff, help: Str.webOidcPolicyClaimDescription)
+        SwitchRow(
+          Str.webOidcSignOutRefused, subtitle: Str.webOidcSignOutRefusedDescription, isOn: $form.oidc.signOutRefused)
       }
     }
     // Nothing an admin types here is a sentence.
@@ -164,56 +159,29 @@ private struct AuthForm: View {
   }
 }
 
-/// The redirect URI to register with the provider, in a field of its own
-/// that can't be typed in, with Copy beside it, as the web has it.
+/// The redirect URI to register with the provider, as Android's row: its
+/// name muted over the address, and Copy, a link icon, at the end.
 private struct RedirectRow: View {
   let url: String
   @Environment(\.snackbar) private var snackbar
   @Environment(\.palette) private var palette
-  @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Space.s2_5) {
-      Text(Str.webOidcRedirectUri).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
-      // Side by side, the address cut in its middle; at the accessibility sizes, Copy under it.
-      if dynamicType.isAccessibilitySize {
-        VStack(alignment: .leading, spacing: Space.s2) {
-          field
-          copy
-        }
-      } else {
-        HStack(spacing: Space.s2) {
-          field
-          copy
-        }
+    HStack(spacing: Space.s2) {
+      VStack(alignment: .leading, spacing: 0) {
+        Text(Str.webOidcRedirectUri).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+        Text(url).textStyle(.sm).foregroundStyle(palette.foreground).textSelection(.enabled)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .accessibilityElement(children: .combine)
+      RoundIconButton(.link, label: Str.webOidcCopy, look: .ghost, size: 44, iconSize: 20) {
+        UIPasteboard.general.string = url
+        snackbar.show(Str.webOidcCopied)
       }
     }
-    .padding(.horizontal, Space.s4)
-    .padding(.vertical, Space.s2_5)
+    .padding(.leading, Space.s4)
+    .padding(.trailing, Space.s2)
+    .padding(.vertical, Space.s3)
     .frame(maxWidth: .infinity, alignment: .leading)
-  }
-
-  private var field: some View {
-    Text(url)
-      .textStyle(.sm)
-      .foregroundStyle(palette.foreground)
-      .lineLimit(dynamicType.isAccessibilitySize ? 3 : 1)
-      .truncationMode(.middle)
-      .textSelection(.enabled)
-      .padding(.horizontal, Space.s3)
-      .padding(.vertical, Space.s2)
-      .frame(maxWidth: .infinity, minHeight: TouchTarget, alignment: .leading)
-      .background(palette.field, in: RoundedRectangle.kit(Radius.lg))
-      .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.input) }
-      .accessibilityLabel(Str.webOidcRedirectUri)
-      .accessibilityValue(url)
-  }
-
-  private var copy: some View {
-    MatineeButton(Str.webOidcCopy, icon: .link, look: .outline) {
-      UIPasteboard.general.string = url
-      snackbar.show(Str.webOidcCopied)
-    }
-    .fixedSize()
   }
 }

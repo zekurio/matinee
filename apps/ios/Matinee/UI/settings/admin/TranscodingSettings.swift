@@ -59,10 +59,10 @@ private struct TranscodingForm: View {
     let acceleration = form.draft.hardwareAcceleration
     let hardware = acceleration != HardwareAcceleration.none
     let capabilities = form.saved.capabilities
-    VStack(alignment: .leading, spacing: Space.section) {
+    VStack(alignment: .leading, spacing: SETTINGS_SPACING) {
       FfmpegSection(capabilities: capabilities, detecting: detecting, onDetect: onDetect)
 
-      VStack(alignment: .leading, spacing: Space.s3) {
+      VStack(alignment: .leading, spacing: Space.s2) {
         ListSection(Str.webTranscodingHardwareTitle) {
           SelectRow(
             Str.webTranscodingHardwareAcceleration, selection: $form.draft.hardwareAcceleration,
@@ -96,16 +96,22 @@ private struct TranscodingForm: View {
       }
 
       if hardware {
-        ListSection(Str.webTranscodingDecodingTitle) {
-          ForEach(DECODE_SUPPORT[acceleration] ?? [], id: \.self) { codec in
-            SwitchRow(
-              videoCodecName(codec),
-              isOn: Binding(get: { form.draft.hardwareDecodingCodecs.contains(codec) }, set: { form.decode(codec, $0) }))
+        // The codecs, then the deeper colors, in two blocks, as Android's.
+        SettingsSection(Str.webTranscodingDecodingTitle) {
+          ListBlock {
+            ForEach(DECODE_SUPPORT[acceleration] ?? [], id: \.self) { codec in
+              SwitchRow(
+                videoCodecName(codec),
+                isOn: Binding(
+                  get: { form.draft.hardwareDecodingCodecs.contains(codec) }, set: { form.decode(codec, $0) }))
+            }
           }
-          SwitchRow(Str.webTranscodingDecodingHevc10, isOn: $form.draft.enableDecodingColorDepth10Hevc)
-          SwitchRow(Str.webTranscodingDecodingVp910, isOn: $form.draft.enableDecodingColorDepth10Vp9)
-          SwitchRow(Str.webTranscodingDecodingHevcRext, isOn: $form.draft.enableDecodingColorDepth10HevcRext)
-          SwitchRow(Str.webTranscodingDecodingHevcRext12, isOn: $form.draft.enableDecodingColorDepth12HevcRext)
+          ListBlock {
+            SwitchRow(Str.webTranscodingDecodingHevc10, isOn: $form.draft.enableDecodingColorDepth10Hevc)
+            SwitchRow(Str.webTranscodingDecodingVp910, isOn: $form.draft.enableDecodingColorDepth10Vp9)
+            SwitchRow(Str.webTranscodingDecodingHevcRext, isOn: $form.draft.enableDecodingColorDepth10HevcRext)
+            SwitchRow(Str.webTranscodingDecodingHevcRext12, isOn: $form.draft.enableDecodingColorDepth12HevcRext)
+          }
         }
       }
 
@@ -200,7 +206,9 @@ private struct TranscodingForm: View {
   }
 }
 
-/// What the server's ffmpeg is, when it was looked at, and looking again.
+/// What the server's ffmpeg is, when it was looked at, and looking again,
+/// as Android's: a block of what runs and a row that detects it again,
+/// with what failed under it.
 private struct FfmpegSection: View {
   let capabilities: TranscodingCapabilities
   let detecting: Bool
@@ -210,16 +218,20 @@ private struct FfmpegSection: View {
   var body: some View {
     let version = capabilities.version.flatMap(nonBlank) ?? Str.webTranscodingFfmpegUnknownVersion
     let error = capabilities.error.flatMap(nonBlank)
-    SettingsSection("FFmpeg") {
-      MatineeButton(
-        detecting ? Str.webTranscodingFfmpegDetecting : Str.webTranscodingFfmpegDetect, icon: .refreshCw,
-        look: .outline, pending: detecting, fullWidth: true, action: onDetect)
+    VStack(alignment: .leading, spacing: 0) {
+      ListBlock {
+        // What runs, and when the server last looked; not a link. The time as the web
+        // shows it: a relative one reads wrong in German's "erkannt am …".
+        ListRow(
+          "ffmpeg", subtitle: error == nil ? Str.webTranscodingFfmpegDetected(version, detectedAt(capabilities.detectedAt)) : nil,
+          icon: .film)
+        ListRow(
+          detecting ? Str.webTranscodingFfmpegDetecting : Str.webTranscodingFfmpegDetect, icon: .refreshCw,
+          action: { if !detecting { onDetect() } })
+      }
       if let error {
-        Note(Str.webTranscodingFfmpegFailed, color: palette.destructive)
+        Note(Str.webTranscodingFfmpegFailed, color: palette.destructive).padding(.top, Space.s2)
         Note(error)
-      } else {
-        // The time as the web shows it: a relative one reads wrong in German's "erkannt am …".
-        Note(Str.webTranscodingFfmpegDetected(version, detectedAt(capabilities.detectedAt)))
       }
     }
   }

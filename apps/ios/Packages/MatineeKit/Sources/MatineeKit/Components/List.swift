@@ -1,24 +1,29 @@
 import SwiftUI
 
 /*
- * Lists as the web draws them, not as iOS's grouped tables do: a bordered
- * block of rows, `rounded-xl`, split by hairlines (packages/ui's List and
- * the settings' SettingRows), under a title. Build a page's lists from a
- * ScrollView of `ListSection`s; the kit has no `List`, since SwiftUI's
- * draws the system's look.
+ * Lists as the Android app's Settings lays them out (SettingsRows.kt), in
+ * the web's colors and radii, not as iOS's grouped tables do: a bordered
+ * block of rows, `rounded-xl`, split by hairlines, under a heading in the
+ * page's title style. Rows are 16 in from the block's edges and 14 above
+ * and below, their names in `text-base`, a value or a line of detail in
+ * the muted color. Build a page's lists from a ScrollView of
+ * `ListSection`s; the kit has no `List`, since SwiftUI's draws the
+ * system's look.
  */
 
-/// How a section's title reads: a heading over a settings block (`text-base
-/// font-semibold`, the web's SettingsSubsection), or a quiet label over a
-/// group of links (`text-sm` muted, as Settings' "Administration").
+/// How a section's title reads: a heading over a block, in the page's
+/// title style (`pageTitleStyle()`), as Android's Settings `Section`; or a
+/// quiet label, `text-sm` muted, for a group that needs no heading of its
+/// own.
 public enum ListSectionTitleStyle: Sendable {
   case heading, label
 }
 
 /// A titled block of rows: `ListRow`s, `SwitchRow`s, `SelectRow`s,
-/// `ValueRow`s, or any view, with hairlines put between them. `footer` is
-/// a line of status under the block, `text-13px` muted, as the web's
-/// SettingNote. `action` sits at the title's end, as a section's Add.
+/// `ValueRow`s, or any view, with hairlines put between them, 14 under its
+/// heading. `footer` is a line under the block, 8 below it, `text-13px`
+/// muted, as Android's notes under a panel. `action` sits at the title's
+/// end, as a section's Add.
 public struct ListSection<Content: View, Action: View>: View {
   let title: String?
   let titleStyle: ListSectionTitleStyle
@@ -39,12 +44,12 @@ public struct ListSection<Content: View, Action: View>: View {
   }
 
   public var body: some View {
-    VStack(alignment: .leading, spacing: titleStyle == .heading ? Space.s3 : Space.s2) {
+    VStack(alignment: .leading, spacing: 0) {
       if let title {
         HStack(spacing: Space.s3) {
           Group {
             if titleStyle == .heading {
-              Text(title).textStyle(.base, weight: .semibold, tracking: .tight).foregroundStyle(palette.foreground)
+              Text(title).pageTitleStyle().foregroundStyle(palette.foreground)
             } else {
               Text(title).textStyle(.sm).foregroundStyle(palette.mutedForeground).padding(.horizontal, 4)
             }
@@ -53,10 +58,13 @@ public struct ListSection<Content: View, Action: View>: View {
           .accessibilityAddTraits(.isHeader)
           action()
         }
+        .padding(.bottom, titleStyle == .heading ? Space.s3_5 : Space.s2)
       }
       ListBlock(content: content)
       if let footer {
-        Text(footer).textStyle(.px13).foregroundStyle(palette.mutedForeground).padding(.horizontal, 4)
+        Text(footer).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.top, Space.s2)
       }
     }
   }
@@ -103,11 +111,13 @@ public enum ListRowAccessory: Sendable {
   case none
 }
 
-/// A row in a list, as the web's ListItem and ListItemButton: `min-h-14
-/// px-4 gap-3`, an icon, bare or on a tile (the web's RowIcon), a title
-/// in `text-base` and a line under it, then a value, what's in `trailing`,
-/// and the accessory. With an `action` the whole row is one tap target
-/// that lights up under a finger. `destructive` paints it in the danger color.
+/// A row in a list, as Android's Settings `LinkRow`: `px-4 py-3.5`, an
+/// icon, 20 and bare, or on a tile (the web's RowIcon), 14 before a title
+/// in `text-base` and a line under it in `text-13px` muted, then a value,
+/// at most 160 wide, what's in `trailing`, and the accessory. With an
+/// `action` the whole row is one tap target that lights up under a
+/// finger. `destructive` paints it in the danger color and drops the
+/// chevron, as Android's sign-out row.
 public struct ListRow<Trailing: View>: View {
   let title: String
   let subtitle: String?
@@ -154,21 +164,22 @@ public struct ListRow<Trailing: View>: View {
 
   private var face: some View {
     let color = destructive ? palette.destructive : palette.foreground
-    return HStack(spacing: Space.s3) {
+    return HStack(spacing: 0) {
       if let icon {
         if iconTile {
-          LucideIcon(icon, size: 16, tint: destructive ? color : palette.mutedForeground)
-            .frame(width: 36, height: 36)
+          LucideIcon(icon, size: 20, tint: destructive ? color : palette.mutedForeground)
+            .frame(width: 40, height: 40)
             .background(palette.secondary, in: RoundedRectangle.kit(Radius.lg))
         } else {
           LucideIcon(icon, size: 20, tint: destructive ? color : palette.mutedForeground)
-            .frame(minWidth: 24)
+            .frame(minWidth: 20)
         }
+        Spacer().frame(width: Space.s3_5)
       }
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: 0) {
         Text(title).textStyle(.base).foregroundStyle(color)
         if let subtitle {
-          Text(subtitle).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+          Text(subtitle).textStyle(.px13).foregroundStyle(palette.mutedForeground)
         }
         // Under the title at the accessibility sizes, where there's no room beside it.
         if let value, dynamicType.isAccessibilitySize {
@@ -181,20 +192,21 @@ public struct ListRow<Trailing: View>: View {
           .textStyle(.sm)
           .foregroundStyle(palette.mutedForeground)
           .lineLimit(1)
-          // As wide as it needs, up to 180, never squeezing the title beside it into wrapping.
-          .frame(maxWidth: 180, alignment: .trailing)
+          // As wide as it needs, up to 160, never squeezing the title beside it into wrapping.
+          .frame(maxWidth: 160, alignment: .trailing)
           .fixedSize()
+          .padding(.leading, Space.s3)
       }
       trailing()
       switch accessory ?? (action != nil && !destructive ? .chevron : .none) {
-      case .chevron: LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground)
-      case .check(let on): LucideIcon(.check, size: 18, tint: palette.accent).opacity(on ? 1 : 0)
+      case .chevron: LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground).padding(.leading, Space.s1)
+      case .check(let on): LucideIcon(.check, size: 18, tint: palette.accent).opacity(on ? 1 : 0).padding(.leading, Space.s3)
       case .none: EmptyView()
       }
     }
     .padding(.horizontal, Space.s4)
-    .padding(.vertical, Space.s2_5)
-    .frame(minHeight: 56)
+    .padding(.vertical, Space.s3_5)
+    .frame(minHeight: 52)
     .contentShape(Rectangle())
   }
 }
@@ -211,9 +223,9 @@ extension ListRow where Trailing == EmptyView {
   }
 }
 
-/// A setting's row, as the web's SettingRow: its name in `text-sm
-/// font-medium`, `px-4 py-2.5`, and the control. The whole row toggles a
-/// `SwitchRow`, as Android's does.
+/// A setting's row, as Android's Settings rows: its name in `text-base`,
+/// `px-4 py-3.5`, an optional icon 14 before it, and the control 12 after.
+/// The whole row toggles a `SwitchRow`.
 private struct SettingRowLayout<Control: View>: View {
   let title: String
   let subtitle: String?
@@ -229,8 +241,8 @@ private struct SettingRowLayout<Control: View>: View {
   var body: some View {
     // At the accessibility sizes a name and a value no longer fit side by side.
     let stacked = stacked || (stacksWhenLarge && dynamicType.isAccessibilitySize)
-    let text = VStack(alignment: .leading, spacing: 2) {
-      Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
+    let text = VStack(alignment: .leading, spacing: 0) {
+      Text(title).textStyle(.base).foregroundStyle(palette.foreground)
       if let subtitle { Text(subtitle).textStyle(.px13).foregroundStyle(palette.mutedForeground) }
     }
     .accessibilityHidden(titleHidden)
@@ -241,15 +253,18 @@ private struct SettingRowLayout<Control: View>: View {
           control()
         }
       } else {
-        HStack(spacing: Space.s3) {
-          if let icon { LucideIcon(icon, size: 20, tint: palette.mutedForeground).frame(minWidth: 24) }
+        HStack(spacing: 0) {
+          if let icon {
+            LucideIcon(icon, size: 20, tint: palette.mutedForeground).frame(minWidth: 20)
+            Spacer().frame(width: Space.s3_5)
+          }
           text.frame(maxWidth: .infinity, alignment: .leading)
-          control()
+          control().padding(.leading, Space.s3)
         }
       }
     }
     .padding(.horizontal, Space.s4)
-    .padding(.vertical, Space.s2_5)
+    .padding(.vertical, Space.s3_5)
     .frame(minHeight: 52, alignment: .leading)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
@@ -298,10 +313,11 @@ private struct RowToggleStyle: ToggleStyle {
   }
 }
 
-/// A choice among `options`, as the web's SelectRow: its name, and the
-/// `Select` under it on a phone (`stacked`, the web's `split` layout at
-/// phone width), or its value at the row's end with a chevron, opening the
-/// menu there, as Android's PickerRow (`stacked: false`).
+/// A choice among `options`, as Android's PickerRow: its name, and its
+/// value at the row's end with a chevron, the whole row opening a menu of
+/// the options there (the default, `stacked: false`). `stacked` puts the
+/// web's `Select` under the name instead, for a form on a wide screen
+/// that wants the web's layout.
 public struct SelectRow<Value: Hashable>: View {
   let title: String
   let options: [(Value, String)]
@@ -311,7 +327,7 @@ public struct SelectRow<Value: Hashable>: View {
   @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
 
-  public init(_ title: String, selection: Binding<Value>, options: [(Value, String)], stacked: Bool = true) {
+  public init(_ title: String, selection: Binding<Value>, options: [(Value, String)], stacked: Bool = false) {
     self.title = title
     self._selection = selection
     self.options = options
@@ -333,7 +349,7 @@ public struct SelectRow<Value: Hashable>: View {
             Text(current).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(1)
             LucideIcon(.chevronDown, size: 16, tint: palette.mutedForeground)
           }
-          .frame(maxWidth: dynamicType.isAccessibilitySize ? nil : 180, alignment: .trailing)
+          .frame(maxWidth: dynamicType.isAccessibilitySize ? nil : 160, alignment: .trailing)
           .dropdownMenu(isPresented: $open, align: .trailing) {
             ForEach(options.indices, id: \.self) { index in
               let option = options[index]

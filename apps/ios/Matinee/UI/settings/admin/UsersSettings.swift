@@ -27,7 +27,7 @@ struct UsersSettings: View {
     let users = loader.state.value ?? []
     AdminPage(Str.settingsAdminUsers) {
       AdminLoaded(loader) { users in
-        ListSection(Str.webUsersTitle) {
+        ListBlock {
           ForEach(users, id: \.id) { user in
             UserRow(user: user, isSelf: me?.id == user.id) { acting = Picked(user.id, user) }
           }
@@ -122,8 +122,9 @@ struct UsersSettings: View {
   }
 }
 
-/// An account: its picture, name and username, whether it's an admin, how
-/// it signs in, and when it was last here. The whole row opens its actions.
+/// An account, as Android's row: its picture, its name with whether it's
+/// an admin, and how it signs in and when it was last here. The whole row
+/// opens its actions, whose sheet names the username.
 private struct UserRow: View {
   let user: AdminUser
   let isSelf: Bool
@@ -133,25 +134,16 @@ private struct UserRow: View {
 
   var body: some View {
     Pressable(action: onOpen) {
-      HStack(spacing: Space.s3) {
+      HStack(spacing: Space.s3_5) {
         ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 40)
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 0) {
           name
-          Text(verbatim: "@\(user.username)").textStyle(.sm).foregroundStyle(palette.mutedForeground)
-          HStack(alignment: .firstTextBaseline, spacing: Space.s1_5) {
-            // An account with no way in, flagged as the web flags it.
-            if signIn.isEmpty {
-              LucideIcon(.triangleAlert, size: 14, tint: palette.warning)
-            }
-            Text(detail).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-          }
+          Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        LucideIcon(.ellipsis, size: 18, tint: palette.mutedForeground)
       }
       .padding(.horizontal, Space.s4)
       .padding(.vertical, Space.s3)
-      .frame(minHeight: 64)
       .contentShape(Rectangle())
     }
     .accessibilityElement(children: .combine)
@@ -168,13 +160,13 @@ private struct UserRow: View {
   }
 
   private var nameText: some View {
-    (Text(user.name).foregroundStyle(palette.foreground)
-      + Text(verbatim: isSelf ? " \(Str.webUsersYou)" : "").foregroundStyle(palette.mutedForeground))
+    (Text(user.name) + Text(verbatim: isSelf ? " \(Str.webUsersYou)" : ""))
+      .foregroundStyle(palette.foreground)
       .textStyle(.base)
   }
 
   @ViewBuilder private var badge: some View {
-    if user.isAdmin { Badge(Str.webUsersAdmin, look: .outline, icon: .shield) }
+    if user.isAdmin { Badge(Str.webUsersAdmin, look: .outline) }
   }
 
   private var signIn: [String] {
