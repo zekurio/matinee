@@ -4,7 +4,7 @@ A native SwiftUI app for iPhone and iPad, on iOS 18.0 or later, written in
 Swift 6. It follows the Android phone app's screens, drawn with MatineeKit,
 the SwiftUI port of the web's components, so it looks like the web app.
 Text comes in English and German.
-There is no tvOS app.
+The Apple TV app is in `MatineeTV`, after Android TV's; see its README.
 
 ## Build
 
