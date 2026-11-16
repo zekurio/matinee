@@ -53,9 +53,9 @@ recipes use those instead of Nix. The CI runner uses this option.
   See [Signing in apps](../server/README.md#signing-in-apps).
 - The tabs float at the bottom of a phone, as on the web and Android, and
   at the top of an iPad, as the web's bar from tablet widths up.
-- Home has the featured titles in a row of cards, Continue watching, Next
-  up, the server's recommendations with "Not interested", and recently
-  added titles.
+- Home has the featured titles in a row of cards on an iPhone, and in the
+  web's banner on an iPad, then Continue watching, Next up, the server's
+  recommendations with "Not interested", and recently added titles.
   Libraries have sorting, genre filters, and search. Browse genres,
   studios, and people, or search across the server.
 - Title, season, and episode pages show watched marks and favorites.

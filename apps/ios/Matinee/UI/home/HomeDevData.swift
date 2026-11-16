@@ -10,8 +10,8 @@ import MatineeCore
  * - `-dev.art YES`: fixed public pictures stand in for the featured
  *   titles' backdrops, and every one gets an overview, genres, and
  *   ratings. With no featured titles, Continue watching and Next up stand
- *   in. The iPhone's carousel takes real pictures from a folder with
- *   `-dev.featuredArt` (HomeCarouselDevData.swift).
+ *   in. The carousel and the iPad's banner take real pictures from a
+ *   folder with `-dev.featuredArt` (HomeCarouselDevData.swift).
  * - `-dev.recommendations YES`: with no recommendation rows from the
  *   server, two made of Home's other titles, so the rows and "Not
  *   interested" can be tried.

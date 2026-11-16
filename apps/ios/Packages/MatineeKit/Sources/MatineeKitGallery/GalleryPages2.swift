@@ -492,6 +492,16 @@ struct NavigationPage: View {
           StatusBarFrostDemo(label: "Scrolled", veil: 0.75, reducedVeil: 0.85, scrolled: true)
         }
       }
+      Demo(
+        "Nav bar over art",
+        note: "A tablet's bar frosts as over a scrolled page unless the page says otherwise: "
+          + "art under it at rest, as Home's banner, asks for the light frost with `.navBarFrost(…)`."
+      ) {
+        HStack(spacing: 12) {
+          NavBarFrostDemo(label: "navBarFrost, at rest", frost: NavBarFrost(veil: 0.35, reducedVeil: 0.6))
+          NavBarFrostDemo(label: "The bar's own", frost: nil)
+        }
+      }
       Demo("Keyboard shortcuts", note: "The bars give their tabs ⌘1, ⌘2, …; `.keyCommand` gives a page one of its own, as ⌘F to search.") {
         Text("⌘K pressed \(pressed) times").textStyle(.sm).foregroundStyle(palette.mutedForeground)
           .keyCommand("k", label: "Count") { pressed += 1 }
@@ -538,6 +548,40 @@ private struct StatusBarFrostDemo: View {
       Text(label).textStyle(.xs).foregroundStyle(palette.mutedForeground)
     }
     .frame(maxWidth: .infinity)
+  }
+}
+
+/// Art under a tablet's bar, the frost as the page asks or the bar's own.
+private struct NavBarFrostDemo: View {
+  let label: String
+  let frost: NavBarFrost?
+  @State private var tab = "home"
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      FakeArt(seed: 3)
+        .ignoresSafeArea()
+        .modifier(AskedFrost(frost: frost))
+        .navBar(
+          NavBar([TabBarItem("home", label: "Home", icon: .house)], selection: tab) { tab = $0 } leading: {
+            Circle().fill(palette.accent).frame(width: 24, height: 24).padding(.horizontal, 10)
+          }
+        )
+        .frame(height: 200)
+        .clipShape(RoundedRectangle.kit(Radius.xl))
+        .overlay { RoundedRectangle.kit(Radius.xl).strokeBorder(palette.border) }
+      Text(label).textStyle(.xs).foregroundStyle(palette.mutedForeground)
+    }
+    .frame(maxWidth: .infinity)
+  }
+}
+
+private struct AskedFrost: ViewModifier {
+  let frost: NavBarFrost?
+
+  func body(content: Content) -> some View {
+    if let frost { content.navBarFrost(frost) } else { content }
   }
 }
 

@@ -236,6 +236,11 @@ a value or a line of detail muted.
   capsule, centered at the top over the status bar's frost, of the logo,
   the tabs by name, and search and the account. The page's safe area
   starts below it.
+- `.navBarFrost(NavBarFrost(veil:, reducedVeil:, opacity:))` and
+  `\.navBarClearance`: for a page with art under a `NavBar` at rest, as
+  Home's banner on an iPad. The bar frosts as over a scrolled page unless
+  the page says how strong, and the clearance is how far below the
+  screen's top the page starts, which art in a scroll view reaches up by.
 - `StatusBarFrost(bar:, veil:, reducedVeil:)`: Android's status bar frost,
   the page blurred and veiled in `--background` across the status bar
   (`bar` tall), then thinning out over 48 below it, the blur easing off
