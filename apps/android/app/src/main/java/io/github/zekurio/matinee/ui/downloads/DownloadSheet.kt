@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -51,6 +50,7 @@ import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetHeader
 import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.player.audioLabel
@@ -143,20 +143,9 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     }
 
     Sheet(onDismissRequest = onDismiss, state = sheet) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 16.dp)) {
-            val (primary, secondary) = names(item)
-            Column(Modifier.padding(horizontal = 20.dp)) {
-                Text(
-                    stringResource(R.string.downloads_sheet_title_named, primary),
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (secondary != null) {
-                    Text(secondary, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Gap(12.dp)
+        val (primary, secondary) = names(item)
+        SheetHeader(stringResource(R.string.downloads_sheet_title_named, primary), secondary)
+        Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 16.dp)) {
             when {
                 error != null -> ErrorState(failure, error, null, Modifier.fillMaxWidth().padding(vertical = 24.dp))
                 loaded == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {

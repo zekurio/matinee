@@ -13,15 +13,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.systemGestureExclusion
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,7 +43,6 @@ import io.github.zekurio.matinee.ui.kit.ButtonLook
 import io.github.zekurio.matinee.ui.kit.Chip
 import io.github.zekurio.matinee.ui.kit.ChoiceChip
 import io.github.zekurio.matinee.ui.kit.Gap
-import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.MatineeButton
@@ -54,6 +50,10 @@ import io.github.zekurio.matinee.ui.kit.MatineeTextField
 import io.github.zekurio.matinee.ui.kit.RangeSlider
 import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetBody
+import io.github.zekurio.matinee.ui.kit.SheetFooter
+import io.github.zekurio.matinee.ui.kit.SheetHeader
+import io.github.zekurio.matinee.ui.kit.SheetPadding
 import io.github.zekurio.matinee.ui.kit.ToggleChip
 import io.github.zekurio.matinee.ui.kit.rememberSheetCloser
 import io.github.zekurio.matinee.ui.kit.rememberSheetState
@@ -116,30 +116,24 @@ fun ActiveFilterChips(chips: List<ActiveFilter>, onClear: () -> Unit) {
 fun FilterSheet(active: Int, onClear: () -> Unit, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val sheet = rememberSheetState()
     val closer = rememberSheetCloser(sheet, onDismiss)
-    Sheet(onDismissRequest = onDismiss, state = sheet, handle = true) {
-        Text(
-            stringResource(R.string.web_filters_title),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp),
-        )
-        Column(
-            Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = Gutter, vertical = 8.dp),
+    Sheet(onDismissRequest = onDismiss, state = sheet) {
+        SheetHeader(stringResource(R.string.web_filters_title))
+        SheetBody(
+            Modifier.padding(horizontal = SheetPadding, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
             content = content,
         )
-        HorizontalDivider(color = Palette.Border)
-        Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = Gutter, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (active > 0) {
-                MatineeButton(onClick = onClear, look = ButtonLook.Ghost) {
-                    LucideIcon(Lucide.X, null, size = 16.dp)
-                    Text(stringResource(R.string.browse_clear_filters))
+        SheetFooter {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (active > 0) {
+                    MatineeButton(onClick = onClear, look = ButtonLook.Ghost) {
+                        LucideIcon(Lucide.X, null, size = 16.dp)
+                        Text(stringResource(R.string.browse_clear_filters))
+                    }
                 }
+                Box(Modifier.weight(1f))
+                MatineeButton(onClick = { closer {} }) { Text(stringResource(R.string.web_filters_done)) }
             }
-            Box(Modifier.weight(1f))
-            MatineeButton(onClick = { closer {} }) { Text(stringResource(R.string.web_filters_done)) }
         }
     }
 }
@@ -304,17 +298,17 @@ fun OptionSheet(
     val res = LocalResources.current
     var query by remember { mutableStateOf("") }
     val shown = choices.filter { query.isBlank() || it.label.contains(query.trim(), ignoreCase = true) }
-    Sheet(onDismissRequest = onDismiss, handle = true) {
-        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp))
+    Sheet(onDismissRequest = onDismiss) {
+        SheetHeader(title, line = false)
         MatineeTextField(
             value = query,
             onValueChange = { query = it },
             placeholder = stringResource(findPlaceholder),
             leadingIcon = Lucide.Search,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = SheetPadding, vertical = 8.dp),
         )
         HorizontalDivider(color = Palette.Border)
-        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 480.dp).navigationBarsPadding()) {
+        LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 480.dp)) {
             if (query.isBlank()) {
                 item(key = "any") { PickRow(any, null, current == null) { onPick(null) } }
             }
@@ -328,7 +322,7 @@ fun OptionSheet(
 @Composable
 private fun PickRow(name: String, count: String?, selected: Boolean, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = Gutter, vertical = 14.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = SheetPadding, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))

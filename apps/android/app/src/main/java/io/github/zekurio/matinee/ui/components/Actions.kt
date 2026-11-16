@@ -1,8 +1,5 @@
 package io.github.zekurio.matinee.ui.components
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -39,6 +36,7 @@ import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetBody
 import io.github.zekurio.matinee.ui.kit.SheetHeader
 import io.github.zekurio.matinee.ui.kit.SheetItem
 import io.github.zekurio.matinee.ui.kit.ToastState
@@ -200,7 +198,7 @@ fun ActionsSheet(actions: Actions) {
         Unit
     }
     Sheet(onDismissRequest = { actions.target = null }, state = sheet) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
+        SheetBody(Modifier.padding(bottom = 8.dp)) {
             when (target) {
                 is ActionTarget.Item -> ItemActions(target.item, target.here, dismiss)
                 is ActionTarget.Title -> TitleActions(target.title, target.file, target.here, target.recommended, dismiss)

@@ -3,7 +3,6 @@ package io.github.zekurio.matinee.ui.requests
 import android.content.res.Resources
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
@@ -41,6 +40,7 @@ import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetBody
 import io.github.zekurio.matinee.ui.kit.SheetHeader
 import io.github.zekurio.matinee.ui.kit.SheetItem
 import io.github.zekurio.matinee.ui.kit.rememberSheetCloser
@@ -155,7 +155,7 @@ fun NotInterestedSheet(item: CatalogTitleSummary, onDismiss: () -> Unit) {
     val done = stringResource(R.string.web_discover_dismissed, item.name)
     val failure = stringResource(R.string.web_discover_dismissFailed, item.name)
     Sheet(onDismissRequest = onDismiss, state = sheet) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
+        SheetBody(Modifier.padding(bottom = 8.dp)) {
             SheetHeader(item.name, item.year?.toString())
             SheetItem(Lucide.EyeOff, stringResource(R.string.web_discover_notInterested)) {
                 close { actions.hideRecommendation(api, snackbar, item.ref, done, failure) }

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +34,7 @@ import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetBody
 import io.github.zekurio.matinee.ui.kit.SheetHeader
 import io.github.zekurio.matinee.ui.kit.SheetItem
 import io.github.zekurio.matinee.ui.kit.Spinner
@@ -87,7 +87,7 @@ fun ServerSwitcherSheet(session: Session, onDismiss: () -> Unit) {
     val sheet = rememberSheetState()
     val close = rememberSheetCloser(sheet, onDismiss)
     Sheet(onDismissRequest = onDismiss, state = sheet) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
+        SheetBody(Modifier.padding(bottom = 8.dp)) {
             SheetHeader(stringResource(R.string.servers_title), null)
             servers.forEach { server ->
                 ServerRow(

@@ -1,8 +1,5 @@
 package io.github.zekurio.matinee.ui.components
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +20,7 @@ import io.github.zekurio.matinee.ui.kit.Dialog
 import io.github.zekurio.matinee.ui.kit.DialogButton
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetBody
 import io.github.zekurio.matinee.ui.kit.SheetHeader
 import io.github.zekurio.matinee.ui.kit.SheetItem
 import io.github.zekurio.matinee.ui.kit.rememberSheetState
@@ -67,7 +65,7 @@ internal fun WatchedAtSheet(ask: WatchedAsk, onDone: () -> Unit) {
         return
     }
     Sheet(onDismissRequest = onDone, state = sheet) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
+        SheetBody(Modifier.padding(bottom = 8.dp)) {
             SheetHeader(stringResource(R.string.media_mark_watched), ask.name)
             SheetItem(Lucide.Clock, stringResource(R.string.media_watched_at_now)) {
                 mark(null)

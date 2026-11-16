@@ -3,7 +3,7 @@ package io.github.zekurio.matinee.ui.requests
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +42,7 @@ import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.kit.Checkbox
 import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.kit.Shapes
+import io.github.zekurio.matinee.ui.kit.SheetFooter
 import io.github.zekurio.matinee.ui.kit.Switch
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -64,7 +68,6 @@ fun RequestSheet(
     only: Int? = null,
     onDismiss: () -> Unit,
 ) {
-    val api = LocalApi.current
     val res = LocalResources.current
     val hub = LocalRequests.current
     val today = LocalDate.now()
@@ -74,58 +77,27 @@ fun RequestSheet(
     var future by remember { mutableStateOf(first && defaultFuture && only == null) }
     val chosen = seasons.filter { it.number in picked }
     val label = if (show) chooserLabel(chosen, future, first) else ChooserLabel.Title
+    // Opened from a season's card, the list starts at that season.
+    val list = rememberLazyListState(initialFirstVisibleItemIndex = seasons.indexOfFirst { it.number == only }.coerceAtLeast(0))
     AskSheet(res.getString(R.string.web_ask_dialog_title, name), onDismiss) { close ->
         if (show) {
-            Column {
-                seasons.forEach { season ->
-                    val availability = season.availability.asTitle()
-                    val open = availability.asks
+            // The seasons scroll between the title and the button, which
+            // stay put however many seasons a show has, as the web's do.
+            LazyColumn(
+                Modifier.fillMaxWidth().weight(1f, fill = false),
+                state = list,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                items(seasons, key = { it.number }) { season ->
                     val checked = season.number in picked
-                    val toggle = { picked = if (checked) picked - season.number else picked + season.number }
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 52.dp)
-                            .clip(Shapes.Md)
-                            .then(if (open) Modifier.clickable(role = Role.Checkbox, onClick = toggle) else Modifier)
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        if (open) {
-                            // In the 20dp a missing box keeps, so the posters line up.
-                            Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
-                                Checkbox(checked = checked, onCheckedChange = null)
-                            }
-                        } else {
-                            Box(Modifier.size(20.dp))
-                        }
-                        Box(Modifier.width(28.dp)) {
-                            ArtFrame("${titleRef.key}:${season.number}", 2f / 3f) {
-                                Picture(listOfNotNull(api.art(season.poster)), Modifier.fillMaxSize())
-                            }
-                        }
-                        Text(
-                            seasonName(season.number, res),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                            color = if (open) Palette.Foreground else Palette.Muted,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            if (open) seasonDetailText(seasonDetail(season, today), res)
-                            else stateWord(availability, today)?.let { stateText(it, res) } ?: stringResource(R.string.web_ask_chooser_unavailable),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Palette.Muted,
-                            maxLines = 1,
-                        )
+                    SeasonRow(titleRef, season, checked, today) {
+                        picked = if (checked) picked - season.number else picked + season.number
                     }
                 }
             }
-            if (first) {
-                HorizontalDivider(color = Palette.Border)
+        }
+        SheetFooter(line = show) {
+            if (show && first) {
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Switch) { future = !future },
                     verticalAlignment = Alignment.CenterVertically,
@@ -134,16 +106,64 @@ fun RequestSheet(
                     Switch(checked = future, onCheckedChange = { future = it })
                 }
             }
+            MatineeButton(
+                onClick = {
+                    val scope = if (show) ShowScope(chosen.map { it.number }, future && first) else null
+                    hub.ask(titleRef, name, libraryId, scope, undo = first) { close {} }
+                },
+                enabled = label != ChooserLabel.PickOne && hub.busy[titleRef.key] != true,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(chooserText(label, res))
+            }
         }
-        MatineeButton(
-            onClick = {
-                val scope = if (show) ShowScope(chosen.map { it.number }, future && first) else null
-                hub.ask(titleRef, name, libraryId, scope, undo = first) { close {} }
-            },
-            enabled = label != ChooserLabel.PickOne && hub.busy[titleRef.key] != true,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(chooserText(label, res))
+    }
+}
+
+/**
+ * A season in the request sheet: its box while it may still be
+ * requested, its poster, its name, and what's coming or its state.
+ */
+@Composable
+private fun SeasonRow(titleRef: CatalogRef, season: CatalogSeason, checked: Boolean, today: LocalDate, onToggle: () -> Unit) {
+    val api = LocalApi.current
+    val res = LocalResources.current
+    val availability = season.availability.asTitle()
+    val open = availability.asks
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .clip(Shapes.Md)
+            .then(if (open) Modifier.toggleable(value = checked, role = Role.Checkbox, onValueChange = { onToggle() }) else Modifier)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        // A season that can't be asked for keeps the box's room, so the posters line up.
+        Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
+            if (open) Checkbox(checked = checked, onCheckedChange = null)
         }
+        Box(Modifier.width(28.dp)) {
+            ArtFrame("${titleRef.key}:${season.number}", 2f / 3f) {
+                Picture(listOfNotNull(api.art(season.poster)), Modifier.fillMaxSize())
+            }
+        }
+        Text(
+            seasonName(season.number, res),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            color = if (open) Palette.Foreground else Palette.Muted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            if (open) seasonDetailText(seasonDetail(season, today), res)
+            else stateWord(availability, today)?.let { stateText(it, res) } ?: stringResource(R.string.web_ask_chooser_unavailable),
+            style = MaterialTheme.typography.bodySmall,
+            color = Palette.Muted,
+            maxLines = 1,
+        )
     }
 }
