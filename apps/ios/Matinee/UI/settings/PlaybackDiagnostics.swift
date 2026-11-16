@@ -91,26 +91,21 @@ struct TextSheet: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    VStack(spacing: 0) {
-      SheetHeader(title)
-      ScrollView([.vertical]) {
-        Text(text)
-          .monoTextStyle(.xs)
-          .foregroundStyle(palette.foreground)
-          .textSelection(.enabled)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, Space.s5)
-          .padding(.vertical, Space.s2)
-      }
-      .defaultScrollAnchor(latestLast ? .bottom : .top)
-      Separator()
+    SheetHeader(title)
+    SheetBody(sides: Space.sheet, top: Space.s2, bottom: Space.s2) {
+      Text(text)
+        .monoTextStyle(.xs)
+        .foregroundStyle(palette.foreground)
+        .textSelection(.enabled)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .defaultScrollAnchor(latestLast ? .bottom : .top)
+    SheetFooter {
       HStack(spacing: Space.s2_5) {
         MatineeButton(Str.diagnosticsClose, look: .ghost) { dismiss() }
         Spacer(minLength: 0)
         MatineeButton(copyLabel, icon: nil, look: .secondary, action: onCopy)
       }
-      .padding(.horizontal, Space.s4)
-      .padding(.vertical, Space.s2_5)
     }
   }
 }

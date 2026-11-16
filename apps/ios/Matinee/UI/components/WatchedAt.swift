@@ -23,14 +23,13 @@ struct WatchedAtSheet: View {
   init(_ ask: WatchedAsk) { self.ask = ask }
 
   var body: some View {
-    VStack(spacing: 0) {
+    SheetBody(bottom: Space.s2) {
       SheetHeader(Str.mediaMarkWatched, subtitle: ask.name)
       SheetItem(Str.mediaWatchedAtNow, icon: .clock) { markWatched(ask, nil, snackbar) }
       SheetItem(Str.mediaWatchedAtReleased, icon: .calendar) { markWatched(ask, WatchedAt.released, snackbar) }
       SheetItem(Str.mediaWatchedAtOther, icon: .calendarClock) { actions?.watchedDay = ask }
       SheetItem(Str.mediaWatchedAtUnknown, icon: .calendarOff) { markWatched(ask, WatchedAt.unknown, snackbar) }
     }
-    .padding(.vertical, Space.s2)
   }
 }
 

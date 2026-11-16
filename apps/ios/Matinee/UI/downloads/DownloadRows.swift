@@ -363,7 +363,7 @@ struct DownloadActions: View {
   var body: some View {
     let (primary, secondary) = downloadNames(entry.item)
     let id = entry.id
-    VStack(spacing: 0) {
+    SheetBody(bottom: Space.s2) {
       SheetHeader(primary, subtitle: secondary ?? statusLine)
       if let command = StateCommand(rowAction(entry)) {
         SheetItem(command.label, icon: command.icon) { changeDownloads(downloads, snackbar, [id], command.change) }
@@ -379,7 +379,6 @@ struct DownloadActions: View {
         changeDownloads(downloads, snackbar, [id]) { try await $0.remove($1) }
       }
     }
-    .padding(.vertical, Space.s2)
   }
 
   /// A movie has no second name: how it stands goes under it instead.
@@ -401,7 +400,7 @@ struct ShowActions: View {
 
   var body: some View {
     let commands = ShowCommands(entries)
-    VStack(spacing: 0) {
+    SheetBody(bottom: Space.s2) {
       SheetHeader(title.name, subtitle: episodesAndSize(entries))
       if !commands.pause.isEmpty {
         SheetItem(Str.downloadsPauseAll, icon: .pause) {
@@ -418,6 +417,5 @@ struct ShowActions: View {
       }
       SheetItem(Str.downloadsRemoveNamed(title.name), icon: .trash, destructive: true, action: onRemove)
     }
-    .padding(.vertical, Space.s2)
   }
 }

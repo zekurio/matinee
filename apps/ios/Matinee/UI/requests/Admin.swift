@@ -55,37 +55,30 @@ struct DeclineSheet: View {
 
   var body: some View {
     let askedBy = item.followers.map(\.name)
-    ScrollView {
-      VStack(alignment: .leading, spacing: Space.s4) {
-        Text(Str.webRequestsDeclineTitle(item.title.name))
-          .textStyle(.lg, weight: .semibold, tracking: .tight)
-          .foregroundStyle(palette.foreground)
-          .lineLimit(2)
-          .accessibilityAddTraits(.isHeader)
-        VStack(alignment: .leading, spacing: Space.s1) {
-          Text(Str.webRequestsDeclineReason).textStyle(.sm, weight: .medium).foregroundStyle(palette.mutedForeground)
-          VStack(spacing: 0) {
-            ForEach(WaitingDeclineReason.knownValues, id: \.self) { code in
-              ReasonRow(label: requestReasonLabel(code), selected: reason == code) { reason = code }
-            }
+    SheetHeader(Str.webRequestsDeclineTitle(item.title.name))
+    SheetBody(sides: Space.sheet, top: Space.s4, bottom: Space.s4, spacing: Space.s4) {
+      VStack(alignment: .leading, spacing: Space.s1) {
+        Text(Str.webRequestsDeclineReason).textStyle(.sm, weight: .medium).foregroundStyle(palette.mutedForeground)
+        VStack(spacing: 0) {
+          ForEach(WaitingDeclineReason.knownValues, id: \.self) { code in
+            ReasonRow(label: requestReasonLabel(code), selected: reason == code) { reason = code }
           }
-          .padding(.horizontal, -Space.s5)
         }
-        FormField(askedBy.isEmpty ? Str.webRequestsDeclineNote : Str.webRequestsDeclineNoteFor(requestNames(askedBy))) {
-          MatineeTextField(Str.webRequestsDeclineNotePlaceholder, text: $note)
-        }
-        MatineeButton(Str.webRequestsDeclineSubmit, look: .primary, dimmed: reason == nil, fullWidth: true) {
-          guard let reason, let hub else { return }
-          let text = note.trimmingCharacters(in: .whitespacesAndNewlines)
-          let item = item
-          dismiss { hub.answer(item, .decline(reason: reason, note: text.isEmpty ? nil : text)) }
-        }
+        .padding(.horizontal, -Space.sheet)
       }
-      .padding(.horizontal, Space.s5)
-      .padding(.top, Space.s2)
-      .padding(.bottom, Space.s5)
+      FormField(askedBy.isEmpty ? Str.webRequestsDeclineNote : Str.webRequestsDeclineNoteFor(requestNames(askedBy))) {
+        MatineeTextField(Str.webRequestsDeclineNotePlaceholder, text: $note)
+      }
     }
-    .scrollBounceBehavior(.basedOnSize)
+    // The button stays in reach, above the keyboard while the note is typed.
+    SheetFooter {
+      MatineeButton(Str.webRequestsDeclineSubmit, look: .primary, dimmed: reason == nil, fullWidth: true) {
+        guard let reason, let hub else { return }
+        let text = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let item = item
+        dismiss { hub.answer(item, .decline(reason: reason, note: text.isEmpty ? nil : text)) }
+      }
+    }
   }
 }
 
@@ -102,7 +95,7 @@ private struct ReasonRow: View {
         Text(label).textStyle(.base).foregroundStyle(palette.foreground).frame(maxWidth: .infinity, alignment: .leading)
         if selected { LucideIcon(.check, size: 18, tint: palette.accent) }
       }
-      .padding(.horizontal, Space.s5)
+      .padding(.horizontal, Space.sheet)
       .frame(minHeight: 48)
       .contentShape(Rectangle())
     }
@@ -297,7 +290,7 @@ private struct RowMenu: View {
   @Environment(\.navigator) private var nav
 
   var body: some View {
-    VStack(spacing: 0) {
+    SheetBody(bottom: Space.s2) {
       SheetHeader(item.title.name, subtitle: [item.library.name, item.connection?.name ?? Str.webRequestsNoConnection].joined(separator: " · "))
       if list == .waiting, hub?.queue.canAnswer(item) == true {
         SheetItem(Str.webRequestsAdd, icon: .check) { hub?.answer(item, .add) }
@@ -311,6 +304,5 @@ private struct RowMenu: View {
         }
       }
     }
-    .padding(.vertical, Space.s2)
   }
 }
