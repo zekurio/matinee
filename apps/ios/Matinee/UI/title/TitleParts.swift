@@ -1,84 +1,232 @@
 import MatineeCore
 import MatineeKit
+import Nuke
+import NukeUI
 import SwiftUI
 
 /*
  * TitleParts.kt: the pieces the title, season, and episode pages are made
- * of, as the web's title header, crew lines, seasons rail, and media info
- * draw them.
+ * of, drawn as the web's title-header.tsx, credits.tsx, media-info.tsx,
+ * episodes.tsx, and seasons-rail.tsx draw them. What they decide from the
+ * server's answers is MatineeCore's (Title/), and their words TitleData.swift's.
+ *
+ * On a phone a page's heading sits low on its art and spans the width; from
+ * the web's `sm` up, 640 points, the poster or the still stands beside it
+ * all, with the buttons level with its foot.
  */
 
-/// How tall a title's backdrop is: most of a phone's upper half, never more than 420.
-func backdropHeight(_ window: CGSize) -> CGFloat { min(window.height * 0.46, 420) }
+// MARK: Layout
 
-/// How far down the backdrop a page's heading starts, so it overlaps the art's faded end.
-func headingTop(_ window: CGSize) -> CGFloat { backdropHeight(window) - 150 }
+/// How a title's page lays out in a window: the web's phone layout, or from
+/// `sm` up its poster beside the details.
+struct TitleLayout {
+  let window: CGSize
 
-/// Where a phone starts a heading without its poster or still, lower, for
-/// more of the backdrop, as the web's `max(10rem, 30vh)`.
-func phoneHeadingTop(_ window: CGSize) -> CGFloat { max(160, window.height * 0.3) }
+  /// The web's `sm`: the poster or still beside the details.
+  var wide: Bool { window.width >= 640 }
+  /// The web's `lg`.
+  var large: Bool { window.width >= 1024 }
 
-/// How far the window's sides are inset for a notch or the Dynamic Island,
-/// which the backdrop reaches past, as Android's goes edge to edge. Read
-/// from the window rather than measured on the page: a page that measured
-/// its own insets and widened its content by them would measure again.
-private func windowSides(_ direction: LayoutDirection) -> (leading: CGFloat, trailing: CGFloat) {
-  let window = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-    .flatMap(\.windows).first(where: \.isKeyWindow)
-  let insets = window?.safeAreaInsets ?? .zero
-  return direction == .rightToLeft ? (insets.right, insets.left) : (insets.left, insets.right)
-}
-
-/// The art across the top of a title's pages, faded into the page under the header.
-struct Backdrop: View {
-  let sources: [ImageSource]
-  let toneKey: String
-  @Environment(\.windowSize) private var window
-  @Environment(\.layoutDirection) private var direction
-  @Environment(\.palette) private var palette
-
-  init(_ sources: [ImageSource?], toneKey: String) {
-    self.sources = sources.compactMap(\.self)
-    self.toneKey = toneKey
+  /// The backdrop: `min(46vh, 420)` on a phone, `min(54vh, 520)` wider, as
+  /// the web's title and season headers; an episode's is taller from `sm`
+  /// up, `min(64vh, 600)`, for its still to sit on.
+  func backdropHeight(episode: Bool = false) -> CGFloat {
+    if !wide { return min(window.height * 0.46, 420) }
+    return episode ? min(window.height * 0.64, 600) : min(window.height * 0.54, 520)
   }
 
+  /// Where the heading starts, from the screen's top. A phone's title and
+  /// episode start low, `max(10rem, 30vh)`, for more of the art; a season's,
+  /// with its poster beside the name, `max(7rem, 20vh)`; wider, the poster's
+  /// top, `max(8rem, 14vh)`, or an episode's still's, `max(12rem, 32vh)`.
+  func headingTop(season: Bool = false, episode: Bool = false) -> CGFloat {
+    if wide { return episode ? max(192, window.height * 0.32) : max(128, window.height * 0.14) }
+    return season ? max(112, window.height * 0.2) : max(160, window.height * 0.3)
+  }
+
+  /// The header poster: `w-24` beside a phone's season name, `w-48`, `lg:w-56`.
+  var posterWidth: CGFloat { !wide ? 96 : large ? 224 : 192 }
+
+  /// An episode's still beside its details: `w-80`, `lg:w-[28rem]`, `xl:w-[32rem]`.
+  var stillWidth: CGFloat { window.width >= 1280 ? 512 : large ? 448 : 320 }
+
+  /// The page's name: `text-[28px]` on a phone, as Home's banner names a
+  /// title, so Details opens on the same name; `text-4xl`, `lg:text-5xl`.
+  var nameSize: TextSize { !wide ? .px28 : large ? .xl5 : .xl4 }
+
+  /// Room between a page's sections: `gap-6 sm:gap-8`.
+  var sectionSpacing: CGFloat { wide ? Space.s8 : Space.s6 }
+}
+
+// MARK: Backdrop
+
+/// How a backdrop is shaded into the page.
+enum BackdropShade {
+  /// A title's or season's, as Home's banner: from the start where the
+  /// details sit, and up from the bottom.
+  case title
+  /// An episode's, a little deeper, for the still and the details over it.
+  case episode
+}
+
+/// The art across the top of a title's pages, faded into the page under
+/// the heading. The first of `sources` that loads; with none, `blurred`,
+/// the poster, softly, so the page doesn't go flat, as the web's; else the
+/// title's tone.
+struct Backdrop: View {
+  let sources: [ImageSource]
+  var blurred: ImageSource?
+  let toneKey: String
+  let height: CGFloat
+  var shade: BackdropShade = .title
+  var wide = false
+  @Environment(\.palette) private var palette
+
   var body: some View {
-    // The window's size is what changes with the insets, on a turn; reading it here redraws this then.
-    let sides = window.width > 0 ? windowSides(direction) : (leading: 0, trailing: 0)
-    Tone(toneKey)
-      .overlay { Picture(sources, alignment: .top) }
-      // The web's two shades: from the start, where the text sits, and up
-      // from the bottom into the page. The art stays a backdrop, so what
-      // sits on it, a poster or an episode's still, stands out.
-      .overlay {
-        LinearGradient(
-          stops: [
-            .init(color: palette.background.opacity(0.95), location: 0),
-            .init(color: palette.background.opacity(0.5), location: 0.5),
-            .init(color: .clear, location: 1),
-          ], startPoint: .leading, endPoint: .trailing)
+    ZStack(alignment: .bottom) {
+      Tone(toneKey)
+      if sources.isEmpty, let blurred {
+        Picture(blurred).scaleEffect(1.1).blur(radius: 40).opacity(0.5)
+      } else {
+        Picture(sources, alignment: .top)
       }
-      .overlay {
+      shading
+    }
+    .frame(maxWidth: .infinity)
+    .frame(height: height)
+    .clipped()
+    .accessibilityHidden(true)
+  }
+
+  @ViewBuilder private var shading: some View {
+    let deep = shade == .episode
+    if wide {
+      // `from-background/95 via-background/60 to-transparent` across, and up from the bottom.
+      LinearGradient(
+        stops: [
+          .init(color: palette.background.opacity(0.95), location: 0),
+          .init(color: palette.background.opacity(deep ? 0.5 : 0.6), location: 0.5),
+          .init(color: palette.background.opacity(0), location: 1),
+        ], startPoint: .leading, endPoint: .trailing)
+      LinearGradient(
+        stops: [
+          .init(color: palette.background.opacity(0), location: 0),
+          .init(color: palette.background.opacity(deep ? 0.7 : 0.4), location: deep ? 0.6 : 0.65),
+          .init(color: palette.background, location: 1),
+        ], startPoint: .top, endPoint: .bottom)
+    } else {
+      // A phone's heading spans the width at the bottom, so its shade is
+      // there and not down the side, which hid half the picture, as Home's
+      // banner on a phone.
+      GeometryReader { proxy in
         LinearGradient(
           stops: [
-            .init(color: .clear, location: 0),
-            .init(color: palette.background.opacity(0.7), location: 0.6),
+            .init(color: palette.background.opacity(0), location: 0),
+            .init(color: palette.background.opacity(deep ? 0.75 : 0.7), location: 0.45),
             .init(color: palette.background, location: 1),
-          ], startPoint: .top, endPoint: .bottom)
+          ], startPoint: .top, endPoint: .bottom
+        )
+        .frame(height: proxy.size.height * 0.7)
+        .frame(maxHeight: .infinity, alignment: .bottom)
       }
-      .frame(maxWidth: .infinity)
-      .frame(height: backdropHeight(window))
-      .clipped()
-      .padding(.leading, -sides.leading)
-      .padding(.trailing, -sides.trailing)
+    }
+  }
+}
+
+// MARK: Heading
+
+/// The poster beside a heading, 2:3, lifted off the art by a deep shadow,
+/// as the web's `HeaderPoster`: the name on the tone until it loads.
+struct HeaderPoster: View {
+  let name: String
+  let poster: ImageSource?
+
+  var body: some View {
+    PosterArt(name: name, poster: poster)
+      .kitShadow(.dialog)
       .accessibilityHidden(true)
   }
 }
 
-/// Names joined as a sentence, each a link: "A, B and C". The sentence
-/// wraps as text does, so a long list reads on as the web's does.
+/// A page's name as its logo when the provider has one, else as text. The
+/// logo keeps a fixed box, so it can't push the page around as it loads,
+/// the web's worry with logos; one that fails gives way to the name.
+struct HeadingMark: View {
+  let name: String
+  var logo: URL?
+  let size: TextSize
+  var wide = false
+  @Environment(\.imagePipeline) private var pipeline
+  @Environment(\.palette) private var palette
+  @State private var failed: URL?
+
+  var body: some View {
+    if let logo, failed != logo {
+      LazyImage(request: ImageRequest(url: logo), transaction: Transaction(animation: Motion.image)) { state in
+        if let image = state.image {
+          image.resizable().aspectRatio(contentMode: .fit)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
+        }
+      }
+      .pipeline(pipeline)
+      .onCompletion { result in
+        if case .failure = result { failed = logo }
+      }
+      .frame(maxWidth: wide ? 420 : 280, alignment: .leading)
+      .frame(height: wide ? 104 : 72)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .accessibilityElement()
+      .accessibilityLabel(name)
+      .accessibilityAddTraits(.isHeader)
+    } else {
+      Text(name)
+        .textStyle(size, weight: .semibold, tracking: .tight)
+        .foregroundStyle(palette.foreground)
+        .lineLimit(3)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityAddTraits(.isHeader)
+    }
+  }
+}
+
+/// The facts under a name, in a line that wraps: the facts themselves,
+/// the age rating outlined, the score by its star, and a movie's file's
+/// badges, as the web's title header.
+struct FactsRow: View {
+  let facts: [String]
+  var contentRating: String?
+  var rating: Double?
+  var flags: [String] = []
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    if !facts.isEmpty || contentRating != nil || rating != nil || !flags.isEmpty {
+      FlowRow(spacing: Space.s3, lineSpacing: Space.s1_5) {
+        if !facts.isEmpty {
+          Text(facts.joined(separator: " · ")).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8))
+        }
+        if let contentRating { Badge(contentRating, look: .metaOutline) }
+        if let rating {
+          HStack(spacing: Space.s1) {
+            LucideIcon(.star, size: 14, tint: palette.star)
+            Text(formatRating(rating)).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8))
+          }
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("\(Str.mediaHeroRated) \(formatRating(rating))")
+        }
+        ForEach(flags, id: \.self) { Badge($0, look: .meta) }
+      }
+    }
+  }
+}
+
+/// Names in running text, each a link: "A, B and C", or with `sentence`
+/// off, a plain list, "A, B, C", as the web lists genres. The text wraps as
+/// text does.
 struct LinkedNames: View {
   let names: [String]
+  var sentence = true
   let color: Color
   let onTap: (String) -> Void
   @Environment(\.palette) private var palette
@@ -90,7 +238,7 @@ struct LinkedNames: View {
       link.link = URL(string: "matinee-name:\(index)")
       text += link
       if index < names.count - 1 {
-        var gap = AttributedString(index == names.count - 2 ? " \(Str.commonAnd) " : ", ")
+        var gap = AttributedString(sentence && index == names.count - 2 ? " \(Str.commonAnd) " : ", ")
         gap.foregroundColor = palette.mutedForeground
         text += gap
       }
@@ -110,58 +258,71 @@ struct LinkedNames: View {
   }
 }
 
-/// "Label  Value and Value", as the web lists directors, writers, and studios.
-struct CreditLine: View {
-  let label: String
-  let names: [String]
-  let onTap: (String) -> Void
+/// Who made the title and where, as label and names: creators, directors,
+/// writers, then studios, each name opening its page, in one wrapping
+/// block, as the web's `CrewFacts`.
+struct CrewLines: View {
+  let credits: [Credit]
+  let studios: [String]
+  @Environment(\.navigator) private var nav
   @Environment(\.palette) private var palette
 
   var body: some View {
-    if !names.isEmpty {
-      HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text(label).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-        LinkedNames(names: names, color: palette.foreground, onTap: onTap)
-          .frame(maxWidth: .infinity, alignment: .leading)
+    let kinds = [CreditKind.creator, CreditKind.director, CreditKind.writer]
+    let lines = kinds.map { ($0, creditNames(credits, $0)) }.filter { !$0.1.isEmpty }
+    if !lines.isEmpty || !studios.isEmpty {
+      FlowRow(spacing: Space.s6, lineSpacing: Space.s1) {
+        ForEach(lines, id: \.0) { kind, names in
+          line(titleCreditLabel(kind, count: names.count), names, onTap: nav.person)
+        }
+        if !studios.isEmpty {
+          line(Str.peopleStudio(studios.count), studios, onTap: nav.studio)
+        }
       }
+      .frame(maxWidth: 896, alignment: .leading)
+    }
+  }
+
+  private func line(_ label: String, _ names: [String], onTap: @escaping (String) -> Void) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: Space.s2) {
+      Text(label).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+      LinkedNames(names: names, color: palette.foreground.opacity(0.85), onTap: onTap)
     }
   }
 }
 
-/// An overview cut to a few lines, with More to read the rest.
+/// A tagline and description cut to a few lines, with More to read the
+/// rest, there, as on Android: the text grows in place.
 struct Overview: View {
   let text: String
   var tagline: String?
   var lines = 3
+  var size: TextSize = .sm
   @State private var open = false
   @State private var cut: CGFloat = 0
   @State private var whole: CGFloat = 0
   @Environment(\.palette) private var palette
 
-  init(_ text: String, tagline: String? = nil, lines: Int = 3) {
-    self.text = text
-    self.tagline = tagline
-    self.lines = lines
-  }
-
   var body: some View {
     let overflows = whole > cut + 1
-    VStack(alignment: .leading, spacing: 0) {
-      body(lines: open ? nil : lines)
+    VStack(alignment: .leading, spacing: Space.s1) {
+      words(lines: open ? nil : lines)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if !open { cut = $0 } }
         // The whole text, unseen, to know whether the cut one leaves some out.
         .background(alignment: .topLeading) {
-          body(lines: nil)
+          words(lines: nil)
             .fixedSize(horizontal: false, vertical: true)
             .hidden()
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { whole = $0 }
         }
       if overflows || open {
-        Text(open ? Str.titleLess : Str.titleMore).textStyle(.base).foregroundStyle(palette.mutedForeground)
+        Text(open ? Str.titleLess : Str.titleMore)
+          .textStyle(.sm, weight: .medium)
+          .foregroundStyle(palette.mutedForeground)
           .accessibilityHidden(true)
       }
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
+    .frame(maxWidth: 720, alignment: .leading)
     .contentShape(Rectangle())
     .onTapGesture { if overflows || open { withMotion(Motion.move) { open.toggle() } } }
     .accessibilityElement(children: .combine)
@@ -170,7 +331,7 @@ struct Overview: View {
     }
   }
 
-  private func body(lines: Int?) -> some View {
+  private func words(lines: Int?) -> some View {
     let body = palette.foreground.opacity(0.85)
     let words: Text =
       if let tagline {
@@ -178,385 +339,172 @@ struct Overview: View {
       } else {
         Text(text).foregroundStyle(body)
       }
-    return words.textStyle(.base).lineLimit(lines)
+    // `leading-6`: 24 points a line, whatever the size.
+    return words.textStyle(size).lineSpacing(size == .sm ? 4 : 2).lineLimit(lines)
   }
 }
 
-/// Play, then the trailer and the round watched, favorite, and more
-/// buttons, as under a title's or episode's heading. Resume says the time
-/// left beside it. The tick, as the web's, marks unwatched at once and asks
-/// when the person watched `name` before marking it watched.
+// MARK: Actions
+
+/// Play, then the trailer, the tick, the heart, and the page's "more", as
+/// under the web's title heading. Resume says the time left beside it.
+/// The tick marks unwatched at once and asks when the person watched
+/// `name` before marking it watched. Without `onFavorite`, for what can't
+/// be a favorite, the heart stays out; without `onWatched`, the tick.
+/// On a phone Play takes what the round buttons leave of the row; at the
+/// accessibility text sizes it takes a row of its own.
 struct ActionRow: View {
   let play: MediaItem?
-  let resume: Bool
   let name: String
   let watched: Bool
   let favorite: Bool
   var trailer: Trailer?
-  let onWatched: (_ watched: Bool, _ watchedAt: String?) async throws -> Void
-  let onFavorite: () async throws -> Void
-  /// The page's menu; it leaves itself out when it would be empty.
+  let onWatched: ((_ watched: Bool, _ watchedAt: String?) async throws -> Void)?
+  let onFavorite: (() async throws -> Void)?
+  /// The page's sheet; its button leaves itself out when it would be empty.
   let more: ActionTarget
+  var wide = false
 
   @Environment(\.navigator) private var nav
   @Environment(\.actions) private var actions
   @Environment(\.snackbar) private var snackbar
   @Environment(\.openURL) private var openURL
-  @Environment(\.windowSize) private var window
   @Environment(\.dynamicTypeSize) private var dynamicType
   @Environment(\.palette) private var palette
 
   var body: some View {
-    let wide = isWide(window)
     Group {
-      // At the accessibility sizes Play's words need the row; the round buttons go under it.
       if dynamicType.isAccessibilitySize && !wide {
-        VStack(alignment: .leading, spacing: 10) {
-          playButton(wide: wide)
-          HStack(spacing: 10) { buttons(wide: wide) }
+        VStack(alignment: .leading, spacing: Space.s2) {
+          playButton
+          HStack(spacing: Space.s2) { buttons }
         }
       } else {
-        HStack(spacing: 10) {
-          playButton(wide: wide)
-          buttons(wide: wide)
-          if wide { Spacer(minLength: 0) }
+        HStack(spacing: Space.s2) {
+          playButton
+          buttons
         }
       }
     }
-    .padding(.horizontal, Space.gutter)
+    #if DEBUG
+      // `-title.open actions` or `watched`: the page's sheet, or the question
+      // of when, once a launch, for a screenshot of it.
+      .task {
+        guard let open = UserDefaults.standard.string(forKey: "title.open"), !ActionRow.opened else { return }
+        try? await Task.sleep(for: .seconds(2.5))
+        ActionRow.opened = true
+        if open == "actions" { actions?.open(more) }
+        if open == "watched", let onWatched { actions?.askWatched(name) { at in try await onWatched(true, at) } }
+      }
+    #endif
   }
 
-  @ViewBuilder private func buttons(wide: Bool) -> some View {
-    if let trailer, let url = URL(string: trailer.url) {
-      TrailerButton(wide: wide) { openURL(url) }
-    }
-    LegacyRoundIconButton(
-      .check, label: watched ? Str.mediaMarkUnwatched : Str.mediaMarkWatched,
-      tint: watched ? palette.accent : palette.foreground
-    ) {
-      if watched {
-        launchShowing(snackbar, Str.mediaMarkUnwatchedFailed) { try await onWatched(false, nil) }
-      } else {
-        actions?.askWatched(name) { at in try await onWatched(true, at) }
-      }
-    }
-    .accessibilityAddTraits(watched ? .isSelected : [])
-    LegacyRoundIconButton(
-      favorite ? .heartFilled : .heart, label: favorite ? Str.mediaRemoveFavorite : Str.mediaAddFavorite,
-      tint: favorite ? palette.destructive : palette.foreground
-    ) {
-      launchShowing(snackbar, Str.mediaFavoriteFailed) { try await onFavorite() }
-    }
-    ActionsButton(more)
-  }
+  #if DEBUG
+    private static var opened = false
+  #endif
 
-  private func playButton(wide: Bool) -> some View {
-    let label = resume ? Str.titleResume : Str.titlePlay
-    let left = resume ? play.flatMap(timeLeft) : nil
-    return Button {
-      if let play { nav.play(play.id, nil) }
-    } label: {
-      HStack(spacing: 8) {
-        LucideIcon(.play, size: 16)
-        Text(label).layoutPriority(1)
-        // On one line, as on a TV. The label stays whole; what's left over goes to the time.
-        if let left {
-          Text(left).foregroundStyle(palette.accentForeground.opacity(0.6)).lineLimit(1)
-        }
-      }
-      // The button's width, not the words', is what's drawn.
-      .frame(maxWidth: .infinity)
-    }
-    .buttonStyle(.legacy(.primary))
-    .frame(width: wide ? 260 : nil)
-    .disabled(play == nil)
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel([label, left].compactMap(\.self).joined(separator: ", "))
-    .accessibilityAddTraits(.isButton)
-  }
-}
-
-/// The title's trailer, on YouTube: just the icon on phones, where Play
-/// takes the row, and named beside it wider, as the web's.
-private struct TrailerButton: View {
-  let wide: Bool
-  let action: () -> Void
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    if wide {
-      Button(action: action) {
-        LucideIcon(.clapperboard, size: 16)
-        Text(Str.iosTitleTrailer)
-      }
-      .buttonStyle(.legacy(.frosted))
-      .accessibilityHint(Str.iosTitleTrailerHint)
-    } else {
-      LegacyRoundIconButton(.clapperboard, label: Str.iosTitleTrailer, action: action)
-        .accessibilityHint(Str.iosTitleTrailerHint)
-    }
-  }
-}
-
-/// The title's name and facts, with its poster beside them when `poster`
-/// says, as the web's title header.
-struct TitleHeading: View {
-  let title: Title
-  let flags: [String]
-  var poster = true
-  @Environment(\.api) private var api
-  @Environment(\.navigator) private var nav
-  @Environment(\.windowSize) private var window
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    HStack(alignment: .bottom, spacing: 16) {
-      if poster {
-        PosterArt(name: title.name, poster: api?.art(title.images.poster, size: .small))
-          .frame(width: isWide(window) ? 180 : 112)
-      }
-      VStack(alignment: .leading, spacing: 0) {
-        Text(title.name).textStyle(.xl3, weight: .bold, tracking: .tight).lineLimit(3).foregroundStyle(palette.foreground)
-          .accessibilityAddTraits(.isHeader)
-        if let original = title.originalName, original != title.name {
-          Text(original).textStyle(.base).foregroundStyle(palette.mutedForeground).lineLimit(1)
-        }
-        let facts = titleFacts(title)
-        if !facts.isEmpty {
-          Text(facts.joined(separator: " · ")).textStyle(.sm)
-            .foregroundStyle(palette.foreground.opacity(0.8))
-            .padding(.top, 8)
-        }
-        // The rating and the file's badges on a line of their own, so a
-        // narrow screen doesn't strand the last one under the facts.
-        if title.contentRating != nil || title.rating != nil || !flags.isEmpty {
-          FlowRow(spacing: 8, lineSpacing: 6) {
-            if let rating = title.contentRating { LegacyBadge(rating, outlined: true) }
-            if let rating = title.rating {
-              HStack(spacing: 4) {
-                LucideIcon(.star, size: 14, tint: palette.star)
-                Text(formatRating(rating)).textStyle(.sm).foregroundStyle(palette.foreground)
-              }
-              .accessibilityElement(children: .ignore)
-              .accessibilityLabel("\(Str.mediaHeroRated) \(formatRating(rating))")
-            }
-            ForEach(flags, id: \.self) { LegacyBadge($0) }
-          }
-          .padding(.top, 6)
-        }
-        if !title.genres.isEmpty {
-          LinkedNames(names: title.genres, color: palette.mutedForeground, onTap: nav.genre).padding(.top, 6)
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.bottom, 4)
-    }
-    .padding(.horizontal, Space.gutter)
-  }
-}
-
-/// Directors, creators, writers, and studios, each a link to their page.
-struct CrewLines: View {
-  let credits: [Credit]
-  let studios: [String]
-  @Environment(\.navigator) private var nav
-
-  var body: some View {
-    let kinds = [CreditKind.creator, CreditKind.director, CreditKind.writer]
-    let lines = kinds.map { ($0, creditNames(credits, $0)) }.filter { !$0.1.isEmpty }
-    if !lines.isEmpty || !studios.isEmpty {
-      VStack(alignment: .leading, spacing: 6) {
-        ForEach(lines, id: \.0) { kind, names in
-          CreditLine(label: creditKind(kind, count: names.count), names: names, onTap: nav.person)
-        }
-        if !studios.isEmpty {
-          CreditLine(label: Str.peopleStudio(studios.count), names: studios, onTap: nav.studio)
-        }
-      }
-      .padding(.horizontal, Space.gutter)
-    }
-  }
-}
-
-/// The cast, by their portraits, each opening their page.
-struct CastRail: View {
-  let credits: [Credit]
-  @Environment(\.api) private var api
-
-  var body: some View {
-    let cast = credits.filter { $0.kind == CreditKind.actor }
-    if !cast.isEmpty {
-      Rail(Str.titleCast) {
-        ForEach(Array(cast.enumerated()), id: \.offset) { _, credit in
-          RailItem(.person) {
-            PersonCard(credit.name, role: credit.role, photo: api?.art(credit.photo, size: .thumb))
-              // Its own height, so a name on two lines doesn't shrink the portrait to fit the rail.
-              .fixedSize(horizontal: false, vertical: true)
-          }
-        }
-      }
-    }
-  }
-}
-
-/// A show's seasons by their posters, with how many episodes are left in
-/// each. On a season's page, `current` leaves that season out.
-struct SeasonsRail: View {
-  let title: Title
-  var current: Season?
-  @Environment(\.navigator) private var nav
-
-  var body: some View {
-    let seasons = current.map { current in title.seasons.filter { $0.number != current.number } } ?? title.seasons
-    if !seasons.isEmpty {
-      Rail(current != nil ? Str.titleSeasonsMore : Str.titleSeasons) {
-        ForEach(seasons, id: \.number) { season in
-          RailItem(.poster) {
-            SeasonCard(title: title, season: season) { nav.season(title.id, season.number) }
-          }
-        }
-      }
-    }
-  }
-}
-
-private struct SeasonCard: View {
-  let title: Title
-  let season: Season
-  let onTap: () -> Void
-  @Environment(\.api) private var api
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    let left = season.itemCount - season.watchedCount
-    Button(action: onTap) {
-      VStack(alignment: .leading, spacing: 0) {
-        PosterArt(
-          name: Str.titleSeasonOf(title.name, seasonName(season.number)),
-          poster: api?.art(season.poster ?? title.images.poster)
-        )
-        .overlay(alignment: .topTrailing) {
-          if left == 0 {
-            WatchedBadge().padding(6)
-          } else {
-            Text(String(left)).textStyle(.px11, weight: .semibold)
-              .foregroundStyle(palette.accentForeground)
-              .padding(.horizontal, 6)
-              .padding(.vertical, 1)
-              .background(palette.accent, in: Capsule())
-              .padding(6)
-          }
-        }
-        CardText(seasonName(season.number), Str.mediaEpisodeCount(season.itemCount))
-      }
-      .contentShape(Rectangle())
-    }
-    .buttonStyle(LegacyCardPress())
-    .cardMenu(.season(title.summary, season, here: false))
-    .accessibilityElement(children: .combine)
-  }
-}
-
-/// The episode up next on a show's page, as the web's EpisodeRow: a big
-/// still that opens it, with Play on hover, its number and name, air date
-/// and runtime, and what happens in it.
-struct NextUpEpisode: View {
-  let item: MediaItem
-  @Environment(\.api) private var api
-  @Environment(\.navigator) private var nav
-  @Environment(ViewerState.self) private var viewer: ViewerState?
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    let label = itemLabel(item)
-    let ratio = progressRatio(item)
-    let watched = viewer?.isWatched(item) ?? (item.progress?.completed ?? false)
-    VStack(alignment: .leading, spacing: 0) {
-      SectionTitle(item.progress != nil ? Str.titleNextUpContinue : Str.titleNextUpNext)
-      Button { nav.episode(item.id) } label: {
-        ArtFrame(label.showName, aspect: 16 / 9) {
-          Picture(api?.landscape(item, size: .medium) ?? [])
-          if watched {
-            WatchedBadge().padding(8).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-          } else if let ratio, ratio > 0 {
-            ArtProgressBar(progress: ratio).frame(maxHeight: .infinity, alignment: .bottom)
-          }
-        }
-      }
-      .buttonStyle(LegacyCardPress())
-      .modifier(HoverPlay(label: Str.mediaPlayNamed(label.title), size: 64) { nav.play(item.id, nil) })
-      .cardMenu(.item(item, here: false))
-      .accessibilityLabel(label.title)
-      .padding(.top, 12)
-      // Its words open its menu, as Android's do; the still opens its page.
-      Menu {
-        ActionItems(target: .item(item, here: false)).tint(palette.foreground)
+  @ViewBuilder private var playButton: some View {
+    if let play {
+      let resume = isResuming(play)
+      let label = resume ? Str.titleResume : Str.titlePlay
+      let left = resume ? timeLeft(play) : nil
+      MatineeButton(look: .primary, fullWidth: true) {
+        nav.play(play.id, nil)
       } label: {
-        VStack(alignment: .leading, spacing: 0) {
-          let heading = episodeNumber(item).map { Str.titleEpisodesCodedName($0, label.title) } ?? label.title
-          Text(heading).textStyle(.base, weight: .semibold).lineLimit(2).foregroundStyle(palette.foreground)
-          let detail = [
-            formatDay(item.episode?.airDate),
-            item.progress?.completed == false ? timeLeft(item) : formatRuntime(runtimeMinutes(item)),
-          ].compactMap(\.self).joined(separator: " · ")
-          if !detail.isEmpty {
-            Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+        LucideIcon(.play, size: 16)
+        // The time left when it fits whole beside the label, else the label alone.
+        ViewThatFits(in: .horizontal) {
+          HStack(spacing: Space.s2) {
+            Text(label)
+            if let left { Text(left).textStyle(.sm).opacity(0.7) }
           }
-          if let overview = item.episode?.overview {
-            Text(overview).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8)).lineLimit(3)
-              .padding(.top, 6)
-          }
+          Text(label)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .multilineTextAlignment(.leading)
+      }
+      // Wider, as wide as its words, and at least a good target.
+      .frame(minWidth: wide ? 168 : nil)
+      .fixedSize(horizontal: wide, vertical: false)
+      .accessibilityLabel([label, left].compactMap(\.self).joined(separator: ", "))
+    }
+  }
+
+  @ViewBuilder private var buttons: some View {
+    if let trailer, let url = URL(string: trailer.url) {
+      if wide {
+        MatineeButton(Str.iosTitleTrailer, icon: .clapperboard, look: .frosted) { openURL(url) }
+          .accessibilityHint(Str.iosTitleTrailerHint)
+      } else {
+        RoundIconButton(.clapperboard, label: Str.iosTitleTrailer, look: .frosted, size: TouchTarget, iconSize: 20) {
+          openURL(url)
+        }
+        .accessibilityHint(Str.iosTitleTrailerHint)
+      }
+    }
+    if let onWatched {
+      RoundIconButton(
+        watched ? .checkBold : .check, label: watched ? Str.mediaMarkUnwatched : Str.mediaMarkWatched,
+        look: .frosted, size: TouchTarget, iconSize: 20, tint: watched ? palette.accent : nil, selected: watched
+      ) {
+        if watched {
+          launchShowing(snackbar, Str.mediaMarkUnwatchedFailed) { try await onWatched(false, nil) }
+        } else {
+          actions?.askWatched(name) { at in try await onWatched(true, at) }
+        }
+      }
+    }
+    if let onFavorite {
+      RoundIconButton(
+        favorite ? .heartFilled : .heart, label: favorite ? Str.mediaRemoveFavorite : Str.mediaAddFavorite,
+        look: .frosted, size: TouchTarget, iconSize: 20, tint: favorite ? palette.destructive : nil, selected: favorite
+      ) {
+        launchShowing(snackbar, Str.mediaFavoriteFailed) { try await onFavorite() }
+      }
+      .motion(Motion.enter, value: favorite)
+    }
+    ActionsButton(more, look: .frosted)
+  }
+}
+
+/// A file's download, under a page's buttons, while there is one: on its
+/// way, waiting, stopped, or on this device, opening the downloads.
+struct DownloadLine: View {
+  let file: MediaItem
+  let open: () -> Void
+  @Environment(Downloads.self) private var downloads
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    if let entry = downloads.store.items[file.id] {
+      Pressable(shape: Capsule(), wash: true, action: open) {
+        HStack(spacing: Space.s2) {
+          icon(entry)
+          Text(titleDownloadText(entry)).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(1)
+          LucideIcon(.chevronRight, size: 14, tint: palette.foregroundFaint)
+        }
+        .padding(.vertical, Space.s1)
+        .frame(minHeight: TouchTarget)
         .contentShape(Rectangle())
       }
-      .menuStyle(.button)
-      .buttonStyle(LegacyCardPress())
-      .padding(.top, 10)
+      .accessibilityElement(children: .combine)
     }
-    .padding(.horizontal, Space.gutter)
+  }
+
+  @ViewBuilder private func icon(_ entry: OfflineItem) -> some View {
+    switch entry.state {
+    case .done: LucideIcon(.circleCheck, size: 16, tint: palette.accent)
+    case .running: ProgressRing(entry.progress, size: 16)
+    case .failed: LucideIcon(.triangleAlert, size: 16, tint: palette.destructive)
+    case .queued, .paused: LucideIcon(.download, size: 16, tint: palette.mutedForeground)
+    }
   }
 }
 
-/// An episode's still, which plays it, lifted off the backdrop by a shadow
-/// as on the web. The whole still plays; Play shows on it on hover.
-struct StillFrame: View {
-  let item: MediaItem
-  let watched: Bool
-  @Environment(\.api) private var api
-  @Environment(\.navigator) private var nav
-  @Environment(\.windowSize) private var window
-  @Environment(\.palette) private var palette
+// MARK: Files
 
-  var body: some View {
-    let label = itemLabel(item)
-    let ratio = progressRatio(item)
-    let play = Str.mediaPlayNamed(label.title)
-    Button { nav.play(item.id, nil) } label: {
-      Tone(label.showName)
-        .overlay { Picture(api?.landscape(item, size: .medium) ?? []) }
-        .overlay(alignment: .topTrailing) { if watched { WatchedBadge(size: 24).padding(10) } }
-        .overlay(alignment: .bottom) {
-          if !watched, let ratio, ratio > 0 { ArtProgressBar(progress: ratio) }
-        }
-        .aspectRatio(16 / 9, contentMode: .fit)
-        .clipShape(RoundedRectangle.kit(Radius.lg))
-        .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.border) }
-        .shadow(color: .black.opacity(0.5), radius: 24, y: 8)
-    }
-    .buttonStyle(LegacyCardPress())
-    .modifier(HoverPlay(label: play, size: 64) { nav.play(item.id, nil) })
-    // A still as wide as an iPad in landscape would be taller than the screen; it stops at half its height.
-    .frame(maxWidth: window.height * 0.55 * 16 / 9)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.horizontal, Space.gutter)
-    .accessibilityLabel(play)
-  }
-}
-
-/// What a file holds, a line each with its icon: the picture, the audio,
-/// and the subtitles, from `fileInfo`.
+/// What a file holds, each part after its icon, in a row that wraps: the
+/// picture, the audio's languages with the main track's layout, and the
+/// subtitles' languages, as the web's `MediaInfo`. The languages are the
+/// server's track lists once they load, the probe's until then.
 struct MediaInfo: View {
   let item: MediaItem
   @State private var tracks = Loader<FileTracks>()
@@ -566,14 +514,14 @@ struct MediaInfo: View {
   var body: some View {
     Group {
       if let info = fileInfo(item, tracks: tracks.state.value) {
-        VStack(alignment: .leading, spacing: 6) {
+        FlowRow(spacing: Space.s5, lineSpacing: Space.s1) {
           if let video = info.video { InfoLine(icon: .film, label: Str.mediaInfoVideo, text: video) }
           if let audio = info.audio { InfoLine(icon: .audioLines, label: Str.mediaInfoAudio, text: audio) }
           if let subtitles = info.subtitles {
             InfoLine(icon: .captions, label: Str.mediaInfoSubtitles, text: subtitles)
           }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: 672, alignment: .leading)
       }
     }
     .loads(tracks) { [id = item.id] api in try await FileTracks.load(api, id) }
@@ -587,12 +535,475 @@ private struct InfoLine: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 10) {
-      // Level with the first line of text, which may wrap.
+    HStack(spacing: Space.s2) {
       LucideIcon(icon, label: label, size: 16, tint: palette.mutedForeground)
-        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
-      Text(text).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8)).lineLimit(3)
+      Text(text).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8)).lineLimit(1)
     }
     .accessibilityElement(children: .combine)
+  }
+}
+
+/// What a file holds in one quiet line, for a row in a list, from its probe
+/// alone, as the web's `MediaInfoLine`: the picture, then the audio, then
+/// the subtitles, the last giving way first.
+struct StreamLine: View {
+  let item: MediaItem
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    if let info = fileInfo(item, tracks: nil) {
+      // What fits whole, the subtitles giving way first, then the audio.
+      ViewThatFits(in: .horizontal) {
+        parts(info, audio: true, subtitles: true)
+        parts(info, audio: true, subtitles: false)
+        parts(info, audio: false, subtitles: false)
+      }
+      .foregroundStyle(palette.mutedForeground.opacity(0.8))
+      .lineLimit(1)
+    }
+  }
+
+  private func parts(_ info: FileInfo, audio: Bool, subtitles: Bool) -> some View {
+    HStack(spacing: Space.s3) {
+      if let video = info.video { part(.film, Str.mediaInfoVideo, video) }
+      if audio, let text = info.audio { part(.audioLines, Str.mediaInfoAudio, text) }
+      if subtitles, let text = info.subtitles { part(.captions, Str.mediaInfoSubtitles, text) }
+    }
+  }
+
+  private func part(_ icon: Lucide, _ label: String, _ text: String) -> some View {
+    HStack(spacing: Space.s1) {
+      LucideIcon(icon, label: label, size: 14, tint: palette.mutedForeground.opacity(0.8))
+      Text(text).textStyle(.xs)
+    }
+    .accessibilityElement(children: .combine)
+  }
+}
+
+/// A movie's files, when it has more than one: what the server calls each
+/// and where it sits, how its streams read, and how far in the person is.
+/// Each plays on its own; a long press offers starting over and its download.
+struct FilesSection: View {
+  let title: Title
+  @State private var files = Loader<[MediaItem]>()
+  @Environment(\.gutter) private var gutter
+
+  var body: some View {
+    Group {
+      switch files.state {
+      case .loading: Color.clear.frame(height: 0)
+      case .failed(let message, let disconnected):
+        // TODO(strings): title_files, the heading "Files"; meanwhile the count's.
+        VStack(alignment: .leading, spacing: 0) {
+          SectionTitle(Str.downloadsAllFiles(title.itemCount)).padding(.horizontal, gutter)
+          ErrorSection(
+            Str.downloadsFilesFailed, message, retrying: files.refreshing, disconnected: disconnected,
+            onRetry: files.reload)
+        }
+      case .ready(let list):
+        if list.count > 1 {
+          VStack(alignment: .leading, spacing: Space.s3) {
+            // TODO(strings): title_files, the heading "Files"; meanwhile the count's.
+            SectionTitle(Str.downloadsAllFiles(list.count))
+            VStack(spacing: Space.s1) {
+              ForEach(list, id: \.id) { FileRow(item: $0) }
+            }
+          }
+          .padding(.horizontal, gutter)
+        }
+      }
+    }
+    .loads(files) { [id = title.id] api in try await api.titleItems(id) }
+  }
+}
+
+private struct FileRow: View {
+  let item: MediaItem
+  @Environment(\.api) private var api
+  @Environment(\.navigator) private var nav
+  @Environment(\.actions) private var actions
+  @Environment(ViewerState.self) private var viewer: ViewerState?
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    let label = itemLabel(item)
+    let ratio = progressRatio(item)
+    let watched = viewer?.isWatched(item) ?? (item.progress?.completed ?? false)
+    let left = isResuming(item) && !watched ? timeLeft(item) : nil
+    Pressable(
+      shape: .kit(Radius.md), action: { nav.play(item.id, nil) },
+      onLongPress: { actions?.open(.item(item, here: true)) }, longPressLabel: Str.titleMoreActions
+    ) {
+      HStack(spacing: Space.s3_5) {
+        ArtFrame(label.showName, aspect: 16 / 9) {
+          Picture(api?.landscape(item, size: .thumb) ?? [])
+          PlayMark(size: 32)
+          if watched {
+            WatchedBadge(size: 18).padding(5).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+          } else if let ratio, ratio > 0 {
+            ArtProgressBar(progress: ratio, inset: Space.s1_5)
+          }
+        }
+        .frame(width: 128)
+        VStack(alignment: .leading, spacing: Space.s0_5) {
+          Text(label.title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground).lineLimit(1)
+          let detail = [fileFolders(item), left ?? formatRuntime(runtimeMinutes(item))].compactMap(\.self)
+          if !detail.isEmpty {
+            Text(detail.joined(separator: " · ")).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+              .lineLimit(2)
+          }
+          StreamLine(item: item)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
+      }
+      .padding(.vertical, Space.s1_5)
+      .contentShape(Rectangle())
+    }
+    .accessibilityElement(children: .combine)
+    .accessibilityHint(Str.mediaPlayNamed(label.title))
+  }
+}
+
+// MARK: People
+
+/// The actors, in billing order, by their portraits, each opening their page.
+struct CastRail: View {
+  let credits: [Credit]
+  @Environment(\.api) private var api
+
+  var body: some View {
+    let cast = credits.filter { $0.kind == CreditKind.actor }
+    if !cast.isEmpty {
+      Rail(Str.titleCast) {
+        // The same actor can play two parts.
+        ForEach(Array(cast.enumerated()), id: \.offset) { _, credit in
+          RailItem(.person) {
+            PersonCard(credit.name, role: credit.role, photo: api?.art(credit.photo, size: .thumb))
+              // Its own height, so a name on two lines doesn't shrink the portrait.
+              .fixedSize(horizontal: false, vertical: true)
+          }
+        }
+      }
+    }
+  }
+}
+
+// MARK: Seasons
+
+/// A show's seasons by their posters, with how many episodes are left in
+/// each, then the seasons the server lacks, each with its state and ask,
+/// from `gaps`. On a season's page `current` leaves that season out; on the
+/// page of a show with one season, whose episodes are listed above,
+/// `extraOnly` leaves the library's out, so the rail is there only for what
+/// the server lacks.
+struct SeasonsRail: View {
+  let title: Title
+  var current: Season?
+  var gaps: TitleGaps?
+  var extraOnly = false
+  @Environment(\.navigator) private var nav
+
+  var body: some View {
+    let seasons = titleSeasons(title, current: current, extraOnly: extraOnly)
+    let missing = gaps?.missing ?? []
+    if !seasons.isEmpty || !missing.isEmpty {
+      Rail(current != nil || extraOnly ? Str.titleSeasonsMore : Str.titleSeasons) {
+        ForEach(seasons, id: \.number) { season in
+          RailItem(.poster) {
+            SeasonCard(title: title, season: season, partial: gaps?.partial(season.number))
+          }
+        }
+        if let gaps {
+          ForEach(missing, id: \.number) { season in
+            RailItem(.poster) { MissingSeasonCard(title: title, season: season, gaps: gaps) }
+          }
+        }
+      }
+    }
+  }
+}
+
+/// A season by its poster, or the show's, with how many episodes are left
+/// to watch in its corner, or the check once none are. A long press offers
+/// its tick, its heart, its download, and an admin's images.
+private struct SeasonCard: View {
+  let title: Title
+  let season: Season
+  let partial: CatalogSeason?
+  @Environment(\.api) private var api
+  @Environment(\.navigator) private var nav
+
+  var body: some View {
+    let name = seasonName(season.number)
+    let watched = season.itemCount > 0 && season.watchedCount >= season.itemCount
+    let left = season.itemCount - season.watchedCount
+    CardButton(target: .season(title.summary, season, here: false), action: { nav.season(title.id, season.number) }) {
+      PosterArt(name: Str.titleSeasonOf(title.name, name), poster: api?.art(season.poster ?? title.images.poster))
+        .overlay(alignment: .topTrailing) {
+          Group {
+            if watched {
+              WatchedBadge()
+            } else {
+              LeftCount(count: left > 0 ? left : season.itemCount)
+            }
+          }
+          .padding(Space.s1_5)
+        }
+    } caption: {
+      CardText(
+        name,
+        partial.map { Str.requestsSeasonPartial($0.availability.episodesHere, $0.availability.episodesAired) }
+          ?? Str.mediaEpisodeCount(season.itemCount))
+    }
+  }
+}
+
+/// How many episodes are left, in the accent, as the web's season count.
+private struct LeftCount: View {
+  let count: Int
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    Text(formatCount(count))
+      .textStyle(.px11, weight: .semibold)
+      .monospacedDigit()
+      .foregroundStyle(palette.accentForeground)
+      .padding(.horizontal, Space.s1_5)
+      .frame(minWidth: 20, minHeight: 20)
+      .background(palette.accent, in: Capsule())
+      .kitShadow(.small)
+      .accessibilityHidden(true)
+  }
+}
+
+// MARK: Episodes
+
+/// A row of a season's episodes, by their stills, that starts on `start`,
+/// as the web's: kept from when it first showed, so marking one watched
+/// doesn't scroll the row away under the finger. `rest` comes last, for the
+/// episodes the server lacks.
+struct EpisodesRail: View {
+  let title: String
+  let items: [MediaItem]
+  var onTitleTap: (() -> Void)?
+  var rest: AnyView?
+  @Environment(\.gutter) private var gutter
+  @Environment(\.windowSize) private var window
+  @State private var position = ScrollPosition(idType: String.self)
+  @State private var placed = false
+  private let startId: String?
+
+  init(title: String, items: [MediaItem], start: Int, onTitleTap: (() -> Void)? = nil, rest: AnyView? = nil) {
+    self.title = title
+    self.items = items
+    self.onTitleTap = onTitleTap
+    self.rest = rest
+    startId = start > 0 && items.indices.contains(start) ? items[start].id : nil
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Space.s3) {
+      SectionTitle(title, action: onTitleTap).padding(.horizontal, gutter)
+      ScrollView(.horizontal) {
+        LazyHStack(alignment: .top, spacing: isWide(window) ? Space.s4 : Space.s3) {
+          ForEach(items, id: \.id) { item in
+            RailItem(.landscape) { EpisodeCard(itemShown(item), showName: false) }.id(item.id)
+          }
+          if let rest { RailItem(.landscape) { rest } }
+        }
+        .scrollTargetLayout()
+      }
+      .contentMargins(.horizontal, gutter, for: .scrollContent)
+      .scrollIndicators(.hidden)
+      .scrollTargetBehavior(.viewAligned)
+      .scrollClipDisabled()
+      .scrollPosition($position, anchor: .leading)
+      // Once laid out, on to where it starts; never again, so it stays where the finger leaves it.
+      .task {
+        guard !placed, let startId else { return }
+        placed = true
+        try? await Task.sleep(for: .milliseconds(80))
+        position.scrollTo(id: startId, anchor: .leading)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .contain)
+  }
+}
+
+/// Play on a picture, not a button of its own: the kit's glass circle,
+/// white over a dark blur whatever the theme, as `PlayGlyph` draws it, for
+/// a picture that plays when it's pressed.
+private struct PlayMark: View {
+  let size: CGFloat
+  @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+  var body: some View {
+    LucideIcon(.play, size: (size * 0.4).rounded(), tint: .white, scales: false)
+      .frame(width: size, height: size)
+      .background {
+        if !reduceTransparency { Circle().fill(.ultraThinMaterial).environment(\.colorScheme, .dark) }
+      }
+      .background(reduceTransparency ? .black.opacity(0.6) : .white.opacity(0.15), in: Circle())
+      .overlay { Circle().strokeBorder(.white.opacity(0.15), lineWidth: 1) }
+      .accessibilityHidden(true)
+  }
+}
+
+/// An episode as the web's `EpisodeRow`: its still, which opens its page,
+/// with Play on it; its number and name, air date and length, and streams
+/// beside it; what happens in it beside it from `sm` up, under it on a
+/// phone. `marker` names it Play's: Next up, or Continue watching. A long
+/// press offers the rest.
+struct EpisodeEntry: View {
+  let item: MediaItem
+  var compact = false
+  var marker: String?
+  @Environment(\.api) private var api
+  @Environment(\.navigator) private var nav
+  @Environment(\.actions) private var actions
+  @Environment(ViewerState.self) private var viewer: ViewerState?
+  @Environment(\.windowSize) private var window
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    let layout = TitleLayout(window: window)
+    let label = itemLabel(item)
+    let watched = viewer?.isWatched(item) ?? (item.progress?.completed ?? false)
+    let overview = item.episode?.overview
+    let code = compact ? (label.untitled ? nil : item.label.shortCode) : episodeCode(item)
+    let still: CGFloat = layout.wide ? (layout.large ? 288 : 256) : (compact ? 152 : 184)
+    VStack(alignment: .leading, spacing: Space.s2) {
+      HStack(alignment: .top, spacing: layout.wide ? Space.s4 : Space.s3) {
+        StillButton(item: item, watched: watched, glyph: compact ? 36 : 44)
+          .frame(width: still)
+        VStack(alignment: .leading, spacing: Space.s0_5) {
+          if let marker {
+            Text(marker).textStyle(.xs, weight: .semibold).foregroundStyle(palette.accent).lineLimit(1)
+          }
+          Pressable(
+            shape: .kit(Radius.sm), wash: false, action: { nav.episode(item.id) },
+            onLongPress: { actions?.open(.item(item, here: false)) }, longPressLabel: Str.titleMoreActions
+          ) {
+            VStack(alignment: .leading, spacing: Space.s0_5) {
+              HStack(alignment: .firstTextBaseline, spacing: Space.s2) {
+                if let code {
+                  Text(code).textStyle(.sm).monospacedDigit().foregroundStyle(palette.mutedForeground)
+                    .fixedSize()
+                }
+                Text(label.title)
+                  .textStyle(layout.wide ? .px15 : .sm, weight: label.untitled ? .regular : .medium)
+                  .foregroundStyle(palette.foreground)
+                  .lineLimit(2)
+              }
+              let facts = episodeFacts(item, watched: watched)
+              if !facts.isEmpty {
+                Text(facts.joined(separator: " · ")).textStyle(.px13).monospacedDigit()
+                  .foregroundStyle(palette.mutedForeground).lineLimit(1)
+              }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .multilineTextAlignment(.leading)
+            .contentShape(Rectangle())
+          }
+          StreamLine(item: item).padding(.top, Space.s0_5)
+          if layout.wide, let overview {
+            Text(overview).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(3)
+              .frame(maxWidth: 640, alignment: .leading)
+              .padding(.top, Space.s1_5)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      // A phone puts what happens under the still, across the row.
+      if !layout.wide, let overview {
+        Text(overview).textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(compact ? 2 : 3)
+      }
+    }
+    .accessibilityElement(children: .contain)
+  }
+}
+
+/// An episode's still, opening its page, with Play on it, how far in the
+/// person is, or the check.
+private struct StillButton: View {
+  let item: MediaItem
+  let watched: Bool
+  var glyph: CGFloat = 44
+  @Environment(\.api) private var api
+  @Environment(\.navigator) private var nav
+  @Environment(\.actions) private var actions
+
+  var body: some View {
+    let label = itemLabel(item)
+    let ratio = progressRatio(item)
+    let resume = isResuming(item) && !watched
+    Pressable(
+      shape: .kit(Radius.md), action: { nav.episode(item.id) },
+      onLongPress: { actions?.open(.item(item, here: false)) }, longPressLabel: Str.titleMoreActions
+    ) {
+      ArtFrame(label.showName, aspect: 16 / 9) {
+        Picture(api?.landscape(item, size: .medium) ?? [])
+        if watched {
+          WatchedBadge().padding(Space.s1_5).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        } else if let ratio, ratio > 0 {
+          ArtProgressBar(progress: ratio)
+        }
+      }
+    }
+    .accessibilityLabel(label.title)
+    .overlay {
+      PlayGlyph(label: resume ? Str.mediaResumeNamed(label.title) : Str.mediaPlayNamed(label.title), size: glyph) {
+        nav.play(item.id, nil)
+      }
+    }
+  }
+}
+
+/// The episode Play starts on a show's page, as the web's `NextUp`:
+/// "Continue watching" while it's in progress, "Next up" otherwise.
+struct NextUpEpisode: View {
+  let item: MediaItem
+  @Environment(\.gutter) private var gutter
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Space.s3) {
+      SectionTitle(item.progress != nil ? Str.titleNextUpContinue : Str.titleNextUpNext)
+      EpisodeEntry(item: item).frame(maxWidth: 1024, alignment: .leading)
+    }
+    .padding(.horizontal, gutter)
+  }
+}
+
+/// An episode's still beside its details, which plays it, lifted off the
+/// backdrop by a deep shadow, as the web's.
+struct StillFrame: View {
+  let item: MediaItem
+  let watched: Bool
+  @Environment(\.api) private var api
+  @Environment(\.navigator) private var nav
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    let label = itemLabel(item)
+    let ratio = progressRatio(item)
+    let resume = isResuming(item) && !watched
+    let name = resume ? Str.mediaResumeNamed(label.title) : Str.mediaPlayNamed(label.title)
+    let shape = RoundedRectangle.kit(Radius.lg)
+    Pressable(shape: .kit(Radius.lg), action: { nav.play(item.id, nil) }) {
+      Tone(label.showName)
+        .overlay { Picture(api?.landscape(item, size: .large) ?? []) }
+        .overlay(alignment: .topTrailing) { if watched { WatchedBadge(size: 24).padding(Space.s2_5) } }
+        .overlay(alignment: .bottom) {
+          if !watched, let ratio, ratio > 0 { ArtProgressBar(progress: ratio, inset: Space.s3) }
+        }
+        .overlay { PlayMark(size: 64) }
+        .aspectRatio(16 / 9, contentMode: .fit)
+        .clipShape(shape)
+        .overlay { shape.strokeBorder(palette.border) }
+    }
+    .kitShadow(.dialog)
+    .accessibilityLabel(name)
   }
 }

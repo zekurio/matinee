@@ -395,8 +395,17 @@ private struct SeasonActions: View {
         }
       }
     }
-    // TODO: a season's heart, as Android's SeasonActions has it, once
-    // MatineeCore's ViewerState has season favorites (another agent's work).
+    // Its heart, as Android's SeasonActions has it; the files without a
+    // season number aren't a season to mark. Its own page has the heart already.
+    if !here, let number = season.number {
+      let favorite = viewer?.isSeasonFavorite(title, number: number, fallback: season.favorite) ?? season.favorite
+      SheetItem(favorite ? Str.mediaRemoveFavorite : Str.mediaAddFavorite, icon: favorite ? .heartFilled : .heart) {
+        guard let api, let viewer else { return }
+        launchShowing(snackbar, Str.mediaFavoriteFailed) {
+          try await viewer.setSeasonFavorite(api, title, number: number, favorite: !favorite)
+        }
+      }
+    }
     if viewer?.mayDownload == true {
       SheetItem(Str.downloadsAction, icon: .download) { actions?.files = FileSet(title: title, season: season) }
     }

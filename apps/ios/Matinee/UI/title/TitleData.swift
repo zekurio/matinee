@@ -1,71 +1,135 @@
+import Foundation
 import MatineeCore
-import MatineeKit
-import SwiftUI
 
 /*
- * TitleData.kt's half that needs the app's words: the facts lines and what
- * a file holds. What the pages decide, like what Play starts in a season,
- * is MatineeCore's (Title/TitleData.swift), where it's tested.
+ * TitleData.kt's half that needs the app's words: the facts lines, what a
+ * file holds, a download's state, and a missing season's. What the pages
+ * decide, like what Play starts in a season or which files a movie lists,
+ * is MatineeCore's (Title/), where it's tested.
  */
 
-/// A title's facts: its year, then its episode count or runtime, then a show's status.
+/// A title's facts: its year, then a movie's runtime or a show's seasons or
+/// episodes, then a show's status, as the web's title header.
 func titleFacts(_ title: Title) -> [String] {
-  [
-    formatYear(title.year),
-    title.isShow ? Str.mediaEpisodeCount(title.itemCount) : formatRuntime(title.runtimeMinutes),
-    title.isShow ? title.status : nil,
-  ].compactMap(\.self)
+  let size: String? =
+    switch showSize(title) {
+    case .seasons(let count): Str.requestsSeasonCount(count)
+    case .episodes(let count): Str.mediaEpisodeCount(count)
+    case nil: nil
+    }
+  return [formatYear(title.year), formatRuntime(titleRuntime(title)), size, title.isShow ? title.status : nil]
+    .compactMap(\.self)
 }
 
-/// An episode's facts: its air date, then its runtime. With `left`, the
-/// time left in it instead while it's in progress; an episode's page leaves
-/// that out, since its Resume button says it.
-func episodeFacts(_ item: MediaItem, watched: Bool, left: Bool = false) -> [String] {
-  let resuming = left && isResumable(item) && !watched
+/// A season's facts: the year it started, its episodes, and how many are watched.
+func seasonFacts(_ season: Season, items: [MediaItem]?) -> [String] {
+  let watched: String? =
+    switch seasonProgress(season) {
+    case .none: nil
+    case .some(let count): Str.titleSeasonWatchedCount(count)
+    case .all: Str.mediaWatched
+    }
+  return [formatYear(seasonYear(items)), Str.mediaEpisodeCount(season.itemCount), watched].compactMap(\.self)
+}
+
+/// An episode's facts: its air date, then its runtime, or the time left in
+/// it while it's in progress and not marked watched.
+func episodeFacts(_ item: MediaItem, watched: Bool) -> [String] {
+  let resuming = isResumable(item) && !watched
   return [formatDay(item.episode?.airDate), resuming ? timeLeft(item) : formatRuntime(runtimeMinutes(item))]
     .compactMap(\.self)
 }
 
-/// What a file holds, a line each: the picture, the audio, the subtitles.
+/// What someone is credited as, "Director", or "Directors" for more.
+func titleCreditLabel(_ kind: String, count: Int) -> String {
+  switch kind {
+  case CreditKind.creator: Str.peopleCreditCreator(count)
+  case CreditKind.director: Str.peopleCreditDirector(count)
+  case CreditKind.writer: Str.peopleCreditWriter(count)
+  default: Str.peopleCreditActor(count)
+  }
+}
+
+/// What a file holds, a part each: the picture, the audio, the subtitles.
 struct FileInfo: Equatable {
   var video: String?
   var audio: String?
   var subtitles: String?
 }
 
-/// The tracks a file holds, as the server lists them for the player.
-struct FileTracks: Sendable {
-  var audio: [String?]
-  var subtitles: [String?]
+/// `fileInfoParts` in words: each language once, named in the app's
+/// language, or the tracks' count when none says; the audio with the main
+/// track's layout after it.
+func fileInfo(_ item: MediaItem, tracks: FileTracks?) -> FileInfo? {
+  guard let parts = fileInfoParts(item, tracks: tracks) else { return nil }
+  let audio = [
+    languageList(parts.audioLanguages)
+      ?? (parts.audioLanguages.isEmpty ? nil : Str.mediaAudioTracks(parts.audioLanguages.count)),
+    parts.layout,
+  ].compactMap(\.self).joined(separator: " · ")
+  let subtitles =
+    languageList(parts.subtitleLanguages)
+    ?? (parts.subtitleLanguages.isEmpty ? nil : Str.mediaSubtitles(parts.subtitleLanguages.count))
+  let info = FileInfo(video: parts.video, audio: audio.isEmpty ? nil : audio, subtitles: subtitles)
+  return info.video == nil && info.audio == nil && info.subtitles == nil ? nil : info
+}
 
-  static func load(_ api: MatineeApi, _ itemId: String) async throws -> FileTracks {
-    async let audio = api.media.audio(id: itemId)
-    async let subtitles = api.media.subtitles(id: itemId)
-    let tracks = try await audio
-    return FileTracks(
-      audio: tracks.filter(\.primary).map(\.language) + tracks.filter { !$0.primary }.map(\.language),
-      subtitles: try await subtitles.tracks.map(\.language))
+/// A download's state, for the line under a page's buttons.
+func titleDownloadText(_ entry: OfflineItem) -> String {
+  switch entry.state {
+  case .done: return Str.downloadsDone
+  case .running:
+    return entry.progress.map { "\(Str.downloadsStateRunning) · \(formatPercent($0))" } ?? Str.downloadsStateRunning
+  case .paused: return Str.downloadsStatePaused
+  case .queued: return Str.downloadsStateWaiting
+  case .failed:
+    let reason =
+      switch entry.failure {
+      case .forbidden: Str.downloadsErrorForbidden
+      case .unreachable: Str.downloadsErrorUnreachable
+      default: Str.downloadsErrorBrokeOff
+      }
+    return Str.downloadsStateFailed(reason)
   }
 }
 
-/// What `item` holds: the picture, the audio's languages with the main
-/// track's layout, and the subtitles' languages. The languages come from the
-/// server's track lists, `tracks`, which include subtitle files beside the
-/// video; until they load, or if they fail, from what the probe found in the
-/// file. Nil without a probe, or when it says nothing.
-func fileInfo(_ item: MediaItem, tracks: FileTracks?) -> FileInfo? {
-  guard let probe = item.probe else { return nil }
-  let probeAudio = probe.audio.filter(\.default) + probe.audio.filter { !$0.default }
-  let audio = tracks?.audio ?? probeAudio.map(\.language)
-  let subtitles = tracks?.subtitles ?? probe.subtitles.map(\.language)
-  let main = probe.audio.first(where: \.default) ?? probe.audio.first
-  // Each language once; a file whose tracks don't say gets their count instead.
-  let audioLine = [
-    languageList(audio) ?? (audio.isEmpty ? nil : Str.mediaAudioTracks(audio.count)), main?.layout,
-  ].compactMap(\.self).joined(separator: " · ")
-  let subtitleLine = languageList(subtitles) ?? (subtitles.isEmpty ? nil : Str.mediaSubtitles(subtitles.count))
-  let info = FileInfo(video: videoSummary(item), audio: audioLine.isEmpty ? nil : audioLine, subtitles: subtitleLine)
-  return info.video == nil && info.audio == nil && info.subtitles == nil ? nil : info
+/// "42 %", as the app's language writes a share.
+func formatPercent(_ share: Double) -> String {
+  min(max(share, 0), 1).formatted(.percent.precision(.fractionLength(0)).locale(.app))
+}
+
+/// What the server says of a season it lacks, in words, as Android's
+/// `stateText`.
+func gapStateText(_ word: RequestStateWord) -> String {
+  switch word {
+  case .asked: Str.webCatalogStateAsked
+  case .coming(let progress):
+    progress.map { Str.webCatalogStateComingPercent(formatPercent($0)) } ?? Str.webCatalogStateComing
+  case .out(let day): Str.webCatalogStateOut(formatDay(day) ?? day)
+  case .notOut: Str.webCatalogStateNotOut
+  case .unavailable: Str.webCatalogStateUnavailable
+  }
+}
+
+/// A missing season under its name: its state, else its episodes, as
+/// Android's `seasonLineText`.
+func gapSeasonLine(_ season: CatalogSeason) -> String {
+  let today = todayDay()
+  if let word = gapStateWord(season.availability, today: today) { return gapStateText(word) }
+  switch requestSeasonDetail(season, today: today) {
+  case .episodes(let count): return Str.mediaEpisodeCount(count)
+  case .airing(let aired, let count): return Str.webCatalogSeasonAiring(String(aired), String(count))
+  case .release(let word): return gapStateText(word)
+  }
+}
+
+/// Today as the server writes a day, YYYY-MM-DD, for release dates.
+func todayDay() -> String {
+  let formatter = DateFormatter()
+  formatter.locale = Locale(identifier: "en_US_POSIX")
+  formatter.calendar = Calendar(identifier: .gregorian)
+  formatter.dateFormat = "yyyy-MM-dd"
+  return formatter.string(from: Date())
 }
 
 /// A season's files, or with `season` nil, the files without a season number.
@@ -77,10 +141,16 @@ func seasonItems(_ api: MatineeApi, _ titleId: String, _ season: Int?) async thr
 #if DEBUG
   /// What a provider would have said about a title, for the dev server,
   /// which has none: `-title.fixture YES` fills in what's missing, so the
-  /// pages' overview, credits, genres, rating, and trailer can be looked at.
-  /// Debug builds only.
+  /// pages' overview, credits, genres, ratings, trailer, and logo can be
+  /// looked at. Debug builds only.
   enum TitleFixture {
     static var on: Bool { UserDefaults.standard.bool(forKey: "title.fixture") }
+
+    /// A wide logo for the titles from 1999, as Home's stand-in has one.
+    static func logo(_ title: TitleSummary) -> URL? {
+      guard on, title.year == 1999 else { return nil }
+      return URL(string: "https://www.gstatic.com/images/branding/googlelogo/2x/googlelogo_light_color_272x92dp.png")
+    }
 
     static func dress(_ title: Title) -> Title {
       guard on else { return title }
@@ -91,19 +161,19 @@ func seasonItems(_ api: MatineeApi, _ titleId: String, _ season: Int?) async thr
         + "It plays, seeks, and resumes like the real thing, and says so in more words than fit "
         + "in three lines, so the overview's More has something to open."
       title.tagline = title.tagline ?? "Every frame accounted for."
-      if title.genres.isEmpty { title.genres = ["Science Fiction", "Action", "Drama"] }
+      if title.genres.isEmpty { title.genres = ["Science Fiction", "Action", "Drama", "Thriller", "Mystery"] }
       if title.studios.isEmpty { title.studios = ["Matinee Pictures", "Test Card Films"] }
       title.rating = title.rating ?? 7.8
       title.contentRating = title.contentRating ?? "PG-13"
-      title.originalName = title.originalName ?? "\(title.name) (Original)"
-      title.runtimeMinutes = title.runtimeMinutes ?? (title.isShow ? nil : 136)
+      title.originalName = title.originalName ?? (title.isShow ? nil : "\(title.name) (Original)")
       if title.isShow { title.status = title.status ?? "Ended" }
       if title.credits.isEmpty {
         title.credits = [
-          Credit(kind: title.isShow ? CreditKind.creator : CreditKind.director, name: "Ada Lovelace", role: nil, photo: nil, tmdbId: nil),
+          Credit(
+            kind: title.isShow ? CreditKind.creator : CreditKind.director, name: "Ada Lovelace", role: nil, photo: nil,
+            tmdbId: nil),
           Credit(kind: CreditKind.writer, name: "Grace Hopper", role: nil, photo: nil, tmdbId: nil),
           Credit(kind: CreditKind.writer, name: "Alan Turing", role: nil, photo: nil, tmdbId: nil),
-          Credit(kind: CreditKind.writer, name: "Ada Lovelace", role: nil, photo: nil, tmdbId: nil),
           Credit(kind: CreditKind.actor, name: "Keanu Reeves", role: "Neo", photo: nil, tmdbId: nil),
           Credit(kind: CreditKind.actor, name: "Carrie-Anne Moss", role: "Trinity", photo: nil, tmdbId: nil),
           Credit(kind: CreditKind.actor, name: "Laurence Fishburne", role: "Morpheus", photo: nil, tmdbId: nil),
@@ -111,14 +181,12 @@ func seasonItems(_ api: MatineeApi, _ titleId: String, _ season: Int?) async thr
         ]
       }
       if title.trailers.isEmpty {
-        title.trailers = [
-          Trailer(url: "https://www.youtube.com/watch?v=vKQi3bBA1y8", name: "Trailer", language: "en"),
-          Trailer(url: "https://www.youtube.com/watch?v=vKQi3bBA1y8", name: "Trailer", language: "de"),
-        ]
+        title.trailers = [Trailer(url: "https://www.youtube.com/watch?v=vKQi3bBA1y8", name: "Trailer", language: "en")]
       }
       title.seasons = title.seasons.map { season in
         var season = season
-        season.overview = season.overview ?? "The season's overview, from the fixture."
+        season.overview =
+          season.overview ?? "The season's overview, from the fixture: what the season is about, in a line or two."
         return season
       }
       if let next = title.next { title.next = dress(next) }
@@ -129,9 +197,13 @@ func seasonItems(_ api: MatineeApi, _ titleId: String, _ season: Int?) async thr
       guard on, item.title?.kind == TitleKind.show else { return item }
       var item = item
       let episode = item.episode
+      let number = item.episodeNumber ?? 1
       item.episode = EpisodeInfo(
-        name: episode?.name, overview: episode?.overview ?? "What happens in this episode, from the fixture.",
-        airDate: episode?.airDate ?? "2008-01-20", runtimeMinutes: episode?.runtimeMinutes, still: episode?.still)
+        name: episode?.name,
+        overview: episode?.overview
+          ?? "What happens in this episode, from the fixture, long enough to wrap onto a second line and a third.",
+        airDate: episode?.airDate ?? String(format: "2008-01-%02d", min(28, 6 + number * 7)),
+        runtimeMinutes: episode?.runtimeMinutes, still: episode?.still)
       return item
     }
   }
@@ -139,7 +211,7 @@ func seasonItems(_ api: MatineeApi, _ titleId: String, _ season: Int?) async thr
 
 /// The title as the page shows it: as the server sent it, and in debug
 /// builds with the fixture's words where it sent none.
-func shown(_ title: Title) -> Title {
+func titleShown(_ title: Title) -> Title {
   #if DEBUG
     TitleFixture.dress(title)
   #else
@@ -147,10 +219,19 @@ func shown(_ title: Title) -> Title {
   #endif
 }
 
-func shown(_ item: MediaItem) -> MediaItem {
+func itemShown(_ item: MediaItem) -> MediaItem {
   #if DEBUG
     TitleFixture.dress(item)
   #else
     item
   #endif
+}
+
+/// The logo to show for `title`: the provider's, or in debug builds the fixture's stand-in.
+func titleLogoURL(_ title: TitleSummary, api: MatineeApi?) -> URL? {
+  #if DEBUG
+    if let logo = TitleFixture.logo(title) { return logo }
+  #endif
+  guard let api, let logo = title.images.logo else { return nil }
+  return URL(string: api.paths.artwork(logo.id, size: .medium))
 }
