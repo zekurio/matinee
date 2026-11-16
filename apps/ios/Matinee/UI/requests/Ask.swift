@@ -77,10 +77,10 @@ enum RequestButtonLook {
   case page, plain
 }
 
-/// The title's one button: "Request", "Cancel request", "Notify me" or
-/// "Stop notifying", whichever the server's action allows, else nothing.
-/// Cancelling and notifying happen here; a request goes to `onRequest`,
-/// which asks at once or opens the request sheet. A Request the viewer
+/// The title's one button: "Request" or "Cancel request", whichever the
+/// server's action allows, else nothing. Cancelling happens here; a
+/// request goes to `onRequest`, which asks at once or opens the request
+/// sheet. A Request the viewer
 /// can't make, out of requests, with requests off, or declined, stays
 /// dimmed, and a tap says why. `action` and `label` stand in for the
 /// server's, as "Request more" for a show asked for already.
@@ -95,7 +95,6 @@ struct PosterActionButton: View {
   let onRequest: () -> Void
   @Environment(\.requests) private var hub
   @Environment(\.user) private var user
-  @Environment(\.palette) private var palette
   @Environment(\.snackbar) private var snackbar
 
   var body: some View {
@@ -108,7 +107,7 @@ struct PosterActionButton: View {
         press(act, blocked: blocked, why: why)
       } label: {
         if !busy {
-          LucideIcon(icon(act), size: look == .page ? 16 : 14, tint: act == .unfollow ? palette.accent : nil)
+          LucideIcon(icon(act), size: look == .page ? 16 : 14)
         }
         Text(act == .request ? label ?? requestPosterActionText(act) : requestPosterActionText(act))
           .lineLimit(look == .page ? 1 : 2)
@@ -128,8 +127,6 @@ struct PosterActionButton: View {
     switch act {
     case .request: .plus
     case .cancel: .x
-    case .follow: .bell
-    case .unfollow: .bellRing
     }
   }
 
@@ -142,8 +139,6 @@ struct PosterActionButton: View {
     switch act {
     case .request: onRequest()
     case .cancel: if let id { hub?.cancel(id: id, name: name) }
-    case .follow: if let id { hub?.follow(id: id, on: true) }
-    case .unfollow: if let id { hub?.follow(id: id, on: false) }
     }
   }
 }

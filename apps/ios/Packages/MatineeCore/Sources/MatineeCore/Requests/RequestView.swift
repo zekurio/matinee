@@ -8,7 +8,7 @@ public enum RequestStateWord: Sendable, Equatable {
   case notOut // web_requests_badge_notOut
   case unavailable // web_requests_badge_unavailable
 }
-public enum RequestPosterAction: Sendable { case request, cancel, follow, unfollow }
+public enum RequestPosterAction: Sendable { case request, cancel }
 public enum RequestBlocked: Sendable, Equatable {
   case off, noDestination, declined
   case limitUntil(Date?) // web_requests_limit
@@ -33,13 +33,8 @@ extension Availability {
   public var adds: Bool { action == "add" }
   public var posterAction: RequestPosterAction? {
     if asks { return .request }
-    guard requestId != nil else { return nil }
-    switch action {
-    case "cancel": return .cancel
-    case "follow": return .follow
-    case "unfollow": return .unfollow
-    default: return nil
-    }
+    guard requestId != nil, action == "cancel" else { return nil }
+    return .cancel
   }
   public var requestBlocked: RequestBlocked? {
     switch disabledReason {
@@ -123,7 +118,7 @@ extension SeasonAvailability {
     Availability(
       state: state, action: action, progress: progress, etaSeconds: etaSeconds, releaseDate: releaseDate,
       stillLooking: stillLooking, reason: reason.map { .init(kind: $0.kind, code: $0.code, note: $0.note) },
-      askedBySelf: askedBySelf, following: following, requestId: requestId,
+      askedBySelf: askedBySelf, requestId: requestId,
       others: .init(count: others.count, names: others.names),
       limit: limit.map { .init(left: $0.left, resetsAt: $0.resetsAt) }, libraryTitleId: libraryTitleId,
       disabledReason: disabledReason)

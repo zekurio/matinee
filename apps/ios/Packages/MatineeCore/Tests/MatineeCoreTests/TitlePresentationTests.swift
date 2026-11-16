@@ -230,7 +230,7 @@ struct TitlePresentationTests {
     func related(_ state: String, libraryTitleId: String?, title: TitleSummary?) throws -> RelatedTitle {
       let json = """
         {"ref":{"kind":"movie","provider":"tmdb","providerId":"604"},"name":"Film","year":2003,"poster":null,
-         "availability":{"state":"\(state)","stillLooking":false,"askedBySelf":false,"following":false,
+         "availability":{"state":"\(state)","stillLooking":false,"askedBySelf":false,
            "others":{"count":0,"names":[]},"libraryTitleId":\(libraryTitleId.map { "\"\($0)\"" } ?? "null")},
          "title":null}
         """

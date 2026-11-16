@@ -54,7 +54,7 @@ struct DeclineSheet: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    let askedBy = item.followers.filter(\.asked).map(\.name)
+    let askedBy = item.followers.map(\.name)
     ScrollView {
       VStack(alignment: .leading, spacing: Space.s4) {
         Text(Str.webRequestsDeclineTitle(item.title.name))

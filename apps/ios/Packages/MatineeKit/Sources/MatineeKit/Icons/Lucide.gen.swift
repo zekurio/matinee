@@ -13,8 +13,6 @@ public nonisolated struct Lucide: Hashable, Sendable {
   public static let arrowLeft = Lucide("lucide_arrow_left")
   public static let arrowUpDown = Lucide("lucide_arrow_up_down")
   public static let audioLines = Lucide("lucide_audio_lines")
-  public static let bell = Lucide("lucide_bell")
-  public static let bellRing = Lucide("lucide_bell_ring")
   public static let calendar = Lucide("lucide_calendar")
   public static let calendarClock = Lucide("lucide_calendar_clock")
   public static let calendarOff = Lucide("lucide_calendar_off")
@@ -103,8 +101,6 @@ public nonisolated struct Lucide: Hashable, Sendable {
     ("arrowLeft", .arrowLeft),
     ("arrowUpDown", .arrowUpDown),
     ("audioLines", .audioLines),
-    ("bell", .bell),
-    ("bellRing", .bellRing),
     ("calendar", .calendar),
     ("calendarClock", .calendarClock),
     ("calendarOff", .calendarOff),

@@ -76,8 +76,6 @@ struct Navigator {
   var discoverRail: (_ key: String) -> Void = { _ in }
   /// All the provider's movies or shows, a `TitleKind`.
   var catalogBrowse: (_ kind: String) -> Void = { _ in }
-  /// Notices about requests on this device.
-  var requestNotices: () -> Void = {}
 
   /// A movie's or show's page.
   func title(_ title: TitleSummary) { titleId(title.id) }

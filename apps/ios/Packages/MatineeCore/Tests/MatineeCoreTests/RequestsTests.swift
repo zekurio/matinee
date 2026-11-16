@@ -3,7 +3,7 @@ import Testing
 @testable import MatineeCore
 
 private func availability(state: String = "none", action: String? = nil, id: String? = nil, disabled: String? = nil) -> Availability {
-  Availability(state: state, action: action, progress: 0.4, etaSeconds: nil, releaseDate: "2027-08-14", stillLooking: false, reason: nil, askedBySelf: false, following: false, requestId: id, others: .init(count: 0, names: []), limit: nil, libraryTitleId: nil, disabledReason: disabled)
+  Availability(state: state, action: action, progress: 0.4, etaSeconds: nil, releaseDate: "2027-08-14", stillLooking: false, reason: nil, askedBySelf: false, requestId: id, others: .init(count: 0, names: []), limit: nil, libraryTitleId: nil, disabledReason: disabled)
 }
 struct RequestsTests {
   @Test func statesAndActionsRemainServerDecisions() {
@@ -38,13 +38,5 @@ struct RequestsTests {
     }
     #expect(state.availability(ref, fallback: availability()).state == "here")
     #expect(state.failure == nil)
-  }
-  @Test func noticesDiscardStaleButMarkThemRead() {
-    let items = [Notification(id: "old", kind: "waiting", title: nil, season: nil, count: 1, createdAt: "2020-01-01T00:00:00Z", readAt: nil)]
-    let changes = newRequestNotices(items, seen: [], now: Date())
-    #expect(changes.show.isEmpty)
-    #expect(changes.markRead == ["old"])
-    #expect(newRequestNotices(items, seen: ["old"]).markRead.isEmpty)
-    #expect(requestNoticeTarget(items[0]) == .queue("waiting"))
   }
 }

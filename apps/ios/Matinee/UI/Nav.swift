@@ -62,8 +62,6 @@ enum Route: Hashable, Codable {
   case discoverRail(key: String)
   /// All the provider's movies or shows, with the server's filters.
   case catalogBrowse(kind: String)
-  /// Notices about requests on this device, from Settings.
-  case requestNotices
 }
 
 /// The player, over everything: a file, and where to start, or nil to go on where the person left off.
@@ -220,8 +218,7 @@ struct PlayerRequest: Identifiable, Hashable {
       asked: { [weak self] in self?.push(.asked, single: true) },
       requests: { [weak self] in self?.push(.requests(list: $0), single: true) },
       discoverRail: { [weak self] in self?.push(.discoverRail(key: $0), single: true) },
-      catalogBrowse: { [weak self] in self?.push(.catalogBrowse(kind: $0), single: true) },
-      requestNotices: { [weak self] in self?.push(.requestNotices, single: true) }
+      catalogBrowse: { [weak self] in self?.push(.catalogBrowse(kind: $0), single: true) }
     )
   }
 
@@ -304,7 +301,6 @@ struct RouteScreen: View {
     case .requests(let list): RequestsScreen(start: list)
     case .discoverRail(let key): DiscoverRailScreen(key: key)
     case .catalogBrowse(let kind): CatalogBrowseScreen(kind: kind)
-    case .requestNotices: NoticeSettingsScreen()
     }
   }
 }
@@ -443,7 +439,6 @@ enum RoutePath {
     case ("requests", let list): return .page(.profile, .requests(list: list))
     case ("discover", let key?): return .page(.search, .discoverRail(key: key))
     case ("discover-browse", let kind?): return .page(.search, .catalogBrowse(kind: kind))
-    case ("request-notices", nil): return .page(.profile, .requestNotices)
     default: return nil
     }
   }

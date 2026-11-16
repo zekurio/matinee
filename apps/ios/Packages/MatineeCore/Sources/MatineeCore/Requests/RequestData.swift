@@ -112,12 +112,6 @@ public struct RequestActions: Sendable {
   public func cancel(id: String) async throws {
     try await api.requests.cancel(requestId: RequestId(id: id))
   }
-  public func follow(id: String) async throws {
-    try await api.requests.follow(requestId: RequestId(id: id))
-  }
-  public func unfollow(id: String) async throws {
-    try await api.requests.unfollow(requestId: RequestId(id: id))
-  }
   public func add(id: String, libraryId: String? = nil) async throws {
     try await api.admin.requests.approve(id: id, libraryId: libraryId)
   }

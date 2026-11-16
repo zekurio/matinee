@@ -139,12 +139,10 @@ public enum RequestQueueList: String, Sendable, CaseIterable, Hashable {
   case waiting, needsAttention, onTheWay, done
 }
 
-/// Who asked first, and everyone else who asked or follows, as Android's
-/// `askers`: those who asked before those who follow, then by when.
+/// Who asked first, and everyone else who asked, as Android's `askers`:
+/// by when they asked.
 public func requestAskers(_ item: AdminRequestItem) -> (first: AdminRequestItem.Follower?, rest: [AdminRequestItem.Follower]) {
-  let sorted = item.followers.sorted { a, b in
-    a.asked != b.asked ? a.asked : a.createdAt < b.createdAt
-  }
+  let sorted = item.followers.sorted { $0.createdAt < $1.createdAt }
   return (sorted.first, Array(sorted.dropFirst()))
 }
 

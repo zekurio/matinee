@@ -27,8 +27,7 @@ struct RequestApiTests {
       { _ = try await data.mine() }, { _ = try await data.queue() },
       { _ = try await data.related(input) }, { _ = try await data.relatedTitles(input, rail: "similar") },
       { _ = try await actions.ask(input) }, { _ = try await actions.more(id: "r", scope: ShowScope(seasons: [1], future: false)) },
-      { try await actions.cancel(id: "r") }, { try await actions.follow(id: "r") },
-      { try await actions.unfollow(id: "r") }, { try await actions.add(id: "r") },
+      { try await actions.cancel(id: "r") }, { try await actions.add(id: "r") },
       { try await actions.decline(id: "r", reason: "notForServer") },
     ]
     for call in calls {

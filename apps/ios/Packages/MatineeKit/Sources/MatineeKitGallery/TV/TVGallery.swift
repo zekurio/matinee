@@ -53,7 +53,7 @@
       case .buttons: .playOutline
       case .lists: .list
       case .panels: .galleryHorizontalEnd
-      case .feedback: .bell
+      case .feedback: .info
       case .search: .search
       case .cards: .film
       case .episodes: .list

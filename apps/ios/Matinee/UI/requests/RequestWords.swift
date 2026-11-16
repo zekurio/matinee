@@ -3,7 +3,7 @@ import MatineeCore
 
 /*
  * RequestWords.kt: the words for what MatineeCore's request values say
- * (Requests/RequestView.swift, RequestScreens.swift, RequestNotices.swift),
+ * (Requests/RequestView.swift, RequestScreens.swift),
  * in the app's language, from the web's strings Android copied into
  * strings_web_*.xml. Nothing here decides anything; it only says it.
  */
@@ -147,8 +147,6 @@ func requestPosterActionText(_ action: RequestPosterAction) -> String {
   switch action {
   case .request: Str.webAskAsk
   case .cancel: Str.webAskCancel
-  case .follow: Str.webAskNotify
-  case .unfollow: Str.webAskStopNotifying
   }
 }
 
@@ -257,19 +255,5 @@ func browseDetailText(_ detail: BrowseCardDetail) -> String? {
     year.map { Str.webFiltersCardScore(formatRating(score), String($0)) } ?? Str.webFiltersCardScoreOnly(formatRating(score))
   case .day(let day): formatDay(day) ?? day
   case .year(let year): formatYear(year)
-  }
-}
-
-/// A notice's words: its line, and what follows it.
-func requestNoticeText(_ words: RequestNoticeWords) -> (title: String, body: String?) {
-  switch words {
-  case .waiting(let count):
-    (count == 1 ? Str.webNotificationsWaitingOne : Str.webNotificationsWaiting(String(count)), nil)
-  case .attention(let count):
-    (count == 1 ? Str.webNotificationsAttentionOne : Str.webNotificationsAttention(String(count)), nil)
-  case .ready(let name, let season):
-    (season.map { Str.webNotificationsReadySeason(name, seasonName($0)) } ?? Str.webNotificationsReady(name), nil)
-  case .unavailable(let name, let reason):
-    (Str.webNotificationsUnavailable(name), reason.map(requestDeclineText) ?? Str.webNotificationsUnavailableHint)
   }
 }

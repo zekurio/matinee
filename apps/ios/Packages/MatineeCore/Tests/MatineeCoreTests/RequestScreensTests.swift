@@ -11,7 +11,7 @@ struct RequestScreensTests {
   func value(_ state: String = "none", _ action: String? = "ask", id: String? = nil, here: String? = nil) -> Availability {
     Availability(
       state: state, action: action, progress: nil, etaSeconds: nil, releaseDate: nil, stillLooking: false, reason: nil,
-      askedBySelf: false, following: false, requestId: id, others: .init(count: 0, names: []), limit: nil,
+      askedBySelf: false, requestId: id, others: .init(count: 0, names: []), limit: nil,
       libraryTitleId: here, disabledReason: nil)
   }
 
@@ -20,7 +20,7 @@ struct RequestScreensTests {
   ) -> SeasonAvailability {
     SeasonAvailability(
       state: state, action: action, progress: progress, etaSeconds: nil, releaseDate: release, stillLooking: false,
-      reason: nil, askedBySelf: false, following: false, requestId: nil, others: .init(count: 0, names: []), limit: nil,
+      reason: nil, askedBySelf: false, requestId: nil, others: .init(count: 0, names: []), limit: nil,
       libraryTitleId: nil, disabledReason: nil, number: number, episodesHere: 2, episodesAired: 8)
   }
 
@@ -71,7 +71,7 @@ struct RequestScreensTests {
       AsyncThrowingStream { continuation in
         continuation.yield([RequestsLiveEvent(ref: ref, availability: Availability(
           state: "coming", action: nil, progress: 0.5, etaSeconds: nil, releaseDate: nil, stillLooking: false,
-          reason: nil, askedBySelf: false, following: false, requestId: "r", others: .init(count: 0, names: []),
+          reason: nil, askedBySelf: false, requestId: "r", others: .init(count: 0, names: []),
           limit: nil, libraryTitleId: nil, disabledReason: nil), seasons: [])])
       }
     }
@@ -157,16 +157,16 @@ struct RequestScreensTests {
       followers: followers, destinationDescription: "", destinations: [], remoteUrl: nil, diagnostics: [])
   }
 
-  @Test func whoAskedComesBeforeWhoFollows() {
-    let anna = AdminRequestItem.Follower(id: "a", name: "anna", avatarId: nil, asked: true, createdAt: "2026-01-02T00:00:00Z")
-    let ben = AdminRequestItem.Follower(id: "b", name: "ben", avatarId: nil, asked: false, createdAt: "2026-01-01T00:00:00Z")
-    let cleo = AdminRequestItem.Follower(id: "c", name: "cleo", avatarId: nil, asked: true, createdAt: "2026-01-03T00:00:00Z")
-    let (first, rest) = requestAskers(adminItem("r", followers: [ben, cleo, anna]))
-    #expect(first?.name == "anna")
-    #expect(rest.map(\.name) == ["cleo", "ben"])
+  @Test func whoAskedFirstComesFirst() {
+    let anna = AdminRequestItem.Follower(id: "a", name: "anna", avatarId: nil, createdAt: "2026-01-02T00:00:00Z")
+    let ben = AdminRequestItem.Follower(id: "b", name: "ben", avatarId: nil, createdAt: "2026-01-01T00:00:00Z")
+    let cleo = AdminRequestItem.Follower(id: "c", name: "cleo", avatarId: nil, createdAt: "2026-01-03T00:00:00Z")
+    let (first, rest) = requestAskers(adminItem("r", followers: [cleo, anna, ben]))
+    #expect(first?.name == "ben")
+    #expect(rest.map(\.name) == ["anna", "cleo"])
     #expect(requestedBy(adminItem("r")) == .waiting)
     #expect(requestedBy(adminItem("r", followers: [anna])) == .one(name: "anna", at: anna.createdAt))
-    #expect(requestedBy(adminItem("r", followers: [ben, anna])) == .many(["anna", "ben"]))
+    #expect(requestedBy(adminItem("r", followers: [anna, ben])) == .many(["ben", "anna"]))
   }
 
   @Test func aShowsRequestSaysWhatItCovers() {

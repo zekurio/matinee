@@ -78,7 +78,7 @@ struct SignedInApp: View {
     .onChange(of: nav.tab, initial: true) { _, tab in opened.insert(tab) }
     // The actions a long press offers, and the sheets they open, over every tab.
     .modifier(ActionsHost())
-    // Requests' live state, sheets, queue, and notices, over every tab (requests/RequestsHub.swift).
+    // Requests' live state, sheets, and queue, over every tab (requests/RequestsHub.swift).
     .requestsHost()
     .fullScreenCover(item: $nav.player) { PlayerCover(request: $0) }
     .environment(nav)

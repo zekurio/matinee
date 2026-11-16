@@ -20,7 +20,7 @@
  *
  * `-requests.slow YES` makes the catalog's search take six seconds.
    *
-   * Asking, cancelling, following, Add, and Decline change the stand-in's
+   * Asking, cancelling, Add, and Decline change the stand-in's
    * state and stream it. An added request comes in over some seconds and
    * then arrives as a title of the dev server's library, so the arrival
    * shows too. Nothing reaches the dev server's requests.
@@ -88,7 +88,6 @@
     private var order: [String] = []
     private var requests: [String: FixtureRequest] = [:]
     private var library: [TitleSummary] = []
-    private var notices: [MatineeCore.Notification] = []
     private var streams: [UUID: (Data?) -> Void] = [:]
     private var counter = 0
 
@@ -163,11 +162,11 @@
     private func availability(
       _ state: String, action: String? = nil, id: String? = nil, progress: Double? = nil, eta: Int? = nil,
       release: String? = nil, looking: Bool = false, reason: Availability.Reason? = nil, mine: Bool = false,
-      following: Bool = false, others: [String] = [], here: String? = nil, disabled: String? = nil
+      others: [String] = [], here: String? = nil, disabled: String? = nil
     ) -> Availability {
       Availability(
         state: state, action: action, progress: progress, etaSeconds: eta, releaseDate: release, stillLooking: looking,
-        reason: reason, askedBySelf: mine, following: following, requestId: id,
+        reason: reason, askedBySelf: mine, requestId: id,
         others: .init(count: others.count, names: others), limit: nil, libraryTitleId: here, disabledReason: disabled)
     }
 
@@ -180,7 +179,7 @@
           state: state.state, action: state.action, progress: state.progress, etaSeconds: state.etaSeconds,
           releaseDate: state.releaseDate, stillLooking: state.stillLooking,
           reason: state.reason.map { .init(kind: $0.kind, code: $0.code, note: $0.note) }, askedBySelf: state.askedBySelf,
-          following: state.following, requestId: state.requestId, others: .init(count: state.others.count, names: state.others.names),
+          requestId: state.requestId, others: .init(count: state.others.count, names: state.others.names),
           limit: nil, libraryTitleId: nil, disabledReason: state.disabledReason, number: number, episodesHere: 0,
           episodesAired: aired ?? episodes),
         selected: selected)
@@ -216,8 +215,8 @@
       film("786892", "Furiosa", 2024, availability("coming", id: "r-fur", looking: true, mine: true), genres: [(28, "Action"), (12, "Adventure")])
       film("696506", "Mickey 17", 2026, availability("release", id: "r-mick", release: day(40), mine: true), genres: [(878, "Science Fiction"), (35, "Comedy")])
       film("965150", "Aftersun", 2022, availability("unavailable", id: "r-aft", reason: declined, mine: true, disabled: "declined"))
-      film("840430", "The Holdovers", 2023, availability("asked", action: "follow", id: "r-hold", others: ["anna"]), genres: [(35, "Comedy"), (18, "Drama")])
-      film("976893", "Perfect Days", 2023, availability("coming", action: "unfollow", id: "r-perf", progress: 0.2, following: true, others: ["ben"]))
+      film("840430", "The Holdovers", 2023, availability("asked", id: "r-hold", others: ["anna", "ben"]), genres: [(35, "Comedy"), (18, "Drama")])
+      film("976893", "Perfect Days", 2023, availability("coming", id: "r-perf", progress: 0.2, others: ["ben"]))
       film("603", "The Matrix", 1999, availability("here", here: nil), genres: [(28, "Action"), (878, "Science Fiction")], rating: 8.2)
       film("915935", "Anatomy of a Fall", 2023, availability("none", action: "ask"), genres: [(53, "Thriller"), (18, "Drama")])
       film("1022789", "Inside Out 2", 2024, availability("release", release: nil), genres: [(16, "Animation"), (10751, "Family")])
@@ -272,9 +271,9 @@
           rating: 6 + Double(index % 30) / 10, score: 6 + Double(index % 30) / 10, votes: 200 + index * 130)
       }
       // The admin's queue: what others asked for.
-      let anna = AdminRequestItem.Follower(id: "u-anna", name: "anna", avatarId: nil, asked: true, createdAt: instant(-7200))
-      let ben = AdminRequestItem.Follower(id: "u-ben", name: "ben", avatarId: nil, asked: false, createdAt: instant(-3600))
-      let viewer = AdminRequestItem.Follower(id: "u-viewer", name: "ios-viewer", avatarId: nil, asked: true, createdAt: instant(-86_400 * 2))
+      let anna = AdminRequestItem.Follower(id: "u-anna", name: "anna", avatarId: nil, createdAt: instant(-7200))
+      let ben = AdminRequestItem.Follower(id: "u-ben", name: "ben", avatarId: nil, createdAt: instant(-3600))
+      let viewer = AdminRequestItem.Follower(id: "u-viewer", name: "ios-viewer", avatarId: nil, createdAt: instant(-86_400 * 2))
       requests = [
         "r-opp": FixtureRequest(id: "r-opp", ref: titles[key("movie", "872585")]!.ref, scope: nil, status: "waiting", createdAt: instant(-86_400 * 2), followers: [viewer], mine: true),
         "r-hold": FixtureRequest(id: "r-hold", ref: titles[key("movie", "840430")]!.ref, scope: nil, status: "waiting", createdAt: instant(-7200), followers: [anna, ben], mine: false),
@@ -285,11 +284,6 @@
         "r-mick": FixtureRequest(id: "r-mick", ref: titles[key("movie", "696506")]!.ref, scope: nil, status: "accepted", createdAt: instant(-86_400 * 8), followers: [viewer], mine: true),
         "r-aft": FixtureRequest(id: "r-aft", ref: titles[key("movie", "965150")]!.ref, scope: nil, status: "declined", createdAt: instant(-86_400 * 9), followers: [viewer], mine: true, reason: "notForServer", note: "We keep this server to family films for now, sorry!"),
         "r-perf": FixtureRequest(id: "r-perf", ref: titles[key("movie", "976893")]!.ref, scope: nil, status: "accepted", createdAt: instant(-86_400), followers: [ben], mine: false),
-      ]
-      notices = [
-        MatineeCore.Notification(
-          id: "n-fixture-matrix", kind: "ready", title: summary(key("movie", "603")), season: nil, count: 1,
-          createdAt: instant(-300), readAt: nil)
       ]
       refreshActions()
     }
@@ -459,10 +453,6 @@
           guard let input = try? decoder.decode(RequestId.self, from: body) else { return notFound() }
           cancel(input.id)
           return (200, Data())
-        case "requests/follow", "requests/unfollow":
-          guard let input = try? decoder.decode(RequestId.self, from: body) else { return notFound() }
-          follow(input.id, on: path == "requests/follow")
-          return (200, Data())
         case "admin/requests":
           return ok(queue())
         case "admin/requests/approve":
@@ -481,17 +471,6 @@
             }
           }
           return ok(Person(name: name, photo: nil, kind: "actor", titleCount: 0, credits: [], profile: nil, catalog: catalog, stale: false))
-        case "notifications":
-          return ok(NotificationPage(items: notices, nextCursor: nil))
-        case "notifications/read":
-          let ids = (try? JSONSerialization.jsonObject(with: body) as? [String: Any])?["ids"] as? [String] ?? []
-          let now = instant(0)
-          notices = notices.map { notice in
-            var notice = notice
-            if ids.contains(notice.id) { notice.readAt = now }
-            return notice
-          }
-          return (200, Data())
         default:
           return nil
         }
@@ -578,7 +557,7 @@
         }
       }
       titles[ref.requestKey] = title
-      let me = AdminRequestItem.Follower(id: "u-me", name: _admin ? "ios-admin" : "ios-viewer", avatarId: nil, asked: true, createdAt: instant(0))
+      let me = AdminRequestItem.Follower(id: "u-me", name: _admin ? "ios-admin" : "ios-viewer", avatarId: nil, createdAt: instant(0))
       requests[id] = FixtureRequest(id: id, ref: ref, scope: scope, status: "waiting", createdAt: instant(0), followers: [me], mine: true)
       publish()
       return item(requests[id]!).map { item in
@@ -611,13 +590,6 @@
       publish()
     }
 
-    private func follow(_ id: String, on: Bool) {
-      guard let key = titles.first(where: { $0.value.availability.requestId == id })?.key else { return }
-      titles[key]?.availability.following = on
-      titles[key]?.availability.action = on ? "unfollow" : "follow"
-      publish()
-    }
-
     private func approve(_ id: String) {
       guard var request = requests[id] else { return }
       request.status = "accepted"
@@ -635,7 +607,6 @@
           if progress >= 0.9 {
             let here = library.dropFirst().first?.id ?? library.first?.id
             setState(request.ref, id: id) { $0.state = "here"; $0.progress = nil; $0.libraryTitleId = here }
-            notices.append(MatineeCore.Notification(id: "n-\(UUID().uuidString)", kind: "ready", title: summary(request.ref.requestKey), season: nil, count: 1, createdAt: instant(0), readAt: nil))
           } else {
             setState(request.ref, id: id) { $0.progress = progress + 0.4 }
             tick(id, progress: progress + 0.4)
@@ -712,8 +683,7 @@
     private static let served: Set<String> = [
       "catalog/details", "catalog/related", "catalog/related/titles", "catalog/search", "discover/rails", "discover/page",
       "discover/browse/options", "discover/browse", "requests/live", "admin/requests/live", "requests/mine",
-      "requests/ask", "requests/cancel", "requests/follow", "requests/unfollow", "admin/requests",
-      "admin/requests/approve", "admin/requests/decline", "notifications", "notifications/read",
+      "requests/ask", "requests/cancel", "admin/requests", "admin/requests/approve", "admin/requests/decline",
     ]
 
     private static func path(_ request: URLRequest) -> String? {

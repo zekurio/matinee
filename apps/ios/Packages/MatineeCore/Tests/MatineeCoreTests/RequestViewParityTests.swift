@@ -4,10 +4,10 @@ import Testing
 
 struct RequestViewParityTests {
   func value(_ state: String = "none", _ action: String? = "ask", id: String? = nil) -> Availability {
-    Availability(state: state, action: action, progress: nil, etaSeconds: nil, releaseDate: nil, stillLooking: false, reason: nil, askedBySelf: false, following: false, requestId: id, others: .init(count: 0, names: []), limit: nil, libraryTitleId: nil, disabledReason: nil)
+    Availability(state: state, action: action, progress: nil, etaSeconds: nil, releaseDate: nil, stillLooking: false, reason: nil, askedBySelf: false, requestId: id, others: .init(count: 0, names: []), limit: nil, libraryTitleId: nil, disabledReason: nil)
   }
   func season(_ number: Int, aired: Int = 10, selected: Bool = true) -> CatalogSeason {
-    CatalogSeason(number: number, overview: nil, poster: nil, episodeCount: 10, airDate: nil, availability: .init(state: "none", action: "ask", progress: nil, etaSeconds: nil, releaseDate: nil, stillLooking: false, reason: nil, askedBySelf: false, following: false, requestId: nil, others: .init(count: 0, names: []), limit: nil, libraryTitleId: nil, disabledReason: nil, number: number, episodesHere: 0, episodesAired: aired), selected: selected)
+    CatalogSeason(number: number, overview: nil, poster: nil, episodeCount: 10, airDate: nil, availability: .init(state: "none", action: "ask", progress: nil, etaSeconds: nil, releaseDate: nil, stillLooking: false, reason: nil, askedBySelf: false, requestId: nil, others: .init(count: 0, names: []), limit: nil, libraryTitleId: nil, disabledReason: nil, number: number, episodesHere: 0, episodesAired: aired), selected: selected)
   }
   let ref = CatalogRef(kind: "movie", provider: "tmdb", providerId: "438631")
   @Test func nothingRequested() {
@@ -45,9 +45,10 @@ struct RequestViewParityTests {
     a.reason = .init(kind: "declined", code: "notFound", note: nil)
     #expect(requestDeclineWord(a.reason!) == .notFound)
   }
-  @Test func followingAndDimmedButtons() {
-    #expect(value("asked", "follow", id: "r").posterAction == .follow)
-    #expect(value("coming", "unfollow", id: "r").posterAction == .unfollow)
+  @Test func someoneElsesRequestAndDimmedButtons() {
+    // Someone else asked for it: there's nothing to press, as Android's someoneElseRequestedOffersNothing.
+    #expect(value("asked", nil, id: "r").posterAction == nil)
+    #expect(value("coming", nil, id: "r").posterAction == nil)
     for reason in ["off", "noDestination", "declined", "limit"] {
       var a = value("none", nil)
       a.disabledReason = reason

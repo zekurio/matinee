@@ -35,21 +35,19 @@ import Observation
   public private(set) var item: RequestItem?
   public private(set) var failure: Failure?
   public private(set) var undoId: String?
-  public private(set) var wantsNotificationPermission = false
   @ObservationIgnored private var expiry: Task<Void, Never>?
   @ObservationIgnored private let duration: Duration
   @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
   public init(undoDuration: Duration = .seconds(6), sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
     duration = undoDuration; self.sleep = sleep
   }
-  public func submit(_ chooser: RequestChooser, availability: Availability, askedPermission: Bool, actions: RequestActions) async {
+  public func submit(_ chooser: RequestChooser, availability: Availability, actions: RequestActions) async {
     guard !busy, availability.requestBlocked == nil, chooser.label != .pickOne else { return }
     busy = true; failure = nil
     defer { busy = false }
     do {
       let result = try await actions.ask(CatalogInput(ref: chooser.ref, libraryId: chooser.libraryId), scope: chooser.scope)
       item = result
-      wantsNotificationPermission = !askedPermission
       expiry?.cancel()
       undoId = chooser.first && (result.availability.action == "cancel" || result.season?.action == "cancel") ? result.id : nil
       if undoId != nil {
