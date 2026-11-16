@@ -36,6 +36,16 @@ The app must update `store.server` whenever `activeServer` changes. Compose
   item ids. `forgetServer` removes just that server, including pending progress.
 - Settings are `unmeteredOnly`, `defaultVersion`, `videoCodec`, and `subtitles`.
   Pass `wishes()` to resolve to apply them. `await store.storageUsed` counts disk bytes.
+- Low storage holds downloads back, as Android's `setRequiresStorageNotLow`:
+  while `volumeAvailableCapacityForImportantUsage` is at or under the lesser
+  of 5% of the volume and 500 MiB (`storageLow`), a download stays queued,
+  and one running goes back to queued with what it has, its tasks cancelled
+  and an original's resume data kept. The worker checks before each start,
+  as each version fragment lands, and every five seconds of an original's
+  progress, and looks again a minute after it held one back. Nothing weighs
+  the server's size estimate, and the row reads Waiting, as on Android.
+  `worker.capacity` is injectable; tests and the app's `-dev.lowStorage`
+  replace it.
 - `OfflineItem` exposes state, optional ratio, bytes, tracks, subtitles, image,
   and a typed `DownloadFailure`. Translate the failure cases in the app. A
   server failure carries its message unchanged.
