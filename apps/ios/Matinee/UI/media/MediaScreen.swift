@@ -45,8 +45,6 @@ struct MediaScreen: View {
         } else {
           LibraryGrid { ForEach(list, id: \.id) { library in LibraryCard(library: library) } }
         }
-        // The ways into the catalog, Browse movies and Browse shows, while the server has Discover on.
-        CatalogBrowseEntries()
       }
       .scrollsToTopOnReselect()
       .refreshable {

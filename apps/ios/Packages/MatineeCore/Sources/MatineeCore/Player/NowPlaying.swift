@@ -98,10 +98,13 @@ enum NowPlayingAudioEvent {
   func install(_ handler: @escaping @MainActor (NowPlayingCommand, Double?) -> Bool) {
     for value in NowPlayingCommand.allCases {
       let command = command(value)
-      let target = command.addTarget { event in
+      // MediaPlayer invokes handlers on an arbitrary queue, so the closure is
+      // @Sendable: without it, it would be the main actor's like the method it's
+      // made in, and Swift stops the app when such a closure runs elsewhere.
+      // State and actions belong to the player actor; disabled commands are
+      // checked there again.
+      let target = command.addTarget { @Sendable event in
         let position = (event as? MPChangePlaybackPositionCommandEvent)?.positionTime
-        // MediaPlayer invokes handlers on an arbitrary queue. State and actions
-        // belong to the player actor; disabled commands are checked there again.
         Task { @MainActor in _ = handler(value, position) }
         return .success
       }
@@ -303,7 +306,7 @@ private struct SystemArtworkLoader: NowPlayingArtworkLoader {
           let image = NSImage(
             cgImage: thumbnail, size: NSSize(width: thumbnail.width, height: thumbnail.height))
         #endif
-        artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        artwork = nowPlayingArtwork(image)
         update()
       } catch {}
     }
@@ -355,4 +358,18 @@ private struct SystemArtworkLoader: NowPlayingArtworkLoader {
     audioSession.stop()
     active = false
   }
+}
+
+#if os(iOS) || os(tvOS)
+  private typealias NowPlayingImage = UIImage
+#else
+  private typealias NowPlayingImage = NSImage
+#endif
+
+/// The artwork for `image`. MediaPlayer asks for the picture on a queue of its
+/// own, so the closure must not be the main actor's: made inside a main-actor
+/// method it would be, and Swift stops the app when it's called from elsewhere.
+nonisolated private func nowPlayingArtwork(_ image: NowPlayingImage) -> MPMediaItemArtwork {
+  nonisolated(unsafe) let image = image
+  return MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
 }

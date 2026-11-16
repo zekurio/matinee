@@ -79,7 +79,7 @@ private struct LoadsDiscover: ViewModifier {
 
 extension View {
   /// Loads whether Discover is on and its rows into `loader`, for a page that
-  /// hands it to `DiscoverRows` or `CatalogBrowseEntries`.
+  /// hands it to `DiscoverRows`.
   func loadsDiscover(_ loader: Loader<DiscoverRails>) -> some View { modifier(LoadsDiscover(loader: loader)) }
 }
 
