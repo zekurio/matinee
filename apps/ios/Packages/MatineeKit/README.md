@@ -291,6 +291,9 @@ xcodebuild test -scheme MatineeKit-Package -only-testing:MatineeKitBoundaryTests
   -destination 'platform=iOS Simulator,name=matinee-design-iphone' -derivedDataPath ../../build/KitDerivedData
 ```
 
+On the Mac, without a simulator, `just boundary` and `just tv-boundary` run the
+same files through `Packages/MatineeKitBoundary`, a package of only these tests.
+
 It prints a count per stock control and every use. The rules are the
 `rules` list at the top of the test, each with what to use instead.
 `KIT_BOUNDARY_ALLOW_FILE` names a file of folders to let through, one a

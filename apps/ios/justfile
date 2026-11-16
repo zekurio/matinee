@@ -14,6 +14,9 @@ built_app := derived / "Build/Products/Debug-iphonesimulator/Matinee.app"
 xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme Matinee -derivedDataPath " + derived
 # The Mac's own copy of the kit's boundary test (Matinee/UI/README.md).
 boundary := "build/KitBoundary"
+# The tests run from Packages/MatineeKitBoundary, which builds on the Mac without the kit;
+# both folders are named, since a test's own default is beside the kit's sources.
+boundary_roots := 'KIT_BOUNDARY_ROOT="$PWD/../MatineeKit/Sources/MatineeKitGallery" KIT_TV_BOUNDARY_ROOT="$PWD/../MatineeKit/Sources/MatineeKitGallery/TV"'
 # The Apple TV app's (MatineeTV/README.md): its own derived data, simulator, and build.
 tv_derived := env("MATINEE_TV_DERIVED_DATA", "build/TVDerivedData")
 tv_simulator := env("MATINEE_TV_SIMULATOR", "Apple TV 4K (4th generation)")
@@ -77,11 +80,11 @@ test: boundary
 
 # Fail on a stock SwiftUI control outside the kit, but in the folders Matinee/UI/kit-exclusions.txt lets through, and on a phone component in the TV app
 boundary: tv-boundary
-    cd Packages/MatineeKit && swift build --scratch-path ../../{{ boundary }} --target MatineeKitBoundaryTests -q
-    cd Packages/MatineeKit && swift test --scratch-path ../../{{ boundary }} --skip-build --filter MatineeKitBoundaryTests -q
-    cd Packages/MatineeKit && KIT_BOUNDARY_ROOT="$PWD/../../Matinee/UI" \
+    cd Packages/MatineeKitBoundary && {{ boundary_roots }} \
+        swift test --scratch-path ../../{{ boundary }} -q
+    cd Packages/MatineeKitBoundary && {{ boundary_roots }} KIT_BOUNDARY_ROOT="$PWD/../../Matinee/UI" \
         KIT_BOUNDARY_ALLOW_FILE="$PWD/../../Matinee/UI/kit-exclusions.txt" \
-        swift test --scratch-path ../../{{ boundary }} --skip-build --filter MatineeKitBoundaryTests -q
+        swift test --scratch-path ../../{{ boundary }} -q
 
 # Generate the API client again after a contract change
 api:
@@ -139,9 +142,8 @@ tv-remote-dev account="ios-admin" *args:
 
 # Fail on a phone component, a phone text size, or a stock control in the Apple TV app's screens
 tv-boundary:
-    cd Packages/MatineeKit && swift build --scratch-path ../../{{ boundary }} --target MatineeKitBoundaryTests -q
-    cd Packages/MatineeKit && KIT_TV_BOUNDARY_ROOT="$PWD/../../MatineeTV" \
-        swift test --scratch-path ../../{{ boundary }} --skip-build --filter MatineeKitBoundaryTests -q
+    cd Packages/MatineeKitBoundary && {{ boundary_roots }} KIT_TV_BOUNDARY_ROOT="$PWD/../../MatineeTV" \
+        swift test --scratch-path ../../{{ boundary }} -q
 
 # Draw the Apple TV app's layered icon and Top Shelf image from brand/ (scripts/tvicon.sh)
 tv-icons:
