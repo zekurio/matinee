@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -106,6 +107,8 @@ private fun OnlineHomeScreen() {
     val asked = rememberHomeAsked()
     val hidden = LocalActions.current.hidden
     val listState = rememberLazyListState()
+    val window = LocalWindowInfo.current.containerSize
+    val banner = opensWithBanner(with(LocalDensity.current) { window.width.toDp().value })
     val haze = rememberHazeState()
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -115,9 +118,14 @@ private fun OnlineHomeScreen() {
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             item(key = "top") {
-                Column {
-                    // Showing what loaded before while the server can't be reached: the icon, up top.
-                    AppHeader { DisconnectedAction(*onPage.toTypedArray()) }
+                // Showing what loaded before while the server can't be reached: the icon, up top.
+                val header: @Composable () -> Unit = { AppHeader { DisconnectedAction(*onPage.toTypedArray()) } }
+                // A tablet's window opens with the web's banner (Hero.kt), the
+                // header over its top; a phone's with the cards, under the header.
+                if (banner) {
+                    HomeBanner(loaders, dev, header)
+                } else Column {
+                    header()
                     // The header is 44 with the logo in its middle, which alone leaves the cards crowding it.
                     val below = Modifier.padding(top = 8.dp)
                     when (val state = featured.state) {

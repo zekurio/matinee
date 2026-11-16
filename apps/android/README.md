@@ -98,9 +98,12 @@ folder as is.
   opens the profile. Search is the field at the top of Media, and Home's
   search button opens Media with it focused. Which tabs there are and
   where a place lands is `ui/ShellLayout.kt`, with its tests.
-- Home opens with the featured titles in a row of cards, after Findroid's:
-  one on a phone, two from 600 dp, three from 840, each with its genres and
-  its name over the backdrop. Then libraries with sort and genre filters,
+- Home opens with the featured titles. On a phone they're a row of cards,
+  after Findroid's, each with its genres and its name over the backdrop.
+  From 600 dp it's the web's banner, as on an iPad: the name typed out, the
+  facts, the genres, the overview where there's room, Play and Details,
+  and the dots, moving on every 8 seconds, with Home's header over its top
+  (`ui/home/Hero.kt`, its rules in `HomeHero.kt`). Then libraries with sort and genre filters,
   search, title, season, and episode pages, watched marks, and favorites.
   Long press a card for more.
 - The player sends the server what the device can play and plays what
