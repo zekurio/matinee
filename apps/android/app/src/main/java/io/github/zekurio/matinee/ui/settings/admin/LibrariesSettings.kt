@@ -68,6 +68,7 @@ import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.kit.MatineeTextField
 import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetBody
 import io.github.zekurio.matinee.ui.kit.SheetHeader
 import io.github.zekurio.matinee.ui.kit.SheetItem
 import io.github.zekurio.matinee.ui.kit.Spinner
@@ -216,7 +217,7 @@ private fun LibrarySheet(
         }
     }
     Sheet(onDismissRequest = onDismiss, state = sheet) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
+        SheetBody(Modifier.padding(bottom = 8.dp)) {
             SheetHeader(library.name, library.paths.joinToString(", "))
             SheetItem(Lucide.RefreshCw, stringResource(R.string.web_libraries_scanNow)) { pick(onScan) }
             if (library.metadataProvider != null) {

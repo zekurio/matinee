@@ -11,13 +11,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -54,6 +52,8 @@ import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetBody
+import io.github.zekurio.matinee.ui.kit.SheetHeader
 import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.text.NumberFormat
@@ -281,11 +281,8 @@ fun Standing(range: String, zone: String, modifier: Modifier = Modifier) {
 private fun BoardSheet(board: io.github.zekurio.matinee.api.LeaderboardBoard, range: String, onDismiss: () -> Unit) {
     val res = LocalResources.current
     Sheet(onDismissRequest = onDismiss, state = rememberSheetState(skipPartiallyExpanded = false)) {
-        Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)
-                .verticalScroll(androidx.compose.foundation.rememberScrollState()),
-        ) {
-            io.github.zekurio.matinee.ui.kit.SheetHeader(metricName(board.metric), rangeName(range))
+        SheetHeader(metricName(board.metric), rangeName(range))
+        SheetBody(Modifier.padding(vertical = 8.dp)) {
             Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 board.entries.forEachIndexed { index, place ->
                     // Set off when it doesn't carry straight on from the top places.

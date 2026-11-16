@@ -17,14 +17,12 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -81,6 +79,8 @@ import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetBody
+import io.github.zekurio.matinee.ui.kit.SheetHeader
 import io.github.zekurio.matinee.ui.kit.SheetItem
 import io.github.zekurio.matinee.ui.kit.rememberSheetCloser
 import io.github.zekurio.matinee.ui.kit.rememberSheetState
@@ -461,19 +461,14 @@ private fun ShowActions(title: TitleSummary, entries: List<OfflineItem>, onRemov
     val sheet = rememberSheetState(skipPartiallyExpanded = false)
     val close = rememberSheetCloser(sheet, onDismiss)
     Sheet(onDismissRequest = onDismiss, state = sheet) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                Text(title.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(
-                    listOf(
-                        res.getQuantityString(R.plurals.media_episode_count, entries.size, entries.size),
-                        formatBytes(entries.sumOf { it.bytes }),
-                    ).joinToString(" · "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Palette.Muted,
-                )
-            }
-            HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
+        SheetBody(Modifier.padding(bottom = 8.dp)) {
+            SheetHeader(
+                title.name,
+                listOf(
+                    res.getQuantityString(R.plurals.media_episode_count, entries.size, entries.size),
+                    formatBytes(entries.sumOf { it.bytes }),
+                ).joinToString(" · "),
+            )
             if (active.isNotEmpty()) {
                 SheetItem(Lucide.Pause, stringResource(R.string.downloads_pause_all)) {
                     close { active.forEach { downloads.pause(it.id) } }
@@ -523,12 +518,8 @@ private fun DownloadActions(entry: OfflineItem, onDismiss: () -> Unit) {
     val sheet = rememberSheetState(skipPartiallyExpanded = false)
     val close = rememberSheetCloser(sheet, onDismiss)
     Sheet(onDismissRequest = onDismiss, state = sheet) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                Text(primary, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (secondary != null) Text(secondary, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, maxLines = 1)
-            }
-            HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
+        SheetBody(Modifier.padding(bottom = 8.dp)) {
+            SheetHeader(primary, secondary)
             if (entry.state == DownloadState.DONE) {
                 SheetItem(Lucide.PlayOutline, stringResource(R.string.title_play)) {
                     close { nav.play(entry.id) }

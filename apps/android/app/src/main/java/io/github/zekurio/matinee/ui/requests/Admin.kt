@@ -76,8 +76,11 @@ import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.kit.MatineeTextField
 import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetBody
+import io.github.zekurio.matinee.ui.kit.SheetFooter
 import io.github.zekurio.matinee.ui.kit.SheetHeader
 import io.github.zekurio.matinee.ui.kit.SheetItem
+import io.github.zekurio.matinee.ui.kit.SheetPadding
 import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.kit.rememberSheetCloser
 import io.github.zekurio.matinee.ui.kit.rememberSheetState
@@ -245,56 +248,60 @@ fun DeclineSheet(item: AdminRequestItem, onDismiss: () -> Unit, giveUp: Boolean 
     val askedBy = item.followers.map { it.name }
     val title = if (giveUp) R.string.web_requests_giveUp_title else R.string.web_requests_decline_title
     AskSheet(stringResource(title, item.title.name), onDismiss) { close ->
-        Text(stringResource(R.string.web_requests_decline_reason), style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
-        // The sheet pads its content; the choices run to its edges, as a sheet's rows do.
-        Column(Modifier.bleed(20.dp)) {
-            if (giveUp) {
-                // Only one reason fits giving up, so it's said, not offered.
-                RadioRow(reasonLabel(DeclineReason.NOT_FOUND), null, true) {}
-            } else {
-                WaitingDeclineReason.all.forEach { code ->
-                    RadioRow(reasonLabel(code), null, reason == code) { reason = code }
+        SheetBody(Modifier.padding(horizontal = SheetPadding, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(R.string.web_requests_decline_reason), style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
+            // The sheet pads its content; the choices run to its edges, as a sheet's rows do.
+            Column(Modifier.bleed(SheetPadding)) {
+                if (giveUp) {
+                    // Only one reason fits giving up, so it's said, not offered.
+                    RadioRow(reasonLabel(DeclineReason.NOT_FOUND), null, true) {}
+                } else {
+                    WaitingDeclineReason.all.forEach { code ->
+                        RadioRow(reasonLabel(code), null, reason == code) { reason = code }
+                    }
                 }
             }
+            // The note's name sits above it, as the reason's does.
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    if (askedBy.isEmpty()) stringResource(R.string.web_requests_decline_note)
+                    else res.getString(R.string.web_requests_decline_noteFor, formatList(askedBy, res)),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Palette.Muted,
+                )
+                MatineeTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    placeholder = stringResource(R.string.web_requests_decline_notePlaceholder),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (giveUp) {
+                Text(
+                    // A by-hand connection holds nothing to keep.
+                    item.connection?.takeIf { it.reportsProgress }?.name?.let { res.getString(R.string.web_requests_giveUp_keeps, it) }
+                        ?: stringResource(R.string.web_requests_giveUp_turnsUp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Palette.Muted,
+                )
+            }
         }
-        // The note's name sits above it, as the reason's does.
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                if (askedBy.isEmpty()) stringResource(R.string.web_requests_decline_note)
-                else res.getString(R.string.web_requests_decline_noteFor, formatList(askedBy, res)),
-                style = MaterialTheme.typography.labelLarge,
-                color = Palette.Muted,
-            )
-            MatineeTextField(
-                value = note,
-                onValueChange = { note = it },
-                placeholder = stringResource(R.string.web_requests_decline_notePlaceholder),
+        SheetFooter {
+            MatineeButton(
+                onClick = {
+                    val text = note.trim().ifEmpty { null }
+                    if (giveUp) {
+                        close { onAnswer(QueueAnswer.GiveUp(text)) }
+                    } else {
+                        val code = reason ?: return@MatineeButton
+                        close { onAnswer(QueueAnswer.Decline(code, text)) }
+                    }
+                },
+                enabled = giveUp || reason != null,
                 modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        if (giveUp) {
-            Text(
-                // A by-hand connection holds nothing to keep.
-                item.connection?.takeIf { it.reportsProgress }?.name?.let { res.getString(R.string.web_requests_giveUp_keeps, it) }
-                    ?: stringResource(R.string.web_requests_giveUp_turnsUp),
-                style = MaterialTheme.typography.bodySmall,
-                color = Palette.Muted,
-            )
-        }
-        MatineeButton(
-            onClick = {
-                val text = note.trim().ifEmpty { null }
-                if (giveUp) {
-                    close { onAnswer(QueueAnswer.GiveUp(text)) }
-                } else {
-                    val code = reason ?: return@MatineeButton
-                    close { onAnswer(QueueAnswer.Decline(code, text)) }
-                }
-            },
-            enabled = giveUp || reason != null,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(stringResource(if (giveUp) R.string.web_requests_giveUp_submit else R.string.web_requests_decline_submit))
+            ) {
+                Text(stringResource(if (giveUp) R.string.web_requests_giveUp_submit else R.string.web_requests_decline_submit))
+            }
         }
     }
 }
@@ -576,7 +583,7 @@ private fun RowMenu(
     val sheet = rememberSheetState()
     val close = rememberSheetCloser(sheet, onDismiss)
     Sheet(onDismissRequest = onDismiss, state = sheet) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
+        SheetBody(Modifier.padding(bottom = 8.dp)) {
             SheetHeader(item.title.name, whereText(item, res))
             when (list) {
                 "waiting" -> {
