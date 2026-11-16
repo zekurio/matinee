@@ -15,5 +15,3 @@ player/
 profile/
 search/
 settings/
-signin/
-title/
