@@ -143,6 +143,7 @@ struct TVTitleGrid<Header: View>: View {
   @Environment(\.tvActions) private var actions
   @Environment(\.snackbar) private var snackbar
   @Environment(ViewerState.self) private var viewer: ViewerState?
+  @Environment(\.palette) private var palette
 
   var body: some View {
     ZStack(alignment: .topLeading) {
@@ -196,8 +197,6 @@ struct TVTitleGrid<Header: View>: View {
         .padding(.bottom, TVSpace.s5)
     }
   }
-
-  @Environment(\.palette) private var palette
 }
 
 /// Below the grid's own room for the lift, where a notice or the spinner stands in for the first row.

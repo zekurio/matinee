@@ -272,6 +272,8 @@ private struct TVFilterRows: View {
     }
     if let years = offered.years {
       TVListHeading(Str.webFiltersYears)
+      // TODO(strings): a range's own ends, proposed web_filters_yearFrom "Oldest" / web_filters_yearTo "Newest";
+      // the sort's words read the same in English and German.
       rangeRows(
         "years", span: years, low: filters.yearFrom.map(Double.init), high: filters.yearTo.map(Double.init),
         words: (Str.webFiltersSortOldest, Str.webFiltersSortNewest), format: yearValue
@@ -300,6 +302,8 @@ private struct TVFilterRows: View {
           .padding(.bottom, TVSpace.s2)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
+      // TODO(strings): proposed web_filters_runtimeMin "Shortest" / web_filters_runtimeMax "Longest";
+      // the sort's for now.
       rangeRows(
         "runtime", span: runtime, low: filters.runtimeMin.map(Double.init), high: filters.runtimeMax.map(Double.init),
         words: (Str.webFiltersSortShortest, Str.webFiltersSortLongest), format: runtimeValue
