@@ -135,8 +135,8 @@ fun AppHeader(modifier: Modifier = Modifier, action: @Composable () -> Unit = {}
     val offline = LocalOffline.current
     val nav = LocalNavigator.current
     Row(
-        // The account's 44 reaches 4 past its picture, which ends on the gutter as the logo starts on it.
-        modifier.fillMaxWidth().statusBarsPadding().height(44.dp).padding(start = Gutter, end = Gutter - 4.dp),
+        // The account's 44 reaches 2 past its picture, which ends on the gutter as the logo starts on it.
+        modifier.fillMaxWidth().statusBarsPadding().height(44.dp).padding(start = Gutter, end = Gutter - 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Logo(Modifier.semantics { heading() }, height = 18.dp)
@@ -145,8 +145,8 @@ fun AppHeader(modifier: Modifier = Modifier, action: @Composable () -> Unit = {}
             LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted, modifier = Modifier.padding(horizontal = 8.dp))
         } else {
             action()
-            // 36 to see, in the 48 every round button takes, its edge 8 from the account's picture.
-            RoundIconButton(Lucide.Search, stringResource(R.string.search_title), nav::search, Modifier.offset(x = 2.dp), size = 36.dp, iconSize = 18.dp)
+            // 40 to see, in the 48 every round button takes, its edge 8 from the account's picture.
+            RoundIconButton(Lucide.Search, stringResource(R.string.search_title), nav::search, Modifier.offset(x = (-2).dp), size = 40.dp, iconSize = 20.dp)
         }
         AccountButton()
     }
@@ -180,7 +180,7 @@ private fun AccountButton() {
         contentAlignment = Alignment.Center,
     ) {
         Box {
-            Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = 36.dp)
+            Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = 40.dp)
             if (waiting > 0) {
                 Box(
                     Modifier
