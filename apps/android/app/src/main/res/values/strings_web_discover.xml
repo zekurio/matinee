@@ -38,10 +38,6 @@
     <string name="web_discover_browse_sort_votes">Most votes</string>
     <string name="web_discover_browse_scoreHint">From TMDB, out of 10</string>
     <string name="web_discover_browse_votes">Votes</string>
-    <plurals name="web_discover_browse_chip_votes">
-        <item quantity="one">At least %1$d vote</item>
-        <item quantity="other">At least %1$d votes</item>
-    </plurals>
     <string name="web_discover_browse_votesStep">%1$s+</string>
     <string name="web_discover_browse_only">Only</string>
     <string name="web_discover_browse_onlyHint">Coming soon looks three months ahead.</string>
@@ -50,7 +46,6 @@
     <string name="web_discover_browse_requestable">Ones to ask for</string>
     <string name="web_discover_browse_floorScore">Only titles with at least %1$s votes, so a handful of votes can\'t top the list.</string>
     <string name="web_discover_browse_floorList">Only titles with at least %1$s votes, so the list isn\'t filled with ones hardly anyone has seen.</string>
-    <string name="web_discover_browse_floorChange">Choose a minimum</string>
     <string name="web_discover_browse_none_movie">No movies match these filters</string>
     <string name="web_discover_browse_none_show">No shows match these filters</string>
     <string name="web_discover_browse_nothing">Nothing to show right now</string>

@@ -2,11 +2,6 @@ import { ORPCError } from "@matinee/client"
 import type { CatalogFilters, CatalogSort, TitleKind } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import { Skeleton } from "@matinee/ui/components/skeleton"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@matinee/ui/components/tooltip"
 import { cn } from "@matinee/ui/lib/utils"
 import {
   keepPreviousData,
@@ -16,21 +11,15 @@ import {
 } from "@tanstack/react-query"
 import {
   CloudOffIcon,
-  InfoIcon,
   RotateCwIcon,
   SearchXIcon,
   SparklesIcon,
 } from "lucide-react"
-import { type ReactNode, useId, useState } from "react"
+import { type ReactNode, useState } from "react"
 
 import { refKey, useLiveAvailability } from "@/components/catalog/catalog-data"
-import { chipClass } from "@/components/chips"
 import { PosterGridSkeleton } from "@/components/library/library-states"
-import {
-  FilterChips,
-  SortMenu,
-  SortSelect,
-} from "@/components/library/list-controls"
+import { SortMenu, SortSelect } from "@/components/library/list-controls"
 import { posterGrid } from "@/components/media-item"
 import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { usePhone } from "@/components/sheet-menu"
@@ -39,12 +28,13 @@ import { errorMessage, orpc } from "@/lib/rpc"
 import { useDismissedStore } from "@/stores/recommendations"
 
 import { BrowseCard, cardDetail, recommends } from "./browse-card"
-import { activeFilters, BrowseFilterPanel } from "./browse-filters"
+import { BrowseFilterPanel } from "./browse-filters"
 import {
   type Browse,
   browseFrom,
   type BrowseOptions,
   type BrowseSearch,
+  filterCount,
   NO_FILTERS,
   searchFor,
   sortFits,
@@ -211,25 +201,19 @@ function BrowseGrid({
     withFilters({ ...browse.filters, ...patch })
   const setSort = (sort: CatalogSort) => navigate({ ...browse, sort })
   const clear = () => withFilters(NO_FILTERS)
-  const chips = activeFilters(browse.filters, options, change)
+  const filtered = filterCount(browse.filters) > 0
   const sorts = sortOptions(options).filter(({ value }) =>
     sortFits(value, browse.filters.recommended),
   )
   // One panel, in the bar that shows; both share its open state.
   const phone = usePhone()
-  // The votes the server asks of a list no one set a minimum for.
-  const floor = first?.voteFloor != null && (
-    <FloorChip
-      count={first.voteFloor}
-      score={browse.sort === "scoreHigh" || browse.sort === "scoreLow"}
-      onClick={() => setPanelOpen(true)}
-    />
-  )
   const panel = (compact: boolean) => (
     <BrowseFilterPanel
       kind={kind}
       options={options}
       filters={browse.filters}
+      sort={browse.sort}
+      voteFloor={first?.voteFloor ?? null}
       change={change}
       open={panelOpen}
       onOpenChange={setPanelOpen}
@@ -253,11 +237,6 @@ function BrowseGrid({
             </>
           )
         }
-        chips={
-          <FilterChips inline active={chips} clear={clear}>
-            {floor}
-          </FilterChips>
-        }
         phoneActions={
           phone && (
             <>
@@ -271,9 +250,6 @@ function BrowseGrid({
           )
         }
       />
-      <FilterChips active={chips} clear={clear}>
-        {floor}
-      </FilterChips>
       {stale && (
         <Note icon={<CloudOffIcon aria-hidden className="size-4 shrink-0" />}>
           {tr("discover.stale")}
@@ -303,7 +279,7 @@ function BrowseGrid({
           title={tr("discover.browse.forYouNone")}
           description={tr("discover.browse.forYouHint")}
         >
-          {chips.length > 0 && (
+          {filtered && (
             <Button variant="outline" onClick={clear}>
               {tr("library.clearFilters")}
             </Button>
@@ -313,13 +289,13 @@ function BrowseGrid({
         <DiscoverEmpty
           icon={<SearchXIcon />}
           title={
-            chips.length > 0
+            filtered
               ? tr(`discover.browse.none.${kind}`)
               : tr("discover.browse.nothing")
           }
-          description={chips.length > 0 ? tr("filters.noneHint") : ""}
+          description={filtered ? tr("filters.noneHint") : ""}
         >
-          {chips.length > 0 && (
+          {filtered && (
             <Button variant="outline" onClick={clear}>
               {tr("library.clearFilters")}
             </Button>
@@ -374,60 +350,6 @@ function BrowseGrid({
 /** The server refused the filters, which only a hand-made or old link gets. */
 function turnedDown(error: Error): boolean {
   return error instanceof ORPCError && error.status === 400
-}
-
-/**
- * The minimum votes a list holds to when no one chose one, as a chip
- * beside the filters in use: it says why, and opens the filters to pick
- * another.
- */
-function FloorChip({
-  count,
-  score,
-  onClick,
-}: {
-  count: number
-  /** Sorted by score, where a few votes could top the list. */
-  score: boolean
-  onClick: () => void
-}) {
-  const whyId = useId()
-  const why = tr(
-    score ? "discover.browse.floorScore" : "discover.browse.floorList",
-    { count },
-  )
-  return (
-    <>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <button
-              type="button"
-              onClick={onClick}
-              aria-describedby={whyId}
-              className={chipClass(false, "gap-1.5 border-dashed pr-2.5")}
-            />
-          }
-        >
-          {tr("discover.browse.chip.votes", { count })}
-          <InfoIcon aria-hidden className="size-3.5 opacity-60" />
-        </TooltipTrigger>
-        <TooltipContent
-          side="bottom"
-          className="max-w-64 flex-col items-start gap-0.5 leading-4 text-pretty"
-        >
-          <span>{why}</span>
-          <span className="text-background/75">
-            {tr("discover.browse.floorChange")}
-          </span>
-        </TooltipContent>
-      </Tooltip>
-      {/* The tooltip is for eyes; this reads the same words aloud. */}
-      <span id={whyId} hidden>
-        {why}
-      </span>
-    </>
-  )
 }
 
 /** A line above the grid about the whole list. */

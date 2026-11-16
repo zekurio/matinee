@@ -38,10 +38,6 @@
     <string name="web_discover_browse_sort_votes">Meiste Stimmen</string>
     <string name="web_discover_browse_scoreHint">Von TMDB, von 10</string>
     <string name="web_discover_browse_votes">Stimmen</string>
-    <plurals name="web_discover_browse_chip_votes">
-        <item quantity="one">Mindestens %1$d Stimme</item>
-        <item quantity="other">Mindestens %1$d Stimmen</item>
-    </plurals>
     <string name="web_discover_browse_votesStep">%1$s+</string>
     <string name="web_discover_browse_only">Nur</string>
     <string name="web_discover_browse_onlyHint">Demnächst heißt in den nächsten drei Monaten.</string>
@@ -50,7 +46,6 @@
     <string name="web_discover_browse_requestable">Was du anfragen kannst</string>
     <string name="web_discover_browse_floorScore">Nur Titel mit mindestens %1$s Stimmen, damit nicht eine Handvoll Stimmen die Liste anführt.</string>
     <string name="web_discover_browse_floorList">Nur Titel mit mindestens %1$s Stimmen, damit die Liste nicht voller Titel ist, die kaum jemand kennt.</string>
-    <string name="web_discover_browse_floorChange">Mindestzahl wählen</string>
     <string name="web_discover_browse_none_movie">Keine Filme passen zu diesen Filtern</string>
     <string name="web_discover_browse_none_show">Keine Serien passen zu diesen Filtern</string>
     <string name="web_discover_browse_nothing">Gerade nichts zu zeigen</string>

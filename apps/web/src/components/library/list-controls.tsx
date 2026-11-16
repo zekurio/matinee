@@ -100,25 +100,21 @@ export type ActiveFilter = { key: string; label: string; remove: () => void }
 
 /**
  * Chips for the filters in use, each taking its own off, and "Clear all"
- * once there are two, then `children`: chips for what the list holds to
- * without being asked. Nothing when there's none. From `sm` up they sit
- * in the header's row, as its `chips`, so the list below doesn't move
- * when one goes on; phones have no room there and get them as a row
- * below.
+ * once there are two. Nothing when none is on. From `sm` up they sit in
+ * the header's row, as its `chips`, so the list below doesn't move when
+ * one goes on; phones have no room there and get them as a row below.
  */
 export function FilterChips({
   active,
   clear,
   inline = false,
-  children,
 }: {
   active: ActiveFilter[]
   clear: () => void
   /** In the header's row: one line that scrolls sideways, no gap below. */
   inline?: boolean
-  children?: ReactNode
 }) {
-  if (active.length === 0 && !children) return null
+  if (active.length === 0) return null
   return (
     <div
       role="group"
@@ -146,7 +142,6 @@ export function FilterChips({
           {tr("library.clearAll")}
         </button>
       )}
-      {children}
     </div>
   )
 }

@@ -52,8 +52,6 @@ import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.ErrorSection
 import io.github.zekurio.matinee.ui.components.ErrorState
 import io.github.zekurio.matinee.ui.components.ErrorBox
-import io.github.zekurio.matinee.ui.components.ActiveFilter
-import io.github.zekurio.matinee.ui.components.ActiveFilterChips
 import io.github.zekurio.matinee.ui.components.ChoiceChips
 import io.github.zekurio.matinee.ui.components.FilterButton
 import io.github.zekurio.matinee.ui.components.FilterChoice
@@ -66,9 +64,7 @@ import io.github.zekurio.matinee.ui.components.OptionRow
 import io.github.zekurio.matinee.ui.components.OptionSheet
 import io.github.zekurio.matinee.ui.components.PANEL_WORDS
 import io.github.zekurio.matinee.ui.components.PosterCard
-import io.github.zekurio.matinee.ui.components.RUNTIME_CHIP_WORDS
 import io.github.zekurio.matinee.ui.components.RangeField
-import io.github.zekurio.matinee.ui.components.SCORE_CHIP_WORDS
 import io.github.zekurio.matinee.ui.components.ToggleChips
 import io.github.zekurio.matinee.ui.components.YEAR_WORDS
 import io.github.zekurio.matinee.ui.components.countryName
@@ -167,57 +163,6 @@ private fun CatalogFilters.count(): Int =
             requestable == true,
         ).count { it }
 
-private fun activeFilters(
-    filters: CatalogFilters,
-    options: CatalogBrowseOptions,
-    res: Resources,
-    change: (CatalogFilters) -> Unit,
-): List<ActiveFilter> {
-    val active = mutableListOf<ActiveFilter>()
-    if (filters.recommended == true) {
-        active += ActiveFilter("recommended", res.getString(R.string.web_discover_browse_recommended)) { change(filters.copy(recommended = null)) }
-    }
-    if (filters.upcoming == true) {
-        active += ActiveFilter("upcoming", res.getString(R.string.web_discover_browse_upcoming)) { change(filters.copy(upcoming = null)) }
-    }
-    if (filters.requestable == true) {
-        active += ActiveFilter("requestable", res.getString(R.string.web_discover_browse_requestable)) { change(filters.copy(requestable = null)) }
-    }
-    val genres = filters.genres.orEmpty()
-    genres.forEach { id ->
-        val genre = options.genres.firstOrNull { it.id == id } ?: return@forEach
-        active += ActiveFilter("genre-$id", genre.name) { change(filters.copy(genres = genres - id)) }
-    }
-    if (filters.yearFrom != null || filters.yearTo != null) {
-        active += ActiveFilter("years", rangeText(filters.yearFrom?.toDouble(), filters.yearTo?.toDouble(), ::yearText, "", YEAR_WORDS, res)) {
-            change(filters.copy(yearFrom = null, yearTo = null))
-        }
-    }
-    if (filters.scoreMin != null || filters.scoreMax != null) {
-        active += ActiveFilter("score", rangeText(filters.scoreMin, filters.scoreMax, ::formatRating, "", SCORE_CHIP_WORDS, res)) {
-            change(filters.copy(scoreMin = null, scoreMax = null))
-        }
-    }
-    filters.votesMin?.let { votes ->
-        active += ActiveFilter("votes", res.getQuantityString(R.plurals.web_discover_browse_chip_votes, votes, formatCount(votes, res))) {
-            change(filters.copy(votesMin = null))
-        }
-    }
-    filters.rating?.let { rating ->
-        active += ActiveFilter("rating", res.getString(R.string.web_filters_chip_rating, rating)) { change(filters.copy(rating = null)) }
-    }
-    filters.language?.let { language ->
-        val name = options.languages.firstOrNull { it.id == language }?.name ?: language
-        active += ActiveFilter("language", name) { change(filters.copy(language = null)) }
-    }
-    if (filters.runtimeMin != null || filters.runtimeMax != null) {
-        active += ActiveFilter("runtime", rangeText(filters.runtimeMin?.toDouble(), filters.runtimeMax?.toDouble(), { runtimeText(it, res) }, "", RUNTIME_CHIP_WORDS, res)) {
-            change(filters.copy(runtimeMin = null, runtimeMax = null))
-        }
-    }
-    return active
-}
-
 /** What a card says under its name, as the server says the list calls for; else the year. */
 fun browseDetail(detail: String?, item: CatalogBrowseTitle, res: Resources): String? {
     val score = item.score
@@ -243,6 +188,8 @@ fun CatalogBrowseScreen(startKind: String, startFilters: String? = null, startSo
     }
     var sort by rememberSaveable { mutableStateOf(startSort ?: CatalogSort.POPULAR) }
     var filtering by rememberSaveable { mutableStateOf(false) }
+    // The votes the server asks of the list while no minimum is chosen, for the sheet.
+    var voteFloor by remember { mutableStateOf<Int?>(null) }
     val ready = (options.state as? Load.Ready)?.value?.takeIf { it.enabled }
     // Best match goes with the recommendations, and back to popular without them.
     val change = { next: CatalogFilters ->
@@ -269,17 +216,16 @@ fun CatalogBrowseScreen(startKind: String, startFilters: String? = null, startSo
             } else {
                 BrowseGrid(
                     kind,
-                    state.value,
                     filters,
                     sort,
                     onChange = change,
-                    onFilters = { filtering = true },
+                    onFloor = { voteFloor = it },
                 )
             }
         }
     }
     if (filtering && ready != null) {
-        BrowseFilterSheet(kind, ready, filters, onChange = change, onDismiss = { filtering = false })
+        BrowseFilterSheet(kind, ready, filters, sort, voteFloor, onChange = change, onDismiss = { filtering = false })
     }
 }
 
@@ -337,7 +283,6 @@ private class BrowsePages {
     var loading by mutableStateOf(false)
     var error by mutableStateOf(false)
     var stale by mutableStateOf(false)
-    var floor by mutableStateOf<Int?>(null)
     var detail by mutableStateOf<String?>(null)
 
     /** Pages read, so one that brought nothing new still moves on to the next. */
@@ -347,11 +292,10 @@ private class BrowsePages {
 @Composable
 private fun BrowseGrid(
     kind: String,
-    options: CatalogBrowseOptions,
     filters: CatalogFilters,
     sort: String,
     onChange: (CatalogFilters) -> Unit,
-    onFilters: () -> Unit,
+    onFloor: (Int?) -> Unit,
 ) {
     val api = LocalApi.current
     val res = LocalResources.current
@@ -370,7 +314,7 @@ private fun BrowseGrid(
                     pages.items.addAll(answer.items.filter { new -> pages.items.none { it.ref.key == new.ref.key } })
                     pages.next = answer.nextPage
                     pages.stale = pages.stale || answer.stale
-                    pages.floor = answer.voteFloor
+                    onFloor(answer.voteFloor)
                     pages.detail = answer.detail
                     pages.reads++
                     pages.error = false
@@ -408,7 +352,7 @@ private fun BrowseGrid(
     val followed = pages.items.toList().let { list -> list.subList(minOf(window.first, list.size), minOf(window.second, list.size)) }
         .filter { it.title == null }
     FollowTitles(followed.map { CatalogInput(it.ref) })
-    val chips = activeFilters(filters, options, res, onChange)
+    val filtered = filters.count() > 0
     val clear = { onChange(NO_FILTERS) }
     val shown = pages.items.filter { !recommended || it.ref.key !in actions.hidden }
 
@@ -420,30 +364,6 @@ private fun BrowseGrid(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        if (chips.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "chips") {
-                ActiveFilterChips(chips, clear)
-            }
-        }
-        pages.floor?.let { floor ->
-            item(span = { GridItemSpan(maxLineSpan) }, key = "floor") {
-                Column {
-                    Text(
-                        res.getString(
-                            if (sort == CatalogSort.SCORE_HIGH || sort == CatalogSort.SCORE_LOW) R.string.web_discover_browse_floorScore else R.string.web_discover_browse_floorList,
-                            formatCount(floor, res),
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Palette.Muted,
-                    )
-                    Gap(8.dp)
-                    MatineeButton(onClick = onFilters, look = ButtonLook.Outline, height = 36.dp) {
-                        LucideIcon(Lucide.ListFilter, null, size = 16.dp)
-                        Text(stringResource(R.string.web_discover_browse_floorChange))
-                    }
-                }
-            }
-        }
         if (pages.stale) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "stale") {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -472,11 +392,11 @@ private fun BrowseGrid(
                         stringResource(R.string.web_discover_browse_forYouNone),
                         stringResource(R.string.web_discover_browse_forYouHint),
                     ) {
-                        if (chips.isNotEmpty()) {
+                        if (filtered) {
                             MatineeButton(onClick = clear, look = ButtonLook.Outline) { Text(stringResource(R.string.browse_clear_filters)) }
                         }
                     }
-                    chips.isNotEmpty() -> Message(
+                    filtered -> Message(
                         Lucide.SearchX,
                         stringResource(if (kind == TitleKind.SHOW) R.string.web_discover_browse_none_show else R.string.web_discover_browse_none_movie),
                         stringResource(R.string.web_filters_noneHint),
@@ -535,6 +455,8 @@ private fun BrowseFilterSheet(
     kind: String,
     options: CatalogBrowseOptions,
     filters: CatalogFilters,
+    sort: String,
+    voteFloor: Int?,
     onChange: (CatalogFilters) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -591,7 +513,15 @@ private fun BrowseFilterSheet(
             { low, high -> rangeText(low, high, ::formatRating, res.getString(R.string.web_filters_anyScore), PANEL_WORDS, res) },
         ) { low, high -> onChange(filters.copy(scoreMin = low, scoreMax = high)) }
         if (options.votes.isNotEmpty()) {
-            FilterSection(stringResource(R.string.web_discover_browse_votes)) {
+            FilterSection(
+                stringResource(R.string.web_discover_browse_votes),
+                voteFloor?.let {
+                    res.getString(
+                        if (sort == CatalogSort.SCORE_HIGH || sort == CatalogSort.SCORE_LOW) R.string.web_discover_browse_floorScore else R.string.web_discover_browse_floorList,
+                        formatCount(it, res),
+                    )
+                },
+            ) {
                 ChoiceChips(
                     options.votes.map { FilterChoice(it, res.getString(R.string.web_discover_browse_votesStep, formatCount(it, res))) },
                     filters.votesMin,

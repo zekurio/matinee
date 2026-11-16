@@ -1,4 +1,4 @@
-import type { CatalogFilters, TitleKind } from "@matinee/contracts"
+import type { CatalogFilters, CatalogSort, TitleKind } from "@matinee/contracts"
 
 import {
   ChoiceChips,
@@ -9,13 +9,10 @@ import {
   ToggleChips,
 } from "@/components/filters/filter-panel"
 import {
-  RUNTIME_CHIP,
   runtimeWords,
-  SCORE_CHIP,
   scoreWords,
   yearWords,
 } from "@/components/filters/ranges"
-import type { ActiveFilter } from "@/components/library/list-controls"
 import { tr } from "@/i18n"
 import {
   formatCount,
@@ -34,103 +31,13 @@ import { type BrowseOptions, filterCount, NO_FILTERS } from "./browse-params"
  * libraries share.
  */
 
-/**
- * The filters in use as chips, each taking its own off. A range is one
- * chip; so is each genre.
- */
-export function activeFilters(
-  filters: CatalogFilters,
-  options: BrowseOptions,
-  change: (patch: Partial<CatalogFilters>) => void,
-): ActiveFilter[] {
-  const active: ActiveFilter[] = []
-  if (filters.recommended) {
-    active.push({
-      key: "recommended",
-      label: tr("discover.browse.recommended"),
-      remove: () => change({ recommended: false }),
-    })
-  }
-  if (filters.upcoming) {
-    active.push({
-      key: "upcoming",
-      label: tr("discover.browse.upcoming"),
-      remove: () => change({ upcoming: false }),
-    })
-  }
-  if (filters.requestable) {
-    active.push({
-      key: "requestable",
-      label: tr("discover.browse.requestable"),
-      remove: () => change({ requestable: false }),
-    })
-  }
-  for (const id of filters.genres) {
-    const genre = options.genres.find((entry) => entry.id === id)
-    if (!genre) continue
-    active.push({
-      key: `genre:${id}`,
-      label: genre.name,
-      remove: () =>
-        change({ genres: filters.genres.filter((other) => other !== id) }),
-    })
-  }
-  if (filters.yearFrom !== null || filters.yearTo !== null) {
-    active.push({
-      key: "years",
-      label: yearWords([filters.yearFrom, filters.yearTo]),
-      remove: () => change({ yearFrom: null, yearTo: null }),
-    })
-  }
-  if (filters.scoreMin !== null || filters.scoreMax !== null) {
-    active.push({
-      key: "score",
-      label: scoreWords([filters.scoreMin, filters.scoreMax], SCORE_CHIP),
-      remove: () => change({ scoreMin: null, scoreMax: null }),
-    })
-  }
-  if (filters.votesMin !== null) {
-    active.push({
-      key: "votes",
-      label: tr("discover.browse.chip.votes", { count: filters.votesMin }),
-      remove: () => change({ votesMin: null }),
-    })
-  }
-  if (filters.rating !== null) {
-    active.push({
-      key: "rating",
-      label: tr("filters.chip.rating", { rating: filters.rating }),
-      remove: () => change({ rating: null }),
-    })
-  }
-  if (filters.language !== null) {
-    const language = options.languages.find(
-      (entry) => entry.id === filters.language,
-    )
-    active.push({
-      key: "language",
-      label: language?.name ?? filters.language,
-      remove: () => change({ language: null }),
-    })
-  }
-  if (filters.runtimeMin !== null || filters.runtimeMax !== null) {
-    active.push({
-      key: "runtime",
-      label: runtimeWords(
-        [filters.runtimeMin, filters.runtimeMax],
-        RUNTIME_CHIP,
-      ),
-      remove: () => change({ runtimeMin: null, runtimeMax: null }),
-    })
-  }
-  return active
-}
-
 /** The Filter button and what it opens, with Discover's fields. */
 export function BrowseFilterPanel({
   kind,
   options,
   filters,
+  sort,
+  voteFloor,
   change,
   open,
   onOpenChange,
@@ -139,6 +46,9 @@ export function BrowseFilterPanel({
   kind: TitleKind
   options: BrowseOptions
   filters: CatalogFilters
+  sort: CatalogSort
+  /** The votes the server asks of the list while no minimum is chosen. */
+  voteFloor: number | null
   change: (patch: Partial<CatalogFilters>) => void
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -230,7 +140,19 @@ export function BrowseFilterPanel({
         onCommit={([scoreMin, scoreMax]) => change({ scoreMin, scoreMax })}
       />
       {options.votes.length > 0 && (
-        <Section label={tr("discover.browse.votes")}>
+        <Section
+          label={tr("discover.browse.votes")}
+          hint={
+            voteFloor === null
+              ? undefined
+              : tr(
+                  sort === "scoreHigh" || sort === "scoreLow"
+                    ? "discover.browse.floorScore"
+                    : "discover.browse.floorList",
+                  { count: voteFloor },
+                )
+          }
+        >
           {(labelId) => (
             <ChoiceChips
               labelId={labelId}
