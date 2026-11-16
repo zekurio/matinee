@@ -79,7 +79,6 @@ struct LinkDeviceScreen: View {
     }
     .scrollDismissesKeyboard(.interactively)
     .topBar(Str.linkTitle, leading: .back, centered: true)
-    .modifier(KitTheme())
   }
 }
 

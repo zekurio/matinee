@@ -14,15 +14,10 @@ import SwiftUI
 /// deinterlacing, audio, and throttling. The fields save together, from
 /// the save bar; a number out of its range holds the save and says why.
 struct TranscodingSettings: View {
-  var body: some View { TranscodingPage().adminTheme() }
-}
-
-private struct TranscodingPage: View {
   @State private var loader = Loader<AdminTranscodingSettings>()
   @State private var form: TranscodingDraft?
   @State private var saver = Saver()
   @Environment(\.api) private var api
-  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
 
   var body: some View {

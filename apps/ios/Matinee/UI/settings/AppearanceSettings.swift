@@ -59,14 +59,13 @@ private struct SchemePicker: View {
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
-    let colors = MatineeKit.MatineeTheme(accentLight: theme.accents.light, accentDark: theme.accents.dark)
     // Side by side, as the web's `grid-cols-3`; at the accessibility sizes the
     // names no longer fit under a third of a phone, so the cards stack.
     let layout = dynamicType.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: MatineeKit.Space.s2))
       : AnyLayout(HStackLayout(alignment: .top, spacing: MatineeKit.Space.s2))
     layout {
-      ForEach(ThemeStore.modes, id: \.self) { mode in
-        card(mode, light: colors.light, dark: colors.dark)
+      ForEach(ThemeMode.allCases, id: \.self) { mode in
+        card(mode, light: theme.light, dark: theme.dark)
       }
     }
     .frame(maxWidth: 560, alignment: .leading)
@@ -74,7 +73,7 @@ private struct SchemePicker: View {
     .accessibilityLabel(Str.webAppearanceColorScheme)
   }
 
-  private func card(_ mode: ThemeStore.Mode, light: MatineeKit.ThemeColors, dark: MatineeKit.ThemeColors) -> some View {
+  private func card(_ mode: ThemeMode, light: MatineeKit.ThemeColors, dark: MatineeKit.ThemeColors) -> some View {
     let selected = theme.mode == mode
     let shape = RoundedRectangle.kit(MatineeKit.Radius.xl)
     // At the accessibility sizes the cards stack, each its miniature beside its name.
@@ -125,19 +124,13 @@ private struct SchemePicker: View {
     .accessibilityAddTraits(selected ? [.isSelected] : [])
   }
 
-  private func label(_ mode: ThemeStore.Mode) -> String {
+  private func label(_ mode: ThemeMode) -> String {
     switch mode {
     case .system: Str.webAppearanceColorSchemeSystem
     case .light: Str.webAppearanceColorSchemeLight
     case .dark: Str.webAppearanceColorSchemeDark
     }
   }
-}
-
-extension ThemeStore {
-  /// The app's own theme modes, by the type the store keeps.
-  typealias Mode = ThemeMode
-  static var modes: [Mode] { Mode.allCases }
 }
 
 /// The home page in `colors`, as the web's AppMiniature: the floating bar

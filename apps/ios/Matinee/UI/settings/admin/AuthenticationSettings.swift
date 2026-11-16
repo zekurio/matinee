@@ -14,10 +14,6 @@ import UIKit
 /// save bar; an empty one falls back to what the server's environment sets,
 /// which it shows as the field's placeholder.
 struct AuthenticationSettings: View {
-  var body: some View { AuthenticationPage().adminTheme() }
-}
-
-private struct AuthenticationPage: View {
   @State private var loader = Loader<AdminAuthSettings>()
   @State private var form: AuthDraft?
   @Environment(\.api) private var api
@@ -174,7 +170,6 @@ private struct AuthForm: View {
 /// that can't be typed in, with Copy beside it, as the web has it.
 private struct RedirectRow: View {
   let url: String
-  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
   @Environment(\.adminPalette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType

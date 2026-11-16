@@ -11,10 +11,6 @@ import SwiftUI
 /// and how wide, and how it decodes. The fields save together, from the
 /// save bar; new settings make new images in the background.
 struct TrickplaySettings: View {
-  var body: some View { TrickplayPage().adminTheme() }
-}
-
-private struct TrickplayPage: View {
   @State private var loader = Loader<AdminTrickplaySettings>()
   @State private var draft: MatineeCore.TrickplaySettings?
   /// A debug build's screenshot edit, made once.

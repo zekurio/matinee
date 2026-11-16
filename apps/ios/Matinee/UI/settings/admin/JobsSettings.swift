@@ -18,17 +18,12 @@ import SwiftUI
 /// waits; a task runs now or stops from its row. The page keeps itself
 /// current while it shows.
 struct JobsSettings: View {
-  var body: some View { JobsPage().adminTheme() }
-}
-
-private struct JobsPage: View {
   @State private var loader = Loader<JobsOverview>()
   @State private var saver = Saver()
   @State private var open: Picked<String>?
   // The numbers changed and not saved yet, by queue; the rest follow the server as it polls.
   @State private var edits: [String: Int] = [:]
   @Environment(\.api) private var api
-  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
 
   var body: some View {

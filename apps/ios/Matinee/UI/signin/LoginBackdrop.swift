@@ -80,7 +80,6 @@ private struct WallRow: View {
     let end = reverse ? 0 : -copy
     HStack(spacing: LoginBackdropLayout.gap) {
       ForEach(Array((tiles + tiles).enumerated()), id: \.offset) { _, tile in
-        // TODO(shell): the shared artwork view with its blurhash placeholder.
         Picture(api.art(tile.artwork, size: .small))
           .frame(width: height * LoginBackdropLayout.aspect(of: tile), height: height)
           .background(palette.foreground.opacity(0.05))

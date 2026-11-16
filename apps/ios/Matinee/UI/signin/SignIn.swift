@@ -399,7 +399,6 @@ private struct CodeQr: View {
 
   var body: some View {
     if let code {
-      // TODO(shell): the shared QR code view.
       QrCode(code.verificationUriComplete, label: Str.signinCodeQr(code.userCode), size: size)
     } else {
       Spinner(size: 32, tint: palette.accent).frame(width: size, height: size)

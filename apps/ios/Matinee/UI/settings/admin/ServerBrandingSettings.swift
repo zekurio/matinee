@@ -19,14 +19,9 @@ typealias ServerAppearanceSettings = ServerBrandingSettings
 /// save bar. The app previews each accent at once, as the web does, and
 /// goes back to the saved ones when the page closes.
 struct ServerBrandingSettings: View {
-  var body: some View { BrandingPage().adminTheme() }
-}
-
-private struct BrandingPage: View {
   @State private var loader = Loader<Branding>()
   @State private var form: BrandingDraft?
   @Environment(\.api) private var api
-  // TODO(shell): the old theme's store, until the shell's replaces it.
   @Environment(ThemeStore.self) private var theme
 
   var body: some View {

@@ -19,10 +19,6 @@ private let BUSY_POLL: Duration = .seconds(2)
 /// A tap offers scanning it, fetching its metadata again, editing it, or
 /// removing it, which asks first; Add library opens the same editor empty.
 struct LibrariesSettings: View {
-  var body: some View { LibrariesPage().adminTheme() }
-}
-
-private struct LibrariesPage: View {
   @State private var loader = Loader<[Library]>()
   @State private var providers = Loader<[MetadataProvider]>()
   @State private var saver = Saver()
@@ -30,7 +26,6 @@ private struct LibrariesPage: View {
   @State private var confirmation: Confirmation?
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
-  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
   @Environment(ShellNav.self) private var shell: ShellNav?
   @Environment(\.adminPalette) private var palette
@@ -197,13 +192,6 @@ private let LIBRARY_SAVED = "library_saved"
 struct LibraryEditorScreen: View {
   let id: String?
   let results: NavResults
-
-  var body: some View { LibraryEditorLoading(id: id, results: results).adminTheme() }
-}
-
-private struct LibraryEditorLoading: View {
-  let id: String?
-  let results: NavResults
   @State private var libraries = Loader<[Library]>()
   @State private var providers = Loader<[MetadataProvider]>()
 
@@ -238,7 +226,6 @@ private struct LibraryEditor: View {
   @FocusState private var naming: Bool
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
-  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
   @Environment(\.adminPalette) private var palette
 
@@ -364,13 +351,6 @@ private func metadataLanguageName(_ tag: String) -> String {
 /// folder or adds it straight away; the bar at the bottom adds the one
 /// that's open. Adding goes back to the editor with the folder.
 struct FolderPickerScreen: View {
-  let start: String?
-  let added: [String]
-
-  var body: some View { FolderPicker(start: start, added: added).adminTheme() }
-}
-
-private struct FolderPicker: View {
   let added: [String]
   @State private var path: String?
   @State private var listing: DirectoryListing?
@@ -421,7 +401,6 @@ private struct FolderPicker: View {
           }
           .scrollDismissesKeyboard(.interactively)
         } else if let failure {
-          // TODO(shell): the shared error state.
           ErrorBox(Str.foldersLoadFailed, failure.message, disconnected: failure.disconnected) { attempt += 1 }
         } else {
           Spinner(size: 24, tint: palette.mutedForeground).accessibilityLabel(Str.loadingInProgress)

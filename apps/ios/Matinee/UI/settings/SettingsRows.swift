@@ -21,20 +21,6 @@ extension EnvironmentValues {
   @Entry var settingsWide = false
 }
 
-/// The kit's theme, from the app's theme store: Matinee's palettes with the
-/// server's accent, in the mode picked on this device.
-// TODO(shell): the shell puts the kit's theme on the root once it moves onto
-// the kit; this goes then, and Settings reads it from there.
-struct KitTheme: ViewModifier {
-  @Environment(ThemeStore.self) private var theme
-
-  func body(content: Content) -> some View {
-    content.matineeTheme(
-      MatineeKit.MatineeTheme(accentLight: theme.accents.light, accentDark: theme.accents.dark),
-      mode: MatineeKit.ThemeMode(rawValue: theme.mode.rawValue) ?? .system)
-  }
-}
-
 /// The widest a Settings page's column grows, so rows don't stretch across
 /// an iPad, as the web's settings dialog caps its panel.
 let SETTINGS_COLUMN: CGFloat = 720
@@ -80,7 +66,6 @@ struct SettingsScaffold<Content: View>: View {
     #endif
     .environment(\.settingsWide, wide)
     .topBar(title, leading: .back, centered: true)
-    .modifier(KitTheme())
   }
 }
 

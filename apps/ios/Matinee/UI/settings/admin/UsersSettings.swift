@@ -13,10 +13,6 @@ import SwiftUI
 /// the account, the admin role, signing out everywhere, and deleting it,
 /// each asked first.
 struct UsersSettings: View {
-  var body: some View { UsersPage().adminTheme() }
-}
-
-private struct UsersPage: View {
   @State private var loader = Loader<[AdminUser]>()
   // The page's, so a change goes on after its sheet or question closes.
   @State private var saver = Saver()
@@ -24,7 +20,6 @@ private struct UsersPage: View {
   @State private var confirmation: Confirmation?
   @Environment(\.api) private var api
   @Environment(\.user) private var me
-  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
   @Environment(MatineeSession.self) private var session
 
@@ -139,10 +134,7 @@ private struct UserRow: View {
   var body: some View {
     Pressable(action: onOpen) {
       HStack(spacing: Space.s3) {
-        MatineeKit.Avatar(user.name, size: 40) {
-          // TODO(shell): the shared artwork view.
-          Picture(user.avatarId.flatMap { api?.paths.avatar($0) }.flatMap { ImageSource($0) })
-        }
+        ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 40)
         VStack(alignment: .leading, spacing: 2) {
           name
           Text(verbatim: "@\(user.username)").textStyle(.sm).foregroundStyle(palette.mutedForeground)

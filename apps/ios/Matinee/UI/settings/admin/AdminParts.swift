@@ -22,24 +22,6 @@ let ADMIN_COLUMN: CGFloat = 680
 
 // MARK: - Theme
 
-extension View {
-  /// The kit's palette, font, and background for an admin page, from the
-  /// app's theme store: its accents, and the appearance picked on this device.
-  // TODO(shell): the root puts `.matineeTheme` on the whole app once the shell moves onto the kit; then this goes.
-  func adminTheme() -> some View { modifier(AdminTheme()) }
-}
-
-private struct AdminTheme: ViewModifier {
-  // TODO(shell): the old theme's store, until the shell's replaces it.
-  @Environment(ThemeStore.self) private var store
-
-  func body(content: Content) -> some View {
-    content.matineeTheme(
-      MatineeKit.MatineeTheme(accentLight: store.accents.light, accentDark: store.accents.dark),
-      mode: MatineeKit.ThemeMode(rawValue: store.mode.rawValue) ?? .system)
-  }
-}
-
 extension EnvironmentValues {
   /// The kit's palette, under a name of its own while the app's old theme
   /// has an environment value called `palette` too.
@@ -130,7 +112,6 @@ struct AdminLoaded<T: Sendable, Content: View>: View {
         .padding(.vertical, Space.s12)
         .accessibilityLabel(Str.loadingInProgress)
     case .failed(let message, let disconnected):
-      // TODO(shell): the shared error state.
       ErrorBox(Str.adminLoadFailed, message, disconnected: disconnected, onRetry: loader.reload)
     case .ready(let value):
       content(value)
@@ -152,10 +133,7 @@ struct AdminLoaded<T: Sendable, Content: View>: View {
       do {
         try await block()
       } catch {
-        let failure = Failure(error)
-        guard failure != .cancelled else { return }
-        // TODO(shell): the kit's toasts, once the shell hosts them.
-        snackbar.show("\(Str.webCommonSaveBarFailed): \(describeFailure(failure))")
+        snackbar.fail(Str.webCommonSaveBarFailed, error)
       }
     }
   }

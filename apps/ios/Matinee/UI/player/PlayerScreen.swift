@@ -47,7 +47,6 @@ struct PlayerScreen: View {
   let itemId: String
   let start: Double?
   @State private var target: PlayTarget
-  // TODO(shell): the server's accents from the shell's kit theme rather than the old ThemeStore.
   @Environment(ThemeStore.self) private var themeStore
 
   init(itemId: String, start: Double?) {
@@ -57,7 +56,7 @@ struct PlayerScreen: View {
   }
 
   var body: some View {
-    let theme = MatineeKit.MatineeTheme(accentLight: themeStore.accents.light, accentDark: themeStore.accents.dark)
+    let theme = themeStore.theme
     PlayerSitting(itemId: target.itemId, start: target.start) { next in
       target = PlayTarget(itemId: next, start: 0)
     }

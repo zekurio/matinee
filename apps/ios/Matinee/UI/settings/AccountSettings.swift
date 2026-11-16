@@ -465,8 +465,7 @@ private struct SessionsSection: View {
       case .loading:
         Skeleton(radius: MatineeKit.Radius.xl).frame(height: 64)
       case .failed(let message, let disconnected):
-        // TODO(shell): the shared error state
-        ErrorBox(Str.accountSessionsFailed, message, disconnected: disconnected, onRetry: sessions.reload)
+        ErrorSection(Str.accountSessionsFailed, message, disconnected: disconnected, onRetry: sessions.reload)
       case .ready(let list):
         ListBlock {
           ForEach(list, id: \.id) { item in
