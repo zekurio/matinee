@@ -91,8 +91,6 @@ import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.tvClickable
 import io.github.zekurio.matinee.ui.tv.tvContent
 import io.github.zekurio.matinee.ui.tv.tvControl
-import java.text.DateFormat
-import java.util.Date
 
 /** How high the overlay's block reaches from the bottom, for the subtitles to clear it. */
 internal val TV_OVERLAY_HEIGHT = 190.dp
@@ -226,7 +224,7 @@ private fun SkipIcon(icon: Int, seconds: Double, label: String) {
     }
 }
 
-/** The title, with the episode's code and show above it, and when it ends on the right. */
+/** The title, with the episode's code and show above it. */
 @Composable
 private fun Heading(controller: PlayerController) {
     val res = LocalResources.current
@@ -248,19 +246,6 @@ private fun Heading(controller: PlayerController) {
                 style = TvType.Headline.onPicture(),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-            )
-        }
-        val duration = controller.duration
-        if (duration > 0) {
-            val ends = remember(controller.position.toInt() / 30, duration, controller.speed) {
-                val left = (duration - controller.position) / controller.speed
-                DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(System.currentTimeMillis() + (left * 1000).toLong()))
-            }
-            Text(
-                stringResource(R.string.player_ends_at, ends),
-                style = TvType.Facts.onPicture(),
-                color = Palette.Foreground.copy(alpha = 0.75f),
-                modifier = Modifier.padding(start = 24.dp, bottom = 3.dp),
             )
         }
     }
@@ -395,10 +380,9 @@ private fun TvSeekBar(controller: PlayerController, scrub: Double?, targets: TvT
             }
         }
         SeekClock(
-            (duration - shown).coerceAtLeast(0.0),
+            duration,
             duration,
             timeStyle.copy(color = Palette.Foreground.copy(alpha = 0.75f)),
-            prefix = "-",
             textAlign = TextAlign.End,
         )
     }
