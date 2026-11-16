@@ -179,10 +179,8 @@ struct AccountRows: View {
         .focused(focus, equals: "signOut")
     }
     .tvServerPanel(isPresented: $servers)
-    // TODO(strings): tv_settings_sign_out_title "Sign out of this TV?"; tv_settings_sign_out_description
-    // "You'll have to sign in again to watch here." Meanwhile Sign out, and what signing out another device says.
     .tvConfirmDialog(
-      isPresented: $signingOut, title: Str.shellSignOut, message: Str.tvSettingsSignOutDeviceDescription,
+      isPresented: $signingOut, title: Str.iosTvSettingsSignOutTitle, message: Str.iosTvSettingsSignOutDescription,
       confirm: Str.shellSignOut, confirmIcon: .logOut, cancel: Str.commonCancel
     ) {
       Task { try? await session.signOut() }

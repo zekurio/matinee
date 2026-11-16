@@ -2838,6 +2838,14 @@ nonisolated enum Str {
   static var iosDownloadsChangeFailed: String { tr("ios_downloads_change_failed", table: "iOS") }
   /// Couldn't start the download
   static var iosDownloadsQueueFailed: String { tr("ios_downloads_queue_failed", table: "iOS") }
+  /// Longest
+  static var iosFiltersRuntimeMax: String { tr("ios_filters_runtime_max", table: "iOS") }
+  /// Shortest
+  static var iosFiltersRuntimeMin: String { tr("ios_filters_runtime_min", table: "iOS") }
+  /// Oldest
+  static var iosFiltersYearFrom: String { tr("ios_filters_year_from", table: "iOS") }
+  /// Newest
+  static var iosFiltersYearTo: String { tr("ios_filters_year_to", table: "iOS") }
   /// %1$lld of %2$lld
   static func iosHomeFeaturedPosition(_ p1: Int, _ p2: Int) -> String { tr("ios_home_featured_position", table: "iOS", p1, p2) }
   /// Choose File
@@ -2858,6 +2866,8 @@ nonisolated enum Str {
   static func iosPlayerFlashSkip(_ p1: Int) -> String { tr("ios_player_flash_skip", table: "iOS", p1) }
   /// %lld%% watched
   static func iosProgressWatched(_ p1: Int) -> String { tr("ios_progress_watched", table: "iOS", p1) }
+  /// Couldn't remove %@
+  static func iosServersRemoveFailed(_ p1: String) -> String { tr("ios_servers_remove_failed", table: "iOS", p1) }
   /// In Settings › Accessibility › Subtitles & Captioning
   static var iosSettingsSubtitlesSystemWhere: String { tr("ios_settings_subtitles_system_where", table: "iOS") }
   /// Matinee for iOS %@
@@ -2868,6 +2878,12 @@ nonisolated enum Str {
   static var iosTitleTrailer: String { tr("ios_title_trailer", table: "iOS") }
   /// Watch the trailer on YouTube
   static var iosTitleTrailerHint: String { tr("ios_title_trailer_hint", table: "iOS") }
+  /// You'll have to sign in again to watch here.
+  static var iosTvSettingsSignOutDescription: String { tr("ios_tv_settings_sign_out_description", table: "iOS") }
+  /// Sign out of this TV?
+  static var iosTvSettingsSignOutTitle: String { tr("ios_tv_settings_sign_out_title", table: "iOS") }
+  /// Nothing on this TV can open the trailer
+  static var iosTvTitleTrailerFailed: String { tr("ios_tv_title_trailer_failed", table: "iOS") }
 }
 
 nonisolated private func tr(_ key: String, table: String = "Localizable") -> String {

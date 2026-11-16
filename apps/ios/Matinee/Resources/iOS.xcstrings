@@ -1,6 +1,67 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "ios_tv_settings_sign_out_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Von diesem Fernseher abmelden?" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sign out of this TV?" } }
+      }
+    },
+    "ios_tv_settings_sign_out_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Du musst dich erneut anmelden, um hier etwas anzusehen." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You'll have to sign in again to watch here." } }
+      }
+    },
+    "ios_servers_remove_failed" : {
+      "comment" : "%@ is the server name. Wording from the web's libraries.removeFailed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "%@ konnte nicht entfernt werden" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't remove %@" } }
+      }
+    },
+    "ios_tv_title_trailer_failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Auf diesem Fernseher kann nichts den Trailer öffnen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Nothing on this TV can open the trailer" } }
+      }
+    },
+    "ios_filters_year_from" : {
+      "comment" : "Lower year bound. Wording from the web's filters.sort.oldest.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Älteste" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Oldest" } }
+      }
+    },
+    "ios_filters_year_to" : {
+      "comment" : "Upper year bound. Wording from the web's filters.sort.newest.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Neueste" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Newest" } }
+      }
+    },
+    "ios_filters_runtime_min" : {
+      "comment" : "Lower runtime bound. Wording from the web's filters.sort.shortest.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Kürzeste" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortest" } }
+      }
+    },
+    "ios_filters_runtime_max" : {
+      "comment" : "Upper runtime bound. Wording from the web's filters.sort.longest.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Längste" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Longest" } }
+      }
+    },
     "ios_account_display_name_save_failed" : {
       "comment" : "%@ is why, in the server's words. The web's account.displayName.saveFailed.",
       "extractionState" : "manual",

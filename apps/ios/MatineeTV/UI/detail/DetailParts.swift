@@ -309,10 +309,8 @@ struct DetailActions: View {
       if let trailer = marks.trailer, let url = URL(string: trailer.url) {
         TVIconButton(.clapperboard, label: Str.iosTitleTrailer) {
           // A TV may have nothing that opens the link, YouTube's app or another.
-          let name = trailer.name ?? Str.iosTitleTrailer
           openURL(url) { opened in
-            // TODO(strings): tv_title_trailer_failed, "Nothing on this TV can open the trailer"; meanwhile "Couldn't play …".
-            if !opened { snackbar.show(Str.mediaPlayFailed(name)) }
+            if !opened { snackbar.show(Str.iosTvTitleTrailerFailed) }
           }
         }
         .focused($focused, equals: "trailer")

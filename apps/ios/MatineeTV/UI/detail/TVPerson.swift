@@ -162,8 +162,7 @@ private struct CreditsRow: View {
     switch kind {
     case CreditKind.director: Str.personDepartmentDirecting
     case CreditKind.writer: Str.personDepartmentWriting
-    // TODO(strings): people_section_creator, the web's "Created".
-    case CreditKind.creator: Str.personDepartmentCreator
+    case CreditKind.creator: Str.iosPeopleSectionCreator
     default: Str.personDepartmentActing
     }
   }
