@@ -21,10 +21,14 @@
  *
  * `-requests.slow YES` makes the catalog's search take six seconds.
    *
-   * Asking, cancelling, Add, and Decline change the stand-in's
+   * Asking, cancelling, and an admin's answers (Add, Add all, Decline,
+   * Give up, Retry, Allow again, Add after all) change the stand-in's
    * state and stream it. An added request comes in over some seconds and
    * then arrives as a title of the dev server's library, so the arrival
-   * shows too. Nothing reaches the dev server's requests.
+   * shows too. The queue has a request in every list, a failed one in
+   * Needs attention, and in Done a declined one, one given up on, and one
+   * that arrived; Done pages two at a time, so its paging shows. Nothing
+   * reaches the dev server's requests.
    */
 
   nonisolated enum RequestFixtures {
@@ -120,6 +124,8 @@
       var mine: Bool
       var reason: String?
       var note: String?
+      /// What went wrong sending it, for Needs attention.
+      var error: String?
     }
 
     // MARK: Setting up
@@ -221,6 +227,16 @@
       film("603", "The Matrix", 1999, availability("here", here: nil), genres: [(28, "Action"), (878, "Science Fiction")], rating: 8.2)
       film("915935", "Anatomy of a Fall", 2023, availability("none", action: "ask"), genres: [(53, "Thriller"), (18, "Drama")])
       film("1022789", "Inside Out 2", 2024, availability("release", release: nil), genres: [(16, "Animation"), (10751, "Family")])
+      // The queue's own: one whose sending failed, and one given up on.
+      film(
+        "938614", "Late Night with the Devil", 2024, availability("coming", id: "r-att", looking: true, others: ["anna"]),
+        genres: [(27, "Horror")], popular: false)
+      film(
+        "933260", "The Substance", 2024,
+        availability(
+          "unavailable", id: "r-sub", reason: .init(kind: "declined", code: "notFound", note: "No copy turned up in a month."),
+          others: ["ben"], disabled: "declined"),
+        genres: [(27, "Horror"), (878, "Science Fiction")], popular: false)
       // Shows.
       add(
         FixtureTitle(
@@ -285,6 +301,9 @@
         "r-mick": FixtureRequest(id: "r-mick", ref: titles[key("movie", "696506")]!.ref, scope: nil, status: "accepted", createdAt: instant(-86_400 * 8), followers: [viewer], mine: true),
         "r-aft": FixtureRequest(id: "r-aft", ref: titles[key("movie", "965150")]!.ref, scope: nil, status: "declined", createdAt: instant(-86_400 * 9), followers: [viewer], mine: true, reason: "notForServer", note: "We keep this server to family films for now, sorry!"),
         "r-perf": FixtureRequest(id: "r-perf", ref: titles[key("movie", "976893")]!.ref, scope: nil, status: "accepted", createdAt: instant(-86_400), followers: [ben], mine: false),
+        "r-att": FixtureRequest(id: "r-att", ref: titles[key("movie", "938614")]!.ref, scope: nil, status: "accepted", createdAt: instant(-86_400 * 3), followers: [anna], mine: false, error: "Radarr couldn't find a release that matches the quality profile."),
+        "r-mat": FixtureRequest(id: "r-mat", ref: titles[key("movie", "603")]!.ref, scope: nil, status: "accepted", createdAt: instant(-86_400 * 20), followers: [anna], mine: false),
+        "r-sub": FixtureRequest(id: "r-sub", ref: titles[key("movie", "933260")]!.ref, scope: nil, status: "declined", createdAt: instant(-86_400 * 12), followers: [ben], mine: false, reason: "notFound", note: "No copy turned up in a month."),
       ]
       refreshActions()
     }
@@ -368,7 +387,7 @@
       return AdminRequestItem(
         id: item.id, title: item.title, library: item.library, scope: item.scope, createdAt: item.createdAt,
         arrivedAt: item.arrivedAt, availability: item.availability, season: item.season, status: request.status,
-        fulfilmentState: request.status == "accepted" ? "sent" : nil, error: nil, reason: request.reason, note: request.note,
+        fulfilmentState: request.status == "accepted" ? "sent" : nil, error: request.error, reason: request.reason, note: request.note,
         declinedAt: request.status == "declined" ? instant(-86_400) : nil,
         connection: AdminRequestItem.Connection(
           id: "c-radarr", name: request.ref.kind == "show" ? "Sonarr 4K" : "Radarr 4K",
@@ -376,22 +395,22 @@
         followers: request.followers, destinationDescription: item.library.name, destinations: [], remoteUrl: nil, diagnostics: [])
     }
 
-    private func queue() -> RequestQueue {
+    private func queue(cursor: String? = nil) -> RequestQueue {
       let all = requests.values.sorted { $0.createdAt > $1.createdAt }
       func list(_ test: (FixtureRequest, Availability) -> Bool) -> [AdminRequestItem] {
         all.filter { request in titles[request.ref.requestKey].map { test(request, $0.availability) } ?? false }.compactMap(adminItem)
       }
       let waiting = list { request, _ in request.status == "waiting" }
-      let onTheWay = list { request, availability in request.status == "accepted" && availability.state != "here" }
+      let attention = list { request, _ in request.status == "accepted" && request.error != nil }
+      let onTheWay = list { request, availability in request.status == "accepted" && request.error == nil && availability.state != "here" }
       let done = list { request, availability in request.status == "declined" || availability.state == "here" }
-      let attention = [adminItem(FixtureRequest(id: "r-att", ref: titles[key("movie", "915935")]!.ref, scope: nil, status: "accepted", createdAt: instant(-86_400 * 3), followers: [], mine: false))].compactMap(\.self).map { item -> AdminRequestItem in
-        var item = item
-        item.error = "Radarr couldn't find a release that matches the quality profile."
-        return item
-      }
+      // Done two at a time, whatever the limit asked, so its paging shows.
+      let start = cursor.flatMap(Int.init) ?? 0
+      let page = Array(done.dropFirst(start).prefix(2))
       return RequestQueue(
-        waiting: waiting, needsAttention: attention, onTheWay: onTheWay, done: done,
-        counts: .init(waiting: waiting.count, needsAttention: attention.count, onTheWay: onTheWay.count, done: done.count), nextCursor: nil)
+        waiting: waiting, needsAttention: attention, onTheWay: onTheWay, done: page,
+        counts: .init(waiting: waiting.count, needsAttention: attention.count, onTheWay: onTheWay.count, done: done.count),
+        nextCursor: done.count > start + 2 ? String(start + 2) : nil)
     }
 
     // MARK: Answering
@@ -450,14 +469,31 @@
           cancel(input.id)
           return (200, Data())
         case "admin/requests":
-          return ok(queue())
+          return ok(queue(cursor: query["cursor"]))
         case "admin/requests/approve":
           guard let id = (try? JSONSerialization.jsonObject(with: body) as? [String: Any])?["id"] as? String else { return notFound() }
           approve(id)
           return (200, Data())
+        case "admin/requests/approve-all":
+          guard let ids = (try? JSONSerialization.jsonObject(with: body) as? [String: Any])?["ids"] as? [String] else { return notFound() }
+          ids.forEach(approve)
+          return (200, Data())
         case "admin/requests/decline":
           guard let input = try? JSONSerialization.jsonObject(with: body) as? [String: Any], let id = input["id"] as? String else { return notFound() }
           decline(id, reason: input["reason"] as? String ?? "notForServer", note: input["note"] as? String)
+          return (200, Data())
+        case "admin/requests/give-up":
+          guard let input = try? JSONSerialization.jsonObject(with: body) as? [String: Any], let id = input["id"] as? String else { return notFound() }
+          requests[id]?.error = nil
+          decline(id, reason: "notFound", note: input["note"] as? String)
+          return (200, Data())
+        case "admin/requests/allow-again", "admin/requests/add-after-all", "admin/requests/retry":
+          guard let id = (try? JSONSerialization.jsonObject(with: body) as? [String: Any])?["id"] as? String else { return notFound() }
+          switch path {
+          case "admin/requests/allow-again": allowAgain(id)
+          case "admin/requests/add-after-all": addAfterAll(id)
+          default: retry(id)
+          }
           return (200, Data())
         case _ where path.hasPrefix("people/"):
           let name = String(path.dropFirst("people/".count)).removingPercentEncoding ?? ""
@@ -656,10 +692,42 @@
       setState(request.ref, id: id) {
         $0.state = "unavailable"
         $0.action = nil
+        $0.progress = nil
+        $0.stillLooking = false
         $0.reason = .init(kind: "declined", code: reason, note: note)
         $0.disabledReason = "declined"
       }
       publish()
+    }
+
+    /// A declined request goes, and the title is anyone's to ask for again.
+    private func allowAgain(_ id: String) {
+      guard let request = requests.removeValue(forKey: id) else { return }
+      reset(request.ref, id: id)
+      publish()
+    }
+
+    /// A declined request is taken as it stands, and sent.
+    private func addAfterAll(_ id: String) {
+      guard var request = requests[id] else { return }
+      request.reason = nil
+      request.note = nil
+      requests[id] = request
+      setState(request.ref, id: id) {
+        $0.reason = nil
+        $0.disabledReason = nil
+      }
+      approve(id)
+    }
+
+    /// Sent again: out of Needs attention, and on its way.
+    private func retry(_ id: String) {
+      guard var request = requests[id] else { return }
+      request.error = nil
+      requests[id] = request
+      setState(request.ref, id: id) { $0.stillLooking = false; $0.progress = 0.1 }
+      publish()
+      tick(id, progress: 0.1)
     }
 
     private func setState(_ ref: CatalogRef, id: String, _ change: (inout Availability) -> Void) {
@@ -715,6 +783,8 @@
       "catalog/details", "catalog/related", "catalog/related/titles", "catalog/search", "discover/rails", "discover/row",
       "discover/browse/options", "discover/browse", "requests/live", "admin/requests/live", "requests/mine",
       "requests/ask", "requests/cancel", "admin/requests", "admin/requests/approve", "admin/requests/decline",
+      "admin/requests/approve-all", "admin/requests/give-up", "admin/requests/allow-again", "admin/requests/add-after-all",
+      "admin/requests/retry",
     ]
 
     private static func path(_ request: URLRequest) -> String? {

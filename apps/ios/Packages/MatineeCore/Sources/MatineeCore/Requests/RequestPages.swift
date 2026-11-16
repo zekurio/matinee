@@ -64,6 +64,9 @@ public final class RequestPages<Item: Sendable> {
     }
   }
   public func settled() async { await task?.value }
+  /// Drops the items `leaves` picks, as an answered request leaves Done
+  /// without the whole list being read again.
+  public func remove(where leaves: (Item) -> Bool) { items.removeAll(where: leaves) }
 }
 extension RequestData {
   public func browseBatch(_ input: CatalogBrowseInput, page: Int) async throws -> RequestPageBatch<CatalogBrowseTitle> {
