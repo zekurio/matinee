@@ -55,9 +55,11 @@ apps.
 | `Matinee/UI/signin/LoginBackdrop.swift`                    | The server's login backdrop behind sign-in                                     |
 | `Matinee/UI/home/HomeDevData.swift`                        | `-dev.art` and `-dev.recommendations`                                          |
 | `Matinee/UI/title/TitleData.swift`                         | The detail pages' facts, file info, season loads, and `-title.fixture`         |
-| `Matinee/UI/player/PlayerTrickplay.swift`                   | Trickplay frame and tile cache, sized by each player                           |
-| `Matinee/UI/player/PlayerLayer.swift`                       | AVPlayer layer and surface, without picture in picture or AirPlay              |
-| `Matinee/UI/player/PlayerMenuEntries.swift`                 | Menu choices and track, quality, and speed labels                              |
+| `Matinee/UI/player/PlayerWords.swift`                      | Refusal, notice, and skip-button wording                                       |
+| `Matinee/UI/player/PlayerSubtitles.swift`                  | Subtitle lines, also used by Settings                                          |
+| `Matinee/UI/player/PlayerTrickplay.swift`                  | Trickplay frame and tile cache, sized by each player                           |
+| `Matinee/UI/player/PlayerLayer.swift`                      | AVPlayer layer and surface, without picture in picture or AirPlay              |
+| `Matinee/UI/player/PlayerMenuEntries.swift`                | Menu choices and track, quality, and speed labels                              |
 | `Matinee/UI/browse/BrowseFixtures.swift`                   | `-dev.browseFixtures`, the fixture people the cast cards open                  |
 
 Why sharing by file and not a package: these depend on the app's

@@ -10,28 +10,6 @@ import SwiftUI
  * playback-notices.ts) where the web has it.
  */
 
-/// The heading over `refusalMessage` when the server won't play the file for this account.
-func refusalTitle(_ refusal: Refusal) -> String {
-  switch refusal {
-  case .restricted: Str.playerRestricted
-  case .busy: Str.playerBusy
-  }
-}
-
-/// What the player says under `refusalTitle`: why, in the app's language for a
-/// reason it knows, else in the server's words, as Android's `refusalMessage`.
-func refusalMessage(_ reason: RefusalReason?, fallback: String) -> String {
-  switch reason {
-  case .restricted(PlaybackRestriction.bitrate_original): Str.playerRestrictedOriginal
-  case .restricted(PlaybackRestriction.bitrate_transcode): Str.playerRestrictedNoTranscode
-  case .restricted(PlaybackRestriction.bitrate_failed): Str.playerRestrictedFailed
-  case .restricted(PlaybackRestriction.bitrate): Str.playerRestrictedBitrate
-  case .restricted(PlaybackRestriction.transcode): Str.playerRestrictedTranscode
-  case .busy(let playing): Str.playerBusyDetail(playing)
-  case .restricted, nil: fallback
-  }
-}
-
 /// What failed, with the way back and, unless trying again gets the same
 /// answer, Retry: the web's empty state over the dimmed picture. It takes
 /// every touch, so none reaches the video under it.
@@ -140,7 +118,7 @@ struct PlayerNoticeNote: View {
   var body: some View {
     ZStack {
       if let note = shown {
-        Toast(ToastMessage(title(note), description: detail(note), kind: .warning))
+        Toast(ToastMessage(noticeTitle(note), description: noticeDetail(note), kind: .warning))
           .frame(maxWidth: 420)
           .transition(.opacity)
       }
@@ -159,23 +137,6 @@ struct PlayerNoticeNote: View {
       withMotion(Motion.exit) { shown = nil }
     }
   }
-
-  private func title(_ note: Notice) -> String {
-    switch note.kind {
-    case .burnInFailed: Str.playerNoticeBurnInFailed
-    case .qualityFailed, .switchFailed: Str.playerNoticeSwitchFailed
-    }
-  }
-
-  private func detail(_ note: Notice) -> String? {
-    let detail: String? =
-      switch note.kind {
-      case .burnInFailed: Str.playerNoticeBurnInFailedDetail
-      case .qualityFailed: Str.playerNoticeQualityFailedDetail
-      case .switchFailed: note.detail.map { refusalMessage(note.refusal, fallback: $0) }
-      }
-    return detail?.isEmpty == false ? detail : nil
-  }
 }
 
 /// Tells one notice from the next, which `Notice` itself can't, having no identity.
@@ -185,16 +146,6 @@ private struct NoticeKey: Equatable {
   init(_ notice: Notice) {
     kind = notice.kind
     detail = notice.detail
-  }
-}
-
-/// What the button that skips `kind` says, like "Skip intro".
-func skipSegmentLabel(_ kind: String) -> String {
-  switch kind {
-  case MediaSegmentKind.recap: Str.playerSkipRecap
-  case MediaSegmentKind.credits: Str.playerSkipCredits
-  case MediaSegmentKind.preview: Str.playerSkipPreview
-  default: Str.playerSkipIntro
   }
 }
 

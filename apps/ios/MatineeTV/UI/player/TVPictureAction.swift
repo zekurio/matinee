@@ -27,7 +27,7 @@ enum TVPictureAction: Equatable {
 
   var label: String {
     switch self {
-    case .skip(let segment): tvSkipSegmentLabel(segment.kind)
+    case .skip(let segment): skipSegmentLabel(segment.kind)
     case .next: Str.playerNextEpisode
     }
   }

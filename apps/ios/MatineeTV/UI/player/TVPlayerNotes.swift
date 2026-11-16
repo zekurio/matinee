@@ -8,43 +8,7 @@ import SwiftUI
  * instead (PlayerScreen.kt's `PlayerNoticeNote`), and, Apple TV's own,
  * the mark a skip leaves at the side it went to.
  *
- * TODO(share): `refusalTitle`, `refusalMessage`, the notices' words, and `skipSegmentLabel`
- * are the iPhone's (Matinee/UI/player/PlayerNotes.swift), copied because
- * that file holds the phone's failure, lock, and up-next views too. The
- * split: the words into `PlayerWords.swift`, shared by both targets.
  */
-
-/// The heading over `tvRefusalMessage` when the server won't play the file for this account.
-func tvRefusalTitle(_ refusal: Refusal) -> String {
-  switch refusal {
-  case .restricted: Str.playerRestricted
-  case .busy: Str.playerBusy
-  }
-}
-
-/// What the player says under `tvRefusalTitle`: why, in the app's language for a
-/// reason it knows, else in the server's words, as Android's `refusalMessage`.
-func tvRefusalMessage(_ reason: RefusalReason?, fallback: String) -> String {
-  switch reason {
-  case .restricted(PlaybackRestriction.bitrate_original): Str.playerRestrictedOriginal
-  case .restricted(PlaybackRestriction.bitrate_transcode): Str.playerRestrictedNoTranscode
-  case .restricted(PlaybackRestriction.bitrate_failed): Str.playerRestrictedFailed
-  case .restricted(PlaybackRestriction.bitrate): Str.playerRestrictedBitrate
-  case .restricted(PlaybackRestriction.transcode): Str.playerRestrictedTranscode
-  case .busy(let playing): Str.playerBusyDetail(playing)
-  case .restricted, nil: fallback
-  }
-}
-
-/// What the button that skips `kind` says, like "Skip intro".
-func tvSkipSegmentLabel(_ kind: String) -> String {
-  switch kind {
-  case MediaSegmentKind.recap: Str.playerSkipRecap
-  case MediaSegmentKind.credits: Str.playerSkipCredits
-  case MediaSegmentKind.preview: Str.playerSkipPreview
-  default: Str.playerSkipIntro
-  }
-}
 
 /// Why nothing plays, centred over the dimmed picture, with Try again
 /// focused and Back beside it; without `retry`, as when the server refused
@@ -107,7 +71,7 @@ struct TVPlayerNoticeNote: View {
   var body: some View {
     ZStack {
       if let note = shown {
-        TVToast(ToastMessage(title(note), description: detail(note), kind: .warning))
+        TVToast(ToastMessage(noticeTitle(note), description: noticeDetail(note), kind: .warning))
           .frame(maxWidth: 1120)
           .transition(.move(edge: .top).combined(with: .opacity))
       }
@@ -134,23 +98,6 @@ struct TVPlayerNoticeNote: View {
       shown = nil
     }
     .allowsHitTesting(false)
-  }
-
-  private func title(_ note: MatineeCore.Notice) -> String {
-    switch note.kind {
-    case .burnInFailed: Str.playerNoticeBurnInFailed
-    case .qualityFailed, .switchFailed: Str.playerNoticeSwitchFailed
-    }
-  }
-
-  private func detail(_ note: MatineeCore.Notice) -> String? {
-    let detail: String? =
-      switch note.kind {
-      case .burnInFailed: Str.playerNoticeBurnInFailedDetail
-      case .qualityFailed: Str.playerNoticeQualityFailedDetail
-      case .switchFailed: note.detail.map { tvRefusalMessage(note.refusal, fallback: $0) }
-      }
-    return detail?.isEmpty == false ? detail : nil
   }
 }
 

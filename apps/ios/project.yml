@@ -173,6 +173,7 @@ targets:
       - Matinee/UI/player/PlayerMenuEntries.swift
       - Matinee/UI/player/PlayerLayer.swift
       - Matinee/UI/player/PlayerTrickplay.swift
+      - Matinee/UI/player/PlayerWords.swift
       - Matinee/Resources/Localizable.xcstrings
       - Matinee/Resources/iOS.xcstrings
       - Matinee/Resources/Assets.xcassets
