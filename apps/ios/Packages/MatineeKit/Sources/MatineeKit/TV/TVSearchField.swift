@@ -35,11 +35,6 @@
         TVControlButton(shape: Capsule(), scale: TVFocus.rowScale, action: { editing = true }) {
           SearchFace(text: text, placeholder: prompt)
         }
-        .background {
-          KeyboardBridge(text: $text, editing: $editing, placeholder: prompt, onSubmit: onSubmit)
-            .frame(width: 1, height: 1)
-            .accessibilityHidden(true)
-        }
         .modifier(BoundFocus(focus: focus))
         .accessibilityLabel(prompt)
         .accessibilityValue(text)
@@ -49,6 +44,13 @@
         }
       }
       .animation(Motion.enter, value: text.isEmpty)
+      // Beside the button, not inside it: a UIKit view in the button's own tree turns focus
+      // asked for in code, as a page starting on the field, away to the top left.
+      .background(alignment: .topLeading) {
+        KeyboardBridge(text: $text, editing: $editing, placeholder: prompt, onSubmit: onSubmit)
+          .frame(width: 1, height: 1)
+          .accessibilityHidden(true)
+      }
     }
   }
 
