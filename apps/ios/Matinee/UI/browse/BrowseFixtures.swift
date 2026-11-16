@@ -14,11 +14,12 @@
   nonisolated enum BrowseFixtures {
     static var on: Bool { UserDefaults.standard.bool(forKey: "dev.browseFixtures") }
 
-    /// `-dev.browse.open filters|language|search|sort|more`: what a page opens with, for screenshots:
-    /// the filter sheet, the language list over it, the search, the sort menu, a biography in full.
+    /// `-dev.browse.open filters|language|sort|more`: what a page opens with, for screenshots:
+    /// the filter sheet, the language list over it, the sort menu, a biography in full.
     static var open: String? { UserDefaults.standard.string(forKey: "dev.browse.open") }
 
-    /// `-dev.browse.query TEXT`: what the library's or the search page's field starts with.
+    /// `-dev.browse.query TEXT`: what search's field starts with, Media's on a phone and the search
+    /// tab's on an iPad, and on a TV a grid's.
     static var query: String? { UserDefaults.standard.string(forKey: "dev.browse.query") }
 
     /// `-dev.browse.filters "genre=Drama;studio=Pixar;years=1980-2000;score=7-;runtime=-120;watched=unwatched;rating=DE:12;language=de"`:
