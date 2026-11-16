@@ -257,7 +257,7 @@ private struct CatalogActions: View {
       let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s2)) : AnyLayout(HStackLayout(spacing: Space.s2_5))
       layout {
         if let answering {
-          AddButton(item: answering, fullWidth: !wide).frame(maxWidth: wide ? 200 : .infinity)
+          AddButton(item: answering, fullWidth: true).frame(maxWidth: wide ? 200 : .infinity)
           DeclineButton(item: answering)
         } else if action != .none {
           PosterActionButton(

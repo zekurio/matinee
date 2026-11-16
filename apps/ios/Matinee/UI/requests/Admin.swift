@@ -232,7 +232,7 @@ private struct QueueRow: View {
               [requestYearKind(item.title.year, item.title.ref.kind), requestScopeText(item.scope)].compactMap(\.self)
                 .joined(separator: " · ")
             )
-            .textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(1)
+            .textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(dynamicType.isAccessibilitySize ? 2 : 1)
             status
           }
           .frame(maxWidth: .infinity, alignment: .leading)

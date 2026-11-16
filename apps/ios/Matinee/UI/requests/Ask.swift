@@ -29,6 +29,8 @@ struct PosterBadge: View {
       let pill = ViewThatFits(in: .horizontal) {
         content(badge, word: word, percent: percent)
         if percent != nil { content(badge, word: word, percent: nil) }
+        // At the largest text sizes, the glyph alone; VoiceOver still reads the word.
+        glyph(badge)
       }
       .accessibilityElement(children: .ignore)
       .accessibilityLabel([requestStateText(word), percent].compactMap(\.self).joined(separator: " "))

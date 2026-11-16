@@ -102,6 +102,7 @@ private struct SeasonChoice: View {
   let toggle: () -> Void
   @Environment(\.api) private var api
   @Environment(\.palette) private var palette
+  @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
     let open = season.availability.asks
@@ -127,12 +128,18 @@ private struct SeasonChoice: View {
       }
       .frame(width: 28)
       .accessibilityHidden(true)
-      Text(name)
-        .textStyle(.base, weight: .medium)
-        .foregroundStyle(open ? palette.foreground : palette.mutedForeground)
-        .lineLimit(1)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(1)
+      // The details go under the name at the largest text sizes, rather than cut short beside it.
+      let words = dynamicType.isAccessibilitySize
+        ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0)) : AnyLayout(HStackLayout(spacing: Space.s3))
+      words {
+        Text(name)
+          .textStyle(.base, weight: .medium)
+          .foregroundStyle(open ? palette.foreground : palette.mutedForeground)
+          .lineLimit(1)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+          .lineLimit(dynamicType.isAccessibilitySize ? 2 : 1)
+      }
     }
     .padding(.vertical, Space.s1)
     .frame(minHeight: 52)
