@@ -486,6 +486,15 @@ MatineeCore.
   or `url:`: a 16:9 still with its progress or watched dot and the caption
   under it.
 - `TVCaptionedPoster("Season 2", detail:, badge: "3", watched:) { art }`.
+- `TVEpisodeRow("Pilot", number: "1", marker: "Next up", facts:, overview:, progress:, watched:, action:, onLongPress:, onPlayPause:) { still }`
+  or `url:`: one episode in a season's list, its 16:9 still with the
+  progress or watched dot at the leading edge, and beside it the marker
+  in the accent, the number and name, the facts, and two lines of the
+  overview. Only the still takes focus; the text brightens with it. Put
+  the rows in a `VStack(spacing: TVEpisodeRows.gap)` with
+  `.tvFocusRow(key, memory:, focused:, first:)`, so the list remembers
+  its episode. `memory.prefer(row:item:)` makes a row or list start on
+  a card other than its first, as on the episode Play starts.
 - `TVPersonCard("Zendaya", role: "Chani") { photo }` or `url:`: a round
   photo, initials until it's in.
 - `TVArtCard(toneKey:, aspect:, label:, action:) { art }`, `TVProgress(0.6)`,
@@ -575,7 +584,8 @@ at a size the screen gives them.
 On tvOS the gallery app opens the TV gallery (`TVKitGallery`), whose last
 page is the phone gallery as it looks on a TV. Its pages: `focus`,
 `scale`, `buttons`, `lists`, `panels`, `feedback` (notices, toasts, the
-dialog, and the text field), `search`, `cards`, `grid`, `home`
+dialog, and the text field), `search`, `cards`, `episodes` (a season's
+list of `TVEpisodeRow`s), `grid`, `home`
 (a mock-up of Home with the backdrop, header, rows, drawer, and clock),
 `remote` (a mock player), and `phone`. Launch arguments: `-page`, `-scheme
 light|dark`, `-accent matinee|ember|moss|sun`, `-locale de`, and `-open

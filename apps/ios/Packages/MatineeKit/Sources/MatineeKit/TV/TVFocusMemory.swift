@@ -42,6 +42,13 @@
       rowItems[row] = item
     }
 
+    /// Where focus lands the first time it comes into `row`, rather than on
+    /// its first card, as a season's row starts on the episode up next.
+    /// Nothing once the row has had a card; it doesn't move focus.
+    public func prefer(row: String, item: String) {
+      if rowItems[row] == nil { rowItems[row] = item }
+    }
+
     /// Puts focus on the card that had it last, or on `fallback` if none
     /// has yet, once its row is on screen. The fallback is kept, so a later
     /// `restore()`, as the drawer's, starts there too.
