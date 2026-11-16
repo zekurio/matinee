@@ -17,20 +17,18 @@ func browseKindLabel(_ kind: String?) -> String {
   }
 }
 
-/// Why a library page shows no titles, with its icon and the way out: nothing
-/// matches the search, nothing the filters, or there are none.
+/// Why a library page shows no titles, with its icon and the way out:
+/// nothing matches the filters, or there are none. The page has no search
+/// of its own (the Apple TV's grids do, and say when nothing matches it),
+/// so its query is always empty.
 @MainActor func libraryEmptyState(_ library: Library?, _ state: TitleListState) -> GridEmpty {
   let shows = library?.kind == LibraryKind.shows
   switch libraryEmpty(state) {
-  case .noMatch(let query):
-    return GridEmpty(
-      icon: .searchX, title: shows ? Str.libraryNoMatchShows(query) : Str.libraryNoMatchMovies(query),
-      action: (Str.libraryClearSearch, state.clearQuery))
   case .noFilterMatch:
     return GridEmpty(
       icon: .listFilter, title: shows ? Str.libraryNoFilterMatchShows : Str.libraryNoFilterMatchMovies,
       action: (Str.browseClearFilters, state.clearFilters))
-  case .none:
+  case .none, .noMatch:
     return GridEmpty(icon: shows ? .tv : .film, title: shows ? Str.libraryNoneShows : Str.libraryNoneMovies)
   }
 }

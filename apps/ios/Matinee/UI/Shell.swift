@@ -5,12 +5,14 @@ import SwiftUI
 import UIKit
 
 /*
- * Shell.kt: the signed-in app. Its tabs, as Android's and the web's on a
- * phone: Home, Media, Downloads, and the profile behind the person's
- * picture in a floating capsule at the bottom of each tab's first page,
- * with search in a circle beside it. Offline only Home, Downloads, and the
- * profile stay. On an iPad the same tabs sit at the top, in the web's bar
- * from `sm` up (Bars.swift, and apps/ios/Matinee/UI/README.md for why).
+ * Shell.kt: the signed-in app. On a phone its tabs are Findroid's, Home,
+ * Media, and Downloads, in a full-width bar along the bottom of each tab's
+ * first page; search is the field at the top of Media, and the profile
+ * opens from the account in Home's header. Offline only Home and Downloads
+ * stay. On an iPad the tabs sit at the top, in the web's bar from `sm` up,
+ * with search and the account at its end (Bars.swift, and
+ * apps/ios/Matinee/UI/README.md for why). MatineeCore's Shell/ShellLayout.swift
+ * says which tabs there are and where each place lands.
  *
  * Each tab keeps a stack of its own, as iOS apps do, so a tab keeps its
  * place while another is open. Switching tabs is immediate, as on iOS,
@@ -76,6 +78,8 @@ struct SignedInApp: View {
       }
     }
     .onChange(of: nav.tab, initial: true) { _, tab in opened.insert(tab) }
+    // An iPad's split view narrowing to a phone's width, or widening back.
+    .onChange(of: style) { _, style in nav.setLayout(style.layout) }
     // The actions a long press offers, and the sheets they open, over every tab.
     .modifier(ActionsHost())
     // Requests' live state, sheets, and queue, over every tab (requests/RequestsHub.swift).
@@ -119,6 +123,7 @@ struct SignedInApp: View {
   private var owner: String { "\(session.activeServer ?? "")\n\(user.id)" }
 
   private func restore() {
+    nav.setLayout(style.layout)
     nav.restore(savedNav, owner: owner)
     restored = true
   }

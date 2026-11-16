@@ -3,9 +3,9 @@ import MatineeKit
 import SwiftUI
 
 /*
- * SearchBar.kt: the search field's pill, at the top of the search page and
- * of a library being searched. The field itself is the kit's, in its pill
- * look.
+ * SearchBar.kt: the search field's pill. Media and the search page hold it
+ * as `SearchPill` (search/SearchScreen.swift); these two are the gallery's.
+ * The field itself is the kit's, in its pill look.
  */
 
 /// The search pill with its field: the search icon, the query, and a button

@@ -18,7 +18,9 @@ struct Navigator {
   var back: () -> Void = {}
   /// Back to the first page of Home, from any tab.
   var home: () -> Void = {}
-  /// A tab's first page; picking the open one starts it over.
+  /// A tab's first page; picking the open one starts it over. A place the
+  /// layout has no tab for opens where it lives: on a phone, search is
+  /// Media with its field taking the keyboard, and the profile a page on Home.
   var tab: (ShellTab) -> Void = { _ in }
 
   /// A file's page: an episode's, or for a movie, the movie's.
@@ -81,7 +83,9 @@ struct Navigator {
   func title(_ title: TitleSummary) { titleId(title.id) }
   func media() { tab(.media) }
   func downloads() { tab(.downloads) }
+  /// Search: Media's field on a phone, the search tab on an iPad.
   func search() { tab(.search) }
+  /// The profile: a page on Home on a phone, the account tab on an iPad.
   func profile() { tab(.profile) }
 }
 

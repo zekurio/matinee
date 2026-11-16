@@ -51,13 +51,16 @@ recipes use those instead of Nix. The CI runner uses this option.
   sign-in sheet through `ASWebAuthenticationSession`, PKCE, and
   `matinee://auth/callback`. The browser page offers passkeys and OIDC.
   See [Signing in apps](../server/README.md#signing-in-apps).
-- The tabs float at the bottom of a phone, as on the web and Android, and
-  at the top of an iPad, as the web's bar from tablet widths up.
+- A phone's tabs are Home, Media, and Downloads, in a full-width bar at
+  the bottom, after the Findroid app's; Home's header has search, which is
+  the field at the top of Media, and the account, which opens the profile.
+  An iPad's tabs sit at the top, as the web's bar from tablet widths up,
+  with search and the account at its end.
 - Home has the featured titles in a row of cards on an iPhone, and in the
   web's banner on an iPad, then Continue watching, Next up, the server's
   recommendations with "Not interested", and recently added titles.
-  Libraries have sorting, genre filters, and search. Browse genres,
-  studios, and people, or search across the server.
+  Libraries have sorting and filters. Browse genres, studios, and people,
+  or search across the server.
 - Title, season, and episode pages show watched marks and favorites.
   A long press on a card opens its actions in a sheet, as on the web. Profile shows watch statistics
   and Recently watched. Admin pages manage libraries, users, authentication,
