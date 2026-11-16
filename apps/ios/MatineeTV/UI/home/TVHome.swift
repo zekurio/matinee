@@ -107,6 +107,7 @@ struct TVHomeScreen: View {
   @Environment(\.api) private var api
   @Environment(\.tvActions) private var actions
   @Environment(\.palette) private var palette
+  @Environment(\.tvPageOnTop) private var onTop
 
   var body: some View {
     ZStack(alignment: .topLeading) {
@@ -142,8 +143,9 @@ struct TVHomeScreen: View {
     // The rows above the libraries show only once loaded, so focus waits for them: focus taken
     // sooner would sit in a row they then push down.
     .tvPageFocus(memory) { firstFocus }
+    // Only while Home is on top: a page opened over it at launch covers it before its rows load.
     .onChange(of: firstFocus?.item) { _, first in
-      if first != nil, memory.lastRow == nil { memory.restore(fallback: firstFocus) }
+      if first != nil, onTop, memory.lastRow == nil { memory.restore(fallback: firstFocus) }
     }
     // Home with the drawer shut: Menu opens it. With it open, Menu leaves the app (TVShell.swift).
     .onTVBack(isActive: !drawer.isOpen) { drawer.open() }

@@ -12,7 +12,39 @@ import SwiftUI
  *   fallback the first time.
  * - Any other page binds its first control with `@FocusState` and calls
  *   `.tvPageFocus($focused)`.
+ *
+ * Only the page on top of the stack takes it. Whether a page is on screen
+ * comes from two places, and both must say so: its own appear and
+ * disappear, and where it sits on the stack (`\.tvPageOnTop`, from
+ * `.tvStackPage`). The first alone isn't enough: a stack that starts with
+ * a page on it, as `-dev.route` or a deep link opens one at launch, shows
+ * Home for a moment and covers it without a transition, and SwiftUI never
+ * tells Home it disappeared.
  */
+
+extension EnvironmentValues {
+  /// Whether the page is the one on top of the TV's stack. Screens off the
+  /// stack, as those before sign-in, are always on top.
+  @Entry var tvPageOnTop = true
+}
+
+extension View {
+  /// Marks a page of `nav`'s stack: on top while `route` is the last on
+  /// the stack, or, for Home (`route` nil), while the stack is empty. Read
+  /// here rather than in the shell, so a push redraws only the pages.
+  func tvStackPage(_ nav: TVNav, route: TVRoute?) -> some View {
+    modifier(StackPage(nav: nav, route: route))
+  }
+}
+
+private struct StackPage: ViewModifier {
+  let nav: TVNav
+  let route: TVRoute?
+
+  func body(content: Content) -> some View {
+    content.environment(\.tvPageOnTop, route.map { nav.path.last == $0 } ?? nav.path.isEmpty)
+  }
+}
 
 extension View {
   /// Puts focus on `focused`'s control as the page appears and each time
@@ -43,26 +75,48 @@ extension View {
 /// so each one notes whether its page is on screen: a hand-back is for the
 /// page on top only. A page beneath asking for focus sends it to the top
 /// left, into the drawer, which hands it back again, without end.
-private struct ClaimsFocus: ViewModifier {
-  let focused: FocusState<Bool>.Binding
+///
+/// On screen is both: appeared and not since disappeared, and on top of the
+/// stack. Each is kept in state, so a claim a moment later reads it as it
+/// is then. A page that comes back on top without appearing again, as Home
+/// does when the page it never saw go over it goes, claims then.
+private struct OnScreen: ViewModifier {
+  let claim: () -> Void
+  @Binding var appeared: Bool
+  @Binding var top: Bool
   @Environment(\.tvPageReturn) private var returns
-  @State private var onScreen = false
+  @Environment(\.tvPageOnTop) private var onTop
 
   func body(content: Content) -> some View {
     content
       .onAppear {
-        onScreen = true
+        appeared = true
+        top = onTop
         claim()
       }
-      .onDisappear { onScreen = false }
-      .onChange(of: returns?.count) { if onScreen { claim() } }
+      .onDisappear { appeared = false }
+      .onChange(of: onTop) { _, now in
+        top = now
+        if now, appeared { claim() }
+      }
+      .onChange(of: returns?.count) { if appeared, top { claim() } }
+  }
+}
+
+private struct ClaimsFocus: ViewModifier {
+  let focused: FocusState<Bool>.Binding
+  @State private var appeared = false
+  @State private var top = true
+
+  func body(content: Content) -> some View {
+    content.modifier(OnScreen(claim: claim, appeared: $appeared, top: $top))
   }
 
   private func claim() {
     // A pushed page is laid out a frame later; a page settling as the app starts can lose it once.
     for delay in [0.0, 0.15, 0.4] {
       DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-        if onScreen, !focused.wrappedValue { focused.wrappedValue = true }
+        if appeared, top, !focused.wrappedValue { focused.wrappedValue = true }
       }
     }
   }
@@ -71,24 +125,18 @@ private struct ClaimsFocus: ViewModifier {
 private struct ClaimsValueFocus<Value: Hashable>: ViewModifier {
   let focused: FocusState<Value?>.Binding
   let value: Value
-  @Environment(\.tvPageReturn) private var returns
-  @State private var onScreen = false
+  @State private var appeared = false
+  @State private var top = true
 
   func body(content: Content) -> some View {
-    content
-      .onAppear {
-        onScreen = true
-        claim()
-      }
-      .onDisappear { onScreen = false }
-      .onChange(of: returns?.count) { if onScreen { claim() } }
+    content.modifier(OnScreen(claim: claim, appeared: $appeared, top: $top))
   }
 
   private func claim() {
     for delay in [0.0, 0.15, 0.4] {
       DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
         // Not over a choice the person already moved to.
-        if onScreen, focused.wrappedValue == nil { focused.wrappedValue = value }
+        if appeared, top, focused.wrappedValue == nil { focused.wrappedValue = value }
       }
     }
   }
@@ -97,16 +145,14 @@ private struct ClaimsValueFocus<Value: Hashable>: ViewModifier {
 private struct RestoresFocus: ViewModifier {
   let memory: TVFocusMemory
   let fallback: () -> (row: String, item: String)?
-  @Environment(\.tvPageReturn) private var returns
-  @State private var onScreen = false
+  @State private var appeared = false
+  @State private var top = true
 
   func body(content: Content) -> some View {
-    content
-      .onAppear {
-        onScreen = true
-        memory.restore(fallback: fallback())
-      }
-      .onDisappear { onScreen = false }
-      .onChange(of: returns?.count) { if onScreen { memory.restore(fallback: fallback()) } }
+    content.modifier(OnScreen(claim: claim, appeared: $appeared, top: $top))
+  }
+
+  private func claim() {
+    if top { memory.restore(fallback: fallback()) }
   }
 }
