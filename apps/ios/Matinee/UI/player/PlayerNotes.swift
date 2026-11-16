@@ -280,8 +280,8 @@ struct LockedScreen: View {
       Pressable(shape: Circle()) {
         if shown { onUnlock() } else { tapped += 1 }
       } label: {
-        LucideIcon(.lockOpen, size: 22, tint: .white, scales: false)
-          .frame(width: TouchTarget, height: TouchTarget)
+        LucideIcon(.lockOpen, size: 26, tint: .white, scales: false)
+          .frame(width: 52, height: 52)
           .pictureGlass(in: Circle(), shade: .medium)
           .opacity(shown ? 1 : 0)
           .contentShape(Circle())

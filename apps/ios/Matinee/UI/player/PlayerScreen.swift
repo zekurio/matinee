@@ -432,7 +432,7 @@ private struct BackOnly: View {
 
   var body: some View {
     RoundIconButton(
-      .arrowLeft, label: Str.playerBack, look: .ghost, size: 44, tint: .white.opacity(0.85), action: close
+      .arrowLeft, label: Str.playerBack, look: .ghost, size: 52, iconSize: 26, tint: .white.opacity(0.85), action: close
     )
     .frame(height: TOP_BAR_HEIGHT)
     .padding(.horizontal, Space.s3)

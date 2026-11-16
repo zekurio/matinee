@@ -81,13 +81,13 @@ private struct Shades: View {
   }
 }
 
-/// The web's control buttons over the picture: 44 round, the icon in white
-/// at 85%, nothing behind it until it's pressed.
+/// The control buttons over the picture, at Android's size: 52 round, the
+/// icon 26 in white at 85%, nothing behind it until it's pressed.
 private struct ControlButton: View {
   let icon: Lucide
   let label: String
-  var size: CGFloat = TouchTarget
-  var iconSize: CGFloat = 22
+  var size: CGFloat = 52
+  var iconSize: CGFloat = 26
   let action: () -> Void
 
   var body: some View {
@@ -116,7 +116,7 @@ private struct PlayerTopBar: View {
         let label = itemLabel(item)
         VStack(alignment: .leading, spacing: 0) {
           Text(label.title)
-            .textStyle(.lg, weight: .semibold, tracking: .tight)
+            .pageTitleStyle()
             .foregroundStyle(.white)
             .lineLimit(1)
           if let line = subtitleLine(item, label), !line.isEmpty {
@@ -167,7 +167,7 @@ private struct PlayerTopBar: View {
 }
 
 /// The top bar's height, which the unlock button lines up with.
-let TOP_BAR_HEIGHT: CGFloat = 48
+let TOP_BAR_HEIGHT: CGFloat = 52
 
 /// Opens the subtitles menu, with a line in the accent under it while subtitles are on.
 private struct SubtitlesButton: View {
@@ -180,7 +180,7 @@ private struct SubtitlesButton: View {
       // The web's `bg-primary h-0.5 w-5 rounded-full`, 6 from the bottom.
       .overlay(alignment: .bottom) {
         if controller.subtitle != nil {
-          Capsule().fill(palette.accent).frame(width: 20, height: 2).offset(y: -6).allowsHitTesting(false)
+          Capsule().fill(palette.accent).frame(width: 20, height: 2).offset(y: -8).allowsHitTesting(false)
         }
       }
       // The line shows subtitles are on; VoiceOver hears which.
@@ -298,7 +298,7 @@ private struct EpisodeButton: View {
   let action: () -> Void
 
   var body: some View {
-    ControlButton(icon: icon, label: label, size: 48, iconSize: 24, action: action)
+    ControlButton(icon: icon, label: label, size: 64, iconSize: 30, action: action)
       .disabled(!enabled)
   }
 }

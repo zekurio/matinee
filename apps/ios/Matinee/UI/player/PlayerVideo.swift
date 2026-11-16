@@ -161,12 +161,12 @@ struct AirPlayButton: View {
   var body: some View {
     ZStack {
       RoutePicker()
-      LucideIcon(.airplay, size: 22, tint: active ? palette.accent : .white.opacity(0.85), scales: false)
+      LucideIcon(.airplay, size: 26, tint: active ? palette.accent : .white.opacity(0.85), scales: false)
         .pictureShadow()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
-    .frame(width: TouchTarget, height: TouchTarget)
+    .frame(width: 52, height: 52)
   }
 }
 
