@@ -160,7 +160,7 @@ struct AppHeader<Action: View>: View {
       if style == .phone {
         // Offline there's nothing to search, as Findroid leaves it out.
         if !offline {
-          RoundIconButton(.search, label: Str.searchTitle, look: .secondary, size: 36, iconSize: 18, action: nav.search)
+          RoundIconButton(.search, label: Str.searchTitle, look: .secondary, size: 40, iconSize: 20, action: nav.search)
         }
         AccountButton()
       }
@@ -212,12 +212,12 @@ private struct AccountButton: View {
     if let user {
       let waiting = user.isAdmin ? max(requests?.queue.needsYou ?? 0, Self.devInbox) : Self.devInbox
       Pressable(shape: Circle(), action: nav.profile) {
-        // 36 to see, as the search beside it, and 44 to hit.
-        ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 36, dot: waiting > 0)
-          .padding(Space.s1)
+        // 40 to see, as the search beside it, and 44 to hit.
+        ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 40, dot: waiting > 0)
+          .padding(Space.s0_5)
       }
       // The picture's edge on the gutter, as the logo's at the other end.
-      .padding(.trailing, -Space.s1)
+      .padding(.trailing, -Space.s0_5)
       .accessibilityLabel(Str.tabProfile)
       .accessibilityValue(waiting > 0 ? Str.webRequestsMenuWaiting(waiting) : "")
     }
