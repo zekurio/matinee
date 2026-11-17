@@ -66,7 +66,9 @@ extension View {
   /// The tabs on `tab`'s first page: the kit's `BottomBar` on a phone, its
   /// `NavBar` on an iPad. They belong to the page, so a page opened from it
   /// covers them, as on Android and in Findroid, and swiping back brings
-  /// them back with it.
+  /// them back with it. Either is drawn around the same page (the kit's
+  /// `tabBars`), so when an iPad's window crosses between the two, the page
+  /// keeps what it loaded, where it's scrolled, and its state.
   func tabBars(_ tab: ShellTab) -> some View { modifier(TabBars(tab: tab)) }
 }
 
@@ -78,32 +80,43 @@ private struct TabBars: ViewModifier {
   @Environment(\.api) private var api
 
   func body(content: Content) -> some View {
-    switch style {
-    case .phone:
-      // Home, Media, and Downloads, each always named; search and the account are in Home's header.
-      content.bottomBar(BottomBar(nav.tabs.map(item), selection: nav.barTab) { nav.select($0) })
-    case .tablet:
-      content.navBar(
-        NavBar(
-          nav.tabs.filter { $0 != .search && $0 != .profile }.map(item),
-          // Search, then the account, as the web's bar ends.
-          trailing: [ShellTab.search, .profile].filter(nav.tabs.contains).map(item),
-          selection: nav.barTab
-        ) {
-          nav.select($0)
-        } leading: {
-          Pressable(shape: Capsule(), wash: true, action: nav.home) {
-            LogoMark(size: 24).padding(.leading, Space.s3).padding(.trailing, Space.s2).frame(height: TouchTarget)
-          }
-          .accessibilityLabel(Str.shellHomeLink)
-        })
-    }
+    content.tabBars(style == .phone ? .bottom : .top, bottom: bottomBar, top: navBar)
+  }
+
+  /// A phone's: Home, Media, and Downloads, each always named; search and
+  /// the account are in Home's header.
+  private var bottomBar: BottomBar<ShellTab> {
+    let select: (ShellTab) -> Void = { [nav] in nav.select($0) }
+    return BottomBar(nav.tabs.map { item($0) }, selection: nav.barTab, onSelect: select)
+  }
+
+  /// An iPad's: the logo, the tabs, then search and the account, as the web's bar ends.
+  private var navBar: NavBar<ShellTab, HomeLogoLink> {
+    let select: (ShellTab) -> Void = { [nav] in nav.select($0) }
+    let places: [ShellTab] = [.search, .profile]
+    let tabs = nav.tabs
+    let logo: () -> HomeLogoLink = { HomeLogoLink() }
+    let items = tabs.filter { !places.contains($0) }.map { item($0) }
+    let trailing = places.filter { tabs.contains($0) }.map { item($0) }
+    return NavBar(items, trailing: trailing, selection: nav.barTab, onSelect: select, leading: logo)
   }
 
   private func item(_ tab: ShellTab) -> TabBarItem<ShellTab> {
     guard tab == .profile, let user else { return TabBarItem(tab, label: tab.label, icon: tab.icon) }
     let url = user.avatarId.flatMap { api?.paths.avatar($0) }
     return TabBarItem(tab, label: tab.label) { _ in ProfileTabPicture(name: user.name, url: url) }
+  }
+}
+
+/// The logo at the start of an iPad's bar, which goes Home.
+private struct HomeLogoLink: View {
+  @Environment(\.navigator) private var nav
+
+  var body: some View {
+    Pressable(shape: Capsule(), wash: true, action: { nav.home() }) {
+      LogoMark(size: 24).padding(.leading, Space.s3).padding(.trailing, Space.s2).frame(height: TouchTarget)
+    }
+    .accessibilityLabel(Str.shellHomeLink)
   }
 }
 

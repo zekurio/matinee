@@ -119,4 +119,12 @@ public struct MediaSearch: Equatable, Sendable {
     if !text.isEmpty { return .results(text) }
     return open ? .suggestions : .libraries
   }
+
+  /// What Media shows in `layout`: on a phone, what's under the field; on a
+  /// tablet, where search is a tab of its own and Media has no field, the
+  /// libraries, whatever the field held. The field keeps it, so an iPad's
+  /// window that narrows to a phone's width again shows the search again.
+  public func content(in layout: ShellLayout) -> MediaPageContent {
+    layout == .phone ? content : .libraries
+  }
 }

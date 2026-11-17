@@ -70,6 +70,19 @@ the tabs are attached by the shell, and their room comes off the safe area,
 so a page that scrolls under them ends clear of them and a centered
 spinner centers in what's visible. Don't add bottom padding for the tabs.
 
+The style changes while the app runs, as an iPad's window narrows to a
+phone's width or widens again, and each tab keeps its page through it: what
+it loaded, where it's scrolled, the pages on its stack, and which tab is
+open. The shell draws either bar around the same page (the kit's
+`tabBars`), so a tab's first page must stay one view too: don't branch its
+root on the style into two pages, each with state of its own. Vary what's
+inside, as Media shows its field only on a phone and Downloads its bar
+(`.topBar(…, hidden:)`); keep state the two shells share above both, as
+Home keeps the featured title in view for the cards and the banner. Home
+holds the row at its top in place across the change (MatineeCore's
+`ScrollAnchor`), since its top changes height. The places a phone lacks,
+the account and search, move to where they live there, as a new page.
+
 ## A screen, start to finish
 
 ```swift

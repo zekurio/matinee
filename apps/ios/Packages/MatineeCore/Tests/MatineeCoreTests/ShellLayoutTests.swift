@@ -2,7 +2,8 @@ import Testing
 
 @testable import MatineeCore
 
-/// The shell's arrangement after Findroid's phone app; Android has no test for it yet.
+/// The shell's arrangement after Findroid's phone app. Android's `ShellLayoutTest` holds the same cases
+/// for its phone, less the tablet's.
 struct ShellLayoutTests {
   @Test func aPhoneHasHomeMediaAndDownloads() {
     #expect(shellTabs(.phone, offline: false) == [.home, .media, .downloads])
@@ -89,6 +90,18 @@ struct ShellLayoutTests {
     var search = MediaSearch()
     search.type("   ")
     #expect(search.content == .suggestions)
+  }
+
+  @Test func aTabletsMediaIsTheLibrariesWhateverTheFieldHolds() {
+    // An iPad's window widened from a phone's width with search open: the field keeps its text for the
+    // next time it narrows.
+    let search = MediaSearch(query: "matrix")
+    #expect(search.content(in: .tablet) == .libraries)
+    #expect(search.content(in: .phone) == .results("matrix"))
+    var open = MediaSearch()
+    open.begin()
+    #expect(open.content(in: .tablet) == .libraries)
+    #expect(open.content(in: .phone) == .suggestions)
   }
 
   @Test func textFromElsewhereOpensSearch() {
