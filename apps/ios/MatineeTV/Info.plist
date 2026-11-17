@@ -7,6 +7,10 @@
 -->
 <plist version="1.0">
 <dict>
+	<key>MatineeAppGroup</key>
+	<string>$(MATINEE_APP_GROUP)</string>
+	<key>CFBundleURLTypes</key>
+	<array><dict><key>CFBundleURLName</key><string>io.github.zekurio.matinee</string><key>CFBundleURLSchemes</key><array><string>matinee</string></array></dict></array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

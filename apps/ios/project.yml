@@ -36,6 +36,7 @@ settings:
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     DEAD_CODE_STRIPPING: YES
+    MATINEE_APP_GROUP: group.io.github.zekurio.matinee
 
 targets:
   Matinee:
@@ -178,6 +179,8 @@ targets:
       - Matinee/Resources/iOS.xcstrings
       - Matinee/Resources/Assets.xcassets
     dependencies:
+      - target: MatineeTopShelf
+        embed: true
       - package: MatineeMPV
       - package: MatineeCore
       - package: MatineeKit
@@ -206,6 +209,7 @@ targets:
         # beside the sources: MatineeTV/Info.plist.
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: MatineeTV/Info.plist
+        CODE_SIGN_ENTITLEMENTS: MatineeTV/MatineeTV.entitlements
         CURRENT_PROJECT_VERSION: "1"
       configs:
         Debug:
@@ -216,6 +220,29 @@ targets:
   # Presses the Siri Remote on an Apple TV simulator from a script, for
   # MatineeTV/Remote/remote.sh: a UI test only so XCUIRemote can reach the
   # focus engine. The script itself is the kit gallery's.
+  MatineeTopShelf:
+    type: app-extension
+    platform: tvOS
+    configFiles:
+      Debug: Config/Version.xcconfig
+      Release: Config/Version.xcconfig
+    sources:
+      - path: MatineeTopShelf
+        excludes: [Info.plist, MatineeTopShelf.entitlements]
+      - Matinee/UI/Strings.gen.swift
+      - Matinee/Resources/Localizable.xcstrings
+      - Matinee/Resources/iOS.xcstrings
+    dependencies:
+      - package: MatineeCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.zekurio.matinee.topshelf
+        CODE_SIGN_ENTITLEMENTS: MatineeTopShelf/MatineeTopShelf.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: MatineeTopShelf/Info.plist
+        CURRENT_PROJECT_VERSION: "1"
+
   MatineeTVRemote:
     type: bundle.ui-testing
     platform: tvOS
