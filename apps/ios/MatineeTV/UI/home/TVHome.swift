@@ -106,7 +106,6 @@ struct TVHomeScreen: View {
   @FocusState private var retryFocused: Bool
   @Environment(TVTopShelf.self) private var topShelf
   @Environment(MatineeSession.self) private var session
-  @Environment(\.api) private var api
   @Environment(\.tvActions) private var actions
   @Environment(\.tvPageOnTop) private var onTop
 

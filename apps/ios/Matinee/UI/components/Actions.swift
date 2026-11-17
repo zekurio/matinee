@@ -210,24 +210,6 @@ struct ActionsButton: View {
   }
 }
 
-extension View {
-  /// A long press on this opens `target`'s actions, for something pressable
-  /// that isn't a card. Cards have it already.
-  func cardMenu(_ target: ActionTarget) -> some View { modifier(CardMenu(target: target)) }
-}
-
-private struct CardMenu: ViewModifier {
-  let target: ActionTarget
-  @Environment(\.actions) private var actions
-  @Environment(\.offline) private var offline
-
-  func body(content: Content) -> some View {
-    content
-      .onLongPressGesture(minimumDuration: 0.45) { if !offline { actions?.open(target) } }
-      .accessibilityAction(named: Text(Str.titleMoreActions)) { if !offline { actions?.open(target) } }
-  }
-}
-
 /// A sheet's rows for `target`.
 struct ActionItems: View {
   let target: ActionTarget

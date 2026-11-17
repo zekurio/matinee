@@ -35,32 +35,33 @@ left" lists what remains.
 All logic is MatineeCore's and all look is MatineeKit's, as for the iPhone
 app. The app-level pieces that aren't in a package are compiled into both
 targets from where they are: `project.yml` lists them one by one under
-`MatineeTV`'s sources. Nothing is copied, so the generated words, the
-loading helpers, and the artwork pipeline can't drift apart between the
-apps.
+`MatineeTV`'s sources, so the generated words, the loading helpers, and
+the artwork pipeline can't drift apart between the apps.
 
-| Shared file                                                | What the TV takes from it                                                      |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `Matinee/UI/Strings.gen.swift`                             | `Str`, every word, from Android's strings (TV strings included)                |
-| `Matinee/Resources/Localizable.xcstrings`, `iOS.xcstrings` | The catalogs `Str` reads                                                       |
-| `Matinee/Resources/Assets.xcassets`                        | The logo and mark, and the launch color                                        |
-| `Matinee/UI/State.swift`                                   | `.loads`, `describeFailure`, `\.api`                                           |
-| `Matinee/UI/Format.swift`                                  | Names, numbers, and dates in the app's language                                |
-| `Matinee/UI/ThemeStore.swift`                              | The mode and the server's accents                                              |
-| `Matinee/UI/Navigator.swift`                               | `Navigator`, which `TVNav.navigator` fills in                                  |
-| `Matinee/UI/components/Toasts.swift`                       | `Snackbar`, `launchShowing`                                                    |
-| `Matinee/UI/components/Picture.swift`                      | `Picture` over Nuke with the blur hash, the image pipeline, `Logo`, `LogoMark` |
-| `Matinee/UI/components/QrCode.swift`                       | `QrCode`, the sign-in QR                                                       |
-| `Matinee/UI/signin/SignInState.swift`                      | `ServerConnect`, `DeviceCodeState`, `unreachableMessage`                       |
-| `Matinee/UI/signin/LoginBackdrop.swift`                    | The server's login backdrop behind sign-in                                     |
-| `Matinee/UI/home/HomeDevData.swift`                        | `-dev.art` and `-dev.recommendations`                                          |
-| `Matinee/UI/title/TitleData.swift`                         | The detail pages' facts, file info, season loads, and `-title.fixture`         |
-| `Matinee/UI/player/PlayerWords.swift`                      | Refusal, notice, and skip-button wording                                       |
-| `Matinee/UI/player/PlayerSubtitles.swift`                  | Subtitle lines, also used by Settings                                          |
-| `Matinee/UI/player/PlayerTrickplay.swift`                  | Trickplay frame and tile cache, sized by each player                           |
-| `Matinee/UI/player/PlayerLayer.swift`                      | AVPlayer layer and surface, without picture in picture or AirPlay              |
-| `Matinee/UI/player/PlayerMenuEntries.swift`                | Menu choices and track, quality, and speed labels                              |
-| `Matinee/UI/browse/BrowseFixtures.swift`                   | `-dev.browseFixtures`, the fixture people the cast cards open                  |
+| Shared file                                                 | What the TV takes from it                                                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `Matinee/UI/Strings.gen.swift`                              | `Str`, every word, from Android's strings (TV strings included)                |
+| `Matinee/Resources/Localizable.xcstrings`, `iOS.xcstrings`  | The catalogs `Str` reads                                                       |
+| `Matinee/Resources/Assets.xcassets`                         | The logo and mark, and the launch color                                        |
+| `Matinee/UI/State.swift`                                    | `.loads`, `describeFailure`, `\.api`                                           |
+| `Matinee/UI/Format.swift`                                   | Names, numbers, and dates in the app's language                                |
+| `Matinee/UI/ThemeStore.swift`                               | The mode and the server's accents                                              |
+| `Matinee/UI/Navigator.swift`                                | `Navigator`, which `TVNav.navigator` fills in                                  |
+| `Matinee/UI/components/Toasts.swift`                        | `Snackbar`, `launchShowing`                                                    |
+| `Matinee/UI/components/Picture.swift`                       | `Picture` over Nuke with the blur hash, the image pipeline, `Logo`, `LogoMark` |
+| `Matinee/UI/components/QrCode.swift`                        | `QrCode`, the sign-in QR                                                       |
+| `Matinee/UI/signin/SignInState.swift`                       | `ServerConnect`, `DeviceCodeState`, `unreachableMessage`                       |
+| `Matinee/UI/signin/LoginBackdrop.swift`                     | The server's login backdrop behind sign-in                                     |
+| `Matinee/UI/home/HomeDevData.swift`                         | `-dev.art` and `-dev.recommendations`                                          |
+| `Matinee/UI/title/TitleData.swift`                          | The detail pages' facts, file info, season loads, and `-title.fixture`         |
+| `Matinee/UI/player/PlayerWords.swift`                       | Refusal, notice, and skip-button wording                                       |
+| `Matinee/UI/player/PlayerSubtitles.swift`                   | Subtitle lines, also used by Settings                                          |
+| `Matinee/UI/player/PlayerTrickplay.swift`                   | Trickplay frame and tile cache, sized by each player                           |
+| `Matinee/UI/player/PlayerLayer.swift`                       | AVPlayer layer and surface, without picture in picture or AirPlay              |
+| `Matinee/UI/player/PlayerMenuEntries.swift`                 | Menu choices and track, quality, and speed labels                              |
+| `Matinee/UI/browse/BrowseFixtures.swift`                    | `-dev.browseFixtures`, the fixture people the cast cards open                  |
+| `Matinee/UI/profile/StatsData.swift`, `StatsFixtures.swift` | The statistics' words, and `-dev.statsFixtures`                                |
+| `Matinee/UI/settings/SettingsData.swift`                    | Saving preferences, the choices Settings offers, and their words               |
 
 Why sharing by file and not a package: these depend on the app's
 generated strings and on each other, and moving them into a package would
@@ -85,39 +86,8 @@ What that asks of everyone:
 
 ## A TV page
 
-```swift
-/// TvKind.kt: every movie or every show, in a grid.
-struct TVKindScreen: View {
-  let kind: String
-  @State private var titles = Loader<BrowsedTitles>()
-  @State private var memory = TVFocusMemory()
-  @FocusState private var retryFocused: Bool
-  @Environment(\.api) private var api
-  @Environment(\.navigator) private var nav
-  @Environment(\.tvActions) private var actions
-
-  var body: some View {
-    Group {
-      switch titles.state {
-      case .loading: TVLoadingRow().frame(maxHeight: .infinity)
-      case .failed(let message, _):
-        TVMessage(Str.tvGridFailed, message: message,
-          action: TVNoticeAction(Str.commonRetry, icon: .refreshCw, action: titles.reload),
-          actionFocus: $retryFocused)
-        .tvPageFocus($retryFocused)
-      case .ready(let page):
-        TVPosterGrid(page.items, itemKey: \.id, memory: memory) { title in
-          TVPosterCard(title.name, width: nil, action: { nav.title(title) },
-            onLongPress: { actions?.open(.title(title)) }) { Picture(api?.art(title.images.poster)) }
-        } header: { … }
-        .tvPageFocus(memory) { page.items.first.map { (TVGrid.row, $0.id) } }
-      }
-    }
-    .ignoresSafeArea()
-    .loads(titles) { [kind] api in try await api.titles.browse(kind: kind, limit: 60) }
-  }
-}
-```
+`UI/profile/TVRecent.swift` is a whole page in one file, and the one to
+copy from.
 
 1. **One file per Android file**, in the folder Android uses (`UI/detail/`,
    `UI/browse/`, ...), named as the type `TVRouteScreen` already calls.
@@ -184,7 +154,6 @@ From `apps/ios`, with `just` (or `nix shell nixpkgs#just -c just …`):
 | `just tv-remote-dev [account] [args]` | Starts a remote session signed in to the dev server                             |
 | `just tv-remote send "<steps>"`       | Presses the remote in that session; `install`, `stop`, `run` too                |
 | `just tv-boundary`                    | The kit's TV boundary test over `MatineeTV/`, also part of `just test`          |
-| `just tv-icons`                       | Renders the icon and Top Shelf images again from `brand/` (`brand/render.sh`)   |
 
 `MATINEE_TV_SIMULATOR` defaults to "Apple TV 4K (4th generation)";
 `MATINEE_TV_DERIVED_DATA` to `build/TVDerivedData`. Use one Apple TV
@@ -253,8 +222,8 @@ are split as they are. `brand/render.sh` renders it into
 of three layers (the sky at the back, the sun in the middle, the water
 and the mark's bands in front) at 400×240 @1x/@2x and 1280×768 for the
 App Store, and the Top Shelf images (1920×720 and the wide 2320×720,
-@1x/@2x), the same scene with the wordmark. `scripts/tvicon.sh` and
-`just tv-icons` run `render.sh`. The catalog's `Contents.json` files are
+@1x/@2x), the same scene with the wordmark. `just brand` runs
+`render.sh`. The catalog's `Contents.json` files are
 written by hand, and `project.yml` names the set
 (`ASSETCATALOG_COMPILER_APPICON_NAME`).
 
@@ -290,8 +259,7 @@ group. If there is no provider artwork, it uses the server's thumbnail,
 as the app's image pipeline does. This differs from Android Watch Next,
 which has no thumbnail fallback. Images use twice the point dimensions
 returned by `TVTopShelfSectionedContent.imageSize(for:)`, aspect-filled,
-and the extension supplies their file URLs for both screen scales. Local
-group file URLs were verified on the tvOS 27.2 simulator. At most 24
+and the extension supplies their file URLs for both screen scales. At most 24
 images remain; replacing the snapshot removes obsolete images. Items
 whose image could not be downloaded are omitted by the provider.
 
@@ -323,24 +291,11 @@ server authorization, not the snapshot as proof of access.
    build both targets with those profiles. No shared Keychain group is
    needed because the extension has no credentials.
 
-`just tv-build` stays unsigned for CI. For running, the existing
-`tv-sim-build`, `tv-run`, `tv-dev`, and remote recipes already use
-`CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-`. Ad-hoc signing embeds the
-App Group entitlement and worked without a development team on the
-simulator; no recipe changes are needed. A separate unsigned install
-launched successfully but had no group containers; its log reported
-`container_create_or_lookup_app_group_path_by_app_group_identifier: client
-is not entitled`. Treat unsigned builds as compilation checks. The
-existing ad-hoc-signed run recipes are required for dynamic Top Shelf.
-
-On a fresh Apple TV 4K 3rd generation simulator running tvOS 27.2, the
-Home Screen displayed the two dev-server in-progress titles with local
-thumbnail images and progress bars. Selecting The Matrix opened its page.
-Signing out removed the group snapshot and images and restored the static
-image. Screenshots are untracked under `build/top-shelf/`:
-`top-shelf-content.png`, `selected-item.png`, `top-shelf-signed-out.png`.
-The simulator was shut down and deleted after checking. Physical-device
-provisioning and Play/Pause from Top Shelf still need a device check.
+`just tv-build` stays unsigned for CI. The run recipes (`tv-run`,
+`tv-dev`, and the remote's) sign ad hoc, which embeds the App Group
+entitlement and is enough on a simulator. An unsigned install has no
+group container, so it shows no Top Shelf content. Provisioning on a
+device and Play/Pause from the Top Shelf haven't been tried.
 
 ## What's left
 
@@ -356,12 +311,10 @@ favourites, and search (`UI/browse/`), the profile (`UI/profile/`), Settings
 - Stock controls and phone components in a TV screen: `just tv-boundary`
   fails on them. If the kit lacks something, add it to the kit's `TV`
   folder, with its gallery page and README.
-- The kit's `TVPicture` for server artwork; it doesn't sign requests or cache.
 - Downloads, offline mode, browser sign-in, camera linking, admin pages,
   the image editor, picture in picture: `ClientCapabilities` leaves them
   out of a TV, and nothing here should lead to them.
 - Deciding what the server decides (AGENTS.md, "Boundaries").
 - Editing the iPhone app's files to suit the TV beyond the narrowest
   `#if os(...)`, or the generated strings and catalogs by hand. A string
-  the TV needs that Android lacks: the nearest `Str` accessor with
-  `// TODO(strings): <android key or proposed text>`.
+  the TV needs that Android lacks goes in `iOS.xcstrings`.

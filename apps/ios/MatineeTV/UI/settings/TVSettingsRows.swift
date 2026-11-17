@@ -25,7 +25,7 @@ import SwiftUI
 struct PlaybackRows: View {
   let focus: FocusState<String?>.Binding
   @State private var options = Loader<PlaybackOptions>()
-  @State private var save = TVPlaybackSave()
+  @State private var save = PlaybackSave()
   @Environment(\.user) private var user
   @Environment(\.api) private var api
   @Environment(\.snackbar) private var snackbar
@@ -232,8 +232,8 @@ private struct SubtitleSample: View {
 struct LanguageRows: View {
   let focus: FocusState<String?>.Binding
   @State private var options = Loader<PlaybackOptions>()
-  @State private var save = TVPlaybackSave()
-  @State private var specials = TVSpecialsSave()
+  @State private var save = PlaybackSave()
+  @State private var specials = SpecialsSave()
   @Environment(\.user) private var user
   @Environment(\.api) private var api
   @Environment(\.snackbar) private var snackbar

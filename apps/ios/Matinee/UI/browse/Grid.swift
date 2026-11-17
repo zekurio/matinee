@@ -143,14 +143,6 @@ struct PosterGrid<Header: View, Empty: View>: View {
   }
 }
 
-extension PosterGrid where Header == EmptyView {
-  init(
-    _ pages: TitlePages, detail: @escaping (TitleSummary) -> String?, @ViewBuilder empty: @escaping () -> Empty
-  ) {
-    self.init(pages, detail: detail, empty: empty) { EmptyView() }
-  }
-}
-
 /// A grid's posters while the first page loads: blank cards with a bar for
 /// the name and one for the year, as the web's `PosterGridSkeleton`.
 struct PosterGridSkeleton: View {

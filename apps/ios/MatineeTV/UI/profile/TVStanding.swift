@@ -69,7 +69,6 @@ private struct BoardFace: View {
   let standing: BoardStanding
   let rows: Int
   @Environment(\.tvFocused) private var focused
-  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: TVSpace.s2) {

@@ -157,7 +157,7 @@ struct PersonScreen: View {
             ForEach(value.credits, id: \.self) { credit in
               PosterCard(
                 credit.title,
-                detail: credit.role ?? formatYear(credit.title.year) ?? creditKind(credit.kind, count: 1))
+                detail: credit.role ?? formatYear(credit.title.year) ?? titleCreditLabel(credit.kind, count: 1))
             }
           }
           // "Not here yet": their titles at TMDB that no library here has.
@@ -234,7 +234,7 @@ private struct PersonHeader: View {
         formatDay(died).map(Str.personDied),
       ].compactMap(\.self).joined(separator: " · ")
     case .credits(let kinds, let count):
-      let names = kinds.map { creditKind($0, count: 1) }.formatted(.list(type: .and).locale(.app))
+      let names = kinds.map { titleCreditLabel($0, count: 1) }.formatted(.list(type: .and).locale(.app))
       return [names.isEmpty ? nil : names, Str.browseTitleCount(count)].compactMap(\.self).joined(separator: " · ")
     }
   }
@@ -261,35 +261,5 @@ private struct PersonSkeleton: View {
     .frame(maxHeight: .infinity, alignment: .top)
     .accessibilityElement()
     .accessibilityLabel(Str.loadingInProgress)
-  }
-}
-
-/// What TMDB says someone is known for, in the app's language.
-private func departmentName(_ id: String) -> String? {
-  switch id {
-  case PersonDepartment.acting: Str.personDepartmentActing
-  case PersonDepartment.directing: Str.personDepartmentDirecting
-  case PersonDepartment.writing: Str.personDepartmentWriting
-  case PersonDepartment.creator: Str.personDepartmentCreator
-  case PersonDepartment.production: Str.personDepartmentProduction
-  case PersonDepartment.editing: Str.personDepartmentEditing
-  case PersonDepartment.camera: Str.personDepartmentCamera
-  case PersonDepartment.sound: Str.personDepartmentSound
-  case PersonDepartment.art: Str.personDepartmentArt
-  case PersonDepartment.costume: Str.personDepartmentCostume
-  case PersonDepartment.visualEffects: Str.personDepartmentVisualEffects
-  case PersonDepartment.lighting: Str.personDepartmentLighting
-  case PersonDepartment.crew: Str.personDepartmentCrew
-  default: nil
-  }
-}
-
-/// "Director", or "Directors" for `count` above one.
-func creditKind(_ kind: String, count: Int) -> String {
-  switch kind {
-  case CreditKind.creator: Str.peopleCreditCreator(count)
-  case CreditKind.director: Str.peopleCreditDirector(count)
-  case CreditKind.writer: Str.peopleCreditWriter(count)
-  default: Str.peopleCreditActor(count)
   }
 }

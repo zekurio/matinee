@@ -81,8 +81,6 @@ struct Navigator {
 
   /// A movie's or show's page.
   func title(_ title: TitleSummary) { titleId(title.id) }
-  func media() { tab(.media) }
-  func downloads() { tab(.downloads) }
   /// Search: Media's field on a phone, the search tab on an iPad.
   func search() { tab(.search) }
   /// The profile: a page on Home on a phone, the account tab on an iPad.

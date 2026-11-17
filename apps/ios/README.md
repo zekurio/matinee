@@ -15,11 +15,10 @@ Node 24 on macOS; install `just` too. Run these from the repository root:
 
 | Recipe              | What it does                                                                                                       |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `just ios generate` | Writes the ignored Xcode project, version config, and app icon catalog                                             |
+| `just ios generate` | Writes the ignored Xcode project, version config, app icon catalog, and strings                                    |
 | `just ios build`    | Builds the unsigned debug app for the simulator in `apps/ios/build/DerivedData/`                                   |
 | `just ios test`     | Runs MatineeCore's tests and the kit's boundary test on the Mac, and checks generated strings, icons, and palettes |
 | `just ios api`      | Generates the API client after a contract change                                                                   |
-| `just ios strings`  | Generates the string catalog and Swift accessors                                                                   |
 | `just ios icons`    | Generates the kit's icons, the app's logo, and the palettes                                                        |
 
 In `apps/ios`, leave out `ios`: `just build`. The same build by hand:
@@ -35,8 +34,10 @@ swift test
 ```
 
 XcodeGen reads `project.yml`; don't commit `Matinee.xcodeproj`.
-It also runs `scripts/version.sh` to read the root `package.json`, and
-`scripts/appicon.sh` to copy the icon from `brand/ios`.
+It also runs `scripts/version.sh` to read the root `package.json`,
+`scripts/appicon.sh` to copy the icon from `brand/ios`, and
+`scripts/strings.py` to write the string catalog and `Str` from Android's
+strings. None of what they write is committed.
 The Apple TV app's layered icon and Top Shelf images come from `brand/` too,
 but `brand/render.sh` renders them straight into the TV target's committed
 catalog ([MatineeTV/README.md](MatineeTV/README.md#icon-and-top-shelf-image)).
@@ -72,11 +73,13 @@ recipes use those instead of Nix. The CI runner uses this option.
   transcoding, trickplay, jobs, and the server's branding. Fix match and the
   image editor change metadata and artwork.
 - The player sends a `PlaybackDevice` and plays the server's
-  `playback.start` answer. AVPlayer opens MP4, M4V, and MOV and plays HLS.
-  It doesn't open MKV. The server's copied stream is fragmented MP4 without
-  byte ranges, which AVPlayer refuses, as Safari does. A non-MP4/MOV file
-  that gets a copied stream first fails and then plays the encode the
-  server selects on fallback. There is no mpv engine.
+  `playback.start` answer, with mpv unless Settings picks AVPlayer. mpv
+  plays MKV, DTS, TrueHD, ASS, and PGS as they are
+  ([MatineeMPV](Packages/MatineeMPV/README.md)). AVPlayer opens MP4, M4V,
+  and MOV and plays HLS. The server's copied stream is fragmented MP4
+  without byte ranges, which AVPlayer refuses, as Safari does, so there a
+  file that gets a copied stream first fails and then plays the encode
+  the server selects on fallback.
   The app draws its own controls and WebVTT subtitles, offers audio,
   subtitle, quality, and speed choices, shows trickplay while seeking,
   reports progress, and offers the next episode. Picture subtitles the
@@ -97,10 +100,9 @@ recipes use those instead of Nix. The CI runner uses this option.
   by code or camera. About shows the latest playback report and a redacted
   process log, shared only when requested.
 
-Local server discovery exists in MatineeCore but no screen uses it. It
-needs Apple's multicast entitlement. Android's phone app doesn't use
-discovery either. Android TV screens, display frame-rate switching, and the
-Watch Next launcher row have no iOS port.
+The Apple TV app finds servers on the local network. The iPhone app
+doesn't: there it needs Apple's multicast entitlement, and Android's
+phone app doesn't look either.
 
 ## Develop
 
@@ -113,8 +115,7 @@ Watch Next launcher row have no iOS port.
 contract first, or the generator in `apps/server/scripts/swift-client.ts`
 when a new schema needs a Swift representation. Transport, plain routes,
 and saved-data handling live beside the generated files.
-On this Mac, run pnpm through
-`nix shell nixpkgs#nodejs_24 nixpkgs#pnpm_11 -c pnpm api:ios`.
+On a Mac, `just ios api` runs it through Nix.
 
 ### Conventions
 
@@ -136,10 +137,10 @@ debug gallery in `UI/gallery/` too.
 Strings come from Android's `res/values*/strings*.xml` through
 `scripts/strings.py`. Use `Str` accessors, including their typed arguments
 and plural counts. Add iOS-only text in `Matinee/Resources/iOS.xcstrings`,
-with an `ios_` key and English and German values, then run `just ios strings`.
+with an `ios_` key and English and German values, then run `just ios generate`.
 Info.plist text lives in `Matinee/Resources/InfoPlist.xcstrings`.
 Format dates, numbers, sizes, and durations through `UI/Format.swift` in
-the app's language. Commit regenerated catalogs and accessors.
+the app's language.
 
 Icons and palettes are the kit's. Add a lucide icon to the Android kit's
 drawables and `Lucide` object first, then run `just ios icons`.
@@ -184,7 +185,11 @@ apps/ios/
     UI/components/             Shared components on the kit: cards, rails, states, sheets
     UI/gallery/                Debug component gallery
     UI/README.md               How a screen is built
+  MatineeTV/                   The Apple TV app, with some of Matinee/'s files (its README)
+  MatineeTopShelf/             Its Top Shelf extension
   Packages/MatineeKit/          The design kit: theme, type, icons, controls (its README)
+  Packages/MatineeKitBoundary/  Runs the kit's boundary test on the Mac
+  Packages/MatineeMPV/          The mpv engine, GPL-3.0 (its README)
   Packages/MatineeCore/
     Sources/MatineeCore/Api/    Generated client, transport, routes, saved data
     Sources/MatineeCore/Auth/   Sessions, Keychain, browser sign-in, discovery
@@ -208,10 +213,9 @@ release build process, signing, or TestFlight setup. The release scripts and
 workflow publish the server and Android APKs only; they need no iOS job
 until signing and distribution exist.
 
-The commit history records layout fixes across the phone screens,
-iPad layouts, and large text sizes, not a complete end-to-end acceptance pass.
-MatineeCore has automated tests for the
-ported logic, fake-engine playback, downloads, and offline track selection.
+Nobody has gone through the apps end to end. MatineeCore has automated
+tests for the ported logic, fake-engine playback, downloads, and offline
+track selection.
 The opt-in Mac live tests played direct MP4 and HLS from the dev fixture,
 checked audio picks, WebVTT loading, PGS burn-in selection, seeking and
 fallback after the copied-stream error. Live download tests fetched copied

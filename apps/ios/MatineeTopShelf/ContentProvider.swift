@@ -27,7 +27,7 @@ final class ContentProvider: TVTopShelfContentProvider {
       }
       guard !items.isEmpty else { return nil }
       let collection = TVTopShelfItemCollection(items: items)
-      collection.title = section.id == "continue" ? Str.browseContinueWatching : Str.browseNextUp
+      collection.title = section.title
       return collection
     }
     return sections.isEmpty ? nil : TVTopShelfSectionedContent(sections: sections)

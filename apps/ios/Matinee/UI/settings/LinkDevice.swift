@@ -20,30 +20,6 @@ import UIKit
  * Approve over Cancel, full width for a thumb.
  */
 
-/// The contract's `DevicePlatform` by name, the same in every language, as the web's `platformLabel`.
-nonisolated func platformLabel(_ platform: String) -> String {
-  switch platform {
-  case "android": "Android"
-  case "androidtv": "Android TV"
-  case "ios": "iOS"
-  case "linux": "Linux"
-  case "macos": "macOS"
-  case "tizen": "Samsung TV"
-  case "tvos": "Apple TV"
-  case "windows": "Windows"
-  default: platform.prefix(1).uppercased() + platform.dropFirst()
-  }
-}
-
-/// What a device is, at a glance. Nil is a browser.
-nonisolated func platformIcon(_ platform: String?) -> Lucide {
-  switch platform {
-  case "androidtv", "tizen", "tvos": .tv
-  case "android", "ios": .smartphone
-  default: .monitor
-  }
-}
-
 /// Signing in a TV or another app by its QR code or code, from Settings' Account page.
 struct LinkDeviceScreen: View {
   // The code being checked, and the server its QR code named. Typed codes name none.

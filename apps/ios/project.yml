@@ -176,6 +176,8 @@ targets:
       - Matinee/UI/player/PlayerLayer.swift
       - Matinee/UI/player/PlayerTrickplay.swift
       - Matinee/UI/player/PlayerWords.swift
+      # What Settings offers and saves, and its words, which the TV's settings take as they are.
+      - Matinee/UI/settings/SettingsData.swift
       - Matinee/Resources/Localizable.xcstrings
       - Matinee/Resources/iOS.xcstrings
       - Matinee/Resources/Assets.xcassets
@@ -227,9 +229,6 @@ targets:
     sources:
       - path: MatineeTopShelf
         excludes: [Info.plist, MatineeTopShelf.entitlements]
-      - Matinee/UI/Strings.gen.swift
-      - Matinee/Resources/Localizable.xcstrings
-      - Matinee/Resources/iOS.xcstrings
     dependencies:
       - package: MatineeCore
     settings:

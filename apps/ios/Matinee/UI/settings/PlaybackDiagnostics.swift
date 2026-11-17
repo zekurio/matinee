@@ -57,24 +57,6 @@ struct PlaybackDiagnosticsSection: View {
   }
 }
 
-/// "Failed (stream)": how the latest try went, and with which source.
-func statusLabel(_ attempt: AttemptDiagnostics) -> String {
-  let mode =
-    switch attempt.mode {
-    case .direct: Str.diagnosticsModeDirect
-    case .stream: Str.diagnosticsModeStream
-    case .hls, .encode: Str.diagnosticsModeHls
-    case .local: Str.diagnosticsModeLocal
-    }
-  return switch attempt.outcome {
-  case .loading: Str.diagnosticsStatusLoading(mode)
-  case .playing: Str.diagnosticsStatusPlaying(mode)
-  case .failed: Str.diagnosticsStatusFailed(mode)
-  case .replaced: Str.diagnosticsStatusReplaced(mode)
-  case .closed: Str.diagnosticsStatusClosed(mode)
-  }
-}
-
 /// A report or a log to read, in the kit's dialog, as Android's: its
 /// title, the text in the web's `font-mono` scrolling in a box at most 420
 /// tall, selectable, and Copy, which keeps the dialog open, over Close. A

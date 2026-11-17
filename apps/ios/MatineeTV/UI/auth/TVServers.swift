@@ -27,7 +27,6 @@ private enum ServerStep: Hashable {
 private struct TVServerPanel: ViewModifier {
   @Binding var isPresented: Bool
   @Environment(MatineeSession.self) private var session
-  @Environment(\.snackbar) private var snackbar
   @State private var step = ServerStep.list
 
   func body(content: Content) -> some View {

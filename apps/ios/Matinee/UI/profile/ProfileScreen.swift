@@ -66,7 +66,7 @@ private struct ProfilePage: View {
           .padding(.vertical, Space.s12)
         case .ready(let profile):
           FavoritesRail(profile: profile)
-          if !offline { ProfileRequests() }
+          if !offline { AskedRail() }
           Statistics(loads: loads).id("stats")
           RecentRail(profile: profile).id("recent")
         }
@@ -313,13 +313,6 @@ private struct FavoritesRail: View {
       }
     }
   }
-}
-
-/// "My requests", between the favorites and the statistics, as Android's
-/// `ProfileAskedRail` and the web's: what you asked for is yours alone,
-/// and this is only ever your own profile. Online only.
-private struct ProfileRequests: View {
-  var body: some View { AskedRail() }
 }
 
 /// What they watched last, a file per title, its heading opening the whole list.

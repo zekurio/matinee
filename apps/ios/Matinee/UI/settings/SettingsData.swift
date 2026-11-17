@@ -6,6 +6,7 @@ import SwiftUI
  * SettingsData.kt: what Settings offers and saves, apart from how it's
  * laid out. The lists come from the server's `playback.options`, as
  * AGENTS.md says a client takes them; only the words are the app's.
+ * The Apple TV app compiles this file too (project.yml).
  */
 
 /// Saves the account's playback preferences, which every device of the
@@ -139,3 +140,44 @@ func subtitleEdgeLabel(_ edge: SubtitleEdge) -> String {
   }
 }
 
+/// The contract's `DevicePlatform` by name, the same in every language, as the web's `platformLabel`.
+nonisolated func platformLabel(_ platform: String) -> String {
+  switch platform {
+  case "android": "Android"
+  case "androidtv": "Android TV"
+  case "ios": "iOS"
+  case "linux": "Linux"
+  case "macos": "macOS"
+  case "tizen": "Samsung TV"
+  case "tvos": "Apple TV"
+  case "windows": "Windows"
+  default: platform.prefix(1).uppercased() + platform.dropFirst()
+  }
+}
+
+/// What a device is, at a glance. Nil is a browser.
+nonisolated func platformIcon(_ platform: String?) -> Lucide {
+  switch platform {
+  case "androidtv", "tizen", "tvos": .tv
+  case "android", "ios": .smartphone
+  default: .monitor
+  }
+}
+
+/// "Failed (stream)": how the latest try went, and with which source.
+func statusLabel(_ attempt: AttemptDiagnostics) -> String {
+  let mode =
+    switch attempt.mode {
+    case .direct: Str.diagnosticsModeDirect
+    case .stream: Str.diagnosticsModeStream
+    case .hls, .encode: Str.diagnosticsModeHls
+    case .local: Str.diagnosticsModeLocal
+    }
+  return switch attempt.outcome {
+  case .loading: Str.diagnosticsStatusLoading(mode)
+  case .playing: Str.diagnosticsStatusPlaying(mode)
+  case .failed: Str.diagnosticsStatusFailed(mode)
+  case .replaced: Str.diagnosticsStatusReplaced(mode)
+  case .closed: Str.diagnosticsStatusClosed(mode)
+  }
+}

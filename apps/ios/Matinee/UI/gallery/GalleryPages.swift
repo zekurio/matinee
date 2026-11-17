@@ -48,12 +48,6 @@
           }
         }
 
-        GalleryHeading("Episode rows")
-        VStack(spacing: Space.s1) {
-          ForEach(Sample.episodes.prefix(3), id: \.id) { EpisodeRow($0) }
-        }
-        .padding(.horizontal, gutter)
-
         GalleryHeading("Grid: \(window.width < 640 ? "two columns" : "176 and up")")
         CardGrid {
           ForEach(Sample.movies + [Sample.show], id: \.id) { PosterCard($0, detail: formatYear($0.year)) }
@@ -178,22 +172,12 @@
         }
         .padding(.horizontal, gutter)
 
-        GalleryHeading("Search")
-        SearchFieldDemo().padding(.horizontal, gutter)
-        SearchBarButton {}.padding(.horizontal, gutter)
-
         GalleryHeading("Headings: a tab's page, and sections with a link and a count")
         PageHeading(Str.tabMedia) { RoundIconButton(.cloudOff, label: Str.serverUnreachable, look: .ghost, size: 40) {} }
         SectionTitle(Str.browseContinueWatching) {}.padding(.horizontal, gutter)
         SectionTitle(Str.searchTitlesHeading, count: 12).padding(.horizontal, gutter)
       }
     }
-  }
-
-  private struct SearchFieldDemo: View {
-    @State private var query = "Matrix"
-
-    var body: some View { SearchField($query) }
   }
 
   // MARK: Sheets

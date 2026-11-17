@@ -40,6 +40,26 @@ func episodeFacts(_ item: MediaItem, watched: Bool) -> [String] {
     .compactMap(\.self)
 }
 
+/// What TMDB says someone is known for, in the app's language.
+func departmentName(_ id: String) -> String? {
+  switch id {
+  case PersonDepartment.acting: Str.personDepartmentActing
+  case PersonDepartment.directing: Str.personDepartmentDirecting
+  case PersonDepartment.writing: Str.personDepartmentWriting
+  case PersonDepartment.creator: Str.personDepartmentCreator
+  case PersonDepartment.production: Str.personDepartmentProduction
+  case PersonDepartment.editing: Str.personDepartmentEditing
+  case PersonDepartment.camera: Str.personDepartmentCamera
+  case PersonDepartment.sound: Str.personDepartmentSound
+  case PersonDepartment.art: Str.personDepartmentArt
+  case PersonDepartment.costume: Str.personDepartmentCostume
+  case PersonDepartment.visualEffects: Str.personDepartmentVisualEffects
+  case PersonDepartment.lighting: Str.personDepartmentLighting
+  case PersonDepartment.crew: Str.personDepartmentCrew
+  default: nil
+  }
+}
+
 /// What someone is credited as, "Director", or "Directors" for more.
 func titleCreditLabel(_ kind: String, count: Int) -> String {
   switch kind {

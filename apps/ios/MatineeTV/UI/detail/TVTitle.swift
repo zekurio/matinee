@@ -120,7 +120,6 @@ private struct TitleHeader: View {
   let marks: DetailMarks
   let more: [DetailMoreRow]
   let memory: TVFocusMemory
-  @Environment(\.api) private var api
   @Environment(\.palette) private var palette
 
   var body: some View {

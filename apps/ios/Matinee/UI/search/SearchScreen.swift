@@ -220,7 +220,7 @@ private struct SearchResultsList: View {
           Rail(Str.searchSectionCast) {
             ForEach(found.people, id: \.name) { person in
               RailItem(.person) {
-                PersonCard(person.name, role: creditKind(person.kind, count: 1), photo: api?.art(person.photo, size: .thumb))
+                PersonCard(person.name, role: titleCreditLabel(person.kind, count: 1), photo: api?.art(person.photo, size: .thumb))
               }
             }
           }

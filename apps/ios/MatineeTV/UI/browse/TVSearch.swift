@@ -187,7 +187,7 @@ private struct SearchRows: View {
     if !found.people.isEmpty {
       TVRow(Str.searchSectionCast, key: SearchRow.people, items: found.people, itemKey: \.name, memory: memory) {
         person in
-        TVPersonCard(person.name, role: creditText(person.kind), action: { nav.person(person.name, nil) }) {
+        TVPersonCard(person.name, role: titleCreditLabel(person.kind, count: 1), action: { nav.person(person.name, nil) }) {
           Picture(api?.art(person.photo, size: .thumb))
         }
         .focusedValue(\.tvBrowseFocused, personInfo(person))
@@ -221,20 +221,10 @@ private struct SearchRows: View {
     }
   }
 
-  /// "Director", for someone in the cast and crew.
-  private func creditText(_ kind: String) -> String {
-    switch kind {
-    case CreditKind.creator: Str.peopleCreditCreator(1)
-    case CreditKind.director: Str.peopleCreditDirector(1)
-    case CreditKind.writer: Str.peopleCreditWriter(1)
-    default: Str.peopleCreditActor(1)
-    }
-  }
-
   private func personInfo(_ person: PersonSummary) -> FocusedItem {
     FocusedItem(
       key: "person/\(person.name)",
-      info: TVItemInfo(name: person.name, facts: [creditText(person.kind), Str.browseTitleCount(person.titleCount)]),
+      info: TVItemInfo(name: person.name, facts: [titleCreditLabel(person.kind, count: 1), Str.browseTitleCount(person.titleCount)]),
       logo: nil, backdrop: [])
   }
 
