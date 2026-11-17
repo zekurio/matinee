@@ -22,10 +22,6 @@ running() {
 }
 
 start() {
-  if [ -d "$DEVSHELL_ROOT/.devenv/state/matinee-postgres" ] && [ ! -d "$data" ]; then
-    echo "Move the old dev database first. See 'Coming from the old devenv shell' in README.md." >&2
-    exit 1
-  fi
   mkdir -p "$data" "$run"
   chmod 700 "$run"
 

@@ -69,8 +69,8 @@ for building and sideloading the app.
     `// ACCESS:` comment explaining the visible row they derive from.
   - Fix the code before reaching for a disable comment.
 - Every part has the version in the root `package.json`. Don't set one
-  anywhere else; `just tag <version>` changes it and releases (README.md,
-  Release).
+  anywhere else; `just tag <version>` changes it and releases (see Release
+  below).
 - No automated tests yet. Check affected flows by hand in the browser.
 - Generate migrations with a descriptive snake_case name:
   `pnpm db:generate --name watch_progress`. Never edit a migration after it
@@ -78,6 +78,24 @@ for building and sideloading the app.
   before the next release.
 - Add shadcn components from `packages/ui`:
   `pnpm dlx shadcn@latest add <name>`. The CLI's output is ours to edit.
+
+## Release
+
+- `just tag 0.2.0` bumps the root `package.json`, commits
+  `chore: release v0.2.0`, tags it, and pushes. It needs a clean `main`
+  that matches `origin/main`.
+- Keep minor and patch under 100. The Android version code is
+  `major * 10000 + minor * 100 + patch`.
+- The tag runs `.github/workflows/release.yml`: it checks the tag against
+  `package.json`, runs `nix flake check`, pushes to Cachix, builds and
+  signs the APKs, and drafts a GitHub release with one APK per ABI, a
+  universal one, and `checksums.txt`. The maintainer tries the APKs on a
+  phone and a TV before publishing the draft.
+- The workflow needs `CACHIX_AUTH_TOKEN` and a `release` environment with
+  `ANDROID_KEYSTORE_BASE64` (`base64 -w0 matinee.jks`),
+  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
+  `ANDROID_KEY_PASSWORD`. Android only installs updates signed with the
+  same key, so never rotate or regenerate the keystore.
 
 ## Web app
 
