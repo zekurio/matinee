@@ -83,7 +83,7 @@ enum GalleryRoute: String, CaseIterable, Hashable, Identifiable {
     case .lists: "Sections, rows, setting rows"
     case .overlays: "Dropdown menu, sheet, dialog, confirm, toast"
     case .feedback: "Spinner, progress, skeleton, empty state"
-    case .navigation: "Top bar, bottom bar, nav bar, status bar frost"
+    case .navigation: "Top bar, bottom bar, nav bar"
     case .calendar: "Pick a day"
     case .icons: "Every lucide icon in the kit"
     }

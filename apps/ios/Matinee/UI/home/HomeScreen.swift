@@ -131,10 +131,14 @@ private struct OnlineHomeScreen: View {
     // An iPad's window crossing between the shells: the banner and the cards
     // differ in height, so the row at the top is held there, not the points.
     .onChange(of: style) { holdRow() }
-    // Home's header sits below the status bar, not behind it, so at rest
-    // there's nothing to shade, and the frost's feather would blur the
-    // logo. It comes in as the page scrolls under the bar.
-    .statusBarScrim(fadesIn: true)
+    #if DEBUG
+      // -dev.home.scroll 400: that far down once Home has loaded, to see it scrolled in a screenshot.
+      .task {
+        guard let y = Double(UserDefaults.standard.string(forKey: "dev.home.scroll") ?? "") else { return }
+        try? await Task.sleep(for: .seconds(3))
+        position.scrollTo(y: y)
+      }
+    #endif
     .loadsHomeAsked(asked)
     .refreshable { await refresh() }
   }

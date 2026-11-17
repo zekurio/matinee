@@ -6,8 +6,8 @@ import SwiftUI
  * Bars.kt: the bars around pages. The tabs on a tab's first page, at the
  * bottom of a phone and at the top of an iPad (Shell.swift says which);
  * Home's header, on a phone the logo, search, and the account, after
- * Findroid's; the floating buttons over a title's art; and the frost that
- * keeps the status bar readable over art and once a page scrolls under it.
+ * Findroid's; and the floating buttons over a title's art. Nothing shades
+ * the status bar: a page under it shows there as it is.
  *
  * A page opened from a tab gets its top from the kit, `.topBar(title)`,
  * which hides the system's bar and keeps the edge swipe back; one that
@@ -143,9 +143,7 @@ private struct ProfileTabPicture: View {
 /// keyboard; and the account, which opens the profile on Home's stack. It's
 /// 44 tall, right under the status bar, where a navigation bar sits. An
 /// iPad's bar has the logo, search, and the account already, so there it
-/// holds only the icon. It scrolls away with the page. The frost under the
-/// status bar is the page's `statusBarScrim(fadesIn: true)`, which stays
-/// away at rest so it doesn't blur the logo.
+/// holds only the icon. It scrolls away with the page.
 struct AppHeader<Action: View>: View {
   @ViewBuilder var action: () -> Action
   @Environment(\.offline) private var offline
@@ -281,55 +279,5 @@ struct ItemTopBar: View {
     }
     .padding(.horizontal, Space.s2)
     .padding(.vertical, Space.s1_5)
-  }
-}
-
-extension View {
-  /// Keeps the status bar readable over art and once a scroll view under
-  /// it scrolls, as Android's `StatusBarScrim`: the kit's `StatusBarFrost`,
-  /// the page blurred and veiled across the whole bar and thinning out
-  /// below it, light at rest and deepening over the first 40 points of
-  /// scrolling. `fadesIn`, for Home, whose header sits below the bar, brings
-  /// the frost in over those 40 points, since at rest it would only blur the
-  /// logo. Goes on the `ScrollView` of a page that reaches under the status bar.
-  func statusBarScrim(fadesIn: Bool = false) -> some View { modifier(StatusBarScrim(fadesIn: fadesIn)) }
-}
-
-private struct StatusBarScrim: ViewModifier {
-  let fadesIn: Bool
-  @State private var strength: StatusBarFrostStrength?
-  @Environment(\.shellStyle) private var style
-  @Environment(\.tabRoot) private var tabRoot
-
-  /// The status bar's height: above the scroll view when it starts below
-  /// the bar, or its own top inset when it reaches under it.
-  private func statusBar(_ proxy: GeometryProxy) -> CGFloat {
-    max(proxy.frame(in: .global).minY, proxy.safeAreaInsets.top)
-  }
-
-  func body(content: Content) -> some View {
-    content
-      .onScrollGeometryChange(for: StatusBarFrostStrength.self) { [fadesIn] geometry in
-        // Settles once the page is 40 down, so scrolling on redraws nothing.
-        StatusBarFrostStrength(offset: geometry.contentOffset.y + geometry.contentInsets.top, fadesIn: fadesIn)
-      } action: { _, value in
-        strength = value
-      }
-      .overlay(alignment: .top) {
-        // On an iPad the tabs' own frost does this, where they show: a page
-        // opened from a tab covers them, and needs its own.
-        if style == .phone || !tabRoot {
-          let strength = strength ?? StatusBarFrostStrength(offset: 0, fadesIn: fadesIn)
-          GeometryReader { proxy in
-            StatusBarFrost(bar: statusBar(proxy), veil: strength.veil, reducedVeil: strength.reducedVeil)
-              .opacity(strength.opacity)
-              // From the screen's top, wherever the scroll view itself starts.
-              .offset(y: -proxy.frame(in: .global).minY)
-          }
-          .ignoresSafeArea(edges: .horizontal)
-          .allowsHitTesting(false)
-          .accessibilityHidden(true)
-        }
-      }
   }
 }

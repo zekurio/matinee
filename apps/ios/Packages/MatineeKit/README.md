@@ -245,7 +245,10 @@ a value or a line of detail muted.
   capsule, centered at the top over the status bar's frost, of the logo,
   the tabs by name, and search and the account, which
   `TabBarItem(id, label:) { selected in picture }` draws as the avatar. The
-  page's safe area starts below it.
+  page's safe area starts below it. The frost is the page blurred and
+  veiled in `--background` across the status bar, thinning out over 48
+  below it; under Reduce Transparency it's the veil alone. It belongs to
+  this bar: nothing else in the kit blurs or veils the status bar.
 - `.tabBars(placement, bottom: BottomBar(…), top: NavBar(…))`: either bar
   around one page, as `TabBarPlacement` says, `.bottom` or `.top`. When the
   placement changes, as an iPad's window narrows to a phone's width and
@@ -262,12 +265,6 @@ a value or a line of detail muted.
   Home's banner on an iPad. The bar frosts as over a scrolled page unless
   the page says how strong, and the clearance is how far below the
   screen's top the page starts, which art in a scroll view reaches up by.
-- `StatusBarFrost(bar:, veil:, reducedVeil:)`: Android's status bar frost,
-  the page blurred and veiled in `--background` across the status bar
-  (`bar` tall), then thinning out over 48 below it, the blur easing off
-  as the veil fades. The app gives the veil's strength for how far its
-  page has scrolled; under Reduce Transparency there's no blur and the
-  veil is `reducedVeil`.
 - Both bars stop growing at `xxLarge` and keep that size at the
   accessibility text sizes, as iOS's tab bar does, show a tab's name large
   on a long press, and take ⌘1, ⌘2, …

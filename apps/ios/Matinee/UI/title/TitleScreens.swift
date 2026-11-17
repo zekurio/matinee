@@ -61,7 +61,6 @@ private struct ItemPage<Content: View>: View {
       #endif
     }
     .ignoresSafeArea(edges: .top)
-    .statusBarScrim()
     .refreshable {
       stale.forEach { $0.reload() }
       // Long enough for the spinner to mean something; the loaders settle on their own.

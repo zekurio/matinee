@@ -5,7 +5,7 @@ import SwiftUI
 /// as over a scrolled page (75%, 85% under Reduce Transparency), which over
 /// the page's background at rest doesn't show. A page that draws art under
 /// the bar at rest, as Home's featured banner on an iPad, says how strong
-/// with `.navBarFrost(…)`, as the phone's `StatusBarFrost` is told.
+/// with `.navBarFrost(…)`.
 public struct NavBarFrost: Equatable, Sendable {
   public var veil: Double
   public var reducedVeil: Double

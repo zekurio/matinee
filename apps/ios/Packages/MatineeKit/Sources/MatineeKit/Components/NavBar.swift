@@ -114,9 +114,9 @@ private struct GlassCapsule: View {
 
 extension View {
   /// Floats `bar` at the top of this page, centered, over the status bar's
-  /// frost (`StatusBarFrost`), as a phone's page has it once it scrolls:
-  /// the page blurred and veiled across the status bar, thinning out below
-  /// it. The page's safe area starts below the bar, so content starts clear
+  /// frost: the page blurred and veiled across the status bar, thinning out
+  /// over 48 below it. Only the tablet's bar has it; a phone's pages have
+  /// nothing over the status bar. The page's safe area starts below the bar, so content starts clear
   /// of it; art that bleeds to the top ignores the safe area and runs under
   /// it, or in a scroll view reaches up by `\.navBarClearance`. A page with
   /// art under the bar at rest says how strong the frost is with `navBarFrost`.

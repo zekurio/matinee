@@ -152,7 +152,6 @@
         }
       }
       .ignoresSafeArea(edges: .top)
-      .statusBarScrim()
       .overlay(alignment: .top) { ItemTopBar(parent: Sample.show.name) {} }
       .hidesSystemNavigationBar()
     }

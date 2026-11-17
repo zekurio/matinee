@@ -46,9 +46,8 @@ struct OfflineHomeScreen: View {
         }
         .padding(.bottom, Space.s6)
       }
-    .scrollsToTopOnReselect()
-    // Its header sits below the status bar: the frost comes in as it scrolls, as on Home.
-    .statusBarScrim(fadesIn: true)
+    // -dev.home.scroll 400, as on Home.
+    .scrollsToTopOnReselect(devScroll: "dev.home.scroll")
     .task(id: session.activeServer) { read() }
     // The player keeps places offline; back from it, or from another app, read them again.
     .onAppear(perform: read)

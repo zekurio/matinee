@@ -236,10 +236,9 @@ struct BottomBarHeightKey: PreferenceKey {
 /// app and iOS's own tab bar: the full width, each tab its icon over its
 /// name, both always shown. The open tab's icon sits in a pill of the
 /// text's color at 10%, the kit's selected look, and its name turns from
-/// muted to the text's color. The bar is frosted as the status bar is once
-/// a page has scrolled under it, the page blurred under the background at
-/// 80%, with a line of `--border` along its top, and it runs on down under
-/// the home indicator. Solid under Reduce Transparency.
+/// muted to the text's color. The bar is frosted, the page blurred under
+/// the background at 80%, with a line of `--border` along its top, and it
+/// runs on down under the home indicator. Solid under Reduce Transparency.
 ///
 /// Its names grow with Dynamic Type up to `xxLarge` and keep that size from
 /// there, as iOS's tab bar keeps its own; a long press on a tab at the
@@ -413,18 +412,19 @@ struct BottomBarModifier<ID: Hashable>: ViewModifier {
   }
 }
 
-/// The frost under the status bar, as Android's `StatusBarScrim`: the page
-/// behind it blurred and veiled in the page's color, evenly across the whole
-/// bar, so its clock and icons sit on one shade rather than half on shade
-/// and half on bare art. Below the bar it thins out over `feather`: the blur
+/// The frost under the status bar behind a `NavBar`, the tablet's tabs,
+/// and nowhere else: a phone's pages have nothing over the status bar. The
+/// page behind it blurred and veiled in the page's color, evenly across the
+/// whole bar, so its clock and icons sit on one shade rather than half on
+/// shade and half on bare art. Below the bar it thins out over `feather`: the blur
 /// eases off as the veil fades, so the page comes back sharp gradually
 /// rather than a blurred band ending on a line. `bar` is the status bar's
 /// height; the frost is `bar + feather` tall, from the screen's top.
 ///
-/// The app says how strong: `veil` over the blur, and `reducedVeil` under
-/// Reduce Transparency, where nothing is blurred and the veil alone, a
-/// stronger one, keeps the bar readable.
-public struct StatusBarFrost: View {
+/// The page says how strong, through `navBarFrost`: `veil` over the blur,
+/// and `reducedVeil` under Reduce Transparency, where nothing is blurred and
+/// the veil alone, a stronger one, keeps the bar readable.
+struct StatusBarFrost: View {
   let bar: CGFloat
   let veil: Double
   let reducedVeil: Double
@@ -432,15 +432,15 @@ public struct StatusBarFrost: View {
   @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
   /// How far below the bar the frost thins out: Android's 48 dp.
-  public static var feather: CGFloat { 48 }
+  static var feather: CGFloat { 48 }
 
-  public init(bar: CGFloat, veil: Double, reducedVeil: Double) {
+  init(bar: CGFloat, veil: Double, reducedVeil: Double) {
     self.bar = bar
     self.veil = veil
     self.reducedVeil = reducedVeil
   }
 
-  public var body: some View {
+  var body: some View {
     let total = max(bar, 0) + Self.feather
     let edge = max(bar, 0) / total
     ZStack {

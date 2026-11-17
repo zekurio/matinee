@@ -2,14 +2,13 @@ import Testing
 
 @testable import MatineeCore
 
-/// Bars.kt's StatusBarScrim and HomeScreen.kt's fade of it; Android has no test for them.
+/// The frost under an iPad's tab bar over Home's banner; Android has no test for it.
 struct StatusBarFrostTest {
   @Test func atRestTheFrostIsLightButNeverClear() {
     let rest = StatusBarFrostStrength(offset: 0)
     #expect(rest.scrolled == 0)
     #expect(abs(rest.veil - 0.35) < 1e-9)
     #expect(abs(rest.reducedVeil - 0.6) < 1e-9)
-    #expect(rest.opacity == 1)
   }
 
   @Test func itDeepensOverTheFirstFortyPoints() {
@@ -26,13 +25,5 @@ struct StatusBarFrostTest {
     #expect(StatusBarFrostStrength(offset: -80).scrolled == 0)
     #expect(StatusBarFrostStrength(offset: .nan).scrolled == 0)
     #expect(StatusBarFrostStrength(offset: .infinity).scrolled == 0)
-  }
-
-  @Test func homesFrostFadesInAsItScrolls() {
-    #expect(StatusBarFrostStrength(offset: 0, fadesIn: true).opacity == 0)
-    #expect(abs(StatusBarFrostStrength(offset: 10, fadesIn: true).opacity - 0.25) < 1e-9)
-    #expect(StatusBarFrostStrength(offset: 40, fadesIn: true).opacity == 1)
-    // And under it the veil deepens as on any page.
-    #expect(abs(StatusBarFrostStrength(offset: 10, fadesIn: true).veil - 0.45) < 1e-9)
   }
 }
