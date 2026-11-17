@@ -1,8 +1,4 @@
-import type {
-  PlaybackDecoder,
-  TranscodeVideoCodec,
-  VideoStream,
-} from "@matinee/contracts"
+import type { PlaybackDecoder, TranscodeVideoCodec } from "@matinee/contracts"
 
 import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
@@ -72,44 +68,6 @@ let probe: HTMLVideoElement | null = null
 function plays(type: string): boolean {
   probe ??= document.createElement("video")
   return probe.canPlayType(type) !== ""
-}
-
-/**
- * The file's video as an MP4 MIME type, from what ffprobe read, or null
- * for a codec no browser plays without help.
- */
-function videoType(video: VideoStream): string | null {
-  const tenBit = (video.bitDepth ?? 8) > 8
-  switch (video.codec) {
-    case "h264":
-      return h264Type(
-        H264_PROFILES.get(video.profile ?? "High") ?? "64",
-        video.level ?? 40,
-      )
-    case "hevc":
-      return hevcType(
-        tenBit || video.profile === "Main 10" ? "2.4" : "1.6",
-        video.level ?? 120,
-      )
-    case "av1":
-      return av1Type(0, tenBit)
-    case "vp9":
-      return vp9Type(tenBit)
-    case "vp8":
-      return VP8_TYPE
-    default:
-      return null
-  }
-}
-
-/**
- * Whether this browser decodes the file's video as it is, for a download
- * that keeps it. Playback asks the server instead, with `browserDecoders()`.
- */
-export function decodesVideo(video: VideoStream | null | undefined): boolean {
-  if (!video) return true
-  const type = videoType(video)
-  return type !== null && plays(type)
 }
 
 /** The highest of `levels` that this browser plays, with every one below it. */

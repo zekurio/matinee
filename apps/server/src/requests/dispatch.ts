@@ -11,8 +11,11 @@ import {
 import { and, asc, eq, sql } from "drizzle-orm"
 
 import { db } from "../db"
+import { ShownError, shownMessage } from "../errors"
 import { defineQueue } from "../jobs/queue"
+import { log } from "../log"
 import { sources } from "../metadata/sources"
+import { ProviderError } from "../metadata/types"
 import { events } from "../realtime/events"
 import { ExternalIds } from "./availability"
 import { sendingFor } from "./fulfilment/connections"
@@ -27,6 +30,20 @@ export const UNDO_MS = 10_000
 
 /** Requests waiting out `UNDO_MS`, so each gets one timer. */
 const held = new Set<string>()
+
+/** Stored when a delivery fails for a reason nobody wrote a message for. */
+const DELIVERY_FAILED =
+  "Request delivery failed. Check the connection and retry."
+
+/** A connection that didn't answer, which delivery tries again. */
+function unreachable(cause: unknown): boolean {
+  return (
+    cause instanceof Error &&
+    (cause.message === UNREACHABLE ||
+      cause.message.includes("fetch failed") ||
+      cause.message.includes("timed out"))
+  )
+}
 
 export async function failRequest(id: string, message: string) {
   const rows = await db
@@ -63,7 +80,7 @@ export const dispatch = defineQueue({
     try {
       const sending = await sendingFor(row)
       if (!sending || !row.options)
-        throw new Error(
+        throw new ShownError(
           "Choose a usable fulfilment connection for this library.",
         )
       const { source, connection } = sending
@@ -92,7 +109,7 @@ export const dispatch = defineQueue({
           language: destination?.metadataLanguage ?? "en-US",
         })
         if (!resolved)
-          throw new Error(
+          throw new ShownError(
             "Cannot resolve the title identity. Check its metadata match and retry.",
           )
         ids[site] = resolved
@@ -155,27 +172,23 @@ export const dispatch = defineQueue({
           break
         } catch (cause) {
           if (signal.aborted) throw cause
-          const transient =
-            cause instanceof Error &&
-            (cause.message === UNREACHABLE ||
-              cause.message.includes("fetch failed") ||
-              cause.message.includes("timed out"))
+          const transient = unreachable(cause)
           if (!transient || attempt >= 3) throw cause
           await sleep(5000 * 2 ** attempt, undefined, { signal })
         }
       }
     } catch (cause) {
       if (signal.aborted) throw cause
-      await failRequest(
-        id,
-        cause instanceof Error &&
-          (cause.message.includes("fetch failed") ||
-            cause.message.includes("timed out"))
-          ? UNREACHABLE
-          : cause instanceof Error
-            ? cause.message
-            : "Request delivery failed. Check the connection and retry.",
-      )
+      // The stored text is the user's; the log has the cause in full.
+      log.warn(`Couldn't deliver request ${id}`, cause)
+      // A provider's own failure names its API paths, which mean nothing
+      // to the person who asked, so it reads as a failed delivery.
+      const message = unreachable(cause)
+        ? UNREACHABLE
+        : cause instanceof ProviderError
+          ? DELIVERY_FAILED
+          : shownMessage(cause, DELIVERY_FAILED)
+      await failRequest(id, message)
     }
   },
 })

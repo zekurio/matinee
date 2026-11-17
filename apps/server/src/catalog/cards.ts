@@ -66,7 +66,11 @@ export async function catalogCards<R extends Row>(
         viewer.id,
       )
     : []
-  const saved = await saveArtwork(rows.map((row) => row.poster))
+  const saved = await saveArtwork(
+    rows.map((row) => row.poster),
+    undefined,
+    { catalog: true },
+  )
   const art = await placeholders([...saved.values()])
   queueArtwork([...saved.values()], "low")
   return rows.flatMap((row, index) => {

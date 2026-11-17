@@ -75,7 +75,9 @@ export async function testEncoder(
     trial,
   )
   if (pipeline.encoder !== hardwareEncoderName(codec, acceleration)) {
-    return failed(`The pipeline chose ${pipeline.encoder}.`)
+    return failed(
+      `Matinee would encode with ${pipeline.encoder} instead of this device, so this device isn't used.`,
+    )
   }
   return check([
     ...pipeline.inputArgs,

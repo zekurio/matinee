@@ -23,6 +23,18 @@ object DownloadState {
     const val FAILED = "failed"
 }
 
+/**
+ * Why a download stopped or waits to try again, as [OfflineItem.errorKind]
+ * keeps it. The words are the app's own, shown in the app's language, so
+ * only [SERVER] keeps the server's words, in [OfflineItem.error].
+ */
+object DownloadError {
+    const val UNREACHABLE = "unreachable"
+    const val BROKE_OFF = "broke_off"
+    const val FORBIDDEN = "forbidden"
+    const val SERVER = "server"
+}
+
 object DownloadKind {
     /** The file as it is, from the stream route with byte ranges. */
     const val ORIGINAL = "original"
@@ -60,6 +72,13 @@ data class OfflineItem(
     val subtitles: List<OfflineSubtitle> = emptyList(),
     /** A still or backdrop saved for the list, relative to the download folder. */
     val image: String? = null,
+    /**
+     * Why it stopped or waits to try again: a [DownloadError] name. Null from
+     * a list saved before kinds were kept, whose [error] holds the words as
+     * they were then.
+     */
+    val errorKind: String? = null,
+    /** The server's own words for a refusal, with the [DownloadError.SERVER] kind. */
     val error: String? = null,
     val addedAt: Long = System.currentTimeMillis(),
     /**
@@ -74,6 +93,9 @@ data class OfflineItem(
 
     val progress: Float?
         get() = totalBytes?.takeIf { it > 0 }?.let { (bytes.toFloat() / it).coerceIn(0f, 1f) }
+
+    /** It stopped, or waits to try again after a failure. */
+    val hasError: Boolean get() = errorKind != null || error != null
 }
 
 /**

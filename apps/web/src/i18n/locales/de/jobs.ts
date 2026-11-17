@@ -54,8 +54,6 @@ export default {
   "jobs.queue.subtitle-prepare.name": "Untertitel vorbereiten",
   "jobs.queue.subtitle-prepare.description":
     "Indizierte Textuntertitel zwischenspeichern, ohne Videospuren zu lesen.",
-  "jobs.queue.subtitle-prepare.note":
-    "Dateien, deren indizierte Textuntertitel gleichzeitig vorbereitet werden.",
   "jobs.task.prepare-subtitles.name": "Untertitel vorbereiten",
   "jobs.task.prepare-subtitles.description":
     "Indizierte Textuntertitel zwischenspeichern und Ausgaben entfernter oder geänderter Dateien löschen. Bilduntertitel bleiben auf Abruf.",
@@ -80,8 +78,6 @@ export default {
   "jobs.queue.downloads.name": "Download-Kodierungen",
   "jobs.queue.downloads.description":
     "Kodiert das Video von Downloads in einer anderen Größe oder einem anderen Codec, während die App oder der Browser sie abruft.",
-  "jobs.queue.downloads.note":
-    "Downloads, die gleichzeitig kodiert werden. Jeder belegt einen Encoder wie ein Stream; erhöhe den Wert, wenn der Server mithält.",
   "jobs.queue.download-copies.name": "Download-Kopien",
   "jobs.queue.download-copies.description":
     "Stellt Downloads zusammen, die ihr Video unverändert behalten, während die App oder der Browser sie abruft.",
@@ -151,6 +147,8 @@ export default {
   "jobs.task.cancelledAfter": "Abgebrochen nach {took}",
   "jobs.task.failed": "Fehlgeschlagen",
   "jobs.task.failedWith": "Fehlgeschlagen: {error}",
+  "jobs.task.failedUnknown":
+    "Das ist fehlgeschlagen. Details stehen im Server-Log.",
   "jobs.task.running": "Läuft…",
   "jobs.task.started": "Gestartet {when}",
   "jobs.task.percent": "{percent} %",

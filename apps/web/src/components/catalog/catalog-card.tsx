@@ -206,7 +206,9 @@ export function PosterBadge({
       </Tooltip>
       {/* The tooltip is for eyes; this reads the same words aloud. */}
       <span id={tipId} hidden>
-        {tip.detail ? `${tip.text}. ${tip.detail}` : tip.text}
+        {tip.detail
+          ? tr("catalog.tip.aloud", { text: tip.text, detail: tip.detail })
+          : tip.text}
       </span>
     </>
   )

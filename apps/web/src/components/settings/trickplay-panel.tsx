@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { tr } from "@/i18n"
 import { firstError, useAppForm } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { ShownError } from "@/lib/shown-error"
 
 import { SelectField, SwitchField } from "./setting-controls"
 import {
@@ -90,7 +91,7 @@ function TrickplayForm({ saved }: { saved: AdminTrickplaySettings }) {
         width: Number(value.width),
       })
       if (!parsed.success) {
-        throw new Error(
+        throw new ShownError(
           firstError(parsed.error.issues) ?? tr("trickplay.checkFields"),
         )
       }

@@ -13,4 +13,10 @@
     <string name="web_common_error_passkeyClosed">Die Passkey-Abfrage wurde geschlossen, bevor sie fertig war.</string>
     <string name="web_common_error_passkeyExists">Dieses Gerät hat schon einen Passkey für dein Konto.</string>
     <string name="web_common_error_unknown">Etwas ist schiefgelaufen.</string>
+    <string name="web_common_error_invalidInput">Das hat nicht geklappt. Prüf, was du eingegeben hast, und versuch es erneut.</string>
+    <string name="web_common_error_pageDescription">Die Seite konnte nicht angezeigt werden. Versuch es erneut oder geh zurück zur Startseite.</string>
+    <string name="web_common_error_retry">Erneut versuchen</string>
+    <string name="web_common_notFound_title">Seite nicht gefunden</string>
+    <string name="web_common_notFound_description">Die Adresse ist vielleicht falsch geschrieben, oder die Seite wurde verschoben.</string>
+    <string name="web_common_backHome">Zur Startseite</string>
 </resources>

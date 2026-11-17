@@ -9,12 +9,7 @@ import { colorHex } from "@matinee/ui/lib/theme-color-math"
 
 // The appearances and the role list are part of the theme contract the server
 // validates.
-export {
-  THEME_APPEARANCES,
-  THEME_COLOR_ROLES,
-  type ThemeAppearance,
-  type ThemeColorRole,
-} from "@matinee/contracts"
+export { THEME_APPEARANCES, type ThemeAppearance } from "@matinee/contracts"
 
 /** A complete palette: one CSS color per role. */
 export interface ThemeColors {

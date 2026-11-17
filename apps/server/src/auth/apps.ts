@@ -1,5 +1,6 @@
 import {
   AppAuthorizeRequest,
+  AUTH_ERROR_QUERY_KEY,
   type AppDevice,
   appAuthorizePagePath,
   DeviceName,
@@ -79,9 +80,13 @@ export const appRoutes = new Hono()
       .catch((): Record<string, string | File> => ({}))
     const request = AppAuthorizeRequest.safeParse(body)
     if (!request.success) {
-      return c.text(
-        "This sign-in request is invalid. Start again in the app.",
-        400,
+      // The login page shows the message as a toast, in the viewer's language.
+      // The target is fixed, never a URL the request names.
+      return c.redirect(
+        `/login?${new URLSearchParams({
+          [AUTH_ERROR_QUERY_KEY]:
+            "This sign-in request is invalid. Start again in the app.",
+        })}`,
       )
     }
     const current = await readSession(c)

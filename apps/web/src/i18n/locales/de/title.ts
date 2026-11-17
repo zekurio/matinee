@@ -7,7 +7,6 @@ export default {
   "title.resume": "Fortsetzen",
   "title.playName": "{name} abspielen",
   "title.resumeName": "{name} fortsetzen",
-  "title.moreActions": "Weitere Aktionen",
   "title.more": "Mehr",
   "title.less": "Weniger",
   "title.seasonOf": "{show}: {season}",
@@ -93,7 +92,10 @@ export default {
   "title.episodes.codedName": "{code}: {name}",
   "title.seasons": "Staffeln",
   "title.seasons.more": "Weitere Staffeln",
-  "title.seasons.partial": "{here} von {count} Folgen da",
+  "title.seasons.partial": plural({
+    one: "{here} von {count} Folge da",
+    other: "{here} von {count} Folgen da",
+  }),
   "title.seasons.left": plural({
     one: "Noch {count} Folge zu schauen",
     other: "Noch {count} Folgen zu schauen",

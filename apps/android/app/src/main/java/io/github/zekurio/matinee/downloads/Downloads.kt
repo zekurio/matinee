@@ -180,7 +180,7 @@ class Downloads(private val context: Context) {
         work.cancelUniqueWork(workName(id))
     }
     fun resume(id: String) {
-        store.update(id) { it.copy(state = DownloadState.QUEUED, error = null) }
+        store.update(id) { it.copy(state = DownloadState.QUEUED, errorKind = null, error = null) }
         schedule(id, true)
     }
     fun remove(id: String, api: MatineeApi?) {

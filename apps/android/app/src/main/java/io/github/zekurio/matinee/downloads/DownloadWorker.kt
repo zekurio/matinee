@@ -39,19 +39,30 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 
-/** Why a download stopped, before it's put in words. */
+/** Why a download stopped, as [OfflineItem] keeps it: its [kind], and for a refusal the server's own words. */
 internal sealed interface DownloadFailure {
-    /** The server answered, and said why. */
-    data class Server(val message: String) : DownloadFailure
+    /** The [DownloadError] name it's kept under. */
+    val kind: String
+
+    /** The server answered, and said why, in its own words when it sent some. */
+    data class Server(val message: String?) : DownloadFailure {
+        override val kind: String get() = DownloadError.SERVER
+    }
 
     /** The server couldn't be reached at all. */
-    data object Unreachable : DownloadFailure
+    data object Unreachable : DownloadFailure {
+        override val kind: String get() = DownloadError.UNREACHABLE
+    }
 
     /** It was reached, then the connection broke off. */
-    data object BrokeOff : DownloadFailure
+    data object BrokeOff : DownloadFailure {
+        override val kind: String get() = DownloadError.BROKE_OFF
+    }
 
     /** Downloads are off for the account, which trying again won't change. */
-    data object Forbidden : DownloadFailure
+    data object Forbidden : DownloadFailure {
+        override val kind: String get() = DownloadError.FORBIDDEN
+    }
 }
 
 internal fun downloadFailure(e: IOException): DownloadFailure = when (e) {
@@ -84,7 +95,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val client = entry.server?.let(session::serverClient) ?: return Result.retry()
         val api = client.api
         val http = client.http
-        store.update(id) { it.copy(state = DownloadState.RUNNING, error = null) }
+        store.update(id) { it.copy(state = DownloadState.RUNNING, errorKind = null, error = null) }
         foreground(id)
         return try {
             withContext(Dispatchers.IO) {
@@ -106,36 +117,25 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                     }
                 }
             }
-            store.update(id) { it.copy(state = DownloadState.DONE, serverId = null, totalBytes = it.bytes, error = null) }
+            store.update(id) { it.copy(state = DownloadState.DONE, serverId = null, totalBytes = it.bytes, errorKind = null, error = null) }
             Result.success()
         } catch (e: CancellationException) {
             store.update(id) { if (it.state == DownloadState.RUNNING) it.copy(state = DownloadState.QUEUED) else it }
             throw e
         } catch (e: IOException) {
             val failure = downloadFailure(e)
-            val message = failureLabel(failure)
+            // Only a refusal keeps the server's words; the rest are shown in the app's language.
+            val words = (failure as? DownloadFailure.Server)?.message
             // Downloads off for the account fail at once, rather than wait out every retry.
             if (failure == DownloadFailure.Forbidden || runAttemptCount >= MAX_ATTEMPTS) {
-                store.update(id) { it.copy(state = DownloadState.FAILED, error = message) }
+                store.update(id) { it.copy(state = DownloadState.FAILED, errorKind = failure.kind, error = words) }
                 Result.failure()
             } else {
-                store.update(id) { if (it.state == DownloadState.RUNNING) it.copy(state = DownloadState.QUEUED, error = message) else it }
+                store.update(id) {
+                    if (it.state == DownloadState.RUNNING) it.copy(state = DownloadState.QUEUED, errorKind = failure.kind, error = words) else it
+                }
                 Result.retry()
             }
-        }
-    }
-
-    /**
-     * What went wrong, short enough for a download's status line, like
-     * "Server not reachable", rather than the exception's "timeout".
-     */
-    private fun failureLabel(failure: DownloadFailure): String {
-        val res = applicationContext.resources
-        return when (failure) {
-            is DownloadFailure.Server -> failure.message
-            DownloadFailure.Unreachable -> res.getString(R.string.downloads_error_unreachable)
-            DownloadFailure.BrokeOff -> res.getString(R.string.downloads_error_broke_off)
-            DownloadFailure.Forbidden -> res.getString(R.string.downloads_error_forbidden)
         }
     }
 
@@ -187,7 +187,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
     }
 
     private fun failure(response: Response): IOException =
-        ApiException(response.code, null, "The server answered ${response.code}.")
+        ApiException(response.code, null, null)
 
     private suspend fun copy(input: InputStream, out: OutputStream, onBytes: suspend (Long) -> Unit) {
         val buffer = ByteArray(64 * 1024)

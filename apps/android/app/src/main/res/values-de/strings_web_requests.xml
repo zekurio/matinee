@@ -7,7 +7,7 @@
         <item quantity="one">Anfragen, %1$d wartet auf dich</item>
         <item quantity="other">Anfragen, %1$d warten auf dich</item>
     </plurals>
-    <string name="web_requests_dot">Anfragen warten auf dich</string>
+    <string name="web_requests_labelled">%1$s. Anfragen warten auf dich</string>
     <string name="web_requests_lists">Listen</string>
     <string name="web_requests_list_waiting">Wartend</string>
     <string name="web_requests_list_needsAttention">Braucht Aufmerksamkeit</string>
@@ -99,6 +99,7 @@
     <string name="web_requests_progress_left">noch %1$s</string>
     <string name="web_requests_progress_label">Fortschritt für %1$s</string>
     <string name="web_requests_attention_unknown">Ohne Grund fehlgeschlagen</string>
+    <string name="web_requests_attention_failedUnknown">Das ist fehlgeschlagen. Details stehen im Server-Log.</string>
     <string name="web_requests_done_arrived">%1$s angekommen</string>
     <string name="web_requests_done_declined">%1$s abgelehnt</string>
     <string name="web_requests_done_declinedUndated">Abgelehnt</string>

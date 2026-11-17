@@ -41,6 +41,7 @@ import io.github.zekurio.matinee.api.DownloadPlan
 import io.github.zekurio.matinee.api.DownloadResolution
 import io.github.zekurio.matinee.api.DownloadSpec
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.serverWords
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.downloads.DownloadSource
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -94,7 +95,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
         try {
             val result = downloads.resolve(api, listOf(item), downloads.wishes()).single()
             if (result is DownloadResolution.Unavailable) {
-                error = result.message
+                error = serverWords(result.message)
                 return@LaunchedEffect
             }
             val ready = result as DownloadResolution.Ready
@@ -130,7 +131,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                     is DownloadResolution.Unavailable -> {
                         specs.remove(choice)
                         plans.remove(choice)
-                        if (choice == picked) error = result.message
+                        if (choice == picked) error = serverWords(result.message)
                     }
                 }
             } catch (e: IOException) {

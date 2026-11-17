@@ -26,6 +26,7 @@ import { tr } from "@/i18n"
 import { firstError, useAppForm } from "@/lib/form"
 import { formatDateTime, formatRelative } from "@/lib/format"
 import { client, orpc } from "@/lib/rpc"
+import { ShownError } from "@/lib/shown-error"
 import { useActionFeedback } from "@/lib/use-action-feedback"
 
 import {
@@ -261,7 +262,7 @@ function AccessEditor({
         override: overrideOf(value),
       })
       if (!parsed.success) {
-        throw new Error(
+        throw new ShownError(
           firstError(parsed.error.issues) ?? tr("access.user.checkFields"),
         )
       }

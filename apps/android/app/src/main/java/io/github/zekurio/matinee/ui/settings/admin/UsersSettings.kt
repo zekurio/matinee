@@ -96,7 +96,7 @@ private fun UserRow(user: AdminUser, onClick: () -> Unit) {
     val self = LocalUser.current.id == user.id
     val signIn = listOfNotNull(
         user.passkeys.takeIf { it > 0 }?.let { res.getQuantityString(R.plurals.web_users_passkeys, it, it) },
-        if (user.oidcLinked) "SSO" else null,
+        if (user.oidcLinked) stringResource(R.string.users_sso) else null,
     ).ifEmpty { listOf(stringResource(R.string.web_users_noSignIn)) }
     val seen = user.lastSeenAt?.let { stringResource(R.string.web_users_lastSeen, formatInstant(it)) }
         ?: stringResource(R.string.web_users_joined, formatInstant(user.createdAt))
@@ -110,7 +110,7 @@ private fun UserRow(user: AdminUser, onClick: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    if (self) "${user.name} ${stringResource(R.string.web_users_you)}" else user.name,
+                    if (self) stringResource(R.string.stats_name_you, user.name) else user.name,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

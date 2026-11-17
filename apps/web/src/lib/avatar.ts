@@ -1,4 +1,5 @@
 import { tr } from "@/i18n"
+import { ShownError } from "@/lib/shown-error"
 
 /** Twice the 256px the server keeps, so its own crop has room to work. */
 const SIZE = 512
@@ -14,7 +15,7 @@ export async function prepareAvatar(file: File): Promise<File> {
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: "from-image" })
   } catch {
-    throw new Error(tr("account.picture.unreadable"))
+    throw new ShownError(tr("account.picture.unreadable"))
   }
   try {
     const side = Math.min(bitmap.width, bitmap.height)
@@ -23,7 +24,7 @@ export async function prepareAvatar(file: File): Promise<File> {
     canvas.width = size
     canvas.height = size
     const context = canvas.getContext("2d")
-    if (!context) throw new Error(tr("account.picture.noResize"))
+    if (!context) throw new ShownError(tr("account.picture.noResize"))
     context.imageSmoothingQuality = "high"
     context.drawImage(
       bitmap,
@@ -39,7 +40,7 @@ export async function prepareAvatar(file: File): Promise<File> {
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/webp", 0.9),
     )
-    if (!blob) throw new Error(tr("account.picture.prepareFailed"))
+    if (!blob) throw new ShownError(tr("account.picture.prepareFailed"))
     const extension = blob.type === "image/webp" ? "webp" : "png"
     return new File([blob], `avatar.${extension}`, { type: blob.type })
   } finally {

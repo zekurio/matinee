@@ -68,6 +68,13 @@ export const artwork = pgTable("artwork", {
   blurhash: text(),
   /** Width over height, set with `blurhash`. */
   aspectRatio: doublePrecision(),
+  /**
+   * The catalog showed it: a provider's image for a title or person anyone
+   * signed in may browse. Other artwork is served only to viewers who see
+   * a library row that uses it, so a provider URL's hash can't be used to
+   * find out what a library they can't open holds.
+   */
+  catalog: boolean().notNull().default(false),
   createdAt: createdAt(),
 })
 
@@ -165,6 +172,16 @@ export const title = pgTable(
     index("title_year_idx").on(t.libraryId, t.year),
     index("title_rating_idx").on(t.libraryId, t.rating),
     index("title_runtime_idx").on(t.libraryId, t.runtimeMinutes),
+    // Serving an image checks who may see the rows that use it.
+    index("title_poster_idx")
+      .on(t.posterId)
+      .where(sql`${t.posterId} is not null`),
+    index("title_backdrop_idx")
+      .on(t.backdropId)
+      .where(sql`${t.backdropId} is not null`),
+    index("title_logo_idx")
+      .on(t.logoId)
+      .where(sql`${t.logoId} is not null`),
   ],
 )
 
@@ -180,7 +197,12 @@ export const season = pgTable(
     /** An admin picked the poster, so a refresh keeps it. */
     posterChosen: boolean().notNull().default(false),
   },
-  (t) => [primaryKey({ columns: [t.titleId, t.number] })],
+  (t) => [
+    primaryKey({ columns: [t.titleId, t.number] }),
+    index("season_poster_idx")
+      .on(t.posterId)
+      .where(sql`${t.posterId} is not null`),
+  ],
 )
 
 /** Every episode the provider lists, whether or not a file exists. */
@@ -202,6 +224,9 @@ export const episode = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.titleId, t.seasonNumber, t.episodeNumber] }),
+    index("episode_still_idx")
+      .on(t.stillId)
+      .where(sql`${t.stillId} is not null`),
   ],
 )
 
@@ -229,6 +254,9 @@ export const credit = pgTable(
     primaryKey({ columns: [t.titleId, t.position] }),
     // A person's page finds their credits by name.
     index("credit_name_idx").on(t.name),
+    index("credit_photo_idx")
+      .on(t.photoId)
+      .where(sql`${t.photoId} is not null`),
   ],
 )
 

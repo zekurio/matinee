@@ -35,6 +35,7 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.JobQueueStatus
 import io.github.zekurio.matinee.api.ScheduledTask
 import io.github.zekurio.matinee.api.name
+import io.github.zekurio.matinee.api.serverWords
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.kit.Gap
@@ -203,11 +204,11 @@ private fun QueueRow(queue: JobQueueStatus, task: ScheduledTask?, onTask: (Strin
     }
 }
 
-/** "45 s", "12 min", "3 h 20 min", for how long something took. */
-private fun duration(seconds: Long): String = when {
-    seconds < 60 -> "$seconds s"
-    seconds < 3600 -> "${seconds / 60} min"
-    else -> "${seconds / 3600} h ${(seconds % 3600) / 60} min"
+/** "45 s", "12 min", "3 h 20 min", for how long something took, in the app's language. */
+private fun duration(seconds: Long, res: Resources): String = when {
+    seconds < 60 -> res.getString(R.string.format_seconds_short, seconds)
+    seconds < 3600 -> res.getString(R.string.format_minutes_short, seconds / 60)
+    else -> res.getString(R.string.format_hours_minutes_short, seconds / 3600, (seconds % 3600) / 60)
 }
 
 private fun millis(at: String): Long? = runCatching { Instant.parse(at).toEpochMilli() }.getOrNull()
@@ -225,17 +226,18 @@ private fun relative(at: String): String =
 /** The task's last run and its schedule, or how far it is now. */
 @Composable
 private fun taskStatus(task: ScheduledTask): String {
+    val res = LocalResources.current
     if (task.startedAt != null) {
         val progress = task.progress
         return if (progress != null) stringResource(R.string.web_jobs_task_percent, (progress * 100).toInt().toString())
         else stringResource(R.string.web_jobs_task_running)
     }
     val last = task.lastRun?.let { run ->
-        val took = duration(((millis(run.endedAt) ?: 0) - (millis(run.startedAt) ?: 0)) / 1000)
+        val took = duration(((millis(run.endedAt) ?: 0) - (millis(run.startedAt) ?: 0)) / 1000, res)
         when (run.result) {
             "completed" -> "${relative(run.endedAt)} · ${stringResource(R.string.web_jobs_task_took, took)}"
             "cancelled" -> "${relative(run.endedAt)} · ${stringResource(R.string.web_jobs_task_cancelledAfter, took)}"
-            else -> run.error?.let { stringResource(R.string.web_jobs_task_failedWith, it) }
+            else -> run.error?.let { stringResource(R.string.web_jobs_task_failedWith, serverWords(it)) }
                 ?: stringResource(R.string.web_jobs_task_failed)
         }
     } ?: stringResource(R.string.web_jobs_task_neverRan)
@@ -244,7 +246,7 @@ private fun taskStatus(task: ScheduledTask): String {
         interval == null -> stringResource(R.string.web_jobs_schedule_manual)
         interval == 86_400.0 -> stringResource(R.string.web_jobs_schedule_daily)
         interval == 3_600.0 -> stringResource(R.string.web_jobs_schedule_hourly)
-        else -> stringResource(R.string.web_jobs_schedule_every, duration(interval.toLong()))
+        else -> stringResource(R.string.web_jobs_schedule_every, duration(interval.toLong(), res))
     }
     val next = task.nextRunAt?.let { "$schedule · ${relative(it)}" } ?: schedule
     return "$last\n$next"
@@ -294,6 +296,9 @@ private fun ConcurrencyRow(queue: JobQueueStatus, value: Int, onChange: (Int) ->
                 style = MaterialTheme.typography.bodySmall,
                 color = Palette.Muted,
             )
+            queue.concurrencyNote?.let { note ->
+                Text(serverWords(note), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+            }
         }
         RoundIconButton(
             Lucide.ChevronLeft,
@@ -352,7 +357,7 @@ private fun QueueSheet(queue: JobQueueStatus, onAction: (String) -> Unit, onDism
                 queue.failures.forEach { failure ->
                     Column {
                         Text(failure.label, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text("${relative(failure.at)} · ${failure.message}", style = MaterialTheme.typography.bodySmall, color = Palette.Danger, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        Text("${relative(failure.at)} · ${serverWords(failure.message)}", style = MaterialTheme.typography.bodySmall, color = Palette.Danger, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

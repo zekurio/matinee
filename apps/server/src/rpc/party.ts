@@ -62,7 +62,8 @@ function refusal(reason: PartyRefusal): ORPCError<string, unknown> {
       return badRequest("The party's queue is full.")
     case "not-ended":
       return new ORPCError("FORBIDDEN", {
-        message: "Only the party's owner can skip to the next one.",
+        message:
+          "This one hasn't ended yet. Only the party's owner can skip ahead.",
       })
     case "no-entry":
       return notFound("That's no longer in the party's queue.")

@@ -166,6 +166,7 @@ import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.playbackDevice
 import io.github.zekurio.matinee.api.skipBack
 import io.github.zekurio.matinee.api.skipForward
+import io.github.zekurio.matinee.api.serverWords
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.downloads.OfflineItem
 import io.github.zekurio.matinee.ui.Load
@@ -174,6 +175,7 @@ import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.LocalApi
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.formatClock
 import io.github.zekurio.matinee.ui.itemLabel
@@ -331,7 +333,8 @@ internal fun refusalTitle(refusal: Refusal) = stringResource(
 
 /**
  * What the player says under [refusalTitle]: why, in the app's language
- * for a reason it knows, else in the server's words.
+ * for a reason it knows; else the server's words, or a general line for the
+ * refusal when it sent none.
  */
 internal fun refusalMessage(resources: Resources, e: ApiException): String {
     val restricted = when (restriction(e)) {
@@ -344,7 +347,11 @@ internal fun refusalMessage(resources: Resources, e: ApiException): String {
     }
     return restricted?.let(resources::getString)
         ?: busyPlaying(e)?.let { resources.getQuantityString(R.plurals.player_busy_detail, it, it) }
-        ?: e.message
+        ?: when (refusal(e)) {
+            Refusal.RESTRICTED -> e.message?.let { serverWords(it, resources) } ?: resources.getString(R.string.player_restricted_generic)
+            Refusal.BUSY -> e.message?.let { serverWords(it, resources) } ?: resources.getString(R.string.player_busy_generic)
+            null -> describeFailure(resources, e)
+        }
 }
 
 @Composable

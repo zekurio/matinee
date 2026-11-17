@@ -107,8 +107,17 @@ export const FulfilmentConnection = t.object({
 export type FulfilmentConnection = t.infer<typeof FulfilmentConnection>
 
 export const FulfilmentConnectionInput = t.object({
-  name: t.string().trim().min(1).max(128),
-  slug: t.string().regex(/^[A-Z][A-Z0-9_]{0,63}$/),
+  name: t
+    .string()
+    .trim()
+    .min(1, "Give the connection a name.")
+    .max(128, "Use at most 128 characters."),
+  slug: t
+    .string()
+    .regex(
+      /^[A-Z][A-Z0-9_]{0,63}$/,
+      "Use capital letters, digits and underscores, starting with a letter.",
+    ),
   source: FulfilmentSourceId,
   settings: FulfilmentValues,
   options: FulfilmentValues.$default({}),
@@ -144,7 +153,7 @@ export type FulfilmentOptions = t.infer<typeof FulfilmentOptions>
 export const FulfilmentOptionsInput = t.object({
   id: t.uuid().optional(),
   source: FulfilmentSourceId,
-  slug: t.string().max(64),
+  slug: t.string().max(64, "Use at most 64 characters."),
   settings: FulfilmentValues,
   apiKey: t.string().min(1).max(4096).optional(),
 })
@@ -262,6 +271,10 @@ export const adminFulfilmentContract = {
     .output(FulfilmentRuleChoices),
   /** TMDB's keywords whose names match a search. */
   keywords: get("/admin/fulfilment/keywords")
-    .input(t.object({ query: t.string().trim().min(1).max(100) }))
+    .input(
+      t.object({
+        query: t.string().trim().min(1).max(100, "Use at most 100 characters."),
+      }),
+    )
     .output(t.array(FulfilmentKeyword)),
 }

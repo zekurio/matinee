@@ -14,6 +14,11 @@ export default {
   "catalog.badge.here": "Jetzt da",
   "catalog.badge.fresh": "Neu, auf deine Anfrage",
 
+  // A card's tooltip read aloud: its line, then the quieter one under it.
+  "catalog.tip.aloud": "{text}. {detail}",
+  // Two sentences of a tooltip read aloud, one after the other.
+  "catalog.tip.join": "{first} {second}",
+
   "catalog.season.airing": "Läuft · {aired} von {count}",
 
   "catalog.page.stale": "Diese Angaben sind vielleicht nicht aktuell.",

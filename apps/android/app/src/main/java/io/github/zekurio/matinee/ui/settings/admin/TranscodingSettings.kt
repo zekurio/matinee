@@ -45,7 +45,10 @@ import io.github.zekurio.matinee.ui.settings.Section
 import io.github.zekurio.matinee.ui.settings.SwitchRow
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.videoCodecName
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.time.Instant
+import java.util.Locale
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -107,8 +110,8 @@ private fun json(settings: TranscodingSettings) =
 
 private fun settings(json: JsonObject) = SettingsJson.decodeFromJsonElement(TranscodingSettings.serializer(), json)
 
-/** "12" for 12.0, "0.5" for 0.5, as a field shows a number. */
-private fun show(number: Double): String = if (number % 1.0 == 0.0) number.toLong().toString() else number.toString()
+/** "12" for 12.0, "0,5" or "0.5" for 0.5, in the device's language, as a field shows a number; no grouping. */
+private fun show(number: Double): String = DecimalFormat("0.######", DecimalFormatSymbols.getInstance(Locale.getDefault())).format(number)
 
 /** The form's edits to [saved], kept by the page so the save bar can read them. */
 private class TranscodingDraft(val saved: AdminTranscodingSettings) {

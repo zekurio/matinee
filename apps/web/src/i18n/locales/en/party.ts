@@ -61,7 +61,7 @@ export default defineMessages("party", {
   // The page an invite link opens.
   "party.join.title": "Join {owner}'s watch party?",
   "party.join.titleNamed": "Join {name}?",
-  "party.join.namedBy": "{owner}'s watch party.",
+  "party.join.namedBy": "{owner}'s watch party. {description}",
   "party.join.people": plural({
     one: "{count} person is in it.",
     other: "{count} people are in it.",
@@ -70,7 +70,7 @@ export default defineMessages("party", {
   "party.join.overDescription":
     "Everyone left, or the link is no longer good. Ask for a new one.",
   "party.join.description":
-    "You'll watch along with the people in it. Joining leaves any party you're in now.",
+    "{people} You'll watch along with the people in it. Joining leaves any party you're in now.",
   "party.join.button": "Join",
   "party.join.failed": "Couldn't join",
   "party.join.home": "Back home",

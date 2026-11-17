@@ -11,15 +11,14 @@ import { t } from "./schema"
  */
 
 /** An IP address, or a range of them in CIDR notation. */
+const RANGE_MESSAGE = "Use an address or a range like 192.168.0.0/16."
+
 export const NetworkRange = t
   .string()
   .trim()
-  .min(1)
-  .max(64)
-  .regex(
-    /^[0-9A-Fa-f:.]+(\/\d{1,3})?$/,
-    "Use an address or a range like 192.168.0.0/16.",
-  )
+  .min(1, RANGE_MESSAGE)
+  .max(64, RANGE_MESSAGE)
+  .regex(/^[0-9A-Fa-f:.]+(\/\d{1,3})?$/, RANGE_MESSAGE)
 
 /** The private, loopback, and link-local ranges, as a new server starts. */
 export const DEFAULT_LOCAL_NETWORKS: readonly string[] = [

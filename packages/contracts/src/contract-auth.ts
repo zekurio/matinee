@@ -42,7 +42,11 @@ export const authContract = oc.tag("Auth").router({
   signOut: post("/auth/sign-out").output(t.void()),
   /** Prove the setup token once; the server remembers it in a cookie. */
   unlockSetup: post("/auth/setup/unlock")
-    .input(t.object({ token: t.string().min(1) }))
+    .input(
+      t.object({
+        token: t.string().min(1, "Enter the setup token to claim this server."),
+      }),
+    )
     .output(t.void()),
   passkey: {
     /** Every passkey procedure fails while an admin has passkeys off. */

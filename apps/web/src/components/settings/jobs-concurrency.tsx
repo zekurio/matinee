@@ -12,12 +12,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { MinusIcon, PlusIcon } from "lucide-react"
 import { useState } from "react"
 
-import { tr } from "@/i18n"
+import { tr, translateKnown } from "@/i18n"
 import { useAppForm, useFieldContext } from "@/lib/form"
 import { client, orpc } from "@/lib/rpc"
 
 import { queueName } from "./queue-details-dialog"
 import {
+  SettingNote,
   SettingRow,
   SettingRows,
   SettingsSaveBar,
@@ -110,9 +111,17 @@ function StepperField({ queue }: { queue: JobQueueStatus }) {
     field.handleChange(Math.max(1, Math.min(max, n)))
   }
   const name = queueName(queue)
+  // The server's note on what the limit does, in English, translated when known.
+  const note = queue.concurrencyNote
 
   return (
-    <SettingRow title={name} layout="split">
+    <SettingRow
+      title={name}
+      layout="split"
+      footer={
+        note === null ? null : <SettingNote>{translateKnown(note)}</SettingNote>
+      }
+    >
       {(ids) => (
         <div className="flex shrink-0 items-center gap-1.5">
           <Button

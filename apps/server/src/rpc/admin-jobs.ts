@@ -18,6 +18,11 @@ function taskOf(id: TaskId) {
   return task
 }
 
+/** "1 job" or "3 jobs", as the concurrency messages say it. */
+function jobCount(count: number) {
+  return count === 1 ? "1 job" : `${count} jobs`
+}
+
 function overview() {
   return {
     queues: allQueues().map((queue) => queue.status()),
@@ -60,12 +65,12 @@ export const adminJobs = {
         const { name } = queue.status()
         if (queue.maxConcurrency === null) {
           throw badRequest(
-            `${name} always runs ${queue.defaultConcurrency} jobs at once.`,
+            `${name} always runs ${jobCount(queue.defaultConcurrency)} at once.`,
           )
         }
         if (value > queue.maxConcurrency) {
           throw badRequest(
-            `${name} runs at most ${queue.maxConcurrency} jobs at once.`,
+            `${name} runs at most ${jobCount(queue.maxConcurrency)} at once.`,
           )
         }
       }

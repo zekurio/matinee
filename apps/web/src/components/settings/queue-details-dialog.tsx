@@ -11,7 +11,7 @@ import { Spinner } from "@matinee/ui/components/spinner"
 import { CircleAlertIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
-import { tr, translateKnown } from "@/i18n"
+import { knownMessage, tr, translateKnown } from "@/i18n"
 import { formatRelative, formatSpan } from "@/lib/format"
 
 /** A queue's name in the interface's language. */
@@ -94,7 +94,11 @@ export function QueueDetailsDialog({
                     <Job
                       label={translateKnown(failure.label)}
                       meta={formatRelative(failure.at)}
-                      detail={translateKnown(failure.message)}
+                      detail={
+                        knownMessage(failure.message) ??
+                        tr("jobs.task.failedUnknown")
+                      }
+                      title={failure.message}
                     />
                   </ListItem>
                 ))}
@@ -151,16 +155,22 @@ function Job({
   label,
   meta,
   detail,
+  title,
 }: {
   label: string
   meta: string
   detail?: string
+  /** The whole detail, for an admin to see what the server said. */
+  title?: string
 }) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
       <p className="text-13px leading-5 font-medium wrap-anywhere">{label}</p>
       {detail && (
-        <p className="text-muted-foreground text-13px leading-5 wrap-anywhere whitespace-pre-line">
+        <p
+          title={title}
+          className="text-muted-foreground text-13px leading-5 wrap-anywhere whitespace-pre-line"
+        >
           {detail}
         </p>
       )}

@@ -112,7 +112,11 @@ export const Passkey = t.object({
 })
 export type Passkey = t.infer<typeof Passkey>
 
-export const PasskeyName = t.string().trim().max(64).nullable()
+export const PasskeyName = t
+  .string()
+  .trim()
+  .max(64, "Use at most 64 characters.")
+  .nullable()
 
 /** The provider account linked for single sign-on. Each user has at most one. */
 export const OidcAccount = t.object({

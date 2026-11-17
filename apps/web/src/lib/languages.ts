@@ -27,11 +27,6 @@ export function baseLanguage(tag: string | null): string | null {
   }
 }
 
-export function sameLanguage(a: string | null, b: string | null): boolean {
-  const base = baseLanguage(a)
-  return base !== null && base === baseLanguage(b)
-}
-
 /** The language this browser asks pages for, like `en` or `de`. */
 export function deviceLanguage(): string {
   return baseLanguage(navigator.language) ?? "en"

@@ -19,6 +19,7 @@ export default defineMessages("transcoding", {
   // Why a switch for something the server may lack is off.
   "transcoding.check.missing": "This ffmpeg build or GPU doesn't have it.",
   "transcoding.check.failed": "It failed on this server: {error}",
+  "transcoding.check.failedPlain": "It failed on this server.",
 
   // Field names, also in “Check {field}.”
   "transcoding.field.vaapiDevice": "VAAPI device",
@@ -58,6 +59,9 @@ export default defineMessages("transcoding", {
   "transcoding.ffmpeg.unknownVersion": "unknown",
   "transcoding.ffmpeg.pauseKeys": "pause keys",
   "transcoding.ffmpeg.doviRemoval": "Dolby Vision removal",
+  "transcoding.ffmpeg.tonemapx": "tone mapping (tonemapx)",
+  // Above the raw detail of a failed check, in a monospace block.
+  "transcoding.ffmpeg.errorDetail": "The check ended with this error:",
   "transcoding.ffmpeg.lacks":
     "This build lacks {features}. Use jellyfin-ffmpeg.",
 
@@ -66,6 +70,8 @@ export default defineMessages("transcoding", {
   "transcoding.hardware.acceleration": "Acceleration",
   "transcoding.hardware.deviceFailed":
     "The device didn't open, so transcodes run in software.",
+  "transcoding.hardware.deviceFailedDetail":
+    "The device didn't open, so transcodes run in software. ffmpeg said: {error}",
   "transcoding.hardware.notInBuild": "Not in this ffmpeg build",
   "transcoding.hardware.encoding": "Hardware encoding",
   "transcoding.hardware.lowPower": "Intel low-power {codec} encoder",

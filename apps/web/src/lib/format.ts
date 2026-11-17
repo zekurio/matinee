@@ -20,7 +20,7 @@ const sizes = perLocale((locale) =>
   ),
 )
 
-/** "512 B", "1.5 GB", "12 GB". */
+/** "512 byte", "1.5 GB", "12 GB". */
 export function formatBytes(bytes: number): string {
   let value = bytes
   let unit = 0
@@ -28,8 +28,19 @@ export function formatBytes(bytes: number): string {
     value /= 1000
     unit++
   }
-  const rounded = value >= 10 ? Math.round(value) : value
+  let rounded = roundSize(value, unit)
+  // Rounding can reach the next unit's 1000: 999.6 kB is "1 MB", not "1,000 kB".
+  if (rounded >= 1000 && unit < sizeUnits.length - 1) {
+    unit++
+    rounded = roundSize(rounded / 1000, unit)
+  }
   return sizes()[unit]?.format(rounded) ?? String(rounded)
+}
+
+/** Rounds as the unit's formatter shows it: whole, or one decimal under ten. */
+function roundSize(value: number, unit: number): number {
+  if (unit === 0) return Math.round(value)
+  return value >= 10 ? Math.round(value) : Math.round(value * 10) / 10
 }
 
 const relative = perLocale(
@@ -45,10 +56,19 @@ const steps: [Intl.RelativeTimeFormatUnit, number][] = [
 ]
 
 export function formatRelative(date: Date): string {
-  const seconds = (date.getTime() - Date.now()) / 1000
-  for (const [unit, size] of steps) {
+  return relativeSpan((date.getTime() - Date.now()) / 1000)
+}
+
+function relativeSpan(seconds: number): string {
+  for (const [index, [unit, size]] of steps.entries()) {
     if (Math.abs(seconds) >= size) {
-      return relative().format(Math.round(seconds / size), unit)
+      const count = Math.round(seconds / size)
+      // Rounding can reach a whole larger unit: 59.6 minutes is an hour.
+      const larger = steps[index - 1]
+      if (larger && Math.abs(count) * size >= larger[1]) {
+        return relativeSpan(Math.sign(seconds) * larger[1])
+      }
+      return relative().format(count, unit)
     }
   }
   return tr("format.justNow")
@@ -111,14 +131,22 @@ export function formatCount(n: number): string {
 
 /** "45 seconds", "3 minutes", "12 hours", "2 days". */
 export function formatSpan(seconds: number): string {
+  // Each count is checked after rounding, since 59.6 seconds rounds to a
+  // count of 60, which is a minute.
   if (seconds < 60) {
-    return tr("format.seconds", { count: Math.max(1, Math.round(seconds)) })
+    const count = Math.max(1, Math.round(seconds))
+    if (count < 60) return tr("format.seconds", { count })
+    return formatSpan(60)
   }
   if (seconds < 3600) {
-    return tr("format.minutesLong", { count: Math.round(seconds / 60) })
+    const count = Math.round(seconds / 60)
+    if (count < 60) return tr("format.minutesLong", { count })
+    return formatSpan(3600)
   }
   if (seconds < 86_400) {
-    return tr("format.hoursLong", { count: Math.round(seconds / 3600) })
+    const count = Math.round(seconds / 3600)
+    if (count < 24) return tr("format.hoursLong", { count })
+    return formatSpan(86_400)
   }
   return tr("format.daysLong", { count: Math.round(seconds / 86_400) })
 }

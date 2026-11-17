@@ -57,8 +57,6 @@ export default defineMessages("jobs", {
   "jobs.queue.subtitle-prepare.name": "Prepare subtitles",
   "jobs.queue.subtitle-prepare.description":
     "Cache indexed text subtitles without reading video streams.",
-  "jobs.queue.subtitle-prepare.note":
-    "Files whose indexed text subtitles are prepared at once.",
   "jobs.task.prepare-subtitles.name": "Prepare subtitles",
   "jobs.task.prepare-subtitles.description":
     "Cache indexed text subtitles and delete outputs of removed or changed files. Picture subtitles stay on demand.",
@@ -83,8 +81,6 @@ export default defineMessages("jobs", {
   "jobs.queue.downloads.name": "Download encodes",
   "jobs.queue.downloads.description":
     "Encode the video of downloads in another size or codec, while the app or browser fetches them.",
-  "jobs.queue.downloads.note":
-    "Downloads encoded at once. Each one uses an encoder as a stream would; raise it if the server keeps up.",
   "jobs.queue.download-copies.name": "Download copies",
   "jobs.queue.download-copies.description":
     "Put together downloads that keep their video as it is, while the app or browser fetches them.",
@@ -155,6 +151,7 @@ export default defineMessages("jobs", {
   "jobs.task.cancelledAfter": "Cancelled after {took}",
   "jobs.task.failed": "Failed",
   "jobs.task.failedWith": "Failed: {error}",
+  "jobs.task.failedUnknown": "This failed. The server log has the details.",
   "jobs.task.running": "Running…",
   "jobs.task.started": "Started {when}",
   "jobs.task.percent": "{percent}%",
@@ -183,6 +180,7 @@ export default defineMessages("jobs", {
 
   // How many jobs each queue runs at once.
   "jobs.concurrency": "Concurrency",
+  // The Android app shows this beside its concurrency stepper.
   "jobs.concurrency.limits": "Default {default}, max {max}.",
   "jobs.concurrency.decrease": "Decrease {queue}",
   "jobs.concurrency.increase": "Increase {queue}",

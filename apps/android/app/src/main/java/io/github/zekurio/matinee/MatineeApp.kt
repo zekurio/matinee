@@ -10,6 +10,7 @@ import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
+import io.github.zekurio.matinee.api.appResources
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.downloads.Downloads
@@ -55,6 +56,7 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        appResources = resources
         session = Session(this)
         if (session.isTv) {
             watchNext = WatchNext(this).also { registerActivityLifecycleCallbacks(WatchNextForeground(it)) }

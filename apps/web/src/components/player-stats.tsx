@@ -20,6 +20,7 @@ import {
   audioEncoderName,
   encoderDevice,
   encoderName,
+  encoderOnCpu,
   encoderOutput,
   toneMapperName,
 } from "@/lib/stats"
@@ -335,7 +336,7 @@ function videoRows(
           label: tr("player.stats.decoder"),
           value: !server.hardwareDecoding
             ? tr("player.stats.decoder.software")
-            : device === "CPU"
+            : encoderOnCpu(encoder)
               ? tr("player.stats.decoder.hardware")
               : tr("player.stats.decoder.hardwareOn", { device }),
         },

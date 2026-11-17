@@ -176,8 +176,12 @@ export function PosterActionButton({
       </Tooltip>
       {/* The tooltip is for eyes; this reads the same words aloud. */}
       <span id={tipId} hidden>
-        {tip.text}
-        {tip.note && ` ${tr("ask.declined.note", { note: tip.note })}`}
+        {tip.note
+          ? tr("catalog.tip.join", {
+              first: tip.text,
+              second: tr("ask.declined.note", { note: tip.note }),
+            })
+          : tip.text}
       </span>
     </>
   )

@@ -25,6 +25,7 @@ import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
+import io.github.zekurio.matinee.api.serverWords
 import io.github.zekurio.matinee.app
 import java.io.IOException
 import java.net.ConnectException
@@ -209,10 +210,11 @@ sealed interface Load<out T> {
  * server's own message when it sent one, else whether it couldn't be
  * reached, the connection broke off, or the answer made no sense to this
  * app. The exception's own text is the HTTP client's or the JSON
- * parser's, in English, and names sockets, addresses, and offsets.
+ * parser's, in English, and names sockets, addresses, and offsets, so it's
+ * never shown.
  */
 fun describeFailure(resources: Resources, e: Exception): String = when (e) {
-    is ApiException -> e.message
+    is ApiException -> e.message?.let { serverWords(it, resources) } ?: resources.getString(R.string.error_server)
     is UnknownHostException, is ConnectException, is SocketTimeoutException, is NoRouteToHostException, is SSLException ->
         resources.getString(R.string.error_unreachable)
     is SerializationException -> resources.getString(R.string.error_unreadable)
