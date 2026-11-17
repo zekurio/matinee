@@ -143,19 +143,37 @@ val TAB_ROUTES: List<Any> = shellTabs(offline = false).map { it.route }
  */
 class Navigator(private val controller: NavHostController, private val offline: Boolean = false) {
     /**
-     * Search was asked for: Media opens with search open, and its field
-     * takes the keyboard once Media's page is up, and puts this back.
+     * Search was asked for, from where: Media opens with search open, and
+     * its field takes the keyboard once Media's page is up, and puts this
+     * back.
      */
-    var searchPending by mutableStateOf(false)
+    var searchPending by mutableStateOf<SearchOrigin?>(null)
+
+    /**
+     * Media's open search came from Home's button with motion on
+     * (`searchMorphs`), so the move between Home and Media is the button
+     * growing into the field, or shrinking back, rather than the tabs'
+     * slide. Set as Home's button opens it, kept by Media while that search
+     * is open, and let go once Media's page is gone.
+     */
+    var searchMorph by mutableStateOf(false)
+
+    /**
+     * The move between pages under way follows the back gesture, which
+     * seeks it by the finger. Set as the pages pick their transitions
+     * (Shell.kt) and read by Home's search pill as it picks its own
+     * (SearchMorph.kt). Not state: nothing redraws for it.
+     */
+    var backGesture = false
 
     /**
      * Opens [page] where it lives (`shellLanding`): a tab as [tab] does,
      * search as Media with its field taking the keyboard, and the profile
      * as a page on Home.
      */
-    fun go(page: ShellPage) {
+    fun go(page: ShellPage, origin: SearchOrigin = SearchOrigin.Media) {
         val landing = shellLanding(page, offline)
-        if (landing.focusesSearch) searchPending = true
+        if (landing.focusesSearch) searchPending = origin
         tab(landing.tab.route)
         if (landing.underProfile) controller.navigate(ProfileRoute) { launchSingleTop = true }
     }
@@ -260,8 +278,14 @@ class Navigator(private val controller: NavHostController, private val offline: 
 
     fun studio(name: String) = controller.navigate(BrowseRoute(studio = name))
 
-    /** Search: Media with its field taking the keyboard. */
-    fun search() = go(ShellPage.Search)
+    /**
+     * Search from Home's button: Media with its field taking the keyboard,
+     * and with [morph] (`searchMorphs`), the button growing into the field.
+     */
+    fun search(morph: Boolean = false) {
+        searchMorph = morph && !offline
+        go(ShellPage.Search, SearchOrigin.Home)
+    }
 
     /** The profile, on top of Home. */
     fun profile() = go(ShellPage.Profile)
@@ -271,7 +295,7 @@ class Navigator(private val controller: NavHostController, private val offline: 
      * version, where search was a tab: Media with search open in its place.
      */
     fun searchInstead() {
-        searchPending = true
+        searchPending = SearchOrigin.Media
         controller.navigate(MediaRoute) {
             popUpTo<SearchRoute> { inclusive = true }
             launchSingleTop = true

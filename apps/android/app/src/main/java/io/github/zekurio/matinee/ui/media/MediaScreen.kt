@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
@@ -20,7 +21,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,12 +54,17 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.api.isAdmin
+import io.github.zekurio.matinee.ui.HEADER_HEIGHT
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.MediaPageContent
 import io.github.zekurio.matinee.ui.MediaSearch
+import io.github.zekurio.matinee.ui.SearchOrigin
+import io.github.zekurio.matinee.ui.rememberReducedMotion
+import io.github.zekurio.matinee.ui.searchMorphField
+import io.github.zekurio.matinee.ui.searchMorphs
 import io.github.zekurio.matinee.ui.components.ArtFrame
 import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.ErrorBox
@@ -81,8 +90,8 @@ import io.github.zekurio.matinee.ui.theme.Palette
 
 /** Saves Media's search field across a configuration change and while a page covers Media. */
 private val MediaSearchSaver = listSaver<MediaSearch, Any>(
-    save = { listOf(it.query, it.opened) },
-    restore = { MediaSearch(it[0] as String, it[1] as Boolean) },
+    save = { listOf(it.query, it.opened, it.origin.name) },
+    restore = { MediaSearch(it[0] as String, it[1] as Boolean, SearchOrigin.valueOf(it[2] as String)) },
 )
 
 /**
@@ -91,16 +100,24 @@ private val MediaSearchSaver = listSaver<MediaSearch, Any>(
  * field opens search, with Discover's rows under it while nothing's typed;
  * typing searches the server, its results grouped as search/Search.kt
  * shows them. While search is open Back takes the field's magnifier's
- * place, and it, or the system's Back, goes back to the libraries: the
- * text gone, the keyboard down. What shows for the field's state is
- * [MediaSearch]'s. Home's search button opens Media with the field taking
- * the keyboard (`Navigator.search`).
+ * place. What shows for the field's state, and what Back does, is
+ * [MediaSearch]'s: opened here, Back closes search, the text gone and the
+ * keyboard down; opened from Home's search button, which opens Media with
+ * the field taking the keyboard (`Navigator.search`), Back goes back to
+ * Home, as the field shrinking back into the button (SearchMorph.kt).
+ *
+ * The field sits in the band Home's header has, [HEADER_HEIGHT] under the
+ * status bar, its middle on the search button's, and the libraries start
+ * 8 under it, where Home's cards do.
  */
 @Composable
 fun MediaScreen() {
     val nav = LocalNavigator.current
     val libraries = rememberLoader("libraries") { libraries.list() }
-    var field by rememberSaveable(stateSaver = MediaSearchSaver) { mutableStateOf(MediaSearch()) }
+    // Opened from Home's button, search is open from the first frame, so nothing else shows under the field first.
+    var field by rememberSaveable(stateSaver = MediaSearchSaver) {
+        mutableStateOf(nav.searchPending?.let { MediaSearch().begin(it) } ?: MediaSearch())
+    }
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -111,21 +128,34 @@ fun MediaScreen() {
     val catalog = remember { CatalogSearchState() }
     CatalogSearchEffect(catalog, field.query)
 
+    // While a search opened by Home's button is open, the way back to Home
+    // is the field shrinking back into the button; once Media's page is
+    // gone, so is that.
+    val morphs = field.returnsHome && searchMorphs(field.origin, rememberReducedMotion())
+    SideEffect { if (morphs) nav.searchMorph = true }
+    val owns by rememberUpdatedState(morphs)
+    DisposableEffect(nav) { onDispose { if (owns) nav.searchMorph = false } }
+
     val close = {
         focusManager.clearFocus()
         keyboard?.hide()
         field = field.cancel()
     }
+    // The field's arrow: back to Home if that's where search came from,
+    // else back to the libraries. The page's leaving puts the keyboard away.
+    val back = { if (field.returnsHome) nav.home() else close() }
     // The system's Back closes search before it leaves Media, as the field's
     // arrow does. While the keyboard is up, it goes first, as everywhere.
-    BackHandler(enabled = field.open, onBack = close)
+    // From Home's button it's the pages' own Back, which follows the gesture.
+    BackHandler(enabled = field.closesOnBack, onBack = close)
     // Search asked for from Home's header: open, and the keyboard up once
-    // Media's page has slid in, as a field can't hold focus before.
+    // Media's page is in, as a field can't hold focus before, and the
+    // keyboard follows the field rather than rise before it's there.
     LaunchedEffect(nav) {
         snapshotFlow { nav.searchPending }.collect { pending ->
-            if (!pending) return@collect
-            nav.searchPending = false
-            field = field.begin()
+            if (pending == null) return@collect
+            nav.searchPending = null
+            field = field.begin(pending)
             lifecycle.withResumed {}
             focus.requestFocus()
             keyboard?.show()
@@ -134,7 +164,7 @@ fun MediaScreen() {
 
     Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(start = Gutter, end = Gutter, top = 8.dp, bottom = 12.dp),
+            Modifier.fillMaxWidth().statusBarsPadding().heightIn(min = HEADER_HEIGHT).padding(horizontal = Gutter),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Gutter to gutter on a phone; on a wide window as wide as a search needs, from the start.
@@ -142,20 +172,21 @@ fun MediaScreen() {
                 field.query,
                 { field = field.type(it) },
                 field.open,
-                onBack = close,
+                onBack = back,
                 // A tap opens search. Focus that the system hands the field back with a
                 // keyboard, as after Escape closed search, doesn't; typing does.
                 onFocus = { if (inputMode.inputMode == InputMode.Touch) field = field.begin() },
                 focus = focus,
-                modifier = Modifier.weight(1f, fill = false).widthIn(max = 640.dp),
+                modifier = Modifier.weight(1f, fill = false).widthIn(max = 640.dp).searchMorphField(),
             )
             // Still showing the libraries from before, while the server can't be reached.
             if (!field.open) DisconnectedAction(libraries)
         }
         when (val content = field.content) {
             MediaPageContent.Libraries -> Libraries(libraries)
-            MediaPageContent.Suggestions -> SearchSuggestions()
-            is MediaPageContent.Results -> {
+            // 12 from the field, as a list of results has always started.
+            MediaPageContent.Suggestions -> Box(Modifier.padding(top = 4.dp)) { SearchSuggestions() }
+            is MediaPageContent.Results -> Box(Modifier.padding(top = 4.dp)) {
                 val names = (libraries.state as? Load.Ready)?.value.orEmpty().associate { it.id to it.name }
                 SearchFound(content.text, search, catalog, names)
             }
@@ -172,7 +203,7 @@ private fun Libraries(libraries: Loader<List<Library>>) {
         is Load.Ready -> LazyVerticalGrid(
             columns = GridCells.Adaptive(160.dp),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = Gutter, end = Gutter, top = 4.dp, bottom = tabBarPadding() + 24.dp),
+            contentPadding = PaddingValues(start = Gutter, end = Gutter, top = 8.dp, bottom = tabBarPadding() + 24.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {

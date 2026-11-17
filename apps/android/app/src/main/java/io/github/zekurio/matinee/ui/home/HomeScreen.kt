@@ -126,7 +126,7 @@ private fun OnlineHomeScreen() {
                     HomeBanner(loaders, dev, header)
                 } else Column {
                     header()
-                    // The header is 44 with the logo in its middle, which alone leaves the cards crowding it.
+                    // 8 under the header's band, where Media's libraries start under its field.
                     val below = Modifier.padding(top = 8.dp)
                     when (val state = featured.state) {
                         Load.Loading -> HomeCarouselSkeleton(below)
