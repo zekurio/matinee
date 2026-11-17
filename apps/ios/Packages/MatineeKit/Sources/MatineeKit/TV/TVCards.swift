@@ -134,7 +134,8 @@
         ZStack(alignment: .topTrailing) {
           Text(name).textStyle(.label).foregroundStyle(palette.foreground.opacity(0.75))
             .multilineTextAlignment(.center).lineLimit(4)
-            .padding(24)
+            // Less at the sides, where 24 broke a twelve-letter word inside itself on a grid's card.
+            .padding(.vertical, 24).padding(.horizontal, 12)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
           art()
           if watched { TVWatchedMark().padding(16) }
