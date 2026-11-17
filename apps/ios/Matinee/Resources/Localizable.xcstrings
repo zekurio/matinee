@@ -2730,6 +2730,23 @@
         }
       }
     },
+    "error_server" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Server konnte das nicht. Versuch es gleich noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server couldn't do that. Try again in a moment."
+          }
+        }
+      }
+    },
     "error_unreachable" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3015,6 +3032,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$lldm"
+          }
+        }
+      }
+    },
+    "format_seconds_short" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Sek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$llds"
           }
         }
       }
@@ -6376,6 +6410,40 @@
         }
       }
     },
+    "player_busy_generic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Konto spielt auf so vielen Geräten ab, wie es darf. Beende die Wiedergabe auf einem, um hier zu schauen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account is playing on as many devices as it may. Stop one to watch here."
+          }
+        }
+      }
+    },
+    "player_error_download" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Download lässt sich nicht abspielen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This download couldn't play."
+          }
+        }
+      }
+    },
     "player_error_lost" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6797,6 +6865,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server."
+          }
+        }
+      }
+    },
+    "player_restricted_generic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Konto darf diese Datei auf keinem Weg abspielen. Frag die Person, die den Server betreibt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account's access rules out every way to play this file. Ask whoever runs the server."
           }
         }
       }
@@ -8730,6 +8815,23 @@
         }
       }
     },
+    "settings_unknown_value" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unbekannt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
+          }
+        }
+      }
+    },
     "settings_version" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9448,6 +9550,23 @@
         }
       }
     },
+    "stats_name_you" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ (du)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ (you)"
+          }
+        }
+      }
+    },
     "stats_period_30d" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9740,23 +9859,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Watch time"
-          }
-        }
-      }
-    },
-    "stats_you" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "(du)"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "(you)"
           }
         }
       }
@@ -11876,6 +11978,23 @@
         }
       }
     },
+    "users_sso" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSO"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSO"
+          }
+        }
+      }
+    },
     "web_appearance_colorScheme" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13369,6 +13488,91 @@
         }
       }
     },
+    "web_catalog_tip_aloud" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. %2$@"
+          }
+        }
+      }
+    },
+    "web_catalog_tip_join" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "web_common_backHome" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zur Startseite"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back home"
+          }
+        }
+      }
+    },
+    "web_common_error_invalidInput" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das hat nicht geklappt. Prüf, was du eingegeben hast, und versuch es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That didn't go through. Check what you entered and try again."
+          }
+        }
+      }
+    },
+    "web_common_error_pageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Seite konnte nicht angezeigt werden. Versuch es erneut oder geh zurück zur Startseite."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The page couldn't be shown. Try again, or go back home."
+          }
+        }
+      }
+    },
     "web_common_error_passkeyClosed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13403,6 +13607,23 @@
         }
       }
     },
+    "web_common_error_retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erneut versuchen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
+          }
+        }
+      }
+    },
     "web_common_error_server" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13433,6 +13654,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Something went wrong."
+          }
+        }
+      }
+    },
+    "web_common_notFound_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Adresse ist vielleicht falsch geschrieben, oder die Seite wurde verschoben."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The address may be mistyped, or the page may have moved."
+          }
+        }
+      }
+    },
+    "web_common_notFound_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seite nicht gefunden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Page not found"
           }
         }
       }
@@ -16042,23 +16297,6 @@
         }
       }
     },
-    "web_jobs_queue_downloads_note" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Downloads, die gleichzeitig kodiert werden. Jeder belegt einen Encoder wie ein Stream; erhöhe den Wert, wenn der Server mithält."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Downloads encoded at once. Each one uses an encoder as a stream would; raise it if the server keeps up."
-          }
-        }
-      }
-    },
     "web_jobs_queue_failed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -16555,23 +16793,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Prepare subtitles"
-          }
-        }
-      }
-    },
-    "web_jobs_queue_subtitle_prepare_note" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dateien, deren indizierte Textuntertitel gleichzeitig vorbereitet werden."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Files whose indexed text subtitles are prepared at once."
           }
         }
       }
@@ -17174,6 +17395,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Failed"
+          }
+        }
+      }
+    },
+    "web_jobs_task_failedUnknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist fehlgeschlagen. Details stehen im Server-Log."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This failed. The server log has the details."
           }
         }
       }
@@ -19773,6 +20011,23 @@
         }
       }
     },
+    "web_requests_attention_failedUnknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist fehlgeschlagen. Details stehen im Server-Log."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This failed. The server log has the details."
+          }
+        }
+      }
+    },
     "web_requests_attention_unknown" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20058,23 +20313,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Given up"
-          }
-        }
-      }
-    },
-    "web_requests_dot" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anfragen warten auf dich"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Requests need you"
           }
         }
       }
@@ -20398,6 +20636,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Show"
+          }
+        }
+      }
+    },
+    "web_requests_labelled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. Anfragen warten auf dich"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. Requests need you"
           }
         }
       }
@@ -21429,6 +21684,4647 @@
         }
       }
     },
+    "web_server_access_downloadVideoOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Server darf für dein Konto kein Video umwandeln. Lade die Datei unverändert herunter oder behalte ihr Video bei."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server may not convert video for your account. Download the file as it is or keep its video."
+          }
+        }
+      }
+    },
+    "web_server_access_downloadsOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloads sind für dein Konto ausgeschaltet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloads are turned off for your account."
+          }
+        }
+      }
+    },
+    "web_server_access_needsEncoding" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Gerät braucht das Video umgewandelt, aber der Server darf für dein Konto kein Video umwandeln. Versuch ein anderes Gerät oder frag die Person, die den Server betreibt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device needs the video converted, but the server may not convert video for your account. Try another device or ask whoever runs the server."
+          }
+        }
+      }
+    },
+    "web_server_access_overLimitEncodeFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und das Umwandeln des Videos ist fehlgeschlagen. Versuch es noch einmal oder frag die Person, die den Server betreibt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server."
+          }
+        }
+      }
+    },
+    "web_server_access_overLimitNoEncoding" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und der Server darf für dein Konto kein Video umwandeln. Frag die Person, die den Server betreibt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server."
+          }
+        }
+      }
+    },
+    "web_server_access_overLimitNoVersion" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und der Server kann unter diesem Limit keine Version erstellen, die dieses Gerät abspielt. Versuch ein anderes Gerät oder frag die Person, die den Server betreibt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file is over the bit rate your account may stream, and the server can't make a version this device plays under that limit. Try another device or ask whoever runs the server."
+          }
+        }
+      }
+    },
+    "web_server_access_overLimitSeek" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei liegt über der Bitrate, die dein Konto streamen darf. Wähle eine niedrigere Qualität, um sie anzusehen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file is over the bit rate your account may stream. Pick a lower quality to watch it."
+          }
+        }
+      }
+    },
+    "web_server_access_tooManyStreams" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Konto spielt auf %1$@ Geräten ab, mehr sind nicht erlaubt. Beende die Wiedergabe auf einem, um hier zu schauen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account is playing on %1$@ devices, the most it may. Stop one to watch here."
+          }
+        }
+      }
+    },
+    "web_server_access_tooManyStreamsOne" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Konto spielt auf 1 Gerät ab, mehr sind nicht erlaubt. Beende die Wiedergabe dort, um hier zu schauen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account is playing on 1 device, the most it may. Stop one to watch here."
+          }
+        }
+      }
+    },
+    "web_server_account_currentSession" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich ab, um die Sitzung zu beenden, die du gerade nutzt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out to end the session you're using."
+          }
+        }
+      }
+    },
+    "web_server_account_lastLink" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkeys sind aus, also kannst du dich nur über Single Sign-on anmelden. Lass es verknüpft."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkeys are off, so single sign-on is your only way to sign in. Keep it linked."
+          }
+        }
+      }
+    },
+    "web_server_account_lastMethod" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge einen weiteren Passkey hinzu oder verknüpfe ein Konto, bevor du deine letzte Anmeldemöglichkeit entfernst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add another passkey or link an account before removing your last way to sign in."
+          }
+        }
+      }
+    },
+    "web_server_account_noLinkedAccount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es ist kein Konto verknüpft."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No account is linked."
+          }
+        }
+      }
+    },
+    "web_server_account_notFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto nicht gefunden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account not found."
+          }
+        }
+      }
+    },
+    "web_server_account_passkeyNotFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkey nicht gefunden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkey not found."
+          }
+        }
+      }
+    },
+    "web_server_account_passkeyOtherAccount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Passkey-Anfrage gehört zu einem anderen Konto."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This passkey request belongs to another account."
+          }
+        }
+      }
+    },
+    "web_server_account_sessionGone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Sitzung ist bereits beendet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That session already ended."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_clientIdRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib eine Client-ID ein, um Single Sign-on einzuschalten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a client ID to turn on single sign-on."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_discoveryCertificate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ konnte nicht geladen werden: Dem TLS-Zertifikat wird nicht vertraut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load %1$@: its TLS certificate isn't trusted."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_discoveryFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ konnte nicht geladen werden. Details stehen im Server-Log."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load %1$@. Check the server log for details."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_discoveryHost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ konnte nicht geladen werden: Der Hostname wurde nicht gefunden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load %1$@: the host name wasn't found."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_discoveryRefused" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ konnte nicht geladen werden: Die Verbindung wurde abgelehnt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load %1$@: the connection was refused."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_discoveryTimedOut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ konnte nicht geladen werden: Die Verbindung hat das Zeitlimit überschritten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load %1$@: the connection timed out."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_discoveryTimeout" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat nicht innerhalb von 10 Sekunden geantwortet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ didn't answer within 10 seconds."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_issuerDiffers" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Discovery-Dokument des Anbieters nennt einen anderen Issuer. Übernimm ihn genau, samt einem Schrägstrich am Ende."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provider's discovery document names a different issuer. Copy it exactly, including any trailing slash."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_issuerMismatch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Anbieter nennt sich %1$@. Verwende genau das als Issuer-URL."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provider calls itself %1$@. Use exactly that as the issuer URL."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_issuerRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib eine Issuer-URL ein, um Single Sign-on einzuschalten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter an issuer URL to turn on single sign-on."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_noMethod" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lass Passkeys oder Single Sign-on an. Ohne beides kann sich niemand anmelden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep passkeys or single sign-on on. Without either, nobody can sign in."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_notDiscovery" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ ist kein Discovery-Dokument. Überprüfe die Issuer-URL."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ isn't a discovery document. Check the issuer URL."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_passkeysOffLink" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpfe dein Konto unter Einstellungen → Konto mit Single Sign-on, bevor du Passkeys ausschaltest."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link your account to single sign-on under Settings → Account before turning passkeys off."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_passkeysOffSaveFirst" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speichere zuerst Single Sign-on und verknüpfe dein Konto unter Einstellungen → Konto damit. Schalte dann Passkeys aus."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save single sign-on first and link your account to it under Settings → Account. Then turn passkeys off."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_ssoOnlyIssuer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du meldest dich nur über Single Sign-on an. Füge einen Passkey hinzu, bevor du den Issuer änderst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You sign in only through single sign-on. Add a passkey before changing the issuer."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_ssoOnlyIssuerPasskeysOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du meldest dich nur über Single Sign-on an. Schalte Passkeys ein und füge einen hinzu, bevor du den Issuer änderst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You sign in only through single sign-on. Turn passkeys on and add one before changing the issuer."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_ssoOnlyOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du meldest dich nur über Single Sign-on an. Füge einen Passkey hinzu, bevor du es ausschaltest."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You sign in only through single sign-on. Add a passkey before turning it off."
+          }
+        }
+      }
+    },
+    "web_server_adminAuth_ssoOnlyOffPasskeysOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du meldest dich nur über Single Sign-on an. Schalte Passkeys ein und füge einen hinzu, bevor du es ausschaltest."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You sign in only through single sign-on. Turn passkeys on and add one before turning it off."
+          }
+        }
+      }
+    },
+    "web_server_adminGroups_everyone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Konto ist in dieser Gruppe, deshalb kann sie nicht gelöscht werden. Nimm ihr stattdessen die Mediatheken weg."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every account is in this group, so it can't be deleted. Take its libraries away instead."
+          }
+        }
+      }
+    },
+    "web_server_adminGroups_gone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Gruppe gibt es nicht mehr. Lade die Liste neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That group no longer exists. Reload the list."
+          }
+        }
+      }
+    },
+    "web_server_adminGroups_nameTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine andere Gruppe hat diesen Namen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another group has that name."
+          }
+        }
+      }
+    },
+    "web_server_adminInvites_gone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Einladung gibt es nicht mehr. Lade die Liste neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That invite no longer exists. Reload the list."
+          }
+        }
+      }
+    },
+    "web_server_adminUsers_gone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Benutzer gibt es nicht mehr. Lade die Liste neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That user no longer exists. Reload the list."
+          }
+        }
+      }
+    },
+    "web_server_adminUsers_lastAdmin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ ist der einzige Admin, der sich anmelden kann. Mach zuerst jemanden zum Admin, der sich anmelden kann."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ is the only admin who can sign in. Make someone who can sign in an admin first."
+          }
+        }
+      }
+    },
+    "web_server_adminUsers_lastAdminDelete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist der einzige Admin, der sich anmelden kann. Mach jemanden zum Admin, der sich anmelden kann, bevor du dein Konto löschst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're the only admin who can sign in. Make someone who can sign in an admin before you delete your account."
+          }
+        }
+      }
+    },
+    "web_server_adminUsers_lastAdminDemote" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist der einzige Admin, der sich anmelden kann. Mach jemanden zum Admin, der sich anmelden kann, bevor du deine Admin-Rechte abgibst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're the only admin who can sign in. Make someone who can sign in an admin before you step down."
+          }
+        }
+      }
+    },
+    "web_server_auth_accountGone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Konto gibt es nicht mehr."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This account no longer exists."
+          }
+        }
+      }
+    },
+    "web_server_auth_appRequestInvalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Anmeldeanfrage ist ungültig. Starte die Anmeldung in der App neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This sign-in request is invalid. Start again in the app."
+          }
+        }
+      }
+    },
+    "web_server_auth_appSignInGone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Anmeldung ist abgelaufen oder wurde schon benutzt. Versuch es noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This sign-in expired or was used already. Try again."
+          }
+        }
+      }
+    },
+    "web_server_auth_deviceCodeExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Code ist abgelaufen. Hol dir einen neuen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This code expired. Get a new one."
+          }
+        }
+      }
+    },
+    "web_server_auth_deviceGone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Code funktioniert nicht. Vielleicht ist er abgelaufen oder wurde schon benutzt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That code doesn't work. It may have expired, or been used already."
+          }
+        }
+      }
+    },
+    "web_server_auth_inviteGone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Einladungslink funktioniert nicht. Vielleicht ist er abgelaufen oder wurde schon benutzt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This invite link doesn't work. It may have expired, or been used already."
+          }
+        }
+      }
+    },
+    "web_server_auth_pendingGone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Anmeldung ist abgelaufen. Fahre noch einmal mit Single Sign-on fort."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This sign-in expired. Continue with single sign-on again."
+          }
+        }
+      }
+    },
+    "web_server_auth_setupDone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Einrichtung ist bereits abgeschlossen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup is already done."
+          }
+        }
+      }
+    },
+    "web_server_auth_setupDoneSignIn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Einrichtung ist bereits abgeschlossen. Melde dich stattdessen an."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup is already done. Sign in instead."
+          }
+        }
+      }
+    },
+    "web_server_auth_setupTokenFirst" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib zuerst den Einrichtungstoken ein."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the setup token first."
+          }
+        }
+      }
+    },
+    "web_server_auth_setupTokenMismatch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Einrichtungstoken stimmt nicht mit dem im Log überein."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That setup token doesn't match the one in the log."
+          }
+        }
+      }
+    },
+    "web_server_auth_setupWithOidc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich mit %1$@ an, um Matinee einzurichten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with %1$@ to set up Matinee."
+          }
+        }
+      }
+    },
+    "web_server_auth_signOutFirst" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich ab, bevor du ein neues Konto erstellst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out before creating a new account."
+          }
+        }
+      }
+    },
+    "web_server_auth_signUpClosed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf diesem Server ist die Registrierung geschlossen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign-up is closed on this server."
+          }
+        }
+      }
+    },
+    "web_server_auth_signUpInvalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Registrierungsanfrage ist ungültig."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The sign-up request is invalid."
+          }
+        }
+      }
+    },
+    "web_server_auth_ssoOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Single Sign-on ist ausgeschaltet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Single sign-on is turned off."
+          }
+        }
+      }
+    },
+    "web_server_auth_usernameTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Benutzername ist schon vergeben."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That username is taken."
+          }
+        }
+      }
+    },
+    "web_server_avatars_loadFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Bild deines Anbieters konnte nicht geladen werden. Versuch es später noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load the picture from your provider. Try again later."
+          }
+        }
+      }
+    },
+    "web_server_avatars_noPicture" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Anbieter hat noch kein Bild geschickt. Melde dich einmal darüber an, um es abzurufen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your provider hasn't sent a picture. Sign in with it once to fetch it."
+          }
+        }
+      }
+    },
+    "web_server_avatars_unreadable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Bild konnte nicht gelesen werden. Versuch es mit einer anderen Datei."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't read that image. Try another file."
+          }
+        }
+      }
+    },
+    "web_server_avatars_uploadLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ein Upload"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "an upload"
+          }
+        }
+      }
+    },
+    "web_server_catalog_filterGone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einen dieser Filter gibt es nicht mehr. Nimm ihn heraus und versuch es noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One of these filters isn't on offer anymore. Clear it and try again."
+          }
+        }
+      }
+    },
+    "web_server_catalog_filtersRefused" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Katalog nimmt diese Filter nicht an. Ändere sie und versuch es noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The catalog didn't take these filters. Change them and try again."
+          }
+        }
+      }
+    },
+    "web_server_catalog_lookupDown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee kann gerade keine Titel nachschlagen. Versuch es in einer Minute noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee can't look titles up right now. Try again in a minute."
+          }
+        }
+      }
+    },
+    "web_server_catalog_matchFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Titel konnte beim Metadatenanbieter der Zielmediathek nicht zugeordnet werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This title couldn't be matched at the destination library's metadata provider."
+          }
+        }
+      }
+    },
+    "web_server_catalog_titleNotFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee findet diesen Titel nicht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee can't find this title."
+          }
+        }
+      }
+    },
+    "web_server_downloads_audioNotMp4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@-Ton passt nicht unverändert in eine MP4-Datei. Wandle diese Spur stattdessen um."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ audio can't go in an MP4 file as it is. Convert that track instead."
+          }
+        }
+      }
+    },
+    "web_server_downloads_audioTwice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle jede Tonspur nur einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick each audio track once."
+          }
+        }
+      }
+    },
+    "web_server_downloads_burnInNeedsEncode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum Einbrennen von Untertiteln muss das Video umgewandelt werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Burning in subtitles needs the video converted."
+          }
+        }
+      }
+    },
+    "web_server_downloads_cantEncodeAudio" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Server kann keinen %1$@-Ton kodieren."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This server can't encode %1$@ audio."
+          }
+        }
+      }
+    },
+    "web_server_downloads_cantEncodeVideo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Server kann nicht in %1$@ kodieren."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This server can't encode %1$@."
+          }
+        }
+      }
+    },
+    "web_server_downloads_encodeFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Server kann dieses Video mit seinen Transkodierungseinstellungen nicht kodieren."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server can't encode this video with its transcoding settings."
+          }
+        }
+      }
+    },
+    "web_server_downloads_noAudioTrack" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei hat keine Tonspur %1$@."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file has no audio track %1$@."
+          }
+        }
+      }
+    },
+    "web_server_downloads_noDownloadAudio" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für dieses Gerät ist keine Audiokonvertierung verfügbar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No audio conversion is available for this device."
+          }
+        }
+      }
+    },
+    "web_server_downloads_noDownloadVideo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Server kann das Video in keinem Codec kodieren, den dieses Gerät abspielt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server can't encode video in a codec this device plays."
+          }
+        }
+      }
+    },
+    "web_server_downloads_noDuration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Server kennt die Länge dieses Videos nicht und kann deshalb keinen Download davon erstellen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server doesn't know how long this video is, so it can't make a download of it."
+          }
+        }
+      }
+    },
+    "web_server_downloads_noPictureSubtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Bilduntertitelspur gibt es in der Datei nicht mehr. Lade die Seite neu und wähle erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That picture subtitle isn't in this file anymore. Reload the page and pick again."
+          }
+        }
+      }
+    },
+    "web_server_downloads_noSubtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Untertitelspur gibt es in der Datei nicht mehr. Lade die Seite neu und wähle erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That subtitle isn't in this file anymore. Reload the page and pick again."
+          }
+        }
+      }
+    },
+    "web_server_downloads_notVideo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Videos lassen sich so herunterladen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only videos can be downloaded this way."
+          }
+        }
+      }
+    },
+    "web_server_downloads_selectedAudioUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die ausgewählten Audiospuren sind in dieser Datei nicht verfügbar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The selected audio tracks aren't available in this file."
+          }
+        }
+      }
+    },
+    "web_server_downloads_subtitleTwice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle jede Untertitelspur nur einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick each subtitle track once."
+          }
+        }
+      }
+    },
+    "web_server_downloads_subtitleUnreadable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Untertitel %1$@ lassen sich nicht lesen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subtitles %1$@ can't be read."
+          }
+        }
+      }
+    },
+    "web_server_downloads_textSubtitlesOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In eine MP4-Datei passen nur Text-Untertitel. Brenne diese ein oder lade eine Matroska-Datei herunter."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only text subtitles go in an MP4 file. Burn this one in, or download a Matroska file."
+          }
+        }
+      }
+    },
+    "web_server_downloads_tooManyAudioTracks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Download kann höchstens 16 Audiospuren enthalten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A download can hold at most 16 audio tracks."
+          }
+        }
+      }
+    },
+    "web_server_downloads_unreadable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei lässt sich nicht lesen. Versuche es erneut, sobald der Server sie gescannt hat."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file can't be read. Try again once the server has scanned it."
+          }
+        }
+      }
+    },
+    "web_server_downloads_videoNotMp4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@-Video passt nicht unverändert in eine MP4-Datei. Wandle stattdessen das Video um."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ video can't go in an MP4 file as it is. Convert the video instead."
+          }
+        }
+      }
+    },
+    "web_server_favorites_notShow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Serien haben Staffeln."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only a show has seasons."
+          }
+        }
+      }
+    },
+    "web_server_favorites_seasonGone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Staffel hat keine Dateien mehr. Lade die Seite neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This season has no files anymore. Reload the page."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_availability_announced" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angekündigt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Announced"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_availability_inCinemas" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Kino"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In cinemas"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_availability_released" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veröffentlicht"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Released"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_connectionMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbindung nicht gefunden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connection not found."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_animeQualityProfile" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qualitätsprofil für Anime"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anime quality profile"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_animeRootFolder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stammordner für Anime"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anime root folder"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_animeSeriesType" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serientyp für Anime"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anime series type"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_animeTags" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tags für Anime"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anime tags"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_baseUrl" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Basis-URL"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Base URL"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_externalUrl" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Externe URL"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "External URL"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_filmsFolder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordner für Filme"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Films folder"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_minimumAvailability" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mindestverfügbarkeit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimum availability"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_monitorNewSeasons" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Staffeln überwachen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monitor new seasons"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_qualityProfile" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qualitätsprofil"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quality profile"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_rootFolder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stammordner"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Root folder"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_search" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch suchen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic search"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_seasonFolders" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Staffelordner"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Season folders"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_seriesType" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serientyp"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Series type"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_showsFolder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordner für Serien"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows folder"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_tagRequests" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anfragen taggen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag requests"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_field_tags" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tags"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tags"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_filmFolder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle den Ordner, in dem Filme landen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose the folder films are saved to."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_folderLost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ liegt in keiner Mediathek, die Matinee für diese Art Titel durchsucht. Wähle die Mediathek, in der es landet, oder speichere in einen anderen Ordner."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ isn't in any library Matinee scans for this kind of title. Choose the library it lands in, or save it to another folder."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_httpUrl" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende eine HTTP- oder HTTPS-URL."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use an HTTP or HTTPS URL."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_keyFile" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Schlüsseldatei der Verbindung kann nicht gelesen werden. Prüfe Pfad und Berechtigungen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cannot read the connection key file. Check its path and permissions."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_keyRejected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Verbindung hat den API-Schlüssel abgelehnt. Prüfe den gespeicherten Schlüssel oder die Umgebungsvariable."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The connection rejected the API key. Check the saved key or environment variable."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_keyTwice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setze den Verbindungsschlüssel oder seine Datei, nicht beides."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set the connection key or its file, not both."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_keywordsNeedTmdb" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schlagwörter kommen von TMDB. Setze zuerst MATINEE_TMDB_API_KEY."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keywords come from TMDB. Set MATINEE_TMDB_API_KEY first."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_noRules" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Verbindung nimmt keine Überschreibungsregeln."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This connection doesn't take override rules."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_notRadarr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese URL gehört nicht zu einem Radarr-Server."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This URL is not a Radarr server."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_notSonarr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese URL gehört nicht zu einem Sonarr-Server."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This URL is not a Sonarr server."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_operationRejected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Verbindung hat den Vorgang abgelehnt. Prüfe Konfiguration und Protokolle."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The connection rejected the operation. Check its configuration and logs."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_optionsMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle jede Option der Verbindung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose each of the connection's options."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_ruleCondition" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib der Regel mindestens eine Bedingung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give the rule at least one condition."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_ruleLanguage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine Sprache aus der Liste."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a language from the list."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_ruleMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regel nicht gefunden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule not found."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_ruleSetting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle mindestens eine Einstellung, die die Regel ändert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose at least one setting the rule changes."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_ruleSettings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle jede Einstellung der Regel aus den Angeboten der Verbindung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose each of the rule's settings from the connection's choices."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_ruleUsers" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle Konten, die es gibt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose accounts that exist."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_rulesChanged" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Regeln haben sich geändert. Lade sie neu und versuch es noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The rules changed. Reload them and try again."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_seriesType_anime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anime"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anime"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_seriesType_daily" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Täglich"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daily"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_seriesType_standard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_settingsInvalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prüfe die Einstellungen der Verbindung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the connection's settings."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_showFolder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle den Ordner, in dem Serien landen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose the folder shows are saved to."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_slugConflict" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Verbindung verwendet diesen Slug bereits. Wähle einen anderen Slug."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A connection already uses this slug. Choose another slug."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_source_manual" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von Hand"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "By hand"
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_titleNotFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Verbindung konnte diesen Titel nicht finden. Prüfe seine externe Kennung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The connection could not find this title. Check its external identifier."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_titleRemoved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Titel wurde aus der Verbindung entfernt. Versuche die Anfrage erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The title was removed from the connection. Retry the request."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_transferFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Übertragung ist fehlgeschlagen. Prüfe die Warteschlange der Verbindung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A transfer failed. Check the connection's queue."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_unknownSource" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine verfügbare Bezugsquelle."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose an available fulfilment source."
+          }
+        }
+      }
+    },
+    "web_server_fulfilment_unreachable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Verbindung ist nicht erreichbar. Prüfe URL und Netzwerkzugriff."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cannot reach the connection. Check its URL and network access."
+          }
+        }
+      }
+    },
+    "web_server_images_gone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Bild ist nicht mehr verfügbar. Suche erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That image isn't available any more. Search again."
+          }
+        }
+      }
+    },
+    "web_server_images_needsSeason" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib auch die Staffel der Folge an."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give the episode's season too."
+          }
+        }
+      }
+    },
+    "web_server_images_noSeasons" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Serien haben Staffeln und Folgen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only shows have seasons and episodes."
+          }
+        }
+      }
+    },
+    "web_server_images_wrongSlot" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filme und Serien haben ein Poster, einen Hintergrund oder ein Logo, Staffeln ein Poster und Folgen ein Standbild."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Movies and shows take a poster, backdrop, or logo, seasons a poster, and episodes a still."
+          }
+        }
+      }
+    },
+    "web_server_jobs_artworkLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Artwork %1$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "artwork %1$@"
+          }
+        }
+      }
+    },
+    "web_server_jobs_cleanTranscodes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löscht Encodes, die %1$@ Stunden lang niemand abgespielt hat, danach die am längsten nicht abgespielten über %2$@ GB, und Downloads, die %1$@ Stunden lang niemand abgerufen hat."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete encodes nobody played for %1$@ hours, then the least recently played past %2$@ GB, and downloads nobody fetched from for %1$@ hours."
+          }
+        }
+      }
+    },
+    "web_server_jobs_failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Auftrag ist fehlgeschlagen. Das Server-Log enthält die Details."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This job failed. The server log has the details."
+          }
+        }
+      }
+    },
+    "web_server_jobs_fixedConcurrency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ führt immer %2$@ Aufträge gleichzeitig aus."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ always runs %2$@ jobs at once."
+          }
+        }
+      }
+    },
+    "web_server_jobs_fixedConcurrencyOne" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ führt immer nur einen Auftrag gleichzeitig aus."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ always runs 1 job at once."
+          }
+        }
+      }
+    },
+    "web_server_jobs_libraryLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mediathek %1$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "library %1$@"
+          }
+        }
+      }
+    },
+    "web_server_jobs_maxConcurrency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ führt höchstens %2$@ Aufträge gleichzeitig aus."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ runs at most %2$@ jobs at once."
+          }
+        }
+      }
+    },
+    "web_server_jobs_maxConcurrencyOne" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ führt höchstens einen Auftrag gleichzeitig aus."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ runs at most 1 job at once."
+          }
+        }
+      }
+    },
+    "web_server_jobs_noQueue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Warteschlange gibt es nicht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There's no such queue."
+          }
+        }
+      }
+    },
+    "web_server_jobs_noTask" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Aufgabe gibt es nicht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There's no such task."
+          }
+        }
+      }
+    },
+    "web_server_jobs_note_artwork" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilder von Anbietern, die gleichzeitig geladen und verkleinert werden. Die erste Metadatenabfrage einer Mediathek stellt Tausende in die Warteschlange."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Provider images downloaded and resized at once. A library's first metadata fetch queues thousands."
+          }
+        }
+      }
+    },
+    "web_server_jobs_note_download_copies" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloads, die gleichzeitig kopiert werden. Eine Kopie liest die Datei und wandelt höchstens ihren Ton um; erhöhe den Wert, wenn die Festplatten mithalten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloads copied at once. A copy reads the file and converts at most its audio; raise it if the disks keep up."
+          }
+        }
+      }
+    },
+    "web_server_jobs_note_downloads" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloads, die gleichzeitig kodiert werden. Jeder belegt einen Encoder wie ein Stream; erhöhe den Wert, wenn der Server mithält."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloads encoded at once. Each one uses an encoder as a stream would; raise it if the server keeps up."
+          }
+        }
+      }
+    },
+    "web_server_jobs_note_media_probe" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dateien, die ffprobe gleichzeitig liest. Erhöhe den Wert, um den ersten Scan einer großen Mediathek schneller abzuschließen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Files ffprobe reads at once. Raise it to finish the first scan of a large library sooner."
+          }
+        }
+      }
+    },
+    "web_server_jobs_note_subtitle_prepare" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dateien, deren indizierte Textuntertitel gleichzeitig vorbereitet werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Files whose indexed text subtitles are prepared at once."
+          }
+        }
+      }
+    },
+    "web_server_jobs_note_trickplay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Videos, die gleichzeitig Vorschauen für die Suchleiste bekommen. Eine Folge braucht etwa 20 Sekunden, ein Film ein paar Minuten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Videos getting seek bar previews at once. An episode takes about 20 seconds, a movie a few minutes."
+          }
+        }
+      }
+    },
+    "web_server_jobs_taskFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Aufgabe ist fehlgeschlagen. Das Server-Log enthält die Details."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This task failed. The server log has the details."
+          }
+        }
+      }
+    },
+    "web_server_libraries_cantRead" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ kann nicht gelesen werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't read %1$@."
+          }
+        }
+      }
+    },
+    "web_server_libraries_noProvider" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle zuerst einen Metadatenanbieter für diese Mediathek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a metadata provider for this library first."
+          }
+        }
+      }
+    },
+    "web_server_libraries_noStartPoint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es wurde keine Stelle gefunden, an der diese Datei starten kann."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't find a point to start this file from."
+          }
+        }
+      }
+    },
+    "web_server_libraries_notFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mediathek nicht gefunden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Library not found."
+          }
+        }
+      }
+    },
+    "web_server_libraries_unreadableFolder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ ist kein Ordner, den der Server lesen kann."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ isn't a folder the server can read."
+          }
+        }
+      }
+    },
+    "web_server_media_ffprobeNoStreams" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffprobe hat keine Video- oder Audiostreams gefunden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffprobe found no video or audio streams"
+          }
+        }
+      }
+    },
+    "web_server_media_ffprobeNotJson" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffprobe hat etwas anderes als JSON ausgegeben"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffprobe printed something other than JSON"
+          }
+        }
+      }
+    },
+    "web_server_media_imageFetchFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Bild konnte nicht heruntergeladen werden. Versuch es später noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't download this image. Try again later."
+          }
+        }
+      }
+    },
+    "web_server_media_noFrame" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffmpeg konnte kein einziges Bild des Videos decodieren. Die Datei ist vielleicht beschädigt oder unvollständig."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffmpeg couldn't decode a single frame of the video. The file may be damaged or incomplete."
+          }
+        }
+      }
+    },
+    "web_server_media_noFrameSize" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffprobe hat die Größe des Bildes nicht gelesen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffprobe didn't read the size of a frame"
+          }
+        }
+      }
+    },
+    "web_server_media_noPamHeader" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Ausgabe von ffmpeg hat keinen PAM-Header"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffmpeg's output has no PAM header"
+          }
+        }
+      }
+    },
+    "web_server_media_notImage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ ist kein JPEG-, PNG- oder WebP-Bild"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ isn't a JPEG, PNG, or WebP image"
+          }
+        }
+      }
+    },
+    "web_server_media_notRgba" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Ausgabe von ffmpeg ist kein RGBA-Bild"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffmpeg's output isn't an RGBA image"
+          }
+        }
+      }
+    },
+    "web_server_media_subtitlePrepareFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Untertitel für %1$@ konnten nicht vorbereitet werden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't prepare subtitles for %1$@"
+          }
+        }
+      }
+    },
+    "web_server_media_subtitlesUnreadable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Untertitel dieser Datei konnten nicht gelesen werden. Ihr Container ist vielleicht beschädigt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file's subtitles couldn't be read. Its container may be damaged."
+          }
+        }
+      }
+    },
+    "web_server_media_tooLarge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ ist zu groß"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ is too large"
+          }
+        }
+      }
+    },
+    "web_server_metadata_answered" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat mit %2$@ geantwortet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ answered %2$@"
+          }
+        }
+      }
+    },
+    "web_server_metadata_answeredFor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat mit %2$@ für %3$@ geantwortet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ answered %2$@ for %3$@"
+          }
+        }
+      }
+    },
+    "web_server_metadata_keepsFailing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ schlägt immer wieder fehl, die Abrufe pausieren vorerst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ keeps failing, stopping for now."
+          }
+        }
+      }
+    },
+    "web_server_metadata_noAnswer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat nicht geantwortet. Versuch es in einer Minute noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ didn't answer. Try again in a minute."
+          }
+        }
+      }
+    },
+    "web_server_metadata_noEntry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat keinen Eintrag mit dieser ID."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ has no entry with that id."
+          }
+        }
+      }
+    },
+    "web_server_metadata_rejectedKey" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat den API-Schlüssel abgelehnt. Überprüfe die Konfiguration des Servers."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ rejected the API key. Check the server's configuration."
+          }
+        }
+      }
+    },
+    "web_server_metadata_tmdbDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Movie Database. Filme und Serien, mit Standbildern von Folgen und Logos. Radarr nutzt sie."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Movie Database. Movies and shows, with episode stills and logos. Radarr uses it."
+          }
+        }
+      }
+    },
+    "web_server_metadata_tmdbKeyMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MATINEE_TMDB_API_KEY ist nicht gesetzt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MATINEE_TMDB_API_KEY isn't set"
+          }
+        }
+      }
+    },
+    "web_server_metadata_tmdbNotSetUp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDB ist nicht eingerichtet. Setze MATINEE_TMDB_API_KEY auf einen API-Schlüssel oder ein Lesezugriffstoken."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDB isn't set up. Set MATINEE_TMDB_API_KEY to an API key or read access token."
+          }
+        }
+      }
+    },
+    "web_server_metadata_tmdbRejectedKey" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDB hat den API-Schlüssel abgelehnt. Setze MATINEE_TMDB_API_KEY auf einen API-Schlüssel oder ein Lesezugriffstoken."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDB rejected the API key. Set MATINEE_TMDB_API_KEY to an API key or read access token."
+          }
+        }
+      }
+    },
+    "web_server_metadata_tmdbSetup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setze MATINEE_TMDB_API_KEY auf einen API-Schlüssel oder ein Lesezugriffstoken."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set MATINEE_TMDB_API_KEY to an API key or read access token."
+          }
+        }
+      }
+    },
+    "web_server_metadata_tvdbDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serien in der Staffelreihenfolge, die Sonarr nutzt, dazu Filme, Logos und Bilder zu Folgen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows in the season order Sonarr uses, plus movies, logos, and episode images."
+          }
+        }
+      }
+    },
+    "web_server_metadata_tvdbKeyMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MATINEE_TVDB_API_KEY ist nicht gesetzt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MATINEE_TVDB_API_KEY isn't set"
+          }
+        }
+      }
+    },
+    "web_server_metadata_tvdbNotSetUp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TheTVDB ist nicht eingerichtet. Setze MATINEE_TVDB_API_KEY und MATINEE_TVDB_PIN, falls dein Schlüssel eine Abonnenten-PIN braucht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TheTVDB isn't set up. Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN."
+          }
+        }
+      }
+    },
+    "web_server_metadata_tvdbRejectedKey" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TheTVDB hat den API-Schlüssel abgelehnt. Setze MATINEE_TVDB_API_KEY und MATINEE_TVDB_PIN, falls dein Schlüssel eine Abonnenten-PIN braucht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TheTVDB rejected the API key. Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN."
+          }
+        }
+      }
+    },
+    "web_server_metadata_tvdbSetup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setze MATINEE_TVDB_API_KEY und MATINEE_TVDB_PIN, falls dein Schlüssel eine Abonnenten-PIN braucht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN."
+          }
+        }
+      }
+    },
+    "web_server_metadata_unreachable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ war nicht erreichbar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't reach %1$@"
+          }
+        }
+      }
+    },
+    "web_server_metadata_unreadable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat eine Antwort geschickt, die Matinee nicht lesen kann. Versuch es später noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ sent a reply Matinee couldn't read. Try again later."
+          }
+        }
+      }
+    },
+    "web_server_network_invalidRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ ist keine Adresse und kein Bereich wie 192.168.0.0/16."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ isn't an address or a range like 192.168.0.0/16."
+          }
+        }
+      }
+    },
+    "web_server_oidc_accessDenied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Anbieter hat den Zugriff verweigert. Versuch es noch einmal, oder frag einen Admin, die Zugriffsregeln des Anbieters zu prüfen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provider denied access. Try again, or ask an admin to check the provider's access rules."
+          }
+        }
+      }
+    },
+    "web_server_oidc_alreadyLinked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Konto ist bereits mit einer anderen Anmeldung bei diesem Anbieter verknüpft. Trenne sie zuerst in den Einstellungen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account is already linked to another sign-in at this provider. Unlink it in settings first."
+          }
+        }
+      }
+    },
+    "web_server_oidc_consentRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Anbieter braucht zuerst deine Zustimmung. Versuch es noch einmal und bestätige die Anfrage."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provider needs your consent first. Try again and accept the request."
+          }
+        }
+      }
+    },
+    "web_server_oidc_expired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anmeldung ist abgelaufen. Versuch es noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign-in expired. Try again."
+          }
+        }
+      }
+    },
+    "web_server_oidc_failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anmeldung ist fehlgeschlagen. Versuch es noch einmal, oder frag einen Admin, das Server-Log zu prüfen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign-in failed. Try again, or ask an admin to check the server log."
+          }
+        }
+      }
+    },
+    "web_server_oidc_interactionRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Anbieter braucht noch einen Schritt von dir. Versuch es noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provider needs you to finish a step there. Try again."
+          }
+        }
+      }
+    },
+    "web_server_oidc_invalidRequest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Anbieter hat die Anmeldeanfrage abgelehnt. Frag einen Admin, die Single-Sign-on-Einstellungen zu prüfen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provider rejected the sign-in request. Ask an admin to check the single sign-on settings."
+          }
+        }
+      }
+    },
+    "web_server_oidc_linkedElsewhere" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Anmeldung ist bereits mit einem anderen Konto verknüpft."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This sign-in is already linked to another account."
+          }
+        }
+      }
+    },
+    "web_server_oidc_loginRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich zuerst beim Anbieter an und versuch es dann noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in at the provider, then try again."
+          }
+        }
+      }
+    },
+    "web_server_oidc_misconfigured" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Single Sign-on ist nicht richtig eingerichtet. Frag einen Admin, im Server-Log nachzusehen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Single sign-on isn't set up correctly. Ask an admin to check the server log."
+          }
+        }
+      }
+    },
+    "web_server_oidc_noIdToken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Anbieter hat das Anmeldetoken nicht mitgeschickt, das Matinee braucht. Frag einen Admin, die Einstellungen des Anbieters zu prüfen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your provider didn't send the sign-in token Matinee needs. Ask an admin to check the provider's settings."
+          }
+        }
+      }
+    },
+    "web_server_oidc_noLinkedAccount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit dieser Anmeldung ist kein Konto verknüpft. Melde dich mit einem Passkey an und verknüpfe sie dann in den Einstellungen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No account is linked to this sign-in. Sign in with a passkey, then link it in settings."
+          }
+        }
+      }
+    },
+    "web_server_oidc_noLinkedAccountSso" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit dieser Anmeldung ist kein Konto verknüpft. Bitte einen Admin um Zugang."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No account is linked to this sign-in. Ask an admin for access."
+          }
+        }
+      }
+    },
+    "web_server_oidc_providerError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim Anbieter ist ein Fehler aufgetreten. Versuch es später noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provider had an error. Try again later."
+          }
+        }
+      }
+    },
+    "web_server_oidc_providerUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Anbieter ist gerade nicht erreichbar. Versuch es später noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provider is unavailable right now. Try again later."
+          }
+        }
+      }
+    },
+    "web_server_oidc_refused" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Anbieter hat die Anmeldung abgelehnt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The provider refused the sign-in."
+          }
+        }
+      }
+    },
+    "web_server_oidc_setupFirst" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erstelle zuerst das Admin-Konto auf der Einrichtungsseite."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create the admin account on the setup page first."
+          }
+        }
+      }
+    },
+    "web_server_oidc_setupNotAdmin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur wer bei %1$@ Admin ist, kann Matinee einrichten. Gib deinem Konto dort den Claim %2$@ mit dem Wert admin und melde dich noch einmal an."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only an admin at %1$@ can set up Matinee. Give your account the %2$@ claim with the value admin, then sign in again."
+          }
+        }
+      }
+    },
+    "web_server_oidc_signInAgainToLink" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich noch einmal an, bevor du ein Konto verknüpfst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in again before linking an account."
+          }
+        }
+      }
+    },
+    "web_server_oidc_signInToLink" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich an, bevor du ein Konto verknüpfst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in before linking an account."
+          }
+        }
+      }
+    },
+    "web_server_oidc_unreachable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Anmeldeanbieter war nicht erreichbar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't reach the sign-in provider."
+          }
+        }
+      }
+    },
+    "web_server_party_entryGone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist nicht mehr in der Warteschlange der Party."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That's no longer in the party's queue."
+          }
+        }
+      }
+    },
+    "web_server_party_full" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Watch-Party ist voll."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This watch party is full."
+          }
+        }
+      }
+    },
+    "web_server_party_notEnded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das läuft noch. Nur der Host der Party kann vorzeitig zum Nächsten springen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This one hasn't ended yet. Only the party's owner can skip ahead."
+          }
+        }
+      }
+    },
+    "web_server_party_notIn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist in keiner Watch-Party."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You aren't in a watch party."
+          }
+        }
+      }
+    },
+    "web_server_party_notMember" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Person ist nicht mehr in der Party."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That person isn't in the party anymore."
+          }
+        }
+      }
+    },
+    "web_server_party_over" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Watch-Party ist vorbei."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This watch party is over."
+          }
+        }
+      }
+    },
+    "web_server_party_ownerOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das kann nur der Host der Party."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only the party's owner can do this."
+          }
+        }
+      }
+    },
+    "web_server_party_queueFull" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Warteschlange der Party ist voll."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The party's queue is full."
+          }
+        }
+      }
+    },
+    "web_server_party_removed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du wurdest aus dieser Watch-Party entfernt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You were removed from this watch party."
+          }
+        }
+      }
+    },
+    "web_server_party_self" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle jemand anderen als dich selbst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick someone other than yourself."
+          }
+        }
+      }
+    },
+    "web_server_passkeys_checkFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Passkey-Prüfung ist fehlgeschlagen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkey check failed."
+          }
+        }
+      }
+    },
+    "web_server_passkeys_notVerified" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Passkey konnte nicht bestätigt werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The passkey could not be verified."
+          }
+        }
+      }
+    },
+    "web_server_passkeys_requestExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Passkey-Anfrage ist abgelaufen. Versuch es noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The passkey request expired. Try again."
+          }
+        }
+      }
+    },
+    "web_server_passkeys_signInExpired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anmeldeanfrage ist abgelaufen. Versuch es noch einmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The sign-in request expired. Try again."
+          }
+        }
+      }
+    },
+    "web_server_people_noCredits" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Film und keine Serie in den Mediatheken führt diese Person auf."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No movie or show in the libraries credits this person."
+          }
+        }
+      }
+    },
+    "web_server_playback_unplayable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Gerät kann diese Datei nicht abspielen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device can't play this file."
+          }
+        }
+      }
+    },
+    "web_server_process_exited" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ wurde mit %2$@ beendet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ exited with %2$@"
+          }
+        }
+      }
+    },
+    "web_server_process_startFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ konnte nicht gestartet werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't start %1$@."
+          }
+        }
+      }
+    },
+    "web_server_process_stopped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ ist mit Code %2$@ abgebrochen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ stopped (exit %2$@)."
+          }
+        }
+      }
+    },
+    "web_server_process_timedOut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat nach %2$@ s das Zeitlimit überschritten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ timed out after %2$@ s"
+          }
+        }
+      }
+    },
+    "web_server_profiles_notFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niemand auf diesem Server hat diesen Benutzernamen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nobody on this server has that username."
+          }
+        }
+      }
+    },
+    "web_server_recommendations_tmdbRequired" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle einen TMDB-Titel, um deine Empfehlungen zu ändern."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a TMDB title to change your recommendations."
+          }
+        }
+      }
+    },
+    "web_server_requests_cursor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lade diese Liste neu und versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reload this list and try again."
+          }
+        }
+      }
+    },
+    "web_server_requests_declineWaiting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur eine wartende Anfrage lässt sich ablehnen. Gib eine angenommene stattdessen auf."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only a waiting request can be declined. Give up on an accepted one instead."
+          }
+        }
+      }
+    },
+    "web_server_requests_declined" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Titel wurde abgelehnt. Anfragen gehen erst wieder, wenn ein Admin sie zulässt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This title was declined, so it can't be requested until an admin allows it again."
+          }
+        }
+      }
+    },
+    "web_server_requests_deliveryFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anfrage konnte nicht gesendet werden. Prüfe die Verbindung und versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Request delivery failed. Check the connection and retry."
+          }
+        }
+      }
+    },
+    "web_server_requests_giveUpAccepted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur eine angenommene Anfrage, die noch nicht angekommen ist, lässt sich aufgeben."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only an accepted request that hasn't arrived can be given up."
+          }
+        }
+      }
+    },
+    "web_server_requests_missing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Anfrage ist nicht verfügbar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This request isn't available."
+          }
+        }
+      }
+    },
+    "web_server_requests_moveChanged" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Anfrage hat sich geändert. Lade die Liste neu und versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This request changed. Reload the list and try again."
+          }
+        }
+      }
+    },
+    "web_server_requests_moveHeld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat diese Serie schon, also kommen ihre neuen Staffeln auch dorthin."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ already has this show, so its new seasons go there too."
+          }
+        }
+      }
+    },
+    "web_server_requests_moveTaken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In %1$@ gibt es schon eine Anfrage für diesen Titel. Lass diese hier, wo sie ist, oder lehne sie ab."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ already has a request for this title. Leave this one where it is, or decline it."
+          }
+        }
+      }
+    },
+    "web_server_requests_moveTarget" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine Mediathek, in die dieser Titel kommen kann."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a library this title can go to."
+          }
+        }
+      }
+    },
+    "web_server_requests_moveWaiting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur eine wartende Anfrage kann in eine andere Mediathek wechseln."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only a waiting request can move to another library."
+          }
+        }
+      }
+    },
+    "web_server_requests_noConnection" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine nutzbare Beschaffungsverbindung für diese Mediathek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a usable fulfilment connection for this library."
+          }
+        }
+      }
+    },
+    "web_server_requests_notDeclined" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Anfrage ist nicht mehr abgelehnt. Lade die Liste neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This request isn't declined any more. Reload the list."
+          }
+        }
+      }
+    },
+    "web_server_requests_notFailing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Anfrage schlägt nicht mehr fehl. Lade die Liste neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This request isn't failing any more. Reload the list."
+          }
+        }
+      }
+    },
+    "web_server_requests_notNow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kannst diesen Titel gerade nicht anfragen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can't request this title right now."
+          }
+        }
+      }
+    },
+    "web_server_requests_seasons" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle Staffeln aus der Liste dieser Serie."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose seasons listed for this show."
+          }
+        }
+      }
+    },
+    "web_server_requests_unresolvedTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Titelidentität konnte nicht ermittelt werden. Prüfe die Metadatenzuordnung und versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cannot resolve the title identity. Check its metadata match and retry."
+          }
+        }
+      }
+    },
+    "web_server_rpc_adminsOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das können nur Admins."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only admins can do this."
+          }
+        }
+      }
+    },
+    "web_server_rpc_checkInput" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prüfe deine Eingabe und versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check what you entered and try again."
+          }
+        }
+      }
+    },
+    "web_server_rpc_passkeysOff" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkeys sind auf diesem Server ausgeschaltet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkeys are turned off on this server."
+          }
+        }
+      }
+    },
+    "web_server_rpc_signInFirst" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich zuerst an."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in first."
+          }
+        }
+      }
+    },
+    "web_server_titles_fileGone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei ist in keiner Mediathek. Lade die Seite neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file isn't in any library. Reload the page."
+          }
+        }
+      }
+    },
+    "web_server_titles_gone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Titel ist in keiner Mediathek. Lade die Seite neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This title isn't in any library. Reload the page."
+          }
+        }
+      }
+    },
+    "web_server_titles_notFound" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Titel ist in keiner Mediathek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This title isn't in any library."
+          }
+        }
+      }
+    },
+    "web_server_transcoding_deviceClosed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Gerät ließ sich nicht öffnen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The device didn't open."
+          }
+        }
+      }
+    },
+    "web_server_transcoding_deviceMissing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ gibt es nicht oder ist nicht lesbar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ doesn't exist or isn't readable."
+          }
+        }
+      }
+    },
+    "web_server_transcoding_ffmpegDidntRun" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffmpeg ließ sich nicht ausführen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffmpeg didn't run."
+          }
+        }
+      }
+    },
+    "web_server_transcoding_ffmpegFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffmpeg ist fehlgeschlagen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ffmpeg failed."
+          }
+        }
+      }
+    },
+    "web_server_transcoding_noEncoder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses ffmpeg hat keinen %1$@-Encoder. Installiere einen Build, der einen hat, oder setze MATINEE_FFMPEG_PATH auf einen solchen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This ffmpeg has no %1$@ encoder. Install a build that includes one, or set MATINEE_FFMPEG_PATH to one that does."
+          }
+        }
+      }
+    },
+    "web_server_transcoding_otherEncoder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee würde mit %1$@ statt mit diesem Gerät kodieren, daher wird dieses Gerät nicht verwendet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee would encode with %1$@ instead of this device, so this device isn't used."
+          }
+        }
+      }
+    },
+    "web_server_transcoding_timedOut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeitlimit überschritten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timed out."
+          }
+        }
+      }
+    },
     "web_transcoding_acceleration_none" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -21816,6 +26712,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "It failed on this server: %1$@"
+          }
+        }
+      }
+    },
+    "web_transcoding_check_failedPlain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf diesem Server ist es fehlgeschlagen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It failed on this server."
           }
         }
       }
@@ -22228,6 +27141,23 @@
         }
       }
     },
+    "web_transcoding_ffmpeg_errorDetail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Prüfung endete mit diesem Fehler:"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The check ended with this error:"
+          }
+        }
+      }
+    },
     "web_transcoding_ffmpeg_failed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -22275,6 +27205,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "pause keys"
+          }
+        }
+      }
+    },
+    "web_transcoding_ffmpeg_tonemapx" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tone-Mapping (tonemapx)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tone mapping (tonemapx)"
           }
         }
       }
@@ -22530,6 +27477,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The device didn't open, so transcodes run in software."
+          }
+        }
+      }
+    },
+    "web_transcoding_hardware_deviceFailedDetail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Gerät ließ sich nicht öffnen, daher laufen Transkodierungen in Software. ffmpeg meldete: %1$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The device didn't open, so transcodes run in software. ffmpeg said: %1$@"
           }
         }
       }
@@ -24319,7 +29283,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bei der Anmeldung vom Richtlinien-Claim von %1$@ gesetzt"
+            "value" : "Bei der Anmeldung durch den Richtlinien-Claim von %1$@ gesetzt"
           }
         },
         "en" : {
@@ -24782,6 +29746,992 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "(you)"
+          }
+        }
+      }
+    },
+    "web_validation_absolutePath" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende einen absoluten Pfad."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use an absolute path."
+          }
+        }
+      }
+    },
+    "web_validation_ageLimitCountry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende einen zweibuchstabigen Ländercode wie DE."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a two-letter country code like US."
+          }
+        }
+      }
+    },
+    "web_validation_avatarSize" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle ein Bild unter 10 MB."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick an image under 10 MB."
+          }
+        }
+      }
+    },
+    "web_validation_avatarType" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle ein JPEG-, PNG- oder WebP-Bild."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a JPEG, PNG, or WebP image."
+          }
+        }
+      }
+    },
+    "web_validation_bitrateLimit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle ein Limit von mindestens 1 Mbit/s."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a limit of at least 1 Mb/s."
+          }
+        }
+      }
+    },
+    "web_validation_browseLanguage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende einen zweibuchstabigen Sprachcode wie de."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a two-letter language code like en."
+          }
+        }
+      }
+    },
+    "web_validation_browseRuntime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die kürzeste Laufzeit darf nicht länger als die längste sein."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The shortest runtime can't be longer than the longest."
+          }
+        }
+      }
+    },
+    "web_validation_browseScores" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die niedrigste Bewertung darf nicht über der höchsten liegen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The lowest score can't be above the highest."
+          }
+        }
+      }
+    },
+    "web_validation_browseSortForYou" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sortiere nur unter deinen Empfehlungen nach bester Übereinstimmung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sort by best match only among your recommendations."
+          }
+        }
+      }
+    },
+    "web_validation_browseYears" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das erste Jahr darf nicht nach dem letzten liegen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The first year can't be after the last."
+          }
+        }
+      }
+    },
+    "web_validation_codeChallenge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ungültige Code-Challenge"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid code challenge"
+          }
+        }
+      }
+    },
+    "web_validation_codeVerifier" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ungültiger Code-Verifier"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid code verifier"
+          }
+        }
+      }
+    },
+    "web_validation_codecsUnique" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeder Codec kann nur einmal aufgeführt werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each codec can be listed once."
+          }
+        }
+      }
+    },
+    "web_validation_connectionName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib der Verbindung einen Namen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give the connection a name."
+          }
+        }
+      }
+    },
+    "web_validation_connectionSlug" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende Großbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use capital letters, digits and underscores, starting with a letter."
+          }
+        }
+      }
+    },
+    "web_validation_crfRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende einen Wert von 0 bis 51."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use 0 to 51."
+          }
+        }
+      }
+    },
+    "web_validation_date" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle ein Datum."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a date."
+          }
+        }
+      }
+    },
+    "web_validation_devicePath" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende ein Gerät unter /dev, etwa /dev/dri/renderD128."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a device under /dev, like /dev/dri/renderD128."
+          }
+        }
+      }
+    },
+    "web_validation_file" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine Datei."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a file."
+          }
+        }
+      }
+    },
+    "web_validation_fileEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei ist leer."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That file is empty."
+          }
+        }
+      }
+    },
+    "web_validation_fileType" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine Datei eines anderen Typs."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a file of another type."
+          }
+        }
+      }
+    },
+    "web_validation_groupName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib der Gruppe einen Namen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give the group a name."
+          }
+        }
+      }
+    },
+    "web_validation_hexColor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende #rrggbb."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use #rrggbb."
+          }
+        }
+      }
+    },
+    "web_validation_imageSize" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle ein Bild unter 25 MB."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick an image under 25 MB."
+          }
+        }
+      }
+    },
+    "web_validation_invalidInput" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ungültige Eingabe"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid input"
+          }
+        }
+      }
+    },
+    "web_validation_invalidUrl" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ungültige URL"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid URL"
+          }
+        }
+      }
+    },
+    "web_validation_invalidUuid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ungültige UUID"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid UUID"
+          }
+        }
+      }
+    },
+    "web_validation_invalidValue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ungültiger Wert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid value"
+          }
+        }
+      }
+    },
+    "web_validation_inviteToken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Einladungslink ist unvollständig."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That invite link is incomplete."
+          }
+        }
+      }
+    },
+    "web_validation_issuerUrl" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib den Issuer als http- oder https-URL ein."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the issuer as an http or https URL."
+          }
+        }
+      }
+    },
+    "web_validation_languageTag" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende ein Sprach-Tag wie en oder pt-BR."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a language tag, like en or pt-BR."
+          }
+        }
+      }
+    },
+    "web_validation_libraryFolders" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge mindestens einen Ordner hinzu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add at least one folder."
+          }
+        }
+      }
+    },
+    "web_validation_libraryFoldersUnique" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeder Ordner kann nur einmal hinzugefügt werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each folder can be added once."
+          }
+        }
+      }
+    },
+    "web_validation_libraryName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib der Mediathek einen Namen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give the library a name."
+          }
+        }
+      }
+    },
+    "web_validation_max256" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende höchstens 256 Zeichen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use at most 256 characters."
+          }
+        }
+      }
+    },
+    "web_validation_max64" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende höchstens 64 Zeichen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use at most 64 characters."
+          }
+        }
+      }
+    },
+    "web_validation_maxLength" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende höchstens %1$@ Zeichen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use at most %1$@ characters."
+          }
+        }
+      }
+    },
+    "web_validation_maxValue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende %1$@ oder weniger."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use %1$@ or less."
+          }
+        }
+      }
+    },
+    "web_validation_metadataLanguage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende einen Sprachcode wie en oder de-DE."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a language code like en or de-DE."
+          }
+        }
+      }
+    },
+    "web_validation_minLength" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende mindestens %1$@ Zeichen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use at least %1$@ characters."
+          }
+        }
+      }
+    },
+    "web_validation_minValue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende %1$@ oder mehr."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use %1$@ or more."
+          }
+        }
+      }
+    },
+    "web_validation_networkRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutze eine Adresse oder einen Bereich wie 192.168.0.0/16."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use an address or a range like 192.168.0.0/16."
+          }
+        }
+      }
+    },
+    "web_validation_pattern" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende einen Wert in dem Format, das dieses Feld erwartet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a value in the format this field expects."
+          }
+        }
+      }
+    },
+    "web_validation_profileName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib einen Benutzernamen ein."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a username."
+          }
+        }
+      }
+    },
+    "web_validation_redirectUri" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende eine %1$@:-URI oder eine Loopback-URL mit http."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a %1$@: URI or a loopback http URL."
+          }
+        }
+      }
+    },
+    "web_validation_required" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fülle dieses Feld aus."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fill in this field."
+          }
+        }
+      }
+    },
+    "web_validation_scopesOpenid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Scopes müssen openid enthalten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scopes must include openid."
+          }
+        }
+      }
+    },
+    "web_validation_searchQuery" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib einen Namen für die Suche ein."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a name to search for."
+          }
+        }
+      }
+    },
+    "web_validation_setupToken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib den Einrichtungstoken ein, um diesen Server zu übernehmen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the setup token to claim this server."
+          }
+        }
+      }
+    },
+    "web_validation_signInLink" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Anmeldelink ist fehlerhaft. Starte die Anmeldung in der App neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This sign-in link is broken. Start again in the app."
+          }
+        }
+      }
+    },
+    "web_validation_staleRequest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lade die Seite neu und versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reload the page and try again."
+          }
+        }
+      }
+    },
+    "web_validation_streamLimit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaube mindestens einen Stream."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow at least one stream."
+          }
+        }
+      }
+    },
+    "web_validation_timeZone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende eine IANA-Zeitzone wie Europe/Berlin."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use an IANA time zone like Europe/Berlin."
+          }
+        }
+      }
+    },
+    "web_validation_userCode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib die 8 Buchstaben ein, die das Gerät anzeigt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the 8 letters the device shows."
+          }
+        }
+      }
+    },
+    "web_validation_usernameChars" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use letters, numbers, dots, dashes, and underscores."
+          }
+        }
+      }
+    },
+    "web_validation_usernameMax" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende höchstens 32 Zeichen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use at most 32 characters."
+          }
+        }
+      }
+    },
+    "web_validation_usernameMin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende mindestens 2 Zeichen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use at least 2 characters."
+          }
+        }
+      }
+    },
+    "web_validation_wholeNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwende eine ganze Zahl."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a whole number."
           }
         }
       }

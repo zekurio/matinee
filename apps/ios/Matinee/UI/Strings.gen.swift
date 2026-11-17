@@ -310,6 +310,8 @@ nonisolated enum Str {
   static var downloadsWatchOffline: String { tr("downloads_watch_offline") }
   /// The connection dropped.
   static var errorConnectionLost: String { tr("error_connection_lost") }
+  /// The server couldn't do that. Try again in a moment.
+  static var errorServer: String { tr("error_server") }
   /// The server isn't answering.
   static var errorUnreachable: String { tr("error_unreachable") }
   /// The app couldn't read the server's answer.
@@ -344,6 +346,8 @@ nonisolated enum Str {
   static func formatMinutes(_ p1: Int) -> String { tr("format_minutes", p1) }
   /// %1$lldm
   static func formatMinutesShort(_ p1: Int) -> String { tr("format_minutes_short", p1) }
+  /// %1$llds
+  static func formatSecondsShort(_ p1: Int) -> String { tr("format_seconds_short", p1) }
   /// Couldn't load these titles
   static var gridLoadFailed: String { tr("grid_load_failed") }
   /// Couldn't load more titles
@@ -696,6 +700,10 @@ nonisolated enum Str {
   static var playerBusy: String { tr("player_busy") }
   /// Your account is playing on %1$lld device, the most it may. Stop one to watch here. / Your account is playing on %1$lld devices, the most it may. Stop one to watch here.
   static func playerBusyDetail(_ count: Int) -> String { tr("player_busy_detail", count) }
+  /// Your account is playing on as many devices as it may. Stop one to watch here.
+  static var playerBusyGeneric: String { tr("player_busy_generic") }
+  /// This download couldn't play.
+  static var playerErrorDownload: String { tr("player_error_download") }
   /// Couldn't play this video
   static var playerErrorLost: String { tr("player_error_lost") }
   /// Couldn't save your playback preferences
@@ -746,6 +754,8 @@ nonisolated enum Str {
   static var playerRestrictedBitrate: String { tr("player_restricted_bitrate") }
   /// This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server.
   static var playerRestrictedFailed: String { tr("player_restricted_failed") }
+  /// Your account's access rules out every way to play this file. Ask whoever runs the server.
+  static var playerRestrictedGeneric: String { tr("player_restricted_generic") }
   /// This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server.
   static var playerRestrictedNoTranscode: String { tr("player_restricted_no_transcode") }
   /// This file is over the bit rate your account may stream. Pick a lower quality to watch it.
@@ -956,6 +966,8 @@ nonisolated enum Str {
   static var settingsSubtitlesSystemOpen: String { tr("settings_subtitles_system_open") }
   /// Subtitles
   static var settingsSubtitlesTitle: String { tr("settings_subtitles_title") }
+  /// Unknown
+  static var settingsUnknownValue: String { tr("settings_unknown_value") }
   /// Matinee for Android %1$@
   static func settingsVersion(_ p1: String) -> String { tr("settings_version", p1) }
   /// Matinee home
@@ -1032,6 +1044,8 @@ nonisolated enum Str {
   static func statsMovieCount(_ count: Int) -> String { tr("stats_movie_count", count) }
   /// Movies finished
   static var statsMoviesFinished: String { tr("stats_movies_finished") }
+  /// %1$@ (you)
+  static func statsNameYou(_ p1: String) -> String { tr("stats_name_you", p1) }
   /// in the last 30 days
   static var statsPeriod30d: String { tr("stats_period_30d") }
   /// in the last year
@@ -1064,8 +1078,6 @@ nonisolated enum Str {
   static var statsTop: String { tr("stats_top") }
   /// Watch time
   static var statsWatchTime: String { tr("stats_watch_time") }
-  /// (you)
-  static var statsYou: String { tr("stats_you") }
   /// Home
   static var tabHome: String { tr("tab_home") }
   /// Media
@@ -1312,6 +1324,8 @@ nonisolated enum Str {
   static func unreachableTimeout(_ p1: String) -> String { tr("unreachable_timeout", p1) }
   /// Can't reach your server
   static var unreachableTitle: String { tr("unreachable_title") }
+  /// SSO
+  static var usersSso: String { tr("users_sso") }
   /// Color scheme
   static var webAppearanceColorScheme: String { tr("web_appearance_colorScheme") }
   /// Dark
@@ -1482,14 +1496,30 @@ nonisolated enum Str {
   static func webCatalogStateOut(_ p1: String) -> String { tr("web_catalog_state_out", p1) }
   /// Not available
   static var webCatalogStateUnavailable: String { tr("web_catalog_state_unavailable") }
+  /// %1$@. %2$@
+  static func webCatalogTipAloud(_ p1: String, _ p2: String) -> String { tr("web_catalog_tip_aloud", p1, p2) }
+  /// %1$@ %2$@
+  static func webCatalogTipJoin(_ p1: String, _ p2: String) -> String { tr("web_catalog_tip_join", p1, p2) }
+  /// Back home
+  static var webCommonBackHome: String { tr("web_common_backHome") }
+  /// That didn't go through. Check what you entered and try again.
+  static var webCommonErrorInvalidInput: String { tr("web_common_error_invalidInput") }
+  /// The page couldn't be shown. Try again, or go back home.
+  static var webCommonErrorPageDescription: String { tr("web_common_error_pageDescription") }
   /// The passkey prompt was closed before it finished.
   static var webCommonErrorPasskeyClosed: String { tr("web_common_error_passkeyClosed") }
   /// This device already has a passkey for your account.
   static var webCommonErrorPasskeyExists: String { tr("web_common_error_passkeyExists") }
+  /// Try again
+  static var webCommonErrorRetry: String { tr("web_common_error_retry") }
   /// The server ran into a problem. Check its log.
   static var webCommonErrorServer: String { tr("web_common_error_server") }
   /// Something went wrong.
   static var webCommonErrorUnknown: String { tr("web_common_error_unknown") }
+  /// The address may be mistyped, or the page may have moved.
+  static var webCommonNotFoundDescription: String { tr("web_common_notFound_description") }
+  /// Page not found
+  static var webCommonNotFoundTitle: String { tr("web_common_notFound_title") }
   /// Saved
   static var webCommonSaveBarDone: String { tr("web_common_saveBar_done") }
   /// Couldn't save your changes
@@ -1788,8 +1818,6 @@ nonisolated enum Str {
   static var webJobsQueueDownloadsDescription: String { tr("web_jobs_queue_downloads_description") }
   /// Download encodes
   static var webJobsQueueDownloadsName: String { tr("web_jobs_queue_downloads_name") }
-  /// Downloads encoded at once. Each one uses an encoder as a stream would; raise it if the server keeps up.
-  static var webJobsQueueDownloadsNote: String { tr("web_jobs_queue_downloads_note") }
   /// %1$lld failed / %1$lld failed
   static func webJobsQueueFailed(_ count: Int) -> String { tr("web_jobs_queue_failed", count) }
   /// Idle
@@ -1846,8 +1874,6 @@ nonisolated enum Str {
   static var webJobsQueueSubtitlePrepareDescription: String { tr("web_jobs_queue_subtitle_prepare_description") }
   /// Prepare subtitles
   static var webJobsQueueSubtitlePrepareName: String { tr("web_jobs_queue_subtitle_prepare_name") }
-  /// Files whose indexed text subtitles are prepared at once.
-  static var webJobsQueueSubtitlePrepareNote: String { tr("web_jobs_queue_subtitle_prepare_note") }
   /// Convert subtitles to WebVTT, and copy PGS subtitles out of videos.
   static var webJobsQueueSubtitlesDescription: String { tr("web_jobs_queue_subtitles_description") }
   /// Subtitles
@@ -1916,6 +1942,8 @@ nonisolated enum Str {
   static var webJobsTaskDispatchRequestsName: String { tr("web_jobs_task_dispatch_requests_name") }
   /// Failed
   static var webJobsTaskFailed: String { tr("web_jobs_task_failed") }
+  /// This failed. The server log has the details.
+  static var webJobsTaskFailedUnknown: String { tr("web_jobs_task_failedUnknown") }
   /// Failed: %1$@
   static func webJobsTaskFailedWith(_ p1: String) -> String { tr("web_jobs_task_failedWith", p1) }
   /// Look for the intro and credits of episodes not looked at yet, or whose file changed, in their chapters and in the audio they share with their season. Scans queue their new files on their own.
@@ -2210,6 +2238,8 @@ nonisolated enum Str {
   static func webRequestsAllowAgainNamed(_ p1: String) -> String { tr("web_requests_allowAgainNamed", p1) }
   /// also %1$@
   static func webRequestsAlsoRequested(_ p1: String) -> String { tr("web_requests_alsoRequested", p1) }
+  /// This failed. The server log has the details.
+  static var webRequestsAttentionFailedUnknown: String { tr("web_requests_attention_failedUnknown") }
   /// Failed without a reason
   static var webRequestsAttentionUnknown: String { tr("web_requests_attention_unknown") }
   /// %1$@ requested this %2$@
@@ -2244,8 +2274,6 @@ nonisolated enum Str {
   static func webRequestsDoneGaveUp(_ p1: String) -> String { tr("web_requests_done_gaveUp", p1) }
   /// Given up
   static var webRequestsDoneGaveUpUndated: String { tr("web_requests_done_gaveUpUndated") }
-  /// Requests need you
-  static var webRequestsDot: String { tr("web_requests_dot") }
   /// Nothing done yet
   static var webRequestsEmptyDone: String { tr("web_requests_empty_done") }
   /// Nothing needs attention
@@ -2284,6 +2312,8 @@ nonisolated enum Str {
   static var webRequestsKindMovie: String { tr("web_requests_kind_movie") }
   /// Show
   static var webRequestsKindShow: String { tr("web_requests_kind_show") }
+  /// %1$@. Requests need you
+  static func webRequestsLabelled(_ p1: String) -> String { tr("web_requests_labelled", p1) }
   /// Done
   static var webRequestsListDone: String { tr("web_requests_list_done") }
   /// Needs attention
@@ -2394,6 +2424,552 @@ nonisolated enum Str {
   static func webRequestsToastGiveUpFailed(_ p1: String) -> String { tr("web_requests_toast_giveUpFailed", p1) }
   /// Undo
   static var webRequestsToastUndo: String { tr("web_requests_toast_undo") }
+  /// The server may not convert video for your account. Download the file as it is or keep its video.
+  static var webServerAccessDownloadVideoOff: String { tr("web_server_access_downloadVideoOff") }
+  /// Downloads are turned off for your account.
+  static var webServerAccessDownloadsOff: String { tr("web_server_access_downloadsOff") }
+  /// This device needs the video converted, but the server may not convert video for your account. Try another device or ask whoever runs the server.
+  static var webServerAccessNeedsEncoding: String { tr("web_server_access_needsEncoding") }
+  /// This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server.
+  static var webServerAccessOverLimitEncodeFailed: String { tr("web_server_access_overLimitEncodeFailed") }
+  /// This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server.
+  static var webServerAccessOverLimitNoEncoding: String { tr("web_server_access_overLimitNoEncoding") }
+  /// This file is over the bit rate your account may stream, and the server can't make a version this device plays under that limit. Try another device or ask whoever runs the server.
+  static var webServerAccessOverLimitNoVersion: String { tr("web_server_access_overLimitNoVersion") }
+  /// This file is over the bit rate your account may stream. Pick a lower quality to watch it.
+  static var webServerAccessOverLimitSeek: String { tr("web_server_access_overLimitSeek") }
+  /// Your account is playing on %1$@ devices, the most it may. Stop one to watch here.
+  static func webServerAccessTooManyStreams(_ p1: String) -> String { tr("web_server_access_tooManyStreams", p1) }
+  /// Your account is playing on 1 device, the most it may. Stop one to watch here.
+  static var webServerAccessTooManyStreamsOne: String { tr("web_server_access_tooManyStreamsOne") }
+  /// Sign out to end the session you're using.
+  static var webServerAccountCurrentSession: String { tr("web_server_account_currentSession") }
+  /// Passkeys are off, so single sign-on is your only way to sign in. Keep it linked.
+  static var webServerAccountLastLink: String { tr("web_server_account_lastLink") }
+  /// Add another passkey or link an account before removing your last way to sign in.
+  static var webServerAccountLastMethod: String { tr("web_server_account_lastMethod") }
+  /// No account is linked.
+  static var webServerAccountNoLinkedAccount: String { tr("web_server_account_noLinkedAccount") }
+  /// Account not found.
+  static var webServerAccountNotFound: String { tr("web_server_account_notFound") }
+  /// Passkey not found.
+  static var webServerAccountPasskeyNotFound: String { tr("web_server_account_passkeyNotFound") }
+  /// This passkey request belongs to another account.
+  static var webServerAccountPasskeyOtherAccount: String { tr("web_server_account_passkeyOtherAccount") }
+  /// That session already ended.
+  static var webServerAccountSessionGone: String { tr("web_server_account_sessionGone") }
+  /// Enter a client ID to turn on single sign-on.
+  static var webServerAdminAuthClientIdRequired: String { tr("web_server_adminAuth_clientIdRequired") }
+  /// Couldn't load %1$@: its TLS certificate isn't trusted.
+  static func webServerAdminAuthDiscoveryCertificate(_ p1: String) -> String { tr("web_server_adminAuth_discoveryCertificate", p1) }
+  /// Couldn't load %1$@. Check the server log for details.
+  static func webServerAdminAuthDiscoveryFailed(_ p1: String) -> String { tr("web_server_adminAuth_discoveryFailed", p1) }
+  /// Couldn't load %1$@: the host name wasn't found.
+  static func webServerAdminAuthDiscoveryHost(_ p1: String) -> String { tr("web_server_adminAuth_discoveryHost", p1) }
+  /// Couldn't load %1$@: the connection was refused.
+  static func webServerAdminAuthDiscoveryRefused(_ p1: String) -> String { tr("web_server_adminAuth_discoveryRefused", p1) }
+  /// Couldn't load %1$@: the connection timed out.
+  static func webServerAdminAuthDiscoveryTimedOut(_ p1: String) -> String { tr("web_server_adminAuth_discoveryTimedOut", p1) }
+  /// %1$@ didn't answer within 10 seconds.
+  static func webServerAdminAuthDiscoveryTimeout(_ p1: String) -> String { tr("web_server_adminAuth_discoveryTimeout", p1) }
+  /// The provider's discovery document names a different issuer. Copy it exactly, including any trailing slash.
+  static var webServerAdminAuthIssuerDiffers: String { tr("web_server_adminAuth_issuerDiffers") }
+  /// The provider calls itself %1$@. Use exactly that as the issuer URL.
+  static func webServerAdminAuthIssuerMismatch(_ p1: String) -> String { tr("web_server_adminAuth_issuerMismatch", p1) }
+  /// Enter an issuer URL to turn on single sign-on.
+  static var webServerAdminAuthIssuerRequired: String { tr("web_server_adminAuth_issuerRequired") }
+  /// Keep passkeys or single sign-on on. Without either, nobody can sign in.
+  static var webServerAdminAuthNoMethod: String { tr("web_server_adminAuth_noMethod") }
+  /// %1$@ isn't a discovery document. Check the issuer URL.
+  static func webServerAdminAuthNotDiscovery(_ p1: String) -> String { tr("web_server_adminAuth_notDiscovery", p1) }
+  /// Link your account to single sign-on under Settings → Account before turning passkeys off.
+  static var webServerAdminAuthPasskeysOffLink: String { tr("web_server_adminAuth_passkeysOffLink") }
+  /// Save single sign-on first and link your account to it under Settings → Account. Then turn passkeys off.
+  static var webServerAdminAuthPasskeysOffSaveFirst: String { tr("web_server_adminAuth_passkeysOffSaveFirst") }
+  /// You sign in only through single sign-on. Add a passkey before changing the issuer.
+  static var webServerAdminAuthSsoOnlyIssuer: String { tr("web_server_adminAuth_ssoOnlyIssuer") }
+  /// You sign in only through single sign-on. Turn passkeys on and add one before changing the issuer.
+  static var webServerAdminAuthSsoOnlyIssuerPasskeysOff: String { tr("web_server_adminAuth_ssoOnlyIssuerPasskeysOff") }
+  /// You sign in only through single sign-on. Add a passkey before turning it off.
+  static var webServerAdminAuthSsoOnlyOff: String { tr("web_server_adminAuth_ssoOnlyOff") }
+  /// You sign in only through single sign-on. Turn passkeys on and add one before turning it off.
+  static var webServerAdminAuthSsoOnlyOffPasskeysOff: String { tr("web_server_adminAuth_ssoOnlyOffPasskeysOff") }
+  /// Every account is in this group, so it can't be deleted. Take its libraries away instead.
+  static var webServerAdminGroupsEveryone: String { tr("web_server_adminGroups_everyone") }
+  /// That group no longer exists. Reload the list.
+  static var webServerAdminGroupsGone: String { tr("web_server_adminGroups_gone") }
+  /// Another group has that name.
+  static var webServerAdminGroupsNameTaken: String { tr("web_server_adminGroups_nameTaken") }
+  /// That invite no longer exists. Reload the list.
+  static var webServerAdminInvitesGone: String { tr("web_server_adminInvites_gone") }
+  /// That user no longer exists. Reload the list.
+  static var webServerAdminUsersGone: String { tr("web_server_adminUsers_gone") }
+  /// %1$@ is the only admin who can sign in. Make someone who can sign in an admin first.
+  static func webServerAdminUsersLastAdmin(_ p1: String) -> String { tr("web_server_adminUsers_lastAdmin", p1) }
+  /// You're the only admin who can sign in. Make someone who can sign in an admin before you delete your account.
+  static var webServerAdminUsersLastAdminDelete: String { tr("web_server_adminUsers_lastAdminDelete") }
+  /// You're the only admin who can sign in. Make someone who can sign in an admin before you step down.
+  static var webServerAdminUsersLastAdminDemote: String { tr("web_server_adminUsers_lastAdminDemote") }
+  /// This account no longer exists.
+  static var webServerAuthAccountGone: String { tr("web_server_auth_accountGone") }
+  /// This sign-in request is invalid. Start again in the app.
+  static var webServerAuthAppRequestInvalid: String { tr("web_server_auth_appRequestInvalid") }
+  /// This sign-in expired or was used already. Try again.
+  static var webServerAuthAppSignInGone: String { tr("web_server_auth_appSignInGone") }
+  /// This code expired. Get a new one.
+  static var webServerAuthDeviceCodeExpired: String { tr("web_server_auth_deviceCodeExpired") }
+  /// That code doesn't work. It may have expired, or been used already.
+  static var webServerAuthDeviceGone: String { tr("web_server_auth_deviceGone") }
+  /// This invite link doesn't work. It may have expired, or been used already.
+  static var webServerAuthInviteGone: String { tr("web_server_auth_inviteGone") }
+  /// This sign-in expired. Continue with single sign-on again.
+  static var webServerAuthPendingGone: String { tr("web_server_auth_pendingGone") }
+  /// Setup is already done.
+  static var webServerAuthSetupDone: String { tr("web_server_auth_setupDone") }
+  /// Setup is already done. Sign in instead.
+  static var webServerAuthSetupDoneSignIn: String { tr("web_server_auth_setupDoneSignIn") }
+  /// Enter the setup token first.
+  static var webServerAuthSetupTokenFirst: String { tr("web_server_auth_setupTokenFirst") }
+  /// That setup token doesn't match the one in the log.
+  static var webServerAuthSetupTokenMismatch: String { tr("web_server_auth_setupTokenMismatch") }
+  /// Sign in with %1$@ to set up Matinee.
+  static func webServerAuthSetupWithOidc(_ p1: String) -> String { tr("web_server_auth_setupWithOidc", p1) }
+  /// Sign out before creating a new account.
+  static var webServerAuthSignOutFirst: String { tr("web_server_auth_signOutFirst") }
+  /// Sign-up is closed on this server.
+  static var webServerAuthSignUpClosed: String { tr("web_server_auth_signUpClosed") }
+  /// The sign-up request is invalid.
+  static var webServerAuthSignUpInvalid: String { tr("web_server_auth_signUpInvalid") }
+  /// Single sign-on is turned off.
+  static var webServerAuthSsoOff: String { tr("web_server_auth_ssoOff") }
+  /// That username is taken.
+  static var webServerAuthUsernameTaken: String { tr("web_server_auth_usernameTaken") }
+  /// Couldn't load the picture from your provider. Try again later.
+  static var webServerAvatarsLoadFailed: String { tr("web_server_avatars_loadFailed") }
+  /// Your provider hasn't sent a picture. Sign in with it once to fetch it.
+  static var webServerAvatarsNoPicture: String { tr("web_server_avatars_noPicture") }
+  /// Couldn't read that image. Try another file.
+  static var webServerAvatarsUnreadable: String { tr("web_server_avatars_unreadable") }
+  /// an upload
+  static var webServerAvatarsUploadLabel: String { tr("web_server_avatars_uploadLabel") }
+  /// One of these filters isn't on offer anymore. Clear it and try again.
+  static var webServerCatalogFilterGone: String { tr("web_server_catalog_filterGone") }
+  /// The catalog didn't take these filters. Change them and try again.
+  static var webServerCatalogFiltersRefused: String { tr("web_server_catalog_filtersRefused") }
+  /// Matinee can't look titles up right now. Try again in a minute.
+  static var webServerCatalogLookupDown: String { tr("web_server_catalog_lookupDown") }
+  /// This title couldn't be matched at the destination library's metadata provider.
+  static var webServerCatalogMatchFailed: String { tr("web_server_catalog_matchFailed") }
+  /// Matinee can't find this title.
+  static var webServerCatalogTitleNotFound: String { tr("web_server_catalog_titleNotFound") }
+  /// %1$@ audio can't go in an MP4 file as it is. Convert that track instead.
+  static func webServerDownloadsAudioNotMp4(_ p1: String) -> String { tr("web_server_downloads_audioNotMp4", p1) }
+  /// Pick each audio track once.
+  static var webServerDownloadsAudioTwice: String { tr("web_server_downloads_audioTwice") }
+  /// Burning in subtitles needs the video converted.
+  static var webServerDownloadsBurnInNeedsEncode: String { tr("web_server_downloads_burnInNeedsEncode") }
+  /// This server can't encode %1$@ audio.
+  static func webServerDownloadsCantEncodeAudio(_ p1: String) -> String { tr("web_server_downloads_cantEncodeAudio", p1) }
+  /// This server can't encode %1$@.
+  static func webServerDownloadsCantEncodeVideo(_ p1: String) -> String { tr("web_server_downloads_cantEncodeVideo", p1) }
+  /// The server can't encode this video with its transcoding settings.
+  static var webServerDownloadsEncodeFailed: String { tr("web_server_downloads_encodeFailed") }
+  /// This file has no audio track %1$@.
+  static func webServerDownloadsNoAudioTrack(_ p1: String) -> String { tr("web_server_downloads_noAudioTrack", p1) }
+  /// No audio conversion is available for this device.
+  static var webServerDownloadsNoDownloadAudio: String { tr("web_server_downloads_noDownloadAudio") }
+  /// The server can't encode video in a codec this device plays.
+  static var webServerDownloadsNoDownloadVideo: String { tr("web_server_downloads_noDownloadVideo") }
+  /// The server doesn't know how long this video is, so it can't make a download of it.
+  static var webServerDownloadsNoDuration: String { tr("web_server_downloads_noDuration") }
+  /// That picture subtitle isn't in this file anymore. Reload the page and pick again.
+  static var webServerDownloadsNoPictureSubtitle: String { tr("web_server_downloads_noPictureSubtitle") }
+  /// That subtitle isn't in this file anymore. Reload the page and pick again.
+  static var webServerDownloadsNoSubtitle: String { tr("web_server_downloads_noSubtitle") }
+  /// Only videos can be downloaded this way.
+  static var webServerDownloadsNotVideo: String { tr("web_server_downloads_notVideo") }
+  /// The selected audio tracks aren't available in this file.
+  static var webServerDownloadsSelectedAudioUnavailable: String { tr("web_server_downloads_selectedAudioUnavailable") }
+  /// Pick each subtitle track once.
+  static var webServerDownloadsSubtitleTwice: String { tr("web_server_downloads_subtitleTwice") }
+  /// Subtitles %1$@ can't be read.
+  static func webServerDownloadsSubtitleUnreadable(_ p1: String) -> String { tr("web_server_downloads_subtitleUnreadable", p1) }
+  /// Only text subtitles go in an MP4 file. Burn this one in, or download a Matroska file.
+  static var webServerDownloadsTextSubtitlesOnly: String { tr("web_server_downloads_textSubtitlesOnly") }
+  /// A download can hold at most 16 audio tracks.
+  static var webServerDownloadsTooManyAudioTracks: String { tr("web_server_downloads_tooManyAudioTracks") }
+  /// This file can't be read. Try again once the server has scanned it.
+  static var webServerDownloadsUnreadable: String { tr("web_server_downloads_unreadable") }
+  /// %1$@ video can't go in an MP4 file as it is. Convert the video instead.
+  static func webServerDownloadsVideoNotMp4(_ p1: String) -> String { tr("web_server_downloads_videoNotMp4", p1) }
+  /// Only a show has seasons.
+  static var webServerFavoritesNotShow: String { tr("web_server_favorites_notShow") }
+  /// This season has no files anymore. Reload the page.
+  static var webServerFavoritesSeasonGone: String { tr("web_server_favorites_seasonGone") }
+  /// Announced
+  static var webServerFulfilmentAvailabilityAnnounced: String { tr("web_server_fulfilment_availability_announced") }
+  /// In cinemas
+  static var webServerFulfilmentAvailabilityInCinemas: String { tr("web_server_fulfilment_availability_inCinemas") }
+  /// Released
+  static var webServerFulfilmentAvailabilityReleased: String { tr("web_server_fulfilment_availability_released") }
+  /// Connection not found.
+  static var webServerFulfilmentConnectionMissing: String { tr("web_server_fulfilment_connectionMissing") }
+  /// Anime quality profile
+  static var webServerFulfilmentFieldAnimeQualityProfile: String { tr("web_server_fulfilment_field_animeQualityProfile") }
+  /// Anime root folder
+  static var webServerFulfilmentFieldAnimeRootFolder: String { tr("web_server_fulfilment_field_animeRootFolder") }
+  /// Anime series type
+  static var webServerFulfilmentFieldAnimeSeriesType: String { tr("web_server_fulfilment_field_animeSeriesType") }
+  /// Anime tags
+  static var webServerFulfilmentFieldAnimeTags: String { tr("web_server_fulfilment_field_animeTags") }
+  /// Base URL
+  static var webServerFulfilmentFieldBaseUrl: String { tr("web_server_fulfilment_field_baseUrl") }
+  /// External URL
+  static var webServerFulfilmentFieldExternalUrl: String { tr("web_server_fulfilment_field_externalUrl") }
+  /// Films folder
+  static var webServerFulfilmentFieldFilmsFolder: String { tr("web_server_fulfilment_field_filmsFolder") }
+  /// Minimum availability
+  static var webServerFulfilmentFieldMinimumAvailability: String { tr("web_server_fulfilment_field_minimumAvailability") }
+  /// Monitor new seasons
+  static var webServerFulfilmentFieldMonitorNewSeasons: String { tr("web_server_fulfilment_field_monitorNewSeasons") }
+  /// Quality profile
+  static var webServerFulfilmentFieldQualityProfile: String { tr("web_server_fulfilment_field_qualityProfile") }
+  /// Root folder
+  static var webServerFulfilmentFieldRootFolder: String { tr("web_server_fulfilment_field_rootFolder") }
+  /// Automatic search
+  static var webServerFulfilmentFieldSearch: String { tr("web_server_fulfilment_field_search") }
+  /// Season folders
+  static var webServerFulfilmentFieldSeasonFolders: String { tr("web_server_fulfilment_field_seasonFolders") }
+  /// Series type
+  static var webServerFulfilmentFieldSeriesType: String { tr("web_server_fulfilment_field_seriesType") }
+  /// Shows folder
+  static var webServerFulfilmentFieldShowsFolder: String { tr("web_server_fulfilment_field_showsFolder") }
+  /// Tag requests
+  static var webServerFulfilmentFieldTagRequests: String { tr("web_server_fulfilment_field_tagRequests") }
+  /// Tags
+  static var webServerFulfilmentFieldTags: String { tr("web_server_fulfilment_field_tags") }
+  /// Choose the folder films are saved to.
+  static var webServerFulfilmentFilmFolder: String { tr("web_server_fulfilment_filmFolder") }
+  /// %1$@ isn't in any library Matinee scans for this kind of title. Choose the library it lands in, or save it to another folder.
+  static func webServerFulfilmentFolderLost(_ p1: String) -> String { tr("web_server_fulfilment_folderLost", p1) }
+  /// Use an HTTP or HTTPS URL.
+  static var webServerFulfilmentHttpUrl: String { tr("web_server_fulfilment_httpUrl") }
+  /// Cannot read the connection key file. Check its path and permissions.
+  static var webServerFulfilmentKeyFile: String { tr("web_server_fulfilment_keyFile") }
+  /// The connection rejected the API key. Check the saved key or environment variable.
+  static var webServerFulfilmentKeyRejected: String { tr("web_server_fulfilment_keyRejected") }
+  /// Set the connection key or its file, not both.
+  static var webServerFulfilmentKeyTwice: String { tr("web_server_fulfilment_keyTwice") }
+  /// Keywords come from TMDB. Set MATINEE_TMDB_API_KEY first.
+  static var webServerFulfilmentKeywordsNeedTmdb: String { tr("web_server_fulfilment_keywordsNeedTmdb") }
+  /// This connection doesn't take override rules.
+  static var webServerFulfilmentNoRules: String { tr("web_server_fulfilment_noRules") }
+  /// This URL is not a Radarr server.
+  static var webServerFulfilmentNotRadarr: String { tr("web_server_fulfilment_notRadarr") }
+  /// This URL is not a Sonarr server.
+  static var webServerFulfilmentNotSonarr: String { tr("web_server_fulfilment_notSonarr") }
+  /// The connection rejected the operation. Check its configuration and logs.
+  static var webServerFulfilmentOperationRejected: String { tr("web_server_fulfilment_operationRejected") }
+  /// Choose each of the connection's options.
+  static var webServerFulfilmentOptionsMissing: String { tr("web_server_fulfilment_optionsMissing") }
+  /// Give the rule at least one condition.
+  static var webServerFulfilmentRuleCondition: String { tr("web_server_fulfilment_ruleCondition") }
+  /// Choose a language from the list.
+  static var webServerFulfilmentRuleLanguage: String { tr("web_server_fulfilment_ruleLanguage") }
+  /// Rule not found.
+  static var webServerFulfilmentRuleMissing: String { tr("web_server_fulfilment_ruleMissing") }
+  /// Choose at least one setting the rule changes.
+  static var webServerFulfilmentRuleSetting: String { tr("web_server_fulfilment_ruleSetting") }
+  /// Choose each of the rule's settings from the connection's choices.
+  static var webServerFulfilmentRuleSettings: String { tr("web_server_fulfilment_ruleSettings") }
+  /// Choose accounts that exist.
+  static var webServerFulfilmentRuleUsers: String { tr("web_server_fulfilment_ruleUsers") }
+  /// The rules changed. Reload them and try again.
+  static var webServerFulfilmentRulesChanged: String { tr("web_server_fulfilment_rulesChanged") }
+  /// Anime
+  static var webServerFulfilmentSeriesTypeAnime: String { tr("web_server_fulfilment_seriesType_anime") }
+  /// Daily
+  static var webServerFulfilmentSeriesTypeDaily: String { tr("web_server_fulfilment_seriesType_daily") }
+  /// Standard
+  static var webServerFulfilmentSeriesTypeStandard: String { tr("web_server_fulfilment_seriesType_standard") }
+  /// Check the connection's settings.
+  static var webServerFulfilmentSettingsInvalid: String { tr("web_server_fulfilment_settingsInvalid") }
+  /// Choose the folder shows are saved to.
+  static var webServerFulfilmentShowFolder: String { tr("web_server_fulfilment_showFolder") }
+  /// A connection already uses this slug. Choose another slug.
+  static var webServerFulfilmentSlugConflict: String { tr("web_server_fulfilment_slugConflict") }
+  /// By hand
+  static var webServerFulfilmentSourceManual: String { tr("web_server_fulfilment_source_manual") }
+  /// The connection could not find this title. Check its external identifier.
+  static var webServerFulfilmentTitleNotFound: String { tr("web_server_fulfilment_titleNotFound") }
+  /// The title was removed from the connection. Retry the request.
+  static var webServerFulfilmentTitleRemoved: String { tr("web_server_fulfilment_titleRemoved") }
+  /// A transfer failed. Check the connection's queue.
+  static var webServerFulfilmentTransferFailed: String { tr("web_server_fulfilment_transferFailed") }
+  /// Choose an available fulfilment source.
+  static var webServerFulfilmentUnknownSource: String { tr("web_server_fulfilment_unknownSource") }
+  /// Cannot reach the connection. Check its URL and network access.
+  static var webServerFulfilmentUnreachable: String { tr("web_server_fulfilment_unreachable") }
+  /// That image isn't available any more. Search again.
+  static var webServerImagesGone: String { tr("web_server_images_gone") }
+  /// Give the episode's season too.
+  static var webServerImagesNeedsSeason: String { tr("web_server_images_needsSeason") }
+  /// Only shows have seasons and episodes.
+  static var webServerImagesNoSeasons: String { tr("web_server_images_noSeasons") }
+  /// Movies and shows take a poster, backdrop, or logo, seasons a poster, and episodes a still.
+  static var webServerImagesWrongSlot: String { tr("web_server_images_wrongSlot") }
+  /// artwork %1$@
+  static func webServerJobsArtworkLabel(_ p1: String) -> String { tr("web_server_jobs_artworkLabel", p1) }
+  /// Delete encodes nobody played for %1$@ hours, then the least recently played past %2$@ GB, and downloads nobody fetched from for %1$@ hours.
+  static func webServerJobsCleanTranscodes(_ p1: String, _ p2: String) -> String { tr("web_server_jobs_cleanTranscodes", p1, p2) }
+  /// This job failed. The server log has the details.
+  static var webServerJobsFailed: String { tr("web_server_jobs_failed") }
+  /// %1$@ always runs %2$@ jobs at once.
+  static func webServerJobsFixedConcurrency(_ p1: String, _ p2: String) -> String { tr("web_server_jobs_fixedConcurrency", p1, p2) }
+  /// %1$@ always runs 1 job at once.
+  static func webServerJobsFixedConcurrencyOne(_ p1: String) -> String { tr("web_server_jobs_fixedConcurrencyOne", p1) }
+  /// library %1$@
+  static func webServerJobsLibraryLabel(_ p1: String) -> String { tr("web_server_jobs_libraryLabel", p1) }
+  /// %1$@ runs at most %2$@ jobs at once.
+  static func webServerJobsMaxConcurrency(_ p1: String, _ p2: String) -> String { tr("web_server_jobs_maxConcurrency", p1, p2) }
+  /// %1$@ runs at most 1 job at once.
+  static func webServerJobsMaxConcurrencyOne(_ p1: String) -> String { tr("web_server_jobs_maxConcurrencyOne", p1) }
+  /// There's no such queue.
+  static var webServerJobsNoQueue: String { tr("web_server_jobs_noQueue") }
+  /// There's no such task.
+  static var webServerJobsNoTask: String { tr("web_server_jobs_noTask") }
+  /// Provider images downloaded and resized at once. A library's first metadata fetch queues thousands.
+  static var webServerJobsNoteArtwork: String { tr("web_server_jobs_note_artwork") }
+  /// Downloads copied at once. A copy reads the file and converts at most its audio; raise it if the disks keep up.
+  static var webServerJobsNoteDownloadCopies: String { tr("web_server_jobs_note_download_copies") }
+  /// Downloads encoded at once. Each one uses an encoder as a stream would; raise it if the server keeps up.
+  static var webServerJobsNoteDownloads: String { tr("web_server_jobs_note_downloads") }
+  /// Files ffprobe reads at once. Raise it to finish the first scan of a large library sooner.
+  static var webServerJobsNoteMediaProbe: String { tr("web_server_jobs_note_media_probe") }
+  /// Files whose indexed text subtitles are prepared at once.
+  static var webServerJobsNoteSubtitlePrepare: String { tr("web_server_jobs_note_subtitle_prepare") }
+  /// Videos getting seek bar previews at once. An episode takes about 20 seconds, a movie a few minutes.
+  static var webServerJobsNoteTrickplay: String { tr("web_server_jobs_note_trickplay") }
+  /// This task failed. The server log has the details.
+  static var webServerJobsTaskFailed: String { tr("web_server_jobs_taskFailed") }
+  /// Can't read %1$@.
+  static func webServerLibrariesCantRead(_ p1: String) -> String { tr("web_server_libraries_cantRead", p1) }
+  /// Pick a metadata provider for this library first.
+  static var webServerLibrariesNoProvider: String { tr("web_server_libraries_noProvider") }
+  /// Can't find a point to start this file from.
+  static var webServerLibrariesNoStartPoint: String { tr("web_server_libraries_noStartPoint") }
+  /// Library not found.
+  static var webServerLibrariesNotFound: String { tr("web_server_libraries_notFound") }
+  /// %1$@ isn't a folder the server can read.
+  static func webServerLibrariesUnreadableFolder(_ p1: String) -> String { tr("web_server_libraries_unreadableFolder", p1) }
+  /// ffprobe found no video or audio streams
+  static var webServerMediaFfprobeNoStreams: String { tr("web_server_media_ffprobeNoStreams") }
+  /// ffprobe printed something other than JSON
+  static var webServerMediaFfprobeNotJson: String { tr("web_server_media_ffprobeNotJson") }
+  /// Couldn't download this image. Try again later.
+  static var webServerMediaImageFetchFailed: String { tr("web_server_media_imageFetchFailed") }
+  /// ffmpeg couldn't decode a single frame of the video. The file may be damaged or incomplete.
+  static var webServerMediaNoFrame: String { tr("web_server_media_noFrame") }
+  /// ffprobe didn't read the size of a frame
+  static var webServerMediaNoFrameSize: String { tr("web_server_media_noFrameSize") }
+  /// ffmpeg's output has no PAM header
+  static var webServerMediaNoPamHeader: String { tr("web_server_media_noPamHeader") }
+  /// %1$@ isn't a JPEG, PNG, or WebP image
+  static func webServerMediaNotImage(_ p1: String) -> String { tr("web_server_media_notImage", p1) }
+  /// ffmpeg's output isn't an RGBA image
+  static var webServerMediaNotRgba: String { tr("web_server_media_notRgba") }
+  /// Couldn't prepare subtitles for %1$@
+  static func webServerMediaSubtitlePrepareFailed(_ p1: String) -> String { tr("web_server_media_subtitlePrepareFailed", p1) }
+  /// This file's subtitles couldn't be read. Its container may be damaged.
+  static var webServerMediaSubtitlesUnreadable: String { tr("web_server_media_subtitlesUnreadable") }
+  /// %1$@ is too large
+  static func webServerMediaTooLarge(_ p1: String) -> String { tr("web_server_media_tooLarge", p1) }
+  /// %1$@ answered %2$@
+  static func webServerMetadataAnswered(_ p1: String, _ p2: String) -> String { tr("web_server_metadata_answered", p1, p2) }
+  /// %1$@ answered %2$@ for %3$@
+  static func webServerMetadataAnsweredFor(_ p1: String, _ p2: String, _ p3: String) -> String { tr("web_server_metadata_answeredFor", p1, p2, p3) }
+  /// %1$@ keeps failing, stopping for now.
+  static func webServerMetadataKeepsFailing(_ p1: String) -> String { tr("web_server_metadata_keepsFailing", p1) }
+  /// %1$@ didn't answer. Try again in a minute.
+  static func webServerMetadataNoAnswer(_ p1: String) -> String { tr("web_server_metadata_noAnswer", p1) }
+  /// %1$@ has no entry with that id.
+  static func webServerMetadataNoEntry(_ p1: String) -> String { tr("web_server_metadata_noEntry", p1) }
+  /// %1$@ rejected the API key. Check the server's configuration.
+  static func webServerMetadataRejectedKey(_ p1: String) -> String { tr("web_server_metadata_rejectedKey", p1) }
+  /// The Movie Database. Movies and shows, with episode stills and logos. Radarr uses it.
+  static var webServerMetadataTmdbDescription: String { tr("web_server_metadata_tmdbDescription") }
+  /// MATINEE_TMDB_API_KEY isn't set
+  static var webServerMetadataTmdbKeyMissing: String { tr("web_server_metadata_tmdbKeyMissing") }
+  /// TMDB isn't set up. Set MATINEE_TMDB_API_KEY to an API key or read access token.
+  static var webServerMetadataTmdbNotSetUp: String { tr("web_server_metadata_tmdbNotSetUp") }
+  /// TMDB rejected the API key. Set MATINEE_TMDB_API_KEY to an API key or read access token.
+  static var webServerMetadataTmdbRejectedKey: String { tr("web_server_metadata_tmdbRejectedKey") }
+  /// Set MATINEE_TMDB_API_KEY to an API key or read access token.
+  static var webServerMetadataTmdbSetup: String { tr("web_server_metadata_tmdbSetup") }
+  /// Shows in the season order Sonarr uses, plus movies, logos, and episode images.
+  static var webServerMetadataTvdbDescription: String { tr("web_server_metadata_tvdbDescription") }
+  /// MATINEE_TVDB_API_KEY isn't set
+  static var webServerMetadataTvdbKeyMissing: String { tr("web_server_metadata_tvdbKeyMissing") }
+  /// TheTVDB isn't set up. Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN.
+  static var webServerMetadataTvdbNotSetUp: String { tr("web_server_metadata_tvdbNotSetUp") }
+  /// TheTVDB rejected the API key. Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN.
+  static var webServerMetadataTvdbRejectedKey: String { tr("web_server_metadata_tvdbRejectedKey") }
+  /// Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN.
+  static var webServerMetadataTvdbSetup: String { tr("web_server_metadata_tvdbSetup") }
+  /// Couldn't reach %1$@
+  static func webServerMetadataUnreachable(_ p1: String) -> String { tr("web_server_metadata_unreachable", p1) }
+  /// %1$@ sent a reply Matinee couldn't read. Try again later.
+  static func webServerMetadataUnreadable(_ p1: String) -> String { tr("web_server_metadata_unreadable", p1) }
+  /// %1$@ isn't an address or a range like 192.168.0.0/16.
+  static func webServerNetworkInvalidRange(_ p1: String) -> String { tr("web_server_network_invalidRange", p1) }
+  /// The provider denied access. Try again, or ask an admin to check the provider's access rules.
+  static var webServerOidcAccessDenied: String { tr("web_server_oidc_accessDenied") }
+  /// Your account is already linked to another sign-in at this provider. Unlink it in settings first.
+  static var webServerOidcAlreadyLinked: String { tr("web_server_oidc_alreadyLinked") }
+  /// The provider needs your consent first. Try again and accept the request.
+  static var webServerOidcConsentRequired: String { tr("web_server_oidc_consentRequired") }
+  /// Sign-in expired. Try again.
+  static var webServerOidcExpired: String { tr("web_server_oidc_expired") }
+  /// Sign-in failed. Try again, or ask an admin to check the server log.
+  static var webServerOidcFailed: String { tr("web_server_oidc_failed") }
+  /// The provider needs you to finish a step there. Try again.
+  static var webServerOidcInteractionRequired: String { tr("web_server_oidc_interactionRequired") }
+  /// The provider rejected the sign-in request. Ask an admin to check the single sign-on settings.
+  static var webServerOidcInvalidRequest: String { tr("web_server_oidc_invalidRequest") }
+  /// This sign-in is already linked to another account.
+  static var webServerOidcLinkedElsewhere: String { tr("web_server_oidc_linkedElsewhere") }
+  /// Sign in at the provider, then try again.
+  static var webServerOidcLoginRequired: String { tr("web_server_oidc_loginRequired") }
+  /// Single sign-on isn't set up correctly. Ask an admin to check the server log.
+  static var webServerOidcMisconfigured: String { tr("web_server_oidc_misconfigured") }
+  /// Your provider didn't send the sign-in token Matinee needs. Ask an admin to check the provider's settings.
+  static var webServerOidcNoIdToken: String { tr("web_server_oidc_noIdToken") }
+  /// No account is linked to this sign-in. Sign in with a passkey, then link it in settings.
+  static var webServerOidcNoLinkedAccount: String { tr("web_server_oidc_noLinkedAccount") }
+  /// No account is linked to this sign-in. Ask an admin for access.
+  static var webServerOidcNoLinkedAccountSso: String { tr("web_server_oidc_noLinkedAccountSso") }
+  /// The provider had an error. Try again later.
+  static var webServerOidcProviderError: String { tr("web_server_oidc_providerError") }
+  /// The provider is unavailable right now. Try again later.
+  static var webServerOidcProviderUnavailable: String { tr("web_server_oidc_providerUnavailable") }
+  /// The provider refused the sign-in.
+  static var webServerOidcRefused: String { tr("web_server_oidc_refused") }
+  /// Create the admin account on the setup page first.
+  static var webServerOidcSetupFirst: String { tr("web_server_oidc_setupFirst") }
+  /// Only an admin at %1$@ can set up Matinee. Give your account the %2$@ claim with the value admin, then sign in again.
+  static func webServerOidcSetupNotAdmin(_ p1: String, _ p2: String) -> String { tr("web_server_oidc_setupNotAdmin", p1, p2) }
+  /// Sign in again before linking an account.
+  static var webServerOidcSignInAgainToLink: String { tr("web_server_oidc_signInAgainToLink") }
+  /// Sign in before linking an account.
+  static var webServerOidcSignInToLink: String { tr("web_server_oidc_signInToLink") }
+  /// Couldn't reach the sign-in provider.
+  static var webServerOidcUnreachable: String { tr("web_server_oidc_unreachable") }
+  /// That's no longer in the party's queue.
+  static var webServerPartyEntryGone: String { tr("web_server_party_entryGone") }
+  /// This watch party is full.
+  static var webServerPartyFull: String { tr("web_server_party_full") }
+  /// This one hasn't ended yet. Only the party's owner can skip ahead.
+  static var webServerPartyNotEnded: String { tr("web_server_party_notEnded") }
+  /// You aren't in a watch party.
+  static var webServerPartyNotIn: String { tr("web_server_party_notIn") }
+  /// That person isn't in the party anymore.
+  static var webServerPartyNotMember: String { tr("web_server_party_notMember") }
+  /// This watch party is over.
+  static var webServerPartyOver: String { tr("web_server_party_over") }
+  /// Only the party's owner can do this.
+  static var webServerPartyOwnerOnly: String { tr("web_server_party_ownerOnly") }
+  /// The party's queue is full.
+  static var webServerPartyQueueFull: String { tr("web_server_party_queueFull") }
+  /// You were removed from this watch party.
+  static var webServerPartyRemoved: String { tr("web_server_party_removed") }
+  /// Pick someone other than yourself.
+  static var webServerPartySelf: String { tr("web_server_party_self") }
+  /// Passkey check failed.
+  static var webServerPasskeysCheckFailed: String { tr("web_server_passkeys_checkFailed") }
+  /// The passkey could not be verified.
+  static var webServerPasskeysNotVerified: String { tr("web_server_passkeys_notVerified") }
+  /// The passkey request expired. Try again.
+  static var webServerPasskeysRequestExpired: String { tr("web_server_passkeys_requestExpired") }
+  /// The sign-in request expired. Try again.
+  static var webServerPasskeysSignInExpired: String { tr("web_server_passkeys_signInExpired") }
+  /// No movie or show in the libraries credits this person.
+  static var webServerPeopleNoCredits: String { tr("web_server_people_noCredits") }
+  /// This device can't play this file.
+  static var webServerPlaybackUnplayable: String { tr("web_server_playback_unplayable") }
+  /// %1$@ exited with %2$@
+  static func webServerProcessExited(_ p1: String, _ p2: String) -> String { tr("web_server_process_exited", p1, p2) }
+  /// Couldn't start %1$@.
+  static func webServerProcessStartFailed(_ p1: String) -> String { tr("web_server_process_startFailed", p1) }
+  /// %1$@ stopped (exit %2$@).
+  static func webServerProcessStopped(_ p1: String, _ p2: String) -> String { tr("web_server_process_stopped", p1, p2) }
+  /// %1$@ timed out after %2$@ s
+  static func webServerProcessTimedOut(_ p1: String, _ p2: String) -> String { tr("web_server_process_timedOut", p1, p2) }
+  /// Nobody on this server has that username.
+  static var webServerProfilesNotFound: String { tr("web_server_profiles_notFound") }
+  /// Choose a TMDB title to change your recommendations.
+  static var webServerRecommendationsTmdbRequired: String { tr("web_server_recommendations_tmdbRequired") }
+  /// Reload this list and try again.
+  static var webServerRequestsCursor: String { tr("web_server_requests_cursor") }
+  /// Only a waiting request can be declined. Give up on an accepted one instead.
+  static var webServerRequestsDeclineWaiting: String { tr("web_server_requests_declineWaiting") }
+  /// This title was declined, so it can't be requested until an admin allows it again.
+  static var webServerRequestsDeclined: String { tr("web_server_requests_declined") }
+  /// Request delivery failed. Check the connection and retry.
+  static var webServerRequestsDeliveryFailed: String { tr("web_server_requests_deliveryFailed") }
+  /// Only an accepted request that hasn't arrived can be given up.
+  static var webServerRequestsGiveUpAccepted: String { tr("web_server_requests_giveUpAccepted") }
+  /// This request isn't available.
+  static var webServerRequestsMissing: String { tr("web_server_requests_missing") }
+  /// This request changed. Reload the list and try again.
+  static var webServerRequestsMoveChanged: String { tr("web_server_requests_moveChanged") }
+  /// %1$@ already has this show, so its new seasons go there too.
+  static func webServerRequestsMoveHeld(_ p1: String) -> String { tr("web_server_requests_moveHeld", p1) }
+  /// %1$@ already has a request for this title. Leave this one where it is, or decline it.
+  static func webServerRequestsMoveTaken(_ p1: String) -> String { tr("web_server_requests_moveTaken", p1) }
+  /// Choose a library this title can go to.
+  static var webServerRequestsMoveTarget: String { tr("web_server_requests_moveTarget") }
+  /// Only a waiting request can move to another library.
+  static var webServerRequestsMoveWaiting: String { tr("web_server_requests_moveWaiting") }
+  /// Choose a usable fulfilment connection for this library.
+  static var webServerRequestsNoConnection: String { tr("web_server_requests_noConnection") }
+  /// This request isn't declined any more. Reload the list.
+  static var webServerRequestsNotDeclined: String { tr("web_server_requests_notDeclined") }
+  /// This request isn't failing any more. Reload the list.
+  static var webServerRequestsNotFailing: String { tr("web_server_requests_notFailing") }
+  /// You can't request this title right now.
+  static var webServerRequestsNotNow: String { tr("web_server_requests_notNow") }
+  /// Choose seasons listed for this show.
+  static var webServerRequestsSeasons: String { tr("web_server_requests_seasons") }
+  /// Cannot resolve the title identity. Check its metadata match and retry.
+  static var webServerRequestsUnresolvedTitle: String { tr("web_server_requests_unresolvedTitle") }
+  /// Only admins can do this.
+  static var webServerRpcAdminsOnly: String { tr("web_server_rpc_adminsOnly") }
+  /// Check what you entered and try again.
+  static var webServerRpcCheckInput: String { tr("web_server_rpc_checkInput") }
+  /// Passkeys are turned off on this server.
+  static var webServerRpcPasskeysOff: String { tr("web_server_rpc_passkeysOff") }
+  /// Sign in first.
+  static var webServerRpcSignInFirst: String { tr("web_server_rpc_signInFirst") }
+  /// This file isn't in any library. Reload the page.
+  static var webServerTitlesFileGone: String { tr("web_server_titles_fileGone") }
+  /// This title isn't in any library. Reload the page.
+  static var webServerTitlesGone: String { tr("web_server_titles_gone") }
+  /// This title isn't in any library.
+  static var webServerTitlesNotFound: String { tr("web_server_titles_notFound") }
+  /// The device didn't open.
+  static var webServerTranscodingDeviceClosed: String { tr("web_server_transcoding_deviceClosed") }
+  /// %1$@ doesn't exist or isn't readable.
+  static func webServerTranscodingDeviceMissing(_ p1: String) -> String { tr("web_server_transcoding_deviceMissing", p1) }
+  /// ffmpeg didn't run.
+  static var webServerTranscodingFfmpegDidntRun: String { tr("web_server_transcoding_ffmpegDidntRun") }
+  /// ffmpeg failed.
+  static var webServerTranscodingFfmpegFailed: String { tr("web_server_transcoding_ffmpegFailed") }
+  /// This ffmpeg has no %1$@ encoder. Install a build that includes one, or set MATINEE_FFMPEG_PATH to one that does.
+  static func webServerTranscodingNoEncoder(_ p1: String) -> String { tr("web_server_transcoding_noEncoder", p1) }
+  /// Matinee would encode with %1$@ instead of this device, so this device isn't used.
+  static func webServerTranscodingOtherEncoder(_ p1: String) -> String { tr("web_server_transcoding_otherEncoder", p1) }
+  /// Timed out.
+  static var webServerTranscodingTimedOut: String { tr("web_server_transcoding_timedOut") }
   /// None (software)
   static var webTranscodingAccelerationNone: String { tr("web_transcoding_acceleration_none") }
   /// NVIDIA NVENC
@@ -2440,6 +3016,8 @@ nonisolated enum Str {
   static var webTranscodingCheckFields: String { tr("web_transcoding_checkFields") }
   /// It failed on this server: %1$@
   static func webTranscodingCheckFailed(_ p1: String) -> String { tr("web_transcoding_check_failed", p1) }
+  /// It failed on this server.
+  static var webTranscodingCheckFailedPlain: String { tr("web_transcoding_check_failedPlain") }
   /// This ffmpeg build or GPU doesn't have it.
   static var webTranscodingCheckMissing: String { tr("web_transcoding_check_missing") }
   /// HEVC 10-bit
@@ -2488,12 +3066,16 @@ nonisolated enum Str {
   static var webTranscodingFfmpegDetecting: String { tr("web_transcoding_ffmpeg_detecting") }
   /// Dolby Vision removal
   static var webTranscodingFfmpegDoviRemoval: String { tr("web_transcoding_ffmpeg_doviRemoval") }
+  /// The check ended with this error:
+  static var webTranscodingFfmpegErrorDetail: String { tr("web_transcoding_ffmpeg_errorDetail") }
   /// ffmpeg didn't run, so nothing can be transcoded.
   static var webTranscodingFfmpegFailed: String { tr("web_transcoding_ffmpeg_failed") }
   /// This build lacks %1$@. Use jellyfin-ffmpeg.
   static func webTranscodingFfmpegLacks(_ p1: String) -> String { tr("web_transcoding_ffmpeg_lacks", p1) }
   /// pause keys
   static var webTranscodingFfmpegPauseKeys: String { tr("web_transcoding_ffmpeg_pauseKeys") }
+  /// tone mapping (tonemapx)
+  static var webTranscodingFfmpegTonemapx: String { tr("web_transcoding_ffmpeg_tonemapx") }
   /// unknown
   static var webTranscodingFfmpegUnknownVersion: String { tr("web_transcoding_ffmpeg_unknownVersion") }
   /// Downmix boost
@@ -2524,6 +3106,8 @@ nonisolated enum Str {
   static var webTranscodingHardwareAcceleration: String { tr("web_transcoding_hardware_acceleration") }
   /// The device didn't open, so transcodes run in software.
   static var webTranscodingHardwareDeviceFailed: String { tr("web_transcoding_hardware_deviceFailed") }
+  /// The device didn't open, so transcodes run in software. ffmpeg said: %1$@
+  static func webTranscodingHardwareDeviceFailedDetail(_ p1: String) -> String { tr("web_transcoding_hardware_deviceFailedDetail", p1) }
   /// Hardware encoding
   static var webTranscodingHardwareEncoding: String { tr("web_transcoding_hardware_encoding") }
   /// Intel low-power %1$@ encoder
@@ -2772,6 +3356,122 @@ nonisolated enum Str {
   static var webUsersTitle: String { tr("web_users_title") }
   /// (you)
   static var webUsersYou: String { tr("web_users_you") }
+  /// Use an absolute path.
+  static var webValidationAbsolutePath: String { tr("web_validation_absolutePath") }
+  /// Use a two-letter country code like US.
+  static var webValidationAgeLimitCountry: String { tr("web_validation_ageLimitCountry") }
+  /// Pick an image under 10 MB.
+  static var webValidationAvatarSize: String { tr("web_validation_avatarSize") }
+  /// Pick a JPEG, PNG, or WebP image.
+  static var webValidationAvatarType: String { tr("web_validation_avatarType") }
+  /// Pick a limit of at least 1 Mb/s.
+  static var webValidationBitrateLimit: String { tr("web_validation_bitrateLimit") }
+  /// Use a two-letter language code like en.
+  static var webValidationBrowseLanguage: String { tr("web_validation_browseLanguage") }
+  /// The shortest runtime can't be longer than the longest.
+  static var webValidationBrowseRuntime: String { tr("web_validation_browseRuntime") }
+  /// The lowest score can't be above the highest.
+  static var webValidationBrowseScores: String { tr("web_validation_browseScores") }
+  /// Sort by best match only among your recommendations.
+  static var webValidationBrowseSortForYou: String { tr("web_validation_browseSortForYou") }
+  /// The first year can't be after the last.
+  static var webValidationBrowseYears: String { tr("web_validation_browseYears") }
+  /// Invalid code challenge
+  static var webValidationCodeChallenge: String { tr("web_validation_codeChallenge") }
+  /// Invalid code verifier
+  static var webValidationCodeVerifier: String { tr("web_validation_codeVerifier") }
+  /// Each codec can be listed once.
+  static var webValidationCodecsUnique: String { tr("web_validation_codecsUnique") }
+  /// Give the connection a name.
+  static var webValidationConnectionName: String { tr("web_validation_connectionName") }
+  /// Use capital letters, digits and underscores, starting with a letter.
+  static var webValidationConnectionSlug: String { tr("web_validation_connectionSlug") }
+  /// Use 0 to 51.
+  static var webValidationCrfRange: String { tr("web_validation_crfRange") }
+  /// Pick a date.
+  static var webValidationDate: String { tr("web_validation_date") }
+  /// Use a device under /dev, like /dev/dri/renderD128.
+  static var webValidationDevicePath: String { tr("web_validation_devicePath") }
+  /// Choose a file.
+  static var webValidationFile: String { tr("web_validation_file") }
+  /// That file is empty.
+  static var webValidationFileEmpty: String { tr("web_validation_fileEmpty") }
+  /// Pick a file of another type.
+  static var webValidationFileType: String { tr("web_validation_fileType") }
+  /// Give the group a name.
+  static var webValidationGroupName: String { tr("web_validation_groupName") }
+  /// Use #rrggbb.
+  static var webValidationHexColor: String { tr("web_validation_hexColor") }
+  /// Pick an image under 25 MB.
+  static var webValidationImageSize: String { tr("web_validation_imageSize") }
+  /// Invalid input
+  static var webValidationInvalidInput: String { tr("web_validation_invalidInput") }
+  /// Invalid URL
+  static var webValidationInvalidUrl: String { tr("web_validation_invalidUrl") }
+  /// Invalid UUID
+  static var webValidationInvalidUuid: String { tr("web_validation_invalidUuid") }
+  /// Invalid value
+  static var webValidationInvalidValue: String { tr("web_validation_invalidValue") }
+  /// That invite link is incomplete.
+  static var webValidationInviteToken: String { tr("web_validation_inviteToken") }
+  /// Enter the issuer as an http or https URL.
+  static var webValidationIssuerUrl: String { tr("web_validation_issuerUrl") }
+  /// Use a language tag, like en or pt-BR.
+  static var webValidationLanguageTag: String { tr("web_validation_languageTag") }
+  /// Add at least one folder.
+  static var webValidationLibraryFolders: String { tr("web_validation_libraryFolders") }
+  /// Each folder can be added once.
+  static var webValidationLibraryFoldersUnique: String { tr("web_validation_libraryFoldersUnique") }
+  /// Give the library a name.
+  static var webValidationLibraryName: String { tr("web_validation_libraryName") }
+  /// Use at most 256 characters.
+  static var webValidationMax256: String { tr("web_validation_max256") }
+  /// Use at most 64 characters.
+  static var webValidationMax64: String { tr("web_validation_max64") }
+  /// Use at most %1$@ characters.
+  static func webValidationMaxLength(_ p1: String) -> String { tr("web_validation_maxLength", p1) }
+  /// Use %1$@ or less.
+  static func webValidationMaxValue(_ p1: String) -> String { tr("web_validation_maxValue", p1) }
+  /// Use a language code like en or de-DE.
+  static var webValidationMetadataLanguage: String { tr("web_validation_metadataLanguage") }
+  /// Use at least %1$@ characters.
+  static func webValidationMinLength(_ p1: String) -> String { tr("web_validation_minLength", p1) }
+  /// Use %1$@ or more.
+  static func webValidationMinValue(_ p1: String) -> String { tr("web_validation_minValue", p1) }
+  /// Use an address or a range like 192.168.0.0/16.
+  static var webValidationNetworkRange: String { tr("web_validation_networkRange") }
+  /// Use a value in the format this field expects.
+  static var webValidationPattern: String { tr("web_validation_pattern") }
+  /// Enter a username.
+  static var webValidationProfileName: String { tr("web_validation_profileName") }
+  /// Use a %1$@: URI or a loopback http URL.
+  static func webValidationRedirectUri(_ p1: String) -> String { tr("web_validation_redirectUri", p1) }
+  /// Fill in this field.
+  static var webValidationRequired: String { tr("web_validation_required") }
+  /// Scopes must include openid.
+  static var webValidationScopesOpenid: String { tr("web_validation_scopesOpenid") }
+  /// Enter a name to search for.
+  static var webValidationSearchQuery: String { tr("web_validation_searchQuery") }
+  /// Enter the setup token to claim this server.
+  static var webValidationSetupToken: String { tr("web_validation_setupToken") }
+  /// This sign-in link is broken. Start again in the app.
+  static var webValidationSignInLink: String { tr("web_validation_signInLink") }
+  /// Reload the page and try again.
+  static var webValidationStaleRequest: String { tr("web_validation_staleRequest") }
+  /// Allow at least one stream.
+  static var webValidationStreamLimit: String { tr("web_validation_streamLimit") }
+  /// Use an IANA time zone like Europe/Berlin.
+  static var webValidationTimeZone: String { tr("web_validation_timeZone") }
+  /// Enter the 8 letters the device shows.
+  static var webValidationUserCode: String { tr("web_validation_userCode") }
+  /// Use letters, numbers, dots, dashes, and underscores.
+  static var webValidationUsernameChars: String { tr("web_validation_usernameChars") }
+  /// Use at most 32 characters.
+  static var webValidationUsernameMax: String { tr("web_validation_usernameMax") }
+  /// Use at least 2 characters.
+  static var webValidationUsernameMin: String { tr("web_validation_usernameMin") }
+  /// Use a whole number.
+  static var webValidationWholeNumber: String { tr("web_validation_wholeNumber") }
   /// Couldn't save your name. %@
   static func iosAccountDisplayNameSaveFailed(_ p1: String) -> String { tr("ios_account_display_name_save_failed", table: "iOS", p1) }
   /// Linked %@

@@ -527,7 +527,7 @@ private struct PlaceRow: View {
       ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 24)
         .accessibilityHidden(true)
       LabelValue(spacing: Space.s2_5) {
-        (Text(user.name) + Text(place.isSelf ? " \(Str.statsYou)" : "").foregroundStyle(palette.mutedForeground))
+        Text(place.isSelf ? Str.statsNameYou(user.name) : user.name)
           .textStyle(.px13)
           .foregroundStyle(palette.foreground)
           .lineLimit(2)

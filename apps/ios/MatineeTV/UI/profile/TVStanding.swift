@@ -124,7 +124,7 @@ private struct PlaceLine: View {
         .frame(width: 56, height: 56)
         .background(podium, in: Circle())
       ProfileAvatar(user: place.user, size: large ? 64 : 56)
-      (Text(place.user.name) + Text(place.isSelf ? " \(Str.statsYou)" : "").foregroundStyle(content.opacity(0.65)))
+      Text(place.isSelf ? Str.statsNameYou(place.user.name) : place.user.name)
         .textStyle(style)
         .foregroundStyle(content)
         .lineLimit(1)
