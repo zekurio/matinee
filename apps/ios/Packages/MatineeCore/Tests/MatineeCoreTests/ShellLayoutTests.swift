@@ -110,4 +110,44 @@ struct ShellLayoutTests {
     #expect(search.open)
     #expect(search.content == .results("matrix"))
   }
+
+  @Test func aPhonesHomeHeaderStaysPutWithTheCardsEightUnderIt() {
+    let header = HomeHeaderPlacement(.phone, cards: true, rowSpacing: 24, backdrop: .none)
+    #expect(header.pinned)
+    #expect(header.gap == 8)
+    #expect(header.below == 8)
+  }
+
+  @Test func withoutCardsTheFirstRowIsARowsGapUnderThePhonesHeader() {
+    // Featured failed or empty online (rows 24 apart), or offline Home (28 apart), which has no cards.
+    #expect(HomeHeaderPlacement(.phone, cards: false, rowSpacing: 24, backdrop: .none).gap == 24)
+    #expect(HomeHeaderPlacement(.phone, cards: false, rowSpacing: 28, backdrop: .none).gap == 28)
+  }
+
+  @Test func whatShipsIsNothingBehindTheHeader() {
+    // As Findroid's, the owner's choice; `.solid(room:)` is the other he was offered.
+    #expect(HeaderBackdrop.home == .none)
+    #expect(HomeHeaderPlacement(.phone, cards: true, rowSpacing: 24).backdrop == .none)
+  }
+
+  @Test func aSolidBackdropsRoomCountsTowardTheGap() {
+    // The cards would start under the edge 12 below the buttons, so they start at it.
+    let cards = HomeHeaderPlacement(.phone, cards: true, rowSpacing: 24, backdrop: .solid(room: 12))
+    #expect(cards.gap == 0)
+    #expect(cards.below == 12)
+    // A row a row's gap under the buttons still, 12 of it the room.
+    let rows = HomeHeaderPlacement(.phone, cards: false, rowSpacing: 24, backdrop: .solid(room: 12))
+    #expect(rows.gap == 12)
+    #expect(rows.below == 24)
+    #expect(HeaderBackdrop.solid(room: -4).room == 0)
+  }
+
+  @Test func aTabletsHomeHeaderScrollsWithThePage() {
+    // Its tabs stay put instead; what's under them lays its own top out.
+    let header = HomeHeaderPlacement(.tablet, cards: true, rowSpacing: 40, backdrop: .solid(room: 12))
+    #expect(!header.pinned)
+    #expect(header.gap == 0)
+    #expect(header.below == 0)
+    #expect(HomeHeaderPlacement(.tablet, cards: false, rowSpacing: 40).gap == 0)
+  }
 }

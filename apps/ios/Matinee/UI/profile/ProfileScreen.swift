@@ -100,15 +100,15 @@ private struct ProfilePage: View {
 }
 
 /// The page's top: on an iPad's account tab, nothing over the header, which
-/// starts under the status bar's frost; on a page opened from Home, the
-/// kit's bar with Back, the page's name, and its buttons.
+/// starts under the tabs; on a page opened from Home, the kit's bar with
+/// Back, the page's name, and its buttons.
 private struct ProfileTop: ViewModifier {
   let tabRoot: Bool
   let buttons: ProfileButtons
 
   func body(content: Content) -> some View {
     if tabRoot {
-      content.statusBarScrim().hidesSystemNavigationBar()
+      content.hidesSystemNavigationBar()
     } else {
       content.topBar(Str.tabProfile) { buttons.padding(.trailing, Space.s1) }
     }

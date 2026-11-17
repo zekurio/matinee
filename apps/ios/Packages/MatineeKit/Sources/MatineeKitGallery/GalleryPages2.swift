@@ -415,6 +415,23 @@ struct NavigationPage: View {
             .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.border) }
         }
       }
+      Demo(
+        "Fixed header",
+        note: "`.fixedHeader(backdrop:) { }`: a tab's first page's own top, as Home's on a phone, staying put while "
+          + "the page starts clear of it and scrolls under it. With `.none`, as Findroid's, the page shows behind it; "
+          + "with `.solid(room: 12)` it goes under the page's background 12 below the buttons, no line."
+      ) {
+        VStack(spacing: 12) {
+          HStack(spacing: 12) {
+            FixedHeaderDemo(label: "None, at rest", backdrop: .none, scrolled: false)
+            FixedHeaderDemo(label: "None, scrolled", backdrop: .none, scrolled: true)
+          }
+          HStack(spacing: 12) {
+            FixedHeaderDemo(label: "Solid, at rest", backdrop: .solid(room: 12), scrolled: false)
+            FixedHeaderDemo(label: "Solid, scrolled", backdrop: .solid(room: 12), scrolled: true)
+          }
+        }
+      }
       Demo("Floating over art", note: "Back and Home on a title's picture, the web's ItemTopBar.") {
         ZStack(alignment: .topLeading) {
           FakeArt(seed: 0).frame(height: 180)
@@ -479,18 +496,6 @@ struct NavigationPage: View {
         }
         .frame(height: 160)
         .clipShape(RoundedRectangle.kit(Radius.xl))
-      }
-      Demo(
-        "Status bar frost",
-        note: "Android's: the page blurred and veiled across the status bar, thinning out 48 below it. "
-          + "Light at rest, deeper once the page has scrolled 40; the app gives the veil."
-      ) {
-        HStack(spacing: 12) {
-          // The app's strengths (MatineeCore's `StatusBarFrostStrength`): 35% at rest, 75% scrolled;
-          // 60% and 85% with no blur under Reduce Transparency.
-          StatusBarFrostDemo(label: "At rest", veil: 0.35, reducedVeil: 0.6, scrolled: false)
-          StatusBarFrostDemo(label: "Scrolled", veil: 0.75, reducedVeil: 0.85, scrolled: true)
-        }
       }
       Demo(
         "Nav bar over art",
@@ -578,39 +583,45 @@ private struct DemoLogo: View {
   }
 }
 
-/// A page under a status bar, with the frost over its top: at rest, art
-/// under the bar; scrolled, the page's rows under it.
-private struct StatusBarFrostDemo: View {
+/// A page with a header that stays: at rest, a card under it; scrolled,
+/// the rows behind it, or gone under its edge.
+private struct FixedHeaderDemo: View {
   let label: String
-  let veil: Double
-  let reducedVeil: Double
+  let backdrop: FixedHeaderBackdrop
   let scrolled: Bool
+  @State private var position = ScrollPosition(edge: .top)
   @Environment(\.palette) private var palette
-
-  /// A phone's status bar, as the frost is given it.
-  private let bar: CGFloat = 47
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      ZStack(alignment: .top) {
-        VStack(alignment: .leading, spacing: 8) {
-          if !scrolled { FakeArt(seed: 1).frame(height: 120) }
+      ScrollView {
+        VStack(alignment: .leading, spacing: 16) {
+          FakeArt(seed: 1).aspectRatio(16 / 9, contentMode: .fit).clipShape(RoundedRectangle.kit(Radius.lg))
           ForEach(0..<6) { index in
             HStack(spacing: 8) {
-              FakeArt(seed: index + 2).frame(width: 44, height: 30).clipShape(RoundedRectangle.kit(Radius.sm))
+              FakeArt(seed: index + 2).frame(width: 56, height: 32).clipShape(RoundedRectangle.kit(Radius.sm))
               Text("Row \(index + 1)").textStyle(.sm).foregroundStyle(palette.foreground)
             }
-            .padding(.horizontal, 10)
           }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        // Scrolled, the rows run up under the bar.
-        .padding(.top, scrolled ? 8 : 0)
-        StatusBarFrost(bar: bar, veil: veil, reducedVeil: reducedVeil)
-        Text("9:41").textStyle(.sm, weight: .semibold).foregroundStyle(palette.foreground)
-          .frame(height: bar)
+        .padding(.horizontal, 12)
+        .padding(.top, backdrop == .none ? 8 : 0)
+        .padding(.bottom, 12)
+      }
+      .scrollPosition($position)
+      .onAppear { if scrolled { position.scrollTo(y: 90) } }
+      .fixedHeader(backdrop: backdrop) {
+        HStack(spacing: 8) {
+          Circle().fill(palette.accent).frame(width: 18, height: 18)
+          Spacer(minLength: 0)
+          RoundIconButton(.search, label: "Search", look: .secondary, size: 32, iconSize: 16) {}
+          Avatar("iOS Admin", size: 32)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 44)
       }
       .frame(height: 260)
+      .background(palette.background)
       .clipShape(RoundedRectangle.kit(Radius.xl))
       .overlay { RoundedRectangle.kit(Radius.xl).strokeBorder(palette.border) }
       Text(label).textStyle(.xs).foregroundStyle(palette.mutedForeground)

@@ -117,6 +117,35 @@ extension View {
     topBar(title, leading: leading, onLeading: onLeading, onHome: onHome, hidden: hidden) { EmptyView() }
   }
 
+  /// Puts `header` at the top of this page, right under the status bar,
+  /// where it stays while the page scrolls under it: a tab's first page's
+  /// own top, as Home's logo, search, and account on a phone, or Media's
+  /// search field. The page's safe area starts below it, so content starts
+  /// clear of it at rest and a pull to refresh shows its spinner under it.
+  /// The header lays itself out; this gives it the full width.
+  ///
+  /// `backdrop` is what's behind it: `.none`, as Findroid's Home, where the
+  /// page scrolls on behind the header and under the status bar with
+  /// nothing between, for a header whose controls have fills of their own;
+  /// or `.solid(room:)`, the page's background from the screen's top to
+  /// `room` below the header, where what scrolls under it goes under a clean
+  /// edge with no line, as under a `TopBar`. Either way the header's band
+  /// takes the taps on it, its empty stretches too, so nothing half under
+  /// it opens from a tap that looks like one on the header.
+  ///
+  /// `hidden` leaves it out, taking no room, while the page stays the same
+  /// view, as `topBar(hidden:)`: a page whose top depends on the shell, as
+  /// Home's header stays put on a phone and rides on the banner on an
+  /// iPad, keeps its state and its scroll position across the change.
+  public func fixedHeader<Header: View>(
+    hidden: Bool = false, backdrop: FixedHeaderBackdrop, @ViewBuilder _ header: () -> Header
+  ) -> some View {
+    let header = header()
+    return safeAreaInset(edge: .top, spacing: 0) {
+      if !hidden { FixedHeader(content: header, backdrop: backdrop) }
+    }
+  }
+
   /// Hides the system's navigation bar on a page that draws its own top,
   /// like one with Back floating over art, and keeps the edge swipe back.
   public func hidesSystemNavigationBar() -> some View {
@@ -133,6 +162,37 @@ extension View {
   /// `topBar` and `hidesSystemNavigationBar` include it.
   public func pageBackground() -> some View {
     modifier(PageBackground())
+  }
+}
+
+/// What's behind a `.fixedHeader`.
+public enum FixedHeaderBackdrop: Equatable, Sendable {
+  /// Nothing: the page shows behind the header and under the status bar.
+  case none
+  /// The page's background, solid from the screen's top to `room` below
+  /// the header, where the page goes under a clean edge.
+  case solid(room: CGFloat)
+}
+
+/// `.fixedHeader`'s band: the header across the page, over its backdrop.
+private struct FixedHeader<Content: View>: View {
+  let content: Content
+  let backdrop: FixedHeaderBackdrop
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    switch backdrop {
+    case .none:
+      content
+        .frame(maxWidth: .infinity)
+        // The empty stretches take taps too, as a solid band's would.
+        .contentShape(Rectangle())
+    case .solid(let room):
+      content
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, max(room, 0))
+        .background(palette.background.ignoresSafeArea(edges: .top))
+    }
   }
 }
 
@@ -236,10 +296,9 @@ struct BottomBarHeightKey: PreferenceKey {
 /// app and iOS's own tab bar: the full width, each tab its icon over its
 /// name, both always shown. The open tab's icon sits in a pill of the
 /// text's color at 10%, the kit's selected look, and its name turns from
-/// muted to the text's color. The bar is frosted as the status bar is once
-/// a page has scrolled under it, the page blurred under the background at
-/// 80%, with a line of `--border` along its top, and it runs on down under
-/// the home indicator. Solid under Reduce Transparency.
+/// muted to the text's color. The bar is frosted, the page blurred under
+/// the background at 80%, with a line of `--border` along its top, and it
+/// runs on down under the home indicator. Solid under Reduce Transparency.
 ///
 /// Its names grow with Dynamic Type up to `xxLarge` and keep that size from
 /// there, as iOS's tab bar keeps its own; a long press on a tab at the
@@ -413,18 +472,19 @@ struct BottomBarModifier<ID: Hashable>: ViewModifier {
   }
 }
 
-/// The frost under the status bar, as Android's `StatusBarScrim`: the page
-/// behind it blurred and veiled in the page's color, evenly across the whole
-/// bar, so its clock and icons sit on one shade rather than half on shade
-/// and half on bare art. Below the bar it thins out over `feather`: the blur
+/// The frost under the status bar behind a `NavBar`, the tablet's tabs,
+/// and nowhere else: a phone's pages have nothing over the status bar. The
+/// page behind it blurred and veiled in the page's color, evenly across the
+/// whole bar, so its clock and icons sit on one shade rather than half on
+/// shade and half on bare art. Below the bar it thins out over `feather`: the blur
 /// eases off as the veil fades, so the page comes back sharp gradually
 /// rather than a blurred band ending on a line. `bar` is the status bar's
 /// height; the frost is `bar + feather` tall, from the screen's top.
 ///
-/// The app says how strong: `veil` over the blur, and `reducedVeil` under
-/// Reduce Transparency, where nothing is blurred and the veil alone, a
-/// stronger one, keeps the bar readable.
-public struct StatusBarFrost: View {
+/// The page says how strong, through `navBarFrost`: `veil` over the blur,
+/// and `reducedVeil` under Reduce Transparency, where nothing is blurred and
+/// the veil alone, a stronger one, keeps the bar readable.
+struct StatusBarFrost: View {
   let bar: CGFloat
   let veil: Double
   let reducedVeil: Double
@@ -432,15 +492,15 @@ public struct StatusBarFrost: View {
   @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
   /// How far below the bar the frost thins out: Android's 48 dp.
-  public static var feather: CGFloat { 48 }
+  static var feather: CGFloat { 48 }
 
-  public init(bar: CGFloat, veil: Double, reducedVeil: Double) {
+  init(bar: CGFloat, veil: Double, reducedVeil: Double) {
     self.bar = bar
     self.veil = veil
     self.reducedVeil = reducedVeil
   }
 
-  public var body: some View {
+  var body: some View {
     let total = max(bar, 0) + Self.feather
     let edge = max(bar, 0) / total
     ZStack {

@@ -91,7 +91,6 @@ private struct CatalogPage: View {
     #endif
     }
     .ignoresSafeArea(edges: .top)
-    .statusBarScrim()
     .refreshable {
       loader.reload()
       related.reload()

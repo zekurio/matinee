@@ -34,7 +34,7 @@ Read the kit's README first. Everything below assumes it.
 | `Shell.swift`        | The signed-in app: a stack per tab, the actions host, the player cover  |
 | `Nav.swift`          | Every route, `ShellNav`, `RoutePath` for `-dev.route`                   |
 | `Navigator.swift`    | What a page calls to open another                                       |
-| `Bars.swift`         | The tabs, Home's header and its account, `ItemTopBar`, `statusBarScrim` |
+| `Bars.swift`         | The tabs, Home's header and its account, `ItemTopBar`                   |
 | `State.swift`        | `.loads`, `describeFailure`, the `api` and `offline` environment        |
 | `Format.swift`       | Names, numbers, and dates in the app's language                         |
 | `ThemeStore.swift`   | The mode and the server's accents, handed to the kit                    |
@@ -51,7 +51,14 @@ first page, every tab named. Home's header (`AppHeader`) has the logo, then
 search and the account: search is the wide field at the top of Media, which
 the button opens with the keyboard up, and the account opens the profile as
 a page on Home's stack, which leads on to Settings, the admin pages, and
-the requests queue. Downloads' top is its name. On an iPad in a regular
+the requests queue. Downloads' top is its name. The three tops stay put
+while their page scrolls. Home's header, online and offline, has nothing
+behind it, as Findroid's: the page scrolls on behind the logo and the
+buttons and under the status bar (the kit's `.fixedHeader`, over
+MatineeCore's `HeaderBackdrop.home`, one line from a solid band). Media's
+field, whose fill is see-through, and Downloads' name, in the kit's
+`.topBar`, sit on the page's background with no line under it. Nothing
+blurs or shades the status bar. On an iPad in a regular
 width the tabs sit at the top, in the web's bar from `sm` up: the logo, the
 tabs by name, then search and the account as places of their own. An iPad
 in a narrow split gets the phone's; the place open moves to where it lives
@@ -117,9 +124,9 @@ struct LibraryScreen: View {
    `titleLarge`, and there is no centered or smaller variant. A page that
    draws art to the top:
    `.hidesSystemNavigationBar()` and `ItemTopBar(parent:onParent:)` over the
-   art, and `.statusBarScrim()` on its `ScrollView`. A tab's first page
-   draws its own top and gets the tabs from the shell. Never the system's
-   navigation bar, title, or toolbar.
+   art, which runs up under the status bar with nothing over it: no blur,
+   no shade. A tab's first page draws its own top and gets the tabs from
+   the shell. Never the system's navigation bar, title, or toolbar.
 3. **Its data.** Each load is a MatineeCore `Loader` in `@State`, given its
    fetch with `.loads(loader) { api in … }`, which fetches when the page
    shows, again when the viewer's marks change, and when the page comes
@@ -262,6 +269,7 @@ build. Pass them after `just dev` or `just gallery`.
 | Home      | `-dev.featuredOpen actions`                                                 | The first featured card's long press                                                                                                                                                                                                                                                                                                                                      |
 | Home      | `-dev.recommendations YES`                                                  | Fills the recommendation rows                                                                                                                                                                                                                                                                                                                                             |
 | Home      | `-dev.header search`                                                        | Presses a button of Home's header once, two seconds after Home shows: `search` (Media, its field taking the keyboard) or `account` (the profile)                                                                                                                                                                                                                          |
+| Home      | `-dev.home.scroll 400`                                                      | Home scrolled that many points down, three seconds after it shows, online or offline, for a screenshot of it scrolled                                                                                                                                                                                                                                                     |
 | Title     | `-title.fixture YES`                                                        | A provider's overview, credits, genres, ratings, trailer, and logo where the dev server has none                                                                                                                                                                                                                                                                          |
 | Title     | `-title.scroll cast`                                                        | Scrolls to a section: `nextup`, `episodes`, `seasons`, `cast`, `actions`, `more`                                                                                                                                                                                                                                                                                          |
 | Title     | `-title.open actions`                                                       | The page's actions sheet, or `watched`, the question of when                                                                                                                                                                                                                                                                                                              |

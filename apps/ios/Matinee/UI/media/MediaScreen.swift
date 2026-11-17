@@ -44,10 +44,11 @@ struct MediaScreen: View {
   var body: some View {
     page
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-      .safeAreaInset(edge: .top, spacing: 0) {
-        // An iPad's search is a tab of its own.
-        if style == .phone { top }
-      }
+      // The field stays put while the page scrolls under it, as Home's
+      // header, but on the page's background: the field's fill is the text's
+      // colour at 6%, which over the libraries would let them through its
+      // placeholder. An iPad's search is a tab of its own.
+      .fixedHeader(hidden: style != .phone, backdrop: .solid(room: 0)) { top }
       .hidesSystemNavigationBar()
       .loads(libraries) { api in try await api.libraries.list() }
       .searchEffect(search, query: field.query, submitted: submitted)
@@ -73,7 +74,6 @@ struct MediaScreen: View {
     .padding(.horizontal, gutter)
     .padding(.top, Space.s2)
     .padding(.bottom, Space.s3)
-    .background(PageColor().ignoresSafeArea(edges: .top))
     // A hardware keyboard's ⌘F goes to the field, as in iOS's own apps.
     .keyCommand("f", label: Str.searchTitle, action: focus)
   }
