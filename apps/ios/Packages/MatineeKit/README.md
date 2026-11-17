@@ -226,7 +226,10 @@ a value or a line of detail muted.
 - `TopBar("Title", leading: .back | .close | .none, onLeading:, onHome:) { actions }`
   and `.topBar(…)`: Android's `TopBar`, 64 tall, the name after Back in
   `pageTitleStyle()`. It's the one page title; there's no centered or
-  smaller variant. `onHome` adds the house beside Back.
+  smaller variant. `onHome` adds the house beside Back. `.topBar(…, hidden: true)`
+  leaves the bar out, as `.hidesSystemNavigationBar()`, and keeps the page
+  the same view as it changes: for a tab's first page with a bar on a phone
+  and a heading of its own on a tablet.
 - `BottomBar([TabBarItem(id, label:, icon:)], selection:) { id in }` and
   `.bottomBar(bar)`: a phone's tabs, after Findroid's: the full width,
   each tab its 22-point icon over its name in `text-xs` medium, always
@@ -243,6 +246,17 @@ a value or a line of detail muted.
   the tabs by name, and search and the account, which
   `TabBarItem(id, label:) { selected in picture }` draws as the avatar. The
   page's safe area starts below it.
+- `.tabBars(placement, bottom: BottomBar(…), top: NavBar(…))`: either bar
+  around one page, as `TabBarPlacement` says, `.bottom` or `.top`. When the
+  placement changes, as an iPad's window narrows to a phone's width and
+  back, the page stays the same view, keeping its state, what it loaded,
+  and where it's scrolled; `.bottomBar` and `.navBar` in two branches would
+  build it again. Each bar does all it does alone (the bottom bar's
+  clearance, keyboard, and toasts; the top bar's safe area, frost, and
+  `\.navBarClearance`), and the one not drawn takes no room and ignores
+  what the page asks of it, so a page can ask for the top bar's frost and
+  stay the same under the bottom bar. The gallery's Bars page trades them
+  around a page.
 - `.navBarFrost(NavBarFrost(veil:, reducedVeil:, opacity:))` and
   `\.navBarClearance`: for a page with art under a `NavBar` at rest, as
   Home's banner on an iPad. The bar frosts as over a scrolled page unless
