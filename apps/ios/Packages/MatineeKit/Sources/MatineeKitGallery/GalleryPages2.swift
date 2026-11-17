@@ -418,10 +418,16 @@ struct NavigationPage: View {
       Demo(
         "Fixed header",
         note: "`.fixedHeader(backdrop:) { }`: a tab's first page's own top, as Home's on a phone, staying put while "
-          + "the page starts clear of it and scrolls under it. With `.none`, as Findroid's, the page shows behind it; "
-          + "with `.solid(room: 12)` it goes under the page's background 12 below the buttons, no line."
+          + "the page starts clear of it and scrolls under it. With `.frosted(room: 12)`, Home's, the bottom bar's "
+          + "frost runs from the top to 12 below the buttons and the page blurs under it, its hairline once it "
+          + "scrolls; with `.solid(room: 12)` the page goes under its background there, no line; with `.none`, as "
+          + "Findroid's, the page shows behind it."
       ) {
         VStack(spacing: 12) {
+          HStack(spacing: 12) {
+            FixedHeaderDemo(label: "Frosted, at rest", backdrop: .frosted(room: 12), scrolled: false)
+            FixedHeaderDemo(label: "Frosted, scrolled", backdrop: .frosted(room: 12), scrolled: true)
+          }
           HStack(spacing: 12) {
             FixedHeaderDemo(label: "None, at rest", backdrop: .none, scrolled: false)
             FixedHeaderDemo(label: "None, scrolled", backdrop: .none, scrolled: true)
@@ -584,7 +590,7 @@ private struct DemoLogo: View {
 }
 
 /// A page with a header that stays: at rest, a card under it; scrolled,
-/// the rows behind it, or gone under its edge.
+/// the rows behind it, blurred under its frost, or gone under its edge.
 private struct FixedHeaderDemo: View {
   let label: String
   let backdrop: FixedHeaderBackdrop
