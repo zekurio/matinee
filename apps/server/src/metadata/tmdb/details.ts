@@ -79,7 +79,7 @@ function pickLogo(logos: Image[] | undefined, lang: string): string | null {
     usable.find((l) => l.iso_639_1 === lang) ??
     usable.find((l) => l.iso_639_1 === "en") ??
     usable[0]
-  return image(logo?.file_path, "w500")
+  return image(logo?.file_path, "original")
 }
 
 function rating(average?: number, count?: number): number | null {
@@ -147,7 +147,7 @@ export async function movieDetails(id: string, language: string) {
     externalIds,
     images: {
       poster: image(movie.poster_path, "w780"),
-      backdrop: image(movie.backdrop_path, "w1280"),
+      backdrop: image(movie.backdrop_path, "original"),
       logo: pickLogo(movie.images?.logos, lang),
     },
     studios: uniqueNames(movie.production_companies?.map((c) => c.name) ?? []),
@@ -240,7 +240,7 @@ export async function showDetails(id: string, language: string) {
     externalIds,
     images: {
       poster: image(show.poster_path, "w780"),
-      backdrop: image(show.backdrop_path, "w1280"),
+      backdrop: image(show.backdrop_path, "original"),
       logo: pickLogo(show.images?.logos, lang),
     },
     studios: uniqueNames(show.production_companies?.map((c) => c.name) ?? []),
