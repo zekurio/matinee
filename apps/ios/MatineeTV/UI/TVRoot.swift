@@ -15,6 +15,7 @@ import SwiftUI
  * it, from the one host here.
  */
 struct TVRoot: View {
+  @Environment(TVTopShelf.self) private var topShelf
   @Environment(MatineeSession.self) private var session
   @Environment(ThemeStore.self) private var theme
   @Environment(ToastState.self) private var toasts
@@ -38,6 +39,10 @@ struct TVRoot: View {
     }
     .onChange(of: session.state, initial: true) { old, state in
       follow(state)
+      switch state {
+      case .signedOut, .noServer, .connecting: topShelf.clear()
+      default: break
+      }
       if signedOut(from: old, to: state) { ImagePipeline.forgetAll() }
     }
   }

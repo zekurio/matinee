@@ -266,16 +266,81 @@ in the Simulator's Apple TV Remote window.
 
 ## Top Shelf content
 
-Android TV's Watch Next row has an Apple TV counterpart: a Top Shelf
-extension (`TVTopShelfContentProvider`) that shows Continue watching and
-Next up when Matinee sits in the top row. It would need a `tv-app-extension`
-target in `project.yml` embedded in `MatineeTV`, an App Group shared by the
-app and the extension so the extension can read the server and the
-session (the token is in the Keychain, so a shared Keychain access group
-too), MatineeCore's API client in the extension, artwork URLs it can load
-without the app's pipeline (signed with the token, or a short-lived URL
-from the server), and deep links (`matinee://title/<id>`, a URL scheme the
-TV app handles by opening `TVRoutePath`). None of it exists yet.
+When Matinee is focused in the Home Screen's top row, `MatineeTopShelf`
+shows the server's Continue watching and Next up lists, in server order,
+up to twelve items each, like Android Watch Next. Empty sections disappear.
+Sectioned content gives each item a progress bar and a poster (2:3) or
+wide (16:9) image. Select opens its detail page; Play/Pause resumes it.
+Titles combine the server's show name, episode code and localized episode
+name. The extension reuses `Strings.gen.swift` and the existing English
+and German catalogs in its own bundle for section headings.
+
+The app writes a versioned, credential-free snapshot to `TopShelf/` in
+`group.io.github.zekurio.matinee`, configured once as `MATINEE_APP_GROUP`
+in `project.yml`. Home publishes after both rows load. Returning to the
+foreground and dismissing the player fetch the same procedures again.
+Unlike Android's hourly WorkManager job, the extension never fetches or
+holds credentials, and there is no scheduled network refresh while the
+app is closed. The system calls `loadTopShelfContent`; the app calls
+`topShelfContentDidChange()` after publishing or clearing.
+
+Artwork needs the app's authentication headers, so the app downloads and
+JPEG-encodes the chosen episode still, title backdrop, or poster into the
+group. If there is no provider artwork, it uses the server's thumbnail,
+as the app's image pipeline does. This differs from Android Watch Next,
+which has no thumbnail fallback. Images use twice the point dimensions
+returned by `TVTopShelfSectionedContent.imageSize(for:)`, aspect-filled,
+and the extension supplies their file URLs for both screen scales. Local
+group file URLs were verified on the tvOS 27.2 simulator. At most 24
+images remain; replacing the snapshot removes obsolete images. Items
+whose image could not be downloaded are omitted by the provider.
+
+The extension links MatineeCore, not mpv or the UI kit. It reads only the
+snapshot and JPEGs, never the API or Keychain. Unknown snapshot versions,
+missing files, and an unavailable App Group produce no dynamic content,
+so the bundled static Top Shelf image shows. Sign-out, server removal,
+and connecting to a server clear the files and notify the system. A
+failed refresh leaves an existing snapshot intact, but a cold start clears
+it while checking the session. This is more conservative than Android's
+cached identity during connection. The TV app has no offline playback.
+
+Actions use `matinee://top-shelf` with server, account and item identifiers,
+never a token. A link waits in memory while sign-in is needed. Another
+server or account's link is ignored, not switched automatically. Before
+navigation the app asks `media.get`; a missing item shows an error toast
+instead of opening a broken page. Links use the active account's normal
+server authorization, not the snapshot as proof of access.
+
+### Signing and checking
+
+1. Choose the owner's development team for `MatineeTV` and `MatineeTopShelf`.
+2. Register both identifiers, `io.github.zekurio.matinee` and
+   `io.github.zekurio.matinee.topshelf`, with that team.
+3. Register `group.io.github.zekurio.matinee` as an App Group and enable it
+   on both identifiers. If changing the name, change `MATINEE_APP_GROUP`
+   once in `project.yml`.
+4. Regenerate provisioning profiles with the App Groups capability and
+   build both targets with those profiles. No shared Keychain group is
+   needed because the extension has no credentials.
+
+`just tv-build` stays unsigned for CI. For running, the existing
+`tv-sim-build`, `tv-run`, `tv-dev`, and remote recipes already use
+`CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-`. Ad-hoc signing embeds the
+App Group entitlement and worked without a development team on the
+simulator; no recipe changes are needed. A separate unsigned install
+launched successfully but had no group containers; its log reported
+`container_create_or_lookup_app_group_path_by_app_group_identifier: client
+is not entitled`. Treat unsigned builds as compilation checks. The
+existing ad-hoc-signed run recipes are required for dynamic Top Shelf.
+
+On a fresh Apple TV 4K 3rd generation simulator running tvOS 27.2, the
+Home Screen displayed the two dev-server in-progress titles with local
+thumbnail images and progress bars. Selecting The Matrix opened its page.
+Signing out removed the group snapshot and images and restored the static
+image. Screenshots are untracked under `build/top-shelf/`:
+`top-shelf-content.png`, `selected-item.png`, `top-shelf-signed-out.png`.
+The simulator was shut down and deleted after checking. Physical-device
+provisioning and Play/Pause from Top Shelf still need a device check.
 
 ## What's left
 
@@ -283,7 +348,6 @@ Every route has its page: Home, the detail pages (`UI/detail/`), the grids,
 favourites, and search (`UI/browse/`), the profile (`UI/profile/`), Settings
 (`UI/settings/`), and the player (`UI/player/`). Still to do:
 
-- Top Shelf content (below).
 - Nothing has run on an Apple TV: remote swipes, display matching, the
   screen saver, and local discovery have only been built, not tried.
 

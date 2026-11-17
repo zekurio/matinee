@@ -104,6 +104,8 @@ struct TVHomeScreen: View {
   @State private var shelfFirsts: [String: String] = [:]
   @FocusedValue(\.tvHomeFocused) private var focusedNow
   @FocusState private var retryFocused: Bool
+  @Environment(TVTopShelf.self) private var topShelf
+  @Environment(MatineeSession.self) private var session
   @Environment(\.api) private var api
   @Environment(\.tvActions) private var actions
   @Environment(\.palette) private var palette
@@ -136,6 +138,11 @@ struct TVHomeScreen: View {
     }
     .ignoresSafeArea()
     .loadsTVHome(loaders)
+    .task(id: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? [])) {
+      if let resume = loaders.resume.state.value, let next = loaders.nextUp.state.value {
+        await topShelf.publish(continuing: resume, next: next, session: session)
+      }
+    }
     .onChange(of: focusedNow) { _, item in if let item { model.focused = item } }
     .onChange(of: loaders.featured.state.value, initial: true) { _, value in if let value { model.offer(value) } }
     // A new featured pick shows once focus is in another row, which has scrolled the featured row away.

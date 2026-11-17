@@ -45,6 +45,8 @@ extension EnvironmentValues {
 struct TVSignedInApp: View {
   let user: User
   @Environment(MatineeSession.self) private var session
+  @Environment(TVTopShelf.self) private var topShelf
+  @Environment(ToastState.self) private var toasts
   @Environment(\.scenePhase) private var scenePhase
   @State private var nav = TVNav()
   /// Watched and favorite marks last only for this sign-in.
@@ -71,7 +73,7 @@ struct TVSignedInApp: View {
     .ignoresSafeArea()
     .tvClock()
     .tvActionsHost(actions)
-    .fullScreenCover(item: $nav.player) { request in
+    .fullScreenCover(item: $nav.player, onDismiss: { Task { await topShelf.refresh(session) } }) { request in
       TVPlayerScreen(request: request) { nav.player = nil }
     }
     .loads(kinds) { api in try await api.titles.browse(limit: 1).kinds }
@@ -86,10 +88,26 @@ struct TVSignedInApp: View {
       #endif
     }
     // What the account may do follows what the server allows now: asked again each time the app comes back.
+    .task(id: topShelf.pending) { await openTopShelfLink() }
     .task(id: scenePhase) {
       guard scenePhase == .active, let api = session.api else { return }
+      await topShelf.refresh(session)
       if let options = try? await api.playback.options() { viewer.options = options }
     }
+  }
+  private func openTopShelfLink() async {
+    guard let url = topShelf.pending, let link = TopShelfLink(url: url) else { return }
+    defer { topShelf.pending = nil }
+    // Never switch accounts or servers because of a stale launcher item.
+    guard case .signedIn(let server, let account) = session.state,
+      link.server == server, link.user == account.id, let api = session.api else { return }
+    do {
+      let item = try await api.media.get(id: link.item)
+      guard case .signedIn(let active, let current) = session.state,
+        active == server, current.id == account.id else { return }
+      if link.play { nav.player = TVPlayerRequest(itemId: item.id, start: nil) }
+      else { nav.navigator.item(item) }
+    } catch { toasts.post(ToastMessage(Str.homeContinueFailed)) }
   }
 }
 
