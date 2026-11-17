@@ -134,6 +134,7 @@
     <string name="home_featured_position">%1$d von %2$d</string>
     <string name="home_featured_previous">Vorherige Folie</string>
     <string name="home_featured_next">Nächste Folie</string>
+    <string name="home_featured_show_slide">Folie %1$d zeigen</string>
     <string name="browse_continue_watching">Weiterschauen</string>
     <string name="browse_next_up">Als Nächstes</string>
     <string name="browse_recently_added">Neu in %1$s</string>
@@ -156,7 +157,6 @@
         <item quantity="other">%1$d Titel</item>
     </plurals>
 
-    <string name="library_search_titles">Titel durchsuchen</string>
     <string name="library_search_movies">Filme durchsuchen</string>
     <string name="library_search_shows">Serien durchsuchen</string>
     <string name="library_clear_search">Suche leeren</string>

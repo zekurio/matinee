@@ -1,5 +1,8 @@
 package io.github.zekurio.matinee.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -16,7 +19,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object HomeRoute
 
-/** The libraries, favorites, and search: the second tab. */
+/** The libraries, with search at the top: the second tab. */
 @Serializable
 data object MediaRoute
 
@@ -46,7 +49,11 @@ data class PersonRoute(val name: String, val tmdbId: String? = null)
 @Serializable
 data class BrowseRoute(val genre: String? = null, val studio: String? = null)
 
-/** Search across the server: a tab, the circle beside the tab bar. */
+/**
+ * Search across the server: the TV's search page. On a phone search is
+ * Media's field, and this only stands in for it, as a back stack saved by
+ * an older version may still hold it (`Navigator.search`).
+ */
 @Serializable
 data object SearchRoute
 
@@ -54,7 +61,7 @@ data object SearchRoute
 @Serializable
 data object RecentRoute
 
-/** The signed-in person, behind their picture in the tab bar, with the way to Settings. */
+/** The signed-in person, with the way to Settings: on a phone a page on Home, behind the account in Home's header. */
 @Serializable
 data object ProfileRoute
 
@@ -117,11 +124,42 @@ data class LibraryEditorRoute(val id: String? = null)
 @Serializable
 data class FolderPickerRoute(val start: String? = null, val added: List<String> = emptyList())
 
-/** The tab bar's tabs, by the route of each one's first page, in its order: the capsule, then search. */
-val TAB_ROUTES: List<Any> = listOf(HomeRoute, MediaRoute, DownloadsRoute, ProfileRoute, SearchRoute)
+/** The route of [page]'s first page. */
+val ShellPage.route: Any
+    get() = when (this) {
+        ShellPage.Home -> HomeRoute
+        ShellPage.Media -> MediaRoute
+        ShellPage.Downloads -> DownloadsRoute
+        ShellPage.Profile -> ProfileRoute
+        ShellPage.Search -> SearchRoute
+    }
 
-/** Moves between screens; one per signed-in app. */
-class Navigator(private val controller: NavHostController) {
+/** Every tab the phone's bar can have, by the route of each one's first page, in its order (`shellTabs`). */
+val TAB_ROUTES: List<Any> = shellTabs(offline = false).map { it.route }
+
+/**
+ * Moves between screens; one per signed-in app. [offline] is the shell's,
+ * which decides where search and the profile land (`shellLanding`).
+ */
+class Navigator(private val controller: NavHostController, private val offline: Boolean = false) {
+    /**
+     * Search was asked for: Media opens with search open, and its field
+     * takes the keyboard once Media's page is up, and puts this back.
+     */
+    var searchPending by mutableStateOf(false)
+
+    /**
+     * Opens [page] where it lives (`shellLanding`): a tab as [tab] does,
+     * search as Media with its field taking the keyboard, and the profile
+     * as a page on Home.
+     */
+    fun go(page: ShellPage) {
+        val landing = shellLanding(page, offline)
+        if (landing.focusesSearch) searchPending = true
+        tab(landing.tab.route)
+        if (landing.underProfile) controller.navigate(ProfileRoute) { launchSingleTop = true }
+    }
+
     fun back() {
         controller.popBackStack()
     }
@@ -134,7 +172,7 @@ class Navigator(private val controller: NavHostController) {
     /**
      * A tab's first page. The first tab's page is under every other tab's,
      * so back from one goes there, and a tab picked again starts over at its
-     * first page. That's Home, or Downloads offline, where the app starts.
+     * first page. That's Home, where the app starts, online and offline.
      */
     fun tab(route: Any) {
         // The bar shows only on a tab's first page, so picking the open tab has nowhere to go.
@@ -222,9 +260,23 @@ class Navigator(private val controller: NavHostController) {
 
     fun studio(name: String) = controller.navigate(BrowseRoute(studio = name))
 
-    fun search() = tab(SearchRoute)
+    /** Search: Media with its field taking the keyboard. */
+    fun search() = go(ShellPage.Search)
 
-    fun profile() = tab(ProfileRoute)
+    /** The profile, on top of Home. */
+    fun profile() = go(ShellPage.Profile)
+
+    /**
+     * Search from a [SearchRoute] left on the back stack by an older
+     * version, where search was a tab: Media with search open in its place.
+     */
+    fun searchInstead() {
+        searchPending = true
+        controller.navigate(MediaRoute) {
+            popUpTo<SearchRoute> { inclusive = true }
+            launchSingleTop = true
+        }
+    }
 
     fun settings() = controller.navigate(SettingsRoute) { launchSingleTop = true }
 

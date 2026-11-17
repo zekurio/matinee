@@ -144,9 +144,11 @@
     <string name="home_load_failed">Couldn\'t load your libraries</string>
     <!-- TalkBack's word for where a card is in Home's featured carousel: its place, then how many there are. -->
     <string name="home_featured_position">%1$d of %2$d</string>
-    <!-- The buttons beside the featured carousel's dots on a tablet, which move it a card back or on. -->
+    <!-- The buttons beside the featured banner's dots on a tablet, which move it a slide back or on. -->
     <string name="home_featured_previous">Previous slide</string>
     <string name="home_featured_next">Next slide</string>
+    <!-- TalkBack's name for one of the featured banner's dots on a tablet, which shows that slide. -->
+    <string name="home_featured_show_slide">Show slide %1$d</string>
     <string name="browse_continue_watching">Continue watching</string>
     <string name="browse_next_up">Next up</string>
     <string name="browse_recently_added">Recently added in %1$s</string>
@@ -172,7 +174,6 @@
     </plurals>
 
     <!-- A library -->
-    <string name="library_search_titles">Search titles</string>
     <string name="library_search_movies">Search movies</string>
     <string name="library_search_shows">Search shows</string>
     <string name="library_clear_search">Clear search</string>

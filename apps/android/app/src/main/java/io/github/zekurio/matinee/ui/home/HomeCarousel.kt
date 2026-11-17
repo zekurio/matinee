@@ -105,7 +105,8 @@ import kotlinx.coroutines.launch
  * with its genres and its name typed out. How many share the row, their
  * sizes, where it rests, where the advance goes next, and the genres line
  * are FeaturedCarousel.kt's, where they're tested. Debug stand-ins are
- * HomeCarouselDevData.kt's.
+ * HomeCarouselDevData.kt's. Home shows it in a window under 600 dp wide, a
+ * phone's; from there it opens with the banner (Hero.kt).
  */
 
 /**
@@ -260,7 +261,7 @@ private fun cardHeight(slides: List<FeaturedTitle>, arts: List<CardArt>, layout:
         slides.indices.maxOfOrNull { index ->
             val textWidth = (layout.cardWidth.dp - PADDING * 2 - if (arts[index] is CardArt.Poster) posterRoom(base) else 0.dp).roundToPx()
             val constraints = Constraints(maxWidth = textWidth.coerceAtLeast(0))
-            val name = measurer.measure(slides[index].title.name, nameStyle, maxLines = nameLines, constraints = constraints).size.height
+            val name = measurer.measure(slides[index].featuredName, nameStyle, maxLines = nameLines, constraints = constraints).size.height
             val line = slides[index].cardLine()?.let {
                 measurer.measure(it, genres, maxLines = 1, constraints = constraints).size.height + LINE_GAP.roundToPx()
             } ?: 0
@@ -309,7 +310,7 @@ private fun FeaturedCard(
     val interaction = remember { MutableInteractionSource() }
     val line = slide.cardLine()
     val position = stringResource(R.string.home_featured_position, index + 1, count)
-    val description = listOfNotNull(slide.title.name, line, position).joinToString(", ")
+    val description = listOfNotNull(slide.featuredName, line, position).joinToString(", ")
     val shape = Shapes.Xl
     Box(
         Modifier
@@ -340,7 +341,7 @@ private fun FeaturedCard(
             if (line != null) {
                 Text(line, style = genresStyle(), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text(slide.title.name, style = nameStyle, maxLines = nameLines, overflow = TextOverflow.Ellipsis)
+            Text(slide.featuredName, style = nameStyle, maxLines = nameLines, overflow = TextOverflow.Ellipsis)
         }
     }
 }

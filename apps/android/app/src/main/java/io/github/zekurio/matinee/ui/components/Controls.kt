@@ -73,7 +73,7 @@ fun ProgressBar(progress: Float, modifier: Modifier = Modifier, inset: Dp = 8.dp
 
 /**
  * The room a page's spinner or error centers in: down to the navigation
- * bar, or on a tab's page to the floating tab bar, so it sits in the
+ * bar, or on a tab's page to the tab bar, so it sits in the
  * middle of what's visible rather than low behind the bar.
  */
 @Composable
