@@ -2,10 +2,9 @@ import Foundation
 
 /*
  * The signed-in shell's arrangement, after Findroid's phone app: which
- * tabs a phone and a tablet have, where each place opens, what the Media
- * tab shows for the state of its search field, and where Home's header
- * goes. The app's Shell, Nav, Media, and Home screens draw what this
- * decides.
+ * tabs a phone and a tablet have, where each place opens, and what the
+ * Media tab shows for the state of its search field. The app's Shell,
+ * Nav, and Media screens draw what this decides.
  *
  * On a phone the tabs are Home, Media, and Downloads. Search lives at the
  * top of Media, and the profile opens from the account button in Home's
@@ -70,73 +69,6 @@ public func shellLanding(_ page: ShellPage, layout: ShellLayout, offline: Bool) 
 public func shellStack(for owner: ShellPage, layout: ShellLayout, offline: Bool) -> ShellLanding {
   let landing = shellLanding(owner, layout: layout, offline: offline)
   return ShellLanding(tab: landing.tab, underProfile: landing.underProfile)
-}
-
-// MARK: Home's header
-
-/// What's behind Home's header on a phone while Home scrolls under it.
-public enum HeaderBackdrop: Equatable, Sendable {
-  /// Nothing, as Findroid's: the logo, search, and the account stay put and
-  /// the page scrolls on behind them and under the status bar, with no band,
-  /// tint, blur, or line between.
-  case none
-  /// The page's background, solid from the screen's top to `room` below
-  /// the header's band, where the page goes under a clean edge.
-  case solid(room: Double)
-  /// The phone's tab bar's frost, from the screen's top to `room` below the
-  /// header's band: the page blurred under its background at 80%, evenly,
-  /// ending on a line, so the rows are sensed passing under the buttons.
-  case frosted(room: Double)
-
-  /// What ships. The owner was shown nothing behind the header, as
-  /// Findroid's, beside a solid band with room under the buttons, and kept
-  /// the band with the frosted look behind it. To show him the others,
-  /// change this line to `.none` or `.solid(room: 12)`.
-  public static let home: HeaderBackdrop = .frosted(room: 12)
-
-  /// How far below the header's band the backdrop's edge is: 0 with none.
-  public var room: Double {
-    switch self {
-    case .none: 0
-    case .solid(let room), .frosted(let room): max(room, 0)
-    }
-  }
-}
-
-/// Where Home's header goes and how far below it Home's content starts.
-/// On a phone it stays put at the top while Home scrolls under it, right
-/// under the status bar, over `backdrop`. At rest the featured cards start
-/// 8 below the header's band and, with none, the first row a row's gap
-/// below, as it would follow the cards; a solid or frosted backdrop's room
-/// counts toward that, so the content never starts under its edge. Online and
-/// offline alike. A tablet's tabs stay put instead: there the header, when
-/// it shows, rides on the banner or at the top of the list and scrolls away
-/// with it.
-public struct HomeHeaderPlacement: Equatable, Sendable {
-  /// The header stays put above the page rather than scrolling with it.
-  public let pinned: Bool
-  /// What's behind it, where it's pinned.
-  public let backdrop: HeaderBackdrop
-  /// From the backdrop's edge, or the header's band with none, to the
-  /// first thing under it at rest; 0 where it isn't pinned, as the page
-  /// then lays its own top out.
-  public let gap: Double
-
-  /// From a phone's header to the featured cards under it.
-  public static let cardsGap = 8.0
-
-  /// `cards` is whether the featured cards, or their place while they load,
-  /// are under the header; `rowSpacing` is the gap between Home's rows.
-  public init(
-    _ layout: ShellLayout, cards: Bool, rowSpacing: Double, backdrop: HeaderBackdrop = .home
-  ) {
-    pinned = layout == .phone
-    self.backdrop = backdrop
-    gap = pinned ? max((cards ? Self.cardsGap : rowSpacing) - backdrop.room, 0) : 0
-  }
-
-  /// From the header's band to the first thing under it at rest.
-  public var below: Double { pinned ? backdrop.room + gap : 0 }
 }
 
 // MARK: Media's search

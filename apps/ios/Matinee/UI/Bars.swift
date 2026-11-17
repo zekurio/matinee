@@ -143,11 +143,7 @@ private struct ProfileTabPicture: View {
 /// keyboard; and the account, which opens the profile on Home's stack. It's
 /// 44 tall, right under the status bar, where a navigation bar sits. An
 /// iPad's bar has the logo, search, and the account already, so there it
-/// holds only the icon. On a phone it stays put while Home scrolls on
-/// under it, over the tab bar's frost from the screen's top to 12 below
-/// the buttons (the kit's `fixedHeader`, over MatineeCore's
-/// `HeaderBackdrop.home`); on an iPad it scrolls away with the page under
-/// the tabs.
+/// holds only the icon. It scrolls away with the page.
 struct AppHeader<Action: View>: View {
   @ViewBuilder var action: () -> Action
   @Environment(\.offline) private var offline
@@ -245,17 +241,6 @@ private struct AccountButton: View {
     #else
       0
     #endif
-  }
-}
-
-extension HeaderBackdrop {
-  /// The kit's `fixedHeader` backdrop for MatineeCore's choice.
-  var kit: FixedHeaderBackdrop {
-    switch self {
-    case .none: .none
-    case .solid(let room): .solid(room: room)
-    case .frosted(let room): .frosted(room: room)
-    }
   }
 }
 

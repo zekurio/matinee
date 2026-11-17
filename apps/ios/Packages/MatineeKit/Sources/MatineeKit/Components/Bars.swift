@@ -117,43 +117,6 @@ extension View {
     topBar(title, leading: leading, onLeading: onLeading, onHome: onHome, hidden: hidden) { EmptyView() }
   }
 
-  /// Puts `header` at the top of this page, right under the status bar,
-  /// where it stays while the page scrolls under it: a tab's first page's
-  /// own top, as Home's logo, search, and account on a phone, or Media's
-  /// search field. The page's safe area starts below it, so content starts
-  /// clear of it at rest and a pull to refresh shows its spinner under it.
-  /// The header lays itself out; this gives it the full width.
-  ///
-  /// `backdrop` is what's behind it: `.none`, as Findroid's Home, where the
-  /// page scrolls on behind the header and under the status bar with
-  /// nothing between, for a header whose controls have fills of their own;
-  /// `.solid(room:)`, the page's background from the screen's top to `room`
-  /// below the header, where what scrolls under it goes under a clean edge
-  /// with no line, as under a `TopBar`; or `.frosted(room:)`, the
-  /// `BottomBar`'s frost over the same stretch, even from the top to its
-  /// edge, where the page is sensed going under, and the tab bar's hairline
-  /// along its lower edge. At rest, with nothing under it, it is the page's
-  /// colour without the line, the page's own top; the frost and the line
-  /// come in over the first 12 points the page moves under its edge. Any
-  /// way, the header's band takes the taps on it,
-  /// its empty stretches too, so nothing half under it opens from a tap
-  /// that looks like one on the header.
-  ///
-  /// `hidden` leaves it out, taking no room, while the page stays the same
-  /// view, as `topBar(hidden:)`: a page whose top depends on the shell, as
-  /// Home's header stays put on a phone and rides on the banner on an
-  /// iPad, keeps its state and its scroll position across the change.
-  ///
-  /// `contentGap` is how far below the band's edge the page's content
-  /// starts at rest, so a frosted band's frost and line wait until the
-  /// content reaches the edge.
-  public func fixedHeader<Header: View>(
-    hidden: Bool = false, backdrop: FixedHeaderBackdrop, contentGap: CGFloat = 0,
-    @ViewBuilder _ header: () -> Header
-  ) -> some View {
-    modifier(FixedHeaderModifier(header: header(), hidden: hidden, backdrop: backdrop, contentGap: contentGap))
-  }
-
   /// Hides the system's navigation bar on a page that draws its own top,
   /// like one with Back floating over art, and keeps the edge swipe back.
   public func hidesSystemNavigationBar() -> some View {
@@ -170,157 +133,6 @@ extension View {
   /// `topBar` and `hidesSystemNavigationBar` include it.
   public func pageBackground() -> some View {
     modifier(PageBackground())
-  }
-}
-
-/// What's behind a `.fixedHeader`.
-public enum FixedHeaderBackdrop: Equatable, Sendable {
-  /// Nothing: the page shows behind the header and under the status bar.
-  case none
-  /// The page's background, solid from the screen's top to `room` below
-  /// the header, where the page goes under a clean edge.
-  case solid(room: CGFloat)
-  /// The `BottomBar`'s frost, from the screen's top to `room` below the
-  /// header, evenly, ending on a line that shows once the page scrolls.
-  case frosted(room: CGFloat)
-}
-
-/// `.fixedHeader`: the band in the page's top safe area, and how far the
-/// page under it has scrolled, for a frosted one's frost and hairline.
-private struct FixedHeaderModifier<Header: View>: ViewModifier {
-  let header: Header
-  let hidden: Bool
-  let backdrop: FixedHeaderBackdrop
-  let contentGap: CGFloat
-  @State private var scrolled: CGFloat = 0
-
-  func body(content: Content) -> some View {
-    let frosted = if case .frosted = backdrop { true } else { false }
-    let gap = max(contentGap, 0)
-    content
-      .safeAreaInset(edge: .top, spacing: 0) {
-        if !hidden { FixedHeader(content: header, backdrop: backdrop, scrolled: scrolled) }
-      }
-      .onScrollGeometryChange(for: CGFloat.self) { geometry in
-        // How far the content has gone under the edge, its first points only, so the rest of a scroll
-        // changes nothing here.
-        let under = geometry.contentOffset.y + geometry.contentInsets.top - gap
-        return frosted ? min(max(under, 0), FixedHeaderFrost.comesIn) : 0
-      } action: { _, offset in
-        scrolled = offset
-      }
-      .modifier(SystemTopEdge(hidden: frosted && !hidden))
-  }
-}
-
-/// iOS 26's own effect at a scroll view's top edge, which fades the page
-/// out where it goes under the band, leaving a frost nothing to blur.
-/// Hidden under a frosted band, so the frost is the only material there.
-private struct SystemTopEdge: ViewModifier {
-  let hidden: Bool
-
-  func body(content: Content) -> some View {
-    #if os(iOS)
-      if #available(iOS 26, *) {
-        content.scrollEdgeEffectHidden(hidden, for: .top)
-      } else {
-        content
-      }
-    #else
-      content
-    #endif
-  }
-}
-
-private enum FixedHeaderFrost {
-  /// Over how much of the page going under its edge a frosted band's
-  /// frost and hairline come in. At rest nothing is under the band, and
-  /// the frost over the bare page would be a shade off it, a band with
-  /// nothing to frost; so it is the page's colour, the header on the page's
-  /// own top, and has no line, which would run along the top of the first
-  /// card and cut it off. They arrive as the content goes under the edge,
-  /// in step with Android's, and leave as it comes back or is pulled down.
-  static var comesIn: CGFloat { Space.s3 }
-}
-
-/// `.fixedHeader`'s band: the header across the page, over its backdrop.
-private struct FixedHeader<Content: View>: View {
-  let content: Content
-  let backdrop: FixedHeaderBackdrop
-  /// How far the page has gone under its edge, up to `FixedHeaderFrost.comesIn`.
-  let scrolled: CGFloat
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    switch backdrop {
-    case .none:
-      content
-        .frame(maxWidth: .infinity)
-        // The empty stretches take taps too, as a solid band's would.
-        .contentShape(Rectangle())
-    case .solid(let room):
-      content
-        .frame(maxWidth: .infinity)
-        .padding(.bottom, max(room, 0))
-        .background(palette.background.ignoresSafeArea(edges: .top))
-    case .frosted(let room):
-      let frost = Double(min(max(scrolled / FixedHeaderFrost.comesIn, 0), 1))
-      content
-        .frame(maxWidth: .infinity)
-        .padding(.bottom, max(room, 0))
-        // Under the status bar too, the whole bar one material, as the tab bar's runs under the home indicator.
-        .background {
-          // The page's colour over the frost rather than under it, which the blur would see instead of the page.
-          Frost.bar.overlay(palette.background.opacity(1 - frost))
-          .ignoresSafeArea(edges: .top)
-        }
-        .overlay(alignment: .bottom) { BarHairline().opacity(frost) }
-        // The whole bar takes taps, as a surface, its room included.
-        .contentShape(Rectangle())
-    }
-  }
-}
-
-/// The kit's frost, the one material its bars are made of: the page behind
-/// blurred by the thinnest material, which blurs as the others do but
-/// tints least, under a veil of the page's colour that is what colours it,
-/// in the palette's scheme so a forced theme frosts as itself. Under Reduce
-/// Transparency, `reduced`, solid. The phone's bars, the `BottomBar` and a
-/// frosted `.fixedHeader`, are `Frost.bar`; a tablet's floating `NavBar` is
-/// the same material in its capsule, thinner, over a banner.
-struct Frost<S: Shape>: View {
-  let shape: S
-  /// The page's colour over the blur.
-  let veil: Double
-  /// What it is when transparency is reduced.
-  let reduced: KeyPath<Palette, Color>
-  @Environment(\.palette) private var palette
-  @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-  var body: some View {
-    if reduceTransparency {
-      shape.fill(palette[keyPath: reduced])
-    } else {
-      shape.fill(.ultraThinMaterial).environment(\.colorScheme, palette.scheme)
-        .overlay(shape.fill(palette.background.opacity(veil)))
-    }
-  }
-}
-
-extension Frost where S == Rectangle {
-  /// The phone's bars': the page's background at 80% over the blur, solid
-  /// in it when transparency is reduced.
-  static var bar: Frost { Frost(shape: Rectangle(), veil: 0.8, reduced: \.background) }
-}
-
-/// A bar's edge where the page goes under it: a hairline of `--border`, a
-/// pixel tall.
-struct BarHairline: View {
-  @Environment(\.palette) private var palette
-  @Environment(\.displayScale) private var displayScale
-
-  var body: some View {
-    Rectangle().fill(palette.border).frame(height: 1 / displayScale).accessibilityHidden(true)
   }
 }
 
@@ -425,9 +237,8 @@ struct BottomBarHeightKey: PreferenceKey {
 /// name, both always shown. The open tab's icon sits in a pill of the
 /// text's color at 10%, the kit's selected look, and its name turns from
 /// muted to the text's color. The bar is frosted, the page blurred under
-/// the background at 80% (`Frost.bar`, as a frosted `.fixedHeader`'s), with
-/// a line of `--border` along its top, and it runs on down under the home
-/// indicator. Solid under Reduce Transparency.
+/// the background at 80%, with a line of `--border` along its top, and it
+/// runs on down under the home indicator. Solid under Reduce Transparency.
 ///
 /// Its names grow with Dynamic Type up to `xxLarge` and keep that size from
 /// there, as iOS's tab bar keeps its own; a long press on a tab at the
@@ -440,6 +251,8 @@ public struct BottomBar<ID: Hashable>: View {
   let onSelect: (ID) -> Void
   @State private var bottomInset: CGFloat = 0
   @Environment(\.palette) private var palette
+  @Environment(\.displayScale) private var displayScale
+  @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
   /// What the bar takes above the bottom safe area at the default text
   /// size, what a toast rises over.
@@ -471,12 +284,25 @@ public struct BottomBar<ID: Hashable>: View {
     .padding(.bottom, bottomInset > 0 ? 0 : Space.s1_5)
     .frame(maxWidth: .infinity)
     .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomInset = $0 }
-    .background { Frost.bar.ignoresSafeArea(edges: .bottom) }
-    .overlay(alignment: .top) { BarHairline() }
+    .background { surface.ignoresSafeArea(edges: .bottom) }
+    .overlay(alignment: .top) {
+      Rectangle().fill(palette.border).frame(height: 1 / displayScale).accessibilityHidden(true)
+    }
     .motion(Motion.move, value: selection)
     .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     .accessibilityElement(children: .contain)
     .accessibilityAddTraits(.isTabBar)
+  }
+
+  @ViewBuilder private var surface: some View {
+    if reduceTransparency {
+      palette.background
+    } else {
+      // The thinnest material, which blurs as the others do but tints
+      // least, so the veil over it is what colors it.
+      Rectangle().fill(.ultraThinMaterial).environment(\.colorScheme, palette.scheme)
+        .overlay(palette.background.opacity(0.8))
+    }
   }
 
   private func tab(_ item: TabBarItem<ID>, shortcut: Int) -> some View {

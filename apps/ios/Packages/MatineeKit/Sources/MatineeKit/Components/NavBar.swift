@@ -95,13 +95,20 @@ public struct NavBar<ID: Hashable, Leading: View>: View {
   }
 }
 
-/// The NavBar's surface: the kit's `Frost` as the phone's bars have it,
-/// but in a capsule and thinner, the page's background at 60% over the
-/// blur, for a pill floating over a banner; `--popover` under Reduce
-/// Transparency, so the pill still stands off the page.
+/// The NavBar's surface: the page's background at 60% over a blur, solid
+/// under Reduce Transparency. The thinnest material, as the phone's tabs
+/// have it, so the veil is what colors it rather than the material's tint.
 private struct GlassCapsule: View {
+  @Environment(\.palette) private var palette
+  @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
   var body: some View {
-    Frost(shape: Capsule(), veil: 0.6, reduced: \.popover)
+    if reduceTransparency {
+      Capsule().fill(palette.popover)
+    } else {
+      Capsule().fill(.ultraThinMaterial).environment(\.colorScheme, palette.scheme)
+        .overlay(Capsule().fill(palette.background.opacity(0.6)))
+    }
   }
 }
 
