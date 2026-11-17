@@ -65,8 +65,9 @@ export const heroFrame =
 export const heroFill =
   "lg:h-auto lg:min-h-[max(360px,min(64vh,40vw))] lg:flex-1"
 
-// Phones split the row between the buttons.
-const heroButton = "max-sm:h-11 max-sm:flex-1"
+// Phones split the row between the buttons; desktop makes them bigger.
+const heroButton =
+  "max-sm:h-11 max-sm:flex-1 lg:h-12 lg:gap-2.5 lg:px-6 lg:text-base lg:[&_svg]:size-5"
 const heroSecondary =
   "border-foreground/10 bg-foreground/15 text-foreground backdrop-blur hover:bg-foreground/25"
 
@@ -225,7 +226,7 @@ export function Hero({
         // kept short and has no room for them; it advances on its own. The
         // full-width strip lets clicks through so it doesn't cover the
         // buttons; only the controls take pointer events.
-        <div className="pointer-events-none absolute inset-x-0 bottom-3 max-sm:hidden sm:bottom-12 lg:bottom-[34px] sm:max-lg:[@media(max-height:540px)]:bottom-3">
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 max-sm:hidden sm:bottom-12 lg:bottom-[38px] sm:max-lg:[@media(max-height:540px)]:bottom-3">
           <div
             className={cn(
               pageColumn,
@@ -300,10 +301,10 @@ function TitleMark({ item, primed }: { item: MediaItem; primed: boolean }) {
         <img
           src={logo.src}
           srcSet={logo.srcSet}
-          sizes="(min-width: 640px) 32rem, 80vw"
+          sizes="(min-width: 1024px) 40rem, (min-width: 640px) 32rem, 80vw"
           alt=""
           onError={() => setLogoFailed(true)}
-          className="max-h-13 max-w-[min(80vw,32rem)] object-contain object-left-bottom drop-shadow-[0_2px_12px_rgb(0_0_0/0.5)] sm:max-h-[clamp(3.5rem,16vh,9rem)] lg:max-h-[clamp(6rem,14vh,11rem)]"
+          className="max-h-13 max-w-[min(80vw,32rem)] object-contain object-left-bottom drop-shadow-[0_2px_12px_rgb(0_0_0/0.5)] sm:max-h-[clamp(3.5rem,16vh,9rem)] lg:max-h-[clamp(7rem,16vh,13rem)] lg:max-w-[min(40vw,40rem)]"
         />
       </h2>
     )
@@ -313,7 +314,7 @@ function TitleMark({ item, primed }: { item: MediaItem; primed: boolean }) {
     // shares the first screen with the rows below it, and a phone on its
     // side has little height to give. A phone's banner is short; a name
     // that big would reach its top.
-    <h2 className="text-foreground text-28px line-clamp-2 max-w-2xl leading-[1.1] font-bold tracking-tight text-balance [text-shadow:0_2px_24px_rgb(0_0_0/0.45)] sm:text-[clamp(2.25rem,7vh,3rem)] lg:text-[clamp(3rem,5.5vh,4.5rem)]">
+    <h2 className="text-foreground text-28px line-clamp-2 max-w-2xl leading-[1.1] font-bold tracking-tight text-balance [text-shadow:0_2px_24px_rgb(0_0_0/0.45)] sm:text-[clamp(2.25rem,7vh,3rem)] lg:max-w-3xl lg:text-[clamp(3.5rem,6.5vh,5.5rem)]">
       {name}
     </h2>
   )
@@ -357,18 +358,18 @@ function SlideContent({
       className={cn(
         // Above the buttons, which stay while the slides change: their
         // place, plus their height and the gap over them.
-        "absolute inset-x-0 bottom-[70px] transition-opacity duration-500 motion-reduce:transition-none sm:bottom-[176px] lg:bottom-24 sm:max-lg:[@media(max-height:540px)]:bottom-[104px]",
+        "absolute inset-x-0 bottom-[70px] transition-opacity duration-500 motion-reduce:transition-none sm:bottom-[176px] lg:bottom-[104px] sm:max-lg:[@media(max-height:540px)]:bottom-[104px]",
         active ? "opacity-100" : "pointer-events-none opacity-0",
       )}
     >
       <div className={pageColumn}>
         <TitleMark item={item} primed={primed} />
-        <div className="text-foreground/80 mt-3 flex max-w-xl flex-wrap items-center gap-x-3 gap-y-1.5 text-sm sm:text-base">
+        <div className="text-foreground/80 mt-3 flex max-w-xl flex-wrap items-center gap-x-3 gap-y-1.5 text-sm sm:text-base lg:mt-4 lg:max-w-2xl lg:gap-x-4 lg:text-lg">
           {facts.length > 0 && (
             <span className="line-clamp-1">{facts.join(" · ")}</span>
           )}
           {title.contentRating && (
-            <span className="border-foreground/30 rounded border px-1.5 text-xs leading-5 font-medium">
+            <span className="border-foreground/30 rounded border px-1.5 text-xs leading-5 font-medium lg:px-2 lg:text-sm lg:leading-6">
               {title.contentRating}
             </span>
           )}
@@ -376,7 +377,7 @@ function SlideContent({
             <span className="inline-flex items-center gap-1 tabular-nums">
               <StarIcon
                 aria-hidden
-                className="size-3.5 fill-current text-amber-300"
+                className="size-3.5 fill-current text-amber-300 lg:size-4"
               />
               <span className="sr-only">{tr("media.hero.rated")}</span>
               {ratings().format(title.rating)}
@@ -390,7 +391,7 @@ function SlideContent({
           <ul
             aria-label={tr("media.hero.genres")}
             className={cn(
-              "mt-3 flex flex-wrap gap-1.5 max-sm:mt-2 sm:max-lg:[@media(max-height:540px)]:hidden",
+              "mt-3 flex flex-wrap gap-1.5 max-sm:mt-2 lg:mt-4 lg:gap-2 sm:max-lg:[@media(max-height:540px)]:hidden",
               resuming && "max-sm:hidden",
             )}
           >
@@ -399,7 +400,7 @@ function SlideContent({
                 <Link
                   to="/genres/$genre"
                   params={{ genre }}
-                  className="border-foreground/15 bg-background/30 text-foreground/85 hover:border-foreground/35 hover:text-foreground focus-visible:ring-ring block rounded-full border px-2.5 py-0.5 text-xs backdrop-blur-sm outline-none focus-visible:ring-2"
+                  className="border-foreground/15 bg-background/30 text-foreground/85 hover:border-foreground/35 hover:text-foreground focus-visible:ring-ring block rounded-full border px-2.5 py-0.5 text-xs backdrop-blur-sm outline-none focus-visible:ring-2 lg:px-3 lg:py-1 lg:text-sm"
                 >
                   {genre}
                 </Link>
@@ -409,12 +410,12 @@ function SlideContent({
         )}
         {title.overview && (
           // Short windows give the banner too little room for it.
-          <p className="text-foreground/70 mt-2 line-clamp-3 max-w-xl text-sm leading-6 max-sm:hidden sm:max-lg:[@media(max-height:700px)]:hidden lg:[@media(max-height:880px)]:hidden">
+          <p className="text-foreground/70 mt-2 line-clamp-3 max-w-xl text-sm leading-6 max-sm:hidden lg:mt-4 lg:max-w-2xl lg:text-base lg:leading-7 sm:max-lg:[@media(max-height:700px)]:hidden lg:[@media(max-height:880px)]:hidden">
             {title.overview}
           </p>
         )}
         {resuming && (
-          <div className="mt-4 flex max-w-xs items-center gap-3 max-sm:mt-3">
+          <div className="mt-4 flex max-w-xs items-center gap-3 max-sm:mt-3 lg:mt-5 lg:max-w-sm">
             <span
               aria-hidden
               className="bg-foreground/25 h-1 flex-1 overflow-hidden rounded-full"
@@ -424,7 +425,7 @@ function SlideContent({
                 style={{ width: `${Math.min(100, ratio * 100)}%` }}
               />
             </span>
-            <span className="text-foreground/80 text-xs tabular-nums">
+            <span className="text-foreground/80 text-xs tabular-nums lg:text-sm">
               {code ? `${code} · ${left}` : left}
             </span>
           </div>
