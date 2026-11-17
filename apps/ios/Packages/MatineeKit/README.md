@@ -229,7 +229,21 @@ a value or a line of detail muted.
   smaller variant. `onHome` adds the house beside Back. `.topBar(…, hidden: true)`
   leaves the bar out, as `.hidesSystemNavigationBar()`, and keeps the page
   the same view as it changes: for a tab's first page with a bar on a phone
-  and a heading of its own on a tablet.
+  and a heading of its own on a tablet. The bar stays put, on
+  `--background` from the screen's top, with no line under it: the page
+  scrolls under a clean edge.
+- `.fixedHeader(hidden:, backdrop:) { header }`: a tab's first page's own
+  top that stays put, as Home's logo, search, and account on a phone and
+  Media's search field, right under the status bar. The page's safe area
+  starts below it, so the content starts clear of it and a pull to refresh
+  shows under it. `backdrop: .none` draws nothing behind it, as Findroid's
+  Home: the page scrolls on behind the header and under the status bar,
+  for a header whose controls have fills of their own.
+  `backdrop: .solid(room:)` is `--background` from the screen's top to
+  `room` below the header, solid and with no line, as `TopBar`. The band
+  takes taps on its empty stretches too. `hidden` leaves it out and keeps
+  the page the same view, as `.topBar(…, hidden:)`. The gallery's Bars page
+  scrolls a page under each.
 - `BottomBar([TabBarItem(id, label:, icon:)], selection:) { id in }` and
   `.bottomBar(bar)`: a phone's tabs, after Findroid's: the full width,
   each tab its 22-point icon over its name in `text-xs` medium, always
