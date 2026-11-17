@@ -38,19 +38,3 @@ extension Favorites {
       episode: viewer.isFavorite)
   }
 }
-
-extension Favorite {
-  /// Dispatches all four kinds through the same live-mark predicates.
-  public func isFavorite(
-    title: (TitleSummary) -> Bool,
-    season: (TitleSummary, Season) -> Bool,
-    episode: (MediaItem) -> Bool
-  ) -> Bool {
-    switch self {
-    case .movie(let entry): title(entry.title)
-    case .show(let entry): title(entry.title)
-    case .showSeason(let entry): season(entry.title, entry.season)
-    case .episode(let entry): episode(entry.item)
-    }
-  }
-}

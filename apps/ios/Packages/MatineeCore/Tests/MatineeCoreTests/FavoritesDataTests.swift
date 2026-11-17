@@ -10,19 +10,5 @@ struct FavoritesDataTests {
     let filtered = all.filtering(title: { _ in false }, season: { _, _ in false }, episode: { $0.id == "second" })
     #expect(filtered.episodes.map(\.id) == ["second"])
     #expect(all.filtering(title: { _ in false }, season: { _, _ in false }, episode: { _ in false }).isEmpty)
-    #expect(Favorite.episode(.init(item: item)).isFavorite(
-      title: { _ in false }, season: { _, _ in false }, episode: { _ in true }))
-  }
-
-  @Test func routePayloadsRoundTrip() throws {
-    let routes: [CoreRoute] = [
-      .season(titleId: "show", number: nil), .season(titleId: "show", number: 0),
-      .person(name: "A/B", tmdbId: "42"), .library(id: "l", sort: "score"),
-      .browse(genre: "Drama", studio: "Studio"),
-      .images(titleId: "show", season: 0, episode: 2),
-      .folderPicker(start: "/media", added: ["/media/a"]),
-      .catalogBrowse(kind: "show", filters: .none, sort: CatalogSort.forYou), .catalogBrowse(kind: "movie"),
-    ]
-    #expect(try JSONDecoder().decode([CoreRoute].self, from: JSONEncoder().encode(routes)) == routes)
   }
 }

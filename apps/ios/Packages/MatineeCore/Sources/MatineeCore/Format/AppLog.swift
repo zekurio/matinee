@@ -91,22 +91,7 @@ public func scrubLogMessage(_ message: String, known: KnownValues = .init()) -> 
   ] { text = replacing(text, pattern, replacement) }
   return text
 }
-public func formatLogLine(_ line: String, known: KnownValues = .init()) -> String? {
-  let regex = try! NSRegularExpression(
-    pattern: #"^(\d\d-\d\d \d\d:\d\d:\d\d\.\d+)\s+\d+\s+\d+\s+([VDIWEFA])\s+(.*?)\s*:(?: (.*))?$"#)
-  guard let match = regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) else {
-    return nil
-  }
-  func part(_ n: Int) -> String {
-    Range(match.range(at: n), in: line).map { String(line[$0]) } ?? ""
-  }
-  return
-    "\(part(1)) \(part(2)) \(scrubLogMessage(part(3), known: known).prefix(32)): \(scrubLogMessage(part(4), known: known))"
-}
-public func formatLog(_ lines: [String], known: KnownValues = .init()) -> String {
-  formatScrubbedLog(lines.compactMap { formatLogLine($0, known: known) })
-}
-private func formatScrubbedLog(_ lines: [String]) -> String {
+func formatScrubbedLog(_ lines: [String]) -> String {
   let kept = Array(lines.suffix(AppLog.maxLines))
   var body: [String] = []
   var size = 0

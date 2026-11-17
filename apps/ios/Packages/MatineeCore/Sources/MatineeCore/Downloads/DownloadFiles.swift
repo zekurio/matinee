@@ -50,13 +50,6 @@ actor DownloadFiles {
     try FileManager.default.moveItem(at: location, to: kept)
     return kept
   }
-  func storageUsed() -> Int64 {
-    guard
-      let files = FileManager.default.enumerator(
-        at: root, includingPropertiesForKeys: [.fileSizeKey])
-    else { return 0 }
-    return files.compactMap { $0 as? URL }.reduce(0) { $0 + size($1) }
-  }
   /// The space the folders of `keys` take on disk, as the file system
   /// allocates it, so it reads as `du` and the system's storage settings do.
   func storageUsed(keys: [String]) -> Int64 {

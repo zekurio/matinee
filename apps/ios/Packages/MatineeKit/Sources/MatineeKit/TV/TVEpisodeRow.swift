@@ -124,18 +124,4 @@
         .joined(separator: ", ")
     }
   }
-
-  extension TVEpisodeRow where Art == TVPicture {
-    /// An episode with its still loaded from `url`.
-    public init(
-      _ name: String, number: String? = nil, marker: String? = nil, facts: [String] = [], overview: String? = nil,
-      progress: Double? = nil, watched: Bool = false, url: URL?, stillWidth: CGFloat = TVEpisodeRows.stillWidth,
-      action: @escaping () -> Void, onLongPress: (() -> Void)? = nil, onPlayPause: (() -> Void)? = nil
-    ) {
-      self.init(
-        name, number: number, marker: marker, facts: facts, overview: overview, progress: progress, watched: watched,
-        stillWidth: stillWidth, action: action, onLongPress: onLongPress, onPlayPause: onPlayPause
-      ) { TVPicture(url) }
-    }
-  }
 #endif

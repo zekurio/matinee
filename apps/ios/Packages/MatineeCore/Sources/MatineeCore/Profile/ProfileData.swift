@@ -4,14 +4,6 @@ import Observation
 /// The full recently watched page asks for at most 100 entries, as Android does.
 public let PROFILE_RECENT_LIMIT = 100
 
-/// Profile page data. Requests attach separately; they are not part of this loader.
-@MainActor public func profileLoader(api: MatineeApi, username: String, snapshot: ProfileSnapshot? = nil,
-                                     describe: @escaping @MainActor (Failure) -> String) -> Loader<Profile> {
-  let loader = Loader<Profile>(kept: snapshot?.profile)
-  loader.configure(describe: describe) { try await api.profiles.get(username: username) }
-  return loader
-}
-
 /// The range's last answer stays visible while a different range loads.
 /// Each range keeps its own loader, as Android keeps one per range's key,
 /// so a range picked again shows its answer at once while it refreshes.
@@ -37,16 +29,6 @@ public final class ProfileStats {
     return last
   }
   public var neverWatched: Bool { range == "all" && stats?.totals.plays == 0 }
-
-  /// Configure the current range with the app's localized failure description.
-  public func configure(api: MatineeApi, username: String, timeZone: String = TimeZone.current.identifier,
-                        describe: @escaping @MainActor (Failure) -> String) {
-    savedState = nil
-    let range = range
-    loader.configure(describe: describe) {
-      try await api.profiles.stats(username: username, range: range, timeZone: timeZone)
-    }
-  }
 
   /// A caller configures the new loader after selecting a range; one
   /// picked before comes back as it was, already configured.
@@ -98,27 +80,4 @@ public enum StatsContent: Equatable, Sendable {
   /// Nothing in the range picked, though there is in all time.
   case nothingInRange
   case shown(WatchStats)
-}
-
-@MainActor public func recentLoader(api: MatineeApi, username: String,
-                                    describe: @escaping @MainActor (Failure) -> String) -> Loader<[WatchedEntry]?> {
-  let loader = Loader<[WatchedEntry]?>()
-  loader.configure(describe: describe) {
-    try await api.profiles.recent(username: username, limit: PROFILE_RECENT_LIMIT)
-  }
-  return loader
-}
-
-@MainActor public func favoritesLoader(api: MatineeApi, username: String,
-                                       describe: @escaping @MainActor (Failure) -> String) -> Loader<Favorites?> {
-  let loader = Loader<Favorites?>()
-  loader.configure(describe: describe) { try await api.profiles.favorites(username: username) }
-  return loader
-}
-
-@MainActor public func leaderboardLoader(api: MatineeApi, range: String, timeZone: String = TimeZone.current.identifier,
-                                         describe: @escaping @MainActor (Failure) -> String) -> Loader<Leaderboard> {
-  let loader = Loader<Leaderboard>()
-  loader.configure(describe: describe) { try await api.stats.leaderboard(range: range, timeZone: timeZone) }
-  return loader
 }

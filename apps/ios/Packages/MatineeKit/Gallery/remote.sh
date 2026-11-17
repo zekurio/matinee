@@ -11,7 +11,7 @@
 #                                                    `send relaunch:...` starts it
 #   ./remote.sh stop                                 end the session
 #
-#   ./remote.sh serve "-page tv-buttons -scheme dark"
+#   ./remote.sh serve "-page buttons -scheme dark"
 #   ./remote.sh send "shot:start right*2 shot:third select menu"
 #
 # Steps: up down left right select menu playpause home, with *n to repeat

@@ -101,11 +101,6 @@ final class AuthProtocol: URLProtocol, @unchecked Sendable {
     let restored = MatineeSession(store: store, configuration: config, automaticallyStart: false)
     #expect(restored.activeServer == "http://fallback.example/")
     #expect(restored.lastUser == authUser)
-    #expect(
-      restored.artworkHeaders(for: URL(string: "http://other.example/api/artwork/1")!).isEmpty)
-    #expect(
-      restored.artworkHeaders(for: URL(string: "http://fallback.example/api/artwork/1")!)[
-        "Authorization"] == "Bearer saved")
     // tvOS has no offline mode; see ClientCapabilities.
     #if !os(tvOS)
     await restored.setOfflineMode(true)

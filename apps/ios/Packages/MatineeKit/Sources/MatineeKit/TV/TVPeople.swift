@@ -43,11 +43,4 @@
       .frame(width: TVPersonWidth)
     }
   }
-
-  extension TVPersonCard where Photo == TVPicture {
-    /// A person with their photo loaded from `url`.
-    public init(_ name: String, role: String? = nil, url: URL?, action: @escaping () -> Void) {
-      self.init(name, role: role, action: action) { TVPicture(url) }
-    }
-  }
 #endif

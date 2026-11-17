@@ -8,7 +8,7 @@
   /// picture on the way, then crossfades; the first picture, or none, shows
   /// at once. Put it behind the page, filling the screen.
   ///
-  ///     TVBackdrop(focused) { title in TVPicture(title.backdrop, alignment: .topTrailing) }
+  ///     TVBackdrop(focused) { title in Picture(api?.art(title.backdrop) ?? [], alignment: .topTrailing) }
   public struct TVBackdrop<Item: Hashable, Picture: View>: View {
     let item: Item?
     let settle: Duration

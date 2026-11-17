@@ -100,18 +100,3 @@ public enum NoLibraries: Equatable, Sendable {
 
   public init(admin: Bool) { self = admin ? .noneExist : .noneOpen }
 }
-
-/// Favorites as a page shows them: the titles and the episodes still marked,
-/// so one taken off here or elsewhere goes at once, before the list is
-/// fetched again.
-@MainActor public enum FavoritesFilter {
-  /// The titles, nil while they load or when they failed.
-  public static func titles(_ load: Load<[TitleSummary]>, _ viewer: ViewerState) -> [TitleSummary]? {
-    load.value?.filter(viewer.isFavorite)
-  }
-
-  /// The episodes, empty while they load or when they failed.
-  public static func episodes(_ load: Load<[MediaItem]>, _ viewer: ViewerState) -> [MediaItem] {
-    load.value?.filter(viewer.isFavorite) ?? []
-  }
-}

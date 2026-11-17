@@ -56,7 +56,6 @@ public let FALLBACK_PLAYBACK_OPTIONS = PlaybackOptions(
   qualities: [], maxBitrate: nil, downloads: false, downloadVideoPresets: [], skipSteps: [],
   videoCodecs: [TranscodeVideoCodec.h264], audioCodecs: [TranscodeAudioCodec.aac],
   audioLanguages: [], subtitleLanguages: [])
-public typealias OfflinePlay = PlaybackOfflineInput.Play
 public let PLAYBACK_UNPLAYABLE = "UNPLAYABLE"
 public let PLAYBACK_RESTRICTED = "PLAYBACK_RESTRICTED"
 public let PLAYBACK_BUSY = "TOO_MANY_STREAMS"

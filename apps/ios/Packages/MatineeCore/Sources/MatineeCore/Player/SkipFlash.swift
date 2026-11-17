@@ -7,8 +7,7 @@ import Foundation
  * for `FLASH_MS` after the last press. Android's players have none.
  *
  * The web says each press's own step; the Apple TV player, after Apple
- * TV's own, adds up presses in a row, and both Apple players do that
- * now: a press the same way while the note still shows adds its step,
+ * TV's own, adds up presses in a row, and so does the phone's: a press the same way while the note still shows adds its step,
  * and one the other way, or after the note went, starts again.
  */
 

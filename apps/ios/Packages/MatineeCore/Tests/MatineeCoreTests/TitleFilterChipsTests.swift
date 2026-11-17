@@ -127,9 +127,6 @@ struct PersonPresentationTests {
     #expect(personCreditSections(someone).map(\.kind) == [CreditKind.director, CreditKind.actor, CreditKind.writer])
     #expect(personCreditSections(someone, titleKind: TitleKind.show).map(\.kind) == [CreditKind.writer])
     #expect(personSubtitle(someone) == .credits(kinds: [CreditKind.director, CreditKind.actor, CreditKind.writer], titleCount: 2))
-    // Each title once, however many ways they're credited on it.
-    let counts = personKindCounts(someone)
-    #expect(counts.movie == 1 && counts.show == 1)
     #expect(personCreditDetail(someone.credits[0]) == (1999, "Neo"))
     #expect(personCreditDetail(someone.credits[2]) == (nil, nil))
   }
@@ -144,13 +141,6 @@ struct PersonPresentationTests {
       credits: credits,
       profile: PersonProfile(tmdbId: "1", knownFor: "juggling", birthday: nil, deathday: "", biography: nil))
     #expect(personSubtitle(odd) == .credits(kinds: [CreditKind.actor], titleCount: 1))
-  }
-
-  @Test func aKindWithNothingIsntShown() {
-    let someone = person(credits: [PersonCredit(title: summary("m"), kind: CreditKind.actor, role: nil)])
-    #expect(personShownKind(someone, picked: nil) == nil)
-    #expect(personShownKind(someone, picked: TitleKind.movie) == TitleKind.movie)
-    #expect(personShownKind(someone, picked: TitleKind.show) == nil)
   }
 }
 

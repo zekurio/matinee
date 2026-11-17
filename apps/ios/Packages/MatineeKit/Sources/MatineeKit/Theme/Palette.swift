@@ -74,8 +74,6 @@ public nonisolated struct Palette: Hashable, Sendable {
     colors.accent.opacity(
       contrastSafeTintAlpha(colors.accent, colors.background, preferred: softAlpha(dark: isDark)))
   }
-  /// `--accent-border`.
-  public var accentBorder: Color { colors.accent.opacity(isDark ? 0.55 : 0.4) }
 
   // MARK: Status
 
@@ -85,11 +83,8 @@ public nonisolated struct Palette: Hashable, Sendable {
   public var warning: Color { colors.warning.color }
   public var info: Color { colors.info.color }
   public var live: Color { colors.live.color }
-  /// The `-soft` tints: the status color at 12%.
+  /// `--destructive-soft`: the status color at 12%.
   public var destructiveSoft: Color { colors.danger.opacity(0.12) }
-  public var successSoft: Color { colors.success.opacity(0.12) }
-  public var warningSoft: Color { colors.warning.opacity(0.12) }
-  public var infoSoft: Color { colors.info.opacity(0.12) }
 
   /// amber-300, the rating star.
   public var star: Color { RGB(0xFCD34D).color }
@@ -110,15 +105,7 @@ public nonisolated struct Palette: Hashable, Sendable {
     }
   }
 
-  /// `color-mix(in oklab, a, b amount)`, for the few web colors that are mixes, like a secondary button's hover.
-  public func mixed(_ base: KeyPath<ThemeColors, RGB>, with other: KeyPath<ThemeColors, RGB>, _ amount: Double)
-    -> Color
-  {
-    mix(colors[keyPath: base], colors[keyPath: other], amount).color
-  }
-
   public static let matineeDark = Palette(MATINEE_DARK)
-  public static let matineeLight = Palette(MATINEE_LIGHT)
 }
 
 extension EnvironmentValues {

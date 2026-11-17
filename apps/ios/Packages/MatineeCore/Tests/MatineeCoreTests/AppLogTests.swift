@@ -41,12 +41,7 @@ struct AppLogTests {
       "position 01:23:45, The server's answer didn't parse",
       "at androidx.media3.extractor.ts.TsExtractor.read(TsExtractor.java:412)",
     ] { #expect(scrubLogMessage(text, known: known) == text) }
-    #expect(formatLogLine("--------- beginning of main") == nil)
-    #expect(
-      formatLogLine(
-        "11-12 01:41:46.123  4321  4350 W MpvPlayer: [ffmpeg] https://media.example.org/x failed",
-        known: known) == "11-12 01:41:46.123 W MpvPlayer: [ffmpeg] <url> failed")
-    let log = formatLog((1...550).map { "11-12 01:41:46.123  1  2 I Tag: line \($0)" })
+    let log = formatScrubbedLog((1...550).map { "line \($0)" })
     #expect(log.hasPrefix("Matinee app log v1\n"))
     #expect(log.hasSuffix("line 550\n"))
     #expect(!log.contains("line 50\n"))

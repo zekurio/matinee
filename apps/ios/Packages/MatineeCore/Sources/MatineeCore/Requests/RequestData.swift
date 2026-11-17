@@ -63,37 +63,15 @@ public final class RequestAvailabilityState {
 public struct RequestData: Sendable {
   public let api: ContractApi
   public init(api: ContractApi) { self.api = api }
-  public func title(_ input: CatalogInput) async throws -> CatalogTitleDetail {
-    try await api.catalog.details(catalogInput: input)
-  }
-  public func discover() async throws -> DiscoverRails { try await api.discover.rails() }
   /// A Discover row's cards: the first page of its browse, or what came from its seed.
   public func row(_ rail: DiscoverRail) async throws -> DiscoverRow {
     try await api.discover.row(id: rail.id, seed: rail.seed)
-  }
-  public func browseOptions(kind: String) async throws -> CatalogBrowseOptions {
-    try await api.discover.browseOptions(kind: kind)
   }
   public func browse(_ input: CatalogBrowseInput) async throws -> CatalogBrowsePage {
     try await api.discover.browse(catalogBrowseInput: input)
   }
   public func search(_ query: String, kind: String? = nil, page: Int = 1) async throws -> CatalogPage {
     try await api.catalog.search(query: query, kind: kind, page: page)
-  }
-  public func gaps(titleId: String) async throws -> CatalogMissingSeasonsOutput {
-    try await api.catalog.missingSeasons(titleId: titleId)
-  }
-  public func mine(cursor: String? = nil, filter: String? = nil) async throws -> RequestPage {
-    try await api.requests.mine(cursor: cursor, limit: 40, filter: filter)
-  }
-  public func queue(cursor: String? = nil) async throws -> RequestQueue {
-    try await api.admin.requests.queue(cursor: cursor, limit: 40)
-  }
-  public func related(_ input: CatalogInput) async throws -> RelatedRails {
-    try await api.catalog.related(catalogInput: input)
-  }
-  public func relatedTitles(_ input: CatalogInput, rail: String) async throws -> RelatedPage {
-    try await api.catalog.relatedTitles(ref: input.ref, rail: rail, libraryId: input.libraryId)
   }
 }
 
@@ -105,9 +83,6 @@ public struct RequestActions: Sendable {
   public init(api: ContractApi) { self.api = api }
   public func ask(_ input: CatalogInput, scope: ShowScope? = nil) async throws -> RequestItem {
     try await api.requests.ask(ref: input.ref, libraryId: input.libraryId, scope: scope)
-  }
-  public func more(id: String, scope: ShowScope) async throws -> RequestItem {
-    try await api.requests.addSeasons(id: id, scope: scope)
   }
   /// Undo is available only for the first ask, never an expansion of scope.
   public func cancel(id: String) async throws {

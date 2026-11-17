@@ -1,7 +1,7 @@
 import AVFoundation
 import Foundation
 
-/// What the controller drives: AVPlayer today, mpv later, a fake in tests.
+/// What the controller drives: AVPlayer, MatineeMPV's engine, a fake in tests.
 /// Times are in the source's own timeline; the controller adds the offset.
 @MainActor public protocol PlaybackEngine: AnyObject {
   var mpvStatistics: MPVStatistics? { get }

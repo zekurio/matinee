@@ -21,14 +21,9 @@ enum MPVLoadError: LocalizedError {
   #endif
 
   public init() {
-    var options = ["sid": "no"]
-    if let font = Bundle.main.url(forResource: "red_hat_text", withExtension: "ttf") {
-      options["sub-fonts-dir"] = font.deletingLastPathComponent().path
-      options["sub-font"] = "Red Hat Text"
-    }
     mpv = MPVPlayer(
       configuration: .init(
-        additionalOptions: options, audio: .init(audioSession: .hostManaged),
+        additionalOptions: ["sid": "no"], audio: .init(audioSession: .hostManaged),
         automaticallyPlays: false))
     mpv.setDiagnosticsEnabled(true)
     mpv.setTextSubtitleInterceptionEnabled(true)

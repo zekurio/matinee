@@ -4,16 +4,11 @@ import UIKit
 
 /*
  * Colors as the web has them (packages/ui/src/lib/theme-colors.ts and
- * theme-color-math.ts), ported from Android's ThemeColors.kt by way of the
- * app's Theme/ThemeColors.swift: a color per role, Matinee's light and dark
+ * theme-color-math.ts), ported from Android's ThemeColors.kt: a color per role, Matinee's light and dark
  * palettes (ThemePresets.gen.swift), and the server's accent on them.
  * Contrast follows WCAG relative luminance; mixing happens in OKLab, so
  * tinted ramps never pass through gray.
  */
-
-public nonisolated enum Appearance: String, Sendable, CaseIterable {
-  case light, dark
-}
 
 /// An opaque sRGB color, its channels 0–1. The math below works on these;
 /// views read SwiftUI colors from `Palette`.
@@ -112,11 +107,6 @@ public nonisolated struct ThemeColors: Hashable, Sendable {
 
   /// Reads like a dark background: white text contrasts better than black.
   public var isDark: Bool { luminance(background) < 0.179 }
-
-  /// Matinee's own palette for an appearance.
-  public static func matinee(_ appearance: Appearance) -> ThemeColors {
-    appearance == .light ? MATINEE_LIGHT : MATINEE_DARK
-  }
 
   /// Replaces the accent with `seed`, adjusted for contrast against the
   /// background: the server's accent on the Matinee theme, which an admin

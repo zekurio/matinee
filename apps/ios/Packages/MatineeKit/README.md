@@ -74,8 +74,8 @@ hiding the system bar would otherwise lose.
 | `palette.background`, `card`, `popover`, `secondary`, `muted`, `field`                                                    | Surfaces: `--background` (neutral-0), `--card` (50), `--popover` (100), `--secondary` (150), `--muted` (100, a surface, not text), `--field` (sunken)                                                                                                                                                                                                   |
 | `palette.foreground`, `mutedForeground`, `foregroundFaint`                                                                | Text: neutral-900, neutral-600, `--foreground-faint`. Android's `Palette.Muted` is `mutedForeground`                                                                                                                                                                                                                                                    |
 | `palette.border`, `input`, `inputHover`, `hairline`, `ring`                                                               | Lines: neutral-200, a field's border (300), its hover (400), `ring-foreground/10` round floating things, the accent focus ring                                                                                                                                                                                                                          |
-| `palette.accent`, `accentForeground`, `accentHover`, `accentActive`, `accentSoft`, `accentBorder`, `accentDim`            | The accent family, fitted to the server's accent                                                                                                                                                                                                                                                                                                        |
-| `palette.destructive`, `success`, `warning`, `info`, `live`, `*Soft`                                                      | Status colors and their 12% tints                                                                                                                                                                                                                                                                                                                       |
+| `palette.accent`, `accentForeground`, `accentHover`, `accentActive`, `accentSoft`, `accentDim`            | The accent family, fitted to the server's accent                                                                                                                                                                                                                                                                                                        |
+| `palette.destructive`, `success`, `warning`, `info`, `live`, `destructiveSoft`                                                      | Status colors, and the destructive one's 12% tint                                                                                                                                                                                                                                                                                                                       |
 | `palette.popoverGlass`, `.glassBackground(in:)`                                                                           | The web's `glass`: the popover at 65% (84% in light) over a blur; solid under Reduce Transparency                                                                                                                                                                                                                                                       |
 | `.textStyle(.sm, weight: .medium, tracking: .tight)`                                                                      | The web's type scale in Red Hat Text: `.xs` 12/16, `.sm` 14/20, `.base` 16/24, `.lg` 18/28, `.xl` 20/28, `.xl2` 24/32, `.xl3` 30/36, `.xl4` 36/40, `.xl5` 48/48, and globals.css's `.px9` … `.px32` (`text-13px` is `.px13`). Sizes and line heights grow with Dynamic Type; `.keepsWordsWhole(text, size)` steps a long word down rather than break it |
 | `.pageTitleStyle()`                                                                                                       | A page's title, Android's `titleLarge`: `.xl` semibold, tight. `TopBar` sets every pushed page's name in it, and Settings' section headings and `SectionTitle` take it too                                                                                                                                                                              |
@@ -265,7 +265,7 @@ a value or a line of detail muted.
   Home's banner on an iPad. The bar frosts as over a scrolled page unless
   the page says how strong, and the clearance is how far below the
   screen's top the page starts, which art in a scroll view reaches up by.
-- Both bars stop growing at `xxLarge` and keep that size at the
+- Both bars stop growing at `xxxLarge` and keep that size at the
   accessibility text sizes, as iOS's tab bar does, show a tab's name large
   on a long press, and take ⌘1, ⌘2, …
 - `.keyCommand("f", modifiers: .command, label: "Search") { }`: a hardware
@@ -556,9 +556,7 @@ search field's placeholder, a card's progress) are in the `TV` table of
 ### Layout pieces
 
 Each takes plain values, a title, a key, a progress, and the picture as a
-view the app supplies, or a `URL` for the kit's `TVPicture`
-(`AsyncImage`, faded in) when the app has no loader of its own. None knows
-MatineeCore.
+view the app supplies. None knows MatineeCore.
 
 - `TVPosterCard("Dune", watched:, width:, action:, onLongPress:, onPlayPause:) { art }`
   or `url:`: a 2:3 poster, its name on a tone until the picture is in.
@@ -593,7 +591,7 @@ MatineeCore.
 - `TVTitleLogo("Dune", url:, style:, width:, height:, alignment:)`, or with
   the app's own logo view: the logo, or the name when there's none or it
   fails.
-- `TVBackdrop(focused) { item in TVPicture(item.backdrop, alignment: .topTrailing) }`:
+- `TVBackdrop(focused) { item in Picture(art(item), alignment: .topTrailing) }`:
   the picture behind a page under `TVScrim`, crossfading once focus rests
   for 350 ms.
 - `TVPinnedRows(memory:, spacing:, fade:, end:, lazy:) { rows }`: a page of
@@ -612,8 +610,7 @@ MatineeCore.
   measures.
 
 The TV app loads its artwork through Nuke with the blur hash, as the
-iPhone app does, and passes it to these as their `art`; `TVPicture` is for
-the gallery and for anything with no loader of its own.
+iPhone app does, and passes it to these as their `art`.
 
 Long press of Select on a card runs its `onLongPress`, Apple TV's way to
 ask for more, which opens the actions panel where Android TV uses Menu;
@@ -686,7 +683,7 @@ On tvOS the gallery app opens the TV gallery (`TVKitGallery`), whose last
 page is the phone gallery as it looks on a TV. Its pages: `focus`,
 `scale`, `buttons`, `lists`, `panels`, `feedback` (notices, toasts, the
 dialog, and the text field), `search`, `cards`, `episodes` (a season's
-list of `TVEpisodeRow`s), `grid`, `home`
+list of `TVEpisodeRow`s), `grid`, `charts`, `home`
 (a mock-up of Home with the backdrop, header, rows, drawer, and clock),
 `remote` (a mock player with the seek bar, presses, swipes, and taps), and `phone`. Launch arguments: `-page`, `-scheme
 light|dark`, `-accent matinee|ember|moss|sun`, `-locale de`, and `-open

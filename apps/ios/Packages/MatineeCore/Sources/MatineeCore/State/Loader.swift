@@ -21,9 +21,6 @@ public final class Loader<T: Sendable> {
   /// A fetch is out.
   public private(set) var refreshing = false
 
-  /// The viewer's marks version this loader showed last, so a change fetches again.
-  @ObservationIgnored public var seenVersion = -1
-
   @ObservationIgnored private var fetch: (@Sendable () async throws -> T)?
   @ObservationIgnored private var describe: @MainActor (Failure) -> String = { _ in "" }
   @ObservationIgnored private let kept: (any Kept<T>)?

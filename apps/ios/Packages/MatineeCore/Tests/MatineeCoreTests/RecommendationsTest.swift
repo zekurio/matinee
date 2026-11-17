@@ -40,13 +40,6 @@ struct RecommendationsTest {
     #expect(ref("1").key == "movie:tmdb:1")
   }
 
-  @Test func aTitleSaysWhyItsThere() {
-    #expect(pick("1", reason: RecommendationReason(kind: "watched", name: "Dune")).why == .watched("Dune"))
-    #expect(pick("1", reason: RecommendationReason(kind: "person", name: "Zendaya")).why == .person("Zendaya"))
-    #expect(pick("1", reason: RecommendationReason(kind: "taste", name: nil)).why == .taste)
-    #expect(pick("1").why == .taste)
-  }
-
   @Test func notInterestedLeavesTitlesAndThenEmptyRowsOut() {
     let rows = HomeRecommendations(
       rails: [

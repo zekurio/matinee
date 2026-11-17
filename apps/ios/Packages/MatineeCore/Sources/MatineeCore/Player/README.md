@@ -7,9 +7,9 @@ Call `await stop()` before discarding it. The token provider must belong to
 the same server as the API. Downloads and queued reports likewise belong to
 that server; the `PlayerDownloads` implementation must enforce that boundary.
 `ServerPlayerDownloads(downloads:server:api:)` is that implementation over
-the app's `Downloads`: `Downloads.playback(_:)` for the file and its saved
-subtitles, that server's `PendingProgress` for reports, and `api` for the
-episode after a download.
+the app's `Downloads`: that server's finished download for the file and its
+saved subtitles, its `PendingProgress` for reports, and `api` for the episode
+after a download.
 
 The controller is split by concern, in `PlayerController.kt`'s member order:
 `PlayerController.swift` (state, opening, answers, loading, fallback, the
@@ -160,9 +160,9 @@ and accumulated failed methods after an injected source failure. It reports
 progress and closes each session. It skips show episodes and the extra MP4
 because those repeat the direct-play fixture.
 
-The shared server was checked with the actual Mac profile. Direct MP4 and
-HLS play, including authenticated playlists and segments. Remux answers fail
-with AVFoundation code -11850 and fall back through a fresh `playback.start`
+Against the dev server with the Mac's profile, direct MP4 and HLS play,
+including authenticated playlists and segments. Remux answers fail with
+AVFoundation code -11850 and fall back through a fresh `playback.start`
 with `remux` in `failed`. The server README documents the missing byte-range
 support on copied streams. No client rule bypasses that decision.
 
@@ -170,7 +170,7 @@ Not yet verified on physical hardware: HDR color output, Dolby Vision, AirPlay,
 PiP restoration, lock-screen artwork, headphone removal, audio interruptions,
 and freeze detection on a visible layer. The Mac live test checks clocks and
 server-selected subtitle delivery, not subtitle pixels or HDR color accuracy.
-The report now includes bounded attempts and outcomes, named failure notes,
+The report includes bounded attempts and outcomes, named failure notes,
 allowlisted settings, file formats and capability codec lists, format descriptions,
 access-log rates, stalls and dropped frames. It also records elapsed time from
 `start` to the first decoded frame observed by the video output. This is not a

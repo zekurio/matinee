@@ -9,8 +9,7 @@ import SwiftUI
  * Picture.swift), which loads through Nuke with the session's sign-in,
  * keeps what it loaded in memory and on disk, and fades in over the blur
  * hash. The kit's TV cards take any view as their art, so a card here is
- * the kit's card with a `Picture` in it, never the kit's `TVPicture`,
- * which is a plain `AsyncImage` for the gallery.
+ * the kit's card with a `Picture` in it.
  *
  *     TVPosterCard(title.name, action: open) { Picture(api?.art(title.images.poster)) }
  */

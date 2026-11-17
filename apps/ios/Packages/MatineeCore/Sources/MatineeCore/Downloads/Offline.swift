@@ -55,7 +55,7 @@ public struct OfflineItem: Codable, Sendable, Identifiable, Hashable {
   public var server: String?
   public private(set) var all: [String: OfflineItem] = [:]
   public var items: [String: OfflineItem] {
-    Dictionary(uniqueKeysWithValues: all.values.filter { $0.server == server }.map { ($0.id, $0) })
+    Dictionary(all.values.filter { $0.server == server }.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
   }
   public init(root: URL? = nil) throws {
     self.root =
@@ -120,9 +120,6 @@ public struct OfflineItem: Codable, Sendable, Identifiable, Hashable {
   public func file(_ entry: OfflineItem) -> URL { root.appending(path: entry.file) }
   public func remove(_ key: String) async throws {
     accept(try await files.remove(key))
-  }
-  public var storageUsed: Int64 {
-    get async { await files.storageUsed() }
   }
 }
 

@@ -54,7 +54,6 @@ public let SUBTITLE_SCALES: [Double] = [0.75, 1, 1.25, 1.5, 2]
   public var subtitleColor: SubtitleColor { didSet { save() } }
   public var subtitleBackground: SubtitleBackground { didSet { save() } }
   public var subtitleEdge: SubtitleEdge { didSet { save() } }
-  // AVPlayer selects its own decoder. It exposes no hardware/software preference.
   public var engine: PlayerEngine { didSet { save() } }
   /// Turns off remembering the brightness, and forgets the one kept, so the
   /// next video starts at the screen's own rather than one from before.

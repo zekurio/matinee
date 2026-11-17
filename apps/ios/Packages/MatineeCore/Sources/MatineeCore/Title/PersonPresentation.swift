@@ -55,34 +55,6 @@ public func personCreditSections(_ person: Person, titleKind: String? = nil) -> 
   }
 }
 
-/// How many of their titles are movies and how many shows, each title once
-/// however many ways they're credited on it, with their titles at TMDB that
-/// aren't here.
-public func personKindCounts(_ person: Person) -> BrowsedTitles.Kinds {
-  var seen = Set<String>()
-  var counts = BrowsedTitles.Kinds(movie: 0, show: 0)
-  for credit in person.credits where seen.insert(credit.title.id).inserted {
-    if credit.title.kind == TitleKind.movie { counts.movie += 1 } else if credit.title.kind == TitleKind.show {
-      counts.show += 1
-    }
-  }
-  for credit in person.catalog {
-    if credit.ref.kind == TitleKind.movie { counts.movie += 1 } else if credit.ref.kind == TitleKind.show {
-      counts.show += 1
-    }
-  }
-  return counts
-}
-
-/// The kind the page shows: the one picked, while they have any of it, as
-/// a kind with nothing would leave the page empty with no chip to undo it.
-public func personShownKind(_ person: Person, picked: String?) -> String? {
-  guard let picked else { return nil }
-  let counts = personKindCounts(person)
-  let count = picked == TitleKind.movie ? counts.movie : picked == TitleKind.show ? counts.show : 0
-  return count > 0 ? picked : nil
-}
-
 /// A credit's line under its poster: the year and the part, each known, "1999 · Neo".
 public func personCreditDetail(_ credit: PersonCredit) -> (year: Int?, role: String?) {
   (credit.title.year, credit.role.flatMap { $0.isEmpty ? nil : $0 })

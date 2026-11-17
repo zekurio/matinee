@@ -23,16 +23,6 @@ public enum RecommendationRailName: Equatable, Sendable {
   case becauseWatched(String)
 }
 
-/// Why a title is recommended, before it's in words.
-public enum RecommendationWhy: Equatable, Sendable {
-  /// "Because you watched Dune".
-  case watched(String)
-  /// "With Zendaya".
-  case person(String)
-  /// "Picked from what you watch".
-  case taste
-}
-
 extension HomeRecommendationRail {
   /// Its name: the seed's title for a "Because you watched" row, else "for you".
   public var name: RecommendationRailName {
@@ -45,17 +35,6 @@ extension HomeRecommendationRail {
   /// Its titles without those marked "Not interested" since the answer came.
   public func visible(hiding hidden: Set<String>) -> [RecommendedTitle] {
     items.filter { !hidden.contains($0.ref.key) }
-  }
-}
-
-extension RecommendedTitle {
-  /// Why it's recommended; a reason this app doesn't know reads as taste.
-  public var why: RecommendationWhy {
-    switch reason?.kind {
-    case "watched": .watched(reason?.name ?? "")
-    case "person": .person(reason?.name ?? "")
-    default: .taste
-    }
   }
 }
 

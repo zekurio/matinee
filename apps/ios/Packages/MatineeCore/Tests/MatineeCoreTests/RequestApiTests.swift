@@ -21,12 +21,8 @@ struct RequestApiTests {
     let actions = RequestActions(api: api)
     let input = CatalogInput(ref: CatalogRef(kind: "show", provider: "tmdb", providerId: "1"), libraryId: "shows")
     let calls: [@Sendable () async throws -> Void] = [
-      { _ = try await data.title(input) }, { _ = try await data.discover() },
-      { _ = try await data.browseOptions(kind: "show") }, { _ = try await data.row(DiscoverRail(id: "forYou", browse: nil)) },
-      { _ = try await data.search("Dune") }, { _ = try await data.gaps(titleId: "show") },
-      { _ = try await data.mine() }, { _ = try await data.queue() },
-      { _ = try await data.related(input) }, { _ = try await data.relatedTitles(input, rail: "similar") },
-      { _ = try await actions.ask(input) }, { _ = try await actions.more(id: "r", scope: ShowScope(seasons: [1], future: false)) },
+      { _ = try await data.row(DiscoverRail(id: "forYou", browse: nil)) }, { _ = try await data.search("Dune") },
+      { _ = try await actions.ask(input) },
       { try await actions.cancel(id: "r") }, { try await actions.add(id: "r") },
       { try await actions.decline(id: "r", reason: "notForServer") },
     ]

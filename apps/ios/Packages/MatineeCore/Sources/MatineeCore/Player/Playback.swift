@@ -331,7 +331,7 @@ public func streamIndex(_ track: SubtitleTrack) -> Int? {
 /// How the subtitle of `plan` shows, by its `subtitleMode`: `client` is
 /// WebVTT the view draws, or a PGS file mpv draws; `player` a stream of
 /// the file the engine draws; `burn-in` part of the picture. `mpv` says
-/// which engine plays; the iOS app has only AVPlayer so far.
+/// which engine plays.
 public func subtitleShow(_ plan: PlaybackStart, mpv: Bool = false) -> SubtitleShow {
   guard let track = plan.subtitle else { return .off }
   switch plan.subtitleMode {

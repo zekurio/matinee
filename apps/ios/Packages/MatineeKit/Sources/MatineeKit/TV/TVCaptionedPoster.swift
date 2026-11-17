@@ -61,18 +61,4 @@
     }
   }
 
-  extension TVCaptionedPoster where Art == TVPicture {
-    /// A captioned poster loaded from `url`.
-    public init(
-      _ name: String, detail: String? = nil, badge: String? = nil, watched: Bool = false, url: URL?,
-      width: CGFloat? = TVCards.posterWidth, action: @escaping () -> Void, onLongPress: (() -> Void)? = nil,
-      onPlayPause: (() -> Void)? = nil
-    ) {
-      self.init(
-        name, detail: detail, badge: badge, watched: watched, width: width, action: action, onLongPress: onLongPress,
-        onPlayPause: onPlayPause
-      ) { TVPicture(url) }
-    }
-  }
-
 #endif

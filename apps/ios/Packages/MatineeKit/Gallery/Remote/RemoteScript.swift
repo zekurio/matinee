@@ -4,7 +4,7 @@ import XCTest
 /// a script, and saves screenshots on the way. `remote.sh` runs it; see the
 /// package's README, "Driving the remote".
 ///
-/// `REMOTE_ARGS` are the gallery's launch arguments (`-page tv-home -scheme dark`),
+/// `REMOTE_ARGS` are the gallery's launch arguments (`-page home -scheme dark`),
 /// `REMOTE_SCRIPT` the steps, separated by spaces, semicolons, or lines:
 ///
 /// - `up`, `down`, `left`, `right`, `select`, `menu`, `playpause`, `home`:
@@ -14,7 +14,7 @@ import XCTest
 /// - `type:media.example.com`: types into the system keyboard while it's up,
 ///   `+` for spaces.
 /// - `shot:name`: saves the screen to `REMOTE_OUT/name.png`.
-/// - `relaunch:-page+tv-buttons+-scheme+light`: starts the gallery again
+/// - `relaunch:-page+buttons+-scheme+light`: starts the gallery again
 ///   with other arguments, `+` for spaces.
 ///
 /// With `REMOTE_INBOX` set it stays, running each `*.steps` file that

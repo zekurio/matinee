@@ -4,7 +4,7 @@
 `Downloads` alive for the app's lifetime. `DownloadFiles` owns media mutations,
 size checks and atomic index writes on its own actor. The store awaits revisioned
 snapshots, so an older result cannot overwrite a newer UI snapshot. Its `put`,
-`update`, `remove` and `storageUsed` APIs are asynchronous. Media lives in
+`update` and `remove` APIs are asynchronous. Media lives in
 Application Support with backup exclusion. Initial index loading and root setup
 are synchronous during store construction, before transfers start.
 
@@ -36,7 +36,7 @@ The app must update `store.server` whenever `activeServer` changes. Compose
   item ids. `forgetServer` removes just that server, including pending progress
   (see Player for what it sends first).
 - Settings are `unmeteredOnly`, `defaultVersion`, `videoCodec`, and `subtitles`.
-  Pass `wishes()` to resolve to apply them. `await store.storageUsed` counts disk bytes.
+  Pass `wishes()` to resolve to apply them.
 - Low storage holds downloads back, as Android's `setRequiresStorageNotLow`:
   while `volumeAvailableCapacityForImportantUsage` is at or under the lesser
   of 5% of the volume and 500 MiB (`storageLow`), a download stays queued,
@@ -99,9 +99,8 @@ AVPlayer opens the finished
 
 **One outstanding version fragment is intentional.** The server deletes
 fragments behind the index requested. Background URLSession cannot guarantee
-ordering, even on one HTTP connection. An initial four-task window caused
-server ENOENT errors and a failed repeat live check. The serial replacement
-passed. Queuing multiple fragments safely needs a server change that retains
+ordering, even on one HTTP connection, and four at once made the server
+answer ENOENT. Queuing multiple fragments safely needs a server change that retains
 fragments until the client acknowledges them. Each completed task wakes the
 app to queue the next. System deferral may let the encoder stop; its next
 request resumes from the saved segment cursor. 503 honors Retry-After.
@@ -112,8 +111,8 @@ Transient failures back off from 30 seconds through eight retries. For a real
 background session, retry tasks use `earliestBeginDate` so the OS schedules
 them while suspended. An initial API/setup failure that cannot create a byte
 task still needs the next foreground restore/reachability event. Server
-refusals are terminal, including non-403 refusals, as requested; Android
-currently retries non-403 API errors.
+refusals are terminal, including non-403 refusals; Android
+retries non-403 API errors.
 
 In `application(_:handleEventsForBackgroundURLSession:completionHandler:)`,
 create/retain Downloads first, then call on the main actor:

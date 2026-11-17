@@ -48,11 +48,6 @@ public struct SessionChanged: Error {}
   public var onRemove: ((String, MatineeApi?) async -> Void)?
   public let deviceName: String
   public let platform = ClientCapabilities.sessionPlatform
-  #if os(tvOS)
-  public let isTv = true
-  #else
-  public let isTv = false
-  #endif
   private let store: SessionStore
   private let configuration: URLSessionConfiguration
   private var candidate: (origin: String, name: String?)?
@@ -129,9 +124,6 @@ public struct SessionChanged: Error {}
       return c.url
     }
   }
-  public static func keyOf(_ url: URL) -> String {
-    serverCandidates(url.absoluteString).first!.absoluteString
-  }
   private func display(_ key: String) -> String { String(key.dropLast()) }
   public var offlineMode: Bool { ClientCapabilities.offlineMode && store.offlineMode }
   public var lastServer: String? {
@@ -143,13 +135,6 @@ public struct SessionChanged: Error {}
   public var lastUser: User? {
     guard let key = activeServer, tokens[key] != nil else { return nil }
     return store.servers.first { $0.origin == key }?.user
-  }
-  public func artworkHeaders(for url: URL) -> [String: String] {
-    guard url.path.hasPrefix("/api/artwork/"),
-      let key = Self.serverCandidates(url.absoluteString).first?.absoluteString,
-      let token = tokens[key]
-    else { return [:] }
-    return ["Authorization": "Bearer \(token)"]
   }
   public func playerHeaders() -> [String: String] {
     guard let key = activeServer, let token = tokens[key] else { return [:] }

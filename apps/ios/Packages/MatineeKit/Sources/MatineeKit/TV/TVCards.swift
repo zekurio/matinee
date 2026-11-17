@@ -19,34 +19,6 @@
     public static var shape: RoundedRectangle { .kit(radius) }
   }
 
-  /// A picture from `url`, filling its frame, fading in over what's behind
-  /// it once loaded; nothing while it loads or when it fails, so the card's
-  /// own stand-in shows. The kit's only loader, for a caller with no image
-  /// pipeline of its own; a card takes any view as its art.
-  public struct TVPicture: View {
-    let url: URL?
-    let contentMode: ContentMode
-    let alignment: Alignment
-
-    public init(_ url: URL?, contentMode: ContentMode = .fill, alignment: Alignment = .center) {
-      self.url = url
-      self.contentMode = contentMode
-      self.alignment = alignment
-    }
-
-    public var body: some View {
-      AsyncImage(url: url, transaction: Transaction(animation: Motion.image)) { phase in
-        if let image = phase.image {
-          image.resizable().aspectRatio(contentMode: contentMode)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
-            .transition(.opacity)
-        }
-      }
-      .clipped()
-      .accessibilityHidden(true)
-    }
-  }
-
   /// The tone a card shows until its picture is in, the same for the same
   /// `key`, from the palette's art tones.
   struct TVTone: View {
@@ -145,17 +117,6 @@
     }
   }
 
-  extension TVPosterCard where Art == TVPicture {
-    /// A poster loaded from `url`.
-    public init(
-      _ name: String, url: URL?, watched: Bool = false, width: CGFloat? = TVCards.posterWidth,
-      action: @escaping () -> Void, onLongPress: (() -> Void)? = nil, onPlayPause: (() -> Void)? = nil
-    ) {
-      self.init(
-        name, watched: watched, width: width, action: action, onLongPress: onLongPress, onPlayPause: onPlayPause
-      ) { TVPicture(url) }
-    }
-  }
 
   /// A file as a 16:9 still, for Continue watching and Next up: how far in
   /// it is along its bottom, or the watched dot, and `caption` and `detail`
@@ -215,19 +176,6 @@
     }
   }
 
-  extension TVLandscapeCard where Art == TVPicture {
-    /// A still loaded from `url`.
-    public init(
-      _ caption: String, detail: String? = nil, progress: Double? = nil, watched: Bool = false, url: URL?,
-      width: CGFloat? = TVCards.landscapeWidth, action: @escaping () -> Void, onLongPress: (() -> Void)? = nil,
-      onPlayPause: (() -> Void)? = nil
-    ) {
-      self.init(
-        caption, detail: detail, progress: progress, watched: watched, width: width, action: action,
-        onLongPress: onLongPress, onPlayPause: onPlayPause
-      ) { TVPicture(url) }
-    }
-  }
 
   /// How far into a file the person is: the accent on a dark track.
   public struct TVProgress: View {

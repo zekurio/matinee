@@ -7,9 +7,9 @@ import SwiftUI
  * light up and Android's PressIndication does, and the web's
  * `focus-visible` ring for keyboard and remote focus.
  *
- * The TV's focus design (pictures grow and gain a ring, controls fill with
- * the text color) will replace `FocusIndicator` and nothing else: every
- * component draws focus through it.
+ * Every component draws focus through `FocusIndicator`, which on a TV is
+ * the TV's focus design (TV/TVFocus.swift): pictures grow and gain a ring,
+ * controls fill with the text color.
  */
 
 /// A state the gallery pins a component in, to show it without a finger on it.
