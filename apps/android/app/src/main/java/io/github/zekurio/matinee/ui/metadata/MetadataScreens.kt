@@ -205,8 +205,8 @@ private fun IdentifyForm(title: Title) {
                 appScope.launch { snackbar.showSnackbar(res.getString(R.string.title_identify_matched, updated.name)) }
                 nav.back()
             } catch (e: IOException) {
-                error = e.message
-                matching = null
+                    error = describeFailure(res, e)
+                    matching = null
             }
         }
         Unit
@@ -406,7 +406,7 @@ private fun ImageEditor(title: Title, target: ImageTarget) {
                 // Pages that show the images fetch them again.
                 viewer.changed()
             } catch (e: IOException) {
-                showError(e.message)
+                showError(describeFailure(res, e))
             } finally {
                 busy = null
             }

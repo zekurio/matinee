@@ -28,6 +28,7 @@ import {
 import { sourceList } from "../requests/fulfilment/sources"
 import type { FulfilmentSource } from "../requests/fulfilment/types"
 import { admin } from "./base"
+import { providerFailure } from "./titles"
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 type RuleRow = typeof fulfilmentRule.$inferSelect
@@ -385,10 +386,18 @@ export const adminFulfilment = {
     const tmdb = metadata.tmdb.configured()
     const [genres, languages, users] = await Promise.all([
       tmdb
-        ? genreProvider(input.kind, language).then((result) => result.value)
+        ? genreProvider(input.kind, language)
+            .then((result) => result.value)
+            .catch((cause: unknown) =>
+              providerFailure(metadata.tmdb.name, cause),
+            )
         : [],
       tmdb
-        ? languagesIn(language).then((result) => result.languages)
+        ? languagesIn(language)
+            .then((result) => result.languages)
+            .catch((cause: unknown) =>
+              providerFailure(metadata.tmdb.name, cause),
+            )
         : knownLanguages(language),
       db
         .select({
@@ -414,6 +423,9 @@ export const adminFulfilment = {
       throw new ORPCError("BAD_REQUEST", {
         message: "Keywords come from TMDB. Set MATINEE_TMDB_API_KEY first.",
       })
-    return (await keywordProvider(input.query)).value
+    const result = await keywordProvider(input.query).catch((cause: unknown) =>
+      providerFailure(metadata.tmdb.name, cause),
+    )
+    return result.value
   }),
 }

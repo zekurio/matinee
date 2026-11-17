@@ -322,7 +322,7 @@ private fun PlaceRow(place: io.github.zekurio.matinee.api.LeaderboardEntry, valu
         }
         io.github.zekurio.matinee.ui.components.Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = 28.dp)
         Text(
-            if (place.self) "${user.name} ${stringResource(R.string.stats_you)}" else user.name,
+            if (place.self) stringResource(R.string.stats_name_you, user.name) else user.name,
             style = MaterialTheme.typography.bodyLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

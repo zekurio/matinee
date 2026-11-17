@@ -46,7 +46,7 @@ const SOFTWARE_ENCODERS = new Map([
 /** `VAAPI H.264` for `h264_vaapi`, `x264 (CPU)` for `libx264`. */
 export function encoderName(encoder: string): string {
   const software = SOFTWARE_ENCODERS.get(encoder)
-  if (software) return `${software} (CPU)`
+  if (software) return tr("stats.encoder.onCpu", { name: software })
   const [codec = encoder, acceleration = ""] = encoder.split("_")
   const name = ACCELERATIONS.get(acceleration)
   return name ? `${name} ${videoCodecName(codec)}` : encoder
@@ -67,7 +67,14 @@ export function encoderOutput(encoder: string): string {
 
 /** Where an encoder runs: `Quick Sync` for `h264_qsv`, `CPU` for `libx264`. */
 export function encoderDevice(encoder: string): string {
-  return ACCELERATIONS.get(encoder.split("_")[1] ?? "") ?? "CPU"
+  return (
+    ACCELERATIONS.get(encoder.split("_")[1] ?? "") ?? tr("stats.encoder.cpu")
+  )
+}
+
+/** Whether an encoder runs in software, as `libx264` does. */
+export function encoderOnCpu(encoder: string): boolean {
+  return !ACCELERATIONS.has(encoder.split("_")[1] ?? "")
 }
 
 const AUDIO_ENCODERS = new Map([
@@ -83,7 +90,6 @@ export function audioEncoderName(encoder: string): string {
 }
 
 const TONE_MAPPERS = new Map([
-  ["tonemapx", "tonemapx (CPU)"],
   ["opencl", "OpenCL"],
   ["vpp", "Intel VPP"],
   ["cuda", "CUDA"],
@@ -92,6 +98,7 @@ const TONE_MAPPERS = new Map([
 ])
 
 export function toneMapperName(mapper: string): string {
+  if (mapper === "tonemapx") return tr("stats.encoder.onCpu", { name: mapper })
   return TONE_MAPPERS.get(mapper) ?? mapper
 }
 

@@ -7,6 +7,7 @@ import type {
 import { scheduledTask } from "@matinee/db"
 
 import { db } from "../db"
+import { shownMessage, TASK_FAILED } from "../errors"
 import { log } from "../log"
 
 /*
@@ -66,10 +67,6 @@ const tasks = new Map<TaskId, Task>()
 let started = false
 let stopped = false
 
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause)
-}
-
 function arm(task: Task): void {
   if (task.timer) clearTimeout(task.timer)
   task.timer = null
@@ -128,7 +125,7 @@ export function runTask(id: TaskId): Promise<void> {
       if (controller.signal.aborted) result = "cancelled"
       else {
         result = "failed"
-        error = messageOf(cause)
+        error = shownMessage(cause, TASK_FAILED)
         log.error(`Task ${task.definition.name} failed`, cause)
       }
     }

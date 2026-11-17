@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -49,6 +50,7 @@ import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.components.ErrorState
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.ui.kit.ButtonLook
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
@@ -102,6 +104,7 @@ internal class Saver(private val run: (suspend () -> Unit) -> Unit, private val 
 internal fun rememberSaver(): Saver {
     val scope = rememberCoroutineScope()
     val snackbar = LocalSnackbar.current
+    val res = LocalResources.current
     val failure = stringResource(R.string.web_common_saveBar_failed)
     var saving by remember { mutableStateOf(false) }
     return remember(scope) {
@@ -113,7 +116,7 @@ internal fun rememberSaver(): Saver {
                         try {
                             block()
                         } catch (e: IOException) {
-                            snackbar.showSnackbar(e.message?.let { "$failure $it" } ?: failure)
+                            snackbar.showSnackbar("$failure ${describeFailure(res, e)}")
                         } finally {
                             saving = false
                         }
@@ -162,6 +165,7 @@ internal fun SaveBarScaffold(
     content: LazyListScope.() -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val res = LocalResources.current
     var stored by remember { mutableStateOf<SaveFeedback>(SaveFeedback.Idle) }
     // An edit after a save starts a new round, so "Saved" doesn't linger,
     // and a failure goes with the edits it failed to save.
@@ -192,7 +196,7 @@ internal fun SaveBarScaffold(
                     onSave()
                     SaveFeedback.Success
                 } catch (e: IOException) {
-                    SaveFeedback.Failed(e.message?.ifBlank { null })
+                    SaveFeedback.Failed(describeFailure(res, e))
                 }
             }
         }

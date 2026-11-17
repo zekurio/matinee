@@ -41,7 +41,7 @@ function isTimeZone(value: string): boolean {
 /** An IANA time zone, like `Europe/Berlin`. Days and hours count in it. */
 export const TimeZone = t
   .string()
-  .max(64)
+  .max(64, "Use an IANA time zone like Europe/Berlin.")
   .regex(/^[A-Za-z0-9_+\-/]+$/, "Use an IANA time zone like Europe/Berlin.")
   .refine(isTimeZone, "Use an IANA time zone like Europe/Berlin.")
 
@@ -383,7 +383,11 @@ export const Profile = t.object({
 export type Profile = t.infer<typeof Profile>
 
 /** Usernames in URLs, matched without regard to case. */
-export const ProfileName = t.string().trim().min(1).max(64)
+export const ProfileName = t
+  .string()
+  .trim()
+  .min(1, "Enter a username.")
+  .max(64, "Use at most 64 characters.")
 
 /**
  * What the leaderboard ranks. Streaks count days in a row with a play, in

@@ -26,12 +26,13 @@ import { type ReactNode, type Ref, useId } from "react"
 
 import { Picture, tone } from "@/components/picture"
 import { UserAvatar } from "@/components/user-avatar"
-import { tr, translateKnown } from "@/i18n"
+import { knownMessage, tr } from "@/i18n"
 import {
   formatDate,
   formatDateTime,
   formatRelative,
   formatSpan,
+  parseDay,
 } from "@/lib/format"
 import { art } from "@/lib/media"
 
@@ -430,7 +431,7 @@ function whereLine(item: AdminRequestItem): string {
 /** What went wrong sending it. */
 function ProblemCell({ item }: { item: AdminRequestItem }) {
   const error = item.error
-    ? translateKnown(item.error)
+    ? (knownMessage(item.error) ?? tr("requests.attention.failedUnknown"))
     : tr("requests.attention.unknown")
   return (
     <Cell second={whereLine(item)} className="max-sm:col-start-2">
@@ -450,10 +451,11 @@ function ProgressCell({ item }: { item: AdminRequestItem }) {
   const { availability } = item
   let status: string
   if (availability.state === "release") {
-    status = availability.releaseDate
-      ? tr("requests.progress.release", {
-          date: formatDate(new Date(availability.releaseDate)),
-        })
+    const day = availability.releaseDate
+      ? parseDay(availability.releaseDate)
+      : null
+    status = day
+      ? tr("requests.progress.release", { date: formatDate(day) })
       : tr("requests.progress.notOut")
   } else if (availability.progress !== null) {
     status = [

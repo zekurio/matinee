@@ -605,22 +605,21 @@ function errorIssues(
   value: SchemaBoundaryInput,
   error: TLocalizedValidationError,
 ): ValidationIssue[] {
-  // One issue per missing key, at the key, as zod reports them.
+  // One issue per missing key, at the key, as zod reports them. A missing
+  // key or an unknown one only comes from a client that's out of date, so the
+  // text says to reload rather than name the field.
   if (error.keyword === "required") {
     return error.params.requiredProperties.map((key) => ({
       path: issuePath(value, `${error.instancePath}/${pointerKey(key)}`),
-      message: `must have required properties ${key}`,
+      message: STALE_REQUEST,
     }))
   }
-  // One issue for all of them, at the object, in zod's words.
+  // One issue for all of them, at the object.
   if (error.keyword === "additionalProperties") {
-    const keys = error.params.additionalProperties
     return [
       {
         path: issuePath(value, error.instancePath),
-        message: `Unrecognized key${keys.length > 1 ? "s" : ""}: ${keys
-          .map((key) => `"${key}"`)
-          .join(", ")}`,
+        message: STALE_REQUEST,
       },
     ]
   }
@@ -735,6 +734,9 @@ function issuePath(value: SchemaBoundaryInput, pointer: string) {
   }
   return path
 }
+
+/** What a client that sent keys the schema doesn't know is told. */
+const STALE_REQUEST = "Reload the page and try again."
 
 function pointerKey(key: string) {
   return key.replaceAll("~", "~0").replaceAll("/", "~1")

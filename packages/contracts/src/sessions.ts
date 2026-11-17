@@ -102,6 +102,9 @@ export const CodeVerifier = t
  * The page posts the same fields to `APP_AUTHORIZE_PATH` once the person
  * approves.
  */
+const BROKEN_SIGN_IN_LINK =
+  "This sign-in link is broken. Start again in the app."
+
 export const AppAuthorizeRequest = t.object({
   /** Where the browser goes with `code` and `state` afterwards. */
   redirect_uri: t
@@ -111,7 +114,7 @@ export const AppAuthorizeRequest = t.object({
       `Use a ${APP_URI_SCHEME}: URI or a loopback http URL.`,
     ),
   /** Comes back as it is, so the app can match the answer to its request. */
-  state: t.string().min(1).max(512),
+  state: t.string().min(1, BROKEN_SIGN_IN_LINK).max(512, BROKEN_SIGN_IN_LINK),
   code_challenge: CodeChallenge,
   code_challenge_method: t.literal("S256"),
   device_name: DeviceName.optional(),

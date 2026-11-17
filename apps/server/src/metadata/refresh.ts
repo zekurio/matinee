@@ -12,6 +12,7 @@ import {
 import { eq } from "drizzle-orm"
 
 import { db } from "../db"
+import { ShownError } from "../errors"
 import { defineQueue } from "../jobs/queue"
 import { localName } from "../library/titles"
 import { log } from "../log"
@@ -382,7 +383,7 @@ type RefreshJob = {
 }
 
 /** A provider failure that makes the waiting fetches from it pointless. */
-class ProviderStopped extends Error {
+class ProviderStopped extends ShownError {
   constructor(
     message: string,
     readonly provider: MetadataProviderId | null,

@@ -23,6 +23,14 @@ export default {
   "validation.redirectUri":
     "Verwende eine {scheme}:-URI oder eine Loopback-URL mit http.",
   "validation.userCode": "Gib die 8 Buchstaben ein, die das Gerät anzeigt.",
+  "validation.signInLink":
+    "Dieser Anmeldelink ist fehlerhaft. Starte die Anmeldung in der App neu.",
+
+  "validation.connectionName": "Gib der Verbindung einen Namen.",
+  "validation.connectionSlug":
+    "Verwende Großbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
+  "validation.setupToken":
+    "Gib den Einrichtungstoken ein, um diesen Server zu übernehmen.",
 
   "validation.bitrateLimit": "Wähle ein Limit von mindestens 1 Mbit/s.",
   "validation.networkRange":
@@ -33,10 +41,9 @@ export default {
   "validation.inviteToken": "Dieser Einladungslink ist unvollständig.",
 
   "validation.timeZone": "Verwende eine IANA-Zeitzone wie Europe/Berlin.",
+  "validation.profileName": "Gib einen Benutzernamen ein.",
 
   "validation.hexColor": "Verwende #rrggbb.",
-  "validation.themeVariantsUnique":
-    "Die IDs der Varianten müssen eindeutig sein.",
 
   "validation.devicePath":
     "Verwende ein Gerät unter /dev, etwa /dev/dri/renderD128.",
@@ -63,4 +70,23 @@ export default {
     "Die niedrigste Bewertung darf nicht über der höchsten liegen.",
   "validation.browseRuntime":
     "Die kürzeste Laufzeit darf nicht länger als die längste sein.",
+
+  "validation.browseSortForYou":
+    "Sortiere nur unter deinen Empfehlungen nach bester Übereinstimmung.",
+
+  "validation.invalidValue": "Ungültiger Wert",
+  "validation.invalidInput": "Ungültige Eingabe",
+  "validation.invalidUrl": "Ungültige URL",
+  "validation.invalidUuid": "Ungültige UUID",
+  "validation.date": "Wähle ein Datum.",
+  "validation.file": "Wähle eine Datei.",
+  "validation.fileType": "Wähle eine Datei eines anderen Typs.",
+  "validation.pattern":
+    "Verwende einen Wert in dem Format, das dieses Feld erwartet.",
+  "validation.required": "Fülle dieses Feld aus.",
+  "validation.minLength": "Verwende mindestens {limit} Zeichen.",
+  "validation.maxLength": "Verwende höchstens {limit} Zeichen.",
+  "validation.minValue": "Verwende {limit} oder mehr.",
+  "validation.maxValue": "Verwende {limit} oder weniger.",
+  "validation.staleRequest": "Lade die Seite neu und versuche es erneut.",
 } satisfies TranslationOf<typeof source>

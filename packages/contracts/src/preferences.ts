@@ -11,7 +11,7 @@ import { PlaybackQualityPreset, TranscodeVideoCodec } from "./transcoding"
 /** A BCP 47 tag as tracks carry them, like `en`, `ja`, or `pt-BR`. */
 export const LanguageTag = t
   .string()
-  .max(35)
+  .max(35, "Use a language tag, like en or pt-BR.")
   .regex(
     /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/,
     "Use a language tag, like en or pt-BR.",

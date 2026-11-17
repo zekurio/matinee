@@ -15,6 +15,7 @@ import { ORPCError } from "@orpc/server"
 import { asc, eq, isNotNull } from "drizzle-orm"
 
 import { db } from "../../db"
+import { log } from "../../log"
 import { sources } from "./sources"
 import type { FulfilmentSource, TitleFacts } from "./types"
 
@@ -53,6 +54,20 @@ export function environmentKey(slug: string) {
   }
 }
 
+/**
+ * The environment key, or null when it's unset or can't be used. The admin
+ * list reads every connection's key state, so one bad key file logs here
+ * instead of hiding every connection behind a 500.
+ */
+function environmentKeyState(slug: string): string | null {
+  try {
+    return environmentKey(slug)
+  } catch (cause) {
+    log.warn(`Connection ${slug}'s environment key can't be used`, cause)
+    return null
+  }
+}
+
 export async function connectionById(id: string, tx: Reader = db) {
   const [row] = await tx
     .select()
@@ -85,7 +100,7 @@ export function redactConnection(row: ConnectionRow, routing: Routing) {
   const settings = source.settings.parse(row.settings)
   for (const field of source.fields())
     if (field.kind === "secret") delete settings[field.key]
-  const environment = Boolean(environmentKey(row.slug))
+  const environment = Boolean(environmentKeyState(row.slug))
   const secretSource: "saved" | "environment" | null = row.apiKey
     ? "saved"
     : environment
@@ -501,7 +516,10 @@ export async function sendingFor(row: {
     const connection = await connectionById(row.connectionId)
     const source = getSource(connection.source)
     return { source, connection: resolveConnection(connection) }
-  } catch {
+  } catch (cause) {
+    // A connection's own error names the problem, like "Set the connection key
+    // or its file, not both." Anything else means it isn't usable.
+    if (cause instanceof ORPCError) throw cause
     return null
   }
 }

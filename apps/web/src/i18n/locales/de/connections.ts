@@ -12,7 +12,7 @@ export default {
     "Füge Radarr, Sonarr oder Von Hand hinzu und mach sie zum Standard für Filme oder Serien.",
   "connections.testing": "Wird getestet…",
   "connections.connected": "Verbunden",
-  "connections.testFailed": "Test fehlgeschlagen",
+  "connections.testFailed.detail": "Test fehlgeschlagen. {error}",
   "connections.key.none":
     "Noch kein Schlüssel. Speichere einen oder setze {variable}.",
   "connections.actions": "Aktionen für {name}",
@@ -75,6 +75,7 @@ export default {
   "connections.card.kind.movie": "Filme",
   "connections.card.kind.show": "Serien",
   "connections.card.nowhere": "keine Mediathek",
+  "connections.card.unknownSource": "Unbekannte Quelle",
 
   "connections.rules.title": "Überschreibungsregeln",
   "connections.rules.add": "Regel hinzufügen",
@@ -103,6 +104,9 @@ export default {
   "connections.rules.noTmdb":
     "Genres und Schlagwörter kommen von TMDB, das nicht eingerichtet ist.",
   "connections.rules.keep": "Wie die Verbindung",
+  "connections.rules.summaryPending":
+    "Details erscheinen, sobald sie geladen sind.",
+  "connections.rules.unknownChoice": "unbekannt",
 
   "connections.libraries.title": "Was jede Mediathek befüllt",
   "connections.libraries.filledBy": "Befüllt über {connections}",

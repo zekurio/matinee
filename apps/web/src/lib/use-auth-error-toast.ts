@@ -3,7 +3,7 @@ import { toast } from "@matinee/ui/components/sonner"
 import { useNavigate } from "@tanstack/react-router"
 import { useEffect } from "react"
 
-import { translateKnown } from "@/i18n"
+import { knownMessage, tr } from "@/i18n"
 
 /**
  * Toasts the error an auth redirect brought back in the URL, such as a
@@ -14,8 +14,10 @@ export function useAuthErrorToast(error: string | undefined, hint?: string) {
   const navigate = useNavigate()
   useEffect(() => {
     if (error === undefined) return
-    // The id keeps a second run, as in StrictMode, to the one toast.
-    toast.error(translateKnown(error), {
+    // The URL can carry any text, so only a message the catalog knows is
+    // shown as it is. The id keeps a second run, as in StrictMode, to the
+    // one toast.
+    toast.error(knownMessage(error) ?? tr("auth.signIn.failed"), {
       id: "auth-error",
       description: hint,
     })

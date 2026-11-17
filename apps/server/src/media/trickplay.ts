@@ -18,6 +18,7 @@ import { and, count, desc, eq, isNull, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { env } from "../env"
+import { ShownError } from "../errors"
 import { defineQueue, perCpu, type Priority } from "../jobs/queue"
 import { log } from "../log"
 import { events } from "../realtime/events"
@@ -154,7 +155,7 @@ async function imageSize(
     path,
   ])
   const match = /^(\d+)x(\d+)/.exec(out.trim())
-  if (!match) throw new Error(`ffprobe didn't read the size of ${path}`)
+  if (!match) throw new ShownError("ffprobe didn't read the size of a frame")
   return { width: Number(match[1]), height: Number(match[2]) }
 }
 
@@ -358,7 +359,7 @@ async function make(job: TrickplayJob, signal: AbortSignal): Promise<void> {
       signal,
     })
     if (count === 0) {
-      throw new Error(
+      throw new ShownError(
         "ffmpeg couldn't decode a single frame of the video. The file may be damaged or incomplete.",
       )
     }
@@ -594,6 +595,20 @@ export async function trickplayCoverage(
 }
 
 /**
+ * Delete a path a sweep found unused. One that won't go is logged, so it
+ * doesn't stop the sweep. True when it's gone.
+ */
+async function sweepRemove(path: string): Promise<boolean> {
+  try {
+    await rm(path, { recursive: true, force: true })
+    return true
+  } catch (cause) {
+    log.warn(`Couldn't delete ${path}`, cause)
+    return false
+  }
+}
+
+/**
  * Delete the tiles of files that are gone, sets that were replaced, and
  * work a crash left behind, and forget sets whose tiles are gone, so they
  * get made again. A file with a job waiting or running is left alone,
@@ -612,8 +627,7 @@ export async function sweepTrickplay(): Promise<void> {
     if (entry.name === ".work") continue
     const dir = join(root, entry.name)
     if (!entry.isDirectory() || !UUID.test(entry.name)) {
-      await rm(dir, { recursive: true, force: true })
-      removed++
+      if (await sweepRemove(dir)) removed++
       continue
     }
     const sets = await readdir(dir).catch(() => [])
@@ -627,19 +641,17 @@ export async function sweepTrickplay(): Promise<void> {
       .from(trickplay)
       .where(eq(trickplay.mediaItemId, entry.name))
     if (!row) {
-      await rm(dir, { recursive: true, force: true })
-      removed++
+      if (await sweepRemove(dir)) removed++
       continue
     }
     for (const set of sets) {
       if (set === row.key) continue
-      await rm(join(dir, set), { recursive: true, force: true })
-      removed++
+      if (await sweepRemove(join(dir, set))) removed++
     }
   }
   for (const name of await readdir(workRoot).catch(() => [])) {
     if (trickplays.busy(name.slice(0, 36))) continue
-    await rm(join(workRoot, name), { recursive: true, force: true })
+    await sweepRemove(join(workRoot, name))
   }
   // Matching the key leaves rows a job replaced meanwhile.
   const lost = rows.filter((row) => !present.has(`${row.id}/${row.key}`))

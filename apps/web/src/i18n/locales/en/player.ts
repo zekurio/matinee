@@ -72,6 +72,7 @@ export default defineMessages("player", {
   "player.subtitles.off": "Off",
   "player.subtitles.noTracks": "This file has no subtitles",
   "player.subtitles.forced": "Forced",
+  "player.subtitles.sdh": "SDH",
   "player.subtitles.burnedIn": "Burned in",
   // The subtitles menu's timing control. {seconds} is a signed number,
   // like +0.3.
@@ -159,6 +160,8 @@ export default defineMessages("player", {
   "player.notice.videoTo": "Transcoding the video to {quality}",
   "player.notice.audio": "{from} audio to {to}",
   "player.notice.audioTitle": "Transcoding {from} audio to {to}",
+  // The size an encode keeps at the original quality: "H.264 at original size".
+  "player.notice.originalSize": "at original size",
   // The codec audio converts to, when it goes down to two channels.
   "player.notice.stereo": "{codec} stereo",
   "player.notice.burnIn": "Burning in subtitles",

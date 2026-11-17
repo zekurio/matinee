@@ -7,7 +7,7 @@
         <item quantity="one">Requests, %1$d needs you</item>
         <item quantity="other">Requests, %1$d need you</item>
     </plurals>
-    <string name="web_requests_dot">Requests need you</string>
+    <string name="web_requests_labelled">%1$s. Requests need you</string>
     <string name="web_requests_lists">Lists</string>
     <string name="web_requests_list_waiting">Waiting</string>
     <string name="web_requests_list_needsAttention">Needs attention</string>
@@ -99,6 +99,7 @@
     <string name="web_requests_progress_left">%1$s left</string>
     <string name="web_requests_progress_label">Progress for %1$s</string>
     <string name="web_requests_attention_unknown">Failed without a reason</string>
+    <string name="web_requests_attention_failedUnknown">This failed. The server log has the details.</string>
     <string name="web_requests_done_arrived">Arrived %1$s</string>
     <string name="web_requests_done_declined">Declined %1$s</string>
     <string name="web_requests_done_declinedUndated">Declined</string>

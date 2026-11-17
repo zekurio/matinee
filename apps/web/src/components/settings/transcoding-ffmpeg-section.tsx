@@ -4,7 +4,7 @@ import { Button } from "@matinee/ui/components/button"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { RefreshCwIcon } from "lucide-react"
 
-import { perLocale, tr } from "@/i18n"
+import { perLocale, tr, translateKnown } from "@/i18n"
 
 import { SettingWarning } from "./setting-controls"
 import { SettingNote, SettingsSubsection } from "./settings-panel"
@@ -32,7 +32,7 @@ export function FfmpegSection({
 }) {
   const { features } = capabilities
   const missing = [
-    !features.tonemapx && "tonemapx",
+    !features.tonemapx && tr("transcoding.ffmpeg.tonemapx"),
     !features.pauseKeys && tr("transcoding.ffmpeg.pauseKeys"),
     !features.hevcRemoveDovi && tr("transcoding.ffmpeg.doviRemoval"),
   ].filter((feature) => feature !== false)
@@ -77,7 +77,12 @@ export function FfmpegSection({
           ))}
       </div>
       {capabilities.error && (
-        <SettingWarning>{capabilities.error}</SettingWarning>
+        <SettingWarning>
+          {tr("transcoding.ffmpeg.errorDetail")}
+          <pre className="text-13px mt-1 font-mono break-words whitespace-pre-wrap">
+            {translateKnown(capabilities.error)}
+          </pre>
+        </SettingWarning>
       )}
       {!capabilities.error && missing.length > 0 && (
         <SettingWarning>

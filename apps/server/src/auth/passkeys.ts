@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm"
 
 import { db } from "../db"
 import { env } from "../env"
+import { log } from "../log"
 import { consumeChallenge, createChallenge } from "./challenges"
 import type { Tx } from "./users"
 
@@ -130,9 +131,9 @@ export async function finishRegistration(
     expectedRPID: RP_ID,
     requireUserVerification: true,
   }).catch((cause: unknown) => {
-    throw new PasskeyError(
-      cause instanceof Error ? cause.message : "Passkey check failed.",
-    )
+    // The library's text names the expected origin and challenge, so it stays in the log.
+    log.warn("Passkey registration check failed", cause)
+    throw new PasskeyError("Passkey check failed.")
   })
   if (!verification.verified) {
     throw new PasskeyError("The passkey could not be verified.")
@@ -205,7 +206,9 @@ export async function finishSignIn(
     .where(eq(passkey.credentialId, response.id))
     .limit(1)
   if (!row) {
-    throw new PasskeyError("This passkey isn't registered with Matinee.")
+    // Same answer as a failed check, so a caller learns nothing about which
+    // credential ids exist.
+    throw new PasskeyError("The passkey could not be verified.")
   }
   const verification = await verifyAuthenticationResponse({
     response,
@@ -220,9 +223,9 @@ export async function finishSignIn(
     },
     requireUserVerification: true,
   }).catch((cause: unknown) => {
-    throw new PasskeyError(
-      cause instanceof Error ? cause.message : "Passkey check failed.",
-    )
+    // The library's text names the expected origin and challenge, so it stays in the log.
+    log.warn("Passkey sign-in check failed", cause)
+    throw new PasskeyError("Passkey check failed.")
   })
   if (!verification.verified) {
     throw new PasskeyError("The passkey could not be verified.")

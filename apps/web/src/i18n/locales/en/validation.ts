@@ -32,6 +32,16 @@ export default defineMessages("validation", {
   // {scheme} is the app's URI scheme, matinee.
   "validation.redirectUri": "Use a {scheme}: URI or a loopback http URL.",
   "validation.userCode": "Enter the 8 letters the device shows.",
+  "validation.signInLink":
+    "This sign-in link is broken. Start again in the app.",
+
+  // fulfilment.ts: download connections.
+  "validation.connectionName": "Give the connection a name.",
+  "validation.connectionSlug":
+    "Use capital letters, digits and underscores, starting with a letter.",
+
+  // contract-auth.ts: the setup token that claims a new server.
+  "validation.setupToken": "Enter the setup token to claim this server.",
 
   // access.ts: access groups and limits.
   "validation.bitrateLimit": "Pick a limit of at least 1 Mb/s.",
@@ -47,10 +57,10 @@ export default defineMessages("validation", {
 
   // stats.ts.
   "validation.timeZone": "Use an IANA time zone like Europe/Berlin.",
+  "validation.profileName": "Enter a username.",
 
   // theme.ts: custom themes.
   "validation.hexColor": "Use #rrggbb.",
-  "validation.themeVariantsUnique": "Variant ids must be unique.",
 
   // transcoding.ts: transcoding settings.
   "validation.devicePath": "Use a device under /dev, like /dev/dri/renderD128.",
@@ -78,4 +88,25 @@ export default defineMessages("validation", {
   "validation.browseScores": "The lowest score can't be above the highest.",
   "validation.browseRuntime":
     "The shortest runtime can't be longer than the longest.",
+
+  "validation.browseSortForYou":
+    "Sort by best match only among your recommendations.",
+
+  // schema.ts: the messages the schema builder writes for a schema that
+  // gives none of its own.
+  "validation.invalidValue": "Invalid value",
+  "validation.invalidInput": "Invalid input",
+  "validation.invalidUrl": "Invalid URL",
+  "validation.invalidUuid": "Invalid UUID",
+  "validation.date": "Pick a date.",
+  "validation.file": "Choose a file.",
+  "validation.fileType": "Pick a file of another type.",
+  "validation.pattern": "Use a value in the format this field expects.",
+  "validation.required": "Fill in this field.",
+  "validation.minLength": "Use at least {limit} characters.",
+  "validation.maxLength": "Use at most {limit} characters.",
+  // schema.ts: a number's bounds, and a client that's out of date.
+  "validation.minValue": "Use {limit} or more.",
+  "validation.maxValue": "Use {limit} or less.",
+  "validation.staleRequest": "Reload the page and try again.",
 })

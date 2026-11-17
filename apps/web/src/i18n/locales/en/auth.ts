@@ -10,6 +10,8 @@ export default defineMessages("auth", {
   "auth.signIn.errorHint":
     "Use a passkey from this server, or ask the admin for access.",
   "auth.signIn.errorHintSso": "Ask the admin for access.",
+  // The sign-in redirect brought back an error Matinee doesn't recognise.
+  "auth.signIn.failed": "Sign-in failed. Try again.",
   // Passkeys are off and single sign-on isn't set up.
   "auth.signIn.noMethod":
     "There's no way to sign in to this server right now. Ask the admin.",

@@ -32,7 +32,7 @@ let current: UiText = {
   cancel: "Cancel",
   loading: "Loading",
   notifications: "Notifications",
-  closeToast: "Close toast",
+  closeToast: "Close notification",
   pickColor: (label) => `Pick a color for ${label}`,
   colorArea: (label) => `${label} saturation and brightness`,
   colorHue: (label) => `${label} hue`,
@@ -43,19 +43,10 @@ let current: UiText = {
   selected: (date) => `${date}, selected`,
 }
 
-const listeners = new Set<() => void>()
-
 export function uiText(): UiText {
   return current
 }
 
 export function setUiText(text: UiText) {
   current = text
-  for (const listener of listeners) listener()
-}
-
-/** For state that keeps text, like the theme list's variant names. */
-export function subscribeUiText(listener: () => void): () => void {
-  listeners.add(listener)
-  return () => listeners.delete(listener)
 }

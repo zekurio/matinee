@@ -193,6 +193,8 @@ export async function prepareDiscover({
         const result = await browseProvider(kind, language, built.query, 1)
         const saved = await saveArtwork(
           result.value.items.map((row) => row.poster),
+          undefined,
+          { catalog: true },
         )
         queueArtwork([...saved.values()], "low")
       }

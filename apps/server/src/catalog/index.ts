@@ -29,7 +29,7 @@ import { noFacts } from "../requests/fulfilment/facts"
 import { detailProvider, lookupProvider, searchProvider } from "./cache"
 
 async function artwork(urls: (string | null)[]) {
-  const saved = await saveArtwork(urls)
+  const saved = await saveArtwork(urls, undefined, { catalog: true })
   const art = await placeholders([...saved.values()])
   // A poster gets its placeholder when it's first fetched, so fetch the
   // ones still lacking it now, for the next list that shows them.

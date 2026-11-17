@@ -27,7 +27,7 @@ import {
 } from "lucide-react"
 import { type ReactNode, useState } from "react"
 
-import { type MessageKey, tr, translateKnown } from "@/i18n"
+import { knownMessage, type MessageKey, tr, translateKnown } from "@/i18n"
 import { formatRelative, formatSpan } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
@@ -460,9 +460,11 @@ function lastRunDetail(
     case "cancelled":
       return tr("jobs.task.cancelledAfter", { took })
     case "failed":
-      return last.error
-        ? tr("jobs.task.failedWith", { error: translateKnown(last.error) })
-        : tr("jobs.task.failed")
+      if (!last.error) return tr("jobs.task.failed")
+      const known = knownMessage(last.error)
+      return known === null
+        ? tr("jobs.task.failedUnknown")
+        : tr("jobs.task.failedWith", { error: known })
   }
 }
 

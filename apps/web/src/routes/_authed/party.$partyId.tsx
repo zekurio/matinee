@@ -74,6 +74,9 @@ function JoinParty() {
   }
   const { name, owner, members } = invite.data
   const ownerName = owner.displayName ?? owner.username
+  const description = tr("party.join.description", {
+    people: tr("party.join.people", { count: members }),
+  })
   return (
     <AuthScreen
       title={
@@ -81,13 +84,11 @@ function JoinParty() {
           ? tr("party.join.titleNamed", { name })
           : tr("party.join.title", { owner: ownerName })
       }
-      description={[
-        name ? tr("party.join.namedBy", { owner: ownerName }) : null,
-        tr("party.join.people", { count: members }),
-        tr("party.join.description"),
-      ]
-        .filter((part) => part !== null)
-        .join(" ")}
+      description={
+        name
+          ? tr("party.join.namedBy", { owner: ownerName, description })
+          : description
+      }
     >
       <div className="mt-6 grid gap-2">
         <Button

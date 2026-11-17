@@ -22,7 +22,7 @@ import {
   takePicture,
 } from "./oidc-accounts"
 import { readOidcIdentity } from "./oidc-claims"
-import { oidcConfig } from "./oidc-client"
+import { oidcConfig, WrongIssuerError } from "./oidc-client"
 import { linkPagePath, savePendingLink } from "./oidc-pending"
 import { passkeysEnabled } from "./passkey-settings"
 import { readSession, signIn } from "./session"
@@ -51,12 +51,59 @@ type FlowStart = Omit<t.infer<typeof OidcFlow>, "codeVerifier" | "nonce">
 /** Settings, open on the account section, where linking starts and ends. */
 const LINK_PAGE = "/settings/account"
 
-/** Only same-origin paths, so the callback can't bounce users elsewhere. */
+/**
+ * Only same-origin paths, so the callback can't bounce users elsewhere.
+ * The path is resolved the way a browser would, since `/\evil.com` and
+ * tabs or newlines inside `//` still lead off-site, and it's sent back in
+ * its normalised form.
+ */
 function safeRedirect(value: string | undefined, fallback: string): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return fallback
-  }
-  return value
+  if (!value?.startsWith("/")) return fallback
+  const origin = new URL(env.PUBLIC_URL).origin
+  const url = URL.canParse(value, origin) ? new URL(value, origin) : null
+  if (url?.origin !== origin) return fallback
+  // `/a/../..//x` normalises to `//x`, which a browser reads as a host.
+  if (url.pathname.startsWith("//")) return fallback
+  return `${url.pathname}${url.search}${url.hash}`
+}
+
+/** Shown for a setup problem the user can't fix; the log has the detail. */
+const MISCONFIGURED =
+  "Single sign-on isn't set up correctly. Ask an admin to check the server log."
+/** Shown when the provider refuses without an error code we know. */
+const REFUSED = "The provider refused the sign-in."
+/** Shown for any other failure in the callback. */
+const FAILED =
+  "Sign-in failed. Try again, or ask an admin to check the server log."
+
+/** What the user is told for each error code the provider sends back. */
+const REFUSAL_MESSAGES = new Map<string, string>([
+  [
+    "access_denied",
+    "The provider denied access. Try again, or ask an admin to check the provider's access rules.",
+  ],
+  ["login_required", "Sign in at the provider, then try again."],
+  [
+    "consent_required",
+    "The provider needs your consent first. Try again and accept the request.",
+  ],
+  [
+    "interaction_required",
+    "The provider needs you to finish a step there. Try again.",
+  ],
+  [
+    "invalid_request",
+    "The provider rejected the sign-in request. Ask an admin to check the single sign-on settings.",
+  ],
+  ["server_error", "The provider had an error. Try again later."],
+  [
+    "temporarily_unavailable",
+    "The provider is unavailable right now. Try again later.",
+  ],
+])
+
+function refusalMessage(cause: client.AuthorizationResponseError): string {
+  return REFUSAL_MESSAGES.get(cause.error) ?? REFUSED
 }
 
 function errorRedirect(c: Context, page: string, message: string) {
@@ -111,9 +158,11 @@ async function startFlow(
     return errorRedirect(
       c,
       errorPage,
-      cause instanceof OidcError
-        ? cause.message
-        : "Couldn't reach the sign-in provider.",
+      cause instanceof WrongIssuerError
+        ? MISCONFIGURED
+        : cause instanceof OidcError
+          ? cause.message
+          : "Couldn't reach the sign-in provider.",
     )
   }
 }
@@ -167,7 +216,11 @@ export const oidcRoutes = new Hono()
         idTokenExpected: true,
       })
       const idClaims = tokens.claims()
-      if (!idClaims) throw new OidcError("The provider sent no ID token.")
+      if (!idClaims) {
+        throw new OidcError(
+          "Your provider didn't send the sign-in token Matinee needs. Ask an admin to check the provider's settings.",
+        )
+      }
       const { identity, claims } = await readOidcIdentity(
         config,
         provider.settings,
@@ -207,6 +260,10 @@ export const oidcRoutes = new Hono()
       if (!isSetup) {
         // Linking on the claim alone would hand the account to whoever
         // controls that claim at the provider, so its owner signs in first.
+        // Linking is offered only to a caller who holds a valid provider
+        // identity with this username claim. The page then asks them to sign
+        // in to the account before it links; the username match itself is
+        // accepted, since the offer is the point of the branch.
         const match = await findUserByUsernameHint(identity.label)
         // Signed out, linking needs a passkey, so with passkeys off the
         // page could only offer a new account.
@@ -233,12 +290,19 @@ export const oidcRoutes = new Hono()
       return c.redirect(redirect)
     } catch (cause) {
       log.error("OIDC callback failed", cause)
+      if (cause instanceof client.AuthorizationResponseError) {
+        log.warn(
+          `The provider refused with ${cause.error}: ${cause.error_description ?? "no description"}`,
+        )
+      }
       const message =
-        cause instanceof OidcError
-          ? cause.message
-          : cause instanceof client.AuthorizationResponseError
-            ? `The provider refused the sign-in: ${cause.error_description ?? cause.error}`
-            : "Sign-in failed. Check the server log for details."
+        cause instanceof WrongIssuerError
+          ? MISCONFIGURED
+          : cause instanceof OidcError
+            ? cause.message
+            : cause instanceof client.AuthorizationResponseError
+              ? refusalMessage(cause)
+              : FAILED
       return errorRedirect(c, errorPage, message)
     }
   })

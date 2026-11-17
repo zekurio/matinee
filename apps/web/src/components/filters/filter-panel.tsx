@@ -228,9 +228,9 @@ export function ToggleChips({
 }) {
   const [query, setQuery] = useState("")
   const finding = limit !== undefined && choices.length > limit
-  const needle = query.trim().toLocaleLowerCase()
+  const needle = query.trim().toLowerCase()
   const matching = choices.filter((choice) =>
-    choice.label.toLocaleLowerCase().includes(needle),
+    choice.label.toLowerCase().includes(needle),
   )
   const shown = finding
     ? [

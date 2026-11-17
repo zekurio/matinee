@@ -1,3 +1,4 @@
+import { log } from "../log"
 import { ProviderError } from "./types"
 
 const TIMEOUT_MS = 20_000
@@ -43,9 +44,19 @@ export async function fetchJson<T>(
       continue
     }
     if (response.ok) {
-      // SAFETY: Callers name the response shape the provider documents for
-      // the endpoint they call. The body isn't schema-checked.
-      return (await response.json()) as T
+      try {
+        // SAFETY: Callers name the response shape the provider documents for
+        // the endpoint they call. The body isn't schema-checked.
+        return (await response.json()) as T
+      } catch (cause) {
+        // A 200 with HTML or a truncated body, from a proxy or a provider
+        // mid-outage. The parser's message would show the start of the body.
+        log.warn(`${provider} sent a body that isn't JSON`, cause)
+        throw new ProviderError(
+          `${provider} sent a reply Matinee couldn't read. Try again later.`,
+          null,
+        )
+      }
     }
     if (response.status === 429 || response.status >= 500) {
       lastError = new ProviderError(

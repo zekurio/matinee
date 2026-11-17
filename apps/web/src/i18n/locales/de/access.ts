@@ -82,9 +82,9 @@ export default {
   "access.group.deleted": "{name} gelöscht",
   "access.group.deleteTitle": "{name} löschen?",
   "access.group.deleteDescription": plural({
-    one: "Ihr {count} Mitglied verliert, was nur diese Gruppe erlaubt hat. Das Konto bleibt.",
+    one: "{count} Mitglied verliert, was nur diese Gruppe erlaubt. Das Konto bleibt.",
     other:
-      "Ihre {count} Mitglieder verlieren, was nur diese Gruppe erlaubt hat. Die Konten bleiben.",
+      "{count} Mitglieder verlieren, was nur diese Gruppe erlaubt. Die Konten bleiben.",
   }),
   "access.group.deleteDescriptionEmpty": "Niemand ist darin.",
 
@@ -117,7 +117,7 @@ export default {
   "access.user.gets": "Was {name} bekommt",
   "access.user.getsAfterSave":
     "Speichere, um zu sehen, was deine Änderungen ergeben.",
-  "access.user.theProvider": "Single Sign-on",
+  "access.user.theProvider": "dem Anmeldeanbieter",
   "access.user.claimsSynced":
     "Gruppen und Claims zuletzt {when} von {provider} gelesen.",
   "access.user.claimsNever":
@@ -125,9 +125,9 @@ export default {
   "access.user.groups": "Gruppen",
   "access.user.everyoneHint": "Jedes Konto ist darin.",
   "access.user.groupFromProvider":
-    "Der Gruppen-Claim von {provider} hat dieses Konto hierher gebracht. Nur {provider} kann es bei der nächsten Anmeldung herausnehmen.",
+    "Der Gruppen-Claim von {provider} hat dieses Konto hierher gebracht. Nur bei {provider} wird es bei der nächsten Anmeldung wieder herausgenommen.",
   "access.user.groupFollows":
-    "Enthält auch die Konten, die {provider} in {group} führt.",
+    "Enthält auch die Konten, die bei {provider} in {group} geführt werden.",
   "access.user.noGroups":
     "Es gibt noch keine anderen Gruppen. Leg eine unter Einstellungen → Zugriff an.",
   "access.user.override": "Für dieses Konto eingestellt",

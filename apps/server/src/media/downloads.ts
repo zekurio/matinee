@@ -26,6 +26,7 @@ import type { Viewer } from "../access/viewer"
 import { itemFor } from "../access/visible"
 import { db } from "../db"
 import { env } from "../env"
+import { ShownError } from "../errors"
 import { defineQueue, type Queue } from "../jobs/queue"
 import { log } from "../log"
 import { trackStream } from "../stats/sessions"
@@ -799,10 +800,11 @@ async function launch(
           notify(active)
           if (code === 0 || run.stopping) resolve()
           else {
+            // The last stderr lines go to the log with the error, not the message.
             reject(
-              new Error(
-                `ffmpeg stopped (exit ${code}): ${run.stderr.join("\n")}`,
-              ),
+              new ShownError(`ffmpeg stopped (exit ${code}).`, {
+                cause: new Error(run.stderr.join("\n")),
+              }),
             )
           }
         })
@@ -1521,8 +1523,9 @@ export async function matroskaStream(
       // A video run that broke off leaves the mux run a short input,
       // which it takes for the end.
       if (videoCode !== 0 || muxCode !== 0) {
-        throw new Error(
-          `ffmpeg stopped (exit ${videoCode !== 0 ? videoCode : muxCode}): ${stderr.join("\n")}`,
+        throw new ShownError(
+          `ffmpeg stopped (exit ${videoCode !== 0 ? videoCode : muxCode}).`,
+          { cause: new Error(stderr.join("\n")) },
         )
       }
       release()
@@ -1668,6 +1671,9 @@ export async function sweepDownloads(): Promise<void> {
       if (active.timer) clearInterval(active.timer)
       downloads.delete(entry.name)
     }
-    await rm(path, { recursive: true, force: true })
+    // One folder that won't go is logged, so the rest still get swept.
+    await rm(path, { recursive: true, force: true }).catch((cause: unknown) =>
+      log.warn(`Couldn't delete the download in ${path}`, cause),
+    )
   }
 }

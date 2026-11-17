@@ -5,9 +5,10 @@ import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 
-import { tr } from "@/i18n"
+import { perLocale, tr } from "@/i18n"
 import { firstError, useAppForm, useFieldContext } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { ShownError } from "@/lib/shown-error"
 
 import { InputField, SettingWarning } from "./setting-controls"
 import {
@@ -20,6 +21,15 @@ import {
 } from "./settings-panel"
 
 const MBIT = 1_000_000
+
+// The speed as the interface's language writes a number: 2,5 in German.
+const speeds = perLocale(
+  (locale) =>
+    new Intl.NumberFormat(locale, {
+      useGrouping: false,
+      maximumFractionDigits: 6,
+    }),
+)
 
 /** The form: the lists as text, a line each, and the speed in Mbit/s. */
 type Draft = {
@@ -35,7 +45,7 @@ function draftFrom(settings: NetworkSettings): Draft {
     uploadMbit:
       settings.uploadBitrate === null
         ? ""
-        : String(settings.uploadBitrate / MBIT),
+        : speeds().format(settings.uploadBitrate / MBIT),
   }
 }
 
@@ -108,7 +118,7 @@ function NetworkForm({ saved }: { saved: AdminNetworkSettings }) {
             : Math.round(Number(speed.replace(",", ".")) * MBIT),
       })
       if (!parsed.success) {
-        throw new Error(
+        throw new ShownError(
           firstError(parsed.error.issues) ?? tr("network.checkFields"),
         )
       }

@@ -4,6 +4,7 @@ import {
 } from "@matinee/contracts"
 
 import { type MessageKey, tr, translateKnown } from "@/i18n"
+import { ShownError } from "@/lib/shown-error"
 
 import { typeOnly } from "./setting-controls"
 
@@ -93,7 +94,7 @@ export function inputError(
   const check = field
     ? tr("transcoding.checkField", { field: tr(field) })
     : tr("transcoding.checkFields")
-  return new Error(
+  return new ShownError(
     issue
       ? tr("transcoding.checkFieldIssue", {
           check,

@@ -26,6 +26,8 @@ import io.github.zekurio.matinee.api.RequestQueue
 import io.github.zekurio.matinee.api.RequestsLiveEvent
 import io.github.zekurio.matinee.api.SeasonAvailability
 import io.github.zekurio.matinee.api.ShowScope
+import io.github.zekurio.matinee.api.appResources
+import io.github.zekurio.matinee.api.serverWords
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.kit.ToastDuration
 import io.github.zekurio.matinee.ui.kit.ToastResult
@@ -119,7 +121,7 @@ class RequestsHub(
 
     private suspend fun fail(message: Int, name: String?, cause: Exception) {
         val head = if (name != null) text(message, name) else text(message)
-        val detail = (cause as? ApiException)?.message
+        val detail = (cause as? ApiException)?.message?.let { serverWords(it, resources ?: appResources) }
         snackbar.showSnackbar(if (detail != null) "$head\n$detail" else head, withDismissAction = true)
     }
 

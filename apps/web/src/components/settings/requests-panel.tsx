@@ -216,7 +216,9 @@ function ConnectionCard({
   })
 
   const variable = <KeyVariable slug={connection.slug} />
-  const sourceName = source ? translateKnown(source.name) : connection.source
+  const sourceName = source
+    ? translateKnown(source.name)
+    : tr("connections.card.unknownSource")
   const quality = (key: string) => {
     const field = choices.data?.fields.find((each) => each.key === key)
     return field
@@ -269,9 +271,9 @@ function ConnectionCard({
                   className="text-danger mt-0.5 size-3.5 shrink-0"
                 />
                 <span>
-                  {tr("connections.testFailed")}
-                  {". "}
-                  {errorMessage(test.error)}
+                  {tr("connections.testFailed.detail", {
+                    error: errorMessage(test.error),
+                  })}
                 </span>
               </>
             ) : test.isSuccess ? (
@@ -596,13 +598,23 @@ function RuleSummary({
   choices: FulfilmentRuleChoices | undefined
   landings: FulfilmentLanding[]
 }) {
+  // Until both answer, names and setting labels would show as ids and keys.
+  if (!fields || !choices) {
+    return (
+      <p className="text-13px text-muted-foreground min-w-0 flex-1 leading-5">
+        {tr("connections.rules.summaryPending")}
+      </p>
+    )
+  }
   const named = <T,>(
     ids: T[],
     list: { id: T; name: string }[] | undefined,
   ): string =>
     lists().format(
       ids.map(
-        (id) => list?.find((entry) => entry.id === id)?.name ?? String(id),
+        (id) =>
+          list?.find((entry) => entry.id === id)?.name ??
+          tr("connections.rules.unknownChoice"),
       ),
     )
   const conditions = [
@@ -623,18 +635,10 @@ function RuleSummary({
       value: lists().format(rule.keywords.map((keyword) => keyword.name)),
     },
   ].filter((entry) => entry !== false)
-  // In the order the form lists them.
-  const order = (key: string) => {
-    const index = fields?.findIndex((each) => each.key === key) ?? -1
-    return index < 0 ? Number.MAX_SAFE_INTEGER : index
-  }
-  const keys = Object.keys(rule.settings).toSorted(
-    (a, b) => order(a) - order(b),
-  )
+  // In the order the form lists them, and only the ones it knows.
+  const known = fields.filter((each) => Object.hasOwn(rule.settings, each.key))
   // A folder and a quality read as what they are; anything else by name.
-  const folderField = fields?.find(
-    (each) => each.folder && keys.includes(each.key),
-  )
+  const folderField = known.find((each) => each.folder)
   const folder = folderField?.folder
     ? {
         library:
@@ -646,13 +650,12 @@ function RuleSummary({
           )?.library?.name ?? null,
       }
     : null
-  const settings = keys.map((key) => {
-    const field = fields?.find((each) => each.key === key)
-    const shown = lists().format(shownValue(field, rule.settings, key))
-    if (field?.folder || key === "qualityProfileId") return shown
+  const settings = known.map((field) => {
+    const shown = lists().format(shownValue(field, rule.settings, field.key))
+    if (field.folder || field.key === "qualityProfileId") return shown
     return (
       <>
-        {field ? translateKnown(field.label) : key}{" "}
+        {translateKnown(field.label)}{" "}
         <span className="text-foreground">{shown}</span>
       </>
     )

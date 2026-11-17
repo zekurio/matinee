@@ -124,7 +124,7 @@ export type DownmixAlgorithm = t.infer<typeof DownmixAlgorithm>
 export const DevicePath = t
   .string()
   .trim()
-  .max(256)
+  .max(256, "Use at most 256 characters.")
   .refine(
     (value) =>
       value === "" ||

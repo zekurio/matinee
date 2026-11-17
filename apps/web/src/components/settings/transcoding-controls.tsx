@@ -7,7 +7,7 @@ import type {
 import { useSelector } from "@tanstack/react-form"
 import type { ReactNode } from "react"
 
-import { tr } from "@/i18n"
+import { tr, translateKnown } from "@/i18n"
 import { useFieldContext, withForm } from "@/lib/form"
 
 import { InputField, SwitchField, typeOnly } from "./setting-controls"
@@ -51,11 +51,14 @@ export function hardwareOf(
 /** Why a check didn't run here, for under its switch; nothing when it did. */
 export function checkNote(check: CapabilityCheck | undefined): ReactNode {
   if (!check || check.status === "ok") return undefined
+  const detail = firstLine(check)
   return (
     <span className="text-destructive">
       {check.status === "missing"
         ? tr("transcoding.check.missing")
-        : tr("transcoding.check.failed", { error: firstLine(check) ?? "" })}
+        : detail
+          ? tr("transcoding.check.failed", { error: translateKnown(detail) })
+          : tr("transcoding.check.failedPlain")}
     </span>
   )
 }

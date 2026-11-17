@@ -31,12 +31,13 @@ import { and, asc, eq, inArray } from "drizzle-orm"
 
 import { db } from "../db"
 import { env } from "../env"
+import { ShownError } from "../errors"
 import { defineQueue } from "../jobs/queue"
 import { log } from "../log"
 import { languageTag, trackLabel } from "./language"
-import { indexedSubtitle } from "./matroska-subtitles"
+import { ContainerError, indexedSubtitle } from "./matroska-subtitles"
 import { currentProbe } from "./probe"
-import { run, runProcess } from "./process"
+import { processFailureKind, run, runProcess } from "./process"
 import { cleanVtt, decodeText, srtToVtt, vttText } from "./webvtt"
 
 // Display names for ffmpeg's codec names and sidecar extensions.
@@ -213,7 +214,7 @@ async function extract(
     const small = job.small
       ? null
       : job.embedded
-        ? await indexedSubtitle(job.embedded.path, job.embedded.index)
+        ? await indexedOf(job.embedded.path, job.embedded.index)
         : null
     if (job.indexedOnly && !small && !job.small && job.embedded) return false
     if (small) await writeFile(indexed, small.bytes)
@@ -338,6 +339,33 @@ function preparationKey(item: Preparation): string {
   return `${item.id}-${item.modifiedAt.getTime()}-${item.sizeBytes}${item.sidecars?.map((job) => `-${job.key}`).join("") ?? ""}`
 }
 
+/** Shown for a file whose container can't be read. The cause goes to the log. */
+const UNREADABLE =
+  "This file's subtitles couldn't be read. Its container may be damaged."
+
+function unreadable(cause: unknown): ShownError {
+  return new ShownError(UNREADABLE, { cause })
+}
+
+/** The index reader's line: the bytes it read and the tracks it indexed. */
+function readIndex(line: string): { bytesRead: number; streams: number[] } {
+  try {
+    return t
+      .object({ bytesRead: t.number(), streams: t.array(t.number()) })
+      .parse(JSON.parse(line))
+  } catch (cause) {
+    throw unreadable(cause)
+  }
+}
+
+/** The subtitle index of a container, with the parser's failures as `unreadable`. */
+async function indexedOf(path: string, index: number) {
+  return indexedSubtitle(path, index).catch((cause: unknown) => {
+    if (cause instanceof ContainerError) throw unreadable(cause)
+    throw cause
+  })
+}
+
 const preparations = defineQueue<Preparation, void>({
   id: "subtitle-prepare",
   name: "Prepare subtitles",
@@ -412,10 +440,12 @@ const preparations = defineQueue<Preparation, void>({
           onStdoutLine: (line) => {
             resultLine = line
           },
+        }).catch((cause: unknown) => {
+          // The reader only parses the container, so its exit means a damaged file.
+          if (processFailureKind(cause) === "exit") throw unreadable(cause)
+          throw cause
         })
-        const result = t
-          .object({ bytesRead: t.number(), streams: t.array(t.number()) })
-          .parse(JSON.parse(resultLine))
+        const result = readIndex(resultLine)
         sourceBytes = result.bytesRead
         streams = result.streams
       }

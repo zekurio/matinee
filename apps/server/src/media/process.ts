@@ -2,6 +2,8 @@ import { type ChildProcess, spawn } from "node:child_process"
 import { setPriority } from "node:os"
 import type { Readable } from "node:stream"
 
+import { ShownError } from "../errors"
+
 const PROCESS_TIMEOUT_MS = 30_000
 // Between SIGTERM and SIGKILL when stopping a stuck process.
 const KILL_GRACE_MS = 5_000
@@ -14,13 +16,18 @@ const STDERR_TAIL_LINES = 20
  */
 export type ProcessFailureKind = "start" | "timeout" | "exit"
 
-class ProcessError extends Error {
+/**
+ * A failed run. The message is short and names no path, so it can be stored
+ * and shown. `detail` is what the program printed or the system said; it
+ * goes to the log with the error.
+ */
+class ProcessError extends ShownError {
   constructor(
     message: string,
     readonly kind: ProcessFailureKind,
-    detail: string,
+    readonly detail: string,
   ) {
-    super(detail ? `${message}: ${detail}` : message)
+    super(message)
     this.name = "ProcessError"
   }
 }
@@ -60,9 +67,9 @@ export type RunProcessOptions = {
 /**
  * Run a command to completion. Resolves on exit code 0, rejects with an
  * AbortError when `signal` aborts, and otherwise with an error that
- * `processFailureKind` classifies, ending in the last lines of stderr. On
- * abort or timeout the process gets SIGTERM, then SIGKILL, so one that
- * ignores SIGTERM can't hold its caller forever.
+ * `processFailureKind` classifies. Its message is fixed; the last lines of
+ * stderr are in its `detail`. On abort or timeout the process gets SIGTERM,
+ * then SIGKILL, so one that ignores SIGTERM can't hold its caller forever.
  */
 export function runProcess(options: RunProcessOptions): Promise<void> {
   if (options.signal?.aborted) return Promise.reject(abortError())
@@ -98,8 +105,8 @@ export function runProcess(options: RunProcessOptions): Promise<void> {
   }
   options.signal?.addEventListener("abort", onAbort, { once: true })
 
-  const fail = (message: string, kind: ProcessFailureKind) =>
-    new ProcessError(message, kind, stderr.join("\n").slice(-500))
+  const fail = (message: string, kind: ProcessFailureKind, detail = "") =>
+    new ProcessError(message, kind, detail || stderr.join("\n").slice(-500))
 
   return new Promise<void>((resolve, reject) => {
     // `error` also fires when kill() fails; only a missing pid means the
@@ -108,8 +115,9 @@ export function runProcess(options: RunProcessOptions): Promise<void> {
       if (child.pid !== undefined) return
       reject(
         fail(
-          `Couldn't start ${options.name} (${options.command}): ${error.message}`,
+          `Couldn't start ${options.name}.`,
           "start",
+          `${options.command}: ${error.message}`,
         ),
       )
     })

@@ -261,6 +261,12 @@ lacks libwebp. Clients use `artworkPath()` or `artworkSrcSet()`. Each image
 also gets a BlurHash for placeholders. Expect about 150 KB per image, so a
 few GB for 1,000 titles.
 
+An image's id is a hash of the provider's URL, which anyone can work out,
+so `/api/artwork` doesn't serve every id to everyone signed in. It serves
+images the catalog showed, which anyone may browse, and images a title the
+viewer can open uses, through its seasons, episodes, and cast too. Any
+other id answers 404, the same as one that doesn't exist.
+
 Admins can replace a poster, backdrop, logo, or still with Edit images.
 It lists the provider's options and accepts JPEG, PNG, and WebP uploads up
 to 25 MB. Refreshes keep the admin's choices.

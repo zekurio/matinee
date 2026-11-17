@@ -215,7 +215,7 @@ internal fun <T> PickRow(
     description: String? = null,
     onPick: (T) -> Unit,
 ) {
-    val value = options.firstOrNull { it.first == current }?.second ?: current.toString()
+    val value = options.firstOrNull { it.first == current }?.second ?: stringResource(R.string.settings_unknown_value)
     val row = remember { FocusRequester() }
     TvListItem(
         title,

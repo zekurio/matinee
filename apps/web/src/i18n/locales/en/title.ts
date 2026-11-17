@@ -7,7 +7,6 @@ export default defineMessages("title", {
   "title.resume": "Resume",
   "title.playName": "Play {name}",
   "title.resumeName": "Resume {name}",
-  "title.moreActions": "More actions",
   "title.more": "More",
   "title.less": "Less",
   // A season's name after its show's, like "Severance: Season 2".
@@ -122,7 +121,10 @@ export default defineMessages("title", {
   "title.seasons": "Seasons",
   "title.seasons.more": "More seasons",
   // A season only partly on the server.
-  "title.seasons.partial": "{here} of {count} episodes here",
+  "title.seasons.partial": plural({
+    one: "{here} of {count} episode here",
+    other: "{here} of {count} episodes here",
+  }),
   "title.seasons.left": plural({
     one: "{count} episode left to watch",
     other: "{count} episodes left to watch",

@@ -1,15 +1,26 @@
+import { Button, buttonVariants } from "@matinee/ui/components/button"
 import { Toaster } from "@matinee/ui/components/sonner"
 import { TooltipProvider } from "@matinee/ui/components/tooltip"
 import type { QueryClient } from "@tanstack/react-query"
-import { createRootRouteWithContext, Outlet } from "@tanstack/react-router"
+import {
+  createRootRouteWithContext,
+  type ErrorComponentProps,
+  Link,
+  Outlet,
+} from "@tanstack/react-router"
+import { useEffect } from "react"
 
+import { AuthScreen } from "@/components/auth-screen"
 import { PageScrollbar } from "@/components/page-scrollbar"
+import { tr } from "@/i18n"
 import { PlaybackAccountSync } from "@/lib/playback-sync"
 import { ServerThemeAccents } from "@/lib/theme-sync"
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   {
     component: Root,
+    errorComponent: RouteError,
+    notFoundComponent: RouteNotFound,
   },
 )
 
@@ -29,5 +40,53 @@ function Root() {
         }}
       />
     </TooltipProvider>
+  )
+}
+
+/**
+ * Shown when a page throws. The message stays off the page: it's for
+ * developers, so it goes to the console instead.
+ */
+function RouteError({ error, reset }: ErrorComponentProps) {
+  useEffect(() => {
+    // `reportError` logs to the console without the `console` calls the
+    // lint rules ban in the app.
+    reportError(error)
+  }, [error])
+  return (
+    <AuthScreen
+      title={tr("common.error.unknown")}
+      description={tr("common.error.pageDescription")}
+    >
+      <div className="grid gap-2">
+        <Button size="lg" onClick={() => reset()}>
+          {tr("common.error.retry")}
+        </Button>
+        <Link
+          to="/"
+          className={buttonVariants({ variant: "outline", size: "lg" })}
+        >
+          {tr("common.backHome")}
+        </Link>
+      </div>
+    </AuthScreen>
+  )
+}
+
+function RouteNotFound() {
+  return (
+    <AuthScreen
+      title={tr("common.notFound.title")}
+      description={tr("common.notFound.description")}
+    >
+      <div className="grid">
+        <Link
+          to="/"
+          className={buttonVariants({ variant: "outline", size: "lg" })}
+        >
+          {tr("common.backHome")}
+        </Link>
+      </div>
+    </AuthScreen>
   )
 }

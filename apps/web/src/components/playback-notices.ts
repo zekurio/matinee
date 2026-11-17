@@ -49,11 +49,14 @@ function videoTranscode(plan: PlaybackStart) {
   const codec =
     plan.convertedVideo &&
     { h264: "H.264", hevc: "HEVC", av1: "AV1" }[plan.convertedVideo]
+  // `original` is an id, not a size: say the size it keeps.
+  const size =
+    plan.quality === "original"
+      ? tr("player.notice.originalSize")
+      : plan.quality.replace(/-\d+$/, "")
   return {
     from: plan.item.probe?.video?.format ?? null,
-    quality: [codec, plan.quality.replace(/-\d+$/, "")]
-      .filter(Boolean)
-      .join(" "),
+    quality: [codec, size].filter(Boolean).join(" "),
   }
 }
 

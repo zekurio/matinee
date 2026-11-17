@@ -6,6 +6,7 @@ import {
   type JobQueueStatus,
 } from "@matinee/contracts"
 
+import { shownMessage } from "../errors"
 import { log } from "../log"
 
 /*
@@ -82,7 +83,7 @@ export type QueueDefinition<P, R> = {
    * Infinity keeps it failing until the server restarts.
    */
   retryAfterMs?: number
-  /** The log message for a failure. Without it, the job logs its own. */
+  /** The log message for a failure. Without it, the log names the queue and the job. */
   failure?: (payload: P) => string
   /** Recognises failures that make the waiting jobs pointless. */
   fatal?: (cause: unknown, payload: P) => Fatal<P> | null
@@ -132,10 +133,6 @@ class Lane<T> {
 
 function abortError(): DOMException {
   return new DOMException("Cancelled", "AbortError")
-}
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause)
 }
 
 /** Null for Infinity, which a number in the contract (and JSON) can't be. */
@@ -458,7 +455,12 @@ export class Queue<P, R> implements QueueControl {
     this.failed++
     if (this.batch) this.batch.failed++
     const label = this.definition.label(entry.payload)
-    this.failures.unshift({ label, message: messageOf(cause), at: new Date() })
+    // What the admins see. The log has the cause in full.
+    this.failures.unshift({
+      label,
+      message: shownMessage(cause),
+      at: new Date(),
+    })
     this.failures.splice(RECENT_FAILURES)
     if (this.definition.retryAfterMs) {
       const at = Date.now()
@@ -483,11 +485,14 @@ export class Queue<P, R> implements QueueControl {
         dropped > 0
           ? `${fatal.message} Dropped ${dropped} waiting ${dropped === 1 ? "job" : "jobs"}.`
           : fatal.message,
+        cause,
       )
       return
     }
-    const failure = this.definition.failure
-    if (failure) log.warn(failure(entry.payload), cause)
+    const message =
+      this.definition.failure?.(entry.payload) ??
+      `${this.definition.name} job failed: ${label}`
+    log.warn(message, cause)
   }
 
   /** Expired errors must not retain their stacks and causes indefinitely. */

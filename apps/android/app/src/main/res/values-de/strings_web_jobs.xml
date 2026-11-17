@@ -36,7 +36,6 @@
     <string name="web_jobs_queue_thumbnails_description">Nimmt ein Einzelbild aus Videos, die kein Artwork haben.</string>
     <string name="web_jobs_queue_subtitle_prepare_name">Untertitel vorbereiten</string>
     <string name="web_jobs_queue_subtitle_prepare_description">Indizierte Textuntertitel zwischenspeichern, ohne Videospuren zu lesen.</string>
-    <string name="web_jobs_queue_subtitle_prepare_note">Dateien, deren indizierte Textuntertitel gleichzeitig vorbereitet werden.</string>
     <string name="web_jobs_task_prepare_subtitles_name">Untertitel vorbereiten</string>
     <string name="web_jobs_task_prepare_subtitles_description">Indizierte Textuntertitel zwischenspeichern und Ausgaben entfernter oder geänderter Dateien löschen. Bilduntertitel bleiben auf Abruf.</string>
     <string name="web_jobs_queue_trickplay_name">Trickplay-Bilder</string>
@@ -53,7 +52,6 @@
     <string name="web_jobs_queue_avatars_description">Schneidet und skaliert Uploads und die Bilder, die Anmeldeanbieter schicken.</string>
     <string name="web_jobs_queue_downloads_name">Download-Kodierungen</string>
     <string name="web_jobs_queue_downloads_description">Kodiert das Video von Downloads in einer anderen Größe oder einem anderen Codec, während die App oder der Browser sie abruft.</string>
-    <string name="web_jobs_queue_downloads_note">Downloads, die gleichzeitig kodiert werden. Jeder belegt einen Encoder wie ein Stream; erhöhe den Wert, wenn der Server mithält.</string>
     <string name="web_jobs_queue_download_copies_name">Download-Kopien</string>
     <string name="web_jobs_queue_download_copies_description">Stellt Downloads zusammen, die ihr Video unverändert behalten, während die App oder der Browser sie abruft.</string>
     <string name="web_jobs_queue_running">%1$s von %2$s aktiv</string>
@@ -107,6 +105,7 @@
     <string name="web_jobs_task_cancelledAfter">Abgebrochen nach %1$s</string>
     <string name="web_jobs_task_failed">Fehlgeschlagen</string>
     <string name="web_jobs_task_failedWith">Fehlgeschlagen: %1$s</string>
+    <string name="web_jobs_task_failedUnknown">Das ist fehlgeschlagen. Details stehen im Server-Log.</string>
     <string name="web_jobs_task_running">Läuft…</string>
     <string name="web_jobs_task_started">Gestartet %1$s</string>
     <string name="web_jobs_task_percent">%1$s %%</string>

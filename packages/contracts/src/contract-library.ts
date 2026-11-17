@@ -116,7 +116,11 @@ export const titlesContract = oc.tag("Titles").router({
     .input(
       t.object({
         id: t.uuid(),
-        query: t.string().trim().min(1, "Enter a name to search for.").max(200),
+        query: t
+          .string()
+          .trim()
+          .min(1, "Enter a name to search for.")
+          .max(200, "Use at most 200 characters."),
         year: t.number().int().min(1870).max(2200).optional(),
       }),
     )
@@ -178,7 +182,11 @@ export const mediaContract = oc.tag("Media").router({
     .input(
       t.object({
         libraryId: t.uuid(),
-        query: t.string().trim().max(200).optional(),
+        query: t
+          .string()
+          .trim()
+          .max(200, "Use at most 200 characters.")
+          .optional(),
         /** Only files under this folder of the library, such as a show. */
         folder: t.string().trim().min(1).max(500).optional(),
         /**

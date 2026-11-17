@@ -19,6 +19,7 @@ export default {
     "Dieser ffmpeg-Build oder diese GPU unterstützt das nicht.",
   "transcoding.check.failed":
     "Auf diesem Server ist es fehlgeschlagen: {error}",
+  "transcoding.check.failedPlain": "Auf diesem Server ist es fehlgeschlagen.",
 
   "transcoding.field.vaapiDevice": "VAAPI-Gerät",
   "transcoding.field.qsvDevice": "QSV-Gerät",
@@ -56,6 +57,8 @@ export default {
   "transcoding.ffmpeg.unknownVersion": "unbekannt",
   "transcoding.ffmpeg.pauseKeys": "Pause-Tasten",
   "transcoding.ffmpeg.doviRemoval": "Entfernen von Dolby Vision",
+  "transcoding.ffmpeg.tonemapx": "Tone-Mapping (tonemapx)",
+  "transcoding.ffmpeg.errorDetail": "Die Prüfung endete mit diesem Fehler:",
   "transcoding.ffmpeg.lacks":
     "Diesem Build fehlt {features}. Verwende jellyfin-ffmpeg.",
 
@@ -63,6 +66,8 @@ export default {
   "transcoding.hardware.acceleration": "Beschleunigung",
   "transcoding.hardware.deviceFailed":
     "Das Gerät ließ sich nicht öffnen, daher laufen Transkodierungen in Software.",
+  "transcoding.hardware.deviceFailedDetail":
+    "Das Gerät ließ sich nicht öffnen, daher laufen Transkodierungen in Software. ffmpeg meldete: {error}",
   "transcoding.hardware.notInBuild": "Nicht in diesem ffmpeg-Build",
   "transcoding.hardware.encoding": "Hardware-Kodierung",
   "transcoding.hardware.lowPower": "Intel-Low-Power-Encoder für {codec}",

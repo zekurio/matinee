@@ -109,10 +109,10 @@ fun formatDay(day: String?): String? {
     }.getOrNull()
 }
 
-/** An ISO time from the server, as a date in the device's language. */
+/** An ISO time from the server, as a date in the device's language; a dash when it doesn't parse. */
 fun formatInstant(value: String): String = runCatching {
     DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date.from(java.time.Instant.parse(value)))
-}.getOrDefault(value)
+}.getOrDefault("\u2014")
 
 fun formatRating(rating: Double): String = "%.1f".format(Locale.getDefault(), rating)
 

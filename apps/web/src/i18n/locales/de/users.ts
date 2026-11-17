@@ -52,7 +52,7 @@ export default {
   "users.ownAccess": "Eigene Grenzen",
   "users.ownAccessHint": "Hat eigene Einstellungen über seinen Gruppen",
   "users.ownAccessFromProvider":
-    "Bei der Anmeldung vom Richtlinien-Claim von {provider} gesetzt",
+    "Bei der Anmeldung durch den Richtlinien-Claim von {provider} gesetzt",
   "users.passkeys": plural({
     one: "{count} Passkey",
     other: "{count} Passkeys",

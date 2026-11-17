@@ -27,6 +27,8 @@ export default {
   "stats.quality.original": "Original",
   "stats.quality.preset": "{height}p {bitrate} Mbit/s",
   "stats.notRead": "Noch nicht ausgelesen",
+  "stats.encoder.onCpu": "{name} (CPU)",
+  "stats.encoder.cpu": "CPU",
   "stats.bucket.week": "Woche vom {date}",
 
   "stats.figure.watchTime": "Sehzeit",

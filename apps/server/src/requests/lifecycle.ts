@@ -898,7 +898,9 @@ export async function moderate(
         operation === "retry" &&
         (row.status !== "approved" || row.fulfilmentState !== "failed")
       )
-        unavailable()
+        throw new ORPCError("CONFLICT", {
+          message: "This request isn't failing any more. Reload the list.",
+        })
       const replan = replans.get(id)
       await tx
         .update(request)

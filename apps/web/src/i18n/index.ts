@@ -212,10 +212,10 @@ for (const key of Object.keys(source)) {
 }
 
 /**
- * English text from the server or a schema in the interface's language,
- * when the catalog knows it; else the text as it is.
+ * The interface's text for English from the server or a schema, when the
+ * catalog knows it; null when it doesn't.
  */
-export function translateKnown(text: string): string {
+export function knownMessage(text: string): string | null {
   const key = exact.get(text)
   if (key !== undefined) return messageText(lookup(key), 1)
   for (const { key: candidate, pattern, names } of patterns) {
@@ -227,7 +227,15 @@ export function translateKnown(text: string): string {
       (placeholder, name: string) => values.get(name) ?? placeholder,
     )
   }
-  return text
+  return null
+}
+
+/**
+ * English text from the server or a schema in the interface's language,
+ * when the catalog knows it; else the text as it is.
+ */
+export function translateKnown(text: string): string {
+  return knownMessage(text) ?? text
 }
 
 /**

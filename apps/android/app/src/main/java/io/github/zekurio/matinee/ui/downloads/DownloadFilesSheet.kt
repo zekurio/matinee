@@ -32,6 +32,7 @@ import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.TitleSummary
+import io.github.zekurio.matinee.api.serverWords
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -152,7 +153,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                             detail = stringResource(R.string.downloads_about, formatBytes(size)),
                         )
                         resolved.filterIsInstance<DownloadResolution.Unavailable>().forEach {
-                            Text(it.message, color = Palette.Danger, modifier = Modifier.padding(horizontal = 20.dp))
+                            Text(serverWords(it.message), color = Palette.Danger, modifier = Modifier.padding(horizontal = 20.dp))
                         }
                         Gap(16.dp)
                         MatineeButton(

@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.CatalogRef
 import io.github.zekurio.matinee.api.CatalogTitleSummary
 import io.github.zekurio.matinee.api.ImageTarget
@@ -25,6 +26,7 @@ import io.github.zekurio.matinee.api.Season as ShowSeason
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.api.isAdmin
+import io.github.zekurio.matinee.api.serverWords
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
@@ -128,7 +130,7 @@ class Actions(val scope: CoroutineScope) {
                 throw e
             } catch (e: IOException) {
                 hidden.remove(ref.key)
-                snackbar.showSnackbar(e.message?.let { "$failure: $it" } ?: failure)
+                snackbar.showSnackbar(withServerWords(failure, e))
             } catch (_: SerializationException) {
                 hidden.remove(ref.key)
                 snackbar.showSnackbar(failure)
@@ -170,13 +172,23 @@ val LocalActions = staticCompositionLocalOf<Actions> { error("no actions") }
 /** Messages that pop up at the bottom, like a failed mark. */
 val LocalSnackbar = staticCompositionLocalOf { ToastState() }
 
+/**
+ * [failure] with the server's own words after it, when it sent some. Other
+ * errors' text is the network's or the parser's, in English, so only
+ * [failure] shows for them.
+ */
+internal fun withServerWords(failure: String, e: IOException): String {
+    val words = (e as? ApiException)?.message?.let { serverWords(it) } ?: return failure
+    return "$failure: $words"
+}
+
 /** Run [block], showing its error at the bottom of the screen. */
 fun CoroutineScope.launchShowing(snackbar: ToastState, failure: String, block: suspend () -> Unit) {
     launch {
         try {
             block()
         } catch (e: IOException) {
-            snackbar.showSnackbar(e.message?.let { "$failure: $it" } ?: failure)
+            snackbar.showSnackbar(withServerWords(failure, e))
         } catch (_: SerializationException) {
             // Parsing details can contain server data; the action's own message is enough here.
             snackbar.showSnackbar(failure)

@@ -8,7 +8,8 @@ export default defineMessages("requests", {
     one: "Requests, {count} needs you",
     other: "Requests, {count} need you",
   }),
-  "requests.dot": "Requests need you",
+  // The account label with the dot on it, for screen readers.
+  "requests.labelled": "{label}. Requests need you",
 
   // The queue at /requests. The lists, as a row of chips with their counts.
   "requests.lists": "Lists",
@@ -139,6 +140,8 @@ export default defineMessages("requests", {
 
   // Needs attention.
   "requests.attention.unknown": "Failed without a reason",
+  "requests.attention.failedUnknown":
+    "This failed. The server log has the details.",
 
   // Done.
   "requests.done.arrived": "Arrived {when}",

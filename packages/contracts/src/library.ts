@@ -55,11 +55,15 @@ export type Library = t.infer<typeof Library>
 const AbsolutePath = t
   .string()
   .trim()
-  .min(1)
+  .min(1, "Use an absolute path.")
   .refine((value) => value.startsWith("/"), "Use an absolute path.")
 
 export const LibraryInput = t.object({
-  name: t.string().trim().min(1, "Give the library a name.").max(100),
+  name: t
+    .string()
+    .trim()
+    .min(1, "Give the library a name.")
+    .max(100, "Use at most 100 characters."),
   kind: LibraryKind,
   paths: t
     .array(AbsolutePath)

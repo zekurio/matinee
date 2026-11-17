@@ -55,8 +55,10 @@ import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
+import io.github.zekurio.matinee.api.serverWords
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.downloads.DEFAULT_ORIGINAL
+import io.github.zekurio.matinee.downloads.DownloadError
 import io.github.zekurio.matinee.downloads.DownloadState
 import io.github.zekurio.matinee.downloads.Downloads
 import io.github.zekurio.matinee.downloads.OfflineItem
@@ -175,7 +177,7 @@ fun DownloadsScreen() {
             if (coming.isNotEmpty()) {
                 item(key = "coming") {
                     val moving = coming.filter { it.state == DownloadState.RUNNING || it.state == DownloadState.QUEUED }
-                    val broken = coming.filter { it.error != null || it.state == DownloadState.FAILED }
+                    val broken = coming.filter { it.hasError || it.state == DownloadState.FAILED }
                     ListHeading(stringResource(R.string.downloads_coming)) {
                         // What broke off is what wants doing first.
                         if (broken.isNotEmpty()) {
@@ -401,7 +403,7 @@ private fun ComingRow(entry: OfflineItem, primary: String, secondary: String?, m
     val downloads = LocalContext.current.app.downloads
     val moving = entry.state == DownloadState.RUNNING || entry.state == DownloadState.QUEUED
     // Broke off: given up, or waiting to try again after an error.
-    val broken = entry.error != null || entry.state == DownloadState.FAILED
+    val broken = entry.hasError || entry.state == DownloadState.FAILED
     Row(
         modifier.fillMaxWidth().clip(CardShape).clickable(onClick = onMore).padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -498,13 +500,27 @@ private fun status(entry: OfflineItem): String {
         DownloadState.DONE -> formatBytes(entry.bytes)
         DownloadState.RUNNING -> if (size != null) stringResource(R.string.downloads_of, formatBytes(entry.bytes), size) else formatBytes(entry.bytes)
         DownloadState.PAUSED -> stringResource(R.string.downloads_state_paused)
-        DownloadState.FAILED -> stringResource(R.string.downloads_state_failed, entry.error.orEmpty())
+        DownloadState.FAILED -> stringResource(R.string.downloads_state_failed, failureText(entry).orEmpty())
         else -> {
             val unmetered = LocalContext.current.app.downloads.unmeteredOnly
             // What went wrong, alone: the red and the retry button say the rest.
-            entry.error ?: stringResource(if (unmetered) R.string.downloads_state_waiting_unmetered else R.string.downloads_state_waiting)
+            failureText(entry) ?: stringResource(if (unmetered) R.string.downloads_state_waiting_unmetered else R.string.downloads_state_waiting)
         }
     }
+}
+
+/**
+ * What went wrong, in the app's words for its kind, or the server's own for
+ * a refusal. A list saved before kinds were kept shows the words it was
+ * saved with.
+ */
+@Composable
+private fun failureText(entry: OfflineItem): String? = when (entry.errorKind) {
+    DownloadError.UNREACHABLE -> stringResource(R.string.downloads_error_unreachable)
+    DownloadError.BROKE_OFF -> stringResource(R.string.downloads_error_broke_off)
+    DownloadError.FORBIDDEN -> stringResource(R.string.downloads_error_forbidden)
+    DownloadError.SERVER -> entry.error?.let { serverWords(it) } ?: stringResource(R.string.error_server)
+    else -> entry.error
 }
 
 @Composable

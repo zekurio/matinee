@@ -8,10 +8,15 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import { tr } from "@/i18n"
+import { perLocale, tr } from "@/i18n"
 import { baseLanguage, languageName } from "@/lib/languages"
 import { channelLayout } from "@/lib/media"
 import { orpc } from "@/lib/rpc"
+
+/** "A, B, C", the way the language lists languages. */
+const unitList = perLocale(
+  (locale) => new Intl.ListFormat(locale, { type: "unit", style: "short" }),
+)
 
 /**
  * "German, English" for tracks' language tags, each language once in the
@@ -25,7 +30,7 @@ function languageList(tags: (string | null)[]): string | null {
     seen.add(base)
     return [languageName(base)]
   })
-  return names.length > 0 ? names.join(", ") : null
+  return names.length > 0 ? unitList().format(names) : null
 }
 
 type InfoLine = { Icon: LucideIcon; label: string; text: string }

@@ -218,31 +218,21 @@ function schema<SchemaType extends TSchema>(
       if (property === "int") {
         return (message?: string) =>
           schema(
-            message === undefined
-              ? copySchema(
-                  target,
-                  {
-                    type: "integer",
-                    // zod's int() takes safe integers only.
-                    minimum: Math.max(
-                      targetRecord.minimum ?? Number.MIN_SAFE_INTEGER,
-                      Number.MIN_SAFE_INTEGER,
-                    ),
-                    maximum: Math.min(
-                      targetRecord.maximum ?? Number.MAX_SAFE_INTEGER,
-                      Number.MAX_SAFE_INTEGER,
-                    ),
-                  },
-                  "Integer",
-                )
-              : annotate(
-                  Type.Refine(target, Number.isSafeInteger, () => message),
-                  {
-                    type: "integer",
-                    minimum: Number.MIN_SAFE_INTEGER,
-                    maximum: Number.MAX_SAFE_INTEGER,
-                  },
-                ),
+            // zod's int() takes safe integers only. The bounds are for the
+            // document; `annotate` keeps any tighter limit already there.
+            annotate(
+              Type.Refine(
+                target,
+                (input) =>
+                  !Guard.IsNumber(input) || Number.isSafeInteger(input),
+                () => message ?? "Use a whole number.",
+              ),
+              {
+                type: "integer",
+                minimum: Number.MIN_SAFE_INTEGER,
+                maximum: Number.MAX_SAFE_INTEGER,
+              },
+            ),
           )
       }
       if (property === "positive") {
@@ -254,7 +244,7 @@ function schema<SchemaType extends TSchema>(
         return () => schema(copySchema(target, { format: "int64" }))
       }
       if (property === "nonnegative") {
-        return () => schema(copySchema(target, { minimum: 0 }))
+        return () => schema(withLimit(target, "min", 0))
       }
       if (property === "multipleOf") {
         return (multipleOf: number) =>
@@ -269,7 +259,7 @@ function schema<SchemaType extends TSchema>(
                 pattern.lastIndex = 0
                 return pattern.test(input)
               },
-              message ?? `Invalid string: must match pattern ${pattern}`,
+              message ?? "Use a value in the format this field expects.",
               { format: "regex", patterns: [pattern.source] },
             ),
           )
@@ -359,7 +349,7 @@ function schema<SchemaType extends TSchema>(
                 target,
                 (input: SchemaBoundaryInput) =>
                   !(input instanceof Blob) || types.includes(input.type),
-                () => message ?? `Invalid input: expected ${types.join(" | ")}`,
+                () => message ?? "Pick a file of another type.",
               ),
               { kind: "file", mime },
             ),
@@ -413,6 +403,19 @@ function standardSchema(valueSchema: TSchema): StandardSchema {
   return adapter
 }
 
+/** The text of a string length check that gave no message of its own. */
+function lengthMessage(kind: "min" | "max", limit: number) {
+  if (kind === "max") return `Use at most ${limit} characters.`
+  return limit === 1
+    ? "Fill in this field."
+    : `Use at least ${limit} characters.`
+}
+
+/** The text of a number check that gave no message of its own. */
+function numberMessage(kind: "min" | "max", limit: number) {
+  return kind === "max" ? `Use ${limit} or less.` : `Use ${limit} or more.`
+}
+
 function withLimit(
   value: TSchema,
   kind: "min" | "max",
@@ -434,18 +437,16 @@ function withLimit(
           ).length
           return kind === "min" ? length >= limit : length <= limit
         },
-        () =>
-          message ??
-          (kind === "min"
-            ? `Too small: expected string to have >=${limit} characters`
-            : `Too big: expected string to have <=${limit} characters`),
+        () => message ?? lengthMessage(kind, limit),
       ),
       kind === "min" ? { minLength: limit } : { maxLength: limit },
     )
   }
-  // A custom message needs a refinement; keyword errors use TypeBox's text.
-  // A file counts its bytes, as zod's file() does.
-  if (message !== undefined) {
+  // A custom message, or a number's own, needs a refinement; other keyword
+  // errors use TypeBox's text. A file counts its bytes, as zod's file() does.
+  const numeric =
+    valueRecord.type === "number" || valueRecord.type === "integer"
+  if (message !== undefined || numeric) {
     return annotate(
       Type.Refine(
         value,
@@ -460,7 +461,7 @@ function withLimit(
           if (size === null) return true
           return kind === "min" ? size >= limit : size <= limit
         },
-        () => message,
+        () => message ?? numberMessage(kind, limit),
       ),
       limitKeywords(valueRecord.type, kind, limit),
     )
@@ -534,20 +535,13 @@ const isUuid = (input: string) => UUID.test(input)
 const uuidMessage = "Invalid UUID"
 const uuidKeywords = { format: "uuid", patterns: [UUID.source] }
 
-function copySchema(value: TSchema, updates: SchemaUpdates, kind?: string) {
+function copySchema(value: TSchema, updates: SchemaUpdates) {
   // SAFETY: The clone keeps the TypeBox schema prototype and all descriptors.
   const copy = Object.create(
     Object.getPrototypeOf(value),
     Object.getOwnPropertyDescriptors(value),
   ) as TSchema & SchemaMetadata
   Object.assign(copy, updates)
-  if (kind) {
-    Object.defineProperty(copy, "~kind", {
-      value: kind,
-      writable: true,
-      configurable: true,
-    })
-  }
   return copy
 }
 
@@ -610,7 +604,7 @@ function partialRecord<Key extends string, Value extends TSchema>(
 }
 
 const validDate = (value: Date) => !Number.isNaN(value.getTime())
-const dateMessage = "Invalid input: expected date"
+const dateMessage = "Pick a date."
 
 function date() {
   return schema(
@@ -674,7 +668,7 @@ export const t = {
         Type.Refine(
           Type.Unsafe<File>(Type.Unknown()),
           (value) => value instanceof File,
-          () => "Invalid input: expected file",
+          () => "Choose a file.",
         ),
         { kind: "file" },
       ),

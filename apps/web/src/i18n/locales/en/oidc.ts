@@ -75,5 +75,6 @@ export default defineMessages("oidc", {
   "oidc.advanced": "Advanced",
   "oidc.advanced.show": "Show",
   "oidc.advanced.hide": "Hide",
+  // Shown by the Android app under the scopes field.
   "oidc.scopes.description": "Separated by spaces. Must include openid.",
 })

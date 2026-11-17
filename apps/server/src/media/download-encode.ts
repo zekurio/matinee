@@ -309,7 +309,9 @@ export async function buildDownload(
   const subtitles = spec.subtitles.map((id) => {
     const track = listed.find((entry) => entry.id === id)
     if (!track || track.delivery === null) {
-      throw new DownloadSpecError("This file has no subtitle with that id.")
+      throw new DownloadSpecError(
+        "That subtitle isn't in this file anymore. Reload the page and pick again.",
+      )
     }
     if (!matroska && track.delivery !== "webvtt") {
       throw new DownloadSpecError(
@@ -339,7 +341,7 @@ export async function buildDownload(
       : undefined
     if (!burnIn || !track) {
       throw new DownloadSpecError(
-        "This file has no picture subtitle with that id.",
+        "That picture subtitle isn't in this file anymore. Reload the page and pick again.",
       )
     }
     burnInLabel = track.label

@@ -36,7 +36,6 @@
     <string name="web_jobs_queue_thumbnails_description">Take a frame from videos that have no artwork.</string>
     <string name="web_jobs_queue_subtitle_prepare_name">Prepare subtitles</string>
     <string name="web_jobs_queue_subtitle_prepare_description">Cache indexed text subtitles without reading video streams.</string>
-    <string name="web_jobs_queue_subtitle_prepare_note">Files whose indexed text subtitles are prepared at once.</string>
     <string name="web_jobs_task_prepare_subtitles_name">Prepare subtitles</string>
     <string name="web_jobs_task_prepare_subtitles_description">Cache indexed text subtitles and delete outputs of removed or changed files. Picture subtitles stay on demand.</string>
     <string name="web_jobs_queue_trickplay_name">Trickplay images</string>
@@ -53,7 +52,6 @@
     <string name="web_jobs_queue_avatars_description">Crop and scale uploads and the pictures sign-in providers send.</string>
     <string name="web_jobs_queue_downloads_name">Download encodes</string>
     <string name="web_jobs_queue_downloads_description">Encode the video of downloads in another size or codec, while the app or browser fetches them.</string>
-    <string name="web_jobs_queue_downloads_note">Downloads encoded at once. Each one uses an encoder as a stream would; raise it if the server keeps up.</string>
     <string name="web_jobs_queue_download_copies_name">Download copies</string>
     <string name="web_jobs_queue_download_copies_description">Put together downloads that keep their video as it is, while the app or browser fetches them.</string>
     <string name="web_jobs_queue_running">%1$s of %2$s running</string>
@@ -107,6 +105,7 @@
     <string name="web_jobs_task_cancelledAfter">Cancelled after %1$s</string>
     <string name="web_jobs_task_failed">Failed</string>
     <string name="web_jobs_task_failedWith">Failed: %1$s</string>
+    <string name="web_jobs_task_failedUnknown">This failed. The server log has the details.</string>
     <string name="web_jobs_task_running">Running…</string>
     <string name="web_jobs_task_started">Started %1$s</string>
     <string name="web_jobs_task_percent">%1$s%%</string>
