@@ -156,13 +156,15 @@
 
   struct BarsPage: View {
     @Environment(\.gutter) private var gutter
+    /// The card in view, as Home keeps it for the iPad's banner.
+    @State private var featured: String?
 
     var body: some View {
       VStack(alignment: .leading, spacing: Space.s7) {
         GalleryHeading("Home's header and featured titles, with what a provider would send")
         VStack(alignment: .leading, spacing: 0) {
           AppHeader { RoundIconButton(.cloudOff, label: Str.serverUnreachable, look: .ghost, size: 40, iconSize: 20) {} }
-          HomeCarousel(slides: Sample.featured)
+          HomeCarousel(slides: Sample.featured, showing: $featured)
         }
         GalleryHeading("Featured titles while they load")
         HomeCarouselSkeleton()

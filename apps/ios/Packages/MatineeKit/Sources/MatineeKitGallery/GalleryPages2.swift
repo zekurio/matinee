@@ -502,11 +502,79 @@ struct NavigationPage: View {
           NavBarFrostDemo(label: "The bar's own", frost: nil)
         }
       }
+      Demo(
+        "Either bar around one page",
+        note: "`.tabBars(placement, bottom:, top:)`: a phone's bar or a tablet's around the same page, as an iPad's "
+          + "window narrows to a phone's width and back. Scroll it and press the button, then change the bar: the "
+          + "page keeps both."
+      ) {
+        TabBarsDemo()
+      }
       Demo("Keyboard shortcuts", note: "The bars give their tabs ⌘1, ⌘2, …; `.keyCommand` gives a page one of its own, as ⌘F to search.") {
         Text("⌘K pressed \(pressed) times").textStyle(.sm).foregroundStyle(palette.mutedForeground)
           .keyCommand("k", label: "Count") { pressed += 1 }
       }
     }
+  }
+}
+
+/// A page that keeps its scroll and its count while the tabs around it
+/// trade places.
+private struct TabBarsDemo: View {
+  @State private var placement = TabBarPlacement.top
+  @State private var tab = "home"
+  @State private var pressed = 0
+  @Environment(\.palette) private var palette
+
+  private let items = [
+    TabBarItem("home", label: "Home", icon: .house),
+    TabBarItem("media", label: "Media", icon: .libraryBig),
+    TabBarItem("downloads", label: "Downloads", icon: .download),
+  ]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 8) {
+        ChoiceChip("Top", selected: placement == .top) { placement = .top }
+        ChoiceChip("Bottom", selected: placement == .bottom) { placement = .bottom }
+      }
+      ScrollView {
+        VStack(alignment: .leading, spacing: 8) {
+          MatineeButton("Pressed \(pressed) times", look: .outline, size: .md) { pressed += 1 }
+          ForEach(0..<8) { index in
+            FakeArt(seed: index).frame(height: 60).clipShape(RoundedRectangle.kit(Radius.sm))
+          }
+        }
+        .padding(12)
+      }
+      // The top bar's frost is for the status bar, which a box partway down a page hasn't got; the
+      // page asks for none, and the bottom bar ignores it.
+      .navBarFrost(NavBarFrost(veil: 0, reducedVeil: 0, opacity: 0))
+      .tabBars(placement, bottom: bottomBar, top: navBar)
+      .frame(height: 340)
+      .clipShape(RoundedRectangle.kit(Radius.xl))
+      .overlay { RoundedRectangle.kit(Radius.xl).strokeBorder(palette.border) }
+    }
+  }
+
+  private var bottomBar: BottomBar<String> {
+    let select: (String) -> Void = { tab = $0 }
+    return BottomBar(items, selection: tab, onSelect: select)
+  }
+
+  private var navBar: NavBar<String, DemoLogo> {
+    let select: (String) -> Void = { tab = $0 }
+    let logo: () -> DemoLogo = { DemoLogo() }
+    return NavBar(items, selection: tab, onSelect: select, leading: logo)
+  }
+}
+
+/// The logo's place at the start of a demo's nav bar.
+private struct DemoLogo: View {
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    Circle().fill(palette.accent).frame(width: 24, height: 24).padding(.horizontal, 10)
   }
 }
 

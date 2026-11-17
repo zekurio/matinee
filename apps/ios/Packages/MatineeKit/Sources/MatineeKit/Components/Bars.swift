@@ -86,9 +86,16 @@ extension View {
   /// system's navigation bar, which it hides, while keeping the edge swipe
   /// back that hiding it would otherwise take away. The page scrolls under
   /// nothing: the bar stays put above it.
+  ///
+  /// `hidden` leaves the bar out, and the page is then as with
+  /// `.hidesSystemNavigationBar()`, drawing its own top. The page stays the
+  /// same view as it changes, so a tab's first page whose top depends on
+  /// the shell, as Downloads' name in a bar on a phone and in its own
+  /// heading on an iPad, keeps its state and its scroll position when the
+  /// shell changes under it.
   public func topBar<Actions: View>(
     _ title: String?, leading: TopBarLeading = .back, onLeading: (() -> Void)? = nil,
-    onHome: (() -> Void)? = nil, @ViewBuilder actions: @escaping () -> Actions
+    onHome: (() -> Void)? = nil, hidden: Bool = false, @ViewBuilder actions: @escaping () -> Actions
   ) -> some View {
     self
       #if os(iOS)
@@ -96,16 +103,18 @@ extension View {
         .background(SwipeBack())
       #endif
       .safeAreaInset(edge: .top, spacing: 0) {
-        TopBar(title, leading: leading, onLeading: onLeading, onHome: onHome, actions: actions)
+        if !hidden {
+          TopBar(title, leading: leading, onLeading: onLeading, onHome: onHome, actions: actions)
+        }
       }
       .pageBackground()
   }
 
   public func topBar(
     _ title: String?, leading: TopBarLeading = .back, onLeading: (() -> Void)? = nil,
-    onHome: (() -> Void)? = nil
+    onHome: (() -> Void)? = nil, hidden: Bool = false
   ) -> some View {
-    topBar(title, leading: leading, onLeading: onLeading, onHome: onHome) { EmptyView() }
+    topBar(title, leading: leading, onLeading: onLeading, onHome: onHome, hidden: hidden) { EmptyView() }
   }
 
   /// Hides the system's navigation bar on a page that draws its own top,
@@ -375,21 +384,24 @@ extension View {
   }
 }
 
-private struct BottomBarModifier<ID: Hashable>: ViewModifier {
-  let bar: BottomBar<ID>
+/// `.bottomBar`, and `.tabBars` with the bar at the bottom. Without a bar
+/// it draws nothing and takes no room, but is the same view, so a page that
+/// trades its bottom bar for a `NavBar` stays the page it was.
+struct BottomBarModifier<ID: Hashable>: ViewModifier {
+  let bar: BottomBar<ID>?
   @State private var keyboard = false
   @State private var height: CGFloat = 0
 
   func body(content: Content) -> some View {
     content
       .safeAreaInset(edge: .bottom, spacing: 0) {
-        if !keyboard {
+        if let bar, !keyboard {
           bar
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
             .transition(.opacity)
         }
       }
-      .preference(key: BottomBarHeightKey.self, value: keyboard ? 0 : height)
+      .preference(key: BottomBarHeightKey.self, value: bar == nil || keyboard ? 0 : height)
       #if os(iOS)
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
           keyboard = true

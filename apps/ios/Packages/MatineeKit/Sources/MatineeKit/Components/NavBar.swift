@@ -125,39 +125,47 @@ extension View {
   }
 }
 
-private struct NavBarModifier<ID: Hashable, Leading: View>: ViewModifier {
-  let bar: NavBar<ID, Leading>
+/// `.navBar`, and `.tabBars` with the bar at the top. Without a bar it
+/// draws nothing, takes no room, and gives no clearance, but is the same
+/// view, so a page that trades its `NavBar` for a bottom bar stays the page
+/// it was.
+struct NavBarModifier<ID: Hashable, Leading: View>: ViewModifier {
+  let bar: NavBar<ID, Leading>?
   /// The status bar's height, where the bar starts, and where it ends.
   @State private var statusBar: CGFloat = 0
   @State private var clearance: CGFloat = 0
 
   func body(content: Content) -> some View {
     content
-      .environment(\.navBarClearance, clearance)
+      .environment(\.navBarClearance, bar == nil ? 0 : clearance)
       // Over the page and under the bar. The bar doesn't know how far the
       // page under it has scrolled, so unless the page says otherwise
       // (`navBarFrost`), its frost is a scrolled page's, which at rest, over
       // only the page's background above its content, doesn't show.
       .overlayPreferenceValue(NavBarFrostKey.self, alignment: .top) { said in
-        let frost = said ?? .scrolled
-        StatusBarFrost(bar: statusBar, veil: frost.veil, reducedVeil: frost.reducedVeil)
-          .opacity(frost.opacity)
-          .ignoresSafeArea(edges: [.top, .horizontal])
-          .allowsHitTesting(false)
+        if bar != nil {
+          let frost = said ?? .scrolled
+          StatusBarFrost(bar: statusBar, veil: frost.veil, reducedVeil: frost.reducedVeil)
+            .opacity(frost.opacity)
+            .ignoresSafeArea(edges: [.top, .horizontal])
+            .allowsHitTesting(false)
+        }
       }
       .safeAreaInset(edge: .top, spacing: 0) {
-        bar
-          .padding(.horizontal, Space.s3)
-          .padding(.top, NavBar<ID, Leading>.inset)
-          .padding(.bottom, Space.s2)
-          .frame(maxWidth: .infinity)
-          .onGeometryChange(for: ClosedRange<CGFloat>.self) { proxy in
-            let frame = proxy.frame(in: .global)
-            return max(frame.minY, 0)...max(frame.maxY, frame.minY, 0)
-          } action: { span in
-            statusBar = span.lowerBound
-            clearance = span.upperBound
-          }
+        if let bar {
+          bar
+            .padding(.horizontal, Space.s3)
+            .padding(.top, NavBar<ID, Leading>.inset)
+            .padding(.bottom, Space.s2)
+            .frame(maxWidth: .infinity)
+            .onGeometryChange(for: ClosedRange<CGFloat>.self) { proxy in
+              let frame = proxy.frame(in: .global)
+              return max(frame.minY, 0)...max(frame.maxY, frame.minY, 0)
+            } action: { span in
+              statusBar = span.lowerBound
+              clearance = span.upperBound
+            }
+        }
       }
   }
 }

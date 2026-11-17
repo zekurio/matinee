@@ -79,7 +79,13 @@ struct SignedInApp: View {
     }
     .onChange(of: nav.tab, initial: true) { _, tab in opened.insert(tab) }
     // An iPad's split view narrowing to a phone's width, or widening back.
-    .onChange(of: style) { _, style in nav.setLayout(style.layout) }
+    // Every tab keeps its page, as the bars are drawn around it (Bars.swift);
+    // a place the phone lacks moves to where it lives there, and is made
+    // anew the next time it's picked rather than as soon as it's back.
+    .onChange(of: style) { _, style in
+      nav.setLayout(style.layout)
+      opened.formIntersection(nav.tabs)
+    }
     // The actions a long press offers, and the sheets they open, over every tab.
     .modifier(ActionsHost())
     // Requests' live state, sheets, and queue, over every tab (requests/RequestsHub.swift).

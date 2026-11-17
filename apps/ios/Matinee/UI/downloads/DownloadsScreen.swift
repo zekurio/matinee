@@ -194,14 +194,12 @@ private struct TabTop: ViewModifier {
   @Environment(\.palette) private var palette
 
   func body(content: Content) -> some View {
-    if tablet {
-      content.hidesSystemNavigationBar()
-    } else {
-      content.topBar(Str.downloadsTitle, leading: .none) {
-        if offline {
-          LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground)
-            .padding(.horizontal, Space.s3)
-        }
+    // The bar left out rather than another view, so the tab keeps its page across an iPad's window crossing
+    // between the two.
+    content.topBar(Str.downloadsTitle, leading: .none, hidden: tablet) {
+      if offline {
+        LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground)
+          .padding(.horizontal, Space.s3)
       }
     }
   }

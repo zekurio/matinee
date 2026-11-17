@@ -12,25 +12,17 @@ import SwiftUI
  * of the field's magnifier while search is open, goes back to the
  * libraries. What shows for the field's state
  * is MatineeCore's `MediaSearch`. On an iPad, where search has a tab of
- * its own, it's the libraries under the web's page heading.
+ * its own, it's the libraries under the web's page heading. Both are one
+ * page, so an iPad's window crossing between them keeps it.
  */
 
-/// The Media tab: every library as a card, and on a phone the search field over them.
+/// The Media tab: every library as a card, and on a phone the search field
+/// over them, with Discover's rows or what a search found under it. On an
+/// iPad the libraries sit under the web's page heading instead. One page
+/// for both, so when an iPad's window crosses between them it keeps the
+/// libraries it loaded, where it's scrolled, and what the field holds,
+/// which shows again on a phone's width.
 struct MediaScreen: View {
-  @Environment(\.shellStyle) private var style
-
-  var body: some View {
-    if style == .tablet {
-      TabletMediaPage()
-    } else {
-      PhoneMediaPage()
-    }
-  }
-}
-
-/// A phone's Media: the search field at the top, and under it the libraries,
-/// Discover's rows, or what a search found.
-private struct PhoneMediaPage: View {
   @State private var libraries = Loader<[Library]>()
   @State private var field = MediaSearch()
   @State private var focused = false
@@ -47,18 +39,20 @@ private struct PhoneMediaPage: View {
   @Environment(ShellNav.self) private var nav
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.gutter) private var gutter
+  @Environment(\.shellStyle) private var style
 
   var body: some View {
     page
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-      .safeAreaInset(edge: .top, spacing: 0) { top }
+      .safeAreaInset(edge: .top, spacing: 0) {
+        // An iPad's search is a tab of its own.
+        if style == .phone { top }
+      }
       .hidesSystemNavigationBar()
       .loads(libraries) { api in try await api.libraries.list() }
       .searchEffect(search, query: field.query, submitted: submitted)
       .catalogSearch(catalog, query: field.query)
       .loadsDiscover(discover)
-      // A hardware keyboard's ⌘F goes to the field, as in iOS's own apps.
-      .keyCommand("f", label: Str.searchTitle, action: focus)
       .onChange(of: focused) { _, now in if now { withMotion(Motion.move) { field.begin() } } }
       // Home's search button, or a link to search: the field takes the keyboard.
       .onChange(of: nav.searchPending, initial: true) { _, pending in if pending { takeSearch() } }
@@ -80,6 +74,8 @@ private struct PhoneMediaPage: View {
     .padding(.top, Space.s2)
     .padding(.bottom, Space.s3)
     .background(PageColor().ignoresSafeArea(edges: .top))
+    // A hardware keyboard's ⌘F goes to the field, as in iOS's own apps.
+    .keyCommand("f", label: Str.searchTitle, action: focus)
   }
 
   /// Back out of search to the libraries, while search is open.
@@ -92,7 +88,7 @@ private struct PhoneMediaPage: View {
   }
 
   @ViewBuilder private var page: some View {
-    switch field.content {
+    switch field.content(in: style.layout) {
     case .libraries: librariesPage
     case .suggestions: SearchSuggestions(discover: discover)
     case .results(let text):
@@ -102,21 +98,32 @@ private struct PhoneMediaPage: View {
 
   @ViewBuilder private var librariesPage: some View {
     switch libraries.state {
-    case .loading: LoadingBox()
+    case .loading:
+      // A spinner, as Android's; on an iPad under the page's heading.
+      VStack(spacing: 0) {
+        if style == .tablet { heading }
+        LoadingBox()
+      }
     case .failed(let message, let disconnected):
       ErrorBox(Str.homeLoadFailed, message, disconnected: disconnected, onRetry: libraries.reload)
     case .ready(let list):
       ScrollView {
+        if style == .tablet { heading }
         if list.isEmpty {
           NoLibrariesNote()
         } else {
           LibraryGrid { ForEach(list, id: \.id) { library in LibraryCard(library: library) } }
-            .padding(.top, Space.s1)
+            .padding(.top, style == .phone ? Space.s1 : 0)
         }
       }
       .scrollsToTopOnReselect()
       .refreshable { await refresh() }
     }
+  }
+
+  /// An iPad's page name, where no bar carries it: the web's heading, the cloud at its end.
+  private var heading: some View {
+    PageHeading(Str.tabMedia) { DisconnectedAction(libraries) }
   }
 
   private func refresh() async {
@@ -166,51 +173,6 @@ private struct PhoneMediaPage: View {
       if let asked = BrowseFixtures.query { field = MediaSearch(query: asked) }
     }
   #endif
-}
-
-/// An iPad's Media: the web's page heading over the libraries.
-private struct TabletMediaPage: View {
-  @State private var libraries = Loader<[Library]>()
-
-  var body: some View {
-    page
-      .hidesSystemNavigationBar()
-      .loads(libraries) { api in try await api.libraries.list() }
-  }
-
-  @ViewBuilder private var page: some View {
-    switch libraries.state {
-    case .loading:
-      // A spinner, as Android's, under the page's heading.
-      VStack(spacing: 0) {
-        heading
-        LoadingBox()
-      }
-    case .failed(let message, let disconnected):
-      ErrorBox(Str.homeLoadFailed, message, disconnected: disconnected, onRetry: libraries.reload)
-    case .ready(let list):
-      ScrollView {
-        heading
-        if list.isEmpty {
-          NoLibrariesNote()
-        } else {
-          LibraryGrid { ForEach(list, id: \.id) { library in LibraryCard(library: library) } }
-        }
-      }
-      .scrollsToTopOnReselect()
-      .refreshable { await refresh() }
-    }
-  }
-
-  private func refresh() async {
-    libraries.reload()
-    await libraries.settled()
-  }
-
-  /// The page's name, where no bar carries it: the web's heading, the cloud at its end.
-  private var heading: some View {
-    PageHeading(Str.tabMedia) { DisconnectedAction(libraries) }
-  }
 }
 
 /// Library cards as wide as fit at 160 or more on a phone, 288 from the
