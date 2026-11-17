@@ -115,7 +115,7 @@ export function frame(
   size: ArtworkSize = "small",
 ): ImageSource {
   // Frames come in two sizes: for cards, and for banners.
-  const thumbnail = size === "medium" || size === "large" ? "large" : "small"
+  const thumbnail = size === "thumb" || size === "small" ? "small" : "large"
   return { src: mediaThumbnailPath(itemId, thumbnail), placeholder: null }
 }
 

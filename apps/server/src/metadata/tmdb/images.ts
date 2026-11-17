@@ -12,8 +12,8 @@ import type { Image, ImageList } from "./payloads"
  */
 const SIZES = {
   poster: { full: "w780", preview: "w342" },
-  backdrop: { full: "w1280", preview: "w780" },
-  logo: { full: "w500", preview: "w300" },
+  backdrop: { full: "original", preview: "w780" },
+  logo: { full: "original", preview: "w300" },
   still: { full: "original", preview: "w300" },
 } satisfies Record<ImageSlot, { full: string; preview: string }>
 

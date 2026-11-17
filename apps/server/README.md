@@ -256,8 +256,10 @@ for shows. TheTVDB lists crew per episode only, so its shows get cast and
 studios.
 
 Artwork downloads to `$MATINEE_DATA_DIR/artwork`, with WebP copies at 240,
-480, 960, and 1920 px made on first request, or JPEG and PNG if ffmpeg
-lacks libwebp. Clients use `artworkPath()` or `artworkSrcSet()`. Each image
+480, 960, 1920, and 3840 px made on first request, or JPEG and PNG if ffmpeg
+lacks libwebp. TMDB backdrops and logos download at their original size, so
+banners stay sharp on wide and high-density screens. Clients use
+`artworkPath()` or `artworkSrcSet()`. Each image
 also gets a BlurHash for placeholders. Expect about 150 KB per image, so a
 few GB for 1,000 titles.
 
