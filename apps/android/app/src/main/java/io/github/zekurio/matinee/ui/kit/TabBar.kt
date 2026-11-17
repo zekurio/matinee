@@ -120,8 +120,8 @@ fun rememberTabBarState(selected: Any?, items: List<Any>): TabBarState {
  * color. With animations removed it only fades, and only at once.
  *
  * Not Material's NavigationBar: that one is 80 tall, with a 64 by 32
- * indicator, 24 icons, and a tonal surface of its own. This one is frosted
- * as the status bar is: [page], the page it sits on, blurred under the
+ * indicator, 24 icons, and a tonal surface of its own. This one is
+ * frosted: [page], the page it sits on, blurred under the
  * page's background at 80%, with a hairline of the border's color along
  * its top. Android 11 and older can't blur, and get the background whole.
  * It runs on under the system's navigation bar. Its tabs gather in the

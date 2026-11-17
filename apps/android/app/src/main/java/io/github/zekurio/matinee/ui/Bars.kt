@@ -1,7 +1,6 @@
 package io.github.zekurio.matinee.ui
 
 import android.content.res.Resources
-import androidx.compose.animation.core.EaseInOut
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,9 +22,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,9 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -47,12 +42,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import dev.chrisbanes.haze.HazeInput
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.blur.HazeBlurStyle
-import dev.chrisbanes.haze.blur.HazeColorEffect
-import dev.chrisbanes.haze.blur.hazeBlur
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.api.name
@@ -128,9 +118,7 @@ fun BottomBar(current: Any?, onPick: (Any) -> Unit, page: HazeState, state: TabB
  * offline, or [action], the icon to reach the server again; search, which
  * opens Media with its field taking the keyboard, and isn't there offline,
  * where there's nothing to search; and the account, which opens the
- * profile on top of Home. It scrolls away with the page. The shade under
- * the status bar once the page scrolls is Home's [StatusBarScrim], not
- * this.
+ * profile on top of Home. It scrolls away with the page.
  *
  * It's [HEADER_HEIGHT] tall right under the status bar, the band Media's
  * search field sits in, so the search button's middle and the field's are
@@ -299,70 +287,3 @@ fun ItemTopBar(modifier: Modifier = Modifier, parent: String? = null, onParent: 
 /** The page's color veiling the art behind a floating button, as the web's bars have it. */
 private val FLOATING get() = Palette.Background.copy(alpha = 0.6f)
 
-/** How far the status bar's frost feathers out below the bar. */
-private val STATUS_BAR_FEATHER = 48.dp
-
-/**
- * Keeps the status bar's icons readable over art and once a page scrolls
- * under it: [page], the list under the bar, blurred and veiled in the
- * page's color, evenly across the whole bar. The old gradient faded out
- * within the bar, so its icons sat half on shade and half on bare art,
- * which read as a bar split in two. Below the bar the frost thins out over
- * [STATUS_BAR_FEATHER]: the blur itself eases off as the veil fades, so
- * the art comes back sharp gradually instead of a blurred band ending on a
- * line. The veil deepens over the first few dp of scrolling, as the page's
- * top slides under the bar. Android 11 and older can't blur, and get a veil.
- */
-@Composable
-fun StatusBarScrim(state: LazyListState, page: HazeState, modifier: Modifier = Modifier) {
-    val density = LocalDensity.current
-    val distance = with(density) { 40.dp.toPx() }
-    val bar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val total = bar + STATUS_BAR_FEATHER
-    val barPx = with(density) { bar.toPx() }
-    val totalPx = with(density) { total.toPx() }
-    // Where the bar ends, as a fraction of the frost's height.
-    val edge = bar / total
-    val shade = Palette.Background
-    // Read while drawing, so scrolling only redraws the frost.
-    val scrolled = { if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / distance).coerceIn(0f, 1f) }
-    val frost = remember(shade, edge, barPx, totalPx, state, distance) {
-        HazeBlurStyle {
-            blurRadius(16.dp)
-            noiseFactor(0f)
-            backgroundColor(shade)
-            // Light at rest, so the art shows through, but never clear.
-            colorEffects(listOf(HazeColorEffect.tint(shade.copy(alpha = 0.35f + 0.4f * scrolled()))))
-            fallbackColorEffect(HazeColorEffect.tint(shade.copy(alpha = 0.6f + 0.25f * scrolled())))
-            // Full blur across the bar, easing to none by the frost's end.
-            progressive(
-                HazeProgressive.verticalGradient(
-                    easing = EaseInOut,
-                    startY = barPx,
-                    startIntensity = 1f,
-                    endY = totalPx,
-                    endIntensity = 0f,
-                ),
-            )
-            // And the veil whole across the bar, then a smoothstep out, so
-            // neither end of the fade shows as an edge.
-            val feather = 1f - edge
-            mask(
-                Brush.verticalGradient(
-                    0f to Color.Black,
-                    edge to Color.Black,
-                    edge + feather * 0.25f to Color.Black.copy(alpha = 0.84f),
-                    edge + feather * 0.5f to Color.Black.copy(alpha = 0.5f),
-                    edge + feather * 0.75f to Color.Black.copy(alpha = 0.16f),
-                    1f to Color.Transparent,
-                ),
-            )
-        }
-    }
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(total)
-            .hazeBlur(HazeInput.Sources(page), frost),
-    )
-}

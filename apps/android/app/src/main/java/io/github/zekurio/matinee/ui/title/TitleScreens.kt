@@ -26,8 +26,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.ui.components.ErrorSection
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.MediaItem
@@ -39,7 +37,6 @@ import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.ItemTopBar
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
-import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.ActionTarget
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.EpisodeRow
@@ -113,12 +110,11 @@ private fun TitlePage(title: Title, reload: () -> Unit) {
     // One season, so no specials either: its episodes go right on the show's page.
     val only = title.seasons.singleOrNull()
     val listState = rememberLazyListState()
-    val haze = rememberHazeState()
     // What the server lacks of a show: seasons, and the rest of one.
     val gaps = rememberShowGaps(title, onRecovered = reload)
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            Modifier.fillMaxSize().hazeSource(haze),
+            Modifier.fillMaxSize(),
             state = listState,
             contentPadding = PaddingValues(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -174,7 +170,6 @@ private fun TitlePage(title: Title, reload: () -> Unit) {
             item(key = "cast") { CastRail(title.credits) }
             item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
-        StatusBarScrim(listState, haze)
         ItemTopBar()
     }
 }
@@ -235,12 +230,11 @@ private fun SeasonPage(title: Title, season: Season) {
     val next = seasonNext(list, viewer)
     val allWatched = seasonWatched(list, viewer)
     val listState = rememberLazyListState()
-    val haze = rememberHazeState()
     val gaps = rememberShowGaps(title)
     val partial = gaps?.partialOf(season.number)
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            Modifier.fillMaxSize().hazeSource(haze),
+            Modifier.fillMaxSize(),
             state = listState,
             contentPadding = PaddingValues(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -320,7 +314,6 @@ private fun SeasonPage(title: Title, season: Season) {
             item(key = "seasons") { SeasonsRail(title, season, gaps) }
             item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
-        StatusBarScrim(listState, haze)
         ItemTopBar(parent = title.name, onParent = { nav.titleUp(title.id) })
     }
 }
@@ -342,7 +335,6 @@ private fun EpisodePage(item: MediaItem) {
     val title = item.title
     val season = item.seasonNumber
     val listState = rememberLazyListState()
-    val haze = rememberHazeState()
     // On a phone the still is the backdrop, with the heading on it, and
     // isn't shown again; wider, the show's art is, with the still on it.
     val wide = isWide()
@@ -350,7 +342,7 @@ private fun EpisodePage(item: MediaItem) {
     val still = listOfNotNull(api.art(item.episode?.still, ArtworkSize.Large), api.frame(item.id, large = true))
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            Modifier.fillMaxSize().hazeSource(haze),
+            Modifier.fillMaxSize(),
             state = listState,
             contentPadding = PaddingValues(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -392,7 +384,6 @@ private fun EpisodePage(item: MediaItem) {
             }
             item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
-        StatusBarScrim(listState, haze)
         ItemTopBar(
             parent = if (title == null) null else if (season != null) seasonName(season, res) else label.showName,
             onParent = title?.let { { if (season != null) nav.seasonUp(it.id, season) else nav.titleUp(it.id) } },
