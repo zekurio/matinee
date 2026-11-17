@@ -72,6 +72,24 @@ struct HomeSectionsTest {
     #expect(FeaturedCarousel.stop(offset: 100, stride: 0, stops: 6) == 0)
   }
 
+  @Test func theRowRestsWhereTheTitleInViewIs() {
+    // One to a row: each card is a place of its own.
+    #expect(FeaturedCarousel.stop(showing: 3, stops: 6) == 3)
+    // Three to a row of six: the last two can't lead it, and show at the last place.
+    #expect(FeaturedCarousel.stop(showing: 5, stops: 4) == 3)
+    #expect(FeaturedCarousel.stop(showing: -1, stops: 4) == 0)
+    #expect(FeaturedCarousel.stop(showing: 2, stops: 0) == 0)
+  }
+
+  @Test func theCardsAndTheBannerShowTheSameTitle() {
+    let ids = ["a", "b", "c"]
+    #expect(featuredIndex(showing: "c", in: ids) == 2)
+    // None yet, or titles that changed since: the first.
+    #expect(featuredIndex(showing: nil, in: ids) == 0)
+    #expect(featuredIndex(showing: "z", in: ids) == 0)
+    #expect(featuredIndex(showing: "a", in: []) == 0)
+  }
+
   @Test func aCardNamesUpToThreeGenresAndNothingElse() {
     let genres = ["Action", "Sci-Fi", "Drama", "War"]
     #expect(featured(kind: TitleKind.movie, year: 1999, count: 1, genres: genres).cardLine() == "Action · Sci-Fi · Drama")

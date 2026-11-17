@@ -26,6 +26,8 @@ import SwiftUI
 /// server can't be reached, else a little room under the tabs.
 struct HomeBanner<Header: View>: View {
   let loaders: HomeLoaders
+  /// The title in view, which the phone's cards share (`Hero.showing`).
+  let showing: Binding<String?>
   @ViewBuilder let header: () -> Header
 
   var body: some View {
@@ -43,7 +45,7 @@ struct HomeBanner<Header: View>: View {
         header()
       } else {
         // Other titles start it at the first again.
-        Hero(slides: slides, rowsBelow: rowsBelow, top: header).id(slides.map(\.title.id))
+        Hero(slides: slides, showing: showing, rowsBelow: rowsBelow, top: header).id(slides.map(\.title.id))
       }
     }
   }
@@ -62,6 +64,10 @@ struct HomeBanner<Header: View>: View {
 /// cloud to show.
 struct Hero<Top: View>: View {
   let slides: [FeaturedTitle]
+  /// The title in view, by its id, which the phone's cards share: the
+  /// banner opens on it and says which slide it came to rest on, so an
+  /// iPad's window that crosses between the two keeps the same title in view.
+  @Binding var showing: String?
   /// Whether Continue watching or Next up follow it, which on an iPad on its
   /// side keeps it short enough for them to start in the first screen.
   let rowsBelow: Bool
@@ -90,11 +96,15 @@ struct Hero<Top: View>: View {
 
   private let parts = BannerParts.ipad
 
-  init(slides: [FeaturedTitle], rowsBelow: Bool, @ViewBuilder top: @escaping () -> Top) {
+  init(
+    slides: [FeaturedTitle], showing: Binding<String?>, rowsBelow: Bool, @ViewBuilder top: @escaping () -> Top
+  ) {
     self.slides = slides
+    _showing = showing
     self.rowsBelow = rowsBelow
     self.top = top
-    let first = HeroPaging.initialPage(slides.count)
+    let start = featuredIndex(showing: showing.wrappedValue, in: slides.map(\.title.id))
+    let first = HeroPaging.page(showing: start, from: HeroPaging.initialPage(slides.count), count: slides.count)
     _position = State(initialValue: ScrollPosition(id: first))
     _settled = State(initialValue: first)
     _current = State(initialValue: first)
@@ -138,6 +148,7 @@ struct Hero<Top: View>: View {
     .onPreferenceChange(HeroTextHeight.self) { textHeight = $0 }
     // Waits on the page it settled on, so the advance's own scroll doesn't cancel it.
     .task(id: HeroAdvance(page: settled, paused: paused), advance)
+    .onChange(of: settled) { _, page in showing = slides[HeroPaging.slide(page, count: count)].title.id }
     .onAppear(perform: startWhereAsked)
     .overlay(alignment: .bottom) { controls(layout: layout, count: count) }
     .overlay(alignment: .top) { top().padding(.top, topInset) }

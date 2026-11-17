@@ -40,8 +40,15 @@ private struct OnlineHomeScreen: View {
   @State private var shelves = HomeShelves()
   /// My requests, loaded here rather than in its row, so an empty one is left out.
   @State private var asked = Loader<RequestPage>()
+  /// The featured title in view, by its id: the phone's cards and the iPad's
+  /// banner each open on it and keep it up to date, so an iPad's window that
+  /// crosses between the two keeps the same title in view.
+  @State private var featured: String?
+  @State private var position = ScrollPosition(edge: .top)
+  @State private var scroll = HomeScroll()
   @Environment(\.shellStyle) private var style
   @Environment(\.actions) private var actions
+  @Environment(\.tabReselected) private var reselected
 
   var body: some View {
     page
@@ -70,13 +77,14 @@ private struct OnlineHomeScreen: View {
       resume: loaders.resume.state, nextUp: loaders.nextUp.state,
       recommendations: homeRecommendations(loaders.recommendations.state.value),
       hiding: actions?.hidden.keys ?? [], asked: asked.state.value?.items ?? [])
+    let moved: (String, Double) -> Void = { id, top in rowMoved(id, top: top) }
     return ScrollView {
       LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s6) {
         // An iPad in a regular width opens with the web's banner
         // (Hero.swift); the iPhone, and an iPad in a narrow split, with the cards.
         if style == .tablet {
           let stale: [any Reloadable] = loaders.all + Array(shelves.loaders.values)
-          HomeBanner(loaders: loaders) { HomeHeader(stale: stale) }
+          HomeBanner(loaders: loaders, showing: $featured) { HomeHeader(stale: stale) }
         } else {
           top
         }
@@ -84,25 +92,45 @@ private struct OnlineHomeScreen: View {
           NoLibrariesNote()
         } else {
           ForEach(rows) { row in
-            switch row {
-            case .continueWatching: EpisodeSection(title: Str.browseContinueWatching, loader: loaders.resume)
-            case .nextUp: EpisodeSection(title: Str.browseNextUp, loader: loaders.nextUp)
-            case .recommended(let rail, let shown): RecommendationRail(rail: rail, shown: shown)
-            // What the viewer asked for, on its way or lately come, as Android's Home has it.
-            case .asked: AskedRow(items: asked.state.value?.items ?? [], fresh: true)
+            Group {
+              switch row {
+              case .continueWatching: EpisodeSection(title: Str.browseContinueWatching, loader: loaders.resume)
+              case .nextUp: EpisodeSection(title: Str.browseNextUp, loader: loaders.nextUp)
+              case .recommended(let rail, let shown): RecommendationRail(rail: rail, shown: shown)
+              // What the viewer asked for, on its way or lately come, as Android's Home has it.
+              case .asked: AskedRow(items: asked.state.value?.items ?? [], fresh: true)
+              }
             }
+            .homeRow(row.id, moved: moved)
           }
           switch libraries.state {
           case .loading: RailSkeleton(title: nil, art: .poster)
           case .failed: EmptyView()
           case .ready(let list):
-            ForEach(list, id: \.id) { library in LibraryShelf(library: library, shelves: shelves) }
+            ForEach(list, id: \.id) { library in
+              LibraryShelf(library: library, shelves: shelves).homeRow("library-\(library.id)", moved: moved)
+            }
           }
         }
       }
+      .coordinateSpace(.named(HomeScroll.rows))
       .padding(.bottom, Space.s6)
     }
-    .scrollsToTopOnReselect()
+    .scrollPosition($position)
+    .onScrollGeometryChange(for: Double.self) { geometry in
+      geometry.contentOffset.y + geometry.contentInsets.top
+    } action: { [scroll] _, offset in
+      scroll.offset = offset
+    }
+    // Where the person leaves it: by then the rows are laid out as they see them.
+    .onScrollPhaseChange { [scroll] _, phase in
+      if phase == .idle { scroll.anchor = ScrollAnchor(offset: scroll.offset, tops: scroll.tops) }
+    }
+    // Back to the top when the tab is picked again on Home.
+    .onChange(of: reselected) { toTop() }
+    // An iPad's window crossing between the shells: the banner and the cards
+    // differ in height, so the row at the top is held there, not the points.
+    .onChange(of: style) { holdRow() }
     // Home's header sits below the status bar, not behind it, so at rest
     // there's nothing to shade, and the frost's feather would blur the
     // logo. It comes in as the page scrolls under the bar.
@@ -128,10 +156,42 @@ private struct OnlineHomeScreen: View {
             featured, standIns: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? [])))
         if !slides.isEmpty {
           // Other titles start the row at its first card again.
-          HomeCarousel(slides: slides).id(slides.map(\.title.id))
+          HomeCarousel(slides: slides, showing: $featured).id(slides.map(\.title.id))
         }
       }
     }
+  }
+
+  /// Keeps the row at the top where the person left it while the shell
+  /// changes over it, as its rows settle at their new heights. Its place is
+  /// the one from before: the rows are already laid out anew by the time
+  /// the change is seen here.
+  private func holdRow() {
+    guard let anchor = scroll.anchor else { return }
+    scroll.held = anchor
+    scroll.holds += 1
+    let hold = scroll.holds
+    Task { await release(hold) }
+  }
+
+  private func toTop() {
+    scroll.anchor = nil
+    withMotion(Motion.move) { position.scrollTo(edge: .top) }
+  }
+
+  /// A row's top moved: where the row at the top is held, the page follows it.
+  private func rowMoved(_ id: String, top: Double) {
+    scroll.tops[id] = top
+    if let held = scroll.held, held.row == id { position.scrollTo(y: held.offset(top: top)) }
+  }
+
+  /// Lets go of the row once the rows have settled, putting it in place a
+  /// last time in case its top didn't move at all.
+  private func release(_ hold: Int) async {
+    try? await Task.sleep(for: HomeScroll.settling)
+    guard hold == scroll.holds, let held = scroll.held else { return }
+    if let top = scroll.tops[held.row] { position.scrollTo(y: held.offset(top: top)) }
+    scroll.held = nil
   }
 
   /// Everything on Home again, as a pull asks; the shelves fetch on their own.
@@ -155,6 +215,40 @@ private struct OnlineHomeScreen: View {
         + (loaders.nextUp.state.value ?? []).compactMap(\.title))
     }
   #endif
+}
+
+/// Where Home is scrolled, for holding the row at its top in place while
+/// the shell changes over it (`ScrollAnchor`). Not observed: it changes as
+/// the page scrolls, and nothing draws from it.
+private final class HomeScroll {
+  /// How far from rest the page is scrolled.
+  var offset: Double = 0
+  /// Each row laid out so far, by its top from the top of the page: the
+  /// rows under the featured titles, which aren't one, since they're what
+  /// changes height.
+  var tops: [String: Double] = [:]
+  /// The row at the top where the page last came to rest.
+  var anchor: ScrollAnchor?
+  /// The row held at the top while the rows settle.
+  var held: ScrollAnchor?
+  /// Counts holds, so only the latest lets go.
+  var holds = 0
+
+  /// The rows' coordinate space.
+  static let rows = "home.rows"
+  /// How long the rows take to settle at their new heights.
+  static let settling: Duration = .milliseconds(600)
+}
+
+extension View {
+  /// One of Home's rows, which tells Home where its top is among them.
+  fileprivate func homeRow(_ id: String, moved: @escaping (String, Double) -> Void) -> some View {
+    onGeometryChange(for: Double.self) { proxy in
+      proxy.frame(in: .named(HomeScroll.rows)).minY
+    } action: { top in
+      moved(id, top)
+    }
+  }
 }
 
 /// Home's header over the featured titles. A phone's, always: the logo,

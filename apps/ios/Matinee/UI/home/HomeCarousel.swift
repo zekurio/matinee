@@ -55,6 +55,10 @@ struct CarouselLayout {
 /// Motion. On an iPad, previous and next buttons beside the dots step it.
 struct HomeCarousel: View {
   let slides: [FeaturedTitle]
+  /// The title in view, by its id, which the iPad's banner shares: the row
+  /// opens on it and says where it came to rest, so an iPad's window that
+  /// crosses between the two keeps the same title in view.
+  @Binding var showing: String?
 
   @Environment(\.windowSize) private var window
   @Environment(\.gutter) private var gutter
@@ -62,16 +66,27 @@ struct HomeCarousel: View {
   @Environment(\.actions) private var actions
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
-  @State private var position = ScrollPosition(idType: Int.self)
+  @State private var position: ScrollPosition
   /// The row's width, which the cards share; the window's until measured.
   @State private var rowWidth: CGFloat?
   /// Where the row rests nearest, which the dots follow.
-  @State private var stop = 0
-  /// Where it last came to rest, which the advance waits on.
-  @State private var settled = 0
+  @State private var stop: Int
+  /// Where it last came to rest, which the advance waits on, and which
+  /// `showing` follows.
+  @State private var settled: Int
   @State private var dragging = false
   /// A debug launch that opens it somewhere holds it there.
   private var held: Bool { HomeCarouselDevData.startStop != nil }
+
+  init(slides: [FeaturedTitle], showing: Binding<String?>) {
+    self.slides = slides
+    _showing = showing
+    let start = featuredIndex(showing: showing.wrappedValue, in: slides.map(\.title.id))
+    // Past the last place a card can lead, the row rests at its end, with the card in view all the same.
+    _position = State(initialValue: ScrollPosition(id: start, anchor: .leading))
+    _stop = State(initialValue: start)
+    _settled = State(initialValue: start)
+  }
 
   var body: some View {
     let layout = CarouselLayout(
@@ -109,7 +124,11 @@ struct HomeCarousel: View {
         guard !paused else { return }
         try? await Task.sleep(for: FeaturedCarousel.advance)
         guard !Task.isCancelled else { return }
-        go(to: FeaturedCarousel.next(after: settled, stops: layout.stops), animation: Motion.easing(0.6))
+        let from = FeaturedCarousel.stop(showing: settled, stops: layout.stops)
+        go(to: FeaturedCarousel.next(after: from, stops: layout.stops), animation: Motion.easing(0.6))
+      }
+      .onChange(of: settled) { _, card in
+        if slides.indices.contains(card) { showing = slides[card].title.id }
       }
       .task(id: layout.stride) { startWhereAsked(layout) }
       .task {

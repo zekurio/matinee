@@ -44,12 +44,28 @@ public enum FeaturedCarousel {
     return (stop - 1 + stops) % stops
   }
 
+  /// The place the row rests at with card `index` in view: the place it
+  /// leads, or for one of the last cards, which can't lead a full row, the
+  /// last place, where it's in view all the same.
+  public static func stop(showing index: Int, stops: Int) -> Int {
+    min(max(index, 0), max(stops - 1, 0))
+  }
+
   /// The place a row scrolled `offset` points along rests nearest, each
   /// card `stride` points from the last.
   public static func stop(offset: Double, stride: Double, stops: Int) -> Int {
     guard stride > 0, offset.isFinite else { return 0 }
     return min(max(Int((offset / stride).rounded()), 0), max(stops - 1, 0))
   }
+}
+
+/// Which of the featured titles, by their ids in order, Home's top shows
+/// first: the one `showing` names, else the first. The phone's cards and the
+/// iPad's banner share `showing`, so an iPad's window crossing between the
+/// two keeps the same title in view; titles that changed in between start
+/// at the first again.
+public func featuredIndex(showing id: String?, in ids: [String]) -> Int {
+  id.flatMap { ids.firstIndex(of: $0) } ?? 0
 }
 
 extension FeaturedTitle {
