@@ -25,27 +25,32 @@ struct OfflineHomeScreen: View {
   var body: some View {
     let rows = offlineHomeRows(
       Array(downloads.store.items.values), place: place, watched: watched, served: served)
+    let spacing = style == .tablet ? Space.s10 : Space.s7
+    // A phone's header stays put above the rows, as online Home's; an iPad's scrolls with them.
+    let header = HomeHeaderPlacement(style.layout, cards: false, rowSpacing: spacing)
     ScrollView {
-        LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s7) {
-          AppHeader()
-          if rows.isEmpty {
-            EmptyState(icon: .download, title: Str.downloadsEmpty, description: Str.downloadsEmptyHint)
-              .padding(.vertical, Space.s8)
-          } else {
-            OfflineRail(title: Str.browseContinueWatching, entries: rows.resume, place: place, watched: watched)
-            OfflineRail(title: Str.browseNextUp, entries: rows.nextUp, place: place, watched: watched)
-            OfflineRail(title: Str.webLibrariesDialogKindMovies, entries: rows.movies, place: place, watched: watched)
-            if !rows.shows.isEmpty {
-              Rail(Str.webLibrariesDialogKindShows) {
-                ForEach(rows.shows, id: \.title.id) { show in
-                  RailItem(.landscape) { ShowCard(show: show) }
-                }
+      LazyVStack(alignment: .leading, spacing: spacing) {
+        if !header.pinned { AppHeader() }
+        if rows.isEmpty {
+          EmptyState(icon: .download, title: Str.downloadsEmpty, description: Str.downloadsEmptyHint)
+            .padding(.vertical, Space.s8)
+        } else {
+          OfflineRail(title: Str.browseContinueWatching, entries: rows.resume, place: place, watched: watched)
+          OfflineRail(title: Str.browseNextUp, entries: rows.nextUp, place: place, watched: watched)
+          OfflineRail(title: Str.webLibrariesDialogKindMovies, entries: rows.movies, place: place, watched: watched)
+          if !rows.shows.isEmpty {
+            Rail(Str.webLibrariesDialogKindShows) {
+              ForEach(rows.shows, id: \.title.id) { show in
+                RailItem(.landscape) { ShowCard(show: show) }
               }
             }
           }
         }
-        .padding(.bottom, Space.s6)
       }
+      .padding(.top, header.gap)
+      .padding(.bottom, Space.s6)
+    }
+    .fixedHeader(hidden: !header.pinned, backdrop: header.backdrop.kit) { AppHeader() }
     // -dev.home.scroll 400, as on Home.
     .scrollsToTopOnReselect(devScroll: "dev.home.scroll")
     .task(id: session.activeServer) { read() }

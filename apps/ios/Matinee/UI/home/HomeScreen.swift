@@ -78,15 +78,18 @@ private struct OnlineHomeScreen: View {
       recommendations: homeRecommendations(loaders.recommendations.state.value),
       hiding: actions?.hidden.keys ?? [], asked: asked.state.value?.items ?? [])
     let moved: (String, Double) -> Void = { id, top in rowMoved(id, top: top) }
+    let stale: [any Reloadable] = loaders.all + Array(shelves.loaders.values)
+    let slides = cardSlides
+    let spacing = style == .tablet ? Space.s10 : Space.s6
+    let header = HomeHeaderPlacement(style.layout, cards: slides != nil, rowSpacing: spacing)
     return ScrollView {
-      LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s6) {
+      LazyVStack(alignment: .leading, spacing: spacing) {
         // An iPad in a regular width opens with the web's banner
         // (Hero.swift); the iPhone, and an iPad in a narrow split, with the cards.
         if style == .tablet {
-          let stale: [any Reloadable] = loaders.all + Array(shelves.loaders.values)
           HomeBanner(loaders: loaders, showing: $featured) { HomeHeader(stale: stale) }
-        } else {
-          top
+        } else if let slides {
+          cards(slides)
         }
         if libraries.state.value?.isEmpty == true {
           NoLibrariesNote()
@@ -113,10 +116,16 @@ private struct OnlineHomeScreen: View {
           }
         }
       }
+      // Inside the rows' space, so their tops count from where the page starts.
+      .padding(.top, header.gap)
       .coordinateSpace(.named(HomeScroll.rows))
       .padding(.bottom, Space.s6)
     }
     .scrollPosition($position)
+    // A phone's header stays put while the page scrolls on behind it, the
+    // cards 8 under it at rest and the pull's spinner under it too; an
+    // iPad's rides on the banner. The same page either way, for the crossing.
+    .fixedHeader(hidden: !header.pinned, backdrop: header.backdrop.kit) { HomeHeader(stale: stale) }
     .onScrollGeometryChange(for: Double.self) { geometry in
       geometry.contentOffset.y + geometry.contentInsets.top
     } action: { [scroll] _, offset in
@@ -143,28 +152,27 @@ private struct OnlineHomeScreen: View {
     .refreshable { await refresh() }
   }
 
-  /// Home's header, then the featured titles: their cards, or while they
-  /// load, their place. With none, or when they failed, the header alone.
-  private var top: some View {
-    let stale: [any Reloadable] = loaders.all + Array(shelves.loaders.values)
-    // A phone's header is 44 with the logo in its middle, which alone leaves the cards crowding it.
-    let below: CGFloat = style == .phone ? Space.s2 : 0
-    return VStack(alignment: .leading, spacing: 0) {
-      HomeHeader(stale: stale)
-      switch loaders.featured.state {
-      case .loading:
-        HomeCarouselSkeleton().padding(.top, below)
-      case .failed:
-        EmptyView()
-      case .ready(let featured):
-        let slides = HomeCarouselDevData.slides(
-          HomeDevData.fill(
-            featured, standIns: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? [])))
-        if !slides.isEmpty {
-          // Other titles start the row at its first card again.
-          HomeCarousel(slides: slides, showing: $featured).id(slides.map(\.title.id)).padding(.top, below)
-        }
-      }
+  /// The featured titles under a phone's header: their slides, none while
+  /// they load, when their place shows, and nil with none or when they
+  /// failed, when the rows start under the header.
+  private var cardSlides: [FeaturedTitle]? {
+    switch loaders.featured.state {
+    case .loading: return []
+    case .failed: return nil
+    case .ready(let featured):
+      let slides = HomeCarouselDevData.slides(
+        HomeDevData.fill(featured, standIns: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? [])))
+      return slides.isEmpty ? nil : slides
+    }
+  }
+
+  /// The featured titles' cards, or while they load, their place.
+  @ViewBuilder private func cards(_ slides: [FeaturedTitle]) -> some View {
+    if slides.isEmpty {
+      HomeCarouselSkeleton()
+    } else {
+      // Other titles start the row at its first card again.
+      HomeCarousel(slides: slides, showing: $featured).id(slides.map(\.title.id))
     }
   }
 
@@ -257,11 +265,11 @@ extension View {
   }
 }
 
-/// Home's header over the featured titles. A phone's, always: the logo,
+/// Home's header. A phone's, always, staying put above the page: the logo,
 /// the cloud while the server can't be reached, search, and the account
 /// (`AppHeader`). An iPad's tabs have the logo, search, and the account, so
-/// there it shows only with the cloud, and is a little room under the tabs
-/// otherwise.
+/// there it rides on the banner, showing only with the cloud, and is a
+/// little room under the tabs otherwise.
 private struct HomeHeader: View {
   let stale: [any Reloadable]
   @Environment(\.offline) private var offline

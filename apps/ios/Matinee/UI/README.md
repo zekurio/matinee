@@ -51,7 +51,14 @@ first page, every tab named. Home's header (`AppHeader`) has the logo, then
 search and the account: search is the wide field at the top of Media, which
 the button opens with the keyboard up, and the account opens the profile as
 a page on Home's stack, which leads on to Settings, the admin pages, and
-the requests queue. Downloads' top is its name. On an iPad in a regular
+the requests queue. Downloads' top is its name. The three tops stay put
+while their page scrolls. Home's header, online and offline, has nothing
+behind it, as Findroid's: the page scrolls on behind the logo and the
+buttons and under the status bar (the kit's `.fixedHeader`, over
+MatineeCore's `HeaderBackdrop.home`, one line from a solid band). Media's
+field, whose fill is see-through, and Downloads' name, in the kit's
+`.topBar`, sit on the page's background with no line under it. Nothing
+blurs or shades the status bar. On an iPad in a regular
 width the tabs sit at the top, in the web's bar from `sm` up: the logo, the
 tabs by name, then search and the account as places of their own. An iPad
 in a narrow split gets the phone's; the place open moves to where it lives
