@@ -176,13 +176,24 @@ function declaration(l: Lines, d: Declaration): void {
         l.line(`self.${id(camel(p.json))} = ${id(camel(p.json))}`)
     })
     l.line("}")
-    if (d.properties.length > 0) {
+    // Swift writes the keys, the decoder, and the encoder itself, each
+    // unless it would differ: a key Swift names otherwise, a field that
+    // may be left out, and a null the server wants written, which Swift's
+    // own encoder drops.
+    const explicit = d.properties.some((p) => p.typed.type.kind === "explicit")
+    const renamed = d.properties.some(
+      (p) => id(camel(p.json)).replaceAll("`", "") !== p.json,
+    )
+    const writesNull = d.properties.some((p) => p.typed.nullable && !p.optional)
+    if (explicit || renamed) {
       l.line("private enum CodingKeys: String, CodingKey {")
       l.indent(() => {
         for (const p of d.properties)
           l.line(`case ${id(camel(p.json))} = ${quote(p.json)}`)
       })
       l.line("}")
+    }
+    if (explicit) {
       l.line("public init(from decoder: any Decoder) throws {")
       l.indent(() => {
         l.line("let c = try decoder.container(keyedBy: CodingKeys.self)")
@@ -197,6 +208,8 @@ function declaration(l: Lines, d: Declaration): void {
         }
       })
       l.line("}")
+    }
+    if (explicit || writesNull) {
       l.line("public func encode(to encoder: any Encoder) throws {")
       l.indent(() => {
         l.line("var c = encoder.container(keyedBy: CodingKeys.self)")
