@@ -80,21 +80,19 @@ fun rememberLibrary(id: String): Library? {
     return (libraries.state as? Load.Ready)?.value.orEmpty().firstOrNull { it.id == id }
 }
 
-/** A library's titles as [state] has them, filtered, searched, and sorted by the server. */
+/** A library's titles as [state] has them, filtered and sorted by the server. */
 @Composable
 fun rememberLibraryPages(libraryId: String, state: TitleListState): TitlePages {
     val sort = state.sort
     val order = state.order
     val filters = state.filters
-    val settled = state.settled
     return rememberTitlePages("titles-$libraryId-${state.key}") { offset, limit ->
-        titles.list(libraryId, query = settled.ifEmpty { null }, filters = filters, sort = sort, order = order, limit = limit, offset = offset)
+        titles.list(libraryId, filters = filters, sort = sort, order = order, limit = limit, offset = offset)
     }
 }
 
-/** Why a library page shows no titles: nothing matches the search, nothing the filters, or there are none. */
+/** Why a library page shows no titles: nothing matches the filters, or there are none. */
 fun libraryEmptyMessage(res: Resources, shows: Boolean, state: TitleListState): String = when {
-    state.settled.isNotEmpty() -> res.getString(if (shows) R.string.library_no_match_shows else R.string.library_no_match_movies, state.settled)
     state.filters.count() > 0 -> res.getString(if (shows) R.string.library_no_filter_match_shows else R.string.library_no_filter_match_movies)
     else -> res.getString(if (shows) R.string.library_none_shows else R.string.library_none_movies)
 }
@@ -142,7 +140,6 @@ val BROWSE_KINDS: List<Pair<String?, Int>> = listOf(
 fun rememberBrowsePages(genre: String?, studio: String?, kind: String?, state: TitleListState): TitlePages {
     val sort = state.sort
     val order = state.order
-    val settled = state.settled
     val filters = state.filters.let { picked ->
         picked.copy(
             genres = listOfNotNull(genre) + picked.genres.orEmpty().filter { it != genre },
@@ -150,7 +147,7 @@ fun rememberBrowsePages(genre: String?, studio: String?, kind: String?, state: T
         )
     }
     return rememberTitlePages("browse-$genre-$studio-$kind-${state.key}") { offset, limit ->
-        titles.browse(query = settled.ifEmpty { null }, kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset).let {
+        titles.browse(kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset).let {
             TitleList(it.items, it.total)
         }
     }

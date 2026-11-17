@@ -358,6 +358,8 @@ nonisolated enum Str {
   static func homeFeaturedPosition(_ p1: Int, _ p2: Int) -> String { tr("home_featured_position", p1, p2) }
   /// Previous slide
   static var homeFeaturedPrevious: String { tr("home_featured_previous") }
+  /// Show slide %1$lld
+  static func homeFeaturedShowSlide(_ p1: Int) -> String { tr("home_featured_show_slide", p1) }
   /// Couldn't load your libraries
   static var homeLoadFailed: String { tr("home_load_failed") }
   /// Couldn't load what's next
@@ -388,8 +390,6 @@ nonisolated enum Str {
   static var librarySearchMovies: String { tr("library_search_movies") }
   /// Search shows
   static var librarySearchShows: String { tr("library_search_shows") }
-  /// Search titles
-  static var librarySearchTitles: String { tr("library_search_titles") }
   /// Sort
   static var librarySort: String { tr("library_sort") }
   /// Name

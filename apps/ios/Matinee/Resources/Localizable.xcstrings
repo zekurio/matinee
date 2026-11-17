@@ -3138,6 +3138,23 @@
         }
       }
     },
+    "home_featured_show_slide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folie %1$lld zeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show slide %1$lld"
+          }
+        }
+      }
+    },
     "home_load_failed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3389,23 +3406,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Search shows"
-          }
-        }
-      }
-    },
-    "library_search_titles" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Titel durchsuchen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search titles"
           }
         }
       }

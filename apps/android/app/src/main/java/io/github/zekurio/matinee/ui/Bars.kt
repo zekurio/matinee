@@ -1,16 +1,12 @@
 package io.github.zekurio.matinee.ui
 
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
+import android.content.res.Resources
 import androidx.compose.animation.core.EaseInOut
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -20,39 +16,33 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -63,6 +53,7 @@ import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.HazeColorEffect
 import dev.chrisbanes.haze.blur.hazeBlur
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -71,6 +62,10 @@ import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.TabBar
+import io.github.zekurio.matinee.ui.kit.TabBarDefaults
+import io.github.zekurio.matinee.ui.kit.TabBarItem
+import io.github.zekurio.matinee.ui.kit.TabBarState
 import io.github.zekurio.matinee.ui.kit.focusRing
 import io.github.zekurio.matinee.ui.requests.LocalRequests
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -78,218 +73,124 @@ import io.github.zekurio.matinee.ui.theme.Palette
 /* The bars around pages: Home's header, the top bars of pages opened from a
  * tab, the floating buttons over a title's art, and the tabs at the bottom. */
 
-/** The floating tab bar's own height. */
-private val TAB_BAR_HEIGHT = 60.dp
-
-/** How far the tab bar floats above the system's navigation bar. */
-private val TAB_BAR_LIFT = 12.dp
-
 /**
- * What the tab bar takes from the bottom of a page, above the system's
- * navigation bar: itself, the gap under it, and a gap above so a page's
- * last row and the snackbar clear it.
+ * What the tab bar takes from the bottom of the screen, above the
+ * system's navigation bar: 60 at the default font size. Toasts rise over it.
  */
-val BOTTOM_BAR_HEIGHT = TAB_BAR_HEIGHT + TAB_BAR_LIFT + 8.dp
-
-/** What a tab's first page leaves free at its bottom, so its end clears the tab bar. */
 @Composable
-fun tabBarPadding(): Dp = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BOTTOM_BAR_HEIGHT
-
-/** A tab in the capsule; [icon] null draws the signed-in person's picture instead. */
-private class Tab(val route: Any, @param:DrawableRes val icon: Int?, @param:StringRes val label: Int)
-
-private val TABS = listOf(
-    Tab(HomeRoute, Lucide.House, R.string.tab_home),
-    Tab(MediaRoute, Lucide.LibraryBig, R.string.tab_media),
-    Tab(DownloadsRoute, Lucide.Download, R.string.downloads_title),
-    Tab(ProfileRoute, null, R.string.tab_profile),
-)
-
-/** Offline, only what works without the server: Home from the downloads, the downloads, and the profile with settings. */
-private val OFFLINE_TABS = TABS.filter { it.route == HomeRoute || it.route == DownloadsRoute || it.route == ProfileRoute }
-
-private val TabBarShape = RoundedCornerShape(percent = 50)
-private val ITEM_HEIGHT = TAB_BAR_HEIGHT - 8.dp
+fun tabBarHeight(): Dp = TabBarDefaults.height()
 
 /**
- * The tabs, on the bottom of each tab's first page, floating over the page,
- * which scrolls on under them: a capsule of the tabs, and search in a
- * circle of its own beside it, as iOS lays them out. The open tab shows
- * its name beside its icon in a pill; the rest show only their icons.
- * It's ours rather than Material's navigation bar, made of the app's own
- * colors and shapes, so it looks the same on every Android version and
- * carries over to iOS as it is.
- *
- * The tabs belong to the page, so they move with it: aside under a page
- * opened from it, and back as that page slides off again. With the
- * keyboard up, as on the search page, they step aside for it. They're
- * frosted glass over [page], the page they float on, which shows through
- * them blurred.
+ * What a tab's first page leaves free at its bottom, so its end clears the
+ * tab bar, or the keyboard while that's up and the bar has stepped aside.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun BottomBar(current: Any?, onPick: (Any) -> Unit, page: HazeState, modifier: Modifier = Modifier) {
-    if (WindowInsets.isImeVisible) return
-    val offline = LocalOffline.current
-    val tabs = if (offline) OFFLINE_TABS else TABS
-    val glass = rememberTabBarGlass()
-    Row(
-        modifier
-            .fillMaxWidth()
-            .padding(top = 28.dp)
-            .navigationBarsPadding()
-            .padding(bottom = TAB_BAR_LIFT),
-        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            Modifier
-                .floating(TabBarShape, page, glass)
-                .padding(4.dp)
-                .selectableGroup()
-                // The open tab's pill grows and shrinks rather than jumping.
-                .animateContentSize(Motion.move()),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            tabs.forEach { tab -> TabItem(tab, current == tab.route) { onPick(tab.route) } }
-        }
-        if (!offline) {
-            Box(Modifier.floating(CircleShape, page, glass).padding(4.dp)) {
-                TabButton(current == SearchRoute, Modifier.size(ITEM_HEIGHT), Role.Tab, { onPick(SearchRoute) }) { color ->
-                    LucideIcon(Lucide.Search, stringResource(R.string.search_title), size = 22.dp, tint = color)
-                }
-            }
-        }
-    }
+fun tabBarPadding(): Dp {
+    val bar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + tabBarHeight()
+    val keyboard = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+    return if (WindowInsets.isImeVisible) maxOf(keyboard, bar - tabBarHeight()) else bar
+}
+
+/** The bar's tabs, by the route of each one's first page. */
+private fun tabItem(page: ShellPage, res: Resources) = when (page) {
+    ShellPage.Home -> TabBarItem(HomeRoute, Lucide.House, res.getString(R.string.tab_home))
+    ShellPage.Media -> TabBarItem(MediaRoute, Lucide.LibraryBig, res.getString(R.string.tab_media))
+    ShellPage.Downloads -> TabBarItem(DownloadsRoute, Lucide.Download, res.getString(R.string.downloads_title))
+    // Neither has a tab: the profile opens from Home's header, and search is Media's field.
+    ShellPage.Profile, ShellPage.Search -> null
 }
 
 /**
- * The bar's glass: the page under it blurred, under a thin veil of the
- * app's raised color, so the art and rows passing beneath show through as
- * color and the icons stay readable. Android 11 and older can't blur, so
- * there the veil is nearly opaque instead.
+ * The tabs, on the bottom of each tab's first page, after Findroid's:
+ * Home, Media, and Downloads, or offline Home and Downloads, each always
+ * named (the kit's [TabBar]). The page scrolls on under their frost. They
+ * belong to the page, so a page opened from it covers them. With the
+ * keyboard up, as while searching Media, they step aside for it. [state]
+ * is the app's, so a tab's capsule grows once when it opens, not again
+ * each time its page comes back.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun rememberTabBarGlass(): HazeBlurStyle {
-    val raised = Palette.Raised
-    val background = Palette.Background
-    return remember(raised, background) {
-        HazeBlurStyle {
-            blurRadius(28.dp)
-            noiseFactor(0.08f)
-            // Behind the page's own transparent parts, as on screen.
-            backgroundColor(background)
-            colorEffects(listOf(HazeColorEffect.tint(raised.copy(alpha = 0.5f))))
-            fallbackColorEffect(HazeColorEffect.tint(raised.copy(alpha = 0.92f)))
-        }
-    }
-}
-
-/** The bar's surfaces: [glass] over [page], with a faint rim, lifted off the page by a shadow. */
-private fun Modifier.floating(shape: Shape, page: HazeState, glass: HazeBlurStyle): Modifier = this
-    .shadow(20.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
-    .clip(shape)
-    .hazeBlur(HazeInput.Sources(page), glass)
-    .border(1.dp, Palette.Foreground.copy(alpha = 0.1f), shape)
-
-@Composable
-private fun TabItem(tab: Tab, selected: Boolean, onClick: () -> Unit) {
-    val label = stringResource(tab.label)
-    TabButton(
-        selected,
-        Modifier
-            .height(ITEM_HEIGHT)
-            .widthIn(min = ITEM_HEIGHT + 4.dp)
-            .semantics { contentDescription = label },
-        Role.Tab,
-        onClick,
-    ) { color ->
-        Row(
-            Modifier.padding(horizontal = if (selected) 18.dp else 0.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (tab.icon != null) {
-                LucideIcon(tab.icon, null, size = 22.dp, tint = color)
-            } else {
-                val user = LocalUser.current
-                val api = LocalApi.current
-                Box(
-                    Modifier
-                        .size(28.dp)
-                        .then(if (selected) Modifier.border(1.5.dp, Palette.Foreground, CircleShape) else Modifier)
-                        .padding(if (selected) 2.dp else 0.dp),
-                ) {
-                    Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = if (selected) 24.dp else 28.dp)
-                    // An admin's dot while requests wait or need them, as on the web's avatar.
-                    if (LocalRequests.current.needsYou > 0) {
-                        Box(
-                            Modifier
-                                .align(Alignment.TopEnd)
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(Palette.Accent)
-                                .border(1.5.dp, Palette.Raised, CircleShape),
-                        )
-                    }
-                }
-            }
-            if (selected) {
-                Text(label, style = MaterialTheme.typography.labelLarge, color = color, maxLines = 1)
-            }
-        }
-    }
-}
-
-/** A tab's touch target: a pill behind it while it's open, and a little give when pressed. */
-@Composable
-private fun TabButton(
-    selected: Boolean,
-    modifier: Modifier,
-    role: Role,
-    onClick: () -> Unit,
-    content: @Composable (color: Color) -> Unit,
-) {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val color by animateColorAsState(if (selected) Palette.Foreground else Palette.Muted, Motion.color(), label = "tabColor")
-    val fill by animateColorAsState(if (selected) Palette.Foreground.copy(alpha = 0.1f) else Color.Transparent, Motion.color(), label = "tabFill")
-    val scale by animateFloatAsState(if (pressed) 0.92f else 1f, Motion.color(), label = "tabPress")
-    Box(
-        modifier
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .clip(TabBarShape)
-            .background(fill)
-            .focusRing(interaction, TabBarShape)
-            .selectable(selected, interaction, indication = null, role = role, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { content(color) }
+fun BottomBar(current: Any?, onPick: (Any) -> Unit, page: HazeState, state: TabBarState?, modifier: Modifier = Modifier) {
+    if (WindowInsets.isImeVisible) return
+    val res = LocalResources.current
+    val offline = LocalOffline.current
+    val items = remember(res, offline) { shellTabs(offline).mapNotNull { tabItem(it, res) } }
+    TabBar(items, current, onPick, page, modifier, state)
 }
 
 /**
- * Home's header, over its featured titles and over offline Home's rows:
- * the logo, as the top edge a tab's first page has, and whether the app is
- * offline, or [action], as the icon to reach the server again. It sits under
- * the status bar and scrolls away with the page. The shade under the status
- * bar once the page scrolls is Home's [StatusBarScrim], not this. Search and
- * the account are in the tab bar.
+ * Home's header, over its featured titles and over offline Home's rows,
+ * after Findroid's: the logo at the start; then whether the app is
+ * offline, or [action], the icon to reach the server again; search, which
+ * opens Media with its field taking the keyboard, and isn't there offline,
+ * where there's nothing to search; and the account, which opens the
+ * profile on top of Home. It's 44 tall, right under the status bar, and
+ * scrolls away with the page. The shade under the status bar once the
+ * page scrolls is Home's [StatusBarScrim], not this.
  */
 @Composable
 fun AppHeader(modifier: Modifier = Modifier, action: @Composable () -> Unit = {}) {
     val offline = LocalOffline.current
-    Box(modifier.fillMaxWidth()) {
-        Row(
-            Modifier.statusBarsPadding().height(56.dp).fillMaxWidth().padding(horizontal = Gutter),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Logo(Modifier.semantics { heading() }, height = 20.dp)
-            Box(Modifier.weight(1f))
-            if (offline) LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
-            else action()
+    val nav = LocalNavigator.current
+    Row(
+        // The account's 44 reaches 2 past its picture, which ends on the gutter as the logo starts on it.
+        modifier.fillMaxWidth().statusBarsPadding().height(44.dp).padding(start = Gutter, end = Gutter - 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Logo(Modifier.semantics { heading() }, height = 18.dp)
+        Box(Modifier.weight(1f))
+        if (offline) {
+            LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted, modifier = Modifier.padding(horizontal = 8.dp))
+        } else {
+            action()
+            // 40 to see, in the 48 every round button takes, its edge 8 from the account's picture.
+            RoundIconButton(Lucide.Search, stringResource(R.string.search_title), nav::search, Modifier.offset(x = (-2).dp), size = 40.dp, iconSize = 20.dp)
+        }
+        AccountButton()
+    }
+}
+
+/**
+ * The account at the end of Home's header, as Findroid's user button: the
+ * person's picture, or their initials, opening the profile. An admin gets
+ * the accent's dot on it while requests need them, as the web's avatar
+ * has it; TalkBack reads the count, and the profile's inbox has it.
+ */
+@Composable
+private fun AccountButton() {
+    val user = LocalUser.current
+    val api = LocalApi.current
+    val nav = LocalNavigator.current
+    val res = LocalResources.current
+    val waiting = if (user.isAdmin) LocalRequests.current.needsYou else 0
+    val label = stringResource(R.string.tab_profile)
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .focusRing(interaction, CircleShape)
+            .clickable(interaction, LocalIndication.current, role = Role.Button, onClick = nav::profile)
+            .semantics {
+                contentDescription = label
+                if (waiting > 0) stateDescription = res.getQuantityString(R.plurals.web_requests_menuWaiting, waiting, waiting)
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box {
+            Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = 40.dp)
+            if (waiting > 0) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(Palette.Accent)
+                        .border(1.5.dp, Palette.Background, CircleShape),
+                )
+            }
         }
     }
 }

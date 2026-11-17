@@ -50,8 +50,8 @@ import io.github.zekurio.matinee.ui.theme.Palette
 
 /*
  * Discover, for when there's nothing in mind yet: on a phone, rows of
- * titles under the search field until something's typed, as the web's
- * phone has them. Each row but "Because you watched" is the start of a
+ * titles under Media's search field while search is open and nothing's
+ * typed, as the web's phone has them. Each row but "Because you watched" is the start of a
  * browse, which its heading opens with the row's filters and sort.
  * Nothing of it shows when the server says Discover is off.
  */
@@ -74,13 +74,13 @@ fun railKey(rail: DiscoverRail): String = rail.seed?.let { "${rail.id}:${it.ref.
 /** Whether the row holds the viewer's recommendations, whose cards offer "Not interested". */
 private fun recommended(rail: DiscoverRail) = rail.id == DiscoverRailId.FOR_YOU || rail.id == DiscoverRailId.BECAUSE_WATCHED
 
-/** Whether Discover is on for this viewer and its rows, kept by the search tab. */
+/** Whether Discover is on for this viewer and its rows, kept by the page that asks, as Media for its search. */
 @Composable
 fun rememberDiscover(): Loader<io.github.zekurio.matinee.api.DiscoverRails> = rememberLoader("discover-rails") { discover.rails() }
 
 /**
  * Discover's rows in the order the server sends them, each loading on its
- * own, for the search tab's list. Rows whose titles are all here already
+ * own, for the list under Media's search field. Rows whose titles are all here already
  * leave nothing to show and stay out. One that failed says so in its place.
  */
 fun LazyListScope.discoverRails(rails: List<DiscoverRail>, pages: Map<String, Loader<DiscoverRow>>) {
@@ -90,7 +90,7 @@ fun LazyListScope.discoverRails(rails: List<DiscoverRail>, pages: Map<String, Lo
     }
 }
 
-/** The first page of each of [rails], kept while the search tab is. */
+/** The first page of each of [rails], kept while the page that shows them is on the back stack. */
 @Composable
 fun rememberRailPages(rails: List<DiscoverRail>): Map<String, Loader<DiscoverRow>> =
     rails.associate { rail -> railKey(rail) to rememberLoader("discover-${railKey(rail)}") { discover.row(rail.id, rail.seed) } }

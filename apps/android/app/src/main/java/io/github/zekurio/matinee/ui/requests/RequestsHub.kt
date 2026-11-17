@@ -50,7 +50,7 @@ import kotlinx.serialization.SerializationException
  * stream starts with the current state, so reconnecting loses nothing.
  * What one screen hears, every screen shows, since a title's state is the
  * same wherever it sits. An admin's queue streams once for the whole app,
- * for the dot on the profile tab, the queue, and Add and Decline on a title.
+ * for the dot on the account in Home's header, the queue, and Add and Decline on a title.
  */
 
 /** A title's live answer: the title and each of its seasons. */

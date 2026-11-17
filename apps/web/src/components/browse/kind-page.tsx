@@ -1,13 +1,20 @@
 import type { Library, TitleKind } from "@matinee/contracts"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@matinee/ui/components/dropdown-menu"
 import { cn } from "@matinee/ui/lib/utils"
 import {
   type QueryClient,
   useInfiniteQuery,
   useQuery,
 } from "@tanstack/react-query"
+import { ChevronDownIcon } from "lucide-react"
 import { useState } from "react"
 
-import { chipClass, chipRow } from "@/components/chips"
 import {
   EmptyList,
   PosterGridSkeleton,
@@ -32,11 +39,7 @@ import {
   useTitleFilters,
 } from "@/components/library/title-queries"
 import { PosterCard, posterGrid } from "@/components/media-item"
-import {
-  belowHeader,
-  PageHeader,
-  useDocumentTitle,
-} from "@/components/page-header"
+import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { tr } from "@/i18n"
 import type { KindSearch } from "@/lib/browse-search"
 import { errorMessage, orpc } from "@/lib/rpc"
@@ -89,8 +92,8 @@ export function kindPageLoader(
 }
 
 /**
- * Every movie or every show, across the libraries, as a poster grid, with
- * chips to narrow it to one library when there's more than one.
+ * Every movie or every show, across the libraries, as a poster grid. With
+ * more than one library, a menu in the subtitle narrows it to one.
  */
 export function KindPage({
   kind,
@@ -135,6 +138,9 @@ export function KindPage({
     : []
   const filtered = chips.length > 0
   const words = libraryKind[kind]
+  const picker = ofKind.length > 1
+  const count =
+    total === undefined ? undefined : tr("browse.titleCount", { count: total })
   const controls: ListControlsProps = {
     search: text.search,
     setSearch: text.setSearch,
@@ -162,22 +168,30 @@ export function KindPage({
       <PageHeader
         title={title}
         description={
-          total === undefined
-            ? undefined
-            : tr("browse.titleCount", { count: total })
+          picker ? (
+            <>
+              <LibraryMenu
+                libraries={ofKind}
+                value={libraryId}
+                onChange={(next) => update({ library: next })}
+              />
+              {count && (
+                <>
+                  <span aria-hidden className="mx-1.5">
+                    ·
+                  </span>
+                  {count}
+                </>
+              )}
+            </>
+          ) : (
+            count
+          )
         }
         actions={<HeaderControls {...controls} />}
         chips={<FilterChips inline active={chips} clear={list.clear} />}
         phoneActions={<PhoneControls {...controls} />}
       />
-      {ofKind.length > 1 && (
-        <LibraryPicker
-          libraries={ofKind}
-          value={libraryId}
-          onChange={(next) => update({ library: next })}
-          className={belowHeader}
-        />
-      )}
       <FilterChips active={chips} clear={list.clear} />
 
       {titles.isPending ? (
@@ -240,39 +254,66 @@ export function KindPage({
   )
 }
 
-/** Chips for every library of the kind, or one of them. */
-function LibraryPicker({
+/** The value the menu's radio group uses for every library at once. */
+const ALL = ""
+
+/**
+ * Every library of the kind, or one of them, as a menu behind the chosen
+ * one's name. It sits in the header's subtitle so it takes no room of its
+ * own.
+ */
+function LibraryMenu({
   libraries,
   value,
   onChange,
-  className,
 }: {
   libraries: Library[]
   value: string | undefined
   onChange: (libraryId: string | undefined) => void
-  className?: string
 }) {
-  const choices = [
-    { id: undefined, name: tr("browse.library.all") },
-    ...libraries.map((library) => ({ id: library.id, name: library.name })),
-  ]
+  const current = libraries.find((library) => library.id === value)
   return (
-    <div
-      role="group"
-      aria-label={tr("browse.library")}
-      className={cn(chipRow, className)}
-    >
-      {choices.map((choice) => (
-        <button
-          key={choice.id ?? "all"}
-          type="button"
-          aria-pressed={choice.id === value}
-          onClick={() => onChange(choice.id)}
-          className={chipClass(choice.id === value)}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={cn(
+          "text-foreground/85 hover:text-foreground focus-visible:ring-ring data-popup-open:text-foreground relative -mx-1 inline-flex max-w-full cursor-default items-center gap-0.5 rounded-md px-1 align-bottom font-medium outline-none select-none focus-visible:ring-2",
+          // A taller hit area on touch screens, without moving the text.
+          "[@media(pointer:coarse)]:after:absolute [@media(pointer:coarse)]:after:-inset-y-3 [@media(pointer:coarse)]:after:inset-x-0",
+        )}
+      >
+        <span className="truncate">
+          {current?.name ?? tr("browse.library.all")}
+        </span>
+        <ChevronDownIcon aria-hidden className="size-3.5 shrink-0" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-auto min-w-48">
+        <DropdownMenuRadioGroup
+          aria-label={tr("browse.library")}
+          value={value ?? ALL}
+          onValueChange={(next) => {
+            const library = libraries.find((l) => l.id === next)
+            onChange(library?.id)
+          }}
         >
-          {choice.name}
-        </button>
-      ))}
-    </div>
+          <DropdownMenuRadioItem
+            value={ALL}
+            closeOnClick
+            className="[@media(pointer:coarse)]:min-h-11"
+          >
+            {tr("browse.library.all")}
+          </DropdownMenuRadioItem>
+          {libraries.map((library) => (
+            <DropdownMenuRadioItem
+              key={library.id}
+              value={library.id}
+              closeOnClick
+              className="[@media(pointer:coarse)]:min-h-11"
+            >
+              {library.name}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
