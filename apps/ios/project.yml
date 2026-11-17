@@ -166,8 +166,11 @@ targets:
       # -dev.browseFixtures), shared with the iPhone's title and person pages.
       - Matinee/UI/title/TitleData.swift
       - Matinee/UI/browse/BrowseFixtures.swift
-      # The words the profile's statistics take, and -dev.statsFixtures, shared
-      # with the iPhone's profile.
+      # The search field's typing, handed to MatineeCore's `SearchState`.
+      - Matinee/UI/search/SearchData.swift
+      # What the profile loads, the words its statistics take, and
+      # -dev.statsFixtures, shared with the iPhone's profile.
+      - Matinee/UI/profile/ProfileData.swift
       - Matinee/UI/profile/StatsData.swift
       - Matinee/UI/profile/StatsFixtures.swift
       # The player's subtitle lines, which the TV's player and Settings' caption preview draw as the phone's does.

@@ -38,30 +38,30 @@ targets from where they are: `project.yml` lists them one by one under
 `MatineeTV`'s sources, so the generated words, the loading helpers, and
 the artwork pipeline can't drift apart between the apps.
 
-| Shared file                                                 | What the TV takes from it                                                      |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `Matinee/UI/Strings.gen.swift`                              | `Str`, every word, from Android's strings (TV strings included)                |
-| `Matinee/Resources/Localizable.xcstrings`, `iOS.xcstrings`  | The catalogs `Str` reads                                                       |
-| `Matinee/Resources/Assets.xcassets`                         | The logo and mark, and the launch color                                        |
-| `Matinee/UI/State.swift`                                    | `.loads`, `describeFailure`, `\.api`                                           |
-| `Matinee/UI/Format.swift`                                   | Names, numbers, and dates in the app's language                                |
-| `Matinee/UI/ThemeStore.swift`                               | The mode and the server's accents                                              |
-| `Matinee/UI/Navigator.swift`                                | `Navigator`, which `TVNav.navigator` fills in                                  |
-| `Matinee/UI/components/Toasts.swift`                        | `Snackbar`, `launchShowing`                                                    |
-| `Matinee/UI/components/Picture.swift`                       | `Picture` over Nuke with the blur hash, the image pipeline, `Logo`, `LogoMark` |
-| `Matinee/UI/components/QrCode.swift`                        | `QrCode`, the sign-in QR                                                       |
-| `Matinee/UI/signin/SignInState.swift`                       | `ServerConnect`, `DeviceCodeState`, `unreachableMessage`                       |
-| `Matinee/UI/signin/LoginBackdrop.swift`                     | The server's login backdrop behind sign-in                                     |
-| `Matinee/UI/home/HomeDevData.swift`                         | `-dev.art` and `-dev.recommendations`                                          |
-| `Matinee/UI/title/TitleData.swift`                          | The detail pages' facts, file info, season loads, and `-title.fixture`         |
-| `Matinee/UI/player/PlayerWords.swift`                       | Refusal, notice, and skip-button wording                                       |
-| `Matinee/UI/player/PlayerSubtitles.swift`                   | Subtitle lines, also used by Settings                                          |
-| `Matinee/UI/player/PlayerTrickplay.swift`                   | Trickplay frame and tile cache, sized by each player                           |
-| `Matinee/UI/player/PlayerLayer.swift`                       | AVPlayer layer and surface, without picture in picture or AirPlay              |
-| `Matinee/UI/player/PlayerMenuEntries.swift`                 | Menu choices and track, quality, and speed labels                              |
-| `Matinee/UI/browse/BrowseFixtures.swift`                    | `-dev.browseFixtures`, the fixture people the cast cards open                  |
-| `Matinee/UI/profile/StatsData.swift`, `StatsFixtures.swift` | The statistics' words, and `-dev.statsFixtures`                                |
-| `Matinee/UI/settings/SettingsData.swift`                    | Saving preferences, the choices Settings offers, and their words               |
+| Shared file                                                                      | What the TV takes from it                                                      |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `Matinee/UI/Strings.gen.swift`                                                   | `Str`, every word, from Android's strings (TV strings included)                |
+| `Matinee/Resources/Localizable.xcstrings`, `iOS.xcstrings`                       | The catalogs `Str` reads                                                       |
+| `Matinee/Resources/Assets.xcassets`                                              | The logo and mark, and the launch color                                        |
+| `Matinee/UI/State.swift`                                                         | `.loads`, `describeFailure`, `\.api`                                           |
+| `Matinee/UI/Format.swift`                                                        | Names, numbers, and dates in the app's language                                |
+| `Matinee/UI/ThemeStore.swift`                                                    | The mode and the server's accents                                              |
+| `Matinee/UI/Navigator.swift`                                                     | `Navigator`, which `TVNav.navigator` fills in                                  |
+| `Matinee/UI/components/Toasts.swift`                                             | `Snackbar`, `launchShowing`                                                    |
+| `Matinee/UI/components/Picture.swift`                                            | `Picture` over Nuke with the blur hash, the image pipeline, `Logo`, `LogoMark` |
+| `Matinee/UI/components/QrCode.swift`                                             | `QrCode`, the sign-in QR                                                       |
+| `Matinee/UI/signin/SignInState.swift`                                            | `ServerConnect`, `DeviceCodeState`, `unreachableMessage`                       |
+| `Matinee/UI/signin/LoginBackdrop.swift`                                          | The server's login backdrop behind sign-in                                     |
+| `Matinee/UI/home/HomeDevData.swift`                                              | `-dev.art` and `-dev.recommendations`                                          |
+| `Matinee/UI/title/TitleData.swift`                                               | The detail pages' facts, file info, season loads, and `-title.fixture`         |
+| `Matinee/UI/player/PlayerWords.swift`                                            | Refusal, notice, and skip-button wording                                       |
+| `Matinee/UI/player/PlayerSubtitles.swift`                                        | Subtitle lines, also used by Settings                                          |
+| `Matinee/UI/player/PlayerTrickplay.swift`                                        | Trickplay frame and tile cache, sized by each player                           |
+| `Matinee/UI/player/PlayerLayer.swift`                                            | AVPlayer layer and surface, without picture in picture or AirPlay              |
+| `Matinee/UI/player/PlayerMenuEntries.swift`                                      | Menu choices and track, quality, and speed labels                              |
+| `Matinee/UI/browse/BrowseFixtures.swift`                                         | `-dev.browseFixtures`, the fixture people the cast cards open                  |
+| `Matinee/UI/profile/ProfileData.swift`, `StatsData.swift`, `StatsFixtures.swift` | The profile's loads, the statistics' words, and `-dev.statsFixtures`           |
+| `Matinee/UI/settings/SettingsData.swift`                                         | Saving preferences, the choices Settings offers, and their words               |
 
 Why sharing by file and not a package: these depend on the app's
 generated strings and on each other, and moving them into a package would

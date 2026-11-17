@@ -23,12 +23,9 @@ public nonisolated struct Lucide: Hashable, Sendable {
   public static let chevronDown = Lucide("lucide_chevron_down")
   public static let chevronLeft = Lucide("lucide_chevron_left")
   public static let chevronRight = Lucide("lucide_chevron_right")
-  public static let chevronUp = Lucide("lucide_kit_chevron_up")
-  public static let chevronsUpDown = Lucide("lucide_kit_chevrons_up_down")
   public static let circleAlert = Lucide("lucide_circle_alert")
   public static let circleCheck = Lucide("lucide_circle_check")
   public static let circleSlash = Lucide("lucide_circle_slash")
-  public static let circleX = Lucide("lucide_kit_circle_x")
   public static let clapperboard = Lucide("lucide_clapperboard")
   public static let clock = Lucide("lucide_clock")
   public static let cloudOff = Lucide("lucide_cloud_off")
@@ -111,12 +108,9 @@ public nonisolated struct Lucide: Hashable, Sendable {
     ("chevronDown", .chevronDown),
     ("chevronLeft", .chevronLeft),
     ("chevronRight", .chevronRight),
-    ("chevronUp", .chevronUp),
-    ("chevronsUpDown", .chevronsUpDown),
     ("circleAlert", .circleAlert),
     ("circleCheck", .circleCheck),
     ("circleSlash", .circleSlash),
-    ("circleX", .circleX),
     ("clapperboard", .clapperboard),
     ("clock", .clock),
     ("cloudOff", .cloudOff),

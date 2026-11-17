@@ -19,7 +19,7 @@ import SwiftUI
 
 /// The statistics' rows, a view each, for the profile's column.
 struct ProfileStatistics: View {
-  let loads: TVProfileLoads
+  let loads: ProfileLoads
   let memory: TVFocusMemory
 
   var body: some View {
@@ -27,7 +27,7 @@ struct ProfileStatistics: View {
     Group {
       // With nothing ever watched, picking a period changes nothing.
       StatsHeading(range: loads.range, showsRanges: content != .neverWatched, memory: memory) {
-        loads.pick($0)
+        loads.pick($0, offline: false)
       }
       switch content {
       case .failed(let message, _):
@@ -41,7 +41,7 @@ struct ProfileStatistics: View {
       case .neverWatched:
         TVMessage(Str.profileSelfEmpty, message: Str.profileSelfEmptyHint, icon: .popcorn, centered: false)
       case .nothingInRange:
-        NothingInRange(range: loads.range, memory: memory) { loads.pick(StatsRange.all) }
+        NothingInRange(range: loads.range, memory: memory) { loads.pick(StatsRange.all, offline: false) }
       case .shown(let stats):
         WatchTimeChart(stats: stats, range: loads.range, memory: memory)
         Totals(stats: stats)

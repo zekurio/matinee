@@ -97,3 +97,13 @@ extension View {
     modifier(Loads(loader: loader, maxAge: maxAge, fetch: fetch))
   }
 }
+
+/// What `DisconnectedAction` and pull to refresh need of a `Loader`, whatever it loads.
+protocol Reloadable: AnyObject {
+  var refreshError: String? { get }
+  var refreshDisconnected: Bool { get }
+  var refreshing: Bool { get }
+  func reload()
+}
+
+extension Loader: Reloadable {}

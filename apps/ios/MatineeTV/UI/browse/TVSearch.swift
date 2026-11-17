@@ -38,7 +38,6 @@ struct TVSearchScreen: View {
   @State private var devStarted = false
   @FocusState private var fieldFocused: Bool
   @FocusedValue(\.tvBrowseFocused) private var focusedNow
-  @Environment(\.api) private var api
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -69,9 +68,7 @@ struct TVSearchScreen: View {
     }
     .ignoresSafeArea()
     .loads(libraries) { api in try await api.libraries.list() }
-    .onAppear { update(now: false) }
-    .onChange(of: query) { update(now: false) }
-    .onChange(of: submitted) { update(now: true) }
+    .searchEffect(search, query: query, submitted: submitted)
     // A new query's results replace what was focused in the last.
     .onChange(of: text) { focused = nil }
     .onChange(of: focusedNow) { _, item in if let item { focused = item } }
@@ -114,17 +111,6 @@ struct TVSearchScreen: View {
 
   private var names: [String: String] {
     Dictionary((libraries.state.value ?? []).map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
-  }
-
-  private func update(now: Bool) {
-    guard let api else { return }
-    search.update(query, now: now) { text in
-      let found = try await api.search.query(query: text, limit: SEARCH_LIMIT)
-      #if DEBUG
-        if BrowseFixtures.on { return BrowseFixtures.search(found, text) }
-      #endif
-      return found
-    }
   }
 }
 

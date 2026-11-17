@@ -50,7 +50,7 @@ struct TVProfileScreen: View {
 
 private struct TVProfilePage: View {
   let user: User
-  @State private var loads: TVProfileLoads
+  @State private var loads: ProfileLoads
   @State private var memory = TVFocusMemory()
   @Environment(\.palette) private var palette
   @Environment(\.tvPageOnTop) private var onTop
@@ -58,7 +58,7 @@ private struct TVProfilePage: View {
 
   init(user: User) {
     self.user = user
-    _loads = State(initialValue: TVProfileLoads(username: user.username))
+    _loads = State(initialValue: ProfileLoads(username: user.username))
   }
 
   var body: some View {
@@ -83,7 +83,7 @@ private struct TVProfilePage: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(palette.background)
     .ignoresSafeArea()
-    .loadsTVProfile(loads)
+    .loadsProfile(loads)
     // The first favorite, else the first thing watched, once the profile
     // says whether there is one; with neither, Settings.
     .tvPageFocus(memory) { firstFocus }

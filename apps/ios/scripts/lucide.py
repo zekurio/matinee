@@ -152,10 +152,7 @@ KIT_EXTRAS = [
     ("octagonX", "octagon-x", 2),
     ("checkBold", "check", 3),
     ("minus", "minus", 3),
-    ("chevronUp", "chevron-up", 2),
-    ("chevronsUpDown", "chevrons-up-down", 2),
     ("eye", "eye", 2),
-    ("circleX", "circle-x", 2),
     # The player's AirPlay button, drawn over the system's route picker.
     ("airplay", "airplay", 2),
 ]

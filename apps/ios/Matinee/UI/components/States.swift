@@ -216,16 +216,6 @@ struct RailFailed: View {
   }
 }
 
-/// What `DisconnectedAction` and pull to refresh need of a `Loader`, whatever it loads.
-protocol Reloadable: AnyObject {
-  var refreshError: String? { get }
-  var refreshDisconnected: Bool { get }
-  var refreshing: Bool { get }
-  func reload()
-}
-
-extension Loader: Reloadable {}
-
 /// For a page still showing what loaded before: the cloud in its bar while
 /// `loaders` can't reach the server, tapped to try again.
 struct DisconnectedAction: View {
