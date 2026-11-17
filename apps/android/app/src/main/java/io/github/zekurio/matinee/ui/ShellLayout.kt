@@ -61,6 +61,22 @@ fun shellLanding(page: ShellPage, offline: Boolean): ShellLanding {
 fun shellStack(owner: ShellPage, offline: Boolean): ShellLanding =
     shellLanding(owner, offline).copy(focusesSearch = false)
 
+/**
+ * Where Media's search was opened from: its own field, tapped on the Media
+ * tab, or Home's search button, which opens Media with the field focused.
+ */
+enum class SearchOrigin { Media, Home }
+
+/**
+ * Whether opening search from [origin] runs Home's button growing into
+ * Media's field, and the field shrinking back into the button on the way
+ * back. Only from Home's button, where there's a button to grow from, and
+ * not with animations removed, where it's a plain switch. A tap on the
+ * Media tab is the tabs' slide, the field already in its place.
+ */
+fun searchMorphs(origin: SearchOrigin, reducedMotion: Boolean): Boolean =
+    origin == SearchOrigin.Home && !reducedMotion
+
 /** What the Media tab shows under its search field. */
 sealed interface MediaPageContent {
     /** The libraries: the field at rest, with nothing typed. */
@@ -80,25 +96,36 @@ sealed interface MediaPageContent {
  * Media's search field: what's typed, and whether search is open. Search
  * opens when the field takes focus and stays open when the keyboard goes
  * down, as a scroll or Back puts it away, so what it shows doesn't vanish
- * under a finger. The field's Back arrow, or the system's Back once the
- * keyboard is down, closes it, back to the libraries. Text opens it too,
- * as a search kept from before.
+ * under a finger. Text opens it too, as a search kept from before.
+ *
+ * What Back does depends on where search was opened ([origin]). Opened on
+ * the Media tab, the field's Back arrow, or the system's Back once the
+ * keyboard is down, closes it, back to the libraries, and the next Back
+ * goes Home. Opened from Home's search button, either goes back to Home,
+ * the way it came, as the field shrinking back into the button.
  */
 data class MediaSearch(
     val query: String = "",
     /** The field took focus since search last closed; [open] says whether search is open. */
     val opened: Boolean = false,
+    val origin: SearchOrigin = SearchOrigin.Media,
 ) {
     val open: Boolean get() = opened || query.isNotEmpty()
 
-    /** The field took focus. */
-    fun begin() = copy(opened = true)
+    /** The field took focus, opened from [from]; a search already open keeps where it came from. */
+    fun begin(from: SearchOrigin = SearchOrigin.Media) = copy(opened = true, origin = if (open) origin else from)
 
-    /** Back: the text gone and the libraries back. */
+    /** Back while it stays on Media: the text gone and the libraries back. */
     fun cancel() = MediaSearch()
 
     /** The text changed; clearing it with the field's own button leaves search open. */
-    fun type(text: String) = MediaSearch(text, open || text.isNotEmpty())
+    fun type(text: String) = copy(query = text, opened = open || text.isNotEmpty())
+
+    /** Back closes search and stays on Media, rather than leaving Media for Home. */
+    val closesOnBack: Boolean get() = open && origin == SearchOrigin.Media
+
+    /** Back leaves Media for Home with search open, the way Home's button came. */
+    val returnsHome: Boolean get() = open && origin == SearchOrigin.Home
 
     /** What the page shows under the field. */
     val content: MediaPageContent
