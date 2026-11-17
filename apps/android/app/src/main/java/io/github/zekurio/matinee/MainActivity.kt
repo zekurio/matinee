@@ -47,6 +47,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // The process may have started in the background, where its first
+        // check of the server could find the network blocked.
+        app.session.onForeground()
+    }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         app.theme.setSystemDark(systemDark(newConfig))

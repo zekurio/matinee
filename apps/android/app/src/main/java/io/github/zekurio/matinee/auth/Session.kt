@@ -272,17 +272,61 @@ class Session(context: Context) {
 
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
 
+    // Declared before the init below, which starts the first check: an
+    // initializer after it would reset them while that check is out.
+
+    /** Counts the checks [start] sends, so only the latest one sets the state. Main thread only. */
+    private var check = 0L
+
+    /**
+     * The default network as the latest check went out, null when there was
+     * none or Android blocked the app's access to it, as it can while the
+     * process runs in the background.
+     */
+    private var checkedOn: Network? = null
+
+    /** A network came up or was unblocked while the latest check was out, so its failure is stale. */
+    private var networkMoved = false
+
     init {
         start()
-        // Try again once a network comes up, rather than wait for a tap.
+        // Try again once a network comes up, or Android lets the app use it
+        // again, rather than wait for a tap.
         connectivity.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                scope.launch {
-                    val current = _state.value
-                    if (current is AuthState.Unreachable && !current.retrying) start()
-                }
+                scope.launch { networkChanged(network) }
+            }
+
+            override fun onBlockedStatusChanged(network: Network, blocked: Boolean) {
+                if (!blocked) scope.launch { networkChanged(network) }
             }
         })
+    }
+
+    /**
+     * A network the app can use. A check that went out before it may fail
+     * from what came before, so its failure tries again rather than show
+     * the unreachable screen with nothing left to retry it.
+     */
+    private fun networkChanged(network: Network) {
+        val current = _state.value
+        val checking = current is AuthState.Connecting || (current is AuthState.Unreachable && current.retrying)
+        when {
+            // Registering reports the network the first check went out on; that's no change.
+            checking -> if (network != checkedOn) networkMoved = true
+            current is AuthState.Unreachable -> start()
+            else -> Unit
+        }
+    }
+
+    /**
+     * The app came to the foreground. A check made while the process ran in
+     * the background, for a download or the player, may have failed only
+     * because Android kept it off the network then.
+     */
+    fun onForeground() {
+        val current = _state.value
+        if (current is AuthState.Unreachable && !current.retrying) start()
     }
 
     /**
@@ -320,6 +364,8 @@ class Session(context: Context) {
 
     /** Check the saved server and session again, unless offline mode keeps the app away from it. */
     fun start() {
+        // Any check still out from before no longer sets the state.
+        val mine = ++check
         candidate = null
         beforeAdding = null
         val server = origin ?: run {
@@ -338,29 +384,44 @@ class Session(context: Context) {
             is AuthState.Unreachable -> current.copy(retrying = true)
             else -> AuthState.Connecting(server.display)
         }
+        checkedOn = connectivity.activeNetwork
+        networkMoved = false
         scope.launch {
             val sent = token
             val verified = try {
                 if (sent != null) client.auth.session().user else null
             } catch (e: IOException) {
-                if (generation == made) _state.value = AuthState.Unreachable(server.display, unreachability(e))
+                checkFailed(mine, made, server, e)
                 return@launch
             }
-            // Signed in, out, or to another server meanwhile: that stands.
-            if (generation != made) return@launch
-            _state.value = try {
-                if (verified != null) {
-                    cacheUser(verified)
-                    AuthState.SignedIn(server.display, verified)
-                } else {
-                    // Only a token the server turned down goes. One this device
-                    // couldn't decrypt stays saved until a sign-in replaces it.
-                    if (sent != null) clearToken()
-                    AuthState.SignedOut(server.display, requireApi().auth.config())
-                }
-            } catch (e: IOException) {
-                AuthState.Unreachable(server.display, unreachability(e))
+            // Signed in, out, or to another server meanwhile, or checked again: that stands.
+            if (generation != made || mine != check) return@launch
+            if (verified != null) {
+                cacheUser(verified)
+                _state.value = AuthState.SignedIn(server.display, verified)
+                return@launch
             }
+            // Only a token the server turned down goes. One this device
+            // couldn't decrypt stays saved until a sign-in replaces it.
+            if (sent != null) clearToken()
+            val cleared = generation
+            val config = try {
+                requireApi().auth.config()
+            } catch (e: IOException) {
+                checkFailed(mine, cleared, server, e)
+                return@launch
+            }
+            if (generation == cleared && mine == check) _state.value = AuthState.SignedOut(server.display, config)
+        }
+    }
+
+    /** The check [mine] got no answer: unreachable, unless the network changed while it was out. */
+    private fun checkFailed(mine: Long, made: Long, server: HttpUrl, e: IOException) {
+        if (generation != made || mine != check) return
+        if (networkMoved) {
+            start()
+        } else {
+            _state.value = AuthState.Unreachable(server.display, unreachability(e))
         }
     }
 
