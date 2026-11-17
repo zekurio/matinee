@@ -13,7 +13,6 @@ public struct MatineeCalendar: View {
   @Environment(\.palette) private var palette
   @Environment(\.locale) private var locale
   @Environment(\.calendar) private var calendar
-  @Environment(\.layoutDirection) private var direction
 
   public init(selected: Date?, latest: Date? = nil, onSelect: @escaping (Date) -> Void) {
     self.selected = selected

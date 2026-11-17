@@ -5,7 +5,7 @@ import UIKit
 
 /*
  * PlayerScreen.kt's `Controls`, laid out as Android's phone player has it
- * now and drawn as the web's touch layout (video-player.tsx with
+ * and drawn as the web's touch layout (video-player.tsx with
  * `coarse`): the way back, the title, and the menus up top; play in the
  * middle between the skips and, for an episode, the previous and next
  * episodes outside them; and at the bottom the times over a seek bar the
@@ -107,7 +107,6 @@ private struct PlayerTopBar: View {
   let close: () -> Void
   let onMenu: (PlayerMenu) -> Void
   let onLock: (() -> Void)?
-  @Environment(\.palette) private var palette
 
   var body: some View {
     HStack(spacing: Space.s1) {

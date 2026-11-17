@@ -69,7 +69,7 @@ struct CatalogRelatedRows: View {
       }
     }
     .loads(loads.rails) { [ref, library] api in
-      try await requestApi(api).catalog.related(catalogInput: CatalogInput(ref: ref, libraryId: library))
+      try await api.catalog.related(catalogInput: CatalogInput(ref: ref, libraryId: library))
     }
   }
 }
@@ -100,7 +100,7 @@ private struct CatalogRelatedRow: View {
       }
     }
     .loads(page) { [ref, library, id = rail.id] api in
-      try await requestApi(api).catalog.relatedTitles(ref: ref, rail: id, libraryId: library)
+      try await api.catalog.relatedTitles(ref: ref, rail: id, libraryId: library)
     }
   }
 }

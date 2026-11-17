@@ -97,7 +97,6 @@ struct Rail<Content: View>: View {
   var onTitleTap: (() -> Void)?
   @ViewBuilder let content: () -> Content
   @Environment(\.gutter) private var gutter
-  @Environment(\.windowSize) private var window
 
   init(_ title: String, onTitleTap: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content) {
     self.title = title

@@ -46,7 +46,6 @@ struct TrickplaySettings: View {
 private struct TrickplayForm: View {
   let data: AdminTrickplaySettings
   @Binding var settings: MatineeCore.TrickplaySettings
-  @Environment(\.palette) private var palette
 
   var body: some View {
     SettingsSection(Str.webTrickplayTitle) {

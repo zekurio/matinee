@@ -597,7 +597,6 @@ struct SeasonsRail: View {
   var current: Season?
   var gaps: TitleGaps?
   var extraOnly = false
-  @Environment(\.navigator) private var nav
 
   var body: some View {
     let seasons = titleSeasons(title, current: current, extraOnly: extraOnly)

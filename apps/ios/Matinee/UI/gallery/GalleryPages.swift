@@ -120,7 +120,6 @@
   // MARK: States
 
   struct StatesPage: View {
-    @Environment(\.palette) private var palette
 
     var body: some View {
       VStack(alignment: .leading, spacing: Space.s7) {

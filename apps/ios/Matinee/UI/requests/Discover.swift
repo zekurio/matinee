@@ -11,25 +11,18 @@ import SwiftUI
  * Nothing of it shows when the server says Discover is off. A long press
  * on a recommendation offers "Not interested".
  *
- *     DiscoverRows()                       // under the empty search field
+ *     DiscoverRows(discover: discover)     // under the empty search field
  */
 
 /// Discover's rows, for the search page's empty field: one stream follows
 /// the cards they show. Rows whose titles are all here already leave
 /// nothing to show and stay out; one that failed says so in its place.
-/// `discover` is a page's own answer to whether Discover is on, when it
-/// needs it too, as search does to leave the keyboard down; else the rows
-/// ask themselves.
+/// `discover` is the page's answer to whether Discover is on, which it
+/// loads with `loadsDiscover`: search needs it too, to leave the keyboard down.
 struct DiscoverRows: View {
-  @State private var own = Loader<DiscoverRails>()
-  private let given: Loader<DiscoverRails>?
+  let discover: Loader<DiscoverRails>
   @State private var pages = DiscoverPages()
-
-  init(discover: Loader<DiscoverRails>? = nil) { given = discover }
-
-  private var discover: Loader<DiscoverRails> { given ?? own }
   @Environment(\.actions) private var actions
-  @Environment(\.palette) private var palette
 
   var body: some View {
     Group {
@@ -58,29 +51,16 @@ struct DiscoverRows: View {
         }
       }
     }
-    .modifier(LoadsDiscover(loader: given == nil ? own : nil))
     .followsRequests(pages.followed(discover.state.value?.rails ?? []))
-  }
-}
-
-/// Whether Discover is on and its rows, from the server, for a loader its
-/// page doesn't load itself.
-private struct LoadsDiscover: ViewModifier {
-  let loader: Loader<DiscoverRails>?
-
-  func body(content: Content) -> some View {
-    if let loader {
-      content.loads(loader) { api in try await requestApi(api).discover.rails() }
-    } else {
-      content
-    }
   }
 }
 
 extension View {
   /// Loads whether Discover is on and its rows into `loader`, for a page that
   /// hands it to `DiscoverRows`.
-  func loadsDiscover(_ loader: Loader<DiscoverRails>) -> some View { modifier(LoadsDiscover(loader: loader)) }
+  func loadsDiscover(_ loader: Loader<DiscoverRails>) -> some View {
+    loads(loader) { api in try await api.discover.rails() }
+  }
 }
 
 /// Each of Discover's rows' cards, kept for the rows and their one stream.
@@ -152,7 +132,7 @@ struct DiscoverRailRow: View {
         }
       }
     }
-    .loads(page) { [rail] api in try await RequestData(api: requestApi(api)).row(rail) }
+    .loads(page) { [rail] api in try await RequestData(api: api).row(rail) }
     #if DEBUG
       // `-requests.heading forYou`: that row's heading pressed once its cards show, for a screenshot of what it opens.
       .task(id: cards.isEmpty) {
@@ -200,36 +180,3 @@ struct StaleNote: View {
     .padding(.horizontal, gutter)
   }
 }
-
-#if DEBUG
-  /// `-dev.route discover-browse/_preview`: the parts other pages place, on a page
-  /// of their own, as they'd sit there: Discover's rows under the empty
-  /// search field, "Not here yet" for a search, and a person's catalog
-  /// credits. `-requests.query` names the search.
-  struct RequestsPreview: View {
-    @State private var search = CatalogSearch()
-    @State private var person = Loader<[PersonCatalogCredit]>()
-
-    var body: some View {
-      ScrollViewReader { proxy in
-        ScrollView {
-          VStack(alignment: .leading, spacing: Space.s8) {
-            DiscoverRows().id("discover")
-            NotHereSection(search: search).id("search")
-            PersonCatalogCredits(credits: person.state.value ?? []).id("person")
-          }
-          .padding(.bottom, Space.s8)
-        }
-        // `-requests.scroll search|person`: down to a part.
-        .task {
-          guard let part = UserDefaults.standard.string(forKey: "requests.scroll") else { return }
-          try? await Task.sleep(for: .seconds(4))
-          proxy.scrollTo(part, anchor: .top)
-        }
-      }
-      .topBar(Str.webDiscoverTitle)
-      .catalogSearch(search, query: UserDefaults.standard.string(forKey: "requests.query") ?? "the")
-      .loads(person) { api in try await RequestData(api: requestApi(api)).personCredits(name: "Zendaya") }
-    }
-  }
-#endif

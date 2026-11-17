@@ -33,7 +33,7 @@ struct CatalogScreen: View {
       }
     }
     .loads(details) { [ref, library] api in
-      try await requestApi(api).catalog.details(catalogInput: CatalogInput(ref: ref, libraryId: library))
+      try await api.catalog.details(catalogInput: CatalogInput(ref: ref, libraryId: library))
     }
     .reloadsOnAsk(details)
     .hidesSystemNavigationBar()
@@ -48,8 +48,6 @@ private struct CatalogPage: View {
   @Environment(\.requests) private var hub
   @Environment(\.navigator) private var nav
   @Environment(\.windowSize) private var window
-  @Environment(\.gutter) private var gutter
-  @Environment(\.palette) private var palette
 
   var body: some View {
     let layout = TitleLayout(window: window)

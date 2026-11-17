@@ -41,7 +41,7 @@ struct RequestSheetModel: Identifiable {
 @Observable final class RequestsHub {
   /// The last word on each title, from a stream or from an answer to an ask.
   let state = RequestAvailabilityState()
-  /// The admin's queue as the server streams it; nil for everyone else and until it answers.
+  /// The admin's queue as the server streams it; empty for everyone else and until it answers.
   let queue = RequestAdminQueue()
   /// Moves on each ask, cancel, and answer, so lists that hold asks fetch again.
   private(set) var version = 0
@@ -194,16 +194,6 @@ extension EnvironmentValues {
   @Entry var requests: RequestsHub? = nil
 }
 
-/// The API the request screens talk to: the server's, or in a debug build
-/// with `-dev.requestFixtures`, a stand-in for its request endpoints
-/// (RequestFixtures.swift), as the dev server has no metadata provider.
-nonisolated func requestApi(_ api: MatineeApi) -> MatineeApi {
-  #if DEBUG
-    if let fixture = RequestFixtures.api(api) { return fixture }
-  #endif
-  return api
-}
-
 // MARK: Around the shell
 
 extension View {
@@ -241,7 +231,7 @@ private struct RequestsHost: ViewModifier {
       // dot, the queue, and Add and Decline on a title's page.
       .task(id: QueueKey(admin: user?.isAdmin == true && !offline, active: phase == .active)) {
         guard user?.isAdmin == true, !offline, phase == .active, let api else { return }
-        await followQueue(requestApi(api))
+        await followQueue(api)
       }
   }
 
@@ -251,12 +241,9 @@ private struct RequestsHost: ViewModifier {
   }
 
   private func attach() {
-    hub.api = api.map(requestApi)
+    hub.api = api
     hub.toasts = toasts
     hub.admin = user?.isAdmin == true
-    #if DEBUG
-      if let api { RequestFixtures.prepare(api, admin: user?.isAdmin == true) }
-    #endif
   }
 
   /// Follows the queue while the app is open, again after it ends or
@@ -282,11 +269,8 @@ private struct RequestsHost: ViewModifier {
 
 extension View {
   /// Follows what the server says of `titles` while this page shows, into
-  /// the hub every page reads, as Android's `FollowTitles`. `reload` runs
-  /// after a broken connection, for what the stream can't say, like a list.
-  func followsRequests(_ titles: [CatalogInput], reload: (@MainActor () async -> Void)? = nil) -> some View {
-    modifier(FollowsRequests(titles: titles, reload: reload))
-  }
+  /// the hub every page reads, as Android's `FollowTitles`.
+  func followsRequests(_ titles: [CatalogInput]) -> some View { modifier(FollowsRequests(titles: titles)) }
 
   /// Fetches `loader` again each time an ask or a cancel changed
   /// something, including while its page was covered, as Android's `ReloadOnAsk`.
@@ -295,7 +279,6 @@ extension View {
 
 private struct FollowsRequests: ViewModifier {
   let titles: [CatalogInput]
-  let reload: (@MainActor () async -> Void)?
   @Environment(\.requests) private var hub
   @Environment(\.api) private var api
   @Environment(\.scenePhase) private var phase
@@ -318,10 +301,7 @@ private struct FollowsRequests: ViewModifier {
 
   private func update() {
     guard shown, let hub, let api else { return }
-    if live == nil {
-      let reload = reload
-      live = RequestLiveController(api: requestApi(api), state: hub.state) { await reload?() }
-    }
+    if live == nil { live = RequestLiveController(api: api, state: hub.state) }
     live?.updateVisible(titles)
   }
 }

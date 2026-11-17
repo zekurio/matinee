@@ -84,7 +84,7 @@ struct AskedRail: View {
       }
     }
     .loads(mine) { api in
-      try await requestApi(api).requests.mine(limit: 24, filter: AskedFilter.all.rawValue)
+      try await api.requests.mine(limit: 24, filter: AskedFilter.all.rawValue)
     }
     .reloadsOnAsk(mine)
     .followsRequests(askedInputs(items))
@@ -100,7 +100,7 @@ extension View {
   func loadsHomeAsked(_ mine: Loader<RequestPage>) -> some View {
     self
       .loads(mine) { api in
-        try await requestApi(api).requests.mine(limit: 24, filter: AskedFilter.inProgress.rawValue)
+        try await api.requests.mine(limit: 24, filter: AskedFilter.inProgress.rawValue)
       }
       .reloadsOnAsk(mine)
       .followsRequests(askedInputs(mine.state.value?.items ?? []))
@@ -171,11 +171,10 @@ struct AskedScreen: View {
   private func configure() {
     guard let api, configured != filter else { return }
     configured = filter
-    let mine = requestApi(api)
     let filter = filter.rawValue
-    let cursors = CursorBook()
+    let cursors = RequestCursors()
     pages.configure(key: filter) { number in
-      let page = try await mine.requests.mine(cursor: await cursors.cursor(number), limit: 40, filter: filter)
+      let page = try await api.requests.mine(cursor: await cursors.cursor(number), limit: 40, filter: filter)
       await cursors.set(number + 1, page.nextCursor)
       return RequestPageBatch(items: page.items, nextPage: page.nextCursor == nil ? nil : number + 1, stale: false)
     }
@@ -226,11 +225,4 @@ struct PageEnd: View {
     .frame(maxWidth: .infinity)
     .padding(Space.s4)
   }
-}
-
-/// Which cursor fetches which page, for MatineeCore's `RequestPages`, which counts pages.
-actor CursorBook {
-  private var cursors: [Int: String] = [:]
-  func cursor(_ page: Int) -> String? { cursors[page] }
-  func set(_ page: Int, _ cursor: String?) { cursors[page] = cursor }
 }

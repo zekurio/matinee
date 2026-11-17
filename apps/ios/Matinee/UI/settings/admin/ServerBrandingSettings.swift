@@ -54,7 +54,6 @@ struct ServerBrandingSettings: View {
 
 private struct BrandingForm: View {
   @Binding var form: BrandingDraft
-  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: SETTINGS_SPACING) {

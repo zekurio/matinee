@@ -137,12 +137,6 @@ struct PersonScreen: View {
     }
     .loads(person) { api in
       #if DEBUG
-        // The requests' stand-in's titles at TMDB, as the dev server has no provider to find them.
-        if RequestFixtures.mode != nil {
-          var found = try await BrowseFixtures.on ? BrowseFixtures.person(name, api: api) : loadPerson(api, name: name, tmdbId: tmdbId)
-          found.catalog = try await RequestData(api: requestApi(api)).personCredits(name: name, tmdbId: tmdbId)
-          return found
-        }
         if BrowseFixtures.on { return try await BrowseFixtures.person(name, api: api) }
       #endif
       return try await loadPerson(api, name: name, tmdbId: tmdbId)

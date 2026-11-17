@@ -13,7 +13,6 @@ public struct Select<Value: Hashable>: View {
   let size: ButtonSize
   @State private var open = false
   @Environment(\.palette) private var palette
-  @Environment(\.isEnabled) private var enabled
 
   /// `size` `.sm` is the web's 28-tall `sm` trigger, for a toolbar.
   public init(_ label: String, selection: Binding<Value>, options: [(Value, String)], size: ButtonSize = .touch) {

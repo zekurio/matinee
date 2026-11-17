@@ -15,8 +15,9 @@ import UIKit
  *
  * The pieces are beside it: the video, picture in picture, and AirPlay
  * (PlayerVideo.swift), the controls (PlayerControls.swift) and seek bar
- * (PlayerSeekBar.swift), the menus' choices (PlayerMenus.swift), the
- * subtitles (PlayerSubtitles.swift), the touches on the video
+ * (PlayerSeekBar.swift), the menus (PlayerMenus.swift) and their choices
+ * (PlayerMenuEntries.swift), the subtitles (PlayerSubtitles.swift), the
+ * touches on the video
  * (PlayerGestures.swift), and what shows over the video besides the
  * controls (PlayerNotes.swift).
  */

@@ -14,7 +14,6 @@ import UIKit
 struct PlaybackDiagnosticsSection: View {
   @State private var open = false
   @Environment(\.snackbar) private var snackbar
-  @Environment(\.palette) private var palette
 
   var body: some View {
     let report = PlaybackDiagnostics.shared.report

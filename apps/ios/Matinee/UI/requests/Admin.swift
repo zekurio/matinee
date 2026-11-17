@@ -37,11 +37,10 @@ struct AddButton: View {
 /// The quiet button beside `AddButton`, opening the Decline sheet.
 struct DeclineButton: View {
   let item: AdminRequestItem
-  var size: ButtonSize = .touch
   @Environment(\.requests) private var hub
 
   var body: some View {
-    MatineeButton(Str.webRequestsDecline, look: .ghost, size: size) { hub?.declining = item }
+    MatineeButton(Str.webRequestsDecline, look: .ghost, size: .touch) { hub?.declining = item }
   }
 }
 
@@ -242,7 +241,7 @@ struct RequestsScreen: View {
               QueueRow(item: item, list: list) { menu = item }
             }
             if list == .done, done.nextPage != nil {
-              DoneEnd(loading: done.loading, failed: done.failure != nil, onMore: done.more)
+              DoneEnd(failed: done.failure != nil, onMore: done.more)
             }
           }
           .padding(.horizontal, gutter)
@@ -257,7 +256,7 @@ struct RequestsScreen: View {
   private func configureDone() {
     guard list == .done, !doneConfigured, let api else { return }
     doneConfigured = true
-    let data = RequestData(api: requestApi(api)), cursors = RequestCursors()
+    let data = RequestData(api: api), cursors = RequestCursors()
     done.configure(key: "done") { page in try await data.doneBatch(page: page, cursors: cursors) }
   }
 
@@ -274,7 +273,6 @@ struct RequestsScreen: View {
 /// The end of Done while more of it is to come: a spinner that asks for the
 /// next page as it shows, or the failure with Retry.
 private struct DoneEnd: View {
-  let loading: Bool
   let failed: Bool
   let onMore: () -> Void
   @Environment(\.palette) private var palette

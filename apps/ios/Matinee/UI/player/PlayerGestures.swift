@@ -162,7 +162,6 @@ struct VideoTouches: View {
   @State private var holdTimer: Task<Void, Never>?
   @State private var pinching = false
   @State private var pinchSwitched = false
-  @Environment(\.layoutDirection) private var direction
 
   private struct Touch {
     var start: CGPoint

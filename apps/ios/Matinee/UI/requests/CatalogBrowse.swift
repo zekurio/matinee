@@ -28,18 +28,6 @@ struct CatalogBrowseScreen: View {
   }
 
   var body: some View {
-    #if DEBUG
-      if start.kind == "_preview" {
-        RequestsPreview()
-      } else {
-        page
-      }
-    #else
-      page
-    #endif
-  }
-
-  private var page: some View {
     BrowseKindPage(kind: start.kind, filters: $filters, sort: $sort)
   }
 }
@@ -115,7 +103,7 @@ private struct BrowseKindPage: View {
   }
   private var fetchOptions: @Sendable (MatineeApi) async throws -> CatalogBrowseOptions {
     let kind = kind
-    return { api in try await requestApi(api).discover.browseOptions(kind: kind) }
+    return { api in try await api.discover.browseOptions(kind: kind) }
   }
 }
 
@@ -143,7 +131,6 @@ private struct BrowseGrid: View {
   @State private var visible: Set<Int> = []
   @Environment(\.api) private var api
   @Environment(\.actions) private var actions
-  @Environment(\.gutter) private var gutter
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -213,7 +200,7 @@ private struct BrowseGrid: View {
 
   private func configure() {
     guard let api else { return }
-    let data = RequestData(api: requestApi(api))
+    let data = RequestData(api: api)
     let input = CatalogBrowseInput(kind: kind, filters: filters, sort: sort, page: nil)
     let key = (try? String(decoding: JSONEncoder().encode(input), as: UTF8.self)) ?? "\(kind)\(sort)"
     visible = []

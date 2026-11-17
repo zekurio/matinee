@@ -226,16 +226,3 @@ struct CatalogSeasonCard: View {
     .accessibilityLabel("\(requestSeasonOf(showName, season.number)), \(line)")
   }
 }
-
-/// A bar of how much is in, with the share beside it, as Android's `ProgressLine`.
-struct RequestProgressLine: View {
-  let progress: Double
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    HStack(spacing: Space.s3) {
-      ProgressBar(progress, height: 6)
-      Text(formatPercent(progress)).textStyle(.sm).foregroundStyle(palette.mutedForeground).monospacedDigit()
-    }
-  }
-}

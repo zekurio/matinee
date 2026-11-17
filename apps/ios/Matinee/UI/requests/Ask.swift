@@ -71,12 +71,6 @@ struct PosterBadge: View {
   }
 }
 
-/// Where a request button is drawn: leading a catalog page's row, as large
-/// as Play; or `plain`, off a picture, as in a season's dashed frame.
-enum RequestButtonLook {
-  case page, plain
-}
-
 /// The title's one button: "Request" or "Cancel request", whichever the
 /// server's action allows, else nothing. Cancelling happens here; a
 /// request goes to `onRequest`, which asks at once or opens the request
@@ -87,7 +81,6 @@ enum RequestButtonLook {
 struct PosterActionButton: View {
   let availability: Availability
   let name: String
-  var look: RequestButtonLook = .page
   var busy = false
   var action: RequestPosterAction?
   var label: String?
@@ -102,25 +95,20 @@ struct PosterActionButton: View {
     if let act = action ?? availability.posterAction ?? (blocked ? .request : nil) {
       let why = blocked ? requestDimmedText(availability, admin: user?.isAdmin == true) : nil
       MatineeButton(
-        look: buttonLook(act), size: look == .page ? .touch : .md, dimmed: blocked, pending: busy, fullWidth: fullWidth
+        look: act == .request ? .primary : .frosted, size: .touch, dimmed: blocked, pending: busy, fullWidth: fullWidth
       ) {
         press(act, blocked: blocked, why: why)
       } label: {
         if !busy {
-          LucideIcon(icon(act), size: look == .page ? 16 : 14)
+          LucideIcon(icon(act), size: 16)
         }
         Text(act == .request ? label ?? requestPosterActionText(act) : requestPosterActionText(act))
-          .lineLimit(look == .page ? 1 : 2)
+          .lineLimit(1)
           .multilineTextAlignment(.center)
       }
       .accessibilityHint(why.map { [$0.text, $0.note].compactMap(\.self).joined(separator: " ") } ?? "")
       .motion(Motion.color, value: act)
     }
-  }
-
-  private func buttonLook(_ act: RequestPosterAction) -> ButtonLook {
-    if act == .request { return .primary }
-    return look == .page ? .frosted : .secondary
   }
 
   private func icon(_ act: RequestPosterAction) -> Lucide {

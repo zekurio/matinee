@@ -108,7 +108,6 @@ struct TVHomeScreen: View {
   @Environment(MatineeSession.self) private var session
   @Environment(\.api) private var api
   @Environment(\.tvActions) private var actions
-  @Environment(\.palette) private var palette
   @Environment(\.tvPageOnTop) private var onTop
 
   var body: some View {

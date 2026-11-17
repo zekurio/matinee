@@ -311,7 +311,6 @@ private struct SeasonPage: View {
   @Environment(\.navigator) private var nav
   @Environment(\.gutter) private var gutter
   @Environment(\.windowSize) private var window
-  @Environment(ViewerState.self) private var viewer: ViewerState?
 
   var body: some View {
     let layout = TitleLayout(window: window)

@@ -4,7 +4,7 @@ import SwiftUI
 
 /*
  * The catalog's parts of other pages: search's "Not here yet", after the
- * web's catalog-search.tsx and Android's SearchScreen.kt, and a person's
+ * web's catalog-search.tsx and Android's Search.kt, and a person's
  * titles the server doesn't have, after the web's people.$name.tsx. Each
  * loads on its own, so the page's own results never wait for the catalog.
  *
@@ -68,7 +68,7 @@ private struct CatalogSearching: ViewModifier {
         guard !text.isEmpty, let api else { return }
         try? await Task.sleep(for: .milliseconds(350))
         guard !Task.isCancelled else { return }
-        search.ask(text, api: requestApi(api))
+        search.ask(text, api: api)
       }
       .followsRequests(search.items.map { CatalogInput(ref: $0.ref, libraryId: nil) })
   }

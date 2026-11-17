@@ -28,9 +28,6 @@ private let EDITOR_WIDTH: CGFloat = 840
 /// editor ask: the provider, or nil when the library has none. For admins
 /// only; the server turns anyone else away.
 private func loadProvider(_ api: MatineeApi, _ libraryId: String) async throws -> MetadataProvider? {
-  #if DEBUG
-    if MetadataFixtures.on { return MetadataFixtures.provider }
-  #endif
   async let libraries = api.libraries.list()
   async let providers = api.metadata.providers()
   return libraryProvider(libraryId, libraries: try await libraries, providers: try await providers)
@@ -49,18 +46,11 @@ private struct TitlePage<Content: View>: View {
       case .loading: LoadingBox()
       case .failed(let message, let disconnected):
         ErrorBox(Str.titleLoadError, message, disconnected: disconnected, onRetry: loader.reload)
-      case .ready(let title): content(shown(title))
+      case .ready(let title): content(title)
       }
     }
     .topBar(heading) { DisconnectedAction(loader) }
     .loads(loader) { [titleId] api in try await api.titles.get(id: titleId) }
-  }
-
-  private func shown(_ title: Title) -> Title {
-    #if DEBUG
-      if MetadataFixtures.on { return MetadataFixtures.matched(title) }
-    #endif
-    return title
   }
 }
 
@@ -248,17 +238,7 @@ private struct IdentifyForm: View {
     guard let api else { return }
     results = .loading
     do {
-      let found: [MetadataMatch]
-      #if DEBUG
-        if MetadataFixtures.on {
-          found = try await MetadataFixtures.matches(query)
-        } else {
-          found = try await api.titles.findMatches(id: title.id, query: query.name, year: query.year)
-        }
-      #else
-        found = try await api.titles.findMatches(id: title.id, query: query.name, year: query.year)
-      #endif
-      results = .ready(found)
+      results = try await .ready(api.titles.findMatches(id: title.id, query: query.name, year: query.year))
     } catch {
       // A newer search took over.
       if Failure(error) == .cancelled || Task.isCancelled { return }
@@ -277,17 +257,7 @@ private struct IdentifyForm: View {
   private func identify() async {
     guard let match = matching, let api else { return }
     do {
-      let updated: Title
-      #if DEBUG
-        if MetadataFixtures.on && MetadataFixtures.pretends(match.id) {
-          try await Task.sleep(for: .seconds(1))
-          updated = try await api.titles.get(id: title.id)
-        } else {
-          updated = try await api.titles.identify(id: title.id, providerId: match.id)
-        }
-      #else
-        updated = try await api.titles.identify(id: title.id, providerId: match.id)
-      #endif
+      let updated = try await api.titles.identify(id: title.id, providerId: match.id)
       viewer?.changed()
       snackbar.post(ToastMessage(Str.titleIdentifyMatched(updated.name), kind: .success))
       nav.back()
@@ -616,20 +586,9 @@ private struct ImageEditor: View {
     guard let api else { return }
     remote = .loading
     do {
-      let found: [RemoteImage]
-      #if DEBUG
-        if MetadataFixtures.on {
-          found = try await MetadataFixtures.remoteImages(slot, allLanguages: allLanguages)
-        } else {
-          found = try await api.titles.remoteImages(
-            id: target.titleId, slot: slot, season: target.season, episode: target.episode,
-            allLanguages: allLanguages)
-        }
-      #else
-        found = try await api.titles.remoteImages(
-          id: target.titleId, slot: slot, season: target.season, episode: target.episode, allLanguages: allLanguages)
-      #endif
-      remote = .ready(found)
+      remote = try await .ready(
+        api.titles.remoteImages(
+          id: target.titleId, slot: slot, season: target.season, episode: target.episode, allLanguages: allLanguages))
     } catch {
       if Failure(error) == .cancelled || Task.isCancelled { return }
       remote = .failed(describeFailure(error), disconnected: Failure(error).isDisconnect)

@@ -44,7 +44,7 @@ struct PlayerFailure: View {
 
 /// How far the last skips went, for a moment after the last press: the
 /// web's flash note (player-controls.tsx, `FlashNote`), which every skip
-/// shows since #52, from the buttons, a double tap, or a key. Presses in a
+/// shows, from the buttons, a double tap, or a key. Presses in a
 /// row the same way add up (MatineeCore's `SkipFlash`), as the TV's mark
 /// does. Android's phone player has none. Its icon is the skip buttons'.
 struct SkipFlashNote: View {

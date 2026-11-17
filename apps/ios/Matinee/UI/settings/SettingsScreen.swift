@@ -27,9 +27,6 @@ enum SettingsPage: String, CaseIterable {
 
   var key: String { rawValue }
 
-  /// The page for `key`; `server-appearance`, Branding's key before it took Android's, opens it too.
-  static func of(_ key: String) -> SettingsPage? { key == "server-appearance" ? .branding : SettingsPage(rawValue: key) }
-
   var admin: Bool {
     switch self {
     case .account, .appearance, .playback, .subtitles, .downloads, .about: false
@@ -188,7 +185,7 @@ struct SettingsPageScreen: View {
   let key: String
 
   var body: some View {
-    switch SettingsPage.of(key) {
+    switch SettingsPage(rawValue: key) {
     case nil: SettingsScreen()
     case .account: AccountPage()
     case .appearance: AppearancePage()

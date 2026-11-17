@@ -72,8 +72,8 @@ struct SettingsScaffold<Content: View>: View {
 let SETTINGS_SPACING: CGFloat = Space.s7
 
 /// A titled group of settings, as Android's `Section`: its heading in the
-/// page's title style, 14 over what it holds. Renamed, as SwiftUI has a
-/// `Section`. For a block of rows alone, `ListSection` says the same in one.
+/// page's title style, 14 over what it holds. Not `Section`, which is
+/// SwiftUI's. For a block of rows alone, `ListSection` says the same in one.
 struct SettingsSection<Content: View>: View {
   let title: String
   var spacing: CGFloat = Space.s3_5

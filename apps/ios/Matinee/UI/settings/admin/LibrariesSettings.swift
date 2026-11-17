@@ -193,12 +193,15 @@ struct LibraryEditorScreen: View {
     let existing = id.flatMap { id in list?.first { $0.id == id } }
     let title = id == nil ? Str.webLibrariesDialogAddTitle : Str.webLibrariesDialogEditTitle
     // The draft starts from the library and the providers, so it waits for both.
-    let ready = !providers.state.isLoading && (id == nil || existing != nil || libraries.state.isFailed)
+    let ready = !providers.state.isLoading && (id == nil || existing != nil)
     Group {
       if ready {
         LibraryEditor(
           title: title, existing: existing, providers: providers.state.value ?? [],
           knownPath: list?.first?.paths.first, results: results)
+      } else if libraries.state.isFailed {
+        // Without the library there is nothing to edit, and an empty editor would add one.
+        AdminPage(title) { AdminLoaded(libraries) { _ in EmptyView() } }
       } else {
         AdminPage(title) { AdminLoaded(providers) { _ in EmptyView() } }
       }
@@ -273,7 +276,7 @@ private struct LibraryEditor: View {
         if draft.provider != nil {
           SelectRow(
             Str.webLibrariesDialogLanguage, selection: $draft.language,
-            options: offeredMetadataLanguages(draft.language).map { ($0.value, metadataLanguageName($0.tag)) })
+            options: offeredMetadataLanguages(draft.language).map { ($0.value, languageName($0.tag)) })
         }
       }
       if draft.provider == nil {
@@ -328,13 +331,6 @@ private struct LibraryEditor: View {
       nav.backWith(LIBRARY_SAVED, saved.id)
     }
   }
-}
-
-/// "German" for `de`, "Portuguese (Brazil)" for `pt-BR`, in the app's language.
-private func metadataLanguageName(_ tag: String) -> String {
-  let locale = Locale.app
-  guard let name = locale.localizedString(forIdentifier: tag), !name.isEmpty else { return tag }
-  return name.prefix(1).uppercased(with: locale) + name.dropFirst()
 }
 
 /// The server's folders, one level at a time, as a page over the editor,
