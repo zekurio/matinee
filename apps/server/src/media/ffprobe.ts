@@ -11,6 +11,7 @@ import type {
 import { type SchemaBoundaryInput, t } from "@matinee/contracts/schema"
 
 import { env } from "../env"
+import { ShownError } from "../errors"
 import { runProcess } from "./process"
 
 // Probing reads headers and one frame; anything slower is a wedged process
@@ -292,7 +293,7 @@ function readJson(stdout: string) {
   try {
     json = JSON.parse(stdout)
   } catch {
-    throw new Error("ffprobe printed something other than JSON")
+    throw new ShownError("ffprobe printed something other than JSON")
   }
   return json
 }
@@ -333,7 +334,7 @@ function readProbe(stdout: string): MediaProbe {
     }
   }
   if (!probe.video && probe.audio.length === 0) {
-    throw new Error("ffprobe found no video or audio streams")
+    throw new ShownError("ffprobe found no video or audio streams")
   }
   return probe
 }

@@ -204,7 +204,9 @@ export async function tmdbPerson(
       role: row.role,
     }))
   const photo = detail.photo
-    ? ((await saveArtwork([detail.photo])).get(detail.photo) ?? null)
+    ? ((await saveArtwork([detail.photo], undefined, { catalog: true })).get(
+        detail.photo,
+      ) ?? null)
     : null
   return {
     profile: {

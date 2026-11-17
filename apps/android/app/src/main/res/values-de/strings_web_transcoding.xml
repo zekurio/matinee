@@ -13,6 +13,7 @@
     <string name="web_transcoding_acceleration_videotoolbox">Apple VideoToolbox</string>
     <string name="web_transcoding_check_missing">Dieser ffmpeg-Build oder diese GPU unterstützt das nicht.</string>
     <string name="web_transcoding_check_failed">Auf diesem Server ist es fehlgeschlagen: %1$s</string>
+    <string name="web_transcoding_check_failedPlain">Auf diesem Server ist es fehlgeschlagen.</string>
     <string name="web_transcoding_field_vaapiDevice">VAAPI-Gerät</string>
     <string name="web_transcoding_field_qsvDevice">QSV-Gerät</string>
     <string name="web_transcoding_field_h264Crf">H.264-CRF</string>
@@ -42,10 +43,13 @@
     <string name="web_transcoding_ffmpeg_unknownVersion">unbekannt</string>
     <string name="web_transcoding_ffmpeg_pauseKeys">Pause-Tasten</string>
     <string name="web_transcoding_ffmpeg_doviRemoval">Entfernen von Dolby Vision</string>
+    <string name="web_transcoding_ffmpeg_tonemapx">Tone-Mapping (tonemapx)</string>
+    <string name="web_transcoding_ffmpeg_errorDetail">Die Prüfung endete mit diesem Fehler:</string>
     <string name="web_transcoding_ffmpeg_lacks">Diesem Build fehlt %1$s. Verwende jellyfin-ffmpeg.</string>
     <string name="web_transcoding_hardware_title">Hardwarebeschleunigung</string>
     <string name="web_transcoding_hardware_acceleration">Beschleunigung</string>
     <string name="web_transcoding_hardware_deviceFailed">Das Gerät ließ sich nicht öffnen, daher laufen Transkodierungen in Software.</string>
+    <string name="web_transcoding_hardware_deviceFailedDetail">Das Gerät ließ sich nicht öffnen, daher laufen Transkodierungen in Software. ffmpeg meldete: %1$s</string>
     <string name="web_transcoding_hardware_notInBuild">Nicht in diesem ffmpeg-Build</string>
     <string name="web_transcoding_hardware_encoding">Hardware-Kodierung</string>
     <string name="web_transcoding_hardware_lowPower">Intel-Low-Power-Encoder für %1$s</string>

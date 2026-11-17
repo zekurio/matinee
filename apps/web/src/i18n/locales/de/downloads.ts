@@ -26,7 +26,6 @@ export default {
   "downloads.keepHdr": "HDR behalten",
 
   "downloads.audio": "Tonspuren",
-  "downloads.audio.loading": "Tonspuren werden geladen…",
   "downloads.audio.keep": "{format} behalten",
   "downloads.audio.convert": "{codec} {layout}",
   "downloads.audio.include": "{track} einschließen",
@@ -45,12 +44,11 @@ export default {
 
   "downloads.estimate": "Etwa {size}",
   "downloads.estimating": "Größe wird berechnet…",
-  "downloads.toneMapped": "HDR wird in SDR umgewandelt.",
+  "downloads.estimateToneMapped": "Etwa {size}. HDR wird in SDR umgewandelt.",
   "downloads.submit": "Herunterladen",
   "downloads.started": "Download gestartet",
   "downloads.started.description":
     "Die Datei wird während des Downloads umgewandelt. Das kann etwas dauern.",
-  "downloads.startFailed": "Der Download konnte nicht gestartet werden",
 
   "downloads.all.description":
     "Speichert jede Originaldatei mit allen Spuren. Für eine Version für dieses Gerät lade eine Folge einzeln herunter.",

@@ -30,7 +30,6 @@ export default defineMessages("downloads", {
   "downloads.keepHdr": "Keep HDR",
 
   "downloads.audio": "Audio tracks",
-  "downloads.audio.loading": "Loading audio tracks…",
   // {format} like TrueHD Atmos.
   "downloads.audio.keep": "Keep {format}",
   // {codec} like AAC, {layout} like Stereo or 5.1.
@@ -56,12 +55,11 @@ export default defineMessages("downloads", {
 
   "downloads.estimate": "About {size}",
   "downloads.estimating": "Working out the size…",
-  "downloads.toneMapped": "HDR is converted to SDR.",
+  "downloads.estimateToneMapped": "About {size}. HDR is converted to SDR.",
   "downloads.submit": "Download",
   "downloads.started": "Download started",
   "downloads.started.description":
     "It's converted as it downloads, so this can take a while.",
-  "downloads.startFailed": "Couldn't start the download",
 
   // The same dialog for every file of a show or season. {name} is the
   // show or season.

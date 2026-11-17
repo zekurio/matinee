@@ -94,5 +94,7 @@ export function chooseEncoder(
   }
   const software = softwareEncoderName(codec)
   if (capabilities.encoders.includes(software)) return software
-  throw new Error(`This ffmpeg has no working encoder for ${codec}.`)
+  throw new Error(
+    `This ffmpeg has no ${codec} encoder. Install a build that includes one, or set MATINEE_FFMPEG_PATH to one that does.`,
+  )
 }

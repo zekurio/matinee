@@ -39,4 +39,4 @@ export function createMatineeClient(
   return createORPCClient(link)
 }
 
-export { ORPCError, isDefinedError } from "@orpc/client"
+export { ORPCError } from "@orpc/client"

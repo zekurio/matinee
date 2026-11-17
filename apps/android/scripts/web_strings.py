@@ -11,7 +11,9 @@ per message, named `web_` and the key with dots and dashes as underscores:
 Placeholders become positional arguments in the order they first appear in
 the English message, the same in every language: "{done} of {total}" is
 `%1$s of %2$s`. In a plural, `{count}` is the quantity, `%1$d`, and comes
-first. Run it again after the web's messages change:
+first. The `server` and `validation` areas also become api/ServerMessages.kt, the
+English text the app matches to translate server errors (api/ServerText.kt,
+the web's `translateKnown()`). Run it again after the web's messages change:
 
     scripts/web_strings.py
 """
@@ -25,9 +27,12 @@ ROOT = Path(__file__).resolve().parent.parent
 LOCALES = ROOT.parent / "web/src/i18n/locales"
 RES = ROOT / "app/src/main/res"
 
-AREAS = ["appearance", "ask", "branding", "catalog", "common", "discover", "filters", "jobs", "libraries", "oidc", "requests", "transcoding", "trickplay", "users"]
+AREAS = ["appearance", "ask", "branding", "catalog", "common", "discover", "filters", "jobs", "libraries", "oidc", "requests", "server", "transcoding", "trickplay", "users", "validation"]
 # The app's languages: English in values/, the rest in values-<lang>/.
 LANGUAGES = {"en": "values", "de": "values-de"}
+# Areas whose English text the app matches, as the web's translateKnown() does.
+MATCHED_AREAS = ["server", "validation"]
+KOTLIN_OUT = ROOT / "app/src/main/java/io/github/zekurio/matinee/api/ServerMessages.kt"
 
 TOKEN = re.compile(
     r'''\s*(?:
@@ -137,6 +142,62 @@ def order(english, others) -> dict:
     return {p: i + 1 for i, p in enumerate(seen)}
 
 
+def english_form(base) -> str:
+    """The text the web matches: a plural's one form, which English picks for a count of 1."""
+    if isinstance(base, dict):
+        return base["one"] if "one" in base else base["other"]
+    return base
+
+
+def kotlin_string(text: str) -> str:
+    """A Kotlin string literal. `$` is escaped so Kotlin doesn't read a template."""
+    body = text.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$").replace("\n", "\\n")
+    return f'"{body}"'
+
+
+def kotlin_list(items: list[str]) -> str:
+    if not items:
+        return "emptyList()"
+    return f"listOf({', '.join(kotlin_string(item) for item in items)})"
+
+
+def kotlin_entry(key: str, base, others: list) -> list[str]:
+    """One ServerMessage: the English text, its placeholders, and the positional args of its resource."""
+    plural = isinstance(base, dict)
+    text = english_form(base)
+    names = PLACEHOLDER.findall(text)
+    positions = order(base, others)
+    args = sorted(positions, key=positions.get)
+    for arg in args:
+        if arg in names or (plural and arg == "count" and not names):
+            continue
+        raise ValueError(f"{key}: the translations use the placeholder {arg!r}, which the English message doesn't have")
+    return [
+        "    ServerMessage(",
+        f"        text = {kotlin_string(text)},",
+        f"        names = {kotlin_list(names)},",
+        f"        args = {kotlin_list(args)},",
+        f"        resId = R.{'plurals' if plural else 'string'}.{name(key)},",
+        f"        plural = {'true' if plural else 'false'},",
+        "    ),",
+    ]
+
+
+def kotlin_file(entries: list[list[str]]) -> str:
+    lines = [
+        "// Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/server.ts and validation.ts. Don't edit.",
+        "package io.github.zekurio.matinee.api",
+        "",
+        "import io.github.zekurio.matinee.R",
+        "",
+        "/** The English server and validation messages, in the web's catalog order. See translateServerMessage. */",
+        "internal val serverMessages: List<ServerMessage> = listOf(",
+        *[line for entry in entries for line in entry],
+        ")",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def resource(key: str, base, value, positions: dict) -> list[str]:
     """The XML lines of one message, in a language that may lack it."""
     if not isinstance(base, dict):
@@ -152,9 +213,13 @@ def resource(key: str, base, value, positions: dict) -> list[str]:
 
 
 def main() -> None:
+    kotlin = []
     for area in AREAS:
         catalogs = {lang: messages(LOCALES / lang / f"{area}.ts") for lang in LANGUAGES}
         english = catalogs["en"]
+        resource_names = [name(key) for key in english]
+        if len(set(resource_names)) != len(resource_names):
+            raise ValueError(f"{area}: two keys make the same resource name")
         for lang, folder in LANGUAGES.items():
             lines = [
                 '<?xml version="1.0" encoding="utf-8"?>',
@@ -168,6 +233,12 @@ def main() -> None:
             out = RES / folder / f"strings_web_{area.lower()}.xml"
             out.write_text("\n".join(lines) + "\n")
             print(f"{out.relative_to(ROOT)}: {len(english)} messages", file=sys.stderr)
+        if area in MATCHED_AREAS:
+            for key, base in english.items():
+                others = [catalogs[o].get(key) for o in LANGUAGES if o != "en" and catalogs[o].get(key) is not None]
+                kotlin.append(kotlin_entry(key, base, others))
+    KOTLIN_OUT.write_text(kotlin_file(kotlin))
+    print(f"{KOTLIN_OUT.relative_to(ROOT)}: {len(kotlin)} messages", file=sys.stderr)
 
 
 if __name__ == "__main__":

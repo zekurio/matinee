@@ -105,8 +105,33 @@ async function describe(
 const IssuerMismatch = t.object({ body: t.object({ issuer: t.string() }) })
 /** Node's network errors carry a code such as ECONNREFUSED. */
 const SystemError = t.object({ code: t.string().min(1) })
+/** TLS errors from Node, for a provider whose certificate isn't trusted. */
+const CERTIFICATE_CODES = new Set([
+  "CERT_HAS_EXPIRED",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+])
 
-/** Turns a failed discovery into something the admin can act on. */
+/**
+ * The Node error code behind a failed request. Network failures arrive as
+ * "fetch failed" with the reason underneath; a host with several addresses
+ * gives an AggregateError with only a code.
+ */
+function networkCode(cause: unknown): string | undefined {
+  const inner = cause instanceof Error ? cause.cause : undefined
+  return (
+    SystemError.safeParse(inner).data?.code ??
+    SystemError.safeParse(cause).data?.code
+  )
+}
+
+/**
+ * Turns a failed discovery into something the admin can act on. The cause
+ * is logged in full; the message names only what the admin can fix.
+ */
 function discoveryError(issuerUrl: string, cause: unknown): string {
   if (cause instanceof WrongIssuerError) {
     return `The provider calls itself ${cause.issuer}. Use exactly that as the issuer URL.`
@@ -129,16 +154,25 @@ function discoveryError(issuerUrl: string, cause: unknown): string {
     case "OAUTH_RESPONSE_IS_NOT_JSON":
       return `${where} isn't a discovery document. Check the issuer URL.`
   }
-  // Network failures arrive as "fetch failed" with the reason underneath;
-  // a host with several addresses gives an AggregateError with only a code.
-  const inner = cause instanceof Error ? cause.cause : undefined
-  const reason =
-    inner instanceof Error
-      ? inner.message || SystemError.safeParse(inner).data?.code || "no answer"
-      : cause instanceof Error
-        ? cause.message
-        : String(cause)
-  return `Couldn't load ${where}: ${reason}`
+  const network = networkCode(cause)
+  if (network === "ECONNREFUSED") {
+    return `Couldn't load ${where}: the connection was refused.`
+  }
+  if (network === "ENOTFOUND" || network === "EAI_AGAIN") {
+    return `Couldn't load ${where}: the host name wasn't found.`
+  }
+  if (
+    network === "ETIMEDOUT" ||
+    network === "UND_ERR_CONNECT_TIMEOUT" ||
+    (cause instanceof Error &&
+      (cause.name === "AbortError" || cause.name === "TimeoutError"))
+  ) {
+    return `Couldn't load ${where}: the connection timed out.`
+  }
+  if (network && CERTIFICATE_CODES.has(network)) {
+    return `Couldn't load ${where}: its TLS certificate isn't trusted.`
+  }
+  return `Couldn't load ${where}. Check the server log for details.`
 }
 
 /**
@@ -229,6 +263,10 @@ export const adminAuth = {
       try {
         await discover(next)
       } catch (cause) {
+        log.warn(
+          `Couldn't load the sign-in provider's discovery document at ${settings.issuerUrl}`,
+          cause,
+        )
         throw badRequest(discoveryError(settings.issuerUrl, cause))
       }
     }

@@ -18,6 +18,7 @@ import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.Paths
 import io.github.zekurio.matinee.api.User
 import io.github.zekurio.matinee.api.decodeSaved
+import io.github.zekurio.matinee.api.serverWords
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -396,8 +397,8 @@ class Session(context: Context) {
                 return null
             } catch (_: ApiException) {
                 failure = res.getString(R.string.connect_not_matinee, url.display)
-            } catch (e: IOException) {
-                failure = e.message ?: res.getString(R.string.connect_failed, url.display)
+            } catch (_: IOException) {
+                failure = res.getString(R.string.connect_failed, url.display)
             } catch (_: kotlinx.serialization.SerializationException) {
                 failure = res.getString(R.string.connect_not_matinee, url.display)
             }
@@ -515,7 +516,8 @@ class Session(context: Context) {
             saveSignIn(server, MatineeApi(server, base).auth.app.token(code, pending.verifier), adding?.name)
             null
         } catch (e: IOException) {
-            e.message ?: res.getString(R.string.signin_failed)
+            // The server's own words when it sent some; the rest of an error's text names sockets and hosts.
+            (e as? ApiException)?.message?.let { serverWords(it, res) } ?: res.getString(R.string.signin_failed)
         }
     }
 

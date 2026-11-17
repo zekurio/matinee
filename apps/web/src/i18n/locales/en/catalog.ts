@@ -21,6 +21,11 @@ export default defineMessages("catalog", {
   "catalog.badge.here": "Here now",
   "catalog.badge.fresh": "New, from your request",
 
+  // A card's tooltip read aloud: its line, then the quieter one under it.
+  "catalog.tip.aloud": "{text}. {detail}",
+  // Two sentences of a tooltip read aloud, one after the other.
+  "catalog.tip.join": "{first} {second}",
+
   // A season's second line while it airs.
   "catalog.season.airing": "Airing · {aired} of {count}",
 

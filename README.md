@@ -135,69 +135,9 @@ pull requests.
 | `nix flake check`                | Builds it and runs the NixOS module tests |
 | `nix develop .#android`          | Shell with a JDK and the Android SDK      |
 | `just`                           | Lists the shortcuts                       |
-| `just tag <version>`             | Cuts a release, see [Release](#release)   |
 
 When `pnpm-lock.yaml` changes, `nix build` fails and prints the new hash.
 Put it in `pnpmDepsHash` in `nix/package.nix`.
-
-<details>
-<summary>Coming from the old devenv shell</summary>
-
-The dev database used to live in `.devenv/state/matinee-postgres`, and the
-new shell won't start while it's there. Move it first:
-
-```sh
-pg_ctl -D .devenv/state/matinee-postgres -w stop  # from the old shell, if running
-mkdir -p data
-mv .devenv/state/matinee-postgres data/postgres
-direnv allow
-```
-
-Don't delete `.devenv` until the database has moved.
-
-The early migrations were squashed into `0000_initial_schema`. A database
-with the old history can't apply it, so back up what you need and recreate
-it.
-
-</details>
-
-## Release
-
-Everything shares the `version` in the root `package.json`. To release:
-
-```sh
-just tag 0.2.0
-```
-
-This bumps `package.json`, commits `chore: release v0.2.0`, tags it, and
-pushes. You need to be on a clean `main` that matches `origin/main`. Keep
-minor and patch under 100, since the Android version code is
-`major * 10000 + minor * 100 + patch`.
-
-The tag runs [`release.yml`](.github/workflows/release.yml). It checks the
-tag against `package.json`, runs `nix flake check`, pushes the package to
-Cachix, and builds and signs the Android APKs. Then it drafts a GitHub
-release with one APK per ABI, a universal one, and `checksums.txt`. Try
-the APKs on a phone and a TV before you publish the draft.
-
-The workflow needs `CACHIX_AUTH_TOKEN` and a `release` environment with
-these secrets:
-
-| Secret                      | Value                          |
-| --------------------------- | ------------------------------ |
-| `ANDROID_KEYSTORE_BASE64`   | `base64 -w0 matinee.jks`       |
-| `ANDROID_KEYSTORE_PASSWORD` | The keystore password          |
-| `ANDROID_KEY_ALIAS`         | The key alias, `matinee` below |
-| `ANDROID_KEY_PASSWORD`      | The key password               |
-
-```sh
-keytool -genkeypair -v -keystore matinee.jks -alias matinee \
-  -keyalg RSA -keysize 4096 -validity 10000
-```
-
-Keep an offline copy of the keystore. Android only installs updates signed
-with the same key, so losing it means everyone reinstalls and loses their
-downloads.
 
 ## License
 

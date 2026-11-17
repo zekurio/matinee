@@ -7,7 +7,8 @@ import {
   QueryClient,
 } from "@tanstack/react-query"
 
-import { tr, translateKnown } from "@/i18n"
+import { knownMessage, tr, translateKnown } from "@/i18n"
+import { ShownError } from "@/lib/shown-error"
 
 declare global {
   interface Window {
@@ -106,12 +107,20 @@ export const queryClient = new QueryClient({
   },
 })
 
+/** What oRPC says for input that fails its schema, before the server's own words. */
+const ORPC_VALIDATION_MESSAGE = "Input validation failed"
+
 /** A message to show the user for a failed call. */
 export function errorMessage(cause: unknown): string {
   if (cause instanceof ORPCError) {
-    return cause.status < 500 && cause.message
-      ? translateKnown(cause.message)
-      : tr("common.error.server")
+    if (cause.status >= 500 || !cause.message) return tr("common.error.server")
+    // A server message is written for the user, so one the catalog lacks
+    // still shows, in English. oRPC's own text for a schema failure is the
+    // exception: it names nothing the user can fix.
+    if (cause.message === ORPC_VALIDATION_MESSAGE) {
+      return tr("common.error.invalidInput")
+    }
+    return translateKnown(cause.message)
   }
   if (cause instanceof Error && cause.name === "NotAllowedError") {
     return tr("common.error.passkeyClosed")
@@ -119,8 +128,11 @@ export function errorMessage(cause: unknown): string {
   if (cause instanceof Error && cause.name === "InvalidStateError") {
     return tr("common.error.passkeyExists")
   }
-  if (cause instanceof Error && cause.message) {
-    return translateKnown(cause.message)
+  if (cause instanceof ShownError) return cause.message
+  // Only text the catalog knows is shown. Other errors (a failed fetch, a
+  // TypeError, a JSON parse) mean nothing to the user.
+  if (cause instanceof Error) {
+    return knownMessage(cause.message) ?? tr("common.error.unknown")
   }
   return tr("common.error.unknown")
 }

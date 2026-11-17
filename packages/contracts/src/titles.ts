@@ -422,7 +422,7 @@ export const NO_TITLE_FILTERS: TitleFilters = {
 /** A list of titles: what it holds, in which order, and which page. */
 export const TitleQuery = t.object({
   /** Part of the name or original name. */
-  query: t.string().trim().max(200).optional(),
+  query: t.string().trim().max(200, "Use at most 200 characters.").optional(),
   kind: TitleKind.optional(),
   filters: TitleFilters.$default(NO_TITLE_FILTERS),
   sort: TitleSort.$default("name"),

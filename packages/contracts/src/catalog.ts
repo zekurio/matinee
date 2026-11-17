@@ -192,7 +192,7 @@ export const catalogContract = {
   search: get("/catalog/search")
     .input(
       t.object({
-        query: t.string().trim().min(1).max(256),
+        query: t.string().trim().min(1).max(256, "Use at most 256 characters."),
         kind: TitleKind.optional(),
         libraryId: t.uuid().optional(),
         page: t.number().int().min(1).$default(1),

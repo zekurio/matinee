@@ -185,7 +185,7 @@ private fun Place(
         }
         Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = if (small) 28.dp else 36.dp)
         Text(
-            if (place.self) "${user.name} ${stringResource(R.string.stats_you)}" else user.name,
+            if (place.self) stringResource(R.string.stats_name_you, user.name) else user.name,
             style = text,
             color = content,
             maxLines = 1,

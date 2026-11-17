@@ -96,7 +96,8 @@ export const AdminAuthSettings = t.object({
 export type AdminAuthSettings = t.infer<typeof AdminAuthSettings>
 
 /** An empty text field drops the saved value, so the environment's applies. */
-const text = (max: number) => t.string().trim().max(max)
+const text = (max: number) =>
+  t.string().trim().max(max, `Use at most ${max} characters.`)
 
 /** An http or https URL, written out with `://`. */
 const isHttpUrl = (value: string) =>

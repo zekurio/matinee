@@ -20,8 +20,6 @@ export default defineMessages("library", {
   "library.noFilterMatch.shows": "No shows match these filters",
   "library.none.movies": "No movies found",
   "library.none.shows": "No shows found",
-  // Sorts.
-  "library.sort.recent": "Recently added",
   // Filter, sort, and search controls.
   "library.filters": "Filters",
   "library.filtersOn": plural({

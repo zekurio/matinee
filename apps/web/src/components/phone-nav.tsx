@@ -129,7 +129,7 @@ export function TabBar({ user, current }: { user: User; current: PhoneTab }) {
           replace={replace}
           aria-label={
             needsYou > 0
-              ? `${tr("shell.profile")}. ${tr("requests.dot")}`
+              ? tr("requests.labelled", { label: tr("shell.profile") })
               : tr("shell.profile")
           }
           aria-current={current === "profile" ? "page" : undefined}

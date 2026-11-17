@@ -11,6 +11,7 @@ export default {
   "auth.signIn.errorHint":
     "Nutze einen Passkey dieses Servers oder bitte den Admin um Zugang.",
   "auth.signIn.errorHintSso": "Bitte den Admin um Zugang.",
+  "auth.signIn.failed": "Anmeldung fehlgeschlagen. Versuch es noch einmal.",
   "auth.signIn.noMethod":
     "Bei diesem Server kann man sich gerade nicht anmelden. Frag den Admin.",
   "auth.signIn.newHere": "Neu auf diesem Server?",

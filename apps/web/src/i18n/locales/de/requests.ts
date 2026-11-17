@@ -8,7 +8,7 @@ export default {
     one: "Anfragen, {count} wartet auf dich",
     other: "Anfragen, {count} warten auf dich",
   }),
-  "requests.dot": "Anfragen warten auf dich",
+  "requests.labelled": "{label}. Anfragen warten auf dich",
 
   "requests.lists": "Listen",
   "requests.list.waiting": "Wartend",
@@ -112,6 +112,8 @@ export default {
   "requests.progress.label": "Fortschritt für {name}",
 
   "requests.attention.unknown": "Ohne Grund fehlgeschlagen",
+  "requests.attention.failedUnknown":
+    "Das ist fehlgeschlagen. Details stehen im Server-Log.",
 
   "requests.done.arrived": "{when} angekommen",
   "requests.done.declined": "{when} abgelehnt",

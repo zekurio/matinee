@@ -45,7 +45,7 @@
     <string name="web_users_groupFromProviderShort">(von %1$s)</string>
     <string name="web_users_ownAccess">Eigene Grenzen</string>
     <string name="web_users_ownAccessHint">Hat eigene Einstellungen über seinen Gruppen</string>
-    <string name="web_users_ownAccessFromProvider">Bei der Anmeldung vom Richtlinien-Claim von %1$s gesetzt</string>
+    <string name="web_users_ownAccessFromProvider">Bei der Anmeldung durch den Richtlinien-Claim von %1$s gesetzt</string>
     <plurals name="web_users_passkeys">
         <item quantity="one">%1$d Passkey</item>
         <item quantity="other">%1$d Passkeys</item>

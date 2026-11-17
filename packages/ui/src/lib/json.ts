@@ -19,11 +19,3 @@ export function isObjectRecord(
 ): value is Record<string, JsonValue> {
   return ObjectRecord.safeParse(value).success && !Array.isArray(value)
 }
-
-export function isStringValue(value: JsonInput): value is string {
-  return t.string().safeParse(value).success
-}
-
-export function isFiniteNumberValue(value: JsonInput): value is number {
-  return t.number().safeParse(value).success
-}

@@ -11,7 +11,7 @@ import { trackLabel } from "./languages"
 export function trackDetail(track: SubtitleTrack): string {
   const parts = []
   if (track.forced) parts.push(tr("player.subtitles.forced"))
-  if (track.sdh) parts.push("SDH")
+  if (track.sdh) parts.push(tr("player.subtitles.sdh"))
   parts.push(track.format)
   if (track.delivery === "burn-in") parts.push(tr("player.subtitles.burnedIn"))
   return parts.join(" · ")

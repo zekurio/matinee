@@ -16,9 +16,12 @@ import { and, eq, isNotNull, isNull, or } from "drizzle-orm"
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core"
 import { Hono } from "hono"
 
+import { seesArtwork } from "../access/artwork"
+import { viewerOf } from "../access/viewer"
 import { readSession } from "../auth/session"
 import { anyOf, arg, db } from "../db"
 import { env } from "../env"
+import { ShownError } from "../errors"
 import { defineQueue, perCpu, type Priority } from "../jobs/queue"
 import { log } from "../log"
 import { readPlaceholder } from "./blurhash"
@@ -26,6 +29,8 @@ import { showsOnLoginBackdrop } from "./login-backdrop"
 import { run } from "./process"
 
 const MAX_BYTES = 25 * 1024 * 1024
+// Shown for a download the network failed. The cause is in the log.
+const IMAGE_FETCH_FAILED = "Couldn't download this image. Try again later."
 const DOWNLOAD_TIMEOUT_MS = 30_000
 // A URL that failed is left alone for this long before trying again.
 const RETRY_AFTER_MS = 10 * 60 * 1000
@@ -55,16 +60,23 @@ type Executor = Pick<typeof db, "insert">
 export async function saveArtwork(
   urls: (string | null | undefined)[],
   executor: Executor = db,
+  { catalog = false }: { catalog?: boolean } = {},
 ): Promise<Map<string, string>> {
   const ids = new Map<string, string>()
   for (const url of urls) if (url) ids.set(url, artworkId(url))
   if (ids.size === 0) return ids
-  const rows = [...ids].map(([url, id]) => ({ id, url }))
+  const rows = [...ids].map(([url, id]) => ({ id, url, catalog }))
   for (let i = 0; i < rows.length; i += 500) {
-    await executor
-      .insert(artwork)
-      .values(rows.slice(i, i + 500))
-      .onConflictDoNothing()
+    const insert = executor.insert(artwork).values(rows.slice(i, i + 500))
+    // The catalog showing an image makes it public, also when a library
+    // saved it first; a library saving it never takes that back.
+    await (catalog
+      ? insert.onConflictDoUpdate({
+          target: artwork.id,
+          set: { catalog: true },
+          where: eq(artwork.catalog, false),
+        })
+      : insert.onConflictDoNothing())
   }
   return ids
 }
@@ -148,12 +160,14 @@ export async function fetchImage(
   const response = await fetch(url, {
     signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
     headers: { "user-agent": "Matinee" },
+  }).catch((cause: unknown) => {
+    throw fetchFailed(url, cause)
   })
-  if (!response.ok) throw new Error(`${url} answered ${response.status}`)
+  if (!response.ok) throw new ShownError(`${url} answered ${response.status}`)
   const length = Number(response.headers.get("content-length") ?? 0)
   if (length > MAX_BYTES) {
     await response.body?.cancel()
-    throw new Error(`${url} is too large`)
+    throw new ShownError(`${url} is too large`)
   }
   // Content-Length is optional and may describe the compressed transfer,
   // not the decoded body. Enforce the limit while reading too.
@@ -163,12 +177,14 @@ export async function fetchImage(
   if (reader) {
     try {
       for (;;) {
-        const { done, value } = await reader.read()
+        const { done, value } = await reader.read().catch((cause: unknown) => {
+          throw fetchFailed(url, cause)
+        })
         if (done) break
         received += value.byteLength
         if (received > MAX_BYTES) {
           await reader.cancel()
-          throw new Error(`${url} is too large`)
+          throw new ShownError(`${url} is too large`)
         }
         chunks.push(value)
       }
@@ -183,8 +199,14 @@ export async function fetchImage(
     offset += chunk.byteLength
   }
   const format = sniffImage(bytes)
-  if (!format) throw new Error(`${url} isn't a JPEG, PNG, or WebP image`)
+  if (!format) throw new ShownError(`${url} isn't a JPEG, PNG, or WebP image`)
   return { bytes, format }
+}
+
+/** A download that the network failed: the cause goes to the log, not the reader. */
+function fetchFailed(url: string, cause: unknown): ShownError {
+  log.warn(`Couldn't download ${url}`, cause)
+  return new ShownError(IMAGE_FETCH_FAILED)
 }
 
 async function download(id: string, url: string): Promise<Cached> {
@@ -545,12 +567,25 @@ artworkRoutes.get("/:id", async (c) => {
   const id = c.req.param("id")
   const size =
     ARTWORK_SIZES.find((name) => name === c.req.query("size")) ?? "small"
-  // The login page loads its backdrop before anyone signs in.
-  const allowed =
-    (await readSession(c)) !== null ||
-    (/^[0-9a-f]{32}$/.test(id) && (await showsOnLoginBackdrop(id, size)))
-  if (!allowed) return c.body(null, 401)
-  if (!/^[0-9a-f]{32}$/.test(id)) return c.body(null, 404)
+  const valid = /^[0-9a-f]{32}$/.test(id)
+  const user = await readSession(c)
+  if (!user) {
+    // The login page loads its backdrop before anyone signs in.
+    if (!valid || !(await showsOnLoginBackdrop(id, size))) {
+      return c.body(null, 401)
+    }
+  } else if (
+    !valid ||
+    // ACCESS: an image the viewer may not see answers as one that doesn't
+    // exist, so a hashed provider URL says nothing about hidden libraries.
+    // The login backdrop is shown to everyone anyway.
+    !(
+      (await seesArtwork(await viewerOf(user), id)) ||
+      (await showsOnLoginBackdrop(id, size))
+    )
+  ) {
+    return c.body(null, 404)
+  }
 
   const file = await artworkFile(id, size)
   if (!file) return c.body(null, 404)

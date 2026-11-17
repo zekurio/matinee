@@ -214,7 +214,9 @@ function AccountMenu({ user }: { user: User }) {
     <button
       type="button"
       aria-label={
-        needsYou > 0 ? `${accountLabel}. ${tr("requests.dot")}` : accountLabel
+        needsYou > 0
+          ? tr("requests.labelled", { label: accountLabel })
+          : accountLabel
       }
       className={cn(pillItem, "gap-2 pl-1", "data-popup-open:bg-foreground/10")}
     >

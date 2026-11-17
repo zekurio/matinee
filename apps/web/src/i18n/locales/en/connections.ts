@@ -11,7 +11,7 @@ export default defineMessages("connections", {
     "Add Radarr, Sonarr, or By hand, and make it the default for films or shows.",
   "connections.testing": "Testing…",
   "connections.connected": "Connected",
-  "connections.testFailed": "Test failed",
+  "connections.testFailed.detail": "Test failed. {error}",
   // {variable} is the environment variable, like MATINEE_CONNECTION_FILMS_API_KEY.
   "connections.key.none": "No key yet. Save one, or set {variable}.",
   "connections.actions": "Actions for {name}",
@@ -76,6 +76,7 @@ export default defineMessages("connections", {
   "connections.card.kind.movie": "Films",
   "connections.card.kind.show": "Shows",
   "connections.card.nowhere": "no library",
+  "connections.card.unknownSource": "Unknown source",
 
   // A connection's override rules.
   "connections.rules.title": "Override rules",
@@ -106,6 +107,10 @@ export default defineMessages("connections", {
     "Genres and keywords come from TMDB, which isn't set up.",
   // A rule setting left unset keeps the connection's value.
   "connections.rules.keep": "Connection's",
+  // Shown in a rule's row until its choices load.
+  "connections.rules.summaryPending": "Details appear once they load.",
+  // A user, genre, or language a rule names that is no longer there.
+  "connections.rules.unknownChoice": "unknown",
 
   // Which connection fills each library.
   "connections.libraries.title": "What fills each library",

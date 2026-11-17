@@ -5,6 +5,8 @@ import type {
 } from "@matinee/contracts"
 import type { ExternalIds, YouTubeTrailer } from "@matinee/db"
 
+import { ShownError } from "../errors"
+
 type MatchKind = "movie" | "show"
 
 // Enough to fill a row on a wide screen; Jellyfin keeps 15.
@@ -155,7 +157,7 @@ export interface MetadataSource {
 }
 
 /** A failed provider request, with the HTTP status if there was one. */
-export class ProviderError extends Error {
+export class ProviderError extends ShownError {
   constructor(
     message: string,
     readonly status: number | null = null,

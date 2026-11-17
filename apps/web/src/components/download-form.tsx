@@ -689,14 +689,12 @@ function DownloadFields({
         {sized && !failed && (
           <p className="text-muted-foreground text-sm" aria-live="polite">
             {estimate
-              ? [
-                  tr("downloads.estimate", {
-                    size: formatBytes(estimate.estimatedBytes),
-                  }),
-                  estimate.video.toneMapped && tr("downloads.toneMapped"),
-                ]
-                  .filter(Boolean)
-                  .join(" ")
+              ? tr(
+                  estimate.video.toneMapped
+                    ? "downloads.estimateToneMapped"
+                    : "downloads.estimate",
+                  { size: formatBytes(estimate.estimatedBytes) },
+                )
               : tr("downloads.estimating")}
           </p>
         )}

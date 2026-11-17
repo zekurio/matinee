@@ -294,7 +294,7 @@ import { onError } from "@orpc/server"
 
 import { SESSION_COOKIE } from "../auth/session"
 import { env } from "../env"
-import { logError } from "./errors"
+import { logError, mapValidationError } from "./errors"
 import { procedures, router } from "./router"
 
 /** JSON Schema for the contract's `t` schemas, for coercion and the document. */
@@ -307,7 +307,7 @@ const schemaConverters = [new TypeBoxToJsonSchemaConverter()]
  */
 export const openapi = new OpenAPIHandler(router, {
   plugins: [new SmartCoercionPlugin({ schemaConverters })],
-  interceptors: [onError(logError)],
+  interceptors: [onError(mapValidationError), onError(logError)],
 })
 
 const output = (schema: AnySchema) => ({ schema, strategy: "output" as const })

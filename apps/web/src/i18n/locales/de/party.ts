@@ -55,7 +55,7 @@ export default {
   "party.proposed": "{name} ist für die Party vorgeschlagen",
   "party.join.title": "Der Watch-Party von {owner} beitreten?",
   "party.join.titleNamed": "{name} beitreten?",
-  "party.join.namedBy": "Die Watch-Party von {owner}.",
+  "party.join.namedBy": "Die Watch-Party von {owner}. {description}",
   "party.join.people": plural({
     one: "{count} Person ist dabei.",
     other: "{count} Personen sind dabei.",
@@ -64,7 +64,7 @@ export default {
   "party.join.overDescription":
     "Alle sind gegangen, oder der Link gilt nicht mehr. Frag nach einem neuen.",
   "party.join.description":
-    "Du schaust mit den Leuten darin mit. Eine Party, in der du gerade bist, verlässt du dabei.",
+    "{people} Du schaust mit den Leuten darin mit. Eine Party, in der du gerade bist, verlässt du dabei.",
   "party.join.button": "Beitreten",
   "party.join.failed": "Beitreten fehlgeschlagen",
   "party.join.home": "Zur Startseite",

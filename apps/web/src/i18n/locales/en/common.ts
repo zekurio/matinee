@@ -18,4 +18,13 @@ export default defineMessages("common", {
   "common.error.passkeyExists":
     "This device already has a passkey for your account.",
   "common.error.unknown": "Something went wrong.",
+  "common.error.invalidInput":
+    "That didn't go through. Check what you entered and try again.",
+  "common.error.pageDescription":
+    "The page couldn't be shown. Try again, or go back home.",
+  "common.error.retry": "Try again",
+  "common.notFound.title": "Page not found",
+  "common.notFound.description":
+    "The address may be mistyped, or the page may have moved.",
+  "common.backHome": "Back home",
 })

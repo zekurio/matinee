@@ -47,6 +47,8 @@ export default {
     "Nur eine angenommene Anfrage, die noch nicht angekommen ist, lässt sich aufgeben.",
   "server.requests.notDeclined":
     "Diese Anfrage ist nicht mehr abgelehnt. Lade die Liste neu.",
+  "server.requests.notFailing":
+    "Diese Anfrage schlägt nicht mehr fehl. Lade die Liste neu.",
   "server.requests.cursor": "Lade diese Liste neu und versuche es erneut.",
   "server.requests.noConnection":
     "Wähle eine nutzbare Beschaffungsverbindung für diese Mediathek.",
@@ -122,6 +124,7 @@ export default {
   "server.rpc.signInFirst": "Melde dich zuerst an.",
   "server.rpc.adminsOnly": "Das können nur Admins.",
   "server.rpc.passkeysOff": "Passkeys sind auf diesem Server ausgeschaltet.",
+  "server.rpc.checkInput": "Prüfe deine Eingabe und versuche es erneut.",
 
   "server.auth.signUpClosed":
     "Auf diesem Server ist die Registrierung geschlossen.",
@@ -149,6 +152,8 @@ export default {
     "Dieser Code ist abgelaufen. Hol dir einen neuen.",
   "server.auth.inviteGone":
     "Dieser Einladungslink funktioniert nicht. Vielleicht ist er abgelaufen oder wurde schon benutzt.",
+  "server.auth.appRequestInvalid":
+    "Diese Anmeldeanfrage ist ungültig. Starte die Anmeldung in der App neu.",
 
   "server.oidc.noLinkedAccount":
     "Mit dieser Anmeldung ist kein Konto verknüpft. Melde dich mit einem Passkey an und verknüpfe sie dann in den Einstellungen.",
@@ -163,17 +168,32 @@ export default {
   "server.oidc.setupNotAdmin":
     "Nur wer bei {provider} Admin ist, kann Matinee einrichten. Gib deinem Konto dort den Claim {claim} mit dem Wert admin und melde dich noch einmal an.",
   "server.oidc.unreachable": "Der Anmeldeanbieter war nicht erreichbar.",
-  "server.oidc.wrongIssuer":
-    "Single Sign-on ist mit der falschen Issuer-URL eingerichtet. Ein Admin muss sie auf {issuer} ändern.",
+  "server.oidc.misconfigured":
+    "Single Sign-on ist nicht richtig eingerichtet. Frag einen Admin, im Server-Log nachzusehen.",
   "server.oidc.signInToLink": "Melde dich an, bevor du ein Konto verknüpfst.",
   "server.oidc.expired":
     "Die Anmeldung ist abgelaufen. Versuch es noch einmal.",
-  "server.oidc.noIdToken": "Der Anbieter hat kein ID-Token geschickt.",
+  "server.oidc.noIdToken":
+    "Dein Anbieter hat das Anmeldetoken nicht mitgeschickt, das Matinee braucht. Frag einen Admin, die Einstellungen des Anbieters zu prüfen.",
   "server.oidc.signInAgainToLink":
     "Melde dich noch einmal an, bevor du ein Konto verknüpfst.",
-  "server.oidc.refused": "Der Anbieter hat die Anmeldung abgelehnt: {reason}",
+  "server.oidc.refused": "Der Anbieter hat die Anmeldung abgelehnt.",
+  "server.oidc.accessDenied":
+    "Der Anbieter hat den Zugriff verweigert. Versuch es noch einmal, oder frag einen Admin, die Zugriffsregeln des Anbieters zu prüfen.",
+  "server.oidc.loginRequired":
+    "Melde dich zuerst beim Anbieter an und versuch es dann noch einmal.",
+  "server.oidc.consentRequired":
+    "Der Anbieter braucht zuerst deine Zustimmung. Versuch es noch einmal und bestätige die Anfrage.",
+  "server.oidc.interactionRequired":
+    "Der Anbieter braucht noch einen Schritt von dir. Versuch es noch einmal.",
+  "server.oidc.invalidRequest":
+    "Der Anbieter hat die Anmeldeanfrage abgelehnt. Frag einen Admin, die Single-Sign-on-Einstellungen zu prüfen.",
+  "server.oidc.providerError":
+    "Beim Anbieter ist ein Fehler aufgetreten. Versuch es später noch einmal.",
+  "server.oidc.providerUnavailable":
+    "Der Anbieter ist gerade nicht erreichbar. Versuch es später noch einmal.",
   "server.oidc.failed":
-    "Die Anmeldung ist fehlgeschlagen. Details stehen im Server-Log.",
+    "Die Anmeldung ist fehlgeschlagen. Versuch es noch einmal, oder frag einen Admin, das Server-Log zu prüfen.",
 
   "server.passkeys.requestExpired":
     "Die Passkey-Anfrage ist abgelaufen. Versuch es noch einmal.",
@@ -181,8 +201,6 @@ export default {
   "server.passkeys.notVerified": "Der Passkey konnte nicht bestätigt werden.",
   "server.passkeys.signInExpired":
     "Die Anmeldeanfrage ist abgelaufen. Versuch es noch einmal.",
-  "server.passkeys.unknown":
-    "Dieser Passkey ist bei Matinee nicht registriert.",
 
   "server.avatars.unreadable":
     "Dieses Bild konnte nicht gelesen werden. Versuch es mit einer anderen Datei.",
@@ -265,8 +283,16 @@ export default {
     "Das Discovery-Dokument des Anbieters nennt einen anderen Issuer. Übernimm ihn genau, samt einem Schrägstrich am Ende.",
   "server.adminAuth.notDiscovery":
     "{url} ist kein Discovery-Dokument. Überprüfe die Issuer-URL.",
+  "server.adminAuth.discoveryRefused":
+    "{url} konnte nicht geladen werden: Die Verbindung wurde abgelehnt.",
+  "server.adminAuth.discoveryHost":
+    "{url} konnte nicht geladen werden: Der Hostname wurde nicht gefunden.",
+  "server.adminAuth.discoveryTimedOut":
+    "{url} konnte nicht geladen werden: Die Verbindung hat das Zeitlimit überschritten.",
+  "server.adminAuth.discoveryCertificate":
+    "{url} konnte nicht geladen werden: Dem TLS-Zertifikat wird nicht vertraut.",
   "server.adminAuth.discoveryFailed":
-    "{url} konnte nicht geladen werden: {reason}",
+    "{url} konnte nicht geladen werden. Details stehen im Server-Log.",
 
   "server.jobs.noQueue": "Diese Warteschlange gibt es nicht.",
   "server.jobs.noTask": "Diese Aufgabe gibt es nicht.",
@@ -276,10 +302,28 @@ export default {
     "{name} führt immer {count} Aufträge gleichzeitig aus.",
   "server.jobs.maxConcurrency":
     "{name} führt höchstens {count} Aufträge gleichzeitig aus.",
+  "server.jobs.maxConcurrencyOne":
+    "{name} führt höchstens einen Auftrag gleichzeitig aus.",
   "server.jobs.cleanTranscodes":
-    "Löscht Encodes, die {hours} Stunden lang niemand abgespielt hat, und danach die am längsten nicht abgespielten über {size} GB.",
+    "Löscht Encodes, die {hours} Stunden lang niemand abgespielt hat, danach die am längsten nicht abgespielten über {size} GB, und Downloads, die {hours} Stunden lang niemand abgerufen hat.",
   "server.jobs.libraryLabel": "Mediathek {id}",
   "server.jobs.artworkLabel": "Artwork {id}",
+  "server.jobs.failed":
+    "Dieser Auftrag ist fehlgeschlagen. Das Server-Log enthält die Details.",
+  "server.jobs.taskFailed":
+    "Diese Aufgabe ist fehlgeschlagen. Das Server-Log enthält die Details.",
+  "server.jobs.note.subtitle-prepare":
+    "Dateien, deren indizierte Textuntertitel gleichzeitig vorbereitet werden.",
+  "server.jobs.note.downloads":
+    "Downloads, die gleichzeitig kodiert werden. Jeder belegt einen Encoder wie ein Stream; erhöhe den Wert, wenn der Server mithält.",
+  "server.jobs.note.download-copies":
+    "Downloads, die gleichzeitig kopiert werden. Eine Kopie liest die Datei und wandelt höchstens ihren Ton um; erhöhe den Wert, wenn die Festplatten mithalten.",
+  "server.jobs.note.artwork":
+    "Bilder von Anbietern, die gleichzeitig geladen und verkleinert werden. Die erste Metadatenabfrage einer Mediathek stellt Tausende in die Warteschlange.",
+  "server.jobs.note.media-probe":
+    "Dateien, die ffprobe gleichzeitig liest. Erhöhe den Wert, um den ersten Scan einer großen Mediathek schneller abzuschließen.",
+  "server.jobs.note.trickplay":
+    "Videos, die gleichzeitig Vorschauen für die Suchleiste bekommen. Eine Folge braucht etwa 20 Sekunden, ein Film ein paar Minuten.",
 
   "server.libraries.notFound": "Mediathek nicht gefunden.",
   "server.libraries.unreadableFolder":
@@ -297,8 +341,8 @@ export default {
   "server.party.ownerOnly": "Das kann nur der Host der Party.",
   "server.party.full": "Diese Watch-Party ist voll.",
   "server.party.queueFull": "Die Warteschlange der Party ist voll.",
-  "server.party.ownerSkips":
-    "Nur der Host der Party kann zum Nächsten springen.",
+  "server.party.notEnded":
+    "Das läuft noch. Nur der Host der Party kann vorzeitig zum Nächsten springen.",
   "server.party.entryGone":
     "Das ist nicht mehr in der Warteschlange der Party.",
   "server.party.removed": "Du wurdest aus dieser Watch-Party entfernt.",
@@ -323,6 +367,13 @@ export default {
     "Der Server kennt die Länge dieses Videos nicht und kann deshalb keinen Download davon erstellen.",
   "server.downloads.noAudioTrack": "Diese Datei hat keine Tonspur {index}.",
   "server.downloads.audioTwice": "Wähle jede Tonspur nur einmal.",
+  "server.downloads.subtitleTwice": "Wähle jede Untertitelspur nur einmal.",
+  "server.downloads.noSubtitle":
+    "Diese Untertitelspur gibt es in der Datei nicht mehr. Lade die Seite neu und wähle erneut.",
+  "server.downloads.textSubtitlesOnly":
+    "In eine MP4-Datei passen nur Text-Untertitel. Brenne diese ein oder lade eine Matroska-Datei herunter.",
+  "server.downloads.subtitleUnreadable":
+    "Untertitel {label} lassen sich nicht lesen.",
   "server.downloads.audioNotMp4":
     "{format}-Ton passt nicht unverändert in eine MP4-Datei. Wandle diese Spur stattdessen um.",
   "server.downloads.cantEncodeAudio":
@@ -332,7 +383,7 @@ export default {
   "server.downloads.burnInNeedsEncode":
     "Zum Einbrennen von Untertiteln muss das Video umgewandelt werden.",
   "server.downloads.noPictureSubtitle":
-    "Diese Datei hat keine Bilduntertitel mit dieser ID.",
+    "Diese Bilduntertitelspur gibt es in der Datei nicht mehr. Lade die Seite neu und wähle erneut.",
   "server.downloads.videoNotMp4":
     "{codec}-Video passt nicht unverändert in eine MP4-Datei. Wandle stattdessen das Video um.",
   "server.downloads.encodeFailed":
@@ -371,6 +422,8 @@ export default {
   "server.metadata.noEntry": "{provider} hat keinen Eintrag mit dieser ID.",
   "server.metadata.noAnswer":
     "{provider} hat nicht geantwortet. Versuch es in einer Minute noch einmal.",
+  "server.metadata.unreadable":
+    "{provider} hat eine Antwort geschickt, die Matinee nicht lesen kann. Versuch es später noch einmal.",
   "server.metadata.keepsFailing":
     "{provider} schlägt immer wieder fehl, die Abrufe pausieren vorerst.",
   "server.metadata.unreachable": "{provider} war nicht erreichbar",
@@ -378,14 +431,11 @@ export default {
     "{provider} hat mit {status} für {path} geantwortet",
   "server.metadata.answered": "{name} hat mit {status} geantwortet",
 
-  "server.process.startFailed":
-    "{name} ({command}) konnte nicht gestartet werden: {error}",
-  "server.process.timedOutDetail":
-    "{name} hat nach {seconds} s das Zeitlimit überschritten: {detail}",
+  "server.process.startFailed": "{name} konnte nicht gestartet werden.",
   "server.process.timedOut":
     "{name} hat nach {seconds} s das Zeitlimit überschritten",
-  "server.process.exitedDetail": "{name} wurde mit {code} beendet: {detail}",
   "server.process.exited": "{name} wurde mit {code} beendet",
+  "server.process.stopped": "{name} ist mit Code {code} abgebrochen.",
 
   "server.media.subtitlePrepareFailed":
     "Untertitel für {path} konnten nicht vorbereitet werden",
@@ -395,14 +445,24 @@ export default {
     "ffprobe hat keine Video- oder Audiostreams gefunden",
   "server.media.noPamHeader": "Die Ausgabe von ffmpeg hat keinen PAM-Header",
   "server.media.notRgba": "Die Ausgabe von ffmpeg ist kein RGBA-Bild",
-  "server.media.noFrameSize": "ffprobe hat die Größe von {path} nicht gelesen",
+  "server.media.noFrameSize": "ffprobe hat die Größe des Bildes nicht gelesen",
   "server.media.noFrame":
     "ffmpeg konnte kein einziges Bild des Videos decodieren. Die Datei ist vielleicht beschädigt oder unvollständig.",
   "server.media.tooLarge": "{url} ist zu groß",
   "server.media.notImage": "{url} ist kein JPEG-, PNG- oder WebP-Bild",
+  "server.media.imageFetchFailed":
+    "Dieses Bild konnte nicht heruntergeladen werden. Versuch es später noch einmal.",
+  "server.media.subtitlesUnreadable":
+    "Die Untertitel dieser Datei konnten nicht gelesen werden. Ihr Container ist vielleicht beschädigt.",
 
   "server.transcoding.timedOut": "Zeitlimit überschritten.",
   "server.transcoding.deviceClosed": "Das Gerät ließ sich nicht öffnen.",
   "server.transcoding.ffmpegDidntRun": "ffmpeg ließ sich nicht ausführen.",
   "server.transcoding.ffmpegFailed": "ffmpeg ist fehlgeschlagen.",
+  "server.transcoding.noEncoder":
+    "Dieses ffmpeg hat keinen {codec}-Encoder. Installiere einen Build, der einen hat, oder setze MATINEE_FFMPEG_PATH auf einen solchen.",
+  "server.transcoding.deviceMissing":
+    "{path} gibt es nicht oder ist nicht lesbar.",
+  "server.transcoding.otherEncoder":
+    "Matinee würde mit {encoder} statt mit diesem Gerät kodieren, daher wird dieses Gerät nicht verwendet.",
 } satisfies TranslationOf<typeof source>

@@ -120,12 +120,15 @@
     <string name="stats_metric_longestStreak">Longest streak</string>
     <string name="stats_metric_movies">Movies finished</string>
     <string name="stats_metric_episodes">Episodes finished</string>
-    <string name="stats_you">(you)</string>
+    <string name="stats_name_you">%1$s (you)</string>
+    <string name="users_sso">SSO</string>
+    <string name="settings_unknown_value">Unknown</string>
     <plurals name="stats_day_count"><item quantity="one">%1$d day</item><item quantity="other">%1$d days</item></plurals>
     <plurals name="stats_movie_count"><item quantity="one">%1$d movie</item><item quantity="other">%1$d movies</item></plurals>
     <plurals name="stats_episode_count"><item quantity="one">%1$d episode</item><item quantity="other">%1$d episodes</item></plurals>
     <string name="stats_top">Most watched</string>
     <string name="stats_genres">Genres</string>
+    <string name="format_seconds_short">%1$ds</string>
     <string name="format_minutes_short">%1$dm</string>
     <string name="format_hours_short">%1$dh</string>
     <string name="format_hours_minutes_short">%1$dh %2$dm</string>
@@ -537,6 +540,8 @@
     <string name="player_bitrate_mbps_exact">%1$s Mbps</string>
     <string name="player_bitrate_kbps">%1$d kbps</string>
     <string name="player_error_lost">Couldn\'t play this video</string>
+    <!-- Under player_error_lost, for a download that won't play: its file is on the phone, so the server isn't blamed. -->
+    <string name="player_error_download">This download couldn\'t play.</string>
     <string name="player_error_subtitles">Couldn\'t load subtitles. Pick another track or turn them off.</string>
     <string name="player_unplayable">This device can\'t play this file.</string>
     <!-- Headings over why: the account's access rules out every way to
@@ -548,8 +553,12 @@
     <string name="player_restricted_no_transcode">This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server.</string>
     <string name="player_restricted_failed">This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server.</string>
     <string name="player_restricted_bitrate">This file is over the bit rate your account may stream, and the server can\'t make a version this device plays under that limit. Try another device or ask whoever runs the server.</string>
+    <!-- Under player_restricted, when the server gave no reason. -->
+    <string name="player_restricted_generic">Your account\'s access rules out every way to play this file. Ask whoever runs the server.</string>
     <string name="player_restricted_transcode">This device needs the video converted, but the server may not convert video for your account. Try another device or ask whoever runs the server.</string>
     <!-- Under player_busy, with how many other devices play. -->
+    <!-- Under player_busy, when the server gave no count. -->
+    <string name="player_busy_generic">Your account is playing on as many devices as it may. Stop one to watch here.</string>
     <plurals name="player_busy_detail">
         <item quantity="one">Your account is playing on %1$d device, the most it may. Stop one to watch here.</item>
         <item quantity="other">Your account is playing on %1$d devices, the most it may. Stop one to watch here.</item>
@@ -572,6 +581,8 @@
 
     <!-- Downloads -->
     <string name="error_unreachable">The server isn\'t answering.</string>
+    <!-- What a failed request says when the server sent no words of its own. -->
+    <string name="error_server">The server couldn\'t do that. Try again in a moment.</string>
     <string name="server_unreachable">Server not reachable</string>
     <string name="error_connection_lost">The connection dropped.</string>
     <string name="player_fill">Fill screen</string>

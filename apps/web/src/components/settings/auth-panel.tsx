@@ -22,6 +22,7 @@ import { useState } from "react"
 import { type MessageKey, tr, translateKnown } from "@/i18n"
 import { useAppForm, withForm } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { ShownError } from "@/lib/shown-error"
 import { useActionFeedback } from "@/lib/use-action-feedback"
 
 import {
@@ -133,7 +134,7 @@ function inputError(
   const check = field
     ? tr("oidc.checkField", { field: tr(field) })
     : tr("oidc.checkFields")
-  return new Error(
+  return new ShownError(
     issue
       ? tr("oidc.checkFieldIssue", {
           check,

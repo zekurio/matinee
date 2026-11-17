@@ -26,11 +26,13 @@ import { artworkRoutes } from "./media/artwork"
 import { downloadRoutes } from "./media/download-routes"
 import { streamRoutes } from "./media/stream"
 import type { RpcContext } from "./rpc/base"
-import { logError } from "./rpc/errors"
+import { logError, mapValidationError } from "./rpc/errors"
 import { contractFingerprint, openapi, openapiSpec } from "./rpc/openapi"
 import { router } from "./rpc/router"
 
-const rpc = new RPCHandler(router, { interceptors: [onError(logError)] })
+const rpc = new RPCHandler(router, {
+  interceptors: [onError(mapValidationError), onError(logError)],
+})
 
 /** Hand requests under `prefix` to an oRPC handler, the rest on. */
 function mount(

@@ -4,7 +4,7 @@ import { ProfileUser } from "./users"
 
 /** A search across the server. `limit` caps each kind of result. */
 export const SearchInput = t.object({
-  query: t.string().trim().min(1).max(200),
+  query: t.string().trim().min(1).max(200, "Use at most 200 characters."),
   limit: t.number().int().min(1).max(100).$default(20),
 })
 export type SearchInput = t.infer<typeof SearchInput>

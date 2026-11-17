@@ -30,14 +30,16 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 
 /**
- * A request the server answered with an error, with its message to show.
- * [data] is what the error carries beside it, as the contract says for its
- * code, such as a `PlaybackRestrictedData`.
+ * A request the server answered with an error. [message] is the server's
+ * own words for the person, or null when it sent none; the app words the
+ * rest itself, so nothing English reaches the screen from here. [data] is
+ * what the error carries beside it, as the contract says for its code, such
+ * as a `PlaybackRestrictedData`.
  */
 class ApiException(
     val status: Int,
     val code: String?,
-    override val message: String,
+    override val message: String?,
     val data: JsonElement? = null,
 ) : IOException(message) {
     /** [data] read as [serializer], or null when it's missing or reads otherwise, as from an older server. */
@@ -193,7 +195,7 @@ class ApiTransport internal constructor(private val base: HttpUrl, private val c
         return ApiException(
             status = response.code,
             code = parsed?.code,
-            message = parsed?.message ?: "The server answered ${response.code}.",
+            message = parsed?.message?.takeIf { it.isNotBlank() },
             data = parsed?.data,
         )
     }

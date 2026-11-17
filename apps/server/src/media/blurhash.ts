@@ -2,6 +2,7 @@ import type { ImagePlaceholder } from "@matinee/contracts"
 import { encode } from "blurhash"
 
 import { env } from "../env"
+import { ShownError } from "../errors"
 import { runBytes } from "./process"
 
 // The image is read at most this big. BlurHash keeps a handful of
@@ -15,7 +16,7 @@ const HEADER_END = "ENDHDR\n"
 /** Width, height, and RGBA pixels of a PAM image as ffmpeg writes it. */
 function parsePam(bytes: Buffer) {
   const end = bytes.indexOf(HEADER_END)
-  if (end < 0) throw new Error("ffmpeg's output has no PAM header")
+  if (end < 0) throw new ShownError("ffmpeg's output has no PAM header")
   const fields = new Map<string, string>()
   for (const line of bytes.subarray(0, end).toString("latin1").split("\n")) {
     const [name, value] = line.trim().split(/\s+/)
@@ -33,7 +34,7 @@ function parsePam(bytes: Buffer) {
     fields.get("MAXVAL") !== "255" ||
     data.byteLength !== width * height * 4
   ) {
-    throw new Error("ffmpeg's output isn't an RGBA image")
+    throw new ShownError("ffmpeg's output isn't an RGBA image")
   }
   return {
     width,

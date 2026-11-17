@@ -31,6 +31,9 @@ export default defineMessages("stats", {
   // A transcode preset: "1080p 10 Mbps".
   "stats.quality.preset": "{height}p {bitrate} Mbps",
   "stats.notRead": "Not read yet",
+  // An encoder's name for software, and where it runs.
+  "stats.encoder.onCpu": "{name} (CPU)",
+  "stats.encoder.cpu": "CPU",
   "stats.bucket.week": "Week of {date}",
 
   // Headline figures and counts shared by the views.

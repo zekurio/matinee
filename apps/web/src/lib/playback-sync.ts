@@ -1,9 +1,7 @@
 import {
-  type AudioLanguage,
   DEFAULT_PLAYBACK_PREFERENCES,
   DEFAULT_SKIP_SECONDS,
   LanguageTag,
-  ORIGINAL_LANGUAGE,
   type PlaybackPreferences,
   SkipSeconds,
   type User,
@@ -51,17 +49,6 @@ export function usePlaybackPreferences(): PlaybackPreferences {
   const saved = useQuery(orpc.auth.session.queryOptions()).data?.user?.playback
   const pending = usePendingPlaybackStore((state) => state.pending)
   return pending ?? saved ?? DEFAULT_PLAYBACK_PREFERENCES
-}
-
-/**
- * The tag an audio language preference stands for in a title: `original`
- * becomes the title's own language, which is null when unknown.
- */
-export function audioLanguageFor(
-  preference: AudioLanguage | null,
-  originalLanguage: string | null,
-): string | null {
-  return preference === ORIGINAL_LANGUAGE ? originalLanguage : preference
 }
 
 /** Change some of the preferences. They apply at once and save shortly. */

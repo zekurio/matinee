@@ -1,5 +1,6 @@
 import {
   type AdminTranscodingSettings,
+  type CapabilityCheck,
   HARDWARE_ACCELERATIONS,
   HARDWARE_DECODE_SUPPORT,
   type HardwareCapability,
@@ -14,7 +15,7 @@ import {
 } from "@matinee/ui/components/select"
 import { useSelector } from "@tanstack/react-form"
 
-import { tr } from "@/i18n"
+import { tr, translateKnown } from "@/i18n"
 import { withForm } from "@/lib/form"
 
 import {
@@ -60,6 +61,16 @@ function hasLowPower(hardware: HardwareCapability): boolean {
   )
 }
 
+/** Why the device didn't open, with ffmpeg's first line of it if it said any. */
+function deviceFailure(device: CapabilityCheck): string {
+  const detail = firstLine(device)
+  return detail
+    ? tr("transcoding.hardware.deviceFailedDetail", {
+        error: translateKnown(detail),
+      })
+    : tr("transcoding.hardware.deviceFailed")
+}
+
 const lowPowerCheck = (
   hardware: HardwareCapability,
   codec: TranscodeVideoCodec,
@@ -100,8 +111,7 @@ export const HardwareSection = withForm({
             footer={
               hardware && hardware.device.status === "failed" ? (
                 <SettingWarning>
-                  {tr("transcoding.hardware.deviceFailed")}{" "}
-                  {firstLine(hardware.device)}
+                  {deviceFailure(hardware.device)}
                 </SettingWarning>
               ) : null
             }

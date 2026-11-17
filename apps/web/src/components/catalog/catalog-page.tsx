@@ -7,7 +7,7 @@ import { StarIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { pageBleed } from "@/components/app-shell"
-import { CastRail, CrewFacts } from "@/components/credits"
+import { CastRail, CrewFacts, unitList } from "@/components/credits"
 import { useDocumentTitle } from "@/components/page-header"
 import { ItemTopBar } from "@/components/phone-nav"
 import { Rail, RailItem } from "@/components/rail"
@@ -245,7 +245,7 @@ function CatalogDetailPage({
                 {/* Plain text: genre pages list the library's titles. */}
                 {detail.genres.length > 0 && (
                   <p className="text-muted-foreground mt-1 text-sm">
-                    {detail.genres.slice(0, 4).join(", ")}
+                    {unitList().format(detail.genres.slice(0, 4))}
                   </p>
                 )}
                 {detail.stale && (

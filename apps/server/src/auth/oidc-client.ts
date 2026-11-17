@@ -8,7 +8,10 @@ let discovered: {
   config: Promise<client.Configuration>
 } | null = null
 
-/** The discovery document names a different issuer than the settings. */
+/**
+ * The discovery document names a different issuer than the settings. The
+ * message is for the log; visitors get a generic one from auth/oidc.ts.
+ */
 export class WrongIssuerError extends OidcError {
   constructor(readonly issuer: string) {
     super(

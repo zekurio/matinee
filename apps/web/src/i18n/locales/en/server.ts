@@ -51,6 +51,8 @@ export default defineMessages("server", {
     "Only an accepted request that hasn't arrived can be given up.",
   "server.requests.notDeclined":
     "This request isn't declined any more. Reload the list.",
+  "server.requests.notFailing":
+    "This request isn't failing any more. Reload the list.",
   "server.requests.cursor": "Reload this list and try again.",
   "server.requests.noConnection":
     "Choose a usable fulfilment connection for this library.",
@@ -125,6 +127,10 @@ export default defineMessages("server", {
   "server.rpc.adminsOnly": "Only admins can do this.",
   "server.rpc.passkeysOff": "Passkeys are turned off on this server.",
 
+  // rpc/errors.ts: input that fails its schema, when its own message is no
+  // help.
+  "server.rpc.checkInput": "Check what you entered and try again.",
+
   // rpc/auth.ts: setup, sign-up, sign-in, and devices.
   "server.auth.signUpClosed": "Sign-up is closed on this server.",
   "server.auth.pendingGone":
@@ -148,6 +154,10 @@ export default defineMessages("server", {
   "server.auth.inviteGone":
     "This invite link doesn't work. It may have expired, or been used already.",
 
+  // auth/apps.ts: the sign-in page an app opens, when its request is bad.
+  "server.auth.appRequestInvalid":
+    "This sign-in request is invalid. Start again in the app.",
+
   // auth/oidc.ts and auth/oidc-accounts.ts: single sign-on, also as the
   // auth error on redirects.
   "server.oidc.noLinkedAccount":
@@ -163,22 +173,34 @@ export default defineMessages("server", {
   "server.oidc.setupNotAdmin":
     "Only an admin at {provider} can set up Matinee. Give your account the {claim} claim with the value admin, then sign in again.",
   "server.oidc.unreachable": "Couldn't reach the sign-in provider.",
-  "server.oidc.wrongIssuer":
-    "Single sign-on is set up with the wrong issuer URL. An admin needs to change it to {issuer}.",
+  "server.oidc.misconfigured":
+    "Single sign-on isn't set up correctly. Ask an admin to check the server log.",
   "server.oidc.signInToLink": "Sign in before linking an account.",
   "server.oidc.expired": "Sign-in expired. Try again.",
-  "server.oidc.noIdToken": "The provider sent no ID token.",
+  "server.oidc.noIdToken":
+    "Your provider didn't send the sign-in token Matinee needs. Ask an admin to check the provider's settings.",
   "server.oidc.signInAgainToLink": "Sign in again before linking an account.",
-  // {reason} is the provider's own text.
-  "server.oidc.refused": "The provider refused the sign-in: {reason}",
-  "server.oidc.failed": "Sign-in failed. Check the server log for details.",
+  "server.oidc.refused": "The provider refused the sign-in.",
+  "server.oidc.accessDenied":
+    "The provider denied access. Try again, or ask an admin to check the provider's access rules.",
+  "server.oidc.loginRequired": "Sign in at the provider, then try again.",
+  "server.oidc.consentRequired":
+    "The provider needs your consent first. Try again and accept the request.",
+  "server.oidc.interactionRequired":
+    "The provider needs you to finish a step there. Try again.",
+  "server.oidc.invalidRequest":
+    "The provider rejected the sign-in request. Ask an admin to check the single sign-on settings.",
+  "server.oidc.providerError": "The provider had an error. Try again later.",
+  "server.oidc.providerUnavailable":
+    "The provider is unavailable right now. Try again later.",
+  "server.oidc.failed":
+    "Sign-in failed. Try again, or ask an admin to check the server log.",
 
   // auth/passkeys.ts.
   "server.passkeys.requestExpired": "The passkey request expired. Try again.",
   "server.passkeys.checkFailed": "Passkey check failed.",
   "server.passkeys.notVerified": "The passkey could not be verified.",
   "server.passkeys.signInExpired": "The sign-in request expired. Try again.",
-  "server.passkeys.unknown": "This passkey isn't registered with Matinee.",
 
   // auth/avatars.ts. Its wrong-type message is validation.avatarType.
   "server.avatars.unreadable": "Couldn't read that image. Try another file.",
@@ -263,20 +285,46 @@ export default defineMessages("server", {
     "The provider's discovery document names a different issuer. Copy it exactly, including any trailing slash.",
   "server.adminAuth.notDiscovery":
     "{url} isn't a discovery document. Check the issuer URL.",
-  "server.adminAuth.discoveryFailed": "Couldn't load {url}: {reason}",
+  "server.adminAuth.discoveryRefused":
+    "Couldn't load {url}: the connection was refused.",
+  "server.adminAuth.discoveryHost":
+    "Couldn't load {url}: the host name wasn't found.",
+  "server.adminAuth.discoveryTimedOut":
+    "Couldn't load {url}: the connection timed out.",
+  "server.adminAuth.discoveryCertificate":
+    "Couldn't load {url}: its TLS certificate isn't trusted.",
+  "server.adminAuth.discoveryFailed":
+    "Couldn't load {url}. Check the server log for details.",
 
   // rpc/admin-jobs.ts and the jobs panel. {name} is a queue's name.
   "server.jobs.noQueue": "There's no such queue.",
   "server.jobs.noTask": "There's no such task.",
-  "server.jobs.fixedConcurrencyOne": "{name} always runs 1 jobs at once.",
+  "server.jobs.fixedConcurrencyOne": "{name} always runs 1 job at once.",
   "server.jobs.fixedConcurrency": "{name} always runs {count} jobs at once.",
   "server.jobs.maxConcurrency": "{name} runs at most {count} jobs at once.",
+  "server.jobs.maxConcurrencyOne": "{name} runs at most 1 job at once.",
   // The clean-transcodes task, with the cache limits filled in.
   "server.jobs.cleanTranscodes":
-    "Delete encodes nobody played for {hours} hours, then the least recently played past {size} GB.",
+    "Delete encodes nobody played for {hours} hours, then the least recently played past {size} GB, and downloads nobody fetched from for {hours} hours.",
   // Failed jobs' labels, with an id.
   "server.jobs.libraryLabel": "library {id}",
   "server.jobs.artworkLabel": "artwork {id}",
+  // A failed job's or task's message when its error has none of its own.
+  "server.jobs.failed": "This job failed. The server log has the details.",
+  "server.jobs.taskFailed": "This task failed. The server log has the details.",
+  // The concurrency notes the queues send, in jobs-concurrency.tsx.
+  "server.jobs.note.subtitle-prepare":
+    "Files whose indexed text subtitles are prepared at once.",
+  "server.jobs.note.downloads":
+    "Downloads encoded at once. Each one uses an encoder as a stream would; raise it if the server keeps up.",
+  "server.jobs.note.download-copies":
+    "Downloads copied at once. A copy reads the file and converts at most its audio; raise it if the disks keep up.",
+  "server.jobs.note.artwork":
+    "Provider images downloaded and resized at once. A library's first metadata fetch queues thousands.",
+  "server.jobs.note.media-probe":
+    "Files ffprobe reads at once. Raise it to finish the first scan of a large library sooner.",
+  "server.jobs.note.trickplay":
+    "Videos getting seek bar previews at once. An episode takes about 20 seconds, a movie a few minutes.",
 
   // rpc/libraries.ts.
   "server.libraries.notFound": "Library not found.",
@@ -298,7 +346,8 @@ export default defineMessages("server", {
   "server.party.ownerOnly": "Only the party's owner can do this.",
   "server.party.full": "This watch party is full.",
   "server.party.queueFull": "The party's queue is full.",
-  "server.party.ownerSkips": "Only the party's owner can skip to the next one.",
+  "server.party.notEnded":
+    "This one hasn't ended yet. Only the party's owner can skip ahead.",
   "server.party.entryGone": "That's no longer in the party's queue.",
   "server.party.removed": "You were removed from this watch party.",
   "server.party.notMember": "That person isn't in the party anymore.",
@@ -332,6 +381,12 @@ export default defineMessages("server", {
     "The server doesn't know how long this video is, so it can't make a download of it.",
   "server.downloads.noAudioTrack": "This file has no audio track {index}.",
   "server.downloads.audioTwice": "Pick each audio track once.",
+  "server.downloads.subtitleTwice": "Pick each subtitle track once.",
+  "server.downloads.noSubtitle":
+    "That subtitle isn't in this file anymore. Reload the page and pick again.",
+  "server.downloads.textSubtitlesOnly":
+    "Only text subtitles go in an MP4 file. Burn this one in, or download a Matroska file.",
+  "server.downloads.subtitleUnreadable": "Subtitles {label} can't be read.",
   "server.downloads.audioNotMp4":
     "{format} audio can't go in an MP4 file as it is. Convert that track instead.",
   "server.downloads.cantEncodeAudio": "This server can't encode {codec} audio.",
@@ -339,7 +394,7 @@ export default defineMessages("server", {
   "server.downloads.burnInNeedsEncode":
     "Burning in subtitles needs the video converted.",
   "server.downloads.noPictureSubtitle":
-    "This file has no picture subtitle with that id.",
+    "That picture subtitle isn't in this file anymore. Reload the page and pick again.",
   "server.downloads.videoNotMp4":
     "{codec} video can't go in an MP4 file as it is. Convert the video instead.",
   "server.downloads.encodeFailed":
@@ -370,20 +425,21 @@ export default defineMessages("server", {
   "server.metadata.noEntry": "{provider} has no entry with that id.",
   "server.metadata.noAnswer":
     "{provider} didn't answer. Try again in a minute.",
+  "server.metadata.unreadable":
+    "{provider} sent a reply Matinee couldn't read. Try again later.",
   "server.metadata.keepsFailing": "{provider} keeps failing, stopping for now.",
   "server.metadata.unreachable": "Couldn't reach {provider}",
   // metadata/http.ts, and media/artwork.ts with an image URL as {name}.
   "server.metadata.answeredFor": "{provider} answered {status} for {path}",
   "server.metadata.answered": "{name} answered {status}",
 
-  // media/process.ts: ffmpeg and ffprobe runs in jobs. {detail} is the
-  // end of what the program printed.
-  "server.process.startFailed": "Couldn't start {name} ({command}): {error}",
-  "server.process.timedOutDetail":
-    "{name} timed out after {seconds} s: {detail}",
+  // media/process.ts: ffmpeg and ffprobe runs in jobs. What the program
+  // printed goes to the log, not here.
+  "server.process.startFailed": "Couldn't start {name}.",
   "server.process.timedOut": "{name} timed out after {seconds} s",
-  "server.process.exitedDetail": "{name} exited with {code}: {detail}",
   "server.process.exited": "{name} exited with {code}",
+  // media/downloads.ts: an encode or copy whose ffmpeg stopped with an error.
+  "server.process.stopped": "{name} stopped (exit {code}).",
 
   // Job failures in media/: ffprobe.ts, blurhash.ts, trickplay.ts, artwork.ts.
   "server.media.subtitlePrepareFailed": "Couldn't prepare subtitles for {path}",
@@ -391,15 +447,25 @@ export default defineMessages("server", {
   "server.media.ffprobeNoStreams": "ffprobe found no video or audio streams",
   "server.media.noPamHeader": "ffmpeg's output has no PAM header",
   "server.media.notRgba": "ffmpeg's output isn't an RGBA image",
-  "server.media.noFrameSize": "ffprobe didn't read the size of {path}",
+  "server.media.noFrameSize": "ffprobe didn't read the size of a frame",
   "server.media.noFrame":
     "ffmpeg couldn't decode a single frame of the video. The file may be damaged or incomplete.",
   "server.media.tooLarge": "{url} is too large",
   "server.media.notImage": "{url} isn't a JPEG, PNG, or WebP image",
+  "server.media.imageFetchFailed":
+    "Couldn't download this image. Try again later.",
+  // media/subtitles.ts: a container the Matroska or WebM parser can't read.
+  "server.media.subtitlesUnreadable":
+    "This file's subtitles couldn't be read. Its container may be damaged.",
 
   // transcode/: the capability checks' errors when ffmpeg printed nothing.
   "server.transcoding.timedOut": "Timed out.",
   "server.transcoding.deviceClosed": "The device didn't open.",
   "server.transcoding.ffmpegDidntRun": "ffmpeg didn't run.",
   "server.transcoding.ffmpegFailed": "ffmpeg failed.",
+  "server.transcoding.noEncoder":
+    "This ffmpeg has no {codec} encoder. Install a build that includes one, or set MATINEE_FFMPEG_PATH to one that does.",
+  "server.transcoding.deviceMissing": "{path} doesn't exist or isn't readable.",
+  "server.transcoding.otherEncoder":
+    "Matinee would encode with {encoder} instead of this device, so this device isn't used.",
 })

@@ -20,15 +20,12 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.api.MediaItem
@@ -44,7 +41,6 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.RefreshOnResume
-import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.ErrorBox
@@ -109,10 +105,9 @@ private fun OnlineHomeScreen() {
     val listState = rememberLazyListState()
     val window = LocalWindowInfo.current.containerSize
     val banner = opensWithBanner(with(LocalDensity.current) { window.width.toDp().value })
-    val haze = rememberHazeState()
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            Modifier.fillMaxSize().hazeSource(haze),
+            Modifier.fillMaxSize(),
             state = listState,
             contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -126,7 +121,7 @@ private fun OnlineHomeScreen() {
                     HomeBanner(loaders, dev, header)
                 } else Column {
                     header()
-                    // The header is 44 with the logo in its middle, which alone leaves the cards crowding it.
+                    // 8 under the header's band, where Media's libraries start under its field.
                     val below = Modifier.padding(top = 8.dp)
                     when (val state = featured.state) {
                         Load.Loading -> HomeCarouselSkeleton(below)
@@ -156,17 +151,6 @@ private fun OnlineHomeScreen() {
                 if (entries.state !is Load.Failed) item(key = "shelf-${library.id}") { LibraryShelf(library, entries) }
             }
         }
-        // Home's header sits below the status bar, not behind it, so at rest
-        // there's nothing to shade, and the frost's feather would blur the
-        // logo. It comes in as the page scrolls under the bar.
-        val fade = with(LocalDensity.current) { 40.dp.toPx() }
-        StatusBarScrim(
-            listState,
-            haze,
-            Modifier.graphicsLayer {
-                alpha = if (listState.firstVisibleItemIndex > 0) 1f else (listState.firstVisibleItemScrollOffset / fade).coerceIn(0f, 1f)
-            },
-        )
     }
 }
 

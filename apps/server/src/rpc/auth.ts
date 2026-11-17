@@ -194,6 +194,9 @@ export const auth = {
             throw badRequest(SIGN_UP_CLOSED)
           }
         }
+        // Open sign-up has to say a name is taken so the person can pick
+        // another. That tells an anonymous caller which usernames exist, a
+        // disclosure accepted as part of sign-up.
         if (await usernameTaken(input.username)) {
           throw badRequest("That username is taken.")
         }
@@ -234,6 +237,8 @@ export const auth = {
             throw badRequest(SIGN_UP_CLOSED)
           }
         }
+        // Same as the check above: sign-up has to say a name is taken, and
+        // that disclosure is accepted for open sign-up.
         if (await usernameTaken(username, tx)) {
           throw badRequest("That username is taken.")
         }

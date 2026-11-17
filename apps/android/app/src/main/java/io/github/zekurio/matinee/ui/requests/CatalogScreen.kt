@@ -31,8 +31,6 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.Availability
@@ -46,7 +44,6 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.RefreshOnResume
-import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.LoadingBox
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -136,11 +133,10 @@ private fun CatalogPage(detail: CatalogTitleDetail, library: String?) {
     LaunchedEffect(arrived) { if (arrived != null) nav.arrived(arrived) }
 
     val listState = rememberLazyListState()
-    val haze = rememberHazeState()
     var sheet by remember { mutableStateOf<Int?>(null) }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            Modifier.fillMaxSize().hazeSource(haze),
+            Modifier.fillMaxSize(),
             state = listState,
             contentPadding = PaddingValues(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -230,7 +226,6 @@ private fun CatalogPage(detail: CatalogTitleDetail, library: String?) {
             relatedRails(related)
             item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
-        StatusBarScrim(listState, haze)
         ItemTopBar()
     }
     // Open with the season a card asked for, or -1 for the row's request.

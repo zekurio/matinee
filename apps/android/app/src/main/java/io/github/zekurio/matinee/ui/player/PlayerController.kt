@@ -648,7 +648,8 @@ class PlayerController(
         seekJob?.cancel()
         val method = current.method
         if (method == null) {
-            error = e.errorCodeName.takeIf { e.cause == null } ?: (e.cause?.message ?: e.errorCodeName)
+            // The codes and causes are in the diagnostics; the words are the app's.
+            error = resources.getString(R.string.player_error_download)
             return
         }
         // The server went away, as while it restarts. Falling back past the

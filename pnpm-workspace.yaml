@@ -34,6 +34,14 @@ overrides:
   # deprecated @esbuild-kit packages. Drop this once drizzle-kit stops.
   esbuild: 0.28.2
 
+auditConfig:
+  ignoreGhsas:
+    # picomatch ReDoS, no patched release yet. It only reaches us through
+    # build tooling (vite, and @unhead/bundler under the API docs page's
+    # @scalar packages), which matches our own config's globs, never input.
+    # Drop this once picomatch ships a fix.
+    - GHSA-fc5q-39xc-vjpf
+
 minimumReleaseAgeExclude:
   - lucide-react@1.69.0
   - "@tanstack/query-core@5.106.1"

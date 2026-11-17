@@ -173,12 +173,12 @@ export function requestTip(
     asks(availability) && limit && limit.left <= 2
       ? tr("ask.left", { count: limit.left })
       : null
-  const text = [
-    declineAnswer(availability),
-    dimmedWhy(availability, admin) ?? left,
-  ]
-    .filter((part) => part !== null)
-    .join(" ")
+  const answer = declineAnswer(availability)
+  const why = dimmedWhy(availability, admin) ?? left
+  const text =
+    answer && why
+      ? tr("catalog.tip.join", { first: answer, second: why })
+      : (answer ?? why)
   if (!text) return null
   const note =
     availability.state === "unavailable"

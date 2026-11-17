@@ -7,12 +7,15 @@ const MAX_TOTAL = 128 * 1024 * 1024
 
 type Element = { id: number; start: number; end: number }
 
+/** The file's structure can't be read. Its words are for the log, not for users. */
+export class ContainerError extends Error {}
+
 function vint(bytes: Buffer, at: number, id = false) {
   const first = bytes[at] ?? 0
   let width = 1
   while (width <= 8 && !(first & (1 << (8 - width)))) width++
   if (width > (id ? 4 : 8) || at + width > bytes.length)
-    throw new Error("Invalid EBML integer")
+    throw new ContainerError("Invalid EBML integer")
   // Unknown sizes are legal for Segment and Cluster. Their payloads are
   // never allocated from this sentinel; read() rejects it elsewhere.
   if (
@@ -24,7 +27,8 @@ function vint(bytes: Buffer, at: number, id = false) {
   }
   let value = id ? first : first & ((1 << (8 - width)) - 1)
   for (let i = 1; i < width; i++) value = value * 256 + (bytes[at + i] ?? 0)
-  if (!Number.isSafeInteger(value)) throw new Error("Oversized EBML integer")
+  if (!Number.isSafeInteger(value))
+    throw new ContainerError("Oversized EBML integer")
   return { value, width }
 }
 
@@ -40,7 +44,7 @@ function children(bytes: Buffer): Element[] {
   for (let at = 0; at < bytes.length;) {
     const item = element(bytes, at)
     if (item.end > bytes.length || result.length >= 200_000)
-      throw new Error("Invalid EBML children")
+      throw new ContainerError("Invalid EBML children")
     result.push(item)
     at = item.end
   }
@@ -49,11 +53,11 @@ function children(bytes: Buffer): Element[] {
 
 function uint(bytes: Buffer): number {
   if (!bytes.length || bytes.length > 8)
-    throw new Error("Invalid EBML unsigned integer")
+    throw new ContainerError("Invalid EBML unsigned integer")
   let value = 0
   for (const byte of bytes) value = value * 256 + byte
   if (!Number.isSafeInteger(value))
-    throw new Error("Oversized EBML unsigned integer")
+    throw new ContainerError("Oversized EBML unsigned integer")
   return value
 }
 
@@ -68,7 +72,7 @@ function fields(bytes: Buffer): Map<number, Buffer> {
 
 function required(map: Map<number, Buffer>, id: number): Buffer {
   const bytes = map.get(id)
-  if (!bytes) throw new Error("Missing Matroska field")
+  if (!bytes) throw new ContainerError("Missing Matroska field")
   return bytes
 }
 
@@ -83,7 +87,7 @@ function encoded(id: number, bytes: Buffer): Buffer {
 
 function integer(id: number, value: number): Buffer {
   if (!Number.isSafeInteger(value) || value < 0)
-    throw new Error("Invalid Matroska timestamp")
+    throw new ContainerError("Invalid Matroska timestamp")
   const bytes = Buffer.alloc(8)
   bytes.writeBigUInt64BE(BigInt(value))
   return encoded(id, bytes)
@@ -168,14 +172,14 @@ class Reader {
       at + length > this.size ||
       this.bytesRead + length > MAX_TOTAL
     ) {
-      throw new Error("Matroska read limit")
+      throw new ContainerError("Matroska read limit")
     }
     this.bytesRead += length
     const bytes = Buffer.alloc(length)
     let done = 0
     while (done < length) {
       const result = await this.file.read(bytes, done, length - done, at + done)
-      if (!result.bytesRead) throw new Error("Truncated Matroska file")
+      if (!result.bytesRead) throw new ContainerError("Truncated Matroska file")
       done += result.bytesRead
     }
     return bytes
@@ -189,7 +193,8 @@ class Reader {
 
   async payload(at: number, expected: number): Promise<Buffer> {
     const item = await this.header(at)
-    if (item.id !== expected) throw new Error("Unexpected Matroska element")
+    if (item.id !== expected)
+      throw new ContainerError("Unexpected Matroska element")
     return this.read(item.start, item.end - item.start)
   }
 }
@@ -344,11 +349,12 @@ export async function indexedSubtitles(
       const batch = await Promise.all(
         picks.slice(first, first + 16).map(async (pick) => {
           const cluster = await activeReader.header(pick.cluster)
-          if (cluster.id !== 0x1f43b675) throw new Error("Invalid cue cluster")
+          if (cluster.id !== 0x1f43b675)
+            throw new ContainerError("Invalid cue cluster")
           const at = cluster.start + pick.relative
           const block = await activeReader.header(at)
           if (block.id !== 0xa0 && block.id !== 0xa3)
-            throw new Error("Invalid cue block")
+            throw new ContainerError("Invalid cue block")
           const payload = await activeReader.read(
             block.start,
             block.end - block.start,

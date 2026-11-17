@@ -173,7 +173,11 @@ export const adminRequestsContract = {
     .input(
       RequestId.extend({
         reason: WaitingDeclineReason,
-        note: t.string().trim().max(2000).nullable(),
+        note: t
+          .string()
+          .trim()
+          .max(2000, "Use at most 2000 characters.")
+          .nullable(),
       }),
     )
     .output(t.void()),
@@ -183,7 +187,15 @@ export const adminRequestsContract = {
    * alone, and if the file turns up anyway the request counts as arrived.
    */
   giveUp: post("/admin/requests/give-up")
-    .input(RequestId.extend({ note: t.string().trim().max(2000).nullable() }))
+    .input(
+      RequestId.extend({
+        note: t
+          .string()
+          .trim()
+          .max(2000, "Use at most 2000 characters.")
+          .nullable(),
+      }),
+    )
     .output(t.void()),
   /**
    * Lifts a decline by removing the declined request, so anyone may

@@ -10,6 +10,8 @@
     <string name="web_catalog_state_unavailable">Not available</string>
     <string name="web_catalog_badge_here">Here now</string>
     <string name="web_catalog_badge_fresh">New, from your request</string>
+    <string name="web_catalog_tip_aloud">%1$s. %2$s</string>
+    <string name="web_catalog_tip_join">%1$s %2$s</string>
     <string name="web_catalog_season_airing">Airing · %1$s of %2$s</string>
     <string name="web_catalog_page_stale">These details may be out of date.</string>
     <string name="web_catalog_page_badLink">This link doesn\'t lead to a title.</string>

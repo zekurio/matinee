@@ -255,6 +255,7 @@ export const ARTWORK_WIDTHS = {
   small: 480,
   medium: 960,
   large: 1920,
+  xlarge: 3840,
 } as const
 
 export type ArtworkSize = keyof typeof ARTWORK_WIDTHS
@@ -265,7 +266,9 @@ export const ARTWORK_SIZES = Object.keys(ARTWORK_WIDTHS).filter(
 
 /**
  * Artwork from a metadata provider, cached by the server at most as wide
- * as `ARTWORK_WIDTHS` says: `small` for cards, `large` for banners. The
+ * as `ARTWORK_WIDTHS` says: `small` for cards, `large` for banners, and
+ * `xlarge` for banners on wide or sharp screens, which a `large` srcset
+ * offers. The
  * URL never changes its image, so browsers may cache it for good.
  */
 export function artworkPath(id: string, size: ArtworkSize = "small"): string {

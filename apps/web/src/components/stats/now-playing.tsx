@@ -13,7 +13,7 @@ import { useEffect, useState } from "react"
 import { ItemLink, Picture, tone } from "@/components/media-item"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
-import { formatWatchTime } from "@/lib/format"
+import { formatSpan, formatWatchTime } from "@/lib/format"
 import { art, channelLayout, itemLabel } from "@/lib/media"
 import { errorMessage, liveQuery, orpc } from "@/lib/rpc"
 import {
@@ -228,12 +228,10 @@ function StreamRow({ line }: { line: StreamLine }) {
         </span>
         {line.to && (
           <>
-            <span
-              aria-label={tr("stats.live.to")}
-              className="text-muted-foreground"
-            >
+            <span aria-hidden className="text-muted-foreground">
               {" → "}
             </span>
+            <span className="sr-only">{` ${tr("stats.live.to")} `}</span>
             {line.to}
           </>
         )}
@@ -243,6 +241,16 @@ function StreamRow({ line }: { line: StreamLine }) {
       </span>
     </p>
   )
+}
+
+/**
+ * A time for the live list. formatWatchTime rounds to whole minutes, which
+ * reads "0m" under a minute, so those show seconds.
+ */
+function liveTime(seconds: number): string {
+  return seconds < 60
+    ? formatSpan(Math.floor(seconds))
+    : formatWatchTime(seconds)
 }
 
 function NowPlayingRow({
@@ -302,10 +310,10 @@ function NowPlayingRow({
               </span>
             ) : duration ? (
               tr("stats.live.left", {
-                time: formatWatchTime(Math.max(0, duration - position)),
+                time: liveTime(Math.max(0, duration - position)),
               })
             ) : (
-              formatWatchTime(position)
+              liveTime(position)
             )}
           </span>
         </div>
