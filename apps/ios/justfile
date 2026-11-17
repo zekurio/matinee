@@ -74,9 +74,7 @@ shot name:
 
 # Run MatineeCore's tests on the Mac, check that screens build only from the kit, and that the generated files are current
 test: boundary
-    # Parallel hangs came from a search fake finishing before cancellation, leaving its test waiting for an event that could never arrive.
     cd Packages/MatineeCore && swift test
-    scripts/strings.py --check
     scripts/lucide.py --kit --check
     scripts/lucide.py --check
     {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
@@ -92,10 +90,6 @@ boundary: tv-boundary
 # Generate the API client again after a contract change
 api:
     cd ../.. && nix shell nixpkgs#nodejs_24 nixpkgs#pnpm_11 -c pnpm api:ios
-
-# Write the string catalog and Strings.gen.swift from Android's strings
-strings:
-    scripts/strings.py
 
 # Write the kit's icons from Android's, the app's logo from brand/, and the palettes from the web's
 icons:
@@ -147,10 +141,6 @@ tv-remote-dev account="ios-admin" *args:
 tv-boundary:
     cd Packages/MatineeKitBoundary && {{ boundary_roots }} KIT_TV_BOUNDARY_ROOT="$PWD/../../MatineeTV" \
         swift test --scratch-path ../../{{ boundary }} -q
-
-# Draw the Apple TV app's layered icon and Top Shelf image from brand/ (scripts/tvicon.sh)
-tv-icons:
-    scripts/tvicon.sh
 
 # Delete the build output and the generated project
 clean:

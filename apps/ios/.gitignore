@@ -1,9 +1,12 @@
 # Generated: XcodeGen writes the project and Info.plist, scripts/version.sh
-# the version, and scripts/appicon.sh copies the icon from brand/ios.
+# the version, scripts/appicon.sh copies the icon from brand/ios, and
+# scripts/strings.py writes the strings from Android's.
 Matinee.xcodeproj/
 Matinee/Info.plist
 Config/
 Matinee/Resources/AppIcon.xcassets/
+Matinee/Resources/Localizable.xcstrings
+Matinee/UI/Strings.gen.swift
 # Build output, kept here so agents' builds don't share one.
 build/
 DerivedData/

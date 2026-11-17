@@ -93,8 +93,7 @@ everything sits there, clear of the clock at the top right.
 catalog, `apps/ios/MatineeTV/Resources/TVAppIcon.xcassets`, at 1x and 2x
 and at 1280×768 for the App Store, and that catalog is committed. Its
 `Contents.json` files are written by hand; add a layer there first if you
-add one in `tvos.py`. `apps/ios/scripts/tvicon.sh` (`just tv-icons`) runs
-`render.sh`. tvOS 27's icon and Top Shelf geometry above was measured on
+add one in `tvos.py`. tvOS 27's icon and Top Shelf geometry above was measured on
 the Apple TV simulator; Apple's guidelines give the canvas sizes but not
 the layout.
 

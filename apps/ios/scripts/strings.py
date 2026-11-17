@@ -3,11 +3,14 @@
 
 Android's res/values*/strings*.xml are the source for every word the two
 apps share, so the apps read alike and a translation is made once. This
-writes
+writes, git-ignored,
 
   Matinee/Resources/Localizable.xcstrings   every string and plural, English
                                             and German, under Android's keys
   Matinee/UI/Strings.gen.swift              `Str`, one typed accessor per key
+
+XcodeGen runs it before it generates the project, as project.yml's
+preGenCommand, so `just generate` and every build pick up a changed string.
 
 Strings only iOS needs go by hand in Matinee/Resources/iOS.xcstrings, in
 Xcode's format and with iOS's format specifiers (%@, %lld). They get
@@ -20,9 +23,6 @@ String, `%1$d` an Int. Usually a plural's first argument is its count:
 `R.plurals.media_episode_count` is `Str.mediaEpisodeCount(_ count: Int)`.
 For web_requests_scope_seasons Android formats a season range as %1$s;
 its accessor takes that String followed by a separate Int count.
-
-    scripts/strings.py           # write the catalog and the accessors
-    scripts/strings.py --check   # fail when they're out of date
 """
 
 import json
@@ -314,25 +314,16 @@ def accessors(shared: dict[str, dict], ios: dict[str, dict]) -> str:
 
 
 def main() -> None:
-    check = sys.argv[1:] == ["--check"]
-    if sys.argv[1:] and not check:
-        sys.exit(__doc__)
     languages = {language: read_language(folder) for language, folder in LANGUAGES.items()}
     ios = read_ios()
     for key in ios:
         if key in languages[SOURCE]:
             fail(f"iOS.xcstrings: {key} is one of Android's strings already")
     outputs = {CATALOG: catalog(languages), ACCESSORS: accessors(languages[SOURCE], ios)}
-    stale = [path for path, text in outputs.items() if not path.exists() or path.read_text() != text]
-    if check:
-        if stale:
-            names = ", ".join(str(path.relative_to(ROOT)) for path in stale)
-            fail(f"{names} out of date; run scripts/strings.py")
-        return
-    for path in stale:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(outputs[path])
-        print(path.relative_to(ROOT))
+    for path, text in outputs.items():
+        # Left alone when it's the same, so Xcode doesn't rebuild for nothing.
+        if not path.exists() or path.read_text() != text:
+            path.write_text(text)
 
 
 if __name__ == "__main__":
