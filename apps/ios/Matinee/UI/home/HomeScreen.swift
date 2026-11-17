@@ -122,10 +122,13 @@ private struct OnlineHomeScreen: View {
       .padding(.bottom, Space.s6)
     }
     .scrollPosition($position)
-    // A phone's header stays put while the page scrolls on behind it, the
-    // cards 8 under it at rest and the pull's spinner under it too; an
-    // iPad's rides on the banner. The same page either way, for the crossing.
-    .fixedHeader(hidden: !header.pinned, backdrop: header.backdrop.kit) { HomeHeader(stale: stale) }
+    // A phone's header stays put while the page scrolls on under it, over
+    // `HeaderBackdrop.home`, the cards at its edge at rest and the pull's
+    // spinner under it too; an iPad's rides on the banner. The same page
+    // either way, for the crossing.
+    .fixedHeader(hidden: !header.pinned, backdrop: header.backdrop.kit, contentGap: header.gap) {
+      HomeHeader(stale: stale)
+    }
     .onScrollGeometryChange(for: Double.self) { geometry in
       geometry.contentOffset.y + geometry.contentInsets.top
     } action: { [scroll] _, offset in

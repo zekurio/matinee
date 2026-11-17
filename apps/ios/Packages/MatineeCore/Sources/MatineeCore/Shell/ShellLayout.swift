@@ -83,17 +83,22 @@ public enum HeaderBackdrop: Equatable, Sendable {
   /// The page's background, solid from the screen's top to `room` below
   /// the header's band, where the page goes under a clean edge.
   case solid(room: Double)
+  /// The phone's tab bar's frost, from the screen's top to `room` below the
+  /// header's band: the page blurred under its background at 80%, evenly,
+  /// ending on a line, so the rows are sensed passing under the buttons.
+  case frosted(room: Double)
 
-  /// What ships. The owner was offered both: nothing behind the header, as
-  /// Findroid's, or a solid band with room under the buttons. To show him
-  /// the other, change this line to `.solid(room: 12)`.
-  public static let home: HeaderBackdrop = .none
+  /// What ships. The owner was shown nothing behind the header, as
+  /// Findroid's, beside a solid band with room under the buttons, and kept
+  /// the band with the frosted look behind it. To show him the others,
+  /// change this line to `.none` or `.solid(room: 12)`.
+  public static let home: HeaderBackdrop = .frosted(room: 12)
 
   /// How far below the header's band the backdrop's edge is: 0 with none.
   public var room: Double {
     switch self {
     case .none: 0
-    case .solid(let room): max(room, 0)
+    case .solid(let room), .frosted(let room): max(room, 0)
     }
   }
 }
@@ -102,8 +107,8 @@ public enum HeaderBackdrop: Equatable, Sendable {
 /// On a phone it stays put at the top while Home scrolls under it, right
 /// under the status bar, over `backdrop`. At rest the featured cards start
 /// 8 below the header's band and, with none, the first row a row's gap
-/// below, as it would follow the cards; a solid backdrop's room counts
-/// toward that, so the content never starts under its edge. Online and
+/// below, as it would follow the cards; a solid or frosted backdrop's room
+/// counts toward that, so the content never starts under its edge. Online and
 /// offline alike. A tablet's tabs stay put instead: there the header, when
 /// it shows, rides on the banner or at the top of the list and scrolls away
 /// with it.

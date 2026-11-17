@@ -144,9 +144,10 @@ private struct ProfileTabPicture: View {
 /// 44 tall, right under the status bar, where a navigation bar sits. An
 /// iPad's bar has the logo, search, and the account already, so there it
 /// holds only the icon. On a phone it stays put while Home scrolls on
-/// behind it, with nothing drawn between, as Findroid's (the kit's
-/// `fixedHeader`, over MatineeCore's `HeaderBackdrop.home`); on an iPad it
-/// scrolls away with the page under the tabs.
+/// under it, over the tab bar's frost from the screen's top to 12 below
+/// the buttons (the kit's `fixedHeader`, over MatineeCore's
+/// `HeaderBackdrop.home`); on an iPad it scrolls away with the page under
+/// the tabs.
 struct AppHeader<Action: View>: View {
   @ViewBuilder var action: () -> Action
   @Environment(\.offline) private var offline
@@ -253,6 +254,7 @@ extension HeaderBackdrop {
     switch self {
     case .none: .none
     case .solid(let room): .solid(room: room)
+    case .frosted(let room): .frosted(room: room)
     }
   }
 }

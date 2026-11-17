@@ -44,11 +44,10 @@ struct MediaScreen: View {
   var body: some View {
     page
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-      // The field stays put while the page scrolls under it, as Home's
-      // header, but on the page's background: the field's fill is the text's
-      // colour at 6%, which over the libraries would let them through its
-      // placeholder. An iPad's search is a tab of its own.
-      .fixedHeader(hidden: style != .phone, backdrop: .solid(room: 0)) { top }
+      // The field stays put while the page scrolls under it, over the
+      // same frost as Home's header, so the two tabs' tops are one
+      // material. An iPad's search is a tab of its own.
+      .fixedHeader(hidden: style != .phone, backdrop: .frosted(room: 0)) { top }
       .hidesSystemNavigationBar()
       .loads(libraries) { api in try await api.libraries.list() }
       .searchEffect(search, query: field.query, submitted: submitted)
@@ -116,7 +115,8 @@ struct MediaScreen: View {
             .padding(.top, style == .phone ? Space.s1 : 0)
         }
       }
-      .scrollsToTopOnReselect()
+      // -dev.media.scroll 200, as Home's.
+      .scrollsToTopOnReselect(devScroll: "dev.media.scroll")
       .refreshable { await refresh() }
     }
   }

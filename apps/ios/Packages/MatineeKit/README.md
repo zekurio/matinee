@@ -232,26 +232,37 @@ a value or a line of detail muted.
   and a heading of its own on a tablet. The bar stays put, on
   `--background` from the screen's top, with no line under it: the page
   scrolls under a clean edge.
-- `.fixedHeader(hidden:, backdrop:) { header }`: a tab's first page's own
-  top that stays put, as Home's logo, search, and account on a phone and
-  Media's search field, right under the status bar. The page's safe area
-  starts below it, so the content starts clear of it and a pull to refresh
-  shows under it. `backdrop: .none` draws nothing behind it, as Findroid's
-  Home: the page scrolls on behind the header and under the status bar,
-  for a header whose controls have fills of their own.
-  `backdrop: .solid(room:)` is `--background` from the screen's top to
-  `room` below the header, solid and with no line, as `TopBar`. The band
-  takes taps on its empty stretches too. `hidden` leaves it out and keeps
-  the page the same view, as `.topBar(…, hidden:)`. The gallery's Bars page
-  scrolls a page under each.
+- `.fixedHeader(hidden:, backdrop:, contentGap:) { header }`: a tab's
+  first page's own top that stays put, as Home's logo, search, and account
+  on a phone and Media's search field, right under the status bar. The
+  page's safe area starts below it, so the content starts clear of it and
+  a pull to refresh shows under it. `backdrop: .frosted(room:)`, Home's and
+  Media's, is the `BottomBar`'s frost from the screen's top to `room` below
+  the header: even across the whole bar, ending on a line, the page
+  blurred under it. At rest, with nothing under it, it is plain
+  `--background` with no line; the frost and the bar's hairline along its
+  lower edge come in over the first 12 points the content moves under the
+  edge (`contentGap` says how far below the edge the content starts at
+  rest, so they wait for it). It hides iOS 26's own scroll edge effect at
+  the top, which would otherwise fade the page out before the frost could
+  blur it. `backdrop: .solid(room:)` is `--background` over the same
+  stretch, solid and with no line, as `TopBar`; `backdrop: .none` draws
+  nothing behind it, as Findroid's Home, for a header whose controls have
+  fills of their own. The whole band takes taps, its empty stretches and
+  room too. `hidden` leaves it out and keeps the page the same view, as
+  `.topBar(…, hidden:)`. The gallery's Bars page shows each at rest and
+  scrolled.
 - `BottomBar([TabBarItem(id, label:, icon:)], selection:) { id in }` and
   `.bottomBar(bar)`: a phone's tabs, after Findroid's: the full width,
   each tab its 22-point icon over its name in `text-xs` medium, always
   both. The open tab's icon sits in a 56 by 32 pill of the text's color at
   10%, its name in the text's color, the rest muted. 60 tall over the home
   indicator, which it runs down under; the page scrolls under its frost,
-  `--background` at 80% over a blur (solid under Reduce Transparency),
-  with a hairline of `--border` along its top. The tabs gather in the
+  `--background` at 80% over the thinnest material (solid under Reduce
+  Transparency), with a hairline of `--border` along its top. The frost and
+  the hairline are `Frost.bar` and `BarHairline` in `Bars.swift`, which a
+  frosted `.fixedHeader` shares, so the top and bottom of a phone's tab
+  are one material; the `NavBar`'s capsule is the same `Frost`, thinner. The tabs gather in the
   middle past 480. VoiceOver reads it as a tab bar. It steps aside for the
   keyboard; toasts rise over it (`BottomBar.clearance`).
 - `NavBar([TabBarItem], trailing: [TabBarItem], selection:) { id in } leading: { logo }`
