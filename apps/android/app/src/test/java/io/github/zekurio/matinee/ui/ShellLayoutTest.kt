@@ -104,4 +104,40 @@ class ShellLayoutTest {
         assertTrue(search.open)
         assertEquals(MediaPageContent.Suggestions, search.content)
     }
+
+    @Test
+    fun backFromSearchOpenedOnMediaClosesItAndStays() {
+        val search = MediaSearch().begin(SearchOrigin.Media).type("dune")
+        assertTrue(search.closesOnBack)
+        assertFalse(search.returnsHome)
+        // At rest, Back isn't the field's: it leaves Media for Home, as from any tab.
+        assertFalse(MediaSearch().closesOnBack)
+        assertFalse(MediaSearch().returnsHome)
+    }
+
+    @Test
+    fun backFromSearchOpenedByHomesButtonGoesHome() {
+        val search = MediaSearch().begin(SearchOrigin.Home)
+        assertTrue(search.returnsHome)
+        assertFalse(search.closesOnBack)
+        // Typing and clearing don't change where it came from.
+        assertTrue(search.type("dune").type("").returnsHome)
+    }
+
+    @Test
+    fun searchAlreadyOpenKeepsWhereItCameFrom() {
+        // Focus coming back to the field, as after a title's page, isn't a new opening.
+        assertEquals(SearchOrigin.Home, MediaSearch().begin(SearchOrigin.Home).begin(SearchOrigin.Media).origin)
+        // Closed and opened again on Media, it's Media's.
+        assertEquals(SearchOrigin.Media, MediaSearch().begin(SearchOrigin.Home).cancel().begin(SearchOrigin.Media).origin)
+    }
+
+    @Test
+    fun onlyHomesButtonMorphsIntoTheField() {
+        assertTrue(searchMorphs(SearchOrigin.Home, reducedMotion = false))
+        // The Media tab has no button to grow from: the tabs slide.
+        assertFalse(searchMorphs(SearchOrigin.Media, reducedMotion = false))
+        // With animations removed, a plain switch.
+        assertFalse(searchMorphs(SearchOrigin.Home, reducedMotion = true))
+    }
 }

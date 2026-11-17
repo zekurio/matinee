@@ -2,10 +2,15 @@ package io.github.zekurio.matinee.ui
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
@@ -30,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -134,9 +140,15 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
             val tab = entry?.destination?.let(::tabOf)
             // The open tab's capsule, the same on every page's copy of the bar, and left be while a page covers it.
             val tabs = rememberTabBarState(tab, TAB_ROUTES)
+            // Home's button and Media's field are one pill while either page is in front, and the move between them.
+            val morph = navigator.searchMorph && (tab == HomeRoute || tab == MediaRoute)
             SharedTransitionLayout {
-                CompositionLocalProvider(LocalPageTransitions provides this, LocalTabBarState provides tabs) {
-                    Pages(controller, session)
+                CompositionLocalProvider(
+                    LocalPageTransitions provides this,
+                    LocalTabBarState provides tabs,
+                    LocalSearchMorph provides morph,
+                ) {
+                    Pages(controller, navigator, session)
                 }
             }
             val bar = tab != null && !WindowInsets.isImeVisible
@@ -176,7 +188,7 @@ private fun FollowPlaybackOptions() {
 }
 
 @Composable
-private fun Pages(controller: NavHostController, session: Session) {
+private fun Pages(controller: NavHostController, navigator: Navigator, session: Session) {
     NavHost(
         controller,
         startDestination = HomeRoute,
@@ -189,13 +201,15 @@ private fun Pages(controller: NavHostController, session: Session) {
         // the background under it, so going back showed its art and colors
         // shifting as they came back to full. Each page has its own
         // background, so they never show through each other. Tabs slide
-        // side by side. Timings are Motion's.
-        enterTransition = { enter(pop = false) },
-        exitTransition = { exit(pop = false) },
-        popEnterTransition = { enter(pop = true) },
-        popExitTransition = { exit(pop = true) },
-        predictivePopEnterTransition = { enter(pop = true) },
-        predictivePopExitTransition = { exit(pop = true) },
+        // side by side, but for Home and Media while Home's search button
+        // grows into Media's field (SearchMorph.kt), when they fade through.
+        // Timings are Motion's.
+        enterTransition = { enter(pop = false, navigator) },
+        exitTransition = { exit(pop = false, navigator) },
+        popEnterTransition = { enter(pop = true, navigator) },
+        popExitTransition = { exit(pop = true, navigator) },
+        predictivePopEnterTransition = { enter(pop = true, navigator, gesture = true) },
+        predictivePopExitTransition = { exit(pop = true, navigator, gesture = true) },
     ) {
         screen<HomeRoute>(tab = HomeRoute) { HomeScreen() }
         screen<MediaRoute>(tab = MediaRoute) { MediaScreen() }
@@ -244,8 +258,8 @@ private fun Pages(controller: NavHostController, session: Session) {
     }
 }
 
-/** The layout the pages move in, which carries the bottom bar from one tab's page to the next. */
-private val LocalPageTransitions = staticCompositionLocalOf<SharedTransitionScope?> { null }
+/** The layout the pages move in, which carries the bottom bar from one tab's page to the next, and Home's search button into Media's field. */
+internal val LocalPageTransitions = staticCompositionLocalOf<SharedTransitionScope?> { null }
 
 /** Which tab the bar shows as open, for every page's copy of it. */
 private val LocalTabBarState = staticCompositionLocalOf<TabBarState?> { null }
@@ -277,26 +291,58 @@ private enum class Move {
 
     /** One tab's first page for another's, in the order of the bottom bar. */
     Tab,
+
+    /**
+     * Home for Media and back while Home's search button grows into
+     * Media's field, or the field shrinks back into it: the pages fade
+     * through, the one leaving gone in SEARCH_FADE_OUT_MS and the one
+     * coming in over ENTER_MS after SEARCH_FADE_IN_DELAY_MS, both on
+     * Motion.Easing, so it's in as the pill lands, at MOVE_MS. They hardly
+     * overlap, so one page's cards don't show through the other's under
+     * the pill. The pill is what moves.
+     *
+     * The back gesture seeks it by the finger, and on those curves most of
+     * the move is over in the first third of the swipe, with neither page
+     * there in that gap. So with the gesture it's linear: the pill's bounds
+     * (SearchMorph.kt), Media fading out over the first half
+     * (SEARCH_GESTURE_FADE_OUT_MS), and Home fading in across all of it,
+     * so a held swipe shows Home coming and the pill on its way.
+     */
+    Search,
 }
 
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.move(): Move {
-    val from = initialState.destination
-    val to = targetState.destination
+/** The move between the pages, which also tells the pill whether the back gesture drives it (Navigator.backGesture). */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.move(navigator: Navigator, gesture: Boolean): Move {
+    navigator.backGesture = gesture
+    val from = tabOf(initialState.destination)
+    val to = tabOf(targetState.destination)
     return when {
-        tabOf(from) != null && tabOf(to) != null -> Move.Tab
+        navigator.searchMorph && setOf(from, to) == setOf(HomeRoute, MediaRoute) -> Move.Search
+        from != null && to != null -> Move.Tab
         else -> Move.Page
     }
 }
 
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.enter(pop: Boolean): EnterTransition = when (move()) {
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.enter(pop: Boolean, navigator: Navigator, gesture: Boolean = false): EnterTransition = when (move(navigator, gesture)) {
     Move.Page -> if (pop) uncoveredIn() else coverIn()
     Move.Tab -> slideInHorizontally(slide()) { it * tabStep() }
+    Move.Search -> if (gesture) fadeIn(tween(Motion.MOVE_MS, easing = LinearEasing)) else fadeIn(Motion.enter(delay = SEARCH_FADE_IN_DELAY_MS))
 }
 
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.exit(pop: Boolean): ExitTransition = when (move()) {
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.exit(pop: Boolean, navigator: Navigator, gesture: Boolean = false): ExitTransition = when (move(navigator, gesture)) {
     Move.Page -> if (pop) uncoverOut() else coveredOut()
     Move.Tab -> slideOutHorizontally(slide()) { -it * tabStep() }
+    Move.Search -> fadeOut(tween(if (gesture) SEARCH_GESTURE_FADE_OUT_MS else SEARCH_FADE_OUT_MS, easing = if (gesture) LinearEasing else Motion.Easing))
 }
+
+/** With the back gesture, Media's page is gone halfway through (Move.Search). */
+private const val SEARCH_GESTURE_FADE_OUT_MS = Motion.MOVE_MS / 2
+
+/** The page Home's search button leaves, or Media's field leaves for Home, is gone in this (Move.Search). */
+private const val SEARCH_FADE_OUT_MS = 90
+
+/** The page the pill goes to starts coming in after this, and is in at MOVE_MS (Move.Search). */
+private const val SEARCH_FADE_IN_DELAY_MS = Motion.MOVE_MS - Motion.ENTER_MS
 
 /**
  * Which way tabs slide: 1 when the tab picked sits after the one left in
@@ -347,14 +393,16 @@ private inline fun <reified T : Any> NavGraphBuilder.screen(
             entry.lifecycle.addObserver(observer)
             onDispose { entry.lifecycle.removeObserver(observer) }
         }
-        Box(Modifier.fillMaxSize()) {
+        // A page on its way out isn't read: TalkBack lands on the one coming in.
+        val leaving = transition.targetState == EnterExitState.PostExit
+        Box(Modifier.fillMaxSize().then(if (leaving) Modifier.clearAndSetSemantics {} else Modifier)) {
             val haze = rememberHazeState()
             Box(
                 Modifier
                     .fillMaxSize()
                     .then(if (tab != null) Modifier.hazeSource(haze) else Modifier)
                     .background(Palette.Background),
-            ) { content(entry) }
+            ) { CompositionLocalProvider(LocalPage provides this@composable) { content(entry) } }
             if (tab != null) TabBar(tab, this@composable, haze, Modifier.align(Alignment.BottomCenter))
         }
     }

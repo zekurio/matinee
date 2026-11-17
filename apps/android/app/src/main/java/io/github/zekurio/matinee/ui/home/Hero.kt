@@ -75,6 +75,7 @@ import androidx.lifecycle.compose.currentStateAsState
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.FeaturedTitle
+import io.github.zekurio.matinee.ui.HEADER_HEIGHT
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.Motion
@@ -125,8 +126,8 @@ import kotlinx.coroutines.launch
  * what the tab bar at the bottom leaves of the screen.
  */
 
-/** Room under the status bar for Home's header, 44 tall, which a slide's text keeps clear of. */
-private val HEADER_ROOM = 56.dp
+/** Room under the status bar for Home's header, which a slide's text keeps clear of by 12. */
+private val HEADER_ROOM = HEADER_HEIGHT + 12.dp
 
 /** The buttons' height. */
 private val BUTTONS = 44.dp
