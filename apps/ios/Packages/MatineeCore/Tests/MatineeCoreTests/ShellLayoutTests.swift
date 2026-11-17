@@ -124,10 +124,27 @@ struct ShellLayoutTests {
     #expect(HomeHeaderPlacement(.phone, cards: false, rowSpacing: 28, backdrop: .none).gap == 28)
   }
 
-  @Test func whatShipsIsNothingBehindTheHeader() {
-    // As Findroid's, the owner's choice; `.solid(room:)` is the other he was offered.
-    #expect(HeaderBackdrop.home == .none)
-    #expect(HomeHeaderPlacement(.phone, cards: true, rowSpacing: 24).backdrop == .none)
+  @Test func whatShipsIsTheTabBarsFrostBehindTheHeader() {
+    // The owner's choice, the solid band's room with the frost behind it; `.none` and `.solid(room:)` are
+    // the others he was shown.
+    #expect(HeaderBackdrop.home == .frosted(room: 12))
+    let header = HomeHeaderPlacement(.phone, cards: true, rowSpacing: 24)
+    #expect(header.backdrop == .frosted(room: 12))
+    #expect(header.gap == 0)
+    #expect(header.below == 12)
+  }
+
+  @Test func aFrostedBackdropsRoomCountsTowardTheGapAsASolidOnes() {
+    for room in [0.0, 12, 20] {
+      for cards in [true, false] {
+        let frosted = HomeHeaderPlacement(.phone, cards: cards, rowSpacing: 24, backdrop: .frosted(room: room))
+        let solid = HomeHeaderPlacement(.phone, cards: cards, rowSpacing: 24, backdrop: .solid(room: room))
+        #expect(frosted.gap == solid.gap)
+        #expect(frosted.below == solid.below)
+      }
+    }
+    #expect(HomeHeaderPlacement(.phone, cards: false, rowSpacing: 24, backdrop: .frosted(room: 12)).gap == 12)
+    #expect(HeaderBackdrop.frosted(room: -4).room == 0)
   }
 
   @Test func aSolidBackdropsRoomCountsTowardTheGap() {
@@ -149,5 +166,6 @@ struct ShellLayoutTests {
     #expect(header.gap == 0)
     #expect(header.below == 0)
     #expect(HomeHeaderPlacement(.tablet, cards: false, rowSpacing: 40).gap == 0)
+    #expect(HomeHeaderPlacement(.tablet, cards: true, rowSpacing: 40, backdrop: .frosted(room: 12)).below == 0)
   }
 }

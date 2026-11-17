@@ -50,7 +50,7 @@ struct OfflineHomeScreen: View {
       .padding(.top, header.gap)
       .padding(.bottom, Space.s6)
     }
-    .fixedHeader(hidden: !header.pinned, backdrop: header.backdrop.kit) { AppHeader() }
+    .fixedHeader(hidden: !header.pinned, backdrop: header.backdrop.kit, contentGap: header.gap) { AppHeader() }
     // -dev.home.scroll 400, as on Home.
     .scrollsToTopOnReselect(devScroll: "dev.home.scroll")
     .task(id: session.activeServer) { read() }

@@ -52,13 +52,16 @@ search and the account: search is the wide field at the top of Media, which
 the button opens with the keyboard up, and the account opens the profile as
 a page on Home's stack, which leads on to Settings, the admin pages, and
 the requests queue. Downloads' top is its name. The three tops stay put
-while their page scrolls. Home's header, online and offline, has nothing
-behind it, as Findroid's: the page scrolls on behind the logo and the
-buttons and under the status bar (the kit's `.fixedHeader`, over
-MatineeCore's `HeaderBackdrop.home`, one line from a solid band). Media's
-field, whose fill is see-through, and Downloads' name, in the kit's
-`.topBar`, sit on the page's background with no line under it. Nothing
-blurs or shades the status bar. On an iPad in a regular
+while their page scrolls. Home's header, online and offline, and Media's
+field sit on a frosted bar, the tab bar's material, from the screen's top
+through the status bar to 12 below Home's buttons (Media's field row has
+its room in it): the page's colour with no line at rest, then the page
+blurred under it with a hairline along its edge once the page goes under
+(the kit's `.fixedHeader`; Home's backdrop is MatineeCore's
+`HeaderBackdrop.home`, one line from nothing behind it or a solid band).
+Downloads' name, in the kit's `.topBar`, sits on the page's background
+with no line under it. No other page has anything over the status bar.
+On an iPad in a regular
 width the tabs sit at the top, in the web's bar from `sm` up: the logo, the
 tabs by name, then search and the account as places of their own. An iPad
 in a narrow split gets the phone's; the place open moves to where it lives
@@ -270,6 +273,7 @@ build. Pass them after `just dev` or `just gallery`.
 | Home      | `-dev.recommendations YES`                                                  | Fills the recommendation rows                                                                                                                                                                                                                                                                                                                                             |
 | Home      | `-dev.header search`                                                        | Presses a button of Home's header once, two seconds after Home shows: `search` (Media, its field taking the keyboard) or `account` (the profile)                                                                                                                                                                                                                          |
 | Home      | `-dev.home.scroll 400`                                                      | Home scrolled that many points down, three seconds after it shows, online or offline, for a screenshot of it scrolled                                                                                                                                                                                                                                                     |
+| Media     | `-dev.media.scroll 200`                                                     | Media's libraries scrolled that many points down, as `-dev.home.scroll`                                                                                                                                                                                                                                                                                                   |
 | Title     | `-title.fixture YES`                                                        | A provider's overview, credits, genres, ratings, trailer, and logo where the dev server has none                                                                                                                                                                                                                                                                          |
 | Title     | `-title.scroll cast`                                                        | Scrolls to a section: `nextup`, `episodes`, `seasons`, `cast`, `actions`, `more`                                                                                                                                                                                                                                                                                          |
 | Title     | `-title.open actions`                                                       | The page's actions sheet, or `watched`, the question of when                                                                                                                                                                                                                                                                                                              |
