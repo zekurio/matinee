@@ -42,8 +42,8 @@ export default defineMessages("browse", {
   "browse.kind.all": "All",
   "browse.kind.movie": "Movies",
   "browse.kind.show": "Shows",
-  // The library chips on the Movies and Shows pages.
+  // The library menu in the Movies and Shows pages' subtitle.
   "browse.library": "Library",
-  "browse.library.all": "All",
+  "browse.library.all": "All libraries",
   // The page header.
 })
