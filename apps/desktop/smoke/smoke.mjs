@@ -18,6 +18,10 @@
  * temporary directory, printed at the end) gets the picture, the app's
  * log, and mpv's last state.
  *
+ * SMOKE_SUBTITLES=no plays the clip without its subtitle, for a GPU that
+ * can't take the textures mpv draws subtitles from, like the virtual one
+ * of GitHub's macOS runners under Vulkan.
+ *
  * A check that fails leaves the app running for a moment. SMOKE_FAILED,
  * if set, is a command to look at it with before it's stopped, like one
  * that lists what the threads of a hung app are doing. `{pid}` stands for
@@ -283,7 +287,10 @@ try {
     start: 1,
     paused: false,
     audio: 1,
-    subtitle: { kind: "stream", index: 2 },
+    subtitle:
+      process.env.SMOKE_SUBTITLES === "no"
+        ? null
+        : { kind: "stream", index: 2 },
     subtitleDelay: 0,
   })
   const playing = await until(
