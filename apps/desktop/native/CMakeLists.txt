@@ -12,6 +12,13 @@ project(matinee-desktop VERSION "${MATINEE_VERSION}" LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+if(APPLE)
+  # For the code that talks to AppKit.
+  enable_language(OBJCXX)
+  set(CMAKE_OBJCXX_STANDARD 20)
+  set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+  set(CMAKE_OBJCXX_EXTENSIONS OFF)
+endif()
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -160,12 +167,17 @@ elseif(APPLE)
   target_sources(matinee-desktop PRIVATE
     resources/matinee.icns
     src/os/media_controls_none.cpp
-    src/os/video_output_default.cpp
-    src/os/macos/sleep_inhibitor_macos.cpp)
+    src/os/macos/mac_video_view.h
+    src/os/macos/mac_video_view.mm
+    src/os/macos/sleep_inhibitor_macos.cpp
+    src/os/macos/video_output_macos.cpp)
   set_source_files_properties(resources/matinee.icns PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources)
+  # The views it holds are counted for it.
+  set_source_files_properties(src/os/macos/mac_video_view.mm PROPERTIES
+    COMPILE_OPTIONS -fobjc-arc)
   target_link_libraries(matinee-desktop PRIVATE
-    "-framework IOKit" "-framework CoreFoundation")
+    "-framework AppKit" "-framework IOKit" "-framework CoreFoundation")
 elseif(WIN32)
   target_sources(matinee-desktop PRIVATE
     resources/matinee.rc

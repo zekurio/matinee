@@ -9,6 +9,7 @@ on:
     paths:
       - apps/desktop/**
       - packages/desktop-bridge/**
+      - tools/ci/mpv-macos.mjs
       - .github/workflows/desktop-macos.yml
   workflow_dispatch:
 
@@ -20,10 +21,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Once with Homebrew's mpv, which draws the video in the window, and once
+  # with the app's own build of it, which shows the video under the window.
   build:
-    name: build
+    name: build (${{ matrix.mpv }} mpv)
     runs-on: macos-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        mpv: [stock, patched]
 
     steps:
       - name: checkout repository
@@ -54,7 +61,28 @@ jobs:
           cache: true
 
       - name: install mpv
+        if: matrix.mpv == 'stock'
         run: brew install mpv ninja pkg-config
+
+      # mpv with the patch in apps/desktop/mpv takes a while to build, so a
+      # build is kept for as long as the patch and what it links stay the
+      # same.
+      - name: install what libmpv builds against
+        id: mpv
+        if: matrix.mpv == 'patched'
+        run: node tools/ci/mpv-macos.mjs prepare
+
+      - name: restore libmpv
+        id: mpv-cache
+        if: matrix.mpv == 'patched'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/mpv
+          key: ${{ steps.mpv.outputs.key }}
+
+      - name: build libmpv
+        if: matrix.mpv == 'patched' && steps.mpv-cache.outputs.cache-hit != 'true'
+        run: node tools/ci/mpv-macos.mjs build
 
       - name: configure
         run: cmake -S apps/desktop/native -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -74,7 +102,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: smoke
+          name: smoke-${{ matrix.mpv }}
           path: |
             ${{ runner.temp }}/smoke/app.log
             ${{ runner.temp }}/smoke/state.json

@@ -297,6 +297,7 @@ bool MpvPlayer::start(const DesktopSettings &settings, bool verbose) {
 
   // Only an mpv with the patch knows the option.
   m_takesParentSurface = mpv_set_option_string(m_mpv, "wayland-parent-surface", "0") >= 0;
+  m_takesParentView = mpv_set_option_string(m_mpv, "macos-parent-view", "0") >= 0;
 
   mpv_request_log_messages(m_mpv, verbose ? "v" : "warn");
   if (const int error = mpv_initialize(m_mpv); error < 0) {
@@ -310,12 +311,14 @@ bool MpvPlayer::start(const DesktopSettings &settings, bool verbose) {
   const QList<std::pair<const char *, const char *>> required = {
       // The picture goes to the window's renderer, under the page.
       {"vo", "libmpv"},
-      // The page draws the controls and takes the keys.
+      // The page draws the controls and takes the keys. The media keys
+      // too, which mpv on macOS would otherwise claim from the system.
       {"osc", "no"},
       {"osd-level", "0"},
       {"input-default-bindings", "no"},
       {"input-vo-keyboard", "no"},
       {"input-cursor", "no"},
+      {"input-media-keys", "no"},
       // A file stays open at its end, on the last frame, and stays as
       // paused or playing as it was, so the page says when it's over.
       {"idle", "yes"},
@@ -379,11 +382,11 @@ bool MpvPlayer::start(const DesktopSettings &settings, bool verbose) {
 void MpvPlayer::presentUnderWindow() {
   m_underWindow = true;
   // mpv's own renderer on Vulkan, which is what carries HDR to a Wayland
-  // surface. The context is named, or mpv might pick X11 through
-  // XWayland and open a window of its own.
+  // surface, and on macOS to a Metal layer. The context is named, or mpv
+  // might pick X11 through XWayland and open a window of its own.
   set("vo", "gpu-next");
   set("gpu-api", "vulkan");
-  set("gpu-context", "waylandvk");
+  set("gpu-context", m_takesParentView ? "macvk" : "waylandvk");
   // mpv times its own frames here.
   set("video-timing-offset", "0.050");
 }
@@ -391,6 +394,10 @@ void MpvPlayer::presentUnderWindow() {
 void MpvPlayer::setParentSurface(quintptr surface, const QSize &size) {
   set("wayland-parent-surface", QByteArray::number(surface));
   setOutputSize(size);
+}
+
+void MpvPlayer::setParentView(quintptr view) {
+  set("macos-parent-view", QByteArray::number(view));
 }
 
 void MpvPlayer::setOutputSize(const QSize &size) {
@@ -465,11 +472,12 @@ void MpvPlayer::open(const PlayerSource &source) {
           });
 }
 
-void MpvPlayer::stop() {
+void MpvPlayer::stop(std::function<void()> stopped) {
   m_deferred.reset();
   resetFile();
   m_failure = QString();
-  command({"stop"});
+  command({"stop"}, stopped ? Reply([stopped](const QJsonValue &, int) { stopped(); })
+                            : Reply());
   publish();
 }
 
