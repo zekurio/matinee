@@ -1,0 +1,42 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "CFBundleDisplayName": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matinee"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matinee"
+          }
+        }
+      },
+      "shouldTranslate": false
+    },
+    "NSLocalNetworkUsageDescription": {
+      "comment": "Why the app asks for the local network.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matinee verbindet sich mit deinem Medienserver in deinem lokalen Netzwerk."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matinee connects to your media server on your local network."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

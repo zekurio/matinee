@@ -1,0 +1,154 @@
+import MatineeCore
+import MatineeKit
+import SwiftUI
+
+/*
+ * RequestSheet.kt, after the web's request-dialog.tsx and ask-sheet.tsx:
+ * where an ask that needs a choice is made, in a sheet from the bottom,
+ * where the thumb is. A show's seasons, each the viewer may still ask for
+ * with a box, the server's pick already ticked (or only the season a card
+ * asked for), the rest with their state; on a first ask "New seasons as
+ * they air"; what the server says when asking is off or the requests are
+ * used up; and the button, which says what pressing it asks for. Where the
+ * ask lands is the server's call. The choosing is MatineeCore's
+ * `RequestChooser`, the asking `RequestsHub.ask`.
+ */
+
+struct RequestSheet: View {
+  let model: RequestSheetModel
+  @State private var chooser: RequestChooser
+  @Environment(\.requests) private var hub
+  @Environment(\.user) private var user
+  @Environment(\.sheetDismiss) private var dismiss
+  @Environment(\.palette) private var palette
+  /// The season the list starts at: the one a season's card asked for.
+  @State private var start: Int?
+
+  init(model: RequestSheetModel) {
+    self.model = model
+    _start = State(initialValue: model.only)
+    // Made for each opening, so each starts from the server's pick.
+    _chooser = State(
+      initialValue: RequestChooser(
+        ref: model.ref, seasons: requestSeasonsInOrder(model.seasons), first: model.first,
+        defaultFuture: model.defaultFuture, libraryId: model.libraryId, only: model.only))
+  }
+
+  var body: some View {
+    let availability = hub?.availability(model.ref, model.availability) ?? model.availability
+    let permission = RequestPermission(availability)
+    let show = model.ref.kind == TitleKind.show
+    let busy = hub?.busy.contains(model.ref.requestKey) == true
+    SheetHeader(Str.webAskDialogTitle(model.name))
+    if show {
+      // The seasons scroll between the title and the button, which stay
+      // put however many seasons a show has, as Android's and the web's.
+      // Opened from a season's card, the list starts at that season.
+      SheetBody(sides: Space.s3, top: Space.s2, bottom: Space.s2) { seasons }
+        .scrollPosition(id: $start, anchor: .top)
+    }
+    SheetFooter(line: show) {
+      if show && chooser.first {
+        SwitchRow(
+          Str.webAskChooserFuture, isOn: Binding(get: { chooser.future }, set: { chooser.setFuture($0) })
+        )
+        .padding(.horizontal, -Space.s4)
+      }
+      // Why the button can't be pressed, beside it, where it stays in sight.
+      if let blocked = permission.blocked {
+        let why = requestDimmedText(availability, admin: user?.isAdmin == true)
+        Callout(
+          why?.text ?? requestBlockedText(blocked, admin: user?.isAdmin == true), description: why?.note,
+          icon: .circleSlash)
+      }
+      MatineeButton(
+        requestChooserText(chooser.label), look: .primary,
+        dimmed: !chooser.canSubmit(availability: availability, busy: false), pending: busy, fullWidth: true
+      ) {
+        guard chooser.canSubmit(availability: availability, busy: busy), let hub else { return }
+        Task {
+          if await hub.ask(chooser, name: model.name, availability: availability) { dismiss() }
+        }
+      }
+      if let left = permission.leftToSay(asks: availability.asks || chooser.seasons.contains { $0.availability.asks }) {
+        Text(Str.webAskLeft(left)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+          .frame(maxWidth: .infinity)
+      }
+    }
+  }
+
+  private var seasons: some View {
+    let live = hub?.seasons(model.ref, chooser.seasons) ?? chooser.seasons
+    return VStack(spacing: 0) {
+      ForEach(live, id: \.number) { season in
+        SeasonChoice(
+          show: model.ref, season: season, checked: chooser.picked.contains(season.number)
+        ) { chooser.toggle(season.number) }
+      }
+    }
+    .scrollTargetLayout()
+  }
+}
+
+/// One season in the sheet: its box while it can be asked for, its poster,
+/// its name, and its episodes, or the state it's in.
+private struct SeasonChoice: View {
+  let show: CatalogRef
+  let season: CatalogSeason
+  let checked: Bool
+  let toggle: () -> Void
+  @Environment(\.api) private var api
+  @Environment(\.palette) private var palette
+  @Environment(\.dynamicTypeSize) private var dynamicType
+
+  var body: some View {
+    let open = season.availability.asks
+    let name = seasonName(season.number)
+    let detail =
+      open
+      ? requestSeasonDetailText(requestSeasonDetail(season, today: todayDay()))
+      : season.availability.stateWord(today: todayDay(), percent: false).map(requestStateText)
+        ?? Str.webAskChooserUnavailable
+    let row = HStack(spacing: Space.s3) {
+      // In the room a missing box keeps, so the posters line up.
+      Group {
+        if open {
+          Checkbox(isOn: .constant(checked), label: name).allowsHitTesting(false)
+        } else {
+          Color.clear
+        }
+      }
+      .frame(width: 20, height: 20)
+      .accessibilityHidden(true)
+      ArtFrame("\(show.requestKey):\(season.number)", aspect: 2 / 3) {
+        Picture(api?.art(season.poster))
+      }
+      .frame(width: 28)
+      .accessibilityHidden(true)
+      // The details go under the name at the largest text sizes, rather than cut short beside it.
+      let words = dynamicType.isAccessibilitySize
+        ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0)) : AnyLayout(HStackLayout(spacing: Space.s3))
+      words {
+        Text(name)
+          .textStyle(.base, weight: .medium)
+          .foregroundStyle(open ? palette.foreground : palette.mutedForeground)
+          .lineLimit(1)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+          .lineLimit(dynamicType.isAccessibilitySize ? 2 : 1)
+      }
+    }
+    .padding(.horizontal, Space.s2)
+    .padding(.vertical, Space.s1)
+    .frame(minHeight: 52)
+    .contentShape(Rectangle())
+    if open {
+      Pressable(shape: .kit(Radius.md), action: { withMotion(Motion.color, toggle) }) { row }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(name), \(detail)")
+        .accessibilityAddTraits(checked ? [.isSelected, .isToggle] : .isToggle)
+    } else {
+      row.accessibilityElement(children: .combine)
+    }
+  }
+}

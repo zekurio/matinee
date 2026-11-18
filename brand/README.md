@@ -11,22 +11,25 @@ height, with a gap of 30% of its width.
 
 ## Files
 
-| File                     | What it is                                                   |
-| ------------------------ | ------------------------------------------------------------ |
-| `mark.svg`               | The mark. Follows the viewer's light or dark scheme          |
-| `wordmark.svg`           | The wordmark, dark on light and light on dark                |
-| `logo.svg`               | Mark and wordmark. Follows the color scheme                  |
-| `logo-light.svg`         | Fixed colors for light backgrounds                           |
-| `logo-dark.svg`          | Fixed colors for dark backgrounds                            |
-| `social-preview.png`     | GitHub social preview, 1280×640. Upload it in Settings       |
-| `app-icon.svg`           | 1024px full-bleed app icon. Platforms round the corners      |
-| `app-icon-dark.svg`      | iOS dark appearance, mark on transparency                    |
-| `app-icon-tinted.svg`    | iOS tinted appearance, gray mark on transparency             |
-| `ios/AppIcon.appiconset` | Xcode asset catalog, one 1024 image per appearance           |
-| `android/res`            | Adaptive and themed icon, used directly by the Gradle build  |
-| `android/play-store.png` | 512px Play Console icon                                      |
-| `wordmark.py`            | Draws the wordmark and writes the logo files                 |
-| `render.sh`              | Runs `wordmark.py`, then renders every PNG and the web icons |
+| File                     | What it is                                                  |
+| ------------------------ | ----------------------------------------------------------- |
+| `mark.svg`               | The mark. Follows the viewer's light or dark scheme         |
+| `wordmark.svg`           | The wordmark, dark on light and light on dark               |
+| `logo.svg`               | Mark and wordmark. Follows the color scheme                 |
+| `logo-light.svg`         | Fixed colors for light backgrounds                          |
+| `logo-dark.svg`          | Fixed colors for dark backgrounds                           |
+| `social-preview.png`     | GitHub social preview, 1280×640. Upload it in Settings      |
+| `app-icon.svg`           | 1024px full-bleed app icon. Platforms round the corners     |
+| `app-icon-dark.svg`      | iOS dark appearance, mark on transparency                   |
+| `app-icon-tinted.svg`    | iOS tinted appearance, gray mark on transparency            |
+| `ios/AppIcon.appiconset` | Xcode asset catalog, one 1024 image per appearance          |
+| `android/res`            | Adaptive and themed icon, used directly by the Gradle build |
+| `android/play-store.png` | 512px Play Console icon                                     |
+| `tvos/icon-*.svg`        | Apple TV icon: back, middle, and front layers, 400×240      |
+| `tvos/top-shelf*.svg`    | Apple TV Top Shelf images, 1920×720 and wide 2320×720       |
+| `wordmark.py`            | Draws the wordmark and writes the logo files                |
+| `tvos.py`                | Draws the Apple TV artwork in `tvos/`                       |
+| `render.sh`              | Runs both scripts, then renders every PNG and the web icons |
 
 `wordmark.py` also writes `apps/web/src/components/logo.gen.ts` and the
 Android drawables `logo.xml` and `logo_dark.xml`. The web app serves
@@ -60,7 +63,8 @@ checks the hash, and caches it in `~/.cache/matinee-brand`.
 
 If you edit the mark, keep the path and color stops the same in the SVGs,
 the Android drawables including `logo_mark.xml` and `logo_mark_dark.xml`,
-`brand.tsx`, and `SUNSET` in `wordmark.py`. Then run `just brand` and
+`brand.tsx`, and `SUNSET` in `wordmark.py`, and split it again in
+`tvos.py`, which checks that it still can. Then run `just brand` and
 commit the output. It needs `resvg`, `oxipng`, and Python with fontTools
 and uharfbuzz, and pulls missing ones through Nix.
 
