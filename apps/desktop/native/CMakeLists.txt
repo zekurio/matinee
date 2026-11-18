@@ -167,17 +167,18 @@ elseif(APPLE)
   target_sources(matinee-desktop PRIVATE
     resources/matinee.icns
     src/os/media_controls_none.cpp
-    src/os/macos/mac_video_view.h
-    src/os/macos/mac_video_view.mm
+    src/os/macos/mac_video_layer.h
+    src/os/macos/mac_video_layer.mm
     src/os/macos/sleep_inhibitor_macos.cpp
     src/os/macos/video_output_macos.cpp)
   set_source_files_properties(resources/matinee.icns PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources)
-  # The views it holds are counted for it.
-  set_source_files_properties(src/os/macos/mac_video_view.mm PROPERTIES
+  # The layers it holds are counted for it.
+  set_source_files_properties(src/os/macos/mac_video_layer.mm PROPERTIES
     COMPILE_OPTIONS -fobjc-arc)
   target_link_libraries(matinee-desktop PRIVATE
-    "-framework AppKit" "-framework IOKit" "-framework CoreFoundation")
+    "-framework AppKit" "-framework QuartzCore" "-framework IOKit"
+    "-framework CoreFoundation")
 elseif(WIN32)
   target_sources(matinee-desktop PRIVATE
     resources/matinee.rc

@@ -10,7 +10,7 @@ mpv release nixpkgs has.
 | Patch                          | What it adds                                     |
 | ------------------------------ | ------------------------------------------------ |
 | `wayland-parent-surface.patch` | `--wayland-parent-surface`, a subsurface of ours |
-| `macos-parent-view.patch`      | `--macos-parent-view`, a view inside one of ours |
+| `macos-parent-layer.patch`     | `--macos-parent-layer`, a layer inside ours      |
 
 `nix/mpv.nix` builds libmpv with the Wayland one for the flake, and
 `tools/ci/mpv-macos.mjs` with the macOS one for the app the macOS

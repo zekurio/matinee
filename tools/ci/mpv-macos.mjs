@@ -1,7 +1,7 @@
 /*
  * libmpv for the desktop app's macOS build: mpv's release with
- * apps/desktop/mpv/macos-parent-view.patch, which lets mpv show its video
- * in a view of the app's. Homebrew's mpv doesn't have the patch, so this
+ * apps/desktop/mpv/macos-parent-layer.patch, which lets mpv show its video
+ * in a layer of the app's. Homebrew's mpv doesn't have the patch, so this
  * builds mpv against Homebrew's libraries into `<temp>/mpv`.
  *
  *   node tools/ci/mpv-macos.mjs prepare
@@ -24,7 +24,7 @@ import { join } from "node:path"
 import { env, fail, read, root, run, setForWorkflow } from "../release/lib.mjs"
 
 const TAG = "v0.41.0"
-const PATCH = join(root, "apps/desktop/mpv/macos-parent-view.patch")
+const PATCH = join(root, "apps/desktop/mpv/macos-parent-layer.patch")
 
 // What libmpv links, which a cached build has to match.
 const LIBRARIES = [

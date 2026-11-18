@@ -1,81 +1,79 @@
 diff --git a/DOCS/man/options.rst b/DOCS/man/options.rst
-index fa71dc0..454ce8c 100644
+index fa71dc0..60955c1 100644
 --- a/DOCS/man/options.rst
 +++ b/DOCS/man/options.rst
-@@ -6926,6 +6926,20 @@ them.
+@@ -6926,6 +6926,21 @@ them.
      :system:   No manual syncing, depend on the layer mechanic and the next drawable
      :feedback: Same as precise but uses the presentation feedback core mechanism
  
-+``--macos-parent-view=<pointer>``
-+    Show the video in a view inside another view, filling it, instead of in a
-+    window of mpv's own (macOS and Vulkan (macvk) only). The value is an
-+    ``NSView *`` of the same process, cast to ``intptr_t``, which makes this
-+    only useful through libmpv. mpv adds a view with its Metal layer to it,
-+    follows its size, and takes no input. The application's main thread has
-+    to run its run loop while a video output opens and closes, which rules
-+    out ending mpv from that thread while one is open.
++``--macos-parent-layer=<pointer>``
++    Show the video in a layer inside another layer, filling it, instead of
++    in a window of mpv's own (macOS and Vulkan (macvk) only). The value is a
++    ``CALayer *`` of the same process, cast to ``intptr_t``, which makes this
++    only useful through libmpv. mpv adds its Metal layer to it as a sublayer
++    that follows its size, and makes no window or view, so it takes no
++    input. The layer has to be in a window when a video output opens. The
++    application's main thread has to run its run loop while one opens and
++    closes, which rules out ending mpv from that thread while one is open.
 +
 +    Unlike with the render API, the video keeps its own layer, so everything
 +    that depends on one works as in mpv's own window: Vulkan, HDR, and
 +    presentation timing. To show it under an application's content, give it
-+    a view below that content's.
++    a layer below that content's.
 +
  ``--macos-menu-shortcuts=<yes|no>``
      Enables the default menu bar shortcuts (default: yes). The menu bar shortcuts always take
      precedence over any other shortcuts, they are not propagated to the mpv core and they can't be
 diff --git a/osdep/mac/app_bridge.h b/osdep/mac/app_bridge.h
-index 961b01c..4c7154e 100644
+index 961b01c..71540c1 100644
 --- a/osdep/mac/app_bridge.h
 +++ b/osdep/mac/app_bridge.h
 @@ -97,6 +97,7 @@ struct macos_opts {
      int macos_render_timer;
      bool macos_menu_shortcuts;
      char **macos_bundle_path;
-+    int64_t macos_parent_view;
++    int64_t macos_parent_layer;
      int cocoa_cb_sw_renderer;
      bool cocoa_cb_10bit_context;
      int cocoa_cb_output_csp;
 diff --git a/osdep/mac/app_bridge.m b/osdep/mac/app_bridge.m
-index 58e10cb..20d3756 100644
+index 58e10cb..db12aeb 100644
 --- a/osdep/mac/app_bridge.m
 +++ b/osdep/mac/app_bridge.m
 @@ -69,6 +69,7 @@ const struct m_sub_options macos_conf = {
              {"system", RENDER_TIMER_SYSTEM}, {"feedback", RENDER_TIMER_PRESENTATION_FEEDBACK})},
          {"macos-menu-shortcuts", OPT_BOOL(macos_menu_shortcuts)},
          {"macos-bundle-path", OPT_STRINGLIST(macos_bundle_path)},
-+        {"macos-parent-view", OPT_INT64(macos_parent_view)},
++        {"macos-parent-layer", OPT_INT64(macos_parent_layer)},
          {"cocoa-cb-sw-renderer", OPT_CHOICE(cocoa_cb_sw_renderer,
              {"auto", -1}, {"no", 0}, {"yes", 1})},
          {"cocoa-cb-10bit-context", OPT_BOOL(cocoa_cb_10bit_context)},
 diff --git a/video/out/mac/common.swift b/video/out/mac/common.swift
-index 77557bb..f6d9fd6 100644
+index 77557bb..3664fd6 100644
 --- a/video/out/mac/common.swift
 +++ b/video/out/mac/common.swift
-@@ -26,6 +26,14 @@ class Common: NSObject {
+@@ -26,6 +26,20 @@ class Common: NSObject {
  
      @objc var window: Window?
      var view: View?
-+    // The application's view the video shows in (--macos-parent-view). mpv
-+    // has no window of its own then.
-+    var parentView: NSView?
-+    // The window the video is in: mpv's own, or the application's.
++    // The application's layer the video shows in (--macos-parent-layer).
++    // mpv has no window or view of its own then.
++    var parentLayer: CALayer?
++    // The window the video is in: mpv's own, or the one whose view draws
++    // into a layer above the application's.
 +    var hostWindow: NSWindow? {
 +        if let window = window { return window }
-+        return view?.window
++        var layer = parentLayer
++        while let current = layer {
++            if let view = current.delegate as? NSView { return view.window }
++            layer = current.superlayer
++        }
++        return nil
 +    }
      var titleBar: TitleBar?
  
      var link: CVDisplayLink?
-@@ -121,7 +129,7 @@ class Common: NSObject {
-     }
- 
-     func initView(_ vo: UnsafeMutablePointer<vo>, _ layer: CALayer) {
--        let (_, wr, _) = getInitProperties(vo)
-+        let wr = parentView?.bounds ?? getInitProperties(vo).1
- 
-         view = View(frame: wr, common: self)
-         guard let view = self.view else {
-@@ -188,7 +196,7 @@ class Common: NSObject {
+@@ -188,7 +202,7 @@ class Common: NSObject {
      }
  
      func updateDisplaylink() {
@@ -84,7 +82,7 @@ index 77557bb..f6d9fd6 100644
              log.warning("Couldn't update DisplayLink, no Screen or DisplayLink available")
              return
          }
-@@ -404,7 +412,7 @@ class Common: NSObject {
+@@ -404,7 +418,7 @@ class Common: NSObject {
      }
  
      func getCurrentScreen() -> NSScreen? {
@@ -93,7 +91,7 @@ index 77557bb..f6d9fd6 100644
                                      getTargetScreen(forFullscreen: false) ??
                                      NSScreen.main
      }
-@@ -564,7 +572,7 @@ class Common: NSObject {
+@@ -564,7 +578,7 @@ class Common: NSObject {
          case VOCTRL_GET_HIDPI_SCALE:
              let scaleFactor = data!.assumingMemoryBound(to: CDouble.self)
              let screen = getCurrentScreen()
@@ -102,106 +100,68 @@ index 77557bb..f6d9fd6 100644
                           screen?.backingScaleFactor ?? 1.0
              scaleFactor.pointee = Double(factor)
              return VO_TRUE
-diff --git a/video/out/mac/view.swift b/video/out/mac/view.swift
-index 8c9c006..9b0f26b 100644
---- a/video/out/mac/view.swift
-+++ b/video/out/mac/view.swift
-@@ -25,8 +25,12 @@ class View: NSView, CALayerDelegate {
-     var hasMouseDown: Bool = false
-     var lastMouseDownEvent: NSEvent?
- 
-+    // In an application's view the video takes no input. What the
-+    // application shows over it does.
-+    var embedded: Bool { return common.parentView != nil }
-+
-     override var isFlipped: Bool { return true }
--    override var acceptsFirstResponder: Bool { return true }
-+    override var acceptsFirstResponder: Bool { return !embedded }
- 
-     init(frame: NSRect, common com: Common) {
-         common = com
-@@ -34,14 +38,47 @@ class View: NSView, CALayerDelegate {
-         autoresizingMask = [.width, .height]
-         wantsBestResolutionOpenGLSurface = true
-         wantsExtendedDynamicRangeOpenGLSurface = true
--        registerForDraggedTypes([ .fileURL, .URL, .string ])
-+        if !embedded {
-+            registerForDraggedTypes([ .fileURL, .URL, .string ])
-+        }
+diff --git a/video/out/mac/metal_layer.swift b/video/out/mac/metal_layer.swift
+index afa435f..bddac54 100644
+--- a/video/out/mac/metal_layer.swift
++++ b/video/out/mac/metal_layer.swift
+@@ -84,6 +84,15 @@ class MetalLayer: CAMetalLayer {
+         }
      }
  
-     required init?(coder: NSCoder) {
-         fatalError("init(coder:) has not been implemented")
-     }
- 
-+    override func hitTest(_ point: NSPoint) -> NSView? {
-+        return embedded ? nil : super.hitTest(point)
-+    }
-+
-+    // The application's window tells its own delegate what happens to it,
-+    // so an embedded view hears of its size and its screen here.
-+    override func setFrameSize(_ newSize: NSSize) {
-+        super.setFrameSize(newSize)
-+        if embedded {
++    // In an application's layer there is no window to say that the size
++    // changed.
++    override func resize(withOldSuperlayerSize size: CGSize) {
++        super.resize(withOldSuperlayerSize: size)
++        if common.parentLayer != nil {
 +            common.windowDidResize()
 +        }
 +    }
 +
-+    override func viewDidChangeBackingProperties() {
-+        super.viewDidChangeBackingProperties()
-+        if embedded {
-+            common.windowDidChangeBackingProperties()
-+            common.flagEvents(VO_EVENT_DPI)
-+        }
-+    }
-+
-+    override func viewDidMoveToWindow() {
-+        super.viewDidMoveToWindow()
-+        if embedded && window != nil {
-+            common.updateDisplaylink()
-+            common.windowDidChangeBackingProperties()
-+        }
-+    }
-+
-     override func updateTrackingAreas() {
-+        if embedded { return }
-+
-         if let tracker = self.tracker {
-             removeTrackingArea(tracker)
-         }
+     init(common com: MacCommon) {
+         common = com
+         super.init()
 diff --git a/video/out/mac_common.swift b/video/out/mac_common.swift
-index 45f922d..cfd636d 100644
+index 45f922d..4dc448f 100644
 --- a/video/out/mac_common.swift
 +++ b/video/out/mac_common.swift
-@@ -33,16 +33,59 @@ class MacCommon: Common {
+@@ -33,16 +33,68 @@ class MacCommon: Common {
          input = InputHelper(vo.pointee.input_ctx, option)
          presentation = Presentation(common: self)
          timer = PreciseTimer(common: self)
-+        if let pointer = UnsafeRawPointer(bitPattern: Int(option.mac.macos_parent_view)) {
-+            parentView = Unmanaged<NSView>.fromOpaque(pointer).takeUnretainedValue()
++        if let pointer = UnsafeRawPointer(bitPattern: Int(option.mac.macos_parent_layer)) {
++            parentLayer = Unmanaged<CALayer>.fromOpaque(pointer).takeUnretainedValue()
 +        }
  
          DispatchQueue.main.sync {
              layer = MetalLayer(common: self)
              initMisc(vo)
-+            if let parent = parentView, let layer = layer {
-+                embed(vo, layer, in: parent)
++            if let parent = parentLayer, let layer = layer {
++                embed(layer, in: parent)
 +            }
-+        }
-+    }
-+
-+    // Puts the video's view into the application's, to fill it. Right when
+         }
+     }
+ 
++    // Puts the video's layer into the application's, to fill it. Right when
 +    // the video output is made, so that the application can tell by its
-+    // view's subviews whether there is one.
-+    func embed(_ vo: UnsafeMutablePointer<vo>, _ layer: CALayer, in parent: NSView) {
-+        initView(vo, layer)
-+        guard let view = self.view else { return }
-+
++    // layer's sublayers whether there is one.
++    func embed(_ layer: MetalLayer, in parent: CALayer) {
 +        needsInitialDraw = false
-+        parent.addSubview(view)
++        layer.frame = parent.bounds
++        layer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
++        parent.addSublayer(layer)
++        if hostWindow != nil {
++            updateDisplaylink()
++        }
++        windowDidChangeBackingProperties()
++
++        // The window tells its own delegate what happens to it, not mpv.
 +        followHostWindow(NSWindow.didChangeScreenNotification) { [weak self] in
 +            self?.updateDisplaylink()
-         }
++        }
++        followHostWindow(NSWindow.didChangeBackingPropertiesNotification) { [weak self] in
++            self?.windowDidChangeBackingProperties()
++            self?.flagEvents(VO_EVENT_DPI)
++        }
 +        followHostWindow(NSWindow.didChangeOcclusionStateNotification) { [weak self] in
 +            self?.windowDidChangeOcclusionState()
 +        }
@@ -213,18 +173,18 @@ index 45f922d..cfd636d 100644
 +            object: nil,
 +            queue: .main,
 +            using: { [weak self] notification in
-+                guard let window = self?.view?.window,
++                guard let window = self?.hostWindow,
 +                      (notification.object as? NSWindow) == window else { return }
 +                handler()
 +            }
 +        ))
-     }
- 
++    }
++
      @objc func config(_ vo: UnsafeMutablePointer<vo>) -> Bool {
          eventsLock.withLock { self.vo = vo }
  
-+        // The view is in the application's already, and has its size.
-+        if parentView != nil {
++        // The layer is in the application's already, and has its size.
++        if parentLayer != nil {
 +            windowDidResize()
 +            updateICCProfile()
 +            return true
@@ -233,18 +193,30 @@ index 45f922d..cfd636d 100644
          DispatchQueue.main.sync {
              let previousActiveApp = getActiveApp()
              initApp()
-@@ -109,8 +152,20 @@ class MacCommon: Common {
+@@ -84,6 +136,9 @@ class MacCommon: Common {
+         DispatchQueue.main.sync {
+             window?.delegate = nil
+             window?.close()
++            if parentLayer != nil {
++                layer?.removeFromSuperlayer()
++            }
+ 
+             uninitCommon()
+         }
+@@ -109,8 +164,22 @@ class MacCommon: Common {
          info.pointee.last_queue_display_time = next?.time ?? -1
      }
  
-+    // The size to render at, in pixels: mpv's window's, or its view's in an
++    // The size to render at, in pixels: mpv's window's, or its layer's in an
 +    // application's.
 +    @objc var sizePixel: NSSize {
 +        if let window = window {
 +            return window.framePixel.size
 +        }
-+        if let view = view, parentView != nil {
-+            return view.convertToBacking(view.bounds).size
++        if let layer = layer, parentLayer != nil {
++            let scale = layer.contentsScale
++            return NSSize(width: (layer.bounds.width * scale).rounded(),
++                          height: (layer.bounds.height * scale).rounded())
 +        }
 +        return NSSize.zero
 +    }
@@ -255,7 +227,7 @@ index 45f922d..cfd636d 100644
                 option.vo.force_render ||
                 needsInitialDraw
      }
-@@ -167,7 +222,7 @@ class MacCommon: Common {
+@@ -167,7 +236,7 @@ class MacCommon: Common {
      }
  
      override func windowDidChangeBackingProperties() {

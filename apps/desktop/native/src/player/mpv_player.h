@@ -70,10 +70,10 @@ public:
   // Wayland surface, which libmpv only does with the patch in
   // apps/desktop/mpv/wayland-parent-surface.patch.
   bool takesParentSurface() const { return m_takesParentSurface; }
-  // The same on macOS: this mpv can show its video in a view of its own
-  // inside another `NSView`, with the patch in
-  // apps/desktop/mpv/macos-parent-view.patch.
-  bool takesParentView() const { return m_takesParentView; }
+  // The same on macOS: this mpv can show its video in a layer of its own
+  // inside another `CALayer`, with the patch in
+  // apps/desktop/mpv/macos-parent-layer.patch.
+  bool takesParentLayer() const { return m_takesParentLayer; }
   // Has mpv present on its own surface under the window's from now on,
   // instead of drawing through the render API. Before any source opens.
   void presentUnderWindow();
@@ -81,8 +81,9 @@ public:
   // own units. 0 while the window has none.
   void setParentSurface(quintptr surface, const QSize &size);
   void setOutputSize(const QSize &size);
-  // The `NSView` mpv puts its own into, as a number. 0 while there is none.
-  void setParentView(quintptr view);
+  // The `CALayer` mpv puts its own into, as a number. 0 while there is
+  // none.
+  void setParentLayer(quintptr layer);
 
   mpv_handle *handle() const { return m_mpv; }
   // Like `v0.41.0`.
@@ -173,7 +174,7 @@ private:
   quint64 m_nextReply;
 
   bool m_takesParentSurface = false;
-  bool m_takesParentView = false;
+  bool m_takesParentLayer = false;
   bool m_underWindow = false;
   bool m_renderReady = false;
   std::optional<PlayerSource> m_deferred;

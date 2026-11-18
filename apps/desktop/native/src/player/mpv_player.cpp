@@ -297,7 +297,7 @@ bool MpvPlayer::start(const DesktopSettings &settings, bool verbose) {
 
   // Only an mpv with the patch knows the option.
   m_takesParentSurface = mpv_set_option_string(m_mpv, "wayland-parent-surface", "0") >= 0;
-  m_takesParentView = mpv_set_option_string(m_mpv, "macos-parent-view", "0") >= 0;
+  m_takesParentLayer = mpv_set_option_string(m_mpv, "macos-parent-layer", "0") >= 0;
 
   mpv_request_log_messages(m_mpv, verbose ? "v" : "warn");
   if (const int error = mpv_initialize(m_mpv); error < 0) {
@@ -386,7 +386,7 @@ void MpvPlayer::presentUnderWindow() {
   // might pick X11 through XWayland and open a window of its own.
   set("vo", "gpu-next");
   set("gpu-api", "vulkan");
-  set("gpu-context", m_takesParentView ? "macvk" : "waylandvk");
+  set("gpu-context", m_takesParentLayer ? "macvk" : "waylandvk");
   // mpv times its own frames here.
   set("video-timing-offset", "0.050");
 }
@@ -396,8 +396,8 @@ void MpvPlayer::setParentSurface(quintptr surface, const QSize &size) {
   setOutputSize(size);
 }
 
-void MpvPlayer::setParentView(quintptr view) {
-  set("macos-parent-view", QByteArray::number(view));
+void MpvPlayer::setParentLayer(quintptr layer) {
+  set("macos-parent-layer", QByteArray::number(layer));
 }
 
 void MpvPlayer::setOutputSize(const QSize &size) {
