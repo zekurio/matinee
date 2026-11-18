@@ -9,6 +9,7 @@ on:
     paths:
       - apps/desktop/**
       - packages/desktop-bridge/**
+      - tools/ci/desktop-macos-app.mjs
       - tools/ci/mpv-macos.mjs
       - .github/workflows/desktop-macos.yml
   workflow_dispatch:
@@ -112,40 +113,54 @@ jobs:
           SMOKE_FAILED: sample {pid} 5 -file {out}/sample.txt; screencapture -x {out}/failed.png
         run: node apps/desktop/smoke/smoke.mjs build/Matinee.app/Contents/MacOS/Matinee
 
-      # TEMPORARY: whether mpv's own window plays through Vulkan on this runner.
-      - name: probe mpv
+      # TEMPORARY: what a view beside the content view does to the title bar.
+      - name: probe the title bar
         if: always() && matrix.mpv == 'stock'
         continue-on-error: true
         run: |
-          for options in "--hwdec=auto-safe --sid=no --osd-level=0" "--profile=fast --hwdec=auto-safe --sid=no --osd-level=0" "--profile=fast --hwdec=no --sid=no --osd-level=0"; do
-            echo "=== $options"
-            mpv --no-config --vo=gpu-next --gpu-api=vulkan --gpu-context=macvk $options \
-              --frames=48 --msg-level=all=v apps/desktop/smoke/clip.mkv 2>&1 | tail -12 || true
-            echo "=== exit ${PIPESTATUS[0]}"
+          mkdir -p "$RUNNER_TEMP/smoke/probe"
+          swiftc -O tools/ci/titlebar-probe.swift -o "$RUNNER_TEMP/titlebar-probe"
+          for variant in plain clear sibling clear-sibling sibling-twice; do
+            "$RUNNER_TEMP/titlebar-probe" $variant "$RUNNER_TEMP/smoke/probe/$variant.png" || true
           done
-          sleep 15
-          mkdir -p "$RUNNER_TEMP/smoke"
-          cp -R ~/Library/Logs/DiagnosticReports "$RUNNER_TEMP/smoke/crashes" || true
 
-      # The system writes a report when the app crashes, a moment after.
+      # An app to download and run: Qt, libmpv, and what they load, inside.
+      - name: package the app
+        if: matrix.mpv == 'patched'
+        run: node tools/ci/desktop-macos-app.mjs package build/Matinee.app "$RUNNER_TEMP/Matinee-macos-arm64.zip"
+
+      # Unpacked somewhere else, with Homebrew and Qt out of its reach.
+      - name: smoke test the packaged app
+        if: matrix.mpv == 'patched'
+        timeout-minutes: 5
+        env:
+          SMOKE_OUT: ${{ runner.temp }}/smoke/packaged
+          SMOKE_SCREENSHOT: screencapture -x {file}
+          SMOKE_MPV_CONF: apps/desktop/smoke/virtual-gpu.conf
+          SMOKE_FAILED: sample {pid} 5 -file {out}/sample.txt; screencapture -x {out}/failed.png
+        run: node tools/ci/desktop-macos-app.mjs smoke "$RUNNER_TEMP/Matinee-macos-arm64.zip"
+
+      # The system writes a report when the app crashes.
       - name: collect crash reports
         if: failure()
-        run: |
-          sleep 15
-          mkdir -p "$RUNNER_TEMP/smoke"
-          cp -R ~/Library/Logs/DiagnosticReports "$RUNNER_TEMP/smoke/crashes" || true
+        run: cp -R ~/Library/Logs/DiagnosticReports "$RUNNER_TEMP/smoke/crashes" || true
 
-      - name: keep what the smoke test left
+      - name: keep what the smoke tests left
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: smoke-${{ matrix.mpv }}
           path: |
-            ${{ runner.temp }}/smoke/app.log
-            ${{ runner.temp }}/smoke/state.json
-            ${{ runner.temp }}/smoke/playing.png
-            ${{ runner.temp }}/smoke/sample.txt
-            ${{ runner.temp }}/smoke/failed.png
-            ${{ runner.temp }}/smoke/crashes
+            ${{ runner.temp }}/smoke
+            !${{ runner.temp }}/smoke/home/**
+            !${{ runner.temp }}/smoke/packaged/home/**
           if-no-files-found: warn
           retention-days: 7
+
+      - name: keep the app
+        if: matrix.mpv == 'patched'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/Matinee-macos-arm64.zip
+          archive: false
+          retention-days: 14
