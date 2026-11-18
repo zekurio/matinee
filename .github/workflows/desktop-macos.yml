@@ -109,6 +109,25 @@ jobs:
           SMOKE_FAILED: sample {pid} 5 -file {out}/sample.txt; screencapture -x {out}/failed.png
         run: node apps/desktop/smoke/smoke.mjs build/Matinee.app/Contents/MacOS/Matinee
 
+      # TEMPORARY: whether mpv's own window plays through Vulkan on this runner.
+      - name: probe mpv
+        if: always() && matrix.mpv == 'stock'
+        continue-on-error: true
+        run: |
+          for hwdec in auto-safe no; do
+            echo "=== hwdec=$hwdec"
+            mpv --no-config --vo=gpu-next --gpu-api=vulkan --gpu-context=macvk --hwdec=$hwdec \
+              --frames=48 --msg-level=all=v apps/desktop/smoke/clip.mkv 2>&1 | tail -60 || true
+          done
+
+      # The system writes a report when the app crashes, a moment after.
+      - name: collect crash reports
+        if: failure()
+        run: |
+          sleep 15
+          mkdir -p "$RUNNER_TEMP/smoke"
+          cp -R ~/Library/Logs/DiagnosticReports "$RUNNER_TEMP/smoke/crashes" || true
+
       - name: keep what the smoke test left
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -120,5 +139,6 @@ jobs:
             ${{ runner.temp }}/smoke/playing.png
             ${{ runner.temp }}/smoke/sample.txt
             ${{ runner.temp }}/smoke/failed.png
+            ${{ runner.temp }}/smoke/crashes
           if-no-files-found: warn
           retention-days: 7
