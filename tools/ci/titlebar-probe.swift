@@ -39,6 +39,7 @@ func shot(_ name: String) {
 }
 
 let under = CALayer()
+let sibling = NSView(frame: .zero)
 under.backgroundColor = NSColor.systemGreen.cgColor
 var child: NSWindow?
 
@@ -46,9 +47,20 @@ func place() {
     switch variant {
     case "layer":
         // A layer of ours under the content view's, in whatever holds it.
-        guard let layer = content.layer, let holder = layer.superlayer else { return }
+        guard let layer = content.layer, let holder = layer.superlayer else { print("no holder yet"); return }
         under.frame = layer.frame
         holder.insertSublayer(under, below: layer)
+    case "topz":
+        // A view of ours over everything in the frame view, so that it
+        // moves none of the others, shown under them by its layer's depth.
+        if sibling.superview == nil {
+            sibling.wantsLayer = true
+            sibling.layer?.backgroundColor = NSColor.systemGreen.cgColor
+            content.superview!.addSubview(sibling, positioned: .above, relativeTo: nil)
+            sibling.layer?.zPosition = -1
+        }
+        sibling.frame = content.frame
+        print("subviews:", content.superview!.subviews.map { String(describing: type(of: $0)) })
     case "child":
         // A window of ours under the window.
         let rect = window.convertToScreen(content.convert(content.bounds, to: nil))
@@ -76,19 +88,23 @@ func place() {
     }
 }
 
-place()
-print("=== \(variant): layers from the content view's holder")
-describe(content.layer?.superlayer ?? content.layer)
+print("=== \(variant)")
+if variant != "layer" { place() }
 
 let steps: [(Double, () -> Void)] = [
+    (0.7, { if variant == "layer" { place() } }),
     (1.5, { shot("1-shown") }),
-    (2.0, { window.setFrame(NSRect(x: 80, y: 150, width: 760, height: 420), display: true); if variant == "child" { place() } }),
+    (2.0, { window.setFrame(NSRect(x: 80, y: 150, width: 760, height: 420), display: true) }),
     (3.0, { shot("2-resized"); describe(content.layer?.superlayer ?? content.layer) }),
-    (3.2, { window.toggleFullScreen(nil) }),
-    (6.5, { if variant == "child" { place() }; shot("3-fullscreen") }),
-    (7.0, { window.toggleFullScreen(nil) }),
-    (10.5, { if variant == "child" { place() }; shot("4-back"); describe(content.layer?.superlayer ?? content.layer) }),
-    (11.0, { exit(0) }),
+    (3.1, { place() }),
+    (3.6, { shot("3-placed-again") }),
+    (3.8, { window.toggleFullScreen(nil) }),
+    (7.0, { shot("4-fullscreen"); describe(content.layer?.superlayer ?? content.layer) }),
+    (7.2, { window.toggleFullScreen(nil) }),
+    (10.5, { shot("5-back"); describe(content.layer?.superlayer ?? content.layer) }),
+    (10.7, { place() }),
+    (11.2, { shot("6-placed-again") }),
+    (11.5, { exit(0) }),
 ]
 for (after, step) in steps {
     DispatchQueue.main.asyncAfter(deadline: .now() + after, execute: step)

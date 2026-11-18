@@ -107,13 +107,23 @@ function dependencies(file) {
 }
 
 /** The directories a file has the loader search for `@rpath`. */
-function searchPaths(file) {
+function readSearchPaths(file) {
   const commands = tool("otool", ["-l", file])
   return [
     ...commands.matchAll(
       /cmd LC_RPATH\n\s+cmdsize \d+\n\s+path (.+) \(offset/g,
     ),
   ].map((match) => match[1])
+}
+
+// Nothing here changes a file's search paths once Qt is in, and the
+// program's are asked for with every library.
+const knownSearchPaths = new Map()
+function searchPaths(file) {
+  if (!knownSearchPaths.has(file)) {
+    knownSearchPaths.set(file, readSearchPaths(file))
+  }
+  return knownSearchPaths.get(file)
 }
 
 // Where each library copied in came from. One that loads its neighbours
@@ -173,14 +183,18 @@ function locate(name, file) {
   return found[0] ?? fromHomebrew(basename(name))
 }
 
-/** Copies a library into the app, once, and has `file` load the copy. */
+/**
+ * Has `file` load a copy of a library inside the app. Returns the copy
+ * when this call made it.
+ */
 function copyIn(name, from, file) {
   if (name.includes(".framework/")) {
     fail(`macdeployqt left ${name} out, which ${file} loads`)
   }
   const copy = join(frameworks, basename(name))
   const installed = `${INSTALLED}/${basename(name)}`
-  if (!existsSync(copy)) {
+  const isNew = !existsSync(copy)
+  if (isNew) {
     const original = realpathSync(from)
     copyFileSync(original, copy)
     // Homebrew's libraries are read-only.
@@ -190,16 +204,18 @@ function copyIn(name, from, file) {
     process.stdout.write(`copied ${original}\n`)
   }
   tool("install_name_tool", ["-change", name, installed, file])
+  return isNew ? copy : undefined
 }
 
 // Libraries that are nowhere on this machine either. Qt's plugins name
 // some they can do without.
 const missing = new Set()
 
-/** One pass over the app. True when it copied something in. */
+/** Goes through the app, and then through the libraries it copies in. */
 function copyOutsideLibraries() {
-  let copied = false
-  for (const file of machFiles()) {
+  const waiting = machFiles()
+  while (waiting.length > 0) {
+    const file = waiting.pop()
     for (const name of dependencies(file)) {
       const where = locate(name, file)
       if (where === "inside") continue
@@ -207,11 +223,10 @@ function copyOutsideLibraries() {
         missing.add(`${name}, which ${file.slice(contents.length + 1)} loads`)
         continue
       }
-      copyIn(name, where, file)
-      copied = true
+      const copy = copyIn(name, where, file)
+      if (copy) waiting.push(copy)
     }
   }
-  return copied
 }
 
 function deployQt() {
@@ -222,13 +237,19 @@ function deployQt() {
   )
   // The program still says where Qt and libmpv were on the machine that
   // built it, and would load them from there on that machine.
-  for (const path of searchPaths(executable)) {
+  for (const path of readSearchPaths(executable)) {
     if (path.startsWith("/")) {
       tool("install_name_tool", ["-delete_rpath", path, executable])
     }
   }
-  if (!searchPaths(executable).includes(INSTALLED)) {
+  if (!readSearchPaths(executable).includes(INSTALLED)) {
     tool("install_name_tool", ["-add_rpath", INSTALLED, executable])
+  }
+  // macdeployqt brings every plugin of the Qt modules the app links. The
+  // app has no use for these two kinds, and they load libraries that
+  // aren't Qt's: database clients and a serial port's.
+  for (const kind of ["sqldrivers", "position"]) {
+    rmSync(join(contents, "PlugIns", kind), { recursive: true, force: true })
   }
 }
 
@@ -268,9 +289,7 @@ function pack(archive) {
   if (!existsSync(executable)) fail(`${app} isn't a built Matinee.app`)
   deployQt()
   mkdirSync(frameworks, { recursive: true })
-  while (copyOutsideLibraries()) {
-    // Until the libraries copied in load nothing from outside either.
-  }
+  copyOutsideLibraries()
   addMoltenVk()
   sign()
   for (const library of missing) {

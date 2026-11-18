@@ -36,7 +36,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/probe"
           swiftc -O tools/ci/titlebar-probe.swift -o "$RUNNER_TEMP/titlebar-probe"
-          for variant in layer child destover; do
+          for variant in layer topz; do
             "$RUNNER_TEMP/titlebar-probe" $variant "$RUNNER_TEMP/probe" || true
           done
       - name: keep the screenshots
