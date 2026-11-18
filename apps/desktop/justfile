@@ -26,10 +26,6 @@ run *args: build
 smoke: build
     {{ sh }} node smoke/smoke.mjs {{ build_dir }}/matinee-desktop
 
-# Build the app, then run it against a stand-in server and check that it plays
-smoke: build
-    {{ sh }} node smoke/smoke.mjs {{ build_dir }}/matinee-desktop
-
 # Serve the app's own pages on :5174, in a browser, with a stand-in for the shell
 pages:
     {{ sh }} pnpm --filter @matinee/desktop dev
