@@ -105,9 +105,9 @@ jobs:
         env:
           SMOKE_OUT: ${{ runner.temp }}/smoke
           SMOKE_SCREENSHOT: screencapture -x {file}
-          # The runner's virtual GPU crashes on the textures mpv uploads
-          # for subtitles through Vulkan, in mpv's own window too.
-          SMOKE_SUBTITLES: ${{ matrix.mpv == 'patched' && 'no' || 'yes' }}
+          # The runner's virtual GPU can't take all that mpv does through
+          # Vulkan. The file says what.
+          SMOKE_MPV_CONF: ${{ matrix.mpv == 'patched' && 'apps/desktop/smoke/virtual-gpu.conf' || '' }}
           # What every thread of an app that hung was doing, and the screen.
           SMOKE_FAILED: sample {pid} 5 -file {out}/sample.txt; screencapture -x {out}/failed.png
         run: node apps/desktop/smoke/smoke.mjs build/Matinee.app/Contents/MacOS/Matinee
@@ -117,7 +117,7 @@ jobs:
         if: always() && matrix.mpv == 'stock'
         continue-on-error: true
         run: |
-          for options in "--hwdec=auto-safe" "--hwdec=no --sid=no --osd-level=0" "--hwdec=auto-safe --sid=no --osd-level=0"; do
+          for options in "--hwdec=auto-safe --sid=no --osd-level=0" "--profile=fast --hwdec=auto-safe --sid=no --osd-level=0" "--profile=fast --hwdec=no --sid=no --osd-level=0"; do
             echo "=== $options"
             mpv --no-config --vo=gpu-next --gpu-api=vulkan --gpu-context=macvk $options \
               --frames=48 --msg-level=all=v apps/desktop/smoke/clip.mkv 2>&1 | tail -12 || true

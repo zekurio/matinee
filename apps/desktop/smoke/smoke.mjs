@@ -18,9 +18,8 @@
  * temporary directory, printed at the end) gets the picture, the app's
  * log, and mpv's last state.
  *
- * SMOKE_SUBTITLES=no plays the clip without its subtitle, for a GPU that
- * can't take the textures mpv draws subtitles from, like the virtual one
- * of GitHub's macOS runners under Vulkan.
+ * SMOKE_MPV_CONF names a file to give the app as its mpv.conf, for a
+ * machine where mpv's defaults don't work, like virtual-gpu.conf here.
  *
  * A check that fails leaves the app running for a moment. SMOKE_FAILED,
  * if set, is a command to look at it with before it's stopped, like one
@@ -30,7 +29,7 @@
 
 import { execSync, spawn } from "node:child_process"
 import { createReadStream, createWriteStream } from "node:fs"
-import { mkdir, mkdtemp, stat, writeFile } from "node:fs/promises"
+import { copyFile, mkdir, mkdtemp, stat, writeFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { tmpdir } from "node:os"
 import { dirname, extname, join, normalize } from "node:path"
@@ -224,6 +223,13 @@ await writeFile(
   join(home, "data", "tokens.json"),
   JSON.stringify({ smoke: TOKEN }),
 )
+if (process.env.SMOKE_MPV_CONF) {
+  await mkdir(join(home, "config", "mpv"), { recursive: true })
+  await copyFile(
+    process.env.SMOKE_MPV_CONF,
+    join(home, "config", "mpv", "mpv.conf"),
+  )
+}
 
 const devtools = await freePort()
 const log = createWriteStream(join(out, "app.log"))
@@ -287,10 +293,7 @@ try {
     start: 1,
     paused: false,
     audio: 1,
-    subtitle:
-      process.env.SMOKE_SUBTITLES === "no"
-        ? null
-        : { kind: "stream", index: 2 },
+    subtitle: { kind: "stream", index: 2 },
     subtitleDelay: 0,
   })
   const playing = await until(
