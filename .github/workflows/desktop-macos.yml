@@ -75,7 +75,7 @@ jobs:
       - name: restore libmpv
         id: mpv-cache
         if: matrix.mpv == 'patched'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/mpv
           key: ${{ steps.mpv.outputs.key }}
@@ -83,6 +83,14 @@ jobs:
       - name: build libmpv
         if: matrix.mpv == 'patched' && steps.mpv-cache.outputs.cache-hit != 'true'
         run: node tools/ci/mpv-macos.mjs build
+
+      # Right away, so a run that fails further down still leaves it.
+      - name: keep libmpv
+        if: matrix.mpv == 'patched' && steps.mpv-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/mpv
+          key: ${{ steps.mpv.outputs.key }}
 
       - name: configure
         run: cmake -S apps/desktop/native -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -93,9 +101,12 @@ jobs:
       # Plays a clip against a stand-in server, with a screenshot taken
       # while it plays to check by eye that the page shows over the video.
       - name: smoke test
+        timeout-minutes: 5
         env:
           SMOKE_OUT: ${{ runner.temp }}/smoke
           SMOKE_SCREENSHOT: screencapture -x {file}
+          # What every thread of an app that hung was doing, and the screen.
+          SMOKE_FAILED: sample {pid} 5 -file {out}/sample.txt; screencapture -x {out}/failed.png
         run: node apps/desktop/smoke/smoke.mjs build/Matinee.app/Contents/MacOS/Matinee
 
       - name: keep what the smoke test left
@@ -107,5 +118,7 @@ jobs:
             ${{ runner.temp }}/smoke/app.log
             ${{ runner.temp }}/smoke/state.json
             ${{ runner.temp }}/smoke/playing.png
+            ${{ runner.temp }}/smoke/sample.txt
+            ${{ runner.temp }}/smoke/failed.png
           if-no-files-found: warn
           retention-days: 7

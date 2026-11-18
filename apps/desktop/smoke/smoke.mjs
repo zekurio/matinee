@@ -17,6 +17,11 @@
  * pink badge and its bar over the video, and SMOKE_OUT (default: a
  * temporary directory, printed at the end) gets the picture, the app's
  * log, and mpv's last state.
+ *
+ * A check that fails leaves the app running for a moment. SMOKE_FAILED,
+ * if set, is a command to look at it with before it's stopped, like one
+ * that lists what the threads of a hung app are doing. `{pid}` stands for
+ * the app's process and `{out}` for SMOKE_OUT.
  */
 
 import { execSync, spawn } from "node:child_process"
@@ -42,6 +47,9 @@ if (!app) {
   process.stderr.write("Usage: node smoke.mjs <path to matinee-desktop>\n")
   process.exit(2)
 }
+
+// How long the app's page gets to answer. An app that hangs never does.
+const ANSWER_MS = 30_000
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -162,7 +170,12 @@ async function connect(port) {
   const evaluate = (expression) =>
     new Promise((resolve, reject) => {
       const id = nextId++
+      const late = setTimeout(() => {
+        waiting.delete(id)
+        reject(new Error(`the app's page didn't answer: ${expression}`))
+      }, ANSWER_MS)
       waiting.set(id, (result) => {
+        clearTimeout(late)
         if (result?.exceptionDetails) {
           reject(new Error(JSON.stringify(result.exceptionDetails)))
         } else resolve(result?.result?.value)
@@ -332,6 +345,17 @@ try {
   process.stderr.write(
     `${cause instanceof Error ? cause.message : String(cause)}\n`,
   )
+  if (process.env.SMOKE_FAILED) {
+    const look = process.env.SMOKE_FAILED.replaceAll(
+      "{pid}",
+      String(child.pid),
+    ).replaceAll("{out}", out)
+    try {
+      execSync(look, { stdio: "inherit" })
+    } catch {
+      process.stderr.write(`couldn't run ${look}\n`)
+    }
+  }
 } finally {
   child.kill()
   await Promise.race([exited, sleep(5000)])
