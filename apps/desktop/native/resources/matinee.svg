@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- The app icon for Linux, macOS, and Windows, which show an icon as it
+       is: app-icon.svg with its corners rounded here, and the margin
+       around it that macOS icons keep. The mark is 24 units to the pixel,
+       its bounding box centered on the canvas. -->
+  <linearGradient id="sky" x1="0" y1="100" x2="0" y2="924" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#1d1a33"/>
+    <stop offset="1" stop-color="#0e0e10"/>
+  </linearGradient>
+  <linearGradient id="sunset" x1="0" y1="3" x2="0" y2="20.7" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#ffc56b"/>
+    <stop offset="0.5" stop-color="#f27a8f"/>
+    <stop offset="1" stop-color="#6d8cf5"/>
+  </linearGradient>
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#sky)"/>
+  <g transform="translate(224 227.6) scale(24)">
+    <path fill="url(#sunset)" d="M2.22 15.1A10 10 0 1 1 21.78 15.1ZM2.53 16.2H21.47A10 10 0 0 1 20.77 17.8H3.23A10 10 0 0 1 2.53 16.2ZM4.15 19.2H19.85A10 10 0 0 1 18.38 20.7H5.62A10 10 0 0 1 4.15 19.2Z"/>
+  </g>
+</svg>

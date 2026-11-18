@@ -58,8 +58,8 @@ jobs:
       - name: check nix flake
         run: nix flake check --print-build-logs
 
-      # A pin keeps the release's package when the cache collects garbage.
-      - name: push and pin the package
+      # A pin keeps the release's packages when the cache collects garbage.
+      - name: push and pin the packages
         env:
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
         run: node tools/release/cache.mjs

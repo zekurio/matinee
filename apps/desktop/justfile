@@ -1,0 +1,39 @@
+# Tasks for the desktop app. Run `just` in this folder for the list, or
+# `just desktop <recipe>` from the repository root. CMake and Qt come from
+# the flake's desktop shell, entered for each command unless you're in it.
+
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+in_shell := env("MATINEE_DESKTOP_SHELL", "")
+sh := if in_shell != "" { "" } else { "nix develop ../..#desktop -c" }
+build_dir := "native/build"
+
+[private]
+default:
+    @just --list --unsorted
+
+# Build the app's own pages, then the program, into native/build
+build:
+    {{ sh }} pnpm --filter @matinee/desktop build
+    {{ sh }} cmake -S native -B {{ build_dir }} -G Ninja
+    {{ sh }} cmake --build {{ build_dir }}
+
+# Build the app and run it. Arguments go to it, like --verbose
+run *args: build
+    {{ sh }} {{ build_dir }}/matinee-desktop {{ args }}
+
+# Build the app, then run it against a stand-in server and check that it plays
+smoke: build
+    {{ sh }} node smoke/smoke.mjs {{ build_dir }}/matinee-desktop
+
+# Build the app, then run it against a stand-in server and check that it plays
+smoke: build
+    {{ sh }} node smoke/smoke.mjs {{ build_dir }}/matinee-desktop
+
+# Serve the app's own pages on :5174, in a browser, with a stand-in for the shell
+pages:
+    {{ sh }} pnpm --filter @matinee/desktop dev
+
+# Remove the build
+clean:
+    rm -rf {{ build_dir }} dist

@@ -20,6 +20,7 @@ height, with a gap of 30% of its width.
 | `logo-dark.svg`          | Fixed colors for dark backgrounds                            |
 | `social-preview.png`     | GitHub social preview, 1280×640. Upload it in Settings       |
 | `app-icon.svg`           | 1024px full-bleed app icon. Platforms round the corners      |
+| `app-icon-desktop.svg`   | The same with rounded corners, for Linux, macOS, and Windows |
 | `app-icon-dark.svg`      | iOS dark appearance, mark on transparency                    |
 | `app-icon-tinted.svg`    | iOS tinted appearance, gray mark on transparency             |
 | `ios/AppIcon.appiconset` | Xcode asset catalog, one 1024 image per appearance           |
@@ -28,10 +29,10 @@ height, with a gap of 30% of its width.
 | `wordmark.py`            | Draws the wordmark and writes the logo files                 |
 | `render.sh`              | Runs `wordmark.py`, then renders every PNG and the web icons |
 
-`wordmark.py` also writes `apps/web/src/components/logo.gen.ts` and the
-Android drawables `logo.xml` and `logo_dark.xml`. The web app serves
-copies as `favicon.svg` and `apple-touch-icon.png`, and `brand.tsx` draws
-the mark inline.
+`wordmark.py` also writes `logo.gen.ts` in `apps/web/src/components` and
+`apps/desktop/src/components`, and the Android drawables `logo.xml` and
+`logo_dark.xml`. The web app serves copies as `favicon.svg` and
+`apple-touch-icon.png`, and `brand.tsx` draws the mark inline.
 
 ## Colors
 
@@ -51,6 +52,9 @@ bounding box is 2.22,3 to 21.78,20.7, and every placement centers that box.
 - iOS uses 30 px per unit on the 1024 canvas, so the mark is 587 px wide.
 - Android uses 2.2 dp per unit on the 108 dp canvas. The farthest point is
   24 dp from center, inside the 33 dp safe zone.
+- The desktop icon is an 824 px square with a 184 px corner radius on the
+  1024 canvas, the size and margin of a macOS icon, with the mark at 24 px
+  per unit.
 
 ## Changing it
 
