@@ -273,6 +273,48 @@ function addMoltenVk() {
   )
 }
 
+/** The oldest macOS each architecture of a file runs on, like `26.0`. */
+function oldestSystems(file) {
+  const commands = tool("otool", ["-l", file])
+  return [
+    ...commands.matchAll(
+      /cmd LC_BUILD_VERSION\n(?:\s+\w+ .*\n){0,4}?\s+minos (\S+)/g,
+    ),
+    ...commands.matchAll(
+      /cmd LC_VERSION_MIN_MACOSX\n\s+cmdsize \d+\n\s+version (\S+)/g,
+    ),
+  ].map((match) => match[1])
+}
+
+const newer = (a, b) => {
+  if (a === undefined) return b
+  const [x, y] = [a, b].map((version) => version.split(".").map(Number))
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const difference = (x[i] ?? 0) - (y[i] ?? 0)
+    if (difference !== 0) return difference > 0 ? a : b
+  }
+  return a
+}
+
+/**
+ * Says in the app's Info.plist which macOS it needs: the newest of what
+ * the files inside need. Homebrew builds its libraries for the runner's
+ * macOS, so that is usually the runner's. On an older one the system
+ * then says so, where the loader would otherwise stop the app at start.
+ */
+function requireSystem() {
+  const needed = machFiles().flatMap(oldestSystems).reduce(newer, undefined)
+  if (!needed) fail("No file in the app says which macOS it needs")
+  tool("plutil", [
+    "-replace",
+    "LSMinimumSystemVersion",
+    "-string",
+    needed,
+    join(contents, "Info.plist"),
+  ])
+  process.stdout.write(`The app needs macOS ${needed} or newer\n`)
+}
+
 function sign() {
   // Changing what a file loads broke its signature. Each file first, the
   // deepest first, since the app's signature covers the ones inside it,
@@ -291,6 +333,7 @@ function pack(archive) {
   mkdirSync(frameworks, { recursive: true })
   copyOutsideLibraries()
   addMoltenVk()
+  requireSystem()
   sign()
   for (const library of missing) {
     process.stdout.write(`::warning::The app has no ${library}\n`)
