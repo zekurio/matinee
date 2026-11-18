@@ -238,7 +238,8 @@ struct LockedScreen: View {
   /// Counts touches on the screen, each showing the button again.
   @State private var tapped = 0
   /// A finger is on the screen, off the button.
-  @GestureState private var touching = false
+  // SwiftUI's, not the player's own GestureState in PlayerGestures.swift.
+  @SwiftUI.GestureState private var touching = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
