@@ -4,8 +4,9 @@
   # Paths from the root that the build doesn't read, so that editing them
   # doesn't rebuild it.
   exclude ? [
-    # The Android app is no part of the server or the web app.
+    # Native apps are no part of the server or the web app.
     "apps/android"
+    "apps/ios"
     # Nor are the desktop app's native shell and its patches to mpv. Its
     # pages are, as a member of the workspace the lockfile covers.
     "apps/desktop/native"

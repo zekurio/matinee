@@ -1,8 +1,10 @@
 # Shortcuts for the repository. `just` lists them. The Android app's are
-# under `just android`, from apps/android/justfile, and the desktop app's
-# under `just desktop`, from apps/desktop/justfile.
+# under `just android`, from apps/android/justfile, the iOS app's under
+# `just ios`, from apps/ios/justfile, and the desktop app's under
+# `just desktop`, from apps/desktop/justfile.
 
 mod android "apps/android"
+mod ios "apps/ios"
 mod desktop "apps/desktop"
 
 [private]
@@ -13,7 +15,7 @@ default:
 dev:
     pnpm dev
 
-# Format check, lint, typecheck, and the Android client check, as CI runs
+# Format check, lint, typecheck, and the native API client checks, as CI runs
 verify:
     pnpm verify
 

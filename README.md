@@ -27,6 +27,7 @@ It's an early MVP. Expect breaking changes until the first release.
 | [Server](apps/server)   | Hono and oRPC on Postgres. Scanning, streaming, sign-in   |
 | [Web](apps/web)         | The React client, served by the server                    |
 | [Android](apps/android) | Phones, tablets, and Android TV, with offline downloads   |
+| [iOS](apps/ios)         | iPhone, iPad, and Apple TV, with offline downloads        |
 | [Desktop](apps/desktop) | Linux, macOS, and Windows, playing with mpv               |
 | [Brand](brand)          | Logo, wordmark, app icons, and the scripts that draw them |
 
@@ -132,6 +133,7 @@ pull requests.
 | -------------------------------- | ----------------------------------------- |
 | `pnpm db:generate --name <what>` | Writes a migration for a schema change    |
 | `pnpm api:android`               | Regenerates the Android API client        |
+| `pnpm api:ios`                   | Regenerates the Apple apps' API client    |
 | `nix build`                      | Builds the server package                 |
 | `nix flake check`                | Builds it and runs the NixOS module tests |
 | `nix develop .#android`          | Shell with a JDK and the Android SDK      |

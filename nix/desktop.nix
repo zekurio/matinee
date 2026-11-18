@@ -23,6 +23,7 @@
     root = ../.;
     exclude = [
       "apps/android"
+      "apps/ios"
       "apps/desktop/mpv"
     ];
   },

@@ -20,6 +20,7 @@ export const DEVICE_PLATFORMS = [
   "linux",
   "macos",
   "tizen",
+  "tvos",
   "windows",
 ] as const
 export const DevicePlatform = t.enum(DEVICE_PLATFORMS)

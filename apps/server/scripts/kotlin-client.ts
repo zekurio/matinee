@@ -77,7 +77,7 @@ type KotlinType =
   /** A field that may be left out, null, or a value: [Typed] says which value. */
   | { kind: "explicit"; value: Typed }
 
-type Typed = { type: KotlinType; nullable: boolean }
+export type Typed = { type: KotlinType; nullable: boolean }
 
 type Property = { json: string; typed: Typed; optional: boolean }
 
@@ -90,7 +90,7 @@ type ClassDeclaration = {
   variantOf?: { union: string; tag: string }
 }
 
-type Declaration =
+export type Declaration =
   | ClassDeclaration
   | {
       kind: "union"
@@ -101,7 +101,7 @@ type Declaration =
   | { kind: "values"; name: string; values: Literal[] }
 
 /** Where a schema's inline classes go, and what they're called from outside. */
-type Scope = { declarations: Declaration[]; prefix: string }
+export type Scope = { declarations: Declaration[]; prefix: string }
 
 const KEYWORDS = new Set([
   "as",
@@ -134,7 +134,13 @@ const KEYWORDS = new Set([
   "while",
 ])
 
-const METHODS: readonly Method[] = ["get", "post", "put", "patch", "delete"]
+export const METHODS: readonly Method[] = [
+  "get",
+  "post",
+  "put",
+  "patch",
+  "delete",
+]
 
 class UnsupportedSchema extends Error {}
 
@@ -145,7 +151,7 @@ function literalKind(value: Literal): "string" | "number" | "boolean" | "null" {
   return "string"
 }
 
-function pascal(name: string): string {
+export function pascal(name: string): string {
   return name
     .split(/[^A-Za-z0-9]+/)
     .filter(Boolean)
@@ -153,7 +159,7 @@ function pascal(name: string): string {
     .join("")
 }
 
-function camel(name: string): string {
+export function camel(name: string): string {
   const joined = pascal(name)
   return joined.charAt(0).toLowerCase() + joined.slice(1)
 }
@@ -202,7 +208,7 @@ function refName(ref: string): string {
   return name
 }
 
-class KotlinClient {
+export class KotlinClient {
   readonly #components: Map<string, Schema>
   /** Top-level declarations, in the order the document names them. */
   readonly #declarations: Declaration[] = []
@@ -495,7 +501,7 @@ class KotlinClient {
 
 // Rendering
 
-class Lines {
+export class Lines {
   readonly #lines: string[] = []
   #depth = 0
 
@@ -675,7 +681,7 @@ type Argument = {
   wire: string
 }
 
-type Endpoint = {
+export type Endpoint = {
   group: string[]
   name: string
   method: Method
@@ -696,7 +702,7 @@ function isFile(schema: Schema): boolean {
   return members !== undefined && members.length > 0 && members.every(isFile)
 }
 
-function endpoint(
+export function endpoint(
   client: KotlinClient,
   scope: Scope,
   method: Method,

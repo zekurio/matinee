@@ -1,0 +1,841 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "ios_tv_settings_sign_out_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Von diesem Fernseher abmelden?" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sign out of this TV?" } }
+      }
+    },
+    "ios_tv_settings_sign_out_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Du musst dich erneut anmelden, um hier etwas anzusehen." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You'll have to sign in again to watch here." } }
+      }
+    },
+    "ios_servers_remove_failed" : {
+      "comment" : "%@ is the server name. Wording from the web's libraries.removeFailed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "%@ konnte nicht entfernt werden" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't remove %@" } }
+      }
+    },
+    "ios_tv_title_trailer_failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Auf diesem Fernseher kann nichts den Trailer öffnen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Nothing on this TV can open the trailer" } }
+      }
+    },
+    "ios_filters_year_from" : {
+      "comment" : "Lower year bound. Wording from the web's filters.sort.oldest.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Älteste" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Oldest" } }
+      }
+    },
+    "ios_filters_year_to" : {
+      "comment" : "Upper year bound. Wording from the web's filters.sort.newest.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Neueste" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Newest" } }
+      }
+    },
+    "ios_filters_runtime_min" : {
+      "comment" : "Lower runtime bound. Wording from the web's filters.sort.shortest.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Kürzeste" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortest" } }
+      }
+    },
+    "ios_filters_runtime_max" : {
+      "comment" : "Upper runtime bound. Wording from the web's filters.sort.longest.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Längste" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Longest" } }
+      }
+    },
+    "ios_account_display_name_save_failed" : {
+      "comment" : "%@ is why, in the server's words. The web's account.displayName.saveFailed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Name konnte nicht gespeichert werden. %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't save your name. %@"
+          }
+        }
+      }
+    },
+    "ios_account_oidc_linked" : {
+      "comment" : "%@ is a date. The web's account.oidc.linked.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpft am %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linked %@"
+          }
+        }
+      }
+    },
+    "ios_account_oidc_stale" : {
+      "comment" : "A link from before single sign-on changed issuer; %@ is the provider's name. The web's account.oidc.stale.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit einer früheren %@-Einrichtung verknüpft, darüber kannst du dich nicht anmelden. Verknüpfe es neu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linked to an earlier %@ setup, so it can't sign you in. Link it again."
+          }
+        }
+      }
+    },
+    "ios_account_oidc_unlink" : {
+      "comment" : "The web's account.oidc.unlink.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trennen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlink"
+          }
+        }
+      }
+    },
+    "ios_account_oidc_unlink_failed" : {
+      "comment" : "%@ is the provider's name. The web's account.oidc.unlinkFailed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpfung mit %@ konnte nicht getrennt werden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't unlink %@"
+          }
+        }
+      }
+    },
+    "ios_account_passkeys_added" : {
+      "comment" : "%@ is a date. The web's account.passkeys.added.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hinzugefügt am %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added %@"
+          }
+        }
+      }
+    },
+    "ios_account_passkeys_remove" : {
+      "comment" : "The web's account.passkeys.remove.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkey entfernen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove passkey"
+          }
+        }
+      }
+    },
+    "ios_account_passkeys_remove_description" : {
+      "comment" : "The web's account.passkeys.removeDescription.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kannst dich damit nicht mehr anmelden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You won't be able to sign in with it again."
+          }
+        }
+      }
+    },
+    "ios_account_passkeys_remove_failed" : {
+      "comment" : "The web's account.passkeys.removeFailed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkey konnte nicht entfernt werden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't remove passkey"
+          }
+        }
+      }
+    },
+    "ios_account_passkeys_remove_named" : {
+      "comment" : "%@ is the passkey's name. The web's account.passkeys.removeNamed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ entfernen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove %@"
+          }
+        }
+      }
+    },
+    "ios_account_passkeys_remove_title" : {
+      "comment" : "%@ is the passkey's name. The web's account.passkeys.removeTitle.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ entfernen?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove %@?"
+          }
+        }
+      }
+    },
+    "ios_account_passkeys_remove_title_unnamed" : {
+      "comment" : "The web's account.passkeys.removeTitleUnnamed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesen Passkey entfernen?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove this passkey?"
+          }
+        }
+      }
+    },
+    "ios_account_passkeys_synced" : {
+      "comment" : "A passkey kept in sync across the person's devices. The web's account.passkeys.synced.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synchronisiert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Synced"
+          }
+        }
+      }
+    },
+    "ios_account_passkeys_unnamed" : {
+      "comment" : "A passkey without a name. The web's account.passkeys.unnamed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passkey"
+          }
+        }
+      }
+    },
+    "ios_account_passkeys_used" : {
+      "comment" : "%@ is relative, like \"3 days ago\". The web's account.passkeys.used.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt verwendet %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Used %@"
+          }
+        }
+      }
+    },
+    "ios_account_picture_change" : {
+      "comment" : "What the account's picture does when tapped. The web's account.picture.change.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bild ändern"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change picture"
+          }
+        }
+      }
+    },
+    "ios_account_picture_change_failed" : {
+      "comment" : "The web's account.picture.changeFailed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Bild konnte nicht geändert werden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't change your picture"
+          }
+        }
+      }
+    },
+    "ios_account_picture_remove" : {
+      "comment" : "The web's account.picture.remove.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bild entfernen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove picture"
+          }
+        }
+      }
+    },
+    "ios_account_profile_title" : {
+      "comment" : "The heading over the picture, name, and sharing in Settings, Account. The web's account.profile.title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile"
+          }
+        }
+      }
+    },
+    "ios_account_sharing_failed" : {
+      "comment" : "The web's account.sharing.failed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es konnte nicht geändert werden, was dein Profil zeigt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't change what your profile shows"
+          }
+        }
+      }
+    },
+    "ios_account_sharing_favorites" : {
+      "comment" : "A switch in Settings, Account: whether others see this account's favorites on its profile. The web's account.sharing.favorites.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Favoriten zeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show my favorites"
+          }
+        }
+      }
+    },
+    "ios_account_sharing_stats" : {
+      "comment" : "A switch in Settings, Account: whether others see this account's statistics on its profile. The web's account.sharing.stats.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Statistiken zeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show my statistics"
+          }
+        }
+      }
+    },
+    "ios_appearance_language_description" : {
+      "comment" : "Under Interface language in Settings, Appearance: the row opens Matinee's page in the iOS Settings app, where its language is picked.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird in der Einstellungen-App gewählt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Picked in the Settings app"
+          }
+        }
+      }
+    },
+    "ios_connect_address" : {
+      "comment" : "What VoiceOver calls the address field on the connect page. The web has no connect page.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serveradresse"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server address"
+          }
+        }
+      }
+    },
+    "ios_connect_local_network" : {
+      "comment" : "Under a failed connect to a server on the local network; iOS asks for Local Network access, which the person can turn on in the app's settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn der Server in deinem lokalen Netzwerk ist, schalte in den Einstellungen „Lokales Netzwerk“ für Matinee ein."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If the server is on your local network, turn on Local Network for Matinee in Settings."
+          }
+        }
+      }
+    },
+    "ios_diagnostics_share" : {
+      "comment" : "Row in Settings, About, Playback report: opens the share sheet with the report's text.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bericht teilen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share report"
+          }
+        }
+      }
+    },
+    "ios_downloads_change_failed" : {
+      "comment" : "Pausing, resuming, or removing a download failed. The web keeps no downloads of its own.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Download konnte nicht geändert werden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't change the download"
+          }
+        }
+      }
+    },
+    "ios_downloads_queue_failed" : {
+      "comment" : "The web's downloads.startFailed.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Download konnte nicht gestartet werden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't start the download"
+          }
+        }
+      }
+    },
+    "ios_home_featured_position" : {
+      "comment" : "VoiceOver's word for where a card is in Home's featured carousel: the card's place, then how many there are.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld von %2$lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "ios_images_from_files" : {
+      "comment" : "In the image editor's Upload menu: pick the image from the Files app. Android has one picker, iOS two.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datei auswählen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose File"
+          }
+        }
+      }
+    },
+    "ios_images_from_photos" : {
+      "comment" : "In the image editor's Upload menu: pick the image from the photo library. Android has one picker, iOS two.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotomediathek"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Library"
+          }
+        }
+      }
+    },
+    "ios_media_hero_next" : {
+      "comment" : "The button on an iPad that moves Home's featured banner on a slide. The web's media.hero.next.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nächste Folie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next slide"
+          }
+        }
+      }
+    },
+    "ios_media_hero_previous" : {
+      "comment" : "The button on an iPad that moves Home's featured banner back a slide. The web's media.hero.previous.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorherige Folie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous slide"
+          }
+        }
+      }
+    },
+    "ios_media_hero_show_slide" : {
+      "comment" : "VoiceOver's name for one of the dots under Home's featured banner on an iPad, which shows that slide. The web's media.hero.showSlide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folie %lld zeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show slide %lld"
+          }
+        }
+      }
+    },
+    "ios_open_settings" : {
+      "comment" : "Button that opens Matinee's page in the iOS Settings app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen öffnen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        }
+      }
+    },
+    "ios_people_section_creator" : {
+      "comment" : "A person page's section of the shows they created. The web's people.section.creator.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idee"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Created"
+          }
+        }
+      }
+    },
+    "ios_playback_audio_remember" : {
+      "comment" : "Switch in Settings, Playback, Languages: an audio track picked in the player comes back when the file plays again. The web's playback.audio.remember; Android has no switch for it yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audioauswahl merken"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remember audio picks"
+          }
+        }
+      }
+    },
+    "ios_player_flash_skip" : {
+      "comment" : "The note over the picture after the player's skip buttons, a double tap, or a key: how far it went, the presses in a row added up; %lld is the seconds. The web's player.flash.skip, which Android lacks.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld s"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld s"
+          }
+        }
+      }
+    },
+    "ios_progress_watched" : {
+      "comment" : "VoiceOver's value for the bar of how much of a file was watched.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld %% gesehen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%% watched"
+          }
+        }
+      }
+    },
+    "ios_settings_subtitles_system_where" : {
+      "comment" : "Under Caption preferences in Settings, Subtitles: where iOS keeps its caption style, which no app can open directly.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Einstellungen › Bedienungshilfen › Untertitel & erweiterte Untertitel"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Settings › Accessibility › Subtitles & Captioning"
+          }
+        }
+      }
+    },
+    "ios_settings_version" : {
+      "comment" : "Under the server's address in Settings: the app and its version, as Android's settings_version says Matinee for Android.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee für iOS %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee for iOS %@"
+          }
+        }
+      }
+    },
+    "ios_title_trailer" : {
+      "comment" : "The button beside Play on a title's page, which opens the trailer on YouTube; the web's title.trailer, which Android doesn't have yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trailer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trailer"
+          }
+        }
+      }
+    },
+    "ios_title_trailer_hint" : {
+      "comment" : "What the trailer button does, for VoiceOver; the web's title.trailerHint.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trailer auf YouTube ansehen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch the trailer on YouTube"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

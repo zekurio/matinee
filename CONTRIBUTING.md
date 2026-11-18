@@ -54,7 +54,7 @@ flows you touched in a browser. Then, depending on what changed:
 
 | You changed                         | Also do                                                         |
 | ----------------------------------- | --------------------------------------------------------------- |
-| A contract in `packages/contracts`  | `pnpm api:android`, and commit the regenerated client           |
+| A contract in `packages/contracts`  | `pnpm api:android` and `pnpm api:ios`, and commit the clients   |
 | The Drizzle schema in `packages/db` | `pnpm db:generate --name <what>`. Never edit a merged migration |
 | Text a user reads                   | Add it to `locales/en/` and translate it in the other languages |
 | `pnpm-lock.yaml`                    | Update `pnpmDepsHash` in `nix/package.nix` from `nix build`     |
