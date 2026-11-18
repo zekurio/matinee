@@ -160,7 +160,7 @@ private struct FavoriteRows: View {
     }
     if !lists.episodes.isEmpty {
       TVRow(Str.favoritesEpisodes, key: FavoriteRow.episodes, items: lists.episodes, itemKey: \.id, memory: memory) {
-        item in still(item)
+        item in TVStillCard(item: item).focusedValue(\.tvBrowseFocused, itemInfo(item, api: api))
       }
     }
     if !lists.movies.isEmpty {
@@ -193,22 +193,5 @@ private struct FavoriteRows: View {
       Picture(api?.art(season.poster ?? title.images.poster))
     }
     .focusedValue(\.tvBrowseFocused, seasonInfo(title, season, api: api))
-  }
-
-  /// An episode as its still: the show, then the episode and the time left, as Home's Continue watching.
-  private func still(_ item: MediaItem) -> some View {
-    let label = itemLabel(item)
-    let code = episodeCode(item)
-    let left = item.progress?.completed == false ? timeLeft(item) : nil
-    let detail = [code, left ?? (code == nil ? label.year : nil)].compactMap(\.self).joined(separator: " · ")
-    return TVLandscapeCard(
-      label.showName, detail: detail.isEmpty ? nil : detail, progress: progressRatio(item),
-      watched: viewer?.isWatched(item) ?? false, action: { nav.item(item) },
-      onLongPress: { actions?.open(.item(item)) },
-      onPlayPause: { nav.play(item.id, nil) }
-    ) {
-      Picture(api?.landscape(item) ?? [])
-    }
-    .focusedValue(\.tvBrowseFocused, itemInfo(item, api: api))
   }
 }

@@ -147,6 +147,7 @@ targets:
       # toasts, artwork over Nuke, the QR code, the sign-in flows' state,
       # and the login backdrop.
       - Matinee/UI/Strings.gen.swift
+      - Matinee/DevSignIn.swift
       - Matinee/UI/State.swift
       - Matinee/UI/Format.swift
       - Matinee/UI/ThemeStore.swift
@@ -156,11 +157,14 @@ targets:
       - Matinee/UI/components/QrCode.swift
       - Matinee/UI/signin/SignInState.swift
       - Matinee/UI/signin/LoginBackdrop.swift
+      - Matinee/UI/home/HomeLoads.swift
       # The detail pages' facts and file info, shared with the iPhone's title
       # and person pages.
       - Matinee/UI/title/TitleData.swift
       # The search field's typing, handed to MatineeCore's `SearchState`.
       - Matinee/UI/search/SearchData.swift
+      # Paging a list, what its filters offer, and the words for sorts and filters.
+      - Matinee/UI/browse/BrowseData.swift
       # What the profile loads and the words its statistics take, shared with
       # the iPhone's profile.
       - Matinee/UI/profile/ProfileData.swift

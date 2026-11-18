@@ -48,13 +48,13 @@ struct TVKindScreen: View {
       }
     }
     .ignoresSafeArea()
-    .tvTitlePages(pages, key: state.key) { api, offset, limit in
+    .pages(pages, key: state.key) { api, offset, limit in
       let query = settled.isEmpty ? nil : settled
       let page = try await api.titles.browse(
         query: query, kind: kind, filters: filters, sort: sort, order: order, limit: limit, offset: offset)
       return TitleList(items: page.items, total: page.total)
     }
-    .tvLoadsFilterOptions(options, kind: kind)
+    .loadsFilterOptions(options, kind: kind)
     .tvTitleFilters(page: $filterPage, sorting: $sorting, options: options, state: state, kind: kind)
     .tvBrowseFocus(memory, field: $fieldFocused, sort: $sortFocused) { firstFocus }
   }

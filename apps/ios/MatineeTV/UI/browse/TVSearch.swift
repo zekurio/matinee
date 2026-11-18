@@ -81,12 +81,14 @@ struct TVSearchScreen: View {
       // The field's placeholder already says what search finds.
       EmptyView()
     } else if search.failed {
-      SearchNotice(
+      GridNotice(
         icon: .cloudOff, headline: Str.searchFailedTitle, message: Str.searchFailed,
-        action: TVNoticeAction(Str.commonRetry, icon: .refreshCw) { submitted += 1 })
+        action: TVNoticeAction(Str.commonRetry, icon: .refreshCw) { submitted += 1 }
+      )
+      .inSearch
     } else if let found = search.results {
       if !found.hasShown {
-        SearchNotice(icon: .searchX, headline: Str.searchNoMatch(text), message: Str.searchNoMatchHint)
+        GridNotice(icon: .searchX, headline: Str.searchNoMatch(text), message: Str.searchNoMatchHint).inSearch
       } else {
         TVPinnedRows(memory: memory) { SearchRows(found: found, names: names, memory: memory) }
           // An answer for older text, while the newer one is out.
@@ -110,33 +112,10 @@ extension SearchResults {
   }
 }
 
-/// In place of the results: why there are none, and what to do about it.
-private struct SearchNotice: View {
-  let icon: Lucide
-  let headline: String
-  let message: String?
-  var action: TVNoticeAction? = nil
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      LucideIcon(icon, size: 72, tint: palette.mutedForeground, scales: false)
-        .padding(.bottom, TVSpace.s5)
-      Text(headline).textStyle(.title).foregroundStyle(palette.foreground.opacity(0.9))
-      if let message {
-        Text(message).textStyle(.body).foregroundStyle(palette.mutedForeground)
-          .frame(maxWidth: 1280, alignment: .leading)
-          .padding(.top, TVSpace.s2)
-      }
-      if let action {
-        TVButton(action.label, icon: action.icon, action: action.action).padding(.top, TVSpace.s6)
-      }
-    }
-    .padding(.leading, TVPage.start)
-    .padding(.trailing, TVPage.end)
-    .padding(.top, TVSpace.s6)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .focusSection()
+extension GridNotice {
+  /// In place of the results, from the page's edge.
+  fileprivate var inSearch: some View {
+    padding(.leading, TVPage.start).padding(.trailing, TVPage.end).padding(.top, TVSpace.s6)
   }
 }
 

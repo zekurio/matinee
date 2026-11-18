@@ -15,7 +15,7 @@ struct TVBrowseScreen: View {
   let genre: String?
   let studio: String?
   @State private var kind: String?
-  @State private var kinds = TVBrowseKinds()
+  @State private var kinds = BrowseKinds()
   @State private var state = TitleListState()
   @State private var options = Loader<TitleFilterOptions>()
   @State private var pages = TitlePages()
@@ -43,7 +43,7 @@ struct TVBrowseScreen: View {
         ForEach(browseKinds(kinds.value), id: \.kind) { choice in
           // The header's count says how many the kind picked has; on every button, five controls
           // wouldn't fit beside the sort in every language.
-          TVButton(browseKindText(choice.kind), icon: kindIcon(choice.kind), active: kind == choice.kind) {
+          TVButton(browseKindLabel(choice.kind), icon: kindIcon(choice.kind), active: kind == choice.kind) {
             self.kind = choice.kind
           }
           .accessibilityValue(choice.count.map { Str.browseTitleCount($0) } ?? "")
@@ -55,14 +55,14 @@ struct TVBrowseScreen: View {
       }
     }
     .ignoresSafeArea()
-    .tvTitlePages(pages, key: "\(kind ?? "")\n\(state.key)") { api, offset, limit in
+    .pages(pages, key: "\(kind ?? "")\n\(state.key)") { api, offset, limit in
       let sent = browseFilters(genre: genre, studio: studio, picked: filters)
       let page = try await api.titles.browse(
         kind: kind, filters: sent, sort: sort, order: order, limit: limit, offset: offset)
       await kinds.show(page.kinds)
       return TitleList(items: page.items, total: page.total)
     }
-    .tvLoadsFilterOptions(options, kind: kind, genre: genre, studio: studio)
+    .loadsFilterOptions(options, kind: kind, genre: genre, studio: studio)
     .tvTitleFilters(
       page: $filterPage, sorting: $sorting, options: options, state: state, kind: kind, own: (genre, studio))
     .tvBrowseFocus(memory, sort: $sortFocused) { firstFocus }
@@ -85,27 +85,10 @@ struct TVBrowseScreen: View {
   }
 }
 
-/// How many movies and shows the genre or studio has, as the server counted
-/// them with the newest page, for the kind buttons.
-@Observable final class TVBrowseKinds {
-  private(set) var value: BrowsedTitles.Kinds?
-
-  func show(_ kinds: BrowsedTitles.Kinds) { if value != kinds { value = kinds } }
-}
-
 private func kindIcon(_ kind: String?) -> Lucide {
   switch kind {
   case TitleKind.movie: .film
   case TitleKind.show: .tv
   default: .libraryBig
-  }
-}
-
-/// A kind's name on a genre's or studio's page: all, movies, or shows.
-private func browseKindText(_ kind: String?) -> String {
-  switch kind {
-  case TitleKind.movie: Str.browseKindMovie
-  case TitleKind.show: Str.browseKindShow
-  default: Str.browseKindAll
   }
 }

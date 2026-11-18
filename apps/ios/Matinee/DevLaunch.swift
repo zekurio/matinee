@@ -24,26 +24,7 @@ import SwiftUI
       if defaults.object(forKey: "dev.offline") != nil {
         store.offlineMode = defaults.bool(forKey: "dev.offline")
       }
-      guard let address = defaults.string(forKey: "dev.server"),
-        let url = MatineeSession.serverCandidates(address).first
-      else { return }
-      let key = url.absoluteString
-      if !store.servers.contains(where: { $0.origin == key }) {
-        store.servers.append(StoredServer(origin: key))
-      }
-      if let token = defaults.string(forKey: "dev.token"), !token.isEmpty,
-        (try? store.secrets.token(for: key)) != token
-      {
-        try? store.secrets.setToken(token, for: key)
-        // Another token may be another account: the session fetches it anew.
-        store.servers = store.servers.map {
-          var server = $0
-          if server.origin == key { server.user = nil }
-          return server
-        }
-      }
-      store.active = key
-      store.lastServer = key
+      devSignIn(store)
     }
 
     /// Offline mode needs the account, which a new token only gets once the

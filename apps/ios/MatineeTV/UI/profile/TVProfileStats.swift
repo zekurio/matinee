@@ -78,7 +78,7 @@ private struct StatsHeading: View {
     .padding(.leading, TVPage.start)
     .padding(.trailing, TVPage.end)
     .padding(.top, TVSpace.s6)
-    .profileRow(ProfileRow.ranges)
+    .detailRow(ProfileRow.ranges)
   }
 }
 
@@ -147,7 +147,7 @@ private struct WatchTimeChart: View {
     }
     .padding(.leading, TVPage.start)
     .padding(.trailing, TVPage.end)
-    .profileRow(ProfileRow.watchTime(range))
+    .detailRow(ProfileRow.watchTime(range))
     .accessibilityElement(children: .contain)
     .accessibilityLabel(Str.statsWatchTime)
   }
@@ -213,7 +213,7 @@ private struct TopTitles: View {
           Picture(api?.art(title.images.poster, size: .medium))
         }
       }
-      .profileRow(ProfileRow.top)
+      .detailRow(ProfileRow.top)
     }
   }
 }
@@ -231,7 +231,7 @@ private struct Genres: View {
         genre in
         TVButton(genre.name, detail: formatWatchTime(genre.watchSeconds)) { nav.genre(genre.name) }
       }
-      .profileRow(ProfileRow.genres)
+      .detailRow(ProfileRow.genres)
     }
   }
 }
@@ -283,7 +283,7 @@ private struct ViewingTimes: View {
       }
       .padding(.leading, TVPage.start)
       .padding(.trailing, TVPage.end)
-      .profileRow(ProfileRow.viewingTimes(range))
+      .detailRow(ProfileRow.viewingTimes(range))
     }
   }
 }

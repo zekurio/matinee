@@ -42,7 +42,7 @@ struct TVGridHeader<Controls: View>: View {
         ScrollView(.horizontal) {
           HStack(spacing: TVSpace.s3) {
             ForEach(chips, id: \.key) { chip in
-              let label = titleFilterChipText(chip)
+              let label = titleFilterChipLabel(chip)
               TVButton(label, trailingIcon: .x, active: true) { onRemove(chip) }
                 .accessibilityLabel(Str.browseRemoveFilter(label))
             }
@@ -77,11 +77,11 @@ struct GridSortAndFilters: View {
     let active = state.activeFilters
     HStack(spacing: TVButtons.gap) {
       TVButton(
-        state.currentOrder.map(titleOrderText) ?? Str.librarySort, icon: .arrowUpDown, trailingIcon: .chevronDown,
+        state.currentOrder.map(titleOrderLabel) ?? Str.librarySort, icon: .arrowUpDown, trailingIcon: .chevronDown,
         action: onSort
       )
       .focused(sortFocus)
-      .accessibilityLabel(Str.browseSortCurrent(state.currentOrder.map(titleOrderText) ?? Str.librarySortName))
+      .accessibilityLabel(Str.browseSortCurrent(state.currentOrder.map(titleOrderLabel) ?? Str.librarySortName))
       TVButton(
         Str.webFiltersTitle, icon: .listFilter, detail: active > 0 ? formatCount(active) : nil,
         trailingIcon: .chevronDown, active: active > 0, action: onFilters

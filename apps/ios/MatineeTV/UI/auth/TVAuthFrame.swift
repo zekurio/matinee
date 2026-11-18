@@ -118,19 +118,6 @@ struct TVAuthNote: View {
   }
 }
 
-extension SavedServer {
-  /// What a saved server is called in the panel: its name, when it told one, else its address without the scheme.
-  var panelTitle: String { name ?? hostAndPort }
-
-  /// The line under it: the address, when the name took its place, and who's signed in there.
-  var panelFacts: String {
-    [name != nil ? hostAndPort : nil, user.map { Str.serversSignedInAs($0.name) } ?? Str.serversSignedOut]
-      .compactMap { $0 }.joined(separator: " · ")
-  }
-
-  private var hostAndPort: String { address.components(separatedBy: "://").last ?? address }
-}
-
 /// A list that scrolls when it's longer than the screen and sits centred
 /// down it when it isn't, as Android's centred column with its scroll.
 struct TVCenteredScroll<Content: View>: View {

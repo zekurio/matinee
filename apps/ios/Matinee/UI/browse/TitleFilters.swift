@@ -27,59 +27,6 @@ func wideControls(_ window: CGSize, _ typeSize: DynamicTypeSize, _ style: ShellS
 
 // MARK: Words
 
-/// A sort and its way, as the menu names it.
-func titleOrderLabel(_ order: TitleOrder) -> String {
-  switch (order.sort, order.order) {
-  case (TitleSort.name, SortOrder.desc): Str.webFiltersSortNameDesc
-  case (TitleSort.recent, SortOrder.desc): Str.webFiltersSortRecentNew
-  case (TitleSort.recent, _): Str.webFiltersSortRecentOld
-  case (TitleSort.year, SortOrder.desc): Str.webFiltersSortNewest
-  case (TitleSort.year, _): Str.webFiltersSortOldest
-  case (TitleSort.score, SortOrder.desc): Str.webFiltersSortScoreHigh
-  case (TitleSort.score, _): Str.webFiltersSortScoreLow
-  case (TitleSort.runtime, SortOrder.desc): Str.webFiltersSortLongest
-  case (TitleSort.runtime, _): Str.webFiltersSortShortest
-  default: Str.webFiltersSortNameAsc
-  }
-}
-
-/// A `WatchFilter`'s name.
-func watchWord(_ state: String) -> String {
-  switch state {
-  case WatchFilter.unwatched: Str.webFiltersWatchUnwatched
-  case WatchFilter.inProgress: Str.webFiltersWatchInProgress
-  default: Str.webFiltersWatchWatched
-  }
-}
-
-/// "German" for `de`, in the app's language.
-func filterLanguageName(_ tag: String) -> String {
-  let locale = Locale.app
-  guard let name = locale.localizedString(forIdentifier: tag), !name.isEmpty else { return tag }
-  return name.prefix(1).uppercased(with: locale) + name.dropFirst()
-}
-
-/// "Germany" for `DE`, in the app's language.
-func filterCountryName(_ code: String) -> String {
-  Locale.app.localizedString(forRegionCode: code) ?? code
-}
-
-/// What a chip says.
-func titleFilterChipLabel(_ chip: TitleFilterChip) -> String {
-  switch chip {
-  case .watched(let state): watchWord(state)
-  case .genre(let name), .studio(let name): name
-  case .years(let from, let to):
-    rangeText(from.map(Double.init), to.map(Double.init), format: yearText, any: "", words: .year)
-  case .score(let min, let max): rangeText(min, max, format: formatRating, any: "", words: .scoreChip)
-  case .movieRating(let rating, let named): named ? Str.webFiltersChipMovieRating(rating) : Str.webFiltersChipRating(rating)
-  case .showRating(let rating, let named): named ? Str.webFiltersChipShowRating(rating) : Str.webFiltersChipRating(rating)
-  case .language(let tag): filterLanguageName(tag)
-  case .runtime(let min, let max):
-    rangeText(min.map(Double.init), max.map(Double.init), format: runtimeText, any: "", words: .runtimeChip)
-  }
-}
-
 /// The filters in use as the shared chips, each taking its own off through `change`.
 func titleFilterChips(
   _ filters: TitleFilters, options: TitleFilterOptions?, change: @escaping (TitleFilters) -> Void
@@ -238,7 +185,7 @@ private struct TitleFilterSections: View {
         isPresented: $choosingLanguage, title: Str.webFiltersLanguage, any: Str.webFiltersAnyLanguage,
         findPlaceholder: Str.browseFindLanguage,
         choices: options.languages.map {
-          FilterChoice(value: $0.language, label: filterLanguageName($0.language), count: $0.titleCount)
+          FilterChoice(value: $0.language, label: languageName($0.language), count: $0.titleCount)
         },
         current: state.filters.language
       ) { picked in
@@ -298,7 +245,7 @@ private struct TitleFilterSections: View {
     if !options.ratings.isEmpty { ratings }
     if options.languages.count > 1 {
       FilterSection(Str.webFiltersLanguage) {
-        OptionRow(label: state.filters.language.map(filterLanguageName) ?? Str.webFiltersAnyLanguage) {
+        OptionRow(label: state.filters.language.map(languageName) ?? Str.webFiltersAnyLanguage) {
           choosingLanguage = true
         }
       }

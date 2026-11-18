@@ -33,7 +33,7 @@ struct Standing: View {
       ) { standing in
         BoardCard(standing: standing, rows: rows) { open = OpenBoard(board: standing.board) }
       }
-      .profileRow(ProfileRow.standing)
+      .detailRow(ProfileRow.standing)
       .tvSidePanel(item: $open, title: { metricName($0.board.metric) }, description: { _ in rangeName(range) }) {
         open in BoardPlaces(board: open.board)
       }

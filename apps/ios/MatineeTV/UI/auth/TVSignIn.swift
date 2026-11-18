@@ -64,7 +64,7 @@ struct TVSignInScreen: View {
   @ViewBuilder private var way: some View {
     let host = server.components(separatedBy: "://").last ?? server
     if adding, let current = session.servers.first(where: \.active) {
-      TVListItem(Str.serversBackTo(current.panelTitle), subtitle: host, icon: .arrowLeft, quiet: true) {
+      TVListItem(Str.serversBackTo(current.title), subtitle: host, icon: .arrowLeft, quiet: true) {
         Task { await session.cancelAdd() }
       }
     } else {

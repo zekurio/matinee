@@ -93,14 +93,6 @@ struct BrowseScreen: View {
   }
 }
 
-/// How many movies and shows a genre or studio has, as the server counted
-/// them with the newest page, for what the kind chips say to VoiceOver.
-@Observable final class BrowseKinds {
-  private(set) var value: BrowsedTitles.Kinds?
-
-  func show(_ kinds: BrowsedTitles.Kinds) { if value != kinds { value = kinds } }
-}
-
 // MARK: People
 
 /// A person's page: who they are and what they're in. Android keeps it in BrowseScreen.kt.

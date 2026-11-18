@@ -177,9 +177,6 @@ struct SettingsServerSection: View {
   }
 }
 
-/// The app's version, as the root package.json has it.
-var appVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
-
 /// A category's page, by its key in the route.
 struct SettingsPageScreen: View {
   let key: String

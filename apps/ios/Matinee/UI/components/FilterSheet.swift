@@ -217,40 +217,6 @@ struct FilterSpan: Equatable {
   let step: Double
 }
 
-/// The keys that word a range: both ends, the low one, the high one.
-struct RangeWords {
-  let between: (String, String) -> String
-  let low: (String) -> String
-  let high: (String) -> String
-
-  /// "Between 1980 and 1989", "At least 7.5", "Up to 120".
-  static let panel = RangeWords(between: Str.webFiltersBetween, low: Str.webFiltersAtLeast, high: Str.webFiltersUpTo)
-  /// Years: "From 1980".
-  static let year = RangeWords(between: Str.webFiltersBetween, low: Str.webFiltersFrom, high: Str.webFiltersUpTo)
-  static let scoreChip = RangeWords(
-    between: Str.webFiltersChipScoreBetween, low: Str.webFiltersChipScoreAtLeast, high: Str.webFiltersChipScoreUpTo)
-  static let runtimeChip = RangeWords(
-    between: Str.webFiltersChipRuntimeBetween, low: Str.webFiltersChipRuntimeAtLeast,
-    high: Str.webFiltersChipRuntimeUpTo)
-}
-
-/// "1980 to 1989", "At least 7.5", or `any` with both ends open.
-func rangeText(_ low: Double?, _ high: Double?, format: (Double) -> String, any: String, words: RangeWords) -> String {
-  switch (low, high) {
-  case (let low?, let high?) where low == high: format(low)
-  case (let low?, let high?): words.between(format(low), format(high))
-  case (let low?, nil): words.low(format(low))
-  case (nil, let high?): words.high(format(high))
-  case (nil, nil): any
-  }
-}
-
-/// A year without its thousands separator.
-func yearText(_ value: Double) -> String { String(Int(value.rounded())) }
-
-/// A length in minutes, in words.
-func runtimeText(_ value: Double) -> String { formatRuntime(Int(value.rounded())) ?? "0" }
-
 /// Two handles on a range, each open at its end. What it says follows the
 /// handles; `onCommit` gets the range once they're let go, nil for an end
 /// at the span's own end.

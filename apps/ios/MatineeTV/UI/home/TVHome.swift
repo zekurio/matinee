@@ -15,46 +15,6 @@ import SwiftUI
  * The rows are TVHomeRows.swift's, and what the header says FocusedItem.swift's.
  */
 
-/// Home's loads: the libraries, Continue watching, Next up, featured, and
-/// the recommendation rows. Each library's shelf loads in its own row.
-/// The iPhone's `HomeLoaders`, without what offline Home keeps.
-final class TVHomeLoaders {
-  let libraries = Loader<[Library]>()
-  let resume = Loader<[MediaItem]>()
-  let nextUp = Loader<[MediaItem]>()
-  let featured = Loader<[FeaturedTitle]>()
-  let recommendations = Loader<HomeRecommendations>()
-
-  /// Everything on Home again, as Try again on Home's one message asks.
-  func reloadAll() {
-    libraries.reload()
-    resume.reload()
-    nextUp.reload()
-    featured.reload()
-    recommendations.reload()
-  }
-}
-
-/// A loader that never fetches again on its return: featured is picked at
-/// random, so fetching it again would swap it under the person.
-private let NEVER_STALE: Duration = .seconds(1_000_000_000)
-
-extension View {
-  /// Loads Home's sections, as the iPhone's `loadsHome`: the libraries,
-  /// Continue watching, and Next up again when Home comes back, the
-  /// recommendations once they're ten minutes old, and featured only when
-  /// it failed.
-  func loadsTVHome(_ loaders: TVHomeLoaders) -> some View {
-    self
-      .loads(loaders.libraries) { api in try await api.libraries.list() }
-      .loads(loaders.resume) { api in try await api.home.continueWatching(limit: 20) }
-      .loads(loaders.nextUp) { api in try await api.home.nextUp(limit: 20).map(\.item) }
-      .loads(loaders.featured, maxAge: NEVER_STALE) { api in try await api.home.featured() }
-      .loads(loaders.recommendations, maxAge: RECOMMENDATIONS_MAX_AGE) { api in try await api.recommendations.home() }
-      .onAppear { if loaders.featured.state.isFailed { loaders.featured.reload() } }
-  }
-}
-
 /// What Home keeps while it's on screen or under a page, so it comes back
 /// as it was left: the card the header shows, and the featured titles. The
 /// server picks other featured titles each time it's asked, and Home asks
@@ -97,7 +57,7 @@ enum HomeRow {
 
 struct TVHomeScreen: View {
   let drawer: TVDrawerState
-  @State private var loaders = TVHomeLoaders()
+  @State private var loaders = HomeLoaders()
   @State private var model = TVHomeModel()
   @State private var memory = TVFocusMemory()
   /// Each shelf's first card once it loaded, for first focus when nothing above it has one.
@@ -135,7 +95,7 @@ struct TVHomeScreen: View {
       }
     }
     .ignoresSafeArea()
-    .loadsTVHome(loaders)
+    .loadsHomeSections(loaders)
     .task(id: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? [])) {
       if let resume = loaders.resume.state.value, let next = loaders.nextUp.state.value {
         await topShelf.publish(continuing: resume, next: next, session: session)

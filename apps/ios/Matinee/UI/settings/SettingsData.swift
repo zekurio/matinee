@@ -1,6 +1,7 @@
 import MatineeCore
 import MatineeKit
 import SwiftUI
+import UIKit
 
 /*
  * SettingsData.kt: what Settings offers and saves, apart from how it's
@@ -104,6 +105,26 @@ func sessionName(_ session: Session) -> String {
     ?? Str.accountDeviceBrowser
 }
 
+/// What a session is when it has a name of its own, when it was last used, and when it signed in.
+func sessionDetail(_ session: Session) -> String {
+  [
+    session.deviceName != nil ? session.platform.map { Str.accountDeviceApp(platformLabel($0)) } : nil,
+    sessionLastActive(session),
+    Str.accountSessionsSignedIn(formatInstant(session.createdAt)),
+  ].compactMap(\.self).joined(separator: " · ")
+}
+
+/// The server moves a session's last use at most hourly, so anything more
+/// recent only says "recently", as the web's.
+private func sessionLastActive(_ session: Session) -> String? {
+  if session.current { return Str.webUsersActiveNow }
+  guard let seen = parseInstant(session.lastSeenAt) else { return nil }
+  if Date.now.timeIntervalSince(seen) < 3600 { return Str.webUsersActiveRecently }
+  let relative = RelativeDateTimeFormatter()
+  relative.locale = .app
+  return Str.webUsersLastSeen(relative.localizedString(for: seen, relativeTo: .now))
+}
+
 func subtitleModeLabel(_ mode: String) -> String {
   switch mode {
   case SubtitleMode.always: Str.playbackSubtitlesModeAlways
@@ -180,4 +201,51 @@ func statusLabel(_ attempt: AttemptDiagnostics) -> String {
   case .replaced: Str.diagnosticsStatusReplaced(mode)
   case .closed: Str.diagnosticsStatusClosed(mode)
   }
+}
+
+/// The app's version, as the root package.json has it.
+var appVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
+
+/// The app's version and build, the system's, and the model, as rows of a title and a value.
+func appInfo() -> [(String, String)] {
+  let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+  #if DEBUG
+    let version = "\(appVersion) (\(build)), debug"
+  #else
+    let version = "\(appVersion) (\(build))"
+  #endif
+  let device = UIDevice.current
+  // "iOS", "iPadOS", or "tvOS", the system's own name, the same in every language, as Android's row says Android.
+  return [
+    (Str.aboutVersion, version),
+    (device.systemName, device.systemVersion),
+    (Str.aboutDevice, deviceName()),
+  ]
+}
+
+/// "iPhone (iPhone18,3)": the kind of device, then its model, which says which one it is.
+private func deviceName() -> String {
+  let kind = UIDevice.current.model
+  guard let model = deviceDiagnostics().model?.text, model != kind else { return kind }
+  return "\(kind) (\(model))"
+}
+
+/// What a log takes out wherever it shows: the server's host and the account's names and id.
+@MainActor func logKnownValues(_ session: MatineeSession) -> KnownValues {
+  switch session.state {
+  case .signedIn(let server, let user), .offline(let server, let user):
+    KnownValues.of(server: server, account: [user.username, user.displayName, user.id])
+  default: KnownValues()
+  }
+}
+
+/// This process's recent log, scrubbed of the server and the account, read off the main thread.
+func readOwnLog(_ known: KnownValues) async -> String {
+  await Task.detached(priority: .userInitiated) {
+    do {
+      return try AppLog.read(known: known)
+    } catch {
+      return "Matinee app log v1\nlog unavailable\n"
+    }
+  }.value
 }

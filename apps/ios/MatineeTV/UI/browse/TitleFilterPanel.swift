@@ -16,87 +16,8 @@ import SwiftUI
  *
  * What's decided, which chips, which steps, is MatineeCore's
  * (Browse/TitleFilterChips.swift, Browse/TitleFilterSteps.swift); this
- * words and draws it. The words are the phone's (Matinee/UI/browse/
- * TitleFilters.swift), which a TV can't share for the phone controls
- * beside them.
+ * draws it, in the words both apps share (Matinee/UI/browse/BrowseData.swift).
  */
-
-// MARK: Words
-
-/// A sort and its way, as the sort panel names it.
-func titleOrderText(_ order: TitleOrder) -> String {
-  switch (order.sort, order.order) {
-  case (TitleSort.name, SortOrder.desc): Str.webFiltersSortNameDesc
-  case (TitleSort.recent, SortOrder.desc): Str.webFiltersSortRecentNew
-  case (TitleSort.recent, _): Str.webFiltersSortRecentOld
-  case (TitleSort.year, SortOrder.desc): Str.webFiltersSortNewest
-  case (TitleSort.year, _): Str.webFiltersSortOldest
-  case (TitleSort.score, SortOrder.desc): Str.webFiltersSortScoreHigh
-  case (TitleSort.score, _): Str.webFiltersSortScoreLow
-  case (TitleSort.runtime, SortOrder.desc): Str.webFiltersSortLongest
-  case (TitleSort.runtime, _): Str.webFiltersSortShortest
-  default: Str.webFiltersSortNameAsc
-  }
-}
-
-/// A `WatchFilter`'s name.
-private func watchText(_ state: String) -> String {
-  switch state {
-  case WatchFilter.unwatched: Str.webFiltersWatchUnwatched
-  case WatchFilter.inProgress: Str.webFiltersWatchInProgress
-  default: Str.webFiltersWatchWatched
-  }
-}
-
-/// "German" for `de`, in the app's language.
-private func languageText(_ tag: String) -> String {
-  let locale = Locale.app
-  guard let name = locale.localizedString(forIdentifier: tag), !name.isEmpty else { return tag }
-  return name.prefix(1).uppercased(with: locale) + name.dropFirst()
-}
-
-/// "Germany" for `DE`, in the app's language.
-private func countryText(_ code: String) -> String { Locale.app.localizedString(forRegionCode: code) ?? code }
-
-private func yearValue(_ value: Double) -> String { String(Int(value.rounded())) }
-private func runtimeValue(_ value: Double) -> String { formatRuntime(Int(value.rounded())) ?? "0" }
-
-/// "1980 to 1989", "At least 7.5", "Up to 2h": a range as its chip says it.
-private func rangeChipText(
-  _ low: Double?, _ high: Double?, format: (Double) -> String, between: (String, String) -> String,
-  atLeast: (String) -> String, upTo: (String) -> String
-) -> String {
-  switch (low, high) {
-  case (let low?, let high?) where low == high: format(low)
-  case (let low?, let high?): between(format(low), format(high))
-  case (let low?, nil): atLeast(format(low))
-  case (nil, let high?): upTo(format(high))
-  case (nil, nil): ""
-  }
-}
-
-/// What the button for a filter in use says.
-func titleFilterChipText(_ chip: TitleFilterChip) -> String {
-  switch chip {
-  case .watched(let state): watchText(state)
-  case .genre(let name), .studio(let name): name
-  case .years(let from, let to):
-    rangeChipText(
-      from.map(Double.init), to.map(Double.init), format: yearValue, between: Str.webFiltersBetween,
-      atLeast: Str.webFiltersFrom, upTo: Str.webFiltersUpTo)
-  case .score(let min, let max):
-    rangeChipText(
-      min, max, format: formatRating, between: Str.webFiltersChipScoreBetween, atLeast: Str.webFiltersChipScoreAtLeast,
-      upTo: Str.webFiltersChipScoreUpTo)
-  case .movieRating(let rating, let named): named ? Str.webFiltersChipMovieRating(rating) : Str.webFiltersChipRating(rating)
-  case .showRating(let rating, let named): named ? Str.webFiltersChipShowRating(rating) : Str.webFiltersChipRating(rating)
-  case .language(let tag): languageText(tag)
-  case .runtime(let min, let max):
-    rangeChipText(
-      min.map(Double.init), max.map(Double.init), format: runtimeValue, between: Str.webFiltersChipRuntimeBetween,
-      atLeast: Str.webFiltersChipRuntimeAtLeast, upTo: Str.webFiltersChipRuntimeUpTo)
-  }
-}
 
 // MARK: The panels
 
@@ -132,7 +53,7 @@ extension View {
       .tvOptionsPanel(
         isPresented: sorting, title: Str.librarySort,
         selection: Binding(get: { state.currentOrder ?? TITLE_ORDERS[0] }, set: { state.apply($0) }),
-        options: offered.map { TVOption($0, titleOrderText($0)) })
+        options: offered.map { TVOption($0, titleOrderLabel($0)) })
       .tvSidePanel(item: page, title: { $0.title }) { shown in
         TVFilterRows(page: shown, current: page, options: options, state: state, kind: kind, own: own)
       }
@@ -247,7 +168,7 @@ private struct TVFilterRows: View {
   @ViewBuilder private func filterRows(_ offered: TitleFilterOptions) -> some View {
     let filters = filters
     if offered.total > 0 {
-      TVStepRow(filters.watched.map(watchText) ?? Str.webFiltersAny, title: Str.webFiltersProgress) { by in
+      TVStepRow(filters.watched.map(watchWord) ?? Str.webFiltersAny, title: Str.webFiltersProgress) { by in
         step { $0.watched = stepChoice(WATCH_FILTER_STEPS, current: $0.watched, by: by) }
       }
       .focused($focused, equals: "watched")
@@ -261,7 +182,7 @@ private struct TVFilterRows: View {
       listRow(.studios, value: list(filters.studios) ?? Str.webFiltersAny)
     }
     if offered.languages.count > 1 {
-      listRow(.language, value: filters.language.map(languageText) ?? Str.webFiltersAnyLanguage)
+      listRow(.language, value: filters.language.map(languageName) ?? Str.webFiltersAnyLanguage)
     }
     if !offered.ratings.isEmpty {
       TVListHeading(Str.webFiltersRating)
@@ -274,7 +195,7 @@ private struct TVFilterRows: View {
       TVListHeading(Str.webFiltersYears)
       rangeRows(
         "years", span: years, low: filters.yearFrom.map(Double.init), high: filters.yearTo.map(Double.init),
-        words: (Str.iosFiltersYearFrom, Str.iosFiltersYearTo), format: yearValue
+        words: (Str.iosFiltersYearFrom, Str.iosFiltersYearTo), format: yearText
       ) { next, low, high in
         next.yearFrom = low.map { Int($0.rounded()) }
         next.yearTo = high.map { Int($0.rounded()) }
@@ -302,7 +223,7 @@ private struct TVFilterRows: View {
       }
       rangeRows(
         "runtime", span: runtime, low: filters.runtimeMin.map(Double.init), high: filters.runtimeMax.map(Double.init),
-        words: (Str.iosFiltersRuntimeMin, Str.iosFiltersRuntimeMax), format: runtimeValue
+        words: (Str.iosFiltersRuntimeMin, Str.iosFiltersRuntimeMax), format: runtimeText
       ) { next, low, high in
         next.runtimeMin = low.map { Int($0.rounded()) }
         next.runtimeMax = high.map { Int($0.rounded()) }
@@ -329,7 +250,7 @@ private struct TVFilterRows: View {
   private func ratingRow(_ system: RatingSystem, both: Bool) -> some View {
     let show = system.kind == TitleKind.show
     let limit = show ? filters.showRating : filters.movieRating
-    let country = countryText(system.country)
+    let country = filterCountryName(system.country)
     let title =
       both ? (show ? Str.webFiltersRatingRowShow(country) : Str.webFiltersRatingRowMovie(country)) : country
     let value =
@@ -403,7 +324,7 @@ private struct TVFilterRows: View {
     .focused($focused, equals: "any")
     ForEach(offered.languages, id: \.language) { entry in
       TVListItem(
-        languageText(entry.language), quiet: true, checked: picked == entry.language,
+        languageName(entry.language), quiet: true, checked: picked == entry.language,
         action: {
           apply { $0.language = entry.language }
           current = .filters
@@ -413,41 +334,5 @@ private struct TVFilterRows: View {
       }
       .focused($focused, equals: "genre-\(entry.language)")
     }
-  }
-}
-
-// MARK: Loading what's offered
-
-extension View {
-  /// Loads what each filter offers for the titles in a scope into `options`,
-  /// as Android's `rememberFilterOptions`; another scope, as another kind
-  /// picked, fetches again at once.
-  func tvLoadsFilterOptions(
-    _ options: Loader<TitleFilterOptions>, kind: String? = nil, genre: String? = nil, studio: String? = nil
-  ) -> some View {
-    modifier(LoadsFilterOptions(options: options, scope: [kind, genre, studio]))
-  }
-}
-
-private struct LoadsFilterOptions: ViewModifier {
-  let options: Loader<TitleFilterOptions>
-  /// The kind, genre, and studio.
-  let scope: [String?]
-  @Environment(\.api) private var api
-
-  func body(content: Content) -> some View {
-    let scope = scope
-    content
-      .loads(options) { api in try await Self.fetch(api, scope) }
-      .onChange(of: scope) {
-        guard let api else { return }
-        options.configure(describe: describeFailure) { try await Self.fetch(api, scope) }
-        options.reload()
-      }
-  }
-
-  private nonisolated static func fetch(_ api: MatineeApi, _ scope: [String?]) async throws -> TitleFilterOptions {
-    let found = try await api.titles.filterOptions(kind: scope[0], genre: scope[1], studio: scope[2])
-    return found
   }
 }

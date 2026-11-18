@@ -113,7 +113,7 @@ private struct SessionRow: View {
   var body: some View {
     // This TV stays focusable, so the list scrolls past it, but has nothing to do.
     TVListItem(
-      sessionName(session), subtitle: detail, icon: platformIcon(session.platform), quiet: true,
+      sessionName(session), subtitle: sessionDetail(session), icon: platformIcon(session.platform), quiet: true,
       action: { if !session.current { onSignOut() } }
     ) {
       if session.current {
@@ -122,24 +122,6 @@ private struct SessionRow: View {
         TVListValue(Str.shellSignOut)
       }
     }
-  }
-
-  private var detail: String {
-    [
-      session.deviceName != nil ? session.platform.map { Str.accountDeviceApp(platformLabel($0)) } : nil,
-      lastActive,
-      Str.accountSessionsSignedIn(formatInstant(session.createdAt)),
-    ].compactMap(\.self).joined(separator: " · ")
-  }
-
-  /// The server moves a session's last use at most hourly, so anything more recent only says "recently".
-  private var lastActive: String? {
-    if session.current { return Str.webUsersActiveNow }
-    guard let seen = parseInstant(session.lastSeenAt) else { return nil }
-    if Date.now.timeIntervalSince(seen) < 3600 { return Str.webUsersActiveRecently }
-    let relative = RelativeDateTimeFormatter()
-    relative.locale = .app
-    return Str.webUsersLastSeen(relative.localizedString(for: seen, relativeTo: .now))
   }
 }
 

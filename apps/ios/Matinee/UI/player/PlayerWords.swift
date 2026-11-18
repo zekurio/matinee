@@ -48,3 +48,16 @@ func noticeDetail(_ note: MatineeCore.Notice) -> String? {
     }
   return detail?.isEmpty == false ? detail : nil
 }
+
+/// How long a note about the last answer stays.
+let NOTICE_SECONDS = 5
+
+/// Tells one notice from the next, which `Notice` itself can't, having no identity.
+struct NoticeKey: Equatable {
+  let kind: NoticeKind
+  let detail: String?
+  init(_ notice: MatineeCore.Notice) {
+    kind = notice.kind
+    detail = notice.detail
+  }
+}

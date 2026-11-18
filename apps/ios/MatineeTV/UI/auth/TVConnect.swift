@@ -83,7 +83,7 @@ private struct TVServerList: View {
             .focused($focused, equals: Row.type)
           if unavailable { searchAgain }
           if canCancel, let current = session.servers.first(where: \.active) {
-            TVListItem(Str.serversBackTo(current.panelTitle), icon: .arrowLeft, quiet: true) {
+            TVListItem(Str.serversBackTo(current.title), icon: .arrowLeft, quiet: true) {
               Task { await session.cancelAdd() }
             }
             .padding(.top, TVSpace.s2)

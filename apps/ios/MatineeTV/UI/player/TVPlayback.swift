@@ -167,12 +167,16 @@ struct TVPlayback: View {
     ])
     .onChange(of: menu) { _, open in if let open { shownMenu = open } }
     .onChange(of: focus) { touched += 1 }
-    .onChange(of: FocusKey(controlsShown, pictureAction?.key, failed), initial: true) { _, _ in placeFocus() }
+    .onChange(of: FocusKey(controls: controlsShown, action: pictureAction?.key, failed: failed), initial: true) { _, _ in placeFocus() }
     .onChange(of: controller.segment) { skipAway = nil }
     .onChange(of: MPVLift(shown: controlsShown, top: controlsTop, subtitle: controller.subtitle?.format), initial: true) {
       _, lift in liftEngineSubtitles(lift)
     }
-    .task(id: HideKey(controls, controller.playing, menu, scrub.target != nil, touched, voiceOver)) {
+    .task(
+      id: HideKey(
+        controls: controls, playing: controller.playing, menu: menu, scrubbing: scrub.target != nil, touched: touched,
+        voiceOver: voiceOver)
+    ) {
       // VoiceOver reads the controls one by one, so they stay until asked away.
       guard controls, controller.playing, menu == nil, scrub.target == nil, !voiceOver else { return }
       try? await Task.sleep(for: HIDE_AFTER)
@@ -399,14 +403,6 @@ private struct HideKey: Equatable {
   let scrubbing: Bool
   let touched: Int
   let voiceOver: Bool
-  init(_ controls: Bool, _ playing: Bool, _ menu: TVPlayerMenu?, _ scrubbing: Bool, _ touched: Int, _ voiceOver: Bool) {
-    self.controls = controls
-    self.playing = playing
-    self.menu = menu
-    self.scrubbing = scrubbing
-    self.touched = touched
-    self.voiceOver = voiceOver
-  }
 }
 
 /// What focus follows.
@@ -414,9 +410,4 @@ private struct FocusKey: Equatable {
   let controls: Bool
   let action: String?
   let failed: Bool
-  init(_ controls: Bool, _ action: String?, _ failed: Bool) {
-    self.controls = controls
-    self.action = action
-    self.failed = failed
-  }
 }

@@ -12,7 +12,7 @@ import SwiftUI
  * while it loads, fails, or is empty, so the rows under it stay put.
  */
 struct TVHomeRows: View {
-  let loaders: TVHomeLoaders
+  let loaders: HomeLoaders
   let featured: [FeaturedTitle]
   let memory: TVFocusMemory
   /// A shelf's first card, or nil, once its row knows, for first focus.
@@ -75,7 +75,7 @@ struct TVHomeRows: View {
       )
       .id(key)
     case .shown(let items):
-      TVRow(title, key: key, items: items, itemKey: \.id, memory: memory) { item in still(item) }
+      TVRow(title, key: key, items: items, itemKey: \.id, memory: memory) { item in TVStillCard(item: item).focusedValue(\.tvHomeFocused, itemInfo(item, api: api)) }
     }
   }
 
@@ -119,23 +119,6 @@ struct TVHomeRows: View {
       Picture(art)
     }
     .focusedValue(\.tvHomeFocused, info)
-  }
-
-  /// A file in Continue watching or Next up as its still: the show, then the episode and the time left.
-  private func still(_ item: MediaItem) -> some View {
-    let label = itemLabel(item)
-    let code = episodeCode(item)
-    let left = item.progress?.completed == false ? timeLeft(item) : nil
-    let detail = [code, left ?? (code == nil ? label.year : nil)].compactMap(\.self).joined(separator: " · ")
-    return TVLandscapeCard(
-      label.showName, detail: detail.isEmpty ? nil : detail, progress: progressRatio(item),
-      watched: viewer?.isWatched(item) ?? false, action: { nav.item(item) },
-      onLongPress: { actions?.open(.item(item)) },
-      onPlayPause: { nav.play(item.id, nil) }
-    ) {
-      Picture(api?.landscape(item) ?? [])
-    }
-    .focusedValue(\.tvHomeFocused, itemInfo(item, api: api))
   }
 }
 
@@ -186,5 +169,30 @@ private struct TVShelfRow: View {
       Picture(api?.art(card.poster))
     }
     .focusedValue(\.tvHomeFocused, shelfInfo(entry, detail: card.detail, api: api))
+  }
+}
+
+/// A file as its still, in Continue watching, Next up, and the favorites:
+/// the show, then the episode and the time left.
+struct TVStillCard: View {
+  let item: MediaItem
+  @Environment(\.api) private var api
+  @Environment(\.navigator) private var nav
+  @Environment(\.tvActions) private var actions
+  @Environment(ViewerState.self) private var viewer: ViewerState?
+
+  var body: some View {
+    let label = itemLabel(item)
+    let code = episodeCode(item)
+    let left = item.progress?.completed == false ? timeLeft(item) : nil
+    let detail = [code, left ?? (code == nil ? label.year : nil)].compactMap(\.self).joined(separator: " · ")
+    TVLandscapeCard(
+      label.showName, detail: detail.isEmpty ? nil : detail, progress: progressRatio(item),
+      watched: viewer?.isWatched(item) ?? false, action: { nav.item(item) },
+      onLongPress: { actions?.open(.item(item)) },
+      onPlayPause: { nav.play(item.id, nil) }
+    ) {
+      Picture(api?.landscape(item) ?? [])
+    }
   }
 }

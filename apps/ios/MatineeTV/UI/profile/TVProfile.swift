@@ -62,7 +62,12 @@ private struct TVProfilePage: View {
 
   var body: some View {
     let profile = loads.profile.state
-    ProfileScroll(memory: memory, headerRows: [ProfileRow.actions, ProfileRow.favorites]) {
+    DetailScroll(
+      memory: memory, headerRows: [ProfileRow.actions, ProfileRow.favorites], bottomRoom: 720,
+      restsAs: [ProfileRow.nothing: ProfileRow.ranges], followsItems: true
+    ) {
+      Color.clear.frame(height: 0)
+    } rows: {
       ProfileHeader(user: user, profile: profile.value, memory: memory)
       switch profile {
       case .loading:
@@ -100,89 +105,6 @@ private struct TVProfilePage: View {
       if let first = profile.recent?.first { return (ProfileRow.recent, first.item.id) }
       return (ProfileRow.actions, ProfileRow.settings)
     }
-  }
-}
-
-// MARK: The page
-
-/// Where the header starts, level with the clock.
-private let HEADER_TOP: CGFloat = TVOverscan.vertical + 8
-/// How far down the focused row's heading rests once the header is away: clear of the clock.
-private let ROW_PIVOT: CGFloat = 136
-/// How far down rows that scroll past the top fade out.
-private let TOP_FADE: CGFloat = 132
-private let PROFILE_TOP = "profile-top"
-
-/// The page as rows under the header, as DetailParts' `DetailScroll`:
-/// while a row in `headerRows` has focus the page sits at its top; once
-/// another has it, that row scrolls to rest under the clock. Each row
-/// gives `.profileRow(key)` the key it has in `memory`.
-private struct ProfileScroll<Content: View>: View {
-  let memory: TVFocusMemory
-  let headerRows: Set<String>
-  @ViewBuilder let content: () -> Content
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  var body: some View {
-    let scrolled = memory.lastRow.map { !headerRows.contains($0) } ?? false
-    ScrollViewReader { reader in
-      ScrollView(.vertical) {
-        VStack(alignment: .leading, spacing: TVSpace.rows) {
-          Color.clear.frame(height: 0).id(PROFILE_TOP)
-          content()
-        }
-        // Room after the last row, so it too can rise to where the focused row rests.
-        .padding(.bottom, 720)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-      .scrollIndicators(.hidden)
-      .onChange(of: memory.lastRow) { _, row in
-        rest(reader, row: row)
-      }
-      // Within a row, the focus engine scrolls the page as it likes, as across a chart's
-      // squares, which can carry the row up under the clock: it goes back to its place.
-      .onChange(of: memory.lastItem) { _, _ in
-        let row = memory.lastRow
-        DispatchQueue.main.async { rest(reader, row: row) }
-      }
-    }
-    // Rows going up past the top fade out there, rather than end at a hard edge under the clock.
-    .mask {
-      VStack(spacing: 0) {
-        LinearGradient(
-          stops: [.init(color: .clear, location: 0), .init(color: .clear, location: 0.55), .init(color: .black, location: 1)],
-          startPoint: .top, endPoint: .bottom
-        )
-        .frame(height: scrolled ? TOP_FADE : 0)
-        Color.black
-      }
-    }
-  }
-}
-
-extension ProfileScroll {
-  /// Scrolls `row` to where a focused row rests: the page's top for the header's rows.
-  fileprivate func rest(_ reader: ScrollViewProxy, row: String?) {
-    guard let row else { return }
-    withAnimation(Motion.animation(Motion.move, reduceMotion: reduceMotion)) {
-      reader.scrollTo(
-        headerRows.contains(row) ? PROFILE_TOP : profileAnchor(row == ProfileRow.nothing ? ProfileRow.ranges : row),
-        anchor: .top)
-    }
-  }
-}
-
-private func profileAnchor(_ row: String) -> String { "pivot/\(row)" }
-
-extension View {
-  /// A row of the profile under `key`: where it rests once it has focus,
-  /// `ROW_PIVOT` below the top, marked by a point that far above it.
-  func profileRow(_ key: String) -> some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Color.clear.frame(height: ROW_PIVOT).id(profileAnchor(key)).accessibilityHidden(true)
-      self
-    }
-    .padding(.top, -ROW_PIVOT)
   }
 }
 
@@ -225,7 +147,7 @@ private struct ProfileHeader: View {
     .padding(.leading, TVPage.start)
     // Clear of the clock at the top right.
     .padding(.trailing, 440)
-    .padding(.top, HEADER_TOP)
+    .padding(.top, DETAIL_HEADER_TOP)
   }
 
   private var facts: [String] {
@@ -340,7 +262,7 @@ private struct RecentRow: View {
         SeeAllCard(aspect: 16 / 9, width: TVCards.landscapeWidth, icon: .clock) { nav.recent() }
       }
     }
-    .profileRow(ProfileRow.recent)
+    .detailRow(ProfileRow.recent)
   }
 }
 

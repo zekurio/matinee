@@ -104,9 +104,6 @@ struct ZoomNote: View {
   }
 }
 
-/// How long a note about the last answer stays.
-private let NOTICE_SECONDS = 5
-
 /// Says what the server did instead of what the viewer asked for, for a
 /// few seconds, as the web's toast does: a subtitle it couldn't burn in, a
 /// quality it couldn't encode, a switch that didn't go through.
@@ -136,16 +133,6 @@ struct PlayerNoticeNote: View {
       guard !Task.isCancelled else { return }
       withMotion(Motion.exit) { shown = nil }
     }
-  }
-}
-
-/// Tells one notice from the next, which `Notice` itself can't, having no identity.
-private struct NoticeKey: Equatable {
-  let kind: NoticeKind
-  let detail: String?
-  init(_ notice: Notice) {
-    kind = notice.kind
-    detail = notice.detail
   }
 }
 

@@ -56,9 +56,6 @@ struct TVPlayerFailure: View {
   }
 }
 
-/// How long a note about the last answer stays.
-private let NOTICE_SECONDS = 5
-
 /// Says what the server did instead of what the viewer asked for, for a
 /// few seconds, at the top: a subtitle it couldn't burn in, a quality it
 /// couldn't encode, a switch that didn't go through. Takes no focus.
@@ -92,16 +89,6 @@ struct TVPlayerNoticeNote: View {
       shown = nil
     }
     .allowsHitTesting(false)
-  }
-}
-
-/// Tells one notice from the next, which `Notice` itself can't, having no identity.
-private struct NoticeKey: Equatable {
-  let kind: NoticeKind
-  let detail: String?
-  init(_ notice: MatineeCore.Notice) {
-    kind = notice.kind
-    detail = notice.detail
   }
 }
 

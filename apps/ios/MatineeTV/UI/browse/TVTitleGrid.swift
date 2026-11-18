@@ -14,40 +14,6 @@ import SwiftUI
  * The paging itself is MatineeCore's `TitlePages` (Browse/TitlePages.swift).
  */
 
-extension View {
-  /// Loads `pages` from the server once the page shows, as Android's
-  /// `rememberTitlePages`: `key` names the list, and another key starts it
-  /// again from the top. Marks changed elsewhere fetch what's loaded again
-  /// in place, so the grid keeps its place.
-  func tvTitlePages(
-    _ pages: TitlePages, key: String,
-    fetch: @escaping @Sendable (_ api: MatineeApi, _ offset: Int, _ limit: Int) async throws -> TitleList
-  ) -> some View {
-    modifier(LoadsTitlePages(pages: pages, key: key, fetch: fetch))
-  }
-}
-
-private struct LoadsTitlePages: ViewModifier {
-  let pages: TitlePages
-  let key: String
-  let fetch: @Sendable (MatineeApi, Int, Int) async throws -> TitleList
-  @Environment(\.api) private var api
-  @Environment(ViewerState.self) private var viewer: ViewerState?
-
-  func body(content: Content) -> some View {
-    content
-      .onAppear(perform: configure)
-      .onChange(of: key, configure)
-      .onChange(of: viewer?.version) { Task { await pages.refresh() } }
-  }
-
-  private func configure() {
-    guard let api else { return }
-    let fetch = fetch
-    pages.configure(key: key) { offset, limit in try await fetch(api, offset, limit) }
-  }
-}
-
 /// Why a grid has no titles, and the one thing to do about it, if any.
 struct TVGridEmpty {
   let icon: Lucide
@@ -160,11 +126,11 @@ private let NOTICE_TOP: CGFloat = 16
 private let SPINNER_TOP: CGFloat = 120
 
 /// In the grid, across it: why it's empty or failed, with a way out where there is one.
-private struct GridNotice: View {
+struct GridNotice: View {
   var icon: Lucide? = nil
   let headline: String
   let message: String?
-  let action: TVNoticeAction?
+  var action: TVNoticeAction? = nil
   @Environment(\.palette) private var palette
 
   var body: some View {

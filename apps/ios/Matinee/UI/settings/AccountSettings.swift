@@ -484,7 +484,7 @@ private struct SessionRow: View {
 
   var body: some View {
     let name = sessionName(session)
-    AccountItemRow(icon: platformIcon(session.platform), title: name, detail: detail) {
+    AccountItemRow(icon: platformIcon(session.platform), title: name, detail: sessionDetail(session)) {
       if session.current {
         Badge(Str.accountSessionsThisDevice, look: .secondary)
       }
@@ -495,25 +495,5 @@ private struct SessionRow: View {
           action: onSignOut)
       }
     }
-  }
-
-  /// What it is when it has a name of its own, when it was last used, and when it signed in.
-  private var detail: String {
-    [
-      session.deviceName != nil ? session.platform.map { Str.accountDeviceApp(platformLabel($0)) } : nil,
-      lastActive,
-      Str.accountSessionsSignedIn(formatInstant(session.createdAt)),
-    ].compactMap { $0 }.joined(separator: " · ")
-  }
-
-  /// The server moves a session's last use at most hourly, so anything more
-  /// recent only says "recently", as the web's.
-  private var lastActive: String? {
-    if session.current { return Str.webUsersActiveNow }
-    guard let seen = parseInstant(session.lastSeenAt) else { return nil }
-    if Date.now.timeIntervalSince(seen) < 3600 { return Str.webUsersActiveRecently }
-    let relative = RelativeDateTimeFormatter()
-    relative.locale = .app
-    return Str.webUsersLastSeen(relative.localizedString(for: seen, relativeTo: .now))
   }
 }

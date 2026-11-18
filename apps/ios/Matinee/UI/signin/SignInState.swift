@@ -129,3 +129,16 @@ func unreachableMessage(_ reason: Unreachability, server: String, canWatchOfflin
   case .other: Str.unreachableOther(host)
   }
 }
+
+extension SavedServer {
+  /// What a saved server is called in a list: its name, when it told one, else its address without the scheme.
+  var title: String { name ?? hostAndPort }
+
+  /// The line under it: the address, when the name took its place, and who's signed in there.
+  var facts: String {
+    [name != nil ? hostAndPort : nil, user.map { Str.serversSignedInAs($0.name) } ?? Str.serversSignedOut]
+      .compactMap { $0 }.joined(separator: " · ")
+  }
+
+  private var hostAndPort: String { address.components(separatedBy: "://").last ?? address }
+}

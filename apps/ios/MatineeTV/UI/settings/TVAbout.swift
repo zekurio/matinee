@@ -28,7 +28,7 @@ struct AboutRows: View {
   var body: some View {
     let report = PlaybackDiagnostics.shared.report
     SettingsColumn {
-      ForEach(Array(tvAppInfo().enumerated()), id: \.offset) { index, row in
+      ForEach(Array(appInfo().enumerated()), id: \.offset) { index, row in
         SettingsFact(row.0, value: row.1)
           .focused(focus, equals: index == 0 ? FIRST_ROW : "info-\(index)")
       }
@@ -57,10 +57,10 @@ struct AboutRows: View {
       TVListItem(Str.logsShow, subtitle: Str.logsNote, quiet: true) {
         guard !busy else { return }
         busy = true
-        let known = knownValues
+        let known = logKnownValues(session)
         Task {
           defer { busy = false }
-          reading = Reading(title: Str.logsTitle, text: await readLog(known), fromEnd: true)
+          reading = Reading(title: Str.logsTitle, text: await readOwnLog(known), fromEnd: true)
         }
       }
       .focused(focus, equals: "showLog")
@@ -69,46 +69,4 @@ struct AboutRows: View {
       isPresented: Binding(get: { reading != nil }, set: { if !$0 { reading = nil } }), title: reading?.title ?? "",
       text: reading?.text ?? "", fromEnd: reading?.fromEnd ?? false)
   }
-
-  /// What the log takes out wherever it shows: the server's host and the account's names and id.
-  private var knownValues: KnownValues {
-    switch session.state {
-    case .signedIn(let server, let user), .offline(let server, let user):
-      KnownValues.of(server: server, account: [user.username, user.displayName, user.id])
-    default: KnownValues()
-    }
-  }
-}
-
-/// This process's recent log, scrubbed of the server and the account, read off the main thread.
-private func readLog(_ known: KnownValues) async -> String {
-  await Task.detached(priority: .userInitiated) {
-    do {
-      return try AppLog.read(known: known)
-    } catch {
-      return "Matinee app log v1\nlog unavailable\n"
-    }
-  }.value
-}
-
-/// The app's version and build, tvOS's, and the model, as a title and a value each.
-private func tvAppInfo() -> [(String, String)] {
-  let info = Bundle.main
-  let version = info.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
-  let build = info.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
-  #if DEBUG
-    let shown = "\(version) (\(build)), debug"
-  #else
-    let shown = "\(version) (\(build))"
-  #endif
-  let device = UIDevice.current
-  // "tvOS", the system's own name, the same in every language.
-  return [(Str.aboutVersion, shown), (device.systemName, device.systemVersion), (Str.aboutDevice, deviceName())]
-}
-
-/// "Apple TV (AppleTV14,1)": the kind of device, then its model, which says which one it is.
-private func deviceName() -> String {
-  let kind = UIDevice.current.model
-  guard let model = deviceDiagnostics().model?.text, model != kind else { return kind }
-  return "\(kind) (\(model))"
 }

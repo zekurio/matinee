@@ -46,6 +46,14 @@ struct DetailScroll<Header: View, Rows: View>: View {
   let memory: TVFocusMemory
   var headerRows: Set<String> = [DetailKey.actions]
   var freeRows: Set<String> = []
+  /// Room after the last row, so it too can rise to where the focused row rests.
+  var bottomRoom: CGFloat = 880
+  /// Rows that rest where another does, as a notice standing in for a row.
+  var restsAs: [String: String] = [:]
+  /// Rests the row again as focus moves within it, for rows the focus engine
+  /// scrolls itself, as across a chart's squares, which can carry the row up
+  /// under the clock.
+  var followsItems = false
   @ViewBuilder let header: () -> Header
   @ViewBuilder let rows: () -> Rows
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -59,12 +67,15 @@ struct DetailScroll<Header: View, Rows: View>: View {
           header().id(DETAIL_TOP)
           rows()
         }
-        // Room after the last row, so it too can rise to where the focused row rests.
-        .padding(.bottom, 880)
+        .padding(.bottom, bottomRoom)
         .frame(maxWidth: .infinity, alignment: .leading)
       }
       .scrollIndicators(.hidden)
       .onChange(of: memory.lastRow) { _, row in scroll(reader, row: row) }
+      .onChange(of: followsItems ? memory.lastItem : nil) {
+        let row = memory.lastRow
+        DispatchQueue.main.async { scroll(reader, row: row) }
+      }
     }
     // Rows that go up past the top fade out there rather than end at a hard edge under the clock.
     .mask {
@@ -82,7 +93,7 @@ struct DetailScroll<Header: View, Rows: View>: View {
 
   private func scroll(_ reader: ScrollViewProxy, row: String?) {
     guard let row, !freeRows.contains(row) else { return }
-    let target = headerRows.contains(row) ? DETAIL_TOP : detailAnchor(row)
+    let target = headerRows.contains(row) ? DETAIL_TOP : detailAnchor(restsAs[row] ?? row)
     withAnimation(Motion.animation(Motion.move, reduceMotion: reduceMotion)) {
       reader.scrollTo(target, anchor: .top)
     }

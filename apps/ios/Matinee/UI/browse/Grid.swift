@@ -8,40 +8,6 @@ import SwiftUI
  * the paging itself, is MatineeCore's (Browse/), where it's tested.
  */
 
-extension View {
-  /// Loads `pages` from the server for this screen, once it shows, as
-  /// Android's `rememberTitlePages`: `key` names the list, and another key
-  /// starts it again from the top. Marks changed elsewhere fetch what's
-  /// loaded again in place, so the grid keeps its place.
-  func pages(
-    _ pages: TitlePages, key: String,
-    fetch: @escaping @Sendable (_ api: MatineeApi, _ offset: Int, _ limit: Int) async throws -> TitleList
-  ) -> some View {
-    modifier(LoadsPages(pages: pages, key: key, fetch: fetch))
-  }
-}
-
-private struct LoadsPages: ViewModifier {
-  let pages: TitlePages
-  let key: String
-  let fetch: @Sendable (MatineeApi, Int, Int) async throws -> TitleList
-  @Environment(\.api) private var api
-  @Environment(ViewerState.self) private var viewer: ViewerState?
-
-  func body(content: Content) -> some View {
-    content
-      .onAppear(perform: configure)
-      .onChange(of: key, configure)
-      .onChange(of: viewer?.version) { Task { await pages.refresh() } }
-  }
-
-  private func configure() {
-    guard let api else { return }
-    let fetch = fetch
-    pages.configure(key: key) { offset, limit in try await fetch(api, offset, limit) }
-  }
-}
-
 /// Posters in as many columns as fit, two on a phone, with `header` across
 /// the top: Android's `PosterGrid`. Loads the next page when the end comes
 /// near, and the loaded ones again on a pull. `header` spans the page and

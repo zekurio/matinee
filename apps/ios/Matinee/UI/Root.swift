@@ -62,18 +62,6 @@ struct MatineeRoot: View {
     }
   }
 
-  /// The account on a server went, by signing out or the server ending its
-  /// session: what its pictures were, its own and its libraries', goes too.
-  /// Switching to another server leaves them, as that account is still signed in.
-  private func signedOut(from old: AuthState, to new: AuthState) -> Bool {
-    guard case .signedOut(let server, _, _) = new else { return false }
-    switch old {
-    case .signedIn(let before, _), .offline(let before, _): return before == server
-    case .connecting(let before), .unreachable(let before, _, _): return before == server
-    default: return false
-    }
-  }
-
   private func follow(_ state: AuthState) {
     switch state {
     case .signedIn:

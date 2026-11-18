@@ -35,7 +35,7 @@ private struct TVServerPanel: ViewModifier {
     content
       .tvSidePanel(
         isPresented: $isPresented,
-        title: asked.map { Str.serversRemoveTitle($0.panelTitle) }
+        title: asked.map { Str.serversRemoveTitle($0.title) }
           ?? (step == .remove ? Str.tvServersRemove : Str.serversTitle),
         description: asked != nil ? Str.serversRemoveBodyTv : step == .remove ? Str.tvServersRemoveDescription : nil
       ) {
@@ -86,7 +86,7 @@ private struct ServerRows: View {
     ForEach(session.servers) { server in
       let busy = session.removing.contains(server.origin)
       TVListItem(
-        server.panelTitle, subtitle: busy ? Str.serversRemoving : server.panelFacts, icon: .server, quiet: true,
+        server.title, subtitle: busy ? Str.serversRemoving : server.facts, icon: .server, quiet: true,
         checked: server.active,
         // One on its way out stays focusable, so focus doesn't jump, but does nothing.
         action: {
@@ -112,7 +112,7 @@ private struct ServerRows: View {
     ForEach(session.servers) { server in
       let busy = session.removing.contains(server.origin)
       TVListItem(
-        server.panelTitle, subtitle: busy ? Str.serversRemoving : server.panelFacts, icon: .server, quiet: true
+        server.title, subtitle: busy ? Str.serversRemoving : server.facts, icon: .server, quiet: true
       ) {
         if !busy { step = .confirm(origin: server.origin) }
       }
@@ -124,7 +124,7 @@ private struct ServerRows: View {
     TVListItem(Str.commonRemove, icon: .trash, quiet: true, destructive: true) {
       if let asked {
         let origin = asked.origin
-        let name = asked.panelTitle
+        let name = asked.title
         launchShowing(snackbar, Str.iosServersRemoveFailed(name)) { try await session.removeServer(origin: origin) }
       }
       // Back to the list, where it shows as being removed until it's gone.
