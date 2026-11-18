@@ -179,7 +179,7 @@ private struct TVShelfRow: View {
   }
 
   private func card(_ entry: ShelfEntry) -> some View {
-    let card = TVShelfCard(entry)
+    let card = shelfCardModel(entry)
     let target = TVActionTarget.title(entry.title, file: entry.title.kind == TitleKind.movie ? entry.item : nil)
     return TVPosterCard(
       entry.title.name, watched: viewer?.isWatched(entry.title) ?? entry.title.watched, action: { card.open(nav) },

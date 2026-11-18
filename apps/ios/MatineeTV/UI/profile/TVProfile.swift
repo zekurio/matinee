@@ -97,7 +97,7 @@ private struct TVProfilePage: View {
     case .loading: return nil
     case .failed: return (ProfileRow.actions, ProfileRow.settings)
     case .ready(let profile):
-      if let first = shownFavorites(profile, viewer: viewer).first { return (ProfileRow.favorites, favoriteKey(first)) }
+      if let first = shownFavorites(profile, viewer: viewer).first { return (ProfileRow.favorites, first.key) }
       if let first = profile.recent?.first { return (ProfileRow.recent, first.item.id) }
       return (ProfileRow.actions, ProfileRow.settings)
     }
@@ -253,16 +253,6 @@ private enum RowCard<Entry> {
   }
 }
 
-/// Tells favorites apart in a row that mixes their kinds.
-private func favoriteKey(_ favorite: Favorite) -> String {
-  switch favorite {
-  case .movie(let movie): "title/\(movie.title.id)"
-  case .show(let show): "title/\(show.title.id)"
-  case .showSeason(let season): "season/\(season.title.id)/\(season.season.number.map(String.init) ?? "")"
-  case .episode(let episode): "episode/\(episode.item.id)"
-  }
-}
-
 /// Favorites of every kind as posters, newest first, as the server sends
 /// them less the hearts taken off here since, then See all, which opens
 /// the whole lists. With none yet, how to make one.
@@ -282,7 +272,7 @@ private struct FavoritesRow: View {
     } else {
       let cards = favorites.map(RowCard.entry) + [.seeAll]
       TVRow(
-        Str.favoritesTitle, key: ProfileRow.favorites, items: cards, itemKey: { $0.key(favoriteKey) }, memory: memory
+        Str.favoritesTitle, key: ProfileRow.favorites, items: cards, itemKey: { $0.key(\.key) }, memory: memory
       ) { card in
         switch card {
         case .entry(let favorite): self.card(favorite)

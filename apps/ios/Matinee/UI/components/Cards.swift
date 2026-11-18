@@ -480,54 +480,6 @@ struct FavoriteCard: View {
   }
 }
 
-extension Favorite {
-  /// Tells favorites apart in a row that mixes their kinds.
-  var key: String {
-    switch self {
-    case .movie(let movie): "title/\(movie.title.id)"
-    case .show(let show): "title/\(show.title.id)"
-    case .showSeason(let season): "season/\(season.title.id)/\(season.season.number.map(String.init) ?? "")"
-    case .episode(let episode): "episode/\(episode.item.id)"
-    }
-  }
-}
-
-/// What a shelf entry's card shows and opens: a movie by its year, a show by
-/// what it got last, with the season's poster and page, or the one new
-/// episode's, where that's what's new.
-struct ShelfCardModel {
-  let poster: Artwork?
-  let detail: String?
-  let open: (Navigator) -> Void
-}
-
-func shelfCardModel(_ entry: ShelfEntry) -> ShelfCardModel {
-  let title = entry.title
-  let openTitle: (Navigator) -> Void = { $0.title(title) }
-  if title.kind == TitleKind.movie {
-    return ShelfCardModel(poster: title.images.poster, detail: formatYear(title.year), open: openTitle)
-  }
-  guard let added = entry.added else {
-    return ShelfCardModel(poster: title.images.poster, detail: Str.mediaEpisodeCount(entry.count), open: openTitle)
-  }
-  if added.count == 1 {
-    let code = episodeCode(added.item)
-    let name = itemLabel(added.item).title
-    let itemId = added.item.id
-    return ShelfCardModel(
-      poster: added.season?.poster ?? title.images.poster,
-      detail: code.map { Str.mediaCodeTitle($0, name) } ?? name
-    ) { $0.episode(itemId) }
-  }
-  let fresh = Str.mediaNewEpisodes(added.count)
-  guard let season = added.season else {
-    return ShelfCardModel(poster: title.images.poster, detail: fresh, open: openTitle)
-  }
-  return ShelfCardModel(poster: season.poster ?? title.images.poster, detail: "\(seasonName(season.number)) · \(fresh)") {
-    $0.season(title.id, season.number)
-  }
-}
-
 /// A movie or show from a library's shelf, saying what it got last.
 struct ShelfCard: View {
   let entry: ShelfEntry
