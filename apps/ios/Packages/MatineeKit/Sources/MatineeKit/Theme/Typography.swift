@@ -30,7 +30,7 @@ public nonisolated enum RedHatText {
   }
 
   /// The font at `size` points and `weight`, or the system's should the
-  /// bundled one be missing, which the gallery would show.
+  /// bundled one be missing.
   public static func uiFont(size: CGFloat, weight: Font.Weight) -> UIFont {
     _ = register
     let key = "\(size)-\(value(weight))" as NSString

@@ -22,7 +22,7 @@ extension ImagePipeline {
     return ImagePipeline(delegate: SignedImages(server: server, headers: headers)) { configure(&$0) }
   }
 
-  /// Without a session: the gallery, and public images.
+  /// Without a session, for public images.
   nonisolated static let anonymous = ImagePipeline { configure(&$0) }
 
   /// Decoded images are kept in memory as Nuke does by default; the

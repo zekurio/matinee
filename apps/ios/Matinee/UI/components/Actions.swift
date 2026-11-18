@@ -52,8 +52,8 @@ enum ActionTarget: Hashable, Identifiable {
 }
 
 /// The app's actions and the sheets they open: Android's `Actions`. One for
-/// the signed-in app, in the environment as `\.actions`; nil outside it, as
-/// in the gallery, where long presses do nothing.
+/// the signed-in app, in the environment as `\.actions`; nil outside it,
+/// where long presses do nothing.
 @Observable final class Actions {
   /// The sheet of actions showing, if one is.
   var target: ActionTarget?

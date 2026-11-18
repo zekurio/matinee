@@ -9,8 +9,7 @@
    *   view, so it lifts: the system's own focus effect, which grows it,
    *   casts its shadow, tilts it under the thumb on the remote's touch
    *   surface, and runs a sheen across it, as every Apple TV app's posters
-   *   do. `TVPictureButton`. Android's look, grown by 6% with the ring round
-   *   it, is one environment value away: `.tvPictureFocus(.matinee)`.
+   *   do. `TVPictureButton`.
    * - A control (a button, a chip, a list row, a drawer entry, the search
    *   field) fills with the text color and its content turns the page's
    *   color, growing a little; no ring. `TVControlButton`.
@@ -22,10 +21,6 @@
 
   /// The TV's focus measures.
   public enum TVFocus {
-    /// How much a focused picture grows with Matinee's own lift
-    /// (`TVPictureFocus.matinee`); the system's grows it by its own amount,
-    /// about 11% for a poster.
-    public static let pictureScale: CGFloat = 1.06
     /// How much a focused button, chip, or drawer entry grows.
     public static let controlScale: CGFloat = 1.05
     /// How much a focused list row grows: less, since rows sit close together.
@@ -34,8 +29,6 @@
     /// gap between the two; also what the phone's controls wear on a TV.
     public static let ring: CGFloat = 6
     public static let gap: CGFloat = 6
-    /// How far a focused picture's shadow spreads with Matinee's own lift.
-    public static let lift: CGFloat = 32
     /// Room a row or grid keeps round its cards, for a focused one's growth and shadow.
     public static let room: CGFloat = 40
     /// Between a picture and its caption: clear of the system's lift.
@@ -48,28 +41,6 @@
     public var tvRest: Color { foreground.opacity(0.12) }
   }
 
-  /// How a focused picture lifts.
-  public enum TVPictureFocus: String, CaseIterable, Sendable {
-    /// The system's focus effect: lift, shadow, tilt under the thumb, and
-    /// sheen. The kit's.
-    case system
-    /// Android TV's: grows by `TVFocus.pictureScale` with a shadow and the
-    /// ring in the text color round it, still under the thumb.
-    case matinee
-  }
-
-  extension EnvironmentValues {
-    /// How focused pictures lift under this view; `.system` unless set.
-    @Entry public var tvPictureFocus = TVPictureFocus.system
-  }
-
-  extension View {
-    /// How focused pictures lift under this view: the system's focus effect,
-    /// the kit's, or Android TV's grow and ring.
-    public func tvPictureFocus(_ look: TVPictureFocus) -> some View {
-      environment(\.tvPictureFocus, look)
-    }
-  }
 
   /// The ring round a focused picture: the text color, `TVFocus.ring`
   /// wide, `TVFocus.gap` clear of the shape. Also what the phone's
@@ -91,70 +62,40 @@
   }
 
   /// The picture look as a button style: `shape` is the picture's outline.
-  /// `ringOnLift` draws the ring on the system's lift, which the gallery
-  /// shows to explain why the kit doesn't.
   struct TVPictureStyle<S: InsettableShape>: ButtonStyle {
     let shape: S
-    var look: TVPictureFocus?
-    var ringOnLift = false
     var longPress: (() -> Void)?
     var memo: TVPressMemo?
 
     func makeBody(configuration: Configuration) -> some View {
-      TVPictureBody(
-        shape: shape, look: look, ringOnLift: ringOnLift, longPress: longPress, memo: memo, configuration: configuration)
+      TVPictureBody(shape: shape, longPress: longPress, memo: memo, configuration: configuration)
     }
   }
 
   private struct TVPictureBody<S: InsettableShape>: View {
     let shape: S
-    let look: TVPictureFocus?
-    let ringOnLift: Bool
     let longPress: (() -> Void)?
     let memo: TVPressMemo?
     let configuration: ButtonStyleConfiguration
     @Environment(\.isFocused) private var focused
     @Environment(\.isEnabled) private var enabled
-    @Environment(\.forcedInteraction) private var forced
-    @Environment(\.palette) private var palette
-    @Environment(\.tvPictureFocus) private var pictureFocus
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-      let focused = self.focused || forced == .focused || forced == .pressed
-      let pressed = configuration.isPressed || forced == .pressed
-      let picture = configuration.label
+      let pressed = configuration.isPressed
+      configuration.label
         .clipShape(shape)
         .contentShape(shape)
-      Group {
-        switch look ?? pictureFocus {
-        case .matinee:
-          picture
-            .overlay {
-              if focused { TVFocusRing(shape: shape, placement: .outside).allowsHitTesting(false).transition(.opacity) }
-            }
-            .scaleEffect(focused ? (pressed ? 1.02 : TVFocus.pictureScale) : 1)
-            .shadow(
-              color: .black.opacity(focused ? (palette.isDark ? 0.55 : 0.3) : 0), radius: TVFocus.lift / 2,
-              y: TVFocus.lift / 2)
-        case .system:
-          picture
-            .overlay {
-              // Only where the gallery asks: on tvOS 26 the lift's glass rim tints it.
-              if focused, ringOnLift { TVFocusRing(shape: shape, placement: .inside).allowsHitTesting(false) }
-            }
-            // The lift's platter and sheen take the picture's own outline, a circle for a person.
-            .contentShape(.hoverEffect, shape)
-            .hoverEffect(.highlight)
-            .scaleEffect(pressed ? 0.97 : 1)
+        // The lift's platter and sheen take the picture's own outline, a circle for a person.
+        .contentShape(.hoverEffect, shape)
+        .hoverEffect(.highlight)
+        .scaleEffect(pressed ? 0.97 : 1)
+        .opacity(enabled ? 1 : 0.5)
+        .background {
+          if let longPress, let memo { TVLongPress(isEnabled: focused && enabled, memo: memo, action: longPress) }
         }
-      }
-      .opacity(enabled ? 1 : 0.5)
-      .background {
-        if let longPress, let memo { TVLongPress(isEnabled: self.focused && enabled, memo: memo, action: longPress) }
-      }
-      .animation(Motion.animation(focused ? Motion.enter : Motion.exit, reduceMotion: reduceMotion), value: focused)
-      .animation(Motion.animation(Motion.color, reduceMotion: reduceMotion), value: pressed)
+        .animation(Motion.animation(focused ? Motion.enter : Motion.exit, reduceMotion: reduceMotion), value: focused)
+        .animation(Motion.animation(Motion.color, reduceMotion: reduceMotion), value: pressed)
     }
   }
 
@@ -181,13 +122,12 @@
     let configuration: ButtonStyleConfiguration
     @Environment(\.isFocused) private var isFocused
     @Environment(\.isEnabled) private var enabled
-    @Environment(\.forcedInteraction) private var forced
     @Environment(\.palette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-      let focused = isFocused || style.lit || forced == .focused || forced == .pressed
-      let pressed = configuration.isPressed || forced == .pressed
+      let focused = isFocused || style.lit
+      let pressed = configuration.isPressed
       configuration.label
         .foregroundStyle(focused ? palette.background : enabled ? (style.content ?? palette.foreground) : palette.mutedForeground)
         .environment(\.tvFocused, focused)
@@ -215,15 +155,13 @@
 
 
   /// A picture that's pressed, with the TV's picture focus: it lifts, tilts,
-  /// and shines, as `tvPictureFocus` has it. `shape` is its outline. `onLongPress` is a
+  /// and shines. `shape` is its outline. `onLongPress` is a
   /// held Select, for the actions panel; `onPlayPause` the remote's
   /// Play/Pause while it's focused, as Apple TV plays a focused title.
   ///
   ///     TVPictureButton(shape: .kit(TVRadius.card), action: open) { poster }
   public struct TVPictureButton<Label: View, S: InsettableShape>: View {
     let shape: S
-    let look: TVPictureFocus?
-    let ringOnLift: Bool
     let action: () -> Void
     let onLongPress: (() -> Void)?
     let onPlayPause: (() -> Void)?
@@ -234,19 +172,7 @@
       shape: S, action: @escaping () -> Void, onLongPress: (() -> Void)? = nil, onPlayPause: (() -> Void)? = nil,
       @ViewBuilder label: @escaping () -> Label
     ) {
-      self.init(
-        shape: shape, look: nil, ringOnLift: false, action: action, onLongPress: onLongPress, onPlayPause: onPlayPause,
-        label: label)
-    }
-
-    /// Pinned to one look, for the gallery's side-by-side.
-    @_spi(Gallery) public init(
-      shape: S, look: TVPictureFocus?, ringOnLift: Bool, action: @escaping () -> Void, onLongPress: (() -> Void)? = nil,
-      onPlayPause: (() -> Void)? = nil, @ViewBuilder label: @escaping () -> Label
-    ) {
       self.shape = shape
-      self.look = look
-      self.ringOnLift = ringOnLift
       self.action = action
       self.onLongPress = onLongPress
       self.onPlayPause = onPlayPause
@@ -255,7 +181,7 @@
 
     public var body: some View {
       Button { memo.click(action) } label: { label() }
-        .buttonStyle(TVPictureStyle(shape: shape, look: look, ringOnLift: ringOnLift, longPress: onLongPress, memo: memo))
+        .buttonStyle(TVPictureStyle(shape: shape, longPress: onLongPress, memo: memo))
         // The lift's platter follows the button's border shape, not the content shape, for a circle.
         .buttonBorderShape(S.self == Circle.self ? .circle : .roundedRectangle(radius: TVRadius.card))
         .onPlayPauseCommand(perform: onPlayPause)

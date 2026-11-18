@@ -5,8 +5,7 @@ import SwiftUI
 /// Where cards and bars send the person, as Android's `LocalNavigator`:
 /// cards say what was tapped and the shell, which owns the navigation
 /// stacks, decides how it opens. Every action does nothing until the shell
-/// fills it in (Nav.swift), so a component works on its own, in the gallery
-/// or a preview.
+/// fills it in (Nav.swift), so a component works on its own, in a preview.
 ///
 ///     @Environment(\.navigator) private var nav
 ///     Button { nav.title(title) } label: { … }

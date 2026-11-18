@@ -3,8 +3,8 @@ import SwiftUI
 
 /// The words the kit's components show or say on their own, like a close
 /// button's label, in English and German (Resources/*.lproj). They follow
-/// the environment's locale, so a preview or the gallery can switch
-/// language, and otherwise the device's.
+/// the environment's locale, so a preview can switch language, and
+/// otherwise the device's.
 nonisolated enum KitText: String {
   case back, home, close, cancel, closeToast, loading, previousMonth, nextMonth, clearText
   case showPassword, hidePassword, rangeStart, rangeEnd

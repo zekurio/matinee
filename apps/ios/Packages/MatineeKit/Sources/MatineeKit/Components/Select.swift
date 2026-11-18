@@ -48,13 +48,12 @@ struct SelectFace: View {
   var height: CGFloat = TouchTarget
   var placeholder = false
   @Environment(\.palette) private var palette
-  @Environment(\.forcedInteraction) private var forced
   @Environment(\.isFocused) private var focused
   @State private var hovered = false
 
   var body: some View {
     let shape = RoundedRectangle.kit(Radius.lg)
-    let ringed = open || focused || forced == .focused
+    let ringed = open || focused
     HStack(spacing: 6) {
       Text(text)
         .textStyle(.sm)
@@ -69,10 +68,10 @@ struct SelectFace: View {
     .background(palette.field, in: shape)
     .overlay {
       shape.strokeBorder(
-        ringed ? palette.ring : (hovered || forced == .hovered || forced == .pressed) ? palette.inputHover : palette.input)
+        ringed ? palette.ring : hovered ? palette.inputHover : palette.input)
     }
     .background {
-      if focused || forced == .focused { RoundedRectangle.kit(Radius.lg + 3).inset(by: -3).fill(palette.ring.opacity(0.2)) }
+      if focused { RoundedRectangle.kit(Radius.lg + 3).inset(by: -3).fill(palette.ring.opacity(0.2)) }
     }
     #if os(iOS)
       .onHover { hovered = $0 }

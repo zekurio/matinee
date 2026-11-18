@@ -59,7 +59,6 @@ public struct MatineeTextField<Trailing: View>: View {
   @Environment(\.palette) private var palette
   @Environment(\.isEnabled) private var enabled
   @Environment(\.locale) private var locale
-  @Environment(\.forcedInteraction) private var forced
   @FocusState private var focused: Bool
   @State private var revealed = false
   @State private var hovered = false
@@ -85,7 +84,7 @@ public struct MatineeTextField<Trailing: View>: View {
 
   public var body: some View {
     let shape = KitShape(radius: look == .pill ? 0 : Radius.lg).capsule(look == .pill)
-    let isFocused = focused || forced == .focused
+    let isFocused = focused
     let tint = isError ? palette.destructive : palette.ring
     HStack(alignment: lines == nil ? .center : .top, spacing: look == .pill ? Space.s3 : Space.s2) {
       if let back {

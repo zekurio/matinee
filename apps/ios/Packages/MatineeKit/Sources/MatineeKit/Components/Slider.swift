@@ -88,7 +88,6 @@ private struct SliderTrack: View {
   @Environment(\.palette) private var palette
   @Environment(\.isEnabled) private var enabled
   @Environment(\.layoutDirection) private var direction
-  @Environment(\.forcedInteraction) private var forced
   @State private var dragging: Int?
   @FocusState private var focusedThumb: Int?
 
@@ -124,8 +123,8 @@ private struct SliderTrack: View {
   }
 
   private func thumbView(_ index: Int) -> some View {
-    let held = dragging == index || forced == .pressed
-    let focused = focusedThumb == index || (forced == .focused && index == 0)
+    let held = dragging == index
+    let focused = focusedThumb == index
     return Circle()
       .fill(Color.white)
       .overlay { Circle().strokeBorder(palette.ring, lineWidth: 1) }

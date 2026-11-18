@@ -12,15 +12,6 @@ import SwiftUI
  * controls fill with the text color.
  */
 
-/// A state the gallery pins a component in, to show it without a finger on it.
-@_spi(Gallery) public enum ForcedInteraction: String, Sendable, CaseIterable {
-  case none, pressed, hovered, focused
-}
-
-extension EnvironmentValues {
-  @_spi(Gallery) @Entry public var forcedInteraction = ForcedInteraction.none
-}
-
 /// How strongly the foreground washes over what's pressed or hovered.
 enum Wash {
   /// The web's `bg-foreground/10` under a pressed menu row.
@@ -93,7 +84,6 @@ private struct PressBody<S: InsettableShape>: View {
   @Environment(\.palette) private var palette
   @Environment(\.isEnabled) private var enabled
   @Environment(\.isFocused) private var focused
-  @Environment(\.forcedInteraction) private var forced
   @State private var shownPressed = false
   @State private var hovered = false
   @State private var pressedAt = Date.distantPast
@@ -141,9 +131,9 @@ private struct PressBody<S: InsettableShape>: View {
 
   private var state: InteractionState {
     InteractionState(
-      pressed: shownPressed || forced == .pressed,
-      hovered: hovered || forced == .hovered,
-      focused: focused || forced == .focused)
+      pressed: shownPressed,
+      hovered: hovered,
+      focused: focused)
   }
 }
 

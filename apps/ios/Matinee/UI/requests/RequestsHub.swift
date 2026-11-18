@@ -189,8 +189,8 @@ struct RequestSheetModel: Identifiable {
 }
 
 extension EnvironmentValues {
-  /// The signed-in app's requests; nil outside it, as in the gallery, where
-  /// request buttons do nothing.
+  /// The signed-in app's requests; nil outside it, where request buttons
+  /// do nothing.
   @Entry var requests: RequestsHub? = nil
 }
 
