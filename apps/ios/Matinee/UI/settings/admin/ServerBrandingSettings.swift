@@ -40,11 +40,6 @@ struct ServerBrandingSettings: View {
     // A new answer, from the server or a save, starts the form again from it.
     .onChange(of: loader.state.value, initial: true) { _, saved in
       form = saved.map(BrandingDraft.init)
-      if adminDemo("edit") {
-        form?.accents.light = ACCENT_PRESETS[2].light
-        form?.accents.dark = ACCENT_PRESETS[2].dark
-        form?.backdrop.enabled = true
-      }
     }
     // Each accent shows as it's picked or typed, once it's a color.
     .onChange(of: form?.valid == true ? form?.accents.draft : nil) { _, draft in if let draft { theme.setAccents(draft) } }

@@ -41,9 +41,9 @@ struct TVPlayback: View {
   @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var controls = true
-  @State private var menu: TVPlayerMenu? = TVPlayerDebug.menu
+  @State private var menu: TVPlayerMenu?
   /// The menu that was open stays drawn while its panel slides away.
-  @State private var shownMenu: TVPlayerMenu = TVPlayerDebug.menu ?? .audio
+  @State private var shownMenu: TVPlayerMenu = .audio
   @State private var scrub = TVScrub()
   @State private var touched = 0
   /// A held arrow brought the controls, so focus goes to the seek bar.
@@ -194,17 +194,7 @@ struct TVPlayback: View {
     .onChange(of: controller.item?.id, initial: true) {
       if let item = controller.item { controller.enableNowPlaying(title: itemLabel(item).title) }
     }
-    .onChange(of: controller.error) { TVPlayerDebug.save(controller.diagnostics) }
-    .task {
-      #if DEBUG
-        while !Task.isCancelled {
-          TVPlayerDebug.save(controller.diagnostics)
-          try? await Task.sleep(for: .seconds(2))
-        }
-      #endif
-    }
     .onDisappear {
-      TVPlayerDebug.save(controller.diagnostics)
       UIApplication.shared.isIdleTimerDisabled = false
       TrickplayTiles.shared.clear()
       _ = scrub.release()

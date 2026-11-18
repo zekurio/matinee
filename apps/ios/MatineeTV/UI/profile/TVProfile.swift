@@ -11,10 +11,9 @@ import SwiftUI
  * when in the week they watch (TVProfileStats.swift, TVStanding.swift).
  *
  * The loads are the iPhone's (Matinee/UI/profile/ProfileData.swift), so
- * the profile and its figures come from the snapshot at once and the
- * debug fixtures (`-dev.statsFixtures YES|quiet|empty`) are the same. A
- * row that takes focus scrolls up under the clock, as Home's and a title
- * page's rows do; while the favorites have it, the header stays in view.
+ * the profile and its figures come from the snapshot at once. A row that
+ * takes focus scrolls up under the clock, as Home's and a title page's
+ * rows do; while the favorites have it, the header stays in view.
  *
  * Android TV's profile puts Sign out under the name; here Settings is
  * there, as on the iPhone, and signing out asks first, in Settings.

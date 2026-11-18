@@ -35,7 +35,6 @@ struct SettingsScaffold<Content: View>: View {
   let title: String
   @ViewBuilder let content: () -> Content
   @State private var wide = false
-  @State private var position = ScrollPosition(edge: .top)
   @Environment(\.shellStyle) private var shellStyle
 
   init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
@@ -54,15 +53,6 @@ struct SettingsScaffold<Content: View>: View {
         .frame(maxWidth: .infinity)
     }
     .scrollDismissesKeyboard(.interactively)
-    .scrollPosition($position)
-    #if DEBUG
-      // -settings.scroll 600: starts that far down, or at the end for `bottom`, to see a long page in a screenshot.
-      .task {
-        guard let to = UserDefaults.standard.string(forKey: "settings.scroll") else { return }
-        try? await Task.sleep(for: .seconds(2))
-        if to == "bottom" { position.scrollTo(edge: .bottom) } else if let y = Double(to) { position.scrollTo(y: y) }
-      }
-    #endif
     .environment(\.settingsWide, wide && shellStyle == .tablet)
     .topBar(title)
   }
@@ -151,12 +141,6 @@ extension ChoiceRow {
       enabled: enabled)
   }
 }
-
-#if DEBUG
-  /// `-settings.open NAME`: opens a dialog, sheet, or menu of a page as it
-  /// shows, to see it in a screenshot without a finger on the simulator.
-  func debugOpens(_ name: String) -> Bool { UserDefaults.standard.string(forKey: "settings.open") == name }
-#endif
 
 /// What a block of rows says when it has none, such as no folders yet:
 /// `text-sm` muted, 16 in, where its first row would be, as Android's.

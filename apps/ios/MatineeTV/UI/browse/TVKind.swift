@@ -21,11 +21,10 @@ struct TVKindScreen: View {
   let kind: String
   @State private var state = TitleListState()
   @State private var options = Loader<TitleFilterOptions>()
-  @State private var pages = makeTVTitlePages()
+  @State private var pages = TitlePages()
   @State private var memory = TVFocusMemory()
   @State private var filterPage: TVFilterPage?
   @State private var sorting = false
-  @State private var devStarted = false
   @FocusState private var fieldFocused: Bool
   @FocusState private var sortFocused: Bool
 
@@ -51,15 +50,6 @@ struct TVKindScreen: View {
     .ignoresSafeArea()
     .tvTitlePages(pages, key: state.key) { api, offset, limit in
       let query = settled.isEmpty ? nil : settled
-      #if DEBUG
-        // The fixtures' filters aren't the server's: ask for what it can answer, and score what it sends.
-        if BrowseFixtures.on {
-          let page = try await api.titles.browse(
-            query: query, kind: kind, filters: BrowseFixtures.served(filters), sort: sort, order: order, limit: limit,
-            offset: offset)
-          return BrowseFixtures.rated(TitleList(items: page.items, total: page.total))
-        }
-      #endif
       let page = try await api.titles.browse(
         query: query, kind: kind, filters: filters, sort: sort, order: order, limit: limit, offset: offset)
       return TitleList(items: page.items, total: page.total)
@@ -67,9 +57,6 @@ struct TVKindScreen: View {
     .tvLoadsFilterOptions(options, kind: kind)
     .tvTitleFilters(page: $filterPage, sorting: $sorting, options: options, state: state, kind: kind)
     .tvBrowseFocus(memory, field: $fieldFocused, sort: $sortFocused) { firstFocus }
-    #if DEBUG
-      .onAppear(perform: devStart)
-    #endif
   }
 
   /// The first poster; with none to show, the sort, so the drawer and the filters are still in reach.
@@ -96,33 +83,4 @@ struct TVKindScreen: View {
       return TVGridEmpty(icon: shows ? .tv : .film, title: shows ? Str.libraryNoneShows : Str.libraryNoneMovies)
     }
   }
-
-  #if DEBUG
-    /// The page as `-dev.browse.*` asks to start it, once (BrowseFixtures.swift).
-    private func devStart() {
-      guard !devStarted else { return }
-      devStarted = true
-      tvBrowseDevStart(state, filterPage: &filterPage, sorting: &sorting)
-    }
-  #endif
 }
-
-#if DEBUG
-  /// A grid page's start as `-dev.browse.filters`, `.sort`, `.query`, and `.open` ask
-  /// (`filters`, `genres`, `language`, or `sort`), for screenshots.
-  func tvBrowseDevStart(_ state: TitleListState, filterPage: inout TVFilterPage?, sorting: inout Bool) {
-    if let filters = BrowseFixtures.filters { state.filters = filters }
-    if let order = TITLE_ORDERS.first(where: { $0.sort == BrowseFixtures.sort }) { state.apply(order) }
-    if let query = BrowseFixtures.query {
-      state.query = query
-      state.settleNow()
-    }
-    switch BrowseFixtures.open {
-    case "filters": filterPage = .filters
-    case "genres": filterPage = .genres
-    case "language": filterPage = .language
-    case "sort": sorting = true
-    default: break
-    }
-  }
-#endif

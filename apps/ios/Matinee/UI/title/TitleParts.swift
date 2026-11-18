@@ -392,22 +392,7 @@ struct ActionRow: View {
         }
       }
     }
-    #if DEBUG
-      // `-title.open actions` or `watched`: the page's sheet, or the question
-      // of when, once a launch, for a screenshot of it.
-      .task {
-        guard let open = UserDefaults.standard.string(forKey: "title.open"), !ActionRow.opened else { return }
-        try? await Task.sleep(for: .seconds(2.5))
-        ActionRow.opened = true
-        if open == "actions" { actions?.open(more) }
-        if open == "watched", let onWatched { actions?.askWatched(name) { at in try await onWatched(true, at) } }
-      }
-    #endif
   }
-
-  #if DEBUG
-    private static var opened = false
-  #endif
 
   @ViewBuilder private var playButton: some View {
     if let play {
@@ -702,7 +687,7 @@ struct EpisodesRail: View {
       ScrollView(.horizontal) {
         LazyHStack(alignment: .top, spacing: isWide(window) ? Space.s4 : Space.s3) {
           ForEach(items, id: \.id) { item in
-            RailItem(.landscape) { EpisodeCard(itemShown(item), showName: false) }.id(item.id)
+            RailItem(.landscape) { EpisodeCard(item, showName: false) }.id(item.id)
           }
           if let rest { RailItem(.landscape) { rest } }
         }

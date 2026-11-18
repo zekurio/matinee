@@ -42,11 +42,6 @@ struct FavoritesScreen: View {
       guard let username = await session.lastUser?.username else {
         return Favorites(shows: [], seasons: [], episodes: [], movies: [])
       }
-      #if DEBUG
-        if BrowseFixtures.on {
-          return try await BrowseFixtures.favorites(loadFavorites(api, username: username), api: api)
-        }
-      #endif
       return try await loadFavorites(api, username: username)
     }
   }

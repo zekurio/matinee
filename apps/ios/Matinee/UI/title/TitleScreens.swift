@@ -45,20 +45,10 @@ private struct ItemPage<Content: View>: View {
   @ViewBuilder let content: () -> Content
 
   var body: some View {
-    ScrollViewReader { proxy in
-      ScrollView {
-        VStack(alignment: .leading, spacing: spacing) { content() }
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.bottom, Space.s10)
-      }
-      #if DEBUG
-        // `-title.scroll cast`: down to a section, for a screenshot of it.
-        .task {
-          guard let section = UserDefaults.standard.string(forKey: "title.scroll") else { return }
-          try? await Task.sleep(for: .seconds(3))
-          proxy.scrollTo(section, anchor: .top)
-        }
-      #endif
+    ScrollView {
+      VStack(alignment: .leading, spacing: spacing) { content() }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, Space.s10)
     }
     .ignoresSafeArea(edges: .top)
     .refreshable {
@@ -81,7 +71,7 @@ struct TitleScreen: View {
   @State private var loader = Loader<Title>()
 
   var body: some View {
-    PageState(loader: loader, error: Str.titleLoadError) { TitlePage(title: titleShown($0), loader: loader) }
+    PageState(loader: loader, error: Str.titleLoadError) { TitlePage(title: $0, loader: loader) }
       .loads(loader) { [id] api in try await api.titles.get(id: id) }
       .hidesSystemNavigationBar()
   }
@@ -101,17 +91,17 @@ private struct TitlePage: View {
       TitleHeader(title: title, layout: layout)
       if title.isShow {
         if let next, showsNextUp(title) {
-          NextUpEpisode(item: itemShown(next)).id("nextup")
+          NextUpEpisode(item: next)
         }
         if let only = inlineSeason(title) {
           // One season, so no specials either: its episodes go right on the show's page.
-          InlineEpisodes(title: title, season: only, gaps: gaps).id("episodes")
+          InlineEpisodes(title: title, season: only, gaps: gaps)
           SeasonsRail(title: title, gaps: gaps, extraOnly: true)
         } else {
-          SeasonsRail(title: title, gaps: gaps).id("seasons")
+          SeasonsRail(title: title, gaps: gaps)
         }
       }
-      CastRail(credits: title.credits).id("cast")
+      CastRail(credits: title.credits)
     }
     .task(id: title.id) {
       guard let api else { return }
@@ -205,7 +195,7 @@ private struct TitleHeader: View {
   }
 
   private var actions: some View {
-    TitleActions(title: title, wide: layout.wide).id("actions")
+    TitleActions(title: title, wide: layout.wide)
   }
 }
 
@@ -287,7 +277,6 @@ struct SeasonScreen: View {
 
   var body: some View {
     PageState(loader: loader, error: Str.titleSeasonShowError) { title in
-      let title = titleShown(title)
       // Hidden specials still open from a link.
       if let current = titleSeason(title, number: season) {
         SeasonPage(title: title, season: current, loader: loader, items: items)
@@ -316,8 +305,8 @@ private struct SeasonPage: View {
     let layout = TitleLayout(window: window)
     ItemPage(spacing: layout.sectionSpacing, parent: title.name, onParent: { nav.titleUp(title.id) }, stale: [loader, items]) {
       SeasonHeader(title: title, season: season, items: items.state.value, layout: layout)
-      SeasonEpisodes(title: title, season: season, items: items, gaps: gaps).id("episodes")
-      SeasonsRail(title: title, current: season, gaps: gaps).id("seasons")
+      SeasonEpisodes(title: title, season: season, items: items, gaps: gaps)
+      SeasonsRail(title: title, current: season, gaps: gaps)
     }
     .task(id: title.id) {
       guard let api else { return }
@@ -484,7 +473,7 @@ private struct SeasonEpisodes: View {
         let up = seasonPlay(title, list) { viewer?.isWatched($0) ?? ($0.progress?.completed ?? false) }
         LazyVStack(alignment: .leading, spacing: wide ? Space.s6 : Space.s5) {
           ForEach(list, id: \.id) { item in
-            EpisodeEntry(item: itemShown(item), compact: true, marker: marker(item, up: up))
+            EpisodeEntry(item: item, compact: true, marker: marker(item, up: up))
           }
           if let partial = gaps.partial(season.number) {
             SeasonRestCard(title: title, season: partial, gaps: gaps).frame(maxWidth: 320)
@@ -568,7 +557,7 @@ struct EpisodeScreen: View {
   @State private var loader = Loader<MediaItem>()
 
   var body: some View {
-    PageState(loader: loader, error: Str.titleEpisodeLoadError) { EpisodePage(item: itemShown($0), loader: loader) }
+    PageState(loader: loader, error: Str.titleEpisodeLoadError) { EpisodePage(item: $0, loader: loader) }
       .loads(loader) { [itemId] api in try await api.media.get(id: itemId) }
       .hidesSystemNavigationBar()
   }
@@ -595,7 +584,7 @@ private struct EpisodePage: View {
     ) {
       EpisodeHeader(item: item, layout: layout)
       if let title {
-        MoreFromSeason(item: item, titleId: title.id).id("more")
+        MoreFromSeason(item: item, titleId: title.id)
       }
     }
   }

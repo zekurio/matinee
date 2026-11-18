@@ -177,9 +177,6 @@ private struct AvatarPicker: View {
         }
       }
     }
-    #if DEBUG
-      .onAppear { if debugOpens("avatar") { menu = true } }
-    #endif
     .photosPicker(isPresented: $picking, selection: $photo, matching: .images, preferredItemEncoding: .compatible)
     .onChange(of: photo) { _, item in
       guard let item else { return }
@@ -470,9 +467,6 @@ private struct SessionsSection: View {
         sessions.reload()
       }
     }
-    #if DEBUG
-      .onAppear { if debugOpens("signout-others") { signingOutOthers = true } }
-    #endif
   }
 
   private func signOut(_ item: Session) {

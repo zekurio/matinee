@@ -70,9 +70,6 @@ private struct TVRecentPage: View {
     .ignoresSafeArea()
     .loads(recent) { [username] api in
       let entries = try await api.profiles.recent(username: username, limit: PROFILE_RECENT_LIMIT)
-      #if DEBUG
-        if StatsFixtures.mode == .empty { return [] }
-      #endif
       return entries
     }
     // The grid comes after the page appears: its first card takes focus once it's there.

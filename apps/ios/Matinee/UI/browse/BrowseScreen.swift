@@ -19,10 +19,9 @@ struct BrowseScreen: View {
   @State private var kind: String?
   @State private var state = TitleListState()
   @State private var options = Loader<TitleFilterOptions>()
-  @State private var pages = makeTitlePages()
+  @State private var pages = TitlePages()
   @State private var kinds = BrowseKinds()
   @State private var filtering = false
-  @State private var devStarted = false
   @Environment(\.windowSize) private var window
   @Environment(\.dynamicTypeSize) private var typeSize
   @Environment(\.shellStyle) private var shellStyle
@@ -39,11 +38,7 @@ struct BrowseScreen: View {
       header(chips: chips)
     }
     .pages(pages, key: "\(kind ?? "")\n\(state.key)") { api, offset, limit in
-      var sent = browseFilters(genre: genre, studio: studio, picked: filters)
-      #if DEBUG
-        // The fixtures' genres and studios aren't the server's: show its titles.
-        if BrowseFixtures.on { sent = BrowseFixtures.served(filters) }
-      #endif
+      let sent = browseFilters(genre: genre, studio: studio, picked: filters)
       let page = try await api.titles.browse(
         kind: kind, filters: sent, sort: sort, order: order, limit: limit, offset: offset)
       await kinds.show(page.kinds)
@@ -59,14 +54,6 @@ struct BrowseScreen: View {
       .padding(.trailing, wideControls(window, typeSize, shellStyle) ? gutter - 4 : 0)
     }
     .titleFilterSheet(isPresented: $filtering, kind: kind, options: offered, state: state)
-    #if DEBUG
-      .onAppear {
-        guard !devStarted else { return }
-        devStarted = true
-        if let filters = BrowseFixtures.filters { state.filters = filters }
-        if BrowseFixtures.open == "filters" { filtering = true }
-      }
-    #endif
   }
 
   /// "Genre · 12 titles", the kinds to pick from, and the filters in use.
@@ -136,9 +123,6 @@ struct PersonScreen: View {
       }
     }
     .loads(person) { api in
-      #if DEBUG
-        if BrowseFixtures.on { return try await BrowseFixtures.person(name, api: api) }
-      #endif
       return try await loadPerson(api, name: name, tmdbId: tmdbId)
     }
     // No name in the bar: the page's heading is the name, large, under it.
@@ -146,34 +130,28 @@ struct PersonScreen: View {
   }
 
   private func content(_ value: Person) -> some View {
-    ScrollViewReader { proxy in
-      ScrollView {
-        VStack(alignment: .leading, spacing: 0) {
-          PersonHeader(person: value)
-            .padding(.top, Space.s2)
-            .padding(.bottom, Space.s3 + Space.s5)
-          // Every credit in one grid, as Android's: the part, else the year, else the kind of credit.
-          CardGrid {
-            ForEach(value.credits, id: \.self) { credit in
-              PosterCard(
-                credit.title,
-                detail: credit.role ?? formatYear(credit.title.year) ?? titleCreditLabel(credit.kind, count: 1))
-            }
+    ScrollView {
+      VStack(alignment: .leading, spacing: 0) {
+        PersonHeader(person: value)
+          .padding(.top, Space.s2)
+          .padding(.bottom, Space.s3 + Space.s5)
+        // Every credit in one grid, as Android's: the part, else the year, else the kind of credit.
+        CardGrid {
+          ForEach(value.credits, id: \.self) { credit in
+            PosterCard(
+              credit.title,
+              detail: credit.role ?? formatYear(credit.title.year) ?? titleCreditLabel(credit.kind, count: 1))
           }
-          // "Not here yet": their titles at TMDB that no library here has.
-          PersonCatalogCredits(credits: value.catalog, stale: value.stale)
-            .padding(.top, value.credits.isEmpty || value.catalog.isEmpty ? 0 : Space.s5 + Space.s3)
-            .id("catalog")
         }
-        .padding(.bottom, Space.s8)
+        // "Not here yet": their titles at TMDB that no library here has.
+        PersonCatalogCredits(credits: value.catalog, stale: value.stale)
+          .padding(.top, value.credits.isEmpty || value.catalog.isEmpty ? 0 : Space.s5 + Space.s3)
       }
-      .refreshable {
-        person.reload()
-        await person.settled()
-      }
-      #if DEBUG
-        .modifier(PersonCatalogDevOpen(kind: .constant(nil), proxy: proxy))
-      #endif
+      .padding(.bottom, Space.s8)
+    }
+    .refreshable {
+      person.reload()
+      await person.settled()
     }
   }
 }

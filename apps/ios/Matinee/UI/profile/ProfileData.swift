@@ -36,10 +36,6 @@ nonisolated func joinedMonth(_ profile: Profile) -> String? {
     snapshot = ProfileSnapshot(username: username)
     profile = Loader(kept: snapshot.profile)
     stats = ProfileStats(snapshot: snapshot)
-    #if DEBUG
-      // `-dev.statsRange 7d`, for screenshots of each range.
-      if let range = UserDefaults.standard.string(forKey: "dev.statsRange") { stats.select(range) }
-    #endif
   }
 
   var range: String { stats.range }
@@ -94,25 +90,16 @@ nonisolated func joinedMonth(_ profile: Profile) -> String? {
 
   nonisolated static func fetchProfile(_ api: MatineeApi, username: String) async throws -> Profile {
     let profile = try await api.profiles.get(username: username)
-    #if DEBUG
-      if StatsFixtures.mode != .off { return StatsFixtures.profile(profile) }
-    #endif
     return profile
   }
 
   nonisolated static func fetchStats(_ api: MatineeApi, username: String, range: String) async throws -> WatchStats? {
     let stats = try await api.profiles.stats(username: username, range: range, timeZone: statsTimeZone)
-    #if DEBUG
-      if StatsFixtures.mode != .off { return try await StatsFixtures.stats(stats, range: range, api: api) }
-    #endif
     return stats
   }
 
   nonisolated static func fetchLeaderboard(_ api: MatineeApi, range: String) async throws -> Leaderboard {
     let board = try await api.stats.leaderboard(range: range, timeZone: statsTimeZone)
-    #if DEBUG
-      if StatsFixtures.mode != .off { return StatsFixtures.leaderboard(board) }
-    #endif
     return board
   }
 }

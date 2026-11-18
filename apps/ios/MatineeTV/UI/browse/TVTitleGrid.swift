@@ -14,17 +14,6 @@ import SwiftUI
  * The paging itself is MatineeCore's `TitlePages` (Browse/TitlePages.swift).
  */
 
-/// A page's `TitlePages`, a page the size Android asks for, or in debug
-/// builds `-dev.pageSize`'s, so paging shows on the dev server's few
-/// titles; `-dev.pageDelay` (milliseconds) slows each page.
-func makeTVTitlePages() -> TitlePages {
-  #if DEBUG
-    let asked = UserDefaults.standard.integer(forKey: "dev.pageSize")
-    if asked > 0 { return TitlePages(pageSize: asked) }
-  #endif
-  return TitlePages()
-}
-
 extension View {
   /// Loads `pages` from the server once the page shows, as Android's
   /// `rememberTitlePages`: `key` names the list, and another key starts it
@@ -55,41 +44,8 @@ private struct LoadsTitlePages: ViewModifier {
   private func configure() {
     guard let api else { return }
     let fetch = fetch
-    #if DEBUG
-      let delay = UserDefaults.standard.integer(forKey: "dev.pageDelay")
-      let copies = UserDefaults.standard.integer(forKey: "dev.gridCopies")
-      if delay > 0 || copies > 1 {
-        pages.configure(key: key) { offset, limit in
-          if delay > 0 { try await Task.sleep(for: .milliseconds(delay)) }
-          return copies > 1
-            ? try await Self.copied(copies, offset: offset, limit: limit) { try await fetch(api, $0, $1) }
-            : try await fetch(api, offset, limit)
-        }
-        return
-      }
-    #endif
     pages.configure(key: key) { offset, limit in try await fetch(api, offset, limit) }
   }
-
-  #if DEBUG
-    /// `-dev.gridCopies N`: the server's list `copies` times over, a page at a
-    /// time, so the dev server's few titles fill a grid of many rows. The
-    /// copies past the first get ids of their own and open nothing real.
-    private nonisolated static func copied(
-      _ copies: Int, offset: Int, limit: Int, fetch: (Int, Int) async throws -> TitleList
-    ) async throws -> TitleList {
-      let all = try await fetch(0, 200)
-      let count = all.items.count
-      guard count > 0 else { return all }
-      let total = count * copies
-      let items = (offset..<min(offset + limit, total)).map { index in
-        var title = all.items[index % count]
-        if index >= count { title.id = "\(title.id)#\(index / count)" }
-        return title
-      }
-      return TitleList(items: items, total: total)
-    }
-  #endif
 }
 
 /// Why a grid has no titles, and the one thing to do about it, if any.

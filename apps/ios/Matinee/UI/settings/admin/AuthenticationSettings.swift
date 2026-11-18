@@ -38,7 +38,6 @@ struct AuthenticationSettings: View {
     // A new answer, from the server or a save, starts the form again from it.
     .onChange(of: loader.state.value, initial: true) { _, saved in
       form = saved.map(AuthDraft.init)
-      if adminDemo("invalid") { form?.oidc.issuerUrl = "auth.example.com" }
     }
   }
 }

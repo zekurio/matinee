@@ -70,8 +70,8 @@ private struct Transfer: Codable, Sendable {
   }
   private let networkAllowed: @MainActor (Bool) -> Bool
   /// The room downloads have to go to; nil reads as room enough. The
-  /// volume's own figures, unless a test or a debug build says otherwise.
-  public var capacity: @MainActor () -> DownloadCapacity?
+  /// volume's own figures, unless a test says otherwise.
+  private let capacity: @MainActor () -> DownloadCapacity?
   /// How long a download held back by low storage waits before it looks
   /// again; Android's WorkManager hears from the system instead.
   var storageRecheck: Duration = .seconds(60)

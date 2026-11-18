@@ -67,18 +67,6 @@ struct LibrariesSettings: View {
         if !Task.isCancelled { loader.reload() }
       }
     }
-    .onChange(of: loader.state.value?.first?.id, initial: true) { _, _ in
-      guard let list = loader.state.value, let first = list.first, acting == nil, confirmation == nil else { return }
-      if adminDemo("sheet") { acting = Picked(first.id, first) }
-      // Removing asks for the library by name, and only acts on that one.
-      guard let target = adminDemoTarget().flatMap({ name in list.first { $0.name == name } }) else { return }
-      if adminDemo("remove") { askRemove(target) }
-      if adminDemoOnce("remove-yes") {
-        askRemove(target)
-        confirmation?.action()
-        confirmation = nil
-      }
-    }
     .matineeSheet(item: $acting) { picked in
       LibrarySheet(
         library: picked.value, onScan: { scan(picked.value) }, onRefresh: { refresh(picked.value) },

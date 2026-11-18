@@ -20,9 +20,8 @@ struct LibraryScreen: View {
   @State private var libraries = Loader<[Library]>()
   @State private var options = Loader<TitleFilterOptions>()
   @State private var state: TitleListState
-  @State private var pages = makeTitlePages()
+  @State private var pages = TitlePages()
   @State private var filtering = false
-  @State private var devStarted = false
   @Environment(\.windowSize) private var window
   @Environment(\.dynamicTypeSize) private var typeSize
   @Environment(\.shellStyle) private var shellStyle
@@ -56,15 +55,6 @@ struct LibraryScreen: View {
       }
     }
     .pages(pages, key: state.key) { api, offset, limit in
-      #if DEBUG
-        // The fixtures' filters aren't the server's: ask for what it can answer, and score what it sends.
-        if BrowseFixtures.on {
-          return BrowseFixtures.rated(
-            try await api.titles.list(
-              libraryId: id, filters: BrowseFixtures.served(filters), sort: sort, order: order, limit: limit,
-              offset: offset))
-        }
-      #endif
       return try await api.titles.list(
         libraryId: id, filters: filters, sort: sort, order: order, limit: limit, offset: offset)
     }
@@ -75,24 +65,7 @@ struct LibraryScreen: View {
     .titleFilterSheet(
       isPresented: $filtering, kind: library?.kind == LibraryKind.shows ? TitleKind.show : TitleKind.movie,
       options: offered, state: state)
-    #if DEBUG
-      .onAppear(perform: devStart)
-    #endif
   }
-
-  #if DEBUG
-    /// The page as `-dev.browse.*` asks to start it, once (BrowseFixtures.swift).
-    private func devStart() {
-      guard !devStarted else { return }
-      devStarted = true
-      if let filters = BrowseFixtures.filters { state.filters = filters }
-      if let order = TITLE_ORDERS.first(where: { $0.sort == BrowseFixtures.sort }) { state.apply(order) }
-      switch BrowseFixtures.open {
-      case "filters", "language": filtering = true
-      default: break
-      }
-    }
-  #endif
 
   /// The bar: the name, then the filters and the sort, icons on a phone
   /// and the web's header controls in words from `sm` up.

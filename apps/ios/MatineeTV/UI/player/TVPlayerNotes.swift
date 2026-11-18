@@ -85,12 +85,6 @@ struct TVPlayerNoticeNote: View {
       shown = notice
       controller.dismissNotice()
     }
-    // A notice held for a screenshot, once the file has loaded, as a real one comes.
-    .onChange(of: controller.item != nil) { _, loaded in
-      guard loaded, count == 0, let notice = TVPlayerDebug.notice else { return }
-      count += 1
-      shown = notice
-    }
     .task(id: count) {
       guard count > 0 else { return }
       try? await Task.sleep(for: .seconds(NOTICE_SECONDS))

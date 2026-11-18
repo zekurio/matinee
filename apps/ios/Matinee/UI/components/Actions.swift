@@ -129,7 +129,6 @@ struct ActionsHost: ViewModifier {
   @Environment(\.api) private var api
   @Environment(\.user) private var user
   @Environment(\.offline) private var offline
-  @Environment(ViewerState.self) private var viewer: ViewerState?
 
   func body(content: Content) -> some View {
     @Bindable var actions = actions
@@ -157,15 +156,6 @@ struct ActionsHost: ViewModifier {
         guard user?.isAdmin == true, !offline, let api else { return }
         await actions.loadProviders(api)
       }
-      #if DEBUG
-        // `-dev.noDownloads YES`: the account as one that may not download,
-        // which neither of the dev server's is, to see what it's offered.
-        .onChange(of: viewer?.options, initial: true) { _, options in
-          guard UserDefaults.standard.bool(forKey: "dev.noDownloads"), var options, options.downloads else { return }
-          options.downloads = false
-          viewer?.options = options
-        }
-      #endif
   }
 }
 

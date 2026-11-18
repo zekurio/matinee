@@ -37,10 +37,7 @@ struct HomeBanner<Header: View>: View {
       HeroSkeleton(rowsBelow: rowsBelow, top: header)
     case .failed:
       header()
-    case .ready(let featured):
-      let slides = HomeCarouselDevData.slides(
-        HomeDevData.fill(
-          featured, standIns: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? [])))
+    case .ready(let slides):
       if slides.isEmpty {
         header()
       } else {
@@ -121,7 +118,7 @@ struct Hero<Top: View>: View {
         ForEach(0..<HeroPaging.pages(count), id: \.self) { page in
           let index = HeroPaging.slide(page, count: count)
           HeroSlide(
-            slide: slides[index], index: index, layout: layout, parts: parts,
+            slide: slides[index], layout: layout, parts: parts,
             top: topInset + Self.headerRoom, bottom: reserved
           )
           .frame(height: height)
@@ -149,7 +146,6 @@ struct Hero<Top: View>: View {
     // Waits on the page it settled on, so the advance's own scroll doesn't cancel it.
     .task(id: HeroAdvance(page: settled, paused: paused), advance)
     .onChange(of: settled) { _, page in showing = slides[HeroPaging.slide(page, count: count)].title.id }
-    .onAppear(perform: startWhereAsked)
     .overlay(alignment: .bottom) { controls(layout: layout, count: count) }
     .overlay(alignment: .top) { top().padding(.top, topInset) }
     .ignoresSafeArea(edges: .horizontal)
@@ -230,8 +226,7 @@ struct Hero<Top: View>: View {
 
   /// Whether it holds where it is rather than move on by itself.
   private var paused: Bool {
-    dragging || hovering || focused || reduceMotion || voiceOver || actions?.target != nil
-      || HomeCarouselDevData.startStop != nil || slides.count < 2
+    dragging || hovering || focused || reduceMotion || voiceOver || actions?.target != nil || slides.count < 2
   }
 
   /// Moves on a slide once it has rested eight seconds, unless it holds.
@@ -261,15 +256,6 @@ struct Hero<Top: View>: View {
     case .decrement: _ = step(-1)
     @unknown default: break
     }
-  }
-
-  /// `-dev.featuredStop`, in a debug build: resting on that slide.
-  private func startWhereAsked() {
-    guard let start = HomeCarouselDevData.startStop, slides.count > 1 else { return }
-    let page = HeroPaging.page(showing: Int(start) % slides.count, from: current, count: slides.count)
-    position.scrollTo(id: page)
-    current = page
-    settled = page
   }
 }
 
@@ -327,7 +313,6 @@ private struct HeroDot: View {
 /// slides with the page.
 private struct HeroSlide: View {
   let slide: FeaturedTitle
-  let index: Int
   let layout: HeroLayout
   let parts: BannerParts
   /// Room at the top for the tabs and Home's header.
@@ -347,7 +332,7 @@ private struct HeroSlide: View {
       .padding(.horizontal, gutter)
       .padding(.top, top)
       .padding(.bottom, bottom)
-      .background { HeroArt(slide: slide, index: index) }
+      .background { HeroArt(slide: slide) }
   }
 
   @State private var textHeight: CGFloat = 0
@@ -523,23 +508,15 @@ private struct HeroButtons: View {
 /// via-background/30 via-35%`.
 private struct HeroArt: View {
   let slide: FeaturedTitle
-  let index: Int
   @Environment(\.api) private var api
   @Environment(\.palette) private var palette
 
   private var sources: [ImageSource] {
     let title = slide.title
-    let server = [
+    return [
       api?.art(title.images.backdrop, size: .large), api?.art(slide.item.episode?.still, size: .large),
       api?.frame(slide.item.id, large: true),
     ].compactMap(\.self)
-    switch HomeCarouselDevData.art(index) {
-    case .backdrop(let source): return [source]
-    // A title with only a poster: the banner, as the web's, doesn't show posters.
-    case .poster: return Array(server.dropFirst())
-    case .none?: return []
-    case nil: return HomeDevData.backdrop(slide) ?? server
-    }
   }
 
   var body: some View {

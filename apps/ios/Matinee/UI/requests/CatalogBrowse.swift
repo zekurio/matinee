@@ -80,23 +80,6 @@ private struct BrowseKindPage: View {
       }
     }
     .loads(options, fetch: fetchOptions)
-    #if DEBUG
-      // `-requests.open filters|sort|scored`: the filters, the sort's menu, or the best-scored first, for a screenshot.
-      .task(id: ready != nil) {
-        guard ready != nil, let what = UserDefaults.standard.string(forKey: "requests.open") else { return }
-        try? await Task.sleep(for: .seconds(1.5))
-        switch what {
-        case "filters":
-          filters.genres = [878]
-          filtering = true
-        case "sort": sorting = true
-        case "scored":
-          sort = "scoreHigh"
-          filters.yearFrom = 2018
-        default: break
-        }
-      }
-    #endif
     .filterSheet(isPresented: $filtering, active: filters.count, onClear: { change.wrappedValue = .none }) {
       if let ready { BrowseFilters(kind: kind, options: ready, filters: change, sort: sort, voteFloor: voteFloor) }
     }

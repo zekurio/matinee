@@ -61,10 +61,6 @@ struct LinkDeviceScreen: View {
 
 /// Whether this device has a camera to scan with.
 @MainActor private var hasCamera: Bool {
-  #if DEBUG
-    // -dev.camera YES: as if it had one, to see the permission and a camera that won't start on the simulator.
-    if UserDefaults.standard.bool(forKey: "dev.camera") { return true }
-  #endif
   return ClientCapabilities.cameraLinking && AVCaptureDevice.default(for: .video) != nil
 }
 
@@ -87,14 +83,6 @@ private struct ScanStep: View {
       }
       CodeField { onCode(ScannedCode(userCode: $0, server: nil), true) }
     }
-    #if DEBUG
-      // -dev.scan TEXT: what a scanned QR code held, through the same path as the camera's.
-      .onAppear {
-        guard let text = UserDefaults.standard.string(forKey: "dev.scan") else { return }
-        UserDefaults.standard.removeObject(forKey: "dev.scan")
-        if let scanned = scannedCode(text) { onCode(scanned, false) }
-      }
-    #endif
   }
 }
 

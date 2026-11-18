@@ -212,10 +212,10 @@ struct StatsCards: View {
     VStack(alignment: .leading, spacing: CARD_GAP) {
       WatchOverview(stats: stats, columns: columns, width: width)
       StatsColumns(columns: columns, spacing: CARD_GAP) {
-        TopTitles(stats: stats).id("titles")
+        TopTitles(stats: stats)
         Genres(stats: stats)
-        if standing { Standing(board: board, range: range).id("standing") }
-        Activity(stats: stats).id("activity")
+        if standing { Standing(board: board, range: range) }
+        Activity(stats: stats)
       }
     }
     .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
@@ -461,16 +461,6 @@ struct Standing: View {
         }
       }
       .matineeSheet(item: $open, size: .mediumAndLarge) { open in BoardSheet(board: open.board, range: range) }
-      #if DEBUG
-        .task {
-          // `-dev.profileBoard watchTime`: that board's sheet open, for screenshots.
-          guard let metric = UserDefaults.standard.string(forKey: "dev.profileBoard"),
-            let shown = found.first(where: { $0.board.metric == metric })
-          else { return }
-          try? await Task.sleep(for: .seconds(3))
-          open = OpenBoard(board: shown.board)
-        }
-      #endif
     }
   }
 }

@@ -45,7 +45,6 @@ private struct ProfilePage: View {
   var body: some View {
     let state = loads.profileState(offline: offline)
     ScrollView {
-      ScrollViewReader { proxy in
       LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s8) {
         // Showing what loaded before while the server can't be reached: the cloud, up top.
         // The inbox opens the admin's queue, with the count of what needs them.
@@ -67,20 +66,11 @@ private struct ProfilePage: View {
         case .ready(let profile):
           FavoritesRail(profile: profile)
           if !offline { AskedRail() }
-          Statistics(loads: loads).id("stats")
-          RecentRail(profile: profile).id("recent")
+          Statistics(loads: loads)
+          RecentRail(profile: profile)
         }
       }
       .padding(.bottom, Space.s8)
-      #if DEBUG
-        .task(id: state?.value != nil) {
-          // `-dev.profileScroll stats|titles|standing|activity|recent`, for screenshots.
-          guard state?.value != nil, let anchor = UserDefaults.standard.string(forKey: "dev.profileScroll") else { return }
-          try? await Task.sleep(for: .seconds(2))
-          proxy.scrollTo(anchor, anchor: .top)
-        }
-      #endif
-      }
     }
     .scrollsToTopOnReselect()
     .modifier(ProfileTop(tabRoot: tabRoot, buttons: buttons))
@@ -92,8 +82,8 @@ private struct ProfilePage: View {
   /// before them the cloud while the server can't be reached, or offline.
   private var buttons: ProfileButtons {
     ProfileButtons(
-      onRequests: requests == nil ? devInbox.open : openRequests,
-      needsYou: max(requests?.queue.needsYou ?? 0, devInbox.count), stale: loads.reloadable, inBar: !tabRoot)
+      onRequests: requests == nil ? nil : openRequests,
+      needsYou: requests?.queue.needsYou ?? 0, stale: loads.reloadable, inBar: !tabRoot)
   }
 
   private func openRequests() { nav.requests(nil) }
@@ -112,18 +102,6 @@ private struct ProfileTop: ViewModifier {
     } else {
       content.topBar(Str.tabProfile) { buttons.padding(.trailing, Space.s1) }
     }
-  }
-}
-
-extension ProfilePage {
-  /// The inbox's stand-in: in debug builds, `-dev.profileInbox 3` shows it
-  /// with three waiting, going nowhere, to see how it looks.
-  fileprivate var devInbox: (open: (() -> Void)?, count: Int) {
-    #if DEBUG
-      let count = UserDefaults.standard.integer(forKey: "dev.profileInbox")
-      if count > 0 { return ({}, count) }
-    #endif
-    return (nil, 0)
   }
 }
 

@@ -20,7 +20,7 @@ struct TVSeasonScreen: View {
 
   var body: some View {
     DetailState(loader: loader, error: Str.titleSeasonShowError) { title in
-      TVSeasonPage(title: titleShown(title), initial: season)
+      TVSeasonPage(title: title, initial: season)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(palette.background)
@@ -73,7 +73,7 @@ private struct TVSeasonPage: View {
 
   private func page(_ season: Season) -> some View {
     let loader = items(season.number)
-    let list = loader.state.value.map { $0.map(itemShown) }
+    let list = loader.state.value
     let isWatched = { [viewer] (item: MediaItem) in viewer?.isWatched(item) ?? (item.progress?.completed ?? false) }
     let up = seasonPlay(title, list, isWatched: isWatched)
     let marks = marks(season, list: list, up: up, isWatched: isWatched)

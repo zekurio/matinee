@@ -133,26 +133,8 @@ struct DiscoverRailRow: View {
       }
     }
     .loads(page) { [rail] api in try await RequestData(api: api).row(rail) }
-    #if DEBUG
-      // `-requests.heading forYou`: that row's heading pressed once its cards show, for a screenshot of what it opens.
-      .task(id: cards.isEmpty) {
-        guard !cards.isEmpty, !DiscoverDebug.pressed, UserDefaults.standard.string(forKey: "requests.heading") == rail.id,
-          let start = discoverRailBrowse(rail)
-        else { return }
-        DiscoverDebug.pressed = true
-        try? await Task.sleep(for: .seconds(1.5))
-        nav.catalogBrowse(start)
-      }
-    #endif
   }
 }
-
-#if DEBUG
-  /// `-requests.heading` presses a heading once a launch, not each time the rows come back.
-  enum DiscoverDebug {
-    static var pressed = false
-  }
-#endif
 
 /// Discover's whole answer couldn't be had: the catalog is down and nothing was kept.
 struct DiscoverFailed: View {

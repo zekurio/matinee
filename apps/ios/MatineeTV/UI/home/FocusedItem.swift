@@ -41,7 +41,7 @@ func featuredInfo(_ slide: FeaturedTitle, api: MatineeApi?) -> FocusedItem {
       ].compactMap(\.self),
       contentRating: title.contentRating, rating: rating(title.rating), overview: title.overview),
     logo: api?.art(title.images.logo, size: .medium),
-    backdrop: (HomeDevData.backdrop(slide) ?? []) + backdropOf(api, slide.item, title.images.backdrop))
+    backdrop: backdropOf(api, slide.item, title.images.backdrop))
 }
 
 /// A file in Continue watching or Next up.

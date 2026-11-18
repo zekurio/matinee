@@ -91,9 +91,6 @@ private struct AppLogSection: View {
       TextDialog(
         isPresented: Binding(get: { shown != nil }, set: { if !$0 { shown = nil } }), title: Str.logsTitle,
         text: shown ?? "", copyLabel: Str.logsCopy, copied: Str.logsCopied, latestLast: true))
-    #if DEBUG
-      .onAppear { if debugOpens("log") { withLog { shown = $0 } } }
-    #endif
   }
 
   private func withLog(_ use: @escaping (String) -> Void) {

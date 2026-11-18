@@ -18,11 +18,10 @@ struct TVBrowseScreen: View {
   @State private var kinds = TVBrowseKinds()
   @State private var state = TitleListState()
   @State private var options = Loader<TitleFilterOptions>()
-  @State private var pages = makeTVTitlePages()
+  @State private var pages = TitlePages()
   @State private var memory = TVFocusMemory()
   @State private var filterPage: TVFilterPage?
   @State private var sorting = false
-  @State private var devStarted = false
   @FocusState private var sortFocused: Bool
 
   var body: some View {
@@ -57,30 +56,16 @@ struct TVBrowseScreen: View {
     }
     .ignoresSafeArea()
     .tvTitlePages(pages, key: "\(kind ?? "")\n\(state.key)") { api, offset, limit in
-      var sent = browseFilters(genre: genre, studio: studio, picked: filters)
-      #if DEBUG
-        // The fixtures' genres and studios aren't the server's: show its titles.
-        if BrowseFixtures.on { sent = BrowseFixtures.served(filters) }
-      #endif
+      let sent = browseFilters(genre: genre, studio: studio, picked: filters)
       let page = try await api.titles.browse(
         kind: kind, filters: sent, sort: sort, order: order, limit: limit, offset: offset)
       await kinds.show(page.kinds)
-      #if DEBUG
-        if BrowseFixtures.on { return BrowseFixtures.rated(TitleList(items: page.items, total: page.total)) }
-      #endif
       return TitleList(items: page.items, total: page.total)
     }
     .tvLoadsFilterOptions(options, kind: kind, genre: genre, studio: studio)
     .tvTitleFilters(
       page: $filterPage, sorting: $sorting, options: options, state: state, kind: kind, own: (genre, studio))
     .tvBrowseFocus(memory, sort: $sortFocused) { firstFocus }
-    #if DEBUG
-      .onAppear {
-        guard !devStarted else { return }
-        devStarted = true
-        tvBrowseDevStart(state, filterPage: &filterPage, sorting: &sorting)
-      }
-    #endif
   }
 
   /// The first poster; with none to show, the sort, so the drawer and the filters are still in reach.

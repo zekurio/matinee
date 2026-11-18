@@ -21,7 +21,6 @@ import SwiftUI
  * - TVPlayerNotes.swift: the failure, the server's notices, a skip's mark.
  * - TVVideo.swift: either engine's picture, and trickplay tiles.
  * - TVDisplayMode.swift: the display following the video, `DisplayMode.kt`.
- * - TVPlayerDebug.swift: launch arguments for screenshots.
  *
  * The subtitle lines are the phone's (Matinee/UI/player/PlayerSubtitles.swift,
  * shared in project.yml). A TV has no picture in picture, AirPlay to send,
@@ -98,9 +97,6 @@ private struct TVPlayerSitting: View {
   private func open() async {
     guard controller == nil, let api else { return }
     made = session.version
-    #if DEBUG
-      if let engine = TVPlayerDebug.engine, prefs.engine != engine { prefs.engine = engine }
-    #endif
     let session = session
     // The token for the session's server, which is the API's; the controller sends it only there.
     let token: @Sendable () async -> String? = { @MainActor in
@@ -115,12 +111,10 @@ private struct TVPlayerSitting: View {
     player.sceneDidBecomeActive()
     controller = player
     await player.start(itemId: itemId, at: start)
-    await TVPlayerDebug.apply(to: player)
   }
 
   private func stop() {
     guard let controller else { return }
-    TVPlayerDebug.save(controller.diagnostics)
     let viewer = viewer
     Task {
       await controller.stop()

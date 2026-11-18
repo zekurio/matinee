@@ -50,11 +50,8 @@ struct TVHomeRows: View {
     libraries
   }
 
-  /// The recommendation rows Home shows, with `-dev.recommendations`' stand-ins in a debug build.
+  /// The recommendation rows Home shows.
   static func rails(_ value: HomeRecommendations?, hidden: Set<String>) -> [HomeRecommendationRail] {
-    #if DEBUG
-      let value = HomeDevData.recommendations(value)
-    #endif
     return value?.shownRails(hiding: hidden) ?? []
   }
 

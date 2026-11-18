@@ -409,13 +409,11 @@ extension EnvironmentValues {
 extension View {
   /// On a tab's first page: back to the top when the tab is picked again.
   /// Goes on the page's `ScrollView`. A page that keeps a `ScrollPosition`
-  /// of its own watches `\.tabReselected` instead. In debug builds,
-  /// `devScroll` names a launch argument that starts the page that far down.
-  func scrollsToTopOnReselect(devScroll: String? = nil) -> some View { modifier(ScrollsToTop(devScroll: devScroll)) }
+  /// of its own watches `\.tabReselected` instead.
+  func scrollsToTopOnReselect() -> some View { modifier(ScrollsToTop()) }
 }
 
 private struct ScrollsToTop: ViewModifier {
-  let devScroll: String?
   @Environment(\.tabReselected) private var reselected
   @State private var position = ScrollPosition(edge: .top)
 
@@ -423,13 +421,6 @@ private struct ScrollsToTop: ViewModifier {
     content
       .scrollPosition($position)
       .onChange(of: reselected) { withMotion(Motion.move) { position.scrollTo(edge: .top) } }
-    #if DEBUG
-      .task {
-        guard let key = devScroll, let y = Double(UserDefaults.standard.string(forKey: key) ?? "") else { return }
-        try? await Task.sleep(for: .seconds(3))
-        position.scrollTo(y: y)
-      }
-    #endif
   }
 }
 

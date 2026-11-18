@@ -177,16 +177,7 @@ struct SignInScreen: View {
   let config: AuthConfig
   let adding: Bool
   @Environment(MatineeSession.self) private var session
-  @State private var withCode = Self.startWithCode
-
-  /// `-dev.signin code` opens the code at once, for scripted screenshots, in debug builds.
-  private static var startWithCode: Bool {
-    #if DEBUG
-      UserDefaults.standard.string(forKey: "dev.signin") == "code"
-    #else
-      false
-    #endif
-  }
+  @State private var withCode = false
 
   var body: some View {
     ZStack {

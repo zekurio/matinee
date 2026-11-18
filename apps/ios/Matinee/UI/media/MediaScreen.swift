@@ -33,7 +33,6 @@ struct MediaScreen: View {
   @State private var discover = Loader<DiscoverRails>()
   /// The catalog's answer for the text, for "Not here yet" and for whether nothing matched at all.
   @State private var catalog = CatalogSearch()
-  @State private var devStarted = false
   /// Search was asked for and the field is to take the keyboard once it can.
   @State private var focusWanted = false
   @Environment(ShellNav.self) private var nav
@@ -57,9 +56,6 @@ struct MediaScreen: View {
       // Home's search button, or a link to search: the field takes the keyboard.
       .onChange(of: nav.searchPending, initial: true) { _, pending in if pending { takeSearch() } }
       .onChange(of: scenePhase) { appCameForward() }
-    #if DEBUG
-      .onAppear(perform: devStart)
-    #endif
   }
 
   /// The field, full width, with Back in place of its magnifier while
@@ -164,15 +160,6 @@ struct MediaScreen: View {
     focused = false
     withMotion(Motion.move) { field.cancel() }
   }
-
-  #if DEBUG
-    /// `-dev.browse.query TEXT`: the field starts with that text, searched.
-    private func devStart() {
-      guard !devStarted else { return }
-      devStarted = true
-      if let asked = BrowseFixtures.query { field = MediaSearch(query: asked) }
-    }
-  #endif
 }
 
 /// Library cards as wide as fit at 160 or more on a phone, 288 from the

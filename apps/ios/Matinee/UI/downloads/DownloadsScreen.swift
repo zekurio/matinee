@@ -74,46 +74,7 @@ struct DownloadsScreen: View {
       }
     }
     .removalDialog($removing)
-    #if DEBUG
-      .task { await devOpen(list) }
-    #endif
   }
-
-  #if DEBUG
-    @Environment(\.actions) private var actions
-    @Environment(\.api) private var api
-
-    /// `-dev.downloadOpen` (DownloadFixtures.swift), once, then
-    /// `-dev.downloadAfter`, the same after the seconds its third part says.
-    private func devOpen(_ list: DownloadList) async {
-      if let open = DownloadFixtures.open, let id = open.id {
-        UserDefaults.standard.removeObject(forKey: "dev.downloadOpen")
-        try? await Task.sleep(for: .milliseconds(800))
-        await devDo(open.what, id: id, season: open.season, list: list)
-      }
-      if let after = DownloadFixtures.after, let id = after.id {
-        UserDefaults.standard.removeObject(forKey: "dev.downloadAfter")
-        try? await Task.sleep(for: .seconds(after.season ?? 1))
-        await devDo(after.what, id: id, season: nil, list: list)
-      }
-    }
-
-    private func devDo(_ what: String, id: String, season: Int?, list: DownloadList) async {
-      switch what {
-      case "actions": acting = shownEntries(downloads).first { $0.id == id }
-      case "show":
-        actingShow = list.finished.compactMap { if case .show(let show) = $0 { show } else { nil } }.first { $0.id == id }
-      case "sheet": actions?.download = try? await api?.media.get(id: id)
-      case "files":
-        guard let title = try? await api?.titles.get(id: id) else { return }
-        actions?.files = FileSet(title: title.summary, season: season.flatMap { n in title.seasons.first { $0.number == n } })
-      case "pause": try? await downloads.pause(id)
-      case "resume": try? await downloads.resume(id)
-      case "remove": try? await downloads.remove(id)
-      default: break
-      }
-    }
-  #endif
 
   /// What the page says with nothing on it, in the middle of what's visible.
   private func empty(_ notice: DownloadsNotice) -> some View {
@@ -205,13 +166,9 @@ private struct TabTop: ViewModifier {
   }
 }
 
-/// The downloads the pages show: the server in use's, and in a debug build
-/// with `-dev.downloadFixtures YES` a made-up one in every state.
+/// The downloads the pages show: the server in use's.
 @MainActor func shownEntries(_ downloads: Downloads) -> [OfflineItem] {
   let stored = Array(downloads.store.items.values)
-  #if DEBUG
-    if DownloadFixtures.on { return stored + DownloadFixtures.entries }
-  #endif
   return stored
 }
 
@@ -253,23 +210,6 @@ struct DownloadsShowScreen: View {
       }
     }
     .removalDialog($removing)
-    #if DEBUG
-      .task {
-        guard let open = DownloadFixtures.open else { return }
-        UserDefaults.standard.removeObject(forKey: "dev.downloadOpen")
-        try? await Task.sleep(for: .milliseconds(800))
-        let entries = shownEntries(downloads).filter { $0.item.title?.id == titleId }
-        switch open.what {
-        case "menu": menu = true
-        case "remove":
-          if let title = entries.first?.item.title, let season = seasonsOf(entries).first {
-            removing = Removal(name: Str.titleSeasonOf(title.name, seasonName(season.number)), entries: season.entries)
-          }
-        case "actions": acting = entries.first { $0.id == open.id }
-        default: break
-        }
-      }
-    #endif
   }
 
   private func page(_ title: TitleSummary, entries: [OfflineItem]) -> some View {

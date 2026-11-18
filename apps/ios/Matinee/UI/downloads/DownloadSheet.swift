@@ -175,15 +175,6 @@ struct DownloadSheet: View {
     }
     planning = false
     picked = settledChoice(picked, plans: plans)
-    #if DEBUG
-      if let wanted = DownloadFixtures.takeStart() {
-        let choices = shownChoices(source.resolved.choices.presets, plans: plans)
-        picked =
-          wanted == "original"
-          ? .original : choices.first { $0.preset.map { String($0.height) } == wanted } ?? .device(nil)
-        start(source, texts: source.subtitles)
-      }
-    #endif
   }
 
   private func start(_ source: DownloadSource, texts: [SubtitleTrack]) {
@@ -195,9 +186,6 @@ struct DownloadSheet: View {
     if !original && (spec == nil || plan == nil) { return }
     let downloads = downloads
     let snackbar = snackbar
-    #if DEBUG
-      DownloadFixtures.lowStorage(downloads)
-    #endif
     // On in a task of its own, so it's queued whether or not the sheet is still there.
     Task {
       do {

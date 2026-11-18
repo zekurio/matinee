@@ -178,35 +178,8 @@ struct AppHeader<Action: View>: View {
     }
     .frame(height: style == .phone ? TouchTarget : 56)
     .padding(.horizontal, gutter)
-    #if DEBUG
-      .task { await devPress() }
-    #endif
   }
-
-  #if DEBUG
-    /// `-dev.header search|account`: that button pressed once, two seconds
-    /// after Home shows, as a finger would, for a screenshot of where it goes.
-    private func devPress() async {
-      guard !AppHeaderDebug.pressed, style == .phone,
-        let button = UserDefaults.standard.string(forKey: "dev.header")
-      else { return }
-      AppHeaderDebug.pressed = true
-      try? await Task.sleep(for: .seconds(2))
-      switch button {
-      case "search": nav.search()
-      case "account": nav.profile()
-      default: break
-      }
-    }
-  #endif
 }
-
-#if DEBUG
-  /// `-dev.header` presses once a launch, not each time Home comes back.
-  enum AppHeaderDebug {
-    static var pressed = false
-  }
-#endif
 
 /// The account at the end of a phone's Home header, as Findroid's user
 /// button: the person's picture, or their initials, opening the profile.
@@ -221,7 +194,7 @@ private struct AccountButton: View {
 
   var body: some View {
     if let user {
-      let waiting = user.isAdmin ? max(requests?.queue.needsYou ?? 0, Self.devInbox) : Self.devInbox
+      let waiting = user.isAdmin ? requests?.queue.needsYou ?? 0 : 0
       Pressable(shape: Circle(), action: nav.profile) {
         // 40 to see, as the search beside it, and 44 to hit.
         ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 40, dot: waiting > 0)
@@ -232,15 +205,6 @@ private struct AccountButton: View {
       .accessibilityLabel(Str.tabProfile)
       .accessibilityValue(waiting > 0 ? Str.webRequestsMenuWaiting(waiting) : "")
     }
-  }
-
-  /// `-dev.profileInbox 3`: the dot as with three waiting, for a screenshot.
-  private static var devInbox: Int {
-    #if DEBUG
-      UserDefaults.standard.integer(forKey: "dev.profileInbox")
-    #else
-      0
-    #endif
   }
 }
 

@@ -68,19 +68,6 @@ struct AboutRows: View {
     .tvReader(
       isPresented: Binding(get: { reading != nil }, set: { if !$0 { reading = nil } }), title: reading?.title ?? "",
       text: reading?.text ?? "", fromEnd: reading?.fromEnd ?? false)
-    #if DEBUG
-      // -dev.report YES: a report as a failed encode leaves it, to see this before anything played.
-      .onAppear {
-        guard UserDefaults.standard.bool(forKey: "dev.report"), PlaybackDiagnostics.latest == nil else { return }
-        var sample = PlaybackReport()
-        sample.attempt(mode: .direct, reason: .start, at: 0, audioIndex: 1, quality: nil, burnIn: false)
-        sample.attempt(
-          mode: .hls, reason: .fallback, at: 12, audioIndex: 1, quality: "1080p-10", burnIn: false,
-          why: [PlaybackReason.video, PlaybackReason.failed], videoTo: "h264", audioTo: "aac")
-        sample.failed(errorDiagnostics(NSError(domain: "AVFoundationErrorDomain", code: -11828)))
-        PlaybackDiagnostics.latest = sample
-      }
-    #endif
   }
 
   /// What the log takes out wherever it shows: the server's host and the account's names and id.

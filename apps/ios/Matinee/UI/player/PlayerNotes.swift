@@ -112,7 +112,7 @@ private let NOTICE_SECONDS = 5
 /// quality it couldn't encode, a switch that didn't go through.
 struct PlayerNoticeNote: View {
   let controller: PlayerController
-  @State private var shown: Notice? = PlayerDebug.notice
+  @State private var shown: Notice?
   @State private var count = 0
 
   var body: some View {

@@ -154,9 +154,6 @@ struct TVHomeScreen: View {
     }
     // Home with the drawer shut: Menu opens it. With it open, Menu leaves the app (TVShell.swift).
     .onTVBack(isActive: !drawer.isOpen) { drawer.open() }
-    #if DEBUG
-      .onChange(of: standIns, initial: true) { HomeDevData.standIns.titles = standIns }
-    #endif
   }
 
   /// Home as one message, when nothing on it loaded.
@@ -171,11 +168,8 @@ struct TVHomeScreen: View {
     }
   }
 
-  /// The featured titles, with `-dev.art`'s stand-ins in a debug build.
-  private var slides: [FeaturedTitle] {
-    HomeDevData.fill(
-      model.featured ?? [], standIns: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? []))
-  }
+  /// The featured titles.
+  private var slides: [FeaturedTitle] { model.featured ?? [] }
 
   /// Where focus goes the first time: the first card of the first row that
   /// has one, once the rows above the libraries have loaded.
@@ -196,15 +190,6 @@ struct TVHomeScreen: View {
     }
     return nil
   }
-
-  #if DEBUG
-    /// The titles on Home, for the stand-in recommendations of `-dev.recommendations`.
-    private var standIns: [TitleSummary] {
-      (loaders.featured.state.value ?? []).map(\.title)
-        + (loaders.resume.state.value ?? []).compactMap(\.title)
-        + (loaders.nextUp.state.value ?? []).compactMap(\.title)
-    }
-  #endif
 }
 
 extension Array {

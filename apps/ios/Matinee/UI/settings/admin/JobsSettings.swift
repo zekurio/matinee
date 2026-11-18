@@ -69,13 +69,6 @@ struct JobsSettings: View {
         if !Task.isCancelled { loader.reload() }
       }
     }
-    .onChange(of: loader.state.value?.queues.first?.id, initial: true) { _, first in
-      guard let first, open == nil, edits.isEmpty else { return }
-      if adminDemo("sheet") { open = Picked(first, first) }
-      if adminDemo("edit"), let queue = loader.state.value.flatMap(tunableQueues)?.first {
-        edits[queue.id] = min(queue.concurrency + 1, queue.maxConcurrency)
-      }
-    }
     .matineeSheet(item: $open) { picked in
       // The sheet follows the page as it polls.
       if let queue = loader.state.value?.queues.first(where: { $0.id == picked.value }) {

@@ -177,25 +177,3 @@ extension String {
   /// Nil for an empty string, for a line that may have nothing to say.
   fileprivate var nilIfEmpty: String? { isEmpty ? nil : self }
 }
-
-#if DEBUG
-  /// `-requests.personKind movie|show` and `-requests.scroll catalog` on a
-  /// person's page: the kind picked and the catalog credits scrolled to, for
-  /// a screenshot of them.
-  struct PersonCatalogDevOpen: ViewModifier {
-    @Binding var kind: String?
-    let proxy: ScrollViewProxy
-    @State private var done = false
-
-    func body(content: Content) -> some View {
-      content.task {
-        guard !done else { return }
-        done = true
-        if let picked = UserDefaults.standard.string(forKey: "requests.personKind") { kind = picked }
-        guard UserDefaults.standard.string(forKey: "requests.scroll") == "catalog" else { return }
-        try? await Task.sleep(for: .seconds(1.5))
-        proxy.scrollTo("catalog", anchor: .top)
-      }
-    }
-  }
-#endif

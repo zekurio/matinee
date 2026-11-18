@@ -35,7 +35,6 @@ struct UsersSettings: View {
       }
     }
     .loads(loader) { api in try await api.admin.users.list() }
-    .onChange(of: users.count, initial: true) { _, _ in demo(users) }
     .matineeSheet(item: $acting) { picked in
       let user = picked.value
       UserSheet(user: user, isSelf: me?.id == user.id) { pick($0, lastAdmin: isLastAdmin(user, of: users)) }
@@ -106,14 +105,6 @@ struct UsersSettings: View {
         }
       }
     }
-  }
-
-  /// What a debug build was launched to show, on the first account that isn't this one.
-  private func demo(_ users: [AdminUser]) {
-    guard let other = users.first(where: { $0.id != me?.id }), acting == nil, confirmation == nil else { return }
-    if adminDemo("sheet") { acting = Picked(other.id, other) }
-    // Only the question: the answer changes a real account.
-    if adminDemo("role") { pick(.role(other, admin: !other.isAdmin), lastAdmin: false) }
   }
 
   private func run(_ block: @escaping (MatineeApi) async throws -> Void) {

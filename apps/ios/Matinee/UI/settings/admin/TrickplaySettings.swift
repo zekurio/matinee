@@ -13,8 +13,6 @@ import SwiftUI
 struct TrickplaySettings: View {
   @State private var loader = Loader<AdminTrickplaySettings>()
   @State private var draft: MatineeCore.TrickplaySettings?
-  /// A debug build's screenshot edit, made once.
-  @State private var demoed = false
   @Environment(\.api) private var api
 
   var body: some View {
@@ -34,11 +32,6 @@ struct TrickplaySettings: View {
     // A new answer, from the server or a save, starts the form again from it.
     .onChange(of: saved, initial: true) { _, saved in
       draft = saved
-      if !demoed, adminDemo("edit") || adminDemo("save"), var edited = saved {
-        demoed = true
-        edited.keyframesOnly.toggle()
-        draft = edited
-      }
     }
   }
 }

@@ -110,18 +110,16 @@ private struct PlayerSitting: View {
     }
     let saved = try? downloads.playback(itemId)
     let server = saved?.entry.server ?? session.activeServer ?? api.base.absoluteString
-    let engine = PlayerDebug.engine ?? prefs.engine
     let player = PlayerController(
       api: api, device: device, prefs: prefs, tokenProvider: token,
       downloads: ServerPlayerDownloads(downloads: downloads, server: server, api: offline ? nil : api),
       preferences: user?.playback ?? DEFAULT_PLAYBACK_PREFERENCES, offline: offline,
-      playbackEngine: engine == .mpv ? MPVPlaybackEngine() : nil)
+      playbackEngine: prefs.engine == .mpv ? MPVPlaybackEngine() : nil)
     player.onNext = { next in playInstead(next.id) }
     player.sceneDidBecomeActive()
     controller = player
     guard saved != nil else {
       await player.start(itemId: itemId, at: start)
-      await PlayerDebug.apply(to: player)
       return
     }
     // A download plays from the device. Online, the server says where the
@@ -152,12 +150,12 @@ private struct Playback: View {
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @State private var controls = !PlayerDebug.flag("hidden")
+  @State private var controls = true
   /// Locked, touches on the screen do nothing; only the corner unlocks.
-  @State private var locked = PlayerDebug.flag("locked")
-  @State private var menu: PlayerMenu? = PlayerDebug.menu
+  @State private var locked = false
+  @State private var menu: PlayerMenu?
   /// The menu that was open stays drawn while its panel slides away.
-  @State private var shownMenu: PlayerMenu = PlayerDebug.menu ?? .audio
+  @State private var shownMenu: PlayerMenu = .audio
   @State private var touched = 0
   @State private var fill: Bool
   /// Counts pinches that switched, so the note shows again for each.
@@ -182,7 +180,7 @@ private struct Playback: View {
   private var inPip: Bool { controller.pictureInPictureActive }
   /// The controls show: asked for, or the file ended, unless locked or failed.
   private var controlsShown: Bool {
-    (controls || controller.ended || PlayerDebug.flag("controls")) && !locked && controller.error == nil
+    (controls || controller.ended) && !locked && controller.error == nil
       && controller.item != nil && !inPip
   }
 
@@ -252,12 +250,6 @@ private struct Playback: View {
       hideControls()
     }
     .onChange(of: menu) { _, open in if let open { shownMenu = open } }
-    .onChange(of: controller.duration > 0) { _, known in
-      // A seek swipe's note held for a screenshot lands a minute and a half on.
-      guard known, PlayerDebug.gesture == .seek else { return }
-      gestures.from = controller.position
-      gestures.target = min(controller.duration, controller.position + 95)
-    }
     .onChange(of: scenePhase) { _, phase in
       switch phase {
       case .background:
@@ -273,17 +265,7 @@ private struct Playback: View {
     .onChange(of: controller.playing, initial: true) { _, playing in
       UIApplication.shared.isIdleTimerDisabled = playing
     }
-    .onChange(of: controller.error) { PlayerDebug.save(controller.diagnostics) }
-    .task {
-      #if DEBUG
-        while !Task.isCancelled {
-          PlayerDebug.save(controller.diagnostics)
-          try? await Task.sleep(for: .seconds(2))
-        }
-      #endif
-    }
     .onDisappear {
-      PlayerDebug.save(controller.diagnostics)
       UIApplication.shared.isIdleTimerDisabled = false
       levels.restore()
       TrickplayTiles.shared.clear()
@@ -383,7 +365,7 @@ private struct Playback: View {
       // steps aside while an error shows, so its buttons stay in reach.
       if locked && controller.error == nil {
         LockedScreen(
-          keep: voiceOver || PlayerDebug.flag("locked"),
+          keep: voiceOver,
           onUnlock: {
             locked = false
             withMotion(Motion.enter) { controls = true }

@@ -33,7 +33,7 @@ enum GestureKind: String, Equatable {
 /// The gesture under the finger now, which the notes over the video show.
 @Observable final class GestureState {
   /// What the finger does, or nil between gestures.
-  var kind: GestureKind? = PlayerDebug.gesture
+  var kind: GestureKind?
   /// The brightness or volume it set, from 0 to 1.
   var level = 0.6
   /// Where a seek swipe started, in seconds.

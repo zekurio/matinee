@@ -417,36 +417,7 @@ private struct ImageEditor: View {
     .fileImporter(isPresented: $importing, allowedContentTypes: [.jpeg, .png, .webP]) { result in
       if case .success(let url) = result { upload(file: url) }
     }
-    #if DEBUG
-      .task { await devDo() }
-    #endif
   }
-
-  #if DEBUG
-    /// `-dev.metadataDo upload|remove|reset|menu`, without a finger: upload a
-    /// made-up picture to the first slot, remove its image, put the
-    /// provider's back, or open Upload's menu. Once.
-    private func devDo() async {
-      guard let what = UserDefaults.standard.string(forKey: "dev.metadataDo") else { return }
-      UserDefaults.standard.removeObject(forKey: "dev.metadataDo")
-      try? await Task.sleep(for: .seconds(2))
-      switch what {
-      case "upload":
-        let size = CGSize(width: 400, height: imageAspect(slot) < 1 ? 600 : 225)
-        let picture = UIGraphicsImageRenderer(size: size).image { context in
-          UIColor(red: 0.1, green: 0.55, blue: 0.6, alpha: 1).setFill()
-          context.fill(CGRect(origin: .zero, size: size))
-          UIColor.white.setFill()
-          context.fill(CGRect(x: size.width * 0.2, y: size.height * 0.4, width: size.width * 0.6, height: size.height * 0.2))
-        }
-        send(checkUpload(picture.jpegData(compressionQuality: 0.8)))
-      case "remove": change(.pick(nil))
-      case "reset": change(.reset)
-      case "menu": uploadMenu = true
-      default: break
-      }
-    }
-  #endif
 
   /// What the images are of: the title, a season of it, or an episode.
   private var name: String {

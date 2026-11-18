@@ -16,7 +16,7 @@ struct TVEpisodeScreen: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    DetailState(loader: loader, error: Str.titleEpisodeLoadError) { item in TVEpisodePage(item: itemShown(item)) }
+    DetailState(loader: loader, error: Str.titleEpisodeLoadError) { item in TVEpisodePage(item: item) }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       .background(palette.background)
       .ignoresSafeArea()

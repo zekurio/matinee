@@ -53,9 +53,6 @@ private struct OnlineHomeScreen: View {
   var body: some View {
     page
       .loadsHome(loaders)
-    #if DEBUG
-      .onChange(of: standIns, initial: true) { HomeDevData.standIns.titles = standIns }
-    #endif
   }
 
   @ViewBuilder private var page: some View {
@@ -75,7 +72,7 @@ private struct OnlineHomeScreen: View {
     // empty, since the list puts its gap around every one.
     let rows = homeRows(
       resume: loaders.resume.state, nextUp: loaders.nextUp.state,
-      recommendations: homeRecommendations(loaders.recommendations.state.value),
+      recommendations: loaders.recommendations.state.value,
       hiding: actions?.hidden.keys ?? [], asked: asked.state.value?.items ?? [])
     let moved: (String, Double) -> Void = { id, top in rowMoved(id, top: top) }
     return ScrollView {
@@ -131,14 +128,6 @@ private struct OnlineHomeScreen: View {
     // An iPad's window crossing between the shells: the banner and the cards
     // differ in height, so the row at the top is held there, not the points.
     .onChange(of: style) { holdRow() }
-    #if DEBUG
-      // -dev.home.scroll 400: that far down once Home has loaded, to see it scrolled in a screenshot.
-      .task {
-        guard let y = Double(UserDefaults.standard.string(forKey: "dev.home.scroll") ?? "") else { return }
-        try? await Task.sleep(for: .seconds(3))
-        position.scrollTo(y: y)
-      }
-    #endif
     .loadsHomeAsked(asked)
     .refreshable { await refresh() }
   }
@@ -156,10 +145,7 @@ private struct OnlineHomeScreen: View {
         HomeCarouselSkeleton().padding(.top, below)
       case .failed:
         EmptyView()
-      case .ready(let featured):
-        let slides = HomeCarouselDevData.slides(
-          HomeDevData.fill(
-            featured, standIns: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? [])))
+      case .ready(let slides):
         if !slides.isEmpty {
           // Other titles start the row at its first card again.
           HomeCarousel(slides: slides, showing: $featured).id(slides.map(\.title.id)).padding(.top, below)
@@ -212,15 +198,6 @@ private struct OnlineHomeScreen: View {
     await loaders.featured.settled()
     await loaders.recommendations.settled()
   }
-
-  #if DEBUG
-    /// The titles on Home, for the stand-in recommendations of `-dev.recommendations`.
-    private var standIns: [TitleSummary] {
-      ((loaders.featured.state.value ?? []).map(\.title)
-        + (loaders.resume.state.value ?? []).compactMap(\.title)
-        + (loaders.nextUp.state.value ?? []).compactMap(\.title))
-    }
-  #endif
 }
 
 /// Where Home is scrolled, for holding the row at its top in place while

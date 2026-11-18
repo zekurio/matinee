@@ -171,28 +171,6 @@ struct RequestsScreen: View {
     }
     .onAppear(perform: configureDone)
     .onChange(of: list) { configureDone() }
-    #if DEBUG
-      // `-requests.open add|decline|menu|addAll|retry|giveUp|allowAgain|addAfterAll`: the first row's
-      // action, Add all, or the menu, once it's up, for a screenshot.
-      .task(id: hub?.queue.queue == nil || list == .done && done.items.isEmpty) {
-        guard let hub, hub.queue.queue != nil, let what = UserDefaults.standard.string(forKey: "requests.open"),
-          let first = rows(hub).first
-        else { return }
-        try? await Task.sleep(for: .seconds(1.5))
-        switch what {
-        case "add": hub.answer(first, .add)
-        case "decline": hub.declining = first
-        case "menu": menu = first
-        case "addAll": if let all = hub.queue.addsAll { hub.answerAll(all) }
-        case "retry": hub.retry(first)
-        case "giveUp": givingUp = first
-        case "allowAgain", "addAfterAll":
-          guard let declined = rows(hub).first(where: { $0.status == RequestStatus.declined }) else { return }
-          hub.answer(declined, what == "allowAgain" ? .allowAgain : .addAfterAll) { done.remove { $0.id == declined.id } }
-        default: break
-        }
-      }
-    #endif
   }
 
   /// The rows of the list showing, less the ones held for Undo.

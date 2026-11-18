@@ -175,9 +175,6 @@ struct DownloadFilesSheet: View {
     let original = picked == .original
     let downloads = downloads
     let snackbar = snackbar
-    #if DEBUG
-      DownloadFixtures.lowStorage(downloads)
-    #endif
     snackbar.show(Str.downloadsAllStarted(missing.count))
     // On in a task of its own, so the files keep queueing after the sheet goes.
     Task {

@@ -46,8 +46,7 @@ struct OfflineHomeScreen: View {
         }
         .padding(.bottom, Space.s6)
       }
-    // -dev.home.scroll 400, as on Home.
-    .scrollsToTopOnReselect(devScroll: "dev.home.scroll")
+    .scrollsToTopOnReselect()
     .task(id: session.activeServer) { read() }
     // The player keeps places offline; back from it, or from another app, read them again.
     .onAppear(perform: read)

@@ -52,12 +52,6 @@ struct SearchScreen: View {
         if !focusedOnce, query.isEmpty {
           focusedOnce = true
           awaitingFocus = true
-          #if DEBUG
-            if let asked = BrowseFixtures.query {
-              query = asked
-              awaitingFocus = false
-            }
-          #endif
         }
       }
       // Discover is for looking around, so with it under the field the keyboard waits for a tap.

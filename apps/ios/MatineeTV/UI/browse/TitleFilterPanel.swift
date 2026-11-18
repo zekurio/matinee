@@ -448,9 +448,6 @@ private struct LoadsFilterOptions: ViewModifier {
 
   private nonisolated static func fetch(_ api: MatineeApi, _ scope: [String?]) async throws -> TitleFilterOptions {
     let found = try await api.titles.filterOptions(kind: scope[0], genre: scope[1], studio: scope[2])
-    #if DEBUG
-      if BrowseFixtures.on { return BrowseFixtures.options(found) }
-    #endif
     return found
   }
 }

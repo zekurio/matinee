@@ -18,7 +18,7 @@ struct TVTitleScreen: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    DetailState(loader: loader, error: Str.titleLoadError) { title in TVTitlePage(title: titleShown(title)) }
+    DetailState(loader: loader, error: Str.titleLoadError) { title in TVTitlePage(title: title) }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       .background(palette.background)
       .ignoresSafeArea()
@@ -36,7 +36,7 @@ private struct TVTitlePage: View {
   @Environment(ViewerState.self) private var viewer: ViewerState?
 
   var body: some View {
-    let next = title.next.map(itemShown)
+    let next = title.next
     let marks = marks(next)
     ZStack(alignment: .topLeading) {
       DetailBackdrop(
@@ -158,9 +158,6 @@ private struct TitleMark: View {
   }
 
   private var logo: ImageSource? {
-    #if DEBUG
-      if let url = TitleFixture.logo(title.summary) { return ImageSource(url: url) }
-    #endif
     return api?.art(title.images.logo, size: .medium)
   }
 }

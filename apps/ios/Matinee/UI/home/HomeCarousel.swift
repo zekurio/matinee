@@ -9,7 +9,7 @@ import SwiftUI
  * genres and its name typed out. How many share the row, where it rests,
  * where the advance goes next, and the genres line are MatineeCore's
  * `FeaturedCarousel` and `FeaturedTitle.cardLine` (Home/), where they're
- * tested. Debug stand-ins are HomeCarouselDevData.swift's.
+ * tested.
  */
 
 /// The sizes the carousel lays its cards out by, for a row `rowWidth`
@@ -75,8 +75,6 @@ struct HomeCarousel: View {
   /// `showing` follows.
   @State private var settled: Int
   @State private var dragging = false
-  /// A debug launch that opens it somewhere holds it there.
-  private var held: Bool { HomeCarouselDevData.startStop != nil }
 
   init(slides: [FeaturedTitle], showing: Binding<String?>) {
     self.slides = slides
@@ -91,7 +89,7 @@ struct HomeCarousel: View {
   var body: some View {
     let layout = CarouselLayout(
       rowWidth: rowWidth ?? window.width, window: window, gutter: gutter, count: slides.count)
-    let paused = dragging || held || reduceMotion || voiceOver || actions?.target != nil || layout.stops < 2
+    let paused = dragging || reduceMotion || voiceOver || actions?.target != nil || layout.stops < 2
     VStack(spacing: Space.s3) {
       ScrollView(.horizontal) {
         LazyHStack(alignment: .top, spacing: layout.gap) {
@@ -102,7 +100,6 @@ struct HomeCarousel: View {
           }
         }
         .scrollTargetLayout()
-        .offset(x: -HomeCarouselDevData.swipe * layout.stride)
       }
       .contentMargins(.horizontal, gutter, for: .scrollContent)
       .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
@@ -129,13 +126,6 @@ struct HomeCarousel: View {
       }
       .onChange(of: settled) { _, card in
         if slides.indices.contains(card) { showing = slides[card].title.id }
-      }
-      .task(id: layout.stride) { startWhereAsked(layout) }
-      .task {
-        // `-dev.featuredOpen actions`, in a debug build: the first card's long press.
-        guard HomeCarouselDevData.opensActions, let first = slides.first else { return }
-        try? await Task.sleep(for: .seconds(1))
-        actions?.open(featuredTarget(first))
       }
 
       if layout.stops > 1 {
@@ -184,13 +174,6 @@ struct HomeCarousel: View {
     withMotion(animation) { position.scrollTo(id: target, anchor: .leading) }
     settled = target
   }
-
-  /// `-dev.featuredStop`, in a debug build: resting at a card, or part of
-  /// the way to the next one, as a swipe leaves it.
-  private func startWhereAsked(_ layout: CarouselLayout) {
-    guard let start = HomeCarouselDevData.startStop, layout.stride > 0 else { return }
-    position.scrollTo(x: start.rounded(.down) * layout.stride - gutter)
-  }
 }
 
 private struct Advance: Equatable {
@@ -219,7 +202,7 @@ private struct FeaturedCard: View {
   var body: some View {
     let shape = RoundedRectangle.kit(Radius.xl)
     let line = slide.cardLine()
-    let art = FeaturedArtwork(slide: slide, index: index)
+    let art = FeaturedArtwork(slide: slide)
     Pressable(
       shape: shape, action: { if !offline { nav.title(slide.title) } }, onLongPress: longPress,
       longPressLabel: Str.titleMoreActions
@@ -282,7 +265,6 @@ private func featuredTarget(_ slide: FeaturedTitle) -> ActionTarget {
 /// or busy picture needs under small text.
 private struct FeaturedArtwork: View {
   let slide: FeaturedTitle
-  let index: Int
   @Environment(\.api) private var api
 
   private enum Art {
@@ -292,14 +274,6 @@ private struct FeaturedArtwork: View {
   }
 
   private var art: Art {
-    if let stand = HomeCarouselDevData.art(index) {
-      switch stand {
-      case .backdrop(let source): return .wide([source])
-      case .poster(let source): return .poster(source)
-      case .none: return .none
-      }
-    }
-    if let stand = HomeDevData.backdrop(slide) { return .wide(stand) }
     let title = slide.title
     let wide = [api?.art(title.images.backdrop, size: .large), api?.art(slide.item.episode?.still, size: .large)]
       .compactMap(\.self)

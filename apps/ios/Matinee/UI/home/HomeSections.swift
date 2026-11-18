@@ -137,13 +137,3 @@ struct RecommendationRail: View {
     }
   }
 }
-
-/// Home's recommendations as they show: the server's, or in a debug build
-/// with `-dev.recommendations`, stand-ins.
-func homeRecommendations(_ value: HomeRecommendations?) -> HomeRecommendations? {
-  #if DEBUG
-    return HomeDevData.recommendations(value)
-  #else
-    return value
-  #endif
-}

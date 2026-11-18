@@ -49,7 +49,6 @@ struct AdminPage<Content: View, Actions: View>: View {
         .frame(maxWidth: .infinity)
     }
     .scrollDismissesKeyboard(.interactively)
-    .adminDemoScroll()
     .topBar(title, onLeading: onBack, actions: actions)
   }
 }
@@ -168,12 +167,6 @@ struct SaveBarPage<Content: View>: View {
       }
       // Gone until the next edit, which starts calm.
       .onChange(of: visible) { _, shown in if !shown { attention = 0 } }
-      .task(id: dirty) {
-        // A debug build saves the edit a screenshot made, as Save would.
-        guard dirty, adminDemoOnce("save") else { return }
-        try? await Task.sleep(for: .seconds(2))
-        save()
-      }
   }
 
   private func attempt() {
@@ -461,57 +454,5 @@ struct Picked<Value>: Identifiable {
   init(_ id: String, _ value: Value) {
     self.id = id
     self.value = value
-  }
-}
-
-// MARK: - Screenshots
-
-/// Whether a debug build was launched to show `step` on an admin page, as
-/// the gallery's `-open`: `-admin.act sheet` opens the first row's sheet,
-/// and each page names the few it has (an edit, a field that fails its
-/// check, a question). `-admin.scroll bottom` opens a page at its end.
-/// Release builds have none.
-func adminDemo(_ step: String) -> Bool {
-  #if DEBUG
-    UserDefaults.standard.string(forKey: "admin.act") == step
-  #else
-    false
-  #endif
-}
-
-/// `adminDemo`, true only the first time it's asked for `step` in a run,
-/// for a step that changes something, so an answer doesn't do it again.
-func adminDemoOnce(_ step: String) -> Bool {
-  guard adminDemo(step), !demosDone.contains(step) else { return false }
-  demosDone.insert(step)
-  return true
-}
-
-private var demosDone: Set<String> = []
-
-/// The row a debug build's step acts on, by its name, `-admin.target`, so
-/// a step that removes something never lands on whatever comes first.
-func adminDemoTarget() -> String? {
-  #if DEBUG
-    UserDefaults.standard.string(forKey: "admin.target")
-  #else
-    nil
-  #endif
-}
-
-extension View {
-  /// Opens the page scrolled as `-admin.scroll` says, in a debug build.
-  func adminDemoScroll() -> some View {
-    #if DEBUG
-      let anchor: UnitPoint? =
-        switch UserDefaults.standard.string(forKey: "admin.scroll") {
-        case "bottom": .bottom
-        case "center": .center
-        default: nil
-        }
-      return defaultScrollAnchor(anchor)
-    #else
-      return self
-    #endif
   }
 }

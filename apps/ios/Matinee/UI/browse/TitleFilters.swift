@@ -163,11 +163,7 @@ struct TitleFilterButton: View {
 struct TitleSortButton: View {
   let state: TitleListState
   let options: TitleFilterOptions?
-  #if DEBUG
-    @State private var open = BrowseFixtures.open == "sort"
-  #else
-    @State private var open = false
-  #endif
+  @State private var open = false
   @Environment(\.windowSize) private var window
   @Environment(\.dynamicTypeSize) private var typeSize
   @Environment(\.shellStyle) private var style
@@ -233,11 +229,7 @@ private struct TitleFilterSections: View {
   let kind: String?
   let options: TitleFilterOptions
   let state: TitleListState
-  #if DEBUG
-    @State private var choosingLanguage = BrowseFixtures.open == "language"
-  #else
-    @State private var choosingLanguage = false
-  #endif
+  @State private var choosingLanguage = false
 
   var body: some View {
     // The language list opens over the filters, from inside their sheet.

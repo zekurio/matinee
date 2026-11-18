@@ -71,12 +71,6 @@ struct TVFavoritesScreen: View {
     .loads(favorites) { [user] api in
       // The server answers nil only for someone who doesn't share them, never for one's own.
       guard let username = user?.username else { return Favorites(shows: [], seasons: [], episodes: [], movies: []) }
-      #if DEBUG
-        if BrowseFixtures.on {
-          let found = try await BrowseFixtures.favorites(loadFavorites(api, username: username), api: api)
-          return try await withEpisodes(found, api: api)
-        }
-      #endif
       return try await loadFavorites(api, username: username)
     }
     .onChange(of: focusedNow) { _, item in if let item { focused = item } }
@@ -125,21 +119,6 @@ struct TVFavoritesScreen: View {
     return nil
   }
 }
-
-#if DEBUG
-  /// `-dev.browseFixtures`' favorites, with a show's first episodes as favorites
-  /// too when nothing of a show is in progress, so the episodes' row shows.
-  private func withEpisodes(_ favorites: Favorites, api: MatineeApi) async throws -> Favorites {
-    guard favorites.episodes.isEmpty, let show = favorites.shows.first else { return favorites }
-    var topped = favorites
-    topped.episodes = try await api.titles.items(id: show.id).prefix(4).map { item in
-      var item = item
-      item.favorite = true
-      return item
-    }
-    return topped
-  }
-#endif
 
 /// A favorite season's key in its row.
 private func seasonKey(_ entry: FavoriteSeason) -> String { "\(entry.title.id)/\(entry.season.number ?? -1)" }

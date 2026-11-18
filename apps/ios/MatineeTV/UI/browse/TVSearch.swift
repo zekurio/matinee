@@ -35,7 +35,6 @@ struct TVSearchScreen: View {
   @State private var focused: FocusedItem?
   /// Moves with the keyboard's Search key and Try again, which search without waiting.
   @State private var submitted = 0
-  @State private var devStarted = false
   @FocusState private var fieldFocused: Bool
   @FocusedValue(\.tvBrowseFocused) private var focusedNow
   @Environment(\.palette) private var palette
@@ -75,16 +74,6 @@ struct TVSearchScreen: View {
     // The page's focus, when the focus engine looks for one, is the field.
     .defaultFocus($fieldFocused, true)
     .tvBrowseFocus(memory, field: $fieldFocused) { .field }
-    #if DEBUG
-      .onAppear {
-        guard !devStarted else { return }
-        devStarted = true
-        if let asked = BrowseFixtures.query {
-          query = asked
-          submitted += 1
-        }
-      }
-    #endif
   }
 
   @ViewBuilder private func results(_ text: String) -> some View {

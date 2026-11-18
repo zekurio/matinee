@@ -30,9 +30,6 @@ struct TVPersonScreen: View {
       .background(palette.background)
       .ignoresSafeArea()
       .loads(person) { api in
-        #if DEBUG
-          if BrowseFixtures.on { return try await BrowseFixtures.person(name, api: api) }
-        #endif
         return try await loadPerson(api, name: name, tmdbId: tmdbId)
       }
   }

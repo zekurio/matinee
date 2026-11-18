@@ -7,7 +7,6 @@
   ///
   ///     -dev.server URL -dev.token TOKEN   signed in to URL with TOKEN, without the flow
   ///     -dev.route PATH                    a page opened at launch (TVRoutePath in UI/TVNav.swift)
-  ///     -dev.art YES, -dev.recommendations YES   Home's stand-ins (Matinee/UI/home/HomeDevData.swift)
   ///
   /// The token goes where a sign-in puts one, the Keychain item for that
   /// server, before the session starts, and the session checks it with the

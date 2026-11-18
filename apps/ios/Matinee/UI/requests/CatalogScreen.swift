@@ -55,7 +55,6 @@ private struct CatalogPage: View {
     let destination = detail.destinations.first(where: \.selected)?.id ?? library
     let availability = hub?.availability(ref, detail.availability) ?? detail.availability
     let seasons = hub?.seasons(ref, detail.seasons) ?? requestSeasonsInOrder(detail.seasons)
-    ScrollViewReader { proxy in
     ScrollView {
       VStack(alignment: .leading, spacing: layout.sectionSpacing) {
         CatalogHeader(detail: detail, availability: availability, seasons: seasons, layout: layout) { only in
@@ -71,22 +70,12 @@ private struct CatalogPage: View {
               }
             }
           }
-          .id("seasons")
         }
-        CastRail(credits: detail.credits).id("cast")
-        CatalogRelatedRows(ref: ref, library: library, loads: related).id("related")
+        CastRail(credits: detail.credits)
+        CatalogRelatedRows(ref: ref, library: library, loads: related)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.bottom, Space.s10)
-    }
-    #if DEBUG
-      // `-requests.scroll seasons|cast|related`: down to a section, for a screenshot of it.
-      .task {
-        guard let section = UserDefaults.standard.string(forKey: "requests.scroll") else { return }
-        try? await Task.sleep(for: .seconds(3))
-        proxy.scrollTo(section, anchor: .top)
-      }
-    #endif
     }
     .ignoresSafeArea(edges: .top)
     .refreshable {
@@ -104,12 +93,6 @@ private struct CatalogPage: View {
     .onChange(of: availability.arrivedTitleId, initial: true) { _, here in
       if let here { nav.arrived(here) }
     }
-    #if DEBUG
-      .modifier(
-        CatalogDevOpen(
-          detail: detail, availability: availability,
-          open: { openSheet(only: nil, availability: availability, seasons: seasons, destination: destination) }))
-    #endif
   }
 
   /// The request sheet, with the season a card asked for, or the row's request.
@@ -225,7 +208,6 @@ private struct CatalogHeader: View {
 
   private var actions: some View {
     CatalogActions(detail: detail, availability: availability, seasons: seasons, wide: layout.wide, openSheet: openSheet)
-      .id("actions")
   }
 }
 
@@ -292,38 +274,3 @@ private struct CatalogActions: View {
     await hub.ask(chooser, name: detail.name, availability: availability)
   }
 }
-
-#if DEBUG
-  /// `-requests.open sheet|decline|add|ask|why`: the request sheet; for an
-  /// admin the decline sheet, or Add; a film asked for at once, for the toast with Undo;
-  /// or a dimmed Request's tap, for what it says. Once the page is up, for
-  /// a screenshot of it.
-  private struct CatalogDevOpen: ViewModifier {
-    let detail: CatalogTitleDetail
-    let availability: Availability
-    let open: () -> Void
-    @Environment(\.requests) private var hub
-    @Environment(\.snackbar) private var snackbar
-    @Environment(\.user) private var user
-    @State private var done = false
-
-    func body(content: Content) -> some View {
-      content.task {
-        guard !done, let what = UserDefaults.standard.string(forKey: "requests.open") else { return }
-        done = true
-        try? await Task.sleep(for: .seconds(2))
-        switch what {
-        case "sheet": open()
-        case "decline": hub?.declining = hub?.waiting(availability)
-        case "add": if let item = hub?.waiting(availability) { hub?.answer(item, .add) }
-        case "ask": await hub?.ask(RequestChooser(detail: detail, availability: availability), name: detail.name, availability: availability)
-        case "why":
-          if let why = requestDimmedText(availability, admin: user?.isAdmin == true) {
-            snackbar.post(ToastMessage(why.text, description: why.note))
-          }
-        default: break
-        }
-      }
-    }
-  }
-#endif

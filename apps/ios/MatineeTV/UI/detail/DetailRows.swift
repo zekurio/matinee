@@ -73,7 +73,7 @@ struct SeasonEpisodesRow: View {
         )
         .detailRow(key)
       case .ready(let all):
-        let list = all.filter { $0.id != exclude }.map(itemShown)
+        let list = all.filter { $0.id != exclude }
         if !list.isEmpty {
           TVRow(heading, key: key, items: list, itemKey: \.id, memory: memory) { item in EpisodeCard(item: item) }
             .detailRow(key)
@@ -236,11 +236,6 @@ struct RelatedRows: View {
   @State private var rails = Loader<RelatedRails>()
 
   var body: some View {
-    #if DEBUG
-      if DetailFixtures.related {
-        RelatedFixtureRow(title: title, memory: memory)
-      }
-    #endif
     if let ref = titleCatalogRef(title) {
       Group {
         if let list = rails.state.value?.rails, !list.isEmpty {
@@ -309,28 +304,3 @@ struct TitlePosterRow: View {
     .detailRow(key)
   }
 }
-
-#if DEBUG
-  /// `-title.fixture YES`'s related row on the dev server, which matches
-  /// nothing: the other titles of the same kind, as "More like this".
-  private struct RelatedFixtureRow: View {
-    let title: Title
-    let memory: TVFocusMemory
-    @State private var titles = Loader<[TitleSummary]>()
-
-    var body: some View {
-      Group {
-        if let list = titles.state.value, !list.isEmpty {
-          TitlePosterRow(
-            heading: Str.webCatalogRelatedMoreLikeThis, key: DetailRowKey.related("fixture"), titles: list,
-            memory: memory)
-        } else {
-          Color.clear.frame(height: 0)
-        }
-      }
-      .loads(titles) { [id = title.id] api in
-        try await api.titles.browse(limit: 12).items.filter { $0.id != id }
-      }
-    }
-  }
-#endif
