@@ -230,14 +230,3 @@ public struct MenuLabel: View {
       .accessibilityAddTraits(.isHeader)
   }
 }
-
-/// A line between groups in a menu, edge to edge: `-mx-1 my-1 bg-foreground/10`.
-public struct MenuSeparator: View {
-  @Environment(\.palette) private var palette
-
-  public init() {}
-
-  public var body: some View {
-    Separator(color: palette.foreground.opacity(0.1)).padding(.horizontal, -4).padding(.vertical, 4)
-  }
-}

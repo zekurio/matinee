@@ -8,18 +8,11 @@ import UIKit
  * each other, or a log.
  */
 
-extension Tracking {
-  /// `tracking-wider`, 0.05em: the web's spacing for a code.
-  public static let codeEm: CGFloat = 0.05
-}
-
 extension View {
   /// Monospaced text at one of the web's sizes, as `font-mono` sets it,
   /// growing with Dynamic Type as `.textStyle` does and keeping the size's
-  /// line height between lines. `tracking` is in ems: a code takes
-  /// `Tracking.codeEm`, the web's `tracking-wider`, so
-  /// `font-mono font-medium tracking-wider` is
-  /// `.monoTextStyle(.sm, weight: .medium, tracking: Tracking.codeEm)`.
+  /// line height between lines. `tracking` is in ems: the web's
+  /// `tracking-wider` is 0.05.
   public func monoTextStyle(_ size: TextSize, weight: Font.Weight = .regular, tracking: CGFloat = 0) -> some View {
     modifier(MonoTextModifier(size: size, weight: weight, tracking: tracking))
   }

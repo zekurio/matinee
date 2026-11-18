@@ -204,44 +204,4 @@
       self.action = action
     }
   }
-
-  extension View {
-    /// A `tvSidePanel` of `actions` for something, as a card's long press
-    /// opens on Apple TV in place of the phone's actions sheet: its name as
-    /// the title, `subtitle` under it, focus on the first action.
-    public func tvActionsPanel(
-      isPresented: Binding<Bool>, title: String, subtitle: String? = nil, actions: [TVAction]
-    ) -> some View {
-      tvSidePanel(isPresented: isPresented, title: title, description: subtitle) {
-        ActionRows(actions: actions)
-      }
-    }
-
-    /// The same, for an `item`: the panel shows while it's set, with the
-    /// actions `actions` gives for it.
-    public func tvActionsPanel<Item: Identifiable>(
-      item: Binding<Item?>, title: @escaping (Item) -> String, subtitle: @escaping (Item) -> String? = { _ in nil },
-      actions: @escaping (Item) -> [TVAction]
-    ) -> some View {
-      tvSidePanel(item: item, title: title, description: subtitle) { item in
-        ActionRows(actions: actions(item))
-      }
-    }
-  }
-
-  private struct ActionRows: View {
-    let actions: [TVAction]
-    @FocusState private var focused: String?
-    @Environment(\.overlayDismiss) private var dismiss
-
-    var body: some View {
-      ForEach(actions) { entry in
-        TVListItem(entry.label, icon: entry.icon, quiet: true, destructive: entry.destructive) {
-          dismiss(then: entry.action)
-        }
-        .focused($focused, equals: entry.id)
-      }
-      .defaultFocus($focused, actions.first?.id)
-    }
-  }
 #endif

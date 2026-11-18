@@ -13,15 +13,15 @@ import Testing
 
 /// Phone components, and phone sizes, a TV screen uses the TV version of.
 let tvRules: [Rule] = [
-  Rule(name: "matineeSheet", pattern: #"\.matineeSheet\s*\("#, instead: ".tvSidePanel, .tvActionsPanel, .tvOptionsPanel"),
-  Rule(name: "dropdownMenu", pattern: #"\.dropdownMenu\s*\("#, instead: ".tvOptionsPanel, .tvActionsPanel"),
+  Rule(name: "matineeSheet", pattern: #"\.matineeSheet\s*\("#, instead: ".tvSidePanel, .tvOptionsPanel"),
+  Rule(name: "dropdownMenu", pattern: #"\.dropdownMenu\s*\("#, instead: ".tvOptionsPanel, .tvSidePanel"),
   Rule(name: "BottomBar", pattern: #"(?<![\w.])BottomBar\s*\(|\.bottomBar\s*\("#, instead: "TVNavDrawer"),
   Rule(name: "TopBar", pattern: #"(?<![\w.])TopBar\s*\(|\.topBar\s*\("#, instead: "a .headline title; Menu goes back"),
   Rule(name: "MatineeButton", pattern: #"(?<![\w.])(MatineeButton|RoundIconButton|Pressable)\s*(\(|\{)"#, instead: "TVButton, TVIconButton, TVRoundButton, TVControlButton, TVPictureButton"),
   Rule(name: "Chip", pattern: #"(?<![\w.])(Chip|ChoiceChip|ToggleChip)\s*\("#, instead: "TVChip"),
   Rule(name: "ListRow", pattern: #"(?<![\w.])(ListSection|ListRow|SwitchRow|SelectRow|ValueRow|ListBlock)\s*(\(|\{)"#, instead: "TVListItem, TVListHeading, TVListValue, TVListSwitch"),
   Rule(name: "MatineeTextField", pattern: #"(?<![\w.])MatineeTextField\s*\("#, instead: "TVSearchField"),
-  Rule(name: "phone inputs", pattern: #"(?<![\w.])(Select|SegmentedControl|Switch|Checkbox|MatineeSlider|RangeSlider|MatineeCalendar)\s*\("#, instead: "TVListItem with TVListValue or TVListSwitch, .tvOptionsPanel, TVStepRow"),
+  Rule(name: "phone inputs", pattern: #"(?<![\w.])(Select|Switch|Checkbox|MatineeSlider|RangeSlider|MatineeCalendar)\s*\("#, instead: "TVListItem with TVListValue or TVListSwitch, .tvOptionsPanel, TVStepRow"),
   Rule(name: "phone type", pattern: #"\.textStyle\(\s*\.(px\d+|xs|sm|base|lg|xl|xl2|xl3|xl4|xl5)\b"#, instead: ".textStyle(.body), .title, .headline, and the rest of TVTextStyle"),
   Rule(name: "phone overlays", pattern: #"\.(toastHost|dialog|confirmDialog)\s*\("#, instead: ".tvToastHost, .tvDialog, .tvConfirmDialog"),
   Rule(name: "phone notices", pattern: #"(?<![\w.])(EmptyState|Callout)\s*\("#, instead: "TVMessage, TVRowNotice"),

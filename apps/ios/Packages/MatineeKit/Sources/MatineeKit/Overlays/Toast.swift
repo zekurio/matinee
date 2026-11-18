@@ -88,13 +88,6 @@ public final class ToastState {
     advance()
   }
 
-  /// Replaces the one showing, as a loading toast becomes its result.
-  public func replace(with message: ToastMessage) {
-    if current != nil { end(.dismissed, next: false) }
-    queue.insert((message, nil), at: 0)
-    advance()
-  }
-
   /// Takes the one showing away.
   public func dismiss() { end(.dismissed) }
 

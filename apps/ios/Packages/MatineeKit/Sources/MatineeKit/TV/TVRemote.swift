@@ -416,28 +416,4 @@
 
     private func clamp(_ value: Double, _ duration: Double) -> Double { min(max(value, 0), duration) }
   }
-
-  extension View {
-    /// Wires `scrub` to the remote while `isEnabled`: Left and Right step
-    /// and glide, a swipe scrubs, and when either ends `onSeek` gets where
-    /// to seek. Put it on what holds focus while the scrubber shows.
-    public func tvScrubbing(
-      _ scrub: TVScrub, position: Double, duration: Double, isEnabled: Bool = true,
-      onSeek: @escaping (Double) -> Void
-    ) -> some View {
-      self
-        .onTVPress([.left, .right], isEnabled: isEnabled) { button, phase in
-          switch phase {
-          case .began: scrub.press(button == .left ? -1 : 1, from: position, duration: duration)
-          case .ended: if let to = scrub.release() { onSeek(to) }
-          }
-        }
-        .onTVSwipe(isEnabled: isEnabled) { swipe in
-          switch swipe.phase {
-          case .began, .changed: scrub.swipe(swipe.translation.width, from: position, duration: duration)
-          case .ended: if let to = scrub.release() { onSeek(to) }
-          }
-        }
-    }
-  }
 #endif

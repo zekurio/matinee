@@ -27,7 +27,7 @@ let rules: [Rule] = [
   // Controls.
   Rule(name: "Button", pattern: #"(?<![\w.])Button\s*(\(|\{)"#, instead: "MatineeButton, RoundIconButton, Pressable"),
   Rule(name: "Toggle", pattern: #"(?<![\w.])Toggle\s*\("#, instead: "Switch, SwitchRow, Checkbox, ToggleChip"),
-  Rule(name: "Picker", pattern: #"(?<![\w.])Picker\s*\("#, instead: "Select, SelectRow, SegmentedControl"),
+  Rule(name: "Picker", pattern: #"(?<![\w.])Picker\s*\("#, instead: "Select, SelectRow"),
   Rule(name: "Slider", pattern: #"(?<![\w.])Slider\s*\("#, instead: "MatineeSlider, RangeSlider"),
   Rule(name: "Stepper", pattern: #"(?<![\w.])Stepper\s*\("#, instead: "MatineeButton pair, Select"),
   Rule(name: "DatePicker", pattern: #"(?<![\w.])DatePicker\s*\("#, instead: "MatineeCalendar"),

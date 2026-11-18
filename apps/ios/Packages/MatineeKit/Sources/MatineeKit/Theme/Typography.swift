@@ -94,18 +94,6 @@ public nonisolated enum TextSize: String, CaseIterable, Sendable {
     }
   }
 
-  /// The web's class for it, for the gallery and the README.
-  public var webName: String {
-    switch self {
-    case .px9, .px10, .px11, .px13, .px15, .px22, .px26, .px28, .px32: "text-\(rawValue.dropFirst(2))px"
-    case .xl2: "text-2xl"
-    case .xl3: "text-3xl"
-    case .xl4: "text-4xl"
-    case .xl5: "text-5xl"
-    default: "text-\(rawValue)"
-    }
-  }
-
   /// The system style whose Dynamic Type curve this one follows.
   var uiTextStyle: UIFont.TextStyle {
     switch self {
