@@ -68,7 +68,7 @@ public:
 
   // This mpv can show its video on a surface of its own under another
   // Wayland surface, which libmpv only does with the patch in
-  // nix/mpv-wayland-parent-surface.patch.
+  // apps/desktop/mpv/wayland-parent-surface.patch.
   bool takesParentSurface() const { return m_takesParentSurface; }
   // Has mpv present on its own surface under the window's from now on,
   // instead of drawing through the render API. Before any source opens.

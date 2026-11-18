@@ -6,9 +6,10 @@
   exclude ? [
     # The Android app is no part of the server or the web app.
     "apps/android"
-    # Nor is the desktop app's native shell. Its pages are, as a member of
-    # the workspace the lockfile covers.
+    # Nor are the desktop app's native shell and its patches to mpv. Its
+    # pages are, as a member of the workspace the lockfile covers.
     "apps/desktop/native"
+    "apps/desktop/mpv"
   ],
 }:
 

@@ -7,5 +7,5 @@
 { mpv-unwrapped }:
 
 mpv-unwrapped.overrideAttrs (old: {
-  patches = (old.patches or [ ]) ++ [ ./mpv-wayland-parent-surface.patch ];
+  patches = (old.patches or [ ]) ++ [ ../apps/desktop/mpv/wayland-parent-surface.patch ];
 })

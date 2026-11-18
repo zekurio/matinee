@@ -21,7 +21,10 @@
   source ? import ./source.nix {
     inherit lib;
     root = ../.;
-    exclude = [ "apps/android" ];
+    exclude = [
+      "apps/android"
+      "apps/desktop/mpv"
+    ];
   },
 }:
 

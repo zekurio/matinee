@@ -111,7 +111,7 @@ its own frame timing, and HDR. An HDR source goes out as HDR10 with its
 own metadata, and the compositor fits it to the display.
 
 Upstream mpv can't do this: it only presents in a window it made, on its
-own connection to the compositor. `nix/mpv-wayland-parent-surface.patch`
+own connection to the compositor. `mpv/wayland-parent-surface.patch`
 adds an option, `--wayland-parent-surface`, that has it use the
 application's connection, with an event queue of its own, and make its
 surface a subsurface of the application's. The flake builds libmpv with
@@ -182,7 +182,7 @@ build/matinee-desktop --verbose
 
 Without Nix you need CMake 3.24, a C++20 compiler, Qt 6.8 or newer with
 Qt WebEngine and Qt WebChannel, and libmpv 0.38 or newer, built with
-`nix/mpv-wayland-parent-surface.patch` for HDR on Wayland. On Linux, also
+`mpv/wayland-parent-surface.patch` for HDR on Wayland. On Linux, also
 Wayland's client library, `wayland-protocols`, `wayland-scanner`, and
 QtKeychain. CMake finds mpv through pkg-config, or in `-DMPV_ROOT=` where
 there is none, and builds QtKeychain itself where the system has none.
