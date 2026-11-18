@@ -188,7 +188,7 @@
       "rules": { "matinee/require-access-filter": "off" }
     },
     {
-      "files": ["apps/web/src/**", "packages/ui/src/**"],
+      "files": ["apps/web/src/**", "apps/desktop/src/**", "packages/ui/src/**"],
       "rules": { "matinee/no-arbitrary-font-size": "error" }
     },
     {

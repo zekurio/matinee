@@ -1,0 +1,48 @@
+@import "@matinee/ui/globals.css";
+
+/* The native shell's sources sit beside these pages and hold no classes. */
+@source not "../native";
+
+/*
+ * These pages show in a small window on a desk and full screen on a TV
+ * across the room, so the root size follows the window's height, and
+ * everything is in rem. The theme's px sizes become rem here, at the same
+ * size at 16px.
+ */
+@theme inline {
+  --text-9px: 0.5625rem;
+  --text-9px--line-height: 0.75rem;
+  --text-10px: 0.625rem;
+  --text-10px--line-height: 0.875rem;
+  --text-11px: 0.6875rem;
+  --text-11px--line-height: 1rem;
+  --text-13px: 0.8125rem;
+  --text-13px--line-height: 1.25rem;
+  --text-15px: 0.9375rem;
+  --text-15px--line-height: 1.375rem;
+  --text-22px: 1.375rem;
+  --text-22px--line-height: 1.75rem;
+  --text-26px: 1.625rem;
+  --text-26px--line-height: 2rem;
+  --text-28px: 1.75rem;
+  --text-28px--line-height: 2rem;
+  --text-32px: 2rem;
+  --text-32px--line-height: 2.5rem;
+}
+
+html {
+  /* 16px up to a 1000px tall window, 17px at 1080p, 35px at 4K. */
+  font-size: clamp(16px, 1.6vh, 44px);
+}
+
+/*
+ * Rings that grow with the text, so focus shows from a couch. The theme
+ * draws them 2px wide.
+ */
+:focus-visible {
+  outline-width: max(2px, 0.125rem);
+  outline-offset: max(2px, 0.125rem);
+}
+[data-slot="list-item"] > button:not([data-slot="button"]):focus-visible {
+  box-shadow: inset 0 0 0 max(2px, 0.125rem) var(--ring);
+}

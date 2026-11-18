@@ -90,6 +90,52 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
 
+  apps/desktop:
+    dependencies:
+      '@fontsource-variable/red-hat-text':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@matinee/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@matinee/desktop-bridge':
+        specifier: workspace:*
+        version: link:../../packages/desktop-bridge
+      '@matinee/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.69.0(@types/react@19.3.0)(react@19.3.1)
+      react:
+        specifier: 'catalog:'
+        version: 19.3.1
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.3.1(react@19.3.1)
+      uqr:
+        specifier: 0.1.3
+        version: 0.1.3
+      zustand:
+        specifier: 5.0.16
+        version: 5.0.16(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
+    devDependencies:
+      '@tailwindcss/vite':
+        specifier: 4.3.4
+        version: 4.3.4(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: 6.2.1
+        version: 6.2.1(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
+
   apps/server:
     dependencies:
       '@hono/node-server':
@@ -147,6 +193,9 @@ importers:
       '@matinee/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@matinee/desktop-bridge':
+        specifier: workspace:*
+        version: link:../../packages/desktop-bridge
       '@matinee/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -257,6 +306,12 @@ importers:
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11
+
+  packages/desktop-bridge:
+    dependencies:
+      '@matinee/contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/ui:
     dependencies:
@@ -3048,6 +3103,9 @@ packages:
     hasBin: true
     peerDependencies:
       browserslist: '>= 4.21.0'
+
+  uqr@0.1.3:
+    resolution: {integrity: sha512-0rjE8iEJe4YmT9TOhwsZtqCMRLc5DXZUI2UEYUUg63ikBkqqE5EYWaI0etFe/5KUcmcYwLih2RND1kq+hrUJXA==}
 
   use-sync-external-store@1.7.0:
     resolution: {integrity: sha512-6L+EeigHMQhdaIPNIFUKwfWJSwWFQ8gJbJ2DLOs5sDIegTwR9fRxvnM3uciHKjIZhFz+KAv2emhWMRvDmMcY8A==}
@@ -6309,6 +6367,8 @@ snapshots:
       browserslist: 4.29.5
       escalade: 3.2.0
       picocolors: 1.1.1
+
+  uqr@0.1.3: {}
 
   use-sync-external-store@1.7.0(react@19.3.1):
     dependencies:
