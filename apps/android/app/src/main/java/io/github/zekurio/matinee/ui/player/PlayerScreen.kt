@@ -497,7 +497,7 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
     }
 
     var controls by remember { mutableStateOf(true) }
-    // Locked, touches on the screen do nothing; only the corner unlocks.
+    // Locked, a touch on the screen only shows the unlock icon in the corner.
     var locked by remember { mutableStateOf(false) }
     // Counts keys pressed while locked, so each shows the unlock icon again.
     var lockTouched by remember { mutableIntStateOf(0) }
@@ -1048,16 +1048,18 @@ private fun SubtitlesButton(controller: PlayerController, onMenu: (Menu) -> Unit
  * Covers the player while it's locked and takes every touch, so none
  * reaches the controls or the gestures under it. An open lock shows in the
  * corner, where the lock button was, for [hideAfter] ms, and tapping it
- * unlocks. Once it's gone, a tap on that spot brings it back, and a touch
- * anywhere else does nothing. A key that would bring up the controls
- * brings it back too: [reveals] counts those. With [keep], as while a
- * screen reader explores by touch, it stays.
+ * unlocks. Once it's gone, a touch anywhere brings it back, and so does a
+ * key that would bring up the controls: [reveals] counts those. With
+ * [keep], as while a screen reader explores by touch, it stays.
  */
 @Composable
 private fun LockedScreen(reveals: Int, hideAfter: Long, keep: Boolean, onUnlock: () -> Unit) {
     var shown by remember { mutableStateOf(true) }
-    // Counts taps on the hidden icon's spot, each showing it again.
+    // Counts touches on the screen, each showing the icon again.
     var tapped by remember { mutableIntStateOf(0) }
+    // The touch under way began with the icon hidden, so it shows the icon
+    // and doesn't also press it.
+    var revealing by remember { mutableStateOf(false) }
     LaunchedEffect(reveals, tapped, keep, hideAfter) {
         shown = true
         if (keep) return@LaunchedEffect
@@ -1068,11 +1070,14 @@ private fun LockedScreen(reveals: Int, hideAfter: Long, keep: Boolean, onUnlock:
         Modifier.fillMaxSize().pointerInput(Unit) {
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
-                // The icon's spot hears its tap first; this keeps the rest.
+                revealing = !shown
+                tapped++
+                // The icon hears its tap first; this keeps the rest.
                 do {
                     val event = awaitPointerEvent()
                     event.changes.forEach { it.consume() }
                 } while (event.changes.any { it.pressed })
+                revealing = false
             }
         },
     ) {
@@ -1084,7 +1089,14 @@ private fun LockedScreen(reveals: Int, hideAfter: Long, keep: Boolean, onUnlock:
             RoundIconButton(
                 Lucide.LockOpen,
                 stringResource(R.string.player_unlock),
-                { if (shown) onUnlock() else tapped++ },
+                {
+                    // Without a touch, as from a switch or a keyboard, a press on the hidden icon shows it.
+                    when {
+                        revealing -> Unit
+                        shown -> onUnlock()
+                        else -> tapped++
+                    }
+                },
                 Modifier.graphicsLayer { alpha = fade },
                 size = 52.dp,
                 iconSize = 26.dp,

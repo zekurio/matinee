@@ -229,22 +229,28 @@ struct UpNextCard: View {
 /// Covers the player while it's locked and takes every touch, so none
 /// reaches the controls or the gestures under it. An open lock shows in the
 /// corner, where the lock button was, for a few seconds, and tapping it
-/// unlocks. Once it's gone, a tap on that spot brings it back, and a touch
-/// anywhere else does nothing. With `keep`, as while VoiceOver runs, it stays.
+/// unlocks. Once it's gone, a touch anywhere brings it back. With `keep`, as
+/// while VoiceOver runs, it stays.
 struct LockedScreen: View {
   let keep: Bool
   let onUnlock: () -> Void
   @State private var shown = true
-  /// Counts taps on the hidden button's spot, each showing it again.
+  /// Counts touches on the screen, each showing the button again.
   @State private var tapped = 0
+  /// A finger is on the screen, off the button.
+  // SwiftUI's, not the player's own GestureState in PlayerGestures.swift.
+  @SwiftUI.GestureState private var touching = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     ZStack(alignment: .topTrailing) {
       Color.clear
         .contentShape(Rectangle())
-        .onTapGesture {}
-        .gesture(DragGesture(minimumDistance: 0).onChanged { _ in })
+        .onTapGesture { tapped += 1 }
+        .gesture(DragGesture(minimumDistance: 0).updating($touching) { _, state, _ in state = true })
+        .onChange(of: touching) { _, down in
+          if down { tapped += 1 }
+        }
         .simultaneousGesture(MagnifyGesture().onChanged { _ in })
         .ignoresSafeArea()
         .accessibilityHidden(true)
