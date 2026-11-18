@@ -8,11 +8,7 @@ import Testing
  * no place on a TV at all; they still compile for tvOS, so this test is
  * what keeps a TV screen from reaching for one. It reuses the boundary
  * test's scanner, so a TV screen is held to that test's rules as well.
- *
- *   KIT_TV_BOUNDARY_ROOT   the folder of TV screens to scan, absolute or
- *                          relative to the package; the TV gallery unless set
- *
- * Through xcodebuild, prefix it with TEST_RUNNER_ (README.md, "TV").
+ * It scans MatineeTV.
  */
 
 /// Phone components, and phone sizes, a TV screen uses the TV version of.
@@ -31,48 +27,12 @@ let tvRules: [Rule] = [
   Rule(name: "phone notices", pattern: #"(?<![\w.])(EmptyState|Callout)\s*\("#, instead: "TVMessage, TVRowNotice"),
 ]
 
-/// The folder to scan: KIT_TV_BOUNDARY_ROOT, or the TV gallery's sources.
-func tvBoundaryRoot() -> URL {
-  let package = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-    .deletingLastPathComponent()
-  guard let root = ProcessInfo.processInfo.environment["KIT_TV_BOUNDARY_ROOT"], !root.isEmpty else {
-    return package.appendingPathComponent("Sources/MatineeKitGallery/TV")
-  }
-  return root.hasPrefix("/") ? URL(fileURLWithPath: root) : package.appendingPathComponent(root)
-}
-
-/// Every use of a phone component in the Swift files under `root`.
-func scanTV(_ root: URL) -> [Finding] {
-  let compiled = tvRules.map { ($0.name, $0.regex) }
-  let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)?
-    .compactMap { $0 as? URL }
-    .filter { $0.pathExtension == "swift" }
-    .sorted { $0.path < $1.path } ?? []
-  var found: [Finding] = []
-  for file in files {
-    let path = String(file.standardizedFileURL.path.dropFirst(root.standardizedFileURL.path.count + 1))
-    guard let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
-    for (index, raw) in text.components(separatedBy: "\n").enumerated() {
-      let line = raw.range(of: "//").map { String(raw[..<$0.lowerBound]) } ?? raw
-      let range = NSRange(line.startIndex..., in: line)
-      for (name, regex) in compiled where regex.firstMatch(in: line, range: range) != nil {
-        found.append(Finding(path: path, line: index + 1, rule: name))
-      }
-    }
-  }
-  return found
-}
-
 @Test func tvScreensUseTheTVKit() throws {
-  let root = tvBoundaryRoot()
-  var isDirectory: ObjCBool = false
-  #expect(
-    FileManager.default.fileExists(atPath: root.path, isDirectory: &isDirectory) && isDirectory.boolValue,
-    "no sources at \(root.path)")
-  let found = scanTV(root) + scan(root, allowed: [])
+  let root = appsIOS.appendingPathComponent("MatineeTV")
+  #expect(FileManager.default.fileExists(atPath: root.path), "no sources at \(root.path)")
+  let found = scan(root, for: tvRules + rules)
   let instead = Dictionary(uniqueKeysWithValues: (tvRules + rules).map { ($0.name, $0.instead) })
   let lines = found.map { "  \($0.path):\($0.line) uses \($0.rule) (use \(instead[$0.rule] ?? "the TV kit"))" }
-  if !found.isEmpty { print(lines.joined(separator: "\n")) }
   #expect(found.isEmpty, "Use the kit's TV version instead.\n\(lines.joined(separator: "\n"))")
 }
 
@@ -94,7 +54,7 @@ func scanTV(_ root: URL) -> [Finding] {
     .dialog(isPresented: $asking, title: "x") {}
     """
   try source.write(to: folder.appendingPathComponent("Screen.swift"), atomically: true, encoding: .utf8)
-  let found = scanTV(folder)
+  let found = scan(folder, for: tvRules)
   #expect(Set(found.map(\.rule)) == ["MatineeButton", "Chip", "matineeSheet", "phone type", "phone overlays"])
   #expect(found.allSatisfy { $0.line > 3 })
   #expect(!found.contains { $0.line == 9 })

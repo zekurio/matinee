@@ -1,6 +1,6 @@
 #!/bin/sh
-# Copies the app icon from brand/ios, its one place in the repository
-# (brand/README.md), into an asset catalog of its own here, which is
+# Copies the app icon from brand/ios, its one place in the repository,
+# into an asset catalog of its own here, which is
 # git-ignored: Xcode's asset compiler doesn't follow a symlink into brand/.
 # XcodeGen runs this before it generates the project, as project.yml's
 # preGenCommand, so run `just generate` after `just brand`.

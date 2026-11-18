@@ -147,7 +147,7 @@ struct MatineeApp: App {
   var body: some Scene {
     WindowGroup {
       let model = delegate.model
-      root
+      MatineeRoot()
         .environment(model.theme)
         .environment(model.session)
         .environment(model.downloads)
@@ -158,19 +158,6 @@ struct MatineeApp: App {
         .matineeTheme(model.theme)
         .onOpenURL(perform: model.open)
     }
-  }
-
-  @ViewBuilder private var root: some View {
-    #if DEBUG
-      // The components on the theme, for checking them: `-gallery YES` (Gallery.swift).
-      if UserDefaults.standard.bool(forKey: "gallery") {
-        GalleryRoot().environment(ViewerState())
-      } else {
-        MatineeRoot()
-      }
-    #else
-      MatineeRoot()
-    #endif
   }
 }
 

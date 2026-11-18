@@ -10,7 +10,7 @@ import SwiftUI
  * show is MatineeCore's `homeRows`. Offline, Home is the downloads
  * (OfflineHome.swift).
  *
- * This is the pattern a screen follows (Matinee/UI/README.md): its loads in
+ * This is the pattern a screen follows: its loads in
  * a class the screen holds in `@State`, `.loads` for each, the states drawn
  * from MatineeCore's helpers, components from components/, and the kit for
  * everything with a look.

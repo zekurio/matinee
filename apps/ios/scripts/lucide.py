@@ -218,10 +218,7 @@ def kit_swift_source(icons: list[tuple[str, str]]) -> str:
         "  private init(_ name: String) { self.name = name }\n"
         "\n"
         + "\n".join(lines)
-        + "\n\n  /// Every icon, by its Swift name, for the gallery.\n"
-        + "  public static let all: [(name: String, icon: Lucide)] = [\n"
-        + "".join(f'    ("{swift}", .{swift}),\n' for swift, _ in icons)
-        + "  ]\n}\n"
+        + "\n}\n"
     )
 
 

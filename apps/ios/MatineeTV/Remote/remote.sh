@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Drives the Apple TV app on a simulator with the Siri Remote and saves
 # screenshots, through the MatineeTVRemote UI test, which presses the
-# remote with XCUIRemote, through the real focus engine. The script and its
-# steps are the kit gallery's (Packages/MatineeKit/Gallery/Remote/
-# RemoteScript.swift); this runs it against the TV app. From apps/ios:
+# remote with XCUIRemote, through the real focus engine (RemoteScript.swift,
+# beside this). From apps/ios:
 #
 #   MatineeTV/Remote/remote.sh run "<launch arguments>" "<steps>"   build, launch, run the steps, quit
 #   MatineeTV/Remote/remote.sh serve "<launch arguments>"           build, launch, and stay for `send`
@@ -12,7 +11,7 @@
 #                                                                   `send relaunch:...` starts it
 #   MatineeTV/Remote/remote.sh stop                                 end the session
 #
-# `just tv-remote serve` passes the dev server and a token for you (MatineeTV/README.md).
+# `just tv-remote-dev` passes the dev server and a token for you.
 # Steps: up down left right select menu playpause home, with *n to repeat
 # (right*3); hold:<button>:<seconds>; wait:<seconds>; shot:<name>, saved as
 # OUT/<name>.png; relaunch:<arguments, + for spaces>.

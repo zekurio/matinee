@@ -1,10 +1,9 @@
 import XCTest
 
-/// Drives the gallery on an Apple TV simulator with the Siri Remote, from
-/// a script, and saves screenshots on the way. `remote.sh` runs it; see the
-/// package's README, "Driving the remote".
+/// Drives the Apple TV app on a simulator with the Siri Remote, from a
+/// script, and saves screenshots on the way. `remote.sh` runs it.
 ///
-/// `REMOTE_ARGS` are the gallery's launch arguments (`-page home -scheme dark`),
+/// `REMOTE_ARGS` are the app's launch arguments,
 /// `REMOTE_SCRIPT` the steps, separated by spaces, semicolons, or lines:
 ///
 /// - `up`, `down`, `left`, `right`, `select`, `menu`, `playpause`, `home`:
@@ -14,8 +13,8 @@ import XCTest
 /// - `type:media.example.com`: types into the system keyboard while it's up,
 ///   `+` for spaces.
 /// - `shot:name`: saves the screen to `REMOTE_OUT/name.png`.
-/// - `relaunch:-page+buttons+-scheme+light`: starts the gallery again
-///   with other arguments, `+` for spaces.
+/// - `relaunch:-dev.route+settings`: starts the app again with other
+///   arguments, `+` for spaces.
 ///
 /// With `REMOTE_INBOX` set it stays, running each `*.steps` file that
 /// appears there and writing `*.done` beside it, until a file says `quit`

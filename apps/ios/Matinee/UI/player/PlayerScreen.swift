@@ -10,8 +10,8 @@ import UIKit
  * The shell presents the player over everything, landscape on a phone
  * (`PlayerCover` in Nav.swift); it leaves with `@Environment(\.dismiss)`,
  * and the shell turns the screen back. `PlayerController` (MatineeCore/
- * Player) plays; this draws it and makes the calls its README's Lifecycle
- * lists at their moments.
+ * Player) plays; this draws it and makes its calls at the moments of the
+ * view's life (PlayerController+Screen.swift).
  *
  * The pieces are beside it: the video, picture in picture, and AirPlay
  * (PlayerVideo.swift), the controls (PlayerControls.swift) and seek bar

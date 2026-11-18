@@ -10,8 +10,8 @@ import UIKit
  * first page; search is the field at the top of Media, and the profile
  * opens from the account in Home's header. Offline only Home and Downloads
  * stay. On an iPad the tabs sit at the top, in the web's bar from `sm` up,
- * with search and the account at its end (Bars.swift, and
- * apps/ios/Matinee/UI/README.md for why). MatineeCore's Shell/ShellLayout.swift
+ * with search and the account at its end (Bars.swift). MatineeCore's
+ * Shell/ShellLayout.swift
  * says which tabs there are and where each place lands.
  *
  * Each tab keeps a stack of its own, as iOS apps do, so a tab keeps its

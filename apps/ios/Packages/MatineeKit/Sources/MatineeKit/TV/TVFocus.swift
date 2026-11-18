@@ -15,8 +15,6 @@
    *   field) fills with the text color and its content turns the page's
    *   color, growing a little; no ring. `TVControlButton`.
    *
-   * Why the system's lift and not the ring: README.md, "TV", "Focus".
-   *
    * Focus moves by the system's focus engine. Rows and panels are focus
    * sections, so a move lands in the row or panel nearest along the way,
    * and `TVFocusMemory` sends it to the card the row had last.

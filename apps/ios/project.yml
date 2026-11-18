@@ -50,16 +50,12 @@ targets:
       - path: Matinee
         excludes:
           - Info.plist
-          - UI/README.md
-          - UI/kit-exclusions.txt
     dependencies:
       - package: MatineeMPV
       - package: MatineeCore
-      # The design kit: theme, type, icons, and every control (its README).
+      # The design kit: theme, type, icons, and every control.
       - package: MatineeKit
         product: MatineeKit
-      - package: MatineeKit
-        product: MatineeKitGallery
       - package: Nuke
         product: Nuke
       - package: Nuke
@@ -131,7 +127,7 @@ targets:
           NSAllowsArbitraryLoads: true
           NSAllowsLocalNetworking: true
 
-  # The Apple TV app (MatineeTV/README.md). Its own screens are in
+  # The Apple TV app. Its own screens are in
   # MatineeTV/; the app-level pieces it shares with the iPhone app are listed
   # here one by one, compiled into both targets from where they are, so a
   # change to one of them reaches both apps and has to build for both.
@@ -145,7 +141,6 @@ targets:
       - path: MatineeTV
         excludes:
           - Info.plist
-          - README.md
           - Remote
       # Shared with the iPhone app: the generated words and their catalogs,
       # loading and failure words, formatting, the theme, the navigator,
@@ -191,8 +186,6 @@ targets:
       - package: MatineeCore
       - package: MatineeKit
         product: MatineeKit
-      - package: MatineeKit
-        product: MatineeKitGallery
       - package: Nuke
         product: Nuke
       - package: Nuke
@@ -245,12 +238,12 @@ targets:
 
   # Presses the Siri Remote on an Apple TV simulator from a script, for
   # MatineeTV/Remote/remote.sh: a UI test only so XCUIRemote can reach the
-  # focus engine. The script itself is the kit gallery's.
+  # focus engine.
   MatineeTVRemote:
     type: bundle.ui-testing
     platform: tvOS
     sources:
-      - Packages/MatineeKit/Gallery/Remote/RemoteScript.swift
+      - MatineeTV/Remote/RemoteScript.swift
     dependencies:
       - target: MatineeTV
     settings:

@@ -9,20 +9,9 @@ import Testing
  * version, and a screen that reaches for one shows the system's look.
  * This is the Swift twin of Android's KitBoundaryTest.
  *
- * It scans the Swift files under a root:
- *
- *   KIT_BOUNDARY_ROOT        the folder to scan, absolute or relative to
- *                            the package; the gallery's sources unless set
- *   KIT_BOUNDARY_ALLOW       comma-separated path prefixes, relative to the
- *                            root, that may use stock controls, like `theme/`
- *   KIT_BOUNDARY_ALLOW_FILE  a file of such prefixes, one a line, `#` for
- *                            comments, as the app's kit-exclusions.txt
- *
- * A prefix let through must still need it: one that matches no file, or
- * whose files are all clean now, fails the test until it's taken off the
- * list, so the list only ever shrinks. Through xcodebuild, prefix each
- * variable with TEST_RUNNER_ (README.md, "The boundary test"); the app runs
- * it on the Mac with `just ios test`.
+ * It scans the Swift files of the iPhone app's screens, Matinee/UI, and
+ * `just ios test` runs it on the Mac. TVBoundaryTests.swift holds the Apple
+ * TV app's screens to the same rules and its own.
  */
 
 /// A stock control or look the kit replaces, and what to use instead.
@@ -82,8 +71,8 @@ struct Finding: Sendable {
   let rule: String
 }
 
-/// Every use of a stock control in the Swift files under `root`, except those under an `allowed` prefix.
-func scan(_ root: URL, allowed: [String]) -> [Finding] {
+/// Every use of what `rules` name in the Swift files under `root`.
+func scan(_ root: URL, for rules: [Rule]) -> [Finding] {
   let compiled = rules.map { ($0.name, $0.regex) }
   var found: [Finding] = []
   let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)?
@@ -92,7 +81,6 @@ func scan(_ root: URL, allowed: [String]) -> [Finding] {
     .sorted { $0.path < $1.path } ?? []
   for file in files {
     let path = String(file.standardizedFileURL.path.dropFirst(root.standardizedFileURL.path.count + 1))
-    if allowed.contains(where: { path.hasPrefix($0) }) { continue }
     guard let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
     var inBlockComment = false
     for (index, raw) in text.components(separatedBy: "\n").enumerated() {
@@ -121,16 +109,9 @@ func scan(_ root: URL, allowed: [String]) -> [Finding] {
   return found
 }
 
-/// The folder to scan: KIT_BOUNDARY_ROOT, or the gallery's sources.
-func boundaryRoot() -> URL {
-  let package = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-    .deletingLastPathComponent()
-  let environment = ProcessInfo.processInfo.environment
-  guard let root = environment["KIT_BOUNDARY_ROOT"], !root.isEmpty else {
-    return package.appendingPathComponent("Sources/MatineeKitGallery")
-  }
-  return root.hasPrefix("/") ? URL(fileURLWithPath: root) : package.appendingPathComponent(root)
-}
+/// apps/ios, which this package sits in.
+let appsIOS = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+  .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 
 /// What a finding list says, a count per stock control and then each use.
 func report(_ found: [Finding]) -> String {
@@ -141,37 +122,11 @@ func report(_ found: [Finding]) -> String {
   return "\(found.count) uses of stock controls outside the kit:\n\(summary)\n\nEach:\n\(lines)"
 }
 
-/// The prefixes let through: KIT_BOUNDARY_ALLOW's, and KIT_BOUNDARY_ALLOW_FILE's lines.
-func allowedPrefixes() throws -> [String] {
-  let environment = ProcessInfo.processInfo.environment
-  var allowed = (environment["KIT_BOUNDARY_ALLOW"] ?? "").split(separator: ",").map(String.init)
-  if let file = environment["KIT_BOUNDARY_ALLOW_FILE"], !file.isEmpty {
-    let text = try String(contentsOf: URL(fileURLWithPath: file), encoding: .utf8)
-    allowed += text.components(separatedBy: "\n").map { line in
-      line.range(of: "#").map { String(line[..<$0.lowerBound]) } ?? line
-    }
-  }
-  return allowed.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-}
-
 @Test func onlyTheKitDrawsControls() throws {
-  let root = boundaryRoot()
-  var isDirectory: ObjCBool = false
-  #expect(
-    FileManager.default.fileExists(atPath: root.path, isDirectory: &isDirectory) && isDirectory.boolValue,
-    "no sources at \(root.path)")
-  let allowed = try allowedPrefixes()
-  let found = scan(root, allowed: allowed)
-  if !found.isEmpty { print(report(found)) }
+  let root = appsIOS.appendingPathComponent("Matinee/UI")
+  #expect(FileManager.default.fileExists(atPath: root.path), "no sources at \(root.path)")
+  let found = scan(root, for: rules)
   #expect(found.isEmpty, "Use the MatineeKit version instead.\n\(report(found))")
-  // Each prefix let through still has stock controls to let through.
-  let everything = scan(root, allowed: [])
-  for prefix in allowed {
-    let inside = everything.filter { $0.path.hasPrefix(prefix) }
-    #expect(
-      !inside.isEmpty,
-      "\(prefix) no longer uses a stock control, or no longer exists: take it off the list of exclusions")
-  }
 }
 
 /// The scanner itself: it catches stock controls and lets comments and the kit's own names through.
@@ -195,7 +150,7 @@ func allowedPrefixes() throws -> [String] {
     .matineeSheet(isPresented: $open) {}
     """
   try source.write(to: folder.appendingPathComponent("Screen.swift"), atomically: true, encoding: .utf8)
-  let found = scan(folder, allowed: [])
+  let found = scan(folder, for: rules)
   let names = Set(found.map(\.rule))
   #expect(names == ["Button", "Toggle", "List", ".toolbar", "ToolbarItem", "SF Symbols", "system fonts", ".sheet"])
   #expect(found.allSatisfy { $0.line > 3 })

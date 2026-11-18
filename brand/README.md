@@ -54,48 +54,6 @@ bounding box is 2.22,3 to 21.78,20.7, and every placement centers that box.
 - iOS uses 30 px per unit on the 1024 canvas, so the mark is 587 px wide.
 - Android uses 2.2 dp per unit on the 108 dp canvas. The farthest point is
   24 dp from center, inside the 33 dp safe zone.
-- The Apple TV icon's mark is 66% of the 240 pt height, about 8.9 pt per
-  unit, centered across, with its horizon (y 15.1) 60% of the way down.
-
-## Apple TV
-
-tvOS wants a layered icon, which it tilts and lights when the icon has
-focus, and a Top Shelf image to fill the top of the screen when the app
-sits in the Home Screen's top row and has no Top Shelf content of its own.
-Both show one scene: the mark's sun going down on a horizon that runs the
-width of the frame, with the dusk sky glowing along it in the mark's
-colors and dark water below. The water is the sky's own gradient, so the
-horizon is as sharp as the glow above it is bright, and fades out toward
-the edges.
-
-The icon's three layers split the scene by distance, so the tilt reads as
-depth rather than as a picture coming apart:
-
-| Layer  | What it holds                                                   |
-| ------ | --------------------------------------------------------------- |
-| Back   | The sky and its glow, opaque, carried on below the horizon      |
-| Middle | The sun as a whole disc                                         |
-| Front  | The water from the horizon down, and the mark's two bands on it |
-
-The front layer's top edge is the horizon and hides the sun's foot, so as
-the icon tilts the sun slides behind the horizon. At rest the layers make
-the mark exactly. The icon carries no wordmark, like the iPhone and
-Android icons.
-
-The Top Shelf images are the scene in one layer, with the sun 400 px tall
-and the wordmark above it. tvOS 27 uses the wide image, scaled to 784 pt
-from the top of the screen down to the Dock, which shows its middle 1765
-px; it mirrors the image's bottom edge, blurred, behind the Dock, which
-gives the sun a reflection. The regular image has the same middle, so
-everything sits there, clear of the clock at the top right.
-
-`render.sh` renders the layers and images into the TV target's asset
-catalog, `apps/ios/MatineeTV/Resources/TVAppIcon.xcassets`, at 1x and 2x
-and at 1280×768 for the App Store, and that catalog is committed. Its
-`Contents.json` files are written by hand; add a layer there first if you
-add one in `tvos.py`. tvOS 27's icon and Top Shelf geometry above was measured on
-the Apple TV simulator; Apple's guidelines give the canvas sizes but not
-the layout.
 
 ## Changing it
 

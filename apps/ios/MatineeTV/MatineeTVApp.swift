@@ -4,10 +4,6 @@ import Nuke
 import SwiftUI
 import UIKit
 
-#if DEBUG
-  import MatineeKitGallery
-#endif
-
 /*
  * The Apple TV app: MainActivity.kt's part for a TV, with TvRoot.kt in
  * UI/TVRoot.swift. One session, one theme, and one set of toasts, made at
@@ -40,7 +36,7 @@ struct MatineeTVApp: App {
 
   var body: some Scene {
     WindowGroup {
-      root
+      TVRoot()
         .environment(model.topShelf)
         .onOpenURL { url in if TopShelfLink(url: url) != nil { model.topShelf.pending = url } }
         .environment(model.theme)
@@ -49,18 +45,5 @@ struct MatineeTVApp: App {
         // The TV's own light or dark, with the server's accents (Info.plist opts in to both).
         .matineeTheme(model.theme)
     }
-  }
-
-  @ViewBuilder private var root: some View {
-    #if DEBUG
-      // The kit's TV gallery, for checking the components on this TV: `-gallery YES`.
-      if UserDefaults.standard.bool(forKey: "gallery") {
-        TVKitGallery(launch: .fromArguments())
-      } else {
-        TVRoot()
-      }
-    #else
-      TVRoot()
-    #endif
   }
 }

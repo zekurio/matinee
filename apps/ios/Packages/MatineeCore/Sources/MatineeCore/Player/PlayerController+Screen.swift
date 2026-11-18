@@ -3,7 +3,7 @@ import Foundation
 // What Android's `PlayerScreen.kt` and `PlayerActivity.kt` keep themselves
 // and the iOS view reads from the controller: the scrub, trickplay tiles,
 // the countdown to the next episode, the skip button's timing, and the
-// moments of the view's life. README.md, Lifecycle, maps each to Android's.
+// moments of the view's life.
 
 /// The last second of a segment, which has nothing left worth skipping.
 let SEGMENT_END_SECONDS = 1.0

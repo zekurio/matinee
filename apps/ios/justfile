@@ -15,12 +15,7 @@ simulator := env("MATINEE_SIMULATOR", "iPhone 17")
 show_simulator := 'open -a Simulator 2>/dev/null || open "$(xcode-select -p)/../Applications/DeviceHub.app" 2>/dev/null || true'
 built_app := derived / "Build/Products/Debug-iphonesimulator/Matinee.app"
 xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme Matinee -derivedDataPath " + derived
-# The Mac's own copy of the kit's boundary test (Matinee/UI/README.md).
-boundary := "build/KitBoundary"
-# The tests run from Packages/MatineeKitBoundary, which builds on the Mac without the kit;
-# both folders are named, since a test's own default is beside the kit's sources.
-boundary_roots := 'KIT_BOUNDARY_ROOT="$PWD/../MatineeKit/Sources/MatineeKitGallery" KIT_TV_BOUNDARY_ROOT="$PWD/../MatineeKit/Sources/MatineeKitGallery/TV"'
-# The Apple TV app's (MatineeTV/README.md): its own derived data, simulator, and build.
+# The Apple TV app's own derived data, simulator, and build.
 tv_derived := env("MATINEE_TV_DERIVED_DATA", "build/TVDerivedData")
 tv_simulator := env("MATINEE_TV_SIMULATOR", "Apple TV 4K (4th generation)")
 tv_built_app := tv_derived / "Build/Products/Debug-appletvsimulator/Matinee.app"
@@ -52,14 +47,7 @@ run *args: sim-build
     xcrun simctl install "{{ simulator }}" "{{ built_app }}"
     xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} {{ args }}
 
-# Open the gallery on the dev server's library (apps/ios/DEV.md), with more launch arguments after
-gallery *args: sim-build
-    xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
-    xcrun simctl install "{{ simulator }}" "{{ built_app }}"
-    xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} -gallery YES \
-        -gallery.server http://localhost:18420 -gallery.token "$(scripts/dev/token ios-admin)" {{ args }}
-
-# Open the app signed in to the dev server (DEV.md) as `account`, ios-admin or ios-viewer, with more launch arguments after
+# Open the app signed in to the dev server (scripts/dev) as `account`, ios-admin or ios-viewer, with more launch arguments after
 dev account="ios-admin" *args: sim-build
     xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
     {{ show_simulator }}
@@ -79,13 +67,9 @@ test: boundary
     scripts/lucide.py --check
     {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
 
-# Fail on a stock SwiftUI control outside the kit, but in the folders Matinee/UI/kit-exclusions.txt lets through, and on a phone component in the TV app
-boundary: tv-boundary
-    cd Packages/MatineeKitBoundary && {{ boundary_roots }} \
-        swift test --scratch-path ../../{{ boundary }} -q
-    cd Packages/MatineeKitBoundary && {{ boundary_roots }} KIT_BOUNDARY_ROOT="$PWD/../../Matinee/UI" \
-        KIT_BOUNDARY_ALLOW_FILE="$PWD/../../Matinee/UI/kit-exclusions.txt" \
-        swift test --scratch-path ../../{{ boundary }} -q
+# Fail on a stock SwiftUI control in either app's screens, and on a phone component, a phone text size, or a phone overlay in the Apple TV app's
+boundary:
+    cd Packages/MatineeKitBoundary && swift test --scratch-path ../../build/KitBoundary -q
 
 # Generate the API client again after a contract change
 api:
@@ -113,7 +97,7 @@ tv-run *args: tv-sim-build
     xcrun simctl install "{{ tv_simulator }}" "{{ tv_built_app }}"
     xcrun simctl launch --terminate-running-process "{{ tv_simulator }}" {{ app }} {{ args }}
 
-# Open the Apple TV app signed in to the dev server (DEV.md) as `account`, with more launch arguments after
+# Open the Apple TV app signed in to the dev server (scripts/dev) as `account`, with more launch arguments after
 tv-dev account="ios-admin" *args: tv-sim-build
     xcrun simctl boot "{{ tv_simulator }}" 2>/dev/null || true
     {{ show_simulator }}
@@ -136,11 +120,6 @@ tv-remote *args:
 tv-remote-dev account="ios-admin" *args:
     MATINEE_TV_DERIVED_DATA="{{ tv_derived }}" SIMULATOR="{{ tv_simulator }}" MatineeTV/Remote/remote.sh serve \
         "-dev.server http://localhost:18420 -dev.token $(scripts/dev/token "$1") ${*:2}"
-
-# Fail on a phone component, a phone text size, or a stock control in the Apple TV app's screens
-tv-boundary:
-    cd Packages/MatineeKitBoundary && {{ boundary_roots }} KIT_TV_BOUNDARY_ROOT="$PWD/../../MatineeTV" \
-        swift test --scratch-path ../../{{ boundary }} -q
 
 # Delete the build output and the generated project
 clean:

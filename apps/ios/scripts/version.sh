@@ -1,6 +1,6 @@
 #!/bin/sh
 # Writes Config/Version.xcconfig with the version from the root package.json,
-# the one place the version is set (README.md, Release). XcodeGen runs this
+# the one place the version is set. XcodeGen runs this
 # before it generates the project, as project.yml's preGenCommand.
 set -eu
 here=$(cd "$(dirname "$0")/.." && pwd)

@@ -11,7 +11,7 @@
    * which lays out 960 by 540 dp: a dp there is two points here, so a page
    * takes the same share of the screen on both. Where Apple has a number of
    * its own for the same thing, the margins and the least type size, the
-   * TV takes Apple's; see README.md, "TV".
+   * TV takes Apple's.
    *
    * tvOS has no Dynamic Type: the system offers no text size, and these stay
    * as they are. Bold Text in the TV's accessibility settings is honoured: a

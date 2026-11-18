@@ -9,8 +9,8 @@ import SwiftUI
  * everything (`.fullScreenCover` in TVShell.swift) and takes it away with
  * `close`; the focus engine then puts focus back on the card that opened it.
  * `PlayerController` (MatineeCore/Player) plays; this makes it, starts and
- * stops it, and makes the calls its README's Lifecycle lists at their
- * moments. The rest is beside it:
+ * stops it, and makes its calls at the moments of the view's life
+ * (PlayerController+Screen.swift). The rest is beside it:
  *
  * - TVPlayback.swift: the remote, focus, the layers Menu steps out of, and
  *   what shows when, Android's `TvPlayback`.
