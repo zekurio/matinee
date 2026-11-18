@@ -65,7 +65,7 @@ if(NOT Qt6Keychain_FOUND)
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/qt6keychain")
   file(COPY "${qtkeychain_SOURCE_DIR}/qtkeychain/keychain.h"
     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/generated/qt6keychain")
-  configure_file("${qtkeychain_BINARY_DIR}/qkeychain_export.h"
+  configure_file("${qtkeychain_BINARY_DIR}/qtkeychain/qkeychain_export.h"
     "${CMAKE_CURRENT_BINARY_DIR}/generated/qt6keychain/qkeychain_export.h" COPYONLY)
 endif()
 
