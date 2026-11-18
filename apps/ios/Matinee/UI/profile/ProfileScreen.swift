@@ -82,7 +82,7 @@ private struct ProfilePage: View {
   /// before them the cloud while the server can't be reached, or offline.
   private var buttons: ProfileButtons {
     ProfileButtons(
-      onRequests: requests == nil ? nil : openRequests,
+      onRequests: requests.map { _ in openRequests },
       needsYou: requests?.queue.needsYou ?? 0, stale: loads.reloadable, inBar: !tabRoot)
   }
 
