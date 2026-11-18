@@ -103,6 +103,7 @@ function sidecarTrack(row: SubtitleFileRow): SubtitleTrack {
     sdh: row.sdh,
     default: row.isDefault,
     source: "sidecar",
+    index: null,
     format: formatName(row.format),
     delivery: sidecarDelivery(row.format),
   }
@@ -123,6 +124,7 @@ function embeddedTrack(
     sdh: stream.hearingImpaired || /\b(sdh|cc|hearing impaired)\b/.test(words),
     default: stream.default,
     source: "embedded",
+    index: stream.index,
     format: formatName(stream.codec),
     delivery: streamDelivery(stream),
   }

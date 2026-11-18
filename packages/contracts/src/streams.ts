@@ -199,6 +199,12 @@ export const SubtitleTrack = t.object({
   /** The file marks it as the track to show by default. */
   default: t.boolean(),
   source: SubtitleSource,
+  /**
+   * The stream's index in the file, ffprobe's, for an `embedded` track:
+   * what a player that draws the file's own subtitles picks it by. Null
+   * for a file beside the video.
+   */
+  index: StreamIndex.nullable(),
   /** The format's short name for display, like `SRT`, `ASS`, or `PGS`. */
   format: t.string(),
   /** Null for tracks the server can't show at all, such as teletext. */

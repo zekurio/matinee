@@ -998,6 +998,7 @@ data class SubtitleTrack(
     val sdh: Boolean,
     val default: Boolean,
     val source: String,
+    val index: Int?,
     val format: String,
     val delivery: String?,
 )
