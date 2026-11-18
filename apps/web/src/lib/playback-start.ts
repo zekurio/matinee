@@ -12,6 +12,7 @@ import { queryOptions } from "@tanstack/react-query"
 import { loadHls } from "@/components/use-hls"
 import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
+import { desktop } from "./desktop"
 import { playbackDevice } from "./playback-device"
 import { randomId } from "./random-id"
 import { client } from "./rpc"
@@ -47,8 +48,9 @@ export function startQuery(itemId: string, start: number | undefined) {
         quality,
         position: start,
       })
-      // An encode plays through hls.js, which loads with the answer.
-      if (plan.hls) void loadHls()
+      // An encode plays through hls.js, which loads with the answer. In
+      // the desktop app mpv plays it.
+      if (plan.hls && !desktop) void loadHls()
       return { sessionId, device, quality, plan }
     },
     staleTime: Infinity,

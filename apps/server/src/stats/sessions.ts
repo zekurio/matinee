@@ -93,6 +93,9 @@ export type StreamPlan = {
 }
 
 const BROWSERS: [RegExp, string][] = [
+  // The desktop app's web view is Chromium and says so, with its own name
+  // after it.
+  [/MatineeDesktop\//, "Matinee Desktop"],
   [/Edg(?:e|A|iOS)?\//, "Edge"],
   [/OPR\/|Opera/, "Opera"],
   [/Firefox\/|FxiOS\//, "Firefox"],

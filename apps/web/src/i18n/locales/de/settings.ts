@@ -22,6 +22,11 @@ export default {
   "settings.section.playback.description": "Sprachen, Qualität und Codecs",
   "settings.section.playback.keywords":
     "Audiosprache, Untertitel, Erzwungene Untertitel, Sprache, Qualität, Videocodec, Audiocodec, HEVC, AV1, Opus, Passthrough, Dolby, Surround, Specials, Staffel 0",
+  "settings.section.desktop.label": "Desktop-App",
+  "settings.section.desktop.description":
+    "Decodieren, Ton und Fenster auf diesem Computer",
+  "settings.section.desktop.keywords":
+    "Hardware-Decodierung, GPU, Audiogerät, Lautsprecher, Surround, Passthrough, Receiver, Dolby, DTS, Exklusiv, Skalierung, Zoom, Oberflächengröße, Vollbild, mpv, Version",
   "settings.section.libraries.label": "Mediatheken",
   "settings.section.libraries.description":
     "Ordner, die Matinee nach Videos durchsucht",

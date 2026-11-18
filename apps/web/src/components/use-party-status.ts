@@ -4,6 +4,7 @@ import { type RefObject, useEffect, useEffectEvent, useRef } from "react"
 import type { PlayerStore } from "@/stores/player"
 
 import { bufferedEnd } from "./playback-source"
+import type { PlayerMedia } from "./player-media"
 import type { PartyLink } from "./use-party-sync"
 
 const TICK_MS = 1000
@@ -17,7 +18,7 @@ const STALL_MS = 2_000
 const READY_S = 8
 
 /** Whether a paused video has loaded enough to play on from where it is. */
-function ready(el: HTMLVideoElement, hls: boolean): boolean {
+function ready(el: PlayerMedia, hls: boolean): boolean {
   if (el.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) return false
   const end = bufferedEnd(el, el.currentTime)
   if (end === null) return false
@@ -37,7 +38,7 @@ function ready(el: HTMLVideoElement, hls: boolean): boolean {
  * has loaded enough where the party waits.
  */
 export function usePartyStatus(
-  video: RefObject<HTMLVideoElement | null>,
+  video: RefObject<PlayerMedia | null>,
   store: PlayerStore,
   position: () => number,
   party: PartyLink | null,

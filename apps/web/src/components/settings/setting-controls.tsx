@@ -121,6 +121,30 @@ export function SelectField<T extends string>(
   return <SelectRow {...row} value={value} onChange={field.handleChange} />
 }
 
+/** A row whose setting has a single possible value here, shown as text. */
+export function FixedRow({
+  title,
+  footer,
+  value,
+}: {
+  title: string
+  footer?: ReactNode
+  value: string
+}) {
+  return (
+    <SettingRow title={title} layout="split" footer={footer}>
+      {(ids) => (
+        <span
+          id={ids.controlId}
+          className="text-muted-foreground text-sm @lg:ml-auto"
+        >
+          {value}
+        </span>
+      )}
+    </SettingRow>
+  )
+}
+
 type InputRowProps = Omit<ComponentProps<typeof Input>, "id" | "title"> & {
   title: string
   layout?: "split" | "stack"

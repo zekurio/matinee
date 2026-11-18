@@ -7,10 +7,12 @@ import { t } from "@matinee/contracts/schema"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 
 import { AuthScreen } from "@/components/auth-screen"
+import { DesktopSignedOut } from "@/components/desktop-pages"
 import { PublicLoginBackdrop } from "@/components/login-backdrop"
 import { OidcLinkPage, type PendingLink } from "@/components/oidc-link-page"
 import { SignInForm } from "@/components/sign-in-form"
 import { tr } from "@/i18n"
+import { desktop } from "@/lib/desktop"
 import { safeRedirect } from "@/lib/redirect"
 import { client, orpc } from "@/lib/rpc"
 import { useAuthErrorToast } from "@/lib/use-auth-error-toast"
@@ -44,9 +46,10 @@ export const Route = createFileRoute("/login")({
       context.queryClient.ensureQueryData(orpc.auth.session.queryOptions()),
       context.queryClient.ensureQueryData(orpc.auth.config.queryOptions()),
     ])
+    // The desktop app never holds an OIDC sign-in of its own to link.
     const pendingLink = await loadPendingLink(
       config,
-      search[OIDC_LINK_QUERY_KEY] !== undefined,
+      !desktop && search[OIDC_LINK_QUERY_KEY] !== undefined,
     )
     // A signed-in user confirms the pending link on this page.
     if (pendingLink) return { config, pendingLink }
@@ -62,6 +65,8 @@ function LoginPage() {
   const search = Route.useSearch()
   const target = safeRedirect(search.redirect)
   if (pendingLink) return <OidcLinkPage link={pendingLink} redirect={target} />
+  // The desktop app signs in itself, in place of this page.
+  if (desktop) return <DesktopSignedOut />
   return (
     <SignInPage
       config={config}

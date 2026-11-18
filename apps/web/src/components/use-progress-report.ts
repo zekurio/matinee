@@ -8,6 +8,8 @@ import {
 
 import type { PlayerStore } from "@/stores/player"
 
+import type { PlayerMedia } from "./player-media"
+
 export type ProgressReport = {
   positionSeconds: number
   durationSeconds?: number
@@ -65,7 +67,7 @@ type PlayedTime = ReturnType<typeof usePlayedTime>
 
 /** Progress for `onProgress`. The returned function sends one now. */
 export function useProgressReport(
-  video: RefObject<HTMLVideoElement | null>,
+  video: RefObject<PlayerMedia | null>,
   store: PlayerStore,
   playedTime: PlayedTime,
   onProgress: ((report: ProgressReport) => void) | undefined,

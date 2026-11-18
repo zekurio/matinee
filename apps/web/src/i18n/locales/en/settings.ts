@@ -24,6 +24,12 @@ export default defineMessages("settings", {
   "settings.section.playback.description": "Languages, quality, and codecs",
   "settings.section.playback.keywords":
     "Audio language, Subtitles, Captions, Forced subtitles, Language, Quality, Video codec, Audio codec, HEVC, AV1, Opus, Passthrough, Dolby, Surround, Specials, Season 0",
+  // Only in the desktop app.
+  "settings.section.desktop.label": "Desktop app",
+  "settings.section.desktop.description":
+    "Decoding, sound, and the window on this computer",
+  "settings.section.desktop.keywords":
+    "Hardware decoding, GPU, Audio device, Speakers, Surround, Passthrough, Receiver, Dolby, DTS, Exclusive, Scale, Zoom, Interface size, Full screen, mpv, Version",
   "settings.section.libraries.label": "Libraries",
   "settings.section.libraries.description": "Folders Matinee scans for video",
   "settings.section.libraries.keywords":

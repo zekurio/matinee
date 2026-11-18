@@ -54,6 +54,7 @@ import { useStore } from "zustand"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { prepareAvatar } from "@/lib/avatar"
+import { desktop } from "@/lib/desktop"
 import { firstError, useAppForm } from "@/lib/form"
 import { formatDate, formatRelative } from "@/lib/format"
 import { addPasskey } from "@/lib/passkey"
@@ -353,8 +354,14 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
     <SettingsSubsection
       id="passkeys"
       title={tr("account.passkeys.title")}
-      action={<AddPasskey />}
+      // The desktop app's web view has no way to make a passkey.
+      action={desktop ? undefined : <AddPasskey />}
     >
+      {desktop && (
+        <p className="text-muted-foreground text-sm">
+          {tr("desktop.passkeys.browser")}
+        </p>
+      )}
       {passkeys.isPending ? (
         <Skeleton className="h-16 rounded-xl" />
       ) : passkeys.data?.length === 0 ? (
@@ -543,8 +550,10 @@ function LinkedAccount({ displayName }: { displayName: string }) {
       title={displayName}
       action={
         // One account per user: linking another means unlinking this one,
-        // unless it can't sign in anyway, and then linking replaces it.
-        linked.isSuccess && !account?.signsIn ? (
+        // unless it can't sign in anyway, and then linking replaces it. The
+        // desktop app would open the provider in the system's browser,
+        // where the link can't finish.
+        linked.isSuccess && !account?.signsIn && !desktop ? (
           <a
             href={oidcStartPath("link", LINK_RETURN)}
             className={buttonVariants({ variant: "outline" })}
@@ -555,6 +564,11 @@ function LinkedAccount({ displayName }: { displayName: string }) {
         ) : null
       }
     >
+      {desktop && linked.isSuccess && !account?.signsIn && (
+        <p className="text-muted-foreground text-sm">
+          {tr("desktop.oidc.browser", { provider: displayName })}
+        </p>
+      )}
       {linked.isPending ? (
         <Skeleton className="h-16 rounded-xl" />
       ) : account ? (

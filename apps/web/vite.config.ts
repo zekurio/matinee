@@ -117,6 +117,9 @@ function preloadLocale(): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "")
   const server = env.VITE_SERVER_URL || "http://localhost:8420"
+  const remote = !["localhost", "127.0.0.1", "[::1]"].includes(
+    new URL(server).hostname,
+  )
   return {
     clearScreen: false,
     resolve: { tsconfigPaths: true },
@@ -124,8 +127,12 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       // The browser stays on this origin; the server sees it as PUBLIC_URL.
-      // The slash keeps pages like /api-docs with the app.
-      proxy: { "/api/": { target: server, changeOrigin: false } },
+      // The slash keeps pages like /api-docs with the app. A server on
+      // another machine sits behind a proxy that routes by the host name,
+      // so it gets its own. Signing in doesn't work against one, since
+      // its cookies and passkeys are for its own address; the desktop app
+      // does, with MATINEE_WEB_APP, since it brings a token.
+      proxy: { "/api/": { target: server, changeOrigin: remote } },
     },
     build: {
       rolldownOptions: {

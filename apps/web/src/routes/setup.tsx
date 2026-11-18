@@ -13,10 +13,12 @@ import { LogInIcon } from "lucide-react"
 import { useState } from "react"
 
 import { AuthScreen } from "@/components/auth-screen"
+import { DesktopBrowserOnly } from "@/components/desktop-pages"
 import { FormAlert } from "@/components/form-alert"
 import { SetupSteps, type SetupStep } from "@/components/setup-steps"
 import { UsernamePasskeyForm } from "@/components/username-passkey-form"
 import { tr } from "@/i18n"
+import { desktop } from "@/lib/desktop"
 import { useAppForm } from "@/lib/form"
 import { signUpWithPasskey } from "@/lib/passkey"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -73,6 +75,19 @@ function SetupPage() {
   useAuthErrorToast(search[AUTH_ERROR_QUERY_KEY])
 
   if (!setup.accountRequired) return <SetupSteps steps={steps} />
+
+  // The first account takes a passkey or the provider's sign-in, which
+  // need a real browser. The steps after it work in the app.
+  if (desktop) {
+    return (
+      <DesktopBrowserOnly
+        title={tr("desktop.setup.title")}
+        description={tr("desktop.setup.description", {
+          url: window.location.origin,
+        })}
+      />
+    )
+  }
 
   const provider = config.oidc?.displayName ?? null
   if (setup.mode === null) {

@@ -7,6 +7,7 @@ import {
   LibraryBigIcon,
   ListChecksIcon,
   type LucideIcon,
+  MonitorIcon,
   NetworkIcon,
   PaintbrushIcon,
   PaletteIcon,
@@ -18,6 +19,7 @@ import {
 import { type ComponentType, useMemo } from "react"
 
 import { tr } from "@/i18n"
+import { desktop } from "@/lib/desktop"
 import type { SettingsSectionId } from "@/lib/settings"
 
 import { AccessPanel } from "./access-panel"
@@ -25,6 +27,7 @@ import { AccountPanel } from "./account-panel"
 import { AppearancePanel } from "./appearance-panel"
 import { AuthPanel } from "./auth-panel"
 import { BrandingPanel } from "./branding-panel"
+import { DesktopPanel } from "./desktop-panel"
 import { JobsPanel } from "./jobs-panel"
 import { LibrariesPanel } from "./libraries-panel"
 import { NetworkPanel } from "./network-panel"
@@ -67,6 +70,17 @@ const SECTIONS: SectionEntry[] = [
     icon: TvMinimalPlayIcon,
     Panel: PlaybackPanel,
   },
+  // This computer's settings, which only the desktop app has.
+  ...(desktop
+    ? [
+        {
+          id: "desktop",
+          group: "account",
+          icon: MonitorIcon,
+          Panel: DesktopPanel,
+        } satisfies SectionEntry,
+      ]
+    : []),
   {
     id: "libraries",
     group: "admin",

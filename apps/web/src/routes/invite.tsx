@@ -16,10 +16,12 @@ import { RefreshCwIcon } from "lucide-react"
 import type { ComponentProps } from "react"
 
 import { AuthScreen } from "@/components/auth-screen"
+import { DesktopBrowserOnly } from "@/components/desktop-pages"
 import { FormAlert } from "@/components/form-alert"
 import { PublicLoginBackdrop } from "@/components/login-backdrop"
 import { UsernamePasskeyForm } from "@/components/username-passkey-form"
 import { tr } from "@/i18n"
+import { desktop } from "@/lib/desktop"
 import { formatDateTime } from "@/lib/format"
 import { signUpWithPasskey } from "@/lib/passkey"
 import { errorMessage, orpc } from "@/lib/rpc"
@@ -74,6 +76,15 @@ function InvitePage() {
       >
         <SignInLink />
       </InviteScreen>
+    )
+  }
+  // Signing up takes a passkey, which the desktop app can't make.
+  if (desktop) {
+    return (
+      <DesktopBrowserOnly
+        title={tr("desktop.invite.title")}
+        description={tr("desktop.invite.description")}
+      />
     )
   }
   const token = InviteToken.safeParse(hash)

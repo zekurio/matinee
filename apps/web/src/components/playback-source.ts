@@ -5,6 +5,8 @@ import type {
   SubtitlePick,
 } from "@matinee/contracts"
 
+import type { PlayerMedia } from "./player-media"
+
 /**
  * What the video loads: the source of a `playback.start` answer, or a
  * stream from `playback.seek` in its place. `offset` is where in the file
@@ -64,11 +66,14 @@ export function sameSource(
 
 /**
  * Whether `el` has shown its source: decoded frames, or for a file without
- * video, half a second of sound.
+ * video, half a second of sound. mpv says neither, so with it half a
+ * second of playing counts.
  */
-export function hasPlayed(el: HTMLVideoElement): boolean {
-  if (el.getVideoPlaybackQuality().totalVideoFrames > 0) return true
-  if (el.videoWidth > 0) return false
+export function hasPlayed(el: PlayerMedia): boolean {
+  if (el instanceof HTMLVideoElement) {
+    if (el.getVideoPlaybackQuality().totalVideoFrames > 0) return true
+    if (el.videoWidth > 0) return false
+  }
   for (let i = 0; i < el.played.length; i++) {
     if (el.played.end(i) - el.played.start(i) > 0.5) return true
   }
@@ -76,7 +81,7 @@ export function hasPlayed(el: HTMLVideoElement): boolean {
 }
 
 /** Where the buffered range around `time` ends, in the video's own time. */
-export function bufferedEnd(el: HTMLVideoElement, time: number): number | null {
+export function bufferedEnd(el: PlayerMedia, time: number): number | null {
   for (let i = 0; i < el.buffered.length; i++) {
     if (el.buffered.start(i) <= time && time <= el.buffered.end(i)) {
       return el.buffered.end(i)
@@ -86,7 +91,7 @@ export function bufferedEnd(el: HTMLVideoElement, time: number): number | null {
 }
 
 /** Whether `time` of the current resource can be seeked to without a reload. */
-export function canSeekTo(el: HTMLVideoElement, time: number): boolean {
+export function canSeekTo(el: PlayerMedia, time: number): boolean {
   for (let i = 0; i < el.seekable.length; i++) {
     if (el.seekable.start(i) <= time && time <= el.seekable.end(i)) {
       // A stream only reaches what it buffered.

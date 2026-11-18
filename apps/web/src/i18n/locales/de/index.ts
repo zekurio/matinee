@@ -9,6 +9,7 @@ import browse from "./browse"
 import catalog from "./catalog"
 import common from "./common"
 import connections from "./connections"
+import desktop from "./desktop"
 import discover from "./discover"
 import downloads from "./downloads"
 import filters from "./filters"
@@ -77,4 +78,5 @@ export default {
   ...connections,
   ...party,
   ...network,
+  ...desktop,
 } satisfies Translation
