@@ -18,15 +18,20 @@ let
   };
 
   # Keep in step with apps/flutter/android/app/build.gradle.kts: Flutter's
-  # default compileSdk and NDK, and the build tools AGP defaults to.
-  platformVersion = "36";
+  # default compileSdk and NDK, and the build tools AGP defaults to. The
+  # jni plugin, under shared_preferences and path_provider, compiles
+  # against 35, and the SDK here is read-only, so it's here too.
+  platformVersions = [
+    "35"
+    "36"
+  ];
   buildToolsVersion = "36.0.0";
   ndkVersion = "28.2.13676358";
   cmakeVersion = "3.22.1";
 
   sdk =
     (pkgs.androidenv.composeAndroidPackages {
-      platformVersions = [ platformVersion ];
+      inherit platformVersions;
       buildToolsVersions = [ buildToolsVersion ];
       includeNDK = true;
       ndkVersions = [ ndkVersion ];
