@@ -21,7 +21,7 @@ import {
   LogOutIcon,
   SettingsIcon,
   ShieldIcon,
-  TvIcon,
+  TvMinimalIcon,
   UserRoundIcon,
 } from "lucide-react"
 import { type ComponentType, type ReactNode, useEffect } from "react"
@@ -45,7 +45,7 @@ import { AvatarWithDot, UserAvatar } from "./user-avatar"
 
 export const libraryIcons = {
   movies: FilmIcon,
-  shows: TvIcon,
+  shows: TvMinimalIcon,
 } satisfies Record<Library["kind"], ComponentType<{ className?: string }>>
 
 /**

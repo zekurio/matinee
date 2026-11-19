@@ -13,7 +13,7 @@ import {
   FilmIcon,
   FolderPlusIcon,
   HardDriveIcon,
-  TvIcon,
+  TvMinimalIcon,
   TvMinimalPlayIcon,
 } from "lucide-react"
 
@@ -143,7 +143,7 @@ function LibrarySections({ stats }: { stats: LibraryStats }) {
           {
             label: tr("stats.library.shows"),
             value: formatCount(totals.shows),
-            icon: TvIcon,
+            icon: TvMinimalIcon,
           },
           {
             label: tr("stats.library.episodes"),
@@ -169,7 +169,7 @@ function LibrarySections({ stats }: { stats: LibraryStats }) {
         <StatsSection title={tr("stats.library.libraries")}>
           <RankedBars
             rows={libraries.map((library) => {
-              const Icon = library.kind === "movies" ? FilmIcon : TvIcon
+              const Icon = library.kind === "movies" ? FilmIcon : TvMinimalIcon
               return {
                 key: library.id,
                 label: (

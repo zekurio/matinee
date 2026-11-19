@@ -32,7 +32,7 @@ import {
   PlusIcon,
   SearchIcon,
   TagIcon,
-  TvIcon,
+  TvMinimalIcon,
   UsersRoundIcon,
   XIcon,
 } from "lucide-react"
@@ -92,7 +92,7 @@ type Group = {
 const sectionIcons = {
   profiles: UsersRoundIcon,
   movies: FilmIcon,
-  shows: TvIcon,
+  shows: TvMinimalIcon,
   cast: ClapperboardIcon,
   genres: TagIcon,
   studios: Building2Icon,
