@@ -1,4 +1,7 @@
-import { type Contract, RPC_PATH } from "@matinee/contracts"
+import type { Contract } from "@matinee/contracts"
+// From its own module, not the package's index, which would bring every
+// schema of the contract into a client that only needs the path.
+import { RPC_PATH } from "@matinee/contracts/paths"
 import { createORPCClient } from "@orpc/client"
 import { RPCLink } from "@orpc/client/fetch"
 import type { ContractRouterClient } from "@orpc/contract"

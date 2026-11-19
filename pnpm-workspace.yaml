@@ -24,6 +24,8 @@ catalog:
   typebox: 1.4.2
 
 allowBuilds:
+  # Only prints a request for funding.
+  core-js: false
   esbuild: true
   lfa-ponyfill: false
   # Picks between Vue 2 and 3 on install; its default is already Vue 3.

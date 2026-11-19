@@ -1,0 +1,27 @@
+{
+  "name": "@matinee/tizen",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite dev",
+    "package": "vite build && node scripts/package.mjs",
+    "strings": "node scripts/strings.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/red-hat-mono": "5.3.0",
+    "@fontsource-variable/red-hat-text": "5.3.0",
+    "@matinee/client": "workspace:*",
+    "@matinee/contracts": "workspace:*",
+    "lucide": "1.69.0",
+    "preact": "11.2.0",
+    "qrcode-generator": "2.0.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-legacy": "8.2.4",
+    "terser": "5.51.2",
+    "vite": "catalog:"
+  }
+}

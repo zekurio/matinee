@@ -16,6 +16,7 @@ brand="$(cd "$(dirname "$0")" && pwd)"
 web="$brand/../apps/web/public"
 ios="$brand/ios/AppIcon.appiconset"
 tv="$brand/../apps/ios/MatineeTV/Resources/TVAppIcon.xcassets/App Icon & Top Shelf Image.brandassets"
+tizen="$brand/../apps/tizen/public"
 
 python3 "$brand/wordmark.py"
 python3 "$brand/tvos.py"
@@ -29,6 +30,7 @@ render app-icon-dark.svg 1024 "$ios/AppIcon-Dark.png"
 render app-icon-tinted.svg 1024 "$ios/AppIcon-Tinted.png"
 render app-icon.svg 512 "$brand/android/play-store.png"
 render app-icon.svg 180 "$web/apple-touch-icon.png"
+render app-icon.svg 512 "$tizen/icon.png"
 resvg --width 1280 "$brand/social-preview.svg" "$brand/social-preview.png"
 install -m 644 "$brand/mark.svg" "$web/favicon.svg"
 
@@ -56,4 +58,4 @@ tv top-shelf-wide 4640 1440 "Top Shelf Image Wide.imageset/top-shelf-wide@2x.png
 # rejects an app icon that has one and tvOS wants the back layer opaque.
 find "$tv" -name '*.png' -print0 | xargs -0 oxipng --quiet --opt 4 --strip safe \
   "$ios"/*.png "$brand/android/play-store.png" "$web/apple-touch-icon.png" \
-  "$brand/social-preview.png"
+  "$tizen/icon.png" "$brand/social-preview.png"
