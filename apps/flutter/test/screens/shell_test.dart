@@ -1,47 +1,111 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/app.dart';
+import 'package:matinee/core/session.dart';
+import 'package:matinee/kit/kit.dart';
 import 'package:matinee/router.dart';
-import 'package:matinee/screens/shell/rail.dart';
+import 'package:matinee/screens/shell/header.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
-Future<void> _pump(WidgetTester tester, Size size) async {
+const _tabs = ['Home', 'Shows', 'Movies', 'Downloads', 'Profile'];
+
+Future<void> _pump(
+  WidgetTester tester,
+  Size size, {
+  double textScale = 1,
+}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(const ProviderScope(child: MatineeApp()));
+  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [authStateProvider.overrideWithValue(const NoServer())],
+      child: const MatineeApp(),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
+/// The tab bar's labels that are showing.
+Iterable<String> _labels(WidgetTester tester) => _tabs.where(
+  (tab) => find
+      .descendant(of: find.byType(TabBar), matching: find.text(tab))
+      .evaluate()
+      .isNotEmpty,
+);
+
 void main() {
+  // The labels fit by their measured width, which the test font's square
+  // glyphs would make far wider.
+  setUpAll(() async {
+    await (FontLoader(
+      KitText.family,
+    )..addFont(rootBundle.load('assets/fonts/red_hat_text.ttf'))).load();
+  });
+
   setUp(() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
   });
 
-  testWidgets('a phone gets the bottom bar, and the tabs switch', (
+  testWidgets('a phone gets the header and five named tabs that switch', (
     tester,
   ) async {
     await _pump(tester, const Size(412, 915));
-    expect(find.byType(ShellRail), findsNothing);
-    expect(find.text('Media'), findsWidgets);
-    await tester.tap(find.text('Media').last);
+    expect(find.byType(ShellHeader), findsOneWidget);
+    expect(_labels(tester), _tabs);
+    await tester.tap(
+      find.descendant(of: find.byType(TabBar), matching: find.text('Movies')),
+    );
     await tester.pumpAndSettle();
-    expect(find.text('/media'), findsOneWidget);
+    expect(find.text('/movies'), findsOneWidget);
+    expect(find.byType(ShellHeader), findsOneWidget);
   });
 
-  testWidgets('a tablet in landscape gets the rail', (tester) async {
+  testWidgets('a tablet in landscape keeps the tabs along the bottom', (
+    tester,
+  ) async {
     await _pump(tester, const Size(1280, 800));
-    expect(find.byType(ShellRail), findsOneWidget);
+    final bottom = tester.getBottomLeft(find.byType(TabBar)).dy;
+    expect(bottom, greaterThan(700));
+    expect(find.byType(ShellHeader), findsOneWidget);
+  });
+
+  testWidgets('the tabs drop every label when one does not fit', (
+    tester,
+  ) async {
+    await _pump(tester, const Size(320, 640), textScale: 2);
+    expect(_labels(tester), isEmpty);
+    // Screen readers still get the names.
+    expect(find.bySemanticsLabel('Downloads'), findsOneWidget);
+  });
+
+  testWidgets('the header opens search and settings', (tester) async {
+    await _pump(tester, const Size(412, 915));
+    expect(find.bySemanticsLabel('Requests'), findsNothing);
+    for (final (label, path) in [
+      ('Search', '/search'),
+      ('Settings', '/settings'),
+    ]) {
+      await tester.tap(find.bySemanticsLabel(label));
+      await tester.pumpAndSettle();
+      expect(find.text(path), findsOneWidget);
+      expect(find.byType(ShellHeader), findsNothing);
+      await tester.tap(find.text('Back'));
+      await tester.pumpAndSettle();
+    }
   });
 
   test('routes build their paths', () {
     expect(Routes.title('t1'), '/title/t1');
     expect(Routes.season('t1', 2), '/title/t1/season/2');
-    expect(Routes.library('l1'), '/library/l1');
-    expect(Routes.library('l1', sort: 'added'), '/library/l1?sort=added');
+    expect(Routes.requests(), '/requests');
+    expect(Routes.requests('approved'), '/requests/approved');
+    expect(Routes.browse(genre: 'Drama'), '/browse?genre=Drama');
     expect(Routes.person('Ana de Armas'), '/person/Ana%20de%20Armas');
   });
 }

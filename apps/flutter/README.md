@@ -71,11 +71,13 @@ decoder as soon as the app draws.
 
 State is Riverpod, without code generation. Routing is go_router. Screens
 open a page with `context.push(Routes.title(id))`, never with a path
-typed out. On a phone or tablet the three tabs (Home, Media, Downloads)
-each keep their own stack, and every other page opens over them without
-the bar. The bar sits along the bottom up to 840 dp wide, which covers a
-phone and a tablet held upright, and becomes a rail on the left past that.
-A TV gets its own routes.
+typed out. Phones and tablets share one frame (`lib/screens/shell`): the
+header on top, with the logo, settings, and search, and the tabs along the
+bottom, Home, Shows, Movies, Downloads, and the profile. Both stay while a
+tab scrolls. Each tab keeps its own stack, and every other page opens over
+them without either. When a tab's label doesn't fit, as on a small phone
+or with large text, the tabs show only their icons. Search opens Explore,
+which an admin's waiting requests head. A TV gets its own routes.
 
 A platform channel starts as a Pigeon file in `pigeons/`. Run
 `just flutter pigeon`, then implement the generated interface on the
@@ -165,16 +167,17 @@ else. If a screen needs a widget the kit doesn't have, add it to the kit.
 `MatineeTheme` carries the web's color roles, `KitText` its font sizes and
 line heights, and `KitRadius` its radii; Red Hat Text is the default
 family. `themeStoreProvider` keeps the preset and light, dark, or system
-in shared preferences. Presets and icons are generated, so a change to the
-web's palettes or a new icon needs:
+in shared preferences. Presets, icons, and the logo are generated, so a
+change to the web's palettes, a new icon, or a new logo needs:
 
 ```sh
 pnpm themes:dart   # lib/kit/theme_presets.g.dart, from packages/ui
 pnpm icons:dart    # lib/kit/lucide.g.dart, from lucide-react
+pnpm logo:dart     # lib/kit/logo.g.dart, from brand/logo-*.svg
 ```
 
 Add an icon to the list in `scripts/lucide.mjs` first. `pnpm verify` fails
-while either file is out of date.
+while any of them is out of date.
 
 `lib/kit/gallery.dart` shows every component. `test/kit` renders it, and
 each group, at 412 by 915 in dark and light with the real font, and

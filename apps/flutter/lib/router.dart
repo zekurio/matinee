@@ -10,27 +10,32 @@ import 'screens/shell/shell.dart';
 
 /// Every place in the app, as the paths go_router opens. Screens navigate
 /// with these, `context.push(Routes.title(id))`, never with a path typed
-/// out, so a route's shape changes in one place. The Kotlin app's routes
-/// (ui/Nav.kt) map one to one.
+/// out, so a route's shape changes in one place. They follow the Kotlin
+/// app's (ui/Nav.kt), except that Shows and Movies are tabs in place of
+/// Media and its libraries, and the requests are one page, which an admin
+/// reaches from the waiting requests at the top of Explore.
 abstract final class Routes {
+  // The tabs.
   static const home = '/';
-  static const media = '/media';
+  static const shows = '/shows';
+  static const movies = '/movies';
   static const downloads = '/downloads';
-
   static const profile = '/profile';
+
+  /// Search, with Explore under the field: the catalog's rows, an
+  /// admin's waiting requests first.
+  static const search = '/search';
   static const favorites = '/favorites';
   static const recent = '/recent';
   static const settings = '/settings';
   static String settingsPage(String page) => '/settings/$page';
   static const linkDevice = '/link-device';
-  static const asked = '/asked';
-  static String requests([String list = 'waiting']) => '/requests/$list';
 
-  static String library(String id, {String? sort}) => Uri(
-    path: '/library/$id',
-    queryParameters: _query({'sort': sort}),
-  ).toString();
-  static String kind(String kind) => '/kind/$kind';
+  /// Yours, and for an admin the ones waiting on them; [list] picks one
+  /// of an admin's lists.
+  static String requests([String? list]) =>
+      list == null ? '/requests' : '/requests/$list';
+
   static String browse({String? genre, String? studio}) => Uri(
     path: '/browse',
     queryParameters: _query({'genre': genre, 'studio': studio}),
@@ -102,7 +107,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 /// The tabs, each with its own stack, and the pages that open over them.
 /// Pages open over the tabs, on the root navigator, as the Kotlin app has
-/// them: a title page fills the screen without the bar.
+/// them: a title page fills the screen without the bars.
 List<RouteBase> _handsetRoutes() => [
   StatefulShellRoute.indexedStack(
     builder: (context, state, shell) => HandsetShell(shell: shell),
@@ -116,8 +121,10 @@ List<RouteBase> _handsetRoutes() => [
           ),
         ],
       ),
-      StatefulShellBranch(routes: [_pending(Routes.media, 'Media')]),
+      StatefulShellBranch(routes: [_pending(Routes.shows, 'Shows')]),
+      StatefulShellBranch(routes: [_pending(Routes.movies, 'Movies')]),
       StatefulShellBranch(routes: [_pending(Routes.downloads, 'Downloads')]),
+      StatefulShellBranch(routes: [_pending(Routes.profile, 'Profile')]),
     ],
   ),
   for (final (path, name) in _pages) _pending(path, name, root: true),
@@ -137,16 +144,14 @@ List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 
 /// The pages over the tabs, by path pattern, until each has its screen.
 const _pages = [
-  ('/profile', 'Profile'),
+  ('/search', 'Search and Explore'),
   ('/favorites', 'Favorites'),
   ('/recent', 'Recently watched'),
   ('/settings', 'Settings'),
   ('/settings/:page', 'Settings page'),
   ('/link-device', 'Link a device'),
-  ('/asked', 'My requests'),
+  ('/requests', 'Requests'),
   ('/requests/:list', 'Requests'),
-  ('/library/:id', 'Library'),
-  ('/kind/:kind', 'Movies or shows'),
   ('/browse', 'Browse'),
   ('/title/:id', 'Title'),
   ('/title/:id/season/:season', 'Season'),

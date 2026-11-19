@@ -4,6 +4,7 @@ export 'checkbox.dart';
 export 'chips.dart';
 export 'dialog.dart';
 export 'icon.dart';
+export 'logo.dart';
 export 'menu.dart';
 export 'page_dots.dart';
 export 'press_indication.dart';

@@ -1,27 +1,26 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/width_class.dart';
+import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
-import 'rail.dart';
+import 'header.dart';
 
-/// The signed-in touch screens' frame: the tabs, Home, Media, and
-/// Downloads, each keeping its own stack. Phones and tablets in portrait
-/// get the bar along the bottom, as Findroid has it; from 840 dp wide, a
-/// tablet in landscape, the tabs move to a rail on the left so the page
-/// keeps its height. Which tabs there are follows the Kotlin app's
-/// ui/ShellLayout.kt.
-class HandsetShell extends StatefulWidget {
+/// The signed-in touch screens' frame, the same on a phone and a tablet:
+/// the header on top, and the tabs along the bottom, Home, Shows, Movies,
+/// Downloads, and the profile, each keeping its own stack. Both stay while
+/// a tab's pages scroll; a page opened from a tab covers them.
+class HandsetShell extends ConsumerStatefulWidget {
   const HandsetShell({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
 
   @override
-  State<HandsetShell> createState() => _HandsetShellState();
+  ConsumerState<HandsetShell> createState() => _HandsetShellState();
 }
 
-class _HandsetShellState extends State<HandsetShell> {
+class _HandsetShellState extends ConsumerState<HandsetShell> {
   late final _selected = TabBarState(widget.shell.currentIndex);
 
   @override
@@ -49,43 +48,65 @@ class _HandsetShellState extends State<HandsetShell> {
   @override
   Widget build(BuildContext context) {
     final words = AppLocalizations.of(context);
+    final user = switch (ref.watch(authStateProvider)) {
+      SignedIn(:final user) || Offline(:final user) => user,
+      _ => null,
+    };
+    final avatar = user?.avatarId;
     final items = [
       TabBarItem(id: 0, icon: Lucide.house, label: words.tabHome),
-      TabBarItem(id: 1, icon: Lucide.libraryBig, label: words.tabMedia),
-      TabBarItem(id: 2, icon: Lucide.download, label: words.downloadsTitle),
+      TabBarItem(id: 1, icon: Lucide.tv, label: words.tabShows),
+      TabBarItem(id: 2, icon: Lucide.film, label: words.tabMovies),
+      TabBarItem(id: 3, icon: Lucide.download, label: words.downloadsTitle),
+      TabBarItem(
+        id: 4,
+        icon: Lucide.userRound,
+        label: words.tabProfile,
+        picture: avatar == null ? null : _AccountPicture(avatar),
+      ),
     ];
-    final colors = MatineeTheme.of(context);
-    final width = MediaQuery.sizeOf(context).width;
-    if (WidthClass.of(width) == WidthClass.expanded) {
-      return ColoredBox(
-        color: colors.background,
-        child: Row(
-          children: [
-            ShellRail(items: items, state: _selected, onSelected: _open),
-            Expanded(
-              child: MediaQuery.removePadding(
-                context: context,
-                removeLeft: true,
-                child: widget.shell,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
     return ColoredBox(
-      color: colors.background,
+      color: MatineeTheme.of(context).background,
       child: Column(
         children: [
+          const ShellHeader(),
           Expanded(
             child: MediaQuery.removePadding(
               context: context,
+              removeTop: true,
               removeBottom: true,
               child: widget.shell,
             ),
           ),
           TabBar(items: items, state: _selected, onSelected: _open),
         ],
+      ),
+    );
+  }
+}
+
+/// The account's picture in the profile's tab, or its icon when the
+/// picture can't load, as offline.
+class _AccountPicture extends ConsumerWidget {
+  const _AccountPicture(this.avatarId);
+
+  final String avatarId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final api = ref.watch(apiProvider);
+    final fallback = KitIcon(
+      Lucide.userRound,
+      size: 22,
+      color: MatineeTheme.of(context).mutedForeground,
+    );
+    if (api == null) return fallback;
+    return ClipOval(
+      child: Image.network(
+        api.paths.avatar(avatarId).toString(),
+        headers: ref.watch(playerHeadersProvider),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stack) => fallback,
       ),
     );
   }

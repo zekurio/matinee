@@ -9,11 +9,20 @@ import 'theme.dart';
 import 'tokens.dart';
 
 class TabBarItem {
-  const TabBarItem({required this.id, required this.icon, required this.label});
+  const TabBarItem({
+    required this.id,
+    required this.icon,
+    required this.label,
+    this.picture,
+  });
 
   final Object id;
   final String icon;
   final String label;
+
+  /// Drawn in the icon's place when set, like the account's picture. It
+  /// gets the icon's 22 by 22.
+  final Widget? picture;
 }
 
 /// Share one state between pages to retain the selected tab across navigation.
@@ -60,24 +69,33 @@ class TabBar extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 480),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: ValueListenableBuilder<Object?>(
-                  valueListenable: state,
-                  builder: (context, selected, child) => Row(
-                    children: [
-                      for (final item in items)
-                        Expanded(
-                          key: ValueKey(item.id),
-                          child: _Tab(
-                            item: item,
-                            selected: item.id == selected,
-                            onPressed: () {
-                              state.select(item.id);
-                              onSelected?.call(item.id);
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final labels = _labelsFit(
+                      context,
+                      constraints.maxWidth / items.length,
+                    );
+                    return ValueListenableBuilder<Object?>(
+                      valueListenable: state,
+                      builder: (context, selected, child) => Row(
+                        children: [
+                          for (final item in items)
+                            Expanded(
+                              key: ValueKey(item.id),
+                              child: _Tab(
+                                item: item,
+                                selected: item.id == selected,
+                                showLabel: labels,
+                                onPressed: () {
+                                  state.select(item.id);
+                                  onSelected?.call(item.id);
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -86,17 +104,41 @@ class TabBar extends StatelessWidget {
       ),
     );
   }
+
+  /// Whether every label fits under its icon in a tab [width] wide. When
+  /// one doesn't, as on a small phone, with large text, or in a longer
+  /// language, every tab shows only its icon, so they stay alike; screen
+  /// readers still read the names.
+  bool _labelsFit(BuildContext context, double width) {
+    final style = DefaultTextStyle.of(context).style
+        .merge(KitText.xs.style(weight: FontWeight.w500));
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    return items.every((item) {
+      final painter = TextPainter(
+        text: TextSpan(text: item.label, style: style),
+        textScaler: scaler,
+        textDirection: direction,
+        maxLines: 1,
+      )..layout();
+      final fits = painter.width <= width - 8;
+      painter.dispose();
+      return fits;
+    });
+  }
 }
 
 class _Tab extends StatelessWidget {
   const _Tab({
     required this.item,
     required this.selected,
+    required this.showLabel,
     required this.onPressed,
   });
 
   final TabBarItem item;
   final bool selected;
+  final bool showLabel;
   final VoidCallback onPressed;
 
   @override
@@ -112,7 +154,9 @@ class _Tab extends StatelessWidget {
       showFocusRing: false,
       builder: (context, state) => ExcludeSemantics(
         child: Padding(
-          padding: const EdgeInsets.only(top: 6, bottom: 4),
+          padding: showLabel
+              ? const EdgeInsets.only(top: 6, bottom: 4)
+              : const EdgeInsets.symmetric(vertical: 8),
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(end: selected ? 1 : 0),
             duration: motion,
@@ -159,20 +203,24 @@ class _Tab extends StatelessWidget {
                               ),
                               child: const SizedBox.expand(),
                             ),
-                          KitIcon(item.icon, size: 22, color: color),
+                          if (item.picture case final picture?)
+                            SizedBox.square(dimension: 22, child: picture)
+                          else
+                            KitIcon(item.icon, size: 22, color: color),
                         ],
                       ),
                     ),
                   ),
-                  Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KitText.xs.style(
-                      color: color,
-                      weight: FontWeight.w500,
+                  if (showLabel)
+                    Text(
+                      item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KitText.xs.style(
+                        color: color,
+                        weight: FontWeight.w500,
+                      ),
                     ),
-                  ),
                 ],
               );
             },

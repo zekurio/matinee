@@ -2795,13 +2795,17 @@
   "@tabHome": {
     "description": "strings.xml: The bottom bar"
   },
-  "tabMedia": "Media",
-  "@tabMedia": {
-    "description": "strings.xml"
+  "tabMovies": "Movies",
+  "@tabMovies": {
+    "description": "The touch screens' shell"
   },
   "tabProfile": "Profile",
   "@tabProfile": {
     "description": "strings.xml"
+  },
+  "tabShows": "Shows",
+  "@tabShows": {
+    "description": "The touch screens' shell"
   },
   "titleCast": "Cast",
   "@titleCast": {
