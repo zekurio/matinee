@@ -12,8 +12,9 @@ class QQuickWindow;
 // window's, through its own swapchain, exactly as in a window of its own.
 // That is the only way the picture reaches the display as HDR, and needs
 // the window to be see-through where the video shows. Wayland has it,
-// with an mpv that takes a parent surface. Windows has it one level down:
-// mpv's window is inside the app's, under a window of the page's own.
+// with an mpv that takes a parent surface, and macOS, with one that takes
+// a parent layer. Windows has it one level down: mpv's window is inside
+// the app's, under a window of the page's own.
 //
 // In the window: mpv draws into the window's own framebuffer through its
 // render API, before Qt draws the page over it. It works everywhere and

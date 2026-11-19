@@ -10,15 +10,16 @@ WebEngine shows the pages, and libmpv puts the picture underneath them, so
 the video shows wherever a page is transparent. The player's controls,
 menus, and everything else are the web app's.
 
-On Wayland, and on Windows with HDR turned on for the display, HDR video
-reaches the display as HDR. Elsewhere mpv tone maps it to SDR.
-[The window](#the-window) says why.
+HDR video reaches the display as HDR on Wayland, on Windows with HDR
+turned on for the display, and on macOS with the app's own build of
+libmpv. Where the app draws the video in its window instead, mpv tone
+maps it to SDR. [The window](#the-window) says why.
 
 Linux is the system it's built and tried on, and there it needs a Wayland
 session: X11 has no HDR and no way to put the video under the window.
-On Windows it builds and plays on GitHub's runners, which have no GPU
-and no HDR display. Nobody has tried it on a PC of their own yet. The
-macOS build hasn't been run by anyone yet.
+On macOS and Windows it builds and plays on GitHub's runners, which
+are virtual machines without HDR, and on Windows without a GPU.
+Nobody has tried it on a Mac or PC of their own yet.
 
 ## Install
 
@@ -29,7 +30,34 @@ nix run github:zekurio/matinee#matinee-desktop
 ```
 
 or add `matinee.packages.${system}.matinee-desktop` to your packages.
-There are no installers for macOS yet. Build it as below.
+There are no installers for macOS and Windows yet.
+
+### macOS
+
+There is no signed release yet. Each run of the `desktop (macos)`
+workflow builds the app for Macs with Apple's chip and keeps it for 14
+days as `Matinee-macos-arm64.zip`. Download it from the run's page on
+GitHub, under Artifacts, or the newest one with `gh`:
+
+```sh
+run=$(gh run list --repo zekurio/matinee --workflow 'desktop (macos)' \
+  --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run download "$run" --repo zekurio/matinee -n Matinee-macos-arm64.zip
+```
+
+It needs the macOS the runner had, macOS 26 for now, because Homebrew
+builds the libraries inside it for that. An older macOS says so when you
+open it.
+
+No developer signed it, so macOS won't open it the first time. Move it
+to Applications and take off the mark the download left on it:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Matinee.app
+```
+
+Or open it once, then choose Open Anyway in System Settings → Privacy &
+Security.
 
 ### Windows
 
@@ -123,13 +151,17 @@ everything, and loads what `playback.start` answers.
 The video gets under the page in one of two ways (`VideoOutput`), picked
 once at start.
 
-**Under the window**, on Wayland and Windows. mpv makes a surface of its own, a
-subsurface below the window's, and presents on it through Vulkan with
-`vo=gpu-next`, exactly as in a window of its own. The window is
-transparent where the video shows, and the compositor puts the two
-together. Since mpv owns the surface, everything that needs one works:
-its own frame timing, and HDR. An HDR source goes out as HDR10 with its
-own metadata, and the compositor fits it to the display.
+**Under the window**, on Wayland, macOS, and Windows. mpv presents on a
+surface of its own through its own swapchain, with `vo=gpu-next`,
+exactly as in a window of its own, and the page is see-through where the
+video shows. Since mpv owns the surface, everything that needs one
+works: its own frame timing, and HDR. Each system gets the surface under
+the page its own way.
+
+On Wayland, mpv's surface is a subsurface below the window's, and mpv
+presents on it through Vulkan. The compositor puts the two together. An
+HDR source goes out as HDR10 with its own metadata, and the compositor
+fits it to the display.
 
 Upstream mpv can't do this: it only presents in a window it made, on its
 own connection to the compositor. `mpv/wayland-parent-surface.patch`
@@ -138,6 +170,17 @@ application's connection, with an event queue of its own, and make its
 surface a subsurface of the application's. The flake builds libmpv with
 it. The app asks mpv whether it has the option, and with a stock libmpv
 it falls back to the second way.
+
+On macOS the window's content is Qt's view, which Qt draws with Metal
+into a layer with an alpha channel. `MacVideoLayer` keeps a layer of its
+own right below that one, in the layer of the window's frame view. mpv
+adds its Metal layer to it and presents through Vulkan on MoltenVK, and
+the system puts the layers together. An HDR video stays HDR under an SDR
+page. Upstream mpv on macOS only presents in a window it made, so
+`mpv/macos-parent-layer.patch` adds `--macos-parent-layer`, which takes
+the app's layer. The workflow builds libmpv with it
+(`tools/ci/mpv-macos.mjs`). With Homebrew's mpv the app falls back to
+the second way.
 
 On Windows, upstream mpv does what's needed. It makes a window inside
 one of the app's that it's given (`--wid`) and presents in it through a
@@ -150,7 +193,8 @@ the page is transparent. Both are inside the app's one window, which
 moves, minimizes, and shows in Alt+Tab as one. Where Qt Quick can't draw
 with Direct3D, the app falls back to the second way.
 
-**In the window**, everywhere else. Qt Quick draws the window with
+**In the window**, with a libmpv that lacks the patch, or on Windows
+where Qt Quick can't draw with Direct3D. Qt Quick draws the window with
 OpenGL, and each frame, after Qt clears the window, `MpvRenderer` has mpv
 draw the video straight into the window's framebuffer through its render
 API, before Qt draws the web view over it. Nothing is copied. An OpenGL
@@ -165,11 +209,20 @@ A few things are easy to break:
 - In the window, mpv draws at the far plane and assumes a fresh OpenGL
   context, so `MpvRenderer` resets the state Qt left before each frame,
   or the depth test discards the whole picture.
-- Under the window, the compositor acts on a new subsurface when the
+- On Wayland, the compositor acts on a new subsurface when the
   window next commits, so `WaylandVideoSurface` has the window draw once
   mpv has set its output up. And the window's surface can go away while
   the app runs, which stops playback: mpv without a parent would open a
   window of its own.
+- On macOS the system orders the window's layers and may build them
+  anew, so `MacVideoLayer` checks its place after each frame the window
+  draws. It has to be a layer and not a view: with a view of the app's in
+  the window's frame view, macOS 26 lays the title bar out the old way,
+  with the title over the buttons.
+- mpv on macOS opens and closes its video output on the main thread and
+  waits for it. Ending mpv from the main thread while it has one would
+  wait forever, so before the app quits it stops playback and runs the
+  main thread until mpv's layer is gone.
 - On Windows, Qt makes the page's window a layered window, since it has
   an alpha channel. With that style, Windows showed it opaque black once
   the app's window had changed size, as it does for full screen, and the
@@ -196,6 +249,21 @@ has mpv fit the picture to the display itself.
 
 To check that the display got HDR, run `drm_info` while a video plays.
 It lists the connector's `Colorspace` and `HDR_OUTPUT_METADATA`.
+
+On macOS it needs a screen that can show HDR: the built-in screen of a
+MacBook Pro from 2021 or later, a Pro Display XDR, or an external HDR
+display with High Dynamic Range turned on in System Settings → Displays.
+macOS shows HDR per window, so there's nothing to switch for the app.
+To check, start it from a terminal and play an HDR title:
+
+```sh
+/Applications/Matinee.app/Contents/MacOS/Matinee --verbose 2>&1 | grep 'Metal layer'
+```
+
+When the picture goes out as HDR, mpv logs
+`Metal layer colorspace changed: ITUR_2100_PQ` and
+`Metal layer HDR active`. An SDR title logs `ITUR_709` instead. The
+highlights of an HDR title should look brighter than the page's white.
 
 On Windows it needs HDR turned on for the display, in Settings →
 System → Display → Use HDR. Windows doesn't switch the display for a
@@ -239,7 +307,7 @@ build/matinee-desktop --verbose
 
 Without Nix you need CMake 3.24, a C++20 compiler, Qt 6.8 or newer with
 Qt WebEngine and Qt WebChannel, and libmpv 0.38 or newer, built with
-`mpv/wayland-parent-surface.patch` for HDR on Wayland. On Linux, also
+the patch in `mpv/` for HDR on Wayland or macOS. On Linux, also
 Wayland's client library, `wayland-protocols`, `wayland-scanner`, and
 QtKeychain. CMake finds mpv through pkg-config, or in `-DMPV_ROOT=` where
 there is none, and builds QtKeychain itself where the system has none.
@@ -284,7 +352,7 @@ handlers in `native/src/app/application.cpp`, and the page that calls it.
 - Installers for macOS and Windows, and an AppImage or Flatpak for Linux.
 - The system's media controls on macOS and Windows. Media keys work
   there while the window has the keyboard.
-- HDR on macOS, where the video is drawn in the window.
+- A signed and notarized app for macOS, and one for Intel Macs.
 - A list of downloads. Files save to the downloads folder without one.
 - Signing in to a server whose certificate the system doesn't trust.
 

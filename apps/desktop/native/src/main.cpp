@@ -6,6 +6,7 @@
 #include <QCommandLineParser>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QSurfaceFormat>
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
 #ifdef Q_OS_WIN
@@ -50,6 +51,15 @@ int main(int argc, char *argv[]) {
   QCoreApplication::setApplicationVersion(QStringLiteral(MATINEE_VERSION));
   QGuiApplication::setApplicationDisplayName(QStringLiteral("Matinee"));
   QGuiApplication::setDesktopFileName(QStringLiteral("io.github.zekurio.matinee"));
+
+#ifdef Q_OS_MACOS
+  // For the video in the window. macOS hands out OpenGL 2.1 unless asked
+  // for a core profile, and 4.1 is the newest it has.
+  QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+  format.setVersion(4, 1);
+  format.setProfile(QSurfaceFormat::CoreProfile);
+  QSurfaceFormat::setDefaultFormat(format);
+#endif
 
   // Qt WebEngine shares its pages' textures with the window's context,
   // where the window draws with OpenGL.

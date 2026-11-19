@@ -20,11 +20,19 @@
  * more back in the window.
  * SMOKE_OUT (default: a temporary directory, printed at the end) gets the
  * pictures, the app's log, and mpv's last state.
+ *
+ * SMOKE_MPV_CONF names a file to give the app as its mpv.conf, for a
+ * machine where mpv's defaults don't work, like virtual-gpu.conf here.
+ *
+ * A check that fails leaves the app running for a moment. SMOKE_FAILED,
+ * if set, is a command to look at it with before it's stopped, like one
+ * that lists what the threads of a hung app are doing. `{pid}` stands for
+ * the app's process and `{out}` for SMOKE_OUT.
  */
 
 import { execSync, spawn } from "node:child_process"
 import { createReadStream, createWriteStream } from "node:fs"
-import { mkdir, mkdtemp, stat, writeFile } from "node:fs/promises"
+import { copyFile, mkdir, mkdtemp, stat, writeFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { tmpdir } from "node:os"
 import { dirname, extname, join, normalize } from "node:path"
@@ -45,6 +53,9 @@ if (!app) {
   process.stderr.write("Usage: node smoke.mjs <path to matinee-desktop>\n")
   process.exit(2)
 }
+
+// How long the app's page gets to answer. An app that hangs never does.
+const ANSWER_MS = 30_000
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -167,7 +178,12 @@ async function connect(port) {
   const evaluate = (expression, { gesture = false } = {}) =>
     new Promise((resolve, reject) => {
       const id = nextId++
+      const late = setTimeout(() => {
+        waiting.delete(id)
+        reject(new Error(`the app's page didn't answer: ${expression}`))
+      }, ANSWER_MS)
       waiting.set(id, (result) => {
+        clearTimeout(late)
         if (result?.exceptionDetails) {
           reject(new Error(JSON.stringify(result.exceptionDetails)))
         } else resolve(result?.result?.value)
@@ -217,6 +233,13 @@ await writeFile(
   join(home, "data", "tokens.json"),
   JSON.stringify({ smoke: TOKEN }),
 )
+if (process.env.SMOKE_MPV_CONF) {
+  await mkdir(join(home, "config", "mpv"), { recursive: true })
+  await copyFile(
+    process.env.SMOKE_MPV_CONF,
+    join(home, "config", "mpv", "mpv.conf"),
+  )
+}
 
 const devtools = await freePort()
 const log = createWriteStream(join(out, "app.log"))
@@ -413,6 +436,17 @@ try {
   process.stderr.write(
     `${cause instanceof Error ? cause.message : String(cause)}\n`,
   )
+  if (process.env.SMOKE_FAILED) {
+    const look = process.env.SMOKE_FAILED.replaceAll(
+      "{pid}",
+      String(child.pid),
+    ).replaceAll("{out}", out)
+    try {
+      execSync(look, { stdio: "inherit" })
+    } catch {
+      process.stderr.write(`couldn't run ${look}\n`)
+    }
+  }
   // A program that can't load a library never gets to write a log.
   if (ending) process.stderr.write(`the app ended by itself, with ${ending}\n`)
 } finally {

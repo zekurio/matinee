@@ -9,6 +9,8 @@ on:
     paths:
       - apps/desktop/**
       - packages/desktop-bridge/**
+      - tools/ci/desktop-macos-app.mjs
+      - tools/ci/mpv-macos.mjs
       - .github/workflows/desktop-macos.yml
   workflow_dispatch:
 
@@ -20,10 +22,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Once with Homebrew's mpv, which draws the video in the window, and once
+  # with the app's own build of it, which shows the video under the window.
   build:
-    name: build
+    name: build (${{ matrix.mpv }} mpv)
     runs-on: macos-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        mpv: [stock, patched]
 
     steps:
       - name: checkout repository
@@ -54,10 +62,94 @@ jobs:
           cache: true
 
       - name: install mpv
+        if: matrix.mpv == 'stock'
         run: brew install mpv ninja pkg-config
+
+      # mpv with the patch in apps/desktop/mpv takes a while to build, so a
+      # build is kept for as long as the patch and what it links stay the
+      # same.
+      - name: install what libmpv builds against
+        id: mpv
+        if: matrix.mpv == 'patched'
+        run: node tools/ci/mpv-macos.mjs prepare
+
+      - name: restore libmpv
+        id: mpv-cache
+        if: matrix.mpv == 'patched'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/mpv
+          key: ${{ steps.mpv.outputs.key }}
+
+      - name: build libmpv
+        if: matrix.mpv == 'patched' && steps.mpv-cache.outputs.cache-hit != 'true'
+        run: node tools/ci/mpv-macos.mjs build
+
+      # Right away, so a run that fails further down still leaves it.
+      - name: keep libmpv
+        if: matrix.mpv == 'patched' && steps.mpv-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/mpv
+          key: ${{ steps.mpv.outputs.key }}
 
       - name: configure
         run: cmake -S apps/desktop/native -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: build
         run: cmake --build build
+
+      # Plays a clip against a stand-in server, with a screenshot taken
+      # while it plays to check by eye that the page shows over the video.
+      - name: smoke test
+        timeout-minutes: 5
+        env:
+          SMOKE_OUT: ${{ runner.temp }}/smoke
+          SMOKE_SCREENSHOT: screencapture -x {file}
+          # The runner's virtual GPU can't take all that mpv does through
+          # Vulkan. The file says what.
+          SMOKE_MPV_CONF: ${{ matrix.mpv == 'patched' && 'apps/desktop/smoke/virtual-gpu.conf' || '' }}
+          # What every thread of an app that hung was doing, and the screen.
+          SMOKE_FAILED: sample {pid} 5 -file {out}/sample.txt; screencapture -x {out}/failed.png
+        run: node apps/desktop/smoke/smoke.mjs build/Matinee.app/Contents/MacOS/Matinee
+
+      # An app to download and run: Qt, libmpv, and what they load, inside.
+      - name: package the app
+        if: matrix.mpv == 'patched'
+        run: node tools/ci/desktop-macos-app.mjs package build/Matinee.app "$RUNNER_TEMP/Matinee-macos-arm64.zip"
+
+      # Unpacked somewhere else, with Homebrew and Qt out of its reach.
+      - name: smoke test the packaged app
+        if: matrix.mpv == 'patched'
+        timeout-minutes: 5
+        env:
+          SMOKE_OUT: ${{ runner.temp }}/smoke/packaged
+          SMOKE_SCREENSHOT: screencapture -x {file}
+          SMOKE_MPV_CONF: apps/desktop/smoke/virtual-gpu.conf
+          SMOKE_FAILED: sample {pid} 5 -file {out}/sample.txt; screencapture -x {out}/failed.png
+        run: node tools/ci/desktop-macos-app.mjs smoke "$RUNNER_TEMP/Matinee-macos-arm64.zip"
+
+      # The system writes a report when the app crashes.
+      - name: collect crash reports
+        if: failure()
+        run: cp -R ~/Library/Logs/DiagnosticReports "$RUNNER_TEMP/smoke/crashes" || true
+
+      - name: keep what the smoke tests left
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: smoke-${{ matrix.mpv }}
+          path: |
+            ${{ runner.temp }}/smoke
+            !${{ runner.temp }}/smoke/home/**
+            !${{ runner.temp }}/smoke/packaged/home/**
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: keep the app
+        if: matrix.mpv == 'patched'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: ${{ runner.temp }}/Matinee-macos-arm64.zip
+          archive: false
+          retention-days: 14

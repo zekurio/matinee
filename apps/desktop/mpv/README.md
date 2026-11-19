@@ -10,10 +10,13 @@ mpv release nixpkgs has.
 | Patch                          | What it adds                                     |
 | ------------------------------ | ------------------------------------------------ |
 | `wayland-parent-surface.patch` | `--wayland-parent-surface`, a subsurface of ours |
+| `macos-parent-layer.patch`     | `--macos-parent-layer`, a layer inside ours      |
 
-`nix/mpv.nix` builds libmpv with them for the flake. The app asks mpv
-whether it has the option, and draws the video in the window when it
-doesn't, so it also runs with a stock libmpv.
+`nix/mpv.nix` builds libmpv with the Wayland one for the flake, and
+`tools/ci/mpv-macos.mjs` with the macOS one for the app the macOS
+workflow packages. The app asks mpv whether it has the option, and draws
+the video in the window when it doesn't, so it also runs with a stock
+libmpv.
 
 To change one, check out mpv at the release's tag, apply the patch, edit,
 and write `git diff` back over it.
