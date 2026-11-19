@@ -61,6 +61,14 @@ jobs:
           modules: qtwebengine qtwebchannel qtpositioning
           cache: true
 
+      # A runner's Homebrew knows the packages of the day its image was
+      # made, and two images can be days apart. Homebrew's mpv 0.41 drew
+      # the video black in the window on the runner's software OpenGL,
+      # where 0.42 shows it, and the patched build bundles these libraries.
+      # So both jobs install what Homebrew has now.
+      - name: update homebrew
+        run: brew update --quiet
+
       - name: install mpv
         if: matrix.mpv == 'stock'
         run: brew install mpv ninja pkg-config
