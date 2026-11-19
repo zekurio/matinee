@@ -64,10 +64,12 @@
     <string name="web_server_fulfilment_httpUrl">Verwende eine HTTP- oder HTTPS-URL.</string>
     <string name="web_server_fulfilment_unknownSource">Wähle eine verfügbare Bezugsquelle.</string>
     <string name="web_server_fulfilment_keyTwice">Setze den Verbindungsschlüssel oder seine Datei, nicht beides.</string>
+    <string name="web_server_fulfilment_keyMoved">URL oder Quelle der Verbindung haben sich geändert, daher sendet Matinee den gespeicherten API-Schlüssel nicht dorthin. Gib den API-Schlüssel für den neuen Server ein.</string>
     <string name="web_server_fulfilment_connectionMissing">Verbindung nicht gefunden.</string>
     <string name="web_server_fulfilment_unreachable">Die Verbindung ist nicht erreichbar. Prüfe URL und Netzwerkzugriff.</string>
     <string name="web_server_fulfilment_keyRejected">Die Verbindung hat den API-Schlüssel abgelehnt. Prüfe den gespeicherten Schlüssel oder die Umgebungsvariable.</string>
     <string name="web_server_fulfilment_operationRejected">Die Verbindung hat den Vorgang abgelehnt. Prüfe Konfiguration und Protokolle.</string>
+    <string name="web_server_fulfilment_replyTooLarge">Die Verbindung hat eine zu große Antwort geschickt. Prüfe Konfiguration und Protokolle.</string>
     <string name="web_server_fulfilment_notRadarr">Diese URL gehört nicht zu einem Radarr-Server.</string>
     <string name="web_server_fulfilment_notSonarr">Diese URL gehört nicht zu einem Sonarr-Server.</string>
     <string name="web_server_fulfilment_titleNotFound">Die Verbindung konnte diesen Titel nicht finden. Prüfe seine externe Kennung.</string>
@@ -99,6 +101,8 @@
     <string name="web_server_auth_signOutFirst">Melde dich ab, bevor du ein neues Konto erstellst.</string>
     <string name="web_server_auth_appSignInGone">Diese Anmeldung ist abgelaufen oder wurde schon benutzt. Versuch es noch einmal.</string>
     <string name="web_server_auth_deviceCodeExpired">Dieser Code ist abgelaufen. Hol dir einen neuen.</string>
+    <string name="web_server_auth_tooManyTries">Zu viele Versuche. Warte eine Weile und versuch es dann noch einmal.</string>
+    <string name="web_server_auth_devicePollTooSoon">Warte %1$s Sekunden zwischen den Abfragen.</string>
     <string name="web_server_auth_inviteGone">Dieser Einladungslink funktioniert nicht. Vielleicht ist er abgelaufen oder wurde schon benutzt.</string>
     <string name="web_server_auth_appRequestInvalid">Diese Anmeldeanfrage ist ungültig. Starte die Anmeldung in der App neu.</string>
     <string name="web_server_oidc_noLinkedAccount">Mit dieser Anmeldung ist kein Konto verknüpft. Melde dich mit einem Passkey an und verknüpfe sie dann in den Einstellungen.</string>
@@ -157,6 +161,8 @@
     <string name="web_server_adminUsers_lastAdminDelete">Du bist der einzige Admin, der sich anmelden kann. Mach jemanden zum Admin, der sich anmelden kann, bevor du dein Konto löschst.</string>
     <string name="web_server_adminAuth_issuerRequired">Gib eine Issuer-URL ein, um Single Sign-on einzuschalten.</string>
     <string name="web_server_adminAuth_clientIdRequired">Gib eine Client-ID ein, um Single Sign-on einzuschalten.</string>
+    <string name="web_server_adminAuth_plainHttp">Verwende eine https-Issuer-URL. Einfaches http geht nur für einen Anbieter auf localhost, außer der Server setzt MATINEE_OIDC_ALLOW_HTTP=true.</string>
+    <string name="web_server_adminAuth_secretForOldClient">Das gespeicherte Client-Secret gehört zum vorherigen Issuer und zur vorherigen Client-ID. Gib das Secret des neuen Clients ein oder entferne das gespeicherte.</string>
     <string name="web_server_adminAuth_noMethod">Lass Passkeys oder Single Sign-on an. Ohne beides kann sich niemand anmelden.</string>
     <string name="web_server_adminAuth_passkeysOffLink">Verknüpfe dein Konto unter Einstellungen → Konto mit Single Sign-on, bevor du Passkeys ausschaltest.</string>
     <string name="web_server_adminAuth_passkeysOffSaveFirst">Speichere zuerst Single Sign-on und verknüpfe dein Konto unter Einstellungen → Konto damit. Schalte dann Passkeys aus.</string>
@@ -248,6 +254,7 @@
     <string name="web_server_metadata_noEntry">%1$s hat keinen Eintrag mit dieser ID.</string>
     <string name="web_server_metadata_noAnswer">%1$s hat nicht geantwortet. Versuch es in einer Minute noch einmal.</string>
     <string name="web_server_metadata_unreadable">%1$s hat eine Antwort geschickt, die Matinee nicht lesen kann. Versuch es später noch einmal.</string>
+    <string name="web_server_metadata_tooLarge">%1$s hat eine Antwort geschickt, die für Matinee zu groß ist.</string>
     <string name="web_server_metadata_keepsFailing">%1$s schlägt immer wieder fehl, die Abrufe pausieren vorerst.</string>
     <string name="web_server_metadata_unreachable">%1$s war nicht erreichbar</string>
     <string name="web_server_metadata_answeredFor">%1$s hat mit %2$s für %3$s geantwortet</string>

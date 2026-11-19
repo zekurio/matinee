@@ -151,7 +151,7 @@ private struct Playback: View {
   @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var controls = true
-  /// Locked, touches on the screen do nothing; only the corner unlocks.
+  /// Locked, a touch on the screen only shows the unlock button in the corner.
   @State private var locked = false
   @State private var menu: PlayerMenu?
   /// The menu that was open stays drawn while its panel slides away.

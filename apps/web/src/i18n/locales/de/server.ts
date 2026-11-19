@@ -93,6 +93,8 @@ export default {
   "server.fulfilment.unknownSource": "Wähle eine verfügbare Bezugsquelle.",
   "server.fulfilment.keyTwice":
     "Setze den Verbindungsschlüssel oder seine Datei, nicht beides.",
+  "server.fulfilment.keyMoved":
+    "URL oder Quelle der Verbindung haben sich geändert, daher sendet Matinee den gespeicherten API-Schlüssel nicht dorthin. Gib den API-Schlüssel für den neuen Server ein.",
   "server.fulfilment.connectionMissing": "Verbindung nicht gefunden.",
   "server.fulfilment.unreachable":
     "Die Verbindung ist nicht erreichbar. Prüfe URL und Netzwerkzugriff.",
@@ -100,6 +102,8 @@ export default {
     "Die Verbindung hat den API-Schlüssel abgelehnt. Prüfe den gespeicherten Schlüssel oder die Umgebungsvariable.",
   "server.fulfilment.operationRejected":
     "Die Verbindung hat den Vorgang abgelehnt. Prüfe Konfiguration und Protokolle.",
+  "server.fulfilment.replyTooLarge":
+    "Die Verbindung hat eine zu große Antwort geschickt. Prüfe Konfiguration und Protokolle.",
   "server.fulfilment.notRadarr":
     "Diese URL gehört nicht zu einem Radarr-Server.",
   "server.fulfilment.notSonarr":
@@ -150,6 +154,10 @@ export default {
     "Diese Anmeldung ist abgelaufen oder wurde schon benutzt. Versuch es noch einmal.",
   "server.auth.deviceCodeExpired":
     "Dieser Code ist abgelaufen. Hol dir einen neuen.",
+  "server.auth.tooManyTries":
+    "Zu viele Versuche. Warte eine Weile und versuch es dann noch einmal.",
+  "server.auth.devicePollTooSoon":
+    "Warte {seconds} Sekunden zwischen den Abfragen.",
   "server.auth.inviteGone":
     "Dieser Einladungslink funktioniert nicht. Vielleicht ist er abgelaufen oder wurde schon benutzt.",
   "server.auth.appRequestInvalid":
@@ -261,6 +269,10 @@ export default {
     "Gib eine Issuer-URL ein, um Single Sign-on einzuschalten.",
   "server.adminAuth.clientIdRequired":
     "Gib eine Client-ID ein, um Single Sign-on einzuschalten.",
+  "server.adminAuth.plainHttp":
+    "Verwende eine https-Issuer-URL. Einfaches http geht nur für einen Anbieter auf localhost, außer der Server setzt MATINEE_OIDC_ALLOW_HTTP=true.",
+  "server.adminAuth.secretForOldClient":
+    "Das gespeicherte Client-Secret gehört zum vorherigen Issuer und zur vorherigen Client-ID. Gib das Secret des neuen Clients ein oder entferne das gespeicherte.",
   "server.adminAuth.noMethod":
     "Lass Passkeys oder Single Sign-on an. Ohne beides kann sich niemand anmelden.",
   "server.adminAuth.passkeysOffLink":
@@ -424,6 +436,8 @@ export default {
     "{provider} hat nicht geantwortet. Versuch es in einer Minute noch einmal.",
   "server.metadata.unreadable":
     "{provider} hat eine Antwort geschickt, die Matinee nicht lesen kann. Versuch es später noch einmal.",
+  "server.metadata.tooLarge":
+    "{provider} hat eine Antwort geschickt, die für Matinee zu groß ist.",
   "server.metadata.keepsFailing":
     "{provider} schlägt immer wieder fehl, die Abrufe pausieren vorerst.",
   "server.metadata.unreachable": "{provider} war nicht erreichbar",

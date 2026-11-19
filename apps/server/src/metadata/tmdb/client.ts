@@ -1,3 +1,5 @@
+import { t } from "@matinee/contracts/schema"
+
 import { env } from "../../env"
 import { limiter } from "../../media/process"
 import { fetchJson } from "../http"
@@ -8,6 +10,8 @@ const API = "https://api.themoviedb.org/3"
 const IMAGES = "https://image.tmdb.org/t/p/"
 // TMDB allows about 50 requests a second; stay well below.
 const limit = limiter(6)
+// Every TMDB v3 reply is an object. Its fields are the endpoint's to check.
+const reply = t.record(t.string(), t.unknown())
 
 function apiKey(): string {
   if (!env.MATINEE_TMDB_API_KEY)
@@ -25,7 +29,13 @@ export function request<T>(
   // Read access tokens are JWTs; v3 keys are 32 hex characters.
   if (key.startsWith("eyJ")) headers.authorization = `Bearer ${key}`
   else url.searchParams.set("api_key", key)
-  return limit(() => fetchJson<T>("TMDB", url, { headers }))
+  return limit(async () => {
+    const data = await fetchJson("TMDB", url, reply, { headers })
+    // SAFETY: The reply is checked to be a JSON object. Callers name the
+    // shape TMDB documents for the endpoint they call; its fields aren't
+    // schema-checked yet.
+    return data as T
+  })
 }
 
 export function image(

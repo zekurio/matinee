@@ -16,6 +16,7 @@ import { sources as metadata } from "../metadata/sources"
 import { events } from "../realtime/events"
 import {
   bare,
+  boundKey,
   checkLandings,
   connectionById,
   environmentKey,
@@ -32,6 +33,7 @@ import { providerFailure } from "./titles"
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 type RuleRow = typeof fulfilmentRule.$inferSelect
+type ConnectionRow = typeof fulfilmentConnection.$inferSelect
 
 function connectionFailure(cause: unknown): never {
   const error = t
@@ -78,13 +80,29 @@ function defaults(source: FulfilmentSource, kinds: CatalogRef["kind"][]) {
  * Saves a connection, checks that every folder it sends to lands in a
  * library, and makes it the only default for the kinds it's the default
  * for. All in one transaction, so a refused save changes nothing.
+ *
+ * An update that keeps its key, saved or from the environment, keeps its
+ * source and destination too; moving it needs the key typed again.
  */
-async function saveConnection(input: FulfilmentConnectionInput, id?: string) {
+async function saveConnection(
+  input: FulfilmentConnectionInput,
+  saved?: ConnectionRow,
+) {
+  const id = saved?.id
   const source = getSource(input.source)
   const settings = parse(
     () => source.settings.parse(input.settings),
     "Check the connection's settings.",
   )
+  // A source without a key drops the one saved for the source before.
+  const apiKey = source.apiKey ? input.apiKey : null
+  if (saved && source.apiKey && !apiKey)
+    await boundKey(
+      { source: input.source, slug: input.slug, settings },
+      saved,
+      apiKey === undefined,
+      environmentKey,
+    )
   const options = parse(
     () => source.parseOptions(input.options),
     "Choose each of the connection's options.",
@@ -121,12 +139,12 @@ async function saveConnection(input: FulfilmentConnectionInput, id?: string) {
       const [row] = id
         ? await tx
             .update(fulfilmentConnection)
-            .set({ ...values, apiKey: input.apiKey, updatedAt: new Date() })
+            .set({ ...values, apiKey, updatedAt: new Date() })
             .where(eq(fulfilmentConnection.id, id))
             .returning()
         : await tx
             .insert(fulfilmentConnection)
-            .values({ ...values, apiKey: input.apiKey ?? null })
+            .values({ ...values, apiKey: apiKey ?? null })
             .returning()
       if (!row) throw new Error("Connection save failed")
       const routing = await loadRouting(tx)
@@ -309,10 +327,9 @@ export const adminFulfilment = {
   create: admin.admin.fulfilment.create.handler(({ input }) =>
     saveConnection(input),
   ),
-  update: admin.admin.fulfilment.update.handler(async ({ input }) => {
-    await connectionById(input.id)
-    return saveConnection(input, input.id)
-  }),
+  update: admin.admin.fulfilment.update.handler(async ({ input }) =>
+    saveConnection(input, await connectionById(input.id)),
+  ),
   remove: admin.admin.fulfilment.remove.handler(async ({ input }) => {
     await db
       .delete(fulfilmentConnection)
@@ -330,12 +347,17 @@ export const adminFulfilment = {
       () => source.settings.parse(input.settings),
       "Check the connection's settings.",
     )
-    // A key typed in the form, else the saved one if the slug didn't
-    // change, else the environment's for the slug.
+    // A key typed in the form, else the one the connection would keep,
+    // as long as it goes to the same source and destination.
     const apiKey =
       input.apiKey ??
-      (saved && saved.slug === input.slug ? saved.apiKey : null) ??
-      environmentKey(input.slug)
+      (source.apiKey
+        ? await boundKey(
+            { source: input.source, slug: input.slug, settings },
+            saved,
+            true,
+          )
+        : null)
     return source.options({
       id: saved?.id ?? "",
       slug: input.slug,

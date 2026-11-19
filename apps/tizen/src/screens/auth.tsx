@@ -241,6 +241,12 @@ function useDeviceCode(): CodeFlow {
               setExpired(true)
               return
             }
+            // Too soon, as when other TVs behind the same address poll
+            // too: nothing's wrong, so it waits and asks again.
+            if (isServerError(cause) && cause.status === 429) {
+              poll(started)
+              return
+            }
             // The network dropping: keep asking about the same code,
             // which someone may have approved meanwhile.
             setError(session.describe(cause))

@@ -8,8 +8,9 @@ import { oidcAccount, passkey, user } from "@matinee/db"
 import { and, count, countDistinct, eq, notExists } from "drizzle-orm"
 import * as client from "openid-client"
 
-import { discover, WrongIssuerError } from "../auth/oidc"
+import { discover, InsecureIssuerError, WrongIssuerError } from "../auth/oidc"
 import {
+  environmentSecretFits,
   isActive,
   issuerKey,
   type OidcState,
@@ -19,6 +20,7 @@ import {
   sameIssuer,
   saveOidc,
 } from "../auth/oidc-settings"
+import { PLAIN_HTTP_REFUSED, plainHttpRefused } from "../auth/oidc-transport"
 import { passkeySettings, savePasskeys } from "../auth/passkey-settings"
 import { atIssuer } from "../auth/users"
 import { db } from "../db"
@@ -92,7 +94,7 @@ async function describe(
     defaults: oidcDefaults(),
     clientSecret: {
       source: state.secretSource,
-      environment: Boolean(env.MATINEE_OIDC_CLIENT_SECRET),
+      environment: environmentSecretFits(state.settings),
     },
     callbackUrl: `${env.PUBLIC_URL}${OIDC_CALLBACK_PATH}`,
     active: isActive(state.settings),
@@ -133,6 +135,7 @@ function networkCode(cause: unknown): string | undefined {
  * is logged in full; the message names only what the admin can fix.
  */
 function discoveryError(issuerUrl: string, cause: unknown): string {
+  if (cause instanceof InsecureIssuerError) return PLAIN_HTTP_REFUSED
   if (cause instanceof WrongIssuerError) {
     return `The provider calls itself ${cause.issuer}. Use exactly that as the issuer URL.`
   }
@@ -218,6 +221,27 @@ export const adminAuth = {
     }
     if (settings.enabled && !settings.clientId) {
       throw badRequest("Enter a client ID to turn on single sign-on.")
+    }
+    if (
+      settings.enabled &&
+      plainHttpRefused(settings.issuerUrl, env.MATINEE_OIDC_ALLOW_HTTP)
+    ) {
+      throw badRequest(PLAIN_HTTP_REFUSED)
+    }
+    // The secret in use belongs to the client it was given for. Moving to
+    // another issuer or client ID without a word about it would send it
+    // there, or quietly leave the new client without one.
+    const clientChanged =
+      !sameIssuer(before.settings.issuerUrl, settings.issuerUrl) ||
+      before.settings.clientId !== settings.clientId
+    if (
+      clientChanged &&
+      input.oidc.clientSecret === undefined &&
+      before.secretSource === "saved"
+    ) {
+      throw badRequest(
+        "The saved client secret is for the previous issuer and client ID. Enter the new client's secret, or remove the saved one.",
+      )
     }
 
     const wasActive = isActive(before.settings)

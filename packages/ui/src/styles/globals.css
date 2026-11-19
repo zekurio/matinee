@@ -52,6 +52,7 @@
 @source "../";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant light (&:is(.light *));
 
 /*
  * Tokens follow alloy's theme model: a neutral ramp from background (0) to
@@ -160,8 +161,10 @@
   --logo-horizon: #3b5bdb;
 }
 
-/* Roles every component uses, resolved from the tokens above. */
-:root {
+/* Roles every component uses, resolved from the tokens above. A forced
+   `.dark` subtree resolves them again, from its own tokens. */
+:root,
+.dark {
   --background: var(--neutral-0);
   --foreground: var(--neutral-900);
   --card: var(--neutral-50);

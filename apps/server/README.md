@@ -118,7 +118,9 @@ still needs drivers in `hardware.graphics.extraPackages`, like
 
 The first visit goes to `/setup`. Without OIDC, it asks for the setup
 token the server logs at start, or `MATINEE_SETUP_TOKEN`, then a username
-and a passkey. On NixOS the token is in `journalctl -u matinee`.
+and a passkey. On NixOS the token is in `journalctl -u matinee`. It asks
+even when `PUBLIC_URL` is localhost, since `HOST` defaults to `::` and the
+server answers on every address.
 
 With `MATINEE_OIDC_ISSUER_URL` and `MATINEE_OIDC_CLIENT_ID` set, setup
 offers only the provider. The first sign-in becomes admin only if its role
@@ -522,6 +524,23 @@ Admins set up single sign-on in Settings → Authentication. Register
 admin through the provider, set the `MATINEE_OIDC_*` variables, since
 Settings can't be reached before setup.
 
+The issuer must be https, or http on loopback, since discovery, the token
+exchange, and refreshes carry the client secret and sign-in codes. For a
+provider on a network you trust, like another container or a LAN host,
+set `MATINEE_OIDC_ALLOW_HTTP=true`. Without it, the server won't start
+with an http issuer elsewhere, Settings won't save one, and sign-in
+refuses one saved before.
+
+A client secret belongs to one issuer and client ID, and goes only to
+them. A saved secret is bound to the ones it was saved with, and
+`MATINEE_OIDC_CLIENT_SECRET` to `MATINEE_OIDC_ISSUER_URL` and
+`MATINEE_OIDC_CLIENT_ID`. Changing either in Settings while a saved secret
+is in use takes the new client's secret, or removing the saved one for a
+public client. Moving away from the environment's issuer or client ID
+leaves its secret out, so enter one in Settings if the new client needs
+it. A secret saved by an older version, without that binding, is removed
+at startup. Enter it again before the next sign-in.
+
 A new account takes its username and display name from
 `MATINEE_OIDC_USERNAME_CLAIM` and `MATINEE_OIDC_NAME_CLAIM`,
 `preferred_username` and `name` by default, and keeps them. A `picture`
@@ -564,7 +583,8 @@ everywhere once the provider refuses its token for good.
 - Passkeys go through SimpleWebAuthn, and OIDC through openid-client with
   PKCE, state, and nonce. Accounts match a provider on issuer and subject,
   never email. The server refuses a provider whose discovery document
-  names a different issuer.
+  names a different issuer, or plain http off loopback without
+  `MATINEE_OIDC_ALLOW_HTTP`.
 - Nobody can remove their last passkey or linked account, and an admin who
   only uses SSO can't turn SSO off or change the issuer. The server won't
   demote or delete the last admin, even when the role claim says so.
@@ -585,6 +605,16 @@ everywhere once the provider refuses its token for good.
   favorites, and history.
 - A client secret saved in Settings is stored as plain text.
   `MATINEE_OIDC_CLIENT_SECRET_FILE` keeps it out of the database.
+- What anyone can call without signing in is limited per client address:
+  passkey sign-in and sign-up options to 30 a minute, single sign-on
+  starts to 20 a minute, device codes to 20 per 10 minutes, device polls
+  to 120 a minute, and setup token tries to 10 per 15 minutes. Past a
+  limit the API answers 429 with `Retry-After`. The address is the one
+  Settings → Network works out, so behind a reverse proxy, add it to the
+  trusted proxies, or all clients share one limit. IPv6 clients count by
+  their /64. The counts live in memory and reset on restart.
+- Request bodies are capped at 1 MB before anything parses them, except
+  avatar and title image uploads, which get the file's limit.
 
 ## For app developers
 
@@ -634,8 +664,9 @@ Apps without a browser, like TV apps, use the device grant, RFC 8628:
    `verificationUriComplete` has the code filled in, for a QR code.
 2. Someone signed in opens the page, enters the code, and approves.
 3. Poll `/api/v1/auth/device/token` with `deviceCode` every `interval`
-   seconds. It returns `pending` until someone approves. After
-   `expiresIn`, ten minutes, it returns 404 and the app starts over.
+   seconds. It returns `pending` until someone approves, and 429 for a
+   poll sooner than `interval` after the last. After `expiresIn`, ten
+   minutes, it returns 404 and the app starts over.
 
 Both pages warn that approving gives the device the account. That warning
 is the only defense against someone sending you their own link or code.

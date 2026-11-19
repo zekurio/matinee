@@ -3,6 +3,7 @@ import { ORPCError } from "@orpc/server"
 
 import { call, list } from "../arr/client"
 import {
+  destination,
   field,
   filled,
   link,
@@ -110,6 +111,7 @@ export const adapter = {
   rules: true,
   settings,
   fields: settingFields,
+  destination,
   defaults: { search: true, tagRequests: false },
   parseOptions: (value) => options.parse(filled(value)),
   sending(value, title) {

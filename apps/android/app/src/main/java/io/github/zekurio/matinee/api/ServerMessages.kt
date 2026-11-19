@@ -447,6 +447,13 @@ internal val serverMessages: List<ServerMessage> = listOf(
         plural = false,
     ),
     ServerMessage(
+        text = "The connection's URL or source changed, so Matinee won't send its saved API key there. Enter the API key for the new server.",
+        names = emptyList(),
+        args = emptyList(),
+        resId = R.string.web_server_fulfilment_keyMoved,
+        plural = false,
+    ),
+    ServerMessage(
         text = "Connection not found.",
         names = emptyList(),
         args = emptyList(),
@@ -472,6 +479,13 @@ internal val serverMessages: List<ServerMessage> = listOf(
         names = emptyList(),
         args = emptyList(),
         resId = R.string.web_server_fulfilment_operationRejected,
+        plural = false,
+    ),
+    ServerMessage(
+        text = "The connection sent a reply too large to read. Check its configuration and logs.",
+        names = emptyList(),
+        args = emptyList(),
+        resId = R.string.web_server_fulfilment_replyTooLarge,
         plural = false,
     ),
     ServerMessage(
@@ -689,6 +703,20 @@ internal val serverMessages: List<ServerMessage> = listOf(
         names = emptyList(),
         args = emptyList(),
         resId = R.string.web_server_auth_deviceCodeExpired,
+        plural = false,
+    ),
+    ServerMessage(
+        text = "Too many tries. Wait a while and try again.",
+        names = emptyList(),
+        args = emptyList(),
+        resId = R.string.web_server_auth_tooManyTries,
+        plural = false,
+    ),
+    ServerMessage(
+        text = "Wait {seconds} seconds between polls.",
+        names = listOf("seconds"),
+        args = listOf("seconds"),
+        resId = R.string.web_server_auth_devicePollTooSoon,
         plural = false,
     ),
     ServerMessage(
@@ -1095,6 +1123,20 @@ internal val serverMessages: List<ServerMessage> = listOf(
         names = emptyList(),
         args = emptyList(),
         resId = R.string.web_server_adminAuth_clientIdRequired,
+        plural = false,
+    ),
+    ServerMessage(
+        text = "Use an https issuer URL. Plain http only works for a provider on localhost, unless the server sets MATINEE_OIDC_ALLOW_HTTP=true.",
+        names = emptyList(),
+        args = emptyList(),
+        resId = R.string.web_server_adminAuth_plainHttp,
+        plural = false,
+    ),
+    ServerMessage(
+        text = "The saved client secret is for the previous issuer and client ID. Enter the new client's secret, or remove the saved one.",
+        names = emptyList(),
+        args = emptyList(),
+        resId = R.string.web_server_adminAuth_secretForOldClient,
         plural = false,
     ),
     ServerMessage(
@@ -1732,6 +1774,13 @@ internal val serverMessages: List<ServerMessage> = listOf(
         names = listOf("provider"),
         args = listOf("provider"),
         resId = R.string.web_server_metadata_unreadable,
+        plural = false,
+    ),
+    ServerMessage(
+        text = "{provider} sent a reply too large for Matinee to read.",
+        names = listOf("provider"),
+        args = listOf("provider"),
+        resId = R.string.web_server_metadata_tooLarge,
         plural = false,
     ),
     ServerMessage(

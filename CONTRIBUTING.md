@@ -42,9 +42,9 @@ pnpm dev           # server on :8420, web app on http://localhost:5173
 
 The dev shell has Node 24, pnpm 11, jellyfin-ffmpeg, `just`, and a Postgres
 on a Unix socket in `data/postgres`. It creates `.env` from `.env.example`
-the first time. Migrations run when the server starts. On localhost,
-`/setup` doesn't ask for a token. `matinee-postgres stop` stops the
-database.
+the first time. Migrations run when the server starts. `/setup` asks for
+the setup token the server logs, even on localhost. `matinee-postgres stop`
+stops the database.
 
 Without Nix, install Node 24 and pnpm 11, copy `.env.example` to `.env`,
 and point `DATABASE_URL` at your own Postgres.

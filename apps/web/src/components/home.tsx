@@ -77,7 +77,8 @@ export function Home() {
       >
         {loading ? (
           <Skeleton
-            className={cn(heroFrame, "rounded-none", fold && heroFill)}
+            // Dark, like the banner it stands in for.
+            className={cn(heroFrame, "dark rounded-none", fold && heroFill)}
           />
         ) : slides.length > 0 ? (
           <Hero slides={slides} className={fold ? heroFill : undefined} />

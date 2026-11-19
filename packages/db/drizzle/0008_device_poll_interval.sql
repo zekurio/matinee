@@ -1,0 +1,2 @@
+ALTER TABLE "device_authorization" ADD COLUMN "last_polled_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "device_authorization_expires_idx" ON "device_authorization" USING btree ("expires_at");

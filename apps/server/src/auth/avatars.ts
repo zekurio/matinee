@@ -18,6 +18,7 @@ import { defineQueue } from "../jobs/queue"
 import { log } from "../log"
 import { fetchImage, sniffImage } from "../media/artwork"
 import { processFailureKind, run } from "../media/process"
+import { urlForLog } from "../network/outbound"
 import { readSession } from "./session"
 
 const SIZE = 256
@@ -36,16 +37,6 @@ const CONTENT_TYPES = {
 
 /** A failure the user can act on, such as a file that isn't an image. */
 export class AvatarError extends ShownError {}
-
-/**
- * A picture URL for the log and the jobs panel: its origin and path. The
- * query often holds a signed token, so it stays out.
- */
-function pictureForLog(url: string): string {
-  if (!URL.canParse(url)) return "an invalid URL"
-  const parsed = new URL(url)
-  return `${parsed.origin}${parsed.pathname}`
-}
 
 /**
  * The `picture` claim as a URL the server may fetch. The ID token is signed
@@ -220,8 +211,7 @@ const avatars = defineQueue<AvatarJob, string | null>({
     "Crop and scale uploads and the pictures sign-in providers send.",
   concurrency: 2,
   key: (job) => job.key,
-  label: (job) =>
-    job.kind === "upload" ? "an upload" : pictureForLog(job.url),
+  label: (job) => (job.kind === "upload" ? "an upload" : urlForLog(job.url)),
   run: async (job) => {
     switch (job.kind) {
       case "upload":
@@ -273,10 +263,7 @@ export async function recordProviderPicture(account: {
     if (!picture) return
     const sync = syncProviderAvatar(account.userId, picture).catch(
       (cause: unknown) => {
-        log.warn(
-          `Couldn't load the OIDC picture ${pictureForLog(picture)}`,
-          cause,
-        )
+        log.warn(`Couldn't load the OIDC picture ${urlForLog(picture)}`, cause)
       },
     )
     await Promise.race([sync, sleep(SIGN_IN_WAIT_MS)])
@@ -322,7 +309,7 @@ export async function followProviderAvatar(
   if (current.avatarId && current.avatarUrl === url) return current
   const id = await providerAvatar(url).catch((cause: unknown) => {
     if (cause instanceof AvatarError) throw cause
-    log.warn(`Couldn't load the OIDC picture ${pictureForLog(url)}`, cause)
+    log.warn(`Couldn't load the OIDC picture ${urlForLog(url)}`, cause)
     throw new AvatarError(
       "Couldn't load the picture from your provider. Try again later.",
     )

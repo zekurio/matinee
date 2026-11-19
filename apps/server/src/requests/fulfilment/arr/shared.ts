@@ -36,6 +36,20 @@ export const settings = t.object({
 })
 
 /**
+ * The address every call goes under, as `call` builds it, normalized by
+ * the URL parser: scheme and host lowercased, default ports dropped.
+ */
+export function destination(value: FulfilmentValues): string | null {
+  const own = settings.safeParse(value)
+  if (!own.success) return null
+  try {
+    return new URL(`${own.data.baseUrl.replace(/\/$/, "")}/api/v3/`).href
+  } catch {
+    return null
+  }
+}
+
+/**
  * Values without the ones a form leaves empty, so an unchosen field is
  * missing rather than an empty string, a null, or an empty list.
  */

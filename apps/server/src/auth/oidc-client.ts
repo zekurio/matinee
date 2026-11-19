@@ -1,7 +1,9 @@
 import * as client from "openid-client"
 
+import { env } from "../env"
 import { OidcError } from "./oidc-accounts"
 import { activeOidc, type OidcState, sameIssuer } from "./oidc-settings"
+import { PLAIN_HTTP_REFUSED, plainHttpRefused } from "./oidc-transport"
 
 let discovered: {
   version: number
@@ -20,10 +22,25 @@ export class WrongIssuerError extends OidcError {
   }
 }
 
+/**
+ * The issuer is plain http off loopback, which the operator didn't allow.
+ * Like WrongIssuerError, the message is for the admin and the log.
+ */
+export class InsecureIssuerError extends OidcError {
+  constructor() {
+    super(PLAIN_HTTP_REFUSED)
+  }
+}
+
 /** Also used to check settings before they're saved. */
 export async function discover(
   state: OidcState,
 ): Promise<client.Configuration> {
+  // Saved settings from before this check, or a variable that changed, can
+  // still name one. Refuse before anything, the secret above all, is sent.
+  if (plainHttpRefused(state.settings.issuerUrl, env.MATINEE_OIDC_ALLOW_HTTP)) {
+    throw new InsecureIssuerError()
+  }
   const issuer = new URL(state.settings.issuerUrl)
   const config = await client.discovery(
     issuer,

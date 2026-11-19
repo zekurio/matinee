@@ -55,16 +55,28 @@ export const AuthConfig = t.object({
 export type AuthConfig = t.infer<typeof AuthConfig>
 
 // SimpleWebAuthn verifies the ceremony payloads. The schemas only check the
-// envelope so malformed requests fail before reaching it.
+// envelope so malformed requests fail before reaching it, and bound the
+// ceremony's strings generously for what authenticators send, so one can't
+// make it parse megabytes. The binary ceremony fields are base64url.
 const ExtensionOutputs = t.looseObject({})
 
+/** Characters an extension's outputs may take as JSON. */
+const MAX_EXTENSION_OUTPUTS = 4096
+
+/** A credential id: at most 1023 bytes as WebAuthn says, in base64url. */
+const CredentialId = t.string().min(1).max(1400)
+/** Client data and authenticator data, a few hundred bytes in practice. */
+const CeremonyData = t.string().max(16 * 1024)
+
 const credentialEnvelope = {
-  id: t.string().min(1),
-  rawId: t.string().min(1),
+  id: CredentialId,
+  rawId: CredentialId,
   type: t.literal("public-key"),
   // Outputs vary by extension; SimpleWebAuthn reads the ones it knows.
   clientExtensionResults: t.custom<AuthenticationExtensionsClientOutputs>(
-    (value) => ExtensionOutputs.safeParse(value).success,
+    (value) =>
+      ExtensionOutputs.safeParse(value).success &&
+      JSON.stringify(value).length <= MAX_EXTENSION_OUTPUTS,
   ),
   authenticatorAttachment: t.enum(["platform", "cross-platform"]).optional(),
 }
@@ -72,24 +84,30 @@ const credentialEnvelope = {
 export const RegistrationResponse = t.object({
   ...credentialEnvelope,
   response: t.object({
-    clientDataJSON: t.string(),
-    attestationObject: t.string(),
-    authenticatorData: t.string().optional(),
+    clientDataJSON: CeremonyData,
+    // Attestation can carry a chain of certificates.
+    attestationObject: t.string().max(64 * 1024),
+    authenticatorData: CeremonyData.optional(),
     // Browsers report transports as free strings. The server keeps the
     // ones it knows.
     transports: t.array(t.string().max(32)).max(16).optional(),
     publicKeyAlgorithm: t.number().int().optional(),
-    publicKey: t.string().optional(),
+    publicKey: t
+      .string()
+      .max(8 * 1024)
+      .optional(),
   }),
 }) satisfies t.Type<RegistrationResponseJSON>
 
 export const AuthenticationResponse = t.object({
   ...credentialEnvelope,
   response: t.object({
-    clientDataJSON: t.string(),
-    authenticatorData: t.string(),
-    signature: t.string(),
-    userHandle: t.string().optional(),
+    clientDataJSON: CeremonyData,
+    authenticatorData: CeremonyData,
+    // An RSA-4096 signature is 512 bytes.
+    signature: t.string().max(2048),
+    // The user handle is at most 64 bytes.
+    userHandle: t.string().max(512).optional(),
   }),
 }) satisfies t.Type<AuthenticationResponseJSON>
 

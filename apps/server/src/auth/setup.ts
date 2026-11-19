@@ -74,8 +74,10 @@ export async function markSetupComplete(): Promise<void> {
 
 /**
  * Pick the token that guards creating the admin with a passkey. Whoever
- * reaches a fresh server first would otherwise claim the admin account. A
- * loopback PUBLIC_URL skips the token unless one is configured.
+ * reaches a fresh server first would otherwise claim the admin account.
+ * There's always a token, even when PUBLIC_URL is loopback: the server
+ * listens on HOST, `::` by default, so a localhost PUBLIC_URL says nothing
+ * about who can reach it.
  */
 export async function initSetupToken(): Promise<void> {
   if (!(await setupRequired())) return
@@ -98,10 +100,8 @@ export async function initSetupToken(): Promise<void> {
     )
     return
   }
-  setupToken =
-    env.MATINEE_SETUP_TOKEN ??
-    (env.isLoopback ? null : randomBytes(24).toString("hex"))
-  if (setupToken && !env.MATINEE_SETUP_TOKEN) {
+  setupToken = env.MATINEE_SETUP_TOKEN ?? randomBytes(24).toString("hex")
+  if (!env.MATINEE_SETUP_TOKEN) {
     log.info(`No account exists yet. Setup token: ${setupToken}`)
   }
   log.info(`Open ${env.PUBLIC_URL}/setup to create the admin account.`)
