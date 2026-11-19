@@ -19,7 +19,9 @@ import Testing
   ) -> SubtitleTrack {
     .init(
       id: id, label: id, language: language, title: nil, forced: forced, sdh: sdh, default: flagged,
-      source: source, format: format, delivery: delivery)
+      source: source,
+      index: source == SubtitleSource.embedded ? Int(id.dropFirst("stream-".count)) : nil,
+      format: format, delivery: delivery)
   }
   private func pick(
     _ tracks: [SubtitleTrack], mode: String = "auto", language: String? = "en",
