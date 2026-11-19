@@ -1,10 +1,12 @@
 # Shortcuts for the repository. `just` lists them. The Android app's are
 # under `just android`, from apps/android/justfile, the iOS app's under
-# `just ios`, from apps/ios/justfile, and the Samsung TV app's under
-# `just tizen`, from apps/tizen/justfile.
+# `just ios`, from apps/ios/justfile, the Flutter app's under
+# `just flutter`, from apps/flutter/justfile, and the Samsung TV app's
+# under `just tizen`, from apps/tizen/justfile.
 
 mod android "apps/android"
 mod ios "apps/ios"
+mod flutter "apps/flutter"
 mod tizen "apps/tizen"
 
 [private]

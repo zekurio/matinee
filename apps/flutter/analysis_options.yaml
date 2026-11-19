@@ -1,0 +1,39 @@
+# Strict analysis for the whole app. Generated files under lib/api and
+# lib/l10n pass it too; fix the generator instead of excluding them.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # A missing return or an unawaited future is a bug, not a hint.
+    missing_return: error
+    unawaited_futures: error
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_dynamic_calls
+    - avoid_print
+    - avoid_slow_async_io
+    - cancel_subscriptions
+    - close_sinks
+    - directives_ordering
+    - discarded_futures
+    - prefer_final_fields
+    - prefer_final_locals
+    - prefer_single_quotes
+    - require_trailing_commas
+    - sort_constructors_first
+    - test_types_in_equals
+    - throw_in_finally
+    - unawaited_futures
+    - unnecessary_lambdas
+    - unnecessary_statements
+    - use_super_parameters
