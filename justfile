@@ -1,9 +1,11 @@
 # Shortcuts for the repository. `just` lists them. The Android app's are
-# under `just android`, from apps/android/justfile, and the iOS app's under
-# `just ios`, from apps/ios/justfile.
+# under `just android`, from apps/android/justfile, the iOS app's under
+# `just ios`, from apps/ios/justfile, and the desktop app's under
+# `just desktop`, from apps/desktop/justfile.
 
 mod android "apps/android"
 mod ios "apps/ios"
+mod desktop "apps/desktop"
 
 [private]
 default:

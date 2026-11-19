@@ -292,7 +292,8 @@ import Testing
   private func subtitle() -> SubtitleTrack {
     SubtitleTrack(
       id: "stream-3", label: "English Signs and Songs", language: "en", title: "Signs and Songs",
-      forced: false, sdh: false, default: false, source: "embedded", format: "PGS", delivery: "pgs")
+      forced: false, sdh: false, default: false, source: "embedded", index: 3, format: "PGS",
+      delivery: "pgs")
   }
   @Test func recordsWhatTheServerAnswered() {
     let plan = PlaybackStart(
@@ -319,7 +320,7 @@ import Testing
     ] {
       let track = SubtitleTrack(
         id: "stream-2", label: "English", language: "en", title: nil, forced: false, sdh: false, default: false,
-        source: "embedded", format: format, delivery: "webvtt")
+        source: "embedded", index: 2, format: format, delivery: "webvtt")
       #expect(SelectionDiagnostics.of(audio: nil, subtitle: track, rendering: .screen).subtitleFormat?.text == safe)
     }
   }

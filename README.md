@@ -14,7 +14,8 @@
 Matinee reads the folders your videos are already in, groups them into
 movies and shows, and pulls metadata from TMDB or TheTVDB. New files from
 Sonarr, Radarr, or Bazarr show up on their own. People sign in with a
-passkey or OIDC and watch in the browser or the Android app. Files play
+passkey or OIDC and watch in the browser, the Android app, or the desktop
+app. Files play
 as they are when the device can decode them. Otherwise the server copies
 the video and converts the audio, or transcodes on the GPU with
 jellyfin-ffmpeg.
@@ -27,6 +28,7 @@ It's an early MVP. Expect breaking changes until the first release.
 | [Web](apps/web)         | The React client, served by the server                    |
 | [Android](apps/android) | Phones, tablets, and Android TV, with offline downloads   |
 | [iOS](apps/ios)         | iPhone, iPad, and Apple TV, with offline downloads        |
+| [Desktop](apps/desktop) | Linux, macOS, and Windows, playing with mpv               |
 | [Brand](brand)          | Logo, wordmark, app icons, and the scripts that draw them |
 
 ## Run it on NixOS
@@ -135,6 +137,8 @@ pull requests.
 | `nix build`                      | Builds the server package                 |
 | `nix flake check`                | Builds it and runs the NixOS module tests |
 | `nix develop .#android`          | Shell with a JDK and the Android SDK      |
+| `nix develop .#desktop`          | Shell with CMake, Qt, and libmpv          |
+| `nix build .#matinee-desktop`    | Builds the desktop app                    |
 | `just`                           | Lists the shortcuts                       |
 
 When `pnpm-lock.yaml` changes, `nix build` fails and prints the new hash.
@@ -142,6 +146,7 @@ Put it in `pnpmDepsHash` in `nix/package.nix`.
 
 ## License
 
-MIT, except `apps/android`, which is GPL-3.0 because it ships GPL builds of
-FFmpeg and mpv. See [LICENSE](LICENSE) and
-[apps/android/LICENSE](apps/android/LICENSE).
+MIT, except `apps/android` and `apps/desktop`, which are GPL-3.0: the
+Android app ships GPL builds of FFmpeg and mpv, and the desktop app links
+mpv. See [LICENSE](LICENSE), [apps/android/LICENSE](apps/android/LICENSE),
+and [apps/desktop/LICENSE](apps/desktop/LICENSE).

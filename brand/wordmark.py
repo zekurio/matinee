@@ -21,6 +21,7 @@ from fontTools.varLib.instancer import instantiateVariableFont
 
 BRAND = Path(__file__).resolve().parent
 WEB = BRAND.parent / "apps" / "web" / "src" / "components"
+DESKTOP = BRAND.parent / "apps" / "desktop" / "src" / "components"
 ANDROID = BRAND.parent / "apps" / "android" / "app" / "src" / "main" / "res" / "drawable"
 
 # Unbounded (SIL OFL 1.1), pinned to a commit of google/fonts. A logo made
@@ -271,11 +272,10 @@ def main() -> None:
         svg((0, 0, 1280, 640), social, "GitHub's social preview, the logo on the dusk sky."),
     )
 
-    # The web app draws the logo inline, so the word follows the text color
-    # and the mark the theme's logo colors.
+    # The web app and the desktop app's own pages draw the logo inline, so
+    # the word follows the text color and the mark the theme's logo colors.
     transform, word_x, total = placement(width, height)
-    write(
-        WEB / "logo.gen.ts",
+    logo_ts = (
         "// Written by brand/wordmark.py. Don't edit; run brand/render.sh.\n\n"
         "/**\n"
         " * The logo's layout: the mark on its 24 unit grid moved by `mark`, and\n"
@@ -288,8 +288,10 @@ def main() -> None:
         f'  mark: "{transform}",\n'
         f"  wordX: {number(word_x)},\n"
         f'  path: "{word}",\n'
-        "}\n",
+        "}\n"
     )
+    for components in (WEB, DESKTOP):
+        write(components / "logo.gen.ts", logo_ts)
 
     # The Android app picks one by its theme, as it does logo_mark.xml.
     write(ANDROID / "logo.xml", android_logo(word, width, height, depth, LIGHT))

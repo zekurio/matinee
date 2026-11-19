@@ -50,11 +50,24 @@ iPad, and Apple TV apps.
   checks them. Build on a Mac with Xcode through `just ios build` and
   `just ios tv-build`; `just ios test` runs the package tests and resource
   checks. See its README.
+- `apps/desktop`: the desktop app, which shows the server's web app in a
+  window and plays with mpv. `native/` is the shell (C++, Qt 6 with Qt
+  WebEngine, libmpv), a CMake project outside the pnpm workspace. `src/`
+  is the app's own pages for picking a server and signing in, a Vite React
+  app that CMake builds into the program. Build it with
+  `nix develop .#desktop` or `just desktop build`; see its README.
+- `packages/desktop-bridge`: what the desktop app's shell and the pages it
+  shows say to each other. `src/protocol.ts` is the protocol, with a `t`
+  schema for every method and event, and `connectDesktop()` the typed
+  client. The shell's half is written by hand in
+  `apps/desktop/native/src/app/application.cpp`, so a change has both.
 - `tools/release`: the scripts behind `just tag` and
   `.github/workflows/release.yml`, in `.mjs` on Node's own modules, since
   the workflow runs them before any install. Workflow steps and `just`
   recipes call a script there rather than hold shell of their own.
-- `nix/`: the flake's package (`package.nix`) and NixOS module
+- `nix/`: the flake's packages (`package.nix` for the server,
+  `desktop.nix` for the desktop app, `mpv.nix` for its libmpv, patched
+  to show video under another Wayland surface) and NixOS module
   (`module.nix`), with tests in `nix/tests`. A server variable the module
   should set for people gets a typed option there; any other goes through
   the module's `settings`, and a secret through `secrets`.
@@ -96,8 +109,8 @@ iPad, and Apple TV apps.
 - Keep minor and patch under 100. The Android version code is
   `major * 10000 + minor * 100 + patch`.
 - The tag runs `.github/workflows/release.yml`: it checks the tag against
-  `package.json`, runs `nix flake check`, pushes to Cachix, builds and
-  signs the APKs, and drafts a GitHub release with one APK per ABI, a
+  `package.json`, runs `nix flake check`, pushes the server and the
+  desktop app to Cachix, builds and signs the APKs, and drafts a GitHub release with one APK per ABI, a
   universal one, and `checksums.txt`. The maintainer tries the APKs on a
   phone and a TV before publishing the draft.
 - The workflow needs `CACHIX_AUTH_TOKEN` and a `release` environment with
@@ -122,6 +135,15 @@ iPad, and Apple TV apps.
   each with a line height of even whole pixels, which keeps text centered
   on the icons beside it. Lint rejects an arbitrary `text-[13px]`; add a
   `--text-*` size to `globals.css` when none fits.
+- In the desktop app mpv plays instead of a `<video>`. `lib/desktop.ts` is
+  the one place that asks for the shell, and `desktop` is null in a
+  browser. The player's hooks take a `PlayerMedia` (`player-media.ts`),
+  the part of a media element they use, which a `<video>` and `MpvMedia`
+  both are. Keep new player code on that interface, and branch on the
+  engine only where a browser and mpv differ in kind, as with hls.js and
+  subtitles. The server's web app must keep working in a shell older than
+  it is: add to the bridge rather than change it, or raise
+  `BRIDGE_PROTOCOL`.
 - Text the user reads goes through `tr("area.key", params)` from `@/i18n`,
   with the message added to its area in `src/i18n/locales/en/` first and
   translated in the other languages' folders (see `apps/web/README.md`,
@@ -186,6 +208,11 @@ iPad, and Apple TV apps.
   exception is a download playing offline on Android or iOS, which picks its
   tracks in `DownloadTracks.kt` or `DownloadTracks.swift` because there's no
   server to ask.
+- The desktop app's pages never see a session's token. The shell keeps
+  it, adds it to the requests the web app and mpv make to the server, and
+  makes the sign-in requests itself. mpv only opens addresses on the
+  server the app is connected to. A bridge method says which kind of page
+  may call it, and the shell checks.
 - Validate inputs in the contract schemas. Procedures throw `ORPCError` with a
   message the user can act on; anything 500 is logged and hidden.
 - The server fetches only image URLs a metadata provider returned, stored in

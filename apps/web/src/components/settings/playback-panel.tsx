@@ -11,29 +11,27 @@ import {
 } from "@matinee/contracts"
 import { toast } from "@matinee/ui/components/sonner"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import type { ReactNode } from "react"
 import { useShallow } from "zustand/shallow"
 
 import { formatBitrate } from "@/components/player-format"
 import { tr } from "@/i18n"
-import { browserAudioCodecs, OPTIONAL_PASSTHROUGH } from "@/lib/audio-support"
+import { OPTIONAL_PASSTHROUGH } from "@/lib/audio-support"
 import { deviceLanguage, languageName } from "@/lib/languages"
+import { encodeCodecs, playerAudioCodecs } from "@/lib/playback-device"
 import {
   updatePlaybackPreferences,
   usePlaybackPreferences,
 } from "@/lib/playback-sync"
 import { client, errorMessage, orpc } from "@/lib/rpc"
-import { browserVideoCodecs } from "@/lib/video-support"
 import {
   type AudioCodecChoice,
   usePlayerPreferencesStore,
   type VideoCodecChoice,
 } from "@/stores/player-preferences"
 
-import { SelectRow, SwitchRow } from "./setting-controls"
+import { FixedRow, SelectRow, SwitchRow } from "./setting-controls"
 import {
   SettingNote,
-  SettingRow,
   SettingRows,
   SettingsSections,
   SettingsSubsection,
@@ -243,30 +241,6 @@ function qualityLabel(id: PlaybackQuality): string {
     : tr("playback.quality.original")
 }
 
-/** A row whose setting has a single possible value here, shown as text. */
-function FixedRow({
-  title,
-  footer,
-  value,
-}: {
-  title: string
-  footer?: ReactNode
-  value: string
-}) {
-  return (
-    <SettingRow title={title} layout="split" footer={footer}>
-      {(ids) => (
-        <span
-          id={ids.controlId}
-          className="text-muted-foreground text-sm @lg:ml-auto"
-        >
-          {value}
-        </span>
-      )}
-    </SettingRow>
-  )
-}
-
 function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
   const device = usePlayerPreferencesStore(
     useShallow((state) => ({
@@ -278,11 +252,11 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
     })),
   )
   // What both ends have, best first. Until the server answers, what this
-  // browser plays.
-  const videoCodecs = browserVideoCodecs().filter(
+  // device plays.
+  const videoCodecs = encodeCodecs().filter(
     (codec) => !options || options.videoCodecs.includes(codec),
   )
-  const audioCodecs = browserAudioCodecs().flatMap((codec) =>
+  const audioCodecs = playerAudioCodecs().flatMap((codec) =>
     (codec === "opus" || codec === "aac") &&
     (!options || options.audioCodecs.includes(codec))
       ? [codec]
@@ -380,7 +354,7 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
   )
 }
 
-/** A switch per format this browser plays that the server could convert. */
+/** A switch per format this device plays that the server could convert. */
 function PassthroughSection() {
   const { convertAudio, setDevicePlayback } = usePlayerPreferencesStore(
     useShallow((state) => ({
@@ -388,7 +362,7 @@ function PassthroughSection() {
       setDevicePlayback: state.setDevicePlayback,
     })),
   )
-  const codecs = browserAudioCodecs().filter((codec) =>
+  const codecs = playerAudioCodecs().filter((codec) =>
     OPTIONAL_PASSTHROUGH.includes(codec),
   )
   if (codecs.length === 0) return null

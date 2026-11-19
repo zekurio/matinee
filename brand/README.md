@@ -11,30 +11,31 @@ height, with a gap of 30% of its width.
 
 ## Files
 
-| File                     | What it is                                                  |
-| ------------------------ | ----------------------------------------------------------- |
-| `mark.svg`               | The mark. Follows the viewer's light or dark scheme         |
-| `wordmark.svg`           | The wordmark, dark on light and light on dark               |
-| `logo.svg`               | Mark and wordmark. Follows the color scheme                 |
-| `logo-light.svg`         | Fixed colors for light backgrounds                          |
-| `logo-dark.svg`          | Fixed colors for dark backgrounds                           |
-| `social-preview.png`     | GitHub social preview, 1280×640. Upload it in Settings      |
-| `app-icon.svg`           | 1024px full-bleed app icon. Platforms round the corners     |
-| `app-icon-dark.svg`      | iOS dark appearance, mark on transparency                   |
-| `app-icon-tinted.svg`    | iOS tinted appearance, gray mark on transparency            |
-| `ios/AppIcon.appiconset` | Xcode asset catalog, one 1024 image per appearance          |
-| `android/res`            | Adaptive and themed icon, used directly by the Gradle build |
-| `android/play-store.png` | 512px Play Console icon                                     |
-| `tvos/icon-*.svg`        | Apple TV icon: back, middle, and front layers, 400×240      |
-| `tvos/top-shelf*.svg`    | Apple TV Top Shelf images, 1920×720 and wide 2320×720       |
-| `wordmark.py`            | Draws the wordmark and writes the logo files                |
-| `tvos.py`                | Draws the Apple TV artwork in `tvos/`                       |
-| `render.sh`              | Runs both scripts, then renders every PNG and the web icons |
+| File                     | What it is                                                   |
+| ------------------------ | ------------------------------------------------------------ |
+| `mark.svg`               | The mark. Follows the viewer's light or dark scheme          |
+| `wordmark.svg`           | The wordmark, dark on light and light on dark                |
+| `logo.svg`               | Mark and wordmark. Follows the color scheme                  |
+| `logo-light.svg`         | Fixed colors for light backgrounds                           |
+| `logo-dark.svg`          | Fixed colors for dark backgrounds                            |
+| `social-preview.png`     | GitHub social preview, 1280×640. Upload it in Settings       |
+| `app-icon.svg`           | 1024px full-bleed app icon. Platforms round the corners      |
+| `app-icon-desktop.svg`   | The same with rounded corners, for Linux, macOS, and Windows |
+| `app-icon-dark.svg`      | iOS dark appearance, mark on transparency                    |
+| `app-icon-tinted.svg`    | iOS tinted appearance, gray mark on transparency             |
+| `ios/AppIcon.appiconset` | Xcode asset catalog, one 1024 image per appearance           |
+| `android/res`            | Adaptive and themed icon, used directly by the Gradle build  |
+| `android/play-store.png` | 512px Play Console icon                                      |
+| `tvos/icon-*.svg`        | Apple TV icon: back, middle, and front layers, 400×240       |
+| `tvos/top-shelf*.svg`    | Apple TV Top Shelf images, 1920×720 and wide 2320×720        |
+| `wordmark.py`            | Draws the wordmark and writes the logo files                 |
+| `tvos.py`                | Draws the Apple TV artwork in `tvos/`                        |
+| `render.sh`              | Runs both scripts, then renders every PNG and the web icons  |
 
-`wordmark.py` also writes `apps/web/src/components/logo.gen.ts` and the
-Android drawables `logo.xml` and `logo_dark.xml`. The web app serves
-copies as `favicon.svg` and `apple-touch-icon.png`, and `brand.tsx` draws
-the mark inline.
+`wordmark.py` also writes `logo.gen.ts` in `apps/web/src/components` and
+`apps/desktop/src/components`, and the Android drawables `logo.xml` and
+`logo_dark.xml`. The web app serves copies as `favicon.svg` and
+`apple-touch-icon.png`, and `brand.tsx` draws the mark inline.
 
 ## Colors
 
@@ -54,6 +55,9 @@ bounding box is 2.22,3 to 21.78,20.7, and every placement centers that box.
 - iOS uses 30 px per unit on the 1024 canvas, so the mark is 587 px wide.
 - Android uses 2.2 dp per unit on the 108 dp canvas. The farthest point is
   24 dp from center, inside the 33 dp safe zone.
+- The desktop icon is an 824 px square with a 184 px corner radius on the
+  1024 canvas, the size and margin of a macOS icon, with the mark at 24 px
+  per unit.
 
 ## Changing it
 

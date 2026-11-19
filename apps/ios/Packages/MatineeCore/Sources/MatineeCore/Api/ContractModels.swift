@@ -2067,9 +2067,10 @@ public struct SubtitleTrack: Codable, Sendable, Hashable {
     public var sdh: Bool
     public var `default`: Bool
     public var source: String
+    public var index: Int?
     public var format: String
     public var delivery: String?
-    public init(id: String, label: String, language: String?, title: String?, forced: Bool, sdh: Bool, `default`: Bool, source: String, format: String, delivery: String?) {
+    public init(id: String, label: String, language: String?, title: String?, forced: Bool, sdh: Bool, `default`: Bool, source: String, index: Int?, format: String, delivery: String?) {
         self.id = id
         self.label = label
         self.language = language
@@ -2078,6 +2079,7 @@ public struct SubtitleTrack: Codable, Sendable, Hashable {
         self.sdh = sdh
         self.`default` = `default`
         self.source = source
+        self.index = index
         self.format = format
         self.delivery = delivery
     }
@@ -2091,6 +2093,7 @@ public struct SubtitleTrack: Codable, Sendable, Hashable {
         try c.encode(self.sdh, forKey: .sdh)
         try c.encode(self.`default`, forKey: .`default`)
         try c.encode(self.source, forKey: .source)
+        try c.encode(self.index, forKey: .index)
         try c.encode(self.format, forKey: .format)
         try c.encode(self.delivery, forKey: .delivery)
     }

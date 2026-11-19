@@ -10,11 +10,19 @@ import { List, ListItemButton } from "@matinee/ui/components/list"
 import { ScrollArea } from "@matinee/ui/components/scroll-area"
 import { useIsMobile } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
-import { ArrowLeftIcon, LogOutIcon, SearchIcon, XIcon } from "lucide-react"
+import {
+  ArrowLeftIcon,
+  LogOutIcon,
+  PowerIcon,
+  SearchIcon,
+  ServerIcon,
+  XIcon,
+} from "lucide-react"
 import { type ReactNode, useMemo, useRef, useState } from "react"
 
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
+import { desktop, quitApp, showServers } from "@/lib/desktop"
 import type { SettingsTarget } from "@/lib/settings"
 import { useSignOut } from "@/lib/sign-out"
 import { useSettingsDialogStore } from "@/stores/settings-dialog"
@@ -147,7 +155,8 @@ function MobileHeader({
 
 /**
  * The phone menu: search, the signed-in account, then every section, and
- * signing out at its end, as phones have no account menu.
+ * signing out at its end, as phones have no account menu. The desktop
+ * app's account menu items follow it, for a narrow window.
  */
 function SettingsOverview({
   user,
@@ -238,6 +247,22 @@ function SettingsOverview({
               <LogOutIcon className="size-5 shrink-0" />
               <span className="min-w-0 flex-1 truncate font-medium">
                 {tr("shell.signOut")}
+              </span>
+            </ListItemButton>
+          </List>
+        )}
+        {!query.trim() && desktop && (
+          <List>
+            <ListItemButton onClick={showServers} trailing={false}>
+              <ServerIcon className="size-5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate font-medium">
+                {tr("desktop.switchServer")}
+              </span>
+            </ListItemButton>
+            <ListItemButton onClick={quitApp} trailing={false}>
+              <PowerIcon className="size-5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate font-medium">
+                {tr("desktop.quit")}
               </span>
             </ListItemButton>
           </List>

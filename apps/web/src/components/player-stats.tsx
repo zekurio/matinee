@@ -13,6 +13,7 @@ import { XIcon } from "lucide-react"
 import { type RefObject, useEffect, useState } from "react"
 
 import { perLocale, tr } from "@/i18n"
+import { desktop } from "@/lib/desktop"
 import { formatBytes } from "@/lib/format"
 import { trackLabel } from "@/lib/languages"
 import { liveQuery, orpc } from "@/lib/rpc"
@@ -54,6 +55,18 @@ type Sample = {
 }
 
 const SAMPLE_MS = 1000
+
+/**
+ * What the thing that plays says about how it plays, read once a second:
+ * the seconds it has loaded ahead, and rows for the playback, video, and
+ * audio groups.
+ */
+export type LiveStats = {
+  ahead: number | null
+  playback: Row[]
+  video: Row[]
+  audio: Row[]
+}
 
 /** Reads the video's size, frames, and buffer once a second. */
 function useSample(video: RefObject<HTMLVideoElement | null>): Sample | null {
@@ -110,17 +123,17 @@ function useSample(video: RefObject<HTMLVideoElement | null>): Sample | null {
   return sample
 }
 
-const decimals = perLocale(
+export const decimals = perLocale(
   (locale) => new Intl.NumberFormat(locale, { maximumFractionDigits: 3 }),
 )
-const tenths = perLocale(
+export const tenths = perLocale(
   (locale) =>
     new Intl.NumberFormat(locale, {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     }),
 )
-const counts = perLocale((locale) => new Intl.NumberFormat(locale))
+export const counts = perLocale((locale) => new Intl.NumberFormat(locale))
 const shares = perLocale(
   (locale) =>
     new Intl.NumberFormat(locale, {
@@ -129,7 +142,7 @@ const shares = perLocale(
     }),
 )
 
-function size(width: number, height: number): string {
+export function size(width: number, height: number): string {
   return `${width}×${height}`
 }
 
@@ -183,8 +196,14 @@ function reasons(
           ? tr("player.stats.reason.video", { codec: video.format })
           : []
       case "audio":
+        // mpv plays every codec, so only this device's settings convert.
         return plan.audio
-          ? tr("player.stats.reason.audioCodec", { format: plan.audio.format })
+          ? tr(
+              desktop
+                ? "player.stats.reason.audioConverted"
+                : "player.stats.reason.audioCodec",
+              { format: plan.audio.format },
+            )
           : []
       case "audio-selection":
         return tr("player.stats.reason.audioTrack")
@@ -214,13 +233,15 @@ const KINDS = {
 } as const
 
 type Row = { label: string; value: string }
+/** A line of the stats: what it says, and its value. */
+export type StatsRow = Row
 
 function playbackRows(
   plan: PlaybackStart,
   source: PlaybackSource,
   failed: readonly PlaybackMethod[],
   file: FileInfo,
-  sample: Sample | null,
+  ahead: number | null,
 ): Row[] {
   const preset = PLAYBACK_QUALITIES.find((entry) => entry.id === plan.quality)
   const why = source.method === "direct" ? [] : reasons(plan, file, failed)
@@ -247,12 +268,12 @@ function playbackRows(
     ...(bitrate
       ? [{ label: tr("player.stats.bitrate"), value: formatBitrate(bitrate) }]
       : []),
-    ...(sample
+    ...(ahead !== null
       ? [
           {
             label: tr("player.stats.buffer"),
             value: tr("player.stats.seconds", {
-              seconds: tenths().format(sample.ahead),
+              seconds: tenths().format(ahead),
             }),
           },
         ]
@@ -264,7 +285,6 @@ function videoRows(
   plan: PlaybackStart,
   video: DisplayVideoStream | null,
   server: SessionStream | null,
-  sample: Sample | null,
 ): Row[] {
   const rows: Row[] = []
   const encode = plan.method === "transcode"
@@ -344,36 +364,53 @@ function videoRows(
       )
     }
   }
-  if (sample && sample.width > 0) {
-    rows.push(
-      {
-        label: tr("player.stats.decoded"),
-        value: size(sample.width, sample.height),
-      },
-      {
-        label: tr("player.stats.display"),
-        value: size(sample.shownWidth, sample.shownHeight),
-      },
-      {
-        label: tr("player.stats.frameRate"),
-        value:
-          sample.fps === null
-            ? "–"
-            : tr("player.stats.fps", { fps: tenths().format(sample.fps) }),
-      },
-      {
-        label: tr("player.stats.dropped"),
-        value: tr("player.stats.droppedValue", {
-          dropped: counts().format(sample.dropped),
-          total: counts().format(sample.total),
-          share: shares().format(
-            sample.total > 0 ? sample.dropped / sample.total : 0,
-          ),
-        }),
-      },
-    )
-  }
   return rows
+}
+
+/** What the browser says about the picture. */
+function sampleRows(sample: Sample | null): Row[] {
+  if (!sample || sample.width <= 0) return []
+  return [
+    {
+      label: tr("player.stats.decoded"),
+      value: size(sample.width, sample.height),
+    },
+    {
+      label: tr("player.stats.display"),
+      value: size(sample.shownWidth, sample.shownHeight),
+    },
+    {
+      label: tr("player.stats.frameRate"),
+      value:
+        sample.fps === null
+          ? "–"
+          : tr("player.stats.fps", { fps: tenths().format(sample.fps) }),
+    },
+    {
+      label: tr("player.stats.dropped"),
+      value: tr("player.stats.droppedValue", {
+        dropped: counts().format(sample.dropped),
+        total: counts().format(sample.total),
+        share: shares().format(
+          sample.total > 0 ? sample.dropped / sample.total : 0,
+        ),
+      }),
+    },
+  ]
+}
+
+/** The browser's side of the stats, from the `<video>`. */
+export function useBrowserStats(
+  video: RefObject<HTMLVideoElement | null>,
+): LiveStats | null {
+  const sample = useSample(video)
+  if (!sample) return null
+  return {
+    ahead: sample.ahead,
+    playback: [],
+    video: sampleRows(sample),
+    audio: [],
+  }
 }
 
 function audioRows(plan: PlaybackStart, server: SessionStream | null): Row[] {
@@ -447,14 +484,15 @@ function Rows({ rows }: { rows: Row[] }) {
 
 /**
  * What plays and how, over the picture, like Jellyfin's playback info: the
- * method and why, bitrates, dynamic range, and the browser's frame counts.
- * A transcode adds what the server encodes with, for `sessionId`.
+ * method and why, bitrates, dynamic range, and what the thing that plays
+ * says in `live`. A transcode adds what the server encodes with, for
+ * `sessionId`.
  */
 export function PlayerStats({
-  video,
+  live,
   sessionId,
 }: {
-  video: RefObject<HTMLVideoElement | null>
+  live: LiveStats | null
   sessionId: string
 }) {
   const plan = usePlayerStore((state) => state.plan)
@@ -462,15 +500,20 @@ export function PlayerStats({
   const failed = usePlayerStore((state) => state.failed)
   const file: FileInfo = plan.item
   const setStatsOpen = usePlayerStore((state) => state.setStatsOpen)
-  const sample = useSample(video)
   const server = useQuery({
     ...orpc.playback.stream.experimental_liveOptions({ input: { sessionId } }),
     ...liveQuery,
   }).data
   const groups = [
-    playbackRows(plan, source, failed, file, sample),
-    videoRows(plan, file.probe?.video ?? null, server ?? null, sample),
-    audioRows(plan, server ?? null),
+    [
+      ...playbackRows(plan, source, failed, file, live?.ahead ?? null),
+      ...(live?.playback ?? []),
+    ],
+    [
+      ...videoRows(plan, file.probe?.video ?? null, server ?? null),
+      ...(live?.video ?? []),
+    ],
+    [...audioRows(plan, server ?? null), ...(live?.audio ?? [])],
     fileRows(file),
   ]
 

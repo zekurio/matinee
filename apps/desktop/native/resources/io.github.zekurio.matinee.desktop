@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Matinee
+GenericName=Media Player
+GenericName[de]=Medienwiedergabe
+Comment=Watch your Matinee server's movies and shows
+Comment[de]=Filme und Serien von deinem Matinee-Server ansehen
+Exec=matinee-desktop
+Icon=io.github.zekurio.matinee
+Terminal=false
+Categories=AudioVideo;Video;Player;
+StartupWMClass=matinee-desktop
+StartupNotify=true

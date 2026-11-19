@@ -11,6 +11,7 @@ import {
 } from "@/stores/player"
 
 import { subtitlesLoadingNotice } from "./playback-notices"
+import { useSubtitlePicks } from "./subtitle-picks"
 import { useAss } from "./use-ass"
 import { usePgs } from "./use-pgs"
 
@@ -327,23 +328,12 @@ export function useSubtitles(
     }
   }, [shownId, src, lifted, tracks])
 
-  /** Show a track, or none for null, as the viewer's pick. */
-  const select = (trackId: string | null) => {
-    onSelect(trackId)
-    onPick(trackId)
-  }
-
-  /** Off if a track shows; otherwise the last pick or the best guess. */
-  const toggle = () => {
-    if (selected !== null) {
-      select(null)
-      return
-    }
-    const { pickedSubtitle } = store.getState()
-    const again = tracks.find((track) => track.id === pickedSubtitle)
-    if (again) select(again.id)
-    else onSelect(undefined)
-  }
+  const { select, toggle } = useSubtitlePicks(
+    tracks,
+    selected,
+    onSelect,
+    onPick,
+  )
 
   // The `<track>` to render, once its text is here.
   const current =

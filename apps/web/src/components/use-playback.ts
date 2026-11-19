@@ -11,6 +11,7 @@ import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
 import { dismissPlaybackNotices, lostNotice } from "./playback-notices"
 import { canSeekTo, hasPlayed } from "./playback-source"
+import type { PlayerMedia } from "./player-media"
 import {
   type PlaybackCore,
   playbackClock,
@@ -20,7 +21,7 @@ import {
 } from "./use-playback-source"
 
 export type PlaybackOptions = {
-  video: RefObject<HTMLVideoElement | null>
+  video: RefObject<PlayerMedia | null>
   /** Nothing this browser can play is left. */
   onUnplayable: () => void
   /** A source failed and the server couldn't say what plays instead. */

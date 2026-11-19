@@ -21,6 +21,7 @@ import {
   sameSource,
   sourceOf,
 } from "./playback-source"
+import type { PlayerMedia } from "./player-media"
 
 /**
  * What the player remembers about the sources it starts, which nothing
@@ -69,7 +70,7 @@ type SourceRefs = ReturnType<typeof useSourceRefs>
 
 /** What the playback functions share. */
 export type PlaybackCore = {
-  video: RefObject<HTMLVideoElement | null>
+  video: RefObject<PlayerMedia | null>
   store: PlayerStore
   refs: SourceRefs
   /** Nothing this browser can play is left. */
@@ -167,7 +168,9 @@ export function sourceStarters(core: PlaybackCore) {
     if (state.pending === null) state.setPending(next.offset + next.start)
     if (plan) state.setPlan(plan, next)
     else state.setSource(next)
-    if (reloads) video.current?.load()
+    // mpv opens every attempt anew; a `<video>` needs telling.
+    const el = video.current
+    if (reloads && el instanceof HTMLVideoElement) el.load()
   }
 
   /** Take an answer: a new source to load, or the tracks around this one. */

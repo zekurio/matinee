@@ -1,4 +1,4 @@
-import type { TranslationOf } from "../../catalog"
+import { plural, type TranslationOf } from "../../catalog"
 import type source from "../en/player"
 
 export default {
@@ -91,6 +91,8 @@ export default {
   "player.stats.reason.audioCodec":
     "Dieser Browser kann kein {format}-Audio abspielen",
   "player.stats.reason.audioTrack": "Nicht die Standard-Audiospur der Datei",
+  "player.stats.reason.audioConverted":
+    "Deine Einstellungen wandeln {format}-Audio um",
   "player.stats.reason.quality": "{quality} gewählt",
   "player.stats.reason.burnIn": "Untertitel eingebrannt",
   "player.stats.reason.limit": "Über dem Bitratenlimit deines Kontos",
@@ -126,6 +128,25 @@ export default {
   "player.stats.container": "Container",
   "player.stats.size": "Größe",
   "player.stats.overallBitrate": "Gesamtbitrate",
+  "player.stats.mpv.decoder": "Decoder der App",
+  "player.stats.mpv.frameRate": "Bildrate",
+  "player.stats.mpv.frameRateValue": "{fps} fps auf einem {hz}-Hz-Bildschirm",
+  "player.stats.mpv.color": "Farbe nach dem Decodieren",
+  "player.stats.mpv.videoBitrate": "Aktuelle Videobitrate",
+  "player.stats.mpv.audioBitrate": "Aktuelle Audiobitrate",
+  "player.stats.mpv.decoderDropped": "Vom Decoder übersprungen",
+  "player.stats.mpv.delayed": "Zu spät gezeigt",
+  "player.stats.mpv.avSync": "A/V-Synchronität",
+  "player.stats.mpv.milliseconds": "{ms} ms",
+  "player.stats.mpv.audioOut": "Tonausgabe",
+  "player.stats.mpv.passthrough": "{codec}, undecodiert an den Receiver",
+  "player.stats.mpv.channels": plural({
+    one: "{count} Kanal",
+    other: "{count} Kanäle",
+  }),
+  "player.stats.mpv.sampleRate": "{rate} kHz",
+  "player.stats.mpv.cache": "Cache",
+  "player.stats.mpv.speed": "Download-Geschwindigkeit",
 
   "player.notice.standIn": "Zu {format}-Audio gewechselt",
   "player.notice.standInDetail":

@@ -16,15 +16,22 @@
       inherit (nixpkgs) lib;
       systems = [ "x86_64-linux" ];
       forAllSystems = f: lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
-      packagesFor = pkgs: {
-        matinee = pkgs.callPackage ./nix/package.nix { };
-      };
+      packagesFor =
+        pkgs:
+        let
+          matinee = pkgs.callPackage ./nix/package.nix { };
+        in
+        {
+          inherit matinee;
+          matinee-desktop = pkgs.callPackage ./nix/desktop.nix { inherit matinee; };
+        };
     in
     {
       devShells = lib.genAttrs systems (
         system:
         {
           default = nixpkgs.legacyPackages.${system}.callPackage ./nix/dev-shell.nix { };
+          desktop = nixpkgs.legacyPackages.${system}.callPackage ./nix/desktop-shell.nix { };
         }
         // import ./nix/android.nix { inherit nixpkgs system; }
       );
@@ -54,7 +61,7 @@
           module = self.nixosModules.default;
         in
         {
-          inherit (self.packages.${pkgs.stdenv.hostPlatform.system}) matinee;
+          inherit (self.packages.${pkgs.stdenv.hostPlatform.system}) matinee matinee-desktop;
           eval = import ./nix/tests/eval.nix {
             inherit lib pkgs module;
             inherit (nixpkgs.lib) nixosSystem;

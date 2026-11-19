@@ -17,6 +17,7 @@ import type { PlayerStore } from "@/stores/player"
 
 import { bufferedEnd } from "./playback-source"
 import { formatTime } from "./player-format"
+import type { PlayerMedia } from "./player-media"
 
 /** The party a player follows, from the watch page. */
 export type PartyLink = {
@@ -83,12 +84,12 @@ type Clock = {
   seek: (to: number) => void
 }
 
-function setRate(el: HTMLVideoElement, rate: number) {
+function setRate(el: PlayerMedia, rate: number) {
   if (el.playbackRate !== rate) el.playbackRate = rate
 }
 
 /** Whether the video has enough buffered to play faster for a while. */
-function mayHurry(el: HTMLVideoElement): boolean {
+function mayHurry(el: PlayerMedia): boolean {
   const end = bufferedEnd(el, el.currentTime)
   if (end === null) return false
   // The rest of the file is here, however little that is.
@@ -109,7 +110,7 @@ function mayHurry(el: HTMLVideoElement): boolean {
  * forever.
  */
 export function usePartySync(
-  video: RefObject<HTMLVideoElement | null>,
+  video: RefObject<PlayerMedia | null>,
   store: PlayerStore,
   clock: Clock,
   party: PartyLink | null,

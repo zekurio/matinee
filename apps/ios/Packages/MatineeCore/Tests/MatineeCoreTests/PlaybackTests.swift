@@ -28,7 +28,9 @@ enum Answers {
   ) -> SubtitleTrack {
     SubtitleTrack(
       id: id, label: label, language: language, title: nil, forced: false, sdh: false,
-      default: false, source: source, format: format, delivery: delivery)
+      default: false, source: source,
+      index: source == "embedded" ? Int(id.dropFirst("stream-".count)) : nil, format: format,
+      delivery: delivery)
   }
 
   static func item(_ id: String = "item-1", duration: Double = 3000) -> MediaItem {

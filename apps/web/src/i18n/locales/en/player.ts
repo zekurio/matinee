@@ -1,4 +1,4 @@
-import { defineMessages } from "../../catalog"
+import { defineMessages, plural } from "../../catalog"
 
 export default defineMessages("player", {
   // The watch page around the player, and what it shows when nothing plays.
@@ -109,6 +109,8 @@ export default defineMessages("player", {
   // {format} is an audio format, like TrueHD Atmos.
   "player.stats.reason.audioCodec": "This browser can't play {format} audio",
   "player.stats.reason.audioTrack": "Not the file's default audio track",
+  // In the desktop app, which plays every codec.
+  "player.stats.reason.audioConverted": "Your settings convert {format} audio",
   // {quality} is a resolution, like 720p.
   "player.stats.reason.quality": "{quality} picked",
   "player.stats.reason.burnIn": "Subtitles burned in",
@@ -150,6 +152,30 @@ export default defineMessages("player", {
   "player.stats.container": "Container",
   "player.stats.size": "Size",
   "player.stats.overallBitrate": "Overall bitrate",
+  // What mpv says in the desktop app. {device} in the decoder row is
+  // mpv's name for the hardware decoder, like vaapi.
+  "player.stats.mpv.decoder": "App decoder",
+  "player.stats.mpv.frameRate": "Frame rate",
+  // {hz} is the display's refresh rate.
+  "player.stats.mpv.frameRateValue": "{fps} fps on a {hz} Hz display",
+  "player.stats.mpv.color": "Decoded color",
+  "player.stats.mpv.videoBitrate": "Video bitrate now",
+  "player.stats.mpv.audioBitrate": "Audio bitrate now",
+  "player.stats.mpv.decoderDropped": "Skipped by the decoder",
+  "player.stats.mpv.delayed": "Shown late",
+  "player.stats.mpv.avSync": "A/V sync",
+  "player.stats.mpv.milliseconds": "{ms} ms",
+  "player.stats.mpv.audioOut": "Sound out",
+  // {codec} is mpv's codec name, like eac3.
+  "player.stats.mpv.passthrough": "{codec}, undecoded to the receiver",
+  "player.stats.mpv.channels": plural({
+    one: "{count} channel",
+    other: "{count} channels",
+  }),
+  // {rate} in kilohertz, like 48.0.
+  "player.stats.mpv.sampleRate": "{rate} kHz",
+  "player.stats.mpv.cache": "Cache",
+  "player.stats.mpv.speed": "Download speed",
 
   // Toasts about what the server converts. {from} is a codec, like HEVC,
   // and {quality} a resolution, like 1080p.

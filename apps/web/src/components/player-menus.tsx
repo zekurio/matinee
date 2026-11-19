@@ -21,8 +21,8 @@ import {
   type MenuSection,
   PlayerMenu,
 } from "./player-menu"
+import type { SubtitleMenu } from "./subtitle-picks"
 import type { usePlayback } from "./use-playback"
-import type { useSubtitles } from "./use-subtitles"
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
 const OFF = "off"
@@ -42,7 +42,7 @@ export function PlayerMenus({
 }: {
   split: boolean
   playback: ReturnType<typeof usePlayback>
-  subs: ReturnType<typeof useSubtitles>
+  subs: SubtitleMenu
   onSpeedChange: (speed: number) => void
   /** The viewer picked an audio track, for the server to remember. */
   onPickAudio: (index: number) => void

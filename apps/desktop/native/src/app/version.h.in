@@ -1,0 +1,8 @@
+#pragma once
+
+// Written by CMake from the version in the root package.json.
+#define MATINEE_VERSION "@MATINEE_VERSION@"
+
+// The newest protocol this shell speaks with the pages it shows, as
+// BRIDGE_PROTOCOL in packages/desktop-bridge/src/protocol.ts.
+#define MATINEE_BRIDGE_PROTOCOL 1

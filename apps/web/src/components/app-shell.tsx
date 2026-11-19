@@ -19,6 +19,8 @@ import {
   HouseIcon,
   InboxIcon,
   LogOutIcon,
+  PowerIcon,
+  ServerIcon,
   SettingsIcon,
   ShieldIcon,
   TvIcon,
@@ -27,6 +29,7 @@ import {
 import { type ComponentType, type ReactNode, useEffect } from "react"
 
 import { tr } from "@/i18n"
+import { desktop, desktopOutdated, quitApp, showServers } from "@/lib/desktop"
 import { formatCount } from "@/lib/format"
 import { orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
@@ -208,6 +211,16 @@ function AccountMenu({ user }: { user: User }) {
       icon: SettingsIcon,
       run: () => openSettings(),
     },
+    // The desktop app's own list of servers, to sign in to another.
+    ...(desktop
+      ? [
+          {
+            label: tr("desktop.switchServer"),
+            icon: ServerIcon,
+            run: showServers,
+          },
+        ]
+      : []),
   ]
   const accountLabel = tr("shell.account", { name })
   const trigger = (
@@ -272,6 +285,12 @@ function AccountMenu({ user }: { user: User }) {
           <LogOutIcon />
           {tr("shell.signOut")}
         </DropdownMenuItem>
+        {desktop && (
+          <DropdownMenuItem onClick={quitApp}>
+            <PowerIcon />
+            {tr("desktop.quit")}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -367,7 +386,12 @@ export function AppShell({
           </>
         )
       ) : (
-        <NavBar user={user} />
+        <>
+          {/* A wide window has no tab bar, so only the desktop app's
+              banner shows here. */}
+          {desktopOutdated && <AppBanner />}
+          <NavBar user={user} />
+        </>
       )}
       <SearchSpotlight />
       <main
