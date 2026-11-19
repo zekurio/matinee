@@ -102,18 +102,19 @@ Application::~Application() {
 
 bool Application::start() {
   if (!m_player->start(m_settings->values(), m_options.verbose)) return false;
-  m_videoUnderWindow = VideoOutput::underWindow(*m_player);
-  if (m_videoUnderWindow) {
+  const bool underWindow = VideoOutput::underWindow(*m_player);
+  if (underWindow) {
     m_player->presentUnderWindow();
-    // The window shows the video through itself, which takes an alpha
-    // channel, asked for before the window is made.
-    QQuickWindow::setDefaultAlphaBuffer(true);
+    // Where the window shows the video through itself, that takes an
+    // alpha channel, asked for before the window is made.
+    m_videoUnderWindow = VideoOutput::showsThroughWindow();
+    if (m_videoUnderWindow) QQuickWindow::setDefaultAlphaBuffer(true);
   } else {
     // mpv draws into the window with OpenGL, so Qt Quick has to draw the
     // window with it too, whatever it would pick for the system.
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
   }
-  qCInfo(lcApp) << "Video shows" << (m_videoUnderWindow ? "under the window" : "in the window");
+  qCInfo(lcApp) << "Video shows" << (underWindow ? "under the window" : "in the window");
 
   if (qEnvironmentVariableIsSet("MATINEE_WEB_APP")) {
     m_webApp = QUrl(qEnvironmentVariable("MATINEE_WEB_APP"), QUrl::StrictMode);

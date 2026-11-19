@@ -8,6 +8,12 @@
 #include <QIcon>
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
+#ifdef Q_OS_WIN
+#include <QtCore/qt_windows.h>
+
+#include <cstdio>
+#endif
+
 namespace {
 
 // Turns on the app's own debug output. Many desktops switch all debug
@@ -18,6 +24,19 @@ void logVerbosely() {
   QByteArray rules = qgetenv("QT_LOGGING_RULES");
   if (!rules.isEmpty()) rules += ';';
   qputenv("QT_LOGGING_RULES", rules + "matinee.*.debug=true");
+
+#ifdef Q_OS_WIN
+  // A Windows program with a window has no terminal, and Qt logs to the
+  // debugger there. A log that was asked for goes where stderr was sent,
+  // as with `2> matinee.log`, or else to the terminal the app was started
+  // from.
+  qputenv("QT_FORCE_STDERR_LOGGING", "1");
+  const HANDLE sent = GetStdHandle(STD_ERROR_HANDLE);
+  if ((!sent || sent == INVALID_HANDLE_VALUE) && AttachConsole(ATTACH_PARENT_PROCESS)) {
+    FILE *terminal = nullptr;
+    freopen_s(&terminal, "CONOUT$", "w", stderr);
+  }
+#endif
 }
 
 } // namespace

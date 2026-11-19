@@ -275,13 +275,18 @@ bool MpvPlayer::start(const DesktopSettings &settings, bool verbose) {
       // frame when it's due. With mpv's default 50 ms head start we
       // swapped 24 fps video a frame early.
       {"video-timing-offset", "0"},
+#ifndef Q_OS_WIN
       // For the video under the window. An HDR source goes out as HDR,
       // with its own metadata, and the compositor fits it to the display.
       // mpv would otherwise ask the compositor what its surface should
       // be, and one that only switches the display to HDR for an HDR
       // surface, as Hyprland does by default, answers SDR until then.
+      // Windows never switches for a program and doesn't fit HDR to an
+      // SDR display, so there mpv's own default stands: it asks what the
+      // display is, and sends HDR, fitted to it, only to one in HDR mode.
       {"target-colorspace-hint", "yes"},
       {"target-colorspace-hint-mode", "source"},
+#endif
       // A file's parts are read again after a dropped connection, from
       // where it broke. Only for sources with byte ranges: a stream
       // without them would start over.
@@ -378,12 +383,19 @@ bool MpvPlayer::start(const DesktopSettings &settings, bool verbose) {
 
 void MpvPlayer::presentUnderWindow() {
   m_underWindow = true;
+  set("vo", "gpu-next");
+#ifdef Q_OS_WIN
+  // mpv's own renderer on Direct3D 11, whose swapchain Windows takes as
+  // HDR10.
+  set("gpu-api", "d3d11");
+  set("gpu-context", "d3d11");
+#else
   // mpv's own renderer on Vulkan, which is what carries HDR to a Wayland
   // surface. The context is named, or mpv might pick X11 through
   // XWayland and open a window of its own.
-  set("vo", "gpu-next");
   set("gpu-api", "vulkan");
   set("gpu-context", "waylandvk");
+#endif
   // mpv times its own frames here.
   set("video-timing-offset", "0.050");
 }
@@ -396,6 +408,11 @@ void MpvPlayer::setParentSurface(quintptr surface, const QSize &size) {
 void MpvPlayer::setOutputSize(const QSize &size) {
   if (size.isEmpty()) return;
   set("geometry", QByteArray::number(size.width()) + 'x' + QByteArray::number(size.height()));
+}
+
+void MpvPlayer::setParentWindow(quintptr window) {
+  // mpv's word for none is -1. 0 is the desktop's wallpaper.
+  set("wid", window ? QByteArray::number(window) : QByteArray("-1"));
 }
 
 void MpvPlayer::setRenderReady(bool ready) {

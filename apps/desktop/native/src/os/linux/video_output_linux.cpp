@@ -11,6 +11,9 @@ bool VideoOutput::underWindow(const MpvPlayer &player) {
   return player.takesParentSurface();
 }
 
+// The video is under the window's own surface.
+bool VideoOutput::showsThroughWindow() { return true; }
+
 VideoOutput *VideoOutput::create(MpvPlayer *player, QQuickWindow *window) {
   if (underWindow(*player)) return new WaylandVideoSurface(player, window);
   return new MpvRenderer(player->handle(), window);
