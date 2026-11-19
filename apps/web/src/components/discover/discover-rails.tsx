@@ -47,6 +47,7 @@ import {
   railLink,
   railsOptions,
 } from "./discover-data"
+import { WaitingRequests } from "./waiting-requests"
 
 type Page = UseQueryResult<t.infer<typeof DiscoverRowSchema>>
 
@@ -71,14 +72,20 @@ export function DiscoverRails() {
     return <Failed onRetry={() => void rails.refetch()} />
   }
   if (!rails.data.enabled) return <DiscoverOff />
+  // The requests that wait come from their own stream, so they stay when
+  // the catalog's rows are down or empty.
+  const requests = rails.data.requests && <WaitingRequests />
   if (list.length > 0 && pages.every((page) => page.isError)) {
     if (pages.some((page) => page.isFetching)) return <RailsSkeleton />
     return (
-      <Failed
-        onRetry={() => {
-          for (const page of pages) void page.refetch()
-        }}
-      />
+      <div className="flex flex-col gap-10 max-sm:gap-6">
+        {requests}
+        <Failed
+          onRetry={() => {
+            for (const page of pages) void page.refetch()
+          }}
+        />
+      </div>
     )
   }
   // A row whose titles are all here already has nothing to show.
@@ -87,7 +94,14 @@ export function DiscoverRails() {
     if (!page || (page.isSuccess && page.data.items.length === 0)) return []
     return [{ rail, page }]
   })
-  if (shown.length === 0) return <Nothing />
+  if (shown.length === 0) {
+    return (
+      <div className="flex flex-col gap-10 max-sm:gap-6">
+        {requests}
+        <Nothing />
+      </div>
+    )
+  }
   const stale = pages.some((page) => page.data?.stale)
   // One row that failed says so in its place. Several say it once, at the
   // top, rather than as a stack of empty boxes.
@@ -107,6 +121,7 @@ export function DiscoverRails() {
           {tr("discover.railsFailed", { count: failed.length })}
         </RailsNote>
       )}
+      {requests}
       {rows.map(({ rail, page }) => (
         <DiscoverRow key={railKey(rail)} rail={rail} page={page} live={live} />
       ))}

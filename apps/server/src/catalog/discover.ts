@@ -18,6 +18,7 @@ import {
 } from "../recommendations/read"
 import { destinations } from "../requests/destinations"
 import { loadRouting } from "../requests/fulfilment/connections"
+import { waitingCount } from "../requests/lifecycle"
 import { page, query } from "./browse"
 import { browseProvider } from "./cache"
 import { askable, catalogCards } from "./cards"
@@ -72,10 +73,19 @@ async function askableKinds(viewer: Viewer) {
 export async function rails(viewer: Viewer) {
   const kinds = await askableKinds(viewer)
   // Discover is for eligible request destinations, not a standalone TMDB browser.
-  if (!kinds.length) return { enabled: false, rails: [], browse: [] }
+  if (!kinds.length)
+    return { enabled: false, requests: false, rails: [], browse: [] }
+  const [personal, waiting] = await Promise.all([
+    discoverRails(viewer, kinds),
+    // Only an admin has a queue, and Discover opens with it while it holds
+    // a request that waits. The web app reads the requests themselves
+    // from the queue's own stream.
+    viewer.role === "admin" ? waitingCount(viewer) : 0,
+  ])
   return {
     enabled: true,
-    rails: [...(await discoverRails(viewer, kinds)), ...catalogRails(kinds)],
+    requests: waiting > 0,
+    rails: [...personal, ...catalogRails(kinds)],
     browse: kinds,
   }
 }

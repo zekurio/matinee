@@ -229,6 +229,13 @@ export const DiscoverRail = t.object({
 
 export const DiscoverRails = t.object({
   enabled: t.boolean(),
+  /**
+   * Whether Discover opens with the waiting requests, read from
+   * `admin.requests.live`. True only for an admin while at least one
+   * request waits. It's no `DiscoverRail`, so an app that doesn't know
+   * the row still reads the rest.
+   */
+  requests: t.boolean(),
   rails: t.array(DiscoverRail),
   /** The kinds this viewer can browse with filters, through `browse`. */
   browse: t.array(TitleKind),

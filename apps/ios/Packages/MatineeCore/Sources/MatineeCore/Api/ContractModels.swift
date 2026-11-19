@@ -915,10 +915,12 @@ public struct DiscoverRail: Codable, Sendable, Hashable {
 
 public struct DiscoverRails: Codable, Sendable, Hashable {
     public var enabled: Bool
+    public var requests: Bool
     public var rails: [DiscoverRail]
     public var browse: [String]
-    public init(enabled: Bool, rails: [DiscoverRail], browse: [String]) {
+    public init(enabled: Bool, requests: Bool, rails: [DiscoverRail], browse: [String]) {
         self.enabled = enabled
+        self.requests = requests
         self.rails = rails
         self.browse = browse
     }

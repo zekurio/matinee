@@ -15,6 +15,8 @@ export default defineMessages("discover", {
   // Recommendations from what the viewer watched, on Discover and on Home.
   "discover.rail.forYou": "Recommended for you",
   "discover.rail.becauseWatched": "Because you watched {name}",
+  // An admin's first row: the requests that wait for their answer.
+  "discover.rail.requests": "Waiting requests",
 
   // Why a title is recommended, on its card's tooltip.
   "discover.reason.watched": "Because you watched {name}",
