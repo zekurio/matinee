@@ -1,3 +1,5 @@
+// Copyright (C) edde746 and Plezy contributors for the Flutter view setup.
+// SPDX-License-Identifier: GPL-3.0-only
 package io.github.zekurio.matinee
 
 import android.content.Context
@@ -5,10 +7,16 @@ import android.content.pm.PackageManager
 import android.media.tv.TvContract
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.RenderMode
+import io.flutter.embedding.android.TransparencyMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.github.zekurio.matinee.platform.DeviceApi
 import io.github.zekurio.matinee.platform.DeviceFacts
+import io.github.zekurio.matinee.player.PlayerApi
+import io.github.zekurio.matinee.player.PlayerBridge
 import java.io.File
 import java.io.IOException
 import java.net.Inet4Address
@@ -17,12 +25,43 @@ import java.security.KeyStore
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 
+@OptIn(UnstableApi::class)
 class MainActivity : FlutterActivity() {
     private val device by lazy { Device(this) }
+    private var playback: PlayerBridge? = null
+
+    // Flutter paints into a transparent Android TextureView above the video SurfaceView.
+    override fun getRenderMode(): RenderMode = RenderMode.texture
+
+    override fun getTransparencyMode(): TransparencyMode = TransparencyMode.transparent
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        DeviceApi.setUp(flutterEngine.dartExecutor.binaryMessenger, device)
+        val messenger = flutterEngine.dartExecutor.binaryMessenger
+        DeviceApi.setUp(messenger, device)
+        val bridge = PlayerBridge(this, messenger)
+        playback = bridge
+        PlayerApi.setUp(messenger, bridge)
+    }
+
+    override fun onStop() {
+        playback?.pauseForBackground()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        // The engine may outlive the activity, but the video views and mpv don't.
+        playback?.release()
+        super.onDestroy()
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        val messenger = flutterEngine.dartExecutor.binaryMessenger
+        PlayerApi.setUp(messenger, null)
+        DeviceApi.setUp(messenger, null)
+        playback?.release()
+        playback = null
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

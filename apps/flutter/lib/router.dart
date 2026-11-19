@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/device.dart';
+import 'player/player_lab.dart';
 import 'screens/pending.dart';
 import 'screens/shell/shell.dart';
 
@@ -68,6 +70,9 @@ abstract final class Routes {
         queryParameters: _query({'filters': filters, 'sort': sort}),
       ).toString();
 
+  /// Debug builds on Android only: both players, by hand.
+  static const playerLab = '/debug/player';
+
   static String libraryEditor([String? id]) =>
       id == null ? '/admin/library' : '/admin/library/$id';
   static const folderPicker = '/admin/folders';
@@ -102,13 +107,31 @@ List<RouteBase> _handsetRoutes() => [
   StatefulShellRoute.indexedStack(
     builder: (context, state, shell) => HandsetShell(shell: shell),
     branches: [
-      StatefulShellBranch(routes: [_pending(Routes.home, 'Home')]),
+      StatefulShellBranch(
+        routes: [
+          _pending(
+            Routes.home,
+            'Home',
+            links: [if (_hasPlayerLab) ('Player lab', Routes.playerLab)],
+          ),
+        ],
+      ),
       StatefulShellBranch(routes: [_pending(Routes.media, 'Media')]),
       StatefulShellBranch(routes: [_pending(Routes.downloads, 'Downloads')]),
     ],
   ),
   for (final (path, name) in _pages) _pending(path, name, root: true),
+  if (_hasPlayerLab)
+    GoRoute(
+      path: Routes.playerLab,
+      parentNavigatorKey: _rootKey,
+      builder: (context, state) => const PlayerLab(),
+    ),
 ];
+
+/// Only Android has the native players so far.
+bool get _hasPlayerLab =>
+    kDebugMode && defaultTargetPlatform == TargetPlatform.android;
 
 List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 
@@ -139,8 +162,14 @@ const _pages = [
   ('/admin/folders', 'Folder picker'),
 ];
 
-GoRoute _pending(String path, String name, {bool root = false}) => GoRoute(
+GoRoute _pending(
+  String path,
+  String name, {
+  bool root = false,
+  List<(String, String)> links = const [],
+}) => GoRoute(
   path: path,
   parentNavigatorKey: root ? _rootKey : null,
-  builder: (context, state) => PendingScreen(name: name, location: state.uri),
+  builder: (context, state) =>
+      PendingScreen(name: name, location: state.uri, links: links),
 );

@@ -63,6 +63,7 @@ decoder as soon as the app draws.
 | `lib/kit`         | The UI kit and theme, see below                          |
 | `lib/l10n`        | The strings, as ARB files                                |
 | `lib/platform`    | Generated platform channels, from `pigeons/`             |
+| `lib/player`      | The player interface, `VideoView`, and the player lab    |
 | `lib/screens`     | One folder per screen; `shell` holds the tabs            |
 | `lib/router.dart` | Every route, and `Routes`, which builds their paths      |
 | `pigeons`         | Pigeon definitions for what Dart asks the platform       |
@@ -102,6 +103,33 @@ the sign-in screens do apart from how they look.
   fresh: on the first launch the platform deletes what the Kotlin app
   kept (its preferences, folders, session key, and Watch Next programs)
   before anything reads storage (`freshStart` in `main`).
+
+## Video on Android
+
+`lib/player/` is the Dart side: an abstract `Player`, a `VideoView` that
+leaves a transparent hole, and Riverpod providers for the state. The Kotlin
+side is in `android/app/src/main/kotlin/.../player/`, reached over the
+Pigeon channels declared in `pigeons/player.dart` (`just flutter pigeon`
+writes both ends).
+
+Video never goes through a Flutter texture. `PlayerSurfaceHost` puts a
+`SurfaceView` in a container beneath the Flutter view, and the Flutter view
+is a transparent `TextureView` above it, so MediaCodec output goes straight
+to the compositor. Two engines sit behind the interface: libmpv (default)
+and Media3.
+
+libmpv is the `mpv-android` AAR from
+[edde746/mpv-build](https://github.com/edde746/mpv-build). Its version and
+SHA-256 are pinned in `android/app/build.gradle.kts` and
+`android/gradle/verification-metadata.xml`; Gradle refuses an AAR that
+doesn't match. To move to a newer build, change both from the pinned
+`mpv-build.lock.json` of the Plezy revision named in `NOTICE.md`, or from
+the release you chose.
+
+Debug builds have a player lab at `/debug/player`, behind a button on the
+Home placeholder. It plays an HLS stream and an MKV with two audio tracks
+and two subtitle tracks on either engine, with seek, track, fit, and rate
+controls and the live state.
 
 ## Strings
 

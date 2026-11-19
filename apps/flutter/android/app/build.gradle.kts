@@ -26,6 +26,34 @@ val matineeVersionCode: Int =
         major.toInt() * 10000 + minor.toInt() * 100 + patch.toInt()
     } ?: throw GradleException("Version $matineeVersion in the root package.json isn't major.minor.patch")
 
+// Android AAR from edde746/mpv-build at 6dbda06021b128b7adc30161bf7870977e575135.
+val mpvRevision = "d633bbc71269"
+val media3Version = "1.11.1"
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            ivy {
+                name = "mpv-build"
+                url = uri("https://github.com/edde746/mpv-build/releases/download/binaries-f78e66727714")
+                patternLayout { artifact("[artifact]-[revision].[ext]") }
+                metadataSources { artifact() }
+            }
+        }
+        filter { includeModule("edde746", "mpv-android") }
+    }
+}
+
+dependencies {
+    implementation("edde746:mpv-android:$mpvRevision@aar")
+    implementation("androidx.media3:media3-exoplayer:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
+    implementation("androidx.media3:media3-datasource-okhttp:$media3Version")
+    implementation("androidx.media3:media3-ui:$media3Version")
+    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+}
+
 android {
     namespace = "io.github.zekurio.matinee"
     compileSdk = flutter.compileSdkVersion
