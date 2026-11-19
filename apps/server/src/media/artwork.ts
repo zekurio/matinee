@@ -24,6 +24,7 @@ import { env } from "../env"
 import { ShownError } from "../errors"
 import { defineQueue, perCpu, type Priority } from "../jobs/queue"
 import { log } from "../log"
+import { OutboundBlocked, outboundGet, urlForLog } from "../network/outbound"
 import { readPlaceholder } from "./blurhash"
 import { showsOnLoginBackdrop } from "./login-backdrop"
 import { run } from "./process"
@@ -151,46 +152,53 @@ async function findOriginal(id: string): Promise<Cached | null> {
 }
 
 /**
- * Download an image a provider named, at most 25 MB. Throws for anything but
- * a JPEG, PNG, or WebP image.
+ * Download an image a provider named, at most 25 MB, from a public address
+ * only (see `network/outbound.ts`). Throws for anything but a JPEG, PNG, or
+ * WebP image.
  */
 export async function fetchImage(
   url: string,
 ): Promise<{ bytes: Uint8Array; format: Format }> {
-  const response = await fetch(url, {
+  // Shown and logged without its query, which often holds a signed token.
+  const shown = urlForLog(url)
+  const response = await outboundGet(url, {
     signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
     headers: { "user-agent": "Matinee" },
   }).catch((cause: unknown) => {
-    throw fetchFailed(url, cause)
+    throw fetchFailed(shown, cause)
   })
-  if (!response.ok) throw new ShownError(`${url} answered ${response.status}`)
-  const length = Number(response.headers.get("content-length") ?? 0)
+  if (response.status < 200 || response.status > 299) {
+    await response.body.cancel()
+    throw new ShownError(`${shown} answered ${response.status}`)
+  }
+  // Only a decoded body has a length to trust, and only as an early out.
+  const length = response.headers["content-encoding"]
+    ? 0
+    : Number(response.headers["content-length"] ?? 0)
   if (length > MAX_BYTES) {
-    await response.body?.cancel()
-    throw new ShownError(`${url} is too large`)
+    await response.body.cancel()
+    throw new ShownError(`${shown} is too large`)
   }
   // Content-Length is optional and may describe the compressed transfer,
   // not the decoded body. Enforce the limit while reading too.
   const chunks: Uint8Array[] = []
   let received = 0
-  const reader = response.body?.getReader()
-  if (reader) {
-    try {
-      for (;;) {
-        const { done, value } = await reader.read().catch((cause: unknown) => {
-          throw fetchFailed(url, cause)
-        })
-        if (done) break
-        received += value.byteLength
-        if (received > MAX_BYTES) {
-          await reader.cancel()
-          throw new ShownError(`${url} is too large`)
-        }
-        chunks.push(value)
+  const reader = response.body.getReader()
+  try {
+    for (;;) {
+      const { done, value } = await reader.read().catch((cause: unknown) => {
+        throw fetchFailed(shown, cause)
+      })
+      if (done) break
+      received += value.byteLength
+      if (received > MAX_BYTES) {
+        await reader.cancel()
+        throw new ShownError(`${shown} is too large`)
       }
-    } finally {
-      reader.releaseLock()
+      chunks.push(value)
     }
+  } finally {
+    reader.releaseLock()
   }
   const bytes = new Uint8Array(received)
   let offset = 0
@@ -199,13 +207,20 @@ export async function fetchImage(
     offset += chunk.byteLength
   }
   const format = sniffImage(bytes)
-  if (!format) throw new ShownError(`${url} isn't a JPEG, PNG, or WebP image`)
+  if (!format) throw new ShownError(`${shown} isn't a JPEG, PNG, or WebP image`)
   return { bytes, format }
 }
 
-/** A download that the network failed: the cause goes to the log, not the reader. */
-function fetchFailed(url: string, cause: unknown): ShownError {
-  log.warn(`Couldn't download ${url}`, cause)
+/**
+ * A download that the network failed or that the server refused: the cause
+ * goes to the log, not the reader. `shown` is the URL from `urlForLog`.
+ */
+function fetchFailed(shown: string, cause: unknown): ShownError {
+  if (cause instanceof OutboundBlocked) {
+    log.warn(`Refused to download ${shown}: ${cause.message}`)
+  } else {
+    log.warn(`Couldn't download ${shown}`, cause)
+  }
   return new ShownError(IMAGE_FETCH_FAILED)
 }
 

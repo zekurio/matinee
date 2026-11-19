@@ -1,3 +1,5 @@
+import { t } from "@matinee/contracts/schema"
+
 import { env } from "../../env"
 import { limiter } from "../../media/process"
 import { fetchJson } from "../http"
@@ -12,6 +14,19 @@ const limit = limiter(4)
 
 export type Envelope<T> = { data: T; links?: { next?: string | null } }
 
+// Every TVDB v4 reply wraps its record in `data`. The record is the
+// endpoint's to check; the envelope and the paging link are checked here.
+const envelope = t.looseObject({
+  data: t.unknown(),
+  links: t
+    .looseObject({ next: t.string().nullable().optional() })
+    .nullable()
+    .optional(),
+})
+const loginReply = t.looseObject({
+  data: t.looseObject({ token: t.string() }),
+})
+
 let token: { value: string; expires: number } | null = null
 let loggingIn: Promise<string> | null = null
 
@@ -22,15 +37,11 @@ async function login(): Promise<string> {
     apikey: env.MATINEE_TVDB_API_KEY,
     pin: env.MATINEE_TVDB_PIN || undefined,
   }
-  const data = await fetchJson<Envelope<{ token: string }>>(
-    "TheTVDB",
-    `${API}/login`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    },
-  )
+  const data = await fetchJson("TheTVDB", `${API}/login`, loginReply, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  })
   token = { value: data.data.token, expires: Date.now() + TOKEN_TTL_MS }
   return token.value
 }
@@ -46,10 +57,18 @@ export async function request<T>(
   params: Record<string, string | number | undefined> = {},
 ): Promise<Envelope<T>> {
   const url = apiUrl(API, path, params)
-  const send = async () =>
-    fetchJson<Envelope<T>>("TheTVDB", url, {
+  const send = async (): Promise<Envelope<T>> => {
+    const reply = await fetchJson("TheTVDB", url, envelope, {
       headers: { authorization: `Bearer ${await currentToken()}` },
     })
+    return {
+      // SAFETY: The envelope is checked. Callers name the record TVDB
+      // documents for the endpoint they call; its fields aren't
+      // schema-checked yet.
+      data: reply.data as T,
+      links: reply.links ?? undefined,
+    }
+  }
   return limit(async () => {
     try {
       return await send()

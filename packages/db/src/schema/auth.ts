@@ -127,18 +127,24 @@ export const authChallenge = pgTable(
  * polls with its device code until someone signed in enters the user code
  * and approves, which sets `userId`. The poll that sees it deletes the row.
  */
-export const deviceAuthorization = pgTable("device_authorization", {
-  id: uuid().primaryKey().defaultRandom(),
-  /** SHA-256 of the secret the app polls with. */
-  deviceCodeHash: text().notNull().unique(),
-  /** Like `BCDF-GHJK`, as `formatUserCode` writes it. */
-  userCode: text().notNull().unique(),
-  deviceName: text(),
-  platform: text().$type<DevicePlatform>().notNull(),
-  /** Who approved it. Null while it waits. */
-  userId: uuid().references(() => user.id, { onDelete: "cascade" }),
-  expiresAt: timestamp({ withTimezone: true }).notNull(),
-  createdAt: createdAt(),
-})
+export const deviceAuthorization = pgTable(
+  "device_authorization",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    /** SHA-256 of the secret the app polls with. */
+    deviceCodeHash: text().notNull().unique(),
+    /** Like `BCDF-GHJK`, as `formatUserCode` writes it. */
+    userCode: text().notNull().unique(),
+    deviceName: text(),
+    platform: text().$type<DevicePlatform>().notNull(),
+    /** Who approved it. Null while it waits. */
+    userId: uuid().references(() => user.id, { onDelete: "cascade" }),
+    /** When the app last polled, which holds it to the interval. */
+    lastPolledAt: timestamp({ withTimezone: true }),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("device_authorization_expires_idx").on(t.expiresAt)],
+)
 
 export type PasskeyRow = typeof passkey.$inferSelect

@@ -96,6 +96,8 @@ export default defineMessages("server", {
   "server.fulfilment.httpUrl": "Use an HTTP or HTTPS URL.",
   "server.fulfilment.unknownSource": "Choose an available fulfilment source.",
   "server.fulfilment.keyTwice": "Set the connection key or its file, not both.",
+  "server.fulfilment.keyMoved":
+    "The connection's URL or source changed, so Matinee won't send its saved API key there. Enter the API key for the new server.",
   "server.fulfilment.connectionMissing": "Connection not found.",
   "server.fulfilment.unreachable":
     "Cannot reach the connection. Check its URL and network access.",
@@ -103,6 +105,8 @@ export default defineMessages("server", {
     "The connection rejected the API key. Check the saved key or environment variable.",
   "server.fulfilment.operationRejected":
     "The connection rejected the operation. Check its configuration and logs.",
+  "server.fulfilment.replyTooLarge":
+    "The connection sent a reply too large to read. Check its configuration and logs.",
   "server.fulfilment.notRadarr": "This URL is not a Radarr server.",
   "server.fulfilment.notSonarr": "This URL is not a Sonarr server.",
   "server.fulfilment.titleNotFound":
@@ -151,6 +155,8 @@ export default defineMessages("server", {
   "server.auth.appSignInGone":
     "This sign-in expired or was used already. Try again.",
   "server.auth.deviceCodeExpired": "This code expired. Get a new one.",
+  "server.auth.tooManyTries": "Too many tries. Wait a while and try again.",
+  "server.auth.devicePollTooSoon": "Wait {seconds} seconds between polls.",
   "server.auth.inviteGone":
     "This invite link doesn't work. It may have expired, or been used already.",
 
@@ -264,6 +270,10 @@ export default defineMessages("server", {
     "Enter an issuer URL to turn on single sign-on.",
   "server.adminAuth.clientIdRequired":
     "Enter a client ID to turn on single sign-on.",
+  "server.adminAuth.plainHttp":
+    "Use an https issuer URL. Plain http only works for a provider on localhost, unless the server sets MATINEE_OIDC_ALLOW_HTTP=true.",
+  "server.adminAuth.secretForOldClient":
+    "The saved client secret is for the previous issuer and client ID. Enter the new client's secret, or remove the saved one.",
   "server.adminAuth.noMethod":
     "Keep passkeys or single sign-on on. Without either, nobody can sign in.",
   "server.adminAuth.passkeysOffLink":
@@ -427,6 +437,8 @@ export default defineMessages("server", {
     "{provider} didn't answer. Try again in a minute.",
   "server.metadata.unreadable":
     "{provider} sent a reply Matinee couldn't read. Try again later.",
+  "server.metadata.tooLarge":
+    "{provider} sent a reply too large for Matinee to read.",
   "server.metadata.keepsFailing": "{provider} keeps failing, stopping for now.",
   "server.metadata.unreachable": "Couldn't reach {provider}",
   // metadata/http.ts, and media/artwork.ts with an image URL as {name}.

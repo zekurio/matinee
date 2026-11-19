@@ -20,6 +20,13 @@ import { logOverridden, overridesOf, variableSet } from "../overrides"
  * from them are saved, and an empty field in the form falls back to the
  * environment again. Settings load once and change only through `saveOidc`,
  * so reads are cheap.
+ *
+ * A client secret belongs to one client at one provider, so it's bound to
+ * the issuer and client ID it was given for and only goes out with them.
+ * A saved secret remembers both; MATINEE_OIDC_CLIENT_SECRET belongs to
+ * MATINEE_OIDC_ISSUER_URL and MATINEE_OIDC_CLIENT_ID. Pointing the
+ * settings elsewhere leaves a secret out rather than sending it to the
+ * wrong provider, and the admin form asks for the new one.
  */
 
 const OIDC_KEY = "oidc"
@@ -53,13 +60,24 @@ const VARIABLES = new Map<keyof OidcSettings, string>([
 ])
 
 const SavedOidc = OidcSettings.partial()
-const SavedSecret = t.object({ value: t.string().min(1) })
+/** Rows from before secrets were bound have only the value. */
+const SavedSecret = t.object({
+  value: t.string().min(1),
+  issuerUrl: t.string().optional(),
+  clientId: t.string().optional(),
+})
 
-type Saved = { oidc: Partial<OidcSettings>; secret: string | null }
+/** A client secret and the client it was given for. */
+type BoundSecret = { value: string; issuerUrl: string; clientId: string }
+
+type Saved = { oidc: Partial<OidcSettings>; secret: BoundSecret | null }
 
 export type OidcState = {
   settings: OidcSettings
-  /** The client secret in use; undefined for a public client. */
+  /**
+   * The client secret in use, only ever one given for this issuer and
+   * client ID; undefined for a public client.
+   */
   secret: string | undefined
   secretSource: SecretSource
   /** Changes on every save, so anything built from older settings can tell. */
@@ -107,16 +125,42 @@ async function readSaved(): Promise<Saved> {
     log.warn("Ignoring saved OIDC settings that no longer validate", oidc.error)
   }
   const secret = SavedSecret.safeParse(byKey.get(SECRET_KEY))
+  const overrides = oidc.success ? oidc.data : {}
+  const unbound =
+    secret.success &&
+    (secret.data.issuerUrl === undefined || secret.data.clientId === undefined)
+  if (unbound) {
+    // An older row doesn't say which environment-backed issuer and client
+    // were active when the secret was saved. Binding it to today's settings
+    // could send it to a provider the operator changed to since then.
+    log.warn(
+      "The client secret saved by an older Matinee release wasn't bound to an issuer and client ID, so it was removed. Enter it again in Settings → Authentication.",
+    )
+  }
   const stored: Saved = {
-    oidc: oidc.success ? oidc.data : {},
-    secret: secret.success ? secret.data.value : null,
+    oidc: overrides,
+    secret:
+      secret.success && !unbound
+        ? {
+            value: secret.data.value,
+            // `unbound` proves both are present in this branch.
+            issuerUrl: secret.data.issuerUrl ?? "",
+            clientId: secret.data.clientId ?? "",
+          }
+        : null,
   }
   // Older servers saved both switches every time, and a default may have
-  // changed to a saved value since. Neither is an override.
+  // changed to a saved value since. Neither is an override. An old unbound
+  // secret is deleted rather than guessed at.
   const next = trimmed(stored)
-  if (!isDeepStrictEqual(next, stored)) await write(next)
+  if (unbound || !isDeepStrictEqual(next, stored)) await write(next)
   logOverridden(next.oidc, VARIABLES)
-  if (next.secret && variableSet("MATINEE_OIDC_CLIENT_SECRET")) {
+  const current = { ...oidcDefaults(), ...next.oidc }
+  if (next.secret && !secretFits(next.secret, current)) {
+    log.warn(
+      "The client secret saved in the admin settings is for another issuer or client ID, so sign-in doesn't send it. Enter the client's secret in Settings → Authentication.",
+    )
+  } else if (next.secret && variableSet("MATINEE_OIDC_CLIENT_SECRET")) {
     log.info(
       "MATINEE_OIDC_CLIENT_SECRET is set, but a secret saved in the admin settings overrides it.",
     )
@@ -125,25 +169,66 @@ async function readSaved(): Promise<Saved> {
   return saved
 }
 
+/** Whether a secret was given for the client these settings name. */
+function secretFits(
+  secret: Pick<BoundSecret, "issuerUrl" | "clientId">,
+  settings: Pick<OidcSettings, "issuerUrl" | "clientId">,
+): boolean {
+  return (
+    sameIssuer(secret.issuerUrl, settings.issuerUrl) &&
+    secret.clientId === settings.clientId
+  )
+}
+
+/** MATINEE_OIDC_CLIENT_SECRET, bound to the client the environment names. */
+function environmentSecret(): BoundSecret | null {
+  const value = env.MATINEE_OIDC_CLIENT_SECRET
+  if (!value) return null
+  return {
+    value,
+    issuerUrl: env.MATINEE_OIDC_ISSUER_URL ?? "",
+    clientId: env.MATINEE_OIDC_CLIENT_ID ?? "",
+  }
+}
+
+/**
+ * Whether MATINEE_OIDC_CLIENT_SECRET applies to the client these settings
+ * name, so it's what's left once the saved secret goes.
+ */
+export function environmentSecretFits(
+  settings: Pick<OidcSettings, "issuerUrl" | "clientId">,
+): boolean {
+  const secret = environmentSecret()
+  return secret !== null && secretFits(secret, settings)
+}
+
 /** Only what differs from the environment. */
 function trimmed(next: Saved): Saved {
+  const fallback = environmentSecret()
+  const same =
+    next.secret !== null &&
+    fallback !== null &&
+    next.secret.value === fallback.value &&
+    secretFits(next.secret, fallback)
   return {
     oidc: overridesOf(next.oidc, oidcDefaults()),
-    secret: next.secret === env.MATINEE_OIDC_CLIENT_SECRET ? null : next.secret,
+    secret: same ? null : next.secret,
   }
 }
 
 function resolve(current: Saved): OidcState {
   const settings = { ...oidcDefaults(), ...current.oidc }
-  const secret = current.secret ?? env.MATINEE_OIDC_CLIENT_SECRET
+  const saved =
+    current.secret && secretFits(current.secret, settings)
+      ? current.secret.value
+      : undefined
+  const fallback = environmentSecretFits(settings)
+    ? env.MATINEE_OIDC_CLIENT_SECRET
+    : undefined
   return {
     settings,
-    secret,
-    secretSource: current.secret
-      ? "saved"
-      : env.MATINEE_OIDC_CLIENT_SECRET
-        ? "environment"
-        : null,
+    secret: saved ?? fallback,
+    secretSource: saved ? "saved" : fallback ? "environment" : null,
     version,
   }
 }
@@ -182,7 +267,9 @@ export async function activeOidc(): Promise<OidcState | null> {
 
 /**
  * What differs from the environment saves. An empty text field drops the
- * saved value, so the environment's applies.
+ * saved value, so the environment's applies. A new secret is bound to the
+ * issuer and client ID saved with it; an omitted one keeps its binding, so
+ * it stays out of requests to any other client.
  */
 function nextSaved(current: Saved, input: OidcSettingsInput): Saved {
   const oidc: Partial<OidcSettings> = {
@@ -193,10 +280,19 @@ function nextSaved(current: Saved, input: OidcSettingsInput): Saved {
   for (const key of TEXT_FIELDS) {
     if (input[key]) oidc[key] = input[key]
   }
+  const settings = { ...oidcDefaults(), ...oidc }
   return trimmed({
     oidc,
     secret:
-      input.clientSecret === undefined ? current.secret : input.clientSecret,
+      input.clientSecret === undefined
+        ? current.secret
+        : input.clientSecret === null
+          ? null
+          : {
+              value: input.clientSecret,
+              issuerUrl: settings.issuerUrl,
+              clientId: settings.clientId,
+            },
   })
 }
 
@@ -222,7 +318,7 @@ async function write(next: Saved): Promise<void> {
       await tx.delete(setting).where(eq(setting.key, OIDC_KEY))
     }
     if (next.secret) {
-      const value = { value: next.secret }
+      const value = next.secret
       await tx
         .insert(setting)
         .values({ key: SECRET_KEY, value })

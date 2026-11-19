@@ -148,7 +148,8 @@ export type FulfilmentOptions = t.infer<typeof FulfilmentOptions>
 /**
  * Asks a connection for its choices before it is saved: its source and
  * settings as the form holds them. With `id`, a key left out is the one
- * the saved connection uses.
+ * the saved connection uses, while its source and destination stay the
+ * same; after they change, the key has to be given again.
  */
 export const FulfilmentOptionsInput = t.object({
   id: t.uuid().optional(),

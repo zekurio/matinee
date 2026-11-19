@@ -5,6 +5,7 @@ import type { Context } from "hono"
 
 import { readViewer } from "../access/viewer"
 import { passkeysEnabled } from "../auth/passkey-settings"
+import { type RateLimit, takeTry, TOO_MANY_TRIES } from "../rate-limit"
 
 export type RpcContext = {
   /** The Hono request, for cookies and headers. */
@@ -34,6 +35,28 @@ export const admin = authed.use(async ({ context, next }) => {
   if (context.user.role !== "admin") throw forbidden()
   return next()
 })
+
+/**
+ * Hold each client to `limit` for a procedure, with TOO_MANY_REQUESTS past
+ * it. Use one of `LIMITS` from `rate-limit.ts`.
+ */
+export function limited(limit: RateLimit) {
+  return os.$context<RpcContext>().middleware(async ({ context, next }) => {
+    const wait = await takeTry(context.hono, limit)
+    if (wait > 0) throw tooManyRequests(TOO_MANY_TRIES, wait)
+    return next()
+  })
+}
+
+export function tooManyRequests(
+  message: string,
+  retryAfter: number,
+): ORPCError<"TOO_MANY_REQUESTS", { retryAfter: number }> {
+  return new ORPCError("TOO_MANY_REQUESTS", {
+    message,
+    data: { retryAfter },
+  })
+}
 
 /** What a user who isn't an admin gets for an admin procedure. */
 export function forbidden(): ORPCError<"FORBIDDEN", unknown> {

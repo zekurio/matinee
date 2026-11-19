@@ -1,7 +1,8 @@
 import { authChallenge, type ChallengePayload } from "@matinee/db"
-import { and, eq, gt, lt } from "drizzle-orm"
+import { and, eq, gt } from "drizzle-orm"
 
 import { db } from "../db"
+import { deleteSomeExpired } from "./expired"
 
 export type ChallengePurpose =
   | "passkey-sign-in"
@@ -17,8 +18,7 @@ export async function createChallenge(input: {
   payload: ChallengePayload
   ttlMs: number
 }): Promise<string> {
-  // Opportunistic cleanup keeps the table small without a worker.
-  await db.delete(authChallenge).where(lt(authChallenge.expiresAt, new Date()))
+  await deleteSomeExpired(authChallenge)
   const [row] = await db
     .insert(authChallenge)
     .values({

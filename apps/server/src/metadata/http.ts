@@ -1,7 +1,13 @@
+import type { SchemaBoundaryInput } from "@matinee/contracts/schema"
+
+import { BodyTooLarge, readJsonBody } from "../json-body"
 import { log } from "../log"
 import { ProviderError } from "./types"
 
 const TIMEOUT_MS = 20_000
+// The largest TMDB and TVDB replies (extended records, image lists, episode
+// pages) run to a few hundred kilobytes. This leaves plenty of room.
+const MAX_BODY_BYTES = 16 * 1024 * 1024
 const MAX_ATTEMPTS = 4
 const MAX_WAIT_MS = 60_000
 
@@ -19,10 +25,12 @@ function retryDelay(response: Response | null, attempt: number): number {
 /**
  * Fetch JSON from a provider. Rate limits, server errors, and network
  * failures are retried with backoff; other failures throw a ProviderError.
+ * The body is read up to a size limit and checked with `schema`.
  */
 export async function fetchJson<T>(
   provider: string,
   url: string | URL,
+  schema: { parse: (value: SchemaBoundaryInput) => T },
   init: RequestInit = {},
 ): Promise<T> {
   // A network failure on the last attempt is reported as unreachable, not as
@@ -44,14 +52,30 @@ export async function fetchJson<T>(
       continue
     }
     if (response.ok) {
+      let body: SchemaBoundaryInput
       try {
-        // SAFETY: Callers name the response shape the provider documents for
-        // the endpoint they call. The body isn't schema-checked.
-        return (await response.json()) as T
+        body = await readJsonBody(response, MAX_BODY_BYTES)
       } catch (cause) {
+        if (cause instanceof BodyTooLarge) {
+          log.warn(`${provider} sent a reply over ${MAX_BODY_BYTES} bytes`)
+          throw new ProviderError(
+            `${provider} sent a reply too large for Matinee to read.`,
+            null,
+          )
+        }
         // A 200 with HTML or a truncated body, from a proxy or a provider
-        // mid-outage. The parser's message would show the start of the body.
-        log.warn(`${provider} sent a body that isn't JSON`, cause)
+        // mid-outage, or a body the timeout cut off. The parser's message
+        // would show the start of the body.
+        log.warn(`Couldn't read ${provider}'s reply as JSON`, cause)
+        throw new ProviderError(
+          `${provider} sent a reply Matinee couldn't read. Try again later.`,
+          null,
+        )
+      }
+      try {
+        return schema.parse(body)
+      } catch (cause) {
+        log.warn(`${provider} sent a reply in an unexpected shape`, cause)
         throw new ProviderError(
           `${provider} sent a reply Matinee couldn't read. Try again later.`,
           null,

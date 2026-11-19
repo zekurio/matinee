@@ -10,6 +10,7 @@ import * as client from "openid-client"
 
 import { env } from "../env"
 import { log } from "../log"
+import { LIMITS, takeTry, TOO_MANY_TRIES } from "../rate-limit"
 import { consumeChallenge, createChallenge } from "./challenges"
 import {
   createOidcUser,
@@ -22,14 +23,18 @@ import {
   takePicture,
 } from "./oidc-accounts"
 import { readOidcIdentity } from "./oidc-claims"
-import { oidcConfig, WrongIssuerError } from "./oidc-client"
+import {
+  InsecureIssuerError,
+  oidcConfig,
+  WrongIssuerError,
+} from "./oidc-client"
 import { linkPagePath, savePendingLink } from "./oidc-pending"
 import { passkeysEnabled } from "./passkey-settings"
 import { readSession, signIn } from "./session"
 import { endSetupAccess, markSetupDone, setupRequired } from "./setup"
 import { findUserByUsernameHint } from "./users"
 
-export { discover, WrongIssuerError } from "./oidc-client"
+export { discover, InsecureIssuerError, WrongIssuerError } from "./oidc-client"
 
 const FLOW_COOKIE = "matinee_oidc"
 const FLOW_TTL_MS = 10 * 60 * 1000
@@ -158,7 +163,7 @@ async function startFlow(
     return errorRedirect(
       c,
       errorPage,
-      cause instanceof WrongIssuerError
+      cause instanceof WrongIssuerError || cause instanceof InsecureIssuerError
         ? MISCONFIGURED
         : cause instanceof OidcError
           ? cause.message
@@ -171,6 +176,10 @@ export const oidcRoutes = new Hono()
   .get("/start", async (c) => {
     const mode = Mode.catch("sign-in").parse(c.req.query("mode"))
     const errorPage = mode === "link" ? LINK_PAGE : "/login"
+    // Before the provider is called or a challenge stored.
+    if ((await takeTry(c, LIMITS.oidcStart)) > 0) {
+      return errorRedirect(c, errorPage, TOO_MANY_TRIES)
+    }
     return startFlow(c, errorPage, async () => {
       // With single sign-on set up, setup needs no token: the provider's
       // role claim says who may become the admin.
@@ -296,7 +305,8 @@ export const oidcRoutes = new Hono()
         )
       }
       const message =
-        cause instanceof WrongIssuerError
+        cause instanceof WrongIssuerError ||
+        cause instanceof InsecureIssuerError
           ? MISCONFIGURED
           : cause instanceof OidcError
             ? cause.message

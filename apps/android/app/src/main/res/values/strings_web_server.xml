@@ -64,10 +64,12 @@
     <string name="web_server_fulfilment_httpUrl">Use an HTTP or HTTPS URL.</string>
     <string name="web_server_fulfilment_unknownSource">Choose an available fulfilment source.</string>
     <string name="web_server_fulfilment_keyTwice">Set the connection key or its file, not both.</string>
+    <string name="web_server_fulfilment_keyMoved">The connection\'s URL or source changed, so Matinee won\'t send its saved API key there. Enter the API key for the new server.</string>
     <string name="web_server_fulfilment_connectionMissing">Connection not found.</string>
     <string name="web_server_fulfilment_unreachable">Cannot reach the connection. Check its URL and network access.</string>
     <string name="web_server_fulfilment_keyRejected">The connection rejected the API key. Check the saved key or environment variable.</string>
     <string name="web_server_fulfilment_operationRejected">The connection rejected the operation. Check its configuration and logs.</string>
+    <string name="web_server_fulfilment_replyTooLarge">The connection sent a reply too large to read. Check its configuration and logs.</string>
     <string name="web_server_fulfilment_notRadarr">This URL is not a Radarr server.</string>
     <string name="web_server_fulfilment_notSonarr">This URL is not a Sonarr server.</string>
     <string name="web_server_fulfilment_titleNotFound">The connection could not find this title. Check its external identifier.</string>
@@ -99,6 +101,8 @@
     <string name="web_server_auth_signOutFirst">Sign out before creating a new account.</string>
     <string name="web_server_auth_appSignInGone">This sign-in expired or was used already. Try again.</string>
     <string name="web_server_auth_deviceCodeExpired">This code expired. Get a new one.</string>
+    <string name="web_server_auth_tooManyTries">Too many tries. Wait a while and try again.</string>
+    <string name="web_server_auth_devicePollTooSoon">Wait %1$s seconds between polls.</string>
     <string name="web_server_auth_inviteGone">This invite link doesn\'t work. It may have expired, or been used already.</string>
     <string name="web_server_auth_appRequestInvalid">This sign-in request is invalid. Start again in the app.</string>
     <string name="web_server_oidc_noLinkedAccount">No account is linked to this sign-in. Sign in with a passkey, then link it in settings.</string>
@@ -157,6 +161,8 @@
     <string name="web_server_adminUsers_lastAdminDelete">You\'re the only admin who can sign in. Make someone who can sign in an admin before you delete your account.</string>
     <string name="web_server_adminAuth_issuerRequired">Enter an issuer URL to turn on single sign-on.</string>
     <string name="web_server_adminAuth_clientIdRequired">Enter a client ID to turn on single sign-on.</string>
+    <string name="web_server_adminAuth_plainHttp">Use an https issuer URL. Plain http only works for a provider on localhost, unless the server sets MATINEE_OIDC_ALLOW_HTTP=true.</string>
+    <string name="web_server_adminAuth_secretForOldClient">The saved client secret is for the previous issuer and client ID. Enter the new client\'s secret, or remove the saved one.</string>
     <string name="web_server_adminAuth_noMethod">Keep passkeys or single sign-on on. Without either, nobody can sign in.</string>
     <string name="web_server_adminAuth_passkeysOffLink">Link your account to single sign-on under Settings → Account before turning passkeys off.</string>
     <string name="web_server_adminAuth_passkeysOffSaveFirst">Save single sign-on first and link your account to it under Settings → Account. Then turn passkeys off.</string>
@@ -248,6 +254,7 @@
     <string name="web_server_metadata_noEntry">%1$s has no entry with that id.</string>
     <string name="web_server_metadata_noAnswer">%1$s didn\'t answer. Try again in a minute.</string>
     <string name="web_server_metadata_unreadable">%1$s sent a reply Matinee couldn\'t read. Try again later.</string>
+    <string name="web_server_metadata_tooLarge">%1$s sent a reply too large for Matinee to read.</string>
     <string name="web_server_metadata_keepsFailing">%1$s keeps failing, stopping for now.</string>
     <string name="web_server_metadata_unreachable">Couldn\'t reach %1$s</string>
     <string name="web_server_metadata_answeredFor">%1$s answered %2$s for %3$s</string>

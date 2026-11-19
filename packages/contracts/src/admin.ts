@@ -78,7 +78,12 @@ export const AdminAuthSettings = t.object({
   defaults: OidcSettings,
   clientSecret: t.object({
     source: SecretSource,
-    /** The environment sets one, so dropping the saved secret falls back. */
+    /**
+     * MATINEE_OIDC_CLIENT_SECRET is set for the issuer and client ID in
+     * use, so dropping the saved secret falls back to it. It belongs to
+     * MATINEE_OIDC_ISSUER_URL and MATINEE_OIDC_CLIENT_ID and is never sent
+     * to another client.
+     */
     environment: t.boolean(),
   }),
   /** The redirect URI to register with the provider. */
@@ -109,6 +114,10 @@ export const OidcSettingsInput = t
     allowSignUp: t.boolean(),
     signOutRefused: t.boolean(),
     displayName: text(64),
+    /**
+     * https, or http for a provider on localhost. Elsewhere the server
+     * refuses http unless MATINEE_OIDC_ALLOW_HTTP is set.
+     */
     issuerUrl: text(2048)
       .refine(
         (value) => value === "" || isHttpUrl(value),
@@ -123,7 +132,11 @@ export const OidcSettingsInput = t
     roleClaim: text(128),
     groupsClaim: text(128),
     policyClaim: text(128),
-    /** A new secret. Null drops the saved one; omitted keeps it. */
+    /**
+     * A new secret, bound to the issuer and client ID saved with it. Null
+     * drops the saved one; omitted keeps it, which a change of issuer or
+     * client ID refuses, since the secret belongs to the old client.
+     */
     clientSecret: t.string().trim().min(1).max(4096).nullable().optional(),
   })
   .refine(

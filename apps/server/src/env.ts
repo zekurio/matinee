@@ -4,6 +4,8 @@ import { dirname, join, resolve } from "node:path"
 import { DevicePath, HardwareAcceleration } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 
+import { PLAIN_HTTP_REFUSED, plainHttpRefused } from "./auth/oidc-transport"
+
 // Fill unset variables from the nearest `.env` above the working directory.
 // Variables already in the environment win.
 function loadDotenv(): void {
@@ -103,6 +105,12 @@ const EnvSchema = t.object({
     // The URL parser skips tabs and newlines, so the value does too.
     .transform((value) => value.replaceAll(/[\t\n\r]/g, "") || undefined)
     .optional(),
+  /**
+   * Let an issuer off loopback use plain http, for a provider on a network
+   * the operator trusts. The client secret and sign-in codes then cross it
+   * unencrypted.
+   */
+  MATINEE_OIDC_ALLOW_HTTP: flag(false),
   MATINEE_OIDC_CLIENT_ID: optional,
   MATINEE_OIDC_CLIENT_SECRET: optional,
   MATINEE_OIDC_DISPLAY_NAME: t.string().$default("Single sign-on"),
@@ -165,6 +173,14 @@ function parseEnv() {
     throw new Error(`Invalid environment:\n${issues.join("\n")}`)
   }
   const env = result.data
+  if (
+    env.MATINEE_OIDC_ISSUER_URL &&
+    plainHttpRefused(env.MATINEE_OIDC_ISSUER_URL, env.MATINEE_OIDC_ALLOW_HTTP)
+  ) {
+    throw new Error(
+      `Invalid environment:\n✖ ${PLAIN_HTTP_REFUSED}\n  → at MATINEE_OIDC_ISSUER_URL`,
+    )
+  }
   const publicUrl = new URL(env.PUBLIC_URL)
   const dataDir = resolve(env.MATINEE_DATA_DIR)
   return {
@@ -174,9 +190,6 @@ function parseEnv() {
       ? resolve(env.MATINEE_TRANSCODE_DIR)
       : join(dataDir, "transcodes"),
     secureCookies: publicUrl.protocol === "https:",
-    isLoopback: ["localhost", "127.0.0.1", "[::1]"].includes(
-      publicUrl.hostname,
-    ),
   }
 }
 

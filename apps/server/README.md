@@ -86,8 +86,10 @@ still needs GPU drivers in `hardware.graphics.extraPackages`, like
 The first visit goes to `/setup`. How it creates the admin depends on
 whether `MATINEE_OIDC_ISSUER_URL` and `MATINEE_OIDC_CLIENT_ID` are set.
 
-Without OIDC, the server logs a setup token at start, or uses
-`MATINEE_SETUP_TOKEN`. Enter it, pick a username, and create a passkey. If
+Without OIDC, the server logs a random setup token at start, or uses
+`MATINEE_SETUP_TOKEN`. It does so even when `PUBLIC_URL` is localhost,
+since `HOST` defaults to `::` and the server answers on every address.
+Enter it, pick a username, and create a passkey. If
 `MATINEE_PASSKEYS_ENABLED=false` too, there's no way to create an admin,
 and setup says so.
 
@@ -122,6 +124,25 @@ Admins configure single sign-on in Settings → Authentication, and changes
 apply on the next sign-in. Register `$PUBLIC_URL/api/auth/oidc/callback`
 as the redirect URI. To create the admin through the provider, set the
 `MATINEE_OIDC_*` variables, since Settings isn't reachable before setup.
+
+The issuer URL must be https. Plain http works only for a provider on
+loopback (`localhost`, `127.0.0.0/8`, `::1`), since discovery, the token
+exchange, and refreshes carry the client secret and sign-in codes. For a
+provider on a network you trust, such as another container or a LAN host,
+set `MATINEE_OIDC_ALLOW_HTTP=true`. Without it, the server won't start
+with an http `MATINEE_OIDC_ISSUER_URL` elsewhere, Settings won't save
+one, and sign-in refuses one saved before.
+
+A client secret belongs to one issuer and client ID. A saved secret is
+bound to the ones it was saved with, and `MATINEE_OIDC_CLIENT_SECRET` to
+`MATINEE_OIDC_ISSUER_URL` and `MATINEE_OIDC_CLIENT_ID`. A secret is only
+sent with its own issuer and client ID. Changing either in Settings while
+a saved secret is in use needs the new client's secret, or removing the
+saved one for a public client. Moving away from the environment's issuer
+or client ID leaves its secret out, so enter one in Settings if the new
+client needs it. A client secret saved by an older Matinee version without
+an issuer and client ID binding is removed at startup; enter it again in
+Settings before the next sign-in.
 
 A new account takes its username from `MATINEE_OIDC_USERNAME_CLAIM`
 (`preferred_username`) and its display name from `MATINEE_OIDC_NAME_CLAIM`
@@ -786,7 +807,9 @@ the rows don't appear.
 - OIDC uses authorization code with PKCE, state, and nonce, through
   openid-client. Accounts match on issuer and subject, never email. Each
   account links one provider account. The server rejects a provider whose
-  discovery document names a different issuer.
+  discovery document names a different issuer, or plain http off
+  loopback without `MATINEE_OIDC_ALLOW_HTTP`, and sends a client secret
+  only to the issuer and client ID it belongs to.
 - You can't remove your last passkey or linked account. An admin who only
   uses SSO can't turn SSO off or change the issuer.
 - Admins can turn passkeys off in Settings → Authentication, or default
@@ -812,6 +835,16 @@ the rows don't appear.
   ignored and logged.
 - A client secret saved in Settings is stored in plain text. Use
   `MATINEE_OIDC_CLIENT_SECRET_FILE` to keep it out of the database.
+- What anyone can call without signing in is limited per client address:
+  passkey sign-in and sign-up options (30 a minute), single sign-on starts
+  (20 a minute), device codes (20 per 10 minutes), device polls (120 a
+  minute), and setup token tries (10 per 15 minutes). Past a limit the API
+  answers 429 with `Retry-After`. The address is the one in Settings →
+  Network, so behind a reverse proxy, add it to the trusted proxies, or all
+  clients share one limit. IPv6 clients count by their /64. The counts
+  live in memory and reset on restart.
+- Request bodies are capped at 1 MB before anything parses them, except
+  avatar and title image uploads, which get the file's limit.
 
 ## Signing in apps
 
@@ -841,7 +874,8 @@ Apps without a browser, like TV apps, use the device grant (RFC 8628):
    `verificationUriComplete` has the code filled in, for a QR code.
 2. A signed-in user opens the page, enters the code, and approves.
 3. Poll `/api/v1/auth/device/token` with `deviceCode` every `interval`
-   seconds. It returns `pending` until approved. After `expiresIn`, ten
+   seconds. It returns `pending` until approved, and 429 for a poll that
+   comes sooner than `interval` after the last. After `expiresIn`, ten
    minutes, it returns 404 and the app starts over.
 
 Both pages warn that approving gives the device the account. That warning

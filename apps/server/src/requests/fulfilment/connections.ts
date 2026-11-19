@@ -78,6 +78,66 @@ export async function connectionById(id: string, tx: Reader = db) {
   return row
 }
 
+async function connectionBySlug(slug: string, tx: Reader = db) {
+  const [row] = await tx
+    .select()
+    .from(fulfilmentConnection)
+    .where(eq(fulfilmentConnection.slug, slug))
+  return row ?? null
+}
+
+const KEY_MOVED =
+  "The connection's URL or source changed, so Matinee won't send its saved API key there. Enter the API key for the new server."
+
+/**
+ * Whether a saved connection's key may go with these details: to the
+ * same source, at the same destination, as its source normalizes it.
+ */
+function keepsDestination(
+  row: ConnectionRow,
+  sourceId: string,
+  settings: FulfilmentValues,
+) {
+  const source = sources.get(sourceId)
+  if (row.source !== sourceId || !source?.destination) return false
+  const to = source.destination
+  const before = parsed(() => to(source.settings.parse(row.settings)))
+  return before !== null && before === to(settings)
+}
+
+/**
+ * The key a connection's details go out with when none was typed: the
+ * saved one of `saved`, when `keep`, else the environment's for the slug.
+ * Either is bound to the connection it belongs to, so details whose
+ * source or destination differ from it get an error asking for the key
+ * again. An environment key no connection uses yet is free to take.
+ * `settings` were parsed by the details' source.
+ */
+export async function boundKey(
+  details: { source: string; slug: string; settings: FulfilmentValues },
+  saved: ConnectionRow | null,
+  keep: boolean,
+  readEnvironment: (slug: string) => string | null = environmentKey,
+): Promise<string | null> {
+  const moved = (row: ConnectionRow) =>
+    !keepsDestination(row, details.source, details.settings)
+  if (saved && keep && saved.apiKey) {
+    if (moved(saved)) throw new ORPCError("BAD_REQUEST", { message: KEY_MOVED })
+    return saved.apiKey
+  }
+  const key = readEnvironment(details.slug)
+  if (!key) return null
+  const owner =
+    saved?.slug === details.slug ? saved : await connectionBySlug(details.slug)
+  if (owner && owner.id !== saved?.id)
+    throw new ORPCError("CONFLICT", {
+      message: "A connection already uses this slug. Choose another slug.",
+    })
+  if (owner && moved(owner))
+    throw new ORPCError("BAD_REQUEST", { message: KEY_MOVED })
+  return key
+}
+
 export function resolveConnection(row: ConnectionRow) {
   return {
     id: row.id,
