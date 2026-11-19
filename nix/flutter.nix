@@ -56,8 +56,11 @@ in
     # Gradle downloads aapt2 from Maven, a binary built for other Linux
     # systems. Use the SDK's, which Nix patched to run here.
     GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${home}/build-tools/${buildToolsVersion}/aapt2";
+    # `dart run` resolves packages itself and needs to find Flutter for
+    # that, as `dart run pigeon` does.
     shellHook = ''
       export PUB_CACHE="''${PUB_CACHE:-$HOME/.pub-cache}"
+      export FLUTTER_ROOT="$(dirname "$(dirname "$(readlink -f "$(command -v flutter)")")")"
     '';
   };
 }

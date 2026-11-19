@@ -2,8 +2,15 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'core/device.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: MatineeApp()));
+  final device = await Device.load();
+  runApp(
+    ProviderScope(
+      overrides: [deviceProvider.overrideWithValue(device)],
+      child: const MatineeApp(),
+    ),
+  );
 }

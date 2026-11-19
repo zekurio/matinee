@@ -47,3 +47,19 @@ logcat:
 # Generate the API client again after a contract change
 api:
     cd ../.. && pnpm api:dart
+
+# Format the Dart code, except what generators write
+format:
+    {{ flutter }} pub get >/dev/null
+    git ls-files --cached --others --exclude-standard 'lib/*.dart' 'test/*.dart' | grep -Ev '(\.g\.dart|/contract_[a-z]+\.dart)$' | xargs -r {{ if in_shell != "" { "dart" } else { "nix develop ../..#flutter -c dart" } }} format
+
+# What CI runs: the analyzer, the format check, and the tests
+check:
+    {{ flutter }} pub get >/dev/null
+    {{ flutter }} analyze
+    git ls-files --cached --others --exclude-standard 'lib/*.dart' 'test/*.dart' | grep -Ev '(\.g\.dart|/contract_[a-z]+\.dart)$' | xargs -r {{ if in_shell != "" { "dart" } else { "nix develop ../..#flutter -c dart" } }} format --output=none --set-exit-if-changed
+    {{ flutter }} test
+
+# Generate the platform channels again after a change in pigeons/
+pigeon:
+    for input in pigeons/*.dart; do {{ if in_shell != "" { "dart" } else { "nix develop ../..#flutter -c dart" } }} run pigeon --input "$input"; done
