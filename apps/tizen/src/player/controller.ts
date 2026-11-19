@@ -241,6 +241,12 @@ export class PlayerController extends Observable {
   } | null = null
   /** Where the viewer sought while an answer was on its way. */
   private seekOnAnswer: number | null = null
+  /**
+   * The segment the viewer skipped, whose button stays away until they
+   * seek. A copied stream lands on the keyframe nearest its end, which
+   * can be a little short of it.
+   */
+  private skipped: MediaSegment | null = null
   private timer = 0
   private released = false
 
@@ -300,9 +306,15 @@ export class PlayerController extends Observable {
 
   /** The part the server offers to skip that plays now, like the intro. */
   get segment(): MediaSegment | null {
+    const skipped = this.skipped
     return (
       this.plan.segments.find(
         (segment) =>
+          !(
+            skipped !== null &&
+            segment.kind === skipped.kind &&
+            segment.start === skipped.start
+          ) &&
           this.position >= segment.start &&
           this.position < segment.end - SEGMENT_END_SECONDS,
       ) ?? null
@@ -405,7 +417,7 @@ export class PlayerController extends Observable {
       this.pendingAt = null
       if (current.method === "direct") this.selectAudioInFile()
       this.showSubtitle()
-      if (sought !== null) this.seekTo(sought)
+      if (sought !== null) this.moveTo(sought)
     }
     if (said) this.notice = { kind: said }
     this.changed()
@@ -668,7 +680,7 @@ export class PlayerController extends Observable {
       this.quality = this.plan.quality
       this.notice = { kind: "switchFailed", detail: message }
       // What plays stays, so a seek made meanwhile goes to it.
-      if (sought !== null) this.seekTo(sought)
+      if (sought !== null) this.moveTo(sought)
     }
     this.changed()
   }
@@ -716,7 +728,20 @@ export class PlayerController extends Observable {
     this.engine.pause()
   }
 
+  /** The viewer's seek, which brings back the button of a segment they skipped. */
   seekTo(seconds: number) {
+    this.skipped = null
+    this.moveTo(seconds)
+  }
+
+  /** Skips `segment` to its end, and keeps its button away. */
+  skipSegment(segment: MediaSegment) {
+    this.moveTo(segment.end)
+    this.skipped = segment
+    this.changed()
+  }
+
+  private moveTo(seconds: number) {
     const current = this.source
     if (!current) return
     const target = Math.max(

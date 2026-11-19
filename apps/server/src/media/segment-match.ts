@@ -17,6 +17,13 @@ const MAX_BIT_DIFFERENCE = 6
 const MAX_GAP_SECONDS = 3.5
 /** How many of the likeliest shifts get lined up. */
 const SHIFTS_TRIED = 25
+/**
+ * A point sums up the next 2.7 s of audio, and still matches when about
+ * the last half of that differs. So shared audio goes on for about this
+ * long after the last point that matches, as measured on stretches with a
+ * known end.
+ */
+const END_LAG_SECONDS = 1
 
 /** A stretch both fingerprints share, in seconds into each. */
 export type SharedAudio = {
@@ -79,10 +86,13 @@ export function sharedAudio(
   }
   if (!best || best.to === best.from) return null
   return {
-    a: { start: best.from * POINT_SECONDS, end: best.to * POINT_SECONDS },
+    a: {
+      start: best.from * POINT_SECONDS,
+      end: best.to * POINT_SECONDS + END_LAG_SECONDS,
+    },
     b: {
       start: (best.from + best.shift) * POINT_SECONDS,
-      end: (best.to + best.shift) * POINT_SECONDS,
+      end: (best.to + best.shift) * POINT_SECONDS + END_LAG_SECONDS,
     },
   }
 }

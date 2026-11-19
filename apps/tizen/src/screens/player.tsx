@@ -749,7 +749,7 @@ function Controls(props: {
       ? {
           label: skipLabel(segment.kind),
           countdown: null,
-          run: () => controller.seekTo(segment.end),
+          run: () => controller.skipSegment(segment),
         }
       : null
   const away = upcoming ? nextAway : skipAway

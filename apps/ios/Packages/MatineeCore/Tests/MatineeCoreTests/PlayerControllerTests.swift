@@ -1168,6 +1168,14 @@ private func episode(_ id: String, duration: Double = 3000) -> MediaItem {
     #expect(controller.skippable(controls: false) == intro)
     await controller.skipSegment()
     #expect(harness.engine.seeks.last == 40)
+    // A skip that lands short of the end keeps its button away, until the viewer seeks.
+    harness.engine.positionSeconds = 38
+    await controller.tick()
+    #expect(controller.segment == nil)
+    await controller.seekTo(20)
+    harness.engine.positionSeconds = 20
+    await controller.tick()
+    #expect(controller.segment == intro)
     // The credits are a segment of their own.
     harness.engine.positionSeconds = 2750
     await controller.tick()

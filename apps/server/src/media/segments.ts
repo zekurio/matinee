@@ -15,6 +15,7 @@ import { env } from "../env"
 import { defineQueue, type Priority } from "../jobs/queue"
 import { log } from "../log"
 import { episodeOrder } from "./items"
+import { keyframesNear } from "./playback"
 import { processFailureKind, runProcess } from "./process"
 import { sharedAudio } from "./segment-match"
 
@@ -25,11 +26,12 @@ import { sharedAudio } from "./segment-match"
  * they don't, the opening and closing audio of an episode is compared
  * with its season's other episodes, and what they share is the intro or
  * the credits. A season is one job, so its episodes are fingerprinted
- * once each.
+ * once each. The end of what they share then moves to the silence or the
+ * cut nearest it, where the episode goes on.
  */
 
 /** Raise to look at every episode again, after a change to the search. */
-const VERSION = 1
+const VERSION = 2
 /** Episodes each one is compared with, the nearest in the season first. */
 const MAX_PEERS = 3
 /** The share of an episode at each end whose audio is compared. */
@@ -40,8 +42,16 @@ const INTRO_SECONDS = { min: 15, max: 120 }
 const CREDITS_SECONDS = { min: 15, max: 450 }
 /** Credits that end this close to the end of the file run to the end. */
 const END_SLACK_SECONDS = 5
+/** Audio this quiet for this long is a silence, as in Intro Skipper. */
+const SILENCE_DB = -50
+const SILENCE_SECONDS = 0.33
+/** How far from where the audio stops matching a silence may start. */
+const SILENCE_REACH_SECONDS = 2
+/** And a cut, without a silence. */
+const CUT_REACH_SECONDS = 1
 const FINGERPRINT_TIMEOUT_MS = 5 * 60_000
 const CHAPTERS_TIMEOUT_MS = 30_000
+const SILENCE_TIMEOUT_MS = 30_000
 // A failure is tried again after this, by the next scan or task run.
 const RETRY_AFTER_MS = 12 * 60 * 60_000
 
@@ -257,6 +267,140 @@ function sharedCredits(
 }
 
 /*
+ * Edges
+ */
+
+type Span = { start: number; end: number }
+
+const SILENCE_START = /silence_start: (-?[\d.]+)/
+const SILENCE_END = /silence_end: (-?[\d.]+)/
+
+/** The silences in `seconds` of the file's audio from `from`. */
+async function silences(
+  item: MediaItemRow,
+  audioIndex: number,
+  from: number,
+  seconds: number,
+  signal: AbortSignal,
+): Promise<Span[]> {
+  const found: Span[] = []
+  let start: number | null = null
+  // The filter counts from the seek.
+  const at = (match: RegExpExecArray | null) =>
+    match ? from + Math.max(0, Number(match[1])) : null
+  await runProcess({
+    name: "ffmpeg",
+    command: env.MATINEE_FFMPEG_PATH,
+    args: [
+      "-hide_banner",
+      "-nostats",
+      "-nostdin",
+      ...(from > 0 ? ["-ss", String(from)] : []),
+      "-t",
+      String(seconds),
+      "-i",
+      item.path,
+      "-map",
+      `0:${audioIndex}`,
+      "-af",
+      `silencedetect=noise=${SILENCE_DB}dB:duration=${SILENCE_SECONDS}`,
+      "-f",
+      "null",
+      "-",
+    ],
+    timeoutMs: SILENCE_TIMEOUT_MS,
+    signal,
+    priority: 10,
+    idleIo: true,
+    onStderrLine: (line) => {
+      // The filter prints at the info level.
+      start = at(SILENCE_START.exec(line)) ?? start
+      const end = at(SILENCE_END.exec(line))
+      if (end !== null && start !== null) {
+        found.push({ start, end })
+        start = null
+      }
+    },
+  })
+  // A silence still going when the audio ran out.
+  if (start !== null) found.push({ start, end: from + seconds })
+  return found
+}
+
+function closest<T>(
+  list: readonly T[],
+  to: number,
+  time: (value: T) => number,
+): T | undefined {
+  let best: T | undefined
+  for (const value of list) {
+    if (
+      best === undefined ||
+      Math.abs(time(value) - to) < Math.abs(time(best) - to)
+    ) {
+      best = value
+    }
+  }
+  return best
+}
+
+/**
+ * Where the episode goes on after audio that stops matching at `end`: at
+ * the silence that starts nearest it, or at a cut in that silence, else
+ * at the cut nearest it. A cut is a keyframe, which a seek in a copied
+ * stream lands on, so Skip lands there too.
+ */
+async function edgeAfter(
+  item: MediaItemRow,
+  audioIndex: number,
+  end: number,
+  signal: AbortSignal,
+): Promise<number> {
+  const from = Math.max(0, end - SILENCE_REACH_SECONDS)
+  const quiet = await silences(
+    item,
+    audioIndex,
+    from,
+    end + SILENCE_REACH_SECONDS - from,
+    signal,
+  )
+  const silence = closest(quiet, end, (span) => span.start)
+  signal.throwIfAborted()
+  const keyframes = await keyframesNear(item, silence?.start ?? end)
+  const cuts = keyframes
+    ? [keyframes.before, keyframes.after].filter((cut) => cut !== null)
+    : []
+  if (silence) {
+    return (
+      cuts.find(
+        (cut) => cut >= silence.start - 0.001 && cut <= silence.end + 0.001,
+      ) ?? silence.start
+    )
+  }
+  const cut = closest(cuts, end, (cut) => cut)
+  return cut !== undefined && Math.abs(cut - end) <= CUT_REACH_SECONDS
+    ? cut
+    : end
+}
+
+/** The segment the fingerprints found, ending where the episode goes on. */
+async function settled(
+  item: MediaItemRow,
+  segment: StoredSegment,
+  signal: AbortSignal,
+): Promise<StoredSegment> {
+  const audio = audioOf(item)
+  // Credits that run to the end of the file stay there.
+  if (!audio || durationOf(item) - segment.end < END_SLACK_SECONDS) {
+    return segment
+  }
+  const end = await edgeAfter(item, audio.index, segment.end, signal).catch(
+    unreadable(item, segment.end),
+  )
+  return end > segment.start ? { ...segment, end } : segment
+}
+
+/*
  * Seasons
  */
 
@@ -374,7 +518,8 @@ async function findSeason(job: SeasonJob, signal: AbortSignal): Promise<void> {
     if (peers.length > 0 && (!has("intro") || !has("credits"))) {
       const shared = await sharedWithPeers(item, peers, printsOf)
       for (const segment of shared) {
-        if (!has(segment.kind)) segments.push(segment)
+        if (has(segment.kind)) continue
+        segments.push(await settled(item, segment, signal))
       }
     }
     segments.sort((a, b) => a.start - b.start)

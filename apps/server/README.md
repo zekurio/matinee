@@ -362,12 +362,17 @@ server takes intros, credits, recaps, and previews from chapter names like
 audio at each end of an episode with ffmpeg's `chromaprint` muxer and
 compares it with up to three nearby episodes. A shared stretch of 15
 seconds to 2 minutes is the intro, and of up to 7½ minutes the credits.
+The end of a stretch moves to a silence that starts within 2 seconds of
+it, or to a keyframe in that silence. Without a silence it moves to a
+keyframe within a second, which is usually the cut to the episode.
 Episodes get checked after ffprobe reads them, a season at a time.
 
 `playback.start` returns the `segments` to offer a skip for, and
 `upNextAt`, where to start offering `next`. Without credits that's 30 to
 40 seconds before the end of an episode of 10 minutes or more, as in
-Jellyfin. Credits that run to the end get no skip.
+Jellyfin. Credits that run to the end get no skip. Once a viewer skips a
+segment, its button stays away until they seek, even when the skip lands
+a little short of the end.
 
 ### Downloads
 

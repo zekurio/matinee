@@ -189,11 +189,18 @@ struct Ask {
   }
 
   /// The part the server offers to skip that plays now, like the intro.
-  /// Its last second has nothing left worth skipping. The client never
-  /// finds one itself: a download, which has no answer, has none.
+  /// Its last second has nothing left worth skipping, and one the viewer
+  /// skipped stays away until they seek. The client never finds one
+  /// itself: a download, which has no answer, has none.
   public var segment: MediaSegment? {
-    plan?.segments.first { position >= $0.start && position < $0.end - SEGMENT_END_SECONDS }
+    plan?.segments.first {
+      $0 != skipped && position >= $0.start && position < $0.end - SEGMENT_END_SECONDS
+    }
   }
+
+  /// The segment the viewer skipped. A copied stream lands on the keyframe
+  /// nearest its end, which can be a little short of it.
+  var skipped: MediaSegment?
 
   public var duration: Double {
     item?.durationSeconds ?? (engine.durationSeconds.isFinite ? engine.durationSeconds + (source?.offset ?? 0) : 0)
@@ -439,7 +446,7 @@ struct Ask {
       }
       await showSubtitle()
       recordSelection()
-      if let sought { await seekTo(sought) }
+      if let sought { await move(to: sought) }
     }
   }
 
@@ -680,7 +687,7 @@ struct Ask {
     }
     notice = Notice(.switchFailed, detail: message)
     // What plays stays, so a seek made meanwhile goes to it.
-    if let sought { await seekTo(sought) }
+    if let sought { await move(to: sought) }
   }
 
   /// Tries again from where it stopped, every method with it.
