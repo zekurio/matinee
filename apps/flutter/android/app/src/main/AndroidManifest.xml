@@ -29,6 +29,7 @@
             android:exported="true"
             android:hardwareAccelerated="true"
             android:launchMode="singleTask"
+            android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:windowSoftInputMode="adjustResize">
             <meta-data
@@ -38,6 +39,24 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <!-- Where the browser sends the person back after signing in
+             (RFC 8252 with PKCE): flutter_web_auth_2 turns it into the
+             result of its authenticate call. The server accepts any
+             `matinee:` redirect, and the app asks for this one. -->
+        <activity
+            android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
+            android:exported="true"
+            android:taskAffinity="">
+            <intent-filter android:label="flutter_web_auth_2">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="matinee"
+                    android:host="auth"
+                    android:path="/callback" />
             </intent-filter>
         </activity>
         <!-- Don't delete: Flutter's tool reads it to generate GeneratedPluginRegistrant.java. -->

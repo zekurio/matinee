@@ -14,6 +14,12 @@ import io.flutter.plugin.common.StandardMethodCodec
 import io.flutter.plugin.common.StandardMessageCodec
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 private object DevicePigeonUtils {
 
   fun wrapResult(result: Any?): List<Any?> {
@@ -272,9 +278,33 @@ private open class DevicePigeonCodec : StandardMessageCodec() {
   }
 }
 
+
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface DeviceApi {
   fun facts(): DeviceFacts
+  /**
+   * Whether the app has to ask for local network access before it can reach
+   * a server or collect discovery replies on the LAN: Android 17 keeps apps
+   * off the LAN without ACCESS_LOCAL_NETWORK, and the user can take it back
+   * in Settings, so this is asked again before each use.
+   */
+  fun localNetworkMissing(): Boolean
+  /**
+   * Asks for local network access, and answers with whether it was granted.
+   * Where nothing needs asking, it answers true at once.
+   */
+  suspend fun requestLocalNetwork(): Boolean
+  /**
+   * The IPv4 broadcast address of each active network interface, like
+   * `192.168.1.255`: `dart:io` knows addresses but not netmasks.
+   */
+  fun broadcastAddresses(): List<String>
+  /**
+   * Deletes what the Kotlin app left behind, once: its preference files and
+   * its downloads folder. Answers whether it ran, which it does on the
+   * first launch only. Call it before anything reads storage.
+   */
+  fun freshStart(): Boolean
 
   companion object {
     /** The codec used by DeviceApi. */
@@ -291,6 +321,68 @@ interface DeviceApi {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
               listOf(api.facts())
+            } catch (exception: Throwable) {
+              DevicePigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.DeviceApi.localNetworkMissing$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.localNetworkMissing())
+            } catch (exception: Throwable) {
+              DevicePigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.DeviceApi.requestLocalNetwork$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.requestLocalNetwork())
+              } catch (exception: Throwable) {
+                DevicePigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.DeviceApi.broadcastAddresses$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.broadcastAddresses())
+            } catch (exception: Throwable) {
+              DevicePigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.DeviceApi.freshStart$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.freshStart())
             } catch (exception: Throwable) {
               DevicePigeonUtils.wrapError(exception)
             }

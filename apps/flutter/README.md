@@ -80,6 +80,28 @@ A platform channel starts as a Pigeon file in `pigeons/`. Run
 `just flutter pigeon`, then implement the generated interface on the
 native side, as `MainActivity.kt` does for `DeviceApi`.
 
+## Sessions and sign-in
+
+`lib/core/session.dart` holds the saved servers, the one in use, and the
+session on it; the Kotlin app's `Session` is its model. Screens read
+`authStateProvider`, `savedServersProvider`, and `apiProvider`, and call
+the methods on `sessionProvider.notifier`. `sign_in_state.dart` has what
+the sign-in screens do apart from how they look.
+
+- Tokens live in flutter_secure_storage, one per server. The server list,
+  the server in use, and offline mode live in shared_preferences.
+- Every HTTP client adds the User-Agent, and the bearer token only to its
+  server's origin. A client made for one sign-in refuses to send once the
+  sign-in changes, so use `apiProvider` again after one.
+- Browser sign-in is RFC 8252 with PKCE through flutter_web_auth_2, back
+  to `matinee://auth/callback`. A TV signs in with a code instead.
+- On Android 17, reaching or finding a server on the local network needs
+  `ACCESS_LOCAL_NETWORK`, asked through the platform bridge before
+  connecting, retrying, and searching.
+- This APK installs over the Kotlin app, and existing installs start
+  fresh: on the first launch the platform deletes the Kotlin app's
+  preference files and downloads folder (`freshStart` in `main`).
+
 ## Strings
 
 The ARB files in `lib/l10n` hold every string, English in `app_en.arb`

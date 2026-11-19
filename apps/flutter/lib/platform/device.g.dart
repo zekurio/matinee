@@ -229,4 +229,87 @@ class DeviceApi {
     ;
     return pigeonVar_replyValue! as DeviceFacts;
   }
+
+  /// Whether the app has to ask for local network access before it can reach
+  /// a server or collect discovery replies on the LAN: Android 17 keeps apps
+  /// off the LAN without ACCESS_LOCAL_NETWORK, and the user can take it back
+  /// in Settings, so this is asked again before each use.
+  Future<bool> localNetworkMissing() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.DeviceApi.localNetworkMissing$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as bool;
+  }
+
+  /// Asks for local network access, and answers with whether it was granted.
+  /// Where nothing needs asking, it answers true at once.
+  Future<bool> requestLocalNetwork() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.DeviceApi.requestLocalNetwork$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as bool;
+  }
+
+  /// The IPv4 broadcast address of each active network interface, like
+  /// `192.168.1.255`: `dart:io` knows addresses but not netmasks.
+  Future<List<String>> broadcastAddresses() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.DeviceApi.broadcastAddresses$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return (pigeonVar_replyValue! as List<Object?>).cast<String>();
+  }
+
+  /// Deletes what the Kotlin app left behind, once: its preference files and
+  /// its downloads folder. Answers whether it ran, which it does on the
+  /// first launch only. Call it before anything reads storage.
+  Future<bool> freshStart() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.DeviceApi.freshStart$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as bool;
+  }
 }

@@ -39,4 +39,24 @@ class DeviceFacts {
 @HostApi()
 abstract class DeviceApi {
   DeviceFacts facts();
+
+  /// Whether the app has to ask for local network access before it can reach
+  /// a server or collect discovery replies on the LAN: Android 17 keeps apps
+  /// off the LAN without ACCESS_LOCAL_NETWORK, and the user can take it back
+  /// in Settings, so this is asked again before each use.
+  bool localNetworkMissing();
+
+  /// Asks for local network access, and answers with whether it was granted.
+  /// Where nothing needs asking, it answers true at once.
+  @async
+  bool requestLocalNetwork();
+
+  /// The IPv4 broadcast address of each active network interface, like
+  /// `192.168.1.255`: `dart:io` knows addresses but not netmasks.
+  List<String> broadcastAddresses();
+
+  /// Deletes what the Kotlin app left behind, once: its preference files and
+  /// its downloads folder. Answers whether it ran, which it does on the
+  /// first launch only. Call it before anything reads storage.
+  bool freshStart();
 }
