@@ -34,7 +34,8 @@ height, with a gap of 30% of its width.
 `wordmark.py` also writes `apps/web/src/components/logo.gen.ts` and the
 Android drawables `logo.xml` and `logo_dark.xml`. The web app serves
 copies as `favicon.svg` and `apple-touch-icon.png`, and `brand.tsx` draws
-the mark inline.
+the mark inline. The Samsung TV app's `apps/tizen/public/icon.png` is the
+app icon at 512 px.
 
 ## Colors
 

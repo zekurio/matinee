@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  What a Samsung TV reads to install and start the app. scripts/package.mjs
+  puts it in the package with the version from the root package.json, so
+  the one here stays 0.0.0.
+-->
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://github.com/zekurio/matinee" version="0.0.0" viewmodes="maximized">
+  <!-- Tizen 4.0 is the 2018 models, the oldest the app is built for. -->
+  <tizen:application id="MatineeApp.Matinee" package="MatineeApp" required_version="4.0"/>
+  <tizen:profile name="tv-samsung"/>
+  <name>Matinee</name>
+  <icon src="icon.png"/>
+  <content src="index.html"/>
+  <feature name="http://tizen.org/feature/screen.size.all"/>
+  <feature name="http://tizen.org/feature/network.internet"/>
+  <!-- The server is wherever the person runs it. -->
+  <access origin="*" subdomains="true"/>
+  <tizen:privilege name="http://tizen.org/privilege/internet"/>
+  <!-- The remote's media keys. -->
+  <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+  <!-- Samsung's player, the TV's model and panel, and the TV's name. -->
+  <tizen:privilege name="http://developer.samsung.com/privilege/avplay"/>
+  <tizen:privilege name="http://developer.samsung.com/privilege/productinfo"/>
+  <tizen:privilege name="http://developer.samsung.com/privilege/network.public"/>
+  <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
+</widget>

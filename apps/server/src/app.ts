@@ -51,17 +51,62 @@ function mount(
   }
 }
 
+/**
+ * The origin of a page an app loaded from its own package, as a TV app's
+ * pages are on Tizen and webOS. No page from the web can have it: a
+ * browser gives those their site's origin, and a file opened in one `null`.
+ */
+const PACKAGED_APP_ORIGIN = "file://"
+
+/** What an answer has that a packaged app's page may read beyond its body. */
+const EXPOSED_HEADERS = "Content-Length, Content-Range, Retry-After"
+
+/**
+ * Lets a packaged app's pages call the API. Their engine holds them to
+ * CORS like any page, so without these headers a TV app reaches nothing.
+ * Only they get them, so other sites still can't read an answer or send
+ * what takes a preflight. Credentials are never allowed, so the session
+ * cookie never comes with such a request either: the app sends its token.
+ */
+function packagedAppCors(c: Context, next: Next): Promise<Response | void> {
+  if (c.req.header("origin") !== PACKAGED_APP_ORIGIN) return next()
+  if (
+    c.req.method === "OPTIONS" &&
+    c.req.header("access-control-request-method")
+  ) {
+    return Promise.resolve(
+      c.body(null, 204, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE",
+        "Access-Control-Allow-Headers":
+          c.req.header("access-control-request-headers") ??
+          "authorization, content-type",
+        "Access-Control-Max-Age": "86400",
+        Vary: "Origin",
+      }),
+    )
+  }
+  return next().then(() => {
+    c.header("Access-Control-Allow-Origin", "*")
+    c.header("Access-Control-Expose-Headers", EXPOSED_HEADERS)
+    c.header("Vary", "Origin", { append: true })
+  })
+}
+
 export function createApp() {
   const app = new Hono()
 
   app.use(secureHeaders({ crossOriginResourcePolicy: "same-origin" }))
+  // First, so it answers a preflight before any route sees it, and its
+  // headers reach every answer after, a refused body's included.
+  app.use("/api/*", packagedAppCors)
   // Before anything reads a body, RPC and REST included.
   app.use(limitBodies())
   // A browser sends a body other than form data or text, or an
   // Authorization header, only after a CORS preflight, which fails since the
-  // server answers none. That leaves form posts and bodiless requests, which
-  // this checks. A bearer token can't come from another site's page, and
-  // readSession ignores the cookie when one is sent.
+  // server answers none but a packaged app's. That leaves form posts and
+  // bodiless requests, which this checks. A bearer token can't come from
+  // another site's page, and readSession ignores the cookie when one is sent.
   const checkOrigin = csrf({ origin: env.PUBLIC_URL })
   app.use("/api/*", (c, next) =>
     c.req.header("authorization")?.startsWith("Bearer ")

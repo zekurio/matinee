@@ -1,0 +1,796 @@
+@import "./kit.css";
+@import "./player.css";
+
+/* Before signing in: the logo top left, a heading on the left, rows on the right. */
+.auth {
+  display: flex;
+  padding: var(--overscan-y) var(--overscan-x);
+  background: var(--bg);
+}
+
+.auth-brand {
+  position: absolute;
+  top: 43rem;
+  left: var(--overscan-x);
+}
+
+.auth-left {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  padding: 72rem 0 24rem;
+}
+
+.auth-right {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  margin-left: 64rem;
+}
+
+.auth-rows {
+  padding: 12rem 0;
+}
+.auth-rows > * + * {
+  margin-top: 10rem;
+}
+.auth-rows.narrow {
+  width: 360rem;
+  margin-top: 24rem;
+  padding: 0;
+}
+.auth-note {
+  max-width: 560rem;
+  padding: 2rem 20rem 0;
+}
+.auth-waiting {
+  display: flex;
+  align-items: center;
+  margin-top: 16rem;
+}
+.auth-waiting > * + * {
+  margin-left: 12rem;
+}
+.connecting-spinner {
+  margin: 28rem 0;
+}
+
+.auth-qr {
+  width: 272rem;
+  height: 272rem;
+  border: 2rem solid rgba(var(--fg-rgb), 0.1);
+  border-radius: 19rem;
+  background: rgba(var(--fg-rgb), 0.05);
+  color: var(--accent);
+  text-align: center;
+  padding: 24rem;
+}
+
+/* The signed-in app: the backdrop, the page, the clock, the drawer. */
+.backdrop {
+  background: var(--bg);
+}
+
+.backdrop-picture {
+  animation: fade-in 560ms var(--ease);
+}
+
+/* Darkens the picture so text reads on it: most at the left and bottom, a little at the top for the clock. */
+.backdrop-scrim {
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(var(--bg-rgb), 0.45) 0%,
+      rgba(var(--bg-rgb), 0) 18%,
+      rgba(var(--bg-rgb), 0.35) 45%,
+      rgba(var(--bg-rgb), 0.95) 100%
+    ),
+    linear-gradient(
+      to right,
+      rgba(var(--bg-rgb), 0.94) 0%,
+      rgba(var(--bg-rgb), 0.78) 35%,
+      rgba(var(--bg-rgb), 0.3) 70%,
+      rgba(var(--bg-rgb), 0.15) 100%
+    );
+}
+
+.page {
+  animation: fade-in var(--enter) var(--ease);
+}
+
+.clock {
+  position: absolute;
+  top: 38rem;
+  right: var(--overscan-x);
+  color: rgba(var(--fg-rgb), 0.9);
+  transition: opacity var(--color) var(--ease);
+  z-index: 5;
+}
+
+.clock.away {
+  opacity: 0;
+}
+
+/* A rail of icons at the left edge that grows into a labelled drawer while it has focus. */
+.drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 400rem;
+  padding: var(--overscan-y) 0 var(--overscan-y) 8rem;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Over the page, a shade the labels read on, deepest at the left. */
+.drawer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1264rem;
+  background: linear-gradient(
+    to right,
+    rgba(var(--bg-rgb), 0.98) 0%,
+    rgba(var(--bg-rgb), 0.94) 25%,
+    rgba(var(--bg-rgb), 0.7) 50%,
+    rgba(var(--bg-rgb), 0.6) 100%
+  );
+  opacity: 0;
+  transition: opacity var(--exit) var(--ease-out);
+}
+
+.drawer.open::before {
+  opacity: 1;
+  transition: opacity var(--enter) var(--ease);
+}
+
+.drawer-entries {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 48rem;
+  height: 100%;
+  pointer-events: auto;
+  transition: width var(--move) var(--ease);
+}
+
+.drawer.open .drawer-entries {
+  width: 236rem;
+}
+.drawer-entries > * + * {
+  margin-top: 6rem;
+}
+
+.drawer-entry {
+  height: 48rem;
+  border-radius: 24rem;
+  background: transparent;
+  color: rgba(var(--fg-rgb), 0.45);
+  overflow: hidden;
+}
+
+.drawer-entry:focus {
+  transform: scale(1.02);
+}
+.drawer.open .drawer-entry {
+  color: rgba(var(--fg-rgb), 0.8);
+}
+.drawer-entry.current {
+  color: var(--accent);
+  background: rgba(var(--fg-rgb), 0.1);
+}
+.drawer.open .drawer-entry.current {
+  color: var(--accent);
+  background: transparent;
+}
+.drawer .drawer-entry.drawer-entry:focus {
+  color: var(--bg);
+  background: var(--fg);
+}
+
+.drawer-icon {
+  flex: none;
+  width: 48rem;
+  height: 48rem;
+}
+
+.drawer-label {
+  padding: 0 18rem 0 6rem;
+  opacity: 0;
+  transition: opacity var(--exit) var(--ease-out);
+}
+
+.drawer.open .drawer-label {
+  opacity: 1;
+  transition: opacity var(--enter) var(--ease) 60ms;
+}
+
+.drawer-gap {
+  flex: none;
+  height: 12rem;
+}
+.drawer-space {
+  flex: 1;
+}
+
+/* Home: the focused card's name, facts, and overview at the top, rows under it. */
+.home-header {
+  position: absolute;
+  top: 35rem;
+  left: var(--page-start);
+  right: 220rem;
+  height: 191rem;
+  overflow: hidden;
+  animation: fade-in var(--enter) var(--ease);
+}
+
+.home-header .overview {
+  max-width: 560rem;
+  margin-top: 12rem;
+  color: rgba(var(--fg-rgb), 0.75);
+}
+
+.home-rows {
+  position: absolute;
+  top: 226rem;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  /* A row scrolled half away ends softly, not in a hard line. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12rem);
+}
+
+.rows {
+  padding: 12rem 0 320rem;
+}
+.rows > * + * {
+  margin-top: 28rem;
+}
+
+.row-notice {
+  display: flex;
+  align-items: center;
+  margin-top: 14rem;
+  padding: 0 var(--page-end) 0 var(--page-start);
+}
+
+.row-notice > * + * {
+  margin-left: 20rem;
+}
+
+/* A page as one message, with a way to try again where there is one. */
+.message {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0 var(--page-end) 0 var(--page-start);
+}
+
+.message .muted {
+  margin-top: 8rem;
+}
+.message .btn {
+  margin-top: 28rem;
+}
+
+/* A detail page: a header over the backdrop, then rows reached with Down. */
+.detail-list {
+  overflow: hidden;
+}
+
+/* Rows that scroll past the top fade out there, rather than end at a hard edge under the clock. */
+.detail-list.scrolled {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 44rem);
+}
+
+.detail-rows {
+  padding-bottom: 360rem;
+}
+.detail-rows > * + * {
+  margin-top: 32rem;
+}
+.detail-header {
+  padding: 35rem var(--page-end) 0 var(--page-start);
+}
+
+.detail-about {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 16rem;
+}
+
+.detail-overview {
+  width: 560rem;
+  flex: none;
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 28rem;
+}
+
+.detail-actions > * + * {
+  margin-left: 14rem;
+}
+.file-info {
+  width: 240rem;
+  flex: none;
+}
+.file-info > * + * {
+  margin-top: 8rem;
+}
+.file-line {
+  display: flex;
+  align-items: flex-start;
+  color: rgba(var(--fg-rgb), 0.8);
+}
+.file-line .icon {
+  margin: 2rem 10rem 0 0;
+}
+
+/* A season: its header at the top, its episodes in a row at the bottom. */
+.season {
+  display: flex;
+  flex-direction: column;
+  padding-top: 35rem;
+}
+
+.season-header {
+  padding: 0 var(--page-end) 0 var(--page-start);
+}
+.season-tabs {
+  display: flex;
+  margin-top: 10rem;
+}
+.season-tabs > * + * {
+  margin-left: 10rem;
+}
+.season-space {
+  flex: 1;
+}
+
+.season-about {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100rem;
+  padding: 0 var(--page-end) 0 var(--page-start);
+}
+
+.season-overview {
+  width: 680rem;
+  margin-top: 4rem;
+}
+.season-row {
+  height: 200rem;
+  flex: none;
+}
+
+/* A page that is a grid of posters under a header that steps aside. */
+.grid-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-header {
+  flex: none;
+  max-height: 260rem;
+  padding-top: 33rem;
+  transition:
+    max-height var(--enter) var(--ease),
+    padding var(--enter) var(--ease),
+    opacity var(--enter) var(--ease);
+}
+
+.grid-header.away {
+  max-height: 0;
+  padding-top: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-height var(--exit) var(--ease-out),
+    padding var(--exit) var(--ease-out),
+    opacity var(--exit) var(--ease-out);
+}
+
+.grid-line {
+  flex: none;
+  height: 30rem;
+  margin: 18rem var(--page-end) 0 var(--page-start);
+  transition: margin var(--enter) var(--ease);
+}
+
+/* Clear of the clock, at the top. */
+.grid-line.alone {
+  margin: 33rem 172rem 0 var(--page-start);
+}
+.grid-line .facts {
+  min-width: 0;
+}
+
+.grid-scroll {
+  flex: 1;
+  min-height: 0;
+  margin-left: 60rem;
+  padding: 20rem var(--page-end) 70vh 20rem;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12rem);
+}
+
+.grid-cells {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: -18rem;
+}
+
+.grid-cell {
+  width: calc(100% / var(--columns) - 18rem);
+  margin: 0 18rem 24rem 0;
+}
+
+.grid-cell .card-poster {
+  width: 100%;
+}
+.grid-head {
+  padding-left: var(--page-start);
+}
+
+.grid-head-title {
+  display: flex;
+  align-items: baseline;
+  padding-right: 172rem;
+}
+
+.grid-head-title > * + * {
+  margin-left: 16rem;
+  flex: none;
+}
+
+.grid-controls {
+  display: flex;
+  align-items: center;
+  height: 48rem;
+  margin-top: 16rem;
+  padding-right: var(--page-end);
+}
+
+.grid-controls > * + * {
+  margin-left: 14rem;
+}
+
+.person-head {
+  display: flex;
+  align-items: center;
+  padding: 2rem var(--page-end) 16rem var(--page-start);
+}
+
+.person-head > * + * {
+  margin-left: 28rem;
+}
+
+/* Search and Favorites: a head, then rows that scroll under it. */
+.search-top {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: var(--overscan-y) 172rem 0 var(--page-start);
+}
+
+.search-top .field {
+  height: 56rem;
+}
+.favorites-head {
+  flex: none;
+  height: 150rem;
+  padding: 33rem var(--page-end) 0 var(--page-start);
+}
+
+.rows-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 8rem);
+}
+
+/* One part of a day to pick, stepped with Left and Right. */
+.day-field {
+  background: rgba(var(--fg-rgb), 0.07);
+}
+.day-field .arrow {
+  opacity: 0;
+}
+.day-field:focus .arrow {
+  opacity: 1;
+}
+
+/* Settings: the categories on the left, the focused one's rows on the right. */
+.settings {
+  display: flex;
+  padding: 0 var(--page-end) 0 60rem;
+}
+
+.settings-categories {
+  flex: none;
+  width: 260rem;
+  padding-top: 35rem;
+}
+.settings-list > * + * {
+  margin-top: 6rem;
+}
+
+.settings-rows {
+  flex: 1;
+  min-width: 0;
+  margin: 87rem -12rem 0 36rem;
+  /* Room around the rows for the focused one, which grows a little. */
+  padding: 4rem 12rem 51rem;
+  overflow: hidden;
+}
+
+.settings-rows .settings-list > * + * {
+  margin-top: 4rem;
+}
+
+/* A line of subtitles over a stand-in for a frame, drawn as the player draws them. */
+.subtitle-preview {
+  position: relative;
+  height: 128rem;
+  margin: 0 20rem 16rem;
+  border-radius: 14rem;
+  background: linear-gradient(135deg, #9db3d1, #55657f, #2b2622, #6e5a45);
+  overflow: hidden;
+}
+
+.subtitle-preview .subtitles {
+  right: 16rem;
+  bottom: 16rem;
+  left: 16rem;
+}
+
+/* The profile: who they are, what they watched last, and their statistics. */
+.profile-rows {
+  padding: 35rem 0 120rem;
+}
+.profile-rows > * + * {
+  margin-top: 32rem;
+}
+.profile-inset {
+  margin-right: var(--page-end);
+  margin-left: var(--page-start);
+}
+
+.profile-head {
+  display: flex;
+  align-items: center;
+  padding: 0 220rem 0 var(--page-start);
+}
+
+.profile-head > * + * {
+  margin-left: 24rem;
+}
+
+.profile-actions,
+.profile-ranges {
+  display: flex;
+  padding-left: var(--page-start);
+}
+
+.profile-actions {
+  margin-top: 32rem;
+}
+.profile-actions > * + * {
+  margin-left: 16rem;
+}
+.profile-ranges {
+  margin-top: 18rem;
+}
+.profile-ranges > * + * {
+  margin-left: 12rem;
+}
+
+.see-all {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.see-all > svg {
+  margin-bottom: 8rem;
+}
+
+.totals {
+  display: flex;
+}
+.totals > * + * {
+  margin-left: 48rem;
+}
+
+/* A chart is one focus stop; its mark shows where focus is, so it has no ring. */
+.chart {
+  outline: none;
+}
+.chart-row {
+  display: flex;
+  margin-top: 20rem;
+}
+
+.chart-bars {
+  position: relative;
+  flex: 1;
+  border-top: 1rem solid var(--border);
+  border-bottom: 1rem solid var(--border);
+}
+
+.chart-bars::before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  border-top: 1rem solid var(--border);
+  content: "";
+}
+
+.chart-bar,
+.chart-slot {
+  position: absolute;
+  bottom: 0;
+}
+.chart-bar {
+  background: var(--accent);
+}
+.chart-bar.dimmed {
+  opacity: 0.45;
+}
+.chart-bar.marked {
+  background: var(--fg);
+}
+
+.chart-slot {
+  top: 0;
+  border-radius: 6rem;
+  background: rgba(var(--fg-rgb), 0.1);
+}
+
+.chart-scale {
+  position: relative;
+  flex: none;
+  width: 88rem;
+}
+.chart-scale > span {
+  position: absolute;
+  left: 14rem;
+  white-space: nowrap;
+}
+
+.chart-ends {
+  display: flex;
+  justify-content: space-between;
+  margin: 8rem 88rem 0 0;
+}
+
+.heat-row {
+  display: flex;
+  align-items: center;
+}
+.heat-row + .heat-row {
+  margin-top: 4rem;
+}
+.heat-day {
+  flex: none;
+  width: 64rem;
+}
+
+.heat-cell {
+  flex: 1;
+  height: 24rem;
+  border-radius: 4rem;
+  background: rgba(var(--fg-rgb), 0.06);
+}
+
+.heat-cell + .heat-cell {
+  margin-left: 4rem;
+}
+.heat-cell.marked {
+  background: var(--fg);
+}
+.heat-row.heat-hours {
+  margin-top: 8rem;
+}
+.heat-hours > span + span {
+  flex: 1;
+  white-space: nowrap;
+}
+
+/* A leaderboard's card, and a place on it. */
+.board {
+  display: block;
+  flex: none;
+  width: 300rem;
+  padding: 16rem 14rem;
+  border-radius: 16rem;
+  background: rgba(var(--fg-rgb), 0.07);
+}
+
+.board-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 8rem 6rem;
+  opacity: 0.7;
+}
+
+.place {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 6rem;
+  border-radius: 10rem;
+}
+
+.place.small {
+  height: 40rem;
+}
+.place.small + .place.small {
+  margin-top: 4rem;
+}
+.place > * + * {
+  margin-left: 12rem;
+}
+.place-name {
+  flex: 1;
+  min-width: 0;
+}
+.place.self {
+  background: rgba(var(--accent-rgb), 0.22);
+}
+.board:focus .place.self {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.place-rank {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28rem;
+  height: 28rem;
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+.place-rank.rank-1 {
+  background: var(--accent);
+  color: #000;
+  opacity: 1;
+}
+.place-rank.rank-2 {
+  background: rgba(var(--accent-rgb), 0.6);
+  opacity: 1;
+}
+.place-rank.rank-3 {
+  background: rgba(var(--accent-rgb), 0.3);
+  opacity: 1;
+}
+
+.place-row {
+  padding: 0 14rem;
+}
+.place-row.self:not(:focus) {
+  background: rgba(var(--accent-rgb), 0.22);
+}
+
+.recent .grid-cell .card-landscape {
+  width: 100%;
+}

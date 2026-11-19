@@ -19,6 +19,7 @@
     ".devenv/**",
     ".direnv/**",
     ".git/**",
+    "apps/tizen/src/i18n/android.gen.ts",
     "apps/web/src/routeTree.gen.ts",
     "packages/db/drizzle/**",
     "data/**",

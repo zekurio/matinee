@@ -34,9 +34,34 @@ the [Security tab](https://github.com/zekurio/matinee/security/advisories/new).
 
 ## Setup
 
-[Develop](README.md#develop) in the README sets up the dev shell, the
-database, and `pnpm dev`. The Android app has its own steps in
-[apps/android/README.md](apps/android/README.md#build).
+```sh
+nix develop        # or `direnv allow`
+pnpm install
+pnpm dev           # server on :8420, web app on http://localhost:5173
+```
+
+The dev shell has Node 24, pnpm 11, jellyfin-ffmpeg, `just`, and a Postgres
+on a Unix socket in `data/postgres`. It creates `.env` from `.env.example`
+the first time. Migrations run when the server starts. `/setup` asks for
+the setup token the server logs, even on localhost. `matinee-postgres stop`
+stops the database.
+
+Without Nix, install Node 24 and pnpm 11, copy `.env.example` to `.env`,
+and point `DATABASE_URL` at your own Postgres.
+
+| Command                          | What it does                              |
+| -------------------------------- | ----------------------------------------- |
+| `pnpm db:generate --name <what>` | Writes a migration for a schema change    |
+| `pnpm api:android`               | Regenerates the Android API client        |
+| `pnpm api:ios`                   | Regenerates the Apple apps' API client    |
+| `nix build`                      | Builds the server package                 |
+| `nix flake check`                | Builds it and runs the NixOS module tests |
+| `nix develop .#android`          | Shell with a JDK and the Android SDK      |
+| `just`                           | Lists the shortcuts                       |
+
+The native apps build on their own, as their READMEs say:
+[Android](apps/android/README.md#build), [iOS](apps/ios/README.md), and
+[Samsung TV](apps/tizen/README.md#build).
 
 [`AGENTS.md`](AGENTS.md) has the conventions: where code goes, the lint
 rules and what they want from you, how translations, queues, and live
@@ -94,5 +119,7 @@ gets skimmed, not read.
 ## License
 
 Code you contribute is under the license of the part it lands in: MIT for
-most of the repository and GPL-3.0 for `apps/android`. See
-[LICENSE](LICENSE) and [apps/android/LICENSE](apps/android/LICENSE).
+most of the repository, and GPL-3.0 for `apps/android` and `apps/ios`,
+except MatineeCore, which stays MIT. See [LICENSE](LICENSE),
+[apps/android/LICENSE](apps/android/LICENSE), and
+[apps/ios/LICENSE](apps/ios/LICENSE).

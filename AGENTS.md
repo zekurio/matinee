@@ -1,11 +1,12 @@
 # Matinee
 
 Self-hosted media server: Hono + oRPC server, React web client, Postgres.
-README.md has the NixOS setup and the dev shell. Each app's README has the
-rest: `apps/server/README.md` for configuration, auth, and how the server
-behaves, `apps/web/README.md` for translations, `apps/android/README.md`
-for building and sideloading the app, `apps/ios/README.md` for the iPhone,
-iPad, and Apple TV apps.
+README.md introduces the project, and CONTRIBUTING.md sets up the dev
+shell. Each app's README has the rest: `apps/server/README.md` for
+hosting, NixOS included, configuration, auth, and how the server behaves,
+`apps/web/README.md` for translations, `apps/android/README.md` for
+building and sideloading the app, `apps/ios/README.md` for the iPhone,
+iPad, and Apple TV apps, `apps/tizen/README.md` for the Samsung TV app.
 
 ## Repository map
 
@@ -50,6 +51,13 @@ iPad, and Apple TV apps.
   checks them. Build on a Mac with Xcode through `just ios build` and
   `just ios tv-build`; `just ios test` runs the package tests and resource
   checks. See its README.
+- `apps/tizen`: the Samsung TV app, a Preact web app packaged as a `.wgt`
+  with the Android TV app's screens and Samsung's AVPlay for video. It
+  runs from file paths on Chromium 56 and up, so it imports only types
+  from `@matinee/contracts`, plus `@matinee/contracts/paths`, and the
+  server answers CORS for `Origin: file://`. Its shared words come from
+  the Android string resources through `pnpm --filter @matinee/tizen
+  strings`; `pnpm verify` checks them. Nobody has run it on a TV yet.
 - `tools/release`: the scripts behind `just tag` and
   `.github/workflows/release.yml`, in `.mjs` on Node's own modules, since
   the workflow runs them before any install. Workflow steps and `just`

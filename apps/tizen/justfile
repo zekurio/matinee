@@ -1,0 +1,23 @@
+# Tasks for the Samsung TV app. Run `just` in this folder for the list, or
+# `just tizen <recipe>` from the repository root. They run in the flake's
+# shell, entered for each command unless you're in it.
+
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+pnpm := if env("IN_NIX_SHELL", "") != "" { "pnpm" } else { "nix develop ../.. -c pnpm" }
+
+[private]
+default:
+    @just --list --unsorted
+
+# Run the app in a browser on :5174, against the server on :8420
+dev:
+    {{ pnpm }} dev
+
+# Build dist/Matinee.wgt, the unsigned package a TV installs
+package:
+    {{ pnpm }} package
+
+# Take the strings shared with the Android app from its resources again
+strings:
+    {{ pnpm }} strings

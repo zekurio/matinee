@@ -1,0 +1,356 @@
+/*
+ * The player. On a TV the video is on a plane behind the page, so while
+ * the player shows, the page is see-through wherever the video should be.
+ */
+
+body.playing,
+body.playing #app {
+  background: transparent;
+}
+
+.player-black {
+  background: #000;
+}
+
+.player-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  object-fit: contain;
+}
+
+/* The element Samsung's player shows through: nothing of its own to draw. */
+object.player-video {
+  background: transparent;
+}
+
+/* Black over the TV's player while a source finds the place it starts at. */
+.player-cover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.player-screen {
+  background: transparent;
+}
+
+.player-wait {
+  color: var(--fg);
+  pointer-events: none;
+}
+.spinner.accent {
+  color: var(--accent);
+}
+
+.player-failure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--overscan-y) var(--overscan-x);
+  text-align: center;
+}
+
+.player-failure-buttons {
+  display: flex;
+  margin-top: 28rem;
+}
+.player-failure-buttons > * + * {
+  margin-left: 16rem;
+}
+.player-error {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.player-notice {
+  position: absolute;
+  top: var(--overscan-y);
+  left: 50%;
+  max-width: 420rem;
+  padding: 10rem 18rem;
+  border-radius: 12rem;
+  background: rgba(0, 0, 0, 0.75);
+  text-align: center;
+  transform: translateX(-50%);
+  animation: fade-in var(--enter) var(--ease);
+}
+
+/*
+ * The controls, kept low and small so the picture stays the thing to look
+ * at: a scrim up from the bottom, the title, one wide seek bar with the
+ * time on either side, and one row of small round buttons.
+ */
+.player-overlay {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--exit) var(--ease-out);
+}
+
+.player-overlay.shown {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity var(--enter) var(--ease);
+}
+
+/* About half black behind the title, two thirds behind the bar, and four fifths at the bottom edge. */
+.player-scrim {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 62%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.5) 30%,
+    rgba(0, 0, 0, 0.65) 55%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+}
+
+.player-controls {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: var(--overscan-y) var(--overscan-x);
+}
+
+/* A soft shadow under text on the picture, so it reads where the scrim is light and the scene bright. */
+.on-picture {
+  text-shadow: 0 2rem 10rem rgba(0, 0, 0, 0.6);
+}
+.dim75 {
+  color: rgba(var(--fg-rgb), 0.75);
+}
+
+.seek-row {
+  display: flex;
+  align-items: center;
+  margin-top: 12rem;
+}
+
+.seek-clock {
+  flex: none;
+  min-width: 44rem;
+  font-variant-numeric: tabular-nums;
+}
+.seek-clock.end {
+  text-align: right;
+}
+
+.seek-bar {
+  position: relative;
+  flex: 1;
+  height: 28rem;
+  margin: 0 16rem;
+}
+
+.seek-track,
+.seek-loaded,
+.seek-played {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 5rem;
+  margin-top: -2.5rem;
+  border-radius: 4rem;
+  transition:
+    height var(--color) var(--ease),
+    margin var(--color) var(--ease);
+}
+
+.seek-track {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.25);
+}
+.seek-loaded {
+  background: rgba(255, 255, 255, 0.45);
+}
+.seek-played {
+  background: var(--accent);
+}
+
+.seek-bar:focus .seek-track,
+.seek-bar:focus .seek-loaded,
+.seek-bar:focus .seek-played {
+  height: 8rem;
+  margin-top: -4rem;
+}
+
+.seek-thumb {
+  position: absolute;
+  top: 50%;
+  width: 22rem;
+  height: 22rem;
+  margin: -11rem 0 0 -11rem;
+  border-radius: 50%;
+  background: var(--fg);
+  transform: scale(0);
+  transition: transform var(--color) var(--ease);
+}
+
+.seek-bar:focus .seek-thumb {
+  transform: none;
+}
+
+/* The time at the dot, with the trickplay frame above it while seeking. */
+.seek-bubble {
+  position: absolute;
+  bottom: 34rem;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+}
+
+.seek-bar:focus .seek-bubble,
+.seek-bubble.scrubbing {
+  display: flex;
+}
+
+.seek-bubble b {
+  padding: 4rem 12rem;
+  border-radius: 8rem;
+  background: var(--fg);
+  color: var(--bg);
+  font-variant-numeric: tabular-nums;
+}
+
+.trickplay {
+  margin-bottom: 8rem;
+  border: 2rem solid var(--fg);
+  border-radius: 10rem;
+  background-color: #000;
+  background-repeat: no-repeat;
+}
+
+.player-buttons {
+  display: flex;
+  align-items: center;
+  margin-top: 16rem;
+}
+
+.player-buttons > * + * {
+  margin-left: 12rem;
+}
+.player-space {
+  flex: 1;
+}
+.player-buttons .btn {
+  margin-right: 4rem;
+}
+
+.skip-icon {
+  position: relative;
+}
+
+.skip-icon b {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  margin-top: -5rem;
+  font-size: 11rem;
+  font-weight: 600;
+  line-height: 12rem;
+  text-align: center;
+}
+
+.menu-on {
+  position: absolute;
+  bottom: -6rem;
+  left: 50%;
+  width: 14rem;
+  height: 2rem;
+  margin-left: -7rem;
+  border-radius: 1rem;
+  background: var(--accent);
+}
+
+.player-corner {
+  position: absolute;
+  right: var(--overscan-x);
+  bottom: var(--overscan-y);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--exit) var(--ease-out);
+}
+
+.player-corner.shown {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity var(--enter) var(--ease);
+}
+
+/* Subtitles: the cues showing now, centered, clear of the controls while they show. */
+.subtitles {
+  position: absolute;
+  right: 48rem;
+  bottom: 40rem;
+  left: 48rem;
+  line-height: 1.3;
+  font-weight: 500;
+  text-align: center;
+  pointer-events: none;
+  transition: bottom var(--move) var(--ease);
+}
+
+.subtitles.lifted {
+  bottom: 190rem;
+}
+.subtitle-line + .subtitle-line {
+  margin-top: 2rem;
+}
+
+.subtitle-line > span {
+  display: inline-block;
+  padding: 2rem 8rem;
+  border-radius: 4rem;
+  white-space: pre-line;
+}
+
+.sub-white {
+  color: #ffffff;
+}
+.sub-yellow {
+  color: #ffe14d;
+}
+.sub-cyan {
+  color: #6ce5ff;
+}
+.sub-green {
+  color: #7cf29a;
+}
+.sub-bg-shaded .subtitle-line > span {
+  background: rgba(0, 0, 0, 0.45);
+}
+.sub-bg-black .subtitle-line > span {
+  background: #000;
+}
+.sub-bg-none .subtitle-line > span {
+  padding: 2rem 0;
+}
+.sub-edge-shadow {
+  text-shadow: 0 2rem 6rem #000;
+}
+
+.sub-edge-outline {
+  text-shadow:
+    -0.07em -0.07em 0 #000,
+    0.07em -0.07em 0 #000,
+    -0.07em 0.07em 0 #000,
+    0.07em 0.07em 0 #000,
+    0 -0.07em 0 #000,
+    0 0.07em 0 #000,
+    -0.07em 0 0 #000,
+    0.07em 0 0 #000;
+}
