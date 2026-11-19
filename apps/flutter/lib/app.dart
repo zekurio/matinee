@@ -7,6 +7,7 @@ import 'kit/theme_store.dart';
 import 'kit/tokens.dart';
 
 import 'l10n/app_localizations.dart';
+import 'router.dart';
 
 /// The app: one widget tree for phones, tablets, and TVs. Which screens a
 /// device gets is decided once, from its form factor.
@@ -17,7 +18,8 @@ class MatineeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences =
         ref.watch(themeStoreProvider).value ?? defaultThemePreferences;
-    return MaterialApp(
+    return MaterialApp.router(
+      routerConfig: ref.watch(routerProvider),
       theme: MatineeTheme.data(preferences.preset.light),
       darkTheme: MatineeTheme.data(preferences.preset.dark),
       themeMode: switch (preferences.appearance) {
@@ -37,24 +39,6 @@ class MatineeApp extends ConsumerWidget {
       builder: (context, child) => DefaultTextStyle(
         style: KitText.sm.style(color: MatineeTheme.of(context).foreground),
         child: child!,
-      ),
-      home: const _Placeholder(),
-    );
-  }
-}
-
-class _Placeholder extends StatelessWidget {
-  const _Placeholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: MatineeTheme.of(context).background,
-      child: Center(
-        child: Text(
-          AppLocalizations.of(context).appName,
-          style: KitText.xxl.style(color: MatineeTheme.of(context).foreground),
-        ),
       ),
     );
   }
