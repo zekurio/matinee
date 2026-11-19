@@ -177,7 +177,14 @@ export function Hero({
           release()
         }
       }}
-      className={cn(heroFrame, "overflow-hidden", className)}
+      className={cn(
+        heroFrame,
+        // Dark in either scheme: art under a white wash looks faded, and
+        // light text over a dark shade reads on any picture. In light, it
+        // also sits over the bar's white fade, and shades its own top.
+        "dark text-foreground overflow-hidden sm:light:z-35",
+        className,
+      )}
     >
       {slides.map((slide, i) => (
         <Backdrop
@@ -207,6 +214,12 @@ export function Hero({
       <div
         aria-hidden
         className="from-background/85 absolute inset-x-0 top-0 h-[calc(env(safe-area-inset-top)*2)] bg-gradient-to-b to-transparent sm:hidden"
+      />
+      {/* In light, the bar's fade sits under the banner; this stands in
+          for it. */}
+      <div
+        aria-hidden
+        className="from-background/70 sm:light:block absolute inset-x-0 top-0 hidden h-24 bg-gradient-to-b to-transparent"
       />
 
       {slides.map((slide, i) => (
