@@ -55,8 +55,9 @@ abstract class DeviceApi {
   /// `192.168.1.255`: `dart:io` knows addresses but not netmasks.
   List<String> broadcastAddresses();
 
-  /// Deletes what the Kotlin app left behind, once: its preference files and
-  /// its downloads folder. Answers whether it ran, which it does on the
-  /// first launch only. Call it before anything reads storage.
+  /// Deletes what the Kotlin app left behind, once: its preference files,
+  /// folders, session key, and Watch Next programs. Answers whether it ran,
+  /// which it does on the first launch only. Call it before anything reads
+  /// storage.
   bool freshStart();
 }

@@ -2,6 +2,7 @@ package io.github.zekurio.matinee
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.tv.TvContract
 import android.os.Build
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
@@ -12,6 +13,7 @@ import java.io.File
 import java.io.IOException
 import java.net.Inet4Address
 import java.net.NetworkInterface
+import java.security.KeyStore
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 
@@ -116,7 +118,9 @@ private class Device(private val activity: MainActivity) : DeviceApi {
 
     /**
      * This APK installs over the Kotlin app, and existing installs start
-     * fresh: its preference files and its downloads folder go, once. Flutter's
+     * fresh, once: its preference files, its folders, the key its session
+     * was encrypted with, and the programs it put in the TV launcher's Watch
+     * Next row, which would open screens this app doesn't have. Flutter's
      * own files (FlutterSharedPreferences, FlutterSecureStorage, app_flutter)
      * stay, and so does anything else that isn't named here.
      */
@@ -126,7 +130,19 @@ private class Device(private val activity: MainActivity) : DeviceApi {
         for (name in KOTLIN_PREFERENCES) {
             runCatching { activity.deleteSharedPreferences(name) }
         }
-        runCatching { File(activity.filesDir, "downloads").deleteRecursively() }
+        for (name in KOTLIN_FILES) {
+            runCatching { File(activity.filesDir, name).deleteRecursively() }
+        }
+        for (name in KOTLIN_CACHES) {
+            runCatching { File(activity.cacheDir, name).deleteRecursively() }
+        }
+        runCatching {
+            KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(KOTLIN_KEY)
+        }
+        // Only a TV has the provider; elsewhere the URI is unknown and throws.
+        if (activity.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) {
+            runCatching { activity.contentResolver.delete(TvContract.WatchNextPrograms.CONTENT_URI, null, null) }
+        }
         marker.edit().putBoolean(MARKER_KEY, true).commit()
         return true
     }
@@ -146,5 +162,12 @@ private class Device(private val activity: MainActivity) : DeviceApi {
             "theme",
             "watch-next",
         )
+
+        /** Folders the Kotlin app kept in filesDir and cacheDir. */
+        val KOTLIN_FILES = listOf("downloads", "mpv", "watch-next-art")
+        val KOTLIN_CACHES = listOf("artwork", "fontconfig", "mpv")
+
+        /** The Android Keystore alias the Kotlin app encrypted its session with. */
+        const val KOTLIN_KEY = "matinee-session"
     }
 }

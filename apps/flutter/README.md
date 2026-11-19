@@ -99,8 +99,9 @@ the sign-in screens do apart from how they look.
   `ACCESS_LOCAL_NETWORK`, asked through the platform bridge before
   connecting, retrying, and searching.
 - This APK installs over the Kotlin app, and existing installs start
-  fresh: on the first launch the platform deletes the Kotlin app's
-  preference files and downloads folder (`freshStart` in `main`).
+  fresh: on the first launch the platform deletes what the Kotlin app
+  kept (its preferences, folders, session key, and Watch Next programs)
+  before anything reads storage (`freshStart` in `main`).
 
 ## Strings
 
