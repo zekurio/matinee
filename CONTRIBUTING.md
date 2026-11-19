@@ -54,14 +54,17 @@ and point `DATABASE_URL` at your own Postgres.
 | `pnpm db:generate --name <what>` | Writes a migration for a schema change    |
 | `pnpm api:android`               | Regenerates the Android API client        |
 | `pnpm api:ios`                   | Regenerates the Apple apps' API client    |
+| `pnpm api:dart`                  | Regenerates the Flutter app's API client  |
 | `nix build`                      | Builds the server package                 |
 | `nix flake check`                | Builds it and runs the NixOS module tests |
 | `nix develop .#android`          | Shell with a JDK and the Android SDK      |
+| `nix develop .#flutter`          | Shell with Flutter and the Android SDK    |
 | `just`                           | Lists the shortcuts                       |
 
 The native apps build on their own, as their READMEs say:
-[Android](apps/android/README.md#build), [iOS](apps/ios/README.md), and
-[Samsung TV](apps/tizen/README.md#build).
+[Android](apps/android/README.md#build), [iOS](apps/ios/README.md),
+[Samsung TV](apps/tizen/README.md#build), and the
+[Flutter app](apps/flutter/README.md#build) that will replace the first two.
 
 [`AGENTS.md`](AGENTS.md) has the conventions: where code goes, the lint
 rules and what they want from you, how translations, queues, and live
@@ -77,14 +80,15 @@ build.
 There are no automated tests for the server or web app yet, so try the
 flows you touched in a browser. Then, depending on what changed:
 
-| You changed                         | Also do                                                         |
-| ----------------------------------- | --------------------------------------------------------------- |
-| A contract in `packages/contracts`  | `pnpm api:android` and `pnpm api:ios`, and commit the clients   |
-| The Drizzle schema in `packages/db` | `pnpm db:generate --name <what>`. Never edit a merged migration |
-| Text a user reads                   | Add it to `locales/en/` and translate it in the other languages |
-| `pnpm-lock.yaml`                    | Update `pnpmDepsHash` in `nix/package.nix` from `nix build`     |
-| `nix/`                              | `nix flake check`                                               |
-| `apps/android`                      | `just android build` and `just android test`                    |
+| You changed                         | Also do                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------- |
+| A contract in `packages/contracts`  | `pnpm api:android`, `pnpm api:ios`, and `pnpm api:dart`, and commit the clients |
+| The Drizzle schema in `packages/db` | `pnpm db:generate --name <what>`. Never edit a merged migration                 |
+| Text a user reads                   | Add it to `locales/en/` and translate it in the other languages                 |
+| `pnpm-lock.yaml`                    | Update `pnpmDepsHash` in `nix/package.nix` from `nix build`                     |
+| `nix/`                              | `nix flake check`                                                               |
+| `apps/android`                      | `just android build` and `just android test`                                    |
+| `apps/flutter`                      | `just flutter check` and `just flutter build`                                   |
 
 Don't bump the version. `just tag` does that when a release goes out.
 
