@@ -8,11 +8,11 @@ contributors. Licensed under GPL-3.0. The Matinee copy of the license is in
 All paths below are relative to
 `android/app/src/main/kotlin/io/github/zekurio/matinee/`.
 
-| Matinee file | Plezy source |
-| --- | --- |
-| `MainActivity.kt` | `PlezyActivity.kt`, Flutter's texture render mode and transparent background |
-| `player/PlayerSurfaceHost.kt` | `shared/PlayerSurfaceHost.kt` and `shared/FlutterOverlayHelper.kt`, the view stack under Flutter, z-order, the OSD plane, and the video rectangle |
-| `player/MpvEngine.kt` | `mpv/MpvPlayerCore.kt`, the mpv options (`vo`, `hwdec`, `vd-lavc-o`, decoder queue, film grain, unused scripts), the placeholder surface, surface handoff, and the software renderer fallback |
+| Matinee file                  | Plezy source                                                                                                                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MainActivity.kt`             | `PlezyActivity.kt`, Flutter's texture render mode and transparent background                                                                                                                  |
+| `player/PlayerSurfaceHost.kt` | `shared/PlayerSurfaceHost.kt` and `shared/FlutterOverlayHelper.kt`, the view stack under Flutter, z-order, the OSD plane, and the video rectangle                                             |
+| `player/MpvEngine.kt`         | `mpv/MpvPlayerCore.kt`, the mpv options (`vo`, `hwdec`, `vd-lavc-o`, decoder queue, film grain, unused scripts), the placeholder surface, surface handoff, and the software renderer fallback |
 
 `player/Media3Engine.kt`, the Pigeon bridge, and everything in `lib/player/`
 are Matinee's own.
