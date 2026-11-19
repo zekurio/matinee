@@ -1,6 +1,7 @@
 import { library } from "@matinee/db"
 import { sql } from "drizzle-orm"
 
+import { deleteAllExpired } from "../auth/expired"
 import { syncOidcAccounts } from "../auth/oidc-refresh"
 import { deleteExpiredSessions } from "../auth/session"
 import { CACHE_HOURS, forgetBrowsedPages } from "../catalog/cache"
@@ -183,7 +184,11 @@ const cleanSessions: TaskDefinition = {
   queue: null,
   startupDelayMs: 0,
   intervalMs: 6 * HOUR_MS,
-  run: () => deleteExpiredSessions(),
+  run: async () => {
+    await deleteExpiredSessions()
+    // Sign-in challenges and device codes too, which expire in minutes.
+    await deleteAllExpired()
+  },
 }
 
 const forgetBrowsed: TaskDefinition = {

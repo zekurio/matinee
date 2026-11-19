@@ -20,6 +20,7 @@ import { secureHeaders } from "hono/secure-headers"
 import { appRoutes } from "./auth/apps"
 import { avatarRoutes } from "./auth/avatars"
 import { oidcRoutes } from "./auth/oidc"
+import { limitBodies } from "./body-limit"
 import { compressBytes, compressJson, pickEncoding } from "./compress"
 import { env } from "./env"
 import { artworkRoutes } from "./media/artwork"
@@ -54,6 +55,8 @@ export function createApp() {
   const app = new Hono()
 
   app.use(secureHeaders({ crossOriginResourcePolicy: "same-origin" }))
+  // Before anything reads a body, RPC and REST included.
+  app.use(limitBodies())
   // A browser sends a body other than form data or text, or an
   // Authorization header, only after a CORS preflight, which fails since the
   // server answers none. That leaves form posts and bodiless requests, which

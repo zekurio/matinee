@@ -7,6 +7,7 @@ import { redeemAppCode } from "../auth/apps"
 import { branding, loginBackdrop } from "../auth/branding"
 import {
   approveDeviceRequest,
+  DEVICE_POLL_INTERVAL_S,
   findDeviceRequest,
   pollDeviceSignIn,
   startDeviceSignIn,
@@ -50,7 +51,16 @@ import { insertUser, lockUsers, usernameTaken } from "../auth/users"
 import { db } from "../db"
 import { log } from "../log"
 import { loginBackdropTiles } from "../media/login-backdrop"
-import { badRequest, authed, notFound, pub, requirePasskeys } from "./base"
+import { LIMITS } from "../rate-limit"
+import {
+  authed,
+  badRequest,
+  limited,
+  notFound,
+  pub,
+  requirePasskeys,
+  tooManyRequests,
+} from "./base"
 
 /** What `beginSignUp` stored with the challenge. */
 const SignUpPayload = t.object({
@@ -93,6 +103,8 @@ async function approvedUser(userId: string) {
   if (!row) throw badRequest("This account no longer exists.")
   return row
 }
+
+const DEVICE_SLOW_DOWN = `Wait ${DEVICE_POLL_INTERVAL_S} seconds between polls.`
 
 const DEVICE_GONE =
   "That code doesn't work. It may have expired, or been used already."
@@ -140,14 +152,16 @@ export const auth = {
     await signOut(context.hono)
   }),
 
-  unlockSetup: pub.auth.unlockSetup.handler(async ({ context, input }) => {
-    if (!(await setupRequired())) throw badRequest("Setup is already done.")
-    await refuseOidcSetup()
-    await requirePasskeys()
-    if (!unlockSetup(context.hono, input.token)) {
-      throw badRequest("That setup token doesn't match the one in the log.")
-    }
-  }),
+  unlockSetup: pub.auth.unlockSetup
+    .use(limited(LIMITS.setupUnlock))
+    .handler(async ({ context, input }) => {
+      if (!(await setupRequired())) throw badRequest("Setup is already done.")
+      await refuseOidcSetup()
+      await requirePasskeys()
+      if (!unlockSetup(context.hono, input.token)) {
+        throw badRequest("That setup token doesn't match the one in the log.")
+      }
+    }),
 
   invite: {
     check: pub.auth.invite.check.handler(async ({ input }) => {
@@ -159,10 +173,12 @@ export const auth = {
   },
 
   passkey: {
-    signInOptions: pub.auth.passkey.signInOptions.handler(async () => {
-      await requirePasskeys()
-      return beginSignIn()
-    }),
+    signInOptions: pub.auth.passkey.signInOptions
+      .use(limited(LIMITS.challenges))
+      .handler(async () => {
+        await requirePasskeys()
+        return beginSignIn()
+      }),
 
     signIn: pub.auth.passkey.signIn.handler(async ({ context, input }) => {
       await requirePasskeys()
@@ -176,8 +192,9 @@ export const auth = {
       return publicUser(row)
     }),
 
-    signUpOptions: pub.auth.passkey.signUpOptions.handler(
-      async ({ context, input }) => {
+    signUpOptions: pub.auth.passkey.signUpOptions
+      .use(limited(LIMITS.challenges))
+      .handler(async ({ context, input }) => {
         const setup = await setupRequired()
         if (setup) await refuseOidcSetup()
         await requirePasskeys()
@@ -201,8 +218,7 @@ export const auth = {
           throw badRequest("That username is taken.")
         }
         return beginSignUp({ username: input.username, setup, inviteId })
-      },
-    ),
+      }),
 
     signUp: pub.auth.passkey.signUp.handler(async ({ context, input }) => {
       await requirePasskeys()
@@ -321,18 +337,24 @@ export const auth = {
   },
 
   device: {
-    start: pub.auth.device.start.handler(({ input }) =>
-      startDeviceSignIn(input),
-    ),
+    start: pub.auth.device.start
+      .use(limited(LIMITS.deviceStart))
+      .handler(({ input }) => startDeviceSignIn(input)),
 
-    poll: pub.auth.device.poll.handler(async ({ context, input }) => {
-      const result = await pollDeviceSignIn(input.deviceCode)
-      if (result === "pending") return { status: "pending" as const }
-      if (!result) throw notFound("This code expired. Get a new one.")
-      const row = await approvedUser(result.userId)
-      const token = await createSession(context.hono, row.id, result.device)
-      return { status: "approved" as const, token, user: publicUser(row) }
-    }),
+    poll: pub.auth.device.poll
+      .use(limited(LIMITS.devicePoll))
+      .handler(async ({ context, input }) => {
+        const result = await pollDeviceSignIn(input.deviceCode)
+        if (result === "pending") return { status: "pending" as const }
+        if (result === "slow-down") {
+          context.hono.header("Retry-After", String(DEVICE_POLL_INTERVAL_S))
+          throw tooManyRequests(DEVICE_SLOW_DOWN, DEVICE_POLL_INTERVAL_S)
+        }
+        if (!result) throw notFound("This code expired. Get a new one.")
+        const row = await approvedUser(result.userId)
+        const token = await createSession(context.hono, row.id, result.device)
+        return { status: "approved" as const, token, user: publicUser(row) }
+      }),
 
     get: authed.auth.device.get.handler(async ({ input }) => {
       const request = await findDeviceRequest(input.userCode)

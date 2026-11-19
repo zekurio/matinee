@@ -316,7 +316,10 @@ in
           admin account through the provider, and only for an account whose
           role claim says admin. Register
           `<publicUrl>/api/auth/oidc/callback` as its redirect URI, and put
-          the client secret in `secrets.MATINEE_OIDC_CLIENT_SECRET`.
+          the client secret in `secrets.MATINEE_OIDC_CLIENT_SECRET`. The
+          URL must be https, or http on localhost. For plain http to a
+          provider elsewhere on a network you trust, set
+          `settings.MATINEE_OIDC_ALLOW_HTTP = true`.
         '';
       };
 

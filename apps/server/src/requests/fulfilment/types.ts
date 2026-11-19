@@ -92,6 +92,13 @@ export interface FulfilmentSource {
   /** How to reach it and how it behaves, described by `fields`. */
   settings: { parse: (value: FulfilmentValues) => FulfilmentValues }
   fields(): DescribedField[]
+  /**
+   * Where these settings send the connection key, normalized so the same
+   * server reads the same, or null when they don't parse. A saved or
+   * environment key only goes to the destination it was saved for.
+   * Sources without a key leave it out.
+   */
+  destination?(settings: FulfilmentValues): string | null
   /** What a new connection's settings start from. */
   defaults: FulfilmentValues
   /** The connection's options, as `options` describes them. Throws when one is missing. */
