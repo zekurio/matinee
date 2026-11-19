@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "api:android": "tsx scripts/android-api.ts",
+    "api:dart": "tsx scripts/dart-api.ts",
     "api:ios": "tsx scripts/ios-api.ts",
     "build": "node build.mjs",
     "dev": "tsx watch --clear-screen=false src/index.ts",

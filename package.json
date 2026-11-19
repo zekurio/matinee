@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "api:android": "pnpm --filter @matinee/server api:android",
+    "api:dart": "pnpm --filter @matinee/server api:dart",
     "api:ios": "pnpm --filter @matinee/server api:ios",
     "build": "pnpm -r build",
     "dev": "pnpm --parallel --filter @matinee/server --filter @matinee/web dev",
@@ -20,7 +21,7 @@
     "lint": "oxlint",
     "typecheck": "pnpm -r --parallel typecheck && pnpm typecheck:oxlint",
     "typecheck:oxlint": "tsc -p tools/oxlint",
-    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:android --check && pnpm api:ios --check && pnpm --filter @matinee/tizen strings --check"
+    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:android --check && pnpm api:ios --check && pnpm api:dart --check && pnpm --filter @matinee/tizen strings --check"
   },
   "devDependencies": {
     "@oxlint/plugins": "1.91.0",
