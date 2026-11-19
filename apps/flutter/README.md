@@ -5,8 +5,9 @@ and Apple TV. It replaces the Kotlin app in `apps/android` and the SwiftUI
 apps in `apps/ios`, which keep shipping until it reaches them. Video plays
 in each platform's native player, behind the Flutter view.
 
-So far it has the toolchain, the kit, the API client, the strings, and
-the tabs. Every screen behind them is a placeholder that shows its route.
+So far it has the toolchain, the kit, the API client, the strings, the
+sessions, the screens that connect and sign in, and the tabs. Every screen
+behind the tabs is a placeholder that shows its route.
 
 ## Build
 
@@ -101,6 +102,15 @@ the sign-in screens do apart from how they look.
 - On Android 17, reaching or finding a server on the local network needs
   `ACCESS_LOCAL_NETWORK`, asked through the platform bridge before
   connecting, retrying, and searching.
+- The session's state picks the screen. `authRedirect` in `lib/router.dart`
+  maps it to a route, and the router asks again whenever `authStateProvider`
+  changes (its `refreshListenable`), so nothing navigates by hand:
+  `NoServer` is `/connect`, `Connecting` is `/connecting`, `Unreachable` is
+  `/unreachable`, `SignedOut` is `/sign-in`, and `SignedIn` or `Offline` is
+  the tabs, wherever the person already is. The screens are in
+  `lib/screens/sign_in`, with the TV's, which sign in by code and show a
+  QR code, in `tv/`. Neither keeps what it shows in the route, only the
+  session.
 - This APK installs over the Kotlin app, and existing installs start
   fresh: on the first launch the platform deletes what the Kotlin app
   kept (its preferences, folders, session key, and Watch Next programs)
@@ -153,7 +163,7 @@ keeps the web's and the Android kit's names: `MatineeButton` (looks, sizes,
 `shape`, `dimmed`, and the `glass` and `frosted` looks for buttons over a
 picture), `Checkbox`, `ChoiceChip`, `ToggleChip`, `Dialog`, `ConfirmDialog`,
 `Menu`, `PageDots`, `ProgressRing`, `SearchPill`, `Sheet`, `Slider`,
-`RangeSlider`, `Spinner`, `Switch`, `TabBar` with `TabBarState`,
+`QrCodeCard`, `RangeSlider`, `Spinner`, `Switch`, `TabBar` with `TabBarState`,
 `MatineeTextField`, `Toast` with `ToastState`, `Calendar`, and
 `PressIndication`, which stands in for Material's ripple. Words come in as
 parameters. `KitIcon` draws the lucide icons in `Lucide` and follows the

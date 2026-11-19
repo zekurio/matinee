@@ -9,6 +9,7 @@ export 'menu.dart';
 export 'page_dots.dart';
 export 'press_indication.dart';
 export 'progress_ring.dart';
+export 'qr_code.dart';
 export 'search_pill.dart';
 export 'sheet.dart';
 export 'slider.dart';

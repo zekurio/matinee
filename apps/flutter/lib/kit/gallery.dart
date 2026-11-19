@@ -9,7 +9,8 @@ enum GalleryGroup {
   fields('Fields and filters'),
   playback('Playback and navigation'),
   overlays('Overlays'),
-  calendar('Calendar');
+  calendar('Calendar'),
+  signIn('Sign-in');
 
   const GalleryGroup(this.title);
 
@@ -169,7 +170,20 @@ class _KitGalleryState extends State<KitGallery> {
     GalleryGroup.playback => _playback(),
     GalleryGroup.overlays => _overlays(),
     GalleryGroup.calendar => _calendar(),
+    GalleryGroup.signIn => _signIn(),
   };
+
+  Widget _signIn() => const Column(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    spacing: 20,
+    children: [
+      Logo(label: 'Matinee'),
+      QrCodeCard(
+        text: 'https://media.example.com/link?code=BCDF-GHJK',
+        label: 'QR code for the code BCDF-GHJK',
+      ),
+    ],
+  );
 
   Widget _buttons() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,

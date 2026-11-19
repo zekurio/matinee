@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/app.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/kit/kit.dart';
@@ -8,6 +9,8 @@ import 'package:matinee/router.dart';
 import 'package:matinee/screens/shell/header.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+
+import '../core/fakes.dart';
 
 const _tabs = ['Home', 'Shows', 'Movies', 'Downloads', 'Profile'];
 
@@ -23,7 +26,12 @@ Future<void> _pump(
   addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [authStateProvider.overrideWithValue(const NoServer())],
+      // Signed in, so the router leaves the sign-in screens for the tabs.
+      overrides: [
+        authStateProvider.overrideWithValue(
+          SignedIn('https://media.example.com', User.fromJson(userJson('ada'))),
+        ),
+      ],
       child: const MatineeApp(),
     ),
   );
