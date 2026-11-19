@@ -9,7 +9,9 @@ export default {
   "discover.rail.comingSoon": "Demnächst",
   "discover.rail.forYou": "Empfehlungen für dich",
   "discover.rail.becauseWatched": "Weil du {name} geschaut hast",
-  "discover.rail.requests": "Wartende Anfragen",
+
+  "discover.request.waiting": "Wartet",
+  "discover.request.askedWhen": "Angefragt {when}",
 
   "discover.reason.watched": "Weil du {name} geschaut hast",
   "discover.reason.person": "Mit {name}",

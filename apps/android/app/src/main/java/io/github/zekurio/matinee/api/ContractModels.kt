@@ -468,7 +468,7 @@ data class DiscoverRail(
 @Serializable
 data class DiscoverRails(
     val enabled: Boolean,
-    val requests: Boolean,
+    val requests: String?,
     val rails: List<DiscoverRail>,
     val browse: List<String>,
 )

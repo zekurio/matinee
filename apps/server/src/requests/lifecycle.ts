@@ -453,6 +453,14 @@ function inProgress() {
   )
 }
 
+/** The requests the viewer asked for or follows, among the libraries they see. */
+function followedBy(viewer: Viewer) {
+  return and(
+    inLibraries(viewer, request.libraryId),
+    eq(requestFollower.userId, viewer.id),
+  )
+}
+
 export async function mine(
   viewer: Viewer,
   input: { cursor?: string; limit: number; filter: "inProgress" | "all" },
@@ -463,8 +471,7 @@ export async function mine(
     .innerJoin(requestFollower, eq(requestFollower.requestId, request.id))
     .where(
       and(
-        inLibraries(viewer, request.libraryId),
-        eq(requestFollower.userId, viewer.id),
+        followedBy(viewer),
         cursorBefore(input.cursor, request.createdAt),
         input.filter === "inProgress" ? inProgress() : undefined,
       ),
@@ -476,6 +483,16 @@ export async function mine(
     items: await items(viewer, requests.slice(0, input.limit)),
     nextCursor: nextCursor(requests, input.limit),
   }
+}
+
+/** How many requests `mine` returns for its "inProgress" filter. */
+export async function inProgressCount(viewer: Viewer): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(request)
+    .innerJoin(requestFollower, eq(requestFollower.requestId, request.id))
+    .where(and(followedBy(viewer), inProgress()))
+  return row?.value ?? 0
 }
 
 /** The requests that wait for an admin's answer, among the libraries they see. */

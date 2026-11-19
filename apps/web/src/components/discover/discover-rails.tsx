@@ -47,7 +47,7 @@ import {
   railLink,
   railsOptions,
 } from "./discover-data"
-import { WaitingRequests } from "./waiting-requests"
+import { DiscoverRequests } from "./requests-rail"
 
 type Page = UseQueryResult<t.infer<typeof DiscoverRowSchema>>
 
@@ -72,9 +72,11 @@ export function DiscoverRails() {
     return <Failed onRetry={() => void rails.refetch()} />
   }
   if (!rails.data.enabled) return <DiscoverOff />
-  // The requests that wait come from their own stream, so they stay when
-  // the catalog's rows are down or empty.
-  const requests = rails.data.requests && <WaitingRequests />
+  // The requests come from their own stream or list, so they stay when the
+  // catalog's rows are down or empty.
+  const requests = rails.data.requests && (
+    <DiscoverRequests which={rails.data.requests} />
+  )
   if (list.length > 0 && pages.every((page) => page.isError)) {
     if (pages.some((page) => page.isFetching)) return <RailsSkeleton />
     return (

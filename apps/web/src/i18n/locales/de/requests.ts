@@ -92,6 +92,7 @@ export default {
   }),
   "requests.toast.declined": "{name} abgelehnt",
   "requests.toast.undo": "Rückgängig",
+  "requests.toast.cancelled": "{name} zurückgezogen",
   "requests.toast.addFailed": "Hinzufügen fehlgeschlagen",
   "requests.toast.declineFailed": "{name} konnte nicht abgelehnt werden",
   "requests.toast.gaveUp": "{name} aufgegeben",

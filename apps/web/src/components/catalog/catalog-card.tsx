@@ -214,7 +214,7 @@ export function PosterBadge({
   )
 }
 
-function badgeGlyph(
+export function badgeGlyph(
   availability: Availability,
   leaving: boolean,
 ): { icon: ReactNode; label: string } | null {
