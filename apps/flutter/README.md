@@ -32,6 +32,43 @@ nix develop ../..#flutter -c flutter build apk --debug
 The version comes from the root `package.json`, like every other part of
 the repository, so `pubspec.yaml` has none.
 
+## The kit
+
+Screens build from `lib/kit`, the port of `packages/ui` and its theme. It
+keeps the web's and the Android kit's names: `MatineeButton` (looks, sizes,
+`shape`, `dimmed`, and the `glass` and `frosted` looks for buttons over a
+picture), `Checkbox`, `ChoiceChip`, `ToggleChip`, `Dialog`, `ConfirmDialog`,
+`Menu`, `PageDots`, `ProgressRing`, `SearchPill`, `Sheet`, `Slider`,
+`RangeSlider`, `Spinner`, `Switch`, `TabBar` with `TabBarState`,
+`MatineeTextField`, `Toast` with `ToastState`, `Calendar`, and
+`PressIndication`, which stands in for Material's ripple. Words come in as
+parameters. `KitIcon` draws the lucide icons in `Lucide` and follows the
+text color around it.
+
+Only `lib/kit` and `lib/app.dart` import Material or Cupertino, and only
+for behavior (dragging, menus, the text field's editing) that the kit then
+draws as the web does; `test/kit_boundary_test.dart` fails on anything
+else. If a screen needs a widget the kit doesn't have, add it to the kit.
+
+`MatineeTheme` carries the web's color roles, `KitText` its font sizes and
+line heights, and `KitRadius` its radii; Red Hat Text is the default
+family. `themeStoreProvider` keeps the preset and light, dark, or system
+in shared preferences. Presets and icons are generated, so a change to the
+web's palettes or a new icon needs:
+
+```sh
+pnpm themes:dart   # lib/kit/theme_presets.g.dart, from packages/ui
+pnpm icons:dart    # lib/kit/lucide.g.dart, from lucide-react
+```
+
+Add an icon to the list in `scripts/lucide.mjs` first. `pnpm verify` fails
+while either file is out of date.
+
+`lib/kit/gallery.dart` shows every component. `test/kit` renders it, and
+each group, at 412 by 915 in dark and light with the real font, and
+compares them with `test/kit/goldens`. After changing a component, run
+`just flutter test --update-goldens` and look at the images that changed.
+
 ## License
 
 GPL-3.0, like the native apps it replaces, since it bundles libmpv.
