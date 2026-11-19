@@ -10,12 +10,15 @@ WebEngine shows the pages, and libmpv puts the picture underneath them, so
 the video shows wherever a page is transparent. The player's controls,
 menus, and everything else are the web app's.
 
-On Wayland, HDR video reaches the display as HDR. Elsewhere mpv tone maps
-it to SDR. [The window](#the-window) says why.
+On Wayland, and on Windows with HDR turned on for the display, HDR video
+reaches the display as HDR. Elsewhere mpv tone maps it to SDR.
+[The window](#the-window) says why.
 
 Linux is the system it's built and tried on, and there it needs a Wayland
 session: X11 has no HDR and no way to put the video under the window.
-The macOS and Windows builds haven't been run by anyone yet.
+On Windows it builds and plays on GitHub's runners, which have no GPU
+and no HDR display. Nobody has tried it on a PC of their own yet. The
+macOS build hasn't been run by anyone yet.
 
 ## Install
 
@@ -26,7 +29,25 @@ nix run github:zekurio/matinee#matinee-desktop
 ```
 
 or add `matinee.packages.${system}.matinee-desktop` to your packages.
-There are no installers for macOS and Windows yet. Build it as below.
+There are no installers for macOS yet. Build it as below.
+
+### Windows
+
+There is no installer or signed release yet. Each run of the
+`desktop (windows)` workflow packages the app in a folder that runs by
+itself, for 64-bit Windows 10 and 11 on x86, and keeps it as
+`matinee-desktop-windows`. Download it from the run's page on GitHub,
+under Artifacts, or the newest one with `gh`:
+
+```sh
+run=$(gh run list --repo zekurio/matinee --workflow 'desktop (windows)' \
+  --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run download "$run" --repo zekurio/matinee -n matinee-desktop-windows
+```
+
+Unzip it anywhere and start `matinee-desktop.exe`. No one signed it, so
+SmartScreen may stop it the first time: choose More info, then Run
+anyway.
 
 ## Use
 
@@ -102,7 +123,7 @@ everything, and loads what `playback.start` answers.
 The video gets under the page in one of two ways (`VideoOutput`), picked
 once at start.
 
-**Under the window**, on Wayland. mpv makes a surface of its own, a
+**Under the window**, on Wayland and Windows. mpv makes a surface of its own, a
 subsurface below the window's, and presents on it through Vulkan with
 `vo=gpu-next`, exactly as in a window of its own. The window is
 transparent where the video shows, and the compositor puts the two
@@ -117,6 +138,17 @@ application's connection, with an event queue of its own, and make its
 surface a subsurface of the application's. The flake builds libmpv with
 it. The app asks mpv whether it has the option, and with a stock libmpv
 it falls back to the second way.
+
+On Windows, upstream mpv does what's needed. It makes a window inside
+one of the app's that it's given (`--wid`) and presents in it through a
+Direct3D 11 swapchain. The page can't stay in the app's window itself,
+since a child window draws over its parent. So `WindowsVideoSurface`
+moves the page into a second child window, above mpv's, which Qt draws
+with Direct3D and an alpha channel through DirectComposition. Windows
+puts sibling windows together in their order, so the video shows where
+the page is transparent. Both are inside the app's one window, which
+moves, minimizes, and shows in Alt+Tab as one. Where Qt Quick can't draw
+with Direct3D, the app falls back to the second way.
 
 **In the window**, everywhere else. Qt Quick draws the window with
 OpenGL, and each frame, after Qt clears the window, `MpvRenderer` has mpv
@@ -138,11 +170,20 @@ A few things are easy to break:
   mpv has set its output up. And the window's surface can go away while
   the app runs, which stops playback: mpv without a parent would open a
   window of its own.
+- On Windows, Qt makes the page's window a layered window, since it has
+  an alpha channel. With that style, Windows showed it opaque black once
+  the app's window had changed size, as it does for full screen, and the
+  video was gone. `WindowsVideoSurface` takes the style off again, since
+  DirectComposition doesn't need it.
+- The app's manifest (`resources/matinee.manifest`) says it knows
+  Windows 10 and 11. Windows tells a program without one that it runs on
+  Windows 8, and mpv then leaves its swapchain's color space alone, which
+  means no HDR.
 
 ### HDR
 
-It needs a compositor with the color management protocol and a display in
-HDR mode. On Hyprland with its defaults (`render:cm_auto_hdr = 1`), the
+On Wayland it needs a compositor with the color management protocol and
+a display in HDR mode. On Hyprland with its defaults (`render:cm_auto_hdr = 1`), the
 display switches to HDR while the app is full screen with an HDR video,
 and back after. In a window it stays in SDR, and the compositor tone
 maps, unless the monitor is set to HDR all the time (`cm, hdr`).
@@ -155,6 +196,22 @@ has mpv fit the picture to the display itself.
 
 To check that the display got HDR, run `drm_info` while a video plays.
 It lists the connector's `Colorspace` and `HDR_OUTPUT_METADATA`.
+
+On Windows it needs HDR turned on for the display, in Settings →
+System → Display → Use HDR. Windows doesn't switch the display for a
+program. mpv asks what the display is and, when it's in HDR mode, gives
+its swapchain the HDR10 color space, so HDR goes out as HDR and SDR is
+fitted into it. On a display in SDR mode it tone maps. To check, start
+the app from a terminal with a log and play an HDR title:
+
+```powershell
+.\matinee-desktop.exe --verbose 2> matinee.log
+```
+
+In the log, `Queried output` says what mpv found the display to be, and
+`Swapchain successfully configured to color space` what it set. Both
+say `RGB_FULL_G2084_NONE_P2020` for HDR, and `RGB_FULL_G22_NONE_P709`
+for a display in SDR mode.
 
 ## Build
 
@@ -205,10 +262,12 @@ opens the pages to Chrome's DevTools at `localhost:9222`.
 
 `just desktop smoke` runs the app against a stand-in for a server
 (`smoke/`) and checks the shell's part: the page gets the session's
-token, the bridge answers and refuses what it should, and mpv plays,
-pauses, and seeks a clip. With `SMOKE_SCREENSHOT` set to a screenshot
-command, it also takes a picture while the clip plays, to check by eye
-that the page shows over the video.
+token, the bridge answers and refuses what it should, mpv plays,
+pauses, and seeks a clip, mpv's picture follows the window to full
+screen and back, and the app quits while a clip plays. With
+`SMOKE_SCREENSHOT` set to a screenshot command, it also takes pictures
+while the clip plays, to check by eye that the page shows over the
+video.
 
 `just desktop pages` runs the app's own pages in a browser against a
 stand-in for the shell (`src/dev/mock-shell.ts`). A panel in the corner
@@ -225,9 +284,7 @@ handlers in `native/src/app/application.cpp`, and the page that calls it.
 - Installers for macOS and Windows, and an AppImage or Flatpak for Linux.
 - The system's media controls on macOS and Windows. Media keys work
   there while the window has the keyboard.
-- HDR on macOS and Windows, where the video is drawn in the
-  window. mpv's newer Direct3D 11 render API may make it possible on
-  Windows.
+- HDR on macOS, where the video is drawn in the window.
 - A list of downloads. Files save to the downloads folder without one.
 - Signing in to a server whose certificate the system doesn't trust.
 
