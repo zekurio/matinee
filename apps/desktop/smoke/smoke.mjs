@@ -2,7 +2,9 @@
  * Runs the desktop app against a stand-in for a server and checks that
  * the shell does its part: it opens the page with the session's token,
  * the page reaches the shell through the bridge, and mpv plays a clip
- * from the "server" with the same token, pauses, and seeks.
+ * from the "server" with the same token, pauses, and seeks. Then the page
+ * takes the window full screen and back, and mpv's picture has to follow
+ * it, and the app has to quit cleanly with a clip still playing.
  *
  *   node apps/desktop/smoke/smoke.mjs <path to matinee-desktop>
  *
@@ -14,9 +16,10 @@
  * Whether the picture is on screen is not something this can see. For
  * that, set SMOKE_SCREENSHOT to a command that writes a screenshot to the
  * path in place of `{file}`. It runs while the clip plays, with the page's
- * pink badge and its bar over the video, and SMOKE_OUT (default: a
- * temporary directory, printed at the end) gets the picture, the app's
- * log, and mpv's last state.
+ * pink badge and its bar over the video, again in full screen, and once
+ * more back in the window.
+ * SMOKE_OUT (default: a temporary directory, printed at the end) gets the
+ * pictures, the app's log, and mpv's last state.
  */
 
 import { execSync, spawn } from "node:child_process"
@@ -159,7 +162,9 @@ async function connect(port) {
     waiting.get(message.id)?.(message.result)
     waiting.delete(message.id)
   })
-  const evaluate = (expression) =>
+  // `gesture` runs the expression as if the user had clicked, which a
+  // page needs to go full screen.
+  const evaluate = (expression, { gesture = false } = {}) =>
     new Promise((resolve, reject) => {
       const id = nextId++
       waiting.set(id, (result) => {
@@ -171,7 +176,12 @@ async function connect(port) {
         JSON.stringify({
           id,
           method: "Runtime.evaluate",
-          params: { expression, awaitPromise: true, returnByValue: true },
+          params: {
+            expression,
+            awaitPromise: true,
+            returnByValue: true,
+            userGesture: gesture,
+          },
         }),
       )
     })
@@ -221,7 +231,14 @@ const child = spawn(app, ["--verbose"], {
 })
 child.stdout.pipe(log)
 child.stderr.pipe(log)
-const exited = new Promise((resolve) => child.on("exit", resolve))
+// Set once the app is gone, to how it went.
+let ending = null
+const exited = new Promise((resolve) =>
+  child.on("exit", (code, signal) => {
+    ending = signal ?? `code ${code}`
+    resolve()
+  }),
+)
 
 let failed = false
 try {
@@ -234,6 +251,43 @@ try {
     )
   const state = async () =>
     JSON.parse(await page.evaluate("JSON.stringify(smoke.state)"))
+  const screenshot = (name) => {
+    if (!process.env.SMOKE_SCREENSHOT) return
+    const file = join(out, name)
+    execSync(process.env.SMOKE_SCREENSHOT.replace("{file}", file), {
+      stdio: "inherit",
+    })
+    process.stdout.write(`      screenshot in ${file}\n`)
+  }
+  const clip = {
+    url: "/api/media/clip/stream",
+    start: 1,
+    paused: false,
+    audio: 1,
+    subtitle: { kind: "stream", index: 2 },
+    subtitleDelay: 0,
+  }
+  // The page's size and the size mpv shows the picture at, both in the
+  // screen's pixels.
+  const sizes = async () => {
+    const view = JSON.parse(
+      await page.evaluate(
+        `JSON.stringify({
+          width: innerWidth * devicePixelRatio,
+          height: innerHeight * devicePixelRatio,
+          fullscreen: document.fullscreenElement !== null,
+        })`,
+      ),
+    )
+    const { result } = await call("player.stats")
+    return { view, shown: [result?.shownWidth, result?.shownHeight] }
+  }
+  // The picture keeps its shape, so it fills the page one way and stays
+  // inside it the other.
+  const fills = ({ view, shown: [width, height] }) =>
+    width <= view.width + 2 &&
+    height <= view.height + 2 &&
+    (Math.abs(width - view.width) <= 2 || Math.abs(height - view.height) <= 2)
 
   await until(
     "the test page",
@@ -265,14 +319,7 @@ try {
     "mpv only opens the server's addresses",
   )
 
-  await call("player.load", {
-    url: "/api/media/clip/stream",
-    start: 1,
-    paused: false,
-    audio: 1,
-    subtitle: { kind: "stream", index: 2 },
-    subtitleDelay: 0,
-  })
+  await call("player.load", clip)
   const playing = await until(
     "the clip to play",
     state,
@@ -287,13 +334,7 @@ try {
     "mpv sends the session's token",
   )
 
-  if (process.env.SMOKE_SCREENSHOT) {
-    const file = join(out, "playing.png")
-    execSync(process.env.SMOKE_SCREENSHOT.replace("{file}", file), {
-      stdio: "inherit",
-    })
-    process.stdout.write(`      screenshot in ${file}\n`)
-  }
+  screenshot("playing.png")
 
   await call("player.setPaused", { paused: true })
   const paused = await until("the pause", state, (now) => now.paused === true)
@@ -313,10 +354,40 @@ try {
 
   const stats = await call("player.stats")
   check(stats.result?.videoCodec === "h264", "the stats name the codec")
+
+  // Full screen the way the web app asks for it, and back. Each resizes
+  // the window and everything mpv's picture is in.
+  check(fills(await sizes()), "mpv's picture fills the page")
+  await page.evaluate("document.documentElement.requestFullscreen()", {
+    gesture: true,
+  })
+  const full = await until(
+    "full screen",
+    sizes,
+    (now) => now.view.fullscreen && fills(now),
+  )
+  check(true, `full screen, the picture fills ${full.shown.join(" by ")}`)
+  screenshot("fullscreen.png")
+  await page.evaluate("document.exitFullscreen()")
+  const back = await until(
+    "the window to come back",
+    sizes,
+    (now) => !now.view.fullscreen && fills(now),
+  )
+  check(true, `back in a window, it fills ${back.shown.join(" by ")}`)
+  screenshot("windowed.png")
+
   await writeFile(
     join(out, "state.json"),
     JSON.stringify(
-      { info: info.result, state: await state(), stats: stats.result },
+      {
+        info: info.result,
+        state: await state(),
+        stats: stats.result,
+        focused: await page.evaluate("document.hasFocus()"),
+        fullscreen: full,
+        windowed: back,
+      },
       null,
       2,
     ),
@@ -326,12 +397,24 @@ try {
   await until("the stop", state, (now) => now.phase === "idle")
   check(true, "it stops")
 
-  page.close()
+  // Quitting takes the window from under mpv while it still presents.
+  await call("player.load", clip)
+  await until(
+    "the clip to play again",
+    state,
+    (now) => now.phase === "ready" && !now.buffering && now.time > 1.5,
+  )
+  // The answer may not make it out before the page goes.
+  void call("app.quit")
+  await Promise.race([exited, sleep(15_000)])
+  check(ending === "code 0", "it quits while the clip plays")
 } catch (cause) {
   failed = true
   process.stderr.write(
     `${cause instanceof Error ? cause.message : String(cause)}\n`,
   )
+  // A program that can't load a library never gets to write a log.
+  if (ending) process.stderr.write(`the app ended by itself, with ${ending}\n`)
 } finally {
   child.kill()
   await Promise.race([exited, sleep(5000)])
