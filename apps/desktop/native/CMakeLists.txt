@@ -24,9 +24,9 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS
   WebEngineQuick)
 
 # libmpv: through pkg-config where the system has it, as Linux and
-# Homebrew do. Elsewhere, from MPV_ROOT, a folder with mpv's headers under
-# include/ and its library: the "mpv-dev" archives for Windows are laid
-# out that way.
+# Homebrew do. Elsewhere, from MPV_ROOT, set here or in the environment, a
+# folder with mpv's headers under include/ and its library: the "mpv-dev"
+# archives for Windows are laid out that way.
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
   pkg_check_modules(mpv IMPORTED_TARGET mpv>=2.3)
@@ -34,7 +34,7 @@ endif()
 if(TARGET PkgConfig::mpv)
   set(mpv_target PkgConfig::mpv)
 else()
-  set(MPV_ROOT "" CACHE PATH "Where mpv's headers and library are")
+  set(MPV_ROOT "$ENV{MPV_ROOT}" CACHE PATH "Where mpv's headers and library are")
   find_path(MPV_INCLUDE_DIR mpv/client.h HINTS "${MPV_ROOT}/include" REQUIRED)
   find_library(MPV_LIBRARY NAMES mpv libmpv libmpv-2
     HINTS "${MPV_ROOT}" "${MPV_ROOT}/lib" REQUIRED)
@@ -65,7 +65,7 @@ if(NOT Qt6Keychain_FOUND)
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/qt6keychain")
   file(COPY "${qtkeychain_SOURCE_DIR}/qtkeychain/keychain.h"
     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/generated/qt6keychain")
-  configure_file("${qtkeychain_BINARY_DIR}/qkeychain_export.h"
+  configure_file("${qtkeychain_BINARY_DIR}/qtkeychain/qkeychain_export.h"
     "${CMAKE_CURRENT_BINARY_DIR}/generated/qt6keychain/qkeychain_export.h" COPYONLY)
 endif()
 
@@ -168,10 +168,14 @@ elseif(APPLE)
     "-framework IOKit" "-framework CoreFoundation")
 elseif(WIN32)
   target_sources(matinee-desktop PRIVATE
+    resources/matinee.manifest
     resources/matinee.rc
     src/os/media_controls_none.cpp
-    src/os/video_output_default.cpp
-    src/os/windows/sleep_inhibitor_windows.cpp)
+    src/os/windows/sleep_inhibitor_windows.cpp
+    src/os/windows/video_output_windows.cpp
+    src/os/windows/windows_video_surface.cpp
+    src/os/windows/windows_video_surface.h)
+  target_link_libraries(matinee-desktop PRIVATE dcomp)
 endif()
 
 qt_add_qml_module(matinee-desktop

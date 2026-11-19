@@ -77,6 +77,9 @@ public:
   // own units. 0 while the window has none.
   void setParentSurface(quintptr surface, const QSize &size);
   void setOutputSize(const QSize &size);
+  // On Windows, the window mpv makes its own in, as its handle. 0 while
+  // there is none.
+  void setParentWindow(quintptr window);
 
   mpv_handle *handle() const { return m_mpv; }
   // Like `v0.41.0`.

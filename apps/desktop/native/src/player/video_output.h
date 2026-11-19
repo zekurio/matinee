@@ -12,7 +12,8 @@ class QQuickWindow;
 // window's, through its own swapchain, exactly as in a window of its own.
 // That is the only way the picture reaches the display as HDR, and needs
 // the window to be see-through where the video shows. Wayland has it,
-// with an mpv that takes a parent surface.
+// with an mpv that takes a parent surface. Windows has it one level down:
+// mpv's window is inside the app's, under a window of the page's own.
 //
 // In the window: mpv draws into the window's own framebuffer through its
 // render API, before Qt draws the page over it. It works everywhere and
@@ -24,6 +25,11 @@ public:
   // Whether this system shows the video under the window. Asked before
   // the window is made, since such a window needs an alpha channel.
   static bool underWindow(const MpvPlayer &player);
+
+  // Whether the video then shows through the app's window itself, which
+  // is the window that needs the alpha channel. Not where the page gets a
+  // window of its own over the video.
+  static bool showsThroughWindow();
 
   // The output for `window`, of the kind `underWindow` said.
   static VideoOutput *create(MpvPlayer *player, QQuickWindow *window);

@@ -7,6 +7,8 @@
 
 bool VideoOutput::underWindow(const MpvPlayer &) { return false; }
 
+bool VideoOutput::showsThroughWindow() { return false; }
+
 VideoOutput *VideoOutput::create(MpvPlayer *player, QQuickWindow *window) {
   return new MpvRenderer(player->handle(), window);
 }

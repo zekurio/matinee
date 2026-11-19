@@ -1,7 +1,9 @@
 name: desktop (windows)
 
 # Builds the desktop app on Windows, which the flake doesn't cover:
-# `nix flake check` in ci.yml builds it for Linux. A workflow of its own,
+# `nix flake check` in ci.yml builds it for Linux. Then packages it in a
+# folder that runs by itself, plays a clip in it, and uploads the folder,
+# which is the build to try on a real display. A workflow of its own,
 # outside the `ci` job the ruleset requires, so that a hosted runner's
 # change of Visual Studio doesn't block a pull request that never touched
 # the app.
@@ -11,6 +13,8 @@ on:
       - apps/desktop/**
       - packages/desktop-bridge/**
       - tools/ci/mpv-windows.mjs
+      - tools/ci/desktop-windows-*.mjs
+      - tools/ci/screenshot-windows.mjs
       - .github/workflows/desktop-windows.yml
   workflow_dispatch:
 
@@ -46,13 +50,20 @@ jobs:
       - name: build the pages
         run: pnpm install --frozen-lockfile && pnpm --filter @matinee/desktop build
 
-      # The Qt that nixpkgs has, so every system builds against one.
+      # Not the 6.12.0 that nixpkgs has: its Qt WebEngine for Visual Studio
+      # was built before the release and asks Qt GUI for a constructor,
+      # QAccessibleInterface's, that was public then and is protected
+      # now, so a program that links it doesn't start. 6.12.1 has no Qt
+      # WebEngine yet. Qt keeps its Windows packages somewhere new since
+      # 6.11, which aqtinstall's last release, 3.3.0, doesn't look in. Its
+      # main branch does.
       - name: install qt
         uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
-          version: 6.12.0
+          version: 6.11.3
           arch: win64_msvc2022_64
           modules: qtwebengine qtwebchannel qtpositioning
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git@5a49f2b391ae8ee1d3c0dd87f8b33c1d49a4deb7
           cache: true
 
       - name: set up visual studio
@@ -66,3 +77,40 @@ jobs:
 
       - name: build
         run: cmake --build build
+
+      - name: package
+        run: node tools/ci/desktop-windows-package.mjs build matinee-desktop
+
+      # Plays a clip in the packaged program and takes screenshots of it.
+      # A runner has no GPU and no HDR display: this shows that the
+      # program starts, plays, puts the page over the video, and keeps the
+      # video through full screen and back.
+      - name: smoke test
+        run: node tools/ci/desktop-windows-smoke.mjs matinee-desktop "$env:RUNNER_TEMP\smoke"
+
+      # Again where Qt Quick can't draw with Direct3D, as with Windows'
+      # software OpenGL, so the app falls back to drawing the video in the
+      # window.
+      - name: smoke test, video in the window
+        env:
+          QSG_RHI_BACKEND: opengl
+          QT_OPENGL: software
+        run: node tools/ci/desktop-windows-smoke.mjs matinee-desktop "$env:RUNNER_TEMP\smoke-in-window"
+
+      - name: upload the smoke test's screenshot and log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: smoke
+          path: |
+            ${{ runner.temp }}/smoke*/*.png
+            ${{ runner.temp }}/smoke*/app.log
+            ${{ runner.temp }}/smoke*/state.json
+          if-no-files-found: warn
+
+      - name: upload the packaged app
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: matinee-desktop-windows
+          path: matinee-desktop/
+          if-no-files-found: error
