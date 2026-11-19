@@ -1469,7 +1469,7 @@ internal fun rememberSkipSegment(controller: PlayerController, controls: Boolean
 @Composable
 private fun SkipSegment(controller: PlayerController, controls: Boolean) {
     val segment = rememberSkipSegment(controller, controls) ?: return
-    MatineeButton(onClick = { controller.seekTo(segment.end) }, look = ButtonLook.Frosted, height = 44.dp) {
+    MatineeButton(onClick = { controller.skipSegment(segment) }, look = ButtonLook.Frosted, height = 44.dp) {
         Text(skipSegmentLabel(segment.kind))
         LucideIcon(Lucide.FastForward, null, size = 14.dp)
     }

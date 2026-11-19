@@ -27,7 +27,13 @@ extension PlayerController {
     engine.pause()
   }
 
+  /// The viewer's seek, which brings back the button of a segment they skipped.
   public func seekTo(_ seconds: Double) async {
+    skipped = nil
+    await move(to: seconds)
+  }
+
+  func move(to seconds: Double) async {
     guard let current = source else { return }
     let target = seekClamp(seconds, duration: max(duration - 1, 0))
     ended = false
@@ -205,9 +211,11 @@ extension PlayerController {
     if !stopped, wantPlay { engine.play(atRate: speed) }
   }
 
-  /// Skips the segment that plays now, as its button does: to its end.
+  /// Skips the segment that plays now, as its button does: to its end. Its
+  /// button stays away until the viewer seeks.
   public func skipSegment() async {
     guard let segment else { return }
-    await seekTo(segment.end)
+    skipped = segment
+    await move(to: segment.end)
   }
 }

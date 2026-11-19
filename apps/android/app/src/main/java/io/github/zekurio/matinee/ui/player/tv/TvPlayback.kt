@@ -186,7 +186,7 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         next != null -> TvPictureAction(stringResource(R.string.player_next_episode), if (next.cancelled) null else next.seconds(controller)) {
             host.playInstead(next.item.id)
         }
-        segment != null && skipLabel != null -> TvPictureAction(skipLabel, null) { controller.seekTo(segment.end) }
+        segment != null && skipLabel != null -> TvPictureAction(skipLabel, null) { controller.skipSegment(segment) }
         else -> null
     }
     val away = if (next != null) nextAway else skipAway

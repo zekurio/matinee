@@ -346,10 +346,19 @@ class PlayerController(
 
     /**
      * The part the server offers to skip that plays now, like the intro.
-     * Its last second has nothing left worth skipping.
+     * Its last second has nothing left worth skipping, and one the viewer
+     * skipped stays away until they seek.
      */
     val segment: MediaSegment?
-        get() = plan?.segments?.firstOrNull { position >= it.start && position < it.end - SEGMENT_END_SECONDS }
+        get() = plan?.segments?.firstOrNull {
+            it != skipped && position >= it.start && position < it.end - SEGMENT_END_SECONDS
+        }
+
+    /**
+     * The segment the viewer skipped. A copied stream lands on the keyframe
+     * nearest its end, which can be a little short of it.
+     */
+    private var skipped by mutableStateOf<MediaSegment?>(null)
 
     val duration: Double
         get() = item.durationSeconds
@@ -513,7 +522,7 @@ class PlayerController(
             if (current.holdsTracks) selectAudioInFile()
             showSubtitle()
             recordSelection()
-            if (sought != null) seekTo(sought)
+            if (sought != null) moveTo(sought)
         }
         if (said != null) notice = Notice(said)
     }
@@ -765,7 +774,7 @@ class PlayerController(
         }
         notice = Notice(NoticeKind.SWITCH_FAILED, message)
         // What plays stays, so a seek made meanwhile goes to it.
-        if (sought != null) seekTo(sought)
+        if (sought != null) moveTo(sought)
     }
 
     /** Tries again from where it stopped, every method with it. */
@@ -791,7 +800,19 @@ class PlayerController(
         if (player.isPlaying) player.pause() else player.play()
     }
 
+    /** The viewer's seek, which brings back the button of a segment they skipped. */
     fun seekTo(seconds: Double) {
+        skipped = null
+        moveTo(seconds)
+    }
+
+    /** Skips [segment] to its end, and keeps its button away. */
+    fun skipSegment(segment: MediaSegment) {
+        moveTo(segment.end)
+        skipped = segment
+    }
+
+    private fun moveTo(seconds: Double) {
         val current = source ?: return
         val target = seconds.coerceIn(0.0, maxOf(duration - 1, 0.0))
         ended = false

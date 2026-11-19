@@ -1,4 +1,5 @@
 import type {
+  MediaSegment,
   PlaybackDevice,
   PlaybackMethod,
   PlaybackQuality,
@@ -70,6 +71,8 @@ export type PlayerState = PlayerStart & {
   failed: PlaybackMethod[]
   /** Where a switch is headed, shown until the new source loads. */
   pending: number | null
+  /** The segment the viewer skipped, whose button stays away until they seek. */
+  skipped: MediaSegment | null
 
   // Subtitles.
   /** The last track picked in this file, which C brings back. */
@@ -116,6 +119,7 @@ export type PlayerState = PlayerStart & {
   addFailed: (method: PlaybackMethod) => void
   setQuality: (quality: PlaybackQuality) => void
   setPending: (at: number | null) => void
+  setSkipped: (segment: MediaSegment | null) => void
   /** The last track the viewer turned on, for C. */
   setPickedSubtitle: (trackId: string) => void
   setSubtitleUrl: (url: { trackId: string; url: string } | null) => void
@@ -147,6 +151,7 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
     quality: start.plan.quality,
     failed: [],
     pending: null,
+    skipped: null,
     pickedSubtitle: null,
     subtitleUrl: null,
     subtitleDelay: 0,
@@ -195,6 +200,7 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
       ),
     setQuality: (quality) => set({ quality }),
     setPending: (pending) => set({ pending }),
+    setSkipped: (skipped) => set({ skipped }),
     setPickedSubtitle: (pickedSubtitle) => set({ pickedSubtitle }),
     setSubtitleUrl: (subtitleUrl) => set({ subtitleUrl }),
     setSubtitleDelay: (subtitleDelay) => set({ subtitleDelay }),
@@ -236,6 +242,15 @@ export function selectBurnedIn(state: PlayerState): boolean {
 /** A source on its way, or the video waiting for data. */
 export function selectBusy(state: PlayerState): boolean {
   return state.pending !== null || state.waiting
+}
+
+/**
+ * Seconds into the file where the viewer is: where a seek on its way is
+ * headed, else the video. The old source still reports its own time
+ * while the new one loads.
+ */
+export function selectNow(state: PlayerState): number {
+  return state.pending ?? state.time
 }
 
 export const PlayerStoreContext = createContext<PlayerStore | null>(null)

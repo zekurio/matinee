@@ -191,6 +191,8 @@ function Player({
   usePartyStatus(video, store, position, party)
   /** The viewer's own seek, which a party follows. */
   const seek = (to: number) => {
+    // It brings back the button of a segment they skipped.
+    actions.setSkipped(null)
     playback.seek(to)
     if (party) sync.tell(party.playback.playing, to)
   }
