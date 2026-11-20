@@ -307,6 +307,7 @@ async function items(viewer: Viewer, rows: Row[]) {
     await withCachedDetails(
       viewer,
       rows.map((row) => ({
+        requestId: row.id,
         ref: {
           kind: row.kind,
           provider: row.provider,
@@ -345,12 +346,7 @@ async function items(viewer: Viewer, rows: Row[]) {
       createdAt: row.createdAt,
       arrivedAt: row.arrivedAt,
       availability: state.availability,
-      season:
-        row.kind === "show"
-          ? furthestSeason(
-              state.seasons.filter((season) => season.requestId === row.id),
-            )
-          : null,
+      season: row.kind === "show" ? furthestSeason(state.seasons) : null,
     }
   })
 }
