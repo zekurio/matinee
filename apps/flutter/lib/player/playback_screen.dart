@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -333,7 +334,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   bool _locked = false;
 
   /// Counts keys and touches while locked, each showing the unlock button again.
-  final int _lockTouched = 0;
+  int _lockTouched = 0;
   final _gesture = ValueNotifier<GestureInfo?>(null);
   late final DeviceLevels _levels;
 
@@ -542,6 +543,62 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
           unawaited(_session.skip(step));
         }
     }
+  }
+
+  /// A remote's, a keyboard's, or a headset's keys, as the Kotlin player
+  /// takes them: media keys play, pause, skip, and change episodes; the
+  /// arrows skip and Select or Up and Down bring up the controls while
+  /// they're hidden. Locked, media keys still work, and the keys that would
+  /// bring up the controls show the unlock button instead.
+  KeyEventResult _key(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final plan = _session.plan;
+    final back = _session.skipBack;
+    final ahead = _session.skipForward;
+    final controls = _visible && !_small;
+    void skip(int? step) {
+      if (step != null) unawaited(_session.skip(step));
+    }
+
+    void episode(MediaItem? item) {
+      if (item != null && !_leaving) unawaited(_next(item));
+    }
+
+    final key = event.logicalKey;
+    final VoidCallback? action = switch (key) {
+      LogicalKeyboardKey.mediaPlayPause ||
+      LogicalKeyboardKey.space => () => unawaited(_session.togglePlay()),
+      LogicalKeyboardKey.mediaPlay => () {
+        if (!_playing) unawaited(_session.togglePlay());
+      },
+      LogicalKeyboardKey.mediaPause => () {
+        if (_playing) unawaited(_session.togglePlay());
+      },
+      LogicalKeyboardKey.mediaFastForward => () => skip(ahead),
+      LogicalKeyboardKey.mediaRewind => () => skip(back == null ? null : -back),
+      LogicalKeyboardKey.mediaTrackPrevious when plan?.previous != null =>
+        () => episode(plan?.previous),
+      LogicalKeyboardKey.mediaTrackNext when plan?.next != null =>
+        () => episode(plan?.next),
+      _ when _locked && _navigationKeys.contains(key) => () => setState(
+        () => _lockTouched++,
+      ),
+      LogicalKeyboardKey.arrowLeft when !controls => () => skip(
+        back == null ? null : -back,
+      ),
+      LogicalKeyboardKey.arrowRight when !controls => () => skip(ahead),
+      LogicalKeyboardKey.select ||
+      LogicalKeyboardKey.enter ||
+      LogicalKeyboardKey.arrowUp ||
+      LogicalKeyboardKey.arrowDown when !controls => () {
+        setState(() => _visible = true);
+        _resetHide();
+      },
+      _ => null,
+    };
+    if (action == null) return KeyEventResult.ignored;
+    action();
+    return KeyEventResult.handled;
   }
 
   /// On while the video plays, so leaving the app keeps it on screen,
@@ -771,181 +828,185 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     final look = subtitleLook(ref, prefs);
     final small = _small;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (plan == null || _session.refused || _leaving)
-          const ColoredBox(color: Color(0xFF000000)),
-        VideoView(player: _session.player),
-        // The picture dimmed behind the controls, coming and going with
-        // them, but not under a menu, whose own backdrop dims it.
-        PlayerFade(
-          visible: plan != null && controls && error == null && menu == null,
-          child: const PlayerDim(),
-        ),
-        if (captions.isNotEmpty)
-          IgnorePointer(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              // Moves with the controls rather than jumping as they come and go.
-              child: AnimatedPadding(
-                duration: PlayerMotion.move,
-                curve: PlayerMotion.easing,
-                padding: EdgeInsets.fromLTRB(
-                  48,
-                  0,
-                  48,
-                  controls && error == null ? 150 : 28,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 2,
-                  children: [
-                    for (final cue in captions) SubtitleLine(cue, look: look),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        // Taps show and hide the controls, a double tap on either side
-        // skips, two fingers fill the screen or show it whole, and swipes
-        // set the brightness, the volume, and the time (video_gestures.dart).
-        VideoGestures(
-          enabled: error == null && menu == null && !_locked && !small,
-          prefs: prefs,
-          levels: _levels,
-          duration: () => _session.duration,
-          position: () => _session.position,
-          playing: () => _playing,
-          notes: _gesture,
-          semanticsLabel: l.a11yPlayerVideo,
-          semanticsHint: controls
-              ? l.a11yPlayerHideControls
-              : l.a11yPlayerShowControls,
-          onTap: _toggleControls,
-          onDoubleTap: (ahead) {
-            final step = ahead ? _session.skipForward : _session.skipBack;
-            if (step != null && enabled) {
-              unawaited(_session.skip(ahead ? step : -step));
-            }
-            _resetHide();
-          },
-          onPinch: _pinch,
-          onSeek: (seconds) {
-            if (enabled) unawaited(_session.seek(seconds));
-          },
-          onHold: _hold,
-          onStart: _gestureStarted,
-          onBrightness: _keepBrightness,
-        ),
-        if (!small)
-          GestureNotes(
-            notes: _gesture,
-            duration: _session.duration,
-            holding: _holding,
-            frame: switch (_session.trickplay) {
-              final images? => (seconds, width) => TrickplayFrame(
-                itemId: _session.itemId,
-                images: images,
-                seconds: seconds,
-                width: width,
-              ),
-              null => null,
-            },
-          ),
-        TimedNote(
-          token: _fitNotes == 0 ? null : _fitNotes,
-          duration: const Duration(milliseconds: 1200),
-          child: PlayerNote(title: _fill ? l.playerFill : l.playerFit),
-        ),
-        TimedNote(
-          token: _session.notice,
-          duration: const Duration(seconds: 5),
-          onHidden: _session.dismissNotice,
-          child: switch (_session.notice) {
-            (final notice, final detail) => _notice(l, notice, detail),
-            null => const SizedBox.shrink(),
-          },
-        ),
-        if (loading)
-          Center(
-            child: Spinner(
-              size: 48,
-              color: matineeDark.foreground,
-              label: l.loadingInProgress,
-            ),
-          ),
-        if (plan == null && error == null && !small)
-          Align(
-            alignment: AlignmentDirectional.topStart,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                child: PlayerBackButton(
-                  label: l.playerBack,
-                  onPressed: widget.back,
-                ),
-              ),
-            ),
-          ),
-        if (plan != null)
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _key,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (plan == null || _session.refused || _leaving)
+            const ColoredBox(color: Color(0xFF000000)),
+          VideoView(player: _session.player),
+          // The picture dimmed behind the controls, coming and going with
+          // them, but not under a menu, whose own backdrop dims it.
           PlayerFade(
-            visible: controls && error == null,
-            child: _controls(l, plan, enabled, loading, prefs),
+            visible: plan != null && controls && error == null && menu == null,
+            child: const PlayerDim(),
           ),
-        if (error != null && !small)
-          // It takes the taps too, so none reaches the video under it.
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {},
-            child: ColoredBox(
-              color: const Color(0xCC000000),
-              child: _failure(l, error),
-            ),
-          ),
-        // The small window shows the video and its captions, and nothing
-        // that wants a touch.
-        if (error == null && !_leaving && !small)
-          PlayerPrompts(
-            lifted: controls,
-            children: [
-              if (_session.segment case final segment?
-                  when !_locked && (_segmentFresh || controls))
-                SkipSegmentButton(
-                  label: switch (segment.kind) {
-                    MediaSegmentKind.recap => l.playerSkipRecap,
-                    MediaSegmentKind.credits => l.playerSkipCredits,
-                    MediaSegmentKind.preview => l.playerSkipPreview,
-                    _ => l.playerSkipIntro,
-                  },
-                  onPressed: _action(
-                    () => _session.skipSegment(segment),
-                    enabled: enabled,
+          if (captions.isNotEmpty)
+            IgnorePointer(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                // Moves with the controls rather than jumping as they come and go.
+                child: AnimatedPadding(
+                  duration: PlayerMotion.move,
+                  curve: PlayerMotion.easing,
+                  padding: EdgeInsets.fromLTRB(
+                    48,
+                    0,
+                    48,
+                    controls && error == null ? 150 : 28,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 2,
+                    children: [
+                      for (final cue in captions) SubtitleLine(cue, look: look),
+                    ],
                   ),
                 ),
-              if (_session.ended || !_hiddenNext)
-                if (_session.next case final item?) _upNext(l, item, enabled),
-            ],
+              ),
+            ),
+          // Taps show and hide the controls, a double tap on either side
+          // skips, two fingers fill the screen or show it whole, and swipes
+          // set the brightness, the volume, and the time (video_gestures.dart).
+          VideoGestures(
+            enabled: error == null && menu == null && !_locked && !small,
+            prefs: prefs,
+            levels: _levels,
+            duration: () => _session.duration,
+            position: () => _session.position,
+            playing: () => _playing,
+            notes: _gesture,
+            semanticsLabel: l.a11yPlayerVideo,
+            semanticsHint: controls
+                ? l.a11yPlayerHideControls
+                : l.a11yPlayerShowControls,
+            onTap: _toggleControls,
+            onDoubleTap: (ahead) {
+              final step = ahead ? _session.skipForward : _session.skipBack;
+              if (step != null && enabled) {
+                unawaited(_session.skip(ahead ? step : -step));
+              }
+              _resetHide();
+            },
+            onPinch: _pinch,
+            onSeek: (seconds) {
+              if (enabled) unawaited(_session.seek(seconds));
+            },
+            onHold: _hold,
+            onStart: _gestureStarted,
+            onBrightness: _keepBrightness,
           ),
-        // Over everything else, so no touch reaches what's under it. It
-        // steps aside while an error shows, so its buttons stay in reach.
-        if (_locked && error == null && !small)
-          PlayerLocked(
-            reveals: _lockTouched,
-            unlockLabel: l.playerUnlock,
-            onUnlock: _unlock,
+          if (!small)
+            GestureNotes(
+              notes: _gesture,
+              duration: _session.duration,
+              holding: _holding,
+              frame: switch (_session.trickplay) {
+                final images? => (seconds, width) => TrickplayFrame(
+                  itemId: _session.itemId,
+                  images: images,
+                  seconds: seconds,
+                  width: width,
+                ),
+                null => null,
+              },
+            ),
+          TimedNote(
+            token: _fitNotes == 0 ? null : _fitNotes,
+            duration: const Duration(milliseconds: 1200),
+            child: PlayerNote(title: _fill ? l.playerFill : l.playerFit),
           ),
-        PlayerPanel(
-          entries: menu == null || plan == null
-              ? null
-              : _entries(l, menu, plan),
-          dismissLabel: l.a11yPlayerCloseMenu,
-          onDismiss: _closeMenu,
-        ),
-      ],
+          TimedNote(
+            token: _session.notice,
+            duration: const Duration(seconds: 5),
+            onHidden: _session.dismissNotice,
+            child: switch (_session.notice) {
+              (final notice, final detail) => _notice(l, notice, detail),
+              null => const SizedBox.shrink(),
+            },
+          ),
+          if (loading)
+            Center(
+              child: Spinner(
+                size: 48,
+                color: matineeDark.foreground,
+                label: l.loadingInProgress,
+              ),
+            ),
+          if (plan == null && error == null && !small)
+            Align(
+              alignment: AlignmentDirectional.topStart,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: PlayerBackButton(
+                    label: l.playerBack,
+                    onPressed: widget.back,
+                  ),
+                ),
+              ),
+            ),
+          if (plan != null)
+            PlayerFade(
+              visible: controls && error == null,
+              child: _controls(l, plan, enabled, loading, prefs),
+            ),
+          if (error != null && !small)
+            // It takes the taps too, so none reaches the video under it.
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {},
+              child: ColoredBox(
+                color: const Color(0xCC000000),
+                child: _failure(l, error),
+              ),
+            ),
+          // The small window shows the video and its captions, and nothing
+          // that wants a touch.
+          if (error == null && !_leaving && !small)
+            PlayerPrompts(
+              lifted: controls,
+              children: [
+                if (_session.segment case final segment?
+                    when !_locked && (_segmentFresh || controls))
+                  SkipSegmentButton(
+                    label: switch (segment.kind) {
+                      MediaSegmentKind.recap => l.playerSkipRecap,
+                      MediaSegmentKind.credits => l.playerSkipCredits,
+                      MediaSegmentKind.preview => l.playerSkipPreview,
+                      _ => l.playerSkipIntro,
+                    },
+                    onPressed: _action(
+                      () => _session.skipSegment(segment),
+                      enabled: enabled,
+                    ),
+                  ),
+                if (_session.ended || !_hiddenNext)
+                  if (_session.next case final item?) _upNext(l, item, enabled),
+              ],
+            ),
+          // Over everything else, so no touch reaches what's under it. It
+          // steps aside while an error shows, so its buttons stay in reach.
+          if (_locked && error == null && !small)
+            PlayerLocked(
+              reveals: _lockTouched,
+              unlockLabel: l.playerUnlock,
+              onUnlock: _unlock,
+            ),
+          PlayerPanel(
+            entries: menu == null || plan == null
+                ? null
+                : _entries(l, menu, plan),
+            dismissLabel: l.a11yPlayerCloseMenu,
+            onDismiss: _closeMenu,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1246,6 +1307,17 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         ),
       };
 }
+
+/// The keys that skip or bring up the controls, which a locked player
+/// keeps from doing either.
+final _navigationKeys = {
+  LogicalKeyboardKey.arrowLeft,
+  LogicalKeyboardKey.arrowRight,
+  LogicalKeyboardKey.arrowUp,
+  LogicalKeyboardKey.arrowDown,
+  LogicalKeyboardKey.select,
+  LogicalKeyboardKey.enter,
+};
 
 (String, String) _errorText(AppLocalizations l, Object error) {
   switch (error) {

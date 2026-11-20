@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -552,6 +553,86 @@ void main() {
     // Not while locked.
     await tap(tester, 'Lock controls');
     expect(find.text('Skip intro'), findsNothing);
+    await tester.pump(const Duration(seconds: 4));
+  });
+
+  testWidgets('keys play, skip, and bring up the controls', (tester) async {
+    final backend = FakePlaybackApi();
+    backend.start = (input) => FakePlaybackApi.answer(
+      plan(id: input.itemId, start: 12, audio: audioOne),
+    );
+    final player = FakePlayer();
+    tester.view.physicalSize = const Size(850, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = ProviderContainer(
+      overrides: [
+        authStateProvider.overrideWithValue(
+          SignedIn('https://matinee.example', User.fromJson(userJson('ada'))),
+        ),
+        apiProvider.overrideWithValue(backend.api),
+        playerHeadersProvider.overrideWithValue(const {}),
+        sessionHttpProvider.overrideWithValue(backend.client),
+        downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
+        playbackPlayerFactoryProvider.overrideWithValue((_, _) => player),
+        playbackFullscreenProvider.overrideWithValue((_, _) async {}),
+        pictureInPictureProvider.overrideWithValue(FakePictureInPicture()),
+        mediaControlsProvider.overrideWithValue(FakeMediaControls()),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MatineeApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlayPause);
+    await tester.pumpAndSettle();
+    expect(player.pauses, 1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlay);
+    await tester.pumpAndSettle();
+    expect(player.plays, 1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.mediaFastForward);
+    await tester.pumpAndSettle();
+    final ahead = player.seeks.last;
+    expect(ahead, greaterThan(const Duration(seconds: 12)));
+
+    // With the controls hidden, the arrows skip and Select brings them up.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Pause'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(player.seeks.last, lessThan(ahead));
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Pause'), findsOneWidget);
+
+    // Locked, Select only shows the unlock button.
+    await tap(tester, 'Lock controls');
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    double unlock() => tester
+        .widget<AnimatedOpacity>(
+          find.ancestor(
+            of: find.bySemanticsLabel('Unlock'),
+            matching: find.byType(AnimatedOpacity),
+          ),
+        )
+        .opacity;
+    expect(unlock(), 0);
+    final seeks = player.seeks.length;
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    expect(unlock(), 1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(player.seeks, hasLength(seeks));
     await tester.pump(const Duration(seconds: 4));
   });
 }
