@@ -7,9 +7,12 @@ import '../../l10n/app_localizations.dart';
 import '../../media/actions.dart';
 import '../../media/artwork.dart';
 import '../../media/format.dart';
+import '../../media/layout.dart';
 import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
+import '../requests/requests_hub.dart' show FollowTitles;
+import '../requests/show_gaps.dart';
 import 'pending_marks.dart';
 import 'title_data.dart';
 import 'title_parts.dart';
@@ -96,8 +99,9 @@ class _SeasonScreenState extends ConsumerState<SeasonScreen> with PendingMarks {
     final more = SeasonActions(summary, season, here: true);
     final backdrop = title.images.backdrop;
     final up = Routes.title(title.id);
-    final others = SeasonsRail.shown(title, onSeason: true, current: number);
-    return TitleScaffold(
+    final gaps = watchShowGaps(ref, title);
+    final partial = gaps?.partialOf(number);
+    final page = TitleScaffold(
       gap: 20,
       parent: title.name,
       onParent: () => goUp(context, up),
@@ -205,9 +209,33 @@ class _SeasonScreenState extends ConsumerState<SeasonScreen> with PendingMarks {
             padding: const EdgeInsets.all(32),
             child: LoadingState(label: l.loadingInProgress),
           ),
-        if (others.isNotEmpty)
-          SeasonsRail(title: title, onSeason: true, current: number),
+        // The ask for the episodes the server lacks, after the last.
+        if (gaps != null && partial != null && items != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: SizedBox(
+                width: railCardSize(context, RailArt.wide).width,
+                child: RestOfSeasonCard(
+                  showName: title.name,
+                  gaps: gaps,
+                  season: partial,
+                ),
+              ),
+            ),
+          ),
+        if (SeasonsRail.any(title, onSeason: true, current: number, gaps: gaps))
+          SeasonsRail(
+            title: title,
+            onSeason: true,
+            current: number,
+            gaps: gaps,
+          ),
       ],
     );
+    return gaps == null
+        ? page
+        : FollowTitles(titles: gaps.followed, child: page);
   }
 }

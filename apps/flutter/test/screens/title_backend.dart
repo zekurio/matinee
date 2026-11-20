@@ -192,6 +192,16 @@ final class TitleBackend {
   Object? related = {'rails': <Object>[], 'stale': false};
   final relatedTitles = <String, List<JsonMap>>{};
 
+  /// What `catalog.missingSeasons` answers: by default, nothing missing.
+  Object? gaps = {
+    'ref': {'kind': 'show', 'provider': 'tmdb', 'providerId': '329865'},
+    'stale': false,
+    'seasons': <Object>[],
+    'partialSeasons': <Object>[],
+    'defaultScope': {'seasons': <int>[], 'future': false},
+    'destinations': <Object>[],
+  };
+
   /// Paths answering with the server's message.
   final failing = <String, String>{};
 
@@ -213,6 +223,7 @@ final class TitleBackend {
       return http.Response('', 204);
     }
     if (path == '/api/v1/catalog/related') return _json(related, 200);
+    if (path == '/api/v1/catalog/missing-seasons') return _json(gaps, 200);
     if (path == '/api/v1/catalog/related/titles') {
       // SAFETY: the client sends the input as a JSON object.
       final rail = (body as Map<String, Object?>)['rail'];

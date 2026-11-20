@@ -65,26 +65,6 @@ RelatedKey? relatedKey(Title title) {
   );
 }
 
-CatalogRef _ref(RelatedKey key) => CatalogRef(
-  kind: key.kind,
-  provider: key.provider,
-  providerId: key.providerId,
-);
-
-final relatedRailsProvider = serverQueryFamily(
-  (api, RelatedKey key) => api.catalog.related(
-    CatalogInput(ref: _ref(key), libraryId: key.libraryId),
-  ),
-);
-
-final relatedTitlesProvider = serverQueryFamily(
-  (api, ({RelatedKey key, String rail}) row) => api.catalog.relatedTitles(
-    ref: _ref(row.key),
-    libraryId: row.key.libraryId,
-    rail: row.rail,
-  ),
-);
-
 /// What Play starts in a season: the episode the server names next for the
 /// show when it's in this season; else, since the server names none for a
 /// season, the one in progress, the first unwatched, or the first, as the

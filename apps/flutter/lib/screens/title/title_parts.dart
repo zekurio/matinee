@@ -17,6 +17,9 @@ import '../../media/format.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
 import '../../router.dart';
+import '../requests/catalog_cards.dart' show CatalogSeasonCard;
+import '../requests/request_sheet.dart' show showRequestSheet;
+import '../requests/show_gaps.dart';
 import 'title_data.dart';
 
 /// The pieces the title, season, and episode pages share, as the Kotlin
@@ -1062,12 +1065,19 @@ class _FileChoice extends StatelessWidget {
 }
 
 /// A season by its poster, with how many episodes are left or a check. A
-/// long press opens its menu.
+/// long press opens its menu. [partial] is what the server lacks of it,
+/// for "3 of 10 episodes here".
 class SeasonCard extends StatelessWidget {
-  const SeasonCard({super.key, required this.title, required this.season});
+  const SeasonCard({
+    super.key,
+    required this.title,
+    required this.season,
+    this.partial,
+  });
 
   final TitleSummary title;
   final Season season;
+  final CatalogSeason? partial;
 
   @override
   Widget build(BuildContext context) {
@@ -1079,7 +1089,10 @@ class SeasonCard extends StatelessWidget {
     return PosterCard(
       name: name,
       toneKey: title.name,
-      detail: l.mediaEpisodeCount(season.itemCount),
+      detail: switch (partial) {
+        final partial? => partialLine(partial, l),
+        null => l.mediaEpisodeCount(season.itemCount),
+      },
       art: art == null ? null : Picture([ArtSource(art)]),
       watchedLabel: left <= 0 ? l.mediaWatched : null,
       badge: left <= 0
@@ -1107,18 +1120,37 @@ class SeasonCard extends StatelessWidget {
 
 /// A show's seasons by their posters; on a season's page, [onSeason], the
 /// others, as "More seasons". [current] is that season's number, null for
-/// the files without one.
+/// the files without one. After them, the seasons the server lacks, from
+/// [gaps], each with its state and its ask. On the page of a show with one
+/// season here, whose episodes are listed above, [extraOnly] leaves the
+/// library's out.
 class SeasonsRail extends StatelessWidget {
   const SeasonsRail({
     super.key,
     required this.title,
     this.onSeason = false,
     this.current,
+    this.gaps,
+    this.extraOnly = false,
   });
 
   final Title title;
   final bool onSeason;
   final int? current;
+  final ShowGaps? gaps;
+  final bool extraOnly;
+
+  /// Whether it has a card to show.
+  static bool any(
+    Title title, {
+    bool onSeason = false,
+    int? current,
+    ShowGaps? gaps,
+    bool extraOnly = false,
+  }) =>
+      (!extraOnly &&
+          shown(title, onSeason: onSeason, current: current).isNotEmpty) ||
+      (gaps?.missing.isNotEmpty ?? false);
 
   /// The seasons it shows.
   static List<Season> shown(
@@ -1133,16 +1165,45 @@ class SeasonsRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final seasons = shown(title, onSeason: onSeason, current: current);
+    final seasons = extraOnly
+        ? const <Season>[]
+        : shown(title, onSeason: onSeason, current: current);
+    final gaps = this.gaps;
+    final missing = gaps?.missing ?? const <CatalogSeason>[];
     final size = railCardSize(context, RailArt.poster);
     final summary = title.summary;
     return Rail(
-      title: onSeason ? l.titleSeasonsMore : l.titleSeasons,
+      title: onSeason || extraOnly ? l.titleSeasonsMore : l.titleSeasons,
       itemWidth: size.width,
       itemHeight: size.height,
-      itemCount: seasons.length,
-      itemBuilder: (context, index) =>
-          SeasonCard(title: summary, season: seasons[index]),
+      itemCount: seasons.length + missing.length,
+      itemBuilder: (context, index) {
+        if (index < seasons.length) {
+          final season = seasons[index];
+          return SeasonCard(
+            title: summary,
+            season: season,
+            partial: gaps?.partialOf(season.number),
+          );
+        }
+        final season = missing[index - seasons.length];
+        return CatalogSeasonCard(
+          show: gaps!.ref,
+          showName: title.name,
+          showPoster: title.images.poster,
+          season: season,
+          onRequest: () => showRequestSheet(
+            context,
+            title: gaps.ref,
+            name: title.name,
+            seasons: gaps.missing,
+            first: gaps.first,
+            defaultFuture: false,
+            libraryId: gaps.libraryId,
+            only: season.number,
+          ),
+        );
+      },
     );
   }
 }
@@ -1158,10 +1219,14 @@ class EpisodesRail extends StatelessWidget {
     this.start,
     this.onSeeAll,
     this.seeAllLabel,
+    this.trailing,
   });
 
   final String title;
   final List<MediaItem> items;
+
+  /// A card after the episodes, as the ask for the rest of the season.
+  final Widget? trailing;
   final MediaItem? next;
 
   /// The card to open at, the leading one.
@@ -1177,12 +1242,13 @@ class EpisodesRail extends StatelessWidget {
       title: title,
       itemWidth: size.width,
       itemHeight: size.height,
-      itemCount: items.length,
+      itemCount: items.length + (trailing == null ? 0 : 1),
       initialIndex: math.max(0, start),
       onSeeAll: onSeeAll,
       seeAllLabel: seeAllLabel,
-      itemBuilder: (context, index) =>
-          EpisodeCard(item: items[index], showName: false),
+      itemBuilder: (context, index) => index < items.length
+          ? EpisodeCard(item: items[index], showName: false)
+          : trailing!,
     );
   }
 }
@@ -1446,94 +1512,6 @@ class EpisodeRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// The rows of titles related to a library title the server matched: the
-/// rest of its film series and more like it. A title the viewer can watch
-/// is the library's card; the rest show what they are, and open nothing
-/// until this app has the catalog's pages. A row with nothing in it, or
-/// that failed, stays out; the page is whole without them.
-class RelatedRows extends ConsumerWidget {
-  const RelatedRows({super.key, required this.relatedTo});
-
-  final RelatedKey relatedTo;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final rails = ref.watch(relatedRailsProvider(relatedTo));
-    final size = railCardSize(context, RailArt.poster);
-    final list = rails.value?.rails;
-    if (list == null) {
-      if (rails.hasError) return const SizedBox.shrink();
-      return RailSkeleton(
-        label: l.loadingInProgress,
-        itemWidth: size.width,
-        aspectRatio: CardMetrics.poster,
-      );
-    }
-    final rows = <Widget>[];
-    for (final rail in list) {
-      final title = rail.id == RelatedRailId.collection && rail.name != null
-          ? rail.name!
-          : l.webCatalogRelatedMoreLikeThis;
-      final page = ref.watch(
-        relatedTitlesProvider((key: relatedTo, rail: rail.id)),
-      );
-      final items = page.value?.items;
-      if (items == null) {
-        if (!page.hasError) {
-          rows.add(
-            RailSkeleton(
-              label: l.loadingInProgress,
-              title: title,
-              itemWidth: size.width,
-              aspectRatio: CardMetrics.poster,
-            ),
-          );
-        }
-        continue;
-      }
-      if (items.isEmpty) continue;
-      rows.add(
-        Rail(
-          title: title,
-          itemWidth: size.width,
-          itemHeight: size.height,
-          itemCount: items.length,
-          itemBuilder: (context, index) => _RelatedCard(item: items[index]),
-        ),
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 24,
-      children: rows,
-    );
-  }
-}
-
-class _RelatedCard extends StatelessWidget {
-  const _RelatedCard({required this.item});
-
-  final RelatedTitle item;
-
-  @override
-  Widget build(BuildContext context) {
-    final title = item.title;
-    final availability = item.availability;
-    if (title != null &&
-        availability.state == 'here' &&
-        availability.libraryTitleId == title.id) {
-      return TitleCard(title: title, detail: title.year?.toString());
-    }
-    final poster = item.poster;
-    return PosterCard(
-      name: item.name,
-      detail: item.year?.toString(),
-      art: poster == null ? null : Picture([ArtSource(poster)]),
     );
   }
 }
