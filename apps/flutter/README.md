@@ -286,8 +286,16 @@ it's open. Other choices keep the last titles on screen, dimmed, until
 the new ones come. A tap on the open tab scrolls its grid to the top
 (`tabReselectProvider` in the shell). Back on a list after half a minute,
 the titles loaded so far are fetched again in place, and the filters'
-counts with them. The language filter waits for a way to name languages
-in the app's language.
+counts with them.
+
+The server sends languages and countries as codes, and Dart has no names
+for them, so `lib/core/display_names.dart` asks the platform
+(`DeviceApi.displayNames`, Java's locale names on Android, as the Kotlin
+app's `languageName` and `countryName`) for them in the app's language.
+The language filter, a row that opens a sheet with a field to find one,
+and its chip name languages that way, and the age ratings their country;
+until the answer comes, or for a code the platform doesn't know, the code
+shows. Tests override `displayNameSourceProvider`.
 
 ## Search
 

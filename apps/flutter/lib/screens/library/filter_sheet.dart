@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/display_names.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import 'list_choices.dart';
@@ -95,6 +96,10 @@ class TitleFilterPanel extends ConsumerWidget {
     void change(ListFilters next) =>
         ref.read(choicesProvider(list).notifier).filters(next);
     final ratings = options.ratings;
+    final countries = DisplayNames.watch(ref, DisplayNameKind.region, [
+      for (final system in ratings) system.country,
+    ], l.localeName);
+    final languages = watchLanguageNames(ref, context, options);
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: Column(
@@ -182,10 +187,10 @@ class TitleFilterPanel extends ConsumerWidget {
           if (ratings.isNotEmpty)
             FilterSection(
               title: l.webFiltersRating,
-              // The country's name needs the platform's words, which this
-              // app doesn't ask for yet; its code says which system it is.
               hint: ratings.length == 1
-                  ? l.webFiltersRatingHint(ratings.single.country)
+                  ? l.webFiltersRatingHint(
+                      countries.nameOf(ratings.single.country),
+                    )
                   : l.webFiltersRatingHintBoth,
               child: ratings.length == 1
                   ? _RatingChips(
@@ -200,8 +205,12 @@ class TitleFilterPanel extends ConsumerWidget {
                         for (final system in ratings)
                           FilterSection(
                             title: system.kind == TitleKind.show
-                                ? l.webFiltersRatingRowShow(system.country)
-                                : l.webFiltersRatingRowMovie(system.country),
+                                ? l.webFiltersRatingRowShow(
+                                    countries.nameOf(system.country),
+                                  )
+                                : l.webFiltersRatingRowMovie(
+                                    countries.nameOf(system.country),
+                                  ),
                             small: true,
                             child: _RatingChips(
                               system: system,
@@ -211,6 +220,35 @@ class TitleFilterPanel extends ConsumerWidget {
                           ),
                       ],
                     ),
+            ),
+          if (options.languages.length > 1)
+            FilterSection(
+              title: l.webFiltersLanguage,
+              child: OptionRow(
+                label: switch (filters.language) {
+                  final language? => languages.nameOf(language),
+                  null => l.webFiltersAnyLanguage,
+                },
+                onPressed: () async {
+                  final picked = await OptionSheet.show(
+                    context,
+                    title: l.webFiltersLanguage,
+                    anyLabel: l.webFiltersAnyLanguage,
+                    findPlaceholder: l.browseFindLanguage,
+                    choices: [
+                      for (final each in options.languages)
+                        (
+                          value: each.language,
+                          label: languages.nameOf(each.language),
+                          count: each.titleCount,
+                        ),
+                    ],
+                    value: filters.language,
+                  );
+                  if (picked == null) return;
+                  change(filters.copyWith(language: () => picked.value));
+                },
+              ),
             ),
           if (options.runtime case final runtime?)
             RangeField(
@@ -247,6 +285,216 @@ class TitleFilterPanel extends ConsumerWidget {
     for (final facet in facets)
       (value: facet.name, label: facet.name, count: facet.titleCount),
   ];
+}
+
+/// The names of the languages [options] offers, in the app's language.
+DisplayNames watchLanguageNames(
+  WidgetRef ref,
+  BuildContext context,
+  TitleFilterOptions? options,
+) => DisplayNames.watch(ref, DisplayNameKind.language, [
+  for (final each in options?.languages ?? const <LanguageCount>[])
+    each.language,
+], AppLocalizations.of(context).localeName);
+
+/// A row naming what's picked from a long list, which opens an
+/// [OptionSheet] to pick another.
+class OptionRow extends StatelessWidget {
+  const OptionRow({super.key, required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    return PressIndication(
+      onPressed: onPressed,
+      label: label,
+      shape: KitRadius.control,
+      builder: (context, state) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: KitText.base.style(
+                  color: state == PressState.pressed
+                      ? colors.mutedForeground
+                      : colors.foreground,
+                ),
+              ),
+            ),
+            KitIcon(
+              Lucide.chevronRight,
+              size: 18,
+              color: colors.mutedForeground,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// What an [OptionSheet] gave back: a choice's value, or null for any.
+typedef OptionPick = ({String? value});
+
+/// A long list to pick one from, or none with Any, with a field that finds
+/// one by name, as the Kotlin app's `OptionSheet`. It opens over the
+/// filters' sheet and answers once a row is picked.
+class OptionSheet extends StatefulWidget {
+  const OptionSheet({
+    super.key,
+    required this.title,
+    required this.anyLabel,
+    required this.findPlaceholder,
+    required this.choices,
+    required this.value,
+  });
+
+  final String title;
+  final String anyLabel;
+  final String findPlaceholder;
+  final List<FilterChoice> choices;
+  final String? value;
+
+  /// Opens it; null when it's dismissed without a pick.
+  static Future<OptionPick?> show(
+    BuildContext context, {
+    required String title,
+    required String anyLabel,
+    required String findPlaceholder,
+    required List<FilterChoice> choices,
+    required String? value,
+  }) => Sheet.show<OptionPick>(
+    context,
+    dismissLabel: AppLocalizations.of(context).commonCancel,
+    builder: (context) => OptionSheet(
+      title: title,
+      anyLabel: anyLabel,
+      findPlaceholder: findPlaceholder,
+      choices: choices,
+      value: value,
+    ),
+  );
+
+  @override
+  State<OptionSheet> createState() => _OptionSheetState();
+}
+
+class _OptionSheetState extends State<OptionSheet> {
+  final _query = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _query.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _query.text.trim().toLowerCase();
+    final shown = [
+      for (final choice in widget.choices)
+        if (query.isEmpty || choice.label.toLowerCase().contains(query)) choice,
+    ];
+    void pick(String? value) => Navigator.of(context).pop((value: value));
+    return Sheet(
+      title: widget.title,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          MatineeTextField(
+            controller: _query,
+            placeholder: widget.findPlaceholder,
+            leading: Lucide.search,
+            textInputAction: TextInputAction.search,
+          ),
+          const SizedBox(height: 8),
+          if (query.isEmpty)
+            _PickRow(
+              label: widget.anyLabel,
+              selected: widget.value == null,
+              onPressed: () => pick(null),
+            ),
+          for (final choice in shown)
+            _PickRow(
+              label: choice.label,
+              count: switch (choice.count) {
+                final count? => countText(context, count),
+                null => null,
+              },
+              selected: choice.value == widget.value,
+              onPressed: () => pick(choice.value),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One of an [OptionSheet]'s rows: the name, its count, and a tick on the
+/// one picked.
+class _PickRow extends StatelessWidget {
+  const _PickRow({
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+    this.count,
+  });
+
+  final String label;
+  final String? count;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final count = this.count;
+    return PressIndication(
+      onPressed: onPressed,
+      label: [label, ?count].join(', '),
+      checked: selected,
+      shape: KitRadius.control,
+      builder: (context, state) => ColoredBox(
+        color: colors.foreground.withValues(
+          alpha: state == PressState.idle ? 0 : .06,
+        ),
+        child: ExcludeSemantics(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Row(
+              spacing: 12,
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: KitText.base.style(color: colors.foreground),
+                  ),
+                ),
+                if (count != null)
+                  Text(
+                    count,
+                    style: KitText.sm.style(color: colors.mutedForeground),
+                  ),
+                if (selected)
+                  KitIcon(Lucide.check, size: 18, color: colors.accent),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// A filter's heading, a line about it, what it's set to at the end, and

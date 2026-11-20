@@ -199,6 +199,25 @@ class FlutterError (
   val details: Any? = null
 ) : RuntimeException()
 
+/** What [DeviceApi.displayNames] names. */
+enum class DisplayNameKind(val raw: Int) {
+  /**
+   * Languages by their BCP 47 tag: `de` is German, `pt-BR` Portuguese
+   * (Brazil).
+   */
+  LANGUAGE(0),
+  /** Countries and regions by their ISO 3166 code: `DE` is Germany. */
+  REGION(1);
+
+  companion object {
+    private val pigeonValues = values()
+
+    fun ofRaw(raw: Int): DisplayNameKind? {
+      return pigeonValues.getOrNull(raw)
+    }
+  }
+}
+
 /** Generated class from Pigeon that represents data sent in messages. */
 data class DeviceFacts (
   /** Android TV or Apple TV: the remote's screens, code sign-in, no downloads. */
@@ -268,6 +287,11 @@ private open class DevicePigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
       129.toByte() -> {
+        (readValue(buffer) as Long?)?.let {
+          DisplayNameKind.ofRaw(it.toInt())
+        }
+      }
+      130.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           DeviceFacts.fromList(it)
         }
@@ -277,8 +301,12 @@ private open class DevicePigeonCodec : StandardMessageCodec() {
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
     when (value) {
-      is DeviceFacts -> {
+      is DisplayNameKind -> {
         stream.write(129)
+        writeValue(stream, value.raw.toLong())
+      }
+      is DeviceFacts -> {
+        stream.write(130)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -314,6 +342,14 @@ interface DeviceApi {
    * storage.
    */
   fun freshStart(): Boolean
+  /**
+   * What each of [codes] is called in [language], the app's language as a
+   * BCP 47 tag, as the platform's own lists name them, capitalized as a
+   * name at the start of a line: "Deutsch" for `de` in German. Dart has no
+   * such names, and the server sends only the codes. A code the platform
+   * doesn't know is left out.
+   */
+  fun displayNames(codes: List<String>, kind: DisplayNameKind, language: String): Map<String, String>
 
   companion object {
     /** The codec used by DeviceApi. */
@@ -392,6 +428,25 @@ interface DeviceApi {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
               listOf(api.freshStart())
+            } catch (exception: Throwable) {
+              DevicePigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.DeviceApi.displayNames$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val codesArg = args[0] as List<String>
+            val kindArg = args[1] as DisplayNameKind
+            val languageArg = args[2] as String
+            val wrapped: List<Any?> = try {
+              listOf(api.displayNames(codesArg, kindArg, languageArg))
             } catch (exception: Throwable) {
               DevicePigeonUtils.wrapError(exception)
             }

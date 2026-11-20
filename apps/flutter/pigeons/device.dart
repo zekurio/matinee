@@ -41,6 +41,16 @@ class DeviceFacts {
   final String timeZone;
 }
 
+/// What [DeviceApi.displayNames] names.
+enum DisplayNameKind {
+  /// Languages by their BCP 47 tag: `de` is German, `pt-BR` Portuguese
+  /// (Brazil).
+  language,
+
+  /// Countries and regions by their ISO 3166 code: `DE` is Germany.
+  region,
+}
+
 @HostApi()
 abstract class DeviceApi {
   DeviceFacts facts();
@@ -65,4 +75,15 @@ abstract class DeviceApi {
   /// which it does on the first launch only. Call it before anything reads
   /// storage.
   bool freshStart();
+
+  /// What each of [codes] is called in [language], the app's language as a
+  /// BCP 47 tag, as the platform's own lists name them, capitalized as a
+  /// name at the start of a line: "Deutsch" for `de` in German. Dart has no
+  /// such names, and the server sends only the codes. A code the platform
+  /// doesn't know is left out.
+  Map<String, String> displayNames(
+    List<String> codes,
+    DisplayNameKind kind,
+    String language,
+  );
 }

@@ -46,9 +46,8 @@ String _shortest(AppLocalizations l) => l.webFiltersSortShortest;
 /// An age limit, as `AgeLimit`, with equality.
 typedef RatingLimit = ({String country, String rating});
 
-/// The filters a list is narrowed by, as the contract's `TitleFilters`
-/// without the language, which needs names this app can't give yet. Null or
-/// empty leaves a filter off.
+/// The filters a list is narrowed by, as the contract's `TitleFilters`.
+/// Null or empty leaves a filter off.
 @immutable
 final class ListFilters {
   const ListFilters({
@@ -60,6 +59,7 @@ final class ListFilters {
     this.scoreMax,
     this.movieRating,
     this.showRating,
+    this.language,
     this.runtimeMin,
     this.runtimeMax,
     this.watched,
@@ -75,6 +75,9 @@ final class ListFilters {
   final double? scoreMax;
   final RatingLimit? movieRating;
   final RatingLimit? showRating;
+
+  /// A language titles were made in, as a BCP 47 tag.
+  final String? language;
   final int? runtimeMin;
   final int? runtimeMax;
 
@@ -90,6 +93,7 @@ final class ListFilters {
         scoreMin != null || scoreMax != null,
         movieRating != null,
         showRating != null,
+        language != null,
         runtimeMin != null || runtimeMax != null,
         watched != null,
       ].where((on) => on).length;
@@ -104,6 +108,7 @@ final class ListFilters {
     ValueGetter<double?>? scoreMax,
     ValueGetter<RatingLimit?>? movieRating,
     ValueGetter<RatingLimit?>? showRating,
+    ValueGetter<String?>? language,
     ValueGetter<int?>? runtimeMin,
     ValueGetter<int?>? runtimeMax,
     ValueGetter<String?>? watched,
@@ -116,6 +121,7 @@ final class ListFilters {
     scoreMax: scoreMax == null ? this.scoreMax : scoreMax(),
     movieRating: movieRating == null ? this.movieRating : movieRating(),
     showRating: showRating == null ? this.showRating : showRating(),
+    language: language == null ? this.language : language(),
     runtimeMin: runtimeMin == null ? this.runtimeMin : runtimeMin(),
     runtimeMax: runtimeMax == null ? this.runtimeMax : runtimeMax(),
     watched: watched == null ? this.watched : watched(),
@@ -131,6 +137,7 @@ final class ListFilters {
     scoreMax: scoreMax,
     movieRating: _limit(movieRating),
     showRating: _limit(showRating),
+    language: language,
     runtimeMin: runtimeMin,
     runtimeMax: runtimeMax,
     watched: watched,
@@ -151,6 +158,7 @@ final class ListFilters {
     scoreMax,
     movieRating,
     showRating,
+    language,
     runtimeMin,
     runtimeMax,
     watched,

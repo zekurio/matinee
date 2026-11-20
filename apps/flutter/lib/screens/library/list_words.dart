@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/display_names.dart';
 import '../../l10n/app_localizations.dart';
 import 'list_choices.dart';
 
@@ -113,12 +114,14 @@ typedef ActiveFilter = ({String key, String label, VoidCallback remove});
 
 /// The filters in use as chips, each taking its own off: a range is one
 /// chip, and so is each genre and studio. [bothRatings] is whether the list
-/// has ratings of both kinds, so a rating chip says which.
+/// has ratings of both kinds, so a rating chip says which; [languages]
+/// names the language.
 List<ActiveFilter> activeFilters(
   BuildContext context,
   ListFilters filters, {
   required bool bothRatings,
   required ValueChanged<ListFilters> change,
+  DisplayNames languages = DisplayNames.none,
 }) {
   final l = AppLocalizations.of(context);
   final active = <ActiveFilter>[];
@@ -189,6 +192,13 @@ List<ActiveFilter> activeFilters(
           ? l.webFiltersChipShowRating(limit.rating)
           : l.webFiltersChipRating(limit.rating),
       remove: () => change(filters.copyWith(showRating: () => null)),
+    ));
+  }
+  if (filters.language case final language?) {
+    active.add((
+      key: 'language',
+      label: languages.nameOf(language),
+      remove: () => change(filters.copyWith(language: () => null)),
     ));
   }
   if (filters.runtimeMin != null || filters.runtimeMax != null) {

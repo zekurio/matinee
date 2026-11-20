@@ -98,6 +98,15 @@ int _deepHash(Object? value) {
 }
 
 
+/// What [DeviceApi.displayNames] names.
+enum DisplayNameKind {
+  /// Languages by their BCP 47 tag: `de` is German, `pt-BR` Portuguese
+  /// (Brazil).
+  language,
+  /// Countries and regions by their ISO 3166 code: `DE` is Germany.
+  region;
+}
+
 class DeviceFacts {
   DeviceFacts({
     required this.television,
@@ -183,8 +192,11 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is DeviceFacts) {
+    }    else if (value is DisplayNameKind) {
       buffer.putUint8(129);
+      writeValue(buffer, value.index);
+    }    else if (value is DeviceFacts) {
+      buffer.putUint8(130);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -195,6 +207,9 @@ class _PigeonCodec extends StandardMessageCodec {
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
       case 129:
+        final value = readValue(buffer) as int?;
+        return value == null ? null : DisplayNameKind.values[value];
+      case 130:
         return DeviceFacts.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -319,5 +334,28 @@ class DeviceApi {
     )
     ;
     return pigeonVar_replyValue! as bool;
+  }
+
+  /// What each of [codes] is called in [language], the app's language as a
+  /// BCP 47 tag, as the platform's own lists name them, capitalized as a
+  /// name at the start of a line: "Deutsch" for `de` in German. Dart has no
+  /// such names, and the server sends only the codes. A code the platform
+  /// doesn't know is left out.
+  Future<Map<String, String>> displayNames(List<String> codes, DisplayNameKind kind, String language) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.DeviceApi.displayNames$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[codes, kind, language]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return (pigeonVar_replyValue! as Map<Object?, Object?>).cast<String, String>();
   }
 }

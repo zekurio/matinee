@@ -15,6 +15,7 @@ import io.flutter.embedding.android.TransparencyMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.github.zekurio.matinee.platform.DeviceApi
 import io.github.zekurio.matinee.platform.DeviceFacts
+import io.github.zekurio.matinee.platform.DisplayNameKind
 import io.github.zekurio.matinee.player.PlayerApi
 import io.github.zekurio.matinee.player.PlayerBridge
 import java.io.File
@@ -22,6 +23,8 @@ import java.io.IOException
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.security.KeyStore
+import java.util.IllformedLocaleException
+import java.util.Locale
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 
@@ -190,6 +193,30 @@ private class Device(private val activity: MainActivity) : DeviceApi {
         }
         marker.edit().putBoolean(MARKER_KEY, true).commit()
         return true
+    }
+
+    /**
+     * The names Java's locale data gives, as the Kotlin app's
+     * `languageName` and `countryName` asked them. A language the data
+     * doesn't know comes back as its tag, and a region as its code, so
+     * those are left out for Dart to fall back on.
+     */
+    override fun displayNames(codes: List<String>, kind: DisplayNameKind, language: String): Map<String, String> {
+        val inLocale = Locale.forLanguageTag(language)
+        val names = mutableMapOf<String, String>()
+        for (code in codes) {
+            val name = try {
+                when (kind) {
+                    DisplayNameKind.LANGUAGE -> Locale.forLanguageTag(code).getDisplayName(inLocale)
+                    DisplayNameKind.REGION -> Locale.Builder().setRegion(code).build().getDisplayCountry(inLocale)
+                }
+            } catch (_: IllformedLocaleException) {
+                null
+            }
+            if (name.isNullOrBlank() || name.equals(code, ignoreCase = true)) continue
+            names[code] = name.replaceFirstChar { it.titlecase(inLocale) }
+        }
+        return names
     }
 
     private companion object {

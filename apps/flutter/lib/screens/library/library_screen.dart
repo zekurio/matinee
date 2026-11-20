@@ -13,6 +13,7 @@ import '../../query/refresh.dart';
 import '../../router.dart';
 import '../home/home_data.dart' show librariesProvider;
 import '../shell/shell.dart' show tabReselectProvider;
+import 'filter_sheet.dart' show watchLanguageNames;
 import 'list_choices.dart';
 import 'list_words.dart';
 import 'title_grid.dart';
@@ -129,6 +130,7 @@ class _KindScreenState extends ConsumerState<KindScreen> {
       choices.filters,
       bothRatings: (options?.ratings.length ?? 0) > 1,
       change: notifier.filters,
+      languages: watchLanguageNames(ref, context, options),
     );
     final filtered = chips.isNotEmpty;
 
@@ -272,6 +274,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
         choices.filters,
         bothRatings: (options?.ratings.length ?? 0) > 1,
         change: notifier.filters,
+        languages: watchLanguageNames(ref, context, options),
       );
       final filtered = chips.isNotEmpty;
       actions.addAll([

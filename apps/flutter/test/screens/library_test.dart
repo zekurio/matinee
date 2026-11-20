@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:matinee/core/display_names.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/media/actions.dart' show mediaChangesProvider;
 import 'package:matinee/screens/library/library_screen.dart';
@@ -10,6 +11,19 @@ import '../media/harness.dart';
 import 'library_backend.dart';
 
 const _shows = KindScreen(kind: 'show');
+
+/// The names the platform would give, in English.
+final class _Names implements DisplayNameSource {
+  @override
+  Future<Map<String, String>> names(
+    List<String> codes,
+    DisplayNameKind kind,
+    String language,
+  ) async {
+    const known = {'en': 'English', 'ja': 'Japanese', 'US': 'United States'};
+    return {for (final code in codes) code: ?known[code]};
+  }
+}
 
 Finder _grid() => find
     .descendant(of: find.byType(KindScreen), matching: find.byType(Scrollable))
@@ -130,6 +144,58 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('3 titles'), findsOneWidget);
     expect(find.bySemanticsLabel('Filters'), findsOneWidget);
+  });
+
+  testWidgets('the language filter names languages in the app language', (
+    tester,
+  ) async {
+    final backend = LibraryBackend()
+      ..options['languages'] = [
+        {'language': 'en', 'titleCount': 2},
+        {'language': 'ja', 'titleCount': 1},
+      ];
+    await pumpScreen(
+      tester,
+      _shows,
+      client: backend.client,
+      overrides: [displayNameSourceProvider.overrideWithValue(_Names())],
+    );
+    await _press(tester, 'Filters');
+    expect(
+      find.text('Up to the rating you pick · United States'),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.text('Any language'),
+      200,
+      scrollable: find
+          .descendant(of: find.byType(Sheet), matching: find.byType(Scrollable))
+          .first,
+    );
+    await tester.tap(find.text('Any language'));
+    await tester.pumpAndSettle();
+    expect(find.text('Find a language'), findsOneWidget);
+    expect(find.bySemanticsLabel('English, 2'), findsOneWidget);
+    await expectLater(
+      find.byType(Navigator).first,
+      matchesGoldenFile('goldens/shows_languages_phone_dark.png'),
+    );
+    await tester.enterText(find.byType(EditableText).last, 'jap');
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('English, 2'), findsNothing);
+    await tester.tap(find.bySemanticsLabel('Japanese, 1'));
+    await tester.pumpAndSettle();
+    expect(backend.browsed.last['filters'], containsPair('language', 'ja'));
+    expect(
+      find.descendant(of: find.byType(Sheet), matching: find.text('Japanese')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Show titles'));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Filters, 1 on'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('Remove filter Japanese'));
+    await tester.pumpAndSettle();
+    expect(backend.browsed.last['filters'], isNot(contains('language')));
   });
 
   testWidgets('the choices last after leaving the tab', (tester) async {
