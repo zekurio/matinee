@@ -127,6 +127,25 @@ void main() {
     },
   );
 
+  test(
+    'a stale local seek acknowledgement cannot overwrite a newer seek',
+    () async {
+      final player = _DelayedSeekPlayer();
+      final session = backend.session(player);
+      addTearDown(session.dispose);
+      await session.start();
+      final first = session.seek(20);
+      final second = session.seek(80);
+      player.pending.last.complete();
+      await second;
+      player.pending.first.complete();
+      await first;
+      expect(session.position, 80);
+      await session.close();
+      expect(backend.reports.last.positionSeconds, 80);
+    },
+  );
+
   test('a restricted stream seek closes the current source', () async {
     backend.start = (_) =>
         FakePlaybackApi.answer(plan(method: PlaybackMethod.remux));
@@ -434,4 +453,15 @@ void main() {
     expect(cues.at(2.2).single.toPlainText(), 'Two');
     expect(cues.at(4), isEmpty);
   });
+}
+
+class _DelayedSeekPlayer extends FakePlayer {
+  final pending = <Completer<void>>[];
+
+  @override
+  Future<void> seekTo(Duration position) {
+    final ack = Completer<void>();
+    pending.add(ack);
+    return ack.future;
+  }
 }

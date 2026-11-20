@@ -477,10 +477,11 @@ class PlaybackSession extends ChangeNotifier {
     if (!seconds.isFinite || length <= 0) return;
     final target = seconds.clamp(0.0, max(0.0, length - 1)).toDouble();
     if (answer.method == PlaybackMethod.direct || answer.hls) {
+      final request = ++_request;
       final moved = await _command(
         () => player.seekTo(_duration(max(0, target - _offset))),
       );
-      if (_closed || !moved) return;
+      if (!_current(request) || !moved) return;
       position = target;
     } else if (answer.method == PlaybackMethod.remux) {
       if (!await _seekStream(answer, target)) return;
