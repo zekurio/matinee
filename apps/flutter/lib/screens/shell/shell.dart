@@ -7,6 +7,23 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import 'header.dart';
 
+/// A tap on the tab that's already open: [path] is the tab's first page,
+/// and [count] tells one tap from the next. The tab's screen listens and
+/// scrolls back to its top, as the shell sends the tab to its first page.
+typedef TabReselect = ({String path, int count});
+
+final tabReselectProvider = NotifierProvider<_TabReselects, TabReselect?>(
+  _TabReselects.new,
+);
+
+final class _TabReselects extends Notifier<TabReselect?> {
+  @override
+  TabReselect? build() => null;
+
+  void tapped(String path) =>
+      state = (path: path, count: (state?.count ?? 0) + 1);
+}
+
 /// The signed-in touch screens' frame, the same on a phone and a tablet:
 /// the header on top, and the tabs along the bottom, Home, Shows, Movies,
 /// Downloads, and the profile, each keeping its own stack. Both stay while
@@ -38,11 +55,15 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
   void _open(Object index) {
     // SAFETY: the items' ids are their branch indexes, set just below.
     final branch = index as int;
-    // A tap on the open tab goes back to its first page.
-    widget.shell.goBranch(
-      branch,
-      initialLocation: branch == widget.shell.currentIndex,
-    );
+    // A tap on the open tab goes back to its first page, at its top.
+    final again = branch == widget.shell.currentIndex;
+    widget.shell.goBranch(branch, initialLocation: again);
+    if (again) {
+      final first = widget.shell.route.branches[branch].defaultRoute;
+      if (first != null) {
+        ref.read(tabReselectProvider.notifier).tapped(first.path);
+      }
+    }
   }
 
   @override

@@ -28,8 +28,10 @@ class Sheet extends StatelessWidget {
     required String dismissLabel,
     bool dismissible = true,
     bool draggable = true,
+    bool rootNavigator = false,
+    double? maxWidth,
   }) {
-    final navigator = Navigator.of(context);
+    final navigator = Navigator.of(context, rootNavigator: rootNavigator);
     final colors = MatineeTheme.of(context);
     return navigator.push<T>(
       _SheetRoute<T>(
@@ -43,6 +45,7 @@ class Sheet extends StatelessWidget {
         enableDrag: draggable,
         backdrop: colors.background.withValues(alpha: .6),
         reducedMotion: MediaQuery.disableAnimationsOf(context),
+        maxWidth: maxWidth,
       ),
     );
   }
@@ -129,6 +132,7 @@ class _SheetRoute<T> extends material.ModalBottomSheetRoute<T> {
     required super.enableDrag,
     required this.backdrop,
     required bool reducedMotion,
+    required double? maxWidth,
   }) : super(
          isScrollControlled: false,
          scrollControlDisabledMaxHeightRatio: .85,
@@ -136,7 +140,7 @@ class _SheetRoute<T> extends material.ModalBottomSheetRoute<T> {
          showDragHandle: false,
          backgroundColor: const Color(0x00000000),
          modalBarrierColor: const Color(0x00000000),
-         constraints: const BoxConstraints(),
+         constraints: BoxConstraints(maxWidth: maxWidth ?? double.infinity),
          elevation: 0,
          clipBehavior: Clip.none,
          sheetAnimationStyle: reducedMotion

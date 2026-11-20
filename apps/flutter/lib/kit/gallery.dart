@@ -404,6 +404,11 @@ class _KitGalleryState extends State<KitGallery> {
             onChanged: (value) => setState(() => _chipOn = value),
           ),
           const ToggleChip(label: 'Archived', checked: false, onChanged: null),
+          RemovableChip(
+            label: 'Drama',
+            removeLabel: 'Remove filter Drama',
+            onRemove: () {},
+          ),
         ],
       ),
       Row(

@@ -149,6 +149,10 @@
   "@browseClearFilters": {
     "description": "strings.xml"
   },
+  "browseCloseFilters": "Close filters",
+  "@browseCloseFilters": {
+    "description": "Dismisses the filter sheet of Shows, Movies, and Browse."
+  },
   "browseContinueWatching": "Continue watching",
   "@browseContinueWatching": {
     "description": "strings.xml"
@@ -209,6 +213,14 @@
   "browseKindShow": "Shows",
   "@browseKindShow": {
     "description": "strings.xml"
+  },
+  "browseLibrary": "Library",
+  "@browseLibrary": {
+    "description": "Names the menu that narrows Shows or Movies to one library."
+  },
+  "browseLibraryAll": "All libraries",
+  "@browseLibraryAll": {
+    "description": "The library menu's choice for every library at once."
   },
   "browseNextUp": "Next up",
   "@browseNextUp": {

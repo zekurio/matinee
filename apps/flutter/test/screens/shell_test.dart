@@ -7,6 +7,7 @@ import 'package:matinee/core/session.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/media/artwork.dart';
 import 'package:matinee/router.dart';
+import 'package:matinee/screens/library/library_screen.dart';
 import 'package:matinee/screens/shell/header.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
@@ -81,7 +82,7 @@ void main() {
       find.descendant(of: find.byType(TabBar), matching: find.text('Movies')),
     );
     await tester.pumpAndSettle();
-    expect(find.text('/movies'), findsOneWidget);
+    expect(find.byType(KindScreen), findsOneWidget);
     expect(find.byType(ShellHeader), findsOneWidget);
     // Back on Home, it's where it was.
     await tester.tap(

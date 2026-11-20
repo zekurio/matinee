@@ -3,11 +3,13 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'api/matinee_api.dart' show TitleKind;
 import 'core/device.dart';
 import 'core/session.dart';
 import 'player/playback_screen.dart';
 import 'player/player_lab.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/library/library_screen.dart';
 import 'screens/pending.dart';
 import 'screens/shell/shell.dart';
 import 'screens/sign_in/connect_screen.dart';
@@ -219,8 +221,23 @@ List<RouteBase> _handsetRoutes() => [
           ),
         ],
       ),
-      StatefulShellBranch(routes: [_pending(Routes.shows, 'Shows')]),
-      StatefulShellBranch(routes: [_pending(Routes.movies, 'Movies')]),
+      StatefulShellBranch(
+        routes: [
+          GoRoute(
+            path: Routes.shows,
+            builder: (context, state) => const KindScreen(kind: TitleKind.show),
+          ),
+        ],
+      ),
+      StatefulShellBranch(
+        routes: [
+          GoRoute(
+            path: Routes.movies,
+            builder: (context, state) =>
+                const KindScreen(kind: TitleKind.movie),
+          ),
+        ],
+      ),
       StatefulShellBranch(routes: [_pending(Routes.downloads, 'Downloads')]),
       StatefulShellBranch(routes: [_pending(Routes.profile, 'Profile')]),
     ],
@@ -247,6 +264,14 @@ List<RouteBase> _handsetRoutes() => [
     path: '/episode/:id',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => EpisodeScreen(id: state.pathParameters['id']!),
+  ),
+  GoRoute(
+    path: '/browse',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => BrowseScreen(
+      genre: state.uri.queryParameters['genre'],
+      studio: state.uri.queryParameters['studio'],
+    ),
   ),
   if (defaultTargetPlatform == TargetPlatform.android)
     GoRoute(
@@ -287,7 +312,6 @@ const _pages = [
   ('/link-device', 'Link a device'),
   ('/requests', 'Requests'),
   ('/requests/:list', 'Requests'),
-  ('/browse', 'Browse'),
   ('/person/:name', 'Person'),
   ('/downloads/show/:titleId', 'Show downloads'),
   ('/identify/:titleId', 'Identify'),

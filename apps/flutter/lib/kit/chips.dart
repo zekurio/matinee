@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'icon.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -55,6 +56,33 @@ class ToggleChip extends StatelessWidget {
   }
 }
 
+/// A filter that's on, as the Kotlin app's chip with a trailing X: filled
+/// like a chosen chip, and pressing it takes the filter off. [removeLabel]
+/// is what a screen reader says, as "Remove filter Drama".
+class RemovableChip extends StatelessWidget {
+  const RemovableChip({
+    super.key,
+    required this.label,
+    required this.removeLabel,
+    required this.onRemove,
+  });
+
+  final String label;
+  final String removeLabel;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) => _Chip(
+    label: label,
+    active: true,
+    onPressed: onRemove,
+    count: null,
+    exclusive: false,
+    trailing: Lucide.x,
+    semanticLabel: removeLabel,
+  );
+}
+
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.label,
@@ -62,6 +90,8 @@ class _Chip extends StatelessWidget {
     required this.onPressed,
     required this.count,
     required this.exclusive,
+    this.trailing,
+    this.semanticLabel,
   });
 
   final String label;
@@ -69,6 +99,8 @@ class _Chip extends StatelessWidget {
   final VoidCallback? onPressed;
   final String? count;
   final bool exclusive;
+  final String? trailing;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -76,9 +108,10 @@ class _Chip extends StatelessWidget {
     return PressIndication(
       onPressed: onPressed,
       shape: KitRadius.pill,
+      label: semanticLabel,
       button: !exclusive,
       checked: exclusive ? active : null,
-      toggled: exclusive ? null : active,
+      toggled: exclusive || trailing != null ? null : active,
       inMutuallyExclusiveGroup: exclusive ? true : null,
       builder: (context, state) {
         final hot = state != PressState.idle;
@@ -98,34 +131,45 @@ class _Chip extends StatelessWidget {
                     : colors.foreground.withValues(alpha: hot ? .3 : .15),
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 6,
-              children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.copyWith(
-                      color: active
-                          ? colors.background
-                          : colors.foreground.withValues(alpha: hot ? 1 : .8),
+            child: ExcludeSemantics(
+              // A chip with its own words for a screen reader says only
+              // those, not its label again.
+              excluding: semanticLabel != null,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 6,
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.copyWith(
+                        color: active
+                            ? colors.background
+                            : colors.foreground.withValues(alpha: hot ? 1 : .8),
+                      ),
                     ),
                   ),
-                ),
-                if (count case final count?)
-                  Text(
-                    count,
-                    maxLines: 1,
-                    style: text.copyWith(
-                      color: active
-                          ? colors.background.withValues(alpha: .7)
-                          : colors.mutedForeground,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                  if (count case final count?)
+                    Text(
+                      count,
+                      maxLines: 1,
+                      style: text.copyWith(
+                        color: active
+                            ? colors.background.withValues(alpha: .7)
+                            : colors.mutedForeground,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-                  ),
-              ],
+                  if (trailing case final icon?)
+                    KitIcon(
+                      icon,
+                      size: 14,
+                      color: active ? colors.background : colors.foreground,
+                    ),
+                ],
+              ),
             ),
           ),
         );

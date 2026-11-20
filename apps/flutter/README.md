@@ -6,10 +6,10 @@ apps in `apps/ios`, which keep shipping until it reaches them. Video plays
 in each platform's native player, behind the Flutter view.
 
 So far it has the toolchain, the kit, the API client, the strings, the
-sessions, the screens that connect and sign in, the tabs, Home, the
-title, season, and episode pages, and the Android phone and tablet
-player. Every other screen behind the tabs is a placeholder that shows
-its route.
+sessions, the screens that connect and sign in, the tabs, Home, Shows,
+Movies, the genre and studio pages, the title, season, and episode
+pages, and the Android phone and tablet player. Every other screen
+behind the tabs is a placeholder that shows its route.
 
 ## Build
 
@@ -240,6 +240,31 @@ A long press on a card, here or on Home, opens its menu
 (`lib/media/actions.dart`): Play, Play from the start, the tick and heart,
 the pages it belongs to, and "Not interested" on a recommendation. Every
 change bumps `mediaChangesProvider`, which the pages and Home listen to.
+
+## Shows, Movies, and Browse
+
+`lib/screens/library` replaces the Kotlin app's Media tab and its library
+pages. Shows lists every show the viewer can see and Movies every movie,
+across the libraries, from `titles.browse` with the kind; with more than
+one library of the kind, a menu under the tab's name narrows it to one, as
+on the web. `Routes.browse(genre:, studio:)` opens the same grid as a page
+for a genre or a studio, with a choice of movies or shows once there are
+both. Posters fill as many columns as `posterColumns` gives the width, and
+the next page of 60 loads as the end of the grid comes near.
+
+The sort menu offers each sort the server has values for
+(`titles.filterOptions`), both ways; the Filter button opens the filters
+in a sheet, no wider than 640 on a tablet, with only the choices the
+server offers for the list. Each change applies at once and shows as a
+chip under the heading that takes it off. The server does the sorting and
+filtering. The tabs keep what was picked for the sitting, until a sign-in
+or a switch to another server; a genre's or a studio's page keeps it while
+it's open. Other choices keep the last titles on screen, dimmed, until
+the new ones come. A tap on the open tab scrolls its grid to the top
+(`tabReselectProvider` in the shell). Back on a list after half a minute,
+the titles loaded so far are fetched again in place, and the filters'
+counts with them. The language filter waits for a way to name languages
+in the app's language.
 
 ## Strings
 
