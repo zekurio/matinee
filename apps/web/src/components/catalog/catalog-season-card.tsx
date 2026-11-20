@@ -62,6 +62,7 @@ export function CatalogSeasonCard({
             touch
             availability={availability}
             name={name}
+            requestName={tr("ask.askNamed", { name: label })}
             busy={ask.isPending}
             onRequest={() =>
               // Undo takes the whole request back, so it's only offered
