@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -429,7 +430,15 @@ void main() {
         harness.backend
           ..hosts.add('a.example')
           ..tokens['token-a'] = 'ada';
-        await _show(tester, harness);
+        final waitForPoll = Completer<void>();
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await _show(
+          tester,
+          harness,
+          size: const Size(320, 915),
+          poll: (_) => waitForPoll.future,
+        );
         await _async(tester, harness.session.signOut);
         expect(find.text('Sign in with a code'), findsOneWidget);
 
@@ -443,12 +452,45 @@ void main() {
         // A phone shows no QR code; the TV does.
         expect(find.byType(QrCodeCard), findsNothing);
 
-        await tester.tap(find.text('Sign in with the browser instead'));
+        final code = find.text('BCDF-GHJK');
+        expect(
+          tester.renderObject<RenderParagraph>(code).didExceedMaxLines,
+          isFalse,
+        );
+        final left = tester.getTopLeft(code).dx;
+        expect(left, greaterThanOrEqualTo(0));
+        expect(tester.getTopRight(code).dx, lessThanOrEqualTo(320));
+        await tester.binding.handlePopRoute();
         await _settle(tester);
+        waitForPoll.complete();
+        await _settle(tester);
+        expect(
+          harness.backend.to('a.example', '/api/v1/auth/device/token'),
+          isEmpty,
+        );
         expect(find.text('Sign in with your browser'), findsOneWidget);
         await _end(tester, harness);
       },
     );
+
+    testWidgets('the artwork rows fit the rotated backdrop on a tablet', (
+      tester,
+    ) async {
+      final harness = Harness();
+      harness.backend
+        ..hosts.add('a.example')
+        ..backdropTiles.add(
+          const LoginBackdropTile(
+            artwork: Artwork(id: 'poster', placeholder: null),
+            kind: LoginBackdropKind.poster,
+          ),
+        );
+      await _show(tester, harness, size: const Size(1280, 800));
+      await _async(tester, () => harness.session.connect('a.example'));
+      expect(find.byType(Image), findsWidgets);
+      expect(tester.takeException(), isNull);
+      await _end(tester, harness);
+    });
 
     testWidgets('a code someone approves signs this device in', (tester) async {
       final saved = await tester.runAsync(_saved);
@@ -527,12 +569,14 @@ void main() {
       tester,
     ) async {
       final harness = Harness();
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       harness.backend.hosts.add('192.168.1.5');
       await _show(
         tester,
         harness,
         device: _tv,
-        size: const Size(1280, 720),
+        size: const Size(960, 540),
         nearby: const [DiscoveredServer('Matinee', 'http://192.168.1.5:8420')],
       );
       expect(find.text('Choose your server'), findsOneWidget);

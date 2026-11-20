@@ -151,6 +151,9 @@ Stream<DeviceCodeEvent> deviceCodeSignIn(
       yield const DeviceCodeExpired();
       return;
     }
+    // A listener may have left while the poll that reported expiry was out.
+    // Give its cancellation a yield before requesting another grant.
+    yield const DeviceCodePolled();
   }
 }
 

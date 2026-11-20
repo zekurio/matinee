@@ -52,16 +52,19 @@ class CodeDetails extends StatelessWidget {
           Semantics(
             label: shown.userCode,
             child: ExcludeSemantics(
-              child: Text(
-                shown.userCode,
-                maxLines: 1,
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: large ? 56 : 36,
-                  height: 1.2,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 4,
-                  color: colors.foreground,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  shown.userCode,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: large ? 56 : 36,
+                    height: 1.2,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 4,
+                    color: colors.foreground,
+                  ),
                 ),
               ),
             ),
@@ -71,9 +74,11 @@ class CodeDetails extends StatelessWidget {
             spacing: 10,
             children: [
               Spinner(size: 14, color: colors.mutedForeground),
-              Text(
-                words.signinCodeWaiting,
-                style: KitText.xs.style(color: colors.mutedForeground),
+              Flexible(
+                child: Text(
+                  words.signinCodeWaiting,
+                  style: KitText.xs.style(color: colors.mutedForeground),
+                ),
               ),
             ],
           ),

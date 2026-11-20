@@ -145,11 +145,12 @@ class _LoginBackdropWallState extends ConsumerState<LoginBackdropWall>
               final count =
                   (box.maxHeight * _oversize / (rowHeight + _gap)).ceil() + 1;
               final rows = _buildRows(_tiles, count);
+              final wallHeight = count * (rowHeight + _gap) - _gap;
               Widget wall = OverflowBox(
                 minWidth: box.maxWidth * _oversize,
                 maxWidth: box.maxWidth * _oversize,
-                minHeight: box.maxHeight * _oversize,
-                maxHeight: box.maxHeight * _oversize,
+                minHeight: wallHeight,
+                maxHeight: wallHeight,
                 child: Transform.rotate(
                   angle: _slope,
                   child: Opacity(

@@ -193,7 +193,6 @@ class _ServerRow extends StatelessWidget {
             onPressed: busy ? null : onPressed,
             autofocus: autofocus,
             shape: KitRadius.control,
-            label: title,
             builder: (context, state) => DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: KitRadius.control,
@@ -294,9 +293,11 @@ class _AddRow extends StatelessWidget {
             spacing: 14,
             children: [
               KitIcon(Lucide.plus, color: colors.mutedForeground),
-              Text(
-                AppLocalizations.of(context).serversAdd,
-                style: KitText.base.style(color: colors.foreground),
+              Flexible(
+                child: Text(
+                  AppLocalizations.of(context).serversAdd,
+                  style: KitText.base.style(color: colors.foreground),
+                ),
               ),
             ],
           ),

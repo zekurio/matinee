@@ -166,6 +166,7 @@ final class FakeBackend {
 
   /// What each device-code poll answers, in turn.
   final devicePolls = <http.Response>[];
+  final backdropTiles = <LoginBackdropTile>[];
 
   Future<http.Response> handle(http.Request request) async {
     requests.add(request);
@@ -186,6 +187,8 @@ final class FakeBackend {
     }
     final path = request.url.path;
     switch (path) {
+      case '/api/v1/auth/login-backdrop':
+        return jsonResponse(LoginBackdropTiles(tiles: backdropTiles).toJson());
       case '/api/v1/auth/config':
         return jsonResponse(configJson);
       case '/api/v1/auth/session':

@@ -48,7 +48,7 @@ final class ServerConnect extends Notifier<ServerConnectState> {
     final session = ref.read(sessionProvider.notifier);
     final failure = await withLocalNetwork(
       access,
-      () => session.connect(address, name: name),
+      () => ref.mounted ? session.connect(address, name: name) : null,
     );
     // Without the access a LAN server only says it can't be reached.
     final hint = failure != null && await access.missing();
@@ -119,7 +119,7 @@ final class DeviceCodeSignIn extends Notifier<DeviceCodeSignInState> {
   @override
   DeviceCodeSignInState build() {
     ref.onDispose(() => unawaited(_events?.cancel()));
-    _start();
+    if (ref.watch(authStateProvider) is SignedOut) _start();
     return const DeviceCodeSignInState();
   }
 
@@ -134,12 +134,16 @@ final class DeviceCodeSignIn extends Notifier<DeviceCodeSignInState> {
     final session = ref.read(sessionProvider.notifier);
     final device = ref.read(deviceProvider);
     // A server being added, before it's saved, or the one in use.
-    _events = deviceCodeSignIn(
-      session.signInApi(),
-      AppDevice(name: device.name, platform: device.platform),
-      renewExpired: renewExpired,
-      delay: ref.read(deviceCodeDelayProvider),
-    ).listen(_on);
+    final signingIn = ref.read(authStateProvider);
+    _events =
+        deviceCodeSignIn(
+          session.signInApi(),
+          AppDevice(name: device.name, platform: device.platform),
+          renewExpired: renewExpired,
+          delay: ref.read(deviceCodeDelayProvider),
+        ).listen((event) {
+          if (identical(ref.read(authStateProvider), signingIn)) _on(event);
+        });
   }
 
   void _on(DeviceCodeEvent event) {
@@ -195,16 +199,22 @@ const scansPerSearch = 3;
 /// are hints: connect through [ServerConnect], which checks the server.
 final class NearbyServers extends Notifier<NearbyServersState> {
   int _search = 0;
+  StreamIterator<DiscoveredServer>? _scan;
 
   @override
   NearbyServersState build() {
-    ref.onDispose(() => _search++);
+    ref.onDispose(() {
+      _search++;
+      unawaited(_scan?.cancel());
+    });
     unawaited(Future<void>.microtask(search));
     return const NearbyServersState(found: [], searching: true);
   }
 
   Future<void> search() async {
+    if (!ref.mounted) return;
     final mine = ++_search;
+    unawaited(_scan?.cancel());
     state = NearbyServersState(found: state.found, searching: true);
     if (!await mayDiscover(ref.read(localNetworkProvider))) {
       if (mine == _search && ref.mounted) {
@@ -217,7 +227,10 @@ final class NearbyServers extends Notifier<NearbyServersState> {
     state = const NearbyServersState(found: [], searching: true);
     final discover = ref.read(serverDiscoveryProvider);
     for (var scan = 0; scan < scansPerSearch; scan++) {
-      await for (final server in discover()) {
+      if (mine != _search || !ref.mounted) return;
+      final replies = _scan = StreamIterator(discover());
+      while (await replies.moveNext()) {
+        final server = replies.current;
         if (mine != _search || !ref.mounted) return;
         if (state.found.any((known) => known.url == server.url)) continue;
         state = NearbyServersState(

@@ -176,6 +176,31 @@ void main() {
       },
     );
 
+    test('cancelling a poll that reports expiry skips renewal', () async {
+      final polling = Completer<void>();
+      final reply = Completer<http.Response>();
+      var starts = 0;
+      final client = MockClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          polling.complete();
+          return reply.future;
+        }
+        starts++;
+        return jsonResponse(deviceCodeFor('device-$starts').toJson());
+      });
+      final subscription = deviceCodeSignIn(
+        MatineeApi(base: Uri.parse('https://a.example/'), client: client),
+        device,
+        renewExpired: true,
+        delay: (_) async {},
+      ).listen((_) {});
+      await polling.future;
+      final cancelled = subscription.cancel();
+      reply.complete(status(404));
+      await cancelled;
+      expect(starts, 1);
+    });
+
     test('stops polling when the listener cancels', () async {
       final grant = DeviceGrant([pending, pending, pending, pending]);
       final gate = Completer<void>();

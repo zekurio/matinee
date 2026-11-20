@@ -135,11 +135,13 @@ class _NearbyHeading extends StatelessWidget {
     return Row(
       spacing: 8,
       children: [
-        Text(
-          AppLocalizations.of(context).tvConnectFound,
-          style: KitText.sm.style(
-            color: colors.mutedForeground,
-            weight: FontWeight.w500,
+        Flexible(
+          child: Text(
+            AppLocalizations.of(context).tvConnectFound,
+            style: KitText.sm.style(
+              color: colors.mutedForeground,
+              weight: FontWeight.w500,
+            ),
           ),
         ),
         if (searching) Spinner(size: 14, color: colors.mutedForeground),
@@ -169,7 +171,6 @@ class NearbyServerRow extends StatelessWidget {
     return PressIndication(
       onPressed: onPressed,
       shape: KitRadius.control,
-      label: '${server.name}, ${withoutScheme(server.url)}',
       builder: (context, state) => DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: KitRadius.control,

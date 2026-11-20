@@ -52,40 +52,47 @@ class TvAuthFrame extends StatelessWidget {
                 children: [
                   Expanded(
                     flex: (split * 100).round(),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            title,
-                            style: KitText.px36.style(
-                              color: colors.foreground,
-                              weight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        if (description case final text?)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: Text(
-                              text,
-                              style: KitText.base.style(
-                                color: colors.mutedForeground,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 48),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                title,
+                                style: KitText.px36.style(
+                                  color: colors.foreground,
+                                  weight: FontWeight.w700,
+                                ),
                               ),
                             ),
-                          ),
-                        ...side,
-                      ],
+                            if (description case final text?)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: Text(
+                                  text,
+                                  style: KitText.base.style(
+                                    color: colors.mutedForeground,
+                                  ),
+                                ),
+                              ),
+                            ...side,
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   Expanded(
                     flex: 100 - (split * 100).round(),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: children,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: children,
+                      ),
                     ),
                   ),
                 ],
@@ -146,7 +153,6 @@ class TvListItem extends StatelessWidget {
       focusNode: focusNode,
       shape: _shape,
       showFocusRing: false,
-      label: subtitle == null ? title : '$title, $subtitle',
       builder: (context, state) {
         final focused =
             state == PressState.focused ||

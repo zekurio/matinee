@@ -17,14 +17,27 @@ import 'server_switcher.dart';
 /// Signing in to the server: through the browser, or with a code approved
 /// from a device that's signed in. A server being added goes back to the
 /// one in use, or to typing another address, with the system's back.
-class SignInScreen extends ConsumerStatefulWidget {
+class SignInScreen extends ConsumerWidget {
   const SignInScreen({super.key});
 
   @override
-  ConsumerState<SignInScreen> createState() => _SignInScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authStateProvider);
+    if (auth is! SignedOut) return const AuthBlank();
+    return _ServerSignIn(key: ValueKey(auth.server), auth: auth);
+  }
 }
 
-class _SignInScreenState extends ConsumerState<SignInScreen> {
+class _ServerSignIn extends ConsumerStatefulWidget {
+  const _ServerSignIn({super.key, required this.auth});
+
+  final SignedOut auth;
+
+  @override
+  ConsumerState<_ServerSignIn> createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends ConsumerState<_ServerSignIn> {
   bool _withCode = false;
   bool _busy = false;
   String? _error;
@@ -47,31 +60,26 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = ref.watch(authStateProvider);
-    if (auth is! SignedOut) return const AuthBlank();
+    final auth = widget.auth;
     final adding = auth.adding;
-    // Another server's sign-in starts afresh, with its own code.
-    return KeyedSubtree(
-      key: ValueKey(auth.server),
-      child: PopScope(
-        // Back from the code to the browser, then, for a server being added,
-        // to typing another address.
-        canPop: !_withCode && !adding,
-        onPopInvokedWithResult: (didPop, _) {
-          if (didPop) return;
-          if (_withCode) {
-            setState(() => _withCode = false);
-          } else {
-            ref.read(sessionProvider.notifier).addServer();
-          }
-        },
-        child: AuthLayout(
-          // The server's login backdrop, if it has one on.
-          backdrop: LoginBackdropWall(settings: auth.config.loginBackdrop),
-          children: _withCode
-              ? [_CodeSignIn(onBack: () => setState(() => _withCode = false))]
-              : _browserChildren(context, auth),
-        ),
+    return PopScope(
+      // Back from the code to the browser, then, for a server being added,
+      // to typing another address.
+      canPop: !_withCode && !adding,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_withCode) {
+          setState(() => _withCode = false);
+        } else {
+          ref.read(sessionProvider.notifier).addServer();
+        }
+      },
+      child: AuthLayout(
+        // The server's login backdrop, if it has one on.
+        backdrop: LoginBackdropWall(settings: auth.config.loginBackdrop),
+        children: _withCode
+            ? [_CodeSignIn(onBack: () => setState(() => _withCode = false))]
+            : _browserChildren(context, auth),
       ),
     );
   }

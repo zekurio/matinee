@@ -161,6 +161,22 @@ void main() {
       expect(exchange.single.body, contains('"codeVerifier"'));
     });
 
+    test('a browser callback after leaving sign-in is discarded', () async {
+      final harness = Harness();
+      harness.backend.hosts.add('a.example');
+      await harness.launch();
+      addTearDown(harness.quit);
+      await harness.session.connect('a.example');
+      final pending = harness.session.signInWithBrowser();
+      harness.session.addServer();
+      await pending;
+      expect(harness.auth, isA<NoServer>());
+      expect(
+        harness.backend.to('a.example', '/api/v1/auth/app/token'),
+        isEmpty,
+      );
+    });
+
     test('a browser answer for another request is refused', () async {
       final harness = Harness();
       harness.backend.hosts.add('a.example');

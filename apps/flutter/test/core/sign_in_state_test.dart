@@ -213,6 +213,49 @@ void main() {
       expect(request.body, contains('"platform":"android"'));
     });
 
+    test('leaving a candidate discards its pending device grant', () async {
+      final harness = Harness();
+      final waiting = Completer<void>();
+      final poll = Completer<void>();
+      harness.backend
+        ..hosts.addAll(['a.example', 'b.example'])
+        ..devicePolls.add(
+          jsonResponse({
+            'status': 'approved',
+            'token': 'token-b',
+            'user': userJson('bob'),
+          }),
+        );
+      await harness.launch(
+        overrides: [
+          deviceCodeDelayProvider.overrideWithValue((_) {
+            waiting.complete();
+            return poll.future;
+          }),
+        ],
+      );
+      addTearDown(harness.quit);
+      await harness.session.connect('a.example');
+      harness.session.signedIn(appSession('token-a', 'ada'));
+      harness.session.addServer();
+      await harness.session.connect('b.example');
+      final subscription = harness.container.listen(
+        deviceCodeSignInProvider(false),
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await waiting.future;
+      harness.session.cancelAdd();
+      poll.complete();
+      await harness.container.pump();
+      await Future<void>.delayed(Duration.zero);
+      expect((harness.auth as SignedIn).user.username, 'ada');
+      expect(
+        harness.backend.to('b.example', '/api/v1/auth/device/token'),
+        isEmpty,
+      );
+    });
+
     test('says so when the code ran out and is not renewed', () async {
       final harness = Harness();
       harness.backend
@@ -306,6 +349,39 @@ void main() {
       }
       return subscription.read();
     }
+
+    test(
+      'leaving discovery cancels the current scan and skips the rest',
+      () async {
+        final harness = Harness();
+        final started = Completer<void>();
+        final cancelled = Completer<void>();
+        final replies = StreamController<DiscoveredServer>(
+          onListen: started.complete,
+          onCancel: cancelled.complete,
+        );
+        var scans = 0;
+        await harness.launch(
+          overrides: [
+            serverDiscoveryProvider.overrideWithValue(() {
+              scans++;
+              return replies.stream;
+            }),
+          ],
+        );
+        addTearDown(harness.quit);
+        final subscription = harness.container.listen(
+          nearbyServersProvider,
+          (_, _) {},
+        );
+        await started.future;
+        subscription.close();
+        await harness.container.pump();
+        await cancelled.future.timeout(const Duration(seconds: 1));
+        await replies.close();
+        expect(scans, 1);
+      },
+    );
 
     test('collects what answers across the scans, once each', () async {
       final harness = Harness();

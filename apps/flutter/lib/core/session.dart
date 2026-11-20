@@ -491,6 +491,7 @@ final class SessionNotifier extends Notifier<SessionState> {
   /// [name]. Without a scheme it tries https, then http. A server already
   /// saved is switched to. Returns why it failed, or null once connected.
   Future<ConnectFailure?> connect(String input, {String? name}) async {
+    final picking = state.auth;
     final candidates = serverCandidates(input);
     if (candidates.isEmpty) {
       return const ConnectFailure(ConnectFailureKind.empty);
@@ -508,7 +509,11 @@ final class SessionNotifier extends Notifier<SessionState> {
       try {
         final config = await client.auth.config();
         // Gone back, or to another server, while it answered.
-        if (!_alive || state.auth is! NoServer) return null;
+        if (!_alive ||
+            !identical(state.auth, picking) ||
+            picking is! NoServer) {
+          return null;
+        }
         if (_origin == null) {
           // The first server is saved at once, so the app comes back to its
           // sign-in.
@@ -651,6 +656,8 @@ final class SessionNotifier extends Notifier<SessionState> {
     final adding = _candidate;
     final server = adding?.url ?? _origin;
     if (server == null) throw StateError('not connected');
+    final signingIn = state.auth;
+    bool current() => _alive && identical(state.auth, signingIn);
     final request = BrowserSignIn.create();
     final page = (adding?.api ?? requireApi()).paths.authorize(
       redirectUri: BrowserSignIn.redirectUri,
@@ -665,25 +672,19 @@ final class SessionNotifier extends Notifier<SessionState> {
     } on Object {
       return const SignInFailure(SignInFailureKind.generic);
     }
-    if (back == null) return null;
+    if (!current() || back == null) return null;
     final code = back.queryParameters['code'];
     if (!BrowserSignIn.isCallback(back) ||
         back.queryParameters['state'] != request.state ||
         code == null) {
       return const SignInFailure(SignInFailureKind.wrongState);
     }
-    if (!_alive) return null;
-    final stillAdding = _candidate;
-    final name =
-        stillAdding != null && originKey(stillAdding.url) == originKey(server)
-        ? stillAdding.name
-        : null;
     try {
       final session = await MatineeApi(
         base: server,
         client: _plain,
       ).auth.app.token(code: code, codeVerifier: request.verifier);
-      if (_alive) _saveSignIn(server, session, name);
+      if (current()) _saveSignIn(server, session, adding?.name);
       return null;
     } on ApiException catch (error) {
       // The server's own words when it sent some; the rest of an error's

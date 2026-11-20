@@ -118,75 +118,69 @@ class _ServerListState extends ConsumerState<_ServerList> {
       title: words.tvConnectTitle,
       description: words.tvConnectDescription,
       children: [
-        Flexible(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 10,
-              children: [
-                TvListHeading(words.tvConnectFound),
-                for (final server in found) ...[
-                  TvListItem(
-                    key: ValueKey(server.url),
-                    title: server.name,
-                    subtitle: withoutScheme(server.url),
-                    icon: Lucide.server,
-                    autofocus: server == found.first && !showLast,
-                    trailing: connect.busy && _trying == server.url
-                        ? spinner
-                        : null,
-                    onPressed: () => _connect(server.url, server.name),
-                  ),
-                  ?note(server.url),
-                ],
-                if (found.isEmpty && !nearby.searching)
-                  TvNote(words.tvConnectNone),
-                // Always there, so focus stays on it while it searches
-                // again.
-                TvListItem(
-                  title: nearby.searching
-                      ? words.tvConnectSearching
-                      : words.tvConnectSearchAgain,
-                  icon: Lucide.refreshCw,
-                  trailing: nearby.searching ? spinner : null,
-                  onPressed: nearby.searching
-                      ? null
-                      : () => unawaited(
-                          ref.read(nearbyServersProvider.notifier).search(),
-                        ),
-                ),
-                if (showLast) ...[
-                  TvListHeading(words.tvConnectLast),
-                  TvListItem(
-                    title: withoutScheme(last),
-                    icon: Lucide.rotateCcw,
-                    autofocus: true,
-                    trailing: connect.busy && _trying == last ? spinner : null,
-                    onPressed: () => _connect(last, null),
-                  ),
-                  ?note(last),
-                ],
-                TvListHeading(words.tvConnectOther),
-                TvListItem(
-                  title: words.tvConnectEnter,
-                  icon: Lucide.link,
-                  autofocus: found.isEmpty && !showLast,
-                  onPressed: widget.onType,
-                ),
-                if (widget.canCancel && current != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: TvListItem(
-                      title: words.serversBackTo(serverTitle(current)),
-                      icon: Lucide.arrowLeft,
-                      quiet: true,
-                      onPressed: session.cancelAdd,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 10,
+          children: [
+            TvListHeading(words.tvConnectFound),
+            for (final server in found) ...[
+              TvListItem(
+                key: ValueKey(server.url),
+                title: server.name,
+                subtitle: withoutScheme(server.url),
+                icon: Lucide.server,
+                autofocus: server == found.first && !showLast,
+                trailing: connect.busy && _trying == server.url
+                    ? spinner
+                    : null,
+                onPressed: () => _connect(server.url, server.name),
+              ),
+              ?note(server.url),
+            ],
+            if (found.isEmpty && !nearby.searching) TvNote(words.tvConnectNone),
+            // Always there, so focus stays on it while it searches
+            // again.
+            TvListItem(
+              title: nearby.searching
+                  ? words.tvConnectSearching
+                  : words.tvConnectSearchAgain,
+              icon: Lucide.refreshCw,
+              trailing: nearby.searching ? spinner : null,
+              onPressed: nearby.searching
+                  ? null
+                  : () => unawaited(
+                      ref.read(nearbyServersProvider.notifier).search(),
                     ),
-                  ),
-              ],
             ),
-          ),
+            if (showLast) ...[
+              TvListHeading(words.tvConnectLast),
+              TvListItem(
+                title: withoutScheme(last),
+                icon: Lucide.rotateCcw,
+                autofocus: true,
+                trailing: connect.busy && _trying == last ? spinner : null,
+                onPressed: () => _connect(last, null),
+              ),
+              ?note(last),
+            ],
+            TvListHeading(words.tvConnectOther),
+            TvListItem(
+              title: words.tvConnectEnter,
+              icon: Lucide.link,
+              autofocus: found.isEmpty && !showLast,
+              onPressed: widget.onType,
+            ),
+            if (widget.canCancel && current != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: TvListItem(
+                  title: words.serversBackTo(serverTitle(current)),
+                  icon: Lucide.arrowLeft,
+                  quiet: true,
+                  onPressed: session.cancelAdd,
+                ),
+              ),
+          ],
         ),
       ],
     );
