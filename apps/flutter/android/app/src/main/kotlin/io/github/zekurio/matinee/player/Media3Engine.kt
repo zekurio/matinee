@@ -27,6 +27,7 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import java.io.File
 import okhttp3.OkHttpClient
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
@@ -95,7 +96,13 @@ internal class Media3Engine(private val context: Context, private val output: Pl
             }.build()
         } else httpClient
         val http = OkHttpDataSource.Factory(client).setDefaultRequestProperties(request.headers)
-        val sources = DefaultMediaSourceFactory(DefaultDataSource.Factory(context, http))
+        val data = DefaultDataSource.Factory(context, http)
+        val saved = Uri.parse(request.url).takeIf { it.scheme == "file" && request.sourceKind == SourceKindMessage.MP4 }?.path
+        // A version made for this device is a fragmented MP4 that doesn't
+        // say where its fragments are; without an index, seeks restart it.
+        val sources = if (saved != null) {
+            DefaultMediaSourceFactory(data, IndexedFragmentsExtractor.factory(File(saved)))
+        } else DefaultMediaSourceFactory(data)
         val renderers = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)

@@ -607,7 +607,10 @@ next one come from the server while it answers, and the next one only at
 the end, without the server's `upNextAt`. As in the Kotlin app, a
 download whose picture freezes gets one seek in place before it fails,
 which `Media3Engine` makes itself for a file on the device; mpv has no
-freeze watch.
+freeze watch. That mp4 of segments says nothing of where they start,
+which Media3 takes as a file it can't seek, so every seek and resume
+would start over; `FragmentIndex.kt` reads the fragments' headers for
+it. mpv finds them itself.
 
 In offline mode, from Settings or from Watch downloads on the
 unreachable screen, the tabs are Home, Downloads, and Profile. Home
