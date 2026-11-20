@@ -362,6 +362,20 @@ progress; and Done, a page at a time, where a declined request can be
 added after all or allowed again. Each row's menu opens the title. An
 account that isn't an admin gets its own requests on either route.
 
+## People
+
+`lib/screens/person` is the Kotlin app's person page (`Routes.person`),
+which the cast and crew on the title pages and the people in search
+open: the photo or the initials, the name, and what TMDB says they're
+known for and when they were born and died, else what they do here and
+in how many titles; the biography; their titles across the libraries in
+the poster grid Browse uses, each with the role; then "Not here yet",
+their other titles at TMDB, opening the catalog's page, or the library's
+once one is here. Those cards follow `requests.live` for the cards built
+around the screen, in blocks of twelve and six blocks at most
+(`FollowWindow`), since the stream takes a hundred titles at most, as
+the Kotlin app follows them.
+
 ## Profile
 
 `lib/screens/profile` is the fifth tab, the Kotlin app's profile: the

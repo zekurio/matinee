@@ -11,6 +11,7 @@ import 'player/player_lab.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/library/library_screen.dart';
 import 'screens/pending.dart';
+import 'screens/person/person_screen.dart';
 import 'screens/profile/lists_screens.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/requests/catalog_browse.dart';
@@ -373,6 +374,14 @@ List<RouteBase> _handsetRoutes() => [
     ),
   ),
   GoRoute(
+    path: '/person/:name',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => PersonScreen(
+      name: state.pathParameters['name']!,
+      tmdbId: state.uri.queryParameters['tmdb'],
+    ),
+  ),
+  GoRoute(
     path: '/browse',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => BrowseScreen(
@@ -412,7 +421,6 @@ List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 /// The pages over the tabs, by path pattern, until each has its screen.
 const _pages = [
   ('/link-device', 'Link a device'),
-  ('/person/:name', 'Person'),
   ('/downloads/show/:titleId', 'Show downloads'),
   ('/identify/:titleId', 'Identify'),
   ('/images/:titleId', 'Images'),
