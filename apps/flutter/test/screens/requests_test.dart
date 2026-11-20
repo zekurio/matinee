@@ -6,6 +6,7 @@ import 'package:matinee/core/session.dart';
 import 'package:matinee/core/toasts.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/screens/requests/catalog_browse.dart';
+import 'package:matinee/screens/requests/catalog_cards.dart' show AskedCard;
 import 'package:matinee/screens/requests/catalog_screen.dart';
 import 'package:matinee/screens/requests/requests_screen.dart';
 import 'package:matinee/screens/search/search_data.dart';
@@ -571,6 +572,48 @@ void main() {
       expect(
         backend.asked.where((path) => path == '/api/v1/requests/mine').length,
         2,
+      );
+    });
+
+    testWidgets('a row is as tall as its cards, and a note has its lines', (
+      tester,
+    ) async {
+      final backend = mine();
+      await pumpScreen(
+        tester,
+        const RequestsScreen(),
+        client: backend.client,
+        size: const Size(412, 915),
+      );
+      final cards = find.byType(AskedCard);
+      // A card without a note: its art and two lines.
+      final row = tester.getSize(cards.at(0)).height;
+      expect(
+        row,
+        lessThanOrEqualTo(
+          CardMetrics.height(
+            tester.getSize(cards.at(0)).width,
+            CardMetrics.poster,
+            TextScaler.noScaling,
+          ),
+        ),
+      );
+      // Two to a row: Dune and Conclave, then Anora, which was declined.
+      final first = tester.getTopLeft(cards.at(0));
+      expect(tester.getTopLeft(cards.at(1)).dy, first.dy);
+      expect(
+        tester.getTopLeft(cards.at(2)).dy - first.dy,
+        row + CardGrid.runSpacing,
+        reason: 'the first row has no note, so no room for one',
+      );
+      // Why, and the admin's note, each on lines of their own.
+      final why = find.text('Already have it.');
+      final note = find.text('It is on the shelf in the living room.');
+      expect(why, findsOneWidget);
+      expect(note, findsOneWidget);
+      expect(
+        tester.getTopLeft(note).dy,
+        greaterThanOrEqualTo(tester.getBottomLeft(why).dy),
       );
     });
 

@@ -92,8 +92,6 @@ class _MinePageState extends ConsumerState<_MinePage> {
         ),
       );
     } else {
-      final declined = items.any(_declined);
-      final scaler = MediaQuery.textScalerOf(context);
       body = FollowTitles(
         titles: FollowedTitles([
           for (final item in items)
@@ -105,8 +103,9 @@ class _MinePageState extends ConsumerState<_MinePage> {
               columns: posterColumns,
               aspectRatio: CardMetrics.poster,
               itemCount: items.length,
-              // Room for why, under the cards, when a title was declined.
-              extraHeight: declined ? _noteHeight(scaler) : 0,
+              // Why a title was declined goes under its card, so a row
+              // with one is taller than the rest.
+              fitRows: true,
               itemBuilder: (context, index) {
                 if (index >= items.length - _nearEnd && !pages.done) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -179,21 +178,9 @@ class _MinePageState extends ConsumerState<_MinePage> {
   }
 }
 
-bool _declined(RequestItem item) =>
-    item.availability.state == AvailabilityState.unavailable &&
-    item.availability.reason != null;
-
-/// Two small lines and the room above them.
-double _noteHeight(TextScaler scaler) =>
-    4 +
-    2 *
-        (scaler.scale(KitText.xs.size) *
-                KitText.xs.lineHeight /
-                KitText.xs.size)
-            .ceilToDouble();
-
-/// Why a declined title isn't coming, under its card, with the note an
-/// admin left.
+/// Why a declined title isn't coming, under its card, and under that the
+/// note an admin left, each with two lines of its own, as the Kotlin
+/// app's `DeclinedNote`.
 class _DeclinedNote extends ConsumerWidget {
   const _DeclinedNote({required this.item});
 
@@ -212,26 +199,29 @@ class _DeclinedNote extends ConsumerWidget {
     if (reason == null || availability.state != AvailabilityState.unavailable) {
       return const SizedBox.shrink();
     }
-    final note = reason.note;
+    final note = reason.note?.trim();
     return Padding(
       padding: const EdgeInsets.only(top: 4),
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(text: declineText(reason, l)),
-            if (note != null)
-              TextSpan(
-                text: ' $note',
-                style: TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: colors.foreground.withValues(alpha: .7),
-                ),
-              ),
-          ],
-        ),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: KitText.xs.style(color: colors.mutedForeground),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            declineText(reason, l),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: KitText.xs.style(color: colors.mutedForeground),
+          ),
+          if (note != null && note.isNotEmpty)
+            Text(
+              note,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: KitText.xs
+                  .style(color: colors.foreground.withValues(alpha: .7))
+                  .copyWith(fontStyle: FontStyle.italic),
+            ),
+        ],
       ),
     );
   }
