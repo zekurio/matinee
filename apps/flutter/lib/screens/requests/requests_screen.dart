@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/link_opener.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/artwork.dart';
@@ -519,11 +520,16 @@ void _open(BuildContext context, AdminRequestItem item) {
   );
 }
 
-/// "Films · Radarr": where a request goes, and what fills it.
-String _whereText(AdminRequestItem item, AppLocalizations l) => [
-  item.library.name,
-  item.connection?.name ?? l.webRequestsNoConnection,
-].join(' · ');
+/// "Films · Radarr": where a request goes, the library chosen under
+/// "Goes to" for a waiting one, and what fills it.
+String _whereText(
+  RequestsState state,
+  AdminRequestItem item,
+  AppLocalizations l,
+) {
+  final goes = state.goesTo(item);
+  return [goes.name, goes.connection ?? l.webRequestsNoConnection].join(' · ');
+}
 
 /// A row's menu: what the list allows, and its title's page.
 Future<void> _showRowMenu(
@@ -549,12 +555,21 @@ Future<void> _showRowMenu(
         unawaited(hub.answer(l, item, answer));
       });
 
+      final remote = item.remoteUrl;
+      final connection = item.connection;
       return Sheet(
         title: item.title.name,
-        description: _whereText(item, l),
+        description: _whereText(ref.read(requestsProvider), item, l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (list == QueueList.waiting && choosesLibrary(item))
+              SheetItem(
+                icon: Lucide.libraryBig,
+                label: l.webRequestsGoesToTitle,
+                onPressed: () =>
+                    then(() => unawaited(showGoesToSheet(context, item))),
+              ),
             if (list == QueueList.waiting) ...[
               SheetItem(
                 icon: Lucide.check,
@@ -609,7 +624,68 @@ Future<void> _showRowMenu(
               label: l.webRequestsOpenTitle,
               onPressed: () => then(() => _open(context, item)),
             ),
+            if (remote != null && connection != null)
+              SheetItem(
+                icon: Lucide.externalLink,
+                label: l.webRequestsOpenRemote(connection.sourceName),
+                onPressed: () => then(
+                  () => unawaited(
+                    ref.read(linkOpenerProvider)(Uri.parse(remote)),
+                  ),
+                ),
+              ),
+            if (item.diagnostics.isNotEmpty)
+              SheetItem(
+                icon: Lucide.activity,
+                label: l.webRequestsDiagnostics,
+                onPressed: () =>
+                    then(() => unawaited(_showDiagnostics(context, item))),
+              ),
           ],
+        ),
+      );
+    },
+  );
+}
+
+/// What the connection reported about a request, label and value as the
+/// server words them, for an admin finding out why it's stuck.
+Future<void> _showDiagnostics(BuildContext context, AdminRequestItem item) {
+  final l = AppLocalizations.of(context);
+  return Sheet.show<void>(
+    context,
+    dismissLabel: l.diagnosticsClose,
+    builder: (sheet) {
+      final colors = MatineeTheme.of(sheet);
+      return Sheet(
+        title: l.webRequestsDiagnostics,
+        description: [item.title.name, ?item.connection?.name].join(' · '),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 12,
+            children: [
+              for (final entry in item.diagnostics)
+                Semantics(
+                  container: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 2,
+                    children: [
+                      Text(
+                        entry.label,
+                        style: KitText.xs.style(color: colors.mutedForeground),
+                      ),
+                      Text(
+                        entry.value,
+                        style: KitText.sm.style(color: colors.foreground),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       );
     },
@@ -636,6 +712,11 @@ class QueueRow extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final hub = ref.read(requestsProvider.notifier);
+    // Where a waiting one goes: its own library, or the one chosen under
+    // "Goes to".
+    final goes = ref.watch(
+      requestsProvider.select((state) => state.goesTo(item)),
+    );
     final people = askers(item);
     final first = people.firstOrNull;
     final small = KitText.xs.style(color: colors.mutedForeground);
@@ -663,7 +744,7 @@ class QueueRow extends ConsumerWidget {
                             : first.name,
                         ?relativeTime(first.createdAt, l),
                       ].join(' · '),
-                    item.library.name,
+                    goes.name,
                   ].join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -672,7 +753,7 @@ class QueueRow extends ConsumerWidget {
               ),
             ],
           ),
-          if (item.connection == null)
+          if (goes.connection == null)
             Text(
               l.webRequestsNoConnection,
               maxLines: 1,

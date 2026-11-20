@@ -165,6 +165,9 @@ JsonMap queueItemJson(
   String? arrivedAt,
   String? fulfilmentState,
   JsonMap? availability,
+  List<JsonMap> destinations = const [],
+  String? remoteUrl,
+  List<JsonMap> diagnostics = const [],
 }) => {
   ...requestJson(id, title, availability: availability),
   'arrivedAt': arrivedAt,
@@ -184,10 +187,18 @@ JsonMap queueItemJson(
       : null,
   'followers': followers ?? [followerJson('ben')],
   'destinationDescription': 'Movies',
-  'destinations': <Object>[],
-  'remoteUrl': null,
-  'diagnostics': <Object>[],
+  'destinations': destinations,
+  'remoteUrl': remoteUrl,
+  'diagnostics': diagnostics,
 };
+
+/// A library a waiting request could go to, for "Goes to".
+JsonMap destinationJson(
+  String id,
+  String name, {
+  bool selected = false,
+  String? connection = 'Radarr',
+}) => {'id': id, 'name': name, 'selected': selected, 'connection': connection};
 
 JsonMap queueJson({
   List<JsonMap> waiting = const [],

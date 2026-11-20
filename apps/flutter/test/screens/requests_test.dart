@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
+import 'package:matinee/core/link_opener.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/core/toasts.dart';
 import 'package:matinee/kit/kit.dart';
@@ -696,6 +697,188 @@ void main() {
       await _undoRunsOut(tester);
       expect(backend.sent.single.$1, '/api/v1/admin/requests/approve');
       expect((backend.sent.single.$2! as Map)['id'], 'q1');
+    });
+
+    group('an admin with libraries to choose from', () {
+      JsonMap choosing() => queueJson(
+        waiting: [
+          queueItemJson(
+            'q1',
+            summaryJson(
+              'a1',
+              'Anora',
+              availability: stateJson('asked', requestId: 'q1'),
+            ),
+            destinations: [
+              destinationJson('lib1', 'Movies', selected: true),
+              destinationJson('lib2', 'Movies in 4K', connection: 'Radarr 4K'),
+            ],
+          ),
+          queueItemJson(
+            'q2',
+            summaryJson(
+              'c1',
+              'Conclave',
+              availability: stateJson('asked', requestId: 'q2'),
+            ),
+          ),
+        ],
+      );
+
+      Future<void> chooseFourK(WidgetTester tester) async {
+        await tester.tap(find.text('Anora'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Goes to'));
+        await tester.pumpAndSettle();
+        // The libraries, each with what fills it, the current one ticked.
+        expect(find.text('Radarr 4K'), findsOneWidget);
+        await tester.tap(find.text('Movies in 4K'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('sends Add to the library chosen under Goes to', (
+        tester,
+      ) async {
+        final backend = RequestsBackend()..queue = choosing();
+        await pumpScreen(
+          tester,
+          _withToasts(const RequestsScreen(list: 'waiting')),
+          client: backend.client,
+          auth: _admin,
+        );
+        await chooseFourK(tester);
+        expect(find.textContaining('Movies in 4K'), findsOneWidget);
+        await tester.tap(find.text('Add').first);
+        await tester.pumpAndSettle();
+        await _undoRunsOut(tester);
+        expect(backend.sent.single.$1, '/api/v1/admin/requests/approve');
+        expect(backend.sent.single.$2, {'id': 'q1', 'libraryId': 'lib2'});
+      });
+
+      testWidgets('Add all sends a moved one on its own', (tester) async {
+        final backend = RequestsBackend()..queue = choosing();
+        await pumpScreen(
+          tester,
+          _withToasts(const RequestsScreen(list: 'waiting')),
+          client: backend.client,
+          auth: _admin,
+        );
+        await chooseFourK(tester);
+        await tester.tap(find.text('Add all 2'));
+        await tester.pumpAndSettle();
+        await _undoRunsOut(tester);
+        expect(backend.sentPaths, [
+          '/api/v1/admin/requests/approve',
+          '/api/v1/admin/requests/approve-all',
+        ]);
+        expect(backend.sent[0].$2, {'id': 'q1', 'libraryId': 'lib2'});
+        expect(backend.sent[1].$2, {
+          'ids': ['q2'],
+        });
+      });
+
+      testWidgets('the title page says where Add sends it', (tester) async {
+        final backend = RequestsBackend()
+          ..queue = choosing()
+          ..answers['/api/v1/catalog/details'] = detailJson(
+            'a1',
+            'Anora',
+            availability: stateJson('asked', requestId: 'q1'),
+          )
+          ..answers['/api/v1/catalog/related'] = {
+            'rails': <Object>[],
+            'stale': false,
+          };
+        await pumpScreen(
+          tester,
+          const CatalogScreen(
+            catalogKey: (
+              kind: 'movie',
+              provider: 'tmdb',
+              providerId: 'a1',
+              libraryId: null,
+            ),
+          ),
+          client: backend.client,
+          auth: _admin,
+        );
+        expect(find.text('Add to Movies'), findsOneWidget);
+        await tester.tap(
+          find.bySemanticsLabel('Change where Anora goes, now Movies'),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Movies in 4K'));
+        await tester.pumpAndSettle();
+        expect(find.text('Add to Movies in 4K'), findsOneWidget);
+        await expectLater(
+          find.byType(CatalogScreen),
+          matchesGoldenFile('goldens/catalog_goes_to_phone_dark.png'),
+        );
+      });
+
+      testWidgets('the Goes to sheet', (tester) async {
+        final backend = RequestsBackend()..queue = choosing();
+        await pumpScreen(
+          tester,
+          const RequestsScreen(list: 'waiting'),
+          client: backend.client,
+          auth: _admin,
+          size: const Size(412, 915),
+        );
+        await tester.tap(find.text('Anora'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Goes to'));
+        await tester.pumpAndSettle();
+        await expectLater(
+          find.byType(Overlay).first,
+          matchesGoldenFile('goldens/goes_to_sheet_phone_dark.png'),
+        );
+      });
+    });
+
+    testWidgets('a row opens its request in the connection, and what it says', (
+      tester,
+    ) async {
+      final opened = <Uri>[];
+      final backend = RequestsBackend()
+        ..queue = queueJson(
+          needsAttention: [
+            queueItemJson(
+              'q3',
+              summaryJson('c1', 'Conclave'),
+              status: 'approved',
+              error: 'Radarr said the root folder is missing',
+              remoteUrl: 'https://radarr.example/movie/12',
+              diagnostics: [
+                {'label': 'Queue status', 'value': 'warning'},
+                {'label': 'Indexer', 'value': 'No results for 2160p'},
+              ],
+            ),
+          ],
+        );
+      await pumpScreen(
+        tester,
+        const RequestsScreen(list: 'needsAttention'),
+        client: backend.client,
+        auth: _admin,
+        overrides: [
+          linkOpenerProvider.overrideWithValue((url) async => opened.add(url)),
+        ],
+      );
+      await tester.tap(find.text('Conclave'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('What the connection reports'));
+      await tester.pumpAndSettle();
+      expect(find.text('Queue status'), findsOneWidget);
+      expect(find.text('No results for 2160p'), findsOneWidget);
+      // Away from the sheet, over the page.
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Conclave'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open in Radarr'));
+      await tester.pumpAndSettle();
+      expect(opened, [Uri.parse('https://radarr.example/movie/12')]);
     });
 
     testWidgets('Undo keeps an answer from being sent', (tester) async {

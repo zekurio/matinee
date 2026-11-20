@@ -6415,6 +6415,10 @@
       }
     }
   },
+  "webRequestsDiagnostics": "What the connection reports",
+  "@webRequestsDiagnostics": {
+    "description": "A request's diagnostics from the connection that fills it, as the server words them: the menu item and the sheet's title."
+  },
   "webRequestsDoneArrived": "Arrived {p1}",
   "@webRequestsDoneArrived": {
     "description": "strings_web_requests.xml",

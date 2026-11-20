@@ -13,6 +13,7 @@ const out = join(root, "lib/kit/lucide.g.dart")
 
 // Mirrors Android's Lucide object, with two additional Sonner status icons.
 const resources = {
+  activity: "activity",
   arrowLeft: "arrow-left",
   arrowUpDown: "arrow-up-down",
   audioLines: "audio-lines",
@@ -34,6 +35,7 @@ const resources = {
   compass: "compass",
   download: "download",
   ellipsis: "ellipsis",
+  externalLink: "external-link",
   eyeOff: "eye-off",
   fastForward: "fast-forward:filled",
   film: "film",

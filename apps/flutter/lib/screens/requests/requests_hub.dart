@@ -47,6 +47,7 @@ final class RequestsState {
     this.version = 0,
     this.busy = const {},
     this.held = const {},
+    this.moves = const {},
     this.queue,
   });
 
@@ -65,9 +66,37 @@ final class RequestsState {
   /// goes, by id.
   final Set<String> held;
 
+  /// Where an admin chose to send waiting requests instead of where they
+  /// go now, library by request id, as the web's "Goes to". It's only
+  /// sent with Add.
+  final Map<String, String> moves;
+
   /// The admin's queue as the server streams it; null for everyone else
   /// and until it answers.
   final RequestQueue? queue;
+
+  /// The library [item] goes to: the one an admin chose under "Goes to",
+  /// else the one the server selected, else the one it's in.
+  ({String id, String name, String? connection}) goesTo(AdminRequestItem item) {
+    final chosen = moves[item.id];
+    AdminRequestDestination? pick;
+    for (final each in item.destinations) {
+      if (each.id == chosen) pick = each;
+    }
+    if (pick == null) {
+      for (final each in item.destinations) {
+        if (each.selected) pick = each;
+      }
+    }
+    if (pick != null) {
+      return (id: pick.id, name: pick.name, connection: pick.connection);
+    }
+    return (
+      id: item.library.id,
+      name: item.library.name,
+      connection: item.connection?.name,
+    );
+  }
 
   /// How many requests wait for the admin or need them, less the ones held
   /// for Undo.
@@ -99,12 +128,14 @@ final class RequestsState {
     int? version,
     Set<String>? busy,
     Set<String>? held,
+    Map<String, String>? moves,
     ValueGetter<RequestQueue?>? queue,
   }) => RequestsState(
     live: live ?? this.live,
     version: version ?? this.version,
     busy: busy ?? this.busy,
     held: held ?? this.held,
+    moves: moves ?? this.moves,
     queue: queue == null ? this.queue : queue(),
   );
 }
@@ -144,6 +175,10 @@ final class AllowAgainAnswer extends QueueAnswer {
 final class AddAfterAllAnswer extends QueueAnswer {
   const AddAfterAllAnswer();
 }
+
+/// Whether a waiting request could go to another library than its own,
+/// so "Goes to" offers a choice.
+bool choosesLibrary(AdminRequestItem item) => item.destinations.length > 1;
 
 /// Whether the signed-in account is an admin, the one the server lets
 /// answer requests.
@@ -212,6 +247,28 @@ final class RequestsHub extends Notifier<RequestsState> {
 
   void _busy(String key, bool on) => state = state.copyWith(
     busy: on ? {...state.busy, key} : ({...state.busy}..remove(key)),
+  );
+
+  /// Sends waiting request [id] to [libraryId] when it's added, or back to
+  /// where the server would send it with null.
+  void move(String id, String? libraryId) => state = state.copyWith(
+    moves: libraryId == null
+        ? ({...state.moves}..remove(id))
+        : {...state.moves, id: libraryId},
+  );
+
+  /// The library a move sends [item] to on Add, or null to leave it where
+  /// it is.
+  String? _movedTo(AdminRequestItem item) {
+    final chosen = state.moves[item.id];
+    for (final each in item.destinations) {
+      if (each.id == chosen) return each.selected ? null : chosen;
+    }
+    return null;
+  }
+
+  void _settleMoves(Iterable<String> ids) => state = state.copyWith(
+    moves: {...state.moves}..removeWhere((id, _) => ids.contains(id)),
   );
 
   void _hold(Iterable<String> ids, bool on) => state = state.copyWith(
@@ -310,6 +367,8 @@ final class RequestsHub extends Notifier<RequestsState> {
     final api = _api;
     if (api == null) return;
     final name = item.title.name;
+    // Read now: the choice is the one made before Add was pressed.
+    final movedTo = _movedTo(item);
     _hold([item.id], true);
     final result = await _toasts.show(
       switch (answer) {
@@ -330,7 +389,10 @@ final class RequestsHub extends Notifier<RequestsState> {
     }
     try {
       await switch (answer) {
-        AddAnswer() => api.admin.requests.approve(id: item.id),
+        AddAnswer() => api.admin.requests.approve(
+          id: item.id,
+          libraryId: movedTo,
+        ),
         DeclineAnswer(:final reason, :final note) => api.admin.requests.decline(
           id: item.id,
           reason: reason,
@@ -347,7 +409,10 @@ final class RequestsHub extends Notifier<RequestsState> {
           RequestId(id: item.id),
         ),
       };
-      if (ref.mounted) bump();
+      if (ref.mounted) {
+        if (answer is AddAnswer) _settleMoves([item.id]);
+        bump();
+      }
     } on Object catch (cause) {
       _fail(l, switch (answer) {
         AddAnswer() => l.webRequestsToastAddFailed,
@@ -371,6 +436,15 @@ final class RequestsHub extends Notifier<RequestsState> {
     final api = _api;
     if (api == null || items.isEmpty) return;
     final ids = [for (final item in items) item.id];
+    // A move is one approve each, with its library; the rest go together.
+    final moved = [
+      for (final item in items)
+        if (_movedTo(item) case final library?) (item.id, library),
+    ];
+    final rest = [
+      for (final id in ids)
+        if (!moved.any((move) => move.$1 == id)) id,
+    ];
     _hold(ids, true);
     final result = await _toasts.show(
       l.webRequestsToastAddedMany(items.length),
@@ -381,8 +455,14 @@ final class RequestsHub extends Notifier<RequestsState> {
     if (!ref.mounted) return;
     if (result != ToastResult.action) {
       try {
-        await api.admin.requests.approveAll(ids: ids);
-        if (ref.mounted) bump();
+        for (final (id, library) in moved) {
+          await api.admin.requests.approve(id: id, libraryId: library);
+        }
+        if (rest.isNotEmpty) await api.admin.requests.approveAll(ids: rest);
+        if (ref.mounted) {
+          _settleMoves(ids);
+          bump();
+        }
         await Future<void>.delayed(const Duration(seconds: 1));
       } on Object catch (cause) {
         _fail(l, l.webRequestsToastAddFailed, cause);

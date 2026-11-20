@@ -1213,6 +1213,7 @@
   "webRequestsDeclineReason": "Grund",
   "webRequestsDeclineSubmit": "Ablehnen",
   "webRequestsDeclineTitle": "{p1} ablehnen",
+  "webRequestsDiagnostics": "Was die Verbindung meldet",
   "webRequestsDoneArrived": "{p1} angekommen",
   "webRequestsDoneDeclined": "{p1} abgelehnt",
   "webRequestsDoneDeclinedUndated": "Abgelehnt",

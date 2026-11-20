@@ -411,8 +411,15 @@ with why a declined title isn't coming. `Routes.requests(list)` is an
 admin's queue: Waiting, with Add, Add all, and Decline with a reason and
 a note; Needs attention, with Retry and Give up; On the way, with
 progress; and Done, a page at a time, where a declined request can be
-added after all or allowed again. Each row's menu opens the title. An
-account that isn't an admin gets its own requests on either route.
+added after all or allowed again. Each row's menu opens the title, the
+request in its connection's own app when the server sends a link
+(`remoteUrl`), and what the connection reports about it
+(`diagnostics`, in the server's words). A waiting request that could go
+to more than one library gets "Goes to" in its menu, and on the
+catalog's page "Add to Films" with the libraries beside it, as the web
+has them: the choice is kept by request (`RequestsState.moves`) and only
+sent with Add, and Add all sends a moved one on its own. An account that
+isn't an admin gets its own requests on either route.
 
 ## People
 

@@ -686,7 +686,9 @@ String requestedText(AdminRequestItem item, AppLocalizations l) {
 
 /// An admin's Add for a waiting request, where everyone else's Request
 /// sits and in its style, held for the toast's Undo as the queue holds it.
-/// [page] draws it leading a catalog page's row, as large as Play.
+/// [page] draws it leading a catalog page's row, as large as Play. When
+/// the request could go to another library, it says "Add to Films" and
+/// has the "Goes to" menu beside it, as the web's.
 class AddButton extends ConsumerWidget {
   const AddButton({super.key, required this.item, this.page = false});
 
@@ -696,21 +698,84 @@ class AddButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    return MatineeButton(
-      size: page ? ButtonSize.xl : ButtonSize.standard,
+    final size = page ? ButtonSize.xl : ButtonSize.standard;
+    final choice = choosesLibrary(item);
+    final library = ref.watch(
+      requestsProvider.select((state) => state.goesTo(item).name),
+    );
+    final radius = Radius.circular(size.radius);
+    final add = MatineeButton(
+      size: size,
       leading: Lucide.check,
-      label: l.webRequestsAddNamed(item.title.name),
+      label: choice
+          ? l.webRequestsAddTo(library)
+          : l.webRequestsAddNamed(item.title.name),
+      shape: choice ? BorderRadiusDirectional.horizontal(start: radius) : null,
       onPressed: () => unawaited(
         ref.read(requestsProvider.notifier).answer(l, item, const AddAnswer()),
       ),
       child: Text(
-        l.webRequestsAdd,
+        choice ? l.webRequestsAddTo(library) : l.webRequestsAdd,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
     );
+    if (!choice) return add;
+    return Row(
+      mainAxisSize: page ? MainAxisSize.max : MainAxisSize.min,
+      spacing: 1,
+      children: [
+        if (page) Expanded(child: add) else Flexible(child: add),
+        MatineeButton(
+          size: size,
+          leading: Lucide.chevronDown,
+          label: l.webRequestsGoesToChange(item.title.name, library),
+          shape: BorderRadiusDirectional.horizontal(end: radius),
+          onPressed: () => unawaited(showGoesToSheet(context, item)),
+        ),
+      ],
+    );
   }
+}
+
+/// "Goes to": the libraries a waiting request could go to, the one it
+/// goes to now ticked, each with the connection that fills it. The choice
+/// is kept by request and only sent with Add.
+Future<void> showGoesToSheet(BuildContext context, AdminRequestItem item) {
+  final l = AppLocalizations.of(context);
+  return Sheet.show<void>(
+    context,
+    dismissLabel: l.commonCancel,
+    builder: (sheet) => Consumer(
+      builder: (context, ref, _) {
+        final current = ref.watch(
+          requestsProvider.select((state) => state.goesTo(item).id),
+        );
+        return Sheet(
+          title: l.webRequestsGoesToTitle,
+          description: item.title.name,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final library in item.destinations)
+                RadioRow(
+                  label: library.name,
+                  detail: library.connection ?? l.webRequestsNoConnection,
+                  selected: library.id == current,
+                  onPressed: () {
+                    ref
+                        .read(requestsProvider.notifier)
+                        .move(item.id, library.selected ? null : library.id);
+                    Navigator.of(sheet).pop();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    ),
+  );
 }
 
 /// The quiet button beside [AddButton], opening the Decline sheet.
