@@ -157,19 +157,21 @@ Future<bool> sendChange(
 /// Marks [name] unwatched at once, or asks when it was watched and marks it
 /// with the answer, as the web's tick does. [pending] hears the value the
 /// page should show before the server answers, and null when it refused.
+/// [ask] asks in place of the phone's sheet, as a TV's panel does.
 Future<void> toggleWatched(
   BuildContext context, {
   required bool watched,
   required String name,
   required Future<void> Function(MatineeApi api, bool watched, String? at) send,
   void Function(bool? pending)? pending,
+  Future<WatchedWhen?> Function(BuildContext context, String name)? ask,
 }) async {
   final container = ProviderScope.containerOf(context, listen: false);
   final l = AppLocalizations.of(context);
   final to = !watched;
   String? at;
   if (to) {
-    final answer = await askWatchedAt(context, name);
+    final answer = await (ask ?? askWatchedAt)(context, name);
     if (answer == null) return;
     at = answer.at;
   }
@@ -449,7 +451,7 @@ class _ActionsSheet extends ConsumerWidget {
           SheetItem(
             icon: Lucide.playOutline,
             label: l.titlePlay,
-            onPressed: () => run((context) => _playTitle(context, title)),
+            onPressed: () => run((context) => playTitle(context, title)),
           ),
         if (file != null && isResuming(file)) _fromStart(l, file, run),
         if (!here) ...[
@@ -503,7 +505,7 @@ class _ActionsSheet extends ConsumerWidget {
             icon: Lucide.eyeOff,
             label: l.webDiscoverNotInterested,
             onPressed: () =>
-                run((context) => _notInterested(context, title, recommended)),
+                run((context) => notInterested(context, title, recommended)),
           ),
         MetadataItems(
           title: title,
@@ -668,7 +670,7 @@ class _ActionsSheet extends ConsumerWidget {
 }
 
 /// Plays what the server names next for [title], or says it has nothing.
-Future<void> _playTitle(BuildContext context, TitleSummary title) async {
+Future<void> playTitle(BuildContext context, TitleSummary title) async {
   final container = ProviderScope.containerOf(context, listen: false);
   final l = AppLocalizations.of(context);
   final toasts = container.read(toastProvider);
@@ -721,7 +723,7 @@ Future<void> _downloadTitle(BuildContext context, TitleSummary title) async {
 }
 
 /// Leaves a recommended title out of the viewer's recommendations.
-Future<void> _notInterested(
+Future<void> notInterested(
   BuildContext context,
   TitleSummary title,
   CatalogRef ref,

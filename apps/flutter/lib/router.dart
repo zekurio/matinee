@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'api/matinee_api.dart' show ImageTarget, TitleKind;
 import 'core/device.dart';
 import 'core/session.dart';
+import 'kit/tv/tv_metrics.dart';
 import 'player/offline_playback_screen.dart';
 import 'player/player_lab.dart';
 import 'screens/downloads/downloads_screen.dart';
@@ -35,6 +36,8 @@ import 'screens/sign_in/unreachable_screen.dart';
 import 'screens/title/episode_screen.dart';
 import 'screens/title/season_screen.dart';
 import 'screens/title/title_screen.dart';
+import 'screens/tv/tv_home.dart';
+import 'screens/tv/tv_shell.dart';
 
 /// Every place in the app, as the paths go_router opens. Screens navigate
 /// with these, `context.push(Routes.title(id))`, never with a path typed
@@ -473,7 +476,114 @@ List<RouteBase> _handsetRoutes() => [
 bool get _hasPlayerLab =>
     kDebugMode && defaultTargetPlatform == TargetPlatform.android;
 
-List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
+/// The TV's pages, under its drawer, as the Kotlin app's `TvSignedInApp`:
+/// the phone's paths, TV screens. The pages from the drawer sit over Home,
+/// so Back goes there; the rest open over whatever opened them. There's no
+/// downloads page, no admin page, no image editor or identify, no
+/// requests, and no single library's grid: the drawer's Movies and Shows
+/// take every library at once.
+List<RouteBase> _tvRoutes() => [
+  ShellRoute(
+    navigatorKey: tvPagesKey,
+    builder: (context, state, child) =>
+        TvShell(stack: _tvStack(GoRouter.of(context)), pages: child),
+    routes: [
+      _tv(
+        Routes.home,
+        (state) => const TvHomeScreen(),
+        routes: [
+          _tv(
+            Routes.search.substring(1),
+            (state) => _pendingTv(state, 'TV search'),
+          ),
+          _tv(
+            Routes.favorites.substring(1),
+            (state) => _pendingTv(state, 'TV favorites'),
+          ),
+          _tv(
+            Routes.movies.substring(1),
+            (state) => _pendingTv(state, 'TV movies'),
+          ),
+          _tv(
+            Routes.shows.substring(1),
+            (state) => _pendingTv(state, 'TV shows'),
+          ),
+          _tv(
+            Routes.profile.substring(1),
+            (state) => _pendingTv(state, 'TV profile'),
+          ),
+          _tv(
+            Routes.settings.substring(1),
+            (state) => _pendingTv(state, 'TV settings'),
+          ),
+        ],
+      ),
+      _tv(Routes.recent, (state) => _pendingTv(state, 'TV recent')),
+      _tv('/settings/:page', (state) => _pendingTv(state, 'TV settings page')),
+      _tv('/title/:id', (state) => _pendingTv(state, 'TV title')),
+      _tv(
+        '/title/:id/season/:season',
+        (state) => _pendingTv(state, 'TV season'),
+      ),
+      _tv('/episode/:id', (state) => _pendingTv(state, 'TV episode')),
+      _tv('/person/:name', (state) => _pendingTv(state, 'TV person')),
+      _tv('/browse', (state) => _pendingTv(state, 'TV browse')),
+    ],
+  ),
+];
+
+Widget _pendingTv(GoRouterState state, String name) =>
+    PendingScreen(name: name, location: state.uri);
+
+/// A TV page at [path], fading in as the last fades out. A page under
+/// Home takes its path without the slash.
+GoRoute _tv(
+  String path,
+  Widget Function(GoRouterState state) screen, {
+  List<RouteBase> routes = const [],
+}) => GoRoute(
+  path: path,
+  routes: routes,
+  pageBuilder: (context, state) => CustomTransitionPage<void>(
+    key: state.pageKey,
+    transitionDuration: TvMotion.enter + TvMotion.exit,
+    reverseTransitionDuration: TvMotion.enter + TvMotion.exit,
+    transitionsBuilder: (context, animation, secondary, child) =>
+        FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: const Interval(.4, 1, curve: TvMotion.easing),
+          ),
+          child: FadeTransition(
+            opacity: Tween<double>(begin: 1, end: 0).animate(
+              CurvedAnimation(
+                parent: secondary,
+                curve: const Interval(0, .4, curve: TvMotion.exitEasing),
+              ),
+            ),
+            child: child,
+          ),
+        ),
+    child: TvPageFrame(child: screen(state)),
+  ),
+);
+
+/// The paths of the TV pages open, bottom first.
+List<String> _tvStack(GoRouter router) {
+  final paths = <String>[];
+  void walk(List<RouteMatchBase> matches) {
+    for (final match in matches) {
+      if (match is ShellRouteMatch) {
+        walk(match.matches);
+      } else if (match is RouteMatch) {
+        paths.add(match.matchedLocation);
+      }
+    }
+  }
+
+  walk(router.routerDelegate.currentConfiguration.matches);
+  return paths;
+}
 
 /// The pages over the tabs, by path pattern, until each has its screen.
 const _pages = <(String, String)>[];
