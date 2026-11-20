@@ -2623,6 +2623,49 @@
       }
     }
   },
+  "requestsAgoNow": "just now",
+  "@requestsAgoNow": {
+    "description": "When a request was made, under a minute ago"
+  },
+  "requestsAgoMinutes": "{count, plural, one{{count} minute ago} other{{count} minutes ago}}",
+  "@requestsAgoMinutes": {
+    "description": "When a request was made, minutes ago",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestsAgoHours": "{count, plural, one{{count} hour ago} other{{count} hours ago}}",
+  "@requestsAgoHours": {
+    "description": "When a request was made, hours ago",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestsAgoDays": "{count, plural, one{yesterday} other{{count} days ago}}",
+  "@requestsAgoDays": {
+    "description": "When a request was made, days ago, within the week",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestsListAnd": "{p1} and {p2}",
+  "@requestsListAnd": {
+    "description": "The last two names in a list of who requested a title",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
   "requestsSpanDays": "{count, plural, one{{count} day} other{{count} days}}",
   "@requestsSpanDays": {
     "description": "strings.xml",
