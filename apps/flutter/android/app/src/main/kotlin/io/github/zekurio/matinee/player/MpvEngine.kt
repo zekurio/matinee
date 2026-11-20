@@ -85,6 +85,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
     }
 
     override fun open(request: OpenMessage) {
+        require(request.headers.isEmpty()) { "Authenticated mpv requests must use the playback relay." }
         ContextCompat.registerReceiver(
             app, noisy, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), ContextCompat.RECEIVER_NOT_EXPORTED,
         )
@@ -121,11 +122,6 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
                 }
                 setOption("tls-verify", "yes")
                 setOption("tls-ca-file", certificates.path)
-                if (request.headers.isNotEmpty()) {
-                    setOption("http-header-fields", request.headers.entries.joinToString(",") { (name, value) ->
-                        "$name: ${value.replace("\\", "\\\\").replace(",", "\\,")}"
-                    })
-                }
             }
             player = mpv
             mpv.setLogLevel("error")

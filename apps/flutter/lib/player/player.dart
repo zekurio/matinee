@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 import '../platform/player.g.dart' as wire;
+import 'playback_relay.dart';
 import 'player_events.dart';
 import 'player_state.dart';
 

@@ -102,6 +102,28 @@ void main() {
     },
   );
 
+  test(
+    'mpv receives loopback URLs and no credentials for video or sidecars',
+    () async {
+      final player = Player();
+      addTearDown(player.dispose);
+      await player.open(
+        'https://media.example/video?signature=test',
+        headers: const {'Authorization': 'Bearer test'},
+        tracks: const SourceTracks(
+          subtitleUrl: 'https://media.example/sub.sup?signature=test',
+        ),
+      );
+      final request = native.named('open').single[1]! as wire.OpenMessage;
+      expect(request.headers, isEmpty);
+      final video = Uri.parse(request.url);
+      final subtitle = Uri.parse(request.tracks!.subtitleUrl!);
+      expect(video.host, '127.0.0.1');
+      expect(subtitle.origin, video.origin);
+      expect(video.hasQuery || subtitle.hasQuery, isFalse);
+    },
+  );
+
   test('commands carry the session and convert units', () async {
     final player = Player();
     await player.seekTo(const Duration(seconds: 12));
@@ -205,7 +227,7 @@ void main() {
     final player = Player();
     await player.open('https://example.test/a.mkv');
     expect(player.state.phase, PlaybackPhase.error);
-    expect(player.state.status.message, 'No such engine.');
+    expect(player.state.status.message, 'Could not open the player.');
     await player.dispose();
   });
 

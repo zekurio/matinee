@@ -13,6 +13,7 @@ class _PigeonPlayer implements Player {
   bool _disposed = false;
   VideoFit _fit = VideoFit.contain;
   Rect? _viewport;
+  PlaybackRelay? _relay;
 
   @override
   PlaybackState get state => _state;
@@ -54,12 +55,25 @@ class _PigeonPlayer implements Player {
       }),
       messageChannelSuffix: '$session',
     );
+    _relay?.close();
+    _relay = null;
     try {
+      if (_engine == PlayerEngine.mpv && headers.isNotEmpty) {
+        // Binding can yield to a back press or another open. Release the
+        // previous native engine before dispose starts targeting the new id.
+        if (previous != null) await _api.dispose(previous);
+        final relay = await PlaybackRelay.open(Uri.parse(url), headers);
+        if (_session != session || _lastSession != session) {
+          relay.close();
+          return;
+        }
+        _relay = relay;
+      }
       await _api.open(
         session,
         wire.OpenMessage(
-          url: url,
-          headers: headers,
+          url: _relay?.url(url) ?? url,
+          headers: _relay == null ? headers : const {},
           startMs: startPosition.inMilliseconds,
           engine: switch (_engine) {
             PlayerEngine.mpv => wire.EngineMessage.mpv,
@@ -77,7 +91,7 @@ class _PigeonPlayer implements Player {
           autoplay: autoplay,
         ),
       );
-    } on PlatformException catch (failure) {
+    } on Exception {
       if (_session == session) {
         _update(
           reducePlayback(
@@ -85,7 +99,7 @@ class _PigeonPlayer implements Player {
             StatusChanged((
               phase: PlaybackPhase.error,
               playing: false,
-              message: failure.message ?? failure.code,
+              message: 'Could not open the player.',
             )),
           ),
         );
@@ -120,8 +134,12 @@ class _PigeonPlayer implements Player {
       _command((session) => _api.setSourceTracks(session, _wireTracks(tracks)));
 
   @override
-  Future<void> setSubtitleUrl(String? url) =>
-      _command((session) => _api.setSubtitleUrl(session, url));
+  Future<void> setSubtitleUrl(String? url) => _command(
+    (session) => _api.setSubtitleUrl(
+      session,
+      url == null ? null : _relay?.url(url) ?? url,
+    ),
+  );
 
   @override
   Future<void> setVideoFit(VideoFit fit) {
@@ -142,6 +160,8 @@ class _PigeonPlayer implements Player {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _relay?.close();
+    _relay = null;
     final session = _session;
     _session = null;
     _state = const PlaybackState();
@@ -172,12 +192,14 @@ class _PigeonPlayer implements Player {
     wire.PlayerEventsApi.setUp(null, messageChannelSuffix: '$session');
   }
 
-  static wire.SourceTracksMessage _wireTracks(SourceTracks tracks) =>
+  wire.SourceTracksMessage _wireTracks(SourceTracks tracks) =>
       wire.SourceTracksMessage(
         audioIndex: tracks.audioIndex,
         audioOrdinal: tracks.audioOrdinal,
         subtitleIndex: tracks.subtitleIndex,
-        subtitleUrl: tracks.subtitleUrl,
+        subtitleUrl: tracks.subtitleUrl == null
+            ? null
+            : _relay?.url(tracks.subtitleUrl!) ?? tracks.subtitleUrl,
         subtitleOffset: tracks.subtitleOffset,
       );
 
