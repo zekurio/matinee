@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' as material;
-import 'package:flutter/services.dart' show TextInputAction;
+import 'package:flutter/services.dart'
+    show TextCapitalization, TextInputAction, TextInputFormatter;
 import 'package:flutter/widgets.dart';
 
 import 'icon.dart';
@@ -23,6 +24,9 @@ class MatineeTextField extends StatefulWidget {
     this.keyboardType,
     this.textInputAction,
     this.autofillHints,
+    this.inputFormatters,
+    this.textCapitalization = TextCapitalization.none,
+    this.autocorrect = true,
     this.onChanged,
     this.onSubmitted,
   });
@@ -43,6 +47,13 @@ class MatineeTextField extends StatefulWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
+
+  /// What the field lets in, as only digits for a year.
+  final List<TextInputFormatter>? inputFormatters;
+  final TextCapitalization textCapitalization;
+
+  /// Off for codes, which the keyboard shouldn't change.
+  final bool autocorrect;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
 
@@ -132,6 +143,10 @@ class _MatineeTextFieldState extends State<MatineeTextField> {
                                 keyboardType: widget.keyboardType,
                                 textInputAction: widget.textInputAction,
                                 autofillHints: widget.autofillHints,
+                                inputFormatters: widget.inputFormatters,
+                                textCapitalization: widget.textCapitalization,
+                                autocorrect: widget.autocorrect,
+                                enableSuggestions: widget.autocorrect,
                                 onChanged: widget.onChanged,
                                 onSubmitted: widget.onSubmitted,
                                 style: textStyle,

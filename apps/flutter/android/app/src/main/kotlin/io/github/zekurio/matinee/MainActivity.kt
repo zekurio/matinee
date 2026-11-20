@@ -3,6 +3,7 @@
 package io.github.zekurio.matinee
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.tv.TvContract
 import android.os.Build
@@ -18,6 +19,8 @@ import io.github.zekurio.matinee.platform.DeviceFacts
 import io.github.zekurio.matinee.platform.DisplayNameKind
 import io.github.zekurio.matinee.player.PlayerApi
 import io.github.zekurio.matinee.player.PlayerBridge
+import io.github.zekurio.matinee.system.SystemApi
+import io.github.zekurio.matinee.system.SystemBridge
 import java.io.File
 import java.io.IOException
 import java.net.Inet4Address
@@ -31,6 +34,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 @OptIn(UnstableApi::class)
 class MainActivity : FlutterActivity() {
     private val device by lazy { Device(this) }
+    private val system by lazy { SystemBridge(this) }
     private var playback: PlayerBridge? = null
 
     // Flutter paints into a transparent Android TextureView above the video SurfaceView.
@@ -42,6 +46,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         DeviceApi.setUp(messenger, device)
+        SystemApi.setUp(messenger, system)
         val bridge = PlayerBridge(this, messenger)
         playback = bridge
         PlayerApi.setUp(messenger, bridge)
@@ -60,6 +65,7 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         // The engine may outlive the activity, but the video views and mpv don't.
         playback?.release()
+        system.release()
         super.onDestroy()
     }
 
@@ -67,9 +73,18 @@ class MainActivity : FlutterActivity() {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         PlayerApi.setUp(messenger, null)
         DeviceApi.setUp(messenger, null)
+        SystemApi.setUp(messenger, null)
         playback?.release()
         playback = null
         super.cleanUpFlutterEngine(flutterEngine)
+    }
+
+    // FlutterActivity is a plain Activity, without androidx.activity's
+    // result APIs, so what the bridges start answers here. Plugins get the rest.
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (!system.onActivityResult(requestCode, resultCode, data)) {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

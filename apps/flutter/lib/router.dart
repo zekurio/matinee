@@ -3,13 +3,15 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'api/matinee_api.dart' show TitleKind;
+import 'api/matinee_api.dart' show ImageTarget, TitleKind;
 import 'core/device.dart';
 import 'core/session.dart';
 import 'player/playback_screen.dart';
 import 'player/player_lab.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/library/library_screen.dart';
+import 'screens/metadata/identify_screen.dart';
+import 'screens/metadata/images_screen.dart';
 import 'screens/pending.dart';
 import 'screens/person/person_screen.dart';
 import 'screens/profile/lists_screens.dart';
@@ -382,6 +384,29 @@ List<RouteBase> _handsetRoutes() => [
     ),
   ),
   GoRoute(
+    path: '/identify/:titleId',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        IdentifyScreen(titleId: state.pathParameters['titleId']!),
+  ),
+  GoRoute(
+    path: '/images/:titleId',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) {
+      final season = int.tryParse(state.uri.queryParameters['season'] ?? '');
+      return ImagesScreen(
+        target: ImageTarget(
+          titleId: state.pathParameters['titleId']!,
+          season: season,
+          // An episode's only with its season.
+          episode: season == null
+              ? null
+              : int.tryParse(state.uri.queryParameters['episode'] ?? ''),
+        ),
+      );
+    },
+  ),
+  GoRoute(
     path: '/browse',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => BrowseScreen(
@@ -422,8 +447,6 @@ List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 const _pages = [
   ('/link-device', 'Link a device'),
   ('/downloads/show/:titleId', 'Show downloads'),
-  ('/identify/:titleId', 'Identify'),
-  ('/images/:titleId', 'Images'),
 ];
 
 GoRoute _pending(

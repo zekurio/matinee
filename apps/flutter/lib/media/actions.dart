@@ -12,6 +12,7 @@ import '../kit/kit.dart';
 import '../l10n/app_localizations.dart';
 import '../router.dart';
 import 'format.dart';
+import 'metadata_items.dart';
 import 'watched_at.dart';
 
 /// What changes the person makes to what they watched and like: the
@@ -238,14 +239,15 @@ final class SeasonActions extends ActionTarget {
 }
 
 /// Whether [target]'s menu holds anything. One opened on its own page has
-/// only Play from the start for now, since downloads and an admin's items
-/// aren't in this app yet, so the page leaves its button out without it.
-bool hasActions(ActionTarget target) {
+/// only Play from the start and, for an [admin], the metadata items, since
+/// downloads aren't in this app yet, so the page leaves its button out
+/// without them.
+bool hasActions(ActionTarget target, {bool admin = false}) {
   if (!target.here) return true;
   return switch (target) {
-    ItemActions(:final item) => isResuming(item),
-    TitleActions(:final file) => isResuming(file),
-    SeasonActions() => false,
+    ItemActions(:final item) => admin || isResuming(item),
+    TitleActions(:final file) => admin || isResuming(file),
+    SeasonActions(:final season) => admin && season.number != null,
   };
 }
 
@@ -366,6 +368,27 @@ class _ActionsSheet extends StatelessWidget {
           ] else if (title != null)
             _link(l.mediaHeroDetails, Lucide.info, Routes.title(title.id), run),
         ],
+        // A movie's file is the movie, so it has the movie's; an episode
+        // has its still.
+        if (title != null)
+          MetadataItems(
+            title: title,
+            images: switch ((
+              title.kind,
+              item.seasonNumber,
+              item.episodeNumber,
+            )) {
+              (TitleKind.movie, _, _) => ImageTarget(titleId: title.id),
+              (_, final season?, final episode?) => ImageTarget(
+                titleId: title.id,
+                season: season,
+                episode: episode,
+              ),
+              _ => null,
+            },
+            matchable: title.kind != TitleKind.show,
+            onPicked: run,
+          ),
       ],
     );
   }
@@ -429,6 +452,12 @@ class _ActionsSheet extends StatelessWidget {
             onPressed: () =>
                 run((context) => _notInterested(context, title, recommended)),
           ),
+        MetadataItems(
+          title: title,
+          images: ImageTarget(titleId: title.id),
+          matchable: true,
+          onPicked: run,
+        ),
       ],
     );
   }
@@ -488,6 +517,16 @@ class _ActionsSheet extends StatelessWidget {
             run,
           ),
         ],
+        // The files without a season number aren't a season to give a
+        // poster.
+        MetadataItems(
+          title: title,
+          images: number == null
+              ? null
+              : ImageTarget(titleId: title.id, season: number),
+          matchable: false,
+          onPicked: run,
+        ),
       ],
     );
   }

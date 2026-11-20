@@ -264,6 +264,26 @@ A long press on a card, here or on Home, opens its menu
 the pages it belongs to, and "Not interested" on a recommendation. Every
 change bumps `mediaChangesProvider`, which the pages and Home listen to.
 
+## Fix match and images
+
+`lib/screens/metadata` is the Kotlin app's `MetadataScreens.kt`, an
+admin's metadata tools as pages. `Routes.identify` searches the
+library's provider by hand, opening on the title's name and year, and
+picking an entry matches the title to it and goes back with a toast.
+`Routes.images` picks a title's poster, backdrop, and logo, a season's
+poster, or an episode's still from what the provider has, in the
+library's language or all of them, or uploads one through the system's
+photo picker (`SystemApi.pickImage` in `pigeons/system.dart`, the
+`PickVisualMedia` picker, or the document picker where there's none);
+it takes JPEG, PNG, or WebP up to 25 MB, as the contract does, and
+removes one or goes back to the provider's. The menus of a card and of
+the title, season, and episode pages end with Fix match, Refresh
+metadata, and Edit images (`lib/media/metadata_items.dart`) for an
+admin, the server's only role that may; fix match and refresh only for a
+movie or show whose library's provider has its API key. On a tablet the
+image grid keeps a phone's width, as Settings does, where the Kotlin app
+stretched its three columns across the screen.
+
 ## Shows, Movies, and Browse
 
 `lib/screens/library` replaces the Kotlin app's Media tab and its library
