@@ -247,6 +247,29 @@ class _KitGalleryState extends State<KitGallery> {
               leading: Lucide.play,
               child: const Text('Trailer'),
             ),
+            MatineeButton(
+              onPressed: () {},
+              look: ButtonLook.frosted,
+              size: ButtonSize.xl,
+              trailing: Lucide.fastForward,
+              child: const Text('Skip intro'),
+            ),
+            RoundIconButton(
+              icon: Lucide.arrowLeft,
+              label: 'Back',
+              onPressed: () {},
+              size: 52,
+              iconSize: 26,
+              background: const Color(0x00000000),
+            ),
+            RoundIconButton(
+              icon: Lucide.captions,
+              label: 'Subtitles',
+              onPressed: () {},
+              size: 52,
+              iconSize: 26,
+              background: const Color(0x00000000),
+            ),
           ],
         ),
       ),
@@ -269,6 +292,11 @@ class _KitGalleryState extends State<KitGallery> {
             onPressed: () {},
             size: ButtonSize.lg,
             child: const Text('Large'),
+          ),
+          MatineeButton(
+            onPressed: () {},
+            size: ButtonSize.xl,
+            child: const Text('Extra large'),
           ),
           const MatineeButton(onPressed: null, child: Text('Unavailable')),
           MatineeButton(
@@ -311,6 +339,16 @@ class _KitGalleryState extends State<KitGallery> {
             look: ButtonLook.secondary,
             label: 'Rated',
             leading: Lucide.star,
+          ),
+          RoundIconButton(
+            icon: Lucide.heart,
+            label: 'Mark as favorite',
+            onPressed: () {},
+          ),
+          const RoundIconButton(
+            icon: Lucide.skipForward,
+            label: 'No next episode',
+            onPressed: null,
           ),
           Row(
             mainAxisSize: MainAxisSize.min,

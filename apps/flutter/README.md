@@ -157,6 +157,19 @@ segments, and next episode. The controls send track and quality changes
 back to the server, and progress stays on the file's timeline even when
 `playback.seek` returns a stream that starts partway through the file.
 
+Its controls are the Kotlin phone player's, at the same sizes on a phone
+and a tablet: the title and the audio, subtitles, speed, and quality
+buttons along the top, the previous episode, the skips, play, and the next
+episode in the middle, and the times over a seek bar the full width at the
+bottom, each edge on its own shade. They fade after three and a half
+seconds of playing, and stay while a screen reader is on. A menu slides in
+as a panel from the side, over the video, which keeps playing. Spreading
+two fingers fills the screen and pinching fits the video again. The pieces
+are in `player_controls.dart`, `seek_bar.dart`, `player_panel.dart`, and
+`player_overlays.dart`; `playback_screen.dart` puts them together. The
+Kotlin player's lock, picture in picture, double-tap and swipe gestures,
+and trickplay thumbnails aren't ported yet.
+
 ## Server data
 
 Screens read the server through providers made in `lib/query/server_data.dart`,
@@ -326,7 +339,7 @@ of its own.
 Screens build from `lib/kit`, the port of `packages/ui` and its theme. It
 keeps the web's and the Android kit's names: `MatineeButton` (looks, sizes,
 `shape`, `dimmed`, and the `glass` and `frosted` looks for buttons over a
-picture), `Checkbox`, `ChoiceChip`, `ToggleChip`, `Dialog`, `ConfirmDialog`,
+picture), `RoundIconButton`, `Checkbox`, `ChoiceChip`, `ToggleChip`, `Dialog`, `ConfirmDialog`,
 `Menu`, `PageDots`, `ProgressRing`, `SearchPill`, `Sheet`, `Slider`,
 `QrCodeCard`, `RangeSlider`, `Spinner`, `Switch`, `TabBar` with `TabBarState`,
 `MatineeTextField`, `Toast` with `ToastState`, `Calendar`, and

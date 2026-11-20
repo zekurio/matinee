@@ -110,8 +110,8 @@ void main() {
     expect(engines, [PlayerEngine.mpv]);
     expect(window.map((entry) => entry.$2), [true]);
     expect(backend.starts.single.itemId, itemId);
-    expect(find.text('Harbour'), findsOneWidget);
-    expect(find.text('S01E01 · The Crossing'), findsOneWidget);
+    expect(find.text('The Crossing'), findsOneWidget);
+    expect(find.text('S01E01 · Harbour'), findsOneWidget);
     expect(find.text('Never displayed.mkv'), findsNothing);
     expect(find.text('Skip intro'), findsOneWidget);
 
@@ -126,13 +126,13 @@ void main() {
     expect(player.seeks.last, const Duration(seconds: 30));
     expect(find.text('Skip intro'), findsNothing);
 
-    final slider = find.byType(Slider);
-    final bar = tester.getRect(slider);
+    final bar = tester.getRect(find.bySemanticsLabel('Playback position'));
     await tester.tapAt(Offset(bar.center.dx, bar.center.dy));
     await tester.pumpAndSettle();
     expect(player.seeks.last.inSeconds, closeTo(60, 2));
 
     await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Pause'), findsNothing);
     await tester.tapAt(const Offset(22, 140));
     await tester.pumpAndSettle();
@@ -156,6 +156,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(backend.starts.last.quality, quality.id);
 
+    await tap(tester, 'Speed');
+    await tester.tap(find.text('1.5×'));
+    await tester.pumpAndSettle();
+    expect(player.rates.last, 1.5);
+
     player.emit(PlaybackPhase.ended, 120);
     await tester.pumpAndSettle();
     expect(find.text('Playing in 10'), findsOneWidget);
@@ -164,7 +169,9 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pump(const Duration(seconds: 12));
     expect(players, hasLength(1));
-    await tester.tap(find.bySemanticsLabel('Next episode'));
+    // Cancelled, the up-next card waits for Play.
+    expect(find.bySemanticsLabel('Next episode'), findsOneWidget);
+    await tester.tap(find.text('Play'));
     await tester.pumpAndSettle();
     expect(player.disposed, isTrue);
     expect(
@@ -173,7 +180,8 @@ void main() {
     );
     expect(backend.starts.last.itemId, nextId);
     expect(backend.starts.last.position, 0);
-    expect(find.text('S01E02 · The Return'), findsOneWidget);
+    expect(find.text('The Return'), findsOneWidget);
+    expect(find.text('S01E02 · Harbour'), findsOneWidget);
     expect(window.map((entry) => entry.$2), [true]);
 
     await tap(tester, 'Back');

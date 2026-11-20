@@ -264,6 +264,7 @@ class FakePlayer implements Player {
   final _updates = StreamController<PlaybackState>.broadcast();
   final opens = <OpenedSource>[];
   final trackChanges = <SourceTracks>[];
+  final rates = <double>[];
   final seeks = <Duration>[];
   bool disposed = false;
   int pauses = 0;
@@ -359,7 +360,7 @@ class FakePlayer implements Player {
   Future<void> setVideoViewport(Rect? bounds) async {}
 
   @override
-  Future<void> setRate(double rate) async {}
+  Future<void> setRate(double rate) async => rates.add(rate);
 
   @override
   Future<void> selectAudioTrack(String? id) => throw UnimplementedError();

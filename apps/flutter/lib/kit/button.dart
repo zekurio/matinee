@@ -24,6 +24,9 @@ enum ButtonSize {
   xs(24, 8, 6, 4, 12, KitText.xs, KitRadius.md),
   sm(32, 10, 6, 4, 14, KitText.px13, KitRadius.md),
   lg(40, 16, 12, 8, 16, KitText.sm, KitRadius.lg),
+
+  /// The Android kit's default height, for buttons over the player.
+  xl(44, 16, 12, 8, 16, KitText.sm, KitRadius.lg),
   icon(36, 0, 0, 0, 16, KitText.sm, 999),
   iconXs(28, 0, 0, 0, 12, KitText.sm, 999),
   iconSm(32, 0, 0, 0, 16, KitText.sm, 999),
@@ -205,68 +208,6 @@ class MatineeButton extends StatelessWidget {
               );
         return Opacity(opacity: isDimmed ? .5 : 1, child: surface);
       },
-    );
-  }
-}
-
-/// A round button with only an icon, on the secondary fill: the watched,
-/// favorite, and more buttons beside a page's Play. [color] tints the icon,
-/// as the accent on something watched; [fill] replaces the secondary, as
-/// the page's veil over a backdrop.
-class RoundIconButton extends StatelessWidget {
-  const RoundIconButton({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-    this.size = 44,
-    this.iconSize = 20,
-    this.color,
-    this.fill,
-    this.toggled,
-  });
-
-  final String icon;
-  final String label;
-  final VoidCallback? onPressed;
-  final double size;
-  final double iconSize;
-  final Color? color;
-  final Color? fill;
-
-  /// For a button that turns something on or off, whether it's on.
-  final bool? toggled;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    final base = fill ?? colors.secondary;
-    return PressIndication(
-      onPressed: onPressed,
-      label: label,
-      toggled: toggled,
-      shape: KitRadius.pill,
-      builder: (context, state) => Opacity(
-        opacity: onPressed == null ? .5 : 1,
-        child: Container(
-          width: size,
-          height: size,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Color.lerp(base, colors.foreground, switch (state) {
-              PressState.pressed => .14,
-              PressState.idle => 0,
-              _ => .08,
-            }),
-          ),
-          child: KitIcon(
-            icon,
-            size: iconSize,
-            color: color ?? colors.foreground,
-          ),
-        ),
-      ),
     );
   }
 }

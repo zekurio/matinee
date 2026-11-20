@@ -87,14 +87,14 @@ class ItemTopBar extends StatelessWidget {
               icon: Lucide.arrowLeft,
               label: l.commonBack,
               iconSize: 22,
-              fill: veil,
+              background: veil,
               onPressed: () =>
                   context.canPop() ? context.pop() : context.go(Routes.home),
             ),
             RoundIconButton(
               icon: Lucide.house,
               label: l.shellHomeLink,
-              fill: veil,
+              background: veil,
               onPressed: () => context.go(Routes.home),
             ),
             if (parent != null && onParent != null)
@@ -1416,7 +1416,7 @@ class EpisodeRow extends StatelessWidget {
             label: l.mediaPlayNamed(names.title),
             size: 40,
             iconSize: 16,
-            fill: const Color(0x00000000),
+            background: const Color(0x00000000),
             onPressed: () => context.push(Routes.play(item.id)),
           ),
         ],

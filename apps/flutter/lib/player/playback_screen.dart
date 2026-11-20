@@ -9,15 +9,20 @@ import '../api/matinee_api.dart';
 import '../core/device.dart';
 import '../core/failure_text.dart';
 import '../core/session.dart';
-import '../kit/glass.dart';
 import '../kit/kit.dart';
 import '../l10n/app_localizations.dart';
+import '../media/format.dart';
 import '../platform/player.g.dart' as wire;
 import '../router.dart';
 import 'playback_device.dart';
 import 'playback_session.dart';
 import 'player.dart';
+import 'player_controls.dart';
+import 'player_motion.dart';
+import 'player_overlays.dart';
+import 'player_panel.dart';
 import 'player_preferences.dart';
+import 'seek_bar.dart';
 import 'video_view.dart';
 
 final playbackPlayerFactoryProvider = Provider<Player Function(PlayerEngine)>(
@@ -139,11 +144,15 @@ class _Opening extends StatelessWidget {
             PositionedDirectional(
               start: 12,
               top: 8,
-              child: _button(Lucide.arrowLeft, l.playerBack, back),
+              child: PlayerBackButton(label: l.playerBack, onPressed: back),
             ),
             Center(
               child: error == null
-                  ? Spinner(size: 28, label: l.loadingInProgress)
+                  ? Spinner(
+                      size: 48,
+                      color: matineeDark.foreground,
+                      label: l.loadingInProgress,
+                    )
                   : Text(
                       error!,
                       style: KitText.base.style(color: matineeDark.foreground),
@@ -196,7 +205,19 @@ class _PlaybackHostState extends State<_PlaybackHost> {
   );
 }
 
-/// The touch controls. A sheet can stay open while the video continues.
+/// The menus the top bar opens in the side panel.
+enum _PlayerMenu { audio, subtitles, speed, quality }
+
+/// The speeds the speed menu offers, from half to double.
+const _speeds = [.5, .75, 1.0, 1.25, 1.5, 2.0];
+
+/// How far two fingers spread, or pinch by its inverse, before the video
+/// switches between fitting and filling the screen.
+const _pinchFill = 1.15;
+
+/// The touch controls, laid out in `player_controls.dart` as the Kotlin
+/// phone player's. A menu stays open in the side panel while the video
+/// continues.
 class _PlaybackControls extends StatefulWidget {
   const _PlaybackControls({
     required this.session,
@@ -213,7 +234,7 @@ class _PlaybackControls extends StatefulWidget {
 }
 
 class _PlaybackControlsState extends State<_PlaybackControls> {
-  static const _hideAfter = Duration(seconds: 3);
+  static const _hideAfter = Duration(milliseconds: 3500);
   static const _nextDelay = 10;
   Timer? _hide;
   Timer? _advance;
@@ -225,6 +246,14 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
   bool _cancelledNext = false;
   int _nextIn = _nextDelay;
   double? _scrubbing;
+  _PlayerMenu? _menu;
+  double _rate = 1;
+  bool _fill = false;
+  bool _pinched = false;
+
+  /// Counts pinches that switched the fit, so the note shows again for each.
+  int _fitNotes = 0;
+  PlaybackPhase _phase = PlaybackPhase.idle;
 
   PlaybackSession get _session => widget.session;
 
@@ -233,6 +262,7 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
     super.initState();
     _session.addListener(_updated);
     _playing = _session.playback.status.playing;
+    _phase = _session.playback.phase;
     if (_playing) _resetHide();
   }
 
@@ -246,6 +276,12 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
 
   void _updated() {
     final playing = _session.playback.status.playing;
+    final phase = _session.playback.phase;
+    // A source the session opens again starts at normal speed.
+    if (phase == PlaybackPhase.ready && _phase != phase && _rate != 1) {
+      unawaited(_applyRate());
+    }
+    _phase = phase;
     setState(() {
       if (_playing != playing) {
         _playing = playing;
@@ -322,6 +358,55 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
     if (mounted) widget.next(item);
   }
 
+  void _openMenu(_PlayerMenu menu) {
+    setState(() {
+      _menu = menu;
+      _sheet = true;
+    });
+    _resetHide();
+  }
+
+  void _closeMenu() {
+    setState(() {
+      _menu = null;
+      _sheet = false;
+    });
+    _resetHide();
+  }
+
+  Future<void> _applyRate() async {
+    try {
+      await _session.player.setRate(_rate);
+    } on Exception {
+      // The speed applies again once the source is ready.
+    }
+  }
+
+  void _pickRate(double rate) {
+    setState(() => _rate = rate);
+    unawaited(_applyRate());
+  }
+
+  void _pinch(ScaleUpdateDetails details) {
+    if (details.pointerCount < 2 || _pinched) return;
+    final want = details.scale > _pinchFill
+        ? true
+        : details.scale < 1 / _pinchFill
+        ? false
+        : null;
+    if (want == null || want == _fill) return;
+    _pinched = true;
+    setState(() {
+      _fill = want;
+      _fitNotes++;
+    });
+    unawaited(
+      _session.player
+          .setVideoFit(want ? VideoFit.cover : VideoFit.contain)
+          .catchError((Object _) {}),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -338,6 +423,7 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
         plan != null && error == null && !_session.busy && !_leaving;
     final captions =
         _session.captions?.at(_session.position) ?? const <TextSpan>[];
+    final menu = _menu;
 
     return Stack(
       fit: StackFit.expand,
@@ -345,467 +431,397 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
         if (plan == null || _session.refused || _leaving)
           const ColoredBox(color: Color(0xFF000000)),
         VideoView(player: _session.player),
-        if (controls)
-          const IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xB3000000),
-                    Color(0x08000000),
-                    Color(0xD9000000),
-                  ],
-                  stops: [0, .48, 1],
-                ),
-              ),
-            ),
-          ),
         if (captions.isNotEmpty)
-          SafeArea(
-            child: IgnorePointer(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(24, 0, 24, controls ? 108 : 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [for (final cue in captions) _Caption(cue)],
-                  ),
+          IgnorePointer(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              // Moves with the controls rather than jumping as they come and go.
+              child: AnimatedPadding(
+                duration: PlayerMotion.move,
+                curve: PlayerMotion.easing,
+                padding: EdgeInsets.fromLTRB(
+                  48,
+                  0,
+                  48,
+                  controls && error == null ? 150 : 28,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 2,
+                  children: [for (final cue in captions) _Caption(cue)],
                 ),
               ),
             ),
           ),
+        // Taps show and hide the controls; spreading two fingers fills the
+        // screen, and pinching shows the video whole.
         Semantics(
-          label: controls ? l.a11yPlayerHideControls : l.a11yPlayerShowControls,
-          button: true,
+          label: l.a11yPlayerVideo,
+          onTapHint: controls
+              ? l.a11yPlayerHideControls
+              : l.a11yPlayerShowControls,
+          onTap: _toggleControls,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: _toggleControls,
+            onScaleStart: (_) => _pinched = false,
+            onScaleUpdate: _pinch,
           ),
         ),
-        SafeArea(
-          minimum: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (controls) _header(l, plan?.item),
-              Expanded(
-                child: Center(
-                  child: error != null
-                      ? _failure(l, error)
-                      : loading
-                      ? Spinner(size: 28, label: l.loadingInProgress)
-                      : controls && enabled
-                      ? _transport(l)
-                      : null,
-                ),
-              ),
-              if (error == null && !_leaving) ...[
-                _prompts(l, enabled),
-                if (controls && plan != null) _footer(l, plan, enabled),
-              ],
-            ],
-          ),
+        TimedNote(
+          token: _fitNotes == 0 ? null : _fitNotes,
+          duration: const Duration(milliseconds: 1200),
+          child: PlayerNote(title: _fill ? l.playerFill : l.playerFit),
         ),
-        if (_session.notice case (final notice, final detail))
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
+        TimedNote(
+          token: _session.notice,
+          duration: const Duration(seconds: 5),
+          onHidden: _session.dismissNotice,
+          child: switch (_session.notice) {
+            (final notice, final detail) => _notice(l, notice, detail),
+            null => const SizedBox.shrink(),
+          },
+        ),
+        if (loading)
+          Center(
+            child: Spinner(
+              size: 48,
+              color: matineeDark.foreground,
+              label: l.loadingInProgress,
+            ),
+          ),
+        if (plan == null && error == null)
+          Align(
+            alignment: AlignmentDirectional.topStart,
+            child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.only(top: 52, left: 16, right: 16),
-                child: _notice(l, notice, detail),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: PlayerBackButton(
+                  label: l.playerBack,
+                  onPressed: widget.back,
+                ),
               ),
             ),
           ),
-      ],
-    );
-  }
-
-  Widget _header(AppLocalizations l, MediaItem? item) => Row(
-    spacing: 12,
-    children: [
-      _button(Lucide.arrowLeft, l.playerBack, widget.back),
-      if (item != null)
-        Flexible(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+        if (plan != null)
+          PlayerFade(
+            visible: controls && error == null,
+            child: _controls(l, plan, enabled, loading),
+          ),
+        if (error != null)
+          // It takes the taps too, so none reaches the video under it.
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {},
+            child: ColoredBox(
+              color: const Color(0xCC000000),
+              child: _failure(l, error),
+            ),
+          ),
+        if (error == null && !_leaving)
+          PlayerPrompts(
+            lifted: controls,
             children: [
-              Text(
-                item.label.showName.isEmpty
-                    ? item.fileTitle
-                    : item.label.showName,
-                style: KitText.base.style(
-                  color: matineeDark.foreground,
-                  weight: FontWeight.w600,
+              if (_session.segment case final segment?)
+                SkipSegmentButton(
+                  label: switch (segment.kind) {
+                    MediaSegmentKind.recap => l.playerSkipRecap,
+                    MediaSegmentKind.credits => l.playerSkipCredits,
+                    MediaSegmentKind.preview => l.playerSkipPreview,
+                    _ => l.playerSkipIntro,
+                  },
+                  onPressed: _action(
+                    () => _session.skipSegment(segment),
+                    enabled: enabled,
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (_fileLabel(l, item) case final label?)
-                Text(
-                  label,
-                  style: KitText.sm.style(color: matineeDark.mutedForeground),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+              if (_session.ended || !_cancelledNext)
+                if (_session.next case final item?) _upNext(l, item, enabled),
             ],
           ),
+        PlayerPanel(
+          entries: menu == null || plan == null
+              ? null
+              : _entries(l, menu, plan),
+          dismissLabel: l.a11yPlayerCloseMenu,
+          onDismiss: _closeMenu,
         ),
-    ],
-  );
-
-  Widget _transport(AppLocalizations l) => Row(
-    mainAxisSize: MainAxisSize.min,
-    spacing: 24,
-    children: [
-      if (_session.skipBack case final seconds?)
-        _button(
-          Lucide.rotateCcw,
-          l.playerSkipBack(seconds),
-          _action(() => _session.skip(-seconds)),
-          seconds: seconds,
-        ),
-      _button(
-        _playing ? Lucide.pause : Lucide.play,
-        _playing ? l.playerPause : l.playerPlay,
-        _action(_session.togglePlay),
-        primary: true,
-      ),
-      if (_session.skipForward case final seconds?)
-        _button(
-          Lucide.rotateCw,
-          l.playerSkipForward(seconds),
-          _action(() => _session.skip(seconds)),
-          seconds: seconds,
-        ),
-    ],
-  );
-
-  Widget _prompts(AppLocalizations l, bool enabled) => Align(
-    alignment: AlignmentDirectional.centerEnd,
-    child: Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.end,
-      children: [
-        if (_session.segment case final segment?)
-          MatineeButton(
-            onPressed: _action(
-              () => _session.skipSegment(segment),
-              enabled: enabled,
-            ),
-            look: ButtonLook.frosted,
-            child: Text(switch (segment.kind) {
-              MediaSegmentKind.intro => l.playerSkipIntro,
-              MediaSegmentKind.recap => l.playerSkipRecap,
-              MediaSegmentKind.credits => l.playerSkipCredits,
-              _ => l.playerSkipPreview,
-            }),
-          ),
-        if (_session.ended || !_cancelledNext)
-          if (_session.next case final item?) _nextPrompt(l, item, enabled),
       ],
-    ),
-  );
-
-  Widget _nextPrompt(AppLocalizations l, MediaItem item, bool enabled) {
-    final left = _session.ended
-        ? _nextIn
-        : (_session.duration - _session.position).ceil().clamp(0, 9999);
-    final words = _cancelledNext ? l.playerNextEpisode : l.playerUpNextIn(left);
-    return Glass(
-      shape: KitRadius.panel,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          spacing: 5,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 240),
-              child: Text(
-                _fileLabel(l, item) ?? item.label.showName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: KitText.sm.style(color: matineeDark.foreground),
-              ),
-            ),
-            Wrap(
-              spacing: 6,
-              children: [
-                MatineeButton(
-                  onPressed: _action(() => _next(item), enabled: enabled),
-                  leading: Lucide.skipForward,
-                  label: l.playerNextEpisode,
-                  child: ExcludeSemantics(child: Text(words)),
-                ),
-                if (!_cancelledNext)
-                  MatineeButton(
-                    onPressed: _cancelNext,
-                    look: ButtonLook.frosted,
-                    child: Text(
-                      _session.ended
-                          ? l.playerUpNextCancel
-                          : l.playerUpNextHide,
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _footer(AppLocalizations l, PlaybackStart plan, bool enabled) {
+  Widget _controls(
+    AppLocalizations l,
+    PlaybackStart plan,
+    bool enabled,
+    bool loading,
+  ) {
+    final item = plan.item;
+    final names = itemNames(item, l);
+    final code = item.label.code;
+    final subtitle = plan.subtitle;
+    final episodes =
+        item.title?.kind == TitleKind.show ||
+            plan.previous != null ||
+            plan.next != null
+        ? (
+            PlayerEpisodeButton(
+              icon: Lucide.skipBack,
+              label: l.playerPreviousEpisode,
+              onPressed: switch (plan.previous) {
+                final previous? => _action(
+                  () => _next(previous),
+                  enabled: !_leaving,
+                ),
+                null => null,
+              },
+            ),
+            PlayerEpisodeButton(
+              icon: Lucide.skipForward,
+              label: l.playerNextEpisode,
+              onPressed: switch (plan.next) {
+                final next? => _action(() => _next(next), enabled: !_leaving),
+                null => null,
+              },
+            ),
+          )
+        : null;
+    return PlayerControls(
+      title: names.title,
+      subtitle: code == null ? null : '$code · ${names.showName}',
+      backLabel: l.playerBack,
+      onBack: widget.back,
+      menus: [
+        PlayerMenuButton(
+          icon: Lucide.audioLines,
+          label: l.playerMenuAudio,
+          onPressed: enabled ? () => _openMenu(_PlayerMenu.audio) : null,
+        ),
+        PlayerMenuButton(
+          icon: Lucide.captions,
+          label: l.playerMenuSubtitles,
+          active: subtitle != null,
+          state: subtitle?.label ?? l.playerSubtitlesOff,
+          onPressed: enabled ? () => _openMenu(_PlayerMenu.subtitles) : null,
+        ),
+        PlayerMenuButton(
+          icon: Lucide.gauge,
+          label: l.playerSpeed,
+          onPressed: enabled ? () => _openMenu(_PlayerMenu.speed) : null,
+        ),
+        if (plan.original || _session.qualities.isNotEmpty)
+          PlayerMenuButton(
+            icon: Lucide.settings,
+            label: l.playerQuality,
+            onPressed: enabled ? () => _openMenu(_PlayerMenu.quality) : null,
+          ),
+      ],
+      transport: PlayerTransport(
+        playing: _playing,
+        loading: loading,
+        playLabel: l.playerPlay,
+        pauseLabel: l.playerPause,
+        onTogglePlay: _action(_session.togglePlay, enabled: enabled),
+        back: switch (_session.skipBack) {
+          final seconds? => (
+            seconds: seconds,
+            label: l.playerSkipBack(seconds),
+            onPressed: _action(() => _session.skip(-seconds), enabled: enabled),
+          ),
+          null => null,
+        },
+        ahead: switch (_session.skipForward) {
+          final seconds? => (
+            seconds: seconds,
+            label: l.playerSkipForward(seconds),
+            onPressed: _action(() => _session.skip(seconds), enabled: enabled),
+          ),
+          null => null,
+        },
+        episodes: episodes,
+      ),
+      seekBar: _seekBar(l, enabled),
+    );
+  }
+
+  Widget _seekBar(AppLocalizations l, bool enabled) {
     final length = _session.duration;
     final at = (_scrubbing ?? _session.position).clamp(0.0, length);
     final seekable = enabled && length > 0;
-    return Row(
-      children: [
-        Text(_time(at), style: KitText.xs.style(color: matineeDark.foreground)),
-        Expanded(
-          child: Slider(
-            compact: true,
-            value: at,
-            buffered: _session.buffered?.clamp(0.0, length),
-            max: length > 0 ? length : 1,
-            label: l.a11yPlayerSeek,
-            formatValue: (value) =>
-                l.a11yPlayerPosition(_time(value), _time(length)),
-            onChangeStart: seekable
-                ? (value) {
-                    setState(() => _scrubbing = value);
-                    _resetHide();
-                  }
-                : null,
-            onChanged: seekable
-                ? (value) {
-                    if (_scrubbing == null) {
-                      // Accessibility and keyboard adjustments do not always start a drag.
-                      unawaited(_session.seek(value));
-                    } else {
-                      setState(() => _scrubbing = value);
-                    }
-                  }
-                : null,
-            onChangeEnd: seekable
-                ? (value) {
-                    setState(() => _scrubbing = null);
-                    _resetHide();
-                    unawaited(_session.seek(value));
-                  }
-                : null,
-          ),
-        ),
-        if (length > 0)
-          Text(
-            _time(length),
-            style: KitText.xs.style(color: matineeDark.foreground),
-          ),
-        const SizedBox(width: 8),
-        _button(
-          Lucide.audioLines,
-          l.playerMenuAudio,
-          enabled ? () => _audio(l, plan) : null,
-        ),
-        _button(
-          Lucide.captions,
-          l.playerMenuSubtitles,
-          enabled ? () => _subtitles(l, plan) : null,
-        ),
-        if (plan.original || _session.qualities.isNotEmpty)
-          _button(
-            Lucide.settings,
-            l.playerQuality,
-            enabled ? () => _quality(l, plan) : null,
-          ),
-      ],
+    return SeekBar(
+      position: at,
+      duration: length,
+      buffered: _session.buffered?.clamp(0.0, length),
+      scrubbing: _scrubbing != null,
+      back: (_session.skipBack ?? 10).toDouble(),
+      ahead: (_session.skipForward ?? 10).toDouble(),
+      label: l.a11yPlayerSeek,
+      describe: l.a11yPlayerPosition,
+      onScrub: seekable
+          ? (value) {
+              final starting = _scrubbing == null;
+              setState(() => _scrubbing = value);
+              if (starting) _resetHide();
+            }
+          : null,
+      onScrubEnd: seekable
+          ? () {
+              final value = _scrubbing;
+              setState(() => _scrubbing = null);
+              _resetHide();
+              if (value != null) unawaited(_session.seek(value));
+            }
+          : null,
+      // Accessibility adjustments seek at once.
+      onSeek: seekable
+          ? (value) {
+              _resetHide();
+              unawaited(_session.seek(value));
+            }
+          : null,
     );
   }
 
-  void _audio(AppLocalizations l, PlaybackStart plan) {
-    unawaited(
-      _choices(l.playerMenuAudio, [
-        for (final track in plan.audioTracks)
-          _Choice(
-            track.label,
-            track.index == plan.audio?.index,
-            () => _session.pickAudio(track),
-          ),
-      ], empty: l.playerAudioNoTracks),
-    );
-  }
-
-  void _subtitles(AppLocalizations l, PlaybackStart plan) {
-    unawaited(
-      _choices(l.playerMenuSubtitles, [
-        _Choice(
-          l.playerSubtitlesOff,
-          plan.subtitle == null,
-          () => _session.pickSubtitle(null),
-        ),
-        for (final track in plan.subtitleTracks)
-          _Choice(
-            track.label,
-            track.id == plan.subtitle?.id,
-            () => _session.pickSubtitle(track),
-          ),
-      ]),
-    );
-  }
-
-  void _quality(AppLocalizations l, PlaybackStart plan) {
-    final decimal = NumberFormat.decimalPattern(
-      Localizations.localeOf(context).toLanguageTag(),
-    );
-    unawaited(
-      _choices(l.playerQuality, [
-        if (plan.original)
-          _Choice(
-            l.playerQualityOriginal,
-            plan.quality == PlaybackQuality.original,
-            () => _session.pickQuality(PlaybackQuality.original),
-          ),
-        for (final preset in _session.qualities)
-          _Choice(
-            l.playbackQualityPreset(
-              preset.height,
-              l.playerBitrateMbpsExact(
-                decimal.format(preset.bitrate / 1000000),
-              ),
+  List<PanelEntry> _entries(
+    AppLocalizations l,
+    _PlayerMenu menu,
+    PlaybackStart plan,
+  ) {
+    void run(Future<void> Function() pick) => unawaited(pick());
+    switch (menu) {
+      case _PlayerMenu.audio:
+        return [
+          PanelHeading(l.playerMenuAudio),
+          if (plan.audioTracks.isEmpty) PanelNote(l.playerAudioNoTracks),
+          for (final track in plan.audioTracks)
+            PanelChoice(
+              track.label,
+              detail: [track.format, ?track.layout].join(' · '),
+              selected: track.index == plan.audio?.index,
+              pick: () => run(() => _session.pickAudio(track)),
             ),
-            plan.quality == preset.id,
-            () => _session.pickQuality(preset.id),
+        ];
+      case _PlayerMenu.subtitles:
+        return [
+          PanelHeading(l.playerMenuSubtitles),
+          PanelChoice(
+            l.playerSubtitlesOff,
+            selected: plan.subtitle == null,
+            pick: () => run(() => _session.pickSubtitle(null)),
           ),
-      ]),
-    );
+          for (final track in plan.subtitleTracks)
+            PanelChoice(
+              track.label,
+              detail: [
+                if (track.forced) l.playerSubtitlesForced,
+                if (track.sdh) 'SDH',
+                track.format,
+                if (track.delivery == SubtitleDelivery.burnIn)
+                  l.playerSubtitlesBurnedIn,
+              ].join(' · '),
+              selected: track.id == plan.subtitle?.id,
+              enabled: track.delivery != null,
+              pick: () => run(() => _session.pickSubtitle(track)),
+            ),
+        ];
+      case _PlayerMenu.speed:
+        final decimal = NumberFormat.decimalPattern(
+          Localizations.localeOf(context).toLanguageTag(),
+        );
+        return [
+          PanelHeading(l.playerSpeed),
+          for (final rate in _speeds)
+            PanelChoice(
+              rate == 1
+                  ? l.playerSpeedNormal
+                  : l.playerSpeedRate(decimal.format(rate)),
+              selected: _rate == rate,
+              pick: () => _pickRate(rate),
+            ),
+        ];
+      case _PlayerMenu.quality:
+        final decimal = NumberFormat.decimalPattern(
+          Localizations.localeOf(context).toLanguageTag(),
+        );
+        return [
+          PanelHeading(l.playerQuality),
+          if (plan.original)
+            PanelChoice(
+              l.playerQualityOriginal,
+              selected: plan.quality == PlaybackQuality.original,
+              pick: () =>
+                  run(() => _session.pickQuality(PlaybackQuality.original)),
+            ),
+          for (final preset in _session.qualities)
+            PanelChoice(
+              l.playbackQualityPreset(
+                preset.height,
+                l.playerBitrateMbpsExact(
+                  decimal.format(preset.bitrate / 1000000),
+                ),
+              ),
+              selected: plan.quality == preset.id,
+              pick: () => run(() => _session.pickQuality(preset.id)),
+            ),
+        ];
+    }
   }
 
-  Future<void> _choices(
-    String title,
-    List<_Choice> choices, {
-    String? empty,
-  }) async {
-    final l = AppLocalizations.of(context);
-    _sheet = true;
-    _resetHide();
-    final pick = await Sheet.show<_Choice>(
-      context,
-      dismissLabel: l.a11yPlayerCloseMenu,
-      builder: (sheet) => Sheet(
-        title: title,
-        child: choices.isEmpty
-            ? Text(empty ?? '')
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final choice in choices)
-                    PressIndication(
-                      selected: choice.selected,
-                      inMutuallyExclusiveGroup: true,
-                      shape: KitRadius.panel,
-                      onPressed: () => Navigator.of(sheet).pop(choice),
-                      builder: (context, state) {
-                        final colors = MatineeTheme.of(context);
-                        return ColoredBox(
-                          color: state == PressState.idle
-                              ? const Color(0x00000000)
-                              : colors.secondary,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              spacing: 8,
-                              children: [
-                                Expanded(child: Text(choice.label)),
-                                if (choice.selected)
-                                  const KitIcon(Lucide.check, size: 16),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                ],
-              ),
-      ),
+  Widget _upNext(AppLocalizations l, MediaItem item, bool enabled) {
+    final left = _session.ended
+        ? _nextIn
+        : (_session.duration - _session.position).ceil().clamp(0, 9999);
+    final words = _cancelledNext ? l.playerPlay : l.playerUpNextIn(left);
+    final title = itemNames(item, l).title;
+    final code = episodeCode(item, l);
+    return UpNextCard(
+      heading: l.playerUpNext,
+      title: code == null ? title : l.mediaCodeTitle(code, title),
+      playLabel: words,
+      playWords: words,
+      onPlay: _action(() => _next(item), enabled: enabled),
+      dismissLabel: !_session.ended
+          ? l.playerUpNextHide
+          : _cancelledNext
+          ? null
+          : l.playerUpNextCancel,
+      onDismiss: !_session.ended || !_cancelledNext ? _cancelNext : null,
     );
-    if (!mounted) return;
-    _sheet = false;
-    _resetHide();
-    await pick?.run();
   }
 
   Widget _failure(AppLocalizations l, Object error) {
     final (title, message) = _errorText(l, error);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 8,
-        children: [
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: KitText.lg.style(color: matineeDark.foreground),
-          ),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: KitText.sm.style(color: matineeDark.mutedForeground),
-          ),
-          if (!_session.refused)
-            MatineeButton(
-              onPressed: _action(_session.retry),
-              child: Text(l.commonRetry),
-            ),
-        ],
-      ),
+    return PlayerFailure(
+      title: title,
+      message: message,
+      backLabel: l.playerBack,
+      onBack: widget.back,
+      retryLabel: l.commonRetry,
+      onRetry: _session.refused ? null : _action(_session.retry),
     );
   }
 
-  Widget _notice(AppLocalizations l, PlaybackNotice notice, Object? detail) {
-    final text = switch (notice) {
-      PlaybackNotice.burnInFailed => l.playerNoticeBurnInFailedDetail,
-      PlaybackNotice.qualityFailed => l.playerNoticeQualityFailedDetail,
-      PlaybackNotice.subtitleFailed => l.playerErrorSubtitles,
-      PlaybackNotice.switchFailed =>
-        detail == null ? l.playerNoticeSwitchFailed : _errorText(l, detail).$2,
-    };
-    return Glass(
-      shape: KitRadius.panel,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.only(start: 12, end: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                text,
-                style: KitText.sm.style(color: matineeDark.foreground),
-              ),
-            ),
-            _button(Lucide.x, l.toastClose, _session.dismissNotice),
-          ],
+  Widget _notice(AppLocalizations l, PlaybackNotice notice, Object? detail) =>
+      switch (notice) {
+        PlaybackNotice.burnInFailed => PlayerNote(
+          title: l.playerNoticeBurnInFailed,
+          detail: l.playerNoticeBurnInFailedDetail,
         ),
-      ),
-    );
-  }
-}
-
-class _Choice {
-  const _Choice(this.label, this.selected, this.run);
-
-  final String label;
-  final bool selected;
-  final Future<void> Function() run;
+        PlaybackNotice.qualityFailed => PlayerNote(
+          title: l.playerNoticeSwitchFailed,
+          detail: l.playerNoticeQualityFailedDetail,
+        ),
+        PlaybackNotice.switchFailed => PlayerNote(
+          title: l.playerNoticeSwitchFailed,
+          detail: detail == null ? null : _errorText(l, detail).$2,
+        ),
+        PlaybackNotice.subtitleFailed => PlayerNote(
+          title: l.playerErrorSubtitles,
+        ),
+      };
 }
 
 class _Caption extends StatelessWidget {
@@ -823,63 +839,6 @@ class _Caption extends StatelessWidget {
       style: KitText.lg.style(color: const Color(0xFFFFFFFF)),
     ),
   );
-}
-
-Widget _button(
-  String icon,
-  String label,
-  VoidCallback? onPressed, {
-  bool primary = false,
-  int? seconds,
-}) => MatineeButton(
-  label: label,
-  onPressed: onPressed,
-  look: ButtonLook.frosted,
-  size: ButtonSize.iconLg,
-  child: seconds == null
-      ? KitIcon(icon, size: primary ? 24 : 20)
-      : Stack(
-          alignment: Alignment.center,
-          children: [
-            KitIcon(icon, size: 27),
-            Padding(
-              padding: const EdgeInsets.only(top: 3),
-              child: ExcludeSemantics(
-                child: Text('$seconds', style: KitText.xs.style()),
-              ),
-            ),
-          ],
-        ),
-);
-
-String? _fileLabel(AppLocalizations l, MediaItem item) {
-  final label = item.label;
-  final number = label.episodeNumber;
-  final title =
-      label.title ??
-      (number == null
-          ? null
-          : item.seasonNumber == 0
-          ? l.mediaSpecial(number)
-          : l.mediaEpisode(number));
-  return [
-    ?label.code,
-    if (title != null && title != label.showName) title,
-  ].join(' · ').nullIfEmpty;
-}
-
-extension on String {
-  String? get nullIfEmpty => isEmpty ? null : this;
-}
-
-String _time(double seconds) {
-  final total = seconds.toInt();
-  final hours = total ~/ 3600;
-  final minutes = (total ~/ 60) % 60;
-  final rest = (total % 60).toString().padLeft(2, '0');
-  return hours > 0
-      ? '$hours:${minutes.toString().padLeft(2, '0')}:$rest'
-      : '$minutes:$rest';
 }
 
 (String, String) _errorText(AppLocalizations l, Object error) {
