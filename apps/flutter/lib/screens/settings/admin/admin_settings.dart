@@ -7,12 +7,14 @@ import '../../../router.dart';
 import '../settings_rows.dart';
 import 'admin_parts.dart';
 import 'libraries_page.dart';
+import 'users_page.dart';
 
 /// The server's settings, for admins, as the Kotlin app's admin
 /// `SettingsPage`s and the web's admin sections: each a row in Settings'
 /// Administration panel, opening `Routes.settingsPage(key)`.
 enum AdminCategory {
-  libraries('libraries', Lucide.libraryBig);
+  libraries('libraries', Lucide.libraryBig),
+  users('users', Lucide.users);
 
   const AdminCategory(this.key, this.icon);
 
@@ -21,12 +23,14 @@ enum AdminCategory {
 
   String title(AppLocalizations l) => switch (this) {
     libraries => l.settingsAdminLibraries,
+    users => l.settingsAdminUsers,
   };
 
   /// The page, behind [AdminGate].
   Widget get page => AdminGate(
     child: switch (this) {
       libraries => const LibrariesPage(),
+      users => const UsersPage(),
     },
   );
 

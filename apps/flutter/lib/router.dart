@@ -15,6 +15,7 @@ import 'screens/profile/lists_screens.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/search/search_screen.dart';
 import 'screens/settings/admin/library_editor.dart';
+import 'screens/settings/admin/user_access_page.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/shell/shell.dart';
 import 'screens/sign_in/connect_screen.dart';
@@ -122,6 +123,9 @@ abstract final class Routes {
   /// The server's folders, for the library editor to add one; it takes a
   /// `FolderPickerRequest` as the push's extra and pops the folder.
   static const folderPicker = '/admin/folders';
+
+  /// What an account may see and do, set by an admin.
+  static String userAccess(String id) => '/admin/users/$id/access';
 
   static Map<String, String>? _query(Map<String, String?> values) {
     final kept = {
@@ -304,6 +308,12 @@ List<RouteBase> _handsetRoutes() => [
         _ => const FolderPickerRequest(),
       },
     ),
+  ),
+  GoRoute(
+    path: '/admin/users/:id/access',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        UserAccessPage(userId: state.pathParameters['id']!),
   ),
   GoRoute(
     path: '/title/:id',
