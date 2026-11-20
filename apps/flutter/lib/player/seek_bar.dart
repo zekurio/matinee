@@ -32,8 +32,8 @@ class SeekBar extends StatelessWidget {
   final bool scrubbing;
 
   /// How far a left or right key moves the bar, as the skip buttons do.
-  final double back;
-  final double ahead;
+  final double? back;
+  final double? ahead;
   final String label;
 
   /// What a screen reader hears as the bar's value, like "1:02 of 23:40".
@@ -154,8 +154,8 @@ class SeekTrack extends StatefulWidget {
   final double position;
   final double duration;
   final double buffered;
-  final double back;
-  final double ahead;
+  final double? back;
+  final double? ahead;
   final bool scrubbing;
   final String label;
   final String Function(String position, String duration) describe;
@@ -204,8 +204,9 @@ class _SeekTrackState extends State<SeekTrack> {
       _endKeys();
       return KeyEventResult.handled;
     }
-    final step = direction < 0 ? -widget.back : widget.ahead;
-    final to = _clamp((_keyed ?? widget.position) + step);
+    final step = direction < 0 ? widget.back : widget.ahead;
+    if (step == null) return KeyEventResult.ignored;
+    final to = _clamp((_keyed ?? widget.position) + direction * step);
     _keyed = to;
     widget.onScrub?.call(to);
     return KeyEventResult.handled;
@@ -220,6 +221,8 @@ class _SeekTrackState extends State<SeekTrack> {
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     final enabled = _enabled;
+    final back = widget.back;
+    final ahead = widget.ahead;
     final position = _clamp(widget.position);
     String describe(double seconds) =>
         widget.describe(formatClock(seconds), formatClock(widget.duration));
@@ -232,13 +235,15 @@ class _SeekTrackState extends State<SeekTrack> {
       slider: true,
       label: widget.label,
       value: value,
-      increasedValue: enabled
-          ? describe(_clamp(position + widget.ahead))
+      increasedValue: enabled && ahead != null
+          ? describe(_clamp(position + ahead))
           : null,
-      decreasedValue: enabled ? describe(_clamp(position - widget.back)) : null,
+      decreasedValue: enabled && back != null
+          ? describe(_clamp(position - back))
+          : null,
       enabled: enabled,
-      onIncrease: enabled ? () => _seekBy(widget.ahead) : null,
-      onDecrease: enabled ? () => _seekBy(-widget.back) : null,
+      onIncrease: enabled && ahead != null ? () => _seekBy(ahead) : null,
+      onDecrease: enabled && back != null ? () => _seekBy(-back) : null,
       child: Focus(
         canRequestFocus: enabled,
         onFocusChange: (focused) {

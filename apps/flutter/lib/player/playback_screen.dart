@@ -672,8 +672,8 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
       duration: length,
       buffered: _session.buffered?.clamp(0.0, length),
       scrubbing: _scrubbing != null,
-      back: (_session.skipBack ?? 10).toDouble(),
-      ahead: (_session.skipForward ?? 10).toDouble(),
+      back: _session.skipBack?.toDouble(),
+      ahead: _session.skipForward?.toDouble(),
       label: l.a11yPlayerSeek,
       describe: l.a11yPlayerPosition,
       onScrub: seekable
