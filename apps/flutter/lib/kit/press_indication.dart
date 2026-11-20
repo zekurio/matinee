@@ -14,6 +14,7 @@ class PressIndication extends StatefulWidget {
     this.longPressLabel,
     this.shape = BorderRadius.zero,
     this.label,
+    this.value,
     this.button = true,
     this.checked,
     this.toggled,
@@ -34,6 +35,9 @@ class PressIndication extends StatefulWidget {
   final Widget Function(BuildContext, PressState) builder;
   final BorderRadiusGeometry shape;
   final String? label;
+
+  /// What it's set to, read after [label], like the subtitles that are on.
+  final String? value;
   final bool button;
   final bool? checked;
   final bool? toggled;
@@ -74,6 +78,7 @@ class _PressIndicationState extends State<PressIndication> {
       inMutuallyExclusiveGroup: widget.inMutuallyExclusiveGroup,
       enabled: enabled,
       label: widget.label,
+      value: widget.value,
       onTap: press,
       onLongPress: widget.onLongPress,
       onLongPressHint: widget.longPressLabel,

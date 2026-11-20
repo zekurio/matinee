@@ -17,6 +17,7 @@ class RoundIconButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onPressed,
+    this.value,
     this.size = 44,
     this.iconSize = 20,
     this.color,
@@ -32,6 +33,9 @@ class RoundIconButton extends StatelessWidget {
   final String icon;
   final String label;
   final VoidCallback? onPressed;
+
+  /// What a screen reader hears it set to, after [label].
+  final String? value;
   final double size;
   final double iconSize;
   final Color? color;
@@ -52,6 +56,7 @@ class RoundIconButton extends StatelessWidget {
         child: PressIndication(
           onPressed: onPressed,
           label: label,
+          value: value,
           toggled: toggled,
           shape: BorderRadius.circular(size / 2),
           focusNode: focusNode,

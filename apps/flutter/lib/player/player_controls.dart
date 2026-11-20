@@ -172,16 +172,14 @@ class PlayerMenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final button = Semantics(
+    final button = RoundIconButton(
+      icon: icon,
+      label: label,
       value: state,
-      child: RoundIconButton(
-        icon: icon,
-        label: label,
-        onPressed: onPressed,
-        size: 52,
-        iconSize: 26,
-        background: _clear,
-      ),
+      onPressed: onPressed,
+      size: 52,
+      iconSize: 26,
+      background: _clear,
     );
     if (!active) return button;
     return Stack(

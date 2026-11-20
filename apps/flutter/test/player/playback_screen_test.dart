@@ -145,9 +145,22 @@ void main() {
     expect(backend.picks.last.audio, audioTwo.index);
     expect(player.trackChanges.last.audioIndex, audioTwo.index);
 
+    // The subtitles that are on are the button's value, on its own node.
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Subtitles')),
+      isSemantics(isButton: true, hasTapAction: true, value: 'Off'),
+    );
     await tap(tester, 'Subtitles');
     await tester.tap(find.text('English captions'));
     await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Subtitles')),
+      isSemantics(
+        isButton: true,
+        hasTapAction: true,
+        value: 'English captions',
+      ),
+    );
     expect(backend.starts.last.subtitle?.trackId, captions.id);
     expect(backend.subtitleRequests, hasLength(1));
 
