@@ -168,9 +168,21 @@ seconds of playing, and stay while a screen reader is on. A menu slides in
 as a panel from the side, over the video, which keeps playing. Spreading
 two fingers fills the screen and pinching fits the video again. The pieces
 are in `player_controls.dart`, `seek_bar.dart`, `player_panel.dart`, and
-`player_overlays.dart`; `playback_screen.dart` puts them together. The
-Kotlin player's lock, picture in picture, double-tap and swipe gestures,
-and trickplay thumbnails aren't ported yet.
+`player_overlays.dart`; `playback_screen.dart` puts them together.
+
+The rest is the Kotlin player's too. A double tap skips, swipes set the
+brightness, the volume, and the time (`video_gestures.dart`), and a held
+finger plays at double speed. The lock hides the controls until it's
+undone. The seek bar shows the server's trickplay frames. Picture in
+picture comes on as the app is left while a video plays, or from its
+button. A media session (`player_system.dart`, `MediaControls.kt`) puts
+the video in the notification shade and on the lock screen and headsets,
+and both engines answer it. A remote's, a keyboard's, and a headset's
+keys play, skip, and bring up the controls. Subtitles take the look
+Settings gives them (`subtitle_look.dart`): mpv takes its size, and
+Media3 draws its cues in the whole look. Each sitting keeps a playback
+report (`playback_report.dart`) of the sources tried and the engine's
+codes, which Settings, About shows.
 
 ## Server data
 
@@ -425,18 +437,21 @@ and the account rows.
 
 `lib/screens/settings` is the Kotlin app's Settings for phones and
 tablets: offline mode on top, then Account, Appearance, Playback,
-Downloads, and About, then the server in use and the app's version. Each
-category opens
+Subtitles, Downloads, and About, then the server in use and the app's
+version. Each category opens
 `Routes.settingsPage(key)`, and a key it doesn't know opens the first
 page. Appearance picks light, dark, or the system's scheme and the theme
 preset (`themeStoreProvider`); Playback, on Android only, picks the
-engine, mpv or Media3 (`playerEngineProvider`); About shows the version,
-the system, and the device, and the licenses page lays out `NOTICE.md`,
-which the app bundles as an asset. The rows (`Panel`, `LinkRow`,
-`SwitchRow`, `ValueRow`, `PickerRow`) are in `settings_rows.dart`. Signing
-out and switching server or account are on the profile. The Kotlin app's
-subtitles and playback diagnostics aren't here yet. An admin also gets
-the Administration section, which [Admin pages](#admin-pages) covers.
+engine, mpv or Media3 (`playerEngineProvider`), and keeps the rest of the
+player's settings (`playerPrefsProvider`); Subtitles, also Android's,
+sets their look over a sample, or follows the system's caption style;
+About shows the version, the system, the device, the licenses, the
+latest playback report, and the app log, and the licenses page lays out
+`NOTICE.md`, which the app bundles as an asset. The rows (`Panel`,
+`LinkRow`, `SwitchRow`, `ValueRow`, `PickerRow`) are in
+`settings_rows.dart`. Signing out and switching server or account are on
+the profile. An admin also gets the Administration section, which
+[Admin pages](#admin-pages) covers.
 
 ### Account
 
