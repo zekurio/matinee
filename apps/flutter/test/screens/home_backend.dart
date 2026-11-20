@@ -132,6 +132,9 @@ final class HomeBackend {
   /// The paths asked, in order.
   final asked = <String>[];
 
+  /// The URLs asked, in order, with their queries.
+  final urls = <Uri>[];
+
   /// The requests' live stream, as server-sent events.
   final live = StreamController<List<int>>.broadcast();
 
@@ -141,6 +144,7 @@ final class HomeBackend {
   late final client = MockClient.streaming((request, body) async {
     final path = request.url.path;
     asked.add(path);
+    urls.add(request.url);
     if (down.contains(path)) throw const SocketException('down');
     if (path == '/api/v1/requests/live') {
       return http.StreamedResponse(live.stream, 200);

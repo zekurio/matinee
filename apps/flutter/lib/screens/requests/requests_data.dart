@@ -286,6 +286,14 @@ final class MyRequests extends CursorList<RequestItem> {
 final myRequestsProvider = NotifierProvider.autoDispose
     .family<MyRequests, CursorPages<RequestItem>, String>(MyRequests.new);
 
+/// The profile's "My requests": the latest of everything the viewer asked
+/// for, as the Kotlin app's `ProfileAskedRail` loads it. Fetched again
+/// when an ask, a cancel, or an answer changes it.
+final profileAskedProvider = FutureProvider.autoDispose<RequestPage>((ref) {
+  ref.watch(requestsVersionProvider);
+  return serverApi(ref).requests.mine(limit: 24, filter: MineFilter.all);
+}, retry: (_, _) => null);
+
 /// An admin's Done, a page at a time from its own call, newest first.
 final class DoneRequests extends CursorList<AdminRequestItem> {
   @override

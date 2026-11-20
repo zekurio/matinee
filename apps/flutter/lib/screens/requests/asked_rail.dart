@@ -6,18 +6,22 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/layout.dart';
 import '../../router.dart';
-import '../requests/catalog_cards.dart';
-import '../requests/requests_hub.dart';
+import 'catalog_cards.dart';
+import 'requests_hub.dart';
 
-/// Home's "My requests", as the Kotlin app's `HomeAskedRail`: what's on its
-/// way and what came or was answered lately, each card following its
-/// title's state live, with the accent dot once one arrives. Nothing when
-/// there's none, so Home stays about what's here. The heading opens the
-/// whole list.
+/// A row of what the viewer asked for, each card following its title's
+/// state live; the heading opens the whole list. Home's, as the Kotlin
+/// app's `HomeAskedRail`, holds what's on its way and what came or was
+/// answered lately, with the accent dot once one arrives ([fresh]); the
+/// profile's, as its `ProfileAskedRail`, the latest of everything. Leave
+/// it out when there's nothing, so the page stays about what's there.
 class AskedRail extends StatelessWidget {
-  const AskedRail({super.key, required this.items});
+  const AskedRail({super.key, required this.items, this.fresh = true});
 
   final List<RequestItem> items;
+
+  /// Whether an arrived title gets the accent dot until it's watched.
+  final bool fresh;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +44,7 @@ class AskedRail extends StatelessWidget {
         itemBuilder: (context, index) => AskedCard(
           key: ValueKey(items[index].id),
           item: items[index],
-          fresh: true,
+          fresh: fresh,
         ),
       ),
     );

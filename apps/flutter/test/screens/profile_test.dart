@@ -211,6 +211,64 @@ void main() {
     );
   });
 
+  testWidgets('the profile shows what the person asked for, live', (
+    tester,
+  ) async {
+    final backend = _backend();
+    await pumpScreen(
+      tester,
+      const ProfileScreen(),
+      client: backend.client,
+      overrides: _servers,
+    );
+    await tester.scrollUntilVisible(
+      find.text('My requests'),
+      200,
+      scrollable: _list(),
+    );
+    // After favorites and before the statistics, as the Kotlin app has it.
+    expect(
+      tester.getTopLeft(find.text('My requests')).dy,
+      greaterThan(tester.getTopLeft(find.text('Favorites')).dy),
+    );
+    expect(find.text('Dune: Part Two'), findsWidgets);
+    final mine = backend.urls.lastWhere(
+      (url) => url.path == '/api/v1/requests/mine',
+    );
+    // The latest of everything, not only what's on its way.
+    expect(mine.queryParameters, {'limit': '24', 'filter': 'all'});
+    expect(find.bySemanticsLabel(RegExp('Requested')), findsOneWidget);
+    backend.send([
+      {
+        'ref': refJson('999'),
+        'availability': availabilityJson('coming', progress: .4),
+        'seasons': <Object>[],
+      },
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel(RegExp('On its way')), findsOneWidget);
+  });
+
+  testWidgets('with nothing asked for there is no row', (tester) async {
+    final backend = _backend()
+      ..answers['/api/v1/requests/mine'] = {
+        'items': <Object>[],
+        'nextCursor': null,
+      };
+    await pumpScreen(
+      tester,
+      const ProfileScreen(),
+      client: backend.client,
+      overrides: _servers,
+    );
+    await tester.scrollUntilVisible(
+      find.text('Sign out'),
+      200,
+      scrollable: _list(),
+    );
+    expect(find.text('My requests'), findsNothing);
+  });
+
   testWidgets('a long press on a favorite season opens its menu', (
     tester,
   ) async {
@@ -260,18 +318,14 @@ void main() {
       client: backend.client,
       overrides: _servers,
     );
-    await tester.scrollUntilVisible(
-      find.text('Watch time · All time'),
-      200,
-      scrollable: _list(),
+    final bars = find.byWidgetPredicate(
+      (widget) =>
+          widget is CustomPaint &&
+          widget.painter.runtimeType.toString() == '_BarsPainter',
     );
-    final box = tester.getRect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is CustomPaint &&
-            widget.painter.runtimeType.toString() == '_BarsPainter',
-      ),
-    );
+    await tester.scrollUntilVisible(bars, 200, scrollable: _list());
+    await tester.pumpAndSettle();
+    final box = tester.getRect(bars);
     final gesture = await tester.startGesture(
       box.centerRight - const Offset(8, 0),
     );

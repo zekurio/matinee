@@ -14,6 +14,8 @@ import '../../media/layout.dart';
 import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
+import '../requests/asked_rail.dart';
+import '../requests/requests_data.dart' show profileAskedProvider;
 import '../settings/settings_rows.dart';
 import '../sign_in/server_switcher.dart';
 import 'favorite_cards.dart';
@@ -49,10 +51,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  /// Back on the tab, favorites and what was watched may have moved on.
+  /// Back on the tab, favorites, requests, and what was watched may have
+  /// moved on.
   void _returned(String username) {
     ref
       ..invalidate(profileProvider(username))
+      ..invalidate(profileAskedProvider)
       ..invalidate(statsProvider(_statsQuery(username)));
   }
 
@@ -122,9 +126,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ];
     }
     final recent = loaded.recent ?? const <WatchedEntry>[];
+    // What they asked for is theirs alone, and this is only their own
+    // profile. A row that's loading, empty, or failed is left out.
+    final asked = ref.watch(profileAskedProvider).value?.items ?? const [];
     return [
       header,
       _Favorites(favorites: loaded.favorites ?? const []),
+      if (asked.isNotEmpty) AskedRail(items: asked, fresh: false),
       _statistics(context, user),
       if (recent.isNotEmpty) _RecentRail(entries: recent),
       const _Account(),

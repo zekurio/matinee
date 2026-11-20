@@ -433,7 +433,10 @@ the Kotlin app follows them.
 `lib/screens/profile` is the fifth tab, the Kotlin app's profile: the
 account's picture (`Avatar` in `lib/media`, which the tab bar shows too),
 name, and since when it's here; favorites, whose heading opens
-`Routes.favorites`; the statistics for a range, with watch time per day,
+`Routes.favorites`; "My requests", the latest of everything the person
+asked for, each card following its title live, whose heading opens
+`Routes.requests()` (`AskedRail` in `lib/screens/requests`, which Home
+shows too); the statistics for a range, with watch time per day,
 week, or month as bars that read out under a finger, the totals, the most
 watched titles, the genres, where the person stands on the leaderboard,
 and when in the week they watch; what they watched last, opening
