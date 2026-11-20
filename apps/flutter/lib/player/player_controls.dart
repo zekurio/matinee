@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '../kit/kit.dart';
@@ -226,7 +228,8 @@ class PlayerMenuButton extends StatelessWidget {
 }
 
 /// The middle of the controls: the previous episode, skip back, play or
-/// pause, skip ahead, and the next episode, 32 apart. While [loading], the
+/// pause, skip ahead, and the next episode, 32 apart where there's room and
+/// closer, then smaller, where there isn't (see [transportFit]). While [loading], the
 /// play button's place stays empty for the spinner drawn at the center.
 class PlayerTransport extends StatelessWidget {
   const PlayerTransport({
@@ -253,16 +256,14 @@ class PlayerTransport extends StatelessWidget {
   final (PlayerEpisodeButton, PlayerEpisodeButton)? episodes;
 
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    spacing: 32,
-    children: [
-      ?episodes?.$1,
-      if (back case final skip?) _SkipButton(skip, Lucide.rotateCcw),
-      SizedBox.square(
-        dimension: 96,
-        child: loading
-            ? null
+  Widget build(BuildContext context) {
+    final buttons = <(double, Widget)>[
+      if (episodes case (final previous, _)) (64, previous),
+      if (back case final skip?) (72, _SkipButton(skip, Lucide.rotateCcw)),
+      (
+        96,
+        loading
+            ? const SizedBox.shrink()
             : RoundIconButton(
                 icon: playing ? Lucide.pause : Lucide.play,
                 label: playing ? pauseLabel : playLabel,
@@ -274,10 +275,48 @@ class PlayerTransport extends StatelessWidget {
                 iconShadows: _onPicture,
               ),
       ),
-      if (ahead case final skip?) _SkipButton(skip, Lucide.rotateCw),
-      ?episodes?.$2,
-    ],
-  );
+      if (ahead case final skip?) (72, _SkipButton(skip, Lucide.rotateCw)),
+      if (episodes case (_, final next)) (64, next),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fit = transportFit([
+          for (final (size, _) in buttons) size,
+        ], constraints.maxWidth);
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: fit.gap,
+          children: [
+            for (final (size, button) in buttons)
+              SizedBox.square(
+                dimension: size * fit.scale,
+                child: FittedBox(
+                  child: SizedBox.square(dimension: size, child: button),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// How the middle row fits [width]: the gaps narrow from 32 to 8 first,
+/// then the buttons shrink together, never past what [width] leaves. At the
+/// narrowest width the app supports, 320, they stay above 48 across.
+({double gap, double scale}) transportFit(List<double> sizes, double width) {
+  const widest = 32.0;
+  const narrowest = 8.0;
+  final buttons = sizes.fold(0.0, (sum, size) => sum + size);
+  final gaps = math.max(0, sizes.length - 1);
+  if (!width.isFinite || buttons + gaps * widest <= width) {
+    return (gap: widest, scale: 1);
+  }
+  if (buttons + gaps * narrowest <= width) {
+    return (gap: (width - buttons) / gaps, scale: 1);
+  }
+  final scale = ((width - gaps * narrowest) / buttons).clamp(0.0, 1.0);
+  return (gap: narrowest, scale: scale.toDouble());
 }
 
 /// A skip button's seconds, what it says to a screen reader, and its action.
@@ -324,6 +363,9 @@ class _SkipButton extends StatelessWidget {
                 child: ExcludeSemantics(
                   child: Text(
                     '${skip.seconds}',
+                    // It sits inside the arrow, so it grows only as far as that leaves.
+                    textScaler: MediaQuery.textScalerOf(context)
+                        .clamp(maxScaleFactor: 1.3),
                     style: KitText.xs
                         .style(
                           color: colors.foreground,
