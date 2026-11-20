@@ -38,6 +38,7 @@ class _KitGalleryState extends State<KitGallery> {
   bool _chipOn = true;
   bool _searchOpen = true;
   int _choice = 0;
+  int _library = 0;
   int _page = 1;
   double _volume = .55;
   RangeValues _range = const RangeValues(.22, .76);
@@ -446,6 +447,23 @@ class _KitGalleryState extends State<KitGallery> {
             label: 'Drama',
             removeLabel: 'Remove filter Drama',
             onRemove: () {},
+          ),
+        ],
+      ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RadioRow(
+            label: 'Films',
+            detail: 'Radarr',
+            selected: _library == 0,
+            onPressed: () => setState(() => _library = 0),
+          ),
+          RadioRow(
+            label: 'Films in 4K',
+            detail: 'Radarr 4K',
+            selected: _library == 1,
+            onPressed: () => setState(() => _library = 1),
           ),
         ],
       ),

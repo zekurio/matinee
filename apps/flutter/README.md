@@ -637,7 +637,7 @@ of its own.
 Screens build from `lib/kit`, the port of `packages/ui` and its theme. It
 keeps the web's and the Android kit's names: `MatineeButton` (looks, sizes,
 `shape`, `dimmed`, and the `glass` and `frosted` looks for buttons over a
-picture), `RoundIconButton`, `Checkbox`, `ChoiceChip`, `ToggleChip`, `Dialog`, `ConfirmDialog`,
+picture), `RoundIconButton`, `Checkbox`, `RadioRow`, `ChoiceChip`, `ToggleChip`, `Dialog`, `ConfirmDialog`,
 `Menu`, `PageDots`, `ProgressRing`, `SearchPill`, `Sheet`, `Slider`,
 `QrCodeCard`, `RangeSlider`, `Spinner`, `Switch`, `TabBar` with `TabBarState`,
 `MatineeTextField`, `Toast` with `ToastState`, `Calendar`, and
