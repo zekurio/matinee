@@ -222,6 +222,24 @@ void main() {
     );
   });
 
+  testWidgets('a 360 wide phone fits Resume beside every round button', (
+    tester,
+  ) async {
+    final backend = _movie();
+    await pumpScreen(
+      tester,
+      const TitleScreen(id: 'm1'),
+      client: backend.client,
+      size: const Size(360, 800),
+    );
+    // An overflow would have failed the pump; the button still reads whole.
+    expect(find.bySemanticsLabel('Resume, 30 min left'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('Watch the trailer on YouTube'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('Resume plays the file the server names', (tester) async {
     final backend = _movie();
     await pumpScreen(

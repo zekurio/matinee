@@ -621,23 +621,46 @@ class ActionRow extends ConsumerWidget {
         onPressed: play == null
             ? null
             : () => context.push(Routes.play(play.id)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 6,
-          children: [
-            Text(label, maxLines: 1),
-            if (left != null)
-              Flexible(
-                child: Text(
-                  left,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.accentForeground.withValues(alpha: .6),
-                  ),
-                ),
+        // The label stays whole and what's left over goes to the time, as
+        // the Kotlin app's; only where the label alone doesn't fit, as on a
+        // 360 wide phone with every round button, it shortens too.
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final painter = TextPainter(
+              text: TextSpan(
+                text: label,
+                style: DefaultTextStyle.of(context).style,
               ),
-          ],
+              maxLines: 1,
+              textDirection: Directionality.of(context),
+              textScaler: MediaQuery.textScalerOf(context),
+            )..layout();
+            final fits = painter.width <= constraints.maxWidth;
+            painter.dispose();
+            final text = Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            );
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 6,
+              children: [
+                if (fits) text else Flexible(child: text),
+                if (left != null && fits)
+                  Flexible(
+                    child: Text(
+                      left,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.accentForeground.withValues(alpha: .6),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
