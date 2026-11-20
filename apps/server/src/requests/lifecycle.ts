@@ -900,7 +900,13 @@ export async function moderate(
             throw cause
           })
       }
-      if (operation === "approve" && row.status !== "asked") continue
+      if (operation === "approve" && row.status !== "asked") {
+        if (ids.length === 1 && row.status === "declined")
+          throw new ORPCError("CONFLICT", {
+            message: "This request changed. Reload the list and try again.",
+          })
+        continue
+      }
       if (
         operation === "retry" &&
         (row.status !== "approved" || row.fulfilmentState !== "failed")
