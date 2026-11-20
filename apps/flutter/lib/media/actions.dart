@@ -29,7 +29,9 @@ class MediaChanges extends Notifier<int> {
   @override
   int build() => 0;
 
-  void changed() => state++;
+  void changed() {
+    if (ref.mounted) state++;
+  }
 }
 
 /// The requests behind each change, by what it's for.
