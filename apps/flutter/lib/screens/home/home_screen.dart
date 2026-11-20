@@ -17,6 +17,7 @@ import 'featured_carousel.dart';
 import 'home_banner.dart';
 import 'home_data.dart';
 import 'home_layout.dart';
+import 'offline_home.dart';
 
 /// The Home tab, as the Kotlin app's: the featured titles on top, as cards
 /// on a phone and the web's banner on a tablet, then Continue watching,
@@ -92,8 +93,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final colors = MatineeTheme.of(context);
     ref.listen(mediaChangesProvider, (_, _) => _changed());
     if (ref.watch(authStateProvider) is Offline) {
-      return ColoredBox(color: colors.background, child: const _Offline());
+      return ColoredBox(color: colors.background, child: const OfflineHome());
     }
+    // What offline Home starts its rows from.
+    final snapshot = ref.read(homeSnapshotProvider.notifier);
+    ref
+      ..listen(continueWatchingProvider, (_, next) {
+        if (next.value case final items?) {
+          snapshot.saveResume([for (final item in items) item.id]);
+        }
+      })
+      ..listen(nextUpProvider, (_, next) {
+        if (next.value case final items?) {
+          snapshot.saveNextUp([for (final item in items) item.id]);
+        }
+      });
     final l = AppLocalizations.of(context);
     final libraries = ref.watch(librariesProvider);
     final resume = ref.watch(continueWatchingProvider);
@@ -311,23 +325,6 @@ class _NoLibraries extends ConsumerWidget {
         message: admin
             ? l.browseHomeNoLibrariesAdmin
             : l.browseHomeNothingYetDescription,
-      ),
-    );
-  }
-}
-
-/// Offline, Home would be the downloads, which this app doesn't keep yet.
-class _Offline extends StatelessWidget {
-  const _Offline();
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Center(
-      child: EmptyState(
-        icon: Lucide.cloudOff,
-        title: l.unreachableOfflineTitle,
-        message: l.unreachableOffline,
       ),
     );
   }
