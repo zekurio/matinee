@@ -72,6 +72,7 @@ const resources = {
   refreshCw: "refresh-cw",
   rotateCcw: "rotate-ccw",
   rotateCw: "rotate-cw",
+  scale: "scale",
   scanQrCode: "scan-qr-code",
   search: "search",
   searchX: "search-x",

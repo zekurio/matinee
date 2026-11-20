@@ -38,9 +38,12 @@ dev_dependencies:
 flutter:
   uses-material-design: false
   generate: true
-  # Shown in Settings, About, Licenses.
+  # Shown in Settings, About, Licenses: the notices, the project's license,
+  # and the licenses the build bundles that Flutter's NOTICES leaves out.
   assets:
     - NOTICE.md
+    - LICENSE
+    - assets/licenses/
   fonts:
     - family: Red Hat Text
       fonts:

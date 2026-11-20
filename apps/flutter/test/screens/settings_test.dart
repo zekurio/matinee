@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show LicenseEntryWithLineBreaks;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/app_log.dart';
 import 'package:matinee/core/device.dart';
+import 'package:matinee/core/licenses.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/core/toasts.dart';
 import 'package:matinee/kit/kit.dart';
@@ -17,6 +21,7 @@ import 'package:matinee/player/player_state.dart';
 import 'package:matinee/player/player_system.dart';
 import 'package:matinee/player/subtitle_look.dart';
 import 'package:matinee/screens/settings/about_page.dart';
+import 'package:matinee/screens/settings/licenses_page.dart';
 import 'package:matinee/screens/settings/settings_screen.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
@@ -419,10 +424,163 @@ void main() {
     });
   });
 
-  testWidgets('Licenses shows NOTICE.md', (tester) async {
-    await _pump(tester, const SettingsPageScreen(pageKey: 'licenses'));
-    expect(find.text('Android player notices'), findsOneWidget);
-    expect(find.text('MainActivity.kt'), findsOneWidget);
+  group('licenses', () {
+    // What Flutter's NOTICES would hold for two Dart packages.
+    final registry = licenseRegistryProvider.overrideWithValue(
+      () => Stream.fromIterable([
+        const LicenseEntryWithLineBreaks(['http'], 'Copyright the Dart team'),
+        const LicenseEntryWithLineBreaks([
+          'http',
+          'crypto',
+        ], 'BSD-style license'),
+      ]),
+    );
+
+    // The texts are assets, which the test reads from disk in real time,
+    // one after another.
+    Future<void> loaded(WidgetTester tester) async {
+      for (var turn = 0; turn < 500; turn++) {
+        await tester.pump();
+        if (find.byType(LoadingState).evaluate().isEmpty) break;
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 5)),
+        );
+      }
+      expect(find.byType(LoadingState), findsNothing);
+      await tester.pumpAndSettle();
+    }
+
+    Finder list() => find
+        .descendant(
+          of: find.byType(SettingsPageScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
+    testWidgets('the page has the project, the notices, and each package', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const SettingsPageScreen(pageKey: 'licenses'),
+        overrides: [registry],
+      );
+      await loaded(tester);
+      expect(find.text('This app'), findsOneWidget);
+      expect(
+        find.text('GNU General Public License, version 3'),
+        findsOneWidget,
+      );
+      expect(find.text('Android player notices'), findsOneWidget);
+      expect(find.text('MainActivity.kt'), findsOneWidget);
+      for (final package in [
+        'AndroidX Media3',
+        'FFmpeg (Jellyfin Media3 FFmpeg decoder)',
+        'libmpv (mpv-android)',
+        'OkHttp',
+        'Red Hat Text',
+        'ZXing',
+      ]) {
+        await tester.scrollUntilVisible(
+          find.text(package),
+          200,
+          scrollable: list(),
+        );
+        expect(find.text(package), findsOneWidget);
+      }
+      await tester.scrollUntilVisible(
+        find.text('http'),
+        200,
+        scrollable: list(),
+      );
+      // Covered by both of its entries.
+      expect(find.text('2 licenses'), findsOneWidget);
+      await tester.ensureVisible(find.text('http'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('http'));
+      await tester.pumpAndSettle();
+      expect(find.text('/licenses/http'), findsOneWidget);
+    });
+
+    testWidgets("a license's page shows its text", (tester) async {
+      await _pump(
+        tester,
+        const LicenseTextScreen(package: projectPackage),
+        overrides: [registry],
+      );
+      await loaded(tester);
+      expect(
+        find.text('GNU General Public License, version 3'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('GNU GENERAL PUBLIC LICENSE'), findsOneWidget);
+    });
+
+    testWidgets('a native library says whose it is over its license', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const LicenseTextScreen(package: 'AndroidX Media3'),
+        overrides: [registry],
+      );
+      await loaded(tester);
+      expect(
+        find.textContaining('Copyright © The Android Open Source Project'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Apache License'), findsOneWidget);
+    });
+
+    test('every library the Android build bundles has its license here', () {
+      // Each dependency's group, and the entry that carries its license.
+      const carried = {
+        'edde746:mpv-android': 'libmpv (mpv-android)',
+        'androidx.media3': 'AndroidX Media3',
+        'org.jellyfin.media3': 'FFmpeg (Jellyfin Media3 FFmpeg decoder)',
+        'org.jetbrains.kotlinx': 'kotlinx.coroutines',
+        'androidx.camera': 'AndroidX CameraX',
+        'com.google.zxing': 'ZXing',
+        'androidx.work': 'AndroidX WorkManager',
+        'com.squareup.okhttp3': 'OkHttp',
+      };
+      final gradle = File('android/app/build.gradle.kts').readAsStringSync();
+      final groups = [
+        for (final match in RegExp(
+          r'^\s*implementation\("([^":]+)(:[^":]+)?',
+          multiLine: true,
+        ).allMatches(gradle))
+          match[1] == 'edde746' ? 'edde746${match[2]}' : match[1]!,
+      ];
+      expect(groups, isNotEmpty);
+      final packages = {
+        for (final license in androidLicenses) ...license.packages,
+      };
+      for (final group in groups) {
+        expect(
+          carried[group],
+          isNotNull,
+          reason: '$group is bundled; add its license to androidLicenses',
+        );
+        expect(packages, contains(carried[group]));
+      }
+    });
+
+    for (final colors in [matineeDark]) {
+      testWidgets('the licenses page', (tester) async {
+        await _pump(
+          tester,
+          const SettingsPageScreen(pageKey: 'licenses'),
+          overrides: [registry],
+          colors: colors,
+        );
+        await loaded(tester);
+        await expectLater(
+          find.byType(SettingsPageScreen),
+          matchesGoldenFile('goldens/licenses_phone_dark.png'),
+        );
+      });
+    }
   });
 
   test('the notice reads as headings, paragraphs, and rows', () {

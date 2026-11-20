@@ -3,7 +3,7 @@
 The following files adapt code from Plezy at revision
 `54f135fe46f1aed4edc36a04241152fc9cac7bf5`. Copyright © edde746 and Plezy
 contributors. Licensed under GPL-3.0. The Matinee copy of the license is in
-[LICENSE](../../LICENSE).
+[LICENSE](LICENSE).
 
 All paths below are relative to
 `android/app/src/main/kotlin/io/github/zekurio/matinee/`.

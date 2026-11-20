@@ -471,9 +471,17 @@ engine, mpv or Media3 (`playerEngineProvider`), and keeps the rest of the
 player's settings (`playerPrefsProvider`); Subtitles, also Android's,
 sets their look over a sample, or follows the system's caption style;
 About shows the version, the system, the device, the licenses, the
-latest playback report, and the app log, and the licenses page lays out
-`NOTICE.md`, which the app bundles as an asset. The rows (`Panel`,
-`LinkRow`, `SwitchRow`, `ValueRow`, `PickerRow`) are in
+latest playback report, and the app log. The licenses page
+(`licenses_page.dart`) opens the project's own license, the `LICENSE`
+beside this README, lays out `NOTICE.md`, and lists what the app is built
+from, each opening its license text at `Routes.license(package)`: the
+Dart and Flutter packages from `LicenseRegistry`, and from
+`lib/core/licenses.dart` what Flutter's NOTICES doesn't know, the font,
+the icons, and on Android the native libraries the Gradle build bundles
+(libmpv, FFmpeg, Media3, CameraX, WorkManager, ZXing, OkHttp, Kotlin),
+with their texts in `assets/licenses`. A test fails when
+`android/app/build.gradle.kts` adds a library that list doesn't cover.
+The rows (`Panel`, `LinkRow`, `SwitchRow`, `ValueRow`, `PickerRow`) are in
 `settings_rows.dart`. Signing out and switching server or account are on
 the profile. An admin also gets the Administration section, which
 [Admin pages](#admin-pages) covers.
@@ -698,4 +706,5 @@ compares them with `test/kit/goldens`. After changing a component, run
 
 ## License
 
-GPL-3.0, like the native apps it replaces, since it bundles libmpv.
+GPL-3.0, in `LICENSE`, like the native apps it replaces, since it
+bundles libmpv and a GPL build of FFmpeg.

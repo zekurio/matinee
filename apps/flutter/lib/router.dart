@@ -23,6 +23,7 @@ import 'screens/requests/requests_screen.dart';
 import 'screens/search/search_screen.dart';
 import 'screens/settings/admin/library_editor.dart';
 import 'screens/settings/admin/user_access_page.dart';
+import 'screens/settings/licenses_page.dart';
 import 'screens/settings/link_device.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/shell/shell.dart';
@@ -74,6 +75,10 @@ abstract final class Routes {
   static const settings = '/settings';
   static String settingsPage(String page) => '/settings/$page';
   static const linkDevice = '/link-device';
+
+  /// The license text of [package], from Settings, About, Licenses.
+  static String license(String package) =>
+      '/licenses/${Uri.encodeComponent(package)}';
 
   /// Yours, and for an admin the ones waiting on them; [list] picks one
   /// of an admin's lists.
@@ -296,6 +301,12 @@ List<RouteBase> _handsetRoutes() => [
     parentNavigatorKey: _rootKey,
     builder: (context, state) =>
         SettingsPageScreen(pageKey: state.pathParameters['page']!),
+  ),
+  GoRoute(
+    path: '/licenses/:package',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        LicenseTextScreen(package: state.pathParameters['package']!),
   ),
   GoRoute(
     path: Routes.linkDevice,

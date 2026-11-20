@@ -15,6 +15,7 @@ import 'admin/admin_parts.dart';
 import 'admin/admin_settings.dart';
 import 'appearance_page.dart';
 import 'downloads_page.dart';
+import 'licenses_page.dart';
 import 'playback_page.dart';
 import 'settings_rows.dart';
 import 'subtitles_page.dart';

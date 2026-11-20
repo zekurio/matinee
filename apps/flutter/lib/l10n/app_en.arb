@@ -52,6 +52,31 @@
   "@aboutLicensesFailed": {
     "description": "Licenses page: NOTICE.md didn't load"
   },
+  "aboutLicensesCount": "{count, plural, one{{count} license} other{{count} licenses}}",
+  "@aboutLicensesCount": {
+    "description": "Licenses page: how many licenses cover a package, when more than one does",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aboutLicensesGpl": "GNU General Public License, version 3",
+  "@aboutLicensesGpl": {
+    "description": "Licenses page: the project's license, by its name"
+  },
+  "aboutLicensesPackages": "What the app is built from",
+  "@aboutLicensesPackages": {
+    "description": "Licenses page: the heading over the packages and libraries the app bundles, each opening its license"
+  },
+  "aboutLicensesProject": "This app",
+  "@aboutLicensesProject": {
+    "description": "Licenses page: the heading over the project's own license"
+  },
+  "aboutLicensesProjectBody": "Matinee is free software: you may share and change it under the GNU General Public License, version 3. It's under the GPL because it bundles libmpv and FFmpeg, which are.",
+  "@aboutLicensesProjectBody": {
+    "description": "Licenses page: what the project's license lets people do, and why it's the GPL"
+  },
   "aboutTitle": "About",
   "@aboutTitle": {
     "description": "strings_diagnostics.xml"
