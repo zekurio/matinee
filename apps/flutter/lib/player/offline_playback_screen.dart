@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../api/matinee_api.dart';
 import '../core/session.dart';
@@ -14,19 +13,13 @@ import '../downloads/pending_progress.dart';
 import '../kit/kit.dart';
 import '../l10n/app_localizations.dart';
 import '../media/actions.dart' show mediaChangesProvider;
-import '../media/format.dart';
 import '../router.dart';
 import 'offline_session.dart';
 import 'playback_device.dart';
 import 'playback_screen.dart';
 import 'player.dart';
 import 'player_controls.dart';
-import 'player_motion.dart';
-import 'player_overlays.dart';
-import 'player_panel.dart';
 import 'player_preferences.dart';
-import 'seek_bar.dart';
-import 'video_view.dart';
 
 /// `/play/:id`: a finished download of the file plays from the device, as
 /// in the Kotlin app, online too; anything else asks the server.
@@ -153,6 +146,10 @@ class _OfflinePlaybackScreenState extends ConsumerState<OfflinePlaybackScreen> {
     final l = AppLocalizations.of(context);
     final engineState = ref.watch(playerEngineProvider);
     final engine = engineState.value ?? PlayerEngine.mpv;
+    // Read once when the player opens, as a stream's.
+    final prefsLoading = ref.watch(
+      playerPrefsProvider.select((prefs) => prefs.isLoading),
+    );
     final codecs = engine == PlayerEngine.media3
         ? ref.watch(playbackCodecsProvider)
         : null;
@@ -169,15 +166,18 @@ class _OfflinePlaybackScreenState extends ConsumerState<OfflinePlaybackScreen> {
       child = _Opening(back: back, error: l.playerErrorDownload);
     } else if (!_asked ||
         engineState.isLoading ||
+        prefsLoading ||
         (codecs != null && codecs.isLoading)) {
       child = _Opening(back: back);
     } else {
       final item = _fresh ?? download.item;
       final preferences = user?.playback ?? defaultPlaybackPreferences;
+      final prefs = ref.read(playerPrefsProvider).value ?? const PlayerPrefs();
       final device = playbackDevice(
         engine,
         codecs?.value,
         WidgetsBinding.instance.platformDispatcher.locale.languageCode,
+        prefs: prefs,
       );
       bool decodes(String codec) =>
           device.audio.contains('*') ||
@@ -200,6 +200,15 @@ class _OfflinePlaybackScreenState extends ConsumerState<OfflinePlaybackScreen> {
         deviceLanguage: device.language,
       );
       final server = download.server;
+      // The system's media controls show the server's artwork while it's
+      // the one in use, as the Kotlin app's do.
+      final api = ref.read(apiProvider);
+      final artwork =
+          api != null &&
+              ref.read(authStateProvider) is SignedIn &&
+              ref.read(downloadsServerProvider) == server
+          ? api.paths.artwork
+          : null;
       final pending = ref.read(pendingProgressProvider.notifier);
       final waiting = pending.report(server, item.id)?.positionSeconds;
       final progress = item.progress;
@@ -221,18 +230,23 @@ class _OfflinePlaybackScreenState extends ConsumerState<OfflinePlaybackScreen> {
           kind: download.kind,
           audioTracks: download.audio,
           subtitles: saved,
-          player: ref.read(playbackPlayerFactoryProvider)(
-            engine,
-            ref.read(playerPrefsProvider).value ?? const PlayerPrefs(),
-          ),
+          player: ref.read(playbackPlayerFactoryProvider)(engine, prefs),
           mpv: engine == PlayerEngine.mpv,
           audio: audio,
           subtitle: subtitle,
           startAt: startAt,
           onReport: reporter.report,
+          skipBack: preferences.skipBack,
+          skipForward: preferences.skipForward,
+          diagnostics: startPlaybackReport(
+            ref,
+            engine,
+            prefs,
+            device,
+            file: item,
+          ),
+          artwork: artwork,
         ),
-        skipBack: preferences.skipBack,
-        skipForward: preferences.skipForward,
         back: back,
         next: (next) => context.replace(Routes.play(next.id), extra: 0.0),
       );
@@ -377,15 +391,11 @@ class _OfflineHost extends ConsumerStatefulWidget {
   const _OfflineHost({
     required super.key,
     required this.create,
-    required this.skipBack,
-    required this.skipForward,
     required this.back,
     required this.next,
   });
 
   final OfflinePlaybackSession Function() create;
-  final int skipBack;
-  final int skipForward;
   final VoidCallback back;
   final ValueChanged<MediaItem> next;
 
@@ -396,10 +406,6 @@ class _OfflineHost extends ConsumerStatefulWidget {
 class _OfflineHostState extends ConsumerState<_OfflineHost> {
   late final OfflinePlaybackSession _session;
 
-  /// The episodes either side, from the server when it answers; none
-  /// offline.
-  (MediaItem?, MediaItem?) _episodes = (null, null);
-
   @override
   void initState() {
     super.initState();
@@ -408,6 +414,8 @@ class _OfflineHostState extends ConsumerState<_OfflineHost> {
     unawaited(_neighbours());
   }
 
+  /// The episodes either side, from the server when it answers; none
+  /// offline.
   Future<void> _neighbours() async {
     final title = _session.item.title;
     final api = ref.read(apiProvider);
@@ -421,11 +429,9 @@ class _OfflineHostState extends ConsumerState<_OfflineHost> {
       final all = await api.titleItems(title.id);
       final index = all.indexWhere((item) => item.id == _session.item.id);
       if (!mounted || index < 0) return;
-      setState(
-        () => _episodes = (
-          index > 0 ? all[index - 1] : null,
-          index + 1 < all.length ? all[index + 1] : null,
-        ),
+      _session.episodes(
+        index > 0 ? all[index - 1] : null,
+        index + 1 < all.length ? all[index + 1] : null,
       );
     } on Object {
       // Without the server, none either side.
@@ -439,462 +445,9 @@ class _OfflineHostState extends ConsumerState<_OfflineHost> {
     super.dispose();
   }
 
+  /// The stream's controls: a download has the same gestures, lock,
+  /// buttons, picture in picture, media session, and keys.
   @override
-  Widget build(BuildContext context) => _OfflineControls(
-    session: _session,
-    skipBack: widget.skipBack,
-    skipForward: widget.skipForward,
-    previous: _episodes.$1,
-    following: _episodes.$2,
-    back: widget.back,
-    next: widget.next,
-  );
-}
-
-enum _Menu { audio, subtitles, speed }
-
-const _speeds = [.5, .75, 1.0, 1.25, 1.5, 2.0];
-
-/// The touch controls over a download, as `PlaybackScreen`'s, without the
-/// quality menu: a download plays as it is.
-class _OfflineControls extends StatefulWidget {
-  const _OfflineControls({
-    required this.session,
-    required this.skipBack,
-    required this.skipForward,
-    required this.previous,
-    required this.following,
-    required this.back,
-    required this.next,
-  });
-
-  final OfflinePlaybackSession session;
-  final int skipBack;
-  final int skipForward;
-  final MediaItem? previous;
-  final MediaItem? following;
-  final VoidCallback back;
-  final ValueChanged<MediaItem> next;
-
-  @override
-  State<_OfflineControls> createState() => _OfflineControlsState();
-}
-
-class _OfflineControlsState extends State<_OfflineControls> {
-  static const _hideAfter = Duration(milliseconds: 3500);
-  static const _nextDelay = 10;
-  Timer? _hide;
-  Timer? _advance;
-  bool _visible = true;
-  bool _leaving = false;
-  bool _playing = false;
-  bool _cancelledNext = false;
-  int _nextIn = _nextDelay;
-  double? _scrubbing;
-  _Menu? _menu;
-  double _rate = 1;
-
-  OfflinePlaybackSession get _session => widget.session;
-
-  @override
-  void initState() {
-    super.initState();
-    _session.addListener(_updated);
-  }
-
-  @override
-  void dispose() {
-    _session.removeListener(_updated);
-    _hide?.cancel();
-    _advance?.cancel();
-    super.dispose();
-  }
-
-  void _updated() {
-    final playing = _session.playback.status.playing;
-    setState(() {
-      if (_playing != playing) {
-        _playing = playing;
-        if (!playing && _session.playback.phase == PlaybackPhase.ready) {
-          _visible = true;
-        }
-        _resetHide();
-      }
-      _syncNext();
-    });
-  }
-
-  /// Once the file ends, the next episode counts down and starts.
-  void _syncNext() {
-    final next = _session.error == null ? widget.following : null;
-    if (next == null || !_session.ended) {
-      _advance?.cancel();
-      _advance = null;
-      _nextIn = _nextDelay;
-      return;
-    }
-    if (_leaving || _cancelledNext || _advance != null) return;
-    _advance = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(() => _nextIn--);
-      if (_nextIn == 0) unawaited(_next(next));
-    });
-  }
-
-  void _resetHide() {
-    _hide?.cancel();
-    if (!_visible ||
-        !_playing ||
-        _menu != null ||
-        _scrubbing != null ||
-        WidgetsBinding
-            .instance
-            .platformDispatcher
-            .accessibilityFeatures
-            .accessibleNavigation) {
-      return;
-    }
-    _hide = Timer(_hideAfter, () => setState(() => _visible = false));
-  }
-
-  void _toggleControls() {
-    setState(() => _visible = !_visible);
-    _resetHide();
-  }
-
-  VoidCallback? _action(Future<void> Function() run, {bool enabled = true}) {
-    if (!enabled) return null;
-    return () {
-      _resetHide();
-      unawaited(run());
-    };
-  }
-
-  Future<void> _next(MediaItem item) async {
-    if (_leaving) return;
-    _advance?.cancel();
-    setState(() => _leaving = true);
-    await _session.close();
-    if (mounted) widget.next(item);
-  }
-
-  void _openMenu(_Menu menu) {
-    setState(() => _menu = menu);
-    _resetHide();
-  }
-
-  void _closeMenu() {
-    setState(() => _menu = null);
-    _resetHide();
-  }
-
-  void _pickRate(double rate) {
-    setState(() => _rate = rate);
-    unawaited(_session.player.setRate(rate).catchError((Object _) {}));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final error = _session.error;
-    final buffering = _session.playback.phase == PlaybackPhase.buffering;
-    final loading =
-        !_leaving &&
-        error == null &&
-        (buffering || _session.playback.phase == PlaybackPhase.idle);
-    final controls = _visible || error != null || _session.ended;
-    final enabled = error == null && !_leaving;
-    final captions =
-        _session.captions?.at(_session.position) ?? const <TextSpan>[];
-    final menu = _menu;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (_leaving) const ColoredBox(color: Color(0xFF000000)),
-        VideoView(player: _session.player),
-        PlayerFade(
-          visible: controls && error == null && menu == null,
-          child: const PlayerDim(),
-        ),
-        if (captions.isNotEmpty)
-          IgnorePointer(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: AnimatedPadding(
-                duration: PlayerMotion.move,
-                curve: PlayerMotion.easing,
-                padding: EdgeInsets.fromLTRB(
-                  48,
-                  0,
-                  48,
-                  controls && error == null ? 150 : 28,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 2,
-                  children: [for (final cue in captions) _Caption(cue)],
-                ),
-              ),
-            ),
-          ),
-        Semantics(
-          label: l.a11yPlayerVideo,
-          onTapHint: controls
-              ? l.a11yPlayerHideControls
-              : l.a11yPlayerShowControls,
-          onTap: _toggleControls,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _toggleControls,
-          ),
-        ),
-        TimedNote(
-          token: _session.subtitleFailed ? _session.subtitle : null,
-          duration: const Duration(seconds: 5),
-          child: PlayerNote(title: l.playerErrorSubtitles),
-        ),
-        if (loading)
-          Center(
-            child: Spinner(
-              size: 48,
-              color: matineeDark.foreground,
-              label: l.loadingInProgress,
-            ),
-          ),
-        PlayerFade(
-          visible: controls && error == null,
-          child: _controls(l, enabled, loading),
-        ),
-        if (error != null)
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {},
-            child: ColoredBox(
-              color: const Color(0xCC000000),
-              child: PlayerFailure(
-                title: l.playerErrorLost,
-                message: l.playerErrorDownload,
-                backLabel: l.playerBack,
-                onBack: widget.back,
-                retryLabel: l.commonRetry,
-                onRetry: _action(_session.retry),
-              ),
-            ),
-          ),
-        if (error == null && !_leaving)
-          PlayerPrompts(
-            lifted: controls,
-            children: [
-              if (_session.ended)
-                if (widget.following case final item?) _upNext(l, item),
-            ],
-          ),
-        PlayerPanel(
-          entries: menu == null ? null : _entries(l, menu),
-          dismissLabel: l.a11yPlayerCloseMenu,
-          onDismiss: _closeMenu,
-        ),
-      ],
-    );
-  }
-
-  Widget _controls(AppLocalizations l, bool enabled, bool loading) {
-    final item = _session.item;
-    final names = itemNames(item, l);
-    final code = item.label.code;
-    final subtitle = _session.subtitle;
-    final previous = widget.previous;
-    final following = widget.following;
-    final episodes = item.title?.kind == TitleKind.show
-        ? (
-            PlayerEpisodeButton(
-              icon: Lucide.skipBack,
-              label: l.playerPreviousEpisode,
-              onPressed: previous == null
-                  ? null
-                  : _action(() => _next(previous), enabled: !_leaving),
-            ),
-            PlayerEpisodeButton(
-              icon: Lucide.skipForward,
-              label: l.playerNextEpisode,
-              onPressed: following == null
-                  ? null
-                  : _action(() => _next(following), enabled: !_leaving),
-            ),
-          )
-        : null;
-    final back = widget.skipBack;
-    final ahead = widget.skipForward;
-    return PlayerControls(
-      title: names.title,
-      subtitle: code == null ? null : '$code · ${names.showName}',
-      backLabel: l.playerBack,
-      onBack: widget.back,
-      menus: [
-        PlayerMenuButton(
-          icon: Lucide.audioLines,
-          label: l.playerMenuAudio,
-          onPressed: enabled ? () => _openMenu(_Menu.audio) : null,
-        ),
-        PlayerMenuButton(
-          icon: Lucide.captions,
-          label: l.playerMenuSubtitles,
-          active: subtitle != null,
-          state: subtitle?.label ?? l.playerSubtitlesOff,
-          onPressed: enabled ? () => _openMenu(_Menu.subtitles) : null,
-        ),
-        PlayerMenuButton(
-          icon: Lucide.gauge,
-          label: l.playerSpeed,
-          onPressed: enabled ? () => _openMenu(_Menu.speed) : null,
-        ),
-      ],
-      transport: PlayerTransport(
-        playing: _playing,
-        loading: loading,
-        playLabel: l.playerPlay,
-        pauseLabel: l.playerPause,
-        onTogglePlay: _action(_session.togglePlay, enabled: enabled),
-        back: (
-          seconds: back,
-          label: l.playerSkipBack(back),
-          onPressed: _action(() => _session.skip(-back), enabled: enabled),
-        ),
-        ahead: (
-          seconds: ahead,
-          label: l.playerSkipForward(ahead),
-          onPressed: _action(() => _session.skip(ahead), enabled: enabled),
-        ),
-        episodes: episodes,
-      ),
-      seekBar: _seekBar(l, enabled),
-    );
-  }
-
-  Widget _seekBar(AppLocalizations l, bool enabled) {
-    final length = _session.duration;
-    final at = (_scrubbing ?? _session.position).clamp(0.0, length);
-    final seekable = enabled && length > 0;
-    return SeekBar(
-      position: at,
-      duration: length,
-      buffered: _session.buffered?.clamp(0.0, length),
-      scrubbing: _scrubbing != null,
-      back: widget.skipBack.toDouble(),
-      ahead: widget.skipForward.toDouble(),
-      label: l.a11yPlayerSeek,
-      describe: l.a11yPlayerPosition,
-      onScrub: seekable
-          ? (value) {
-              final starting = _scrubbing == null;
-              setState(() => _scrubbing = value);
-              if (starting) _resetHide();
-            }
-          : null,
-      onScrubEnd: seekable
-          ? () {
-              final value = _scrubbing;
-              setState(() => _scrubbing = null);
-              _resetHide();
-              if (value != null) unawaited(_session.seek(value));
-            }
-          : null,
-      onSeek: seekable
-          ? (value) {
-              _resetHide();
-              unawaited(_session.seek(value));
-            }
-          : null,
-    );
-  }
-
-  List<PanelEntry> _entries(AppLocalizations l, _Menu menu) {
-    void run(Future<void> Function() pick) => unawaited(pick());
-    switch (menu) {
-      case _Menu.audio:
-        return [
-          PanelHeading(l.playerMenuAudio),
-          if (_session.audioTracks.isEmpty) PanelNote(l.playerAudioNoTracks),
-          for (final track in _session.audioTracks)
-            PanelChoice(
-              track.label,
-              detail: [track.format, ?track.layout].join(' · '),
-              selected: track == _session.audio,
-              pick: () => run(() => _session.pickAudio(track)),
-            ),
-        ];
-      case _Menu.subtitles:
-        return [
-          PanelHeading(l.playerMenuSubtitles),
-          PanelChoice(
-            l.playerSubtitlesOff,
-            selected: _session.subtitle == null,
-            pick: () => run(() => _session.pickSubtitle(null)),
-          ),
-          for (final track in _session.subtitleTracks)
-            PanelChoice(
-              track.label,
-              detail: [
-                if (track.forced) l.playerSubtitlesForced,
-                if (track.sdh) 'SDH',
-                track.format,
-              ].join(' · '),
-              selected: track.id == _session.subtitle?.id,
-              pick: () => run(() => _session.pickSubtitle(track)),
-            ),
-        ];
-      case _Menu.speed:
-        final decimal = NumberFormat.decimalPattern(
-          Localizations.localeOf(context).toLanguageTag(),
-        );
-        return [
-          PanelHeading(l.playerSpeed),
-          for (final rate in _speeds)
-            PanelChoice(
-              rate == 1
-                  ? l.playerSpeedNormal
-                  : l.playerSpeedRate(decimal.format(rate)),
-              selected: _rate == rate,
-              pick: () => _pickRate(rate),
-            ),
-        ];
-    }
-  }
-
-  Widget _upNext(AppLocalizations l, MediaItem item) {
-    final words = _cancelledNext ? l.playerPlay : l.playerUpNextIn(_nextIn);
-    final title = itemNames(item, l).title;
-    final code = episodeCode(item, l);
-    return UpNextCard(
-      heading: l.playerUpNext,
-      title: code == null ? title : l.mediaCodeTitle(code, title),
-      playLabel: words,
-      playWords: words,
-      onPlay: _action(() => _next(item)),
-      dismissLabel: _cancelledNext ? null : l.playerUpNextCancel,
-      onDismiss: _cancelledNext
-          ? null
-          : () {
-              _advance?.cancel();
-              _advance = null;
-              setState(() => _cancelledNext = true);
-            },
-    );
-  }
-}
-
-class _Caption extends StatelessWidget {
-  const _Caption(this.cue);
-
-  final TextSpan cue;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    color: const Color(0xD9000000),
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    child: Text.rich(
-      cue,
-      textAlign: TextAlign.center,
-      style: KitText.lg.style(color: const Color(0xFFFFFFFF)),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      PlaybackControls(session: _session, back: widget.back, next: widget.next);
 }

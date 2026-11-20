@@ -16,6 +16,7 @@ import '../media/actions.dart' show MediaChanges, mediaChangesProvider;
 import '../media/format.dart';
 import '../platform/player.g.dart' as wire;
 import '../router.dart';
+import 'offline_session.dart' show DownloadUnplayable;
 import 'playback_device.dart';
 import 'playback_report.dart';
 import 'playback_session.dart';
@@ -134,7 +135,7 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
       child = _PlaybackHost(
         key: ValueKey((api, widget.itemId, widget.startAt, engine)),
         create: () => PlaybackSession(
-          diagnostics: _recorder(engine, prefs, profile),
+          diagnostics: startPlaybackReport(ref, engine, prefs, profile),
           itemId: widget.itemId,
           api: api,
           httpClient: ref.read(sessionHttpProvider),
@@ -154,35 +155,39 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
     }
     return MatineeTheme.wrap(matineeDark, child);
   }
+}
 
-  /// The report of this sitting, which Settings, About keeps after the
-  /// player closes. The device's part comes once the platform says it.
-  DiagnosticsRecorder _recorder(
-    PlayerEngine engine,
-    PlayerPrefs prefs,
-    PlaybackDevice profile,
-  ) {
-    // Read now: the session's last change comes as the screen goes away.
-    final store = ref.read(playbackReportProvider.notifier);
-    final recorder = DiagnosticsRecorder(
-      PlaybackReport(
-        settings: SettingsDiagnostics.of(engine, prefs),
-        capabilities: CapabilityDiagnostics.of(profile, null),
-      ),
-      // The session starts while the player builds, which mustn't change
-      // a provider; a microtask keeps each change in order.
-      (report) => scheduleMicrotask(() => store.publish(report)),
-    );
-    final version = ref.read(deviceProvider).appVersion;
-    unawaited(
-      ref.read(deviceDiagnosticsProvider.future).then((device) {
-        if (device != null) {
-          recorder.device(DeviceDiagnostics.of(version, device));
-        }
-      }),
-    );
-    return recorder;
-  }
+/// The report of a sitting, which Settings, About keeps after the player
+/// closes, for a stream or a download ([file], which a stream's first
+/// answer gives). The device's part comes once the platform says it.
+DiagnosticsRecorder startPlaybackReport(
+  WidgetRef ref,
+  PlayerEngine engine,
+  PlayerPrefs prefs,
+  PlaybackDevice profile, {
+  MediaItem? file,
+}) {
+  // Read now: the session's last change comes as the screen goes away.
+  final store = ref.read(playbackReportProvider.notifier);
+  final recorder = DiagnosticsRecorder(
+    PlaybackReport(
+      settings: SettingsDiagnostics.of(engine, prefs),
+      capabilities: CapabilityDiagnostics.of(profile, null),
+      file: file == null ? const FileDiagnostics() : FileDiagnostics.of(file),
+    ),
+    // The session starts while the player builds, which mustn't change
+    // a provider; a microtask keeps each change in order.
+    (report) => scheduleMicrotask(() => store.publish(report)),
+  );
+  final version = ref.read(deviceProvider).appVersion;
+  unawaited(
+    ref.read(deviceDiagnosticsProvider.future).then((device) {
+      if (device != null) {
+        recorder.device(DeviceDiagnostics.of(version, device));
+      }
+    }),
+  );
+  return recorder;
 }
 
 class _Opening extends StatelessWidget {
@@ -265,11 +270,8 @@ class _PlaybackHostState extends State<_PlaybackHost> {
   }
 
   @override
-  Widget build(BuildContext context) => _PlaybackControls(
-    session: _session,
-    back: widget.back,
-    next: widget.next,
-  );
+  Widget build(BuildContext context) =>
+      PlaybackControls(session: _session, back: widget.back, next: widget.next);
 }
 
 /// The menus the top bar opens in the side panel.
@@ -279,24 +281,27 @@ enum _PlayerMenu { audio, subtitles, speed, quality }
 const _speeds = [.5, .75, 1.0, 1.25, 1.5, 2.0];
 
 /// The touch controls, laid out in `player_controls.dart` as the Kotlin
-/// phone player's. A menu stays open in the side panel while the video
-/// continues.
-class _PlaybackControls extends ConsumerStatefulWidget {
-  const _PlaybackControls({
+/// phone player's, over a stream or a download alike ([PlayerSitting]):
+/// the gestures and their notes, the lock, the buttons settings keep,
+/// picture in picture, the system's media controls, and the keys. A menu
+/// stays open in the side panel while the video continues.
+class PlaybackControls extends ConsumerStatefulWidget {
+  const PlaybackControls({
+    super.key,
     required this.session,
     required this.back,
     required this.next,
   });
 
-  final PlaybackSession session;
+  final PlayerSitting session;
   final VoidCallback back;
   final ValueChanged<MediaItem> next;
 
   @override
-  ConsumerState<_PlaybackControls> createState() => _PlaybackControlsState();
+  ConsumerState<PlaybackControls> createState() => _PlaybackControlsState();
 }
 
-class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
+class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
   static const _hideAfter = Duration(milliseconds: 3500);
 
   /// How long the skip button shows by itself once its segment starts, as
@@ -365,7 +370,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   DateTime _mediaAt = DateTime.now();
   PlaybackPhase _phase = PlaybackPhase.idle;
 
-  PlaybackSession get _session => widget.session;
+  PlayerSitting get _session => widget.session;
 
   @override
   void initState() {
@@ -466,10 +471,9 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   /// What the system's controls show: the episode and its show, or the
   /// movie and its year, with its picture, as the Kotlin player's session.
   void _syncMedia() {
-    final plan = _session.plan;
-    if (plan == null || _leaving) return;
+    final item = _session.item;
+    if (item == null || _leaving) return;
     final l = AppLocalizations.of(context);
-    final item = plan.item;
     final names = itemNames(item, l);
     final code = item.label.code;
     final back = _session.skipBack;
@@ -478,16 +482,15 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         item.episode?.still ??
         item.title?.images.backdrop ??
         item.title?.images.poster;
-    final api = ref.read(apiProvider);
+    final artwork = art == null ? null : _session.artworkUrl(art.id);
     final info = MediaInfoMessage(
       title: names.title,
       subtitle: item.title?.kind == TitleKind.show
           ? [names.showName, ?code].join(' · ')
           : names.year,
-      artworkUrl: art == null || api == null
-          ? null
-          : api.paths.artwork(art.id).toString(),
-      headers: ref.read(playerHeadersProvider),
+      artworkUrl: artwork?.toString(),
+      // The session's token goes only with the server's own artwork.
+      headers: artwork == null ? const {} : ref.read(playerHeadersProvider),
       playLabel: l.playerPlay,
       pauseLabel: l.playerPause,
       backMs: back == null ? null : back * 1000,
@@ -551,7 +554,8 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   /// bring up the controls show the unlock button instead.
   KeyEventResult _key(FocusNode _, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final plan = _session.plan;
+    final previous = _session.previousEpisode;
+    final following = _session.nextEpisode;
     final back = _session.skipBack;
     final ahead = _session.skipForward;
     final controls = _visible && !_small;
@@ -575,10 +579,11 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
       },
       LogicalKeyboardKey.mediaFastForward => () => skip(ahead),
       LogicalKeyboardKey.mediaRewind => () => skip(back == null ? null : -back),
-      LogicalKeyboardKey.mediaTrackPrevious when plan?.previous != null =>
-        () => episode(plan?.previous),
-      LogicalKeyboardKey.mediaTrackNext when plan?.next != null =>
-        () => episode(plan?.next),
+      LogicalKeyboardKey.mediaTrackPrevious when previous != null =>
+        () => episode(previous),
+      LogicalKeyboardKey.mediaTrackNext when following != null => () => episode(
+        following,
+      ),
       _ when _locked && _navigationKeys.contains(key) => () => setState(
         () => _lockTouched++,
       ),
@@ -807,19 +812,19 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final plan = _session.plan;
+    final item = _session.item;
     final error = _session.error;
     final buffering = _session.playback.phase == PlaybackPhase.buffering;
     final loading =
         !_leaving &&
         error == null &&
-        (plan == null || _session.busy || buffering);
+        (item == null || _session.busy || buffering);
     final controls =
         !_locked &&
         !_small &&
-        (_visible || error != null || _session.ended || plan == null);
+        (_visible || error != null || _session.ended || item == null);
     final enabled =
-        plan != null && error == null && !_session.busy && !_leaving;
+        item != null && error == null && !_session.busy && !_leaving;
     final captions =
         _session.captions?.at(_session.position) ?? const <TextSpan>[];
     final menu = _menu;
@@ -833,13 +838,13 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (plan == null || _session.refused || _leaving)
+          if (item == null || _session.refused || _leaving)
             const ColoredBox(color: Color(0xFF000000)),
           VideoView(player: _session.player),
           // The picture dimmed behind the controls, coming and going with
           // them, but not under a menu, whose own backdrop dims it.
           PlayerFade(
-            visible: plan != null && controls && error == null && menu == null,
+            visible: item != null && controls && error == null && menu == null,
             child: const PlayerDim(),
           ),
           if (captions.isNotEmpty)
@@ -934,7 +939,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
                 label: l.loadingInProgress,
               ),
             ),
-          if (plan == null && error == null && !small)
+          if (item == null && error == null && !small)
             Align(
               alignment: AlignmentDirectional.topStart,
               child: SafeArea(
@@ -950,10 +955,10 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
                 ),
               ),
             ),
-          if (plan != null)
+          if (item != null)
             PlayerFade(
               visible: controls && error == null,
-              child: _controls(l, plan, enabled, loading, prefs),
+              child: _controls(l, item, enabled, loading, prefs),
             ),
           if (error != null && !small)
             // It takes the taps too, so none reaches the video under it.
@@ -998,9 +1003,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
               onUnlock: _unlock,
             ),
           PlayerPanel(
-            entries: menu == null || plan == null
-                ? null
-                : _entries(l, menu, plan),
+            entries: menu == null || item == null ? null : _entries(l, menu),
             dismissLabel: l.a11yPlayerCloseMenu,
             onDismiss: _closeMenu,
           ),
@@ -1011,24 +1014,25 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
 
   Widget _controls(
     AppLocalizations l,
-    PlaybackStart plan,
+    MediaItem item,
     bool enabled,
     bool loading,
     PlayerPrefs prefs,
   ) {
-    final item = plan.item;
     final names = itemNames(item, l);
     final code = item.label.code;
-    final subtitle = plan.subtitle;
+    final subtitle = _session.subtitle;
+    final previous = _session.previousEpisode;
+    final following = _session.nextEpisode;
     final episodes =
         item.title?.kind == TitleKind.show ||
-            plan.previous != null ||
-            plan.next != null
+            previous != null ||
+            following != null
         ? (
             PlayerEpisodeButton(
               icon: Lucide.skipBack,
               label: l.playerPreviousEpisode,
-              onPressed: switch (plan.previous) {
+              onPressed: switch (previous) {
                 final previous? => _action(
                   () => _next(previous),
                   enabled: !_leaving,
@@ -1039,7 +1043,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
             PlayerEpisodeButton(
               icon: Lucide.skipForward,
               label: l.playerNextEpisode,
-              onPressed: switch (plan.next) {
+              onPressed: switch (following) {
                 final next? => _action(() => _next(next), enabled: !_leaving),
                 null => null,
               },
@@ -1080,7 +1084,9 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
           label: l.playerSpeed,
           onPressed: enabled ? () => _openMenu(_PlayerMenu.speed) : null,
         ),
-        if (plan.original || _session.qualities.isNotEmpty)
+        // A download plays as it is.
+        if (_session case PlaybackSession(:final plan?, :final qualities)
+            when plan.original || qualities.isNotEmpty)
           PlayerMenuButton(
             icon: Lucide.settings,
             label: l.playerQuality,
@@ -1168,22 +1174,18 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     );
   }
 
-  List<PanelEntry> _entries(
-    AppLocalizations l,
-    _PlayerMenu menu,
-    PlaybackStart plan,
-  ) {
+  List<PanelEntry> _entries(AppLocalizations l, _PlayerMenu menu) {
     void run(Future<void> Function() pick) => unawaited(pick());
     switch (menu) {
       case _PlayerMenu.audio:
         return [
           PanelHeading(l.playerMenuAudio),
-          if (plan.audioTracks.isEmpty) PanelNote(l.playerAudioNoTracks),
-          for (final track in plan.audioTracks)
+          if (_session.audioTracks.isEmpty) PanelNote(l.playerAudioNoTracks),
+          for (final track in _session.audioTracks)
             PanelChoice(
               track.label,
               detail: [track.format, ?track.layout].join(' · '),
-              selected: track.index == plan.audio?.index,
+              selected: track.index == _session.audio?.index,
               pick: () => run(() => _session.pickAudio(track)),
             ),
         ];
@@ -1192,21 +1194,20 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
           PanelHeading(l.playerMenuSubtitles),
           PanelChoice(
             l.playerSubtitlesOff,
-            selected: plan.subtitle == null,
+            selected: _session.subtitle == null,
             pick: () => run(() => _session.pickSubtitle(null)),
           ),
-          for (final track in plan.subtitleTracks)
+          for (final track in _session.subtitleTracks)
             PanelChoice(
               track.label,
               detail: [
                 if (track.forced) l.playerSubtitlesForced,
                 if (track.sdh) 'SDH',
                 track.format,
-                if (track.delivery == SubtitleDelivery.burnIn)
-                  l.playerSubtitlesBurnedIn,
+                if (_session.burnsIn(track)) l.playerSubtitlesBurnedIn,
               ].join(' · '),
-              selected: track.id == plan.subtitle?.id,
-              enabled: track.delivery != null,
+              selected: track.id == _session.subtitle?.id,
+              enabled: _session.canPick(track),
               pick: () => run(() => _session.pickSubtitle(track)),
             ),
         ];
@@ -1226,6 +1227,10 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
             ),
         ];
       case _PlayerMenu.quality:
+        // Only a stream has the menu.
+        final session = _session;
+        final plan = session is PlaybackSession ? session.plan : null;
+        if (session is! PlaybackSession || plan == null) return const [];
         final decimal = NumberFormat.decimalPattern(
           Localizations.localeOf(context).toLanguageTag(),
         );
@@ -1236,9 +1241,9 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
               l.playerQualityOriginal,
               selected: plan.quality == PlaybackQuality.original,
               pick: () =>
-                  run(() => _session.pickQuality(PlaybackQuality.original)),
+                  run(() => session.pickQuality(PlaybackQuality.original)),
             ),
-          for (final preset in _session.qualities)
+          for (final preset in session.qualities)
             PanelChoice(
               l.playbackQualityPreset(
                 preset.height,
@@ -1247,7 +1252,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
                 ),
               ),
               selected: plan.quality == preset.id,
-              pick: () => run(() => _session.pickQuality(preset.id)),
+              pick: () => run(() => session.pickQuality(preset.id)),
             ),
         ];
     }
@@ -1343,6 +1348,8 @@ final _navigationKeys = {
       return (l.playerErrorLost, l.playerUnplayable);
     case PlaybackServerUnavailable():
       return (l.playerErrorLost, l.errorUnreachable);
+    case DownloadUnplayable():
+      return (l.playerErrorLost, l.playerErrorDownload);
     default:
       return (l.playerErrorLost, describeFailure(l, error));
   }

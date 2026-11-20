@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -11,8 +13,10 @@ import 'package:matinee/downloads/downloads.dart';
 import 'package:matinee/downloads/pending_progress.dart';
 import 'package:matinee/player/offline_playback_screen.dart';
 import 'package:matinee/player/offline_session.dart';
+import 'package:matinee/player/playback_report.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
+import 'package:matinee/player/player_system.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
@@ -140,6 +144,7 @@ void main() {
       WidgetTester tester, {
       required AuthState auth,
       bool reachable = true,
+      List<Override> extra = const [],
     }) async {
       final players = <FakePlayer>[];
       final sent = <String>[];
@@ -189,6 +194,7 @@ void main() {
             return player;
           }),
           playbackFullscreenProvider.overrideWithValue((_, _) async {}),
+          ...extra,
         ],
       );
       await tester.tap(find.text('Open'));
@@ -241,6 +247,51 @@ void main() {
       expect(sent, contains('POST /api/v1/media/m1/progress'));
       final pending = container.read(pendingProgressProvider.notifier);
       expect(pending.report(_server, 'm1'), isNotNull);
+    });
+
+    testWidgets('has the stream\'s keys, lock, system controls, and report', (
+      tester,
+    ) async {
+      final media = FakeMediaControls();
+      final pip = FakePictureInPicture();
+      final (container, players, _) = await pump(
+        tester,
+        auth: Offline(_server, ada),
+        extra: [
+          pictureInPictureProvider.overrideWithValue(pip),
+          mediaControlsProvider.overrideWithValue(media),
+        ],
+      );
+      final player = players.single;
+      player.emit(PlaybackPhase.ready, 600, playing: true);
+      await tester.pumpAndSettle();
+      // In the shade and on the lock screen, without the server's artwork.
+      expect(media.shown.single.title, 'Arrival');
+      expect(media.shown.single.artworkUrl, isNull);
+      expect(media.states.last.playing, isTrue);
+      // Leaving the app while it plays shrinks it into picture in picture.
+      expect(pip.autos.last, isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlayPause);
+      await tester.pumpAndSettle();
+      expect(player.pauses, 1);
+      media.press(MediaCommandKind.play);
+      await tester.pumpAndSettle();
+      expect(player.plays, 1);
+
+      await tester.tap(find.bySemanticsLabel('Lock controls'));
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Unlock'), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Unlock'));
+      await tester.pumpAndSettle();
+
+      final report = container.read(playbackReportProvider)!;
+      expect(report.attempts.single.mode, SourceMode.local);
+      expect(report.attempts.single.startAt, 600);
+      expect(report.attempts.single.outcome, AttemptOutcome.playing);
+      await tester.tap(find.bySemanticsLabel('Back').first);
+      await tester.pumpAndSettle();
     });
 
     testWidgets('a pending report is where it starts', (tester) async {

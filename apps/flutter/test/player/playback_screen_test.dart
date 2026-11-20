@@ -480,7 +480,9 @@ void main() {
     unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
     await tester.pumpAndSettle();
     final info = media.shown.single;
-    expect(info.headers, {'Authorization': 'x'});
+    // Without artwork, the session's token goes nowhere.
+    expect(info.artworkUrl, isNull);
+    expect(info.headers, isEmpty);
     expect(info.playLabel, 'Play');
     expect(info.backLabel, 'Back ${info.backMs! ~/ 1000} seconds');
     expect(media.states.last.playing, isTrue);

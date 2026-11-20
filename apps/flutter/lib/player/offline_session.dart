@@ -7,7 +7,9 @@ import 'package:flutter/foundation.dart';
 import '../api/matinee_api.dart';
 import '../downloads/download_tracks.dart';
 import '../downloads/offline_item.dart';
+import 'playback_report.dart';
 import 'player.dart';
+import 'player_sitting.dart';
 import 'web_vtt.dart';
 
 /// Where a sitting with a download got to, for the server or, while it's
@@ -32,8 +34,11 @@ final class SavedSubtitle {
 /// `Opening.Local`: the file plays from the device with no server to ask,
 /// so the tracks are picked here (`download_tracks.dart`), a text subtitle
 /// is drawn from the WebVTT saved beside it, and where the person got to
-/// goes to [onReport] for the server or for later.
-class OfflinePlaybackSession extends ChangeNotifier {
+/// goes to [onReport] for the server or for later. The controls are the
+/// stream's (`PlaybackControls`), through [PlayerSitting].
+class OfflinePlaybackSession extends ChangeNotifier
+    with NoServerExtras
+    implements PlayerSitting {
   OfflinePlaybackSession({
     required this.item,
     required this.path,
@@ -46,45 +51,73 @@ class OfflinePlaybackSession extends ChangeNotifier {
     this.audio,
     this.subtitle,
     this.startAt = 0,
+    this.skipBack,
+    this.skipForward,
+    this.diagnostics,
+    this._artwork,
     @visibleForTesting Future<String> Function(String path)? readText,
     @visibleForTesting Duration Function()? elapsed,
   }) : _readText = readText ?? _readFile,
        _elapsed = elapsed ?? (Stopwatch()..start()).elapsedNow;
 
+  @override
   final MediaItem item;
 
   /// The video on the device.
   final String path;
   final DownloadKind kind;
+  @override
   final List<AudioTrack> audioTracks;
   final List<SavedSubtitle> subtitles;
+  @override
   final Player player;
 
   /// The engine is mpv, which draws ASS with its own styling.
   final bool mpv;
   final void Function(OfflineReport report) onReport;
   final double startAt;
+  @override
+  final int? skipBack;
+  @override
+  final int? skipForward;
+
+  /// This sitting's report, which Settings, About keeps, as a stream's.
+  final DiagnosticsRecorder? diagnostics;
+  final Uri Function(String id)? _artwork;
   final Future<String> Function(String path) _readText;
   final Duration Function() _elapsed;
 
+  @override
   AudioTrack? audio;
+  @override
   SubtitleTrack? subtitle;
+  @override
   PlaybackState playback = const PlaybackState();
+  @override
   double position = 0;
+  @override
   Object? error;
+  @override
   WebVtt? captions;
+  @override
+  (PlaybackNotice, Object?)? notice;
 
-  /// The saved subtitle couldn't be read.
-  bool subtitleFailed = false;
+  /// The episodes either side, which the server tells while it answers;
+  /// none without it.
+  @override
+  MediaItem? previousEpisode;
+  @override
+  MediaItem? nextEpisode;
 
   StreamSubscription<PlaybackState>? _listener;
+  StreamSubscription<Object>? _diagnosed;
+  ErrorDiagnostics? _engineError;
   Timer? _timer;
   Duration _lastTick = Duration.zero;
   Duration _lastReport = Duration.zero;
   double _playedSeconds = 0;
   bool _opened = false;
   bool _closed = false;
-  bool _seekedAfterFreeze = false;
   Future<void>? _closing;
   int _captionRequest = 0;
 
@@ -94,6 +127,10 @@ class OfflinePlaybackSession extends ChangeNotifier {
   /// this device holds only the video and the audio picked.
   bool get _inFile => kind == DownloadKind.original;
 
+  @override
+  String get itemId => item.id;
+
+  @override
   double get duration => max(
     0,
     item.durationSeconds ??
@@ -102,21 +139,68 @@ class OfflinePlaybackSession extends ChangeNotifier {
             : _seconds(playback.timeline.duration!)),
   );
 
+  @override
   double? get buffered => switch (playback.timeline.buffered) {
     final at? => _seconds(at),
     null => null,
   };
 
+  @override
   bool get ended => playback.phase == PlaybackPhase.ended;
 
+  /// Opening, before the engine says anything.
+  @override
+  bool get busy =>
+      _opened &&
+      !_closed &&
+      error == null &&
+      playback.phase == PlaybackPhase.idle;
+
+  /// Without a server's `upNextAt`, the next episode comes at the end.
+  @override
+  MediaItem? get next => ended && error == null ? nextEpisode : null;
+
+  @override
   List<SubtitleTrack> get subtitleTracks => [
     for (final saved in subtitles) saved.track,
   ];
+
+  /// A track neither the engine nor the screen can draw shows nothing.
+  @override
+  bool canPick(SubtitleTrack track) =>
+      downloadSubtitleShow(track, mpv: mpv, inFile: _inFile) is! SubtitleOff;
+
+  /// A download holds what it holds; nothing is burned in for it.
+  @override
+  bool burnsIn(SubtitleTrack track) => false;
+
+  @override
+  Uri? artworkUrl(String id) => _artwork?.call(id);
+
+  /// The episodes either side, once the server says.
+  void episodes(MediaItem? previous, MediaItem? next) {
+    if (_closed) return;
+    previousEpisode = previous;
+    nextEpisode = next;
+    notifyListeners();
+  }
+
+  @override
+  void dismissNotice() {
+    notice = null;
+    notifyListeners();
+  }
 
   Future<void> start() async {
     _lastTick = _elapsed();
     _lastReport = _lastTick;
     _listener = player.states.listen(_updatePlayback);
+    _diagnosed = player.diagnostics.listen((message) {
+      if (message.error case final error?) {
+        _engineError = ErrorDiagnostics.of(error);
+      }
+      diagnostics?.engine(message);
+    });
     _timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
       _countPlayed();
       final interval = Duration(seconds: playback.status.playing ? 10 : 30);
@@ -125,23 +209,39 @@ class OfflinePlaybackSession extends ChangeNotifier {
     position = startAt;
     _opened = true;
     final show = _show();
+    if (await _open(show, startAt, AttemptReason.start)) _showCaptions(show);
+  }
+
+  /// Loads the file at [at] seconds, as the report's attempt for [reason].
+  Future<bool> _open(SubtitleShow show, double at, AttemptReason reason) async {
+    diagnostics?.attemptLocal(reason, at: at, audioIndex: audio?.index);
+    _select(show);
     try {
       await player.open(
         Uri.file(path).toString(),
-        startPosition: _duration(startAt),
+        startPosition: _duration(at),
         kind: kind == DownloadKind.device
             ? PlayerSourceKind.mp4
             : PlayerSourceKind.file,
         tracks: _tracks(show),
       );
-    } on Exception catch (failure) {
-      if (_closed) return;
-      error = failure;
+      return true;
+    } on Exception {
+      if (_closed) return false;
+      diagnostics?.failed(_engineError ?? ErrorDiagnostics.unknown);
+      error = const DownloadUnplayable();
       notifyListeners();
-      return;
+      return false;
     }
-    _showCaptions(show);
   }
+
+  void _select(SubtitleShow show) => diagnostics?.selected(
+    SelectionDiagnostics.picked(audio, subtitle, switch (show) {
+      SubtitleOnScreen() => SubtitleRendering.screen,
+      SubtitleInFile() => SubtitleRendering.player,
+      SubtitleOff() => null,
+    }),
+  );
 
   SubtitleShow _show() =>
       downloadSubtitleShow(subtitle, mpv: mpv, inFile: _inFile);
@@ -169,7 +269,6 @@ class OfflinePlaybackSession extends ChangeNotifier {
   void _showCaptions(SubtitleShow show) {
     final request = ++_captionRequest;
     captions = null;
-    subtitleFailed = false;
     if (show case SubtitleOnScreen(:final track)) {
       final saved = subtitles.where((entry) => entry.track.id == track.id);
       if (saved.isEmpty) return;
@@ -184,7 +283,8 @@ class OfflinePlaybackSession extends ChangeNotifier {
       captions = cues;
     } on Exception {
       if (_closed || request != _captionRequest) return;
-      subtitleFailed = true;
+      notice = (PlaybackNotice.subtitleFailed, null);
+      diagnostics?.note(DiagnosticsNote.subtitleLoadFailed);
     }
     notifyListeners();
   }
@@ -208,47 +308,37 @@ class OfflinePlaybackSession extends ChangeNotifier {
         (ended && previous.phase != PlaybackPhase.ended)) {
       _report();
     }
+    if (next.phase == PlaybackPhase.ready &&
+        previous.phase != PlaybackPhase.ready) {
+      diagnostics?.playing();
+    }
     if (next.phase == PlaybackPhase.error && error == null) _failed();
     notifyListeners();
   }
 
-  /// A download has nothing to fall back to. Frames that stopped get one
-  /// seek in place to shake them loose, as the Kotlin app's; after that,
-  /// it says the file didn't play.
+  /// A download has nothing to fall back to, so it says the file didn't
+  /// play. Frames that stopped arriving get one seek in place first, which
+  /// the engine makes itself for a file on the device (`Media3Engine`), as
+  /// the Kotlin app's `frozen()`.
   void _failed() {
-    if (!_seekedAfterFreeze && position > 0) {
-      _seekedAfterFreeze = true;
-      unawaited(_command(() => player.seekTo(_duration(position))));
-      return;
-    }
+    diagnostics?.failed(_engineError ?? ErrorDiagnostics.unknown);
+    _engineError = null;
     error = const DownloadUnplayable();
     _report();
   }
 
+  @override
   Future<void> retry() async {
     if (_closed) return;
     error = null;
-    _seekedAfterFreeze = false;
     notifyListeners();
     final show = _show();
-    try {
-      await player.open(
-        Uri.file(path).toString(),
-        startPosition: _duration(position),
-        kind: kind == DownloadKind.device
-            ? PlayerSourceKind.mp4
-            : PlayerSourceKind.file,
-        tracks: _tracks(show),
-      );
-    } on Exception catch (failure) {
-      if (_closed) return;
-      error = failure;
-      notifyListeners();
-    }
+    if (await _open(show, position, AttemptReason.retry)) _showCaptions(show);
   }
 
   bool get _canChange => !_closed && _opened && error == null;
 
+  @override
   Future<void> togglePlay() async {
     if (!_canChange) return;
     if (ended) await seek(0);
@@ -259,8 +349,10 @@ class OfflinePlaybackSession extends ChangeNotifier {
     }
   }
 
+  @override
   Future<void> skip(int seconds) => seek(position + seconds);
 
+  @override
   Future<void> seek(double seconds) async {
     if (!_canChange) return;
     final length = duration;
@@ -275,17 +367,22 @@ class OfflinePlaybackSession extends ChangeNotifier {
 
   /// A download holds only its own tracks, so it picks among them; nothing
   /// is remembered on a server.
+  @override
   Future<void> pickAudio(AudioTrack track) async {
     if (!_canChange || track == audio) return;
     audio = track;
+    final show = _show();
+    _select(show);
     notifyListeners();
-    await _command(() => player.setSourceTracks(_tracks(_show())));
+    await _command(() => player.setSourceTracks(_tracks(show)));
   }
 
+  @override
   Future<void> pickSubtitle(SubtitleTrack? track) async {
     if (!_canChange || track?.id == subtitle?.id) return;
     subtitle = track;
     final show = _show();
+    _select(show);
     _showCaptions(show);
     notifyListeners();
     await _command(() => player.setSourceTracks(_tracks(show)));
@@ -313,12 +410,15 @@ class OfflinePlaybackSession extends ChangeNotifier {
     ));
   }
 
+  @override
   Future<void> close() => _closing ??= _close();
 
   Future<void> _close() async {
     _closed = true;
     _timer?.cancel();
     unawaited(_listener?.cancel());
+    unawaited(_diagnosed?.cancel());
+    diagnostics?.closed();
     _countPlayed();
     try {
       await player.dispose();

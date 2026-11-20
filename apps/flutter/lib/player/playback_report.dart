@@ -328,32 +328,41 @@ class SelectionDiagnostics {
 
   /// What [plan] picked, and who draws its subtitle.
   factory SelectionDiagnostics.of(PlaybackStart plan) {
-    final audio = plan.audio;
     final subtitle = plan.subtitle;
-    return SelectionDiagnostics(
-      audioIndex: audio?.index,
-      audioCodec: safeAudioCodec(audio?.codec),
-      audioChannels: audio?.channels,
-      subtitleFormat: Safe.known(subtitle?.format, knownSubtitleFormats),
-      subtitleSource: Safe.known(subtitle?.source, _knownSubtitleSources),
-      subtitleDelivery: subtitle == null
-          ? null
-          : Safe.known(subtitle.delivery ?? 'none', {
-              ..._knownDeliveries,
-              'none',
-            }),
-      subtitleRendering: subtitle == null
-          ? null
-          : switch (plan.subtitleMode) {
-              PlaybackSubtitleMode.burnIn => SubtitleRendering.burnIn,
-              // The app draws a WebVTT file itself; the engine the rest.
-              PlaybackSubtitleMode.client
-                  when subtitle.delivery == SubtitleDelivery.webvtt =>
-                SubtitleRendering.screen,
-              _ => SubtitleRendering.player,
-            },
+    return SelectionDiagnostics.picked(
+      plan.audio,
+      subtitle,
+      switch (plan.subtitleMode) {
+        PlaybackSubtitleMode.burnIn => SubtitleRendering.burnIn,
+        // The app draws a WebVTT file itself; the engine the rest.
+        PlaybackSubtitleMode.client
+            when subtitle?.delivery == SubtitleDelivery.webvtt =>
+          SubtitleRendering.screen,
+        _ => SubtitleRendering.player,
+      },
     );
   }
+
+  /// [audio] and [subtitle], which [rendering] draws, as a download picks
+  /// them without a server.
+  factory SelectionDiagnostics.picked(
+    AudioTrack? audio,
+    SubtitleTrack? subtitle,
+    SubtitleRendering? rendering,
+  ) => SelectionDiagnostics(
+    audioIndex: audio?.index,
+    audioCodec: safeAudioCodec(audio?.codec),
+    audioChannels: audio?.channels,
+    subtitleFormat: Safe.known(subtitle?.format, knownSubtitleFormats),
+    subtitleSource: Safe.known(subtitle?.source, _knownSubtitleSources),
+    subtitleDelivery: subtitle == null
+        ? null
+        : Safe.known(subtitle.delivery ?? 'none', {
+            ..._knownDeliveries,
+            'none',
+          }),
+    subtitleRendering: subtitle == null ? null : rendering,
+  );
 
   final int? audioIndex;
   final Safe? audioCodec;
@@ -709,6 +718,37 @@ class DiagnosticsRecorder {
         );
       });
 
+  /// A download loads from the device for [reason], at [at] seconds,
+  /// without a server's answer.
+  void attemptLocal(
+    AttemptReason reason, {
+    required double at,
+    int? audioIndex,
+  }) => _update((r) {
+    final previous = [
+      for (final a in r.attempts)
+        a.outcome == AttemptOutcome.loading
+            ? a.copyWith(outcome: AttemptOutcome.replaced)
+            : a,
+    ];
+    final all = [
+      ...previous,
+      AttemptDiagnostics(
+        number: _nextNumber++,
+        mode: SourceMode.local,
+        reason: reason,
+        startAt: max(0, at).floor(),
+        audioIndex: audioIndex,
+      ),
+    ];
+    final dropped = max(0, all.length - maxAttempts);
+    return r.copyWith(
+      attempts: all.sublist(dropped),
+      droppedAttempts: r.droppedAttempts + dropped,
+      tracks: const [],
+    );
+  });
+
   /// The latest source started playing.
   void playing() => _updateLatest(
     (a) => a.outcome == AttemptOutcome.loading
@@ -731,6 +771,10 @@ class DiagnosticsRecorder {
   /// What [plan] picked, when a pick changes without a new source.
   void select(PlaybackStart plan) =>
       _update((r) => r.copyWith(selection: SelectionDiagnostics.of(plan)));
+
+  /// What a download picked.
+  void selected(SelectionDiagnostics selection) =>
+      _update((r) => r.copyWith(selection: selection));
 
   void device(DeviceDiagnostics device) =>
       _update((r) => r.copyWith(device: device));
@@ -776,7 +820,10 @@ class PlaybackReportStore extends Notifier<PlaybackReport?> {
   @override
   PlaybackReport? build() => null;
 
-  void publish(PlaybackReport report) => state = report;
+  /// The player's last change can come as the app goes away with it.
+  void publish(PlaybackReport report) {
+    if (ref.mounted) state = report;
+  }
 
   void clear() => state = null;
 }

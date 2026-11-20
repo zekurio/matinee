@@ -10,20 +10,16 @@ import '../core/address.dart';
 import '../platform/player.g.dart' as wire;
 import 'playback_report.dart';
 import 'player.dart';
+import 'player_sitting.dart';
 import 'web_vtt.dart';
+
+export 'player_sitting.dart' show PlaybackNotice, PlayerSitting;
 
 typedef _Picks = ({int? audio, SubtitlePick? subtitle, String? quality});
 
-enum PlaybackNotice {
-  switchFailed,
-  burnInFailed,
-  qualityFailed,
-  subtitleFailed,
-}
-
 /// One sitting with a file. Only the server selects the source and tracks.
 /// Here, positions stay on the file's clock until a command reaches an engine.
-class PlaybackSession extends ChangeNotifier {
+class PlaybackSession extends ChangeNotifier implements PlayerSitting {
   PlaybackSession({
     required this.itemId,
     required this.api,
@@ -43,11 +39,13 @@ class PlaybackSession extends ChangeNotifier {
        // the account may use, and a pick in the player lasts this session.
        _picks = (audio: null, subtitle: null, quality: quality);
 
+  @override
   final String itemId;
   final String sessionId;
   final MatineeApi api;
   final http.Client httpClient;
   final Map<String, String> headers;
+  @override
   final Player player;
   final PlaybackDevice device;
   final PlaybackPreferences preferences;
@@ -60,14 +58,21 @@ class PlaybackSession extends ChangeNotifier {
 
   PlaybackStart? plan;
   PlaybackOptions? options;
+  @override
   PlaybackState playback = const PlaybackState();
+  @override
   double position = 0;
+  @override
   bool busy = false;
+  @override
   Object? error;
+  @override
   (PlaybackNotice, Object?)? notice;
+  @override
   WebVtt? captions;
 
   /// The server's preview frames for the seek bar, once they're ready.
+  @override
   Trickplay? trickplay;
   StreamSubscription<TrickplayStatus>? _trickplay;
 
@@ -95,6 +100,7 @@ class PlaybackSession extends ChangeNotifier {
   PlaybackReportInput? _queuedReport;
   Future<void> _savingPicks = Future<void>.value();
 
+  @override
   double get duration => max(
     0,
     plan?.item.durationSeconds ??
@@ -103,12 +109,15 @@ class PlaybackSession extends ChangeNotifier {
             : 0),
   );
 
+  @override
   double? get buffered {
     final at = playback.timeline.buffered;
     return at == null ? null : _offset + _seconds(at);
   }
 
+  @override
   int? get skipBack => _skipStep(preferences.skipBack);
+  @override
   int? get skipForward => _skipStep(preferences.skipForward);
 
   int? _skipStep(int preferred) {
@@ -128,6 +137,7 @@ class PlaybackSession extends ChangeNotifier {
     return ladder.where((quality) => ids.contains(quality.id)).toList();
   }
 
+  @override
   MediaSegment? get segment {
     for (final segment in plan?.segments ?? const <MediaSegment>[]) {
       if ((segment.kind, segment.start, segment.end) != _skipped &&
@@ -139,8 +149,42 @@ class PlaybackSession extends ChangeNotifier {
     return null;
   }
 
+  @override
   bool get ended => playback.phase == PlaybackPhase.ended;
 
+  @override
+  MediaItem? get item => plan?.item;
+
+  @override
+  MediaItem? get previousEpisode => plan?.previous;
+
+  @override
+  MediaItem? get nextEpisode => plan?.next;
+
+  @override
+  List<AudioTrack> get audioTracks => plan?.audioTracks ?? const [];
+
+  @override
+  AudioTrack? get audio => plan?.audio;
+
+  @override
+  List<SubtitleTrack> get subtitleTracks => plan?.subtitleTracks ?? const [];
+
+  @override
+  SubtitleTrack? get subtitle => plan?.subtitle;
+
+  /// A track the server gives no way to show can't be picked.
+  @override
+  bool canPick(SubtitleTrack track) => track.delivery != null;
+
+  @override
+  bool burnsIn(SubtitleTrack track) =>
+      track.delivery == SubtitleDelivery.burnIn;
+
+  @override
+  Uri? artworkUrl(String id) => api.paths.artwork(id);
+
+  @override
   MediaItem? get next {
     if (plan case final plan?) {
       if (ended || position >= (plan.upNextAt ?? double.infinity)) {
@@ -150,6 +194,7 @@ class PlaybackSession extends ChangeNotifier {
     return null;
   }
 
+  @override
   bool get refused => switch (error) {
     ApiException(code: playbackRestricted || playbackBusy) => true,
     _ => false,
@@ -513,6 +558,7 @@ class PlaybackSession extends ChangeNotifier {
     );
   }
 
+  @override
   Future<void> retry() {
     if (_closed || busy || refused) return Future<void>.value();
     _failed.clear();
@@ -523,6 +569,7 @@ class PlaybackSession extends ChangeNotifier {
     );
   }
 
+  @override
   Future<void> togglePlay() async {
     if (_closed || !_opened || busy || error != null) return;
     if (ended) {
@@ -538,14 +585,17 @@ class PlaybackSession extends ChangeNotifier {
     }
   }
 
+  @override
   Future<void> skip(int seconds) => seek(position + seconds);
 
+  @override
   Future<void> seek(double seconds) {
     if (!_canChange) return Future<void>.value();
     _skipped = null;
     return _move(seconds);
   }
 
+  @override
   Future<void> skipSegment(MediaSegment segment) {
     if (!_canChange) return Future<void>.value();
     _skipped = (segment.kind, segment.start, segment.end);
@@ -616,6 +666,7 @@ class PlaybackSession extends ChangeNotifier {
 
   bool get _canChange => !_closed && _opened && !busy && error == null;
 
+  @override
   Future<void> pickAudio(AudioTrack track) {
     if (!_canChange || track.index == plan?.audio?.index) {
       return Future<void>.value();
@@ -632,6 +683,7 @@ class PlaybackSession extends ChangeNotifier {
     );
   }
 
+  @override
   Future<void> pickSubtitle(SubtitleTrack? track) {
     if (!_canChange || track?.id == plan?.subtitle?.id) {
       return Future<void>.value();
@@ -684,6 +736,7 @@ class PlaybackSession extends ChangeNotifier {
     }
   }
 
+  @override
   void dismissNotice() {
     notice = null;
     notifyListeners();
@@ -725,6 +778,7 @@ class PlaybackSession extends ChangeNotifier {
     _sending = null;
   }
 
+  @override
   Future<void> close() => _closing ??= _close();
 
   Future<void> _close() async {

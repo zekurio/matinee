@@ -594,6 +594,21 @@ and starts a stream otherwise. Where the person got to goes to the
 server, or, while it's out of reach, to `PendingProgress`, which sends
 it, with each sitting for the statistics, once the server answers again.
 
+A download plays with the stream's controls (`PlaybackControls` over
+`PlayerSitting`, which both sessions implement), so it has the same
+gestures and their notes, lock, buttons from Settings, picture in
+picture, media session and notification, remote, keyboard, and headset
+keys, subtitle look, and playback report, its attempts marked `local`.
+The system's controls show the server's artwork only while the
+download's server is the one in use. What needs the server stays out: a
+download has no quality menu, no trickplay frames on the seek bar or
+under a swipe, and no skip segments. The episodes either side and the
+next one come from the server while it answers, and the next one only at
+the end, without the server's `upNextAt`. As in the Kotlin app, a
+download whose picture freezes gets one seek in place before it fails,
+which `Media3Engine` makes itself for a file on the device; mpv has no
+freeze watch.
+
 In offline mode, from Settings or from Watch downloads on the
 unreachable screen, the tabs are Home, Downloads, and Profile. Home
 (`offline_home.dart`) lays the downloads out in Home's rows: Continue

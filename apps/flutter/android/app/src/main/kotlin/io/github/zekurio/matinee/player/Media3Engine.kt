@@ -50,12 +50,27 @@ internal class Media3Engine(private val context: Context, private val output: Pl
     private val freeze = FreezeWatch()
     private var frozen = false
 
+    /** The source is a file on the device, a download, with nothing to fall back to. */
+    private var local = false
+
+    /** A frozen download got its one seek in place. */
+    private var nudged = false
+
     private val ticker = object : Runnable {
         override fun run() {
             if (exo == null) return
             publishTimeline()
             val player = checkNotNull(exo)
             if (!frozen && freeze.check(SystemClock.elapsedRealtime(), player.isPlaying, surface != null && player.videoSize.width > 0)) {
+                freeze.reset()
+                if (local && !nudged) {
+                    // As the Kotlin app's frozen(): a download gets one seek
+                    // in place, which restarts the decoder, before it fails.
+                    nudged = true
+                    player.seekTo(player.currentPosition)
+                    main.postDelayed(this, 250L)
+                    return
+                }
                 frozen = true
                 player.pause()
                 output.emit(DiagnosticsMessage(error = frozenDiagnostics()))
@@ -92,6 +107,10 @@ internal class Media3Engine(private val context: Context, private val output: Pl
         }
         val player = ExoPlayer.Builder(context, renderers).setMediaSourceFactory(sources).build()
         exo = player
+        frozen = false
+        freeze.reset()
+        local = request.url.startsWith("file:")
+        nudged = false
         player.addListener(this)
         player.addAnalyticsListener(this)
         player.setVideoFrameMetadataListener { _, _, _, _ -> freeze.frame(SystemClock.elapsedRealtime()) }
