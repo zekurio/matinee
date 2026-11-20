@@ -195,55 +195,59 @@ class MenuItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     final color = destructive ? colors.danger : colors.foreground;
-    return Semantics(
-      selected: selected,
-      child: material.MenuItemButton(
-        onPressed: onPressed,
-        autofocus: autofocus,
-        style: material.ButtonStyle(
-          textStyle: WidgetStatePropertyAll(KitText.sm.style()),
-          foregroundColor: WidgetStateProperty.resolveWith(
-            (states) => color.withValues(
-              alpha: states.contains(WidgetState.disabled) ? .5 : 1,
+    // One node, so TalkBack says the tick on the button it lands on.
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        child: material.MenuItemButton(
+          onPressed: onPressed,
+          autofocus: autofocus,
+          style: material.ButtonStyle(
+            textStyle: WidgetStatePropertyAll(KitText.sm.style()),
+            foregroundColor: WidgetStateProperty.resolveWith(
+              (states) => color.withValues(
+                alpha: states.contains(WidgetState.disabled) ? .5 : 1,
+              ),
             ),
-          ),
-          overlayColor: WidgetStateProperty.resolveWith(
-            (states) =>
-                states.any(
-                  const {
-                    WidgetState.hovered,
-                    WidgetState.focused,
-                    WidgetState.pressed,
-                  }.contains,
-                )
-                ? color.withValues(
-                    alpha: destructive && colors.isDark ? .2 : .1,
+            overlayColor: WidgetStateProperty.resolveWith(
+              (states) =>
+                  states.any(
+                    const {
+                      WidgetState.hovered,
+                      WidgetState.focused,
+                      WidgetState.pressed,
+                    }.contains,
                   )
-                : const Color(0x00000000),
-          ),
-          shape: const WidgetStatePropertyAll(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(KitRadius.md)),
+                  ? color.withValues(
+                      alpha: destructive && colors.isDark ? .2 : .1,
+                    )
+                  : const Color(0x00000000),
             ),
+            shape: const WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(KitRadius.md)),
+              ),
+            ),
+            minimumSize: const WidgetStatePropertyAll(Size.zero),
+            padding: const WidgetStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            ),
+            tapTargetSize: material.MaterialTapTargetSize.shrinkWrap,
+            visualDensity: material.VisualDensity.standard,
+            splashFactory: material.NoSplash.splashFactory,
           ),
-          minimumSize: const WidgetStatePropertyAll(Size.zero),
-          padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          // Not Material's leading and trailing icons: it spaces them 12 from
+          // the label, and the web's gap is 6.
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 6,
+            children: [
+              if (icon case final icon?) KitIcon(icon, size: 16),
+              Expanded(child: Text(label)),
+              if (selected ?? false) const KitIcon(Lucide.check, size: 16),
+            ],
           ),
-          tapTargetSize: material.MaterialTapTargetSize.shrinkWrap,
-          visualDensity: material.VisualDensity.standard,
-          splashFactory: material.NoSplash.splashFactory,
-        ),
-        // Not Material's leading and trailing icons: it spaces them 12 from
-        // the label, and the web's gap is 6.
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 6,
-          children: [
-            if (icon case final icon?) KitIcon(icon, size: 16),
-            Expanded(child: Text(label)),
-            if (selected ?? false) const KitIcon(Lucide.check, size: 16),
-          ],
         ),
       ),
     );

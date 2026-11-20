@@ -1,3 +1,5 @@
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -137,5 +139,27 @@ void main() {
     final panel = tester.getRect(find.byType(MenuPanel));
     expect(panel.left, greaterThanOrEqualTo(0));
     expect(panel.right, lessThanOrEqualTo(412));
+  });
+
+  testWidgets('a picked item reads as one selected button', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pumpScreen(
+      tester,
+      _page(TextDirection.ltr),
+      client: _client,
+      size: const Size(1280, 800),
+    );
+    await tester.tap(find.text('Original'));
+    await tester.pumpAndSettle();
+    // TalkBack lands on the button, so the tick has to be said there.
+    final picked = tester
+        .getSemantics(find.text('Original').last)
+        .getSemanticsData();
+    expect(picked.label, 'Original');
+    expect(picked.flagsCollection.isButton, isTrue);
+    expect(picked.flagsCollection.isSelected, Tristate.isTrue);
+    final other = tester.getSemantics(find.text('720p')).getSemanticsData();
+    expect(other.flagsCollection.isSelected, isNot(Tristate.isTrue));
+    semantics.dispose();
   });
 }
