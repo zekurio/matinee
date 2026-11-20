@@ -438,6 +438,8 @@ class OpenMessage {
     this.tracks,
     this.autoplay = true,
     this.softwareDecoders = false,
+    this.subtitleScale = 1,
+    this.systemSubtitleScale = false,
   });
 
   String url;
@@ -461,6 +463,13 @@ class OpenMessage {
   /// Try the device's software decoders before its hardware ones.
   bool softwareDecoders;
 
+  /// How much bigger than their own size the subtitles mpv draws are.
+  double subtitleScale;
+
+  /// The system's caption size in place of [subtitleScale], when Settings
+  /// follows the system's caption style.
+  bool systemSubtitleScale;
+
   List<Object?> _toList() {
     return <Object?>[
       url,
@@ -473,6 +482,8 @@ class OpenMessage {
       tracks,
       autoplay,
       softwareDecoders,
+      subtitleScale,
+      systemSubtitleScale,
     ];
   }
 
@@ -492,6 +503,8 @@ class OpenMessage {
       tracks: result[7] as SourceTracksMessage?,
       autoplay: result[8]! as bool,
       softwareDecoders: result[9]! as bool,
+      subtitleScale: result[10]! as double,
+      systemSubtitleScale: result[11]! as bool,
     );
   }
 
@@ -504,7 +517,7 @@ class OpenMessage {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(url, other.url) && _deepEquals(headers, other.headers) && _deepEquals(startMs, other.startMs) && _deepEquals(engine, other.engine) && _deepEquals(fit, other.fit) && _deepEquals(viewport, other.viewport) && _deepEquals(sourceKind, other.sourceKind) && _deepEquals(tracks, other.tracks) && _deepEquals(autoplay, other.autoplay) && _deepEquals(softwareDecoders, other.softwareDecoders);
+    return _deepEquals(url, other.url) && _deepEquals(headers, other.headers) && _deepEquals(startMs, other.startMs) && _deepEquals(engine, other.engine) && _deepEquals(fit, other.fit) && _deepEquals(viewport, other.viewport) && _deepEquals(sourceKind, other.sourceKind) && _deepEquals(tracks, other.tracks) && _deepEquals(autoplay, other.autoplay) && _deepEquals(softwareDecoders, other.softwareDecoders) && _deepEquals(subtitleScale, other.subtitleScale) && _deepEquals(systemSubtitleScale, other.systemSubtitleScale);
   }
 
   @override
@@ -513,7 +526,7 @@ class OpenMessage {
 
   @override
   String toString() {
-    return 'OpenMessage(url: $url, headers: $headers, startMs: $startMs, engine: $engine, fit: $fit, viewport: $viewport, sourceKind: $sourceKind, tracks: $tracks, autoplay: $autoplay, softwareDecoders: $softwareDecoders)';
+    return 'OpenMessage(url: $url, headers: $headers, startMs: $startMs, engine: $engine, fit: $fit, viewport: $viewport, sourceKind: $sourceKind, tracks: $tracks, autoplay: $autoplay, softwareDecoders: $softwareDecoders, subtitleScale: $subtitleScale, systemSubtitleScale: $systemSubtitleScale)';
   }
 }
 

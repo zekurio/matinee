@@ -232,6 +232,22 @@ enum class MediaCommandKind(val raw: Int) {
   }
 }
 
+enum class CaptionEdgeMessage(val raw: Int) {
+  NONE(0),
+  OUTLINE(1),
+  SHADOW(2),
+  RAISED(3),
+  DEPRESSED(4);
+
+  companion object {
+    private val pigeonValues = values()
+
+    fun ofRaw(raw: Int): CaptionEdgeMessage? {
+      return pigeonValues.getOrNull(raw)
+    }
+  }
+}
+
 /**
  * The window's brightness and the media volume. Both are from 0 to 1.
  *
@@ -461,6 +477,68 @@ data class MediaCommandMessage (
     return "MediaCommandMessage(kind=$kind, positionMs=$positionMs)"
   }
 }
+
+/**
+ * The caption style Settings > Accessibility > Caption preferences sets,
+ * with Android's own defaults for what it leaves open. Colors are ARGB.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class CaptionStyleMessage (
+  val foreground: Long,
+  val background: Long,
+  val window: Long,
+  val edge: CaptionEdgeMessage,
+  val edgeColor: Long,
+  val scale: Double
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): CaptionStyleMessage {
+      val foreground = pigeonVar_list[0] as Long
+      val background = pigeonVar_list[1] as Long
+      val window = pigeonVar_list[2] as Long
+      val edge = pigeonVar_list[3] as CaptionEdgeMessage
+      val edgeColor = pigeonVar_list[4] as Long
+      val scale = pigeonVar_list[5] as Double
+      return CaptionStyleMessage(foreground, background, window, edge, edgeColor, scale)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      foreground,
+      background,
+      window,
+      edge,
+      edgeColor,
+      scale,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as CaptionStyleMessage
+    return PlayerSystemPigeonUtils.deepEquals(this.foreground, other.foreground) && PlayerSystemPigeonUtils.deepEquals(this.background, other.background) && PlayerSystemPigeonUtils.deepEquals(this.window, other.window) && PlayerSystemPigeonUtils.deepEquals(this.edge, other.edge) && PlayerSystemPigeonUtils.deepEquals(this.edgeColor, other.edgeColor) && PlayerSystemPigeonUtils.deepEquals(this.scale, other.scale)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.foreground)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.background)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.window)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.edge)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.edgeColor)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.scale)
+    return result
+  }
+  override fun toString(): String {
+    return "CaptionStyleMessage(foreground=$foreground, background=$background, window=$window, edge=$edge, edgeColor=$edgeColor, scale=$scale)"
+  }
+}
 private open class PlayerSystemPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -475,23 +553,33 @@ private open class PlayerSystemPigeonCodec : StandardMessageCodec() {
         }
       }
       131.toByte() -> {
-        (readValue(buffer) as? List<Any?>)?.let {
-          LevelsMessage.fromList(it)
+        (readValue(buffer) as Long?)?.let {
+          CaptionEdgeMessage.ofRaw(it.toInt())
         }
       }
       132.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          MediaInfoMessage.fromList(it)
+          LevelsMessage.fromList(it)
         }
       }
       133.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          MediaStateMessage.fromList(it)
+          MediaInfoMessage.fromList(it)
         }
       }
       134.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
+          MediaStateMessage.fromList(it)
+        }
+      }
+      135.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
           MediaCommandMessage.fromList(it)
+        }
+      }
+      136.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          CaptionStyleMessage.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -507,20 +595,28 @@ private open class PlayerSystemPigeonCodec : StandardMessageCodec() {
         stream.write(130)
         writeValue(stream, value.raw.toLong())
       }
-      is LevelsMessage -> {
+      is CaptionEdgeMessage -> {
         stream.write(131)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw.toLong())
       }
-      is MediaInfoMessage -> {
+      is LevelsMessage -> {
         stream.write(132)
         writeValue(stream, value.toList())
       }
-      is MediaStateMessage -> {
+      is MediaInfoMessage -> {
         stream.write(133)
         writeValue(stream, value.toList())
       }
-      is MediaCommandMessage -> {
+      is MediaStateMessage -> {
         stream.write(134)
+        writeValue(stream, value.toList())
+      }
+      is MediaCommandMessage -> {
+        stream.write(135)
+        writeValue(stream, value.toList())
+      }
+      is CaptionStyleMessage -> {
+        stream.write(136)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -561,6 +657,10 @@ interface PlayerSystemApi {
   fun setMediaState(state: MediaStateMessage)
   /** Takes the controls away once the player closes. */
   fun hideMedia()
+  /** The system's caption style, or null where there is none. */
+  fun captionStyle(): CaptionStyleMessage?
+  /** Opens the system's caption preferences. */
+  fun openCaptionSettings()
 
   companion object {
     /** The codec used by PlayerSystemApi. */
@@ -726,6 +826,37 @@ interface PlayerSystemApi {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
               api.hideMedia()
+              listOf(null)
+            } catch (exception: Throwable) {
+              PlayerSystemPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerSystemApi.captionStyle$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.captionStyle())
+            } catch (exception: Throwable) {
+              PlayerSystemPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerSystemApi.openCaptionSettings$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              api.openCaptionSettings()
               listOf(null)
             } catch (exception: Throwable) {
               PlayerSystemPigeonUtils.wrapError(exception)

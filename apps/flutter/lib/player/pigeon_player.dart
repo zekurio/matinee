@@ -1,13 +1,20 @@
 part of 'player.dart';
 
 class _PigeonPlayer implements Player {
-  _PigeonPlayer(this._engine, [this._softwareDecoders = false]);
+  _PigeonPlayer(
+    this._engine, [
+    this._softwareDecoders = false,
+    this._subtitleScale = 1,
+    this._systemSubtitleScale = false,
+  ]);
 
   static int _lastSession = 0;
   static final wire.PlayerApi _api = wire.PlayerApi();
 
   final PlayerEngine _engine;
   final bool _softwareDecoders;
+  final double _subtitleScale;
+  final bool _systemSubtitleScale;
   final StreamController<PlaybackState> _updates = StreamController.broadcast();
   PlaybackState _state = const PlaybackState();
   int? _session;
@@ -91,6 +98,8 @@ class _PigeonPlayer implements Player {
           tracks: tracks == null ? null : _wireTracks(tracks),
           autoplay: autoplay,
           softwareDecoders: _softwareDecoders,
+          subtitleScale: _subtitleScale,
+          systemSubtitleScale: _systemSubtitleScale,
         ),
       );
     } on Exception {

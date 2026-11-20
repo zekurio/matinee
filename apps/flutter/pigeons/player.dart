@@ -96,6 +96,8 @@ class OpenMessage {
     this.tracks,
     this.autoplay = true,
     this.softwareDecoders = false,
+    this.subtitleScale = 1,
+    this.systemSubtitleScale = false,
   });
 
   final String url;
@@ -110,6 +112,13 @@ class OpenMessage {
 
   /// Try the device's software decoders before its hardware ones.
   final bool softwareDecoders;
+
+  /// How much bigger than their own size the subtitles mpv draws are.
+  final double subtitleScale;
+
+  /// The system's caption size in place of [subtitleScale], when Settings
+  /// follows the system's caption style.
+  final bool systemSubtitleScale;
 }
 
 sealed class PlaybackEventMessage {}

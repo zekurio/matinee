@@ -86,6 +86,28 @@ class MediaCommandMessage {
   final int? positionMs;
 }
 
+enum CaptionEdgeMessage { none, outline, shadow, raised, depressed }
+
+/// The caption style Settings > Accessibility > Caption preferences sets,
+/// with Android's own defaults for what it leaves open. Colors are ARGB.
+class CaptionStyleMessage {
+  CaptionStyleMessage({
+    required this.foreground,
+    required this.background,
+    required this.window,
+    required this.edge,
+    required this.edgeColor,
+    required this.scale,
+  });
+
+  final int foreground;
+  final int background;
+  final int window;
+  final CaptionEdgeMessage edge;
+  final int edgeColor;
+  final double scale;
+}
+
 @HostApi()
 abstract class PlayerSystemApi {
   LevelsMessage levels();
@@ -120,6 +142,12 @@ abstract class PlayerSystemApi {
 
   /// Takes the controls away once the player closes.
   void hideMedia();
+
+  /// The system's caption style, or null where there is none.
+  CaptionStyleMessage? captionStyle();
+
+  /// Opens the system's caption preferences.
+  void openCaptionSettings();
 }
 
 @FlutterApi()

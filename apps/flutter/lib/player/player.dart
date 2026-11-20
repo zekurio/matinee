@@ -34,11 +34,20 @@ class SourceTracks {
 /// replaces any previous session, including one owned by another [Player].
 abstract class Player {
   /// [softwareDecoders] tries the device's software decoders first, as the
-  /// Decoders setting asks.
+  /// Decoders setting asks. [subtitleScale] sizes the subtitles mpv draws
+  /// itself, or [systemSubtitleScale] takes the system's caption size in its
+  /// place; Media3's cues are drawn in Flutter with the subtitle look.
   factory Player({
     PlayerEngine engine = PlayerEngine.mpv,
     bool softwareDecoders = false,
-  }) => _PigeonPlayer(engine, softwareDecoders);
+    double subtitleScale = 1,
+    bool systemSubtitleScale = false,
+  }) => _PigeonPlayer(
+    engine,
+    softwareDecoders,
+    subtitleScale,
+    systemSubtitleScale,
+  );
 
   PlaybackState get state;
 

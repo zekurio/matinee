@@ -8,6 +8,8 @@ import 'player_state.dart';
 
 export '../platform/player_system.g.dart'
     show
+        CaptionEdgeMessage,
+        CaptionStyleMessage,
         MediaCommandKind,
         MediaCommandMessage,
         MediaInfoMessage,
@@ -145,6 +147,14 @@ class PlatformPlayerSystem
 
   @override
   Future<void> hide() => _api.hideMedia().catchError((Object _) {});
+
+  /// Android's caption style, or null on a platform without one.
+  Future<wire.CaptionStyleMessage?> captionStyle() =>
+      _api.captionStyle().catchError((Object _) => null);
+
+  /// Android's Caption preferences page.
+  Future<void> openCaptionSettings() =>
+      _api.openCaptionSettings().catchError((Object _) {});
 
   void dispose() {
     wire.PlayerSystemEventsApi.setUp(null);

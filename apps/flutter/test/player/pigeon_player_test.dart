@@ -67,40 +67,44 @@ void main() {
     native = _Native(binding.defaultBinaryMessenger)..install();
   });
 
-  test(
-    'open sends the source, engine, fit, and any viewport set before it',
-    () async {
-      final player = Player(engine: PlayerEngine.media3);
-      await player.setVideoFit(VideoFit.cover);
-      await player.setVideoViewport(const Rect.fromLTWH(1, 2, 300, 200));
-      await player.open(
-        'https://example.test/a.mkv',
-        headers: {'X-Token': 'abc'},
-        startPosition: const Duration(seconds: 90),
-        kind: PlayerSourceKind.hls,
-        autoplay: false,
-        tracks: const SourceTracks(
-          subtitleUrl: 'https://example.test/a.sup',
-          subtitleOffset: 90,
-        ),
-      );
+  test('open sends the source, engine, fit, subtitle size, and any viewport '
+      'set before it', () async {
+    final player = Player(
+      engine: PlayerEngine.media3,
+      subtitleScale: 1.25,
+      systemSubtitleScale: true,
+    );
+    await player.setVideoFit(VideoFit.cover);
+    await player.setVideoViewport(const Rect.fromLTWH(1, 2, 300, 200));
+    await player.open(
+      'https://example.test/a.mkv',
+      headers: {'X-Token': 'abc'},
+      startPosition: const Duration(seconds: 90),
+      kind: PlayerSourceKind.hls,
+      autoplay: false,
+      tracks: const SourceTracks(
+        subtitleUrl: 'https://example.test/a.sup',
+        subtitleOffset: 90,
+      ),
+    );
 
-      final request = native.named('open').single[1]! as wire.OpenMessage;
-      expect(request.url, 'https://example.test/a.mkv');
-      expect(request.headers, {'X-Token': 'abc'});
-      expect(request.startMs, 90000);
-      expect(request.engine, wire.EngineMessage.media3);
-      expect(request.fit, wire.FitMessage.cover);
-      expect(request.viewport?.left, 1);
-      expect(request.viewport?.width, 300);
-      expect(request.sourceKind, wire.SourceKindMessage.hls);
-      expect(request.autoplay, isFalse);
-      expect(request.tracks?.subtitleUrl, 'https://example.test/a.sup');
-      expect(request.tracks?.subtitleOffset, 90);
-      expect(player.state.phase, PlaybackPhase.buffering);
-      await player.dispose();
-    },
-  );
+    final request = native.named('open').single[1]! as wire.OpenMessage;
+    expect(request.url, 'https://example.test/a.mkv');
+    expect(request.headers, {'X-Token': 'abc'});
+    expect(request.startMs, 90000);
+    expect(request.engine, wire.EngineMessage.media3);
+    expect(request.fit, wire.FitMessage.cover);
+    expect(request.viewport?.left, 1);
+    expect(request.viewport?.width, 300);
+    expect(request.sourceKind, wire.SourceKindMessage.hls);
+    expect(request.autoplay, isFalse);
+    expect(request.tracks?.subtitleUrl, 'https://example.test/a.sup');
+    expect(request.tracks?.subtitleOffset, 90);
+    expect(request.subtitleScale, 1.25);
+    expect(request.systemSubtitleScale, isTrue);
+    expect(player.state.phase, PlaybackPhase.buffering);
+    await player.dispose();
+  });
 
   test(
     'mpv receives loopback URLs and no credentials for video or sidecars',

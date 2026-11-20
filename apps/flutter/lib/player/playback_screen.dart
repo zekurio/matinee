@@ -25,6 +25,7 @@ import 'player_panel.dart';
 import 'player_preferences.dart';
 import 'player_system.dart';
 import 'seek_bar.dart';
+import 'subtitle_look.dart';
 import 'swipe.dart';
 import 'trickplay.dart';
 import 'video_gestures.dart';
@@ -36,6 +37,8 @@ final playbackPlayerFactoryProvider =
           (engine, prefs) => Player(
             engine: engine,
             softwareDecoders: prefs.decoders == Decoders.software,
+            subtitleScale: prefs.subtitleScale,
+            systemSubtitleScale: prefs.subtitleSystemStyle,
           ),
     );
 final playbackFullscreenProvider = Provider<Future<void> Function(int, bool)>(
@@ -734,6 +737,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         _session.captions?.at(_session.position) ?? const <TextSpan>[];
     final menu = _menu;
     final prefs = ref.watch(playerPrefsProvider).value ?? const PlayerPrefs();
+    final look = subtitleLook(ref, prefs);
     final small = _small;
 
     return Stack(
@@ -765,7 +769,9 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   spacing: 2,
-                  children: [for (final cue in captions) _Caption(cue)],
+                  children: [
+                    for (final cue in captions) SubtitleLine(cue, look: look),
+                  ],
                 ),
               ),
             ),
@@ -1208,23 +1214,6 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
           title: l.playerErrorSubtitles,
         ),
       };
-}
-
-class _Caption extends StatelessWidget {
-  const _Caption(this.cue);
-
-  final TextSpan cue;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    color: const Color(0xD9000000),
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    child: Text.rich(
-      cue,
-      textAlign: TextAlign.center,
-      style: KitText.lg.style(color: const Color(0xFFFFFFFF)),
-    ),
-  );
 }
 
 (String, String) _errorText(AppLocalizations l, Object error) {

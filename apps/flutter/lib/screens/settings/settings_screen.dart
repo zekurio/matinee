@@ -17,15 +17,16 @@ import 'appearance_page.dart';
 import 'downloads_page.dart';
 import 'playback_page.dart';
 import 'settings_rows.dart';
+import 'subtitles_page.dart';
 
 /// A category of Settings, as the Kotlin app's `SettingsPage`: each is a
 /// row on the first page and opens a page of its own at
-/// `Routes.settingsPage(key)`. The Kotlin app's subtitles page isn't here
-/// yet; the admin pages are `AdminCategory`.
+/// `Routes.settingsPage(key)`. The admin pages are `AdminCategory`.
 enum SettingsPage {
   account('account', Lucide.userRound),
   appearance('appearance', Lucide.palette),
   playback('playback', Lucide.tvPlay),
+  subtitles('subtitles', Lucide.captions),
   downloads('downloads', Lucide.download),
   about('about', Lucide.info),
   licenses('licenses', Lucide.list);
@@ -39,15 +40,16 @@ enum SettingsPage {
     account => l.settingsPageAccount,
     appearance => l.settingsPageAppearance,
     playback => l.settingsPagePlayback,
+    subtitles => l.settingsSubtitlesTitle,
     downloads => l.downloadsTitle,
     about => l.aboutTitle,
     licenses => l.aboutLicenses,
   };
 
-  /// Whether this device has the page: the engines and the downloads are
-  /// Android's.
+  /// Whether this device has the page: the engines, the caption style
+  /// subtitles can follow, and the downloads are Android's.
   bool get available =>
-      (this != playback && this != downloads) ||
+      (this != playback && this != subtitles && this != downloads) ||
       defaultTargetPlatform == TargetPlatform.android;
 
   static SettingsPage? of(String key) {
@@ -137,6 +139,7 @@ class SettingsScreen extends ConsumerWidget {
             for (final page in const [
               SettingsPage.appearance,
               SettingsPage.playback,
+              SettingsPage.subtitles,
               SettingsPage.downloads,
               SettingsPage.about,
             ])
@@ -198,6 +201,7 @@ class SettingsPageScreen extends StatelessWidget {
     SettingsPage.account => const AccountPage(),
     SettingsPage.appearance => const AppearancePage(),
     SettingsPage.playback => const PlaybackPage(),
+    SettingsPage.subtitles => const SubtitlesPage(),
     SettingsPage.downloads => const DownloadsPage(),
     SettingsPage.about => const AboutPage(),
     SettingsPage.licenses => const LicensesPage(),

@@ -16,6 +16,8 @@ import android.provider.Settings
 import android.util.Log
 import android.util.Rational
 import android.view.WindowManager
+import android.view.accessibility.CaptioningManager
+import android.view.accessibility.CaptioningManager.CaptionStyle
 import androidx.core.content.ContextCompat
 import io.flutter.plugin.common.BinaryMessenger
 import io.github.zekurio.matinee.R
@@ -165,6 +167,34 @@ internal class PlayerSystem(
     override fun hideMedia() {
         media.hide()
         refreshParams()
+    }
+
+    /**
+     * The style's getters stand in Android's own defaults for what it leaves
+     * open, white on black with no edge, so captions look as they do in every
+     * other app that follows the setting. Its typeface can't cross to Dart.
+     */
+    override fun captionStyle(): CaptionStyleMessage? {
+        val captions = activity.getSystemService(CaptioningManager::class.java) ?: return null
+        val style = captions.userStyle
+        return CaptionStyleMessage(
+            foreground = style.foregroundColor.toLong(),
+            background = style.backgroundColor.toLong(),
+            window = style.windowColor.toLong(),
+            edge = when (style.edgeType) {
+                CaptionStyle.EDGE_TYPE_OUTLINE -> CaptionEdgeMessage.OUTLINE
+                CaptionStyle.EDGE_TYPE_DROP_SHADOW -> CaptionEdgeMessage.SHADOW
+                CaptionStyle.EDGE_TYPE_RAISED -> CaptionEdgeMessage.RAISED
+                CaptionStyle.EDGE_TYPE_DEPRESSED -> CaptionEdgeMessage.DEPRESSED
+                else -> CaptionEdgeMessage.NONE
+            },
+            edgeColor = style.edgeColor.toLong(),
+            scale = captions.fontScale.toDouble(),
+        )
+    }
+
+    override fun openCaptionSettings() {
+        runCatching { activity.startActivity(Intent(Settings.ACTION_CAPTIONING_SETTINGS)) }
     }
 
     private fun send(command: MediaCommandMessage) {

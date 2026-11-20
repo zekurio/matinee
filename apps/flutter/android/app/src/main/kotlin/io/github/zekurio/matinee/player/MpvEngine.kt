@@ -16,6 +16,7 @@ import android.os.HandlerThread
 import android.os.Looper
 import android.util.Base64
 import android.util.Log
+import android.view.accessibility.CaptioningManager
 import androidx.core.content.ContextCompat
 import com.edde746.mpv.EndFileReason
 import com.edde746.mpv.MpvEvent
@@ -118,6 +119,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
                 setOption("sub-auto", "no")
                 setOption("sub-delay", (-(request.tracks?.subtitleOffset ?: 0.0)).toString())
                 setOption("sub-scale-with-window", "yes")
+                setOption("sub-scale", subtitleScale(request).toString())
                 // Pause on the last frame at the end rather than unloading the file, so a seek still works.
                 setOption("keep-open", "yes")
                 setOption("cache", "yes")
@@ -145,6 +147,14 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
             worker.post(ticker)
         }
     }
+
+    /** Settings' size for subtitles, or the system's caption size when Settings follows it. */
+    private fun subtitleScale(request: OpenMessage): Double =
+        if (request.systemSubtitleScale) {
+            app.getSystemService(CaptioningManager::class.java)?.fontScale?.toDouble() ?: 1.0
+        } else {
+            request.subtitleScale
+        }
 
     private fun MpvPlayerConfig.configureOutput() {
         setOption("vo", "mediacodec,gpu-next")

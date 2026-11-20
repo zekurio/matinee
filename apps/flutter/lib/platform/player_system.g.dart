@@ -122,6 +122,14 @@ enum MediaCommandKind {
   ahead;
 }
 
+enum CaptionEdgeMessage {
+  none,
+  outline,
+  shadow,
+  raised,
+  depressed;
+}
+
 /// The window's brightness and the media volume. Both are from 0 to 1.
 class LevelsMessage {
   LevelsMessage({
@@ -387,6 +395,78 @@ class MediaCommandMessage {
   }
 }
 
+/// The caption style Settings > Accessibility > Caption preferences sets,
+/// with Android's own defaults for what it leaves open. Colors are ARGB.
+class CaptionStyleMessage {
+  CaptionStyleMessage({
+    required this.foreground,
+    required this.background,
+    required this.window,
+    required this.edge,
+    required this.edgeColor,
+    required this.scale,
+  });
+
+  int foreground;
+
+  int background;
+
+  int window;
+
+  CaptionEdgeMessage edge;
+
+  int edgeColor;
+
+  double scale;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      foreground,
+      background,
+      window,
+      edge,
+      edgeColor,
+      scale,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static CaptionStyleMessage decode(Object result) {
+    result as List<Object?>;
+    return CaptionStyleMessage(
+      foreground: result[0]! as int,
+      background: result[1]! as int,
+      window: result[2]! as int,
+      edge: result[3]! as CaptionEdgeMessage,
+      edgeColor: result[4]! as int,
+      scale: result[5]! as double,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! CaptionStyleMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(foreground, other.foreground) && _deepEquals(background, other.background) && _deepEquals(window, other.window) && _deepEquals(edge, other.edge) && _deepEquals(edgeColor, other.edgeColor) && _deepEquals(scale, other.scale);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'CaptionStyleMessage(foreground: $foreground, background: $background, window: $window, edge: $edge, edgeColor: $edgeColor, scale: $scale)';
+  }
+}
+
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -401,17 +481,23 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is MediaCommandKind) {
       buffer.putUint8(130);
       writeValue(buffer, value.index);
-    }    else if (value is LevelsMessage) {
+    }    else if (value is CaptionEdgeMessage) {
       buffer.putUint8(131);
-      writeValue(buffer, value.encode());
-    }    else if (value is MediaInfoMessage) {
+      writeValue(buffer, value.index);
+    }    else if (value is LevelsMessage) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    }    else if (value is MediaStateMessage) {
+    }    else if (value is MediaInfoMessage) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    }    else if (value is MediaCommandMessage) {
+    }    else if (value is MediaStateMessage) {
       buffer.putUint8(134);
+      writeValue(buffer, value.encode());
+    }    else if (value is MediaCommandMessage) {
+      buffer.putUint8(135);
+      writeValue(buffer, value.encode());
+    }    else if (value is CaptionStyleMessage) {
+      buffer.putUint8(136);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -428,13 +514,18 @@ class _PigeonCodec extends StandardMessageCodec {
         final value = readValue(buffer) as int?;
         return value == null ? null : MediaCommandKind.values[value];
       case 131:
-        return LevelsMessage.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : CaptionEdgeMessage.values[value];
       case 132:
-        return MediaInfoMessage.decode(readValue(buffer)!);
+        return LevelsMessage.decode(readValue(buffer)!);
       case 133:
-        return MediaStateMessage.decode(readValue(buffer)!);
+        return MediaInfoMessage.decode(readValue(buffer)!);
       case 134:
+        return MediaStateMessage.decode(readValue(buffer)!);
+      case 135:
         return MediaCommandMessage.decode(readValue(buffer)!);
+      case 136:
+        return CaptionStyleMessage.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -631,6 +722,43 @@ class PlayerSystemApi {
   /// Takes the controls away once the player closes.
   Future<void> hideMedia() async {
     final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerSystemApi.hideMedia$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: true,
+    )
+    ;
+  }
+
+  /// The system's caption style, or null where there is none.
+  Future<CaptionStyleMessage?> captionStyle() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerSystemApi.captionStyle$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: true,
+    )
+    ;
+    return pigeonVar_replyValue as CaptionStyleMessage?;
+  }
+
+  /// Opens the system's caption preferences.
+  Future<void> openCaptionSettings() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerSystemApi.openCaptionSettings$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,

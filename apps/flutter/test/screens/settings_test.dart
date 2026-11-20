@@ -14,6 +14,7 @@ import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/player/player_state.dart';
 import 'package:matinee/player/player_system.dart';
+import 'package:matinee/player/subtitle_look.dart';
 import 'package:matinee/screens/settings/about_page.dart';
 import 'package:matinee/screens/settings/settings_screen.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -84,6 +85,7 @@ void main() {
       'Account',
       'Appearance',
       'Playback',
+      'Subtitles',
       'About',
       'media.example.com',
       'Matinee for Android 1.4.0',
@@ -106,7 +108,7 @@ void main() {
   });
 
   testWidgets('an unknown page is the first page', (tester) async {
-    await _pump(tester, const SettingsPageScreen(pageKey: 'subtitles'));
+    await _pump(tester, const SettingsPageScreen(pageKey: 'nowhere'));
     expect(find.text('Offline mode'), findsOneWidget);
   });
 
@@ -186,6 +188,65 @@ void main() {
     // Saved, so a new start reads the same.
     container.invalidate(playerPrefsProvider);
     expect(await container.read(playerPrefsProvider.future), prefs);
+  });
+
+  testWidgets('Subtitles keeps the look and shows it in the sample', (
+    tester,
+  ) async {
+    final container = await _pump(
+      tester,
+      const SettingsPageScreen(pageKey: 'subtitles'),
+      size: const Size(412, 1200),
+      overrides: [
+        systemCaptionStyleProvider.overrideWith(
+          (ref) => CaptionStyleMessage(
+            foreground: 0xFFFFFF00,
+            background: 0x00000000,
+            window: 0xFF0000FF,
+            edge: CaptionEdgeMessage.raised,
+            edgeColor: 0xFF000000,
+            scale: 1.5,
+          ),
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+    SubtitleLook sample() =>
+        tester.widget<SubtitleLine>(find.byType(SubtitleLine)).look;
+    expect(find.text('This is how subtitles look.'), findsOneWidget);
+    expect(sample(), SubtitleLook.own(const PlayerPrefs()));
+
+    await tester.tap(find.text('Size'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('150%'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Text color'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Yellow'));
+    await tester.pumpAndSettle();
+    // Only the app's own edges: the system's raised one isn't offered.
+    await tester.tap(find.text('Edge'));
+    await tester.pumpAndSettle();
+    expect(find.text('Outline'), findsOneWidget);
+    await tester.tap(find.text('Outline'));
+    await tester.pumpAndSettle();
+    var prefs = container.read(playerPrefsProvider).value!;
+    expect(prefs.subtitleScale, 1.5);
+    expect(prefs.subtitleColor, SubtitleColor.yellow);
+    expect(prefs.subtitleEdge, SubtitleEdge.outline);
+    expect(sample().color, const Color(0xFFFFE14D));
+    expect(sample().edge, SubtitleEdge.outline);
+
+    // The system's style leaves only the way to its settings.
+    await tester.tap(find.text("Use the system's caption style"));
+    await tester.pumpAndSettle();
+    prefs = container.read(playerPrefsProvider).value!;
+    expect(prefs.subtitleSystemStyle, isTrue);
+    expect(find.text('Caption preferences'), findsOneWidget);
+    expect(find.text('Size'), findsNothing);
+    expect(sample().edge, SubtitleEdge.raised);
+    expect(sample().window, const Color(0xFF0000FF));
+    expect(sample().scale, 1.5);
   });
 
   testWidgets('About tells the version and opens the licenses', (tester) async {
