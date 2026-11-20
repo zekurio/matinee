@@ -70,6 +70,9 @@ abstract final class Routes {
   static String season(String titleId, int season) =>
       '/title/$titleId/season/$season';
   static String episode(String itemId) => '/episode/$itemId';
+
+  /// The player, for the file or download id `playback.start` takes.
+  static String play(String id) => '/play/$id';
   static String person(String name, {String? tmdbId}) => Uri(
     path: '/person/${Uri.encodeComponent(name)}',
     queryParameters: _query({'tmdb': tmdbId}),
@@ -262,6 +265,7 @@ const _pages = [
   ('/title/:id', 'Title'),
   ('/title/:id/season/:season', 'Season'),
   ('/episode/:id', 'Episode'),
+  ('/play/:id', 'Player'),
   ('/person/:name', 'Person'),
   ('/downloads/show/:titleId', 'Show downloads'),
   ('/identify/:titleId', 'Identify'),

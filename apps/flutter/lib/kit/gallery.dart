@@ -10,7 +10,9 @@ enum GalleryGroup {
   playback('Playback and navigation'),
   overlays('Overlays'),
   calendar('Calendar'),
-  signIn('Sign-in');
+  signIn('Sign-in'),
+  media('Media'),
+  pages('Pages and states');
 
   const GalleryGroup(this.title);
 
@@ -171,6 +173,8 @@ class _KitGalleryState extends State<KitGallery> {
     GalleryGroup.overlays => _overlays(),
     GalleryGroup.calendar => _calendar(),
     GalleryGroup.signIn => _signIn(),
+    GalleryGroup.media => const _MediaSamples(),
+    GalleryGroup.pages => const _PageSamples(),
   };
 
   Widget _signIn() => const Column(
@@ -677,6 +681,210 @@ class _GlassSample extends StatelessWidget {
         ),
         Spacer(),
       ],
+    ),
+  );
+}
+
+/// Posters, stills, a rail, a grid, the page frame, and the states a
+/// media page shows while it loads, has nothing, or failed. Pictures are
+/// painted stand-ins: the kit loads nothing.
+class _MediaSamples extends StatelessWidget {
+  const _MediaSamples();
+
+  static const _posters = [
+    ('Arrival', '2016', Color(0xFF3B5B7A), Color(0xFF0E1A26)),
+    ('The Expanse', '6 new episodes', Color(0xFF7A3B2E), Color(0xFF1C0D0A)),
+    ('Paterson', '2016', Color(0xFF6E7A3B), Color(0xFF181C0B)),
+    ('Severance', 'Season 2 · 3 new episodes', null, null),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    const poster = 132.0;
+    const wide = 220.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 20,
+      children: [
+        Rail(
+          title: 'Recently added in Movies',
+          onSeeAll: () {},
+          seeAllLabel: 'See all',
+          itemWidth: poster,
+          itemHeight: CardMetrics.height(poster, CardMetrics.poster, scaler),
+          itemCount: _posters.length,
+          itemBuilder: (context, index) {
+            final (name, detail, from, to) = _posters[index];
+            return PosterCard(
+              name: name,
+              detail: detail,
+              watchedLabel: index == 2 ? 'Watched' : null,
+              art: from == null ? null : _SampleArt(from, to!),
+              onPressed: () {},
+            );
+          },
+        ),
+        Rail(
+          title: 'Continue watching',
+          itemWidth: wide,
+          itemHeight: CardMetrics.height(wide, CardMetrics.wide, scaler),
+          itemCount: 3,
+          itemBuilder: (context, index) => WideCard(
+            name: ['The Expanse', 'Arrival', 'Severance'][index],
+            detail: [
+              'S2, E5: Home · 12 min left',
+              '1 h 2 min left',
+              'S1, E1: Good News About Hell',
+            ][index],
+            art: index == 2
+                ? null
+                : const _SampleArt(Color(0xFF2E5E7A), Color(0xFF101820)),
+            progress: [.42, .7, null][index],
+            watchedLabel: index == 2 ? 'Watched' : null,
+            onPressed: () {},
+            onPlay: () {},
+            playLabel: 'Resume',
+          ),
+        ),
+        Rail(
+          title: 'Nothing here',
+          itemWidth: poster,
+          itemHeight: 0,
+          itemCount: 0,
+          itemBuilder: (context, index) => const SizedBox(),
+          empty: 'Nothing here yet.',
+        ),
+      ],
+    );
+  }
+}
+
+/// What a media page shows while it loads, has nothing, or failed, and
+/// the frame of a page opened over the tabs.
+class _PageSamples extends StatelessWidget {
+  const _PageSamples();
+
+  static const _posters = _MediaSamples._posters;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    const poster = 132.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 20,
+      children: [
+        SizedBox(
+          height: 150,
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              border: Border.all(color: MatineeTheme.of(context).border),
+              borderRadius: KitRadius.panel,
+            ),
+            child: ClipRRect(
+              borderRadius: KitRadius.panel,
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: PageFrame(
+                  title: 'Favorites',
+                  backLabel: 'Back',
+                  onBack: () {},
+                  child: const Center(
+                    child: EmptyState(
+                      icon: Lucide.heart,
+                      title: 'No favorites yet',
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const ErrorState(
+          title: "Couldn't load Home",
+          message: "The server isn't answering.",
+          retryLabel: 'Try again',
+          onRetry: _nothing,
+          homeLabel: 'Back to Home',
+          onHome: _nothing,
+        ),
+        const ErrorState(
+          title: "Couldn't load this row",
+          retryLabel: 'Try again',
+          onRetry: _nothing,
+          disconnected: true,
+          disconnectedLabel: 'Server not reachable',
+        ),
+        const EmptyState(
+          icon: Lucide.popcorn,
+          title: 'Nothing to watch yet',
+          message: 'Ask whoever runs this server to give you access.',
+        ),
+        const RailSkeleton(
+          label: 'Loading',
+          itemWidth: poster,
+          aspectRatio: CardMetrics.poster,
+        ),
+        SizedBox(
+          height: 2 * CardMetrics.height(100, CardMetrics.poster, scaler) + 20,
+          child: CustomScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            slivers: [
+              CardGrid(
+                columns: (width) => 4,
+                aspectRatio: CardMetrics.poster,
+                itemCount: 6,
+                itemBuilder: (context, index) => index.isEven
+                    ? PosterCard(
+                        name: _posters[index % 4].$1,
+                        detail: _posters[index % 4].$2,
+                        onPressed: () {},
+                      )
+                    : const CardSkeleton(aspectRatio: CardMetrics.poster),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+void _nothing() {}
+
+/// A painted stand-in for a picture: two colors and a horizon.
+class _SampleArt extends StatelessWidget {
+  const _SampleArt(this.from, this.to);
+
+  final Color from;
+  final Color to;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [from, to],
+      ),
+    ),
+    child: Align(
+      alignment: const Alignment(.4, -.3),
+      child: FractionallySizedBox(
+        widthFactor: .3,
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color.lerp(from, const Color(0xFFFFE8B0), .6),
+            ),
+          ),
+        ),
+      ),
     ),
   );
 }

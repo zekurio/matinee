@@ -20,3 +20,14 @@ String describeFailure(AppLocalizations l, Object error) => switch (error) {
   FormatException() || TypeError() => l.errorUnreadable,
   _ => l.errorConnectionLost,
 };
+
+/// Whether [error] means the server couldn't be reached or the connection
+/// broke off, not that it answered with an error: a page then shows only
+/// the cloud and Try again, as the Kotlin app's `isDisconnect`.
+bool isDisconnect(Object error) => switch (error) {
+  SocketException() ||
+  TimeoutException() ||
+  TlsException() ||
+  http.ClientException() => true,
+  _ => false,
+};

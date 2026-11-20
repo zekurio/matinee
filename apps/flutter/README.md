@@ -61,8 +61,10 @@ decoder as soon as the app draws.
 | ----------------- | -------------------------------------------------------- |
 | `lib/api`         | The generated API client, from the contract              |
 | `lib/core`        | What the screens share: the device, width classes        |
+| `lib/query`       | How screens read the server: queries, live streams       |
 | `lib/kit`         | The UI kit and theme, see below                          |
 | `lib/l10n`        | The strings, as ARB files                                |
+| `lib/media`       | Widgets that show the server's media: artwork, cards     |
 | `lib/platform`    | Generated platform channels, from `pigeons/`             |
 | `lib/player`      | The player interface, `VideoView`, and the player lab    |
 | `lib/screens`     | One folder per screen; `shell` holds the tabs            |
@@ -152,6 +154,47 @@ segments, and next episode. The controls send track and quality changes
 back to the server, and progress stays on the file's timeline even when
 `playback.seek` returns a stream that starts partway through the file.
 
+## Server data
+
+Screens read the server through providers made in `lib/query/server_data.dart`,
+declared next to the screen that shows them:
+
+```dart
+final featuredProvider = serverQuery((api) => api.home.featured());
+final shelfProvider = serverQueryFamily(
+  (api, String library) => api.libraries.shelf(library, limit: 12),
+);
+final liveProvider = serverStreamFamily(
+  (api, Titles titles) => api.requests.live(titles: titles.inputs),
+);
+```
+
+A screen watches one and gets an `AsyncValue`. `.value` is the last
+answer, kept while `ref.invalidate(provider)` fetches again; an error goes
+to `FailureState` (`lib/query/failure_view.dart`), which words it through
+`describeFailure` and shows only the cloud and Try again when the server
+can't be reached. Each provider follows `apiProvider`, so a sign-in or a
+server switch fetches again; goes away once nothing watches it; and never
+retries on its own, unlike Riverpod's default. A live stream from
+`transport.events` goes through `reconnecting` (`lib/query/reconnecting.dart`):
+it opens again at once when the server ends it, after a backoff from one
+second up to thirty when it drops, and keeps its last value meanwhile.
+Follow only what the server sends whole on each connect, as its
+`follow(...)` streams and the request snapshots do. `ReturnWatcher`
+(`lib/query/refresh.dart`) tells a screen the person came back to it, from
+another page or tab or from the background, and the screen picks what's
+old enough to fetch again.
+
+`lib/media` shows what comes back. `Picture` loads artwork from the
+server's paths through the session's artwork client, which sends each
+saved server its own token, picks the smallest of the server's sizes that
+is sharp in its box at the screen's density, keeps every picture in the
+app's cache folder (`DiskArtworkCache`, at most 256 MB), shows the
+artwork's BlurHash while it loads, and falls back through its sources,
+leaving the title's tone when none loads. `TitleCard`, `ShelfCard`, and
+`EpisodeCard` are the kit's cards filled from the API, and `layout.dart`
+has the rails' card widths and the grids' column counts by width class.
+
 ## Strings
 
 The ARB files in `lib/l10n` hold every string, English in `app_en.arb`
@@ -175,7 +218,17 @@ picture), `Checkbox`, `ChoiceChip`, `ToggleChip`, `Dialog`, `ConfirmDialog`,
 `QrCodeCard`, `RangeSlider`, `Spinner`, `Switch`, `TabBar` with `TabBarState`,
 `MatineeTextField`, `Toast` with `ToastState`, `Calendar`, and
 `PressIndication`, which stands in for Material's ripple. Words come in as
-parameters. `KitIcon` draws the lucide icons in `Lucide` and follows the
+parameters.
+
+For media pages it has the Kotlin app's cards and their layout, none of
+which knows the API: `PosterCard` and `WideCard` (a still with watch
+progress) over an `ArtFrame` on the title's `Tone`, `Rail` and
+`RailSkeleton`, the sliver `CardGrid`, which takes its column count from
+the screen, `PageFrame` for a page opened over the tabs (Back, a title,
+the body), and `SkeletonBox`, `LoadingState`, `EmptyState`, and
+`ErrorState`. `CardMetrics` holds the gutter, the gaps, and a card's
+height for its width and the text size, which rails and grids need
+because they lay out cards they haven't built. `KitIcon` draws the lucide icons in `Lucide` and follows the
 text color around it.
 
 Only `lib/kit` and `lib/app.dart` import Material or Cupertino, and only

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../kit/kit.dart';
+import '../l10n/app_localizations.dart';
 
 /// Stands in for a screen that isn't ported yet, so every route opens
 /// something and the shell can be tried end to end. Each is replaced by
@@ -24,35 +25,38 @@ class PendingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    return ColoredBox(
-      color: colors.background,
-      child: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 8,
-            children: [
-              Text(name, style: KitText.xl.style(color: colors.foreground)),
-              Text(
-                location.toString(),
-                style: KitText.sm.style(color: colors.mutedForeground),
+    final router = GoRouter.of(context);
+    final body = SafeArea(
+      top: false,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 8,
+          children: [
+            Text(name, style: KitText.xl.style(color: colors.foreground)),
+            Text(
+              location.toString(),
+              style: KitText.sm.style(color: colors.mutedForeground),
+            ),
+            for (final (label, path) in links)
+              MatineeButton(
+                look: ButtonLook.outline,
+                onPressed: () => router.push(path),
+                child: Text(label),
               ),
-              for (final (label, path) in links)
-                MatineeButton(
-                  look: ButtonLook.outline,
-                  onPressed: () => GoRouter.of(context).push(path),
-                  child: Text(label),
-                ),
-              if (GoRouter.of(context).canPop())
-                MatineeButton(
-                  look: ButtonLook.outline,
-                  onPressed: () => GoRouter.of(context).pop(),
-                  child: const Text('Back'),
-                ),
-            ],
-          ),
+          ],
         ),
       ),
+    );
+    // A tab's own page sits under the shell's header; a page over the tabs
+    // gets the frame.
+    if (!router.canPop()) {
+      return ColoredBox(color: colors.background, child: body);
+    }
+    return PageFrame(
+      backLabel: AppLocalizations.of(context).commonBack,
+      onBack: router.pop,
+      child: body,
     );
   }
 }

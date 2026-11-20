@@ -103,7 +103,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(path), findsOneWidget);
       expect(find.byType(ShellHeader), findsNothing);
-      await tester.tap(find.text('Back'));
+      await tester.tap(find.bySemanticsLabel('Back'));
       await tester.pumpAndSettle();
     }
   });
