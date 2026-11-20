@@ -11,6 +11,10 @@ import 'tv_seek.dart';
 /// to clear it.
 const tvOverlayHeight = 190.0;
 
+/// How wide the trickplay frame over the seek bar is, as the Kotlin TV
+/// player draws it.
+const tvTrickplayWidth = 240.0;
+
 /// How wide the player's buttons are, but play's.
 const _small = 40.0;
 
@@ -123,6 +127,7 @@ class TvPlayerOverlay extends StatefulWidget {
     required this.onMenu,
     this.action,
     this.episodes,
+    this.preview,
   });
 
   final TvPlayerTargets targets;
@@ -152,6 +157,9 @@ class TvPlayerOverlay extends StatefulWidget {
   final ValueChanged<TvPlayerMenu> onMenu;
   final TvPictureAction? action;
   final TvEpisodeButtons? episodes;
+
+  /// The trickplay frame at a time, for the seek bar.
+  final Widget Function(double seconds)? preview;
 
   @override
   State<TvPlayerOverlay> createState() => _TvPlayerOverlayState();
@@ -221,6 +229,7 @@ class _TvPlayerOverlayState extends State<TvPlayerOverlay> {
                     scrubbing: widget.scrubbing,
                     keys: widget.keys,
                     onTogglePlay: widget.onTogglePlay,
+                    preview: widget.preview,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -491,9 +500,9 @@ class _MenuButton extends StatelessWidget {
 /// The seek bar, as the Kotlin app's `TvSeekBar`. Focused, it thickens,
 /// shows its dot, and the time floats above the dot; Left and Right step
 /// by the skip lengths and glide while held, and the player seeks when the
-/// key comes up. Select plays or pauses, Down goes to play. The server
-/// makes no trickplay frames the Flutter app shows yet, so the time floats
-/// alone.
+/// key comes up, with [preview]'s trickplay frame over the time while the
+/// keys move it, when the server made frames. Select plays or pauses, Down
+/// goes to play.
 class TvSeekBar extends StatelessWidget {
   const TvSeekBar({
     super.key,
@@ -505,9 +514,13 @@ class TvSeekBar extends StatelessWidget {
     required this.scrubbing,
     required this.keys,
     required this.onTogglePlay,
+    this.preview,
   });
 
   final FocusNode focusNode;
+
+  /// The trickplay frame at a time, [tvTrickplayWidth] wide.
+  final Widget Function(double seconds)? preview;
 
   /// Where Down goes.
   final FocusNode below;
@@ -582,6 +595,7 @@ class TvSeekBar extends StatelessWidget {
                 fraction: seekFraction(position, length),
                 loaded: seekFraction(buffered ?? 0, length),
                 bubble: focused || scrubbing ? formatClock(position) : null,
+                frame: scrubbing ? preview?.call(position) : null,
               ),
             ),
           ),
@@ -602,12 +616,14 @@ class _Track extends StatelessWidget {
     required this.fraction,
     required this.loaded,
     required this.bubble,
+    this.frame,
   });
 
   final bool focused;
   final double fraction;
   final double loaded;
   final String? bubble;
+  final Widget? frame;
 
   @override
   Widget build(BuildContext context) {
@@ -642,25 +658,47 @@ class _Track extends StatelessWidget {
                   right: 0,
                   child: CustomSingleChildLayout(
                     delegate: _BubbleLayout(fraction),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.foreground,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        text,
-                        style: TvType.title
-                            .style(color: colors.background)
-                            .copyWith(
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (frame case final picture?) ...[
+                          DecoratedBox(
+                            position: DecorationPosition.foreground,
+                            decoration: BoxDecoration(
+                              borderRadius: TvCards.radius,
+                              border: Border.all(
+                                color: colors.foreground,
+                                width: 2,
+                              ),
                             ),
-                      ),
+                            child: ClipRRect(
+                              borderRadius: TvCards.radius,
+                              child: picture,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.foreground,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            text,
+                            style: TvType.title
+                                .style(color: colors.background)
+                                .copyWith(
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -678,7 +716,8 @@ class _BubbleLayout extends SingleChildLayoutDelegate {
   final double fraction;
 
   @override
-  Size getSize(BoxConstraints constraints) => Size(constraints.maxWidth, 32);
+  // Room for the trickplay frame over the time; it takes no layout room.
+  Size getSize(BoxConstraints constraints) => Size(constraints.maxWidth, 240);
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>

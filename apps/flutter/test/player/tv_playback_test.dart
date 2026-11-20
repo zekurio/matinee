@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,8 +9,11 @@ import 'package:matinee/app.dart';
 import 'package:matinee/core/device.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/kit/tv/tv.dart';
+import 'package:matinee/media/artwork.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
+import 'package:matinee/player/player_system.dart';
+import 'package:matinee/player/trickplay.dart';
 import 'package:matinee/player/tv/tv_display_mode.dart';
 import 'package:matinee/player/tv/tv_playback_screen.dart';
 import 'package:matinee/player/tv/tv_seek.dart';
@@ -34,24 +38,58 @@ typedef _Player = ({
   FakePlaybackApi backend,
   List<FakePlayer> players,
   _FakeDisplay display,
+  FakeMediaControls media,
 });
+
+/// [start] with a probe whose video has [frameRate], which the fixture's
+/// lacks.
+PlaybackStart _withFrameRate(PlaybackStart start, double frameRate) {
+  // SAFETY: a PlaybackStart encodes as a JSON object.
+  final json = jsonDecode(jsonEncode(start.toJson())) as Map<String, Object?>;
+  // SAFETY: its item encodes as a JSON object too.
+  (json['item']! as Map<String, Object?>)['probe'] = {
+    'format': {'name': 'matroska', 'durationSeconds': 120, 'bitRate': null},
+    'video': {
+      'index': 0,
+      'codec': 'h264',
+      'width': 1920,
+      'height': 1080,
+      'frameRate': frameRate,
+      'interlaced': false,
+      'hdr10Plus': false,
+      'masteringDisplay': false,
+      'format': 'H.264',
+      'resolution': '1080p',
+    },
+    'audio': const <Object>[],
+    'subtitles': const <Object>[],
+  };
+  return PlaybackStart.fromJson(json);
+}
 
 Future<_Player> _open(
   WidgetTester tester, {
   Size size = const Size(960, 540),
   bool hasNext = false,
   List<MediaSegment> segments = const [],
+  double? frameRate,
+  TrickplayStatus? trickplay,
 }) async {
   final backend = FakePlaybackApi();
-  backend.start = (input) => FakePlaybackApi.answer(
-    plan(
+  if (trickplay != null) backend.trickplay = trickplay;
+  backend.start = (input) {
+    final answer = plan(
       id: input.itemId,
       start: input.position ?? 18,
       quality: input.quality ?? PlaybackQuality.original,
       hasNext: hasNext && input.itemId == itemId,
       segments: input.itemId == itemId ? segments : const [],
-    ),
-  );
+    );
+    return FakePlaybackApi.answer(
+      frameRate == null ? answer : _withFrameRate(answer, frameRate),
+    );
+  };
+  final media = FakeMediaControls();
   final players = <FakePlayer>[];
   final display = _FakeDisplay();
   tester.view.physicalSize = size;
@@ -72,13 +110,17 @@ Future<_Player> _open(
       sessionHttpProvider.overrideWithValue(backend.client),
       removingServersProvider.overrideWithValue(const {}),
       savedServersProvider.overrideWithValue(const []),
-      playbackPlayerFactoryProvider.overrideWithValue((engine) {
+      playbackPlayerFactoryProvider.overrideWithValue((engine, prefs) {
         final player = FakePlayer();
         players.add(player);
         return player;
       }),
       playbackFullscreenProvider.overrideWithValue((owner, enabled) async {}),
       tvDisplayProvider.overrideWithValue(display),
+      mediaControlsProvider.overrideWithValue(media),
+      artworkLoaderProvider.overrideWithValue(
+        ArtworkLoader(backend.client, const NoArtworkCache()),
+      ),
     ],
   );
   addTearDown(container.dispose);
@@ -93,6 +135,7 @@ Future<_Player> _open(
     backend: backend,
     players: players,
     display: display,
+    media: media,
   );
 }
 
@@ -201,6 +244,78 @@ void main() {
     expect(focusedKey(), 'player/play');
     // The fixture's probe has no frame rate, so the screen stays.
     expect(opened.display.asked, isEmpty);
+  });
+
+  testWidgets('asks for the frame rate, and lets go on leaving', (
+    tester,
+  ) async {
+    final opened = await _open(tester, frameRate: 23.976);
+    expect(opened.display.asked, [23.976]);
+    await back(tester);
+    await back(tester);
+    expect(find.byType(TvPlaybackScreen), findsNothing);
+    expect(opened.display.asked, [23.976, null]);
+  });
+
+  testWidgets('the next episode at the same rate keeps the mode', (
+    tester,
+  ) async {
+    final opened = await _open(tester, hasNext: true, frameRate: 23.976);
+    opened.players.single.emit(PlaybackPhase.ended, 120);
+    await settle(tester);
+    await select(tester);
+    await settle(tester);
+    expect(opened.players, hasLength(2));
+    expect(find.text('The Return'), findsOneWidget);
+    expect(opened.display.asked, [23.976], reason: 'nothing let go between');
+  });
+
+  testWidgets('the video shows in the system media controls, whose presses '
+      'reach it', (tester) async {
+    final opened = await _open(tester);
+    final player = opened.players.single;
+    final info = opened.media.shown.single;
+    expect(info.title, 'The Crossing');
+    expect(opened.media.states.last.playing, isTrue);
+    opened.media.press(MediaCommandKind.pause);
+    await settle(tester);
+    expect(player.pauses, 1);
+    await back(tester);
+    await back(tester);
+    expect(opened.media.hides, 1);
+  });
+
+  testWidgets('a media key acts once', (tester) async {
+    final opened = await _open(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlayPause);
+    await settle(tester);
+    expect(opened.players.single.pauses, 1);
+  });
+
+  testWidgets('a held arrow shows the trickplay frame over the time', (
+    tester,
+  ) async {
+    await _open(
+      tester,
+      trickplay: const TrickplayStatusReady(
+        images: Trickplay(
+          key: 'k',
+          width: 160,
+          height: 90,
+          columns: 5,
+          rows: 4,
+          count: 50,
+          intervalSeconds: 10,
+        ),
+      ),
+    );
+    await _waitForHide(tester);
+    await _hold(tester, LogicalKeyboardKey.arrowRight);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(TrickplayFrame), findsOneWidget);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
+    await settle(tester);
+    expect(find.byType(TrickplayFrame), findsNothing);
   });
 
   testWidgets('Select toggles play; Up goes to the seek bar, Down back', (

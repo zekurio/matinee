@@ -4,46 +4,46 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/matinee_api.dart';
-import '../../core/device.dart';
-import '../../core/failure_text.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../kit/tv/tv.dart';
 import '../../l10n/app_localizations.dart';
-import '../../media/actions.dart' show MediaChanges, mediaChangesProvider;
 import '../../media/format.dart';
 import '../../router.dart';
 import '../playback_device.dart';
 import '../playback_screen.dart'
-    show playbackFullscreenProvider, playbackPlayerFactoryProvider;
+    show PlaybackHost, createPlaybackSession, playbackFullscreenProvider;
 import '../playback_session.dart';
 import '../player.dart';
 import '../player_motion.dart';
-import '../player_overlays.dart' show PlayerNote, TimedNote;
+import '../player_overlays.dart' show TimedNote;
+import '../player_panel.dart';
+import '../player_parts.dart';
 import '../player_preferences.dart';
+import '../player_system.dart';
+import '../subtitle_look.dart';
+import '../trickplay.dart';
 import '../video_view.dart';
 import 'tv_display_mode.dart';
 import 'tv_overlay.dart';
-import 'tv_preferences.dart';
 import 'tv_seek.dart';
 
-/// How long the controls stay up while the video plays and nothing moves.
+/// How long the controls stay up while the video plays and nothing moves:
+/// the phone player's time. Neither it nor the kit reads the platform's
+/// recommended timeout, which the Kotlin player asked accessibility for.
 const _hideAfter = Duration(milliseconds: 3500);
 
-/// Seconds the next episode counts down once the file ended, when the
-/// credits didn't count it down already.
-const _upNextSeconds = 10;
-
-/// The speeds the settings menu offers, from half to double.
-const _speeds = [.5, .75, 1.0, 1.25, 1.5, 2.0];
+/// How long the skip button shows by itself once its segment starts, as
+/// the Kotlin player's `SKIP_SHOWN_MS`; after that it comes with the
+/// controls.
+const _skipShown = Duration(seconds: 8);
 
 /// The player on a TV, as the Kotlin app's `TvPlayerScreen`: what the
-/// phone's player loads, the [PlaybackSession] and the video under it,
-/// drawn for a remote. The controls, the menus, and the keys are the TV's
-/// own.
+/// phone's player loads, the same [PlaybackSession] set up the same way
+/// ([createPlaybackSession]) with the video under it, drawn for a remote.
+/// The controls, the menus, and the keys are the TV's own.
 class TvPlaybackScreen extends ConsumerStatefulWidget {
   const TvPlaybackScreen({super.key, required this.itemId, this.startAt});
 
@@ -58,16 +58,21 @@ class _TvPlaybackScreenState extends ConsumerState<TvPlaybackScreen> {
   static int _lastOwner = 1 << 20;
   late final int _owner = ++_lastOwner;
   late final Future<void> Function(int, bool) _fullscreen;
+  late final TvDisplayMatch _display;
 
   @override
   void initState() {
     super.initState();
     _fullscreen = ref.read(playbackFullscreenProvider);
+    // Before the last episode's player leaves, so the mode it holds stays
+    // for this one to keep or change.
+    _display = ref.read(tvDisplayMatchProvider)..claim(this);
     unawaited(_window(true));
   }
 
   @override
   void dispose() {
+    _display.leave(this);
     unawaited(_window(false));
     super.dispose();
   }
@@ -91,7 +96,10 @@ class _TvPlaybackScreenState extends ConsumerState<TvPlaybackScreen> {
     final codecs = engine == PlayerEngine.media3
         ? ref.watch(playbackCodecsProvider)
         : null;
-    final prefs = ref.watch(tvPlaybackPrefsProvider);
+    // Read once when the player opens, as the phone's does.
+    final prefsLoading = ref.watch(
+      playerPrefsProvider.select((prefs) => prefs.isLoading),
+    );
     final auth = ref.watch(authStateProvider);
     final user = switch (auth) {
       SignedIn(:final user) => user,
@@ -106,32 +114,26 @@ class _TvPlaybackScreenState extends ConsumerState<TvPlaybackScreen> {
       );
     } else if (engineState.isLoading ||
         codecs?.isLoading == true ||
-        prefs.isLoading) {
+        prefsLoading) {
       child = const _Opening();
     } else {
-      final profile = playbackDevice(
-        engine,
-        codecs?.value,
-        WidgetsBinding.instance.platformDispatcher.locale.languageCode,
-      );
-      child = _TvPlaybackHost(
+      child = PlaybackHost(
         key: ValueKey((api, widget.itemId, widget.startAt, engine)),
-        create: () => PlaybackSession(
-          itemId: widget.itemId,
+        create: () => createPlaybackSession(
+          ref,
           api: api,
-          httpClient: ref.read(sessionHttpProvider),
-          headers: {
-            ...ref.read(playerHeadersProvider),
-            'User-Agent': ref.read(deviceProvider).userAgent,
-          },
-          player: ref.read(playbackPlayerFactoryProvider)(engine),
-          device: profile,
-          preferences: user.playback ?? defaultPlaybackPreferences,
+          user: user,
+          engine: engine,
+          codecs: codecs?.value,
+          itemId: widget.itemId,
           startAt: widget.startAt,
         ),
-        prefs: prefs.value ?? (matchFrameRate: true, autoplayNext: true),
-        back: _back,
-        next: (item) => context.replace(Routes.play(item.id), extra: 0.0),
+        builder: (session) => _TvPlayback(
+          session: session,
+          display: (rate) => _display.match(this, rate),
+          back: _back,
+          next: (item) => context.replace(Routes.play(item.id), extra: 0.0),
+        ),
       );
     }
     return MatineeTheme.wrap(
@@ -224,81 +226,14 @@ class TvPlayerFailure extends StatelessWidget {
   }
 }
 
-class _TvPlaybackHost extends StatefulWidget {
-  const _TvPlaybackHost({
-    required super.key,
-    required this.create,
-    required this.prefs,
-    required this.back,
-    required this.next,
-  });
-
-  final PlaybackSession Function() create;
-  final TvPlaybackPrefs prefs;
-  final VoidCallback back;
-  final ValueChanged<MediaItem> next;
-
-  @override
-  State<_TvPlaybackHost> createState() => _TvPlaybackHostState();
-}
-
-class _TvPlaybackHostState extends State<_TvPlaybackHost> {
-  late final PlaybackSession _session;
-  late final MediaChanges _changes;
-  late final TvDisplayMatch _display;
-
-  @override
-  void initState() {
-    super.initState();
-    final container = ProviderScope.containerOf(context, listen: false);
-    _changes = container.read(mediaChangesProvider.notifier);
-    _display = TvDisplayMatch(container.read(tvDisplayProvider));
-    _session = widget.create();
-    if (widget.prefs.matchFrameRate) _session.addListener(_matchDisplay);
-    unawaited(_session.start());
-  }
-
-  /// The screen follows the video's frame rate once the server says it.
-  void _matchDisplay() {
-    final rate = _session.plan?.item.probe?.video?.frameRate;
-    if (rate != null) unawaited(_display.match(rate));
-  }
-
-  @override
-  void dispose() {
-    _session.removeListener(_matchDisplay);
-    _display.release();
-    // What was watched moved on: the pages under the player fetch again
-    // once the server has the last position.
-    unawaited(_session.close().whenComplete(_changes.changed));
-    _session.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => _TvPlayback(
-    session: _session,
-    autoplayNext: widget.prefs.autoplayNext,
-    back: widget.back,
-    next: widget.next,
-  );
-}
-
-/// The next episode as it comes, as the Kotlin app's `UpNextState`: its
-/// countdown, whether it stopped or never ran, and whether it came while
-/// the credits rolled, when it starts as soon as the file ends.
-class _UpNext {
-  _UpNext(this.item, {required bool autoplay, required this.early})
-    : cancelled = !autoplay;
-
-  final MediaItem item;
-  final bool early;
-  bool cancelled;
-  int left = _upNextSeconds;
-
-  /// Back took its button off the picture; the controls still have it.
-  bool away = false;
-}
+/// The menus the TV's buttons open at the right edge, as the Kotlin app's:
+/// audio, subtitles, and settings, which holds the quality, the speed, and
+/// how the picture fills the screen.
+List<PlayerMenu> _menusOf(TvPlayerMenu menu) => switch (menu) {
+  TvPlayerMenu.audio => const [PlayerMenu.audio],
+  TvPlayerMenu.subtitles => const [PlayerMenu.subtitles],
+  TvPlayerMenu.settings => const [PlayerMenu.quality, PlayerMenu.speed],
+};
 
 /// Plays the session for a remote, as the Kotlin app's `TvPlayback`.
 ///
@@ -307,29 +242,36 @@ class _UpNext {
 /// media keys work at any time. With them showing, the D-pad moves focus.
 /// Back closes a menu, then the controls, then the player. Every key press
 /// keeps the controls up a while longer; a menu or a seek keeps them up.
-class _TvPlayback extends StatefulWidget {
+/// The keys are this widget's alone: a TV never builds the phone's
+/// controls, whose own key handler would act on them too.
+class _TvPlayback extends ConsumerStatefulWidget {
   const _TvPlayback({
     required this.session,
-    required this.autoplayNext,
+    required this.display,
     required this.back,
     required this.next,
   });
 
   final PlaybackSession session;
-  final bool autoplayNext;
+
+  /// Asks the screen for the frame rate the server says the video has.
+  final ValueChanged<double?> display;
   final VoidCallback back;
   final ValueChanged<MediaItem> next;
 
   @override
-  State<_TvPlayback> createState() => _TvPlaybackState();
+  ConsumerState<_TvPlayback> createState() => _TvPlaybackState();
 }
 
-class _TvPlaybackState extends State<_TvPlayback> {
+class _TvPlaybackState extends ConsumerState<_TvPlayback> {
   final _targets = TvPlayerTargets();
   final _root = FocusNode(debugLabel: 'player/root');
   final _keySeek = KeySeek();
+  late final UpNextCountdown _countdown;
+  late final PlayerSpeed _speed;
+  late final PlayerMediaSession _media;
+  late final bool _matchFrameRate;
   Timer? _hide;
-  Timer? _countdown;
   var _controls = true;
   var _menuOpen = false;
   double? _scrub;
@@ -341,12 +283,15 @@ class _TvPlaybackState extends State<_TvPlayback> {
   /// already answered.
   LogicalKeyboardKey? _seeking;
   LogicalKeyboardKey? _swallow;
-  _UpNext? _upNext;
+
+  /// The segment whose skip button shows, whether it's within [_skipShown]
+  /// of starting, and the one Back took off the picture.
+  (String, double, double)? _segmentKey;
+  var _segmentFresh = false;
+  Timer? _segmentTimer;
   MediaSegment? _skipAwayFrom;
   var _leaving = false;
-  var _rate = 1.0;
   var _fill = false;
-  PlaybackPhase _phase = PlaybackPhase.idle;
 
   /// What focus followed last, to move it when the controls come or go.
   ({bool visible, bool onPicture, String? next})? _followed;
@@ -356,9 +301,32 @@ class _TvPlaybackState extends State<_TvPlayback> {
   @override
   void initState() {
     super.initState();
+    final prefs = ref.read(playerPrefsProvider).value ?? const PlayerPrefs();
+    _matchFrameRate = prefs.matchFrameRate;
+    _fill = prefs.fillScreen;
+    if (_fill) unawaited(_applyFit());
+    _countdown = UpNextCountdown(
+      autoplay: prefs.autoplayNext,
+      onTick: () => setState(() {}),
+      onPlay: (item) => unawaited(_play(item)),
+    );
+    _speed = PlayerSpeed(_session);
+    _media = PlayerMediaSession(
+      _session,
+      ref.read(mediaControlsProvider),
+      headers: () => ref.read(playerHeadersProvider),
+    );
     _session.addListener(_updated);
     HardwareKeyboard.instance.addHandler(_preview);
     _resetHide();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The words change with the language.
+    _media.forget();
+    _syncMedia();
   }
 
   @override
@@ -366,58 +334,59 @@ class _TvPlaybackState extends State<_TvPlayback> {
     HardwareKeyboard.instance.removeHandler(_preview);
     _session.removeListener(_updated);
     _hide?.cancel();
-    _countdown?.cancel();
+    _segmentTimer?.cancel();
+    _countdown.stop();
+    _media.dispose();
     _targets.dispose();
     _root.dispose();
     super.dispose();
   }
 
   void _updated() {
-    final phase = _session.playback.phase;
-    // A source the session opens again starts at normal speed.
-    if (phase == PlaybackPhase.ready && _phase != phase && _rate != 1) {
-      unawaited(_applyRate());
-    }
-    _phase = phase;
-    setState(_syncNext);
+    _speed.follow();
+    setState(() {
+      _countdown.sync(_session, leaving: _leaving);
+      _syncSegment();
+    });
     _resetHide();
+    _syncMedia();
+    if (_matchFrameRate) {
+      if (_session.item case final item?) {
+        widget.display(item.probe?.video?.frameRate);
+      } else if (_session.error != null) {
+        widget.display(null);
+      }
+    }
   }
 
-  /// Follows the episode after this one, as `rememberUpNext`: once the file
-  /// ends it starts at once if the credits counted it down, or counts down
-  /// on its own first, unless the countdown stopped.
-  void _syncNext() {
-    final item = _session.error == null ? _session.next : null;
-    if (item == null) {
-      _upNext = null;
-      _countdown?.cancel();
-      _countdown = null;
-      return;
-    }
-    if (_upNext?.item.id != item.id) {
-      _upNext = _UpNext(
-        item,
-        autoplay: widget.autoplayNext,
-        early: !_session.ended,
-      );
-    }
-    final next = _upNext!;
-    if (!_session.ended || next.cancelled || _countdown != null || _leaving) {
-      return;
-    }
-    if (next.early) {
-      _countdown = Timer(Duration.zero, () => unawaited(_play(item)));
-    } else {
-      _countdown = Timer.periodic(const Duration(seconds: 1), (_) {
-        setState(() => next.left--);
-        if (next.left <= 0) unawaited(_play(item));
+  void _syncMedia() {
+    if (_leaving) return;
+    _media.sync(
+      AppLocalizations.of(context),
+      playing: _session.playback.status.playing,
+      rate: _speed.value,
+    );
+  }
+
+  void _syncSegment() {
+    final segment = _session.segment;
+    final key = segment == null
+        ? null
+        : (segment.kind, segment.start, segment.end);
+    if (key == _segmentKey) return;
+    _segmentKey = key;
+    _segmentTimer?.cancel();
+    _segmentFresh = key != null;
+    if (key != null) {
+      _segmentTimer = Timer(_skipShown, () {
+        if (mounted) setState(() => _segmentFresh = false);
       });
     }
   }
 
   Future<void> _play(MediaItem item) async {
     if (_leaving) return;
-    _countdown?.cancel();
+    _countdown.stop();
     setState(() => _leaving = true);
     await _session.close();
     if (mounted) widget.next(item);
@@ -428,7 +397,12 @@ class _TvPlaybackState extends State<_TvPlayback> {
     if (!_controls ||
         !_session.playback.status.playing ||
         _menuOpen ||
-        _scrub != null) {
+        _scrub != null ||
+        WidgetsBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeatures
+            .accessibleNavigation) {
       return;
     }
     _hide = Timer(_hideAfter, () {
@@ -444,24 +418,33 @@ class _TvPlaybackState extends State<_TvPlayback> {
     _resetHide();
   }
 
-  Future<void> _applyRate() async {
-    try {
-      await _session.player.setRate(_rate);
-    } on Exception {
-      // The speed applies again once the source is ready.
-    }
+  Future<void> _applyFit() => _session.player
+      .setVideoFit(_fill ? VideoFit.cover : VideoFit.contain)
+      .catchError((Object _) {});
+
+  void _pickFill(bool fill) {
+    setState(() => _fill = fill);
+    unawaited(_applyFit());
+    // Kept for the next video, as the Kotlin app's fillScreen.
+    unawaited(
+      ref
+          .read(playerPrefsProvider.notifier)
+          .change((prefs) => prefs.copyWith(fillScreen: fill))
+          .catchError((Object _) {}),
+    );
   }
 
-  double get _skipBack => (_session.skipBack ?? 10).toDouble();
-  double get _skipAhead => (_session.skipForward ?? 10).toDouble();
-
+  /// A press steps by the account's skip length, once the server has said
+  /// which lengths it offers; until then the keys do nothing, as the
+  /// phone's do.
   late final TvSeekKeys _seekKeys = (
     press: (direction, repeat, at) {
-      final step = direction < 0 ? _skipBack : _skipAhead;
+      final step = direction < 0 ? _session.skipBack : _session.skipForward;
+      if (step == null) return;
       final to = _keySeek.press(
         from: _scrub ?? _session.position,
         direction: direction,
-        step: step,
+        step: step.toDouble(),
         duration: _session.duration,
         repeat: repeat,
         at: at,
@@ -482,23 +465,21 @@ class _TvPlaybackState extends State<_TvPlayback> {
 
   bool get _visible =>
       _controls ||
-      (_session.ended && _upNext == null) ||
+      (_session.ended && _session.next == null) ||
       _session.error != null;
 
   TvPictureAction? _action(AppLocalizations l) {
     if (_session.error != null || _leaving) return null;
-    if (_upNext case final next?) {
+    if (_session.next case final next?) {
       return (
         label: l.playerNextEpisode,
-        countdown: next.cancelled
+        countdown: _countdown.cancelled
             ? null
-            : _session.ended
-            ? next.left
-            : (_session.duration - _session.position).ceil().clamp(0, 99999),
-        onPressed: () => unawaited(_play(next.item)),
+            : _countdown.secondsLeft(_session),
+        onPressed: () => unawaited(_play(next)),
       );
     }
-    if (_session.segment case final segment?) {
+    if (_session.segment case final segment? when _segmentFresh || _controls) {
       return (
         label: switch (segment.kind) {
           MediaSegmentKind.recap => l.playerSkipRecap,
@@ -513,10 +494,9 @@ class _TvPlaybackState extends State<_TvPlayback> {
     return null;
   }
 
-  bool get _away => switch (_upNext) {
-    final next? => next.away,
-    null => _session.segment != null && _session.segment == _skipAwayFrom,
-  };
+  bool get _away => _session.next != null
+      ? _countdown.hidden
+      : _session.segment != null && _session.segment == _skipAwayFrom;
 
   /// Sees each key before what has focus, as `onPreviewKeyEvent` did.
   bool _preview(KeyEvent event) {
@@ -528,39 +508,46 @@ class _TvPlaybackState extends State<_TvPlayback> {
       _swallow = null;
       return true;
     }
-    final media = switch (key) {
+    final playing = _session.playback.status.playing;
+    final back = _session.skipBack;
+    final ahead = _session.skipForward;
+    final previous = _session.previousEpisode;
+    final following = _session.nextEpisode;
+    final VoidCallback? media = switch (key) {
       LogicalKeyboardKey.mediaPlayPause ||
-      LogicalKeyboardKey.space => _session.togglePlay,
-      LogicalKeyboardKey.mediaPlay => _session.player.play,
-      LogicalKeyboardKey.mediaPause => _session.player.pause,
-      LogicalKeyboardKey.mediaFastForward ||
-      LogicalKeyboardKey.mediaSkipForward => () => _session.skip(
-        _skipAhead.round(),
-      ),
-      LogicalKeyboardKey.mediaRewind || LogicalKeyboardKey.mediaSkipBackward =>
-        () => _session.skip(-_skipBack.round()),
-      LogicalKeyboardKey.mediaTrackPrevious =>
-        switch (_session.plan?.previous) {
-          final previous? => () => _play(previous),
-          null => null,
-        },
-      LogicalKeyboardKey.mediaTrackNext => switch (_session.plan?.next) {
-        final next? => () => _play(next),
-        null => null,
+      LogicalKeyboardKey.space => () => unawaited(_session.togglePlay()),
+      LogicalKeyboardKey.mediaPlay => () {
+        if (!playing) unawaited(_session.togglePlay());
       },
-      LogicalKeyboardKey.closedCaptionToggle => () async => _openMenu(
-        TvPlayerMenu.subtitles,
+      LogicalKeyboardKey.mediaPause => () {
+        if (playing) unawaited(_session.togglePlay());
+      },
+      LogicalKeyboardKey.mediaFastForward ||
+      LogicalKeyboardKey.mediaSkipForward => () {
+        if (ahead != null) unawaited(_session.skip(ahead));
+      },
+      LogicalKeyboardKey.mediaRewind ||
+      LogicalKeyboardKey.mediaSkipBackward => () {
+        if (back != null) unawaited(_session.skip(-back));
+      },
+      LogicalKeyboardKey.mediaTrackPrevious when previous != null =>
+        () => unawaited(_play(previous)),
+      LogicalKeyboardKey.mediaTrackNext when following != null =>
+        () => unawaited(_play(following)),
+      LogicalKeyboardKey.closedCaptionToggle => () => unawaited(
+        _openMenu(TvPlayerMenu.subtitles),
       ),
-      LogicalKeyboardKey.mediaAudioTrack => () async => _openMenu(
-        TvPlayerMenu.audio,
+      LogicalKeyboardKey.mediaAudioTrack => () => unawaited(
+        _openMenu(TvPlayerMenu.audio),
       ),
       _ => null,
     };
     if (media != null) {
-      if (event is KeyDownEvent && _session.plan != null) unawaited(media());
+      // Taken here, so Android doesn't also hand it to the media session.
+      if (event is KeyDownEvent && _session.item != null) media();
       return true;
     }
-    if (!_onTop || _session.plan == null || _session.error != null) {
+    if (!_onTop || _session.item == null || _session.error != null) {
       return false;
     }
     final direction = switch (key) {
@@ -609,7 +596,7 @@ class _TvPlaybackState extends State<_TvPlayback> {
     final now = (
       visible: visible,
       onPicture: onPicture,
-      next: _upNext?.item.id,
+      next: _session.next?.id,
     );
     final before = _followed;
     if (before == now) return;
@@ -634,8 +621,7 @@ class _TvPlaybackState extends State<_TvPlayback> {
   }
 
   Future<void> _openMenu(TvPlayerMenu menu) async {
-    final plan = _session.plan;
-    if (plan == null || _menuOpen || !_onTop) return;
+    if (_session.item == null || _menuOpen || !_onTop) return;
     final l = AppLocalizations.of(context);
     setState(() {
       _controls = true;
@@ -647,14 +633,15 @@ class _TvPlaybackState extends State<_TvPlayback> {
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
     button.requestFocus();
+    final title = switch (menu) {
+      TvPlayerMenu.audio => l.playerMenuAudio,
+      TvPlayerMenu.subtitles => l.playerMenuSubtitles,
+      TvPlayerMenu.settings => l.playerMenuSettings,
+    };
     final pick = await showTvPanel<VoidCallback>(
       context,
-      title: switch (menu) {
-        TvPlayerMenu.audio => l.playerMenuAudio,
-        TvPlayerMenu.subtitles => l.playerMenuSubtitles,
-        TvPlayerMenu.settings => l.playerMenuSettings,
-      },
-      builder: (panel) => _menuRows(panel, l, menu, plan),
+      title: title,
+      builder: (panel) => _panelRows(panel, title, _entries(l, menu)),
     );
     if (!mounted) return;
     setState(() => _menuOpen = false);
@@ -665,122 +652,69 @@ class _TvPlaybackState extends State<_TvPlayback> {
     });
   }
 
-  List<Widget> _menuRows(
-    BuildContext panel,
-    AppLocalizations l,
-    TvPlayerMenu menu,
-    PlaybackStart plan,
-  ) {
-    var focused = false;
-    Widget choice(
-      String title, {
-      required bool selected,
-      required VoidCallback pick,
-      String? detail,
-      bool enabled = true,
-    }) {
-      final first = selected && enabled && !focused;
-      if (first) focused = true;
-      return TvListItem(
-        title: title,
-        subtitle: detail == null || detail.isEmpty ? null : detail,
-        quiet: true,
-        checked: selected,
-        enabled: enabled,
-        autofocus: first,
-        onPressed: () => Navigator.of(panel).pop(pick),
-      );
-    }
+  /// The phone's entries for [menu] ([playerMenuEntries]), and in settings
+  /// how the picture fills the screen, which a phone switches with a pinch.
+  List<PanelEntry> _entries(AppLocalizations l, TvPlayerMenu menu) => [
+    for (final part in _menusOf(menu))
+      if (part != PlayerMenu.quality || offersQuality(_session))
+        ...playerMenuEntries(
+          l,
+          _session,
+          part,
+          rate: _speed.value,
+          onRate: (speed) => setState(() => _speed.pick(speed)),
+        ),
+    if (menu == TvPlayerMenu.settings) ...[
+      const PanelDivider(),
+      PanelHeading(l.playerPicture),
+      for (final fill in [false, true])
+        PanelChoice(
+          fill ? l.playerFill : l.playerFit,
+          selected: _fill == fill,
+          pick: () => _pickFill(fill),
+        ),
+    ],
+  ];
 
-    void run(Future<void> Function() action) => unawaited(action());
-    final decimal = NumberFormat.decimalPattern(l.localeName);
-    switch (menu) {
-      case TvPlayerMenu.audio:
-        return [
-          if (plan.audioTracks.isEmpty) _MenuNote(l.playerAudioNoTracks),
-          for (final track in plan.audioTracks)
-            choice(
-              track.label,
-              detail: [track.format, ?track.layout].join(' · '),
-              selected: track.index == plan.audio?.index,
-              pick: () => run(() => _session.pickAudio(track)),
-            ),
-        ];
-      case TvPlayerMenu.subtitles:
-        return [
-          choice(
-            l.playerSubtitlesOff,
-            selected: plan.subtitle == null,
-            pick: () => run(() => _session.pickSubtitle(null)),
+  /// [entries] as the panel's rows: the current choice checked and focused
+  /// first, a pick closing the panel before it runs. The panel's heading
+  /// names the menu, so a first heading that says the same goes.
+  List<Widget> _panelRows(
+    BuildContext panel,
+    String title,
+    List<PanelEntry> entries,
+  ) {
+    final rows = switch (entries) {
+      [PanelHeading(:final text), ...final rest] when text == title => rest,
+      _ => entries,
+    };
+    var focused = false;
+    return [
+      for (final (index, entry) in rows.indexed)
+        switch (entry) {
+          PanelHeading(:final text) => Padding(
+            padding: EdgeInsets.only(top: index > 0 ? 8 : 0),
+            child: TvListHeading(text),
           ),
-          for (final track in plan.subtitleTracks)
-            choice(
-              track.label,
-              detail: [
-                if (track.forced) l.playerSubtitlesForced,
-                if (track.sdh) 'SDH',
-                track.format,
-                if (track.delivery == SubtitleDelivery.burnIn)
-                  l.playerSubtitlesBurnedIn,
-              ].join(' · '),
-              selected: track.id == plan.subtitle?.id,
-              enabled: track.delivery != null,
-              pick: () => run(() => _session.pickSubtitle(track)),
-            ),
-        ];
-      case TvPlayerMenu.settings:
-        return [
-          if (plan.original || _session.qualities.isNotEmpty) ...[
-            TvListHeading(l.playerQuality),
-            if (plan.original)
-              choice(
-                l.playerQualityOriginal,
-                selected: plan.quality == PlaybackQuality.original,
-                pick: () =>
-                    run(() => _session.pickQuality(PlaybackQuality.original)),
-              ),
-            for (final preset in _session.qualities)
-              choice(
-                l.playbackQualityPreset(
-                  preset.height,
-                  l.playerBitrateMbpsExact(
-                    decimal.format(preset.bitrate / 1000000),
-                  ),
-                ),
-                selected: plan.quality == preset.id,
-                pick: () => run(() => _session.pickQuality(preset.id)),
-              ),
-          ],
-          TvListHeading(l.playerSpeed),
-          for (final rate in _speeds)
-            choice(
-              rate == 1
-                  ? l.playerSpeedNormal
-                  : l.playerSpeedRate(decimal.format(rate)),
-              selected: _rate == rate,
-              pick: () {
-                setState(() => _rate = rate);
-                unawaited(_applyRate());
-              },
-            ),
-          // How the picture fills the screen, which a phone switches with
-          // a pinch.
-          TvListHeading(l.playerPicture),
-          for (final fill in [false, true])
-            choice(
-              fill ? l.playerFill : l.playerFit,
-              selected: _fill == fill,
-              pick: () {
-                setState(() => _fill = fill);
-                unawaited(
-                  _session.player
-                      .setVideoFit(fill ? VideoFit.cover : VideoFit.contain)
-                      .catchError((Object _) {}),
-                );
-              },
-            ),
-        ];
-    }
+          PanelNote(:final text) => _MenuNote(text),
+          PanelDivider() => const _MenuDivider(),
+          PanelChoice() => () {
+            final first = entry.selected && entry.enabled && !focused;
+            if (first) focused = true;
+            return TvListItem(
+              title: entry.title,
+              subtitle: entry.detail == null || entry.detail!.isEmpty
+                  ? null
+                  : entry.detail,
+              quiet: true,
+              checked: entry.selected,
+              enabled: entry.enabled,
+              autofocus: first,
+              onPressed: () => Navigator.of(panel).pop(entry.pick),
+            );
+          }(),
+        },
+    ];
   }
 
   void _onBack() {
@@ -789,19 +723,15 @@ class _TvPlaybackState extends State<_TvPlayback> {
       // Back cancels the countdown and takes the button away; the controls
       // still have it.
       setState(() {
-        if (_upNext case final next?) {
-          next
-            ..cancelled = true
-            ..away = true;
-          _countdown?.cancel();
-          _countdown = null;
+        if (_session.next != null) {
+          _countdown.cancel(hide: true);
         } else {
           _skipAwayFrom = _session.segment;
         }
       });
       return;
     }
-    if (_controls && _session.error == null && _session.plan != null) {
+    if (_controls && _session.error == null && _session.item != null) {
       _hide?.cancel();
       setState(() => _controls = false);
     }
@@ -810,25 +740,29 @@ class _TvPlaybackState extends State<_TvPlayback> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final plan = _session.plan;
+    final item = _session.item;
     final error = _session.error;
     final loading =
         !_leaving &&
         error == null &&
-        (plan == null ||
+        (item == null ||
             _session.busy ||
             _session.playback.phase == PlaybackPhase.buffering);
     final visible = _visible;
     final action = _action(l);
     final onPicture = _onPicture(l);
-    if (plan != null && error == null) _follow(visible, onPicture, action);
+    if (item != null && error == null) _follow(visible, onPicture, action);
     final captions =
         _session.captions?.at(_session.position) ?? const <TextSpan>[];
-    final names = plan == null ? null : itemNames(plan.item, l);
-    final code = plan?.item.label.code;
+    final prefs = ref.watch(playerPrefsProvider).value ?? const PlayerPrefs();
+    final names = item == null ? null : itemNames(item, l);
+    final code = item?.label.code;
     final playRests = !_menuOpen && !_focusSeek && !(action != null && !_away);
     final canLeave =
-        error != null || plan == null || (!_controls && !onPicture);
+        error != null || item == null || (!_controls && !onPicture);
+    final previous = _session.previousEpisode;
+    final following = _session.nextEpisode;
+    final images = _session.trickplay;
 
     return PopScope(
       canPop: canLeave,
@@ -844,7 +778,7 @@ class _TvPlaybackState extends State<_TvPlayback> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (plan == null || _session.refused || _leaving)
+            if (item == null || _session.refused || _leaving)
               const ColoredBox(color: Color(0xFF000000)),
             VideoView(player: _session.player),
             TimedNote(
@@ -852,7 +786,11 @@ class _TvPlaybackState extends State<_TvPlayback> {
               duration: const Duration(seconds: 5),
               onHidden: _session.dismissNotice,
               child: switch (_session.notice) {
-                (final notice, final detail) => _notice(l, notice, detail),
+                (final notice, final detail) => playbackNoticeNote(
+                  l,
+                  notice,
+                  detail,
+                ),
                 null => const SizedBox.shrink(),
               },
             ),
@@ -864,7 +802,7 @@ class _TvPlaybackState extends State<_TvPlayback> {
                   label: l.loadingInProgress,
                 ),
               ),
-            if (plan != null && names != null)
+            if (item != null && names != null)
               PlayerFade(
                 visible: visible && error == null,
                 child: TvPlayerOverlay(
@@ -883,47 +821,41 @@ class _TvPlaybackState extends State<_TvPlayback> {
                   ahead: _session.skipForward,
                   keys: _seekKeys,
                   playRests: playRests,
-                  subtitlesOn: plan.subtitle != null,
+                  subtitlesOn: _session.subtitle != null,
                   onTogglePlay: () => unawaited(_session.togglePlay()),
                   onSkip: (seconds) => unawaited(_session.skip(seconds)),
                   onMenu: (menu) => unawaited(_openMenu(menu)),
                   action: action,
-                  episodes: plan.previous == null && plan.next == null
+                  episodes: previous == null && following == null
                       ? null
                       : (
-                          previous: switch (plan.previous) {
+                          previous: switch (previous) {
                             final previous? => () => unawaited(_play(previous)),
                             null => null,
                           },
-                          next: switch (plan.next) {
+                          next: switch (following) {
                             final next? => () => unawaited(_play(next)),
                             null => null,
                           },
+                        ),
+                  preview: images == null
+                      ? null
+                      : (seconds) => TrickplayFrame(
+                          itemId: _session.itemId,
+                          images: images,
+                          seconds: seconds,
+                          width: tvTrickplayWidth,
                         ),
                 ),
               ),
             // Over the scrim, so it doesn't dim them; they rise clear of
             // the controls.
             if (captions.isNotEmpty)
-              IgnorePointer(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: AnimatedPadding(
-                    duration: PlayerMotion.move,
-                    curve: PlayerMotion.easing,
-                    padding: EdgeInsets.fromLTRB(
-                      80,
-                      0,
-                      80,
-                      visible ? tvOverlayHeight : 40,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 2,
-                      children: [for (final cue in captions) _Caption(cue)],
-                    ),
-                  ),
-                ),
+              SubtitleLayer(
+                cues: captions,
+                look: subtitleLook(ref, prefs),
+                bottom: visible ? tvOverlayHeight : 40,
+                side: 80,
               ),
             if (error != null)
               ColoredBox(
@@ -954,7 +886,7 @@ class _TvPlaybackState extends State<_TvPlayback> {
   }
 
   Widget _failure(AppLocalizations l, Object error) {
-    final (title, message) = tvPlaybackErrorText(l, error);
+    final (title, message) = playbackErrorText(l, error);
     return TvPlayerFailure(
       title: title,
       message: message,
@@ -962,25 +894,6 @@ class _TvPlaybackState extends State<_TvPlayback> {
       onRetry: _session.refused ? null : () => unawaited(_session.retry()),
     );
   }
-
-  Widget _notice(AppLocalizations l, PlaybackNotice notice, Object? detail) =>
-      switch (notice) {
-        PlaybackNotice.burnInFailed => PlayerNote(
-          title: l.playerNoticeBurnInFailed,
-          detail: l.playerNoticeBurnInFailedDetail,
-        ),
-        PlaybackNotice.qualityFailed => PlayerNote(
-          title: l.playerNoticeSwitchFailed,
-          detail: l.playerNoticeQualityFailedDetail,
-        ),
-        PlaybackNotice.switchFailed => PlayerNote(
-          title: l.playerNoticeSwitchFailed,
-          detail: detail == null ? null : tvPlaybackErrorText(l, detail).$2,
-        ),
-        PlaybackNotice.subtitleFailed => PlayerNote(
-          title: l.playerErrorSubtitles,
-        ),
-      };
 }
 
 class _MenuNote extends StatelessWidget {
@@ -1001,52 +914,15 @@ class _MenuNote extends StatelessWidget {
   );
 }
 
-/// A subtitle cue, read from the couch: larger than the phone's.
-class _Caption extends StatelessWidget {
-  const _Caption(this.cue);
-
-  final TextSpan cue;
+class _MenuDivider extends StatelessWidget {
+  const _MenuDivider();
 
   @override
-  Widget build(BuildContext context) => Container(
-    color: const Color(0xD9000000),
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-    child: Text.rich(
-      cue,
-      textAlign: TextAlign.center,
-      style: TvType.title.style(color: const Color(0xFFFFFFFF)),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: SizedBox(
+      height: 1,
+      child: ColoredBox(color: MatineeTheme.of(context).border),
     ),
   );
-}
-
-/// What went wrong, as a title and a line under it, as the phone player's
-/// `_errorText`, which is private to `playback_screen.dart`.
-(String, String) tvPlaybackErrorText(AppLocalizations l, Object error) {
-  switch (error) {
-    case ApiException(code: playbackBusy):
-      final playing = error.dataAs(PlaybackBusyData.fromJson)?.playing;
-      return (
-        l.playerBusy,
-        playing == null ? l.playerBusyGeneric : l.playerBusyDetail(playing),
-      );
-    case ApiException(code: playbackRestricted):
-      final reason = error.dataAs(PlaybackRestrictedData.fromJson)?.reason;
-      return (
-        l.playerRestricted,
-        switch (reason) {
-          PlaybackRestriction.bitrateOriginal => l.playerRestrictedOriginal,
-          PlaybackRestriction.bitrateTranscode => l.playerRestrictedNoTranscode,
-          PlaybackRestriction.bitrateFailed => l.playerRestrictedFailed,
-          PlaybackRestriction.bitrate => l.playerRestrictedBitrate,
-          PlaybackRestriction.transcode => l.playerRestrictedTranscode,
-          _ => error.message ?? l.playerRestrictedGeneric,
-        },
-      );
-    case ApiException(code: playbackUnplayable):
-      return (l.playerErrorLost, l.playerUnplayable);
-    case PlaybackServerUnavailable():
-      return (l.playerErrorLost, l.errorUnreachable);
-    default:
-      return (l.playerErrorLost, describeFailure(l, error));
-  }
 }

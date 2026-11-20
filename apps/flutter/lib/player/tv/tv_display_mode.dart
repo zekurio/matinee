@@ -24,29 +24,45 @@ class _PigeonDisplay implements TvDisplay {
 
 final tvDisplayProvider = Provider<TvDisplay>((ref) => _PigeonDisplay());
 
+/// The one [TvDisplayMatch] the app's players share, so the next episode
+/// takes over the mode the last one asked for.
+final tvDisplayMatchProvider = Provider<TvDisplayMatch>(
+  (ref) => TvDisplayMatch(ref.watch(tvDisplayProvider)),
+);
+
 /// Switches the screen to a refresh rate that plays the video's frame rate
-/// evenly while the player is open, as the Kotlin app's
-/// `MatchDisplayMode`. The frame rate is the server's, from the item's
-/// probe; the rates are the display's at the resolution it has. [match]
-/// asks once per frame rate, [release] lets go when the player closes.
+/// evenly while a player is open, as the Kotlin app's `MatchDisplayMode`.
+/// The frame rate is the server's, from the item's probe; the rates are the
+/// display's at the resolution it has.
+///
+/// A player [claim]s it as it opens, [match]es once the server says the
+/// frame rate, and [leave]s as it closes. The next episode's player claims
+/// it before the last one leaves, so the last one's leaving doesn't let go
+/// of a mode the next one wants too, and a next episode at the same rate
+/// asks nothing of the screen.
 class TvDisplayMatch {
   TvDisplayMatch(this._display);
 
   final TvDisplay _display;
+  Object? _owner;
   double? _asked;
-  bool _holding = false;
-  bool _released = false;
+  double? _held;
+  int _request = 0;
 
-  Future<void> match(double? frameRate) async {
-    if (_released || frameRate == null || frameRate == _asked) return;
+  void claim(Object player) => _owner = player;
+
+  /// Asks for the rate that plays [frameRate], or lets go for none.
+  Future<void> match(Object player, double? frameRate) async {
+    if (player != _owner || frameRate == _asked) return;
     _asked = frameRate;
+    final request = ++_request;
+    double? rate;
     try {
-      final rate = matchingRefreshRate(
-        await _display.refreshRates(),
-        frameRate,
-      );
-      if (_released || rate == null) return;
-      _holding = true;
+      if (frameRate != null) {
+        rate = matchingRefreshRate(await _display.refreshRates(), frameRate);
+      }
+      if (request != _request || rate == _held) return;
+      _held = rate;
       await _display.preferRefreshRate(rate);
     } on PlatformException {
       // The screen stays as it is; the video still plays.
@@ -55,10 +71,14 @@ class TvDisplayMatch {
     }
   }
 
-  void release() {
-    _released = true;
-    if (!_holding) return;
-    _holding = false;
+  /// [player] closed: lets go, unless another player has taken over.
+  void leave(Object player) {
+    if (player != _owner) return;
+    _owner = null;
+    _asked = null;
+    _request++;
+    if (_held == null) return;
+    _held = null;
     unawaited(_display.preferRefreshRate(null).catchError((Object _) {}));
   }
 }

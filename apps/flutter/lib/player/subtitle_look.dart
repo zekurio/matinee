@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../platform/player.g.dart' as wire show SubtitleEdgeMessage;
 import '../platform/player_system.g.dart' as wire;
 import 'player.dart' show PlayerSubtitles;
+import 'player_motion.dart';
 import 'player_preferences.dart';
 import 'player_system.dart';
 
@@ -204,4 +205,44 @@ class SubtitleLine extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The cues showing now, centred at the bottom over the video, as both
+/// players draw them: [bottom] up from the edge, which moves with the
+/// controls rather than jumping as they come and go, and [side] in from
+/// each edge, at [size] times the look's scale.
+class SubtitleLayer extends StatelessWidget {
+  const SubtitleLayer({
+    super.key,
+    required this.cues,
+    required this.look,
+    required this.bottom,
+    this.side = 48,
+    this.size = 20,
+  });
+
+  final List<InlineSpan> cues;
+  final SubtitleLook look;
+  final double bottom;
+  final double side;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: Align(
+      alignment: Alignment.bottomCenter,
+      child: AnimatedPadding(
+        duration: PlayerMotion.move,
+        curve: PlayerMotion.easing,
+        padding: EdgeInsets.fromLTRB(side, 0, side, bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 2,
+          children: [
+            for (final cue in cues) SubtitleLine(cue, look: look, size: size),
+          ],
+        ),
+      ),
+    ),
+  );
 }
