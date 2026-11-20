@@ -95,9 +95,37 @@ const pinchFill = 1.15;
 /// starts where the system takes its own gestures, as at the edges for
 /// back, only taps. A second finger hands the touch to the pinch without
 /// seeking.
+/// Passes touches that start on the controls' middle buttons on to the
+/// [VideoGestures] under them, so a swipe across the buttons seeks as it
+/// does anywhere on the video. The buttons keep the taps: a relayed touch
+/// only ever becomes a sideways seek.
+final class GestureRelay {
+  void Function(PointerEvent event)? _target;
+
+  void _forward(PointerEvent event) => _target?.call(event);
+}
+
+/// Wraps [child], whose touches [relay] passes on as they happen.
+class RelayedGestures extends StatelessWidget {
+  const RelayedGestures({super.key, required this.relay, required this.child});
+
+  final GestureRelay relay;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: relay._forward,
+    onPointerMove: relay._forward,
+    onPointerUp: relay._forward,
+    onPointerCancel: relay._forward,
+    child: child,
+  );
+}
+
 class VideoGestures extends StatefulWidget {
   const VideoGestures({
     super.key,
+    this.relay,
     required this.enabled,
     required this.prefs,
     required this.levels,
@@ -145,6 +173,9 @@ class VideoGestures extends StatefulWidget {
   final String? semanticsLabel;
   final String? semanticsHint;
 
+  /// Touches from the middle buttons, which may seek.
+  final GestureRelay? relay;
+
   @override
   State<VideoGestures> createState() => _VideoGesturesState();
 }
@@ -167,8 +198,55 @@ class _VideoGesturesState extends State<VideoGestures> {
   (Duration, Offset)? _lastTap;
   int _volumeWrites = 0;
 
+  /// The touch under way began on a middle button, which keeps its tap.
+  bool _relayed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.relay?._target = _relayedEvent;
+  }
+
+  @override
+  void didUpdateWidget(VideoGestures old) {
+    super.didUpdateWidget(old);
+    if (old.relay != widget.relay) {
+      if (old.relay?._target == _relayedEvent) old.relay?._target = null;
+      widget.relay?._target = _relayedEvent;
+    }
+  }
+
+  /// A touch on a middle button, in this layer's own coordinates.
+  void _relayedEvent(PointerEvent event) {
+    if (!mounted) return;
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.attached) return;
+    final local = event.transformed(
+      Matrix4.tryInvert(box.getTransformTo(null)),
+    );
+    switch (local) {
+      case PointerDownEvent():
+        // A finger already down makes this one the pinch's, which the
+        // buttons don't take part in.
+        if (_pointers.isNotEmpty) return;
+        _down(local);
+        _relayed = _first == local.pointer;
+        // Holding a button isn't holding the video.
+        if (_relayed) _holdTimer?.cancel();
+      case PointerMoveEvent() when _relayed:
+        _move(local);
+      case PointerUpEvent() when _relayed:
+        _up(local);
+      case PointerCancelEvent() when _relayed:
+        _cancel(local);
+      default:
+        break;
+    }
+  }
+
   @override
   void dispose() {
+    if (widget.relay?._target == _relayedEvent) widget.relay?._target = null;
     _holdTimer?.cancel();
     _tapTimer?.cancel();
     if (_kind == GestureKind.hold) widget.onHold(false);
@@ -195,6 +273,7 @@ class _VideoGesturesState extends State<VideoGestures> {
     }
     final size = context.size ?? Size.zero;
     _first = event.pointer;
+    _relayed = false;
     _origin = event.localPosition;
     _moved = Offset.zero;
     _multi = false;
@@ -269,6 +348,11 @@ class _VideoGesturesState extends State<VideoGestures> {
         return;
       }
       final vertical = _moved.dy.abs() > _moved.dx.abs();
+      // From a button, only a sideways swipe: up and down stay its own.
+      if (_relayed && vertical) {
+        _swipeOff = true;
+        return;
+      }
       final prefs = widget.prefs;
       final duration = widget.duration();
       final read = _read;
@@ -340,7 +424,10 @@ class _VideoGesturesState extends State<VideoGestures> {
     if (!first) return;
     _first = null;
     _holdTimer?.cancel();
-    final tap = !_multi && _kind == null && _moved.distance < kTouchSlop;
+    // A button's tap is the button's.
+    final tap =
+        !_relayed && !_multi && _kind == null && _moved.distance < kTouchSlop;
+    _relayed = false;
     _finish(lifted: true);
     if (tap) _tapped(event.timeStamp, event.localPosition);
   }
@@ -349,6 +436,7 @@ class _VideoGesturesState extends State<VideoGestures> {
     _pointers.remove(event.pointer);
     if (event.pointer != _first) return;
     _first = null;
+    _relayed = false;
     _holdTimer?.cancel();
     _finish(lifted: false);
   }

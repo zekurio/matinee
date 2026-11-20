@@ -40,6 +40,7 @@ class _Log {
   final holds = <bool>[];
   final starts = <GestureKind>[];
   final brightness = <double>[];
+  int presses = 0;
 }
 
 Future<(_Log, FakeLevels, ValueNotifier<GestureInfo?>)> _pump(
@@ -47,6 +48,7 @@ Future<(_Log, FakeLevels, ValueNotifier<GestureInfo?>)> _pump(
   PlayerPrefs prefs = const PlayerPrefs(),
   bool enabled = true,
   bool playing = true,
+  bool button = false,
 }) async {
   tester.view.physicalSize = const Size(800, 400);
   tester.view.devicePixelRatio = 1;
@@ -55,6 +57,7 @@ Future<(_Log, FakeLevels, ValueNotifier<GestureInfo?>)> _pump(
   final levels = FakeLevels();
   final notes = ValueNotifier<GestureInfo?>(null);
   addTearDown(notes.dispose);
+  final relay = GestureRelay();
   await tester.pumpWidget(
     Localizations(
       locale: const Locale('en'),
@@ -84,7 +87,21 @@ Future<(_Log, FakeLevels, ValueNotifier<GestureInfo?>)> _pump(
                 },
                 onStart: log.starts.add,
                 onBrightness: log.brightness.add,
+                relay: relay,
               ),
+              // A middle button, over the gestures as the controls are.
+              if (button)
+                Center(
+                  child: RelayedGestures(
+                    relay: relay,
+                    child: RoundIconButton(
+                      icon: Lucide.play,
+                      label: 'Play',
+                      size: 96,
+                      onPressed: () => log.presses++,
+                    ),
+                  ),
+                ),
               ValueListenableBuilder(
                 valueListenable: notes,
                 builder: (context, _, _) => GestureNotes(
@@ -104,6 +121,49 @@ Future<(_Log, FakeLevels, ValueNotifier<GestureInfo?>)> _pump(
 
 void main() {
   setUpAll(loadFont);
+
+  group('on a middle button', () {
+    testWidgets('a sideways swipe seeks, and the button stays unpressed', (
+      tester,
+    ) async {
+      final (log, _, _) = await _pump(tester, button: true);
+      await tester.timedDrag(
+        find.bySemanticsLabel('Play'),
+        const Offset(200, 0),
+        const Duration(milliseconds: 300),
+      );
+      await tester.pumpAndSettle();
+      expect(log.starts, [GestureKind.seek]);
+      expect(log.seeks.single, greaterThan(100));
+      expect(log.presses, 0);
+      expect(log.taps, 0);
+    });
+
+    testWidgets('a tap presses it and leaves the controls be', (tester) async {
+      final (log, _, _) = await _pump(tester, button: true);
+      await tester.tap(find.bySemanticsLabel('Play'));
+      await tester.pumpAndSettle();
+      expect(log.presses, 1);
+      expect(log.taps, 0);
+      expect(log.seeks, isEmpty);
+    });
+
+    testWidgets('up and down stay the button\'s, and holding is no hold', (
+      tester,
+    ) async {
+      final (log, levels, _) = await _pump(tester, button: true);
+      await tester.timedDrag(
+        find.bySemanticsLabel('Play'),
+        const Offset(0, -120),
+        const Duration(milliseconds: 300),
+      );
+      await tester.longPress(find.bySemanticsLabel('Play'));
+      await tester.pumpAndSettle();
+      expect(log.starts, isEmpty);
+      expect(levels.volumeSet, isEmpty);
+      expect(log.holds, isEmpty);
+    });
+  });
 
   test('swipes go as far as in the Kotlin app', () {
     expect(swipeLevel(.5, -400 * swipeFullRange / 2, 400), closeTo(1, 1e-9));

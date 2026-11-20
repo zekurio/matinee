@@ -350,6 +350,9 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
   /// Counts keys and touches while locked, each showing the unlock button again.
   int _lockTouched = 0;
   final _gesture = ValueNotifier<GestureInfo?>(null);
+
+  /// A swipe that starts on the middle buttons seeks too.
+  final _relay = GestureRelay();
   late final DeviceLevels _levels;
 
   /// Counts pinches that switched the fit, so the note shows again for each.
@@ -764,6 +767,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
             // skips, two fingers fill the screen or show it whole, and swipes
             // set the brightness, the volume, and the time (video_gestures.dart).
             VideoGestures(
+              relay: _relay,
               enabled: error == null && menu == null && !_locked && !small,
               prefs: prefs,
               levels: _levels,
@@ -996,29 +1000,38 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
             onPressed: _lock,
           ),
       ],
-      transport: PlayerTransport(
-        playing: _playing,
-        loading: loading,
-        playLabel: l.playerPlay,
-        pauseLabel: l.playerPause,
-        onTogglePlay: _action(_session.togglePlay, enabled: enabled),
-        back: switch (prefs.skipButtons ? _session.skipBack : null) {
-          final seconds? => (
-            seconds: seconds,
-            label: l.playerSkipBack(seconds),
-            onPressed: _action(() => _session.skip(-seconds), enabled: enabled),
-          ),
-          null => null,
-        },
-        ahead: switch (prefs.skipButtons ? _session.skipForward : null) {
-          final seconds? => (
-            seconds: seconds,
-            label: l.playerSkipForward(seconds),
-            onPressed: _action(() => _session.skip(seconds), enabled: enabled),
-          ),
-          null => null,
-        },
-        episodes: episodes,
+      transport: RelayedGestures(
+        relay: _relay,
+        child: PlayerTransport(
+          playing: _playing,
+          loading: loading,
+          playLabel: l.playerPlay,
+          pauseLabel: l.playerPause,
+          onTogglePlay: _action(_session.togglePlay, enabled: enabled),
+          back: switch (prefs.skipButtons ? _session.skipBack : null) {
+            final seconds? => (
+              seconds: seconds,
+              label: l.playerSkipBack(seconds),
+              onPressed: _action(
+                () => _session.skip(-seconds),
+                enabled: enabled,
+              ),
+            ),
+            null => null,
+          },
+          ahead: switch (prefs.skipButtons ? _session.skipForward : null) {
+            final seconds? => (
+              seconds: seconds,
+              label: l.playerSkipForward(seconds),
+              onPressed: _action(
+                () => _session.skip(seconds),
+                enabled: enabled,
+              ),
+            ),
+            null => null,
+          },
+          episodes: episodes,
+        ),
       ),
       seekBar: _seekBar(l, enabled),
     );
