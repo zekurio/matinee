@@ -257,7 +257,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
                     player?.attachSurfaces(target, null, 0L, 0L)
                 }
             } catch (failure: Exception) {
-                Log.w(TAG, "Could not retire the video surface", failure)
+                Log.w(TAG, "Could not retire the video surface (${failure.javaClass.simpleName})")
             } finally {
                 retired.countDown()
                 try {
@@ -501,7 +501,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
         try {
             command()
         } catch (failure: Exception) {
-            Log.w(TAG, "Could not $label", failure)
+            Log.w(TAG, "Could not $label (${failure.javaClass.simpleName})")
             if (fatal) fail("mpv could not $label.")
         } catch (failure: LinkageError) {
             Log.w(TAG, "Could not load libmpv", failure)

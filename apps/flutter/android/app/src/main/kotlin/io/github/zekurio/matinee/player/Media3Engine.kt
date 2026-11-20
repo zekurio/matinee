@@ -64,6 +64,8 @@ internal class Media3Engine(private val context: Context, private val output: Pl
     }
 
     override fun open(request: OpenMessage) {
+        // Media3 logs nested network exceptions, which can include signed URLs.
+        androidx.media3.common.util.Log.setLogLevel(androidx.media3.common.util.Log.LOG_LEVEL_OFF)
         val origin = request.url.toHttpUrlOrNull()
         val client = if (origin != null && request.headers.keys.any { it.equals("Authorization", true) }) {
             httpClient.newBuilder().addNetworkInterceptor { chain ->

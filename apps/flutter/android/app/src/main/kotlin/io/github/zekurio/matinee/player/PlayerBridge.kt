@@ -127,7 +127,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
         }
 
         fun failed(failure: Throwable) {
-            Log.w(TAG, "Player setup failed", failure)
+            Log.w(TAG, "Player setup failed (${failure.javaClass.simpleName})")
             emit(StateMessage(PhaseMessage.ERROR, playing = false, message = "Could not start the player.", serverUnavailable = false))
         }
 
