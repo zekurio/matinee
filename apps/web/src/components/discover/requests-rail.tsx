@@ -22,6 +22,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatDateTime, formatRelative } from "@/lib/format"
+import { seasonName } from "@/lib/media"
 import { liveQuery, orpc } from "@/lib/rpc"
 import {
   useHiddenRequests,
@@ -168,14 +169,20 @@ function QueueRequest({ item }: { item: AdminRequestItem }) {
  */
 function OwnRequest({ item }: { item: AskedItem }) {
   const hold = useRequestActionsStore((state) => state.hold)
-  const { availability } = item
+  const season = item.season
+  const availability = season ?? item.availability
   return (
     <RequestCard
       item={item}
       state={
         <>
+          {season && (
+            <span className="text-muted-foreground text-xs">
+              {seasonName(season.number)}
+            </span>
+          )}
           <RequestState availability={availability} />
-          <DeclinedNote item={item} />
+          <DeclinedNote item={{ availability }} />
         </>
       }
       who={
@@ -189,7 +196,8 @@ function OwnRequest({ item }: { item: AskedItem }) {
         </p>
       }
       actions={
-        availability.action === "cancel" && (
+        (item.availability.action === "cancel" ||
+          availability.action === "cancel") && (
           <Button
             variant="secondary"
             size="sm"
