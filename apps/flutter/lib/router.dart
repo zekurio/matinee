@@ -36,6 +36,7 @@ import 'screens/sign_in/unreachable_screen.dart';
 import 'screens/title/episode_screen.dart';
 import 'screens/title/season_screen.dart';
 import 'screens/title/title_screen.dart';
+import 'screens/tv/tv_browse.dart';
 import 'screens/tv/tv_home.dart';
 import 'screens/tv/tv_shell.dart';
 
@@ -492,21 +493,18 @@ List<RouteBase> _tvRoutes() => [
         Routes.home,
         (state) => const TvHomeScreen(),
         routes: [
-          _tv(
-            Routes.search.substring(1),
-            (state) => _pendingTv(state, 'TV search'),
-          ),
+          _tv(Routes.search.substring(1), (state) => const TvSearchScreen()),
           _tv(
             Routes.favorites.substring(1),
-            (state) => _pendingTv(state, 'TV favorites'),
+            (state) => const TvFavoritesScreen(),
           ),
           _tv(
             Routes.movies.substring(1),
-            (state) => _pendingTv(state, 'TV movies'),
+            (state) => const TvKindScreen(kind: TitleKind.movie),
           ),
           _tv(
             Routes.shows.substring(1),
-            (state) => _pendingTv(state, 'TV shows'),
+            (state) => const TvKindScreen(kind: TitleKind.show),
           ),
           _tv(
             Routes.profile.substring(1),
@@ -527,7 +525,13 @@ List<RouteBase> _tvRoutes() => [
       ),
       _tv('/episode/:id', (state) => _pendingTv(state, 'TV episode')),
       _tv('/person/:name', (state) => _pendingTv(state, 'TV person')),
-      _tv('/browse', (state) => _pendingTv(state, 'TV browse')),
+      _tv(
+        '/browse',
+        (state) => TvBrowseScreen(
+          genre: state.uri.queryParameters['genre'],
+          studio: state.uri.queryParameters['studio'],
+        ),
+      ),
     ],
   ),
 ];

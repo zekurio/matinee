@@ -41,8 +41,9 @@ final class TitleListRequest {
     this.genre,
     this.studio,
     required this.sort,
-    required this.order,
+    this.order,
     required this.filters,
+    this.query,
   });
 
   final String? kind;
@@ -50,8 +51,13 @@ final class TitleListRequest {
   final String? genre;
   final String? studio;
   final String sort;
-  final String order;
+
+  /// Null for the server's own order for [sort].
+  final String? order;
   final ListFilters filters;
+
+  /// What a search typed, as the TV's Movies and Shows narrow by.
+  final String? query;
 
   @override
   bool operator ==(Object other) =>
@@ -62,11 +68,12 @@ final class TitleListRequest {
       other.studio == studio &&
       other.sort == sort &&
       other.order == order &&
-      other.filters == filters;
+      other.filters == filters &&
+      other.query == query;
 
   @override
   int get hashCode =>
-      Object.hash(kind, libraryId, genre, studio, sort, order, filters);
+      Object.hash(kind, libraryId, genre, studio, sort, order, filters, query);
 }
 
 /// The titles loaded so far, and how the next page is going.
@@ -129,6 +136,7 @@ final class TitlePages extends Notifier<TitlePagesState> {
   }
 
   Future<BrowsedTitles> _page(int offset, int limit) => _api!.titles.browse(
+    query: request.query,
     kind: request.kind,
     libraryId: request.libraryId,
     filters: request.filters.toApi(

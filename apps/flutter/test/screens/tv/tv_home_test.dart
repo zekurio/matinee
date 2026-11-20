@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:matinee/screens/tv/tv_browse.dart';
 import 'package:matinee/screens/tv/tv_home.dart';
 import 'package:matinee/screens/tv/tv_shell.dart';
 
@@ -72,7 +73,7 @@ void main() {
     await down(tester);
     expect(focusedLabel(), 'Favorites');
     await select(tester);
-    expect(find.text('TV favorites'), findsOneWidget);
+    expect(find.byType(TvFavoritesScreen), findsOneWidget);
     expect(await back(tester), isTrue);
     expect(find.byType(TvHomeScreen), findsOneWidget);
     expect(focusedKey(), 'featured/m2', reason: 'Home kept its place');
