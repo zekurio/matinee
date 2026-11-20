@@ -456,6 +456,17 @@ void main() {
     testWidgets('the TV player at $width', (tester) async {
       await _open(tester, size: size, segments: const [intro]);
       await up(tester);
+      await tester.pumpAndSettle();
+      // The time over the focused bar clears the title.
+      // The higher of the two times, the clock at the bar's start under it.
+      final times = [
+        for (final element in find.text('0:18').evaluate())
+          tester.getRect(find.byElementPredicate((e) => e == element)),
+      ]..sort((a, b) => a.top.compareTo(b.top));
+      expect(times, hasLength(2));
+      final bubble = times.first;
+      final title = tester.getRect(find.text('The Crossing'));
+      expect(bubble.top, greaterThan(title.bottom));
       await expectLater(
         find.byType(TvPlaybackScreen),
         matchesGoldenFile('goldens/tv_player_$width.png'),

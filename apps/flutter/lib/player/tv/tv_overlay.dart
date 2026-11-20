@@ -11,6 +11,13 @@ import 'tv_seek.dart';
 /// to clear it.
 const tvOverlayHeight = 190.0;
 
+/// The time bubble's height, one line of [TvType.title] in its padding.
+const _bubbleHeight = 26.0 + 8;
+
+/// Between the heading and the focused seek bar: the bubble, 6 over the
+/// bar's box, and 6 clear of the heading.
+const _bubbleRoom = 6 + _bubbleHeight + 6;
+
 /// How wide the trickplay frame over the seek bar is, as the Kotlin TV
 /// player draws it.
 const tvTrickplayWidth = 240.0;
@@ -172,6 +179,9 @@ class _TvPlayerOverlayState extends State<TvPlayerOverlay> {
   var _inside = false;
   var _onPlay = false;
 
+  /// The seek bar has focus, so its time floats over it.
+  var _onSeek = false;
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -219,17 +229,31 @@ class _TvPlayerOverlayState extends State<TvPlayerOverlay> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _Heading(title: widget.title, subtitle: widget.subtitle),
-                  const SizedBox(height: 12),
-                  TvSeekBar(
-                    focusNode: targets.seek,
-                    below: targets.play,
-                    position: widget.position,
-                    duration: widget.duration,
-                    buffered: widget.buffered,
-                    scrubbing: widget.scrubbing,
-                    keys: widget.keys,
-                    onTogglePlay: widget.onTogglePlay,
-                    preview: widget.preview,
+                  // The time over the focused bar takes no room of its own,
+                  // so the heading moves up out of its way rather than
+                  // sit under it. The trickplay frame, while seeking, is
+                  // what to look at, and covers it.
+                  AnimatedContainer(
+                    duration: TvMotion.move,
+                    curve: TvMotion.easing,
+                    height: _onSeek || widget.scrubbing ? _bubbleRoom : 12,
+                  ),
+                  Focus(
+                    canRequestFocus: false,
+                    skipTraversal: true,
+                    onFocusChange: (focused) =>
+                        setState(() => _onSeek = focused),
+                    child: TvSeekBar(
+                      focusNode: targets.seek,
+                      below: targets.play,
+                      position: widget.position,
+                      duration: widget.duration,
+                      buffered: widget.buffered,
+                      scrubbing: widget.scrubbing,
+                      keys: widget.keys,
+                      onTogglePlay: widget.onTogglePlay,
+                      preview: widget.preview,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -679,6 +703,7 @@ class _Track extends StatelessWidget {
                           const SizedBox(height: 8),
                         ],
                         Container(
+                          height: _bubbleHeight,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 4,
