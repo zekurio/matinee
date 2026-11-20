@@ -13,14 +13,20 @@ import '../../media/layout.dart';
 import '../../query/failure_view.dart';
 import '../../router.dart';
 import '../home/home_data.dart' show librariesProvider;
+import '../requests/catalog_cards.dart' show CatalogCard;
+import '../requests/discover.dart';
+import '../requests/request_words.dart' show askable, refKey;
+import '../requests/requests_data.dart' show catalogSearchProvider;
+import '../requests/requests_hub.dart';
 import 'search_data.dart';
 
 /// Search across the library, as the Kotlin app's (search/Search.kt): the
 /// field at the top with Back in its magnifier's place, and under it, once
 /// something's typed and typing pauses, the titles by library in the order
-/// the server ranked them, then cast and crew, genres, and studios. The
-/// last answer stays while the next is out, with "Searching…" under it.
-/// Under the empty field is where Explore goes, which comes later.
+/// the server ranked them, then cast and crew, genres, and studios, then
+/// the catalog's "Not here yet", which loads on its own. The last answer
+/// stays while the next is out, with "Searching…" under it. Under the
+/// empty field is Explore.
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -105,7 +111,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: MediaQuery.removePadding(
               context: context,
               removeTop: true,
-              child: _text.isEmpty ? const _Explore() : _found(l),
+              child: _text.isEmpty
+                  ? Explore(
+                      leading: [
+                        if (ref.watch(isAdminProvider))
+                          const SliverToBoxAdapter(child: RequestsLink()),
+                      ],
+                    )
+                  : _found(l),
             ),
           ),
         ],
@@ -133,42 +146,108 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
     final last = result.hasValue || result.isLoading ? _last : null;
     if (last == null) return LoadingState(label: l.searchSearching);
-    if (last.results.isEmpty) {
+    final catalog = ref.watch(catalogSearchProvider(text));
+    final page = catalog.value;
+    final catalogFailed =
+        page == null && catalog.hasError && !catalog.isLoading;
+    // The titles the viewer may ask for: none while requests are off.
+    final notHere = page == null
+        ? null
+        : askable(page.items, (item) => item.availability);
+    final catalogPending = notHere == null && !catalogFailed;
+    if (last.results.isEmpty && !catalogPending && (notHere?.isEmpty ?? true)) {
       return Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(vertical: 48),
-          child: EmptyState(
-            icon: Lucide.searchX,
-            title: l.searchNoMatch(last.text),
-            message: l.searchNoMatchHint,
+          child: Column(
+            spacing: 16,
+            children: [
+              EmptyState(
+                icon: Lucide.searchX,
+                title: l.searchNoMatch(last.text),
+                message: l.searchNoMatchHint,
+              ),
+              if (catalogFailed)
+                _CatalogFailed(
+                  onRetry: () => ref.invalidate(catalogSearchProvider(text)),
+                ),
+            ],
           ),
         ),
       );
     }
-    return _Results(results: last.results, searching: result.isLoading);
+    // Here rather than in the section, so its cards stay live while its
+    // heading is scrolled away.
+    return FollowTitles(
+      titles: FollowedTitles([
+        for (final item in notHere ?? const <CatalogTitleSummary>[])
+          CatalogInput(ref: item.ref),
+      ]),
+      child: _Results(
+        results: last.results,
+        searching: result.isLoading,
+        notHere: notHere,
+        catalogFailed: catalogFailed,
+        catalogStale: page?.stale ?? false,
+        onCatalogRetry: () => ref.invalidate(catalogSearchProvider(text)),
+      ),
+    );
   }
 }
 
-/// Under the empty field: Explore's rails, the catalog's, Discover's, and
-/// an admin's waiting requests, once they come. Until then it's empty, as
-/// the Kotlin app leaves it while Discover is off; the field's placeholder
-/// says what search finds.
-class _Explore extends StatelessWidget {
-  const _Explore();
+/// The catalog couldn't be searched, with Try again.
+class _CatalogFailed extends StatelessWidget {
+  const _CatalogFailed({required this.onRetry});
+
+  final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => const CustomScrollView(
-    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-    slivers: [],
-  );
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
+      child: Row(
+        spacing: 12,
+        children: [
+          Expanded(
+            child: Text(
+              l.catalogSearchFailed,
+              style: KitText.sm.style(
+                color: MatineeTheme.of(context).mutedForeground,
+              ),
+            ),
+          ),
+          MatineeButton(
+            look: ButtonLook.outline,
+            size: ButtonSize.sm,
+            onPressed: onRetry,
+            child: Text(l.commonRetry),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// What matched, grouped. Scrolling puts the keyboard away, so the rest can
 /// be seen; the field keeps its text.
 class _Results extends ConsumerWidget {
-  const _Results({required this.results, required this.searching});
+  const _Results({
+    required this.results,
+    required this.searching,
+    required this.notHere,
+    required this.catalogFailed,
+    required this.catalogStale,
+    required this.onCatalogRetry,
+  });
 
   final SearchResults results;
+
+  /// What the catalog found that isn't here, null while it's out.
+  final List<CatalogTitleSummary>? notHere;
+  final bool catalogFailed;
+  final bool catalogStale;
+  final VoidCallback onCatalogRetry;
 
   /// A newer search is out, so these may be for the text before.
   final bool searching;
@@ -244,6 +323,7 @@ class _Results extends ConsumerWidget {
           ),
           gap,
         ],
+        ..._notHere(context, l, colors),
         if (searching)
           SliverToBoxAdapter(
             child: Padding(
@@ -262,14 +342,80 @@ class _Results extends ConsumerWidget {
       ],
     );
   }
+
+  /// "Not here yet": titles the catalog found that no library here has,
+  /// under the library's own results with that heading, or first and
+  /// unheaded when the library has none.
+  List<Widget> _notHere(
+    BuildContext context,
+    AppLocalizations l,
+    KitColors colors,
+  ) {
+    final items = notHere;
+    if (items != null && items.isEmpty) return const [];
+    final first = results.isEmpty;
+    return [
+      if (!first)
+        SliverToBoxAdapter(
+          child: _GroupHeading(
+            title: l.webCatalogNotHere,
+            count: items == null || items.isEmpty
+                ? null
+                : l.browseTitleCount(items.length),
+          ),
+        ),
+      if (catalogFailed)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: _CatalogFailed(onRetry: onCatalogRetry),
+          ),
+        )
+      else if (items == null)
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: Spinner(size: 32)),
+          ),
+        )
+      else if (catalogStale)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              CardMetrics.gutter,
+              6,
+              CardMetrics.gutter,
+              0,
+            ),
+            child: Text(
+              l.webCatalogSearchStale,
+              style: KitText.sm.style(color: colors.mutedForeground),
+            ),
+          ),
+        ),
+      if (items != null) ...[
+        const SliverToBoxAdapter(child: SizedBox(height: 12)),
+        CardGrid(
+          columns: posterColumns,
+          aspectRatio: CardMetrics.poster,
+          itemCount: items.length,
+          itemBuilder: (context, index) => CatalogCard(
+            key: ValueKey(refKey(items[index].ref)),
+            title: items[index],
+          ),
+        ),
+      ],
+      const SliverToBoxAdapter(child: SizedBox(height: 28)),
+    ];
+  }
 }
 
 /// A library's name over its matches, with how many on the same baseline.
 class _GroupHeading extends StatelessWidget {
-  const _GroupHeading({required this.title, required this.count});
+  const _GroupHeading({required this.title, this.count});
 
   final String title;
-  final String count;
+  final String? count;
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +428,8 @@ class _GroupHeading extends StatelessWidget {
         spacing: 10,
         children: [
           Flexible(child: SectionTitle(title: title)),
-          Text(count, style: KitText.sm.style(color: colors.mutedForeground)),
+          if (count case final count?)
+            Text(count, style: KitText.sm.style(color: colors.mutedForeground)),
         ],
       ),
     );

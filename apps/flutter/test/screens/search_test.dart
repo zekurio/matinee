@@ -29,6 +29,17 @@ JsonMap _results({List<JsonMap> titles = const []}) => {
 
 HomeBackend _backend() => HomeBackend()
   ..answers['/api/v1/libraries'] = [libraryJson('lib-movie', name: 'Films')]
+  // The catalog finds nothing more, and Discover is off.
+  ..answers['/api/v1/catalog/search'] = {
+    'items': <Object>[],
+    'nextPage': null,
+    'stale': false,
+  }
+  ..answers['/api/v1/discover/rails'] = {
+    'enabled': false,
+    'rails': <Object>[],
+    'browse': <Object>[],
+  }
   ..answers['/api/v1/search'] = _results(
     titles: [
       titleJson('m1', name: 'Arrival'),
