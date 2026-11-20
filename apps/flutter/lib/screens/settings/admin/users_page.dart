@@ -14,6 +14,7 @@ import '../../../core/toasts.dart';
 import '../../../kit/kit.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../media/avatar.dart';
+import '../../../media/format.dart';
 import '../../../router.dart';
 import '../settings_rows.dart';
 import 'admin_data.dart';
@@ -274,8 +275,12 @@ class _UserRow extends StatelessWidget {
     return [
       if (self)
         l.webUsersActiveNow
-      else if (seen == null)
-        l.webUsersSignedOut
+      else if (seen == null) ...[
+        l.webUsersSignedOut,
+        // When it came, which the web shows on hover, as the Kotlin app
+        // shows it for an account that was never seen.
+        ?_joined(l),
+      ]
       // The server moves a session's last-seen time at most hourly.
       else if (DateTime.now().difference(seen) < const Duration(hours: 1))
         l.webUsersActiveRecently
@@ -287,6 +292,12 @@ class _UserRow extends StatelessWidget {
             : l.webUsersPasskeysOff(user.passkeys),
       if (user.oidcLinked) signIn.oidc ?? l.webUsersOidcOff,
     ];
+  }
+
+  String? _joined(AppLocalizations l) {
+    final created = DateTime.tryParse(user.createdAt)?.toLocal();
+    if (created == null) return null;
+    return l.webUsersJoined(formatDate(created, l));
   }
 
   @override

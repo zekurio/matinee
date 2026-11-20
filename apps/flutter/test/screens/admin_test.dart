@@ -246,6 +246,19 @@ void main() {
       expect(find.text('For Linus'), findsOneWidget);
     });
 
+    testWidgets('an account never seen says when it joined', (tester) async {
+      final backend = AdminBackend();
+      backend.users = [
+        ...backend.users,
+        {...adminUserJson('linus'), 'lastSeenAt': null, 'sessions': 0},
+      ];
+      await _pump(tester, 'users', backend: backend);
+      expect(
+        find.text('Signed out · Joined Jan 1, 2026 · 1 passkey'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('deleting an account asks first', (tester) async {
       final backend = await _pump(tester, 'users');
       await tester.tap(find.text('grace'));

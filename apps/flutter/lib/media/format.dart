@@ -104,10 +104,16 @@ String? formatDay(String? day, AppLocalizations l) {
   if (day == null) return null;
   final parsed = DateTime.tryParse(day);
   if (parsed == null) return null;
+  return formatDate(parsed, l);
+}
+
+/// [date] as the app's language writes a date, or as English does when
+/// the language's date words aren't loaded.
+String formatDate(DateTime date, AppLocalizations l) {
   try {
-    return DateFormat.yMMMd(l.localeName).format(parsed);
+    return DateFormat.yMMMd(l.localeName).format(date);
   } on Object {
-    return DateFormat.yMMMd().format(parsed);
+    return DateFormat.yMMMd().format(date);
   }
 }
 
