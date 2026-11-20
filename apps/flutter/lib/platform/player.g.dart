@@ -133,6 +133,13 @@ enum SourceKindMessage {
   hls;
 }
 
+enum TrackKindMessage {
+  video,
+  audio,
+  text,
+  other;
+}
+
 class FrameSizeMessage {
   FrameSizeMessage({
     required this.width,
@@ -873,6 +880,348 @@ class ActiveEngineMessage extends PlaybackEventMessage {
   }
 }
 
+/// A format the player has, for the playback report: its MIME type, codec
+/// string, size or channels, and what the device makes of it. Never its
+/// id, label, or language. Dart checks each string before keeping it.
+class FormatDiagnosticsMessage {
+  FormatDiagnosticsMessage({
+    required this.type,
+    required this.selected,
+    this.mime,
+    this.codecs,
+    this.width,
+    this.height,
+    this.channels,
+    this.sampleRate,
+    this.bitrate,
+    this.support,
+  });
+
+  TrackKindMessage type;
+
+  bool selected;
+
+  String? mime;
+
+  String? codecs;
+
+  int? width;
+
+  int? height;
+
+  int? channels;
+
+  int? sampleRate;
+
+  int? bitrate;
+
+  String? support;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      type,
+      selected,
+      mime,
+      codecs,
+      width,
+      height,
+      channels,
+      sampleRate,
+      bitrate,
+      support,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static FormatDiagnosticsMessage decode(Object result) {
+    result as List<Object?>;
+    return FormatDiagnosticsMessage(
+      type: result[0]! as TrackKindMessage,
+      selected: result[1]! as bool,
+      mime: result[2] as String?,
+      codecs: result[3] as String?,
+      width: result[4] as int?,
+      height: result[5] as int?,
+      channels: result[6] as int?,
+      sampleRate: result[7] as int?,
+      bitrate: result[8] as int?,
+      support: result[9] as String?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! FormatDiagnosticsMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(type, other.type) && _deepEquals(selected, other.selected) && _deepEquals(mime, other.mime) && _deepEquals(codecs, other.codecs) && _deepEquals(width, other.width) && _deepEquals(height, other.height) && _deepEquals(channels, other.channels) && _deepEquals(sampleRate, other.sampleRate) && _deepEquals(bitrate, other.bitrate) && _deepEquals(support, other.support);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'FormatDiagnosticsMessage(type: $type, selected: $selected, mime: $mime, codecs: $codecs, width: $width, height: $height, channels: $channels, sampleRate: $sampleRate, bitrate: $bitrate, support: $support)';
+  }
+}
+
+/// A playback error by its codes: the engine's code and its name, the HTTP
+/// status, the decoder, and the classes of its causes. Never its message,
+/// which can hold the file's address.
+class ErrorDiagnosticsMessage {
+  ErrorDiagnosticsMessage({
+    required this.code,
+    this.name,
+    this.type,
+    this.renderer,
+    this.format,
+    this.formatSupport,
+    this.httpStatus,
+    this.decoder,
+    this.secureDecoder,
+    required this.causes,
+  });
+
+  int code;
+
+  String? name;
+
+  String? type;
+
+  String? renderer;
+
+  FormatDiagnosticsMessage? format;
+
+  String? formatSupport;
+
+  int? httpStatus;
+
+  String? decoder;
+
+  bool? secureDecoder;
+
+  List<String> causes;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      code,
+      name,
+      type,
+      renderer,
+      format,
+      formatSupport,
+      httpStatus,
+      decoder,
+      secureDecoder,
+      causes,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static ErrorDiagnosticsMessage decode(Object result) {
+    result as List<Object?>;
+    return ErrorDiagnosticsMessage(
+      code: result[0]! as int,
+      name: result[1] as String?,
+      type: result[2] as String?,
+      renderer: result[3] as String?,
+      format: result[4] as FormatDiagnosticsMessage?,
+      formatSupport: result[5] as String?,
+      httpStatus: result[6] as int?,
+      decoder: result[7] as String?,
+      secureDecoder: result[8] as bool?,
+      causes: (result[9]! as List<Object?>).cast<String>(),
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! ErrorDiagnosticsMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(code, other.code) && _deepEquals(name, other.name) && _deepEquals(type, other.type) && _deepEquals(renderer, other.renderer) && _deepEquals(format, other.format) && _deepEquals(formatSupport, other.formatSupport) && _deepEquals(httpStatus, other.httpStatus) && _deepEquals(decoder, other.decoder) && _deepEquals(secureDecoder, other.secureDecoder) && _deepEquals(causes, other.causes);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'ErrorDiagnosticsMessage(code: $code, name: $name, type: $type, renderer: $renderer, format: $format, formatSupport: $formatSupport, httpStatus: $httpStatus, decoder: $decoder, secureDecoder: $secureDecoder, causes: $causes)';
+  }
+}
+
+/// What the playback report learns from the engine as it plays: an error,
+/// sent before the error state it explains, the tracks Media3 picked, or a
+/// decoder it started. mpv picks its own decoders and tracks, so it sends
+/// only errors.
+class DiagnosticsMessage extends PlaybackEventMessage {
+  DiagnosticsMessage({
+    this.error,
+    this.tracks,
+    this.decoderKind,
+    this.decoder,
+  });
+
+  ErrorDiagnosticsMessage? error;
+
+  List<FormatDiagnosticsMessage>? tracks;
+
+  TrackKindMessage? decoderKind;
+
+  String? decoder;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      error,
+      tracks,
+      decoderKind,
+      decoder,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static DiagnosticsMessage decode(Object result) {
+    result as List<Object?>;
+    return DiagnosticsMessage(
+      error: result[0] as ErrorDiagnosticsMessage?,
+      tracks: (result[1] as List<Object?>?)?.cast<FormatDiagnosticsMessage>(),
+      decoderKind: result[2] as TrackKindMessage?,
+      decoder: result[3] as String?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! DiagnosticsMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(error, other.error) && _deepEquals(tracks, other.tracks) && _deepEquals(decoderKind, other.decoderKind) && _deepEquals(decoder, other.decoder);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'DiagnosticsMessage(error: $error, tracks: $tracks, decoderKind: $decoderKind, decoder: $decoder)';
+  }
+}
+
+/// The app and the device for the playback report, without anything that
+/// tells them apart from others of the same model.
+class DeviceDiagnosticsMessage {
+  DeviceDiagnosticsMessage({
+    required this.appBuild,
+    required this.buildType,
+    required this.release,
+    required this.sdk,
+    required this.manufacturer,
+    required this.model,
+    this.abi,
+    required this.tv,
+    required this.media3,
+    required this.ffmpeg,
+  });
+
+  int appBuild;
+
+  String buildType;
+
+  String release;
+
+  int sdk;
+
+  String manufacturer;
+
+  String model;
+
+  String? abi;
+
+  bool tv;
+
+  String media3;
+
+  bool ffmpeg;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      appBuild,
+      buildType,
+      release,
+      sdk,
+      manufacturer,
+      model,
+      abi,
+      tv,
+      media3,
+      ffmpeg,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static DeviceDiagnosticsMessage decode(Object result) {
+    result as List<Object?>;
+    return DeviceDiagnosticsMessage(
+      appBuild: result[0]! as int,
+      buildType: result[1]! as String,
+      release: result[2]! as String,
+      sdk: result[3]! as int,
+      manufacturer: result[4]! as String,
+      model: result[5]! as String,
+      abi: result[6] as String?,
+      tv: result[7]! as bool,
+      media3: result[8]! as String,
+      ffmpeg: result[9]! as bool,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! DeviceDiagnosticsMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(appBuild, other.appBuild) && _deepEquals(buildType, other.buildType) && _deepEquals(release, other.release) && _deepEquals(sdk, other.sdk) && _deepEquals(manufacturer, other.manufacturer) && _deepEquals(model, other.model) && _deepEquals(abi, other.abi) && _deepEquals(tv, other.tv) && _deepEquals(media3, other.media3) && _deepEquals(ffmpeg, other.ffmpeg);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'DeviceDiagnosticsMessage(appBuild: $appBuild, buildType: $buildType, release: $release, sdk: $sdk, manufacturer: $manufacturer, model: $model, abi: $abi, tv: $tv, media3: $media3, ffmpeg: $ffmpeg)';
+  }
+}
+
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -893,41 +1242,56 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is SourceKindMessage) {
       buffer.putUint8(132);
       writeValue(buffer, value.index);
-    }    else if (value is FrameSizeMessage) {
+    }    else if (value is TrackKindMessage) {
       buffer.putUint8(133);
-      writeValue(buffer, value.encode());
-    }    else if (value is VideoDecoderMessage) {
+      writeValue(buffer, value.index);
+    }    else if (value is FrameSizeMessage) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    }    else if (value is CodecCapabilitiesMessage) {
+    }    else if (value is VideoDecoderMessage) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    }    else if (value is SourceTracksMessage) {
+    }    else if (value is CodecCapabilitiesMessage) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    }    else if (value is ViewportMessage) {
+    }    else if (value is SourceTracksMessage) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    }    else if (value is OpenMessage) {
+    }    else if (value is ViewportMessage) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    }    else if (value is StateMessage) {
+    }    else if (value is OpenMessage) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    }    else if (value is TimelineMessage) {
+    }    else if (value is StateMessage) {
       buffer.putUint8(140);
       writeValue(buffer, value.encode());
-    }    else if (value is TrackMessage) {
+    }    else if (value is TimelineMessage) {
       buffer.putUint8(141);
       writeValue(buffer, value.encode());
-    }    else if (value is TracksMessage) {
+    }    else if (value is TrackMessage) {
       buffer.putUint8(142);
       writeValue(buffer, value.encode());
-    }    else if (value is VideoMessage) {
+    }    else if (value is TracksMessage) {
       buffer.putUint8(143);
       writeValue(buffer, value.encode());
-    }    else if (value is ActiveEngineMessage) {
+    }    else if (value is VideoMessage) {
       buffer.putUint8(144);
+      writeValue(buffer, value.encode());
+    }    else if (value is ActiveEngineMessage) {
+      buffer.putUint8(145);
+      writeValue(buffer, value.encode());
+    }    else if (value is FormatDiagnosticsMessage) {
+      buffer.putUint8(146);
+      writeValue(buffer, value.encode());
+    }    else if (value is ErrorDiagnosticsMessage) {
+      buffer.putUint8(147);
+      writeValue(buffer, value.encode());
+    }    else if (value is DiagnosticsMessage) {
+      buffer.putUint8(148);
+      writeValue(buffer, value.encode());
+    }    else if (value is DeviceDiagnosticsMessage) {
+      buffer.putUint8(149);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -950,29 +1314,40 @@ class _PigeonCodec extends StandardMessageCodec {
         final value = readValue(buffer) as int?;
         return value == null ? null : SourceKindMessage.values[value];
       case 133:
-        return FrameSizeMessage.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : TrackKindMessage.values[value];
       case 134:
-        return VideoDecoderMessage.decode(readValue(buffer)!);
+        return FrameSizeMessage.decode(readValue(buffer)!);
       case 135:
-        return CodecCapabilitiesMessage.decode(readValue(buffer)!);
+        return VideoDecoderMessage.decode(readValue(buffer)!);
       case 136:
-        return SourceTracksMessage.decode(readValue(buffer)!);
+        return CodecCapabilitiesMessage.decode(readValue(buffer)!);
       case 137:
-        return ViewportMessage.decode(readValue(buffer)!);
+        return SourceTracksMessage.decode(readValue(buffer)!);
       case 138:
-        return OpenMessage.decode(readValue(buffer)!);
+        return ViewportMessage.decode(readValue(buffer)!);
       case 139:
-        return StateMessage.decode(readValue(buffer)!);
+        return OpenMessage.decode(readValue(buffer)!);
       case 140:
-        return TimelineMessage.decode(readValue(buffer)!);
+        return StateMessage.decode(readValue(buffer)!);
       case 141:
-        return TrackMessage.decode(readValue(buffer)!);
+        return TimelineMessage.decode(readValue(buffer)!);
       case 142:
-        return TracksMessage.decode(readValue(buffer)!);
+        return TrackMessage.decode(readValue(buffer)!);
       case 143:
-        return VideoMessage.decode(readValue(buffer)!);
+        return TracksMessage.decode(readValue(buffer)!);
       case 144:
+        return VideoMessage.decode(readValue(buffer)!);
+      case 145:
         return ActiveEngineMessage.decode(readValue(buffer)!);
+      case 146:
+        return FormatDiagnosticsMessage.decode(readValue(buffer)!);
+      case 147:
+        return ErrorDiagnosticsMessage.decode(readValue(buffer)!);
+      case 148:
+        return DiagnosticsMessage.decode(readValue(buffer)!);
+      case 149:
+        return DeviceDiagnosticsMessage.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -1014,6 +1389,24 @@ class PlayerApi {
     )
     ;
     return pigeonVar_replyValue! as CodecCapabilitiesMessage;
+  }
+
+  Future<DeviceDiagnosticsMessage> deviceDiagnostics() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerApi.deviceDiagnostics$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as DeviceDiagnosticsMessage;
   }
 
   Future<void> setFullscreen(int owner, bool enabled) async {

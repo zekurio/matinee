@@ -10,11 +10,12 @@ import '../../l10n/app_localizations.dart';
 import '../../query/failure_view.dart';
 import '../../router.dart';
 import 'app_log_section.dart';
+import 'playback_report_section.dart';
 import 'settings_rows.dart';
 import 'settings_screen.dart';
 
-/// Settings, About: what this app and device are, the licenses, and the
-/// app's log. The Kotlin app's playback report isn't here yet.
+/// Settings, About: what this app and device are, the licenses, then the
+/// latest playback's report and the app's log, in the Kotlin app's order.
 class AboutPage extends ConsumerWidget {
   const AboutPage({super.key});
 
@@ -47,6 +48,9 @@ class AboutPage extends ConsumerWidget {
             ),
           ],
         ),
+        // The engines, and so the report, are Android's.
+        if (defaultTargetPlatform == TargetPlatform.android)
+          const PlaybackReportSection(),
         const AppLogSection(),
       ],
     );

@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 
 import '../api/matinee_api.dart';
 import '../core/address.dart';
+import '../platform/player.g.dart' as wire;
+import 'playback_report.dart';
 import 'player.dart';
 import 'web_vtt.dart';
 
@@ -31,6 +33,7 @@ class PlaybackSession extends ChangeNotifier {
     required this.device,
     required this.preferences,
     this.startAt,
+    this.diagnostics,
     String? quality,
     @visibleForTesting String? sessionId,
     @visibleForTesting Duration Function()? elapsed,
@@ -49,6 +52,10 @@ class PlaybackSession extends ChangeNotifier {
   final PlaybackDevice device;
   final PlaybackPreferences preferences;
   final double? startAt;
+
+  /// The report Settings shows of this sitting: codes and formats, never
+  /// names or addresses.
+  final DiagnosticsRecorder? diagnostics;
   final Duration Function() _elapsed;
 
   PlaybackStart? plan;
@@ -67,6 +74,10 @@ class PlaybackSession extends ChangeNotifier {
   final _failed = <String>{};
   _Picks _picks;
   StreamSubscription<PlaybackState>? _listener;
+  StreamSubscription<wire.DiagnosticsMessage>? _diagnosed;
+
+  /// The engine's error that the next failure is, as it sends it ahead.
+  ErrorDiagnostics? _engineError;
   Timer? _timer;
   Duration _lastTick = Duration.zero;
   Duration _lastReport = Duration.zero;
@@ -148,6 +159,12 @@ class PlaybackSession extends ChangeNotifier {
     _lastTick = _elapsed();
     _lastReport = _lastTick;
     _listener = player.states.listen(_updatePlayback);
+    _diagnosed = player.diagnostics.listen((message) {
+      if (message.error case final error?) {
+        _engineError = ErrorDiagnostics.of(error);
+      }
+      diagnostics?.engine(message);
+    });
     _timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
       _countPlayed();
       final interval = Duration(seconds: playback.status.playing ? 10 : 30);
@@ -155,7 +172,7 @@ class PlaybackSession extends ChangeNotifier {
     });
     unawaited(_readOptions());
     _readTrickplay();
-    return _ask(at: startAt, forceReload: true);
+    return _ask(at: startAt, forceReload: true, reason: AttemptReason.start);
   }
 
   /// The seek bar does without previews until they're ready, or at all.
@@ -178,6 +195,7 @@ class PlaybackSession extends ChangeNotifier {
       final result = await api.playback.options();
       if (_closed) return;
       options = result;
+      diagnostics?.capabilities(CapabilityDiagnostics.of(device, result));
       notifyListeners();
     } on Exception {
       // The start answer still supplies the qualities allowed for the file.
@@ -186,7 +204,11 @@ class PlaybackSession extends ChangeNotifier {
     }
   }
 
+  /// A [seek] loads the same pick at another place, which the report
+  /// doesn't count as an attempt; anything else is one for [reason].
   Future<void> _ask({
+    AttemptReason reason = AttemptReason.start,
+    bool seek = false,
     double? at,
     _Picks? picks,
     bool forceReload = false,
@@ -235,15 +257,21 @@ class PlaybackSession extends ChangeNotifier {
         if (!_current(request)) return;
         plan = next;
         _picks = settled;
+        diagnostics?.select(next);
       } else {
         plan = next;
         _picks = settled;
+        if (seek) {
+          diagnostics?.select(next);
+        } else {
+          diagnostics?.attempt(next, reason);
+        }
         await _load(url, next.offset, next.start, tracks, autoplay: !pause);
       }
       if (_current(request)) _showCaptions(caption);
     } catch (failure) {
       if (_current(request)) {
-        await _handleRequestFailure(failure);
+        await _handleRequestFailure(failure, seek: seek);
       }
     } finally {
       if (_current(request)) {
@@ -255,7 +283,16 @@ class PlaybackSession extends ChangeNotifier {
 
   bool _current(int request) => !_closed && request == _request;
 
-  Future<void> _handleRequestFailure(Object failure) async {
+  Future<void> _handleRequestFailure(
+    Object failure, {
+    bool seek = false,
+  }) async {
+    diagnostics?.note(switch (failure) {
+      ApiException(code: playbackUnplayable) => DiagnosticsNote.unplayable,
+      ApiException(code: playbackRestricted) => DiagnosticsNote.restricted,
+      ApiException(code: playbackBusy) => DiagnosticsNote.tooManyStreams,
+      _ => seek ? DiagnosticsNote.seekFailed : DiagnosticsNote.startFailed,
+    });
     if (_opened &&
         !_sourceFailed &&
         !(failure is ApiException &&
@@ -415,6 +452,7 @@ class PlaybackSession extends ChangeNotifier {
     } on Exception {
       if (_closed || _captionUrl != url) return;
       notice = (PlaybackNotice.subtitleFailed, null);
+      diagnostics?.note(DiagnosticsNote.subtitleLoadFailed);
     }
     notifyListeners();
   }
@@ -442,7 +480,15 @@ class PlaybackSession extends ChangeNotifier {
         (ended && (previous.phase != PlaybackPhase.ended || moved))) {
       _report();
     }
-    if (next.phase == PlaybackPhase.error && !_sourceFailed) _fallback(next);
+    if (next.phase == PlaybackPhase.ready &&
+        previous.phase != PlaybackPhase.ready) {
+      diagnostics?.playing();
+    }
+    if (next.phase == PlaybackPhase.error && !_sourceFailed) {
+      diagnostics?.failed(_engineError ?? ErrorDiagnostics.unknown);
+      _engineError = null;
+      _fallback(next);
+    }
     notifyListeners();
   }
 
@@ -457,13 +503,24 @@ class PlaybackSession extends ChangeNotifier {
       return;
     }
     _failed.add(lost.method);
-    unawaited(_ask(at: position, forceReload: true, lost: lost));
+    unawaited(
+      _ask(
+        at: position,
+        forceReload: true,
+        lost: lost,
+        reason: AttemptReason.fallback,
+      ),
+    );
   }
 
   Future<void> retry() {
     if (_closed || busy || refused) return Future<void>.value();
     _failed.clear();
-    return _ask(at: _opened ? position : startAt, forceReload: true);
+    return _ask(
+      at: _opened ? position : startAt,
+      forceReload: true,
+      reason: AttemptReason.retry,
+    );
   }
 
   Future<void> togglePlay() async {
@@ -510,7 +567,7 @@ class PlaybackSession extends ChangeNotifier {
     } else if (answer.method == PlaybackMethod.remux) {
       if (!await _seekStream(answer, target)) return;
     } else {
-      await _ask(at: target, nearest: true, forceReload: true);
+      await _ask(at: target, nearest: true, forceReload: true, seek: true);
     }
     if (!_closed) {
       _report();
@@ -546,7 +603,7 @@ class PlaybackSession extends ChangeNotifier {
       return _current(request);
     } catch (failure) {
       if (_current(request)) {
-        await _handleRequestFailure(failure);
+        await _handleRequestFailure(failure, seek: true);
       }
       return false;
     } finally {
@@ -566,6 +623,7 @@ class PlaybackSession extends ChangeNotifier {
     _remember(audio: track.index);
     return _ask(
       at: position,
+      reason: AttemptReason.audioChange,
       picks: (
         audio: track.index,
         subtitle: _picks.subtitle,
@@ -585,6 +643,7 @@ class PlaybackSession extends ChangeNotifier {
     }
     return _ask(
       at: position,
+      reason: AttemptReason.subtitleChange,
       picks: (audio: _picks.audio, subtitle: pick, quality: _picks.quality),
     );
   }
@@ -596,6 +655,7 @@ class PlaybackSession extends ChangeNotifier {
     }
     return _ask(
       at: position,
+      reason: AttemptReason.qualityChange,
       picks: (audio: _picks.audio, subtitle: _picks.subtitle, quality: quality),
     );
   }
@@ -671,7 +731,9 @@ class PlaybackSession extends ChangeNotifier {
     _closed = true;
     _timer?.cancel();
     unawaited(_listener?.cancel());
+    unawaited(_diagnosed?.cancel());
     unawaited(_trickplay?.cancel());
+    diagnostics?.closed();
     _countPlayed();
     try {
       await player.dispose();

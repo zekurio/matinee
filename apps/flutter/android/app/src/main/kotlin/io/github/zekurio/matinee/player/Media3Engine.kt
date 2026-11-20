@@ -58,6 +58,7 @@ internal class Media3Engine(private val context: Context, private val output: Pl
             if (!frozen && freeze.check(SystemClock.elapsedRealtime(), player.isPlaying, surface != null && player.videoSize.width > 0)) {
                 frozen = true
                 player.pause()
+                output.emit(DiagnosticsMessage(error = frozenDiagnostics()))
                 output.emit(StateMessage(PhaseMessage.ERROR, playing = false, message = "Video frames stopped arriving.", serverUnavailable = false))
             }
             main.postDelayed(this, 250L)
@@ -205,6 +206,25 @@ internal class Media3Engine(private val context: Context, private val output: Pl
         surface = null
     }
 
+    // Before onEvents sends the error state, so the report has the codes when it fails over.
+    override fun onPlayerError(error: PlaybackException) {
+        output.emit(DiagnosticsMessage(error = errorDiagnostics(error)))
+    }
+
+    override fun onVideoDecoderInitialized(
+        eventTime: AnalyticsListener.EventTime,
+        decoderName: String,
+        initializedTimestampMs: Long,
+        initializationDurationMs: Long,
+    ) = output.emit(DiagnosticsMessage(decoderKind = TrackKindMessage.VIDEO, decoder = decoderName))
+
+    override fun onAudioDecoderInitialized(
+        eventTime: AnalyticsListener.EventTime,
+        decoderName: String,
+        initializedTimestampMs: Long,
+        initializationDurationMs: Long,
+    ) = output.emit(DiagnosticsMessage(decoderKind = TrackKindMessage.AUDIO, decoder = decoderName))
+
     override fun onEvents(player: Player, events: Player.Events) {
         if (frozen) return
         val error = player.playerError
@@ -239,6 +259,7 @@ internal class Media3Engine(private val context: Context, private val output: Pl
 
     override fun onTracksChanged(tracks: Tracks) {
         exo?.let { applyTrackSelection(it, tracks) }
+        output.emit(DiagnosticsMessage(tracks = trackDiagnostics(tracks)))
         val next = TracksMessage(
             audio = tracksOf(tracks, C.TRACK_TYPE_AUDIO).map(Track::message),
             subtitles = tracksOf(tracks, C.TRACK_TYPE_TEXT).map(Track::message),

@@ -186,11 +186,113 @@ class ActiveEngineMessage extends PlaybackEventMessage {
   final EngineMessage engine;
 }
 
+enum TrackKindMessage { video, audio, text, other }
+
+/// A format the player has, for the playback report: its MIME type, codec
+/// string, size or channels, and what the device makes of it. Never its
+/// id, label, or language. Dart checks each string before keeping it.
+class FormatDiagnosticsMessage {
+  FormatDiagnosticsMessage({
+    required this.type,
+    required this.selected,
+    this.mime,
+    this.codecs,
+    this.width,
+    this.height,
+    this.channels,
+    this.sampleRate,
+    this.bitrate,
+    this.support,
+  });
+
+  final TrackKindMessage type;
+  final bool selected;
+  final String? mime;
+  final String? codecs;
+  final int? width;
+  final int? height;
+  final int? channels;
+  final int? sampleRate;
+  final int? bitrate;
+  final String? support;
+}
+
+/// A playback error by its codes: the engine's code and its name, the HTTP
+/// status, the decoder, and the classes of its causes. Never its message,
+/// which can hold the file's address.
+class ErrorDiagnosticsMessage {
+  ErrorDiagnosticsMessage({
+    required this.code,
+    this.name,
+    this.type,
+    this.renderer,
+    this.format,
+    this.formatSupport,
+    this.httpStatus,
+    this.decoder,
+    this.secureDecoder,
+    required this.causes,
+  });
+
+  final int code;
+  final String? name;
+  final String? type;
+  final String? renderer;
+  final FormatDiagnosticsMessage? format;
+  final String? formatSupport;
+  final int? httpStatus;
+  final String? decoder;
+  final bool? secureDecoder;
+  final List<String> causes;
+}
+
+/// What the playback report learns from the engine as it plays: an error,
+/// sent before the error state it explains, the tracks Media3 picked, or a
+/// decoder it started. mpv picks its own decoders and tracks, so it sends
+/// only errors.
+class DiagnosticsMessage extends PlaybackEventMessage {
+  DiagnosticsMessage({this.error, this.tracks, this.decoderKind, this.decoder});
+
+  final ErrorDiagnosticsMessage? error;
+  final List<FormatDiagnosticsMessage>? tracks;
+  final TrackKindMessage? decoderKind;
+  final String? decoder;
+}
+
+/// The app and the device for the playback report, without anything that
+/// tells them apart from others of the same model.
+class DeviceDiagnosticsMessage {
+  DeviceDiagnosticsMessage({
+    required this.appBuild,
+    required this.buildType,
+    required this.release,
+    required this.sdk,
+    required this.manufacturer,
+    required this.model,
+    this.abi,
+    required this.tv,
+    required this.media3,
+    required this.ffmpeg,
+  });
+
+  final int appBuild;
+  final String buildType;
+  final String release;
+  final int sdk;
+  final String manufacturer;
+  final String model;
+  final String? abi;
+  final bool tv;
+  final String media3;
+  final bool ffmpeg;
+}
+
 /// One native player per activity. Each open has its own session and event
 /// channel suffix, so a previous route or source cannot control the new one.
 @HostApi()
 abstract class PlayerApi {
   CodecCapabilitiesMessage codecs();
+  DeviceDiagnosticsMessage deviceDiagnostics();
   void setFullscreen(int owner, bool enabled);
   void open(int session, OpenMessage request);
   void play(int session);

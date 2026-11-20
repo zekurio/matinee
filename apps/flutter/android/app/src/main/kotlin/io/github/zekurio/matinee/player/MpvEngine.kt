@@ -20,6 +20,7 @@ import android.view.accessibility.CaptioningManager
 import androidx.core.content.ContextCompat
 import com.edde746.mpv.EndFileReason
 import com.edde746.mpv.MpvEvent
+import com.edde746.mpv.MpvError
 import com.edde746.mpv.MpvException
 import com.edde746.mpv.MpvPlaceholderSurface
 import com.edde746.mpv.MpvPlayer
@@ -75,6 +76,9 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
     private var ended = false
     private var error: String? = null
     private var serverUnavailable = false
+
+    /** The HTTP status FFmpeg last logged for this file, for the playback report. */
+    private var httpStatus: Long? = null
     private var wantPause = true
     private var seekOnLoad: Long? = null
     private var sidecarUrl: String? = null
@@ -306,6 +310,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
                     started = false
                     ended = false
                     serverUnavailable = false
+                    httpStatus = null
                 }
                 is MpvEvent.FileLoaded -> {
                     loaded = true
@@ -319,7 +324,12 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
                     serverUnavailable = false
                 }
                 is MpvEvent.EndFile -> when (event.reason) {
-                    EndFileReason.Error -> fail(event.errorMessage ?: "mpv could not play this source.", serverUnavailable)
+                    EndFileReason.Error -> {
+                        val diagnostics = DiagnosticsMessage(error = mpvDiagnostics(event.error, httpStatus))
+                        // Ahead of the error state, on the same queue, so the report has it first.
+                        main.post { if (!closed) output.emit(diagnostics) }
+                        fail(event.errorMessage ?: "mpv could not play this source.", serverUnavailable)
+                    }
                     EndFileReason.Eof -> ended = true
                     else -> Unit
                 }
@@ -329,6 +339,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
                     if (event.prefix.startsWith("ffmpeg")) {
                         val status = HTTP_ERROR.find(event.text)?.groupValues?.get(1)
                         if (status != null) {
+                            httpStatus = status.toLong()
                             serverUnavailable = status == "502" || status == "504"
                         } else if (CONNECTION_ERROR.containsMatchIn(event.text)) {
                             serverUnavailable = true
@@ -562,6 +573,15 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
         runCatching { player?.setProperty("pause", true) }
         publish(StateMessage(PhaseMessage.ERROR, playing = false, message = message, serverUnavailable = unreachable))
     }
+
+    /** mpv's error by its code and name, as `MPV_ERROR_LOADING_FAILED`, never its message. */
+    private fun mpvDiagnostics(error: MpvError?, http: Long?) = ErrorDiagnosticsMessage(
+        code = error?.code?.toLong() ?: 0L,
+        name = error?.let { "MPV_ERROR_" + it.name.replace(Regex("(?<=[a-z])(?=[A-Z])"), "_").uppercase() },
+        type = "mpv",
+        httpStatus = http,
+        causes = emptyList(),
+    )
 
     private fun systemCertificates(): File {
         val store = KeyStore.getInstance("AndroidCAStore").apply { load(null) }

@@ -11,6 +11,7 @@ import 'package:matinee/core/toasts.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/platform/player.g.dart' as wire;
 import 'package:matinee/player/playback_device.dart';
+import 'package:matinee/player/playback_report.dart';
 import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/player/player_state.dart';
 import 'package:matinee/player/player_system.dart';
@@ -22,6 +23,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 
 import '../core/fakes.dart';
 import '../media/harness.dart';
+import '../player/playback_fakes.dart' show plan;
 import 'home_backend.dart';
 import 'metadata_test.dart' show RecordedToasts;
 
@@ -257,6 +259,64 @@ void main() {
     await tester.tap(find.text('Licenses'));
     await tester.pumpAndSettle();
     expect(find.text('/settings/licenses'), findsOneWidget);
+  });
+
+  testWidgets('About shows, copies, and clears the playback report', (
+    tester,
+  ) async {
+    final copied = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          // SAFETY: Clipboard.setData always sends a map with its text.
+          copied.add((call.arguments as Map)['text'] as String);
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    final container = await _pump(
+      tester,
+      const SettingsPageScreen(pageKey: 'about'),
+      size: const Size(412, 1400),
+    );
+    expect(find.text('Playback report'), findsOneWidget);
+    expect(find.textContaining('Nothing played since'), findsOneWidget);
+
+    DiagnosticsRecorder(
+        PlaybackReport(
+          settings: SettingsDiagnostics.of(
+            PlayerEngine.mpv,
+            const PlayerPrefs(),
+          ),
+        ),
+        container.read(playbackReportProvider.notifier).publish,
+      )
+      ..attempt(plan(), AttemptReason.start)
+      ..failed(ErrorDiagnostics.unknown);
+    await tester.pumpAndSettle();
+    expect(find.text('Failed (file as it is)'), findsOneWidget);
+
+    await tester.tap(find.text('Show report'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Matinee playback report v1'), findsOneWidget);
+    await tester.tap(find.text('Close').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Copy report'));
+    await tester.pumpAndSettle();
+    expect(copied.single, startsWith('Matinee playback report v1'));
+
+    await tester.tap(find.text('Clear report'));
+    await tester.pumpAndSettle();
+    expect(container.read(playbackReportProvider), isNull);
+    expect(find.textContaining('Nothing played since'), findsOneWidget);
   });
 
   group('the app log', () {

@@ -259,6 +259,21 @@ enum class SourceKindMessage(val raw: Int) {
   }
 }
 
+enum class TrackKindMessage(val raw: Int) {
+  VIDEO(0),
+  AUDIO(1),
+  TEXT(2),
+  OTHER(3);
+
+  companion object {
+    private val pigeonValues = values()
+
+    fun ofRaw(raw: Int): TrackKindMessage? {
+      return pigeonValues.getOrNull(raw)
+    }
+  }
+}
+
 /** Generated class from Pigeon that represents data sent in messages. */
 data class FrameSizeMessage (
   val width: Long,
@@ -874,6 +889,298 @@ data class ActiveEngineMessage (
     return "ActiveEngineMessage(engine=$engine)"
   }
 }
+
+/**
+ * A format the player has, for the playback report: its MIME type, codec
+ * string, size or channels, and what the device makes of it. Never its
+ * id, label, or language. Dart checks each string before keeping it.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class FormatDiagnosticsMessage (
+  val type: TrackKindMessage,
+  val selected: Boolean,
+  val mime: String? = null,
+  val codecs: String? = null,
+  val width: Long? = null,
+  val height: Long? = null,
+  val channels: Long? = null,
+  val sampleRate: Long? = null,
+  val bitrate: Long? = null,
+  val support: String? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): FormatDiagnosticsMessage {
+      val type = pigeonVar_list[0] as TrackKindMessage
+      val selected = pigeonVar_list[1] as Boolean
+      val mime = pigeonVar_list[2] as String?
+      val codecs = pigeonVar_list[3] as String?
+      val width = pigeonVar_list[4] as Long?
+      val height = pigeonVar_list[5] as Long?
+      val channels = pigeonVar_list[6] as Long?
+      val sampleRate = pigeonVar_list[7] as Long?
+      val bitrate = pigeonVar_list[8] as Long?
+      val support = pigeonVar_list[9] as String?
+      return FormatDiagnosticsMessage(type, selected, mime, codecs, width, height, channels, sampleRate, bitrate, support)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      type,
+      selected,
+      mime,
+      codecs,
+      width,
+      height,
+      channels,
+      sampleRate,
+      bitrate,
+      support,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as FormatDiagnosticsMessage
+    return PlayerPigeonUtils.deepEquals(this.type, other.type) && PlayerPigeonUtils.deepEquals(this.selected, other.selected) && PlayerPigeonUtils.deepEquals(this.mime, other.mime) && PlayerPigeonUtils.deepEquals(this.codecs, other.codecs) && PlayerPigeonUtils.deepEquals(this.width, other.width) && PlayerPigeonUtils.deepEquals(this.height, other.height) && PlayerPigeonUtils.deepEquals(this.channels, other.channels) && PlayerPigeonUtils.deepEquals(this.sampleRate, other.sampleRate) && PlayerPigeonUtils.deepEquals(this.bitrate, other.bitrate) && PlayerPigeonUtils.deepEquals(this.support, other.support)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.type)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.selected)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.mime)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.codecs)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.width)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.height)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.channels)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.sampleRate)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.bitrate)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.support)
+    return result
+  }
+  override fun toString(): String {
+    return "FormatDiagnosticsMessage(type=$type, selected=$selected, mime=$mime, codecs=$codecs, width=$width, height=$height, channels=$channels, sampleRate=$sampleRate, bitrate=$bitrate, support=$support)"
+  }
+}
+
+/**
+ * A playback error by its codes: the engine's code and its name, the HTTP
+ * status, the decoder, and the classes of its causes. Never its message,
+ * which can hold the file's address.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class ErrorDiagnosticsMessage (
+  val code: Long,
+  val name: String? = null,
+  val type: String? = null,
+  val renderer: String? = null,
+  val format: FormatDiagnosticsMessage? = null,
+  val formatSupport: String? = null,
+  val httpStatus: Long? = null,
+  val decoder: String? = null,
+  val secureDecoder: Boolean? = null,
+  val causes: List<String>
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): ErrorDiagnosticsMessage {
+      val code = pigeonVar_list[0] as Long
+      val name = pigeonVar_list[1] as String?
+      val type = pigeonVar_list[2] as String?
+      val renderer = pigeonVar_list[3] as String?
+      val format = pigeonVar_list[4] as FormatDiagnosticsMessage?
+      val formatSupport = pigeonVar_list[5] as String?
+      val httpStatus = pigeonVar_list[6] as Long?
+      val decoder = pigeonVar_list[7] as String?
+      val secureDecoder = pigeonVar_list[8] as Boolean?
+      val causes = pigeonVar_list[9] as List<String>
+      return ErrorDiagnosticsMessage(code, name, type, renderer, format, formatSupport, httpStatus, decoder, secureDecoder, causes)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      code,
+      name,
+      type,
+      renderer,
+      format,
+      formatSupport,
+      httpStatus,
+      decoder,
+      secureDecoder,
+      causes,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as ErrorDiagnosticsMessage
+    return PlayerPigeonUtils.deepEquals(this.code, other.code) && PlayerPigeonUtils.deepEquals(this.name, other.name) && PlayerPigeonUtils.deepEquals(this.type, other.type) && PlayerPigeonUtils.deepEquals(this.renderer, other.renderer) && PlayerPigeonUtils.deepEquals(this.format, other.format) && PlayerPigeonUtils.deepEquals(this.formatSupport, other.formatSupport) && PlayerPigeonUtils.deepEquals(this.httpStatus, other.httpStatus) && PlayerPigeonUtils.deepEquals(this.decoder, other.decoder) && PlayerPigeonUtils.deepEquals(this.secureDecoder, other.secureDecoder) && PlayerPigeonUtils.deepEquals(this.causes, other.causes)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.code)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.name)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.type)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.renderer)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.format)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.formatSupport)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.httpStatus)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.decoder)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.secureDecoder)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.causes)
+    return result
+  }
+  override fun toString(): String {
+    return "ErrorDiagnosticsMessage(code=$code, name=$name, type=$type, renderer=$renderer, format=$format, formatSupport=$formatSupport, httpStatus=$httpStatus, decoder=$decoder, secureDecoder=$secureDecoder, causes=$causes)"
+  }
+}
+
+/**
+ * What the playback report learns from the engine as it plays: an error,
+ * sent before the error state it explains, the tracks Media3 picked, or a
+ * decoder it started. mpv picks its own decoders and tracks, so it sends
+ * only errors.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class DiagnosticsMessage (
+  val error: ErrorDiagnosticsMessage? = null,
+  val tracks: List<FormatDiagnosticsMessage>? = null,
+  val decoderKind: TrackKindMessage? = null,
+  val decoder: String? = null
+) : PlaybackEventMessage()
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): DiagnosticsMessage {
+      val error = pigeonVar_list[0] as ErrorDiagnosticsMessage?
+      val tracks = pigeonVar_list[1] as List<FormatDiagnosticsMessage>?
+      val decoderKind = pigeonVar_list[2] as TrackKindMessage?
+      val decoder = pigeonVar_list[3] as String?
+      return DiagnosticsMessage(error, tracks, decoderKind, decoder)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      error,
+      tracks,
+      decoderKind,
+      decoder,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as DiagnosticsMessage
+    return PlayerPigeonUtils.deepEquals(this.error, other.error) && PlayerPigeonUtils.deepEquals(this.tracks, other.tracks) && PlayerPigeonUtils.deepEquals(this.decoderKind, other.decoderKind) && PlayerPigeonUtils.deepEquals(this.decoder, other.decoder)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.error)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.tracks)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.decoderKind)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.decoder)
+    return result
+  }
+  override fun toString(): String {
+    return "DiagnosticsMessage(error=$error, tracks=$tracks, decoderKind=$decoderKind, decoder=$decoder)"
+  }
+}
+
+/**
+ * The app and the device for the playback report, without anything that
+ * tells them apart from others of the same model.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class DeviceDiagnosticsMessage (
+  val appBuild: Long,
+  val buildType: String,
+  val release: String,
+  val sdk: Long,
+  val manufacturer: String,
+  val model: String,
+  val abi: String? = null,
+  val tv: Boolean,
+  val media3: String,
+  val ffmpeg: Boolean
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): DeviceDiagnosticsMessage {
+      val appBuild = pigeonVar_list[0] as Long
+      val buildType = pigeonVar_list[1] as String
+      val release = pigeonVar_list[2] as String
+      val sdk = pigeonVar_list[3] as Long
+      val manufacturer = pigeonVar_list[4] as String
+      val model = pigeonVar_list[5] as String
+      val abi = pigeonVar_list[6] as String?
+      val tv = pigeonVar_list[7] as Boolean
+      val media3 = pigeonVar_list[8] as String
+      val ffmpeg = pigeonVar_list[9] as Boolean
+      return DeviceDiagnosticsMessage(appBuild, buildType, release, sdk, manufacturer, model, abi, tv, media3, ffmpeg)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      appBuild,
+      buildType,
+      release,
+      sdk,
+      manufacturer,
+      model,
+      abi,
+      tv,
+      media3,
+      ffmpeg,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as DeviceDiagnosticsMessage
+    return PlayerPigeonUtils.deepEquals(this.appBuild, other.appBuild) && PlayerPigeonUtils.deepEquals(this.buildType, other.buildType) && PlayerPigeonUtils.deepEquals(this.release, other.release) && PlayerPigeonUtils.deepEquals(this.sdk, other.sdk) && PlayerPigeonUtils.deepEquals(this.manufacturer, other.manufacturer) && PlayerPigeonUtils.deepEquals(this.model, other.model) && PlayerPigeonUtils.deepEquals(this.abi, other.abi) && PlayerPigeonUtils.deepEquals(this.tv, other.tv) && PlayerPigeonUtils.deepEquals(this.media3, other.media3) && PlayerPigeonUtils.deepEquals(this.ffmpeg, other.ffmpeg)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.appBuild)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.buildType)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.release)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.sdk)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.manufacturer)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.model)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.abi)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.tv)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.media3)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.ffmpeg)
+    return result
+  }
+  override fun toString(): String {
+    return "DeviceDiagnosticsMessage(appBuild=$appBuild, buildType=$buildType, release=$release, sdk=$sdk, manufacturer=$manufacturer, model=$model, abi=$abi, tv=$tv, media3=$media3, ffmpeg=$ffmpeg)"
+  }
+}
 private open class PlayerPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -898,63 +1205,88 @@ private open class PlayerPigeonCodec : StandardMessageCodec() {
         }
       }
       133.toByte() -> {
-        (readValue(buffer) as? List<Any?>)?.let {
-          FrameSizeMessage.fromList(it)
+        (readValue(buffer) as Long?)?.let {
+          TrackKindMessage.ofRaw(it.toInt())
         }
       }
       134.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          VideoDecoderMessage.fromList(it)
+          FrameSizeMessage.fromList(it)
         }
       }
       135.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          CodecCapabilitiesMessage.fromList(it)
+          VideoDecoderMessage.fromList(it)
         }
       }
       136.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          SourceTracksMessage.fromList(it)
+          CodecCapabilitiesMessage.fromList(it)
         }
       }
       137.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          ViewportMessage.fromList(it)
+          SourceTracksMessage.fromList(it)
         }
       }
       138.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          OpenMessage.fromList(it)
+          ViewportMessage.fromList(it)
         }
       }
       139.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          StateMessage.fromList(it)
+          OpenMessage.fromList(it)
         }
       }
       140.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TimelineMessage.fromList(it)
+          StateMessage.fromList(it)
         }
       }
       141.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TrackMessage.fromList(it)
+          TimelineMessage.fromList(it)
         }
       }
       142.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TracksMessage.fromList(it)
+          TrackMessage.fromList(it)
         }
       }
       143.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          VideoMessage.fromList(it)
+          TracksMessage.fromList(it)
         }
       }
       144.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
+          VideoMessage.fromList(it)
+        }
+      }
+      145.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
           ActiveEngineMessage.fromList(it)
+        }
+      }
+      146.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          FormatDiagnosticsMessage.fromList(it)
+        }
+      }
+      147.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          ErrorDiagnosticsMessage.fromList(it)
+        }
+      }
+      148.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          DiagnosticsMessage.fromList(it)
+        }
+      }
+      149.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          DeviceDiagnosticsMessage.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -978,52 +1310,72 @@ private open class PlayerPigeonCodec : StandardMessageCodec() {
         stream.write(132)
         writeValue(stream, value.raw.toLong())
       }
-      is FrameSizeMessage -> {
+      is TrackKindMessage -> {
         stream.write(133)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw.toLong())
       }
-      is VideoDecoderMessage -> {
+      is FrameSizeMessage -> {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is CodecCapabilitiesMessage -> {
+      is VideoDecoderMessage -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is SourceTracksMessage -> {
+      is CodecCapabilitiesMessage -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is ViewportMessage -> {
+      is SourceTracksMessage -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is OpenMessage -> {
+      is ViewportMessage -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is StateMessage -> {
+      is OpenMessage -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is TimelineMessage -> {
+      is StateMessage -> {
         stream.write(140)
         writeValue(stream, value.toList())
       }
-      is TrackMessage -> {
+      is TimelineMessage -> {
         stream.write(141)
         writeValue(stream, value.toList())
       }
-      is TracksMessage -> {
+      is TrackMessage -> {
         stream.write(142)
         writeValue(stream, value.toList())
       }
-      is VideoMessage -> {
+      is TracksMessage -> {
         stream.write(143)
         writeValue(stream, value.toList())
       }
-      is ActiveEngineMessage -> {
+      is VideoMessage -> {
         stream.write(144)
+        writeValue(stream, value.toList())
+      }
+      is ActiveEngineMessage -> {
+        stream.write(145)
+        writeValue(stream, value.toList())
+      }
+      is FormatDiagnosticsMessage -> {
+        stream.write(146)
+        writeValue(stream, value.toList())
+      }
+      is ErrorDiagnosticsMessage -> {
+        stream.write(147)
+        writeValue(stream, value.toList())
+      }
+      is DiagnosticsMessage -> {
+        stream.write(148)
+        writeValue(stream, value.toList())
+      }
+      is DeviceDiagnosticsMessage -> {
+        stream.write(149)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -1039,6 +1391,7 @@ private open class PlayerPigeonCodec : StandardMessageCodec() {
  */
 interface PlayerApi {
   fun codecs(): CodecCapabilitiesMessage
+  fun deviceDiagnostics(): DeviceDiagnosticsMessage
   fun setFullscreen(owner: Long, enabled: Boolean)
   fun open(session: Long, request: OpenMessage)
   fun play(session: Long)
@@ -1071,6 +1424,21 @@ interface PlayerApi {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
               listOf(api.codecs())
+            } catch (exception: Throwable) {
+              PlayerPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerApi.deviceDiagnostics$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.deviceDiagnostics())
             } catch (exception: Throwable) {
               PlayerPigeonUtils.wrapError(exception)
             }

@@ -34,6 +34,8 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
 
     override fun codecs() = Capabilities.codecs
 
+    override fun deviceDiagnostics() = deviceDiagnostics(activity)
+
     override fun setFullscreen(owner: Long, enabled: Boolean) = fullscreen.set(owner, enabled)
 
     override fun open(session: Long, request: OpenMessage) {

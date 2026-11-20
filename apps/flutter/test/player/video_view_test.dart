@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:matinee/platform/player.g.dart' as wire;
 import 'package:matinee/player/player.dart';
 import 'package:matinee/player/video_view.dart';
 
@@ -16,6 +17,9 @@ class _FakePlayer implements Player {
 
   @override
   Stream<PlaybackState> get states => const Stream.empty();
+
+  @override
+  Stream<wire.DiagnosticsMessage> get diagnostics => const Stream.empty();
 
   @override
   Future<void> open(

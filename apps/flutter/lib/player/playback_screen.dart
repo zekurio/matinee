@@ -16,6 +16,7 @@ import '../media/format.dart';
 import '../platform/player.g.dart' as wire;
 import '../router.dart';
 import 'playback_device.dart';
+import 'playback_report.dart';
 import 'playback_session.dart';
 import 'player.dart';
 import 'player_controls.dart';
@@ -133,6 +134,7 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
       child = _PlaybackHost(
         key: ValueKey((api, widget.itemId, widget.startAt, engine)),
         create: () => PlaybackSession(
+          diagnostics: _recorder(engine, prefs, profile),
           itemId: widget.itemId,
           api: api,
           httpClient: ref.read(sessionHttpProvider),
@@ -151,6 +153,35 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
       );
     }
     return MatineeTheme.wrap(matineeDark, child);
+  }
+
+  /// The report of this sitting, which Settings, About keeps after the
+  /// player closes. The device's part comes once the platform says it.
+  DiagnosticsRecorder _recorder(
+    PlayerEngine engine,
+    PlayerPrefs prefs,
+    PlaybackDevice profile,
+  ) {
+    // Read now: the session's last change comes as the screen goes away.
+    final store = ref.read(playbackReportProvider.notifier);
+    final recorder = DiagnosticsRecorder(
+      PlaybackReport(
+        settings: SettingsDiagnostics.of(engine, prefs),
+        capabilities: CapabilityDiagnostics.of(profile, null),
+      ),
+      // The session starts while the player builds, which mustn't change
+      // a provider; a microtask keeps each change in order.
+      (report) => scheduleMicrotask(() => store.publish(report)),
+    );
+    final version = ref.read(deviceProvider).appVersion;
+    unawaited(
+      ref.read(deviceDiagnosticsProvider.future).then((device) {
+        if (device != null) {
+          recorder.device(DeviceDiagnostics.of(version, device));
+        }
+      }),
+    );
+    return recorder;
   }
 }
 

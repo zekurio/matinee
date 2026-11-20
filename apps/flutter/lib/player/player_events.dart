@@ -31,6 +31,7 @@ sealed class PlayerEvent {
           height: message.height,
           frameRate: message.frameRate,
         )),
+        wire.DiagnosticsMessage() => Diagnosed(message),
         wire.ActiveEngineMessage() => EngineChanged(switch (message.engine) {
           wire.EngineMessage.mpv => PlayerEngine.mpv,
           wire.EngineMessage.media3 => PlayerEngine.media3,
@@ -69,6 +70,14 @@ class EngineChanged extends PlayerEvent {
   final PlayerEngine engine;
 }
 
+/// What the engine says for the playback report, which leaves the state
+/// as it is ([Player.diagnostics]).
+class Diagnosed extends PlayerEvent {
+  const Diagnosed(this.message);
+
+  final wire.DiagnosticsMessage message;
+}
+
 /// Applies one native event to the state. A new idle status clears
 /// everything, since nothing from the old source applies to what comes next.
 PlaybackState reducePlayback(PlaybackState current, PlayerEvent event) =>
@@ -81,6 +90,7 @@ PlaybackState reducePlayback(PlaybackState current, PlayerEvent event) =>
       TracksChanged(:final tracks) => current.copyWith(tracks: tracks),
       VideoChanged(:final video) => current.copyWith(video: video),
       EngineChanged(:final engine) => current.copyWith(engine: engine),
+      Diagnosed() => current,
     };
 
 Duration? _duration(int? ms) => ms == null ? null : Duration(milliseconds: ms);

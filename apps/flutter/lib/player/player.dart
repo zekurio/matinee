@@ -54,6 +54,10 @@ abstract class Player {
   /// Each new subscription starts with the current state.
   Stream<PlaybackState> get states;
 
+  /// What the engine says for the playback report: its errors, each before
+  /// the error state it explains, and Media3's tracks and decoders.
+  Stream<wire.DiagnosticsMessage> get diagnostics;
+
   /// Opens and starts playing. A new open clears the previous source's state.
   Future<void> open(
     String url, {

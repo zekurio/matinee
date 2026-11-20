@@ -6,7 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:matinee/api/matinee_api.dart';
+import 'package:matinee/platform/player.g.dart' as wire;
 import 'package:matinee/player/playback_device.dart';
+import 'package:matinee/player/playback_report.dart';
 import 'package:matinee/player/playback_session.dart';
 import 'package:matinee/player/player.dart';
 import 'package:matinee/player/player_system.dart';
@@ -242,26 +244,30 @@ class FakePlaybackApi {
     throw StateError('Unexpected request ${request.method} $path');
   }
 
-  PlaybackSession session(FakePlayer player, {Duration Function()? elapsed}) =>
-      PlaybackSession(
-        itemId: itemId,
-        api: api,
-        httpClient: client,
-        headers: const {'Authorization': 'Bearer test'},
-        player: player,
-        device: playbackDevice(PlayerEngine.mpv, null, 'de'),
-        preferences: const PlaybackPreferences(
-          audioLanguage: null,
-          subtitleLanguage: null,
-          subtitleMode: SubtitleMode.defaultValue,
-          rememberAudio: true,
-          rememberSubtitles: true,
-          skipBackSeconds: 5,
-          skipForwardSeconds: 30,
-        ),
-        sessionId: sittingId,
-        elapsed: elapsed,
-      );
+  PlaybackSession session(
+    FakePlayer player, {
+    Duration Function()? elapsed,
+    DiagnosticsRecorder? diagnostics,
+  }) => PlaybackSession(
+    diagnostics: diagnostics,
+    itemId: itemId,
+    api: api,
+    httpClient: client,
+    headers: const {'Authorization': 'Bearer test'},
+    player: player,
+    device: playbackDevice(PlayerEngine.mpv, null, 'de'),
+    preferences: const PlaybackPreferences(
+      audioLanguage: null,
+      subtitleLanguage: null,
+      subtitleMode: SubtitleMode.defaultValue,
+      rememberAudio: true,
+      rememberSubtitles: true,
+      skipBackSeconds: 5,
+      skipForwardSeconds: 30,
+    ),
+    sessionId: sittingId,
+    elapsed: elapsed,
+  );
 }
 
 typedef OpenedSource = ({
@@ -289,6 +295,16 @@ class FakePlayer implements Player {
 
   @override
   Stream<PlaybackState> get states => _updates.stream;
+
+  final _diagnostics = StreamController<wire.DiagnosticsMessage>.broadcast(
+    sync: true,
+  );
+
+  @override
+  Stream<wire.DiagnosticsMessage> get diagnostics => _diagnostics.stream;
+
+  /// What the engine would say for the report.
+  void diagnose(wire.DiagnosticsMessage message) => _diagnostics.add(message);
 
   void emit(
     PlaybackPhase phase,

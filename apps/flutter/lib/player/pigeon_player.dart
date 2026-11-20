@@ -16,6 +16,7 @@ class _PigeonPlayer implements Player {
   final double _subtitleScale;
   final bool _systemSubtitleScale;
   final StreamController<PlaybackState> _updates = StreamController.broadcast();
+  final _diagnostics = StreamController<wire.DiagnosticsMessage>.broadcast();
   PlaybackState _state = const PlaybackState();
   int? _session;
   bool _disposed = false;
@@ -35,6 +36,9 @@ class _PigeonPlayer implements Player {
     );
     listener.onCancel = subscription.cancel;
   }, isBroadcast: true);
+
+  @override
+  Stream<wire.DiagnosticsMessage> get diagnostics => _diagnostics.stream;
 
   @override
   Future<void> open(
@@ -57,7 +61,10 @@ class _PigeonPlayer implements Player {
     );
     wire.PlayerEventsApi.setUp(
       _SessionEvents((message) {
-        if (_session == session) {
+        if (_session != session) return;
+        if (message is wire.DiagnosticsMessage) {
+          _diagnostics.add(message);
+        } else {
           _update(reducePlayback(_state, PlayerEvent.fromMessage(message)));
         }
       }),
@@ -186,6 +193,7 @@ class _PigeonPlayer implements Player {
       // dispose leaves nothing for the caller to do.
     } finally {
       unawaited(_updates.close());
+      unawaited(_diagnostics.close());
     }
   }
 
