@@ -264,6 +264,11 @@ class _PlaybackControls extends ConsumerStatefulWidget {
 
 class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   static const _hideAfter = Duration(milliseconds: 3500);
+
+  /// How long the skip button shows by itself once its segment starts, as
+  /// in Jellyfin and the Kotlin player; after that it comes with the
+  /// controls.
+  static const skipShown = Duration(seconds: 8);
   static const _nextDelay = 10;
   Timer? _hide;
   Timer? _advance;
@@ -311,6 +316,12 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   /// on leaving the app, which starts off.
   bool _autoSent = false;
 
+  /// The segment whose skip button shows, and whether it's still within
+  /// [skipShown] of starting.
+  (String, double, double)? _segmentKey;
+  bool _segmentFresh = false;
+  Timer? _segmentTimer;
+
   late final MediaControls _media;
   StreamSubscription<MediaCommandMessage>? _commands;
 
@@ -349,6 +360,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     _playing = _session.playback.status.playing;
     _phase = _session.playback.phase;
     if (_playing) _resetHide();
+    _syncSegment();
     _syncAuto();
   }
 
@@ -357,6 +369,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     _session.removeListener(_updated);
     _hide?.cancel();
     _advance?.cancel();
+    _segmentTimer?.cancel();
     _gesture.dispose();
     _pip.active.removeListener(_smallChanged);
     unawaited(_commands?.cancel());
@@ -385,9 +398,27 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         _resetHide();
       }
       _syncNext();
+      _syncSegment();
     });
     _syncAuto();
     _syncMedia();
+  }
+
+  void _syncSegment() {
+    final segment = _session.segment;
+    final key = segment == null
+        ? null
+        : (segment.kind, segment.start, segment.end);
+    if (key == _segmentKey) return;
+    _segmentKey = key;
+    _segmentTimer?.cancel();
+    _segmentFresh = key != null;
+    if (key != null) {
+      _segmentTimer = Timer(
+        skipShown,
+        () => setState(() => _segmentFresh = false),
+      );
+    }
   }
 
   @override
@@ -844,7 +875,8 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
           PlayerPrompts(
             lifted: controls,
             children: [
-              if (_session.segment case final segment?)
+              if (_session.segment case final segment?
+                  when !_locked && (_segmentFresh || controls))
                 SkipSegmentButton(
                   label: switch (segment.kind) {
                     MediaSegmentKind.recap => l.playerSkipRecap,

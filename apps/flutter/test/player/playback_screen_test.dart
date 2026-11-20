@@ -499,6 +499,61 @@ void main() {
     await tap(tester, 'Back');
     expect(media.hides, 1);
   });
+
+  testWidgets('the skip button shows by itself for a while, then with the '
+      'controls', (tester) async {
+    final backend = FakePlaybackApi();
+    backend.start = (input) => FakePlaybackApi.answer(
+      plan(id: input.itemId, start: 12, audio: audioOne, segments: [intro]),
+    );
+    final player = FakePlayer();
+    tester.view.physicalSize = const Size(850, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = ProviderContainer(
+      overrides: [
+        authStateProvider.overrideWithValue(
+          SignedIn('https://matinee.example', User.fromJson(userJson('ada'))),
+        ),
+        apiProvider.overrideWithValue(backend.api),
+        playerHeadersProvider.overrideWithValue(const {}),
+        sessionHttpProvider.overrideWithValue(backend.client),
+        downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
+        playbackPlayerFactoryProvider.overrideWithValue((_, _) => player),
+        playbackFullscreenProvider.overrideWithValue((_, _) async {}),
+        pictureInPictureProvider.overrideWithValue(FakePictureInPicture()),
+        mediaControlsProvider.overrideWithValue(FakeMediaControls()),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MatineeApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
+    await tester.pumpAndSettle();
+    expect(find.text('Skip intro'), findsOneWidget);
+    // The controls hide after 3.5 seconds; the button stays to 8.
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Pause'), findsNothing);
+    expect(find.text('Skip intro'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    expect(find.text('Skip intro'), findsNothing);
+    // Back with the controls.
+    await tester.tapAt(const Offset(425, 200));
+    await tester.pump(kDoubleTapTimeout);
+    await tester.pumpAndSettle();
+    expect(find.text('Skip intro'), findsOneWidget);
+    // Not while locked.
+    await tap(tester, 'Lock controls');
+    expect(find.text('Skip intro'), findsNothing);
+    await tester.pump(const Duration(seconds: 4));
+  });
 }
 
 SharedPreferencesAsync _preferences() => SharedPreferencesAsync();
