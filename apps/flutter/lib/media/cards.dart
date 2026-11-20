@@ -5,6 +5,7 @@ import '../api/matinee_api.dart';
 import '../kit/kit.dart';
 import '../l10n/app_localizations.dart';
 import '../router.dart';
+import 'actions.dart';
 import 'artwork.dart';
 import 'format.dart';
 
@@ -17,7 +18,9 @@ String itemRoute(MediaItem item) {
 }
 
 /// A movie or show as its poster, opening its page, or [route] when set.
-/// [poster] stands in for the title's own, as a season's.
+/// [poster] stands in for the title's own, as a season's. A long press
+/// opens its menu, with "Not interested" when a recommendation row offered
+/// it as [recommended].
 class TitleCard extends StatelessWidget {
   const TitleCard({
     super.key,
@@ -25,12 +28,14 @@ class TitleCard extends StatelessWidget {
     this.detail,
     this.poster,
     this.route,
+    this.recommended,
   });
 
   final TitleSummary title;
   final String? detail;
   final Artwork? poster;
   final String? route;
+  final CatalogRef? recommended;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +48,9 @@ class TitleCard extends StatelessWidget {
           ? AppLocalizations.of(context).mediaWatched
           : null,
       onPressed: () => context.push(route ?? Routes.title(title.id)),
+      onLongPress: () =>
+          showActions(context, TitleActions(title, recommended: recommended)),
+      longPressLabel: AppLocalizations.of(context).titleMoreActions,
     );
   }
 }
@@ -94,12 +102,14 @@ class ShelfCard extends StatelessWidget {
 /// An episode or movie to start or resume, for Continue watching and Next
 /// up: the episode's picture, the show's name, then the episode and the
 /// time left. It opens the episode's page, or a movie's; Play, where a
-/// mouse or focus shows it, starts the file. The Kotlin app's
-/// `EpisodeCard`.
+/// mouse or focus shows it, starts the file. On a show's own pages
+/// [showName] is false, and the episode's name leads instead. A long press
+/// opens its menu. The Kotlin app's `EpisodeCard`.
 class EpisodeCard extends StatelessWidget {
-  const EpisodeCard({super.key, required this.item});
+  const EpisodeCard({super.key, required this.item, this.showName = true});
 
   final MediaItem item;
+  final bool showName;
 
   @override
   Widget build(BuildContext context) {
@@ -113,9 +123,19 @@ class EpisodeCard extends StatelessWidget {
     final detail = code != null
         ? [l.mediaCodeTitle(code, names.title), ?left].join(' · ')
         : left ?? names.year;
+    final number = episodeNumberLabel(item, l);
+    final ownName = number == null || names.untitled
+        ? names.title
+        : l.titleEpisodesCodedName(number, names.title);
+    final ownDetail = [
+      ?formatDay(item.episode?.airDate, l),
+      ?(left ?? formatRuntime(runtimeMinutes(item), l)),
+    ].join(' · ');
     return WideCard(
-      name: names.showName,
-      detail: detail,
+      name: showName ? names.showName : ownName,
+      detail: showName ? detail : (ownDetail.isEmpty ? null : ownDetail),
+      toneKey: names.showName,
+      untitled: !showName && names.untitled,
       art: Picture(landscapeSources(item)),
       progress: progressRatio(item),
       watchedLabel: isWatched(item) ? l.mediaWatched : null,
@@ -124,6 +144,8 @@ class EpisodeCard extends StatelessWidget {
       playLabel: left == null
           ? l.mediaPlayNamed(name)
           : l.mediaResumeNamed(name),
+      onLongPress: () => showActions(context, ItemActions(item)),
+      longPressLabel: l.titleMoreActions,
     );
   }
 }

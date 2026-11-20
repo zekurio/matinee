@@ -6,6 +6,7 @@ import '../../api/matinee_api.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/actions.dart';
 import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
@@ -75,9 +76,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ..invalidate(askedProvider);
   }
 
+  /// Something was marked, liked, or hidden from a menu here or on another
+  /// page: what Home shows of it comes again.
+  void _changed() {
+    _fetched = DateTime.now();
+    ref
+      ..invalidate(continueWatchingProvider)
+      ..invalidate(nextUpProvider)
+      ..invalidate(recommendationsProvider)
+      ..invalidate(shelfProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
+    ref.listen(mediaChangesProvider, (_, _) => _changed());
     if (ref.watch(authStateProvider) is Offline) {
       return ColoredBox(color: colors.background, child: const _Offline());
     }
@@ -234,8 +247,13 @@ class _RecommendationRail extends StatelessWidget {
       itemHeight: size.height,
       itemCount: items.length,
       itemBuilder: (context, index) {
-        final title = items[index].title;
-        return TitleCard(title: title, detail: title.year?.toString());
+        final item = items[index];
+        final title = item.title;
+        return TitleCard(
+          title: title,
+          detail: title.year?.toString(),
+          recommended: item.ref,
+        );
       },
     );
   }

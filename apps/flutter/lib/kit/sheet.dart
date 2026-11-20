@@ -2,7 +2,9 @@ import 'package:flutter/material.dart' as material;
 import 'package:flutter/widgets.dart';
 
 import 'glass.dart';
+import 'icon.dart';
 import 'modal_backdrop.dart';
+import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
@@ -152,5 +154,76 @@ class _SheetRoute<T> extends material.ModalBottomSheetRoute<T> {
     color: backdrop,
     animation: animation!,
     child: super.buildModalBarrier(),
+  );
+}
+
+/// A row in a sheet's menu: an icon and what it does, the whole row a
+/// button. [destructive] is red, as taking a download back.
+class SheetItem extends StatelessWidget {
+  const SheetItem({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.destructive = false,
+  });
+
+  final String icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final color = destructive ? colors.danger : colors.foreground;
+    return PressIndication(
+      onPressed: onPressed,
+      label: label,
+      shape: KitRadius.control,
+      builder: (context, state) => DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: KitRadius.control,
+          color: colors.foreground.withValues(
+            alpha: switch (state) {
+              PressState.pressed => .1,
+              PressState.idle => 0,
+              _ => .06,
+            },
+          ),
+        ),
+        child: ExcludeSemantics(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+            child: Row(
+              spacing: 16,
+              children: [
+                KitIcon(
+                  icon,
+                  color: destructive ? color : colors.mutedForeground,
+                ),
+                Expanded(
+                  child: Text(label, style: KitText.base.style(color: color)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A line between a sheet's groups of items.
+class SheetSeparator extends StatelessWidget {
+  const SheetSeparator({super.key});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: SizedBox(
+      height: 1,
+      child: ColoredBox(color: MatineeTheme.of(context).hairline),
+    ),
   );
 }

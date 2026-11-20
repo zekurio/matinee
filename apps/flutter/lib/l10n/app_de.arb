@@ -550,6 +550,7 @@
   "titleEpisodesCodedName": "{p1}: {p2}",
   "titleEpisodesError": "Die Folgen konnten nicht geladen werden. {p1}",
   "titleEpisodesFailed": "Die Folgen konnten nicht geladen werden",
+  "titleFilePick": "Datei wählen",
   "titleIdentifyAnyYear": "Alle",
   "titleIdentifyCurrent": "Aktuelle Zuordnung",
   "titleIdentifyDescription": "Durchsuche {p1} und wähle den Eintrag für {p2}.",

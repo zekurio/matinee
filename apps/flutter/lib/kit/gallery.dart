@@ -748,6 +748,67 @@ class _MediaSamples extends StatelessWidget {
           ),
         ),
         Rail(
+          title: 'Cast',
+          itemWidth: 96,
+          itemHeight: PersonCard.height(96, scaler),
+          itemCount: 3,
+          itemBuilder: (context, index) => PersonCard(
+            name: ['Amy Adams', 'Jeremy Renner', 'Forest Whitaker'][index],
+            role: ['Louise Banks', 'Ian Donnelly', 'Colonel Weber'][index],
+            onPressed: () {},
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const Badge('PG-13', outlined: true),
+              const Badge('2160p'),
+              const Badge('HDR10'),
+              RoundIconButton(
+                icon: Lucide.check,
+                label: 'Mark unwatched',
+                color: MatineeTheme.of(context).accent,
+                toggled: true,
+                onPressed: () {},
+              ),
+              RoundIconButton(
+                icon: Lucide.heart,
+                label: 'Add to favorites',
+                onPressed: () {},
+              ),
+              RoundIconButton(
+                icon: Lucide.ellipsis,
+                label: 'More actions',
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SheetItem(
+                icon: Lucide.rotateCcw,
+                label: 'Play from the start',
+                onPressed: () {},
+              ),
+              const SheetSeparator(),
+              SheetItem(
+                icon: Lucide.trash,
+                label: 'Remove download',
+                destructive: true,
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+        Rail(
           title: 'Nothing here',
           itemWidth: poster,
           itemHeight: 0,

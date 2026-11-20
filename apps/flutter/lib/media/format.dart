@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:intl/intl.dart';
+
 import '../api/matinee_api.dart';
 import '../l10n/app_localizations.dart';
 
@@ -77,3 +79,94 @@ String? timeLeft(MediaItem item, AppLocalizations l) {
 }
 
 bool isWatched(MediaItem item) => item.progress?.completed ?? false;
+
+/// "1h 52m", "45m", or "2h", or null without a length.
+String? formatRuntime(int? minutes, AppLocalizations l) {
+  if (minutes == null || minutes <= 0) return null;
+  final hours = minutes ~/ 60;
+  final rest = minutes % 60;
+  if (hours == 0) return l.formatMinutes(rest);
+  if (rest == 0) return l.formatHours(hours);
+  return l.formatHoursMinutes(hours, rest);
+}
+
+/// A file's length in minutes: the provider's for an episode, else the
+/// file's own.
+int? runtimeMinutes(MediaItem item) {
+  if (item.episode?.runtimeMinutes case final minutes?) return minutes;
+  final seconds = item.durationSeconds;
+  return seconds == null ? null : (seconds / 60).round();
+}
+
+/// A YYYY-MM-DD day from the server, as the app's language writes dates;
+/// null when there's none or it doesn't parse.
+String? formatDay(String? day, AppLocalizations l) {
+  if (day == null) return null;
+  final parsed = DateTime.tryParse(day);
+  if (parsed == null) return null;
+  try {
+    return DateFormat.yMMMd(l.localeName).format(parsed);
+  } on Object {
+    return DateFormat.yMMMd().format(parsed);
+  }
+}
+
+/// A rating out of ten, with one decimal, as the app's language writes it.
+String formatRating(double rating, AppLocalizations l) =>
+    NumberFormat('0.0', l.localeName).format(rating);
+
+/// "2160p · HEVC · HDR10": the picture's part of a file, in the words the
+/// server gave its probe.
+String? videoSummary(MediaItem item) {
+  final video = item.probe?.video;
+  if (video == null) return null;
+  return [video.resolution, video.format, ?video.dynamicRange].join(' · ');
+}
+
+/// The audio stream the file plays first: its default, else its first.
+DisplayAudioStream? mainAudio(MediaItem item) {
+  final audio = item.probe?.audio ?? const <DisplayAudioStream>[];
+  for (final stream in audio) {
+    if (stream.defaultValue) return stream;
+  }
+  return audio.firstOrNull;
+}
+
+/// The badges a movie's heading has for its file: the resolution, the
+/// dynamic range, and the main audio's layout, as the server words them.
+List<String> mediaFlags(MediaItem item) {
+  final video = item.probe?.video;
+  return [?video?.resolution, ?video?.dynamicRange, ?mainAudio(item)?.layout];
+}
+
+/// "4.2 GB": a file's size, in the app's language's digits.
+String formatBytes(int bytes, AppLocalizations l) {
+  const units = ['B', 'kB', 'MB', 'GB', 'TB'];
+  var value = bytes.toDouble();
+  var unit = 0;
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1000;
+    unit++;
+  }
+  final number = value >= 10
+      ? value.round().toString()
+      : NumberFormat('0.0', l.localeName).format(value);
+  return '$number ${units[unit]}';
+}
+
+/// "Episode 4", or "Special 4" in season 0; null without a number.
+String? episodeNumberLabel(MediaItem item, AppLocalizations l) {
+  final number = item.episodeNumber;
+  if (number == null) return null;
+  return item.seasonNumber == 0
+      ? l.mediaSpecial(number)
+      : l.mediaEpisode(number);
+}
+
+/// The person started [item] and hasn't finished it, so Play resumes it.
+bool isResuming(MediaItem? item) {
+  final progress = item?.progress;
+  return progress != null &&
+      !progress.completed &&
+      progress.positionSeconds > 0;
+}

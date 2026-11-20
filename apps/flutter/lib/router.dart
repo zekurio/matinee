@@ -15,6 +15,9 @@ import 'screens/sign_in/sign_in_screen.dart';
 import 'screens/sign_in/tv/tv_connect.dart';
 import 'screens/sign_in/tv/tv_sign_in.dart';
 import 'screens/sign_in/unreachable_screen.dart';
+import 'screens/title/episode_screen.dart';
+import 'screens/title/season_screen.dart';
+import 'screens/title/title_screen.dart';
 
 /// Every place in the app, as the paths go_router opens. Screens navigate
 /// with these, `context.push(Routes.title(id))`, never with a path typed
@@ -223,6 +226,28 @@ List<RouteBase> _handsetRoutes() => [
     ],
   ),
   for (final (path, name) in _pages) _pending(path, name, root: true),
+  GoRoute(
+    path: '/title/:id',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => TitleScreen(id: state.pathParameters['id']!),
+  ),
+  GoRoute(
+    path: '/title/:id/season/:season',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) {
+      // -1 is the files without a season number.
+      final season = int.tryParse(state.pathParameters['season']!);
+      return SeasonScreen(
+        titleId: state.pathParameters['id']!,
+        season: season == null || season < 0 ? null : season,
+      );
+    },
+  ),
+  GoRoute(
+    path: '/episode/:id',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => EpisodeScreen(id: state.pathParameters['id']!),
+  ),
   if (defaultTargetPlatform == TargetPlatform.android)
     GoRoute(
       path: '/play/:id',
@@ -263,9 +288,6 @@ const _pages = [
   ('/requests', 'Requests'),
   ('/requests/:list', 'Requests'),
   ('/browse', 'Browse'),
-  ('/title/:id', 'Title'),
-  ('/title/:id/season/:season', 'Season'),
-  ('/episode/:id', 'Episode'),
   ('/person/:name', 'Person'),
   ('/downloads/show/:titleId', 'Show downloads'),
   ('/identify/:titleId', 'Identify'),

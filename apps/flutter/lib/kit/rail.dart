@@ -64,8 +64,9 @@ class SectionTitle extends StatelessWidget {
 /// A titled row of cards that scrolls sideways past the page's edge, each
 /// [itemWidth] wide and [itemHeight] tall (see [CardMetrics.height]). The
 /// list builds its cards as they scroll in. With no items, [empty] says
-/// so in the row's place.
-class Rail extends StatelessWidget {
+/// so in the row's place. It opens scrolled to [initialIndex], as a show's
+/// episodes open at the one up next.
+class Rail extends StatefulWidget {
   const Rail({
     super.key,
     required this.title,
@@ -76,6 +77,7 @@ class Rail extends StatelessWidget {
     this.onSeeAll,
     this.seeAllLabel,
     this.empty,
+    this.initialIndex = 0,
   });
 
   final String title;
@@ -86,10 +88,29 @@ class Rail extends StatelessWidget {
   final VoidCallback? onSeeAll;
   final String? seeAllLabel;
   final String? empty;
+  final int initialIndex;
+
+  @override
+  State<Rail> createState() => _RailState();
+}
+
+class _RailState extends State<Rail> {
+  late final _scroll = ScrollController(
+    initialScrollOffset:
+        widget.initialIndex * (widget.itemWidth + CardMetrics.gap),
+  );
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final empty = this.empty;
+    final widget = this.widget;
+    final empty = widget.empty;
+    final itemCount = widget.itemCount;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -97,9 +118,9 @@ class Rail extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
           child: SectionTitle(
-            title: title,
-            onPressed: onSeeAll,
-            seeAllLabel: seeAllLabel,
+            title: widget.title,
+            onPressed: widget.onSeeAll,
+            seeAllLabel: widget.seeAllLabel,
           ),
         ),
         const SizedBox(height: 12),
@@ -118,8 +139,9 @@ class Rail extends StatelessWidget {
           )
         else
           SizedBox(
-            height: itemHeight,
+            height: widget.itemHeight,
             child: ListView.separated(
+              controller: _scroll,
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(
                 horizontal: CardMetrics.gutter,
@@ -128,10 +150,10 @@ class Rail extends StatelessWidget {
               separatorBuilder: (context, index) =>
                   const SizedBox(width: CardMetrics.gap),
               itemBuilder: (context, index) => SizedBox(
-                width: itemWidth,
+                width: widget.itemWidth,
                 child: Align(
                   alignment: Alignment.topCenter,
-                  child: itemBuilder(context, index),
+                  child: widget.itemBuilder(context, index),
                 ),
               ),
             ),

@@ -208,3 +208,65 @@ class MatineeButton extends StatelessWidget {
     );
   }
 }
+
+/// A round button with only an icon, on the secondary fill: the watched,
+/// favorite, and more buttons beside a page's Play. [color] tints the icon,
+/// as the accent on something watched; [fill] replaces the secondary, as
+/// the page's veil over a backdrop.
+class RoundIconButton extends StatelessWidget {
+  const RoundIconButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.size = 44,
+    this.iconSize = 20,
+    this.color,
+    this.fill,
+    this.toggled,
+  });
+
+  final String icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final double size;
+  final double iconSize;
+  final Color? color;
+  final Color? fill;
+
+  /// For a button that turns something on or off, whether it's on.
+  final bool? toggled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final base = fill ?? colors.secondary;
+    return PressIndication(
+      onPressed: onPressed,
+      label: label,
+      toggled: toggled,
+      shape: KitRadius.pill,
+      builder: (context, state) => Opacity(
+        opacity: onPressed == null ? .5 : 1,
+        child: Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color.lerp(base, colors.foreground, switch (state) {
+              PressState.pressed => .14,
+              PressState.idle => 0,
+              _ => .08,
+            }),
+          ),
+          child: KitIcon(
+            icon,
+            size: iconSize,
+            color: color ?? colors.foreground,
+          ),
+        ),
+      ),
+    );
+  }
+}

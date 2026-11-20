@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/toasts.dart';
 import 'kit/theme.dart';
 import 'kit/theme_store.dart';
+import 'kit/toast.dart';
 import 'kit/tokens.dart';
 
 import 'l10n/app_localizations.dart';
@@ -38,7 +40,18 @@ class MatineeApp extends ConsumerWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => DefaultTextStyle(
         style: KitText.sm.style(color: MatineeTheme.of(context).foreground),
-        child: child!,
+        // Toasts sit above the tab bar, over whatever page is open.
+        child: Stack(
+          children: [
+            child!,
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 64,
+              child: Center(child: ToastHost(state: ref.watch(toastProvider))),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -10,6 +10,8 @@ class PressIndication extends StatefulWidget {
     super.key,
     required this.onPressed,
     required this.builder,
+    this.onLongPress,
+    this.longPressLabel,
     this.shape = BorderRadius.zero,
     this.label,
     this.button = true,
@@ -24,6 +26,11 @@ class PressIndication extends StatefulWidget {
   });
 
   final VoidCallback? onPressed;
+
+  /// A long press, as a card's menu; [longPressLabel] is what a screen
+  /// reader hears it does.
+  final VoidCallback? onLongPress;
+  final String? longPressLabel;
   final Widget Function(BuildContext, PressState) builder;
   final BorderRadiusGeometry shape;
   final String? label;
@@ -65,6 +72,8 @@ class _PressIndicationState extends State<PressIndication> {
       enabled: enabled,
       label: widget.label,
       onTap: press,
+      onLongPress: widget.onLongPress,
+      onLongPressHint: widget.longPressLabel,
       child: FocusableActionDetector(
         enabled: enabled,
         focusNode: widget.focusNode,
@@ -86,6 +95,7 @@ class _PressIndicationState extends State<PressIndication> {
           behavior: HitTestBehavior.opaque,
           excludeFromSemantics: true,
           onTap: press,
+          onLongPress: enabled ? widget.onLongPress : null,
           onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
           onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
           onTapCancel: enabled ? () => setState(() => _pressed = false) : null,

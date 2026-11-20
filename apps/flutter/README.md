@@ -6,9 +6,10 @@ apps in `apps/ios`, which keep shipping until it reaches them. Video plays
 in each platform's native player, behind the Flutter view.
 
 So far it has the toolchain, the kit, the API client, the strings, the
-sessions, the screens that connect and sign in, the tabs, Home, and the
-Android phone and tablet player. Every other screen behind the tabs is a
-placeholder that shows its route.
+sessions, the screens that connect and sign in, the tabs, Home, the
+title, season, and episode pages, and the Android phone and tablet
+player. Every other screen behind the tabs is a placeholder that shows
+its route.
 
 ## Build
 
@@ -213,6 +214,33 @@ only when they failed, since the server picks them at random. The rules
 for the carousel's and the banner's sizes and paging are in
 `home_layout.dart`. Offline, Home says so until the downloads exist.
 
+## Title pages
+
+`lib/screens/title` holds a movie's or show's page (`Routes.title`), a
+season's (`Routes.season`, with -1 for the files without a season
+number), and an episode's (`Routes.episode`), the Kotlin app's
+`TitleScreens.kt` over the web's title page. Each has the backdrop and
+heading with the facts the server sends, the overview and crew, Play or
+Resume for the file the server names (`Title.next`; on a season page that
+episode when it's in the season, else the one in progress or the first
+unwatched), the tick, the heart, and the trailer. A movie with more than
+one file gets a picker, each file in the words of its probe. A show leads
+with the episode up next, then its seasons, or with one season its
+episodes; a season lists its episodes; an episode shows the rest of its
+season. The cast opens `Routes.person`, the genres and studios
+`Routes.browse`. A title the server matched has its related rows from
+`catalog.related`: the titles here are the library's cards, and the rest
+open nothing until the catalog's pages exist. A page fetches again when
+the person comes back to it, and whenever a change lands.
+
+The tick and the heart show their new state at once and go back if the
+server refuses, with a toast (`toastProvider`, shown over every screen).
+Marking watched asks when, as the web does (`lib/media/watched_at.dart`).
+A long press on a card, here or on Home, opens its menu
+(`lib/media/actions.dart`): Play, Play from the start, the tick and heart,
+the pages it belongs to, and "Not interested" on a recommendation. Every
+change bumps `mediaChangesProvider`, which the pages and Home listen to.
+
 ## Strings
 
 The ARB files in `lib/l10n` hold every string, English in `app_en.arb`
@@ -235,13 +263,14 @@ picture), `Checkbox`, `ChoiceChip`, `ToggleChip`, `Dialog`, `ConfirmDialog`,
 `Menu`, `PageDots`, `ProgressRing`, `SearchPill`, `Sheet`, `Slider`,
 `QrCodeCard`, `RangeSlider`, `Spinner`, `Switch`, `TabBar` with `TabBarState`,
 `MatineeTextField`, `Toast` with `ToastState`, `Calendar`, and
-`PressIndication`, which stands in for Material's ripple. Words come in as
-parameters.
+`PressIndication`, which stands in for Material's ripple and takes a long
+press, `RoundIconButton`, `Badge`, and the sheet's `SheetItem` and
+`SheetSeparator`. Words come in as parameters.
 
 For media pages it has the Kotlin app's cards and their layout, none of
 which knows the API: `PosterCard` and `WideCard` (a still with watch
 progress) over an `ArtFrame` on the title's `Tone`, `Rail` and
-`RailSkeleton`, the sliver `CardGrid`, which takes its column count from
+`RailSkeleton`, `PersonCard`, the sliver `CardGrid`, which takes its column count from
 the screen, `PageFrame` for a page opened over the tabs (Back, a title,
 the body), and `SkeletonBox`, `LoadingState`, `EmptyState`, and
 `ErrorState`. `CardMetrics` holds the gutter, the gaps, and a card's

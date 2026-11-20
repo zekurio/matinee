@@ -2879,6 +2879,10 @@
   "@titleEpisodesFailed": {
     "description": "strings_loading.xml"
   },
+  "titleFilePick": "Choose a file",
+  "@titleFilePick": {
+    "description": "A movie with several files: the button and sheet that pick the one Play starts."
+  },
   "titleIdentifyAnyYear": "Any",
   "@titleIdentifyAnyYear": {
     "description": "strings.xml"

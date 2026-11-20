@@ -217,6 +217,8 @@ class PosterCard extends StatelessWidget {
     this.watchedLabel,
     this.badge,
     this.onPressed,
+    this.onLongPress,
+    this.longPressLabel,
   });
 
   final String name;
@@ -236,6 +238,10 @@ class PosterCard extends StatelessWidget {
   final Widget? badge;
   final VoidCallback? onPressed;
 
+  /// Opens the card's menu; [longPressLabel] says so to a screen reader.
+  final VoidCallback? onLongPress;
+  final String? longPressLabel;
+
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
@@ -249,6 +255,8 @@ class PosterCard extends StatelessWidget {
       children: [
         PressIndication(
           onPressed: onPressed,
+          onLongPress: onLongPress,
+          longPressLabel: longPressLabel,
           shape: CardMetrics.radius,
           label: [name, ?detail].join(', '),
           builder: (context, state) => ArtFrame(
@@ -305,6 +313,8 @@ class WideCard extends StatelessWidget {
     this.onPressed,
     this.onPlay,
     this.playLabel,
+    this.onLongPress,
+    this.longPressLabel,
   }) : assert(onPlay == null || playLabel != null);
 
   final String name;
@@ -319,6 +329,8 @@ class WideCard extends StatelessWidget {
   final VoidCallback? onPressed;
   final VoidCallback? onPlay;
   final String? playLabel;
+  final VoidCallback? onLongPress;
+  final String? longPressLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -333,6 +345,8 @@ class WideCard extends StatelessWidget {
       children: [
         PressIndication(
           onPressed: onPressed,
+          onLongPress: onLongPress,
+          longPressLabel: longPressLabel,
           shape: CardMetrics.radius,
           label: [name, ?detail].join(', '),
           builder: (context, state) => ArtFrame(
@@ -407,4 +421,141 @@ class PlayGlyph extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Someone in the cast: their round photo, or their initials on a neutral
+/// circle until it loads and when there's none, with their name and role
+/// under it.
+class PersonCard extends StatelessWidget {
+  const PersonCard({
+    super.key,
+    required this.name,
+    this.role,
+    this.photo,
+    this.onPressed,
+  });
+
+  final String name;
+  final String? role;
+
+  /// The photo, over the initials: a widget that draws nothing until it
+  /// loads.
+  final Widget? photo;
+  final VoidCallback? onPressed;
+
+  /// How tall it is [width] wide, with two lines of name and two of role.
+  static double height(double width, TextScaler scaler) =>
+      width +
+      8 +
+      2 * CardText._line(scaler, KitText.sm) +
+      2 * CardText._line(scaler, KitText.xs);
+
+  /// "MO" for Masi Oka, "Z" for zekurio.
+  static String initials(String name) {
+    final words = name
+        .split(RegExp(r'[ \-_.]'))
+        .where((word) => word.trim().isNotEmpty)
+        .toList();
+    if (words.isEmpty) return '?';
+    final first = words.first.characters.first;
+    if (words.length == 1) return first.toUpperCase();
+    return '$first${words.last.characters.first}'.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final photo = this.photo;
+    final role = this.role;
+    return PressIndication(
+      onPressed: onPressed,
+      shape: CardMetrics.radius,
+      label: [name, ?role].join(', '),
+      builder: (context, state) => ExcludeSemantics(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AspectRatio(
+              aspectRatio: 1,
+              child: ClipOval(
+                child: ColoredBox(
+                  color: colors.secondary,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Center(
+                        child: Text(
+                          initials(name),
+                          style: KitText.xxl.style(
+                            color: colors.mutedForeground,
+                            weight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      ?photo,
+                      _PressWash(state),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              name,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: KitText.sm.style(
+                color: colors.foreground,
+                weight: FontWeight.w500,
+              ),
+            ),
+            if (role != null)
+              Text(
+                role,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: KitText.xs.style(color: colors.mutedForeground),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A short fact in a box: a content rating, outlined, or a file's
+/// resolution or sound, filled.
+class Badge extends StatelessWidget {
+  const Badge(this.text, {super.key, this.outlined = false});
+
+  final String text;
+  final bool outlined;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    const shape = BorderRadius.all(Radius.circular(4));
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: shape,
+        color: outlined ? null : colors.foreground.withValues(alpha: .12),
+        border: outlined
+            ? Border.all(color: colors.foreground.withValues(alpha: .3))
+            : null,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+        child: Text(
+          text,
+          maxLines: 1,
+          style: KitText.xs.style(
+            color: colors.foreground.withValues(alpha: .85),
+            weight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
 }
