@@ -3,6 +3,7 @@ import type source from "../en/ask"
 
 export default {
   "ask.ask": "Anfragen",
+  "ask.askNamed": "{name} anfragen",
   "ask.more": "Mehr anfragen",
   "ask.cancel": "Anfrage zurückziehen",
 

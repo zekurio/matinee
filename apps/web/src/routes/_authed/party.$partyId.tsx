@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 
 import { AuthScreen } from "@/components/auth-screen"
+import { useDocumentTitle } from "@/components/page-header"
 import { tr } from "@/i18n"
 import { partyPosition, setParty } from "@/lib/party"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -50,6 +51,8 @@ function JoinParty() {
     // Over, or not for this account: asking again says the same.
     retry: false,
   })
+  // The party's name in the tab, or "Watch party" for one without.
+  useDocumentTitle(invite.data && (invite.data.name ?? tr("party.title")))
   const home = (
     <Link to="/" className={buttonVariants({ variant: "outline", size: "lg" })}>
       {tr("party.join.home")}
