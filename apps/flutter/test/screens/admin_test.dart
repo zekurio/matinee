@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -221,6 +222,25 @@ void main() {
       expect(backend.sent.single.path, '/admin/users/id-grace/access');
       final body = backend.sent.single.body! as JsonMap;
       expect((body['override']! as JsonMap)['transcode'], isFalse);
+    });
+
+    testWidgets('a tablet shows the values whole', (tester) async {
+      await _pump(
+        tester,
+        '',
+        screen: const UserAccessPage(userId: 'id-grace'),
+        size: const Size(800, 1280),
+      );
+      final cut = [
+        for (final paragraph in tester.renderObjectList<RenderParagraph>(
+          find.descendant(
+            of: find.byType(UserAccessPage),
+            matching: find.byType(RichText),
+          ),
+        ))
+          if (paragraph.didExceedMaxLines) paragraph.text.toPlainText(),
+      ];
+      expect(cut, isEmpty);
     });
 
     testWidgets('admin_access_phone_dark', (tester) async {

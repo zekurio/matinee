@@ -130,21 +130,23 @@ class _RowIcon extends StatelessWidget {
   }
 }
 
-/// A row's value at its end, muted, cut short past 160.
+/// A row's value at its end, muted, in the half of the row the title, which
+/// is [Expanded] beside it, leaves, and cut short past that. A fixed width
+/// cut the admin pages' longer values on a tablet.
 class _RowValue extends StatelessWidget {
   const _RowValue(this.value);
 
   final String value;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.only(start: 12),
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 160),
+  Widget build(BuildContext context) => Expanded(
+    child: Padding(
+      padding: const EdgeInsetsDirectional.only(start: 12),
       child: Text(
         value,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.end,
         style: KitText.sm.style(
           color: MatineeTheme.of(context).mutedForeground,
         ),
