@@ -14,6 +14,7 @@ import 'screens/pending.dart';
 import 'screens/profile/lists_screens.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/search/search_screen.dart';
+import 'screens/settings/settings_screen.dart';
 import 'screens/shell/shell.dart';
 import 'screens/sign_in/connect_screen.dart';
 import 'screens/sign_in/sign_in_screen.dart';
@@ -263,6 +264,17 @@ List<RouteBase> _handsetRoutes() => [
     builder: (context, state) => const RecentScreen(),
   ),
   GoRoute(
+    path: Routes.settings,
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const SettingsScreen(),
+  ),
+  GoRoute(
+    path: '/settings/:page',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        SettingsPageScreen(pageKey: state.pathParameters['page']!),
+  ),
+  GoRoute(
     path: Routes.search,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const SearchScreen(),
@@ -329,8 +341,6 @@ List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 
 /// The pages over the tabs, by path pattern, until each has its screen.
 const _pages = [
-  ('/settings', 'Settings'),
-  ('/settings/:page', 'Settings page'),
   ('/link-device', 'Link a device'),
   ('/requests', 'Requests'),
   ('/requests/:list', 'Requests'),

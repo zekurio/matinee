@@ -8,8 +8,9 @@ in each platform's native player, behind the Flutter view.
 So far it has the toolchain, the kit, the API client, the strings, the
 sessions, the screens that connect and sign in, the tabs, Home, Shows,
 Movies, the genre and studio pages, the title, season, and episode
-pages, search, the profile, and the Android phone and tablet player.
-Every other screen behind the tabs is a placeholder that shows its route.
+pages, search, the profile, settings, and the Android phone and tablet
+player. Every other screen behind the tabs is a placeholder that shows
+its route.
 
 ## Build
 
@@ -290,6 +291,22 @@ the server list or to sign out. The statistics count days and hours in
 the device's time zone, which `DeviceFacts.timeZone` reads. The last
 range's figures stay while the next range loads. Offline it's the person
 and the account rows.
+
+## Settings
+
+`lib/screens/settings` is the Kotlin app's Settings for phones and
+tablets: offline mode on top, then Appearance, Playback, and About, then
+the server in use and the app's version. Each category opens
+`Routes.settingsPage(key)`, and a key it doesn't know opens the first
+page. Appearance picks light, dark, or the system's scheme and the theme
+preset (`themeStoreProvider`); Playback, on Android only, picks the
+engine, mpv or Media3 (`playerEngineProvider`); About shows the version,
+the system, and the device, and the licenses page lays out `NOTICE.md`,
+which the app bundles as an asset. The rows (`Panel`, `LinkRow`,
+`SwitchRow`, `ValueRow`, `PickerRow`) are in `settings_rows.dart`. Signing
+out and switching server or account are on the profile. The Kotlin app's
+account and sessions, linking a device, subtitles, downloads, the app
+log, playback diagnostics, and the admin pages aren't here yet.
 
 ## Strings
 

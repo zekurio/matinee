@@ -44,6 +44,14 @@
   "@aboutDevice": {
     "description": "strings_diagnostics.xml"
   },
+  "aboutLicenses": "Licenses",
+  "@aboutLicenses": {
+    "description": "About: the row and page with the notices for the code the app adapts and bundles"
+  },
+  "aboutLicensesFailed": "Couldn't load the licenses",
+  "@aboutLicensesFailed": {
+    "description": "Licenses page: NOTICE.md didn't load"
+  },
   "aboutTitle": "About",
   "@aboutTitle": {
     "description": "strings_diagnostics.xml"
@@ -136,6 +144,14 @@
   "appearanceMaterialYou": "Wallpaper colors",
   "@appearanceMaterialYou": {
     "description": "strings.xml"
+  },
+  "appearancePreset": "Theme",
+  "@appearancePreset": {
+    "description": "Appearance: the section picking the color preset"
+  },
+  "appearancePresetMatinee": "Matinee",
+  "@appearancePresetMatinee": {
+    "description": "Appearance: the name of the default color preset"
   },
   "askedLoadFailed": "Couldn't load your requests",
   "@askedLoadFailed": {

@@ -36,6 +36,9 @@ dev_dependencies:
 flutter:
   uses-material-design: false
   generate: true
+  # Shown in Settings, About, Licenses.
+  assets:
+    - NOTICE.md
   fonts:
     - family: Red Hat Text
       fonts:

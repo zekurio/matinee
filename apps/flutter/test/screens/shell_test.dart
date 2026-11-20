@@ -42,6 +42,16 @@ Future<void> _pump(
         artworkLoaderProvider.overrideWithValue(
           ArtworkLoader(backend.client, const NoArtworkCache()),
         ),
+        // Settings names the server in use, which the session would keep.
+        savedServersProvider.overrideWithValue([
+          SavedServer(
+            origin: '$server/',
+            address: '$server',
+            name: null,
+            user: User.fromJson(userJson('ada')),
+            active: true,
+          ),
+        ]),
       ],
       child: const MatineeApp(),
     ),
