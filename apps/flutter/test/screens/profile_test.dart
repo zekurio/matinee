@@ -211,6 +211,21 @@ void main() {
     );
   });
 
+  testWidgets('a long press on a favorite season opens its menu', (
+    tester,
+  ) async {
+    final backend = _backend();
+    await pumpScreen(
+      tester,
+      const ProfileScreen(),
+      client: backend.client,
+      overrides: _servers,
+    );
+    await tester.longPress(find.bySemanticsLabel('The Expanse, Season 2'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove from favorites'), findsOneWidget);
+  });
+
   testWidgets('a range asks for its statistics', (tester) async {
     final backend = _backend();
     await pumpScreen(

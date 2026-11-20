@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../api/matinee_api.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/actions.dart';
 import '../../media/artwork.dart';
 import '../../media/cards.dart';
 import '../../media/format.dart';
-import '../../router.dart';
 
 /// A favorite of any kind as a poster, so a row that mixes them lines up,
 /// as the Kotlin app's `FavoriteCard`: a movie or show by its year, a
@@ -23,7 +23,7 @@ class FavoriteCard extends StatelessWidget {
       title: title,
       detail: title.year?.toString(),
     ),
-    FavoriteShowSeason(:final title, :final season) => SeasonCard(
+    FavoriteShowSeason(:final title, :final season) => SeasonPosterCard(
       title: title,
       season: season,
     ),
@@ -41,9 +41,14 @@ String favoriteKey(Favorite favorite) => switch (favorite) {
 };
 
 /// A season as its poster, or its show's: the show's name over the
-/// season's, opening the season's page. Watched once every file is.
-class SeasonCard extends StatelessWidget {
-  const SeasonCard({super.key, required this.title, required this.season});
+/// season's, opening the season's page. Watched once every file is. A long
+/// press opens its menu, as the Kotlin app's `SeasonPosterCard`.
+class SeasonPosterCard extends StatelessWidget {
+  const SeasonPosterCard({
+    super.key,
+    required this.title,
+    required this.season,
+  });
 
   final TitleSummary title;
   final Season season;
@@ -58,20 +63,19 @@ class SeasonCard extends StatelessWidget {
     return PosterCard(
       name: title.name,
       detail: seasonName(number, l),
-      toneKey: title.id,
+      toneKey: title.name,
       art: art == null ? null : Picture([ArtSource(art)]),
       watchedLabel: watched ? l.mediaWatched : null,
-      onPressed: () => context.push(
-        number == null
-            ? Routes.title(title.id)
-            : Routes.season(title.id, number),
-      ),
+      onPressed: () => context.push(seasonRoute(title.id, number)),
+      onLongPress: () => showActions(context, SeasonActions(title, season)),
+      longPressLabel: l.titleMoreActions,
     );
   }
 }
 
 /// An episode as its show's poster, for a row of posters: the show's name
-/// over the episode's, opening the episode's page.
+/// over the episode's, opening the episode's page. A long press opens its
+/// menu.
 class EpisodePosterCard extends StatelessWidget {
   const EpisodePosterCard({super.key, required this.item});
 
@@ -86,10 +90,12 @@ class EpisodePosterCard extends StatelessWidget {
     return PosterCard(
       name: names.showName,
       detail: code == null ? names.title : l.mediaCodeTitle(code, names.title),
-      toneKey: item.title?.id ?? item.id,
+      toneKey: names.showName,
       art: poster == null ? null : Picture([ArtSource(poster)]),
       watchedLabel: isWatched(item) ? l.mediaWatched : null,
       onPressed: () => context.push(itemRoute(item)),
+      onLongPress: () => showActions(context, ItemActions(item)),
+      longPressLabel: l.titleMoreActions,
     );
   }
 }

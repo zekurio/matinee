@@ -107,7 +107,7 @@ class FavoritesScreen extends ConsumerWidget {
         if (lists.seasons.isNotEmpty)
           rail(l.favoritesSeasons, lists.seasons.length, (context, i) {
             final entry = lists.seasons[i];
-            return SeasonCard(title: entry.title, season: entry.season);
+            return SeasonPosterCard(title: entry.title, season: entry.season);
           }, poster),
         if (lists.episodes.isNotEmpty)
           rail(
