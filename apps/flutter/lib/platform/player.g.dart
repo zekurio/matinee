@@ -127,6 +127,244 @@ enum PhaseMessage {
   error;
 }
 
+enum SourceKindMessage {
+  file,
+  mp4,
+  hls;
+}
+
+class FrameSizeMessage {
+  FrameSizeMessage({
+    required this.width,
+    required this.height,
+  });
+
+  int width;
+
+  int height;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      width,
+      height,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static FrameSizeMessage decode(Object result) {
+    result as List<Object?>;
+    return FrameSizeMessage(
+      width: result[0]! as int,
+      height: result[1]! as int,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! FrameSizeMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(width, other.width) && _deepEquals(height, other.height);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'FrameSizeMessage(width: $width, height: $height)';
+  }
+}
+
+class VideoDecoderMessage {
+  VideoDecoderMessage({
+    required this.codec,
+    this.widest,
+    this.tallest,
+    required this.tenBit,
+  });
+
+  String codec;
+
+  FrameSizeMessage? widest;
+
+  FrameSizeMessage? tallest;
+
+  bool tenBit;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      codec,
+      widest,
+      tallest,
+      tenBit,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static VideoDecoderMessage decode(Object result) {
+    result as List<Object?>;
+    return VideoDecoderMessage(
+      codec: result[0]! as String,
+      widest: result[1] as FrameSizeMessage?,
+      tallest: result[2] as FrameSizeMessage?,
+      tenBit: result[3]! as bool,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! VideoDecoderMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(codec, other.codec) && _deepEquals(widest, other.widest) && _deepEquals(tallest, other.tallest) && _deepEquals(tenBit, other.tenBit);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'VideoDecoderMessage(codec: $codec, widest: $widest, tallest: $tallest, tenBit: $tenBit)';
+  }
+}
+
+class CodecCapabilitiesMessage {
+  CodecCapabilitiesMessage({
+    required this.video,
+    required this.audio,
+    required this.dolbyVision,
+  });
+
+  List<VideoDecoderMessage> video;
+
+  List<String> audio;
+
+  bool dolbyVision;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      video,
+      audio,
+      dolbyVision,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static CodecCapabilitiesMessage decode(Object result) {
+    result as List<Object?>;
+    return CodecCapabilitiesMessage(
+      video: (result[0]! as List<Object?>).cast<VideoDecoderMessage>(),
+      audio: (result[1]! as List<Object?>).cast<String>(),
+      dolbyVision: result[2]! as bool,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! CodecCapabilitiesMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(video, other.video) && _deepEquals(audio, other.audio) && _deepEquals(dolbyVision, other.dolbyVision);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'CodecCapabilitiesMessage(video: $video, audio: $audio, dolbyVision: $dolbyVision)';
+  }
+}
+
+/// Track identifiers on the server's plan. An engine resolves them against
+/// the demuxer for the current source.
+class SourceTracksMessage {
+  SourceTracksMessage({
+    this.audioIndex,
+    this.audioOrdinal,
+    this.subtitleIndex,
+    this.subtitleUrl,
+    required this.subtitleOffset,
+  });
+
+  int? audioIndex;
+
+  int? audioOrdinal;
+
+  int? subtitleIndex;
+
+  String? subtitleUrl;
+
+  double subtitleOffset;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      audioIndex,
+      audioOrdinal,
+      subtitleIndex,
+      subtitleUrl,
+      subtitleOffset,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static SourceTracksMessage decode(Object result) {
+    result as List<Object?>;
+    return SourceTracksMessage(
+      audioIndex: result[0] as int?,
+      audioOrdinal: result[1] as int?,
+      subtitleIndex: result[2] as int?,
+      subtitleUrl: result[3] as String?,
+      subtitleOffset: result[4]! as double,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! SourceTracksMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(audioIndex, other.audioIndex) && _deepEquals(audioOrdinal, other.audioOrdinal) && _deepEquals(subtitleIndex, other.subtitleIndex) && _deepEquals(subtitleUrl, other.subtitleUrl) && _deepEquals(subtitleOffset, other.subtitleOffset);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'SourceTracksMessage(audioIndex: $audioIndex, audioOrdinal: $audioOrdinal, subtitleIndex: $subtitleIndex, subtitleUrl: $subtitleUrl, subtitleOffset: $subtitleOffset)';
+  }
+}
+
 /// The video widget's bounds in physical pixels relative to the Flutter view.
 class ViewportMessage {
   ViewportMessage({
@@ -196,6 +434,9 @@ class OpenMessage {
     required this.engine,
     required this.fit,
     this.viewport,
+    this.sourceKind,
+    this.tracks,
+    this.autoplay = true,
   });
 
   String url;
@@ -210,6 +451,12 @@ class OpenMessage {
 
   ViewportMessage? viewport;
 
+  SourceKindMessage? sourceKind;
+
+  SourceTracksMessage? tracks;
+
+  bool autoplay;
+
   List<Object?> _toList() {
     return <Object?>[
       url,
@@ -218,6 +465,9 @@ class OpenMessage {
       engine,
       fit,
       viewport,
+      sourceKind,
+      tracks,
+      autoplay,
     ];
   }
 
@@ -233,6 +483,9 @@ class OpenMessage {
       engine: result[3]! as EngineMessage,
       fit: result[4]! as FitMessage,
       viewport: result[5] as ViewportMessage?,
+      sourceKind: result[6] as SourceKindMessage?,
+      tracks: result[7] as SourceTracksMessage?,
+      autoplay: result[8]! as bool,
     );
   }
 
@@ -245,7 +498,7 @@ class OpenMessage {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(url, other.url) && _deepEquals(headers, other.headers) && _deepEquals(startMs, other.startMs) && _deepEquals(engine, other.engine) && _deepEquals(fit, other.fit) && _deepEquals(viewport, other.viewport);
+    return _deepEquals(url, other.url) && _deepEquals(headers, other.headers) && _deepEquals(startMs, other.startMs) && _deepEquals(engine, other.engine) && _deepEquals(fit, other.fit) && _deepEquals(viewport, other.viewport) && _deepEquals(sourceKind, other.sourceKind) && _deepEquals(tracks, other.tracks) && _deepEquals(autoplay, other.autoplay);
   }
 
   @override
@@ -254,7 +507,7 @@ class OpenMessage {
 
   @override
   String toString() {
-    return 'OpenMessage(url: $url, headers: $headers, startMs: $startMs, engine: $engine, fit: $fit, viewport: $viewport)';
+    return 'OpenMessage(url: $url, headers: $headers, startMs: $startMs, engine: $engine, fit: $fit, viewport: $viewport, sourceKind: $sourceKind, tracks: $tracks, autoplay: $autoplay)';
   }
 }
 
@@ -266,6 +519,7 @@ class StateMessage extends PlaybackEventMessage {
     required this.phase,
     required this.playing,
     this.message,
+    this.serverUnavailable = false,
   });
 
   PhaseMessage phase;
@@ -274,11 +528,14 @@ class StateMessage extends PlaybackEventMessage {
 
   String? message;
 
+  bool serverUnavailable;
+
   List<Object?> _toList() {
     return <Object?>[
       phase,
       playing,
       message,
+      serverUnavailable,
     ];
   }
 
@@ -291,6 +548,7 @@ class StateMessage extends PlaybackEventMessage {
       phase: result[0]! as PhaseMessage,
       playing: result[1]! as bool,
       message: result[2] as String?,
+      serverUnavailable: result[3]! as bool,
     );
   }
 
@@ -303,7 +561,7 @@ class StateMessage extends PlaybackEventMessage {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(phase, other.phase) && _deepEquals(playing, other.playing) && _deepEquals(message, other.message);
+    return _deepEquals(phase, other.phase) && _deepEquals(playing, other.playing) && _deepEquals(message, other.message) && _deepEquals(serverUnavailable, other.serverUnavailable);
   }
 
   @override
@@ -312,7 +570,7 @@ class StateMessage extends PlaybackEventMessage {
 
   @override
   String toString() {
-    return 'StateMessage(phase: $phase, playing: $playing, message: $message)';
+    return 'StateMessage(phase: $phase, playing: $playing, message: $message, serverUnavailable: $serverUnavailable)';
   }
 }
 
@@ -613,29 +871,44 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is PhaseMessage) {
       buffer.putUint8(131);
       writeValue(buffer, value.index);
-    }    else if (value is ViewportMessage) {
+    }    else if (value is SourceKindMessage) {
       buffer.putUint8(132);
-      writeValue(buffer, value.encode());
-    }    else if (value is OpenMessage) {
+      writeValue(buffer, value.index);
+    }    else if (value is FrameSizeMessage) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    }    else if (value is StateMessage) {
+    }    else if (value is VideoDecoderMessage) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    }    else if (value is TimelineMessage) {
+    }    else if (value is CodecCapabilitiesMessage) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    }    else if (value is TrackMessage) {
+    }    else if (value is SourceTracksMessage) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    }    else if (value is TracksMessage) {
+    }    else if (value is ViewportMessage) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    }    else if (value is VideoMessage) {
+    }    else if (value is OpenMessage) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    }    else if (value is ActiveEngineMessage) {
+    }    else if (value is StateMessage) {
       buffer.putUint8(139);
+      writeValue(buffer, value.encode());
+    }    else if (value is TimelineMessage) {
+      buffer.putUint8(140);
+      writeValue(buffer, value.encode());
+    }    else if (value is TrackMessage) {
+      buffer.putUint8(141);
+      writeValue(buffer, value.encode());
+    }    else if (value is TracksMessage) {
+      buffer.putUint8(142);
+      writeValue(buffer, value.encode());
+    }    else if (value is VideoMessage) {
+      buffer.putUint8(143);
+      writeValue(buffer, value.encode());
+    }    else if (value is ActiveEngineMessage) {
+      buffer.putUint8(144);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -655,20 +928,31 @@ class _PigeonCodec extends StandardMessageCodec {
         final value = readValue(buffer) as int?;
         return value == null ? null : PhaseMessage.values[value];
       case 132:
-        return ViewportMessage.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : SourceKindMessage.values[value];
       case 133:
-        return OpenMessage.decode(readValue(buffer)!);
+        return FrameSizeMessage.decode(readValue(buffer)!);
       case 134:
-        return StateMessage.decode(readValue(buffer)!);
+        return VideoDecoderMessage.decode(readValue(buffer)!);
       case 135:
-        return TimelineMessage.decode(readValue(buffer)!);
+        return CodecCapabilitiesMessage.decode(readValue(buffer)!);
       case 136:
-        return TrackMessage.decode(readValue(buffer)!);
+        return SourceTracksMessage.decode(readValue(buffer)!);
       case 137:
-        return TracksMessage.decode(readValue(buffer)!);
+        return ViewportMessage.decode(readValue(buffer)!);
       case 138:
-        return VideoMessage.decode(readValue(buffer)!);
+        return OpenMessage.decode(readValue(buffer)!);
       case 139:
+        return StateMessage.decode(readValue(buffer)!);
+      case 140:
+        return TimelineMessage.decode(readValue(buffer)!);
+      case 141:
+        return TrackMessage.decode(readValue(buffer)!);
+      case 142:
+        return TracksMessage.decode(readValue(buffer)!);
+      case 143:
+        return VideoMessage.decode(readValue(buffer)!);
+      case 144:
         return ActiveEngineMessage.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -694,6 +978,41 @@ class PlayerApi {
 
   final String pigeonVar_messageChannelSuffix;
 
+
+  Future<CodecCapabilitiesMessage> codecs() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerApi.codecs$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as CodecCapabilitiesMessage;
+  }
+
+  Future<void> setFullscreen(int owner, bool enabled) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerApi.setFullscreen$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[owner, enabled]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: true,
+    )
+    ;
+  }
 
   Future<void> open(int session, OpenMessage request) async {
     final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerApi.open$pigeonVar_messageChannelSuffix';
@@ -806,6 +1125,23 @@ class PlayerApi {
       binaryMessenger: pigeonVar_binaryMessenger,
     );
     final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[session, id]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: true,
+    )
+    ;
+  }
+
+  Future<void> setSourceTracks(int session, SourceTracksMessage tracks) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerApi.setSourceTracks$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[session, tracks]);
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
     _extractReplyValueOrThrow(
         pigeonVar_replyList,

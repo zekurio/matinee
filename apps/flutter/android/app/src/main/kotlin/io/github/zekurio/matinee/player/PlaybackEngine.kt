@@ -12,6 +12,7 @@ internal interface PlaybackEngine {
     fun setRate(rate: Double)
     fun selectAudioTrack(id: String?)
     fun selectSubtitleTrack(id: String?)
+    fun setSourceTracks(tracks: SourceTracksMessage)
     fun setSubtitleUrl(url: String?)
     fun setVideoFit(fit: FitMessage)
     fun setSurfaces(surfaces: PlaybackSurfaces, retiring: Boolean)

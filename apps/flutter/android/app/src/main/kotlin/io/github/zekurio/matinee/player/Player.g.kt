@@ -245,6 +245,213 @@ enum class PhaseMessage(val raw: Int) {
   }
 }
 
+enum class SourceKindMessage(val raw: Int) {
+  FILE(0),
+  MP4(1),
+  HLS(2);
+
+  companion object {
+    private val pigeonValues = values()
+
+    fun ofRaw(raw: Int): SourceKindMessage? {
+      return pigeonValues.getOrNull(raw)
+    }
+  }
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class FrameSizeMessage (
+  val width: Long,
+  val height: Long
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): FrameSizeMessage {
+      val width = pigeonVar_list[0] as Long
+      val height = pigeonVar_list[1] as Long
+      return FrameSizeMessage(width, height)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      width,
+      height,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as FrameSizeMessage
+    return PlayerPigeonUtils.deepEquals(this.width, other.width) && PlayerPigeonUtils.deepEquals(this.height, other.height)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.width)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.height)
+    return result
+  }
+  override fun toString(): String {
+    return "FrameSizeMessage(width=$width, height=$height)"
+  }
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class VideoDecoderMessage (
+  val codec: String,
+  val widest: FrameSizeMessage? = null,
+  val tallest: FrameSizeMessage? = null,
+  val tenBit: Boolean
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): VideoDecoderMessage {
+      val codec = pigeonVar_list[0] as String
+      val widest = pigeonVar_list[1] as FrameSizeMessage?
+      val tallest = pigeonVar_list[2] as FrameSizeMessage?
+      val tenBit = pigeonVar_list[3] as Boolean
+      return VideoDecoderMessage(codec, widest, tallest, tenBit)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      codec,
+      widest,
+      tallest,
+      tenBit,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as VideoDecoderMessage
+    return PlayerPigeonUtils.deepEquals(this.codec, other.codec) && PlayerPigeonUtils.deepEquals(this.widest, other.widest) && PlayerPigeonUtils.deepEquals(this.tallest, other.tallest) && PlayerPigeonUtils.deepEquals(this.tenBit, other.tenBit)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.codec)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.widest)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.tallest)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.tenBit)
+    return result
+  }
+  override fun toString(): String {
+    return "VideoDecoderMessage(codec=$codec, widest=$widest, tallest=$tallest, tenBit=$tenBit)"
+  }
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class CodecCapabilitiesMessage (
+  val video: List<VideoDecoderMessage>,
+  val audio: List<String>,
+  val dolbyVision: Boolean
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): CodecCapabilitiesMessage {
+      val video = pigeonVar_list[0] as List<VideoDecoderMessage>
+      val audio = pigeonVar_list[1] as List<String>
+      val dolbyVision = pigeonVar_list[2] as Boolean
+      return CodecCapabilitiesMessage(video, audio, dolbyVision)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      video,
+      audio,
+      dolbyVision,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as CodecCapabilitiesMessage
+    return PlayerPigeonUtils.deepEquals(this.video, other.video) && PlayerPigeonUtils.deepEquals(this.audio, other.audio) && PlayerPigeonUtils.deepEquals(this.dolbyVision, other.dolbyVision)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.video)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.audio)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.dolbyVision)
+    return result
+  }
+  override fun toString(): String {
+    return "CodecCapabilitiesMessage(video=$video, audio=$audio, dolbyVision=$dolbyVision)"
+  }
+}
+
+/**
+ * Track identifiers on the server's plan. An engine resolves them against
+ * the demuxer for the current source.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class SourceTracksMessage (
+  val audioIndex: Long? = null,
+  val audioOrdinal: Long? = null,
+  val subtitleIndex: Long? = null,
+  val subtitleUrl: String? = null,
+  val subtitleOffset: Double
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): SourceTracksMessage {
+      val audioIndex = pigeonVar_list[0] as Long?
+      val audioOrdinal = pigeonVar_list[1] as Long?
+      val subtitleIndex = pigeonVar_list[2] as Long?
+      val subtitleUrl = pigeonVar_list[3] as String?
+      val subtitleOffset = pigeonVar_list[4] as Double
+      return SourceTracksMessage(audioIndex, audioOrdinal, subtitleIndex, subtitleUrl, subtitleOffset)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      audioIndex,
+      audioOrdinal,
+      subtitleIndex,
+      subtitleUrl,
+      subtitleOffset,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as SourceTracksMessage
+    return PlayerPigeonUtils.deepEquals(this.audioIndex, other.audioIndex) && PlayerPigeonUtils.deepEquals(this.audioOrdinal, other.audioOrdinal) && PlayerPigeonUtils.deepEquals(this.subtitleIndex, other.subtitleIndex) && PlayerPigeonUtils.deepEquals(this.subtitleUrl, other.subtitleUrl) && PlayerPigeonUtils.deepEquals(this.subtitleOffset, other.subtitleOffset)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.audioIndex)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.audioOrdinal)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.subtitleIndex)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.subtitleUrl)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.subtitleOffset)
+    return result
+  }
+  override fun toString(): String {
+    return "SourceTracksMessage(audioIndex=$audioIndex, audioOrdinal=$audioOrdinal, subtitleIndex=$subtitleIndex, subtitleUrl=$subtitleUrl, subtitleOffset=$subtitleOffset)"
+  }
+}
+
 /**
  * The video widget's bounds in physical pixels relative to the Flutter view.
  *
@@ -305,7 +512,10 @@ data class OpenMessage (
   val startMs: Long,
   val engine: EngineMessage,
   val fit: FitMessage,
-  val viewport: ViewportMessage? = null
+  val viewport: ViewportMessage? = null,
+  val sourceKind: SourceKindMessage? = null,
+  val tracks: SourceTracksMessage? = null,
+  val autoplay: Boolean
 )
  {
   companion object {
@@ -316,7 +526,10 @@ data class OpenMessage (
       val engine = pigeonVar_list[3] as EngineMessage
       val fit = pigeonVar_list[4] as FitMessage
       val viewport = pigeonVar_list[5] as ViewportMessage?
-      return OpenMessage(url, headers, startMs, engine, fit, viewport)
+      val sourceKind = pigeonVar_list[6] as SourceKindMessage?
+      val tracks = pigeonVar_list[7] as SourceTracksMessage?
+      val autoplay = pigeonVar_list[8] as Boolean
+      return OpenMessage(url, headers, startMs, engine, fit, viewport, sourceKind, tracks, autoplay)
     }
   }
   fun toList(): List<Any?> {
@@ -327,6 +540,9 @@ data class OpenMessage (
       engine,
       fit,
       viewport,
+      sourceKind,
+      tracks,
+      autoplay,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -337,7 +553,7 @@ data class OpenMessage (
       return true
     }
     val other = other as OpenMessage
-    return PlayerPigeonUtils.deepEquals(this.url, other.url) && PlayerPigeonUtils.deepEquals(this.headers, other.headers) && PlayerPigeonUtils.deepEquals(this.startMs, other.startMs) && PlayerPigeonUtils.deepEquals(this.engine, other.engine) && PlayerPigeonUtils.deepEquals(this.fit, other.fit) && PlayerPigeonUtils.deepEquals(this.viewport, other.viewport)
+    return PlayerPigeonUtils.deepEquals(this.url, other.url) && PlayerPigeonUtils.deepEquals(this.headers, other.headers) && PlayerPigeonUtils.deepEquals(this.startMs, other.startMs) && PlayerPigeonUtils.deepEquals(this.engine, other.engine) && PlayerPigeonUtils.deepEquals(this.fit, other.fit) && PlayerPigeonUtils.deepEquals(this.viewport, other.viewport) && PlayerPigeonUtils.deepEquals(this.sourceKind, other.sourceKind) && PlayerPigeonUtils.deepEquals(this.tracks, other.tracks) && PlayerPigeonUtils.deepEquals(this.autoplay, other.autoplay)
   }
 
   override fun hashCode(): Int {
@@ -348,10 +564,13 @@ data class OpenMessage (
     result = 31 * result + PlayerPigeonUtils.deepHash(this.engine)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.fit)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.viewport)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.sourceKind)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.tracks)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.autoplay)
     return result
   }
   override fun toString(): String {
-    return "OpenMessage(url=$url, headers=$headers, startMs=$startMs, engine=$engine, fit=$fit, viewport=$viewport)"
+    return "OpenMessage(url=$url, headers=$headers, startMs=$startMs, engine=$engine, fit=$fit, viewport=$viewport, sourceKind=$sourceKind, tracks=$tracks, autoplay=$autoplay)"
   }
 }
 
@@ -364,7 +583,8 @@ sealed class PlaybackEventMessage
 data class StateMessage (
   val phase: PhaseMessage,
   val playing: Boolean,
-  val message: String? = null
+  val message: String? = null,
+  val serverUnavailable: Boolean
 ) : PlaybackEventMessage()
  {
   companion object {
@@ -372,7 +592,8 @@ data class StateMessage (
       val phase = pigeonVar_list[0] as PhaseMessage
       val playing = pigeonVar_list[1] as Boolean
       val message = pigeonVar_list[2] as String?
-      return StateMessage(phase, playing, message)
+      val serverUnavailable = pigeonVar_list[3] as Boolean
+      return StateMessage(phase, playing, message, serverUnavailable)
     }
   }
   fun toList(): List<Any?> {
@@ -380,6 +601,7 @@ data class StateMessage (
       phase,
       playing,
       message,
+      serverUnavailable,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -390,7 +612,7 @@ data class StateMessage (
       return true
     }
     val other = other as StateMessage
-    return PlayerPigeonUtils.deepEquals(this.phase, other.phase) && PlayerPigeonUtils.deepEquals(this.playing, other.playing) && PlayerPigeonUtils.deepEquals(this.message, other.message)
+    return PlayerPigeonUtils.deepEquals(this.phase, other.phase) && PlayerPigeonUtils.deepEquals(this.playing, other.playing) && PlayerPigeonUtils.deepEquals(this.message, other.message) && PlayerPigeonUtils.deepEquals(this.serverUnavailable, other.serverUnavailable)
   }
 
   override fun hashCode(): Int {
@@ -398,10 +620,11 @@ data class StateMessage (
     result = 31 * result + PlayerPigeonUtils.deepHash(this.phase)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.playing)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.message)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.serverUnavailable)
     return result
   }
   override fun toString(): String {
-    return "StateMessage(phase=$phase, playing=$playing, message=$message)"
+    return "StateMessage(phase=$phase, playing=$playing, message=$message, serverUnavailable=$serverUnavailable)"
   }
 }
 
@@ -652,41 +875,66 @@ private open class PlayerPigeonCodec : StandardMessageCodec() {
         }
       }
       132.toByte() -> {
-        (readValue(buffer) as? List<Any?>)?.let {
-          ViewportMessage.fromList(it)
+        (readValue(buffer) as Long?)?.let {
+          SourceKindMessage.ofRaw(it.toInt())
         }
       }
       133.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          OpenMessage.fromList(it)
+          FrameSizeMessage.fromList(it)
         }
       }
       134.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          StateMessage.fromList(it)
+          VideoDecoderMessage.fromList(it)
         }
       }
       135.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TimelineMessage.fromList(it)
+          CodecCapabilitiesMessage.fromList(it)
         }
       }
       136.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TrackMessage.fromList(it)
+          SourceTracksMessage.fromList(it)
         }
       }
       137.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TracksMessage.fromList(it)
+          ViewportMessage.fromList(it)
         }
       }
       138.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          VideoMessage.fromList(it)
+          OpenMessage.fromList(it)
         }
       }
       139.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          StateMessage.fromList(it)
+        }
+      }
+      140.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          TimelineMessage.fromList(it)
+        }
+      }
+      141.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          TrackMessage.fromList(it)
+        }
+      }
+      142.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          TracksMessage.fromList(it)
+        }
+      }
+      143.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          VideoMessage.fromList(it)
+        }
+      }
+      144.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           ActiveEngineMessage.fromList(it)
         }
@@ -708,36 +956,56 @@ private open class PlayerPigeonCodec : StandardMessageCodec() {
         stream.write(131)
         writeValue(stream, value.raw.toLong())
       }
-      is ViewportMessage -> {
+      is SourceKindMessage -> {
         stream.write(132)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw.toLong())
       }
-      is OpenMessage -> {
+      is FrameSizeMessage -> {
         stream.write(133)
         writeValue(stream, value.toList())
       }
-      is StateMessage -> {
+      is VideoDecoderMessage -> {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is TimelineMessage -> {
+      is CodecCapabilitiesMessage -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is TrackMessage -> {
+      is SourceTracksMessage -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is TracksMessage -> {
+      is ViewportMessage -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is VideoMessage -> {
+      is OpenMessage -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is ActiveEngineMessage -> {
+      is StateMessage -> {
         stream.write(139)
+        writeValue(stream, value.toList())
+      }
+      is TimelineMessage -> {
+        stream.write(140)
+        writeValue(stream, value.toList())
+      }
+      is TrackMessage -> {
+        stream.write(141)
+        writeValue(stream, value.toList())
+      }
+      is TracksMessage -> {
+        stream.write(142)
+        writeValue(stream, value.toList())
+      }
+      is VideoMessage -> {
+        stream.write(143)
+        writeValue(stream, value.toList())
+      }
+      is ActiveEngineMessage -> {
+        stream.write(144)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -752,6 +1020,8 @@ private open class PlayerPigeonCodec : StandardMessageCodec() {
  * Generated interface from Pigeon that represents a handler of messages from Flutter.
  */
 interface PlayerApi {
+  fun codecs(): CodecCapabilitiesMessage
+  fun setFullscreen(owner: Long, enabled: Boolean)
   fun open(session: Long, request: OpenMessage)
   fun play(session: Long)
   fun pause(session: Long)
@@ -760,6 +1030,7 @@ interface PlayerApi {
   /** Null turns the track type off. */
   fun selectAudioTrack(session: Long, id: String?)
   fun selectSubtitleTrack(session: Long, id: String?)
+  fun setSourceTracks(session: Long, tracks: SourceTracksMessage)
   /** A new URL selects that sidecar. Null removes any attached sidecar. */
   fun setSubtitleUrl(session: Long, url: String?)
   fun setVideoFit(session: Long, fit: FitMessage)
@@ -776,6 +1047,40 @@ interface PlayerApi {
     @JvmOverloads
     fun setUp(binaryMessenger: BinaryMessenger, api: PlayerApi?, messageChannelSuffix: String = "") {
       val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerApi.codecs$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.codecs())
+            } catch (exception: Throwable) {
+              PlayerPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerApi.setFullscreen$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val ownerArg = args[0] as Long
+            val enabledArg = args[1] as Boolean
+            val wrapped: List<Any?> = try {
+              api.setFullscreen(ownerArg, enabledArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              PlayerPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
       run {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerApi.open$separatedMessageChannelSuffix", codec)
         if (api != null) {
@@ -897,6 +1202,25 @@ interface PlayerApi {
             val idArg = args[1] as String?
             val wrapped: List<Any?> = try {
               api.selectSubtitleTrack(sessionArg, idArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              PlayerPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerApi.setSourceTracks$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val sessionArg = args[0] as Long
+            val tracksArg = args[1] as SourceTracksMessage
+            val wrapped: List<Any?> = try {
+              api.setSourceTracks(sessionArg, tracksArg)
               listOf(null)
             } catch (exception: Throwable) {
               PlayerPigeonUtils.wrapError(exception)

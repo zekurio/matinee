@@ -6,8 +6,8 @@ apps in `apps/ios`, which keep shipping until it reaches them. Video plays
 in each platform's native player, behind the Flutter view.
 
 So far it has the toolchain, the kit, the API client, the strings, the
-sessions, the screens that connect and sign in, and the tabs. Every screen
-behind the tabs is a placeholder that shows its route.
+sessions, the screens that connect and sign in, the tabs, and the Android
+phone and tablet player. The browsing screens are still placeholders.
 
 ## Build
 
@@ -141,7 +141,16 @@ the release you chose.
 Debug builds have a player lab at `/debug/player`, behind a button on the
 Home placeholder. It plays an HLS stream and an MKV with two audio tracks
 and two subtitle tracks on either engine, with seek, track, fit, and rate
-controls and the live state.
+controls and the live state. The engine picker is saved and also applies
+to server playback. To play a server file from the lab, sign in and enter
+its media item UUID in the Media item ID field.
+
+`Routes.play(itemId)` opens the same player from a phone or tablet screen.
+It sends the engine's decoder profile to `playback.start` and loads the
+returned source. It uses the server's track picks, resume position, skip
+segments, and next episode. The controls send track and quality changes
+back to the server, and progress stays on the file's timeline even when
+`playback.seek` returns a stream that starts partway through the file.
 
 ## Strings
 

@@ -23,11 +23,16 @@ import kotlinx.coroutines.launch
 @UnstableApi
 internal class PlayerBridge(private val activity: Activity, private val messenger: BinaryMessenger) : PlayerApi {
     private var current: Session? = null
+    private val fullscreen = PlayerFullscreen(activity)
 
     // Pigeon's FlutterApi methods suspend. Dispatchers.Main.immediate sends
     // the message before launch() returns when called on the main thread, so
     // events keep the order they were emitted in.
     private val scope = MainScope()
+
+    override fun codecs() = Capabilities.codecs
+
+    override fun setFullscreen(owner: Long, enabled: Boolean) = fullscreen.set(owner, enabled)
 
     override fun open(session: Long, request: OpenMessage) {
         require(request.url.isNotBlank()) { "A media URL is required." }
@@ -35,7 +40,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
         val next = Session(session)
         current = next
         next.emit(ActiveEngineMessage(request.engine))
-        next.emit(StateMessage(PhaseMessage.BUFFERING, playing = false))
+        next.emit(StateMessage(PhaseMessage.BUFFERING, playing = false, serverUnavailable = false))
         try {
             val host = PlayerSurfaceHost(activity, request.engine, next::surfacesChanged)
             next.host = host
@@ -66,6 +71,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
 
     override fun selectAudioTrack(session: Long, id: String?) = withEngine(session) { selectAudioTrack(id) }
     override fun selectSubtitleTrack(session: Long, id: String?) = withEngine(session) { selectSubtitleTrack(id) }
+    override fun setSourceTracks(session: Long, tracks: SourceTracksMessage) = withEngine(session) { setSourceTracks(tracks) }
     override fun setSubtitleUrl(session: Long, url: String?) = withEngine(session) { setSubtitleUrl(url) }
 
     override fun setVideoFit(session: Long, fit: FitMessage) {
@@ -90,7 +96,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
     /** Closes the live session, if any. The Dart side only listens for [notify] when something else replaced it. */
     fun closeCurrent(notify: Boolean) {
         val previous = current ?: return
-        if (notify) previous.emit(StateMessage(PhaseMessage.IDLE, playing = false))
+        if (notify) previous.emit(StateMessage(PhaseMessage.IDLE, playing = false, serverUnavailable = false))
         current = null
         try {
             // The engine moves off the surfaces before they're destroyed.
@@ -102,6 +108,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
 
     /** The activity is going away for good. */
     fun release() {
+        fullscreen.restore()
         closeCurrent(notify = false)
         scope.cancel()
     }
@@ -121,7 +128,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
 
         fun failed(failure: Throwable) {
             Log.w(TAG, "Player setup failed", failure)
-            emit(StateMessage(PhaseMessage.ERROR, playing = false, message = "Could not start the player."))
+            emit(StateMessage(PhaseMessage.ERROR, playing = false, message = "Could not start the player.", serverUnavailable = false))
         }
 
         override fun emit(event: PlaybackEventMessage) {

@@ -355,6 +355,7 @@
   "playerFit": "Ganzes Bild",
   "playerLoadFailed": "Der Titel konnte nicht geladen werden",
   "playerLock": "Bedienung sperren",
+  "playerLabItemId": "Mediendatei-ID",
   "playerMenuAudio": "Audio",
   "playerMenuSettings": "Einstellungen",
   "playerMenuSubtitles": "Untertitel",

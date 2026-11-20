@@ -10,6 +10,25 @@ export 'player_state.dart';
 
 part 'pigeon_player.dart';
 
+enum PlayerSourceKind { file, mp4, hls }
+
+/// The server's track picks, expressed in the original file's stream IDs.
+class SourceTracks {
+  const SourceTracks({
+    this.audioIndex,
+    this.audioOrdinal,
+    this.subtitleIndex,
+    this.subtitleUrl,
+    this.subtitleOffset = 0,
+  });
+
+  final int? audioIndex;
+  final int? audioOrdinal;
+  final int? subtitleIndex;
+  final String? subtitleUrl;
+  final double subtitleOffset;
+}
+
 /// Android has one active native player per activity. Opening a source
 /// replaces any previous session, including one owned by another [Player].
 abstract class Player {
@@ -26,6 +45,9 @@ abstract class Player {
     String url, {
     Map<String, String> headers = const {},
     Duration startPosition = Duration.zero,
+    PlayerSourceKind? kind,
+    SourceTracks? tracks,
+    bool autoplay = true,
   });
   Future<void> play();
   Future<void> pause();
@@ -36,6 +58,7 @@ abstract class Player {
   /// Passing null disables that track type.
   Future<void> selectAudioTrack(String? id);
   Future<void> selectSubtitleTrack(String? id);
+  Future<void> setSourceTracks(SourceTracks tracks);
 
   /// Passing null removes the attached sidecar.
   Future<void> setSubtitleUrl(String? url);

@@ -14,6 +14,7 @@ class Slider extends StatelessWidget {
     this.min = 0,
     this.max = 1,
     this.divisions,
+    this.buffered,
     this.onChangeStart,
     this.onChangeEnd,
     this.label,
@@ -26,6 +27,7 @@ class Slider extends StatelessWidget {
   final double min;
   final double max;
   final int? divisions;
+  final double? buffered;
   final ValueChanged<double>? onChangeStart;
   final ValueChanged<double>? onChangeEnd;
   final String? label;
@@ -41,6 +43,7 @@ class Slider extends StatelessWidget {
       min: min,
       max: max,
       divisions: divisions,
+      secondaryTrackValue: buffered,
       onChanged: onChanged,
       onChangeStart: onChangeStart,
       onChangeEnd: onChangeEnd,
@@ -158,6 +161,7 @@ void _paintTrack(
   Animation<double> enableAnimation, {
   required double start,
   required double end,
+  (double, double)? buffered,
 }) {
   final inactive = ColorTween(
     begin: theme.disabledInactiveTrackColor,
@@ -179,7 +183,14 @@ void _paintTrack(
   canvas
     ..save()
     ..clipRRect(track)
-    ..drawRRect(track, Paint()..color = inactive)
+    ..drawRRect(track, Paint()..color = inactive);
+  if (buffered case (final from, final to)) {
+    canvas.drawRect(
+      Rect.fromLTRB(from, track.top, to, track.bottom),
+      Paint()..color = Color.lerp(inactive, active, .4)!,
+    );
+  }
+  canvas
     ..drawRect(
       Rect.fromLTRB(start, track.top, end, track.bottom),
       Paint()..color = active,
@@ -236,6 +247,17 @@ class _Track extends material.SliderTrackShape
       enableAnimation,
       start: ltr ? travel.left - reach : thumbCenter.dx,
       end: ltr ? thumbCenter.dx : travel.right + reach,
+      buffered: switch (secondaryOffset) {
+        final offset? when ltr && offset.dx > thumbCenter.dx => (
+          thumbCenter.dx,
+          offset.dx,
+        ),
+        final offset? when !ltr && offset.dx < thumbCenter.dx => (
+          offset.dx,
+          thumbCenter.dx,
+        ),
+        _ => null,
+      },
     );
   }
 }

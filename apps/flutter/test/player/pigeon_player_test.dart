@@ -25,6 +25,7 @@ class _Native {
       'setRate',
       'selectAudioTrack',
       'selectSubtitleTrack',
+      'setSourceTracks',
       'setSubtitleUrl',
       'setVideoFit',
       'setViewport',
@@ -76,6 +77,12 @@ void main() {
         'https://example.test/a.mkv',
         headers: {'X-Token': 'abc'},
         startPosition: const Duration(seconds: 90),
+        kind: PlayerSourceKind.hls,
+        autoplay: false,
+        tracks: const SourceTracks(
+          subtitleUrl: 'https://example.test/a.sup',
+          subtitleOffset: 90,
+        ),
       );
 
       final request = native.named('open').single[1]! as wire.OpenMessage;
@@ -86,6 +93,10 @@ void main() {
       expect(request.fit, wire.FitMessage.cover);
       expect(request.viewport?.left, 1);
       expect(request.viewport?.width, 300);
+      expect(request.sourceKind, wire.SourceKindMessage.hls);
+      expect(request.autoplay, isFalse);
+      expect(request.tracks?.subtitleUrl, 'https://example.test/a.sup');
+      expect(request.tracks?.subtitleOffset, 90);
       expect(player.state.phase, PlaybackPhase.buffering);
       await player.dispose();
     },
@@ -102,6 +113,9 @@ void main() {
     await player.selectAudioTrack('3');
     await player.selectSubtitleTrack(null);
     await player.setSubtitleUrl('https://example.test/a.srt');
+    await player.setSourceTracks(
+      const SourceTracks(audioIndex: 3, audioOrdinal: 1, subtitleIndex: 4),
+    );
 
     expect(native.named('seekTo').single, [session, 12000]);
     expect(native.named('selectAudioTrack').single, [session, '3']);
@@ -110,6 +124,15 @@ void main() {
       session,
       'https://example.test/a.srt',
     ]);
+    final [id, tracks] = native.named('setSourceTracks').single;
+    expect(id, session);
+    expect(
+      tracks,
+      isA<wire.SourceTracksMessage>()
+          .having((track) => track.audioIndex, 'audioIndex', 3)
+          .having((track) => track.audioOrdinal, 'audioOrdinal', 1)
+          .having((track) => track.subtitleIndex, 'subtitleIndex', 4),
+    );
     await player.dispose();
   });
 
@@ -185,6 +208,25 @@ void main() {
     expect(player.state.status.message, 'No such engine.');
     await player.dispose();
   });
+
+  test(
+    'distinguishes a source failure when the server is unreachable',
+    () async {
+      final player = Player();
+      await player.open('https://example.test/a.mkv');
+      await native.emit(
+        native.lastSession,
+        wire.StateMessage(
+          phase: wire.PhaseMessage.error,
+          playing: false,
+          serverUnavailable: true,
+        ),
+      );
+      expect(player.state.phase, PlaybackPhase.error);
+      expect(player.state.serverUnavailable, isTrue);
+      await player.dispose();
+    },
+  );
 
   test(
     'dispose tells the native side once and ends the state stream',

@@ -4,12 +4,14 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Surface
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
@@ -17,6 +19,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -24,6 +27,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import okhttp3.OkHttpClient
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @UnstableApi
 internal class Media3Engine(private val context: Context, private val output: PlaybackOutput) :
@@ -41,17 +45,37 @@ internal class Media3Engine(private val context: Context, private val output: Pl
     private var lastTracks: TracksMessage? = null
     private var lastVideo: VideoMessage? = null
     private var frameRate: Double? = null
+    private var sourceTracks: SourceTracksMessage? = null
+    private val freeze = FreezeWatch()
+    private var frozen = false
 
     private val ticker = object : Runnable {
         override fun run() {
             if (exo == null) return
             publishTimeline()
+            val player = checkNotNull(exo)
+            if (!frozen && freeze.check(SystemClock.elapsedRealtime(), player.isPlaying, surface != null && player.videoSize.width > 0)) {
+                frozen = true
+                player.pause()
+                output.emit(StateMessage(PhaseMessage.ERROR, playing = false, message = "Video frames stopped arriving.", serverUnavailable = false))
+            }
             main.postDelayed(this, 250L)
         }
     }
 
     override fun open(request: OpenMessage) {
-        val http = OkHttpDataSource.Factory(httpClient).setDefaultRequestProperties(request.headers)
+        val origin = request.url.toHttpUrlOrNull()
+        val client = if (origin != null && request.headers.keys.any { it.equals("Authorization", true) }) {
+            httpClient.newBuilder().addNetworkInterceptor { chain ->
+                val next = chain.request()
+                val url = next.url
+                chain.proceed(
+                    if (url.scheme == origin.scheme && url.host == origin.host && url.port == origin.port) next
+                    else next.newBuilder().removeHeader("Authorization").build(),
+                )
+            }.build()
+        } else httpClient
+        val http = OkHttpDataSource.Factory(client).setDefaultRequestProperties(request.headers)
         val sources = DefaultMediaSourceFactory(DefaultDataSource.Factory(context, http))
         val renderers = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)
@@ -60,17 +84,24 @@ internal class Media3Engine(private val context: Context, private val output: Pl
         exo = player
         player.addListener(this)
         player.addAnalyticsListener(this)
+        player.setVideoFrameMetadataListener { _, _, _, _ -> freeze.frame(SystemClock.elapsedRealtime()) }
         player.setAudioAttributes(
             AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
             true,
         )
         player.setHandleAudioBecomingNoisy(true)
         surface?.let(player::setVideoSurface)
-        item = MediaItem.fromUri(request.url)
+        val mime = when (request.sourceKind) {
+            SourceKindMessage.HLS -> MimeTypes.APPLICATION_M3U8
+            SourceKindMessage.MP4 -> MimeTypes.VIDEO_MP4
+            else -> null
+        }
+        item = MediaItem.Builder().setUri(request.url).setMimeType(mime).build()
+        sourceTracks = request.tracks
         applyTrackSelection(player, Tracks.EMPTY)
         player.setMediaItem(checkNotNull(item), request.startMs)
         player.prepare()
-        player.play()
+        player.playWhenReady = request.autoplay
         main.post(ticker)
     }
 
@@ -112,6 +143,11 @@ internal class Media3Engine(private val context: Context, private val output: Pl
         applyTrackSelection(player, player.currentTracks)
     }
 
+    override fun setSourceTracks(tracks: SourceTracksMessage) {
+        sourceTracks = tracks
+        exo?.let { applyTrackSelection(it, it.currentTracks) }
+    }
+
     override fun setSubtitleUrl(url: String?) {
         val player = exo ?: return
         val source = item ?: return
@@ -146,6 +182,7 @@ internal class Media3Engine(private val context: Context, private val output: Pl
         val next = surfaces.video?.surface
         if (surface === next && !retiring) return
         surface = next
+        freeze.reset()
         exo?.setVideoSurface(next)
     }
 
@@ -160,6 +197,7 @@ internal class Media3Engine(private val context: Context, private val output: Pl
     }
 
     override fun onEvents(player: Player, events: Player.Events) {
+        if (frozen) return
         val error = player.playerError
         val state = StateMessage(
             phase = when {
@@ -171,6 +209,7 @@ internal class Media3Engine(private val context: Context, private val output: Pl
             },
             playing = player.isPlaying,
             message = error?.let { "Media3 playback failed (${it.errorCodeName})." },
+            serverUnavailable = error != null && serverUnavailable(error),
         )
         if (state != lastState) {
             lastState = state
@@ -208,16 +247,29 @@ internal class Media3Engine(private val context: Context, private val output: Pl
     private fun applyTrackSelection(player: ExoPlayer, tracks: Tracks) {
         val current = player.trackSelectionParameters
         val next = current.buildUpon()
-        if (audioPicked) {
+        val plan = sourceTracks
+        if (plan != null) {
+            val audio = tracksOf(tracks, C.TRACK_TYPE_AUDIO)
+            val selected = plan.audioIndex?.let { index ->
+                audio.firstOrNull { it.format.id == "${index + 1}" }
+                    ?: plan.audioOrdinal?.toInt()?.let(audio::getOrNull)
+            }
+            next.clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+            selected?.let { next.setOverrideForType(it.override()) }
+        } else if (audioPicked) {
             next.clearOverridesOfType(C.TRACK_TYPE_AUDIO).setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, audioId == null)
             tracksOf(tracks, C.TRACK_TYPE_AUDIO).firstOrNull { it.id == audioId }
-                ?.let { next.setOverrideForType(TrackSelectionOverride(it.group.mediaTrackGroup, it.index)) }
+                ?.let { next.setOverrideForType(it.override()) }
         }
-        next.clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT, subtitleId == null)
-        tracksOf(tracks, C.TRACK_TYPE_TEXT).firstOrNull { it.id == subtitleId }
-            ?.let { next.setOverrideForType(TrackSelectionOverride(it.group.mediaTrackGroup, it.index)) }
+        val text = tracksOf(tracks, C.TRACK_TYPE_TEXT)
+        val subtitle = if (plan != null) {
+            plan.subtitleIndex?.let { index -> text.firstOrNull { it.format.id == "${index + 1}" } }
+        } else text.firstOrNull { it.id == subtitleId }
+        next.clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT, subtitle == null)
+        subtitle?.let { next.setOverrideForType(it.override()) }
         val parameters = next.build()
         if (parameters != current) player.trackSelectionParameters = parameters
+        if (subtitle == null) output.setCues(emptyList())
     }
 
     private fun publishTimeline() {
@@ -245,8 +297,11 @@ internal class Media3Engine(private val context: Context, private val output: Pl
     }
 
     private data class Track(val id: String, val group: Tracks.Group, val index: Int) {
+        val format: Format get() = group.getTrackFormat(index)
+
+        fun override() = TrackSelectionOverride(group.mediaTrackGroup, index)
+
         fun message(): TrackMessage {
-            val format = group.getTrackFormat(index)
             return TrackMessage(
                 id = id,
                 language = format.language,
@@ -262,6 +317,16 @@ internal class Media3Engine(private val context: Context, private val output: Pl
     private companion object {
         const val SIDECAR_ID = "matinee-sidecar"
         val httpClient = OkHttpClient()
+
+        fun serverUnavailable(error: PlaybackException): Boolean = when (error.errorCode) {
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> true
+            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
+                generateSequence(error.cause) { it.cause }
+                    .filterIsInstance<HttpDataSource.InvalidResponseCodeException>()
+                    .firstOrNull()?.responseCode in listOf(502, 504)
+            else -> false
+        }
 
         fun tracksOf(tracks: Tracks, type: Int): List<Track> =
             tracks.groups.filter { it.type == type }.flatMapIndexed { groupIndex, group ->

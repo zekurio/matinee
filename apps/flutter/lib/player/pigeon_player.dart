@@ -32,6 +32,9 @@ class _PigeonPlayer implements Player {
     String url, {
     Map<String, String> headers = const {},
     Duration startPosition = Duration.zero,
+    PlayerSourceKind? kind,
+    SourceTracks? tracks,
+    bool autoplay = true,
   }) async {
     if (_disposed) throw StateError('Player has been disposed.');
     final previous = _session;
@@ -64,6 +67,14 @@ class _PigeonPlayer implements Player {
           },
           fit: _wireFit(_fit),
           viewport: _wireViewport(_viewport),
+          sourceKind: switch (kind) {
+            PlayerSourceKind.file => wire.SourceKindMessage.file,
+            PlayerSourceKind.mp4 => wire.SourceKindMessage.mp4,
+            PlayerSourceKind.hls => wire.SourceKindMessage.hls,
+            null => null,
+          },
+          tracks: tracks == null ? null : _wireTracks(tracks),
+          autoplay: autoplay,
         ),
       );
     } on PlatformException catch (failure) {
@@ -103,6 +114,10 @@ class _PigeonPlayer implements Player {
   @override
   Future<void> selectSubtitleTrack(String? id) =>
       _command((session) => _api.selectSubtitleTrack(session, id));
+
+  @override
+  Future<void> setSourceTracks(SourceTracks tracks) =>
+      _command((session) => _api.setSourceTracks(session, _wireTracks(tracks)));
 
   @override
   Future<void> setSubtitleUrl(String? url) =>
@@ -156,6 +171,15 @@ class _PigeonPlayer implements Player {
   static void _unregister(int session) {
     wire.PlayerEventsApi.setUp(null, messageChannelSuffix: '$session');
   }
+
+  static wire.SourceTracksMessage _wireTracks(SourceTracks tracks) =>
+      wire.SourceTracksMessage(
+        audioIndex: tracks.audioIndex,
+        audioOrdinal: tracks.audioOrdinal,
+        subtitleIndex: tracks.subtitleIndex,
+        subtitleUrl: tracks.subtitleUrl,
+        subtitleOffset: tracks.subtitleOffset,
+      );
 
   static wire.FitMessage _wireFit(VideoFit fit) => switch (fit) {
     VideoFit.contain => wire.FitMessage.contain,

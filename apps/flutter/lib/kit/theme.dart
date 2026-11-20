@@ -14,6 +14,9 @@ class MatineeTheme extends ThemeExtension<MatineeTheme> {
         (theme.brightness == Brightness.dark ? matineeDark : matineeLight);
   }
 
+  static Widget wrap(KitColors colors, Widget child) =>
+      Theme(data: data(colors), child: child);
+
   static ThemeData data(KitColors colors) {
     final brightness = colors.isDark ? Brightness.dark : Brightness.light;
     final base = ThemeData(

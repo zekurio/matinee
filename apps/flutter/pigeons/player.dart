@@ -16,6 +16,59 @@ enum FitMessage { contain, cover, fill }
 
 enum PhaseMessage { idle, buffering, ready, ended, error }
 
+enum SourceKindMessage { file, mp4, hls }
+
+class FrameSizeMessage {
+  FrameSizeMessage({required this.width, required this.height});
+
+  final int width;
+  final int height;
+}
+
+class VideoDecoderMessage {
+  VideoDecoderMessage({
+    required this.codec,
+    this.widest,
+    this.tallest,
+    required this.tenBit,
+  });
+
+  final String codec;
+  final FrameSizeMessage? widest;
+  final FrameSizeMessage? tallest;
+  final bool tenBit;
+}
+
+class CodecCapabilitiesMessage {
+  CodecCapabilitiesMessage({
+    required this.video,
+    required this.audio,
+    required this.dolbyVision,
+  });
+
+  final List<VideoDecoderMessage> video;
+  final List<String> audio;
+  final bool dolbyVision;
+}
+
+/// Track identifiers on the server's plan. An engine resolves them against
+/// the demuxer for the current source.
+class SourceTracksMessage {
+  SourceTracksMessage({
+    this.audioIndex,
+    this.audioOrdinal,
+    this.subtitleIndex,
+    this.subtitleUrl,
+    required this.subtitleOffset,
+  });
+
+  final int? audioIndex;
+  final int? audioOrdinal;
+  final int? subtitleIndex;
+  final String? subtitleUrl;
+  final double subtitleOffset;
+}
+
 /// The video widget's bounds in physical pixels relative to the Flutter view.
 class ViewportMessage {
   ViewportMessage({
@@ -39,6 +92,9 @@ class OpenMessage {
     required this.engine,
     required this.fit,
     this.viewport,
+    this.sourceKind,
+    this.tracks,
+    this.autoplay = true,
   });
 
   final String url;
@@ -47,16 +103,25 @@ class OpenMessage {
   final EngineMessage engine;
   final FitMessage fit;
   final ViewportMessage? viewport;
+  final SourceKindMessage? sourceKind;
+  final SourceTracksMessage? tracks;
+  final bool autoplay;
 }
 
 sealed class PlaybackEventMessage {}
 
 class StateMessage extends PlaybackEventMessage {
-  StateMessage({required this.phase, required this.playing, this.message});
+  StateMessage({
+    required this.phase,
+    required this.playing,
+    this.message,
+    this.serverUnavailable = false,
+  });
 
   final PhaseMessage phase;
   final bool playing;
   final String? message;
+  final bool serverUnavailable;
 }
 
 class TimelineMessage extends PlaybackEventMessage {
@@ -112,6 +177,8 @@ class ActiveEngineMessage extends PlaybackEventMessage {
 /// channel suffix, so a previous route or source cannot control the new one.
 @HostApi()
 abstract class PlayerApi {
+  CodecCapabilitiesMessage codecs();
+  void setFullscreen(int owner, bool enabled);
   void open(int session, OpenMessage request);
   void play(int session);
   void pause(int session);
@@ -121,6 +188,7 @@ abstract class PlayerApi {
   /// Null turns the track type off.
   void selectAudioTrack(int session, String? id);
   void selectSubtitleTrack(int session, String? id);
+  void setSourceTracks(int session, SourceTracksMessage tracks);
 
   /// A new URL selects that sidecar. Null removes any attached sidecar.
   void setSubtitleUrl(int session, String? url);

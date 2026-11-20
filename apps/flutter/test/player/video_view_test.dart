@@ -22,6 +22,9 @@ class _FakePlayer implements Player {
     String url, {
     Map<String, String> headers = const {},
     Duration startPosition = Duration.zero,
+    PlayerSourceKind? kind,
+    SourceTracks? tracks,
+    bool autoplay = true,
   }) async {}
 
   @override
@@ -41,6 +44,9 @@ class _FakePlayer implements Player {
 
   @override
   Future<void> selectSubtitleTrack(String? id) async {}
+
+  @override
+  Future<void> setSourceTracks(SourceTracks tracks) async {}
 
   @override
   Future<void> setSubtitleUrl(String? url) async {}

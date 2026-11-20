@@ -37,6 +37,7 @@ class PlaybackState {
     this.tracks = (audio: const [], subtitles: const []),
     this.video,
     this.engine,
+    this.serverUnavailable = false,
   });
 
   final PlaybackStatus status;
@@ -46,6 +47,7 @@ class PlaybackState {
 
   /// The engine the native side is using, once it says so.
   final PlayerEngine? engine;
+  final bool serverUnavailable;
 
   PlaybackPhase get phase => status.phase;
 
@@ -59,12 +61,14 @@ class PlaybackState {
     PlaybackTracks? tracks,
     VideoInfo? video,
     PlayerEngine? engine,
+    bool? serverUnavailable,
   }) => PlaybackState(
     status: status ?? this.status,
     timeline: timeline ?? this.timeline,
     tracks: tracks ?? this.tracks,
     video: video ?? this.video,
     engine: engine ?? this.engine,
+    serverUnavailable: serverUnavailable ?? this.serverUnavailable,
   );
 }
 

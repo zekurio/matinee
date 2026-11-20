@@ -16,7 +16,7 @@ sealed class PlayerEvent {
           },
           playing: message.playing,
           message: message.message,
-        )),
+        ), serverUnavailable: message.serverUnavailable),
         wire.TimelineMessage() => TimelineChanged((
           position: Duration(milliseconds: message.positionMs),
           duration: _duration(message.durationMs),
@@ -39,9 +39,10 @@ sealed class PlayerEvent {
 }
 
 class StatusChanged extends PlayerEvent {
-  const StatusChanged(this.status);
+  const StatusChanged(this.status, {this.serverUnavailable = false});
 
   final PlaybackStatus status;
+  final bool serverUnavailable;
 }
 
 class TimelineChanged extends PlayerEvent {
@@ -74,7 +75,8 @@ PlaybackState reducePlayback(PlaybackState current, PlayerEvent event) =>
     switch (event) {
       StatusChanged(:final status) when status.phase == PlaybackPhase.idle =>
         PlaybackState(status: status),
-      StatusChanged(:final status) => current.copyWith(status: status),
+      StatusChanged(:final status, :final serverUnavailable) =>
+        current.copyWith(status: status, serverUnavailable: serverUnavailable),
       TimelineChanged(:final timeline) => current.copyWith(timeline: timeline),
       TracksChanged(:final tracks) => current.copyWith(tracks: tracks),
       VideoChanged(:final video) => current.copyWith(video: video),

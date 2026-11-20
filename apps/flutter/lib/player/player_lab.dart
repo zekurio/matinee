@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../kit/kit.dart';
+import '../l10n/app_localizations.dart';
+import '../router.dart';
 
 import 'player.dart';
+import 'player_preferences.dart';
 import 'player_providers.dart';
 import 'video_view.dart';
 
@@ -28,15 +31,16 @@ class PlayerLab extends ConsumerStatefulWidget {
 }
 
 class _PlayerLabState extends ConsumerState<PlayerLab> {
-  PlayerEngine _engine = PlayerEngine.mpv;
   VideoFit _fit = VideoFit.contain;
   double _rate = 1;
   final TextEditingController _subtitleUrl = TextEditingController();
+  final TextEditingController _itemId = TextEditingController();
   String? _commandError;
 
   @override
   void dispose() {
     _subtitleUrl.dispose();
+    _itemId.dispose();
     super.dispose();
   }
 
@@ -51,21 +55,24 @@ class _PlayerLabState extends ConsumerState<PlayerLab> {
     }
   }
 
-  void _chooseEngine(PlayerEngine? engine) {
-    if (engine == null || engine == _engine) return;
-    setState(() {
-      _engine = engine;
-      _rate = 1;
-      _commandError = null;
-    });
-    // The other player takes over when its source opens. Its fit is set now
-    // so that the first picture already has it.
-    unawaited(_run(() => ref.read(playerProvider(engine)).setVideoFit(_fit)));
+  Future<void> _chooseEngine(PlayerEngine engine) async {
+    await ref.read(playerEngineProvider.notifier).setEngine(engine);
+    if (!mounted) return;
+    setState(() => _rate = 1);
+    await ref.read(playerProvider(engine)).setVideoFit(_fit);
+  }
+
+  Future<void> _playItem(Player player, String id) async {
+    final itemId = id.trim();
+    if (itemId.isEmpty) return;
+    await player.pause();
+    if (mounted) unawaited(context.push<void>(Routes.play(itemId)));
   }
 
   @override
   Widget build(BuildContext context) {
-    final player = ref.watch(playerProvider(_engine));
+    final engine = ref.watch(playerEngineProvider).value ?? PlayerEngine.mpv;
+    final player = ref.watch(playerProvider(engine));
     final state =
         ref.watch(playbackStateProvider(player)).value ?? player.state;
     final colors = MatineeTheme.of(context);
@@ -78,7 +85,7 @@ class _PlayerLabState extends ConsumerState<PlayerLab> {
               color: colors.surface,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(12),
-                child: _controls(player, state),
+                child: _controls(player, state, engine),
               ),
             ),
           ),
@@ -87,7 +94,8 @@ class _PlayerLabState extends ConsumerState<PlayerLab> {
     );
   }
 
-  Widget _controls(Player player, PlaybackState state) {
+  Widget _controls(Player player, PlaybackState state, PlayerEngine engine) {
+    final l = AppLocalizations.of(context);
     final (:phase, :playing, :message) = state.status;
     final (:position, :duration, :buffered) = state.timeline;
     final video = state.video;
@@ -104,13 +112,31 @@ class _PlayerLabState extends ConsumerState<PlayerLab> {
           _button('Play MKV', () => _run(() => player.open(_mkv))),
         ]),
         _choices('Engine', [
-          for (final engine in PlayerEngine.values)
+          for (final choice in PlayerEngine.values)
             ChoiceChip(
-              label: engine.name,
-              selected: engine == _engine,
-              onPressed: () => _chooseEngine(engine),
+              label: choice.name,
+              selected: choice == engine,
+              onPressed: () => unawaited(_run(() => _chooseEngine(choice))),
             ),
         ]),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          spacing: 8,
+          children: [
+            Expanded(
+              child: MatineeTextField(
+                controller: _itemId,
+                label: l.playerLabItemId,
+                onSubmitted: (id) =>
+                    unawaited(_run(() => _playItem(player, id))),
+              ),
+            ),
+            _button(
+              l.playerPlay,
+              () => _run(() => _playItem(player, _itemId.text)),
+            ),
+          ],
+        ),
         _row([
           _button(
             playing ? 'Pause' : 'Play',

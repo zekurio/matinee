@@ -65,9 +65,11 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
     private var started = false
     private var ended = false
     private var error: String? = null
+    private var serverUnavailable = false
     private var wantPause = true
     private var seekOnLoad: Long? = null
     private var sidecarUrl: String? = null
+    private var sourceTracks: SourceTracksMessage? = null
     private var fit = FitMessage.CONTAIN
     private var software = false
     private var lastRect: String? = null
@@ -87,10 +89,12 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
             app, noisy, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         noisyRegistered = true
-        val autoplay = requestFocus()
+        val autoplay = request.autoplay && requestFocus()
         enqueue("initialize", fatal = true) {
             wantPause = !autoplay
             fit = request.fit
+            sourceTracks = request.tracks
+            sidecarUrl = request.tracks?.subtitleUrl
             val certificates = systemCertificates()
             placeholder = MpvPlaceholderSurface.create()
             val mpv = MpvPlayer.create(app, listener) {
@@ -100,6 +104,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
                 // Tracks only as picked. Subtitles start off and nothing is found next to the file.
                 setOption("sid", "no")
                 setOption("sub-auto", "no")
+                setOption("sub-delay", (-(request.tracks?.subtitleOffset ?: 0.0)).toString())
                 setOption("sub-scale-with-window", "yes")
                 // Pause on the last frame at the end rather than unloading the file, so a seek still works.
                 setOption("keep-open", "yes")
@@ -123,6 +128,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
                 }
             }
             player = mpv
+            mpv.setLogLevel("error")
             mpv.observeProperty("track-list", PropertyFormat.String)
             mpv.observeProperty("vo-format-rejected", PropertyFormat.Flag)
             pendingUrl = request.url
@@ -194,8 +200,19 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
         enqueue("select subtitles") { player?.setProperty("sid", selector) }
     }
 
+    override fun setSourceTracks(tracks: SourceTracksMessage) = enqueue("set source tracks") {
+        sourceTracks = tracks
+        player?.setProperty("sub-delay", -tracks.subtitleOffset)
+        changeSidecar(tracks.subtitleUrl)
+        player?.getString("track-list")?.let(::publishTracks)
+    }
+
     override fun setSubtitleUrl(url: String?) = enqueue("set external subtitles") {
-        val mpv = player ?: return@enqueue
+        changeSidecar(url)
+    }
+
+    private fun changeSidecar(url: String?) {
+        val mpv = player ?: return
         if (loaded) {
             val previous = sidecarId(mpv)
             if (url != sidecarUrl) {
@@ -266,20 +283,36 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
                     loaded = false
                     started = false
                     ended = false
+                    serverUnavailable = false
                 }
                 is MpvEvent.FileLoaded -> {
                     loaded = true
                     seekOnLoad?.let(::seek)
                     seekOnLoad = null
                     sidecarUrl?.let { player?.command("sub-add", it, "select") }
+                    player?.getString("track-list")?.let(::publishTracks)
                 }
-                is MpvEvent.PlaybackRestart -> started = true
+                is MpvEvent.PlaybackRestart -> {
+                    started = true
+                    serverUnavailable = false
+                }
                 is MpvEvent.EndFile -> when (event.reason) {
-                    EndFileReason.Error -> fail(event.errorMessage ?: "mpv could not play this source.")
+                    EndFileReason.Error -> fail(event.errorMessage ?: "mpv could not play this source.", serverUnavailable)
                     EndFileReason.Eof -> ended = true
                     else -> Unit
                 }
-                is MpvEvent.LogMessage -> Unit
+                is MpvEvent.LogMessage -> {
+                    // libmpv exposes a generic error on EndFile. The HTTP error or
+                    // connection failure that led to it comes from FFmpeg's log.
+                    if (event.prefix.startsWith("ffmpeg")) {
+                        val status = HTTP_ERROR.find(event.text)?.groupValues?.get(1)
+                        if (status != null) {
+                            serverUnavailable = status == "502" || status == "504"
+                        } else if (CONNECTION_ERROR.containsMatchIn(event.text)) {
+                            serverUnavailable = true
+                        }
+                    }
+                }
             }
             publishPlayback()
         }
@@ -369,7 +402,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
             !started || mpv.getFlag("seeking") == true || mpv.getFlag("paused-for-cache") == true -> PhaseMessage.BUFFERING
             else -> PhaseMessage.READY
         }
-        publish(StateMessage(phase, phase == PhaseMessage.READY && mpv.getFlag("pause") == false))
+        publish(StateMessage(phase, phase == PhaseMessage.READY && mpv.getFlag("pause") == false, serverUnavailable = false))
         if (!loaded) return
         publish(
             TimelineMessage(
@@ -391,6 +424,24 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
 
     private fun publishTracks(json: String) {
         val (audio, subtitles) = trackList(json).partition { it.optString("type") == "audio" }
+        val plan = sourceTracks
+        if (loaded && plan != null) {
+            val mpv = player ?: return
+            val sound = plan.audioIndex?.let { index ->
+                audio.firstOrNull { !it.optBoolean("external") && it.optLong("ff-index", -1) == index }
+            }
+            if (sound != null && !sound.optBoolean("selected")) mpv.setProperty("aid", sound.getString("id"))
+            if (plan.subtitleUrl == null) {
+                val subtitle = plan.subtitleIndex?.let { index ->
+                    subtitles.firstOrNull { !it.optBoolean("external") && it.optLong("ff-index", -1) == index }
+                }
+                if (subtitle != null && !subtitle.optBoolean("selected")) {
+                    mpv.setProperty("sid", subtitle.getString("id"))
+                } else if (subtitle == null && subtitles.any { it.optBoolean("selected") }) {
+                    mpv.setProperty("sid", "no")
+                }
+            }
+        }
         publish(TracksMessage(audio.map(::trackMessage), subtitles.map(::trackMessage)))
     }
 
@@ -462,11 +513,11 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
         }
     }
 
-    private fun fail(message: String) {
+    private fun fail(message: String, unreachable: Boolean = false) {
         if (error != null) return
         error = message
         runCatching { player?.setProperty("pause", true) }
-        publish(StateMessage(PhaseMessage.ERROR, playing = false, message = message))
+        publish(StateMessage(PhaseMessage.ERROR, playing = false, message = message, serverUnavailable = unreachable))
     }
 
     private fun systemCertificates(): File {
@@ -492,6 +543,11 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
 
     private companion object {
         const val TAG = "MatineeMpv"
+        val HTTP_ERROR = Regex("""\bHTTP error (\d{3})\b""")
+        val CONNECTION_ERROR = Regex(
+            "Connection refused|Connection timed out|Network is unreachable|No route to host|Failed to resolve hostname",
+            RegexOption.IGNORE_CASE,
+        )
         val SYSTEM_FONTS = File("/system/fonts")
 
         // mpv's bundled Lua scripts. None answers anything Matinee sends mpv.

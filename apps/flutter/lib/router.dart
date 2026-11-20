@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'core/device.dart';
 import 'core/session.dart';
+import 'player/playback_screen.dart';
 import 'player/player_lab.dart';
 import 'screens/pending.dart';
 import 'screens/shell/shell.dart';
@@ -65,6 +66,7 @@ abstract final class Routes {
   ).toString();
 
   static String title(String id) => '/title/$id';
+  static String play(String id) => '/play/${Uri.encodeComponent(id)}';
   static String season(String titleId, int season) =>
       '/title/$titleId/season/$season';
   static String episode(String itemId) => '/episode/$itemId';
@@ -217,6 +219,21 @@ List<RouteBase> _handsetRoutes() => [
     ],
   ),
   for (final (path, name) in _pages) _pending(path, name, root: true),
+  if (defaultTargetPlatform == TargetPlatform.android)
+    GoRoute(
+      path: '/play/:id',
+      parentNavigatorKey: _rootKey,
+      pageBuilder: (context, state) => NoTransitionPage<void>(
+        key: state.pageKey,
+        child: PlaybackScreen(
+          itemId: state.pathParameters['id']!,
+          startAt: switch (state.extra) {
+            final double value => value,
+            _ => null,
+          },
+        ),
+      ),
+    ),
   if (_hasPlayerLab)
     GoRoute(
       path: Routes.playerLab,
