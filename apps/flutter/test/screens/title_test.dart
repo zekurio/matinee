@@ -14,6 +14,7 @@ import 'package:matinee/screens/title/title_screen.dart';
 import '../media/fixtures.dart';
 import '../media/harness.dart';
 import 'home_backend.dart';
+import 'requests_backend.dart' as catalog show seasonJson;
 import 'title_backend.dart';
 
 Finder _page() => find
@@ -406,6 +407,33 @@ void main() {
     await tester.tap(find.text('Static'));
     await tester.pumpAndSettle();
     expect(find.text('/episode/e23'), findsOneWidget);
+  });
+
+  testWidgets("a season the server lacks doesn't pass for one it has", (
+    tester,
+  ) async {
+    final backend = _show();
+    (backend.gaps! as JsonMap)['seasons'] = [catalog.seasonJson(3)];
+    await pumpScreen(
+      tester,
+      const SeasonScreen(titleId: 's1', season: 2),
+      client: backend.client,
+    );
+    await _scrollTo(tester, find.text('More seasons'));
+    await _scrollTo(tester, find.bySemanticsLabel(RegExp('^Season 3, ')));
+    // It says it isn't here, and sits dimmed in a dashed frame where the
+    // library's seasons have their hairline.
+    expect(
+      find.bySemanticsLabel('Season 3, Not here yet, 10 episodes'),
+      findsOneWidget,
+    );
+    final frames = tester.widgetList<ArtFrame>(find.byType(ArtFrame));
+    expect(frames.where((frame) => frame.dashed), hasLength(1));
+    expect(frames.where((frame) => !frame.dashed), isNotEmpty);
+    // A tap still asks for it, through the request sheet.
+    await tester.tap(find.bySemanticsLabel(RegExp('^Season 3, ')));
+    await tester.pumpAndSettle();
+    expect(find.text('New seasons as they air'), findsOneWidget);
   });
 
   testWidgets("a season's Play resumes its episode in progress", (

@@ -500,6 +500,7 @@ class CatalogSeasonCard extends StatelessWidget {
       detail: seasonLineText(season, l),
       art: poster == null ? null : Picture([ArtSource(poster)]),
       badge: CatalogBadge(availability: availability),
+      absentLabel: l.webCatalogNotHere,
       onPressed: requests ? onRequest : null,
     );
   }

@@ -27,23 +27,48 @@ abstract final class CardMetrics {
 }
 
 /// The 2:3 or 16:9 frame art sits in: on its title's tone, rounded, with a
-/// hairline over the edge. [children] stack in it, filling it, over the
-/// tone; the art goes first, its marks after.
+/// hairline over the edge, or a [dashed] one for something that isn't
+/// here. [children] stack in it, filling it, over the tone; the art goes
+/// first, its marks after.
 class ArtFrame extends StatelessWidget {
   const ArtFrame({
     super.key,
     required this.toneKey,
     required this.aspectRatio,
+    this.dashed = false,
     this.children = const [],
   });
 
   final String toneKey;
   final double aspectRatio;
+  final bool dashed;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
+    final clipped = ClipRRect(
+      borderRadius: CardMetrics.radius,
+      child: Tone(
+        toneKey: toneKey,
+        child: Stack(
+          fit: StackFit.expand,
+          alignment: Alignment.center,
+          children: children,
+        ),
+      ),
+    );
+    if (dashed) {
+      return AspectRatio(
+        aspectRatio: aspectRatio,
+        child: CustomPaint(
+          foregroundPainter: DashedOutline(
+            colors.foreground.withValues(alpha: .45),
+          ),
+          child: clipped,
+        ),
+      );
+    }
     return AspectRatio(
       aspectRatio: aspectRatio,
       child: DecoratedBox(
@@ -66,6 +91,37 @@ class ArtFrame extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A card's rounded edge drawn dashed, for the place of something that
+/// isn't here: the rest of a season, a season the server lacks.
+class DashedOutline extends CustomPainter {
+  const DashedOutline(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final outline = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          (Offset.zero & size).deflate(.5),
+          const Radius.circular(KitRadius.sm),
+        ),
+      );
+    for (final metric in outline.computeMetrics()) {
+      for (var at = 0.0; at < metric.length; at += 10) {
+        canvas.drawPath(metric.extractPath(at, at + 6), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(DashedOutline old) => old.color != color;
 }
 
 /// The round check on something watched, in the accent.
@@ -260,10 +316,16 @@ class PosterCard extends StatelessWidget {
     this.onPressed,
     this.onLongPress,
     this.longPressLabel,
+    this.absentLabel,
   });
 
   final String name;
   final String? detail;
+
+  /// Set for something the server doesn't have, as a season under "More
+  /// seasons": what a screen reader says for it, "Not here yet". The art
+  /// dims inside a dashed frame, so it doesn't pass for the library's.
+  final String? absentLabel;
 
   /// A [Lucide] icon before [detail], and what a screen reader says for
   /// the two in place of [detail], as [CardDetail] has them.
@@ -301,7 +363,7 @@ class PosterCard extends StatelessWidget {
       longPressLabel: longPressLabel,
       shape: CardMetrics.radius,
       showFocusRing: false,
-      label: [name, ?(detailLabel ?? detail)].join(', '),
+      label: [name, ?absentLabel, ?(detailLabel ?? detail)].join(', '),
       builder: (context, state) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -311,6 +373,7 @@ class PosterCard extends StatelessWidget {
             child: ArtFrame(
               toneKey: toneKey ?? name,
               aspectRatio: CardMetrics.poster,
+              dashed: absentLabel != null,
               children: [
                 ExcludeSemantics(
                   child: Center(
@@ -329,7 +392,8 @@ class PosterCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                ?art,
+                if (art != null)
+                  absentLabel == null ? art : Opacity(opacity: .35, child: art),
                 if (mark != null)
                   PositionedDirectional(top: 6, end: 6, child: mark),
                 _PressWash(state),

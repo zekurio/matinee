@@ -117,7 +117,7 @@ class RestOfSeasonCard extends ConsumerWidget {
         AspectRatio(
           aspectRatio: CardMetrics.wide,
           child: CustomPaint(
-            painter: _DashedFrame(colors.foreground.withValues(alpha: .2)),
+            painter: DashedOutline(colors.foreground.withValues(alpha: .2)),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: CardMetrics.radius,
@@ -176,35 +176,4 @@ class RestOfSeasonCard extends ConsumerWidget {
       ],
     );
   }
-}
-
-/// The edge of the empty frame where the missing episodes' stills would
-/// be: dashed, so it reads as the gap it is.
-class _DashedFrame extends CustomPainter {
-  const _DashedFrame(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final outline = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          (Offset.zero & size).deflate(.5),
-          const Radius.circular(KitRadius.sm),
-        ),
-      );
-    for (final metric in outline.computeMetrics()) {
-      for (var at = 0.0; at < metric.length; at += 10) {
-        canvas.drawPath(metric.extractPath(at, at + 6), paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedFrame old) => old.color != color;
 }
