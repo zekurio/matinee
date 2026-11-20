@@ -198,6 +198,31 @@ void main() {
     expect(scanner.settingsOpened, 1);
   });
 
+  testWidgets(
+    "after a no to the camera, Enter another code doesn't ask again",
+    (tester) async {
+      final scanner = await _pump(
+        tester,
+        _backend()..failing[_device] = 'Down for upkeep',
+        scanner: FakeScanner(allowed: false, grants: false),
+      );
+      expect(scanner.requests, 1);
+      await tester.enterText(find.byType(EditableText), _code);
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.text("Couldn't look up that code"), findsOneWidget);
+      await tester.tap(find.text('Enter another code'));
+      await tester.pumpAndSettle();
+      expect(scanner.requests, 1);
+      // The Allow button still asks.
+      expect(find.text('Allow camera'), findsOneWidget);
+      await tester.tap(find.text('Allow camera'));
+      await tester.pumpAndSettle();
+      expect(scanner.requests, 2);
+    },
+  );
+
   testWidgets("a camera that won't start says so", (tester) async {
     await _pump(tester, _backend(), scanner: FakeScanner()..startFails = true);
     expect(find.text("Couldn't start the camera."), findsOneWidget);

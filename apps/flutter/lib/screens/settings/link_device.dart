@@ -32,6 +32,10 @@ class _LinkDeviceScreenState extends State<LinkDeviceScreen> {
   ScannedCode? _code;
   var _typed = false;
 
+  /// The person said no to the camera on this visit, so coming back to the
+  /// scan step doesn't ask again; its Allow button still does.
+  var _refused = false;
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -55,6 +59,8 @@ class _LinkDeviceScreenState extends State<LinkDeviceScreen> {
               children: [
                 if (code == null)
                   _ScanStep(
+                    ask: !_refused,
+                    onRefused: () => _refused = true,
                     onCode: (scanned, {required typed}) => setState(() {
                       _code = scanned;
                       _typed = typed;
@@ -81,9 +87,15 @@ typedef _OnCode = void Function(ScannedCode code, {required bool typed});
 
 /// The camera, where the device has one, and the field for typing the code.
 class _ScanStep extends ConsumerWidget {
-  const _ScanStep({required this.onCode});
+  const _ScanStep({
+    required this.onCode,
+    required this.ask,
+    required this.onRefused,
+  });
 
   final _OnCode onCode;
+  final bool ask;
+  final VoidCallback onRefused;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -97,6 +109,8 @@ class _ScanStep extends ConsumerWidget {
           // A new picture for a new orientation, so it stands upright.
           CameraScanner(
             key: ValueKey(MediaQuery.orientationOf(context)),
+            ask: ask,
+            onRefused: onRefused,
             onCode: (code) => onCode(code, typed: false),
           ),
           const SizedBox(height: 32),
@@ -182,9 +196,21 @@ const _viewfinderShape = BorderRadius.all(Radius.circular(16));
 /// A square of the camera's picture, once the person allows it, with what
 /// it found under it.
 class CameraScanner extends ConsumerStatefulWidget {
-  const CameraScanner({super.key, required this.onCode});
+  const CameraScanner({
+    super.key,
+    required this.onCode,
+    this.ask = true,
+    this.onRefused,
+  });
 
   final ValueChanged<ScannedCode> onCode;
+
+  /// Whether to ask for the camera on opening. False once the person said
+  /// no, when only the Allow button asks.
+  final bool ask;
+
+  /// The person said no to the camera.
+  final VoidCallback? onRefused;
 
   @override
   ConsumerState<CameraScanner> createState() => _CameraScannerState();
@@ -222,7 +248,7 @@ class _CameraScannerState extends ConsumerState<CameraScanner> {
   }
 
   Future<void> _first() async {
-    final allowed = await _allowedNow() || await _request();
+    final allowed = await _allowedNow() || (widget.ask && await _request());
     if (mounted) setState(() => _allowed = allowed);
   }
 
@@ -247,7 +273,9 @@ class _CameraScannerState extends ConsumerState<CameraScanner> {
       return false;
     }
     _blocked = answer == CameraAnswer.blocked;
-    return answer == CameraAnswer.allowed;
+    final allowed = answer == CameraAnswer.allowed;
+    if (!allowed) widget.onRefused?.call();
+    return allowed;
   }
 
   /// Asks again while Android still shows the prompt, and otherwise opens
