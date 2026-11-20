@@ -62,11 +62,14 @@ PlaybackDevice playbackDevice(
         'ac3',
         'eac3',
       ])
-        if (mpv || audio.contains(codec)) codec,
+        if (codec == 'aac' || mpv || audio.contains(codec)) codec,
     ],
     encodeVideo: [
       for (final codec in TranscodeVideoCodec.all)
-        if (mpv || video.any((decoder) => decoder.codec == codec)) codec,
+        if (codec == TranscodeVideoCodec.h264 ||
+            mpv ||
+            video.any((decoder) => decoder.codec == codec))
+          codec,
     ],
     hls: true,
     selectAudio: true,

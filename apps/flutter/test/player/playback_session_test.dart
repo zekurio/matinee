@@ -434,7 +434,10 @@ void main() {
     expect(media3.video.first.maxBitDepth, 10);
     expect(media3.video.first.dolbyVisionProfiles, isNot(contains(5)));
     expect(media3.audio, ['aac', 'pcm_*']);
-    expect(media3.encodeVideo, ['hevc']);
+    expect(media3.encodeVideo, ['h264', 'hevc']);
+    expect(playbackDevice(PlayerEngine.media3, null, 'en').streamAudio, [
+      'aac',
+    ]);
     expect(media3.sidecarSubtitles, isEmpty);
     final mpv = playbackDevice(PlayerEngine.mpv, codecs, 'en');
     expect(mpv.audio, ['*']);
