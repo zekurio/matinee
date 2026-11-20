@@ -142,8 +142,11 @@ class CardText extends StatelessWidget {
   static double height(TextScaler scaler) =>
       8 + _line(scaler, KitText.sm) + _line(scaler, KitText.px13) + 1;
 
+  /// A line's height, rounded up to the whole pixel the text lays out in:
+  /// at a text size like 130%, a 16 tall line is 20.8, and two of them
+  /// would run past a box sized for exactly that.
   static double _line(TextScaler scaler, KitText text) =>
-      scaler.scale(text.size) * text.lineHeight / text.size;
+      (scaler.scale(text.size) * text.lineHeight / text.size).ceilToDouble();
 
   @override
   Widget build(BuildContext context) {

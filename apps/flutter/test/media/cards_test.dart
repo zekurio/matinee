@@ -99,6 +99,38 @@ void main() {
     expect(find.text('/episode/e1'), findsOneWidget);
   });
 
+  testWidgets(
+    'a person card fits the height a rail gives it at any text size',
+    (tester) async {
+      for (final scale in [1.0, 1.15, 1.3, 1.5, 2.0]) {
+        final textScaler = TextScaler.linear(scale);
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: MediaQuery(
+              data: MediaQueryData(textScaler: textScaler),
+              child: MatineeTheme.wrap(
+                matineeDark,
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: 100,
+                    height: PersonCard.height(100, textScaler),
+                    child: const PersonCard(
+                      name: 'Bradford Youngblood Junior the Third',
+                      role: 'Director of Photography and Second Unit',
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull, reason: 'at $scale');
+      }
+    },
+  );
+
   testWidgets('a picture tries the next source when one fails', (tester) async {
     final asked = <Uri>[];
     final item = MediaItem.fromJson(
