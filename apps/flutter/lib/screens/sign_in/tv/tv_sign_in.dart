@@ -201,8 +201,13 @@ class TvUnreachableScreen extends ConsumerWidget {
     final words = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final noNetwork = auth.reason == Unreachability.noNetwork;
+    final unreadable = auth.reason == Unreachability.unreadableSession;
     return TvAuthFrame(
-      title: noNetwork ? words.unreachableOfflineTitle : words.unreachableTitle,
+      title: noNetwork
+          ? words.unreachableOfflineTitle
+          : unreadable
+          ? words.unreachableSessionTitle
+          : words.unreachableTitle,
       description: unreachableMessage(
         words,
         auth.reason,
@@ -234,6 +239,14 @@ class TvUnreachableScreen extends ConsumerWidget {
               ? null
               : () => ref.read(sessionProvider.notifier).retry(),
         ),
+        if (unreadable) ...[
+          const SizedBox(height: 10),
+          TvListItem(
+            title: words.unreachableSignInAgain,
+            icon: Lucide.logIn,
+            onPressed: ref.read(sessionProvider.notifier).signInAgain,
+          ),
+        ],
         const SizedBox(height: 10),
         TvListItem(
           title: words.connectChangeServer,

@@ -18,9 +18,16 @@ abstract interface class SecretStore {
   Future<void> delete(String key);
 }
 
-/// [SecretStore] over flutter_secure_storage.
+/// [SecretStore] over flutter_secure_storage. A read that fails throws and
+/// deletes nothing: the plugin's `resetOnError`, on by default, wipes every
+/// secret the app keeps when one can't be decrypted, as after a keystore
+/// hiccup on a restored snapshot, which signed the person out for good.
 final class PlatformSecretStore implements SecretStore {
-  const PlatformSecretStore([this._storage = const FlutterSecureStorage()]);
+  const PlatformSecretStore([
+    this._storage = const FlutterSecureStorage(
+      aOptions: AndroidOptions(resetOnError: false),
+    ),
+  ]);
 
   final FlutterSecureStorage _storage;
 
@@ -130,23 +137,26 @@ final class SessionStore {
     this._active,
     this._lastServer,
     this._offline,
+    this._unreadable,
   );
 
-  /// Reads everything the app saved. A token the keystore can't give back,
-  /// as after its key was reset, reads as signed out; it stays saved until
-  /// a sign-in replaces it.
+  /// Reads everything the app saved. A token the keystore can't give back
+  /// is [unreadable]: not a token, and not signed out either. It stays
+  /// saved, for the next start to read again, until a sign-in replaces it
+  /// or the person signs out.
   static Future<SessionStore> open(
     Preferences prefs,
     SecretStore secrets,
   ) async {
     final servers = _decode(prefs.getString(_serversKey));
     final tokens = <String, String>{};
+    final unreadable = <String>{};
     for (final server in servers) {
       try {
         final token = await secrets.read(_tokenKey(server.origin));
         if (token != null) tokens[server.origin] = token;
       } on Object {
-        // Unreadable, not wrong: leave it for a sign-in to replace.
+        unreadable.add(server.origin);
       }
     }
     return SessionStore._(
@@ -157,6 +167,7 @@ final class SessionStore {
       prefs.getString(_activeKey),
       prefs.getString(_lastServerKey),
       prefs.getBool(_offlineKey) ?? false,
+      unreadable,
     );
   }
 
@@ -174,6 +185,7 @@ final class SessionStore {
   String? _active;
   String? _lastServer;
   bool _offline;
+  final Set<String> _unreadable;
   Future<void> _writes = Future.value();
 
   /// Writes happen one after another, in the order they were made, and one
@@ -215,13 +227,42 @@ final class SessionStore {
 
   void setToken(String origin, String token) {
     _tokens[origin] = token;
+    _unreadable.remove(origin);
     _write(() => _secrets.write(_tokenKey(origin), token));
   }
 
   void removeToken(String origin) {
     _tokens.remove(origin);
+    _unreadable.remove(origin);
     _write(() => _secrets.delete(_tokenKey(origin)));
   }
+
+  /// Whether [origin] has a token saved that the keystore wouldn't give
+  /// back when it was read.
+  bool unreadable(String origin) => _unreadable.contains(origin);
+
+  /// Asks the keystore for [origin]'s token again, after it failed: the
+  /// token once it reads, else null, and it stays unreadable.
+  Future<String?> readAgain(String origin) async {
+    if (!_unreadable.contains(origin)) return _tokens[origin];
+    // After the writes made so far, so a sign-in meanwhile isn't undone.
+    await _writes;
+    if (!_unreadable.contains(origin)) return _tokens[origin];
+    try {
+      final token = await _secrets.read(_tokenKey(origin));
+      _unreadable.remove(origin);
+      if (token != null) _tokens[origin] = token;
+      return token;
+    } on Object {
+      return null;
+    }
+  }
+
+  /// The person chose to sign in again rather than wait for the keystore:
+  /// [origin] reads as signed out for the rest of this run. The saved token
+  /// stays until the sign-in replaces it, so leaving before then still has
+  /// the next start try it.
+  void giveUpOn(String origin) => _unreadable.remove(origin);
 
   /// The origin of the server in use, one of [servers].
   String? get active => _active;

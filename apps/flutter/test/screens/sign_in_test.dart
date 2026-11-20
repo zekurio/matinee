@@ -282,6 +282,25 @@ void main() {
       expect(find.byType(TabBar), findsOneWidget);
       await _end(tester, harness);
     });
+
+    testWidgets('a sign-in the keystore can\'t read waits for a choice', (
+      tester,
+    ) async {
+      final saved = await tester.runAsync(_saved);
+      saved!.secrets.unreadable.add('token:https://a.example/');
+      final harness = Harness(prefs: saved.prefs, secrets: saved.secrets);
+      harness.backend
+        ..hosts.add('a.example')
+        ..tokens['token-a'] = 'ada';
+      await _show(tester, harness);
+      expect(find.text("Couldn't read your sign-in"), findsOneWidget);
+      expect(find.text('Try again'), findsOneWidget);
+
+      await tester.tap(find.text('Sign in again'));
+      await _reach<SignedOut>(tester, harness);
+      expect(saved.secrets.values['token:https://a.example/'], 'token-a');
+      await _end(tester, harness);
+    });
   });
 
   group('connect', () {

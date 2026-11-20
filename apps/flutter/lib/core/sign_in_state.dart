@@ -269,5 +269,6 @@ String unreachableMessage(
     Unreachability.timeout => l.unreachableTimeout(host),
     Unreachability.certificate => l.unreachableCertificate(host),
     Unreachability.other => l.unreachableOther(host),
+    Unreachability.unreadableSession => l.unreachableSession(host),
   };
 }

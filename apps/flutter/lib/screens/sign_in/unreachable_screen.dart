@@ -18,9 +18,10 @@ bool canWatchOffline(WidgetRef ref) =>
     ref.watch(hasDownloadsProvider) &&
     ref.read(sessionProvider.notifier).lastUser != null;
 
-/// The saved server didn't answer. Laid out like sign-in: what happened, one
-/// line on why, then the ways on. Without a network the downloads come
-/// first.
+/// The saved server didn't answer, or its session didn't read from the
+/// keystore. Laid out like sign-in: what happened, one line on why, then the
+/// ways on. Without a network the downloads come first; with an unreadable
+/// session, signing in again is one of them.
 class UnreachableScreen extends ConsumerWidget {
   const UnreachableScreen({super.key});
 
@@ -33,6 +34,7 @@ class UnreachableScreen extends ConsumerWidget {
     final session = ref.read(sessionProvider.notifier);
     final offline = canWatchOffline(ref);
     final noNetwork = auth.reason == Unreachability.noNetwork;
+    final unreadable = auth.reason == Unreachability.unreadableSession;
 
     Widget retry(ButtonLook look) => MatineeButton(
       look: look,
@@ -60,6 +62,8 @@ class UnreachableScreen extends ConsumerWidget {
         AuthHeading(
           title: noNetwork
               ? words.unreachableOfflineTitle
+              : unreadable
+              ? words.unreachableSessionTitle
               : words.unreachableTitle,
           description: unreachableMessage(
             words,
@@ -79,6 +83,15 @@ class UnreachableScreen extends ConsumerWidget {
           retry(ButtonLook.primary),
           const SizedBox(height: 10),
           watchOffline(ButtonLook.outline),
+        ],
+        if (unreadable) ...[
+          const SizedBox(height: 10),
+          MatineeButton(
+            look: ButtonLook.outline,
+            leading: Lucide.logIn,
+            onPressed: session.signInAgain,
+            child: Text(words.unreachableSignInAgain),
+          ),
         ],
         const SizedBox(height: 32),
         const Center(child: ChangeServerButton()),

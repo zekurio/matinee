@@ -257,21 +257,61 @@ void main() {
       expect(saved.active, isTrue);
     });
 
-    test('a token the keystore can\'t give back stays saved', () async {
+    test('a token the keystore can\'t give back waits, saved, without a '
+        'sign-in', () async {
       final first = await signedInOn('a.example');
       await first.quit();
       first.secrets.unreadable.add('token:https://a.example/');
 
       final again = Harness(prefs: first.prefs, secrets: first.secrets);
-      again.backend.hosts.add('a.example');
+      again.backend
+        ..hosts.add('a.example')
+        ..tokens['token-a'] = 'ada';
       await again.launch();
       addTearDown(again.quit);
 
+      final shown = await again.until<Unreachable>();
+      expect(shown.reason, Unreachability.unreadableSession);
+      await again.settle();
+      expect(again.secrets.values['token:https://a.example/'], 'token-a');
+      // The server isn't asked, with or without a token.
+      expect(again.backend.to('a.example', '/api/v1/auth/session'), isEmpty);
+      expect(again.backend.to('a.example', '/api/v1/auth/config'), isEmpty);
+      // The account's downloads still play.
+      expect(again.session.lastUser?.username, 'ada');
+
+      // Still unreadable on a retry, then the keystore answers.
+      await again.session.retry();
+      await again.until<Unreachable>((state) => !state.retrying);
+      again.secrets.unreadable.clear();
+      await again.session.retry();
+      final signedIn = await again.until<SignedIn>();
+      expect(signedIn.user.username, 'ada');
+    });
+
+    test('signing in again leaves the unreadable token until a new one '
+        'replaces it', () async {
+      final first = await signedInOn('a.example');
+      await first.quit();
+      first.secrets.unreadable.add('token:https://a.example/');
+
+      final again = Harness(prefs: first.prefs, secrets: first.secrets);
+      again.backend
+        ..hosts.add('a.example')
+        ..tokens['token-b'] = 'ada';
+      await again.launch();
+      addTearDown(again.quit);
+      await again.until<Unreachable>();
+
+      again.session.signInAgain();
       await again.until<SignedOut>();
       await again.settle();
       expect(again.secrets.values['token:https://a.example/'], 'token-a');
-      // No check went out with a token that was never read.
-      expect(again.backend.to('a.example', '/api/v1/auth/session'), isEmpty);
+
+      again.session.signedIn(appSession('token-b', 'ada'));
+      await again.until<SignedIn>();
+      await again.settle();
+      expect(again.secrets.values['token:https://a.example/'], 'token-b');
     });
 
     test('two saved entries for one server keep the signed in one', () async {

@@ -12,6 +12,10 @@ enum Unreachability {
   timeout,
   certificate,
   other,
+
+  /// The server wasn't asked: the keystore wouldn't give back the session
+  /// token saved for it (`SessionStore.unreadable`).
+  unreadableSession,
 }
 
 // errno values by platform: Linux and Android, then Apple, then Windows.

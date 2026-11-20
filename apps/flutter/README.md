@@ -101,6 +101,16 @@ the sign-in screens do apart from how they look.
 
 - Tokens live in flutter_secure_storage, one per server. The server list,
   the server in use, and offline mode live in shared_preferences.
+- A token the keystore won't give back is never deleted for it. The
+  plugin's `resetOnError`, which wipes every secret when one doesn't
+  decrypt, is off (`PlatformSecretStore`), and `SessionStore` marks such a
+  server's token unreadable rather than missing. The app doesn't ask the
+  server or show sign-in then: it shows the unreachable screen with
+  `Unreachability.unreadableSession`, where Try again reads the keystore
+  once more, the downloads still play, and Sign in again
+  (`signInAgain`) is the person's choice. The token stays saved until a
+  sign-in replaces it or the person signs out, so the next start reads it
+  again. Only a token the server refuses is dropped on its own.
 - Every HTTP client adds the User-Agent, and the bearer token only to its
   server's origin. A client made for one sign-in refuses to send once the
   sign-in changes, so use `apiProvider` again after one.

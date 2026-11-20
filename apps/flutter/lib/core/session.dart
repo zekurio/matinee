@@ -365,13 +365,20 @@ final class SessionNotifier extends Notifier<SessionState> {
   /// The account last signed in to the server in use, while its session
   /// still stands.
   User? get lastUser {
-    if (_token == null) return null;
+    if (_token == null && !_unreadable) return null;
     final key = _store.active;
     if (key == null) return null;
     for (final server in _store.servers) {
       if (server.origin == key) return decodeUser(server.user);
     }
     return null;
+  }
+
+  /// The server in use has a token saved that the keystore wouldn't give
+  /// back, which isn't the same as signed out.
+  bool get _unreadable {
+    final key = _store.active;
+    return _token == null && key != null && _store.unreadable(key);
   }
 
   /// Turn offline mode on, straight to the downloads, or off, which checks
@@ -414,7 +421,11 @@ final class SessionNotifier extends Notifier<SessionState> {
     _networkMoved = false;
     final sent = _token;
     unawaited(
-      Future<void>.microtask(() => _verify(mine, made, server, client, sent)),
+      Future<void>.microtask(
+        () => _unreadable
+            ? _readAgain(mine, made, server)
+            : _verify(mine, made, server, client, sent),
+      ),
     );
     // Trying again stays on the unreachable screen, with the button busy.
     return switch (current) {
@@ -459,6 +470,40 @@ final class SessionNotifier extends Notifier<SessionState> {
     if (_alive && _generation == cleared && mine == _check) {
       _setAuth(SignedOut(displayOf(server), config));
     }
+  }
+
+  /// The session's token didn't read when the app opened: ask the keystore
+  /// again, and check the server with it once it reads. Until then nothing
+  /// is deleted and the server isn't asked; the person can wait for the
+  /// next start, try again, or sign in again ([signInAgain]).
+  Future<void> _readAgain(int mine, int made, Uri server) async {
+    final key = _store.active;
+    if (key == null) return;
+    final token = await _store.readAgain(key);
+    if (!_alive || _generation != made || mine != _check) return;
+    if (token != null) {
+      _token = token;
+      _rebind();
+      _publish();
+      start();
+    } else if (_store.unreadable(key)) {
+      _setAuth(
+        Unreachable(displayOf(server), Unreachability.unreadableSession),
+      );
+    } else {
+      // It read this time, and there's no token: signed out.
+      start();
+    }
+  }
+
+  /// The person gave up on a session the keystore won't give back: sign in
+  /// to the server in use again. The old token stays saved until the new
+  /// one replaces it.
+  void signInAgain() {
+    final key = _store.active;
+    if (key == null) return;
+    _store.giveUpOn(key);
+    start();
   }
 
   /// The check [mine] got no answer: unreachable, unless the network changed

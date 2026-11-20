@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/core/session_store.dart';
 
@@ -78,17 +81,55 @@ void main() {
     expect(store.servers, isEmpty);
   });
 
-  test('a token the keystore can\'t give back reads as signed out', () async {
-    final prefs = MemoryPreferences();
-    final secrets = MemorySecrets();
-    prefs.values['servers'] = '[{"origin":"https://a.example/"}]';
-    secrets.values['token:https://a.example/'] = 'secret';
-    secrets.unreadable.add('token:https://a.example/');
+  test(
+    'a token the keystore can\'t give back is unreadable, and kept',
+    () async {
+      final prefs = MemoryPreferences();
+      final secrets = MemorySecrets();
+      prefs.values['servers'] = '[{"origin":"https://a.example/"}]';
+      secrets.values['token:https://a.example/'] = 'secret';
+      secrets.unreadable.add('token:https://a.example/');
 
-    final store = await SessionStore.open(prefs, secrets);
+      final store = await SessionStore.open(prefs, secrets);
 
-    expect(store.servers, hasLength(1));
-    expect(store.token('https://a.example/'), isNull);
+      expect(store.servers, hasLength(1));
+      expect(store.token('https://a.example/'), isNull);
+      expect(store.unreadable('https://a.example/'), isTrue);
+      expect(await store.readAgain('https://a.example/'), isNull);
+      expect(store.unreadable('https://a.example/'), isTrue);
+      expect(secrets.values['token:https://a.example/'], 'secret');
+
+      // The keystore comes back.
+      secrets.unreadable.clear();
+      expect(await store.readAgain('https://a.example/'), 'secret');
+      expect(store.token('https://a.example/'), 'secret');
+      expect(store.unreadable('https://a.example/'), isFalse);
+    },
+  );
+
+  group('PlatformSecretStore', () {
+    late _ThrowingPlatform platform;
+    setUp(() {
+      platform = _ThrowingPlatform();
+      FlutterSecureStoragePlatform.instance = platform;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    });
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test('a read that fails deletes nothing', () async {
+      platform.values['token:https://a.example/'] = 'secret';
+      final prefs = MemoryPreferences()
+        ..values['servers'] = '[{"origin":"https://a.example/"}]';
+
+      final store = await SessionStore.open(prefs, const PlatformSecretStore());
+
+      expect(store.unreadable('https://a.example/'), isTrue);
+      // The plugin is told not to wipe what it can't decrypt, and nothing
+      // here deletes it either.
+      expect(platform.options.last['resetOnError'], 'false');
+      expect(platform.deleted, isEmpty);
+      expect(platform.values['token:https://a.example/'], 'secret');
+    });
   });
 
   test('a write that fails does not stop the ones after it', () async {
@@ -113,4 +154,54 @@ final class _FailingSecrets extends MemorySecrets {
   @override
   Future<void> write(String key, String value) async =>
       throw StateError('keystore is locked');
+}
+
+/// flutter_secure_storage's native side when the keystore won't decrypt: a
+/// read throws, and only an explicit delete removes anything.
+final class _ThrowingPlatform extends FlutterSecureStoragePlatform {
+  final values = <String, String>{};
+  final deleted = <String>[];
+  final options = <Map<String, String>>[];
+
+  @override
+  Future<String?> read({
+    required String key,
+    required Map<String, String> options,
+  }) async {
+    this.options.add(options);
+    throw PlatformException(code: 'Exception', message: 'BadPaddingException');
+  }
+
+  @override
+  Future<void> write({
+    required String key,
+    required String value,
+    required Map<String, String> options,
+  }) async => values[key] = value;
+
+  @override
+  Future<bool> containsKey({
+    required String key,
+    required Map<String, String> options,
+  }) async => values.containsKey(key);
+
+  @override
+  Future<void> delete({
+    required String key,
+    required Map<String, String> options,
+  }) async {
+    deleted.add(key);
+    values.remove(key);
+  }
+
+  @override
+  Future<Map<String, String>> readAll({
+    required Map<String, String> options,
+  }) async => throw PlatformException(code: 'Exception');
+
+  @override
+  Future<void> deleteAll({required Map<String, String> options}) async {
+    deleted.add('*');
+    values.clear();
+  }
 }

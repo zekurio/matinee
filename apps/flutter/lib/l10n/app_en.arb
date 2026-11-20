@@ -3916,6 +3916,23 @@
       }
     }
   },
+  "unreachableSession": "This device couldn't read your sign-in to {p1}. It's still saved, and Matinee tries again each time it starts.",
+  "@unreachableSession": {
+    "description": "The keystore wouldn't give the saved session token back",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "unreachableSessionTitle": "Couldn't read your sign-in",
+  "@unreachableSessionTitle": {
+    "description": "The keystore wouldn't give the saved session token back"
+  },
+  "unreachableSignInAgain": "Sign in again",
+  "@unreachableSignInAgain": {
+    "description": "Gives up on the unreadable sign-in and opens sign-in"
+  },
   "unreachableTimeout": "{p1} took too long to answer.",
   "@unreachableTimeout": {
     "description": "strings.xml",
