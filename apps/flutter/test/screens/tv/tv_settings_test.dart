@@ -61,6 +61,10 @@ void main() {
     expect(focusedKey(), 'category/playback');
     expect(find.text('Match frame rate'), findsOneWidget);
     await down(tester);
+    expect(focusedKey(), 'category/subtitles');
+    expect(find.text("Use the system's caption style"), findsOneWidget);
+    expect(find.text('Size'), findsOneWidget);
+    await down(tester);
     expect(focusedKey(), 'category/languages');
     expect(find.text('Audio'), findsOneWidget);
     expect(find.text('Match frame rate'), findsNothing);
@@ -79,7 +83,8 @@ void main() {
   ) async {
     await _open(tester, Routes.settings);
     await right(tester);
-    await down(tester);
+    expect(focusedLabel(), 'Quality');
+    await down(tester, 2);
     expect(focusedLabel(), 'Play the next episode');
     await back(tester);
     expect(focusedKey(), 'category/playback');
@@ -93,6 +98,7 @@ void main() {
   ) async {
     await _open(tester, Routes.settings);
     await right(tester);
+    await down(tester);
     expect(focusedLabel(), startsWith('Match frame rate'));
     final toggle = find.byType(TvListSwitch).first;
     expect(tester.widget<TvListSwitch>(toggle).checked, isTrue);
@@ -113,13 +119,35 @@ void main() {
     await _open(tester, '${Routes.settings}/about');
     expect(focusedKey(), 'category/about');
     expect(find.text('Version'), findsOneWidget);
+    // Nothing played yet, so the report has nothing to show.
+    expect(find.text('Playback report'), findsOneWidget);
+    expect(find.textContaining('Nothing played since'), findsOneWidget);
   });
 
-  testWidgets('a device asks before signing out; Cancel has focus', (
+  testWidgets('a subtitle style opens its picker and keeps the pick', (
+    tester,
+  ) async {
+    await _open(tester, '${Routes.settings}/subtitles');
+    expect(focusedKey(), 'category/subtitles');
+    await right(tester);
+    expect(focusedLabel(), startsWith("Use the system's caption style"));
+    await down(tester);
+    expect(focusedLabel(), 'Size');
+    await select(tester);
+    expect(tvOpenPanels.value, 1);
+    expect(focusedLabel(), '100%', reason: 'the current choice');
+    await down(tester);
+    await select(tester);
+    expect(tvOpenPanels.value, 0);
+    expect(focusedLabel(), 'Size');
+    expect(find.text('125%'), findsOneWidget);
+  });
+
+  testWidgets('a device asks before signing out, on Sign out as Kotlin', (
     tester,
   ) async {
     await _open(tester, Routes.settings);
-    await down(tester, 2);
+    await down(tester, 3);
     expect(focusedKey(), 'category/account');
     await right(tester);
     expect(focusedLabel(), startsWith('Living room'));
@@ -127,6 +155,8 @@ void main() {
     expect(focusedLabel(), startsWith('Bedroom'));
     await select(tester);
     expect(tvOpenPanels.value, 1);
+    expect(focusedLabel(), 'Sign out');
+    await down(tester);
     expect(focusedLabel(), 'Cancel');
     await back(tester);
     expect(tvOpenPanels.value, 0);
@@ -162,6 +192,7 @@ void main() {
     final width = size.width.round();
     for (final (name, page) in [
       ('playback', 'playback'),
+      ('subtitles', 'subtitles'),
       ('languages', 'languages'),
     ]) {
       testWidgets('settings $name at $width', (tester) async {

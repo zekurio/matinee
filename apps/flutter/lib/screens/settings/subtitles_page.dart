@@ -56,7 +56,7 @@ class SubtitlesPage extends ConsumerWidget {
                 title: l.settingsSubtitlesColor,
                 options: [
                   for (final color in SubtitleColor.values)
-                    (color, _colorLabel(l, color)),
+                    (color, subtitleColorLabel(l, color)),
                 ],
                 current: prefs.subtitleColor,
                 onPicked: (picked) =>
@@ -66,7 +66,7 @@ class SubtitlesPage extends ConsumerWidget {
                 title: l.settingsSubtitlesBackground,
                 options: [
                   for (final background in SubtitleBackground.values)
-                    (background, _backgroundLabel(l, background)),
+                    (background, subtitleBackgroundLabel(l, background)),
                 ],
                 current: prefs.subtitleBackground,
                 onPicked: (picked) => change(
@@ -77,7 +77,7 @@ class SubtitlesPage extends ConsumerWidget {
                 title: l.settingsSubtitlesEdge,
                 options: [
                   for (final edge in ownSubtitleEdges)
-                    (edge, _edgeLabel(l, edge)),
+                    (edge, subtitleEdgeLabel(l, edge)),
                 ],
                 current: prefs.subtitleEdge,
                 onPicked: (picked) =>
@@ -91,26 +91,30 @@ class SubtitlesPage extends ConsumerWidget {
   }
 }
 
-String _colorLabel(AppLocalizations l, SubtitleColor color) => switch (color) {
-  SubtitleColor.white => l.settingsSubtitlesColorWhite,
-  SubtitleColor.yellow => l.settingsSubtitlesColorYellow,
-  SubtitleColor.cyan => l.settingsSubtitlesColorCyan,
-  SubtitleColor.green => l.settingsSubtitlesColorGreen,
-};
-
-String _backgroundLabel(AppLocalizations l, SubtitleBackground background) =>
-    switch (background) {
-      SubtitleBackground.none => l.settingsSubtitlesBackgroundNone,
-      SubtitleBackground.shaded => l.settingsSubtitlesBackgroundShaded,
-      SubtitleBackground.black => l.settingsSubtitlesBackgroundBlack,
+String subtitleColorLabel(AppLocalizations l, SubtitleColor color) =>
+    switch (color) {
+      SubtitleColor.white => l.settingsSubtitlesColorWhite,
+      SubtitleColor.yellow => l.settingsSubtitlesColorYellow,
+      SubtitleColor.cyan => l.settingsSubtitlesColorCyan,
+      SubtitleColor.green => l.settingsSubtitlesColorGreen,
     };
 
-// Settings offers only its own edges; the system's others never show here.
-String _edgeLabel(AppLocalizations l, SubtitleEdge edge) => switch (edge) {
-  SubtitleEdge.shadow => l.settingsSubtitlesEdgeShadow,
-  SubtitleEdge.outline => l.settingsSubtitlesEdgeOutline,
-  _ => l.settingsSubtitlesEdgeNone,
+String subtitleBackgroundLabel(
+  AppLocalizations l,
+  SubtitleBackground background,
+) => switch (background) {
+  SubtitleBackground.none => l.settingsSubtitlesBackgroundNone,
+  SubtitleBackground.shaded => l.settingsSubtitlesBackgroundShaded,
+  SubtitleBackground.black => l.settingsSubtitlesBackgroundBlack,
 };
+
+// Settings offers only its own edges; the system's others never show here.
+String subtitleEdgeLabel(AppLocalizations l, SubtitleEdge edge) =>
+    switch (edge) {
+      SubtitleEdge.shadow => l.settingsSubtitlesEdgeShadow,
+      SubtitleEdge.outline => l.settingsSubtitlesEdgeOutline,
+      _ => l.settingsSubtitlesEdgeNone,
+    };
 
 /// A line of subtitles over a stand-in for a bright frame, as the player
 /// would draw it.

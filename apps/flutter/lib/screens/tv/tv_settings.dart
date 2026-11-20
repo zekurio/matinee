@@ -18,21 +18,33 @@ import '../../kit/kit.dart';
 import '../../kit/tv/tv.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/avatar.dart';
+import '../../player/playback_device.dart';
+import '../../player/playback_report.dart';
 import '../../player/player.dart' show PlayerEngine;
 import '../../player/player_preferences.dart';
-import '../../player/tv/tv_preferences.dart';
+import '../../player/player_system.dart';
+import '../../player/subtitle_look.dart';
 import '../settings/account_page.dart'
     show accountSessionsProvider, sessionName;
 import '../settings/devices.dart';
+import '../settings/playback_page.dart'
+    show
+        audioFormatName,
+        playbackQualityChoices,
+        playbackQualityLimitText,
+        shownQuality,
+        videoCodecName;
+import '../settings/playback_report_section.dart' show diagnosticsStatus;
+import '../settings/subtitles_page.dart'
+    show subtitleBackgroundLabel, subtitleColorLabel, subtitleEdgeLabel;
 import '../sign_in/server_switcher.dart' show withoutScheme;
 import '../sign_in/tv/tv_servers.dart';
 
 /// Settings' categories on a TV, as the Kotlin app's `TvSettingsCategory`,
-/// by the keys of `Routes.settingsPage`. The Kotlin app's Subtitles
-/// category, the style of the app's own subtitles, has no counterpart:
-/// the Flutter player keeps no subtitle style yet.
+/// by the keys of `Routes.settingsPage`.
 enum TvSettingsCategory {
   playback('playback', Lucide.tvPlay),
+  subtitles('subtitles', Lucide.captions),
   languages('languages', Lucide.audioLines),
   devices('account', Lucide.monitor),
   account('server', Lucide.userRound),
@@ -45,6 +57,7 @@ enum TvSettingsCategory {
 
   String title(AppLocalizations l) => switch (this) {
     playback => l.settingsPagePlayback,
+    subtitles => l.settingsSubtitlesTitle,
     languages => l.playbackLanguagesTitle,
     devices => l.tvSettingsDevices,
     account => l.tvSettingsAccount,
@@ -232,6 +245,7 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
                       ),
                       children: switch (_selected) {
                         TvSettingsCategory.playback => [const _PlaybackRows()],
+                        TvSettingsCategory.subtitles => [const _SubtitleRows()],
                         TvSettingsCategory.languages => [const _LanguageRows()],
                         TvSettingsCategory.devices => [const _DeviceRows()],
                         TvSettingsCategory.account => [const _AccountRows()],
@@ -402,9 +416,10 @@ PlaybackPreferences _with(
   skipForwardSeconds: skipForward ?? p.skipForwardSeconds,
 );
 
-/// What this TV plays with and how, then the account's skip lengths, as
-/// the Kotlin app's `PlaybackRows`. The quality, the decoders, the codecs
-/// for encodes, and passthrough have no setting in the Flutter app yet.
+/// What this TV plays with and how, the account's skip lengths, and what
+/// the server converts to for it, as the Kotlin app's `PlaybackRows`. The
+/// device's rows are [playerPrefsProvider]'s, which the phone's Playback
+/// page sets too.
 class _PlaybackRows extends ConsumerWidget {
   const _PlaybackRows();
 
@@ -414,27 +429,47 @@ class _PlaybackRows extends ConsumerWidget {
     final user = _user(ref);
     final playback = user?.playback ?? defaultPlaybackPreferences;
     final options = ref.watch(playbackOptionsProvider).value;
-    final tv =
-        ref.watch(tvPlaybackPrefsProvider).value ??
-        (matchFrameRate: true, autoplayNext: true);
-    final prefs = ref.read(tvPlaybackPrefsProvider.notifier);
+    final prefs = ref.watch(playerPrefsProvider).value ?? const PlayerPrefs();
+    final codecs = ref.watch(playbackCodecsProvider).value;
     final engine = ref.watch(playerEngineProvider).value ?? PlayerEngine.mpv;
+    void change(PlayerPrefs Function(PlayerPrefs) edit) =>
+        unawaited(ref.read(playerPrefsProvider.notifier).change(edit));
     List<(int, String)> skips(int current) => [
       for (final step in {...?options?.skipSteps, current}.toList()..sort())
         (step, l.playbackSkipSeconds(step)),
     ];
+    final qualities = playbackQualityChoices(l, options);
+    final limit = options?.maxBitrate;
+    // A codec shows only when there's a choice: what the server encodes and
+    // this TV decodes.
+    final video = encodeVideoChoices(
+      options?.videoCodecs ?? const ['h264'],
+      codecs,
+    );
+    final audio = convertAudioChoices(
+      options?.audioCodecs ?? const ['aac'],
+      codecs,
+    );
+    final passthrough = passthroughCodecs(codecs);
     return _Rows([
       TvListHeading(l.tvSettingsThisTv),
+      _PickRow<String>(
+        title: l.playbackQualityTitle,
+        description: limit == null ? null : playbackQualityLimitText(l, limit),
+        options: qualities,
+        current: shownQuality(prefs.quality, options, qualities),
+        onPick: (picked) => change((prefs) => prefs.copyWith(quality: picked)),
+      ),
       _SwitchRow(
         title: l.tvSettingsFrameRate,
         description: l.tvSettingsFrameRateDescription,
-        checked: tv.matchFrameRate,
-        onChange: (on) => unawaited(prefs.setMatchFrameRate(on)),
+        checked: prefs.matchFrameRate,
+        onChange: (on) => change((prefs) => prefs.copyWith(matchFrameRate: on)),
       ),
       _SwitchRow(
         title: l.playbackAutoplayTitle,
-        checked: tv.autoplayNext,
-        onChange: (on) => unawaited(prefs.setAutoplayNext(on)),
+        checked: prefs.autoplayNext,
+        onChange: (on) => change((prefs) => prefs.copyWith(autoplayNext: on)),
       ),
       _PickRow<PlayerEngine>(
         title: l.playbackEngineTitle,
@@ -447,6 +482,15 @@ class _PlaybackRows extends ConsumerWidget {
         onPick: (picked) => unawaited(
           ref.read(playerEngineProvider.notifier).setEngine(picked),
         ),
+      ),
+      _PickRow<Decoders>(
+        title: l.playbackDecodersTitle,
+        options: [
+          (Decoders.hardware, l.playbackDecodersHardware),
+          (Decoders.software, l.playbackDecodersSoftware),
+        ],
+        current: prefs.decoders,
+        onPick: (picked) => change((prefs) => prefs.copyWith(decoders: picked)),
       ),
       _groupGap,
       TvListHeading(l.playbackSkipTitle),
@@ -464,8 +508,170 @@ class _PlaybackRows extends ConsumerWidget {
         onPick: (seconds) =>
             _savePlayback(ref, l, _with(playback, skipForward: seconds)),
       ),
+      if (video.length > 1 || audio.length > 1) ...[
+        _groupGap,
+        TvListHeading(l.playbackTranscodingTitle),
+        if (video.length > 1)
+          _PickRow<String>(
+            title: l.playbackVideoCodecTitle,
+            options: [
+              (
+                automaticCodec,
+                l.playbackCodecAutomatic(videoCodecName('h264')),
+              ),
+              for (final codec in video) (codec, videoCodecName(codec)),
+            ],
+            current: video.contains(prefs.videoCodec)
+                ? prefs.videoCodec
+                : automaticCodec,
+            onPick: (picked) =>
+                change((prefs) => prefs.copyWith(videoCodec: picked)),
+          ),
+        if (audio.length > 1)
+          _PickRow<String>(
+            title: l.playbackAudioCodecTitle,
+            options: [
+              (
+                automaticCodec,
+                l.playbackCodecAutomatic(audioFormatName(audio.first)),
+              ),
+              for (final codec in audio) (codec, audioFormatName(codec)),
+            ],
+            current: audio.contains(prefs.audioCodec)
+                ? prefs.audioCodec
+                : automaticCodec,
+            onPick: (picked) =>
+                change((prefs) => prefs.copyWith(audioCodec: picked)),
+          ),
+        _RowNote(l.tvSettingsTranscodingNote),
+      ],
+      if (passthrough.isNotEmpty) ...[
+        _groupGap,
+        TvListHeading(l.playbackPassthroughTitle),
+        for (final codec in passthrough)
+          _SwitchRow(
+            title: audioFormatName(codec),
+            checked: !prefs.convertAudio.contains(codec),
+            onChange: (on) => change(
+              (prefs) => prefs.copyWith(
+                convertAudio: on
+                    ? (prefs.convertAudio.toSet()..remove(codec))
+                    : {...prefs.convertAudio, codec},
+              ),
+            ),
+          ),
+      ],
     ]);
   }
+}
+
+/// How subtitles look on this TV, over a sample, as the Kotlin app's
+/// `SubtitleRows`: the system's caption style, or the app's own.
+class _SubtitleRows extends ConsumerWidget {
+  const _SubtitleRows();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final prefs = ref.watch(playerPrefsProvider).value ?? const PlayerPrefs();
+    final percent = NumberFormat.percentPattern(l.localeName);
+    void change(PlayerPrefs Function(PlayerPrefs) edit) =>
+        unawaited(ref.read(playerPrefsProvider.notifier).change(edit));
+    return _Rows([
+      _SubtitlePreview(look: subtitleLook(ref, prefs)),
+      _SwitchRow(
+        title: l.settingsSubtitlesSystem,
+        checked: prefs.subtitleSystemStyle,
+        onChange: (on) =>
+            change((prefs) => prefs.copyWith(subtitleSystemStyle: on)),
+      ),
+      if (prefs.subtitleSystemStyle)
+        TvListItem(
+          title: l.settingsSubtitlesSystemOpen,
+          quiet: true,
+          trailing: const TvListValue(''),
+          onPressed: () =>
+              unawaited(ref.read(playerSystemProvider).openCaptionSettings()),
+        )
+      else ...[
+        _PickRow<double>(
+          title: l.settingsSubtitlesSize,
+          options: [
+            for (final scale in subtitleScales) (scale, percent.format(scale)),
+          ],
+          current: prefs.subtitleScale,
+          onPick: (picked) =>
+              change((prefs) => prefs.copyWith(subtitleScale: picked)),
+        ),
+        _PickRow<SubtitleColor>(
+          title: l.settingsSubtitlesColor,
+          options: [
+            for (final color in SubtitleColor.values)
+              (color, subtitleColorLabel(l, color)),
+          ],
+          current: prefs.subtitleColor,
+          onPick: (picked) =>
+              change((prefs) => prefs.copyWith(subtitleColor: picked)),
+        ),
+        _PickRow<SubtitleBackground>(
+          title: l.settingsSubtitlesBackground,
+          options: [
+            for (final background in SubtitleBackground.values)
+              (background, subtitleBackgroundLabel(l, background)),
+          ],
+          current: prefs.subtitleBackground,
+          onPick: (picked) =>
+              change((prefs) => prefs.copyWith(subtitleBackground: picked)),
+        ),
+        _PickRow<SubtitleEdge>(
+          title: l.settingsSubtitlesEdge,
+          options: [
+            for (final edge in ownSubtitleEdges)
+              (edge, subtitleEdgeLabel(l, edge)),
+          ],
+          current: prefs.subtitleEdge,
+          onPick: (picked) =>
+              change((prefs) => prefs.copyWith(subtitleEdge: picked)),
+        ),
+      ],
+    ]);
+  }
+}
+
+/// A line of subtitles over a stand-in for a frame, drawn as the player
+/// draws them, at the player's size on a TV.
+class _SubtitlePreview extends StatelessWidget {
+  const _SubtitlePreview({required this.look});
+
+  final SubtitleLook look;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+    child: Container(
+      height: 128,
+      alignment: Alignment.bottomCenter,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF9DB3D1),
+            Color(0xFF55657F),
+            Color(0xFF2B2622),
+            Color(0xFF6E5A45),
+          ],
+        ),
+      ),
+      child: SubtitleLine(
+        TextSpan(text: AppLocalizations.of(context).settingsSubtitlesPreview),
+        look: look,
+        size: 18,
+      ),
+    ),
+  );
 }
 
 /// The account's languages, which every device of the account plays by,
@@ -629,7 +835,6 @@ class _DeviceRowsState extends ConsumerState<_DeviceRows> {
           title: l.commonCancel,
           icon: Lucide.x,
           quiet: true,
-          autofocus: true,
           onPressed: () => Navigator.of(panel).pop(false),
         ),
       ],
@@ -774,9 +979,8 @@ extension on String {
 }
 
 /// The phone's About page on a TV, as the Kotlin app's `AboutRows`: the
-/// app and the TV, and the app's log, shown and copied, since a TV has no
-/// app to share it with. The Kotlin app's playback report has no
-/// counterpart in the Flutter app yet.
+/// app and the TV, the latest playback's report, and the app's log, shown
+/// and copied, since a TV has no app to share them with.
 class _AboutRows extends ConsumerStatefulWidget {
   const _AboutRows();
 
@@ -786,6 +990,20 @@ class _AboutRows extends ConsumerStatefulWidget {
 
 class _AboutRowsState extends ConsumerState<_AboutRows> {
   var _busy = false;
+  final _showLog = FocusNode(debugLabel: 'about/show log');
+
+  @override
+  void dispose() {
+    _showLog.dispose();
+    super.dispose();
+  }
+
+  /// Copies [text], and says so: a TV's system shows nothing for a copy.
+  Future<void> _copy(String text, String done) async {
+    final toasts = ref.read(toastProvider);
+    await Clipboard.setData(ClipboardData(text: text));
+    unawaited(toasts.show(done));
+  }
 
   Future<void> _withLog(Future<void> Function(String log) use) async {
     if (_busy) return;
@@ -805,6 +1023,8 @@ class _AboutRowsState extends ConsumerState<_AboutRows> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final device = ref.watch(deviceProvider);
+    final report = ref.watch(playbackReportProvider);
+    final latest = report?.latest;
     Widget value(String title, String text) => TvListItem(
       title: title,
       quiet: true,
@@ -819,11 +1039,43 @@ class _AboutRowsState extends ConsumerState<_AboutRows> {
       value(l.aboutAndroid, device.osVersion),
       value(l.aboutDevice, device.model),
       _groupGap,
+      TvListHeading(l.diagnosticsTitle),
+      if (report == null || latest == null)
+        _RowNote(l.diagnosticsEmpty)
+      else ...[
+        value(l.diagnosticsLatest, diagnosticsStatus(l, latest)),
+        TvListItem(
+          title: l.diagnosticsShow,
+          quiet: true,
+          onPressed: () => showTvText(
+            context,
+            title: l.diagnosticsTitle,
+            text: formatReport(report),
+          ),
+        ),
+        TvListItem(
+          title: l.diagnosticsCopy,
+          quiet: true,
+          onPressed: () => _copy(formatReport(report), l.diagnosticsCopied),
+        ),
+        // Its rows go, so focus moves on to the log's.
+        TvListItem(
+          title: l.diagnosticsClear,
+          quiet: true,
+          destructive: true,
+          onPressed: () {
+            _showLog.requestFocus();
+            ref.read(playbackReportProvider.notifier).clear();
+          },
+        ),
+      ],
+      _groupGap,
       TvListHeading(l.logsTitle),
       TvListItem(
         title: l.logsShow,
         subtitle: l.logsNote,
         quiet: true,
+        focusNode: _showLog,
         onPressed: () => _withLog(
           (log) =>
               showTvText(context, title: l.logsTitle, text: log, fromEnd: true),
@@ -832,12 +1084,7 @@ class _AboutRowsState extends ConsumerState<_AboutRows> {
       TvListItem(
         title: l.logsCopy,
         quiet: true,
-        onPressed: () => _withLog((log) async {
-          final toasts = ref.read(toastProvider);
-          await Clipboard.setData(ClipboardData(text: log));
-          // A TV's system shows nothing for a copy, so the app says it.
-          unawaited(toasts.show(l.logsCopied));
-        }),
+        onPressed: () => _withLog((log) => _copy(log, l.logsCopied)),
       ),
     ]);
   }

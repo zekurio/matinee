@@ -55,6 +55,48 @@ String audioFormatName(String codec) =>
     }[codec] ??
     codec.toUpperCase();
 
+/// The qualities this account may stream, once `playback.options` answers.
+List<(String, String)> playbackQualityChoices(
+  AppLocalizations l,
+  PlaybackOptions? options,
+) {
+  final decimal = NumberFormat.decimalPattern(l.localeName);
+  return [
+    (PlaybackQuality.original, l.playerQualityOriginal),
+    for (final preset in options?.qualities ?? const <PlaybackQualityPreset>[])
+      (
+        preset.id,
+        l.playbackQualityPreset(
+          preset.height,
+          l.playerBitrateMbpsExact(decimal.format(preset.bitrate / 1000000)),
+        ),
+      ),
+  ];
+}
+
+/// The quality a setting shows: one the account may no longer use shows as
+/// the original, the best the server allows. It stays saved, so a lifted
+/// limit brings it back.
+String shownQuality(
+  String saved,
+  PlaybackOptions? options,
+  List<(String, String)> qualities,
+) => options == null || qualities.any((entry) => entry.$1 == saved)
+    ? saved
+    : PlaybackQuality.original;
+
+/// "Your server limits streams to 8 Mbps", for [limit] in bits a second.
+String playbackQualityLimitText(AppLocalizations l, int limit) {
+  final decimal = NumberFormat.decimalPattern(l.localeName);
+  return l.playbackQualityLimit(
+    limit < 1000000
+        ? l.playerBitrateKbps((limit / 1000).round())
+        : l.playerBitrateMbpsExact(
+            decimal.format((limit / 100000).round() / 10),
+          ),
+  );
+}
+
 /// Settings, Playback: what this device plays and how, as the Kotlin
 /// app's device, gesture, button, transcoding, and passthrough sections.
 /// [playerEngineProvider] keeps the engine and [playerPrefsProvider] the
@@ -300,28 +342,8 @@ class _DeviceSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    final decimal = NumberFormat.decimalPattern(locale);
-    final options = this.options;
-    // The qualities this account may stream, once `playback.options` answers.
-    final qualities = [
-      (PlaybackQuality.original, l.playerQualityOriginal),
-      for (final preset
-          in options?.qualities ?? const <PlaybackQualityPreset>[])
-        (
-          preset.id,
-          l.playbackQualityPreset(
-            preset.height,
-            l.playerBitrateMbpsExact(decimal.format(preset.bitrate / 1000000)),
-          ),
-        ),
-    ];
-    // One the account may no longer use shows as the original, the best the
-    // server allows; it stays saved, so a lifted limit brings it back.
-    final quality =
-        options == null || qualities.any((entry) => entry.$1 == prefs.quality)
-        ? prefs.quality
-        : PlaybackQuality.original;
+    final qualities = playbackQualityChoices(l, options);
+    final quality = shownQuality(prefs.quality, options, qualities);
     final limit = options?.maxBitrate;
     return SettingsSection(
       title: l.playbackDeviceTitle,
@@ -386,13 +408,7 @@ class _DeviceSection extends StatelessWidget {
           if (limit != null) ...[
             const SizedBox(height: 8),
             Text(
-              l.playbackQualityLimit(
-                limit < 1000000
-                    ? l.playerBitrateKbps((limit / 1000).round())
-                    : l.playerBitrateMbpsExact(
-                        decimal.format((limit / 100000).round() / 10),
-                      ),
-              ),
+              playbackQualityLimitText(l, limit),
               style: KitText.sm.style(color: colors.textMuted),
             ),
           ],
