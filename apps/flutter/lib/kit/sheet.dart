@@ -22,16 +22,20 @@ class Sheet extends StatelessWidget {
   final String? description;
   final Widget? footer;
 
+  /// As wide as a sheet gets on a tablet, as Material 3's sheets in the
+  /// Kotlin app are; narrower screens get it edge to edge.
+  static const widest = 640.0;
+
   static Future<T?> show<T>(
     BuildContext context, {
     required WidgetBuilder builder,
     required String dismissLabel,
     bool dismissible = true,
     bool draggable = true,
-    bool rootNavigator = false,
-    double? maxWidth,
+    double maxWidth = Sheet.widest,
   }) {
-    final navigator = Navigator.of(context, rootNavigator: rootNavigator);
+    // Over the whole app, the tab bar too, wherever it's opened from.
+    final navigator = Navigator.of(context, rootNavigator: true);
     final colors = MatineeTheme.of(context);
     return navigator.push<T>(
       _SheetRoute<T>(
@@ -132,7 +136,7 @@ class _SheetRoute<T> extends material.ModalBottomSheetRoute<T> {
     required super.enableDrag,
     required this.backdrop,
     required bool reducedMotion,
-    required double? maxWidth,
+    required double maxWidth,
   }) : super(
          isScrollControlled: false,
          scrollControlDisabledMaxHeightRatio: .85,
@@ -140,7 +144,7 @@ class _SheetRoute<T> extends material.ModalBottomSheetRoute<T> {
          showDragHandle: false,
          backgroundColor: const Color(0x00000000),
          modalBarrierColor: const Color(0x00000000),
-         constraints: BoxConstraints(maxWidth: maxWidth ?? double.infinity),
+         constraints: BoxConstraints(maxWidth: maxWidth),
          elevation: 0,
          clipBehavior: Clip.none,
          sheetAnimationStyle: reducedMotion

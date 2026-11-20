@@ -9,6 +9,7 @@ import 'package:matinee/media/artwork.dart';
 import 'package:matinee/router.dart';
 import 'package:matinee/screens/library/library_screen.dart';
 import 'package:matinee/screens/shell/header.dart';
+import 'package:matinee/screens/shell/shell.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
@@ -125,6 +126,24 @@ void main() {
     expect(find.byType(KindScreen), findsNothing);
     // Home has nothing under it, so back leaves the app.
     expect(await tester.binding.handlePopRoute(), isFalse);
+  });
+
+  testWidgets("a card's menu opens over the tabs, at most 640 wide", (
+    tester,
+  ) async {
+    await _pump(tester, const Size(1280, 800));
+    await tester.longPress(
+      find.bySemanticsLabel('The Expanse, S2, E5: Home · 12 min left'),
+    );
+    await tester.pumpAndSettle();
+    final cancel = find.text('Go to The Expanse');
+    expect(cancel, findsOneWidget);
+    // On the root navigator, not the tab's, so the tab bar can't cover it.
+    expect(
+      find.ancestor(of: cancel, matching: find.byType(HandsetShell)),
+      findsNothing,
+    );
+    expect(tester.getSize(find.byType(Sheet)).width, lessThanOrEqualTo(640));
   });
 
   testWidgets('a tablet in landscape keeps the tabs along the bottom', (

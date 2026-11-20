@@ -34,7 +34,8 @@ class Dialog extends StatelessWidget {
     String? dismissLabel,
     bool zoom = true,
   }) {
-    final navigator = Navigator.of(context);
+    // Over the whole app, the tab bar too, wherever it's opened from.
+    final navigator = Navigator.of(context, rootNavigator: true);
     final colors = MatineeTheme.of(context);
     final themes = InheritedTheme.capture(from: context, to: navigator.context);
     final reducedMotion = MediaQuery.disableAnimationsOf(context);

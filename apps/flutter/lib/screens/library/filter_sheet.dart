@@ -15,7 +15,7 @@ import 'title_pages.dart';
 /// what the server offers for the list, each change applied at once, a
 /// range once its handle is let go, with Clear filters while any is on and
 /// Show titles to close. A phone gets it across the bottom; a tablet the
-/// same sheet, no wider than [_widest].
+/// same sheet, no wider than [Sheet.widest].
 Future<void> showTitleFilters(
   BuildContext context, {
   required ListKey list,
@@ -25,8 +25,6 @@ Future<void> showTitleFilters(
   final l = AppLocalizations.of(context);
   return Sheet.show<void>(
     context,
-    rootNavigator: true,
-    maxWidth: _widest,
     dismissLabel: l.browseCloseFilters,
     builder: (context) => Sheet(
       title: l.webFiltersTitle,
@@ -35,8 +33,6 @@ Future<void> showTitleFilters(
     ),
   );
 }
-
-const _widest = 640.0;
 
 /// How many studios show before the field that finds the rest.
 const _studiosShown = 10;
