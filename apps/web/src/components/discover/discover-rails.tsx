@@ -48,6 +48,7 @@ import {
   railLink,
   railsOptions,
 } from "./discover-data"
+import { RailFailed } from "./rail-failed"
 import { DiscoverRequests } from "./requests-rail"
 
 type Page = UseQueryResult<t.infer<typeof DiscoverRowSchema>>
@@ -231,19 +232,6 @@ export function useRailDismiss(rail: RailInfo) {
     of: (item: BrowseEntry) =>
       recommended ? () => dismiss(queryClient, item.ref, item.name) : undefined,
   }
-}
-
-/** In a row's place, when its cards didn't load. */
-export function RailFailed({ onRetry }: { onRetry: () => void }) {
-  return (
-    <li className="text-muted-foreground flex w-full flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed p-6 text-sm">
-      {tr("discover.railFailed")}
-      <Button variant="outline" size="sm" onClick={onRetry}>
-        <RotateCwIcon />
-        {tr("discover.retry")}
-      </Button>
-    </li>
-  )
 }
 
 /** A row's cards on their way, the size of the cards they stand in for. */

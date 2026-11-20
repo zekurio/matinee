@@ -30,6 +30,7 @@ import {
 } from "@/stores/request-actions"
 
 import { RAIL_CARDS } from "./discover-data"
+import { RailFailed } from "./rail-failed"
 import {
   RequestCard,
   RequestCardSkeleton,
@@ -62,10 +63,12 @@ export function DiscoverRequests({ which }: { which: "queue" | "mine" }) {
 function RequestsRow<Item extends { id: string }>({
   link,
   items,
+  retry,
   children,
 }: {
   link: LinkOptions
   items: readonly Item[] | undefined
+  retry?: () => void
   children: (item: Item) => ReactNode
 }) {
   const hidden = useHiddenRequests()
@@ -89,17 +92,21 @@ function RequestsRow<Item extends { id: string }>({
         </Link>
       }
     >
-      {shown
-        ? shown.slice(0, RAIL_CARDS).map((item) => (
-            <RailItem key={item.id} artwork="request">
-              {children(item)}
-            </RailItem>
-          ))
-        : Array.from({ length: 3 }, (_, i) => (
-            <RailItem key={i} artwork="request">
-              <RequestCardSkeleton />
-            </RailItem>
-          ))}
+      {retry ? (
+        <RailFailed onRetry={retry} />
+      ) : shown ? (
+        shown.slice(0, RAIL_CARDS).map((item) => (
+          <RailItem key={item.id} artwork="request">
+            {children(item)}
+          </RailItem>
+        ))
+      ) : (
+        Array.from({ length: 3 }, (_, i) => (
+          <RailItem key={i} artwork="request">
+            <RequestCardSkeleton />
+          </RailItem>
+        ))
+      )}
     </Rail>
   )
 }
@@ -114,7 +121,10 @@ function WaitingRequests() {
   return (
     <RequestsRow
       link={linkOptions({ to: "/requests" })}
-      items={queue.isError && !queue.data ? [] : queue.data?.waiting}
+      items={queue.data?.waiting}
+      retry={
+        queue.isError && !queue.data ? () => void queue.refetch() : undefined
+      }
     >
       {(item) => <QueueRequest item={item} />}
     </RequestsRow>
@@ -140,7 +150,8 @@ function OwnRequests() {
         to: "/profiles/$username/asked",
         params: { username: user.username },
       })}
-      items={mine.isError && !mine.data ? [] : items}
+      items={items}
+      retry={mine.isError && !mine.data ? () => void mine.refetch() : undefined}
     >
       {(item) => <OwnRequest item={item} />}
     </RequestsRow>
