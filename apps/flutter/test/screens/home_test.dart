@@ -80,6 +80,35 @@ void main() {
     expect(find.text('/play/f-e1'), findsOneWidget);
   });
 
+  testWidgets('the banner stays dark in a light theme, as the web\'s', (
+    tester,
+  ) async {
+    final backend = HomeBackend();
+    await pumpScreen(
+      tester,
+      const HomeScreen(),
+      client: backend.client,
+      size: const Size(1280, 800),
+      colors: matineeLight,
+    );
+    Color colorOf(Finder text) =>
+        tester.widget<Text>(text.hitTestable().first).style!.color!;
+    final title = find.descendant(
+      of: find.byType(HomeBanner),
+      matching: find.byWidgetPredicate(
+        (widget) => widget is Text && (widget.style?.shadows ?? []).isNotEmpty,
+      ),
+    );
+    // Light text over the dark shade, whichever scheme the app is in.
+    expect(colorOf(title), matineeDark.foreground);
+    expect(
+      colorOf(find.text('2016 · 23 episodes')),
+      matineeDark.foreground.withValues(alpha: .8),
+    );
+    // The page around it keeps the light scheme.
+    expect(colorOf(find.text('Continue watching')), matineeLight.foreground);
+  });
+
   testWidgets('the banner moves to a slide its dot picks', (tester) async {
     final backend = HomeBackend();
     await pumpScreen(

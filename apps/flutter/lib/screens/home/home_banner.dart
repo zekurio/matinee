@@ -22,6 +22,12 @@ import 'home_layout.dart';
 /// while focus is in it, with animations off, with a screen reader on, or
 /// while Home is out of sight. [box] is Home's own, the space between the
 /// shell's header and its tabs.
+///
+/// It's dark in either scheme, as the web's: art under a white wash looks
+/// faded, and light text over a dark shade reads on any picture. In light,
+/// it ends at the page in a straight edge, the shade's dark against the
+/// light page, and shades its own top, so the light header above meets
+/// dark rather than whatever the art's top holds.
 class HomeBanner extends StatefulWidget {
   const HomeBanner({
     super.key,
@@ -132,6 +138,20 @@ class _HomeBannerState extends State<HomeBanner> {
       CardMetrics.gutter,
       reserved,
     );
+    final light = !MatineeTheme.of(context).isDark;
+    return MatineeTheme.alwaysDark(
+      context,
+      _banner(l, layout, current, textPadding, light: light),
+    );
+  }
+
+  Widget _banner(
+    AppLocalizations l,
+    HeroLayout layout,
+    int current,
+    EdgeInsets textPadding, {
+    required bool light,
+  }) {
     return Semantics(
       label: l.tvHomeFeatured,
       container: true,
@@ -165,7 +185,7 @@ class _HomeBannerState extends State<HomeBanner> {
                 Positioned.fill(
                   child: ListenableBuilder(
                     listenable: _pager,
-                    builder: (context, _) => _art(),
+                    builder: (context, _) => _art(light: light),
                   ),
                 ),
                 Positioned.fill(
@@ -229,7 +249,7 @@ class _HomeBannerState extends State<HomeBanner> {
 
   /// The slide showing, with the next one fading over it as the pages
   /// move, rather than the pictures sliding edge to edge.
-  Widget _art() {
+  Widget _art({required bool light}) {
     final position = _pager.hasClients && _pager.position.haveDimensions
         ? _pager.page ?? _page.toDouble()
         : _page.toDouble();
@@ -241,6 +261,7 @@ class _HomeBannerState extends State<HomeBanner> {
         _HeroArt(
           key: ValueKey(HeroPaging.slide(under, _count)),
           slide: widget.slides[HeroPaging.slide(under, _count)],
+          shadeTop: light,
         ),
         if (over > 0)
           Opacity(
@@ -248,6 +269,7 @@ class _HomeBannerState extends State<HomeBanner> {
             child: _HeroArt(
               key: ValueKey(HeroPaging.slide(under + 1, _count)),
               slide: widget.slides[HeroPaging.slide(under + 1, _count)],
+              shadeTop: light,
             ),
           ),
       ],
@@ -291,13 +313,18 @@ class _HomeBannerState extends State<HomeBanner> {
   }
 }
 
-/// A slide's picture and the web's shade in the page's color, so in a
-/// light theme the picture fades into a light page: across from the text's
-/// side, and up the lower half into the page.
+/// A slide's picture and the web's shades, in the dark scheme's
+/// background whatever the app's: across from the text's side, and up the
+/// lower half to a dark edge.
 class _HeroArt extends StatelessWidget {
-  const _HeroArt({super.key, required this.slide});
+  const _HeroArt({super.key, required this.slide, this.shadeTop = false});
 
   final FeaturedTitle slide;
+
+  /// Under a light header, a shade down from the top too, as the web's in
+  /// light, so the header meets dark and not the art's top, which may be
+  /// as light as the header.
+  final bool shadeTop;
 
   @override
   Widget build(BuildContext context) {
@@ -341,6 +368,26 @@ class _HeroArt extends StatelessWidget {
               ),
             ),
           ),
+          if (shadeTop)
+            Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                height: 96,
+                width: double.infinity,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        background.withValues(alpha: .7),
+                        background.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -613,13 +660,17 @@ class HomeBannerSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = HeroLayout(box.width, box.height, rowsBelow: rowsBelow);
-    final colors = MatineeTheme.of(context);
+    // Dark as the banner it stands for, so light doesn't flash to dark.
+    return MatineeTheme.alwaysDark(context, _skeleton(context, layout));
+  }
+
+  Widget _skeleton(BuildContext context, HeroLayout layout) {
     return Semantics(
       label: AppLocalizations.of(context).loadingInProgress,
       container: true,
       child: Container(
         height: layout.height,
-        color: colors.surface,
+        color: MatineeTheme.darkOf(context).surface,
         alignment: AlignmentDirectional.bottomStart,
         padding: EdgeInsetsDirectional.only(
           start: CardMetrics.gutter,

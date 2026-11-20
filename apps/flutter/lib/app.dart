@@ -22,7 +22,10 @@ class MatineeApp extends ConsumerWidget {
         ref.watch(themeStoreProvider).value ?? defaultThemePreferences;
     return MaterialApp.router(
       routerConfig: ref.watch(routerProvider),
-      theme: MatineeTheme.data(preferences.preset.light),
+      theme: MatineeTheme.data(
+        preferences.preset.light,
+        dark: preferences.preset.dark,
+      ),
       darkTheme: MatineeTheme.data(preferences.preset.dark),
       themeMode: switch (preferences.appearance) {
         ThemeAppearance.system => ThemeMode.system,

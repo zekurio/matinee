@@ -217,7 +217,9 @@ has the rails' card widths and the grids' column counts by width class.
 phone opens with the featured cards under the header, which swipe one at
 a time and move on every five seconds; from 600 wide, Home opens with the
 web's banner, its slides crossfading every eight seconds, with Play and
-Details. Under them come Continue watching, Next up, the recommendation
+Details. The banner is dark in either scheme, as the web's: in light, its
+art isn't washed white, and it meets the header and the page at a dark
+edge. Under them come Continue watching, Next up, the recommendation
 rows, "My requests", whose cards follow `requests.live`, and each
 library's newest titles. A row that's loading, empty, or failed is left
 out (a shelf shows its heading over blank cards while it loads), and Home
