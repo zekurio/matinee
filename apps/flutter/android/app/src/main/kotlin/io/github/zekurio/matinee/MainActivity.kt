@@ -14,6 +14,8 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.RenderMode
 import io.flutter.embedding.android.TransparencyMode
 import io.flutter.embedding.engine.FlutterEngine
+import io.github.zekurio.matinee.downloads.DownloadsBridge
+import io.github.zekurio.matinee.downloads.DownloadsHostApi
 import io.github.zekurio.matinee.platform.DeviceApi
 import io.github.zekurio.matinee.platform.DeviceFacts
 import io.github.zekurio.matinee.platform.DisplayNameKind
@@ -39,6 +41,7 @@ class MainActivity : FlutterActivity() {
     private val system by lazy { SystemBridge(this) }
     private var playback: PlayerBridge? = null
     private var scanner: ScannerBridge? = null
+    private var downloads: DownloadsBridge? = null
 
     // Flutter paints into a transparent Android TextureView above the video SurfaceView.
     override fun getRenderMode(): RenderMode = RenderMode.texture
@@ -56,6 +59,9 @@ class MainActivity : FlutterActivity() {
         val bridge = PlayerBridge(this, messenger)
         playback = bridge
         PlayerApi.setUp(messenger, bridge)
+        val offline = DownloadsBridge(this, messenger)
+        downloads = offline
+        DownloadsHostApi.setUp(messenger, offline)
     }
 
     override fun onStart() {
@@ -82,6 +88,9 @@ class MainActivity : FlutterActivity() {
         DeviceApi.setUp(messenger, null)
         SystemApi.setUp(messenger, null)
         ScannerApi.setUp(messenger, null)
+        DownloadsHostApi.setUp(messenger, null)
+        downloads?.release()
+        downloads = null
         playback?.release()
         playback = null
         scanner?.release()
@@ -100,6 +109,8 @@ class MainActivity : FlutterActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         if (requestCode == LOCAL_NETWORK_REQUEST) {
             device.localNetworkAnswered()
+        } else if (requestCode == DownloadsBridge.NOTIFY_REQUEST) {
+            downloads?.notifyAnswered()
         } else if (scanner?.onRequestPermissionsResult(requestCode) != true) {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }

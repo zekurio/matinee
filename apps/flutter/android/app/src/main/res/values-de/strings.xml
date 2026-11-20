@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- As app_de.arb's downloadsChannel and downloadsStateRunning. -->
+    <string name="downloads_channel">Downloads</string>
+    <string name="downloads_state_running">Wird heruntergeladen</string>
+</resources>

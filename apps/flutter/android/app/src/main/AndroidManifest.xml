@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- LAN discovery. Runtime permission when targeting API 37 or above. -->
@@ -8,6 +9,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- To scan the QR code a TV shows to sign it in, from Settings, Account. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Downloads run as WorkManager jobs that show their progress. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- One app for phones, tablets, and TVs: no touch screen or camera
          required, and a launcher entry on Android TV. -->
@@ -63,6 +68,11 @@
                     android:path="/callback" />
             </intent-filter>
         </activity>
+        <!-- A download's job runs in the foreground while it fetches. -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
         <!-- Don't delete: Flutter's tool reads it to generate GeneratedPluginRegistrant.java. -->
         <meta-data
             android:name="flutterEmbedding"

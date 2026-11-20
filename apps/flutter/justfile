@@ -63,3 +63,8 @@ check:
 # Generate the platform channels again after a change in pigeons/
 pigeon:
     for input in pigeons/*.dart; do {{ if in_shell != "" { "dart" } else { "nix develop ../..#flutter -c dart" } }} run pigeon --input "$input"; done
+
+# Run the JVM unit tests of the Android side, like the downloads worker
+android-test:
+    {{ flutter }} build apk --debug --config-only >/dev/null
+    cd android && {{ if in_shell != "" { "" } else { "nix develop ../../..#flutter -c" } }} ./gradlew --project-cache-dir="${XDG_CACHE_HOME:-$HOME/.cache}/matinee/gradle-project" :app:testDebugUnitTest --console=plain

@@ -7,6 +7,7 @@ import 'core/fresh_start.dart';
 import 'core/session.dart';
 import 'core/session_lifecycle.dart';
 import 'core/session_store.dart';
+import 'downloads/downloads_lifecycle.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +24,9 @@ Future<void> main() async {
         deviceProvider.overrideWithValue(device),
         sessionStoreProvider.overrideWithValue(store),
       ],
-      child: const SessionLifecycle(child: MatineeApp()),
+      child: const SessionLifecycle(
+        child: DownloadsLifecycle(child: MatineeApp()),
+      ),
     ),
   );
 }
