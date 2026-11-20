@@ -364,7 +364,24 @@ class PlaybackSession extends ChangeNotifier {
 
   Future<void> _readCaptions(Uri url) async {
     try {
-      final response = await httpClient.get(url);
+      var target = url;
+      late http.StreamedResponse streamed;
+      for (var hops = 0; ; hops++) {
+        if (_closed || _captionUrl != url) return;
+        streamed = await httpClient.send(
+          http.Request('GET', target)..followRedirects = false,
+        );
+        final location = streamed.headers['location'];
+        if (!streamed.isRedirect || location == null) break;
+        await streamed.stream.drain<void>();
+        target = target.resolve(location);
+        if (hops >= 5 ||
+            !{'http', 'https'}.contains(target.scheme) ||
+            target.userInfo.isNotEmpty) {
+          throw const FormatException('Invalid subtitle redirect.');
+        }
+      }
+      final response = await http.Response.fromStream(streamed);
       if (response.statusCode != 200) {
         throw http.ClientException('HTTP ${response.statusCode}', url);
       }
