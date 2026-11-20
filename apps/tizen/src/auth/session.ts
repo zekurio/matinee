@@ -24,6 +24,11 @@ import { tvModel, tvName } from "@/platform/tizen"
 const SERVERS_KEY = "matinee.tv.servers"
 /** The cookie the server reads a session from when a request has no bearer token. */
 const SESSION_COOKIE = "matinee_session"
+/**
+ * What the app calls itself in the server's sessions list, watching now,
+ * and client stats: a product name, the same in every language.
+ */
+const CLIENT_NAME = "Matinee Samsung TV"
 
 /** A server the TV knows, with its sign-in if it has one. */
 export type SavedServer = {
@@ -235,6 +240,7 @@ export class Session extends Observable {
       if (user) {
         this.keepUser(origin, user)
         this.set({ kind: "signedIn", server: origin, user })
+        this.identify(api)
         return
       }
       // Only a token the server turned down goes.
@@ -331,6 +337,15 @@ export class Session extends Observable {
     this.origin = origin
     this.keepToken(origin, token, nameOf(user))
     this.set({ kind: "signedIn", server: origin, user })
+    this.identify(this.clientFor(origin))
+  }
+
+  /**
+   * Tell the server what the app calls itself for the session, as every
+   * client does when it starts. It's only ever shown, so a failure is let go.
+   */
+  private identify(api: MatineeClient) {
+    api.account.sessions.identify({ name: CLIENT_NAME }).catch(() => {})
   }
 
   /** The account changed something of its own, like its playback preferences. */

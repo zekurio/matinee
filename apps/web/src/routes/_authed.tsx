@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 
+import { identifyBrowser } from "@/lib/client-name"
 import { orpc } from "@/lib/rpc"
 
 /**
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/_authed")({
     const { user } = await context.queryClient.ensureQueryData(
       orpc.auth.session.queryOptions(),
     )
+    if (user) identifyBrowser(user)
     // Only an admin can have setup left, so nobody else waits for config.
     if (user && user.role !== "admin") return { user }
     const config = await context.queryClient.ensureQueryData(

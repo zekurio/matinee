@@ -65,7 +65,10 @@ export type SessionOwner = {
   id: string
   userId: string
   item: MediaItemRow
-  userAgent: string | undefined
+  /** What the signed-in client called itself; see `SessionUser`. */
+  client: string | null
+  /** The sign-in the request came with. */
+  authSessionId: string
 }
 
 export type SessionReport = {
@@ -92,36 +95,6 @@ export type StreamPlan = {
   quality: PlaybackQuality
 }
 
-const BROWSERS: [RegExp, string][] = [
-  [/Edg(?:e|A|iOS)?\//, "Edge"],
-  [/OPR\/|Opera/, "Opera"],
-  [/Firefox\/|FxiOS\//, "Firefox"],
-  [/CriOS\/|Chrome\//, "Chrome"],
-  [/Safari\//, "Safari"],
-]
-
-const SYSTEMS: [RegExp, string][] = [
-  [/iPhone|iPad|iPod/, "iOS"],
-  [/Android/, "Android"],
-  [/CrOS/, "ChromeOS"],
-  [/Windows/, "Windows"],
-  [/Macintosh|Mac OS X/, "macOS"],
-  [/Linux/, "Linux"],
-]
-
-/**
- * `Firefox on Linux` from a User-Agent header. Apps that aren't browsers get
- * their first word, like `MatineeTV`.
- */
-export function clientName(agent: string | undefined): string | null {
-  if (!agent) return null
-  const browser = BROWSERS.find(([pattern]) => pattern.test(agent))?.[1]
-  const system = SYSTEMS.find(([pattern]) => pattern.test(agent))?.[1]
-  if (browser && system) return `${browser} on ${system}`
-  const name = browser ?? system ?? agent.split(/[\s/]/)[0]?.slice(0, 40)
-  return name || null
-}
-
 /** The columns a new session starts with. */
 async function startValues(owner: SessionOwner) {
   // ACCESS: The title is keyed by the visible item passed by the playback route.
@@ -141,8 +114,19 @@ async function startValues(owner: SessionOwner) {
     titleKind: owning?.kind ?? null,
     videoCodec: probe?.video?.codec ?? null,
     audioCodec: audio?.codec ?? null,
-    client: clientName(owner.userAgent),
+    client: owner.client,
+    authSessionId: owner.authSessionId,
   }
+}
+
+/**
+ * On a row that's already there: its client's name and sign-in, kept, or
+ * filled in when it had none. The first request of a play can arrive
+ * before the client has named itself.
+ */
+const ownerColumns = {
+  client: sql`coalesce(${playbackSession.client}, excluded.client)`,
+  authSessionId: sql`coalesce(${playbackSession.authSessionId}, excluded.auth_session_id)`,
 }
 
 /** Updates only touch a session of the same user and file. */
@@ -158,13 +142,13 @@ function sameOwner(owner: SessionOwner): SQL | undefined {
 const inserted = sql<boolean>`xmax = 0`
 
 /**
- * End the sessions a browser left open on a file when it starts another
+ * End the sessions a client left open on a file when it starts another
  * there, as a reload does. The page that went away may never have sent
  * its closing report, and would show as watching until it timed out. A
  * second tab that's still open reopens its session with its next report.
+ * It goes by the sign-in, not the client's name, which two devices share.
  */
 async function endLeftBehind(owner: SessionOwner): Promise<void> {
-  const client = clientName(owner.userAgent)
   await db
     .update(playbackSession)
     .set({ endedAt: new Date() })
@@ -173,9 +157,7 @@ async function endLeftBehind(owner: SessionOwner): Promise<void> {
         sameOwner(owner),
         ne(playbackSession.id, owner.id),
         isNull(playbackSession.endedAt),
-        client === null
-          ? isNull(playbackSession.client)
-          : eq(playbackSession.client, client),
+        eq(playbackSession.authSessionId, owner.authSessionId),
       ),
     )
 }
@@ -208,6 +190,7 @@ export async function recordReport(
         paused: report.paused,
         endedAt,
         updatedAt: now,
+        ...ownerColumns,
       },
       setWhere: sameOwner(owner),
     })
@@ -295,6 +278,7 @@ export async function recordStream(
         quality: sql`excluded.quality`,
         endedAt: null,
         updatedAt: new Date(),
+        ...ownerColumns,
       },
       setWhere: sameOwner(owner),
     })

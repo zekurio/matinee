@@ -12,6 +12,9 @@ export default defineMessages("validation", {
   // contract-library.ts: searching a provider for a match.
   "validation.searchQuery": "Enter a name to search for.",
 
+  // sessions.ts: the name a client gives itself.
+  "validation.clientName": "Enter a name.",
+
   // titles.ts: uploading a title's, season's, or episode's image. The
   // empty file and image type messages are the avatar ones below.
   "validation.imageSize": "Pick an image under 25 MB.",

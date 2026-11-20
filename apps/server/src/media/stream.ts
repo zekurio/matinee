@@ -233,7 +233,8 @@ streamRoutes.get("/:id/play", async (c) => {
         id: sessionId,
         userId: viewer.id,
         item,
-        userAgent: c.req.header("user-agent"),
+        client: viewer.clientName,
+        authSessionId: viewer.sessionId,
       }
     : null
   const { plan } = opened
@@ -294,14 +295,21 @@ async function hlsRequest(
 }
 
 function watcherFor(
-  viewer: { id: string },
+  viewer: { id: string; clientName: string | null; sessionId: string },
   item: MediaItemRow,
   session: string | undefined,
-  userAgent: string | undefined,
 ): Watcher {
   return {
     key: session ?? `user:${viewer.id}`,
-    owner: session ? { id: session, userId: viewer.id, item, userAgent } : null,
+    owner: session
+      ? {
+          id: session,
+          userId: viewer.id,
+          item,
+          client: viewer.clientName,
+          authSessionId: viewer.sessionId,
+        }
+      : null,
   }
 }
 
@@ -329,12 +337,7 @@ streamRoutes.get("/:id/hls/main.m3u8", async (c) => {
   const spec = await encodeSpec(item, request)
   if (!spec) return c.body(null, 500)
   const job = await openJob(spec)
-  const watcher = watcherFor(
-    viewer,
-    item,
-    query.data.session,
-    c.req.header("user-agent"),
-  )
+  const watcher = watcherFor(viewer, item, query.data.session)
   startWatching(job, query.data.start, watcher)
   if (watcher.owner) {
     void recordStream(watcher.owner, spec.plan).catch((cause: unknown) =>
@@ -381,12 +384,7 @@ streamRoutes.get("/:id/hls/:key/:name", async (c) => {
   if (!encodeAllowed(viewer.access, job.spec.plan.quality))
     return c.body(null, 403)
 
-  const watcher = watcherFor(
-    viewer,
-    item,
-    query.data.session,
-    c.req.header("user-agent"),
-  )
+  const watcher = watcherFor(viewer, item, query.data.session)
   const signal = c.req.raw.signal
   const segment = name[1]
   if (segment !== undefined && !hasSegment(job, Number(segment))) {

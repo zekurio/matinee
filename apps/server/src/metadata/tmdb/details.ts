@@ -1,6 +1,7 @@
 import type { ExternalIds } from "@matinee/db"
 
 import { languageTag } from "../../media/language"
+import { showStatus } from "../status"
 import { isYouTubeId, rankTrailers } from "../trailers"
 import {
   type EpisodeDetails,
@@ -142,7 +143,8 @@ export async function movieDetails(id: string, language: string) {
     rating: rating(movie.vote_average, movie.vote_count),
     contentRating: text(certification?.certification),
     releaseDate: isoDate(movie.release_date),
-    status: text(movie.status),
+    // Jellyfin keeps a status only for shows.
+    status: null,
     runtimeMinutes: movie.runtime || null,
     externalIds,
     images: {
@@ -235,7 +237,7 @@ export async function showDetails(id: string, language: string) {
     rating: rating(show.vote_average, show.vote_count),
     contentRating: text(ageRating?.rating),
     releaseDate: isoDate(show.first_air_date),
-    status: text(show.status),
+    status: showStatus(show.status),
     runtimeMinutes: show.episode_run_time?.[0] || null,
     externalIds,
     images: {

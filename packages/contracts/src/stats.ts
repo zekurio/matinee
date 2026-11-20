@@ -288,7 +288,10 @@ export const NowPlaying = t.object({
    */
   reportAgeSeconds: t.number().min(0),
   paused: t.boolean(),
-  /** The browser and system, like `Firefox on Linux`. */
+  /**
+   * What the client called itself, like `Chrome Android` or
+   * `Matinee Android TV`. Null when it didn't say.
+   */
   client: t.string().nullable(),
   startedAt: t.date(),
   /** ffmpeg is running for it right now. */

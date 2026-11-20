@@ -4,6 +4,7 @@ import type {
   MediaItem,
   PlaybackQualityPreset,
   Title,
+  TitleStatus,
 } from "@matinee/contracts"
 import {
   type ArtworkSize,
@@ -329,8 +330,22 @@ export function titleFacts(title: Title): string[] {
     show
       ? plural("media_episode_count", title.itemCount)
       : formatRuntime(title.runtimeMinutes),
-    show ? title.status : null,
+    show ? titleStatusName(title.status) : null,
   ].filter((fact): fact is string => Boolean(fact))
+}
+
+/** A show's status in the TV's language, from the web's words. */
+export function titleStatusName(status: TitleStatus | null): string | null {
+  switch (status) {
+    case "continuing":
+      return tr("web_metadata_status_continuing")
+    case "ended":
+      return tr("web_metadata_status_ended")
+    case "unreleased":
+      return tr("web_metadata_status_unreleased")
+    default:
+      return null
+  }
 }
 
 /** "Director", or "Directors" for a `count` above one. */
