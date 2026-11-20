@@ -13,6 +13,9 @@ import 'screens/library/library_screen.dart';
 import 'screens/pending.dart';
 import 'screens/profile/lists_screens.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/requests/catalog_browse.dart';
+import 'screens/requests/catalog_screen.dart';
+import 'screens/requests/requests_screen.dart';
 import 'screens/search/search_screen.dart';
 import 'screens/settings/admin/library_editor.dart';
 import 'screens/settings/admin/user_access_page.dart';
@@ -338,6 +341,38 @@ List<RouteBase> _handsetRoutes() => [
     builder: (context, state) => EpisodeScreen(id: state.pathParameters['id']!),
   ),
   GoRoute(
+    path: '/requests',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const RequestsScreen(),
+  ),
+  GoRoute(
+    path: '/requests/:list',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        RequestsScreen(list: state.pathParameters['list']),
+  ),
+  GoRoute(
+    path: '/catalog/:kind/:provider/:providerId',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => CatalogScreen(
+      catalogKey: (
+        kind: state.pathParameters['kind']!,
+        provider: state.pathParameters['provider']!,
+        providerId: state.pathParameters['providerId']!,
+        libraryId: state.uri.queryParameters['library'],
+      ),
+    ),
+  ),
+  GoRoute(
+    path: '/catalog-browse/:kind',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => CatalogBrowseScreen(
+      kind: state.pathParameters['kind']!,
+      filters: state.uri.queryParameters['filters'],
+      sort: state.uri.queryParameters['sort'],
+    ),
+  ),
+  GoRoute(
     path: '/browse',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => BrowseScreen(
@@ -377,14 +412,10 @@ List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 /// The pages over the tabs, by path pattern, until each has its screen.
 const _pages = [
   ('/link-device', 'Link a device'),
-  ('/requests', 'Requests'),
-  ('/requests/:list', 'Requests'),
   ('/person/:name', 'Person'),
   ('/downloads/show/:titleId', 'Show downloads'),
   ('/identify/:titleId', 'Identify'),
   ('/images/:titleId', 'Images'),
-  ('/catalog/:kind/:provider/:providerId', 'Catalog title'),
-  ('/catalog-browse/:kind', 'Browse the catalog'),
 ];
 
 GoRoute _pending(

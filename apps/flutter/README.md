@@ -8,9 +8,9 @@ in each platform's native player, behind the Flutter view.
 So far it has the toolchain, the kit, the API client, the strings, the
 sessions, the screens that connect and sign in, the tabs, Home, Shows,
 Movies, the genre and studio pages, the title, season, and episode
-pages, search, the profile, settings, and the Android phone and tablet
-player. Every other screen behind the tabs is a placeholder that shows
-its route.
+pages, search with Explore, the catalog's pages and requests, the
+profile, settings, and the Android phone and tablet player. Every other
+screen behind the tabs is a placeholder that shows its route.
 
 ## Build
 
@@ -220,7 +220,8 @@ web's banner, its slides crossfading every eight seconds, with Play and
 Details. The banner is dark in either scheme, as the web's: in light, its
 art isn't washed white, and it meets the header and the page at a dark
 edge. Under them come Continue watching, Next up, the recommendation
-rows, "My requests", whose cards follow `requests.live`, and each
+rows, "My requests", whose cards follow `requests.live` and open the
+catalog's page or the library's (see Requests), and each
 library's newest titles. A row that's loading, empty, or failed is left
 out (a shelf shows its heading over blank cards while it loads), and Home
 is one error page only when the libraries failed and nothing else came.
@@ -245,9 +246,15 @@ with the episode up next, then its seasons, or with one season its
 episodes; a season lists its episodes; an episode shows the rest of its
 season. The cast opens `Routes.person`, the genres and studios
 `Routes.browse`. A title the server matched has its related rows from
-`catalog.related`: the titles here are the library's cards, and the rest
-open nothing until the catalog's pages exist. A page fetches again when
-the person comes back to it, and whenever a change lands.
+`catalog.related` (`CatalogRelatedRows` in `lib/screens/requests`): the
+titles here are the library's cards, and the rest are catalog cards that
+follow their state and open the catalog's page. A show the provider knows
+more of than the server has gets the missing seasons at the end of its
+seasons rail, each with its state and the request sheet, and a season
+only partly here says "3 of 10 episodes here" and ends its episodes with
+"Request the rest" (`show_gaps.dart`, from `catalog.missingSeasons`). A
+page fetches again when the person comes back to it, and whenever a
+change lands.
 
 The tick and the heart show their new state at once and go back if the
 server refuses, with a toast (`toastProvider`, shown over every screen).
@@ -288,9 +295,72 @@ in the app's language.
 library 250 ms after typing pauses (`search.query`, 40 matches), and the
 last answer stays on screen, with "Searching…" under it, while the next
 is out. Matches come as the server ranked them: titles by library, then
-cast and crew, then genres and studios as chips that open Browse. Like
-the Kotlin app it keeps no recent searches. The empty field shows
-nothing yet; it's where Explore's rails go.
+cast and crew, then genres and studios as chips that open Browse, then
+the catalog's "Not here yet" (`catalog.search`), which loads on its own,
+so the library's matches never wait for it. With nothing in the library
+the catalog's titles come first without a heading, and "No match" shows
+only once the catalog found nothing either. Titles the viewer can't
+request, with requests off, are left out. Like the Kotlin app it keeps no
+recent searches. The empty field shows Explore.
+
+## Explore
+
+`lib/screens/requests/discover.dart` is the Kotlin app's `Discover.kt`
+under the search field: `discover.rails` says whether Discover is on and
+which rows to show, in its order, and each row loads its first 20 cards
+from `discover.row` on its own, with blank cards while it loads and a
+line with Try again when it fails. Several failed rows say so once; all
+of them failing, or `discover.rails` itself, is one message. A row's
+heading opens its browse (`Routes.catalogBrowse` with the row's filters
+and sort), and a recommendation's long press offers "Not interested",
+which `recommendations.dismissed` takes and the rows leave out for the
+sitting. Titles here already are the library's cards; the rest follow
+`requests.live`. With Discover off, the page under the field stays empty.
+
+`Explore(leading: ...)` takes slivers to put before the rows. The search
+page passes an admin's `RequestsLink`, the way to the queue with how many
+requests need them. A row of request cards goes in the same place once
+the server sends one: add its sliver to `leading`, before or instead of
+the link.
+
+`CatalogBrowseScreen` (`catalog_browse.dart`) is `Routes.catalogBrowse`:
+`discover.browse` a page at a time as the grid's end comes near, the sort
+in a menu and the filters in a sheet, each from `discover.browseOptions`.
+The cards say the score or the release date when the server says the
+list calls for it. A long list keeps only the blocks of cards near the
+screen, as the web's does.
+
+## Requests
+
+`lib/screens/requests` holds the catalog's side, the Kotlin app's
+`ui/requests`. `RequestsHub` (`requests_hub.dart`) is the one place a
+request changes. It keeps each title's state as `requests.live` streams
+it, asks and cancels, holds an admin's answers for the toast's Undo
+before sending them, and bumps `requestsVersionProvider`, which every
+read that holds a request's state watches, so pages that are covered
+fetch again too. A screen follows its titles by wrapping them in
+`FollowTitles`. For an admin, the hub also follows
+`admin.requests.live`, which the queue, the Add and Decline buttons, and
+the count beside "Requests" read.
+
+`Routes.catalog` (`catalog_screen.dart`) is a title the server doesn't
+have, laid out like a library title's page, with the state on the
+poster. Request asks at once for a movie and opens the request sheet for
+a show (`request_sheet.dart`: its seasons, the server's pick ticked, and
+"New seasons as they air" on a first request); "Request more" asks for
+the seasons left. An admin answering a waiting request gets Add and
+Decline in Request's place, and a tap on the badge says who asked. When
+the title arrives while the page is open, the library's page replaces
+it. A request the viewer can't make stays dimmed, and a tap says why. A
+first request's toast offers Undo for six seconds.
+
+`Routes.requests()` is what the viewer asked for, In progress or All,
+with why a declined title isn't coming. `Routes.requests(list)` is an
+admin's queue: Waiting, with Add, Add all, and Decline with a reason and
+a note; Needs attention, with Retry and Give up; On the way, with
+progress; and Done, a page at a time, where a declined request can be
+added after all or allowed again. Each row's menu opens the title. An
+account that isn't an admin gets its own requests on either route.
 
 ## Profile
 
