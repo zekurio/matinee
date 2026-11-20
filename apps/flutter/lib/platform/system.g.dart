@@ -217,4 +217,44 @@ class SystemApi {
     ;
     return pigeonVar_replyValue as PickedImage?;
   }
+
+  /// This process's latest lines in logcat, at most [maxLines], in its
+  /// threadtime format, as the Kotlin app's `readAppLog` read them. An app
+  /// reads its own lines without READ_LOGS.
+  Future<List<String>> readLog(int maxLines) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.SystemApi.readLog$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[maxLines]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return (pigeonVar_replyValue! as List<Object?>).cast<String>();
+  }
+
+  /// Offers [text] to the apps that take it, like mail or a messenger, with
+  /// [subject] for the ones that have one.
+  Future<void> shareText(String subject, String text) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.SystemApi.shareText$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[subject, text]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: true,
+    )
+    ;
+  }
 }

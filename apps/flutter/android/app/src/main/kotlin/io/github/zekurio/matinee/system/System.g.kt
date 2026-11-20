@@ -278,6 +278,17 @@ interface SystemApi {
    * out. Reads at most [maxBytes] plus one.
    */
   suspend fun pickImage(maxBytes: Long): PickedImage?
+  /**
+   * This process's latest lines in logcat, at most [maxLines], in its
+   * threadtime format, as the Kotlin app's `readAppLog` read them. An app
+   * reads its own lines without READ_LOGS.
+   */
+  suspend fun readLog(maxLines: Long): List<String>
+  /**
+   * Offers [text] to the apps that take it, like mail or a messenger, with
+   * [subject] for the ones that have one.
+   */
+  fun shareText(subject: String, text: String)
 
   companion object {
     /** The codec used by SystemApi. */
@@ -302,6 +313,44 @@ interface SystemApi {
               }
               reply.reply(wrapped)
             }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.SystemApi.readLog$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val maxLinesArg = args[0] as Long
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.readLog(maxLinesArg))
+              } catch (exception: Throwable) {
+                SystemPigeonUtils.wrapError(exception)
+              }
+              reply.reply(wrapped)
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.SystemApi.shareText$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val subjectArg = args[0] as String
+            val textArg = args[1] as String
+            val wrapped: List<Any?> = try {
+              api.shareText(subjectArg, textArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              SystemPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)

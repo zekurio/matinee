@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/misc.dart'
     show FutureProviderFamily, StreamProviderFamily;
 
 import '../api/matinee_api.dart';
+import '../core/app_log.dart';
 import '../core/session.dart';
 import 'reconnecting.dart';
 
@@ -48,10 +49,28 @@ MatineeApi serverApi(Ref ref) =>
 /// Riverpod 3 retries a failed provider by default; these show the failure.
 Duration? _noRetry(int count, Object error) => null;
 
+/// [read], with an answer that didn't parse logged, as the Kotlin app's
+/// `Load` logged it, for the app log.
+Future<T> _logged<T>(Future<T> read) async {
+  try {
+    return await read;
+  } on Object catch (error, stack) {
+    if (error is FormatException || error is TypeError) {
+      logWarning(
+        'ServerData',
+        "The server's answer didn't parse",
+        error,
+        stack,
+      );
+    }
+    rethrow;
+  }
+}
+
 /// One read from the server.
 FutureProvider<T> serverQuery<T>(Future<T> Function(MatineeApi api) read) =>
     FutureProvider.autoDispose<T>(
-      (ref) => read(serverApi(ref)),
+      (ref) => _logged(read(serverApi(ref))),
       retry: _noRetry,
     );
 
@@ -59,7 +78,7 @@ FutureProvider<T> serverQuery<T>(Future<T> Function(MatineeApi api) read) =>
 FutureProviderFamily<T, A> serverQueryFamily<T, A>(
   Future<T> Function(MatineeApi api, A arg) read,
 ) => FutureProvider.autoDispose.family<T, A>(
-  (ref, arg) => read(serverApi(ref), arg),
+  (ref, arg) => _logged(read(serverApi(ref), arg)),
   retry: _noRetry,
 );
 

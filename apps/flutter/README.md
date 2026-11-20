@@ -433,8 +433,8 @@ the system, and the device, and the licenses page lays out `NOTICE.md`,
 which the app bundles as an asset. The rows (`Panel`, `LinkRow`,
 `SwitchRow`, `ValueRow`, `PickerRow`) are in `settings_rows.dart`. Signing
 out and switching server or account are on the profile. The Kotlin app's
-subtitles, downloads, the app log, and playback diagnostics aren't here
-yet. An admin also gets the Administration section, which
+subtitles, downloads, and playback diagnostics aren't here yet. An admin
+also gets the Administration section, which
 [Admin pages](#admin-pages) covers.
 
 ### Account
@@ -449,6 +449,27 @@ out here, which the profile does; any other signs out with
 `DELETE /account/sessions/{id}`. Back from linking a device, the list
 loads again, and once more after `devicePoll`, a little longer than a
 device takes to poll for its session.
+
+### The app log
+
+About ends with the app's log, as the Kotlin app's: Show, Copy, and
+Share, each reading it afresh (`app_log_section.dart`). It's this
+process's latest lines in logcat (`SystemApi.readLog` in
+`pigeons/system.dart`, which runs `logcat --pid` as the Kotlin app did),
+so it has what Flutter writes there, under the tag `flutter`, and what the
+players and Android log for the app. `lib/core/app_log.dart` is the
+Kotlin app's `AppLog.kt` in Dart: it keeps the latest 500 lines within
+60,000 characters and scrubs each one of the server's host, the account's
+names and id, URLs, hosts, addresses, paths, file names, quoted text,
+ids, and tokens, with the Kotlin app's tests in
+`test/core/app_log_test.dart`. Nothing is sent anywhere unless the person
+shares it.
+
+Flutter's own errors reach logcat already: a widget's error through
+`FlutterError`'s default handler, and an uncaught one from the engine.
+`logWarning` writes the app's own warnings, as the Kotlin app's `Log.w`
+did, and a server answer that doesn't parse is logged from
+`serverQuery`, as the Kotlin app logged it.
 
 ### Linking a device
 

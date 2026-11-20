@@ -5,11 +5,13 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Process
 import android.os.ext.SdkExtensions
 import android.provider.MediaStore
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -62,6 +64,37 @@ class SystemBridge(private val activity: Activity) : SystemApi {
         return PickedImage(type, bytes)
     }
 
+    override suspend fun readLog(maxLines: Long): List<String> = withContext(Dispatchers.IO) {
+        try {
+            val process = ProcessBuilder(
+                "logcat", "-d", "-v", "threadtime", "--pid=${Process.myPid()}", "-t", "$maxLines",
+            )
+                .redirectErrorStream(true)
+                .start()
+            try {
+                process.inputStream.bufferedReader().readLines().also {
+                    process.waitFor(LOGCAT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                }
+            } finally {
+                process.destroy()
+            }
+        } catch (e: IOException) {
+            listOf("logcat unavailable: ${e.javaClass.simpleName}")
+        }
+    }
+
+    override fun shareText(subject: String, text: String) {
+        val send = Intent(Intent.ACTION_SEND)
+            .setType("text/plain")
+            .putExtra(Intent.EXTRA_SUBJECT, subject)
+            .putExtra(Intent.EXTRA_TEXT, text)
+        try {
+            activity.startActivity(Intent.createChooser(send, null))
+        } catch (_: ActivityNotFoundException) {
+            // Nothing takes text.
+        }
+    }
+
     /** True when it took the result, which was for something it started. */
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
         if (requestCode != PICK_IMAGE_REQUEST) return false
@@ -79,6 +112,7 @@ class SystemBridge(private val activity: Activity) : SystemApi {
 
     private companion object {
         const val PICK_IMAGE_REQUEST = 7422
+        const val LOGCAT_TIMEOUT_SECONDS = 5L
         val IMAGE_TYPES = arrayOf("image/jpeg", "image/png", "image/webp")
 
         /** Android 13, or 11 and 12 with the photo picker's system update, as `PickVisualMedia` checks. */

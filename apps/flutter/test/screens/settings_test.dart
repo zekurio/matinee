@@ -1,10 +1,13 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
+import 'package:matinee/core/app_log.dart';
 import 'package:matinee/core/device.dart';
 import 'package:matinee/core/session.dart';
+import 'package:matinee/core/toasts.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/player/player_state.dart';
@@ -16,6 +19,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import '../core/fakes.dart';
 import '../media/harness.dart';
 import 'home_backend.dart';
+import 'metadata_test.dart' show RecordedToasts;
 
 final _overrides = <Override>[
   savedServersProvider.overrideWithValue([
@@ -45,12 +49,13 @@ Future<ProviderContainer> _pump(
   Size size = const Size(412, 915),
   KitColors colors = matineeDark,
   AuthState? auth,
+  List<Override> overrides = const [],
 }) async {
   await pumpScreen(
     tester,
     screen,
     client: HomeBackend().client,
-    overrides: _overrides,
+    overrides: [..._overrides, ...overrides],
     size: size,
     colors: colors,
     auth: auth,
@@ -139,6 +144,106 @@ void main() {
     await tester.tap(find.text('Licenses'));
     await tester.pumpAndSettle();
     expect(find.text('/settings/licenses'), findsOneWidget);
+  });
+
+  group('the app log', () {
+    const lines = [
+      '--------- beginning of main',
+      '11-20 09:00:00.000  4321  4350 W ServerData: GET '
+          'https://media.example.com/api/v1/titles failed',
+      '11-20 09:00:01.000  4321  4350 I flutter: signed in to '
+          'media.example.com as ada',
+    ];
+    const scrubbed = [
+      '11-20 09:00:00.000 W ServerData: GET <url> failed',
+      '11-20 09:00:01.000 I flutter: signed in to <server> as <account>',
+    ];
+
+    Future<RecordedToasts> pumpAbout(
+      WidgetTester tester, {
+      void Function(String subject, String text)? onShare,
+    }) async {
+      final toasts = RecordedToasts();
+      await _pump(
+        tester,
+        const SettingsPageScreen(pageKey: 'about'),
+        overrides: [
+          logReaderProvider.overrideWithValue((maxLines) async {
+            expect(maxLines, maxLogLines * 2);
+            return lines;
+          }),
+          textSharerProvider.overrideWithValue(
+            (subject, text) async => onShare?.call(subject, text),
+          ),
+          toastProvider.overrideWithValue(toasts),
+        ],
+      );
+      return toasts;
+    }
+
+    testWidgets('shows the log without the server or the account', (
+      tester,
+    ) async {
+      await pumpAbout(tester);
+      expect(find.text('App log'), findsOneWidget);
+      expect(
+        find.text(
+          'Recent messages from this app, without addresses, accounts, or '
+          'file names',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Show log'));
+      await tester.pumpAndSettle();
+      for (final line in scrubbed) {
+        expect(find.text(line), findsOneWidget);
+      }
+      expect(find.text('Matinee app log v1'), findsOneWidget);
+      expect(find.textContaining('beginning of main'), findsNothing);
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+      expect(find.text(scrubbed.first), findsNothing);
+    });
+
+    testWidgets('copies it, which Android 13 and up confirms itself', (
+      tester,
+    ) async {
+      String? copied;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            // SAFETY: Clipboard.setData always sends a map with its text.
+            copied = (call.arguments as Map)['text'] as String?;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      final toasts = await pumpAbout(tester);
+      await tester.tap(find.text('Copy log'));
+      await tester.pumpAndSettle();
+      expect(copied, endsWith('${scrubbed.join('\n')}\n'));
+      expect(toasts.shown, isEmpty);
+    });
+
+    testWidgets('shares it', (tester) async {
+      final shared = <(String, String)>[];
+      await pumpAbout(
+        tester,
+        onShare: (subject, text) => shared.add((subject, text)),
+      );
+      await tester.tap(find.text('Share log'));
+      await tester.pumpAndSettle();
+      expect(shared.single.$1, 'App log');
+      expect(shared.single.$2, startsWith('Matinee app log v1\n'));
+      expect(shared.single.$2, contains(scrubbed.last));
+    });
   });
 
   testWidgets('Licenses shows NOTICE.md', (tester) async {

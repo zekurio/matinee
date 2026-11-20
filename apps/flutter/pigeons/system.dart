@@ -32,4 +32,14 @@ abstract class SystemApi {
   /// out. Reads at most [maxBytes] plus one.
   @async
   PickedImage? pickImage(int maxBytes);
+
+  /// This process's latest lines in logcat, at most [maxLines], in its
+  /// threadtime format, as the Kotlin app's `readAppLog` read them. An app
+  /// reads its own lines without READ_LOGS.
+  @async
+  List<String> readLog(int maxLines);
+
+  /// Offers [text] to the apps that take it, like mail or a messenger, with
+  /// [subject] for the ones that have one.
+  void shareText(String subject, String text);
 }

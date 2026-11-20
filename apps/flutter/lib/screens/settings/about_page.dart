@@ -9,11 +9,12 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../query/failure_view.dart';
 import '../../router.dart';
+import 'app_log_section.dart';
 import 'settings_rows.dart';
 import 'settings_screen.dart';
 
-/// Settings, About: what this app and device are, and the licenses. The
-/// Kotlin app's playback report and app log aren't here yet.
+/// Settings, About: what this app and device are, the licenses, and the
+/// app's log. The Kotlin app's playback report isn't here yet.
 class AboutPage extends ConsumerWidget {
   const AboutPage({super.key});
 
@@ -46,6 +47,7 @@ class AboutPage extends ConsumerWidget {
             ),
           ],
         ),
+        const AppLogSection(),
       ],
     );
   }
