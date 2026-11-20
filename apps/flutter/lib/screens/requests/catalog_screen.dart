@@ -93,14 +93,25 @@ class _CatalogPageState extends ConsumerState<_CatalogPage> {
       ),
     );
     // Once the title is in a library the viewer can see, this page becomes
-    // that title's page.
+    // that title's page, which Back leaves for wherever this one came
+    // from. Only while it's on top: the router replaces the page on top,
+    // so under another title's page or the request sheet it waits until
+    // the person comes back to it. Watching whether it's on top builds
+    // it again when that changes.
     final arrived = availability.state == AvailabilityState.here
         ? availability.libraryTitleId
         : null;
-    if (arrived != null && !_left) {
+    final onTop = ModalRoute.isCurrentOf(context) ?? true;
+    if (arrived != null && !_left && onTop) {
       _left = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.pushReplacement(Routes.title(arrived));
+        if (!mounted) return;
+        if (ModalRoute.isCurrentOf(context) ?? true) {
+          context.pushReplacement(Routes.title(arrived));
+        } else {
+          // Covered in the meantime: next time it's on top.
+          setState(() => _left = false);
+        }
       });
     }
     void openSheet(int? only) => unawaited(

@@ -403,7 +403,10 @@ a show (`request_sheet.dart`: its seasons, the server's pick ticked, and
 the seasons left. An admin answering a waiting request gets Add and
 Decline in Request's place, and a tap on the badge says who asked. When
 the title arrives while the page is open, the library's page replaces
-it. A request the viewer can't make stays dimmed, and a tap says why. A
+it, and Back goes where the catalog's page would have:
+to Explore, Home, the requests page, or for a link, Home. While the
+request sheet or another page is over it, it waits until the person is
+back on it (`test/screens/arrival_test.dart`). A request the viewer can't make stays dimmed, and a tap says why. A
 first request's toast offers Undo for six seconds.
 
 `Routes.requests()` is what the viewer asked for, In progress or All,

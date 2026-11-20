@@ -271,6 +271,9 @@ final class RequestsBackend {
   /// The titles each `requests.live` stream was opened for, by provider id.
   final followed = <List<String>>[];
 
+  /// `catalog.details` for one title, by provider id, ahead of [answers].
+  final details = <String, JsonMap>{};
+
   /// The queue the admin's stream starts with.
   JsonMap queue = queueJson();
 
@@ -323,6 +326,13 @@ final class RequestsBackend {
     }
     if (failing[path] case final message?) {
       return _json({'message': message}, 500);
+    }
+    if (path == '/api/v1/catalog/details') {
+      // SAFETY: the client sends a CatalogInput, its ref an object.
+      final ref = (input as Map<String, Object?>)['ref']! as Map;
+      if (details[ref['providerId']] case final detail?) {
+        return _json(detail, 200);
+      }
     }
     if (path == '/api/v1/discover/row') {
       // SAFETY: the client sends the input as a JSON object.
