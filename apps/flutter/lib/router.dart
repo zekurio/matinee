@@ -8,6 +8,7 @@ import 'core/device.dart';
 import 'core/session.dart';
 import 'player/playback_screen.dart';
 import 'player/player_lab.dart';
+import 'screens/downloads/downloads_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/library/library_screen.dart';
 import 'screens/metadata/identify_screen.dart';
@@ -257,7 +258,14 @@ List<RouteBase> _handsetRoutes() => [
           ),
         ],
       ),
-      StatefulShellBranch(routes: [_pending(Routes.downloads, 'Downloads')]),
+      StatefulShellBranch(
+        routes: [
+          GoRoute(
+            path: Routes.downloads,
+            builder: (context, state) => const DownloadsScreen(),
+          ),
+        ],
+      ),
       StatefulShellBranch(
         routes: [
           GoRoute(
@@ -326,6 +334,12 @@ List<RouteBase> _handsetRoutes() => [
     parentNavigatorKey: _rootKey,
     builder: (context, state) =>
         UserAccessPage(userId: state.pathParameters['id']!),
+  ),
+  GoRoute(
+    path: '/downloads/show/:titleId',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        DownloadsShowScreen(titleId: state.pathParameters['titleId']!),
   ),
   GoRoute(
     path: '/title/:id',
@@ -450,7 +464,7 @@ bool get _hasPlayerLab =>
 List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 
 /// The pages over the tabs, by path pattern, until each has its screen.
-const _pages = [('/downloads/show/:titleId', 'Show downloads')];
+const _pages = <(String, String)>[];
 
 GoRoute _pending(
   String path,

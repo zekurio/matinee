@@ -116,6 +116,29 @@ final finishedDownloadProvider = Provider.family<OfflineItem?, String>((
   return entry != null && entry.done ? entry : null;
 });
 
+/// The space the downloads of the server in use take.
+final downloadsBytesProvider = Provider<int>(
+  (ref) => ref
+      .watch(shownDownloadsProvider)
+      .values
+      .fold(0, (sum, entry) => sum + entry.bytes),
+);
+
+/// The space left where the downloads go, asked again as a download
+/// finishes or goes; null until the platform says.
+final freeBytesProvider = FutureProvider<int?>((ref) async {
+  ref.watch(
+    downloadsProvider.select(
+      (list) => list.all.values.where((entry) => entry.done).length,
+    ),
+  );
+  try {
+    return await ref.watch(downloadsPlatformProvider).freeBytes();
+  } on Object {
+    return null;
+  }
+});
+
 /// What the account may stream and save, the Kotlin app's `viewer.options`.
 final playbackOptionsProvider = serverQuery((api) => api.playback.options());
 

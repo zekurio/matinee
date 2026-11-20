@@ -38,6 +38,9 @@ class HandsetShell extends ConsumerStatefulWidget {
   ConsumerState<HandsetShell> createState() => _HandsetShellState();
 }
 
+/// Shows and Movies, which need the server.
+const _libraryTabs = {1, 2};
+
 class _HandsetShellState extends ConsumerState<HandsetShell> {
   late final _selected = TabBarState(widget.shell.currentIndex);
 
@@ -75,10 +78,21 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
       _ => null,
     };
     final avatar = user?.avatarId;
+    // Offline only what works without the server stays, as in the Kotlin
+    // app: Home from the downloads, the downloads, and the profile, which
+    // leads to Settings. There are no libraries to list without it.
+    final offline = ref.watch(authStateProvider) is Offline;
+    ref.listen(authStateProvider, (_, auth) {
+      if (auth is Offline && _libraryTabs.contains(widget.shell.currentIndex)) {
+        widget.shell.goBranch(0);
+      }
+    });
     final items = [
       TabBarItem(id: 0, icon: Lucide.house, label: words.tabHome),
-      TabBarItem(id: 1, icon: Lucide.tv, label: words.tabShows),
-      TabBarItem(id: 2, icon: Lucide.film, label: words.tabMovies),
+      if (!offline) ...[
+        TabBarItem(id: 1, icon: Lucide.tv, label: words.tabShows),
+        TabBarItem(id: 2, icon: Lucide.film, label: words.tabMovies),
+      ],
       TabBarItem(id: 3, icon: Lucide.download, label: words.downloadsTitle),
       TabBarItem(
         id: 4,
