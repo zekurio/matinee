@@ -862,12 +862,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
                 if (_session.segment case final segment?
                     when !_locked && (_segmentFresh || controls))
                   SkipSegmentButton(
-                    label: switch (segment.kind) {
-                      MediaSegmentKind.recap => l.playerSkipRecap,
-                      MediaSegmentKind.credits => l.playerSkipCredits,
-                      MediaSegmentKind.preview => l.playerSkipPreview,
-                      _ => l.playerSkipIntro,
-                    },
+                    label: skipSegmentLabel(l, segment),
                     onPressed: _action(
                       () => _session.skipSegment(segment),
                       enabled: enabled,

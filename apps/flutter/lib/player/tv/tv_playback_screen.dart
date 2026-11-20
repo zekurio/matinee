@@ -481,12 +481,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
     }
     if (_session.segment case final segment? when _segmentFresh || _controls) {
       return (
-        label: switch (segment.kind) {
-          MediaSegmentKind.recap => l.playerSkipRecap,
-          MediaSegmentKind.credits => l.playerSkipCredits,
-          MediaSegmentKind.preview => l.playerSkipPreview,
-          _ => l.playerSkipIntro,
-        },
+        label: skipSegmentLabel(l, segment),
         countdown: null,
         onPressed: () => unawaited(_session.skipSegment(segment)),
       );

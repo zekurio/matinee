@@ -15,9 +15,10 @@ import 'player_panel.dart';
 import 'player_system.dart';
 
 /// What the phone's and the TV's players share over a [PlayerSitting]:
-/// the words for a failure and for a note, the menus' entries, the next
-/// episode's countdown, the speed kept across a new source, and the
-/// system's media controls. Each player lays them out its own way.
+/// the words for a failure, a note, and the skip button, the menus'
+/// entries, the next episode's countdown, the speed kept across a new
+/// source, and the system's media controls. Each player lays them out its
+/// own way.
 
 /// What went wrong, as a title and a line under it.
 (String, String) playbackErrorText(AppLocalizations l, Object error) {
@@ -72,6 +73,15 @@ PlayerNote playbackNoticeNote(
   ),
   PlaybackNotice.subtitleFailed => PlayerNote(title: l.playerErrorSubtitles),
 };
+
+/// What the button that skips [segment] says.
+String skipSegmentLabel(AppLocalizations l, MediaSegment segment) =>
+    switch (segment.kind) {
+      MediaSegmentKind.recap => l.playerSkipRecap,
+      MediaSegmentKind.credits => l.playerSkipCredits,
+      MediaSegmentKind.preview => l.playerSkipPreview,
+      _ => l.playerSkipIntro,
+    };
 
 /// The player's menus. The phone opens each from its own button; the TV
 /// puts quality and speed together under its settings button.
