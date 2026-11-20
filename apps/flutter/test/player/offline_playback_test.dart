@@ -161,6 +161,7 @@ void main() {
       List<Override> extra = const [],
       List<wire.DownloadEntryMessage>? entries,
       String id = 'm1',
+      ValueNotifier<String>? which,
       KitColors colors = matineeDark,
     }) async {
       final players = <FakePlayer>[];
@@ -193,7 +194,14 @@ void main() {
           onTap: () => unawaited(
             Navigator.of(context).push(
               PageRouteBuilder<void>(
-                pageBuilder: (_, _, _) => PlayRoute(id: id),
+                // A changing id is the router moving the page to another
+                // file, which it keeps, as Next does.
+                pageBuilder: (_, _, _) => which == null
+                    ? PlayRoute(id: id)
+                    : ValueListenableBuilder(
+                        valueListenable: which,
+                        builder: (context, id, _) => PlayRoute(id: id),
+                      ),
               ),
             ),
           ),
@@ -276,6 +284,33 @@ void main() {
       expect(find.bySemanticsLabel('Previous episode'), findsOneWidget);
       expect(find.bySemanticsLabel('Next episode'), findsOneWidget);
       expect(sent, isEmpty);
+      await tester.tap(find.bySemanticsLabel('Next episode'));
+      await tester.pumpAndSettle();
+      expect(find.text('/play/e3'), findsOneWidget);
+    });
+
+    testWidgets('the same page moved to another file plays that file', (
+      tester,
+    ) async {
+      final show = titleJson('s1', kind: 'show', name: 'The Expanse');
+      wire.DownloadEntryMessage episode(int number) => downloadEntry(
+        itemJson('e$number', title: show, season: 1, episode: number),
+        server: _server,
+      );
+      final which = ValueNotifier('e2');
+      addTearDown(which.dispose);
+      final (_, players, _) = await pump(
+        tester,
+        auth: Offline(_server, ada),
+        entries: [episode(2), episode(3)],
+        which: which,
+      );
+      expect(players.single.opens.single.url, contains('/e2/'));
+      which.value = 'e3';
+      await tester.pumpAndSettle();
+      expect(players, hasLength(2));
+      expect(players.first.disposed, isTrue);
+      expect(players.last.opens.single.url, contains('/e3/'));
       await tester.tap(find.bySemanticsLabel('Back').first);
       await tester.pumpAndSettle();
     });

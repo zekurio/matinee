@@ -37,7 +37,14 @@ class PlayRoute extends ConsumerWidget {
     final download = ref.read(finishedDownloadProvider(id));
     final loaded = ref.watch(downloadsProvider.select((list) => list.loaded));
     if (download != null) {
-      return OfflinePlaybackScreen(itemId: id, startAt: startAt);
+      return OfflinePlaybackScreen(
+        // The router keeps the page as it moves to another file, as Next
+        // does, since its key is the route's pattern; a downloaded file is
+        // a new player, where the streamed one moves to it in place.
+        key: ValueKey(id),
+        itemId: id,
+        startAt: startAt,
+      );
     }
     if (!loaded) {
       // The list comes in a moment; until then nothing is played twice.
@@ -59,12 +66,24 @@ class _Settled extends ConsumerStatefulWidget {
 }
 
 class _SettledState extends ConsumerState<_Settled> {
-  late final bool _download =
-      ref.read(finishedDownloadProvider(widget.id)) != null;
+  late bool _download = _downloaded();
+
+  bool _downloaded() => ref.read(finishedDownloadProvider(widget.id)) != null;
+
+  @override
+  void didUpdateWidget(_Settled old) {
+    super.didUpdateWidget(old);
+    // Another file asks again; the same one keeps what it said.
+    if (old.id != widget.id) _download = _downloaded();
+  }
 
   @override
   Widget build(BuildContext context) => _download
-      ? OfflinePlaybackScreen(itemId: widget.id, startAt: widget.startAt)
+      ? OfflinePlaybackScreen(
+          key: ValueKey(widget.id),
+          itemId: widget.id,
+          startAt: widget.startAt,
+        )
       : PlaybackScreen(itemId: widget.id, startAt: widget.startAt);
 }
 
