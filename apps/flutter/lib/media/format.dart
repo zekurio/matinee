@@ -154,7 +154,8 @@ String formatBytes(int bytes, AppLocalizations l) {
     value /= 1000;
     unit++;
   }
-  final number = value >= 10
+  // Bytes are whole, so "0 B" rather than "0.0 B".
+  final number = value >= 10 || unit == 0
       ? value.round().toString()
       : NumberFormat('0.0', l.localeName).format(value);
   return '$number ${units[unit]}';

@@ -174,7 +174,7 @@ void main() {
       await tester.tap(find.text('Original'));
       await tester.pumpAndSettle();
       expect(find.text('Audio tracks'), findsNothing);
-      expect(find.text('1.0 B · MKV · May not play on this device'), findsOne);
+      expect(find.text('1 B · MKV · May not play on this device'), findsOne);
       await tester.tap(find.text('Download').last);
       await tester.pumpAndSettle();
       final request = platform.requests.single;
