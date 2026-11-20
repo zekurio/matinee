@@ -1,15 +1,24 @@
 package io.github.zekurio.matinee.player.system
 
 import android.app.Activity
+import android.app.PendingIntent
 import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.drawable.Icon
 import android.media.AudioManager
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.util.Rational
 import android.view.WindowManager
+import androidx.core.content.ContextCompat
 import io.flutter.plugin.common.BinaryMessenger
+import io.github.zekurio.matinee.R
 import kotlin.math.roundToInt
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -19,15 +28,35 @@ import kotlinx.coroutines.launch
  * What the player asks of the device around the video, as the Kotlin
  * app's `DeviceLevels` and `rememberPictureInPicture`: the window's own
  * brightness, which a swipe sets and the player puts back, the media
- * volume, and picture in picture. Pigeon calls these on the main thread.
+ * volume, picture in picture, and the media session ([MediaControls]).
+ * Pigeon calls these on the main thread.
  */
-internal class PlayerSystem(private val activity: Activity, messenger: BinaryMessenger) : PlayerSystemApi {
+internal class PlayerSystem(
+    private val activity: Activity,
+    messenger: BinaryMessenger,
+    /** A play pressed on the system's controls, which may start the sound with the app away. */
+    private val playPressed: () -> Unit,
+) : PlayerSystemApi {
     private val audio = activity.getSystemService(AudioManager::class.java)
     private val events = PlayerSystemEventsApi(messenger)
     private val scope = MainScope()
 
     /** The player wants the small window when the app is left, as while a video plays. */
     private var auto = false
+
+    private val media = MediaControls(activity, ::send)
+
+    /** The small window's buttons, which Android's own shows only play and pause of. */
+    private val actions = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val kind = MediaCommandKind.ofRaw(intent.getIntExtra(EXTRA_COMMAND, -1)) ?: return
+            send(MediaCommandMessage(kind))
+        }
+    }
+
+    init {
+        ContextCompat.registerReceiver(activity, actions, IntentFilter(ACTION), ContextCompat.RECEIVER_NOT_EXPORTED)
+    }
 
     override fun levels(): LevelsMessage = LevelsMessage(brightness(), volume())
 
@@ -78,15 +107,77 @@ internal class PlayerSystem(private val activity: Activity, messenger: BinaryMes
         auto = enabled
         // From Android 12 the system shrinks the app itself as it leaves,
         // which animates better than entering from the leave hint.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            runCatching { activity.setPictureInPictureParams(params(enabled).build()) }
-        }
+        refreshParams()
+    }
+
+    private fun refreshParams() {
+        if (!hasPictureInPicture()) return
+        runCatching { activity.setPictureInPictureParams(params(auto).build()) }
     }
 
     private fun params(auto: Boolean): PictureInPictureParams.Builder =
-        PictureInPictureParams.Builder().setAspectRatio(ASPECT).apply {
+        PictureInPictureParams.Builder().setAspectRatio(ASPECT).setActions(remoteActions()).apply {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setAutoEnterEnabled(auto)
         }
+
+    /** Back, play or pause, and ahead, as the player's own middle row has them. */
+    private fun remoteActions(): List<RemoteAction> {
+        val info = media.info ?: return emptyList()
+        val playing = media.playing
+        return listOfNotNull(
+            info.backLabel?.takeIf { info.backMs != null }?.let {
+                action(R.drawable.lucide_rotate_ccw, it, MediaCommandKind.BACK)
+            },
+            if (playing) {
+                action(R.drawable.lucide_pause_filled, info.pauseLabel, MediaCommandKind.PAUSE)
+            } else {
+                action(R.drawable.lucide_play_filled, info.playLabel, MediaCommandKind.PLAY)
+            },
+            info.aheadLabel?.takeIf { info.aheadMs != null }?.let {
+                action(R.drawable.lucide_rotate_cw, it, MediaCommandKind.AHEAD)
+            },
+        ).take(activity.maxNumPictureInPictureActions.coerceAtLeast(1))
+    }
+
+    private fun action(icon: Int, label: String, kind: MediaCommandKind): RemoteAction = RemoteAction(
+        Icon.createWithResource(activity, icon),
+        label,
+        label,
+        PendingIntent.getBroadcast(
+            activity,
+            kind.raw,
+            Intent(ACTION).setPackage(activity.packageName).putExtra(EXTRA_COMMAND, kind.raw),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        ),
+    )
+
+    override fun showMedia(info: MediaInfoMessage) {
+        media.show(info)
+        refreshParams()
+    }
+
+    override fun setMediaState(state: MediaStateMessage) {
+        val was = media.playing
+        media.update(state)
+        if (was != media.playing) refreshParams()
+    }
+
+    override fun hideMedia() {
+        media.hide()
+        refreshParams()
+    }
+
+    private fun send(command: MediaCommandMessage) {
+        if (command.kind == MediaCommandKind.PLAY) playPressed()
+        scope.launch {
+            try {
+                events.mediaCommand(command)
+            } catch (failure: Exception) {
+                // The player closed between the press and now.
+                Log.d(TAG, "Dropped a media command", failure)
+            }
+        }
+    }
 
     /** Home or Recents before Android 12, where nothing enters by itself. */
     fun userLeaving() {
@@ -105,11 +196,15 @@ internal class PlayerSystem(private val activity: Activity, messenger: BinaryMes
     }
 
     fun release() {
+        media.hide()
+        runCatching { activity.unregisterReceiver(actions) }
         scope.cancel()
     }
 
     private companion object {
         const val TAG = "MatineePlayerSystem"
+        const val ACTION = "io.github.zekurio.matinee.PLAYER_ACTION"
+        const val EXTRA_COMMAND = "command"
 
         /** The Kotlin player's shape for the small window, whatever the video's. */
         val ASPECT = Rational(16, 9)

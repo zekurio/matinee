@@ -66,7 +66,7 @@ class MainActivity : FlutterActivity() {
         val offline = DownloadsBridge(this, messenger)
         downloads = offline
         DownloadsHostApi.setUp(messenger, offline)
-        val around = PlayerSystem(this, messenger)
+        val around = PlayerSystem(this, messenger) { playback?.allowPlayInBackground() }
         playerSystem = around
         PlayerSystemApi.setUp(messenger, around)
     }

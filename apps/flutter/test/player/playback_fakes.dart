@@ -3,14 +3,13 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:matinee/api/matinee_api.dart';
-import 'package:matinee/player/picture_in_picture.dart';
 import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/playback_session.dart';
 import 'package:matinee/player/player.dart';
+import 'package:matinee/player/player_system.dart';
 
 const itemId = '25a476af-d3df-40d1-9400-4029b6176607';
 const nextId = 'ba0aab09-d3f4-495f-be62-b67b18d07272';
@@ -415,4 +414,27 @@ class FakePictureInPicture implements PictureInPicture {
 
   @override
   Future<void> setAuto(bool enabled) async => autos.add(enabled);
+}
+
+class FakeMediaControls implements MediaControls {
+  final shown = <MediaInfoMessage>[];
+  final states = <MediaStateMessage>[];
+  int hides = 0;
+  final _commands = StreamController<MediaCommandMessage>.broadcast();
+
+  /// A press on the notification, a headset, or the small window.
+  void press(MediaCommandKind kind, {int? positionMs}) =>
+      _commands.add(MediaCommandMessage(kind: kind, positionMs: positionMs));
+
+  @override
+  Stream<MediaCommandMessage> get commands => _commands.stream;
+
+  @override
+  Future<void> show(MediaInfoMessage info) async => shown.add(info);
+
+  @override
+  Future<void> update(MediaStateMessage state) async => states.add(state);
+
+  @override
+  Future<void> hide() async => hides++;
 }

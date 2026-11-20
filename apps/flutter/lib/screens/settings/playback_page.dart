@@ -8,10 +8,10 @@ import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../platform/player.g.dart' as wire;
-import '../../player/picture_in_picture.dart';
 import '../../player/playback_device.dart';
 import '../../player/player_preferences.dart';
 import '../../player/player_state.dart';
+import '../../player/player_system.dart';
 import 'settings_rows.dart';
 import 'settings_screen.dart';
 

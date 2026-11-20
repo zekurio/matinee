@@ -13,12 +13,12 @@ import 'package:matinee/downloads/downloads.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/media/actions.dart' show mediaChangesProvider;
 import 'package:matinee/platform/player.g.dart' as wire;
-import 'package:matinee/player/picture_in_picture.dart';
 import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
 import 'package:matinee/player/player_controls.dart' show PlayerDim;
 import 'package:matinee/player/player_preferences.dart';
+import 'package:matinee/player/player_system.dart';
 import 'package:matinee/router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -405,6 +405,99 @@ void main() {
     expect(pip.autos.last, false);
     expect(find.bySemanticsLabel('Picture in picture'), findsNothing);
     await tester.pump(const Duration(seconds: 4));
+  });
+
+  test('the system hears of a change, not of every tick', () {
+    MediaStateMessage at(int ms, {bool playing = true}) => mediaState(
+      playing: playing,
+      phase: PlaybackPhase.ready,
+      position: ms / 1000,
+      duration: 600,
+      rate: 1,
+    );
+    expect(mediaStateMoved(null, at(0), Duration.zero), isTrue);
+    // Playing on as the system works it out.
+    expect(
+      mediaStateMoved(at(0), at(5000), const Duration(seconds: 5)),
+      isFalse,
+    );
+    // A seek.
+    expect(
+      mediaStateMoved(at(0), at(60000), const Duration(seconds: 5)),
+      isTrue,
+    );
+    expect(
+      mediaStateMoved(at(0), at(0, playing: false), Duration.zero),
+      isTrue,
+    );
+    // Paused, the position stays where it was.
+    expect(
+      mediaStateMoved(
+        at(1000, playing: false),
+        at(1000, playing: false),
+        const Duration(minutes: 1),
+      ),
+      isFalse,
+    );
+  });
+
+  testWidgets('the system controls show the video and drive it', (
+    tester,
+  ) async {
+    final backend = FakePlaybackApi();
+    backend.start = (input) => FakePlaybackApi.answer(
+      plan(id: input.itemId, start: 18, audio: audioOne),
+    );
+    final player = FakePlayer();
+    final media = FakeMediaControls();
+    tester.view.physicalSize = const Size(850, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = ProviderContainer(
+      overrides: [
+        authStateProvider.overrideWithValue(
+          SignedIn('https://matinee.example', User.fromJson(userJson('ada'))),
+        ),
+        apiProvider.overrideWithValue(backend.api),
+        playerHeadersProvider.overrideWithValue(const {'Authorization': 'x'}),
+        sessionHttpProvider.overrideWithValue(backend.client),
+        downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
+        playbackPlayerFactoryProvider.overrideWithValue((_, _) => player),
+        playbackFullscreenProvider.overrideWithValue((_, _) async {}),
+        pictureInPictureProvider.overrideWithValue(FakePictureInPicture()),
+        mediaControlsProvider.overrideWithValue(media),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MatineeApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
+    await tester.pumpAndSettle();
+    final info = media.shown.single;
+    expect(info.headers, {'Authorization': 'x'});
+    expect(info.playLabel, 'Play');
+    expect(info.backLabel, 'Back ${info.backMs! ~/ 1000} seconds');
+    expect(media.states.last.playing, isTrue);
+    expect(media.states.last.positionMs, 18000);
+
+    media.press(MediaCommandKind.pause);
+    await tester.pumpAndSettle();
+    expect(player.pauses, 1);
+    media.press(MediaCommandKind.seekTo, positionMs: 60000);
+    await tester.pumpAndSettle();
+    expect(player.seeks.last, const Duration(seconds: 60));
+    media.press(MediaCommandKind.ahead);
+    await tester.pumpAndSettle();
+    expect(player.seeks.last, Duration(milliseconds: 60000 + info.aheadMs!));
+    expect(media.states.last.positionMs, 60000 + info.aheadMs!);
+
+    await tap(tester, 'Back');
+    expect(media.hides, 1);
   });
 }
 

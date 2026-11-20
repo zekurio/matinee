@@ -202,6 +202,36 @@ class FlutterError (
   val details: Any? = null
 ) : RuntimeException()
 
+enum class MediaPhaseMessage(val raw: Int) {
+  BUFFERING(0),
+  READY(1),
+  ENDED(2);
+
+  companion object {
+    private val pigeonValues = values()
+
+    fun ofRaw(raw: Int): MediaPhaseMessage? {
+      return pigeonValues.getOrNull(raw)
+    }
+  }
+}
+
+enum class MediaCommandKind(val raw: Int) {
+  PLAY(0),
+  PAUSE(1),
+  SEEK_TO(2),
+  BACK(3),
+  AHEAD(4);
+
+  companion object {
+    private val pigeonValues = values()
+
+    fun ofRaw(raw: Int): MediaCommandKind? {
+      return pigeonValues.getOrNull(raw)
+    }
+  }
+}
+
 /**
  * The window's brightness and the media volume. Both are from 0 to 1.
  *
@@ -248,12 +278,220 @@ data class LevelsMessage (
     return "LevelsMessage(brightness=$brightness, volume=$volume)"
   }
 }
+
+/**
+ * What the system's controls show for the video, in the app's language.
+ * [headers] go with the artwork's request, which is to the active server.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class MediaInfoMessage (
+  val title: String,
+  val subtitle: String? = null,
+  val artworkUrl: String? = null,
+  val headers: Map<String, String>,
+  val playLabel: String,
+  val pauseLabel: String,
+  /** The server's skip steps, with what their buttons say; null without. */
+  val backMs: Long? = null,
+  val backLabel: String? = null,
+  val aheadMs: Long? = null,
+  val aheadLabel: String? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): MediaInfoMessage {
+      val title = pigeonVar_list[0] as String
+      val subtitle = pigeonVar_list[1] as String?
+      val artworkUrl = pigeonVar_list[2] as String?
+      val headers = pigeonVar_list[3] as Map<String, String>
+      val playLabel = pigeonVar_list[4] as String
+      val pauseLabel = pigeonVar_list[5] as String
+      val backMs = pigeonVar_list[6] as Long?
+      val backLabel = pigeonVar_list[7] as String?
+      val aheadMs = pigeonVar_list[8] as Long?
+      val aheadLabel = pigeonVar_list[9] as String?
+      return MediaInfoMessage(title, subtitle, artworkUrl, headers, playLabel, pauseLabel, backMs, backLabel, aheadMs, aheadLabel)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      title,
+      subtitle,
+      artworkUrl,
+      headers,
+      playLabel,
+      pauseLabel,
+      backMs,
+      backLabel,
+      aheadMs,
+      aheadLabel,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as MediaInfoMessage
+    return PlayerSystemPigeonUtils.deepEquals(this.title, other.title) && PlayerSystemPigeonUtils.deepEquals(this.subtitle, other.subtitle) && PlayerSystemPigeonUtils.deepEquals(this.artworkUrl, other.artworkUrl) && PlayerSystemPigeonUtils.deepEquals(this.headers, other.headers) && PlayerSystemPigeonUtils.deepEquals(this.playLabel, other.playLabel) && PlayerSystemPigeonUtils.deepEquals(this.pauseLabel, other.pauseLabel) && PlayerSystemPigeonUtils.deepEquals(this.backMs, other.backMs) && PlayerSystemPigeonUtils.deepEquals(this.backLabel, other.backLabel) && PlayerSystemPigeonUtils.deepEquals(this.aheadMs, other.aheadMs) && PlayerSystemPigeonUtils.deepEquals(this.aheadLabel, other.aheadLabel)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.title)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.subtitle)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.artworkUrl)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.headers)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.playLabel)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.pauseLabel)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.backMs)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.backLabel)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.aheadMs)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.aheadLabel)
+    return result
+  }
+  override fun toString(): String {
+    return "MediaInfoMessage(title=$title, subtitle=$subtitle, artworkUrl=$artworkUrl, headers=$headers, playLabel=$playLabel, pauseLabel=$pauseLabel, backMs=$backMs, backLabel=$backLabel, aheadMs=$aheadMs, aheadLabel=$aheadLabel)"
+  }
+}
+
+/**
+ * Where the video is. The system moves the position on from it while it
+ * plays, so it comes again only when that would be wrong.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class MediaStateMessage (
+  val playing: Boolean,
+  val phase: MediaPhaseMessage,
+  val positionMs: Long,
+  val durationMs: Long? = null,
+  val rate: Double
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): MediaStateMessage {
+      val playing = pigeonVar_list[0] as Boolean
+      val phase = pigeonVar_list[1] as MediaPhaseMessage
+      val positionMs = pigeonVar_list[2] as Long
+      val durationMs = pigeonVar_list[3] as Long?
+      val rate = pigeonVar_list[4] as Double
+      return MediaStateMessage(playing, phase, positionMs, durationMs, rate)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      playing,
+      phase,
+      positionMs,
+      durationMs,
+      rate,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as MediaStateMessage
+    return PlayerSystemPigeonUtils.deepEquals(this.playing, other.playing) && PlayerSystemPigeonUtils.deepEquals(this.phase, other.phase) && PlayerSystemPigeonUtils.deepEquals(this.positionMs, other.positionMs) && PlayerSystemPigeonUtils.deepEquals(this.durationMs, other.durationMs) && PlayerSystemPigeonUtils.deepEquals(this.rate, other.rate)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.playing)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.phase)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.positionMs)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.durationMs)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.rate)
+    return result
+  }
+  override fun toString(): String {
+    return "MediaStateMessage(playing=$playing, phase=$phase, positionMs=$positionMs, durationMs=$durationMs, rate=$rate)"
+  }
+}
+
+/**
+ * A press on the system's controls, a headset, or the small window.
+ * [positionMs] is where a seekTo goes.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class MediaCommandMessage (
+  val kind: MediaCommandKind,
+  val positionMs: Long? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): MediaCommandMessage {
+      val kind = pigeonVar_list[0] as MediaCommandKind
+      val positionMs = pigeonVar_list[1] as Long?
+      return MediaCommandMessage(kind, positionMs)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      kind,
+      positionMs,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as MediaCommandMessage
+    return PlayerSystemPigeonUtils.deepEquals(this.kind, other.kind) && PlayerSystemPigeonUtils.deepEquals(this.positionMs, other.positionMs)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.kind)
+    result = 31 * result + PlayerSystemPigeonUtils.deepHash(this.positionMs)
+    return result
+  }
+  override fun toString(): String {
+    return "MediaCommandMessage(kind=$kind, positionMs=$positionMs)"
+  }
+}
 private open class PlayerSystemPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
       129.toByte() -> {
+        (readValue(buffer) as Long?)?.let {
+          MediaPhaseMessage.ofRaw(it.toInt())
+        }
+      }
+      130.toByte() -> {
+        (readValue(buffer) as Long?)?.let {
+          MediaCommandKind.ofRaw(it.toInt())
+        }
+      }
+      131.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           LevelsMessage.fromList(it)
+        }
+      }
+      132.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          MediaInfoMessage.fromList(it)
+        }
+      }
+      133.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          MediaStateMessage.fromList(it)
+        }
+      }
+      134.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          MediaCommandMessage.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -261,8 +499,28 @@ private open class PlayerSystemPigeonCodec : StandardMessageCodec() {
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
     when (value) {
-      is LevelsMessage -> {
+      is MediaPhaseMessage -> {
         stream.write(129)
+        writeValue(stream, value.raw.toLong())
+      }
+      is MediaCommandKind -> {
+        stream.write(130)
+        writeValue(stream, value.raw.toLong())
+      }
+      is LevelsMessage -> {
+        stream.write(131)
+        writeValue(stream, value.toList())
+      }
+      is MediaInfoMessage -> {
+        stream.write(132)
+        writeValue(stream, value.toList())
+      }
+      is MediaStateMessage -> {
+        stream.write(133)
+        writeValue(stream, value.toList())
+      }
+      is MediaCommandMessage -> {
+        stream.write(134)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -295,6 +553,14 @@ interface PlayerSystemApi {
    * while a video plays.
    */
   fun setAutoPictureInPicture(enabled: Boolean)
+  /**
+   * Shows the video's controls in the notification shade, on the lock
+   * screen, to headsets, and in the small window.
+   */
+  fun showMedia(info: MediaInfoMessage)
+  fun setMediaState(state: MediaStateMessage)
+  /** Takes the controls away once the player closes. */
+  fun hideMedia()
 
   companion object {
     /** The codec used by PlayerSystemApi. */
@@ -418,6 +684,58 @@ interface PlayerSystemApi {
           channel.setMessageHandler(null)
         }
       }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerSystemApi.showMedia$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val infoArg = args[0] as MediaInfoMessage
+            val wrapped: List<Any?> = try {
+              api.showMedia(infoArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              PlayerSystemPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerSystemApi.setMediaState$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val stateArg = args[0] as MediaStateMessage
+            val wrapped: List<Any?> = try {
+              api.setMediaState(stateArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              PlayerSystemPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerSystemApi.hideMedia$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              api.hideMedia()
+              listOf(null)
+            } catch (exception: Throwable) {
+              PlayerSystemPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
     }
   }
 }
@@ -437,6 +755,29 @@ class PlayerSystemEventsApi(private val binaryMessenger: BinaryMessenger, privat
       val channelName = "dev.flutter.pigeon.matinee.PlayerSystemEventsApi.pictureInPictureChanged$separatedMessageChannelSuffix"
       val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
       channel.send(listOf(activeArg)) {
+        if (it is List<*>) {
+          if (it.size > 1) {
+            continuation.resumeWithException(FlutterError(it[0] as String, it[1] as String, it[2] as String?))
+          } else {
+            continuation.resume(Unit)
+          }
+        } else {
+          continuation.resumeWithException(PlayerSystemPigeonUtils.createConnectionError(channelName))
+        } 
+      }
+    }
+  }
+  /**
+   * The system's controls want the video to do something. The player
+   * does it its own way, as a seek in a transcode asks the server.
+   */
+  suspend fun mediaCommand(commandArg: MediaCommandMessage)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    return suspendCancellableCoroutine { continuation ->
+      val channelName = "dev.flutter.pigeon.matinee.PlayerSystemEventsApi.mediaCommand$separatedMessageChannelSuffix"
+      val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+      channel.send(listOf(commandArg)) {
         if (it is List<*>) {
           if (it.size > 1) {
             continuation.resumeWithException(FlutterError(it[0] as String, it[1] as String, it[2] as String?))

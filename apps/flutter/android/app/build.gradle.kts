@@ -48,6 +48,7 @@ dependencies {
     implementation("edde746:mpv-android:$mpvRevision@aar")
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
+    implementation("androidx.media3:media3-session:$media3Version")
     implementation("androidx.media3:media3-datasource-okhttp:$media3Version")
     implementation("androidx.media3:media3-ui:$media3Version")
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")

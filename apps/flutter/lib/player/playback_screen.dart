@@ -15,7 +15,6 @@ import '../media/actions.dart' show MediaChanges, mediaChangesProvider;
 import '../media/format.dart';
 import '../platform/player.g.dart' as wire;
 import '../router.dart';
-import 'picture_in_picture.dart';
 import 'playback_device.dart';
 import 'playback_session.dart';
 import 'player.dart';
@@ -24,6 +23,7 @@ import 'player_motion.dart';
 import 'player_overlays.dart';
 import 'player_panel.dart';
 import 'player_preferences.dart';
+import 'player_system.dart';
 import 'seek_bar.dart';
 import 'swipe.dart';
 import 'trickplay.dart';
@@ -310,6 +310,14 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   /// What the player last told the system about entering the small window
   /// on leaving the app, which starts off.
   bool _autoSent = false;
+
+  late final MediaControls _media;
+  StreamSubscription<MediaCommandMessage>? _commands;
+
+  /// What the system's controls last got, so each change goes once.
+  String? _mediaShown;
+  MediaStateMessage? _mediaState;
+  DateTime _mediaAt = DateTime.now();
   PlaybackPhase _phase = PlaybackPhase.idle;
 
   PlaybackSession get _session => widget.session;
@@ -327,6 +335,8 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     _small = _pip.active.value;
     _pip.active.addListener(_smallChanged);
     ref.listenManual(playerPrefsProvider, (_, _) => _syncAuto());
+    _media = ref.read(mediaControlsProvider);
+    _commands = _media.commands.listen(_mediaCommand);
     // The brightness the last swipe left, when settings keep it.
     final saved = prefs.brightness;
     if (prefs.swipeLevels &&
@@ -349,6 +359,8 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     _advance?.cancel();
     _gesture.dispose();
     _pip.active.removeListener(_smallChanged);
+    unawaited(_commands?.cancel());
+    if (_mediaShown != null) unawaited(_media.hide());
     // Leaving the app from anywhere else keeps it full size.
     if (_autoSent) unawaited(_pip.setAuto(false));
     // The window's own brightness was the player's; the system's comes back.
@@ -375,6 +387,96 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
       _syncNext();
     });
     _syncAuto();
+    _syncMedia();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The words change with the language.
+    _mediaShown = null;
+    _syncMedia();
+  }
+
+  /// What the system's controls show: the episode and its show, or the
+  /// movie and its year, with its picture, as the Kotlin player's session.
+  void _syncMedia() {
+    final plan = _session.plan;
+    if (plan == null || _leaving) return;
+    final l = AppLocalizations.of(context);
+    final item = plan.item;
+    final names = itemNames(item, l);
+    final code = item.label.code;
+    final back = _session.skipBack;
+    final ahead = _session.skipForward;
+    final art =
+        item.episode?.still ??
+        item.title?.images.backdrop ??
+        item.title?.images.poster;
+    final api = ref.read(apiProvider);
+    final info = MediaInfoMessage(
+      title: names.title,
+      subtitle: item.title?.kind == TitleKind.show
+          ? [names.showName, ?code].join(' · ')
+          : names.year,
+      artworkUrl: art == null || api == null
+          ? null
+          : api.paths.artwork(art.id).toString(),
+      headers: ref.read(playerHeadersProvider),
+      playLabel: l.playerPlay,
+      pauseLabel: l.playerPause,
+      backMs: back == null ? null : back * 1000,
+      backLabel: back == null ? null : l.playerSkipBack(back),
+      aheadMs: ahead == null ? null : ahead * 1000,
+      aheadLabel: ahead == null ? null : l.playerSkipForward(ahead),
+    );
+    final key = [
+      item.id,
+      info.title,
+      info.subtitle,
+      info.artworkUrl,
+      back,
+      ahead,
+      info.playLabel,
+    ].join('\u0000');
+    if (key != _mediaShown) {
+      _mediaShown = key;
+      _mediaState = null;
+      unawaited(_media.show(info));
+    }
+    final state = mediaState(
+      playing: _playing,
+      phase: _session.playback.phase,
+      position: _session.position,
+      duration: _session.duration,
+      rate: _holding ? holdSpeed : _rate,
+    );
+    final now = DateTime.now();
+    if (!mediaStateMoved(_mediaState, state, now.difference(_mediaAt))) return;
+    _mediaState = state;
+    _mediaAt = now;
+    unawaited(_media.update(state));
+  }
+
+  void _mediaCommand(MediaCommandMessage command) {
+    switch (command.kind) {
+      case MediaCommandKind.play:
+        if (!_playing) unawaited(_session.togglePlay());
+      case MediaCommandKind.pause:
+        if (_playing) unawaited(_session.togglePlay());
+      case MediaCommandKind.seekTo:
+        if (command.positionMs case final ms?) {
+          unawaited(_session.seek(ms / 1000));
+        }
+      case MediaCommandKind.back:
+        if (_session.skipBack case final step?) {
+          unawaited(_session.skip(-step));
+        }
+      case MediaCommandKind.ahead:
+        if (_session.skipForward case final step?) {
+          unawaited(_session.skip(step));
+        }
+    }
   }
 
   /// On while the video plays, so leaving the app keeps it on screen,
@@ -507,6 +609,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   void _pickRate(double rate) {
     setState(() => _rate = rate);
     unawaited(_applyRate());
+    _syncMedia();
   }
 
   void _pinch(bool want) {
@@ -532,11 +635,13 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
       if (_holding || !_playing || _rate >= holdSpeed) return false;
       setState(() => _holding = true);
       unawaited(_session.player.setRate(holdSpeed).catchError((Object _) {}));
+      _syncMedia();
       return true;
     }
     if (!_holding) return false;
     if (mounted) setState(() => _holding = false);
     unawaited(_applyRate());
+    if (mounted) _syncMedia();
     return false;
   }
 

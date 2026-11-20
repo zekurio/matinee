@@ -108,6 +108,20 @@ int _deepHash(Object? value) {
 }
 
 
+enum MediaPhaseMessage {
+  buffering,
+  ready,
+  ended;
+}
+
+enum MediaCommandKind {
+  play,
+  pause,
+  seekTo,
+  back,
+  ahead;
+}
+
 /// The window's brightness and the media volume. Both are from 0 to 1.
 class LevelsMessage {
   LevelsMessage({
@@ -161,6 +175,218 @@ class LevelsMessage {
   }
 }
 
+/// What the system's controls show for the video, in the app's language.
+/// [headers] go with the artwork's request, which is to the active server.
+class MediaInfoMessage {
+  MediaInfoMessage({
+    required this.title,
+    this.subtitle,
+    this.artworkUrl,
+    required this.headers,
+    required this.playLabel,
+    required this.pauseLabel,
+    this.backMs,
+    this.backLabel,
+    this.aheadMs,
+    this.aheadLabel,
+  });
+
+  String title;
+
+  String? subtitle;
+
+  String? artworkUrl;
+
+  Map<String, String> headers;
+
+  String playLabel;
+
+  String pauseLabel;
+
+  /// The server's skip steps, with what their buttons say; null without.
+  int? backMs;
+
+  String? backLabel;
+
+  int? aheadMs;
+
+  String? aheadLabel;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      title,
+      subtitle,
+      artworkUrl,
+      headers,
+      playLabel,
+      pauseLabel,
+      backMs,
+      backLabel,
+      aheadMs,
+      aheadLabel,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static MediaInfoMessage decode(Object result) {
+    result as List<Object?>;
+    return MediaInfoMessage(
+      title: result[0]! as String,
+      subtitle: result[1] as String?,
+      artworkUrl: result[2] as String?,
+      headers: (result[3]! as Map<Object?, Object?>).cast<String, String>(),
+      playLabel: result[4]! as String,
+      pauseLabel: result[5]! as String,
+      backMs: result[6] as int?,
+      backLabel: result[7] as String?,
+      aheadMs: result[8] as int?,
+      aheadLabel: result[9] as String?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! MediaInfoMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(title, other.title) && _deepEquals(subtitle, other.subtitle) && _deepEquals(artworkUrl, other.artworkUrl) && _deepEquals(headers, other.headers) && _deepEquals(playLabel, other.playLabel) && _deepEquals(pauseLabel, other.pauseLabel) && _deepEquals(backMs, other.backMs) && _deepEquals(backLabel, other.backLabel) && _deepEquals(aheadMs, other.aheadMs) && _deepEquals(aheadLabel, other.aheadLabel);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'MediaInfoMessage(title: $title, subtitle: $subtitle, artworkUrl: $artworkUrl, headers: $headers, playLabel: $playLabel, pauseLabel: $pauseLabel, backMs: $backMs, backLabel: $backLabel, aheadMs: $aheadMs, aheadLabel: $aheadLabel)';
+  }
+}
+
+/// Where the video is. The system moves the position on from it while it
+/// plays, so it comes again only when that would be wrong.
+class MediaStateMessage {
+  MediaStateMessage({
+    required this.playing,
+    required this.phase,
+    required this.positionMs,
+    this.durationMs,
+    required this.rate,
+  });
+
+  bool playing;
+
+  MediaPhaseMessage phase;
+
+  int positionMs;
+
+  int? durationMs;
+
+  double rate;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      playing,
+      phase,
+      positionMs,
+      durationMs,
+      rate,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static MediaStateMessage decode(Object result) {
+    result as List<Object?>;
+    return MediaStateMessage(
+      playing: result[0]! as bool,
+      phase: result[1]! as MediaPhaseMessage,
+      positionMs: result[2]! as int,
+      durationMs: result[3] as int?,
+      rate: result[4]! as double,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! MediaStateMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(playing, other.playing) && _deepEquals(phase, other.phase) && _deepEquals(positionMs, other.positionMs) && _deepEquals(durationMs, other.durationMs) && _deepEquals(rate, other.rate);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'MediaStateMessage(playing: $playing, phase: $phase, positionMs: $positionMs, durationMs: $durationMs, rate: $rate)';
+  }
+}
+
+/// A press on the system's controls, a headset, or the small window.
+/// [positionMs] is where a seekTo goes.
+class MediaCommandMessage {
+  MediaCommandMessage({
+    required this.kind,
+    this.positionMs,
+  });
+
+  MediaCommandKind kind;
+
+  int? positionMs;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      kind,
+      positionMs,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static MediaCommandMessage decode(Object result) {
+    result as List<Object?>;
+    return MediaCommandMessage(
+      kind: result[0]! as MediaCommandKind,
+      positionMs: result[1] as int?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! MediaCommandMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(kind, other.kind) && _deepEquals(positionMs, other.positionMs);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'MediaCommandMessage(kind: $kind, positionMs: $positionMs)';
+  }
+}
+
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -169,8 +395,23 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is LevelsMessage) {
+    }    else if (value is MediaPhaseMessage) {
       buffer.putUint8(129);
+      writeValue(buffer, value.index);
+    }    else if (value is MediaCommandKind) {
+      buffer.putUint8(130);
+      writeValue(buffer, value.index);
+    }    else if (value is LevelsMessage) {
+      buffer.putUint8(131);
+      writeValue(buffer, value.encode());
+    }    else if (value is MediaInfoMessage) {
+      buffer.putUint8(132);
+      writeValue(buffer, value.encode());
+    }    else if (value is MediaStateMessage) {
+      buffer.putUint8(133);
+      writeValue(buffer, value.encode());
+    }    else if (value is MediaCommandMessage) {
+      buffer.putUint8(134);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -181,7 +422,19 @@ class _PigeonCodec extends StandardMessageCodec {
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
       case 129:
+        final value = readValue(buffer) as int?;
+        return value == null ? null : MediaPhaseMessage.values[value];
+      case 130:
+        final value = readValue(buffer) as int?;
+        return value == null ? null : MediaCommandKind.values[value];
+      case 131:
         return LevelsMessage.decode(readValue(buffer)!);
+      case 132:
+        return MediaInfoMessage.decode(readValue(buffer)!);
+      case 133:
+        return MediaStateMessage.decode(readValue(buffer)!);
+      case 134:
+        return MediaCommandMessage.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -338,6 +591,60 @@ class PlayerSystemApi {
     )
     ;
   }
+
+  /// Shows the video's controls in the notification shade, on the lock
+  /// screen, to headsets, and in the small window.
+  Future<void> showMedia(MediaInfoMessage info) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerSystemApi.showMedia$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[info]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: true,
+    )
+    ;
+  }
+
+  Future<void> setMediaState(MediaStateMessage state) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerSystemApi.setMediaState$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[state]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: true,
+    )
+    ;
+  }
+
+  /// Takes the controls away once the player closes.
+  Future<void> hideMedia() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.PlayerSystemApi.hideMedia$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+    _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: true,
+    )
+    ;
+  }
 }
 
 abstract class PlayerSystemEventsApi {
@@ -345,6 +652,10 @@ abstract class PlayerSystemEventsApi {
 
   /// The app went into the small window or came back out of it.
   void pictureInPictureChanged(bool active);
+
+  /// The system's controls want the video to do something. The player
+  /// does it its own way, as a seek in a transcode asks the server.
+  void mediaCommand(MediaCommandMessage command);
 
   static void setUp(PlayerSystemEventsApi? api, {
     BinaryMessenger? binaryMessenger,
@@ -364,6 +675,27 @@ abstract class PlayerSystemEventsApi {
           final bool arg_active = args[0]! as bool;
           try {
             api.pictureInPictureChanged(arg_active);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
+    }
+    {
+      final pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.matinee.PlayerSystemEventsApi.mediaCommand$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          final List<Object?> args = message! as List<Object?>;
+          final MediaCommandMessage arg_command = args[0]! as MediaCommandMessage;
+          try {
+            api.mediaCommand(arg_command);
             return wrapResponse(empty: true);
           } on PlatformException catch (e) {
             return wrapResponse(error: e);
