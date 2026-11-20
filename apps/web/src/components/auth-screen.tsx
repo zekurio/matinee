@@ -27,7 +27,7 @@ export function AuthScreen({
   backdrop?: ReactNode
   /** Fill the parent rather than the window, as a preview does. */
   contained?: boolean
-  children: ReactNode
+  children?: ReactNode
 }) {
   return (
     <main
@@ -52,8 +52,44 @@ export function AuthScreen({
             {description}
           </p>
         )}
-        <div className="mt-8">{children}</div>
+        {children && <div className="mt-8">{children}</div>}
       </div>
     </main>
+  )
+}
+
+/**
+ * A page outside the shell that only reports something, such as a missing
+ * page, an error, or a link that no longer works. The actions stack the full
+ * width of the column, as the sign-in form's buttons do, so they line up with
+ * the text above them. `detail` is a smaller line under them, for what the
+ * reader can do about it.
+ */
+export function StatusScreen({
+  title,
+  description,
+  actions,
+  detail,
+}: {
+  title: string
+  description: ReactNode
+  /** `Button`s, the main one first. */
+  actions?: ReactNode
+  detail?: ReactNode
+}) {
+  return (
+    <AuthScreen title={title} description={description}>
+      {actions && <div className="grid gap-2">{actions}</div>}
+      {detail && (
+        <p
+          className={cn(
+            "text-muted-foreground text-13px leading-5",
+            actions && "mt-4",
+          )}
+        >
+          {detail}
+        </p>
+      )}
+    </AuthScreen>
   )
 }
