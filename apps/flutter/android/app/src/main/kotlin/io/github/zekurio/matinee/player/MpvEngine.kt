@@ -19,6 +19,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.edde746.mpv.EndFileReason
 import com.edde746.mpv.MpvEvent
+import com.edde746.mpv.MpvException
 import com.edde746.mpv.MpvPlaceholderSurface
 import com.edde746.mpv.MpvPlayer
 import com.edde746.mpv.MpvPlayerConfig
@@ -59,6 +60,13 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
     private var placeholder: MpvPlaceholderSurface? = null
     private var surfaces: PlaybackSurfaces? = null
     private var attached: OutputSurfaces? = null
+
+    /**
+     * The video track is off while the sound plays with the app away, as the
+     * Kotlin app's mpv drops its video output: decoding into the placeholder
+     * stalls playback. The track comes back with a real surface.
+     */
+    private var videoOff = false
     private var pendingUrl: String? = null
     private var waitForVideo = false
     private var loaded = false
@@ -166,6 +174,10 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
                 player?.command("seek", "0", "absolute+exact")
                 ended = false
                 started = false
+            }
+            if ((attached?.video?.generation ?: 0L) == 0L && !videoOff) {
+                player?.setProperty("vid", "no")
+                videoOff = true
             }
             setPaused(false)
         }
@@ -341,15 +353,36 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
         val video = realVideo ?: SurfacePlane(checkNotNull(placeholder).surface, 0L)
         val target = OutputSurfaces(video, osd, software)
         if (target != attached) {
-            mpv.attachSurfaces(
-                video.surface, osd?.surface, video.generation, osd?.generation ?: 0L,
-                if (software) "gpu-next" else null,
-            )
+            try {
+                mpv.attachSurfaces(
+                    video.surface, osd?.surface, video.generation, osd?.generation ?: 0L,
+                    if (software) "gpu-next" else null,
+                )
+            } catch (failure: MpvException) {
+                if (realVideo != null) throw failure
+                // The hardware path can't move onto the placeholder (error -4)
+                // once the app is away. It lets go of the picture instead,
+                // which ending the session would only replace with a stream,
+                // and takes it back with the next surface.
+                if (!videoOff) mpv.setProperty("vid", "no")
+                videoOff = true
+                attached = null
+                loadPending(mpv)
+                return
+            }
             attached = target
             lastRect = null
             lastSize = null
         }
+        if (videoOff && video.generation != 0L) {
+            mpv.setProperty("vid", "auto")
+            videoOff = false
+        }
         applyGeometry()
+        loadPending(mpv)
+    }
+
+    private fun loadPending(mpv: MpvPlayer) {
         pendingUrl?.let { url ->
             pendingUrl = null
             mpv.command("loadfile", url, "replace")
