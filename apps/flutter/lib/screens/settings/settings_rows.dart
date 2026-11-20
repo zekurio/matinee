@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '../../kit/kit.dart';
@@ -130,29 +132,84 @@ class _RowIcon extends StatelessWidget {
   }
 }
 
-/// A row's value at its end, muted, in the half of the row the title, which
-/// is [Expanded] beside it, leaves, and cut short past that. A fixed width
-/// cut the admin pages' longer values on a tablet.
-class _RowValue extends StatelessWidget {
-  const _RowValue(this.value);
+/// A row's [text] and, when there's one, its [value] at the end, muted, on
+/// one line. Both keep their whole width when they fit; when they don't,
+/// the one that's longer than half the row gives way and is cut short, or
+/// both share it half and half. A fixed width for the value cut the admin
+/// pages' longer values on a tablet, and half the row for it cut the
+/// downloads' storage on a phone beside its short title.
+class _TitleAndValue extends StatelessWidget {
+  const _TitleAndValue({
+    required this.title,
+    required this.text,
+    required this.value,
+  });
 
-  final String value;
+  /// The title [text] shows, measured for the split.
+  final String title;
+  final Widget text;
+  final String? value;
+
+  static const _gap = 12.0;
 
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: Padding(
-      padding: const EdgeInsetsDirectional.only(start: 12),
-      child: Text(
-        value,
+  Widget build(BuildContext context) {
+    final value = this.value;
+    if (value == null) return Expanded(child: text);
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    final valueStyle = KitText.sm.style(
+      color: MatineeTheme.of(context).mutedForeground,
+    );
+    double measure(String words, TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(text: words, style: style),
+        textDirection: direction,
+        textScaler: scaler,
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.end,
-        style: KitText.sm.style(
-          color: MatineeTheme.of(context).mutedForeground,
-        ),
+      )..layout();
+      final width = painter.width;
+      painter.dispose();
+      return width;
+    }
+
+    return Expanded(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final room = math.max(0.0, constraints.maxWidth - _gap);
+          final titleWidth = measure(title, KitText.base.style());
+          final valueWidth = measure(value, valueStyle);
+          final half = room / 2;
+          final width = titleWidth + valueWidth <= room
+              ? valueWidth
+              : titleWidth <= half
+              ? room - titleWidth
+              : valueWidth <= half
+              ? valueWidth
+              : half;
+          return Row(
+            children: [
+              Expanded(child: text),
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: _gap),
+                child: SizedBox(
+                  // A hair over the measure, so rounding doesn't cut it.
+                  width: math.min(width + .5, room),
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: valueStyle,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// A row's title, with what it's for under it when there's [description].
@@ -217,14 +274,15 @@ class LinkRow extends StatelessWidget {
       child: Row(
         children: [
           if (icon != null) _RowIcon(icon, danger: destructive),
-          Expanded(
-            child: _RowText(
+          _TitleAndValue(
+            title: title,
+            text: _RowText(
               title: title,
               description: description,
               danger: destructive,
             ),
+            value: value,
           ),
-          if (value != null) _RowValue(value),
           if (!destructive)
             Padding(
               padding: const EdgeInsetsDirectional.only(start: 4),
@@ -289,8 +347,11 @@ class ValueRow extends StatelessWidget {
     onPressed: null,
     child: Row(
       children: [
-        Expanded(child: _RowText(title: title)),
-        _RowValue(value),
+        _TitleAndValue(
+          title: title,
+          text: _RowText(title: title),
+          value: value,
+        ),
       ],
     ),
   );
@@ -333,8 +394,11 @@ class PickerRow<T> extends StatelessWidget {
             child: ExcludeSemantics(
               child: Row(
                 children: [
-                  Expanded(child: _RowText(title: title)),
-                  _RowValue(shown),
+                  _TitleAndValue(
+                    title: title,
+                    text: _RowText(title: title),
+                    value: shown,
+                  ),
                   Padding(
                     padding: const EdgeInsetsDirectional.only(start: 4),
                     child: KitIcon(
