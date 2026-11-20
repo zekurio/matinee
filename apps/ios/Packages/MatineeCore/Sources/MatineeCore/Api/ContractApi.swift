@@ -85,6 +85,9 @@ public struct RequestsApi: Sendable {
     public func cancel(requestId: RequestId) async throws {
         try await transport.send(method: "POST", path: ["requests", "cancel"], query: [], body: try transport.json(requestId))
     }
+    public func mineLive(cursor: String? = nil, limit: Int? = nil) async throws -> AsyncThrowingStream<RequestPage, any Error> {
+        return transport.events(method: "GET", path: ["requests", "mine", "live"], query: [("cursor", wireText(cursor)), ("limit", wireText(limit))], body: nil)
+    }
     public func mine(cursor: String? = nil, limit: Int? = nil, filter: String? = nil) async throws -> RequestPage {
         return try await transport.call(method: "GET", path: ["requests", "mine"], query: [("cursor", wireText(cursor)), ("limit", wireText(limit)), ("filter", wireText(filter))], body: nil)
     }

@@ -2,6 +2,7 @@ import {
   NO_CATALOG_FILTERS,
   type CatalogRef,
   type DiscoverRail,
+  type DiscoverRails,
   type DiscoverRow,
 } from "@matinee/contracts"
 import type { t } from "@matinee/contracts/schema"
@@ -18,7 +19,6 @@ import {
 } from "../recommendations/read"
 import { destinations } from "../requests/destinations"
 import { loadRouting } from "../requests/fulfilment/connections"
-import { inProgressCount, waitingCount } from "../requests/lifecycle"
 import { page, query } from "./browse"
 import { browseProvider } from "./cache"
 import { askable, catalogCards } from "./cards"
@@ -70,34 +70,17 @@ async function askableKinds(viewer: Viewer) {
   return kinds
 }
 
-/** Which requests Discover opens with: the admin's queue before the viewer's own. */
-function openingRequests(
-  waiting: number,
-  own: number,
-): "queue" | "mine" | null {
-  if (waiting > 0) return "queue"
-  return own > 0 ? "mine" : null
-}
-
-export async function rails(viewer: Viewer) {
+export async function rails(
+  viewer: Viewer,
+): Promise<t.infer<typeof DiscoverRails>> {
   const kinds = await askableKinds(viewer)
   // Discover is for eligible request destinations, not a standalone TMDB browser.
   if (!kinds.length)
     return { enabled: false, requests: null, rails: [], browse: [] }
-  const [personal, waiting, own] = await Promise.all([
-    discoverRails(viewer, kinds),
-    // Only an admin has a queue, and Discover opens with it while it holds
-    // a request that waits. The web app reads the requests themselves
-    // from the queue's own stream.
-    viewer.role === "admin" ? waitingCount(viewer) : 0,
-    // Everyone else, and an admin with nothing waiting, gets their own
-    // requests in progress, counted by the filter `requests.mine` reads.
-    inProgressCount(viewer),
-  ])
   return {
     enabled: true,
-    requests: openingRequests(waiting, own),
-    rails: [...personal, ...catalogRails(kinds)],
+    requests: viewer.role === "admin" ? "queue" : "mine",
+    rails: [...(await discoverRails(viewer, kinds)), ...catalogRails(kinds)],
     browse: kinds,
   }
 }

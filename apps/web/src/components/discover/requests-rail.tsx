@@ -11,13 +11,7 @@ import {
 import { ChevronRightIcon, XIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
-import {
-  type AskedItem,
-  DeclinedNote,
-  mineOptions,
-  useAskedLive,
-} from "@/components/asked/asked"
-import { liveEntry } from "@/components/catalog/catalog-data"
+import { type AskedItem, DeclinedNote } from "@/components/asked/asked"
 import { Rail, RailItem } from "@/components/rail"
 import { AdminAnswer } from "@/components/requests/admin-answer"
 import {
@@ -28,6 +22,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatDateTime, formatRelative } from "@/lib/format"
+import { liveQuery, orpc } from "@/lib/rpc"
 import {
   useHiddenRequests,
   useRequestActionsStore,
@@ -132,9 +127,13 @@ function WaitingRequests() {
  */
 function OwnRequests() {
   const { user } = authed.useRouteContext()
-  const mine = useQuery(mineOptions("inProgress"))
+  const mine = useQuery({
+    ...orpc.requests.mineLive.experimental_liveOptions({
+      input: { limit: 24 },
+    }),
+    ...liveQuery,
+  })
   const items = mine.data?.items
-  const live = useAskedLive(items ?? [])
   return (
     <RequestsRow
       link={linkOptions({
@@ -143,7 +142,7 @@ function OwnRequests() {
       })}
       items={mine.isError && !mine.data ? [] : items}
     >
-      {(item) => <OwnRequest item={item} live={live} />}
+      {(item) => <OwnRequest item={item} />}
     </RequestsRow>
   )
 }
@@ -168,20 +167,12 @@ function QueueRequest({ item }: { item: AdminRequestItem }) {
  * server allows it. Cancel holds the call for Undo as the queue's answers
  * do, rather than going out from the poster's own button.
  */
-function OwnRequest({
-  item,
-  live,
-}: {
-  item: AskedItem
-  live: ReturnType<typeof useAskedLive>
-}) {
+function OwnRequest({ item }: { item: AskedItem }) {
   const hold = useRequestActionsStore((state) => state.hold)
-  // The stream's state when it has one, as My requests' cards read it.
-  const availability =
-    liveEntry(live, item.title.ref)?.availability ?? item.availability
+  const { availability } = item
   return (
     <RequestCard
-      item={{ ...item, availability }}
+      item={item}
       state={
         <>
           <RequestState availability={availability} />

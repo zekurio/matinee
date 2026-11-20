@@ -134,6 +134,9 @@ export const requestsContract = {
     .input(RequestId.extend({ scope: ShowScope }))
     .output(RequestItem),
   cancel: post("/requests/cancel").input(RequestId).output(t.void()),
+  mineLive: get("/requests/mine/live")
+    .input(RequestPageInput)
+    .output(eventIterator(RequestPage)),
   mine: get("/requests/mine")
     .input(
       RequestPageInput.extend({

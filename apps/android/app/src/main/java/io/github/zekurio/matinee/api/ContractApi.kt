@@ -203,6 +203,16 @@ class RequestsApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
+    /** `GET /requests/mine/live` */
+    fun mineLive(cursor: String? = null, limit: Int? = null): Flow<RequestPage> =
+        transport.events(
+            "GET",
+            listOf("requests", "mine", "live"),
+            listOf("cursor" to cursor, "limit" to limit?.toString()),
+            null,
+            RequestPage.serializer(),
+        )
+
     /** `GET /requests/mine` */
     suspend fun mine(
         cursor: String? = null,

@@ -230,12 +230,9 @@ export const DiscoverRail = t.object({
 export const DiscoverRails = t.object({
   enabled: t.boolean(),
   /**
-   * Which requests Discover opens with. `queue` is an admin's waiting
-   * requests, from `admin.requests.live`. `mine` is the viewer's own
-   * requests in progress, from `requests.mine` (filter `inProgress`),
-   * with their state kept current the way My requests does it. Null
-   * shows none. It's no `DiscoverRail`, so an app that doesn't know the
-   * row still reads the rest.
+   * The list to follow even while empty. Admins get the waiting list
+   * from admin.requests.live; other viewers get their in-progress
+   * requests from requests.mineLive. Null when Discover is disabled.
    */
   requests: t.enum(["queue", "mine"]).nullable(),
   rails: t.array(DiscoverRail),

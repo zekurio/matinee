@@ -485,39 +485,12 @@ export async function mine(
   }
 }
 
-/** How many requests `mine` returns for its "inProgress" filter. */
-export async function inProgressCount(viewer: Viewer): Promise<number> {
-  const [row] = await db
-    .select({ value: count() })
-    .from(request)
-    .innerJoin(requestFollower, eq(requestFollower.requestId, request.id))
-    .where(and(followedBy(viewer), inProgress()))
-  return row?.value ?? 0
-}
-
-/** The requests that wait for an admin's answer, among the libraries they see. */
-function waitingFor(viewer: Viewer) {
-  return and(
-    inLibraries(viewer, request.libraryId),
-    eq(request.status, "asked"),
-  )
-}
-
-/** How many requests wait in the admin's queue, which its "waiting" list holds. */
-export async function waitingCount(viewer: Viewer): Promise<number> {
-  const [row] = await db
-    .select({ value: count() })
-    .from(request)
-    .where(waitingFor(viewer))
-  return row?.value ?? 0
-}
-
 export async function queue(
   viewer: Viewer,
   input: { cursor?: string; limit: number },
 ) {
   const visible = inLibraries(viewer, request.libraryId)
-  const waiting = waitingFor(viewer)
+  const waiting = and(visible, eq(request.status, "asked"))
   const attention = and(
     visible,
     eq(request.status, "approved"),
