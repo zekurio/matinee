@@ -29,6 +29,7 @@ import {
   useSendHeldOnLeave,
 } from "@/stores/request-actions"
 
+import { RAIL_CARDS } from "./discover-data"
 import {
   RequestCard,
   RequestCardSkeleton,
@@ -90,7 +91,7 @@ function RequestsRow<Item extends { id: string }>({
       }
     >
       {shown
-        ? shown.map((item) => (
+        ? shown.slice(0, RAIL_CARDS).map((item) => (
             <RailItem key={item.id} artwork="request">
               {children(item)}
             </RailItem>
@@ -129,7 +130,7 @@ function OwnRequests() {
   const { user } = authed.useRouteContext()
   const mine = useQuery({
     ...orpc.requests.mineLive.experimental_liveOptions({
-      input: { limit: 24 },
+      input: { limit: RAIL_CARDS },
     }),
     ...liveQuery,
   })
