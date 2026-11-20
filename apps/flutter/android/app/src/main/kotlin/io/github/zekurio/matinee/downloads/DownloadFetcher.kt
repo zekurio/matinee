@@ -217,7 +217,10 @@ class DownloadFetcher(
             started.first
         }
         // The file holds the init segment and the segments before `segment`;
-        // a segment cut off by a break goes.
+        // a segment cut off by a break goes. A file shorter than that lost
+        // what was written down, as when the power went, and a segment
+        // after the gap would spoil it, so the version starts over.
+        if (entry.bytes > 0 && (!file.exists() || file.length() < entry.bytes)) throw StartOver()
         if (file.exists() && file.length() > entry.bytes) RandomAccessFile(file, "rw").use { it.setLength(entry.bytes) }
         // A version still waiting its turn on the server answers 503, as a
         // segment being made does: wait as it says, then ask again. Many
@@ -233,7 +236,10 @@ class DownloadFetcher(
                     }
                     !response.ok -> throw DownloadHttpException(response.code, null)
                     else -> {
-                        FileOutputStream(file, false).use { out -> copy(response.body, out) {} }
+                        FileOutputStream(file, false).use { out ->
+                            copy(response.body, out) {}
+                            out.fd.sync()
+                        }
                         true
                     }
                 }
@@ -247,7 +253,11 @@ class DownloadFetcher(
             val last = http.get(route(entry.apiBase, "downloads", serverId, "$segment.m4s")).use { response ->
                 when (response.code) {
                     200 -> {
-                        FileOutputStream(file, true).use { out -> copy(response.body, out) { read -> bytes += read } }
+                        // On the disk before it's written down as here.
+                        FileOutputStream(file, true).use { out ->
+                            copy(response.body, out) { read -> bytes += read }
+                            out.fd.sync()
+                        }
                         segment++
                         store.update(id) { it.copy(segment = segment, bytes = bytes) }
                         // Written down above; the notification hears at most once a

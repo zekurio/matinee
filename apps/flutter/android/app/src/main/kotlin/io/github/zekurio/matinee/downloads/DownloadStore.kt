@@ -1,13 +1,15 @@
 package io.github.zekurio.matinee.downloads
 
 import java.io.File
+import java.io.FileOutputStream
 import org.json.JSONArray
 import org.json.JSONException
 
 /**
  * The downloads, kept as one JSON file, and their files in a folder per
- * item. Every change writes the list again, so a download picks up where it
- * was after the app or the phone restarts. Every server's downloads are
+ * item. Every change writes the list again, synced to the disk, so a
+ * download picks up where it was after the app or the phone restarts, even
+ * one that didn't shut down cleanly. Every server's downloads are
  * here; Dart shows only those of the server in use.
  *
  * The folder isn't the Kotlin app's `downloads`, which the first launch
@@ -50,7 +52,13 @@ class DownloadStore(filesDir: File) {
         val tmp = File(root, "index.json.tmp")
         val array = JSONArray()
         next.values.sortedBy { it.addedAt }.forEach { array.put(it.toJson()) }
-        tmp.writeText(array.toString())
+        // On the disk before it takes the list's place, so a download that
+        // shows as running is still listed after the power goes, not lost
+        // with an empty list.
+        FileOutputStream(tmp).use { out ->
+            out.write(array.toString().toByteArray(Charsets.UTF_8))
+            out.fd.sync()
+        }
         if (!tmp.renameTo(index)) {
             index.delete()
             tmp.renameTo(index)

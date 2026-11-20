@@ -230,6 +230,28 @@ class DownloadFetcherTest {
     }
 
     @Test
+    fun `a version whose file lost what was written down starts over`() = runBlocking {
+        // Two segments written down, but only the init segment reached the disk.
+        store.put(device().copy(serverId = "old", segment = 2, bytes = 3))
+        video().apply { parentFile?.mkdirs() }.writeText("I")
+        http.answers = { method, url, _ ->
+            when {
+                method == "POST" -> answer(200, """{"id":"d2"}""")
+                method == "DELETE" -> answer(204)
+                url.contains("/old/") -> answer(500)
+                url.endsWith("/d2/init.mp4") -> answer(200, "I")
+                url.endsWith("/d2/0.m4s") -> answer(200, "A")
+                url.endsWith("/d2/1.m4s") -> answer(200, "B".toByteArray(), mapOf("X-Matinee-Last-Segment" to "1"))
+                else -> answer(404)
+            }
+        }
+        fetcher().fetch("item")
+        assertEquals("IAB", video().readText())
+        assertEquals("d2", store["item"]!!.serverId)
+        assertTrue(http.asked.none { it.contains("/old/") })
+    }
+
+    @Test
     fun `a device version picks up after the last whole segment`() = runBlocking {
         store.put(device().copy(serverId = "d1", segment = 1, bytes = 2))
         // A segment cut off by the break is still in the file.
