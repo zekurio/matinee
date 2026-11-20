@@ -1,6 +1,7 @@
 import { Button, buttonVariants } from "@matinee/ui/components/button"
 import { Toaster } from "@matinee/ui/components/sonner"
 import { TooltipProvider } from "@matinee/ui/components/tooltip"
+import { cn } from "@matinee/ui/lib/utils"
 import type { QueryClient } from "@tanstack/react-query"
 import {
   createRootRouteWithContext,
@@ -10,7 +11,7 @@ import {
 } from "@tanstack/react-router"
 import { useEffect } from "react"
 
-import { AuthScreen } from "@/components/auth-screen"
+import { StatusScreen } from "@/components/auth-screen"
 import { PageScrollbar } from "@/components/page-scrollbar"
 import { tr } from "@/i18n"
 import { PlaybackAccountSync } from "@/lib/playback-sync"
@@ -54,39 +55,39 @@ function RouteError({ error, reset }: ErrorComponentProps) {
     reportError(error)
   }, [error])
   return (
-    <AuthScreen
+    <StatusScreen
       title={tr("common.error.unknown")}
       description={tr("common.error.pageDescription")}
-    >
-      <div className="grid gap-2">
-        <Button size="lg" onClick={() => reset()}>
-          {tr("common.error.retry")}
-        </Button>
-        <Link
-          to="/"
-          className={buttonVariants({ variant: "outline", size: "lg" })}
-        >
-          {tr("common.backHome")}
-        </Link>
-      </div>
-    </AuthScreen>
+      actions={
+        <>
+          <Button size="lg" onClick={() => reset()}>
+            {tr("common.error.retry")}
+          </Button>
+          <Link
+            to="/"
+            // A link styled as a button, so it stays a link to a screen
+            // reader. Merged as `Button` does, or the base's transparent
+            // border wins over the outline's.
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+          >
+            {tr("common.backHome")}
+          </Link>
+        </>
+      }
+    />
   )
 }
 
 function RouteNotFound() {
   return (
-    <AuthScreen
+    <StatusScreen
       title={tr("common.notFound.title")}
       description={tr("common.notFound.description")}
-    >
-      <div className="grid">
-        <Link
-          to="/"
-          className={buttonVariants({ variant: "outline", size: "lg" })}
-        >
+      actions={
+        <Link to="/" className={cn(buttonVariants({ size: "lg" }))}>
           {tr("common.backHome")}
         </Link>
-      </div>
-    </AuthScreen>
+      }
+    />
   )
 }
