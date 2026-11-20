@@ -20,7 +20,6 @@ import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/player/player_state.dart';
 import 'package:matinee/player/player_system.dart';
 import 'package:matinee/player/subtitle_look.dart';
-import 'package:matinee/screens/settings/about_page.dart';
 import 'package:matinee/screens/settings/licenses_page.dart';
 import 'package:matinee/screens/settings/settings_screen.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
