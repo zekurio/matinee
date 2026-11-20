@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
@@ -72,6 +73,27 @@ void main() {
     await tester.tap(find.text('Arrival').first);
     await tester.pumpAndSettle();
     expect(find.text('/title/m1'), findsOneWidget);
+  });
+
+  testWidgets('clearing the query keeps the field ready to type', (
+    tester,
+  ) async {
+    final backend = _backend();
+    await pumpScreen(tester, const SearchScreen(), client: backend.client);
+    await _type(tester, 'arr');
+    expect(find.text('Arrival'), findsWidgets);
+    // A mouse or stylus, which a tablet takes too, drops a field's focus
+    // on a tap outside it, unlike a finger.
+    await tester.tap(
+      find.bySemanticsLabel('Clear search'),
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pumpAndSettle();
+    final field = tester.widget<EditableText>(find.byType(EditableText));
+    expect(field.controller.text, isEmpty);
+    // A tap on the clear button is a tap on the field, so the keyboard
+    // stays up for the next query.
+    expect(field.focusNode.hasFocus, isTrue);
   });
 
   testWidgets('a genre opens Browse', (tester) async {

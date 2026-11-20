@@ -102,13 +102,18 @@ class SearchPill extends StatelessWidget {
                     valueListenable: editing,
                     builder: (context, value, child) => value.text.isEmpty
                         ? const SizedBox(width: 12)
-                        : _PillAction(
-                            icon: Lucide.x,
-                            label: clearLabel!,
-                            onPressed: () {
-                              editing.clear();
-                              onChanged?.call('');
-                            },
+                        // Part of the field, so a tap on it from a mouse
+                        // or stylus doesn't take the field's focus, and
+                        // the keyboard, away with the text.
+                        : TextFieldTapRegion(
+                            child: _PillAction(
+                              icon: Lucide.x,
+                              label: clearLabel!,
+                              onPressed: () {
+                                editing.clear();
+                                onChanged?.call('');
+                              },
+                            ),
                           ),
                   )
                 else
