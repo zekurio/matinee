@@ -86,15 +86,27 @@ class ScannerBridge(
     override fun cameraAllowed(): Boolean =
         activity.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 
-    override suspend fun requestCamera(): Boolean {
-        if (cameraAllowed()) return true
-        return suspendCancellableCoroutine { continuation ->
+    override suspend fun requestCamera(): CameraAnswer {
+        if (cameraAllowed()) return CameraAnswer.ALLOWED
+        // Android wants the reason shown only between the first no and the
+        // second. False both before the ask and after a no means it didn't
+        // show the prompt, so a tap that asks again would do nothing.
+        val explainedBefore = explainCamera()
+        val granted = suspendCancellableCoroutine { continuation ->
             waiting += { granted -> if (continuation.isActive) continuation.resume(granted) }
             if (waiting.size == 1) {
                 activity.requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_REQUEST)
             }
         }
+        return when {
+            granted -> CameraAnswer.ALLOWED
+            !explainedBefore && !explainCamera() -> CameraAnswer.BLOCKED
+            else -> CameraAnswer.DENIED
+        }
     }
+
+    private fun explainCamera(): Boolean =
+        activity.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)
 
     /** True when it took the answer, which was to its own prompt. */
     fun onRequestPermissionsResult(requestCode: Int): Boolean {

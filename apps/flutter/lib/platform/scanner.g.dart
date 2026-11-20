@@ -108,6 +108,16 @@ int _deepHash(Object? value) {
 }
 
 
+/// What asking for the camera came to.
+enum CameraAnswer {
+  allowed,
+  /// The person said no to the prompt.
+  denied,
+  /// Android didn't show the prompt, as after the second no: only the
+  /// app's page in the system settings can allow the camera now.
+  blocked;
+}
+
 /// The camera's picture, as a texture Flutter draws.
 class ScannerView {
   ScannerView({
@@ -185,8 +195,11 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is ScannerView) {
+    }    else if (value is CameraAnswer) {
       buffer.putUint8(129);
+      writeValue(buffer, value.index);
+    }    else if (value is ScannerView) {
+      buffer.putUint8(130);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -197,6 +210,9 @@ class _PigeonCodec extends StandardMessageCodec {
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
       case 129:
+        final value = readValue(buffer) as int?;
+        return value == null ? null : CameraAnswer.values[value];
+      case 130:
         return ScannerView.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -259,9 +275,9 @@ class ScannerApi {
     return pigeonVar_replyValue! as bool;
   }
 
-  /// Asks for the camera, and answers whether it's allowed now. Android
-  /// stops showing the prompt after the second no, and answers no at once.
-  Future<bool> requestCamera() async {
+  /// Asks for the camera, and answers whether it's allowed now, or that
+  /// Android stopped showing the prompt, which it does after the second no.
+  Future<CameraAnswer> requestCamera() async {
     final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.ScannerApi.requestCamera$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
@@ -276,7 +292,7 @@ class ScannerApi {
         isNullValid: false,
     )
     ;
-    return pigeonVar_replyValue! as bool;
+    return pigeonVar_replyValue! as CameraAnswer;
   }
 
   /// The app's page in the system settings, where the camera can be

@@ -35,6 +35,18 @@ class ScannerView {
   final bool mirrored;
 }
 
+/// What asking for the camera came to.
+enum CameraAnswer {
+  allowed,
+
+  /// The person said no to the prompt.
+  denied,
+
+  /// Android didn't show the prompt, as after the second no: only the
+  /// app's page in the system settings can allow the camera now.
+  blocked,
+}
+
 @HostApi()
 abstract class ScannerApi {
   /// Whether the device has a camera at all, which a TV mostly doesn't.
@@ -43,10 +55,10 @@ abstract class ScannerApi {
   /// Whether the app may use the camera.
   bool cameraAllowed();
 
-  /// Asks for the camera, and answers whether it's allowed now. Android
-  /// stops showing the prompt after the second no, and answers no at once.
+  /// Asks for the camera, and answers whether it's allowed now, or that
+  /// Android stopped showing the prompt, which it does after the second no.
   @async
-  bool requestCamera();
+  CameraAnswer requestCamera();
 
   /// The app's page in the system settings, where the camera can be
   /// allowed after Android stopped asking.

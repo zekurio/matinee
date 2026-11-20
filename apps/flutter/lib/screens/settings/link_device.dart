@@ -194,9 +194,9 @@ class _CameraScannerState extends ConsumerState<CameraScanner> {
   late final AppLifecycleListener _lifecycle;
   bool? _allowed;
 
-  /// Prompts shown: Android stops showing it after the second no, and then
-  /// only its settings can allow the camera.
-  var _asked = 0;
+  /// Android stopped showing the prompt, as it does after the second no,
+  /// so only the app's page in its settings can allow the camera.
+  var _blocked = false;
   var _failed = false;
 
   /// A QR code that isn't a Matinee sign-in was in view a moment ago.
@@ -222,11 +222,7 @@ class _CameraScannerState extends ConsumerState<CameraScanner> {
   }
 
   Future<void> _first() async {
-    var allowed = await _allowedNow();
-    if (!allowed && _asked == 0) {
-      _asked = 1;
-      allowed = await _request();
-    }
+    final allowed = await _allowedNow() || await _request();
     if (mounted) setState(() => _allowed = allowed);
   }
 
@@ -244,21 +240,25 @@ class _CameraScannerState extends ConsumerState<CameraScanner> {
   }
 
   Future<bool> _request() async {
+    final CameraAnswer answer;
     try {
-      return await _scanner.requestCamera();
+      answer = await _scanner.requestCamera();
     } on PlatformException {
       return false;
     }
+    _blocked = answer == CameraAnswer.blocked;
+    return answer == CameraAnswer.allowed;
   }
 
+  /// Asks again while Android still shows the prompt, and otherwise opens
+  /// the app's settings, so the button never does nothing.
   Future<void> _allow() async {
-    if (_asked >= 2) {
-      await _scanner.openAppSettings();
-      return;
+    if (!_blocked) {
+      final allowed = await _request();
+      if (mounted) setState(() => _allowed = allowed);
+      if (allowed || !_blocked) return;
     }
-    _asked++;
-    final allowed = await _request();
-    if (mounted) setState(() => _allowed = allowed);
+    await _scanner.openAppSettings();
   }
 
   void _read(String text) {

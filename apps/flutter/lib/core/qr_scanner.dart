@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../platform/scanner.g.dart';
 
-export '../platform/scanner.g.dart' show ScannerView;
+export '../platform/scanner.g.dart' show CameraAnswer, ScannerView;
 
 /// The camera reading QR codes, behind `pigeons/scanner.dart`, so tests and
 /// platforms without one can stand in for it.
@@ -15,8 +15,9 @@ abstract interface class QrScanner {
 
   Future<bool> cameraAllowed();
 
-  /// Asks for the camera, and answers whether it's allowed now.
-  Future<bool> requestCamera();
+  /// Asks for the camera, and answers whether it's allowed now, or that
+  /// Android no longer shows the prompt.
+  Future<CameraAnswer> requestCamera();
 
   Future<void> openAppSettings();
 
@@ -59,7 +60,7 @@ final class PlatformQrScanner implements QrScanner, ScannerEvents {
   Future<bool> cameraAllowed() => _api.cameraAllowed();
 
   @override
-  Future<bool> requestCamera() => _api.requestCamera();
+  Future<CameraAnswer> requestCamera() => _api.requestCamera();
 
   @override
   Future<void> openAppSettings() => _api.openAppSettings();

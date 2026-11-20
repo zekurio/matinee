@@ -202,6 +202,26 @@ class FlutterError (
   val details: Any? = null
 ) : RuntimeException()
 
+/** What asking for the camera came to. */
+enum class CameraAnswer(val raw: Int) {
+  ALLOWED(0),
+  /** The person said no to the prompt. */
+  DENIED(1),
+  /**
+   * Android didn't show the prompt, as after the second no: only the
+   * app's page in the system settings can allow the camera now.
+   */
+  BLOCKED(2);
+
+  companion object {
+    private val pigeonValues = values()
+
+    fun ofRaw(raw: Int): CameraAnswer? {
+      return pigeonValues.getOrNull(raw)
+    }
+  }
+}
+
 /**
  * The camera's picture, as a texture Flutter draws.
  *
@@ -265,6 +285,11 @@ private open class ScannerPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
       129.toByte() -> {
+        (readValue(buffer) as Long?)?.let {
+          CameraAnswer.ofRaw(it.toInt())
+        }
+      }
+      130.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           ScannerView.fromList(it)
         }
@@ -274,8 +299,12 @@ private open class ScannerPigeonCodec : StandardMessageCodec() {
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
     when (value) {
-      is ScannerView -> {
+      is CameraAnswer -> {
         stream.write(129)
+        writeValue(stream, value.raw.toLong())
+      }
+      is ScannerView -> {
+        stream.write(130)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -291,10 +320,10 @@ interface ScannerApi {
   /** Whether the app may use the camera. */
   fun cameraAllowed(): Boolean
   /**
-   * Asks for the camera, and answers whether it's allowed now. Android
-   * stops showing the prompt after the second no, and answers no at once.
+   * Asks for the camera, and answers whether it's allowed now, or that
+   * Android stopped showing the prompt, which it does after the second no.
    */
-  suspend fun requestCamera(): Boolean
+  suspend fun requestCamera(): CameraAnswer
   /**
    * The app's page in the system settings, where the camera can be
    * allowed after Android stopped asking.

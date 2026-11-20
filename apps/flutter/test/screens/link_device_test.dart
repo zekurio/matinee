@@ -36,10 +36,17 @@ final class FakeScanner implements QrScanner {
   @override
   Future<bool> cameraAllowed() async => allowed;
 
+  /// Prompts the person saw: Android shows two, then answers at once.
+  var prompts = 0;
+
   @override
-  Future<bool> requestCamera() async {
+  Future<CameraAnswer> requestCamera() async {
     requests++;
-    return allowed = grants;
+    if (allowed) return CameraAnswer.allowed;
+    if (prompts >= 2) return CameraAnswer.blocked;
+    prompts++;
+    allowed = grants;
+    return allowed ? CameraAnswer.allowed : CameraAnswer.denied;
   }
 
   @override
@@ -157,16 +164,38 @@ void main() {
     await tester.tap(find.text('Allow camera'));
     await tester.pumpAndSettle();
     expect(scanner.requests, 2);
+    expect(scanner.settingsOpened, 0);
+    // Android shows no third prompt, so the tap goes to the settings.
     await tester.tap(find.text('Allow camera'));
     await tester.pumpAndSettle();
-    expect(scanner.requests, 2);
+    expect(scanner.prompts, 2);
     expect(scanner.settingsOpened, 1);
+    await tester.tap(find.text('Allow camera'));
+    await tester.pumpAndSettle();
+    expect(scanner.requests, 3);
+    expect(scanner.settingsOpened, 2);
     // Allowed there, and back in the app.
     scanner.allowed = true;
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
     expect(scanner.running, isTrue);
+  });
+
+  testWidgets('once Android stops asking, the first tap opens the settings', (
+    tester,
+  ) async {
+    // Two nos on an earlier visit: this page's own ask shows nothing.
+    final scanner = await _pump(
+      tester,
+      _backend(),
+      scanner: FakeScanner(allowed: false, grants: false)..prompts = 2,
+    );
+    expect(scanner.requests, 1);
+    await tester.tap(find.text('Allow camera'));
+    await tester.pumpAndSettle();
+    expect(scanner.requests, 1);
+    expect(scanner.settingsOpened, 1);
   });
 
   testWidgets("a camera that won't start says so", (tester) async {
