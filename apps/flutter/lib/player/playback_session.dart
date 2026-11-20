@@ -578,6 +578,7 @@ class PlaybackSession extends ChangeNotifier {
 
   void _remember({int? audio, SubtitlePick? subtitle}) {
     _savingPicks = _savingPicks.then((_) async {
+      if (_closed) return;
       try {
         await api.playback.pickTracks(itemId, audio: audio, subtitle: subtitle);
       } on Exception {
