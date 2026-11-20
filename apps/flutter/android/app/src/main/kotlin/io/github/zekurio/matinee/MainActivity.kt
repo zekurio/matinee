@@ -44,6 +44,11 @@ class MainActivity : FlutterActivity() {
         PlayerApi.setUp(messenger, bridge)
     }
 
+    override fun onStart() {
+        super.onStart()
+        playback?.enterForeground()
+    }
+
     override fun onStop() {
         playback?.pauseForBackground()
         super.onStop()

@@ -22,6 +22,8 @@ import kotlinx.coroutines.launch
  */
 @UnstableApi
 internal class PlayerBridge(private val activity: Activity, private val messenger: BinaryMessenger) : PlayerApi {
+    private var foreground = false
+
     private var current: Session? = null
     private val fullscreen = PlayerFullscreen(activity)
 
@@ -51,7 +53,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
                 EngineMessage.MEDIA3 -> Media3Engine(activity, next)
             }
             next.engine = engine
-            engine.open(request)
+            engine.open(request.copy(autoplay = foreground && request.autoplay))
         } catch (failure: Exception) {
             next.failed(failure)
         } catch (failure: LinkageError) {
@@ -60,7 +62,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
         }
     }
 
-    override fun play(session: Long) = withEngine(session) { play() }
+    override fun play(session: Long) = withEngine(session) { if (foreground) play() }
     override fun pause(session: Long) = withEngine(session) { pause() }
     override fun seekTo(session: Long, positionMs: Long) = withEngine(session) { seekTo(positionMs.coerceAtLeast(0)) }
 
@@ -88,8 +90,11 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
         if (current?.id == session) closeCurrent(notify = false)
     }
 
-    /** The activity left the screen: its surfaces are going, so stop rather than play on unseen. */
+    fun enterForeground() { foreground = true }
+
+    /** Pause the active source and any replacement that arrives while stopped. */
     fun pauseForBackground() {
+        foreground = false
         current?.engine?.pause()
     }
 
