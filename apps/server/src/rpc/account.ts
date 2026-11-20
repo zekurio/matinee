@@ -18,6 +18,7 @@ import {
   storePasskey,
 } from "../auth/passkeys"
 import {
+  cleanDeviceName,
   deleteSession,
   deleteUserSessions,
   identifySession,
@@ -246,7 +247,11 @@ export const account = {
 
     identify: authed.account.sessions.identify.handler(
       async ({ context, input }) => {
-        await identifySession(context.user, input.name)
+        // The contract's minimum counts characters this takes out, like a
+        // zero-width space, and a name of only those is no name.
+        const name = cleanDeviceName(input.name)
+        if (!name) throw badRequest("Enter a name.")
+        await identifySession(context.user, name)
       },
     ),
   },

@@ -191,6 +191,13 @@ export const playbackSession = pgTable(
     encodeSeconds: doublePrecision().notNull().default(0),
     /** What the client called itself, like `Chrome Android`; see `session.clientName`. */
     client: text(),
+    /**
+     * The sign-in that played it, which tells a reload from another device
+     * with the same name. Null for plays from before it was kept. Not a
+     * foreign key: a play outlives the sign-in, and nothing reads the
+     * session through it.
+     */
+    authSessionId: uuid(),
     startedAt: createdAt(),
     /** The last report or stream. */
     updatedAt: createdAt(),

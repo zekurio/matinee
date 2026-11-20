@@ -234,6 +234,7 @@ streamRoutes.get("/:id/play", async (c) => {
         userId: viewer.id,
         item,
         client: viewer.clientName,
+        authSessionId: viewer.sessionId,
       }
     : null
   const { plan } = opened
@@ -294,14 +295,20 @@ async function hlsRequest(
 }
 
 function watcherFor(
-  viewer: { id: string; clientName: string | null },
+  viewer: { id: string; clientName: string | null; sessionId: string },
   item: MediaItemRow,
   session: string | undefined,
 ): Watcher {
   return {
     key: session ?? `user:${viewer.id}`,
     owner: session
-      ? { id: session, userId: viewer.id, item, client: viewer.clientName }
+      ? {
+          id: session,
+          userId: viewer.id,
+          item,
+          client: viewer.clientName,
+          authSessionId: viewer.sessionId,
+        }
       : null,
   }
 }

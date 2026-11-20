@@ -190,18 +190,18 @@ export async function listSessions(
 }
 
 /**
- * Keep what the current session's client calls itself. Only the session's
- * own token can name it, and it is only ever shown.
+ * Keep what the current session's client calls itself, as
+ * `cleanDeviceName` leaves it. Only the session's own token can name it,
+ * and it is only ever shown.
  */
 export async function identifySession(
   current: SessionUser,
   name: string,
 ): Promise<void> {
-  const cleaned = cleanDeviceName(name)
-  if (cleaned === current.clientName) return
+  if (name === current.clientName) return
   await db
     .update(session)
-    .set({ clientName: cleaned })
+    .set({ clientName: name })
     .where(eq(session.id, current.sessionId))
 }
 

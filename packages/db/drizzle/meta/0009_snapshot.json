@@ -765,6 +765,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "auth_session_id": {
+          "name": "auth_session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "started_at": {
           "name": "started_at",
           "type": "timestamp with time zone",

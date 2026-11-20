@@ -28,4 +28,7 @@ UPDATE "playback_session" SET "client" = regexp_replace(
   regexp_replace("client", ' on Android$', ' Android'),
   ' on (Linux|Windows|macOS|ChromeOS)$', ''
 )
-WHERE "client" ~ ' on (Android|Linux|Windows|macOS|ChromeOS)$';
+WHERE "client" ~ ' on (Android|Linux|Windows|macOS|ChromeOS)$';--> statement-breakpoint
+-- The sign-in a play came from, which tells a reload from another device
+-- of the same name. Plays from before this have none.
+ALTER TABLE "playback_session" ADD COLUMN "auth_session_id" uuid;

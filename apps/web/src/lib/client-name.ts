@@ -10,10 +10,12 @@ import { client } from "@/lib/rpc"
  * itself; the server only keeps and shows it.
  */
 
-// Edge and Opera say Chrome too, and Chrome says Safari, so they go first.
+// Edge, Opera, and Samsung Internet say Chrome too, and Chrome says
+// Safari, so they go first.
 const BROWSERS: [RegExp, string][] = [
   [/Edg(?:e|A|iOS)?\//, "Edge"],
   [/OPR\/|Opera/, "Opera"],
+  [/SamsungBrowser\//, "Samsung Internet"],
   [/Firefox\/|FxiOS\//, "Firefox"],
   [/CriOS\/|Chrome\//, "Chrome"],
   [/Safari\//, "Safari"],
