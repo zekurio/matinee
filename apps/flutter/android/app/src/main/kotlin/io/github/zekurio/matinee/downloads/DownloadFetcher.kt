@@ -219,13 +219,26 @@ class DownloadFetcher(
         // The file holds the init segment and the segments before `segment`;
         // a segment cut off by a break goes.
         if (file.exists() && file.length() > entry.bytes) RandomAccessFile(file, "rw").use { it.setLength(entry.bytes) }
-        if (entry.bytes == 0L) {
-            http.get(route(entry.apiBase, "downloads", serverId, "init.mp4")).use { response ->
-                if (response.code == 404 || response.code == 409) throw StartOver()
-                if (!response.ok) throw DownloadHttpException(response.code, null)
-                FileOutputStream(file, false).use { out -> copy(response.body, out) {} }
+        // A version still waiting its turn on the server answers 503, as a
+        // segment being made does: wait as it says, then ask again. Many
+        // downloads started together wait so, and none of them is a failure.
+        while (entry.bytes == 0L) {
+            coroutineContext.ensureActive()
+            val here = http.get(route(entry.apiBase, "downloads", serverId, "init.mp4")).use { response ->
+                when {
+                    response.code == 404 || response.code == 409 -> throw StartOver()
+                    response.code == 503 -> {
+                        wait(retryAfter(response))
+                        false
+                    }
+                    !response.ok -> throw DownloadHttpException(response.code, null)
+                    else -> {
+                        FileOutputStream(file, false).use { out -> copy(response.body, out) {} }
+                        true
+                    }
+                }
             }
-            entry = store.update(id) { it.copy(bytes = file.length(), segment = 0) } ?: return
+            if (here) entry = store.update(id) { it.copy(bytes = file.length(), segment = 0) } ?: return
         }
         var segment = entry.segment
         var bytes = entry.bytes
@@ -244,7 +257,7 @@ class DownloadFetcher(
                     }
                     204 -> true
                     503 -> {
-                        wait((response.header("Retry-After")?.toLongOrNull() ?: 5L).coerceIn(1, 60) * 1000)
+                        wait(retryAfter(response))
                         false
                     }
                     404, 409 -> throw StartOver()
@@ -260,6 +273,10 @@ class DownloadFetcher(
             // It cleans up after itself in time.
         }
     }
+
+    /** How long a 503 asks to wait, in milliseconds: its Retry-After, kept between a second and a minute. */
+    private fun retryAfter(response: HttpAnswer): Long =
+        (response.header("Retry-After")?.toLongOrNull() ?: 5L).coerceIn(1, 60) * 1000
 
     /** `downloads.start`: the server's id for the version, and its estimate of the size. */
     private suspend fun start(entry: OfflineEntry, spec: String): Pair<String, Long?> {

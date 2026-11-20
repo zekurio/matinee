@@ -205,6 +205,31 @@ class DownloadFetcherTest {
     }
 
     @Test
+    fun `a version waiting its turn on the server waits, rather than failing`() = runBlocking {
+        store.put(device())
+        var turns = 2
+        http.answers = { method, url, _ ->
+            when {
+                method == "POST" -> answer(200, """{"id":"d1","plan":{"estimatedBytes":99}}""")
+                method == "DELETE" -> answer(204)
+                // Queued behind the others: no init segment yet, twice.
+                url.endsWith("/init.mp4") && turns > 0 -> {
+                    turns--
+                    answer(503, "", mapOf("Retry-After" to "5"))
+                }
+                url.endsWith("/init.mp4") -> answer(200, "I")
+                url.endsWith("/0.m4s") -> answer(200, "A".toByteArray(), mapOf("X-Matinee-Last-Segment" to "1"))
+                else -> answer(404)
+            }
+        }
+        fetcher().fetch("item")
+        assertEquals("IA", video().readText())
+        assertEquals(listOf(5000L, 5000L), waits)
+        // Set up once, however long it waited.
+        assertEquals(1, http.posted.size)
+    }
+
+    @Test
     fun `a device version picks up after the last whole segment`() = runBlocking {
         store.put(device().copy(serverId = "d1", segment = 1, bytes = 2))
         // A segment cut off by the break is still in the file.
