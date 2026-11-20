@@ -729,171 +729,183 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     final look = subtitleLook(ref, prefs);
     final small = _small;
 
-    return Focus(
-      autofocus: true,
-      onKeyEvent: _key,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (item == null || _session.refused || _leaving)
-            const ColoredBox(color: Color(0xFF000000)),
-          VideoView(player: _session.player),
-          // The picture dimmed behind the controls, coming and going with
-          // them, but not under a menu, whose own backdrop dims it.
-          PlayerFade(
-            visible: item != null && controls && error == null && menu == null,
-            child: const PlayerDim(),
-          ),
-          if (captions.isNotEmpty)
-            SubtitleLayer(
-              cues: captions,
-              look: look,
-              bottom: controls && error == null ? 150 : 28,
+    // Locked, system Back only shows the unlock button, as a touch does,
+    // so a pocket or a stray palm doesn't leave the video. Home still
+    // shrinks it into picture in picture.
+    final holding = _locked && error == null && !small;
+    return PopScope(
+      canPop: !holding,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && holding) setState(() => _lockTouched++);
+      },
+      child: Focus(
+        autofocus: true,
+        onKeyEvent: _key,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (item == null || _session.refused || _leaving)
+              const ColoredBox(color: Color(0xFF000000)),
+            VideoView(player: _session.player),
+            // The picture dimmed behind the controls, coming and going with
+            // them, but not under a menu, whose own backdrop dims it.
+            PlayerFade(
+              visible:
+                  item != null && controls && error == null && menu == null,
+              child: const PlayerDim(),
             ),
-          // Taps show and hide the controls, a double tap on either side
-          // skips, two fingers fill the screen or show it whole, and swipes
-          // set the brightness, the volume, and the time (video_gestures.dart).
-          VideoGestures(
-            enabled: error == null && menu == null && !_locked && !small,
-            prefs: prefs,
-            levels: _levels,
-            duration: () => _session.duration,
-            position: () => _session.position,
-            playing: () => _playing,
-            notes: _gesture,
-            semanticsLabel: l.a11yPlayerVideo,
-            semanticsHint: controls
-                ? l.a11yPlayerHideControls
-                : l.a11yPlayerShowControls,
-            onTap: _toggleControls,
-            onDoubleTap: (ahead) {
-              final step = ahead ? _session.skipForward : _session.skipBack;
-              if (step != null && enabled) {
-                unawaited(_session.skip(ahead ? step : -step));
-              }
-              _resetHide();
-            },
-            onPinch: _pinch,
-            onSeek: (seconds) {
-              if (enabled) unawaited(_session.seek(seconds));
-            },
-            onHold: _hold,
-            onStart: _gestureStarted,
-            onBrightness: _keepBrightness,
-          ),
-          if (!small)
-            GestureNotes(
+            if (captions.isNotEmpty)
+              SubtitleLayer(
+                cues: captions,
+                look: look,
+                bottom: controls && error == null ? 150 : 28,
+              ),
+            // Taps show and hide the controls, a double tap on either side
+            // skips, two fingers fill the screen or show it whole, and swipes
+            // set the brightness, the volume, and the time (video_gestures.dart).
+            VideoGestures(
+              enabled: error == null && menu == null && !_locked && !small,
+              prefs: prefs,
+              levels: _levels,
+              duration: () => _session.duration,
+              position: () => _session.position,
+              playing: () => _playing,
               notes: _gesture,
-              duration: _session.duration,
-              holding: _holding,
-              frame: switch (_session.trickplay) {
-                final images? => (seconds, width) => TrickplayFrame(
-                  itemId: _session.itemId,
-                  images: images,
-                  seconds: seconds,
-                  width: width,
+              semanticsLabel: l.a11yPlayerVideo,
+              semanticsHint: controls
+                  ? l.a11yPlayerHideControls
+                  : l.a11yPlayerShowControls,
+              onTap: _toggleControls,
+              onDoubleTap: (ahead) {
+                final step = ahead ? _session.skipForward : _session.skipBack;
+                if (step != null && enabled) {
+                  unawaited(_session.skip(ahead ? step : -step));
+                }
+                _resetHide();
+              },
+              onPinch: _pinch,
+              onSeek: (seconds) {
+                if (enabled) unawaited(_session.seek(seconds));
+              },
+              onHold: _hold,
+              onStart: _gestureStarted,
+              onBrightness: _keepBrightness,
+            ),
+            if (!small)
+              GestureNotes(
+                notes: _gesture,
+                duration: _session.duration,
+                holding: _holding,
+                frame: switch (_session.trickplay) {
+                  final images? => (seconds, width) => TrickplayFrame(
+                    itemId: _session.itemId,
+                    images: images,
+                    seconds: seconds,
+                    width: width,
+                  ),
+                  null => null,
+                },
+              ),
+            TimedNote(
+              token: _fitNotes == 0 ? null : _fitNotes,
+              duration: const Duration(milliseconds: 1200),
+              child: PlayerNote(title: _fill ? l.playerFill : l.playerFit),
+            ),
+            TimedNote(
+              token: _session.notice,
+              duration: const Duration(seconds: 5),
+              onHidden: _session.dismissNotice,
+              child: switch (_session.notice) {
+                (final notice, final detail) => playbackNoticeNote(
+                  l,
+                  notice,
+                  detail,
                 ),
-                null => null,
+                null => const SizedBox.shrink(),
               },
             ),
-          TimedNote(
-            token: _fitNotes == 0 ? null : _fitNotes,
-            duration: const Duration(milliseconds: 1200),
-            child: PlayerNote(title: _fill ? l.playerFill : l.playerFit),
-          ),
-          TimedNote(
-            token: _session.notice,
-            duration: const Duration(seconds: 5),
-            onHidden: _session.dismissNotice,
-            child: switch (_session.notice) {
-              (final notice, final detail) => playbackNoticeNote(
-                l,
-                notice,
-                detail,
+            if (loading)
+              Center(
+                child: Spinner(
+                  size: 48,
+                  color: matineeDark.foreground,
+                  label: l.loadingInProgress,
+                ),
               ),
-              null => const SizedBox.shrink(),
-            },
-          ),
-          if (loading)
-            Center(
-              child: Spinner(
-                size: 48,
-                color: matineeDark.foreground,
-                label: l.loadingInProgress,
-              ),
-            ),
-          if (item == null && error == null && !small)
-            Align(
-              alignment: AlignmentDirectional.topStart,
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  child: PlayerBackButton(
-                    label: l.playerBack,
-                    onPressed: widget.back,
+            if (item == null && error == null && !small)
+              Align(
+                alignment: AlignmentDirectional.topStart,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: PlayerBackButton(
+                      label: l.playerBack,
+                      onPressed: widget.back,
+                    ),
                   ),
                 ),
               ),
-            ),
-          if (item != null)
-            PlayerFade(
-              visible: controls && error == null,
-              child: _controls(l, item, enabled, loading, prefs),
-            ),
-          if (error != null && !small)
-            // It takes the taps too, so none reaches the video under it.
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {},
-              child: ColoredBox(
-                color: const Color(0xCC000000),
-                child: _failure(l, error),
+            if (item != null)
+              PlayerFade(
+                visible: controls && error == null,
+                child: _controls(l, item, enabled, loading, prefs),
               ),
-            ),
-          // The small window shows the video and its captions, and nothing
-          // that wants a touch.
-          if (error == null && !_leaving && !small)
-            PlayerPrompts(
-              lifted: controls,
-              children: [
-                if (_session.segment case final segment?
-                    when !_locked && (_segmentFresh || controls))
-                  SkipSegmentButton(
-                    label: skipSegmentLabel(l, segment),
-                    onPressed: _action(
-                      () => _session.skipSegment(segment),
-                      enabled: enabled,
+            if (error != null && !small)
+              // It takes the taps too, so none reaches the video under it.
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {},
+                child: ColoredBox(
+                  color: const Color(0xCC000000),
+                  child: _failure(l, error),
+                ),
+              ),
+            // The small window shows the video and its captions, and nothing
+            // that wants a touch.
+            if (error == null && !_leaving && !small)
+              PlayerPrompts(
+                lifted: controls,
+                children: [
+                  if (_session.segment case final segment?
+                      when !_locked && (_segmentFresh || controls))
+                    SkipSegmentButton(
+                      label: skipSegmentLabel(l, segment),
+                      onPressed: _action(
+                        () => _session.skipSegment(segment),
+                        enabled: enabled,
+                      ),
                     ),
-                  ),
-                if (_session.ended || !_countdown.hidden)
-                  if (_session.next case final item?) _upNext(l, item, enabled),
-              ],
+                  if (_session.ended || !_countdown.hidden)
+                    if (_session.next case final item?)
+                      _upNext(l, item, enabled),
+                ],
+              ),
+            // Over everything else, so no touch reaches what's under it. It
+            // steps aside while an error shows, so its buttons stay in reach.
+            if (holding)
+              PlayerLocked(
+                reveals: _lockTouched,
+                unlockLabel: l.playerUnlock,
+                onUnlock: _unlock,
+              ),
+            PlayerPanel(
+              entries: menu == null || item == null
+                  ? null
+                  : playerMenuEntries(
+                      l,
+                      _session,
+                      menu,
+                      rate: _speed.value,
+                      onRate: _pickRate,
+                    ),
+              dismissLabel: l.a11yPlayerCloseMenu,
+              onDismiss: _closeMenu,
             ),
-          // Over everything else, so no touch reaches what's under it. It
-          // steps aside while an error shows, so its buttons stay in reach.
-          if (_locked && error == null && !small)
-            PlayerLocked(
-              reveals: _lockTouched,
-              unlockLabel: l.playerUnlock,
-              onUnlock: _unlock,
-            ),
-          PlayerPanel(
-            entries: menu == null || item == null
-                ? null
-                : playerMenuEntries(
-                    l,
-                    _session,
-                    menu,
-                    rate: _speed.value,
-                    onRate: _pickRate,
-                  ),
-            dismissLabel: l.a11yPlayerCloseMenu,
-            onDismiss: _closeMenu,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

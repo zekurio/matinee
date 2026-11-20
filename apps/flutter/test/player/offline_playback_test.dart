@@ -329,6 +329,24 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel('Unlock'), findsOneWidget);
+      // Once the button has gone, system Back brings it back rather than
+      // leaving the video.
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      double unlockOpacity() => tester
+          .widget<AnimatedOpacity>(
+            find.ancestor(
+              of: find.bySemanticsLabel('Unlock'),
+              matching: find.byType(AnimatedOpacity),
+            ),
+          )
+          .opacity;
+      expect(unlockOpacity(), 0);
+      expect(await tester.binding.handlePopRoute(), isTrue);
+      await tester.pump();
+      expect(find.byType(PlayRoute), findsOneWidget);
+      expect(unlockOpacity(), 1);
+      await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Unlock'));
       await tester.pumpAndSettle();
 
