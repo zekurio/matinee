@@ -47,6 +47,7 @@ final class _Toasts extends ToastState {
     String? actionLabel,
     String? closeLabel,
     ToastDuration? duration,
+    Duration? within,
   }) {
     shown.add(message);
     return Completer<ToastResult>().future;

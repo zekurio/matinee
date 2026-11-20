@@ -5,13 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
-import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/actions.dart';
 import '../../media/artwork.dart';
 import '../../media/format.dart';
-import '../../media/metadata_items.dart' show mayEditMetadata;
 import '../../query/refresh.dart';
 import '../../router.dart';
 import 'pending_marks.dart';

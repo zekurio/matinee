@@ -100,7 +100,7 @@ class DownloadsBridge(private val activity: Activity, messenger: BinaryMessenger
     }
 
     companion object {
-        const val NOTIFY_REQUEST = 7422
+        const val NOTIFY_REQUEST = 7424
 
         fun entry(request: DownloadRequestMessage) = OfflineEntry(
             id = request.id,

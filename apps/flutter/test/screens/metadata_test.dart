@@ -497,7 +497,12 @@ void main() {
         TitleActions(movie),
       );
       expect(find.text('Edit images'), findsNothing);
-      expect(backend.requests, isEmpty);
+      // The menu asks what the account may download, and nothing of the
+      // metadata.
+      expect(
+        backend.requests.where((r) => !r.$1.endsWith('/playback/options')),
+        isEmpty,
+      );
     });
 
     testWidgets("an episode's menu edits its still", (tester) async {

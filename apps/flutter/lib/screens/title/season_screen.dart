@@ -2,14 +2,12 @@ import 'package:flutter/widgets.dart' hide Title;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/matinee_api.dart';
-import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/actions.dart';
 import '../../media/artwork.dart';
 import '../../media/format.dart';
 import '../../media/layout.dart';
-import '../../media/metadata_items.dart' show mayEditMetadata;
 import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
