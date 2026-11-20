@@ -109,6 +109,7 @@ class WatchProgressBar extends StatelessWidget {
       borderRadius: KitRadius.pill,
       child: SizedBox(
         height: 4,
+        width: double.infinity,
         child: ColoredBox(
           color: const Color(0x73000000),
           child: FractionallySizedBox(

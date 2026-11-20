@@ -7,6 +7,7 @@ import 'core/device.dart';
 import 'core/session.dart';
 import 'player/playback_screen.dart';
 import 'player/player_lab.dart';
+import 'screens/home/home_screen.dart';
 import 'screens/pending.dart';
 import 'screens/shell/shell.dart';
 import 'screens/sign_in/connect_screen.dart';
@@ -66,13 +67,12 @@ abstract final class Routes {
   ).toString();
 
   static String title(String id) => '/title/$id';
-  static String play(String id) => '/play/${Uri.encodeComponent(id)}';
   static String season(String titleId, int season) =>
       '/title/$titleId/season/$season';
   static String episode(String itemId) => '/episode/$itemId';
 
   /// The player, for the file or download id `playback.start` takes.
-  static String play(String id) => '/play/$id';
+  static String play(String id) => '/play/${Uri.encodeComponent(id)}';
   static String person(String name, {String? tmdbId}) => Uri(
     path: '/person/${Uri.encodeComponent(name)}',
     queryParameters: _query({'tmdb': tmdbId}),
@@ -208,10 +208,11 @@ List<RouteBase> _handsetRoutes() => [
     branches: [
       StatefulShellBranch(
         routes: [
-          _pending(
-            Routes.home,
-            'Home',
-            links: [if (_hasPlayerLab) ('Player lab', Routes.playerLab)],
+          GoRoute(
+            path: Routes.home,
+            builder: (context, state) => HomeScreen(
+              links: [if (_hasPlayerLab) ('Player lab', Routes.playerLab)],
+            ),
           ),
         ],
       ),
@@ -265,7 +266,6 @@ const _pages = [
   ('/title/:id', 'Title'),
   ('/title/:id/season/:season', 'Season'),
   ('/episode/:id', 'Episode'),
-  ('/play/:id', 'Player'),
   ('/person/:name', 'Person'),
   ('/downloads/show/:titleId', 'Show downloads'),
   ('/identify/:titleId', 'Identify'),

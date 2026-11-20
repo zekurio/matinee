@@ -5,12 +5,15 @@ import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/app.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/kit/kit.dart';
+import 'package:matinee/media/artwork.dart';
 import 'package:matinee/router.dart';
 import 'package:matinee/screens/shell/header.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import '../core/fakes.dart';
+import '../media/harness.dart' show server;
+import 'home_backend.dart';
 
 const _tabs = ['Home', 'Shows', 'Movies', 'Downloads', 'Profile'];
 
@@ -19,6 +22,7 @@ Future<void> _pump(
   Size size, {
   double textScale = 1,
 }) async {
+  final backend = HomeBackend();
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
@@ -30,6 +34,12 @@ Future<void> _pump(
       overrides: [
         authStateProvider.overrideWithValue(
           SignedIn('https://media.example.com', User.fromJson(userJson('ada'))),
+        ),
+        apiProvider.overrideWithValue(
+          MatineeApi(base: server, client: backend.client),
+        ),
+        artworkLoaderProvider.overrideWithValue(
+          ArtworkLoader(backend.client, const NoArtworkCache()),
         ),
       ],
       child: const MatineeApp(),
@@ -66,12 +76,19 @@ void main() {
     await _pump(tester, const Size(412, 915));
     expect(find.byType(ShellHeader), findsOneWidget);
     expect(_labels(tester), _tabs);
+    expect(find.text('Continue watching'), findsOneWidget);
     await tester.tap(
       find.descendant(of: find.byType(TabBar), matching: find.text('Movies')),
     );
     await tester.pumpAndSettle();
     expect(find.text('/movies'), findsOneWidget);
     expect(find.byType(ShellHeader), findsOneWidget);
+    // Back on Home, it's where it was.
+    await tester.tap(
+      find.descendant(of: find.byType(TabBar), matching: find.text('Home')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Continue watching'), findsOneWidget);
   });
 
   testWidgets('a tablet in landscape keeps the tabs along the bottom', (

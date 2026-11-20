@@ -6,8 +6,9 @@ apps in `apps/ios`, which keep shipping until it reaches them. Video plays
 in each platform's native player, behind the Flutter view.
 
 So far it has the toolchain, the kit, the API client, the strings, the
-sessions, the screens that connect and sign in, the tabs, and the Android
-phone and tablet player. The browsing screens are still placeholders.
+sessions, the screens that connect and sign in, the tabs, Home, and the
+Android phone and tablet player. Every other screen behind the tabs is a
+placeholder that shows its route.
 
 ## Build
 
@@ -140,8 +141,8 @@ doesn't match. To move to a newer build, change both from the pinned
 `mpv-build.lock.json` of the Plezy revision named in `NOTICE.md`, or from
 the release you chose.
 
-Debug builds have a player lab at `/debug/player`, behind a button on the
-Home placeholder. It plays an HLS stream and an MKV with two audio tracks
+Debug builds have a player lab at `/debug/player`, behind a button at the
+end of Home. It plays an HLS stream and an MKV with two audio tracks
 and two subtitle tracks on either engine, with seek, track, fit, and rate
 controls and the live state. The engine picker is saved and also applies
 to server playback. To play a server file from the lab, sign in and enter
@@ -162,7 +163,7 @@ declared next to the screen that shows them:
 ```dart
 final featuredProvider = serverQuery((api) => api.home.featured());
 final shelfProvider = serverQueryFamily(
-  (api, String library) => api.libraries.shelf(library, limit: 12),
+  (api, String library) => api.media.shelf(library, limit: 12),
 );
 final liveProvider = serverStreamFamily(
   (api, Titles titles) => api.requests.live(titles: titles.inputs),
@@ -194,6 +195,23 @@ artwork's BlurHash while it loads, and falls back through its sources,
 leaving the title's tone when none loads. `TitleCard`, `ShelfCard`, and
 `EpisodeCard` are the kit's cards filled from the API, and `layout.dart`
 has the rails' card widths and the grids' column counts by width class.
+
+## Home
+
+`lib/screens/home` is the Kotlin app's Home for phones and tablets. A
+phone opens with the featured cards under the header, which swipe one at
+a time and move on every five seconds; from 600 wide, Home opens with the
+web's banner, its slides crossfading every eight seconds, with Play and
+Details. Under them come Continue watching, Next up, the recommendation
+rows, "My requests", whose cards follow `requests.live`, and each
+library's newest titles. A row that's loading, empty, or failed is left
+out (a shelf shows its heading over blank cards while it loads), and Home
+is one error page only when the libraries failed and nothing else came.
+Back on Home after half a minute, what's in progress and the shelves are
+fetched again; the recommendations after ten minutes; the featured titles
+only when they failed, since the server picks them at random. The rules
+for the carousel's and the banner's sizes and paging are in
+`home_layout.dart`. Offline, Home says so until the downloads exist.
 
 ## Strings
 

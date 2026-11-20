@@ -12,7 +12,7 @@ import 'reconnecting.dart';
 /// ```dart
 /// final featuredProvider = serverQuery((api) => api.home.featured());
 /// final shelfProvider = serverQueryFamily(
-///   (api, String library) => api.libraries.shelf(library, limit: 12),
+///   (api, String library) => api.media.shelf(library, limit: 12),
 /// );
 /// ```
 ///
