@@ -860,49 +860,10 @@ class MediaInfo extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final probe = item.probe;
-    if (probe == null) return const SizedBox.shrink();
+    if (item.probe == null) return const SizedBox.shrink();
     final l = AppLocalizations.of(context);
     final tracks = ref.watch(fileTracksProvider(item.id)).value;
-    final audioCount = tracks?.audio.length ?? probe.audio.length;
-    final subtitleCount = tracks?.subtitles.length ?? probe.subtitles.length;
-    final audioNames = tracks == null
-        ? null
-        : trackLanguages([
-            for (final track
-                in tracks.audio
-                    .where((t) => t.primary)
-                    .followedBy(tracks.audio.where((t) => !t.primary)))
-              (
-                language: track.language,
-                title: track.title,
-                label: track.label,
-              ),
-          ]);
-    final subtitleNames = tracks == null
-        ? null
-        : trackLanguages([
-            for (final track in tracks.subtitles)
-              (
-                language: track.language,
-                title: track.title,
-                label: track.label,
-              ),
-          ]);
-    final layout = mainAudio(item)?.layout;
-    final audio = [
-      ?(audioNames ?? (audioCount > 0 ? l.mediaAudioTracks(audioCount) : null)),
-      ?layout,
-    ].join(' · ');
-    final subtitles =
-        subtitleNames ??
-        (subtitleCount > 0 ? l.mediaSubtitles(subtitleCount) : null);
-    final lines = [
-      if (videoSummary(item) case final video?)
-        (Lucide.film, l.mediaInfoVideo, video),
-      if (audio.isNotEmpty) (Lucide.audioLines, l.mediaInfoAudio, audio),
-      if (subtitles != null) (Lucide.captions, l.mediaInfoSubtitles, subtitles),
-    ];
+    final lines = mediaInfoLines(item, tracks, l);
     if (lines.isEmpty) return const SizedBox.shrink();
     final colors = MatineeTheme.of(context);
     return Column(
@@ -940,6 +901,49 @@ class MediaInfo extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// [MediaInfo]'s lines, each an icon, what it names, and the words: the
+/// picture, the audio, and the subtitles, with [tracks] once they load.
+/// None until the server probed the file.
+List<(String, String, String)> mediaInfoLines(
+  MediaItem item,
+  FileTracks? tracks,
+  AppLocalizations l,
+) {
+  final probe = item.probe;
+  if (probe == null) return const [];
+  final audioCount = tracks?.audio.length ?? probe.audio.length;
+  final subtitleCount = tracks?.subtitles.length ?? probe.subtitles.length;
+  final audioNames = tracks == null
+      ? null
+      : trackLanguages([
+          for (final track
+              in tracks.audio
+                  .where((t) => t.primary)
+                  .followedBy(tracks.audio.where((t) => !t.primary)))
+            (language: track.language, title: track.title, label: track.label),
+        ]);
+  final subtitleNames = tracks == null
+      ? null
+      : trackLanguages([
+          for (final track in tracks.subtitles)
+            (language: track.language, title: track.title, label: track.label),
+        ]);
+  final layout = mainAudio(item)?.layout;
+  final audio = [
+    ?(audioNames ?? (audioCount > 0 ? l.mediaAudioTracks(audioCount) : null)),
+    ?layout,
+  ].join(' · ');
+  final subtitles =
+      subtitleNames ??
+      (subtitleCount > 0 ? l.mediaSubtitles(subtitleCount) : null);
+  return [
+    if (videoSummary(item) case final video?)
+      (Lucide.film, l.mediaInfoVideo, video),
+    if (audio.isNotEmpty) (Lucide.audioLines, l.mediaInfoAudio, audio),
+    if (subtitles != null) (Lucide.captions, l.mediaInfoSubtitles, subtitles),
+  ];
 }
 
 /// One file in a line: its picture, main audio, and size, as the server

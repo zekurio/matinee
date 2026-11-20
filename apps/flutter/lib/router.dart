@@ -37,6 +37,7 @@ import 'screens/title/episode_screen.dart';
 import 'screens/title/season_screen.dart';
 import 'screens/title/title_screen.dart';
 import 'screens/tv/tv_browse.dart';
+import 'screens/tv/tv_detail.dart';
 import 'screens/tv/tv_home.dart';
 import 'screens/tv/tv_shell.dart';
 
@@ -518,13 +519,32 @@ List<RouteBase> _tvRoutes() => [
       ),
       _tv(Routes.recent, (state) => _pendingTv(state, 'TV recent')),
       _tv('/settings/:page', (state) => _pendingTv(state, 'TV settings page')),
-      _tv('/title/:id', (state) => _pendingTv(state, 'TV title')),
+      _tv(
+        '/title/:id',
+        (state) => TvTitleScreen(id: state.pathParameters['id']!),
+      ),
       _tv(
         '/title/:id/season/:season',
-        (state) => _pendingTv(state, 'TV season'),
+        (state) => TvSeasonScreen(
+          titleId: state.pathParameters['id']!,
+          // -1 is the files without a season number.
+          season: switch (int.tryParse(state.pathParameters['season']!)) {
+            final number? when number >= 0 => number,
+            _ => null,
+          },
+        ),
       ),
-      _tv('/episode/:id', (state) => _pendingTv(state, 'TV episode')),
-      _tv('/person/:name', (state) => _pendingTv(state, 'TV person')),
+      _tv(
+        '/episode/:id',
+        (state) => TvEpisodeScreen(id: state.pathParameters['id']!),
+      ),
+      _tv(
+        '/person/:name',
+        (state) => TvPersonScreen(
+          name: state.pathParameters['name']!,
+          tmdbId: state.uri.queryParameters['tmdb'],
+        ),
+      ),
       _tv(
         '/browse',
         (state) => TvBrowseScreen(

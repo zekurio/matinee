@@ -290,7 +290,7 @@ class _TvPinnedListState extends State<TvPinnedList> {
 /// between the header and the grid, and has the top to itself while the
 /// header is away. [onNearEnd] asks for more as the last rows near.
 /// [scrollKey] changing, as a new sort, scrolls back to the top. [cellAspect]
-/// is a cell's width over its height, caption and all.
+/// is a cell's width over its height, and [cellExtra] what a caption adds.
 class TvPosterGrid extends StatefulWidget {
   const TvPosterGrid({
     super.key,
@@ -298,6 +298,7 @@ class TvPosterGrid extends StatefulWidget {
     required this.itemCount,
     required this.itemBuilder,
     required this.cellAspect,
+    this.cellExtra = 0,
     this.columns = TvGrid.columns,
     this.header,
     this.line,
@@ -311,6 +312,9 @@ class TvPosterGrid extends StatefulWidget {
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
   final double cellAspect;
+
+  /// Height a cell has beyond its [cellAspect], as a caption under a poster.
+  final double cellExtra;
   final int columns;
   final Widget? header;
   final Widget? line;
@@ -441,7 +445,7 @@ class _TvPosterGridState extends State<TvPosterGrid> {
                 final cellWidth =
                     (width - TvGrid.gap * (widget.columns - 1)) /
                     widget.columns;
-                _cell = cellWidth / widget.cellAspect;
+                _cell = cellWidth / widget.cellAspect + widget.cellExtra;
                 _pitch = _cell + TvGrid.rowGap;
                 final room = math.max(
                   constraints.maxHeight - TvGrid.inset - _cell,
@@ -471,7 +475,7 @@ class _TvPosterGridState extends State<TvPosterGrid> {
                                     crossAxisCount: widget.columns,
                                     crossAxisSpacing: TvGrid.gap,
                                     mainAxisSpacing: TvGrid.rowGap,
-                                    childAspectRatio: widget.cellAspect,
+                                    mainAxisExtent: _cell,
                                   ),
                               itemCount: widget.itemCount,
                               itemBuilder: (context, index) => Focus(
@@ -579,6 +583,84 @@ class TvLoading extends StatelessWidget {
       child: Spinner(
         size: size,
         color: MatineeTheme.of(context).mutedForeground,
+      ),
+    ),
+  );
+}
+
+/// A detail page, as the Kotlin app's `DetailList`: [header] first, with
+/// its buttons, then [rows] below it, reached with Down. While the header
+/// has focus the page sits at its top; once a row has it, each row scrolls
+/// to [pivot] below the top, as Home's do. Rows scrolled past the top fade
+/// out over [fade] rather than end hard under the clock.
+class TvHeaderList extends StatefulWidget {
+  const TvHeaderList({
+    super.key,
+    required this.header,
+    required this.rows,
+    this.pivot = 88,
+    this.fade = 44,
+    this.gap = 32,
+    this.end = 360,
+  });
+
+  final Widget header;
+  final List<Widget> rows;
+  final double pivot;
+  final double fade;
+  final double gap;
+  final double end;
+
+  @override
+  State<TvHeaderList> createState() => _TvHeaderListState();
+}
+
+class _TvHeaderListState extends State<TvHeaderList> {
+  final _scroll = ScrollController();
+  final _header = FocusNode(
+    skipTraversal: true,
+    canRequestFocus: false,
+    debugLabel: 'header',
+  );
+  var _scrolled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_moved);
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    _header.dispose();
+    super.dispose();
+  }
+
+  void _moved() {
+    final scrolled = _scroll.offset > 0;
+    if (scrolled != _scrolled) setState(() => _scrolled = scrolled);
+  }
+
+  double _rule(double start, double end, double viewport) =>
+      _header.hasFocus ? -_scroll.offset : start - widget.pivot;
+
+  @override
+  Widget build(BuildContext context) => TvFadeTop(
+    fade: _scrolled ? widget.fade : 0,
+    child: TvFollowFocus(
+      controller: _scroll,
+      rule: _rule,
+      child: ListView.separated(
+        controller: _scroll,
+        clipBehavior: Clip.none,
+        scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
+        padding: EdgeInsets.only(bottom: widget.end),
+        itemCount: widget.rows.length + 1,
+        separatorBuilder: (_, _) => SizedBox(height: widget.gap),
+        itemBuilder: (context, index) => index == 0
+            ? Focus(focusNode: _header, child: widget.header)
+            : widget.rows[index - 1],
       ),
     ),
   );

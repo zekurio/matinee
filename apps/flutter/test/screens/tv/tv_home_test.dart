@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/screens/tv/tv_browse.dart';
+import 'package:matinee/screens/tv/tv_detail.dart';
 import 'package:matinee/screens/tv/tv_home.dart';
 import 'package:matinee/screens/tv/tv_shell.dart';
 
@@ -85,7 +86,7 @@ void main() {
     await pumpTv(tester, HomeBackend());
     await down(tester);
     await select(tester);
-    expect(find.text('TV episode'), findsOneWidget);
+    expect(find.byType(TvEpisodeScreen), findsOneWidget);
     expect(await back(tester), isTrue);
     expect(focusedKey(), 'continue/e1');
   });

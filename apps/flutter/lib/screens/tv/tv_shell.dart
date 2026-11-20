@@ -640,3 +640,29 @@ class _TvClockState extends State<TvClock> {
     );
   }
 }
+
+/// Goes to [route] as the page above this one, as the Kotlin app's
+/// `titleUp` and `seasonUp`: back to it when it's the page before, else
+/// opened over this one. The phone's `goUp` reads the root's matches; a
+/// TV's pages sit under its shell, so this reads the shell's.
+void tvGoUp(BuildContext context, String route) {
+  final locations = <String>[];
+  void walk(List<RouteMatchBase> matches) {
+    for (final match in matches) {
+      if (match is ImperativeRouteMatch) {
+        walk(match.matches.matches);
+      } else if (match is ShellRouteMatch) {
+        walk(match.matches);
+      } else if (match is RouteMatch) {
+        locations.add(match.matchedLocation);
+      }
+    }
+  }
+
+  walk(GoRouter.of(context).routerDelegate.currentConfiguration.matches);
+  if (locations.length >= 2 && locations[locations.length - 2] == route) {
+    context.pop();
+    return;
+  }
+  unawaited(context.push(route));
+}
