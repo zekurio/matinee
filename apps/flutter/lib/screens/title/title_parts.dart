@@ -180,8 +180,10 @@ class PageState extends StatelessWidget {
   }
 }
 
-/// The page scrolling under its buttons, the sections [gap] apart.
-class TitleScaffold extends StatelessWidget {
+/// The page scrolling under its buttons, the sections [gap] apart. Once
+/// it scrolls, a [TopVeil] comes in behind the buttons and the status
+/// bar, so the text going under them doesn't show through.
+class TitleScaffold extends StatefulWidget {
   const TitleScaffold({
     super.key,
     required this.sections,
@@ -196,28 +198,117 @@ class TitleScaffold extends StatelessWidget {
   final VoidCallback? onParent;
 
   @override
+  State<TitleScaffold> createState() => _TitleScaffoldState();
+}
+
+class _TitleScaffoldState extends State<TitleScaffold> {
+  /// How far the veil has come in, 0 at the top of the page to 1 once the
+  /// page has scrolled [TopVeil.travel].
+  final _veil = ValueNotifier<double>(0);
+
+  @override
+  void dispose() {
+    _veil.dispose();
+    super.dispose();
+  }
+
+  bool _scrolled(ScrollNotification notification) {
+    if (notification.depth == 0) {
+      _veil.value = (notification.metrics.pixels / TopVeil.travel).clamp(0, 1);
+    }
+    return false;
+  }
+
+  @override
   Widget build(BuildContext context) => ColoredBox(
     color: MatineeTheme.of(context).background,
     child: Stack(
       children: [
         Positioned.fill(
-          child: MediaQuery.removePadding(
-            context: context,
-            removeTop: true,
-            child: ListView.separated(
-              padding: EdgeInsets.only(
-                bottom: 32 + MediaQuery.paddingOf(context).bottom,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _scrolled,
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: true,
+              child: ListView.separated(
+                padding: EdgeInsets.only(
+                  bottom: 32 + MediaQuery.paddingOf(context).bottom,
+                ),
+                itemCount: widget.sections.length,
+                separatorBuilder: (context, index) =>
+                    SizedBox(height: widget.gap),
+                itemBuilder: (context, index) => widget.sections[index],
               ),
-              itemCount: sections.length,
-              separatorBuilder: (context, index) => SizedBox(height: gap),
-              itemBuilder: (context, index) => sections[index],
             ),
           ),
         ),
-        ItemTopBar(parent: parent, onParent: onParent),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: ValueListenableBuilder(
+              valueListenable: _veil,
+              builder: (context, shown, child) => shown == 0
+                  ? const SizedBox.shrink()
+                  : Opacity(opacity: shown, child: child),
+              child: const TopVeil(),
+            ),
+          ),
+        ),
+        ItemTopBar(parent: widget.parent, onParent: widget.onParent),
       ],
     ),
   );
+}
+
+/// The page's colour behind the status bar and the [ItemTopBar], solid as
+/// far as the buttons' lower edge, then easing out over [fade], so the
+/// text scrolling under them never shows through and the veil ends with
+/// no edge to see. Its many stops follow an ease, which keeps the fade
+/// from banding.
+class TopVeil extends StatelessWidget {
+  const TopVeil({super.key});
+
+  /// How far the page scrolls while the veil comes in.
+  static const travel = 48.0;
+
+  /// How tall the fade is under the buttons.
+  static const fade = 32.0;
+
+  /// The bar's height under the status bar: the buttons and their margin.
+  static const bar = 56.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = MatineeTheme.of(context).background;
+    final solid = MediaQuery.paddingOf(context).top + bar;
+    final height = solid + fade;
+    const steps = 12;
+    final stops = <double>[0];
+    final colors = <Color>[background];
+    for (var step = 0; step <= steps; step++) {
+      final t = step / steps;
+      stops.add((solid + fade * t) / height);
+      // A smoothstep from the solid part to nothing, flat at both ends,
+      // so neither the top nor the foot of the fade shows a line.
+      final alpha = 1 - t * t * (3 - 2 * t);
+      colors.add(background.withValues(alpha: alpha));
+    }
+    return SizedBox(
+      height: height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: stops,
+            colors: colors,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The art across the top of a page, faded into the page: from the start,

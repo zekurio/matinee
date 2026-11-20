@@ -9,6 +9,7 @@ import 'package:matinee/screens/home/home_screen.dart';
 import 'package:matinee/screens/title/episode_screen.dart';
 import 'package:matinee/screens/title/season_screen.dart';
 import 'package:matinee/screens/title/title_data.dart';
+import 'package:matinee/screens/title/title_parts.dart' show TopVeil;
 import 'package:matinee/screens/title/title_screen.dart';
 
 import '../media/fixtures.dart';
@@ -221,6 +222,49 @@ void main() {
       find.bySemanticsLabel('Watch the trailer on YouTube'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('a veil comes in behind the buttons once the page scrolls', (
+    tester,
+  ) async {
+    await pumpScreen(
+      tester,
+      const TitleScreen(id: 'm1'),
+      client: _movie().client,
+    );
+    // At the top the backdrop shows under the buttons.
+    expect(find.byType(TopVeil), findsNothing);
+    await tester.drag(_page(), const Offset(0, -24));
+    await tester.pump();
+    final half = tester.widget<Opacity>(
+      find.ancestor(of: find.byType(TopVeil), matching: find.byType(Opacity)),
+    );
+    expect(half.opacity, closeTo(.5, .01));
+    await tester.drag(_page(), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(find.byType(TopVeil), findsOneWidget);
+    // Solid as far as the buttons' foot, then fading out under them.
+    final back = tester.getRect(find.bySemanticsLabel('Back'));
+    final veil = tester.getRect(find.byType(TopVeil));
+    expect(veil.top, 0);
+    expect(veil.bottom, greaterThan(back.bottom + 16));
+    final gradient =
+        (tester
+                        .widget<DecoratedBox>(
+                          find.descendant(
+                            of: find.byType(TopVeil),
+                            matching: find.byType(DecoratedBox),
+                          ),
+                        )
+                        .decoration
+                    // SAFETY: TopVeil paints a BoxDecoration with a gradient.
+                    as BoxDecoration)
+                .gradient!
+            // SAFETY: as above, a linear one.
+            as LinearGradient;
+    final solidUntil = gradient.stops![1] * veil.height;
+    expect(solidUntil, greaterThanOrEqualTo(back.bottom));
+    expect(gradient.colors.last.a, 0);
   });
 
   testWidgets('a 360 wide phone fits Resume beside every round button', (
