@@ -11,7 +11,7 @@ export default {
   "discover.rail.becauseWatched": "Weil du {name} geschaut hast",
 
   "discover.request.waiting": "Wartet",
-  "discover.request.askedWhen": "Angefragt {when}",
+  "discover.request.askedWhen": "Zuerst angefragt: {when}",
 
   "discover.reason.watched": "Weil du {name} geschaut hast",
   "discover.reason.person": "Mit {name}",

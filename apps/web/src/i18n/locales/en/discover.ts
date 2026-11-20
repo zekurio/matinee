@@ -19,7 +19,7 @@ export default defineMessages("discover", {
   // The card in Discover's first row, an admin's waiting requests or a
   // person's own. The row is titled `requests.title`.
   "discover.request.waiting": "Waiting",
-  "discover.request.askedWhen": "Requested {when}",
+  "discover.request.askedWhen": "First requested {when}",
 
   // Why a title is recommended, on its card's tooltip.
   "discover.reason.watched": "Because you watched {name}",
