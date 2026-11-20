@@ -138,6 +138,17 @@ void main() {
     expect(backend.reports.last.closed, isTrue);
   });
 
+  test('replay keeps playing after a remux seek opens a new source', () async {
+    backend.start = (_) =>
+        FakePlaybackApi.answer(plan(method: PlaybackMethod.remux));
+    await session.start();
+    player.emit(PlaybackPhase.ended, 120);
+    await flush();
+    await session.togglePlay();
+    expect(player.state.status.playing, isTrue);
+    expect(player.pauses, 0);
+  });
+
   test('WebVTT stays on the file clock across a seek', () async {
     backend.start = (_) => FakePlaybackApi.answer(
       plan(

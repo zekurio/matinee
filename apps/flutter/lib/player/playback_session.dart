@@ -444,7 +444,11 @@ class PlaybackSession extends ChangeNotifier {
 
   Future<void> togglePlay() async {
     if (_closed || !_opened || busy || error != null) return;
-    if (ended) await seek(0);
+    if (ended) {
+      await seek(0);
+      if (!_closed && error == null) await _command(player.play);
+      return;
+    }
     if (_closed || error != null) return;
     if (playback.status.playing && !ended) {
       await _command(player.pause);
