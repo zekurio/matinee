@@ -9,6 +9,7 @@ import 'package:matinee/app.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/platform/player.g.dart' as wire;
+import 'package:matinee/media/actions.dart' show mediaChangesProvider;
 import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
@@ -188,6 +189,9 @@ void main() {
     expect(window.last, (window.first.$1, false));
     expect(players.last.disposed, isTrue);
     expect(find.byType(PlaybackScreen), findsNothing);
+    // Each closed file told the pages under the player to fetch again.
+    await tester.pumpAndSettle();
+    expect(container.read(mediaChangesProvider), 2);
   });
 
   testWidgets('uses the saved Media3 preference and reports a refusal', (

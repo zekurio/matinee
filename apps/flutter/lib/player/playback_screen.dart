@@ -11,6 +11,7 @@ import '../core/failure_text.dart';
 import '../core/session.dart';
 import '../kit/kit.dart';
 import '../l10n/app_localizations.dart';
+import '../media/actions.dart' show MediaChanges, mediaChangesProvider;
 import '../media/format.dart';
 import '../platform/player.g.dart' as wire;
 import '../router.dart';
@@ -183,16 +184,25 @@ class _PlaybackHost extends StatefulWidget {
 
 class _PlaybackHostState extends State<_PlaybackHost> {
   late final PlaybackSession _session;
+  late final MediaChanges _changes;
 
   @override
   void initState() {
     super.initState();
+    _changes = ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(mediaChangesProvider.notifier);
     _session = widget.create();
     unawaited(_session.start());
   }
 
   @override
   void dispose() {
+    // What was watched moved on: the pages under the player fetch again
+    // once the server has the last position, as the Kotlin app's
+    // `viewer.changed()` on leaving the player.
+    unawaited(_session.close().whenComplete(_changes.changed));
     _session.dispose();
     super.dispose();
   }
