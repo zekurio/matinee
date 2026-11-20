@@ -252,7 +252,9 @@ class _OfflinePlaybackScreenState extends ConsumerState<OfflinePlaybackScreen> {
         next: (next) => context.replace(Routes.play(next.id), extra: 0.0),
       );
     }
-    return MatineeTheme.wrap(matineeDark, child);
+    // Dark whatever the scheme, in the theme's own dark half, so the
+    // server's accent shows here too.
+    return MatineeTheme.alwaysDark(context, child);
   }
 }
 

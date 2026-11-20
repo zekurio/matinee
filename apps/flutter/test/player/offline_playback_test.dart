@@ -11,6 +11,7 @@ import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/downloads/downloads.dart';
 import 'package:matinee/downloads/pending_progress.dart';
+import 'package:matinee/kit/kit.dart';
 import 'package:matinee/platform/downloads.g.dart' as wire;
 import 'package:matinee/player/offline_playback_screen.dart';
 import 'package:matinee/player/offline_session.dart';
@@ -18,6 +19,7 @@ import 'package:matinee/player/playback_report.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
 import 'package:matinee/player/player_system.dart';
+import 'package:matinee/player/seek_bar.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
@@ -159,6 +161,7 @@ void main() {
       List<Override> extra = const [],
       List<wire.DownloadEntryMessage>? entries,
       String id = 'm1',
+      KitColors colors = matineeDark,
     }) async {
       final players = <FakePlayer>[];
       final sent = <String>[];
@@ -202,6 +205,7 @@ void main() {
         screen,
         client: client,
         size: const Size(850, 400),
+        colors: colors,
         auth: auth,
         overrides: [
           downloadsPlatformProvider.overrideWithValue(platform),
@@ -272,6 +276,18 @@ void main() {
       expect(find.bySemanticsLabel('Previous episode'), findsOneWidget);
       expect(find.bySemanticsLabel('Next episode'), findsOneWidget);
       expect(sent, isEmpty);
+      await tester.tap(find.bySemanticsLabel('Back').first);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets("plays in the theme's dark half, the server's accent on it", (
+      tester,
+    ) async {
+      final rose = withThemeAccent(matineeDark, const Color(0xFFF43F5E));
+      await pump(tester, auth: Offline(_server, ada), colors: rose);
+      final seek = tester.element(find.byType(SeekBar));
+      expect(MatineeTheme.of(seek).accent, rose.accent);
+      expect(rose.accent, isNot(matineeDark.accent));
       await tester.tap(find.bySemanticsLabel('Back').first);
       await tester.pumpAndSettle();
     });

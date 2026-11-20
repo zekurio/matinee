@@ -141,7 +141,9 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
         ),
       );
     }
-    return MatineeTheme.wrap(matineeDark, child);
+    // Dark whatever the scheme, in the theme's own dark half, so the
+    // server's accent shows here too.
+    return MatineeTheme.alwaysDark(context, child);
   }
 }
 

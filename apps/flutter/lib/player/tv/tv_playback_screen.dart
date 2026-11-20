@@ -136,8 +136,9 @@ class _TvPlaybackScreenState extends ConsumerState<TvPlaybackScreen> {
         ),
       );
     }
-    return MatineeTheme.wrap(
-      matineeDark,
+    // Dark, in the theme's own dark half, so the server's accent shows.
+    return MatineeTheme.alwaysDark(
+      context,
       ColoredBox(
         color: const Color(0xFF000000),
         child: TvFocusRules(child: child),
@@ -153,7 +154,7 @@ class _Opening extends StatelessWidget {
   Widget build(BuildContext context) => Center(
     child: Spinner(
       size: 56,
-      color: matineeDark.accent,
+      color: MatineeTheme.darkOf(context).accent,
       label: AppLocalizations.of(context).loadingInProgress,
     ),
   );
