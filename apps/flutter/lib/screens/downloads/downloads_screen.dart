@@ -17,10 +17,15 @@ import '../shell/shell.dart';
 
 /// A downloaded show: its finished episodes by season.
 final class _ShowDownloads {
-  const _ShowDownloads(this.title, this.seasons);
+  const _ShowDownloads(this.title, this.seasons, {required this.all});
 
   final TitleSummary title;
+
+  /// The episodes that are here.
   final List<_SeasonDownloads> seasons;
+
+  /// Every episode of it on the device, still coming too.
+  final List<OfflineItem> all;
 
   List<OfflineItem> get entries => [
     for (final season in seasons) ...season.entries,
@@ -70,8 +75,17 @@ int _bytes(Iterable<OfflineItem> entries) =>
     entries.fold(0, (sum, entry) => sum + entry.bytes);
 
 /// "3 episodes · 4.2 GB".
-String _countAndSize(List<OfflineItem> entries, AppLocalizations l) =>
-    '${l.mediaEpisodeCount(entries.length)} · ${formatBytes(_bytes(entries), l)}';
+/// A show's downloads in one line, the same on the tab and on the show's
+/// own page: "11 episodes · 4.2 GB" once all are here, "5 of 11 episodes
+/// · 2.1 GB" while some still come, counting every episode of the show on
+/// the device and the space all of them take now.
+String _countAndSize(List<OfflineItem> entries, AppLocalizations l) {
+  final done = entries.where((entry) => entry.done).length;
+  final count = done == entries.length
+      ? l.mediaEpisodeCount(entries.length)
+      : l.downloadsEpisodesDone(done, entries.length);
+  return '$count · ${formatBytes(_bytes(entries), l)}';
+}
 
 /// The show and episode, or the movie, of a file.
 (String, String?) downloadNames(MediaItem item, AppLocalizations l) {
@@ -145,9 +159,19 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
     for (final entry in done.where((entry) => entry.isShow)) {
       (byShow[entry.item.title!.id] ??= []).add(entry);
     }
+    // Every episode on the device, coming or done, counts on the show's row
+    // as on its page.
+    final everyEpisode = <String, List<OfflineItem>>{};
+    for (final entry in items.values.where((entry) => entry.isShow)) {
+      (everyEpisode[entry.item.title!.id] ??= []).add(entry);
+    }
     final shows = [
-      for (final episodes in byShow.values)
-        _ShowDownloads(episodes.first.item.title!, _seasonsOf(episodes)),
+      for (final MapEntry(key: id, value: episodes) in byShow.entries)
+        _ShowDownloads(
+          episodes.first.item.title!,
+          _seasonsOf(episodes),
+          all: everyEpisode[id] ?? episodes,
+        ),
     ];
     // Movies and shows together, what came last first.
     final finished = <(DateTime, Widget)>[
@@ -208,41 +232,45 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
     );
   }
 
-  /// What broke off is what wants doing first, then pausing what's moving.
+  /// Trying again what broke off, beside pausing what's moving, or
+  /// resuming what's paused: each that has something to do, side by side.
   Widget _comingAction(
     AppLocalizations l,
     List<OfflineItem> coming,
     Downloads downloads,
   ) {
     final broken = coming.where((entry) => entry.broken).toList();
-    final moving = coming.where((entry) => entry.moving).toList();
-    if (broken.isNotEmpty) {
-      return _HeadingButton(
-        label: l.downloadsRetryAll,
-        onPressed: () {
-          for (final entry in broken) {
-            unawaited(downloads.resume(entry.id));
-          }
-        },
-      );
+    final moving = coming
+        .where((entry) => entry.moving && !entry.broken)
+        .toList();
+    final paused = coming
+        .where((entry) => !entry.moving && !entry.broken)
+        .toList();
+    void each(List<OfflineItem> entries, Future<void> Function(String) act) {
+      for (final entry in entries) {
+        unawaited(act(entry.id));
+      }
     }
-    if (moving.isNotEmpty) {
-      return _HeadingButton(
-        label: l.downloadsPauseAll,
-        onPressed: () {
-          for (final entry in moving) {
-            unawaited(downloads.pause(entry.id));
-          }
-        },
-      );
-    }
-    return _HeadingButton(
-      label: l.downloadsResumeAll,
-      onPressed: () {
-        for (final entry in coming) {
-          unawaited(downloads.resume(entry.id));
-        }
-      },
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (broken.isNotEmpty)
+          _HeadingButton(
+            label: l.downloadsRetryAll,
+            onPressed: () => each(broken, downloads.resume),
+          ),
+        if (moving.isNotEmpty)
+          _HeadingButton(
+            label: l.downloadsPauseAll,
+            onPressed: () => each(moving, downloads.pause),
+          )
+        else if (paused.isNotEmpty)
+          _HeadingButton(
+            label: l.downloadsResumeAll,
+            onPressed: () => each(paused, downloads.resume),
+          ),
+      ],
     );
   }
 }
@@ -618,7 +646,7 @@ class _ShowRow extends StatelessWidget {
             ),
           ),
           Text(
-            _countAndSize(entries, l),
+            _countAndSize(show.all, l),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: KitText.xs.style(color: colors.mutedForeground),
@@ -789,10 +817,11 @@ class _ComingRow extends ConsumerWidget {
               onPressed: () => unawaited(downloads.pause(entry.id)),
             )
           : RoundIconButton(
-              icon: Lucide.refreshCw,
+              icon: Lucide.play,
               label: l.downloadsResume,
               size: 40,
-              iconSize: 18,
+              // Filled, as pause beside it is.
+              iconSize: 14,
               color: colors.mutedForeground,
               background: const Color(0x00000000),
               onPressed: () => unawaited(downloads.resume(entry.id)),
@@ -942,12 +971,16 @@ Future<void> _showShowActions(
   final container = ProviderScope.containerOf(context, listen: false);
   final offline = container.read(authStateProvider) is Offline;
   final downloads = container.read(downloadsProvider.notifier);
-  final active = entries.where((entry) => entry.moving).toList();
-  final stopped = [
+  final active = entries
+      .where((entry) => entry.moving && !entry.broken)
+      .toList();
+  final paused = [
     for (final entry in entries)
-      if (entry.state == DownloadState.paused ||
-          entry.state == DownloadState.failed)
-        entry,
+      if (entry.state == DownloadState.paused && !entry.broken) entry,
+  ];
+  final broken = [
+    for (final entry in entries)
+      if (!entry.done && entry.broken) entry,
   ];
   final act = await Sheet.show<_Act>(
     context,
@@ -970,12 +1003,22 @@ Future<void> _showShowActions(
                   }
                 }),
               ),
-            if (stopped.isNotEmpty)
+            if (paused.isNotEmpty)
               SheetItem(
-                icon: Lucide.refreshCw,
+                icon: Lucide.play,
                 label: l.downloadsResumeAll,
                 onPressed: () => run((context) async {
-                  for (final entry in stopped) {
+                  for (final entry in paused) {
+                    await downloads.resume(entry.id);
+                  }
+                }),
+              ),
+            if (broken.isNotEmpty)
+              SheetItem(
+                icon: Lucide.rotateCw,
+                label: l.downloadsRetryAll,
+                onPressed: () => run((context) async {
+                  for (final entry in broken) {
                     await downloads.resume(entry.id);
                   }
                 }),

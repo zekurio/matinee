@@ -1027,6 +1027,18 @@
   "@downloadsEmptyHint": {
     "description": "strings.xml"
   },
+  "downloadsEpisodesDone": "{done} of {count, plural, one{{count} episode} other{{count} episodes}}",
+  "@downloadsEpisodesDone": {
+    "description": "flutter: a show's downloads while some still come, 5 of 11 episodes",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "downloadsErrorBrokeOff": "Connection lost",
   "@downloadsErrorBrokeOff": {
     "description": "strings.xml"

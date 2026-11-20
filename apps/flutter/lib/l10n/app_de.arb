@@ -189,6 +189,7 @@
   "downloadsDone": "Auf diesem Gerät",
   "downloadsEmpty": "Noch nichts heruntergeladen",
   "downloadsEmptyHint": "Lade einen Film oder eine Folge über ihr Menü herunter, um sie offline anzusehen.",
+  "downloadsEpisodesDone": "{done} von {count, plural, one{{count} Folge} other{{count} Folgen}}",
   "downloadsErrorBrokeOff": "Verbindung abgebrochen",
   "downloadsErrorForbidden": "Dein Konto kann nicht herunterladen",
   "downloadsErrorUnreachable": "Server nicht erreichbar",
