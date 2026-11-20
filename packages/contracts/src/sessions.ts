@@ -41,19 +41,19 @@ export const AppDevice = t.object({
 export type AppDevice = t.infer<typeof AppDevice>
 
 /**
- * The browser and system a User-Agent names, for a client to join in its
- * own words, like `Firefox on Linux`. Either can be missing, not both.
+ * What a client calls itself, as it sent it: a browser's product name like
+ * `Chrome` or `Safari iPhone`, or an app's, like `Matinee Android TV`. Only
+ * ever shown, never parsed.
  */
-export const ClientAgent = t.object({
-  /**
-   * Like `Firefox`. For an app that isn't a browser and runs on no system
-   * the server knows, its name from the User-Agent, like `MatineeTV`.
-   */
-  browser: t.string().nullable(),
-  /** Like `Linux` or `Android`. */
-  system: t.string().nullable(),
-})
-export type ClientAgent = t.infer<typeof ClientAgent>
+export const ClientName = t
+  .string()
+  .trim()
+  .min(1, "Enter a name.")
+  .max(64, "Use at most 64 characters.")
+
+/** What `account.sessions.identify` takes. */
+export const ClientIdentity = t.object({ name: ClientName })
+export type ClientIdentity = t.infer<typeof ClientIdentity>
 
 /** A place the user is signed in, as their settings list it. */
 export const Session = t.object({
@@ -65,8 +65,11 @@ export const Session = t.object({
   deviceName: t.string().nullable(),
   /** What the app runs on. Null for browsers. */
   platform: DevicePlatform.nullable(),
-  /** The browser and system, from the User-Agent. Null for apps. */
-  browser: ClientAgent.nullable(),
+  /**
+   * What the browser calls itself, like `Chrome` or `Safari iPhone`, as it
+   * last told the server. Null for apps, and for a browser that hasn't said.
+   */
+  browser: t.string().nullable(),
   createdAt: t.date(),
   /** The server moves it at most once an hour. */
   lastSeenAt: t.date(),

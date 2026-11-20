@@ -7,6 +7,7 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Title
+import io.github.zekurio.matinee.api.TitleStatus
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.api.isShow
 import io.github.zekurio.matinee.ui.Load
@@ -19,7 +20,6 @@ import io.github.zekurio.matinee.ui.languageList
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.runtimeMinutes
 import io.github.zekurio.matinee.ui.timeLeft
-import io.github.zekurio.matinee.ui.titleStatusName
 import io.github.zekurio.matinee.ui.videoSummary
 
 /* What the title, season, and episode pages load and decide, for the phone's pages and the TV's alike. */
@@ -67,6 +67,14 @@ fun titleFacts(title: Title, res: Resources): List<String> = listOfNotNull(
     else formatRuntime(title.runtimeMinutes, res),
     if (title.isShow) titleStatusName(title.status, res) else null,
 )
+
+/** A show's status in the app's language, from the web's words; null for none, or one this build doesn't know. */
+fun titleStatusName(status: String?, res: Resources): String? = when (status) {
+    TitleStatus.CONTINUING -> R.string.web_metadata_status_continuing
+    TitleStatus.ENDED -> R.string.web_metadata_status_ended
+    TitleStatus.UNRELEASED -> R.string.web_metadata_status_unreleased
+    else -> null
+}?.let(res::getString)
 
 /**
  * An episode's facts: its air date, then its runtime. With [left], the

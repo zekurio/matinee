@@ -201,7 +201,7 @@ private struct FeaturedCard: View {
 
   var body: some View {
     let shape = RoundedRectangle.kit(Radius.xl)
-    let line = slide.cardLine(genre: genreName)
+    let line = slide.cardLine()
     let art = FeaturedArtwork(slide: slide)
     Pressable(
       shape: shape, action: { if !offline { nav.title(slide.title) } }, onLongPress: longPress,

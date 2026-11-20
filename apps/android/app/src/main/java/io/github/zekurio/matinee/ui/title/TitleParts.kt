@@ -87,7 +87,6 @@ import io.github.zekurio.matinee.ui.episodeNumber
 import io.github.zekurio.matinee.ui.formatDay
 import io.github.zekurio.matinee.ui.formatRating
 import io.github.zekurio.matinee.ui.formatRuntime
-import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.kit.Badge
 import io.github.zekurio.matinee.ui.kit.CardShape
@@ -142,11 +141,11 @@ fun Backdrop(sources: List<ImageSource>, toneKey: String, modifier: Modifier = M
 /** Names joined as a sentence, each a link: "A, B and C". */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun LinkedNames(names: List<String>, color: Color, onClick: (String) -> Unit, label: @Composable (String) -> String = { it }) {
+private fun LinkedNames(names: List<String>, color: Color, onClick: (String) -> Unit) {
     val and = stringResource(R.string.common_and)
     FlowRow {
         names.forEachIndexed { index, name ->
-            Text(label(name), style = MaterialTheme.typography.bodyMedium, color = color, modifier = Modifier.clickable { onClick(name) })
+            Text(name, style = MaterialTheme.typography.bodyMedium, color = color, modifier = Modifier.clickable { onClick(name) })
             if (index < names.lastIndex) {
                 Text(
                     if (index == names.lastIndex - 1) " $and " else ", ",
@@ -335,7 +334,7 @@ fun TitleHeading(title: Title, flags: List<String>, poster: Boolean = true) {
             }
             if (title.genres.isNotEmpty()) {
                 Gap(6.dp)
-                LinkedNames(title.genres, Palette.Muted, nav::genre) { genreName(it) }
+                LinkedNames(title.genres, Palette.Muted, nav::genre)
             }
         }
     }

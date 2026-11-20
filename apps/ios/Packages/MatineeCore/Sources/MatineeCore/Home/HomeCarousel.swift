@@ -72,9 +72,8 @@ extension FeaturedTitle {
   /// The line over a card's name: the genres the iPad's banner lists
   /// (`shownGenres`), in plain words the card cuts short at its end when
   /// they don't fit; nil with none. The card says nothing else but the name.
-  /// `genre` words each one, as the server sends keys.
-  public func cardLine(separator: String = " · ", genre: (String) -> String) -> String? {
+  public func cardLine(separator: String = " · ") -> String? {
     let genres = shownGenres
-    return genres.isEmpty ? nil : genres.map(genre).joined(separator: separator)
+    return genres.isEmpty ? nil : genres.joined(separator: separator)
   }
 }

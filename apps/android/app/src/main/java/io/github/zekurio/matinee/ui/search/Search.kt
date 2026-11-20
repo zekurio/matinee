@@ -59,7 +59,6 @@ import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.SectionTitle
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.railItemWidth
-import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.kit.Chip
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
@@ -204,7 +203,7 @@ fun SearchFound(text: String, search: SearchState, catalog: CatalogSearchState, 
                         SectionTitle(stringResource(R.string.search_section_genres))
                         Gap(12.dp)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            found.genres.forEach { Chip(genreName(it.name), false, { nav.genre(it.name) }) }
+                            found.genres.forEach { Chip(it.name, false, { nav.genre(it.name) }) }
                         }
                     }
                 }

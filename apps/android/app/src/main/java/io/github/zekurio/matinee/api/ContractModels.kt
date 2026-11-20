@@ -1640,18 +1640,6 @@ data class BrowsedTitles(
 }
 
 @Serializable
-data class ClientAgent(
-    val browser: String?,
-    val system: String?,
-)
-
-@Serializable
-data class ClientCount(
-    val client: ClientAgent,
-    val plays: Int,
-)
-
-@Serializable
 data class CreatedInvite(
     val id: String,
     val label: String?,
@@ -2227,7 +2215,7 @@ data class NowPlaying(
     val positionSeconds: Double,
     val reportAgeSeconds: Double,
     val paused: Boolean,
-    val client: ClientAgent?,
+    val client: String?,
     val startedAt: String,
     val streaming: Boolean,
 )
@@ -2669,7 +2657,7 @@ data class ServerStats(
     val methods: List<MethodStat>,
     val transcoding: TranscodingStats,
     val users: List<UserStat>,
-    val clients: List<ClientCount>,
+    val clients: List<NamedCount>,
 )
 
 object SessionClient {
@@ -2685,7 +2673,7 @@ data class Session(
     val client: String,
     val deviceName: String?,
     val platform: String?,
-    val browser: ClientAgent?,
+    val browser: String?,
     val createdAt: String,
     val lastSeenAt: String,
     val expiresAt: String,
@@ -2734,12 +2722,8 @@ object ThemeMode {
 object TitleStatus {
     const val CONTINUING = "continuing"
     const val ENDED = "ended"
-    const val CANCELED = "canceled"
-    const val UPCOMING = "upcoming"
-    const val IN_PRODUCTION = "in-production"
-    const val PILOT = "pilot"
-    const val RELEASED = "released"
-    val all = listOf(CONTINUING, ENDED, CANCELED, UPCOMING, IN_PRODUCTION, PILOT, RELEASED)
+    const val UNRELEASED = "unreleased"
+    val all = listOf(CONTINUING, ENDED, UNRELEASED)
 }
 
 @Serializable
@@ -2977,6 +2961,11 @@ data class AuthSettingsInput(
 data class AppDevice(
     val name: String? = null,
     val platform: String,
+)
+
+@Serializable
+data class ClientIdentity(
+    val name: String,
 )
 
 @Serializable

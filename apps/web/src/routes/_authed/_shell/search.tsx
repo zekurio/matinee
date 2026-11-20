@@ -32,7 +32,6 @@ import { usePhone } from "@/components/sheet-menu"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
-import { genreName, genresNamed } from "@/lib/metadata"
 import { reloadOnEnter } from "@/lib/route-loading"
 import { orpc } from "@/lib/rpc"
 import { useUrlText } from "@/lib/use-url-text"
@@ -48,9 +47,7 @@ const LIMIT = 60
 
 /** The results for a query, shared by the page and its loader. */
 function searchOptions(query: string) {
-  return orpc.search.query.queryOptions({
-    input: { query, limit: LIMIT, genres: genresNamed(query) || undefined },
-  })
+  return orpc.search.query.queryOptions({ input: { query, limit: LIMIT } })
 }
 
 export const Route = createFileRoute("/_authed/_shell/search")({
@@ -258,7 +255,7 @@ function HitCard({ hit }: { hit: SearchHit }) {
           params={{ genre: hit.facet.name }}
           className={cn(chipLink, "h-10 px-4")}
         >
-          <FacetText facet={hit.facet} name={genreName(hit.facet.name)} />
+          <FacetText facet={hit.facet} />
         </Link>
       )
     case "studio":
@@ -268,7 +265,7 @@ function HitCard({ hit }: { hit: SearchHit }) {
           params={{ studio: hit.facet.name }}
           className={cn(chipLink, "h-10 px-4")}
         >
-          <FacetText facet={hit.facet} name={hit.facet.name} />
+          <FacetText facet={hit.facet} />
         </Link>
       )
     case "user": {
@@ -294,10 +291,10 @@ function HitCard({ hit }: { hit: SearchHit }) {
   }
 }
 
-function FacetText({ facet, name }: { facet: Facet; name: string }) {
+function FacetText({ facet }: { facet: Facet }) {
   return (
     <>
-      <span className="truncate text-sm font-medium">{name}</span>
+      <span className="truncate text-sm font-medium">{facet.name}</span>
       <span className="text-muted-foreground text-xs tabular-nums">
         {formatCount(facet.titleCount)}
       </span>

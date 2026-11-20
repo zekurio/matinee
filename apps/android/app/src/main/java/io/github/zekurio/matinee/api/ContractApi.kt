@@ -577,6 +577,16 @@ class AccountSessionsApi internal constructor(private val transport: ApiTranspor
             null,
             AccountSessionsRevokeOthersOutput.serializer(),
         )
+
+    /** `PUT /account/sessions/current/client` */
+    suspend fun identify(clientIdentity: ClientIdentity) {
+        transport.send(
+            "PUT",
+            listOf("account", "sessions", "current", "client"),
+            emptyList(),
+            transport.json(ClientIdentity.serializer(), clientIdentity),
+        )
+    }
 }
 
 class LibrariesApi internal constructor(private val transport: ApiTransport) {
@@ -845,11 +855,11 @@ class PeopleApi internal constructor(private val transport: ApiTransport) {
 
 class SearchApi internal constructor(private val transport: ApiTransport) {
     /** `GET /search` */
-    suspend fun query(query: String, limit: Int? = null, genres: String? = null): SearchResults =
+    suspend fun query(query: String, limit: Int? = null): SearchResults =
         transport.call(
             "GET",
             listOf("search"),
-            listOf("query" to query, "limit" to limit?.toString(), "genres" to genres),
+            listOf("query" to query, "limit" to limit?.toString()),
             null,
             SearchResults.serializer(),
         )

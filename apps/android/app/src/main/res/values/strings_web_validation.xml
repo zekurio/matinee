@@ -4,6 +4,7 @@
     <string name="web_validation_issuerUrl">Enter the issuer as an http or https URL.</string>
     <string name="web_validation_scopesOpenid">Scopes must include openid.</string>
     <string name="web_validation_searchQuery">Enter a name to search for.</string>
+    <string name="web_validation_clientName">Enter a name.</string>
     <string name="web_validation_imageSize">Pick an image under 25 MB.</string>
     <string name="web_validation_metadataLanguage">Use a language code like en or de-DE.</string>
     <string name="web_validation_absolutePath">Use an absolute path.</string>

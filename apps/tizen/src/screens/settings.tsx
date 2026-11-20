@@ -40,7 +40,6 @@ import {
   languageName,
   qualityLabel,
 } from "@/model/format"
-import { clientName } from "@/model/metadata"
 import { appVersion, tizenVersion, tvModel } from "@/platform/tizen"
 import { ORIGINAL_QUALITY } from "@/player/controller"
 import { encodeVideoChoices, hasAvplay } from "@/player/device"
@@ -510,7 +509,7 @@ function platformIcon(platform: DevicePlatform | null): IconNode {
 function sessionName(item: AccountSession): string {
   return (
     item.deviceName ??
-    (item.browser ? clientName(item.browser) : null) ??
+    item.browser ??
     (item.platform
       ? tr(
           "account_device_app",

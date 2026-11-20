@@ -63,7 +63,5 @@ Server errors and validation messages arrive in English. The `server` and
 `validation` areas copy them word for word, and `translateKnown()` matches
 incoming text against them, with `{name}` for values. If you change a
 message on the server, change `en/server.ts` or `en/validation.ts` too, or
-it stays in English. Provider metadata like overviews shows as the
-provider sent it. Genres and title statuses come as keys, which the
-`metadata` area words (`lib/metadata.ts`); Android, iOS, and the TV app
-take those messages through `apps/android/scripts/web_strings.py`.
+it stays in English. Provider metadata like overviews and genres shows as
+the provider sent it.

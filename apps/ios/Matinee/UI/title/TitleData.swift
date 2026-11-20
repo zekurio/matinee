@@ -21,6 +21,17 @@ func titleFacts(_ title: Title) -> [String] {
     .compactMap(\.self)
 }
 
+/// A show's status in the app's words, from the web's; nil for none, or one
+/// this build doesn't know.
+func titleStatusName(_ status: String?) -> String? {
+  switch status ?? "" {
+  case TitleStatus.continuing: Str.webMetadataStatusContinuing
+  case TitleStatus.ended: Str.webMetadataStatusEnded
+  case TitleStatus.unreleased: Str.webMetadataStatusUnreleased
+  default: nil
+  }
+}
+
 /// A season's facts: the year it started, its episodes, and how many are watched.
 func seasonFacts(_ season: Season, items: [MediaItem]?) -> [String] {
   let watched: String? =

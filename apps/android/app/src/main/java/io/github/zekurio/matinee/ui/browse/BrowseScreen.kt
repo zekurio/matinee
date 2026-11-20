@@ -50,7 +50,6 @@ import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.initials
 import io.github.zekurio.matinee.ui.formatDay
-import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.kit.ButtonLook
 import io.github.zekurio.matinee.ui.kit.Chip
 import io.github.zekurio.matinee.ui.kit.Gap
@@ -66,7 +65,7 @@ import io.github.zekurio.matinee.ui.title.Overview
 /** A genre's or a studio's titles from every library, with the filters and sorts a library has. */
 @Composable
 fun BrowseScreen(genre: String?, studio: String?) {
-    val name = genre?.let { genreName(it) } ?: studio.orEmpty()
+    val name = genre ?: studio.orEmpty()
     var kind by rememberSaveable { mutableStateOf<String?>(null) }
     val state = rememberTitleListState()
     var filtering by rememberSaveable { mutableStateOf(false) }

@@ -15,7 +15,6 @@ import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatSpan, formatWatchTime } from "@/lib/format"
 import { art, channelLayout, itemLabel } from "@/lib/media"
-import { clientName } from "@/lib/metadata"
 import { errorMessage, liveQuery, orpc } from "@/lib/rpc"
 import {
   audioEncoderName,
@@ -327,11 +326,9 @@ function NowPlayingRow({
           >
             {user.displayName ?? user.username}
           </Link>
-          {[subtitle, session.client && clientName(session.client)]
-            .filter(Boolean)
-            .map((part) => (
-              <span key={part} className="truncate">{`· ${part}`}</span>
-            ))}
+          {[subtitle, session.client].filter(Boolean).map((part) => (
+            <span key={part} className="truncate">{`· ${part}`}</span>
+          ))}
         </p>
         <span
           aria-hidden

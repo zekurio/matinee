@@ -101,7 +101,7 @@ func skipChoices(_ current: Int, _ options: PlaybackOptions?) -> [(Int, String)]
 
 /// What a session in the list is called: the device's name, the browser, or the kind of app.
 func sessionName(_ session: Session) -> String {
-  session.deviceName ?? session.browser.flatMap(clientName) ?? session.platform.map { Str.accountDeviceApp(platformLabel($0)) }
+  session.deviceName ?? session.browser ?? session.platform.map { Str.accountDeviceApp(platformLabel($0)) }
     ?? Str.accountDeviceBrowser
 }
 

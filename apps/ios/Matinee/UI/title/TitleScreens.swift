@@ -175,9 +175,7 @@ private struct TitleHeader: View {
       RatingBadges(contentRating: title.contentRating, rating: title.rating, flags: titleFlags(title))
         .padding(.top, Space.s1_5)
       if !title.genres.isEmpty {
-        LinkedNames(
-          names: Array(title.genres.prefix(4)), sentence: false, color: palette.mutedForeground, onTap: nav.genre,
-          label: genreName)
+        LinkedNames(names: Array(title.genres.prefix(4)), sentence: false, color: palette.mutedForeground, onTap: nav.genre)
           .padding(.top, Space.s1_5)
       }
     }

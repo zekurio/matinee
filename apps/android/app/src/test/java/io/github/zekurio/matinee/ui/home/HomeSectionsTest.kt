@@ -117,10 +117,10 @@ class HomeSectionsTest {
 
     @Test
     fun aCardNamesUpToThreeGenresAndNothingElse() {
-        assertEquals("Action · Sci-Fi · Drama", featured(TitleKind.MOVIE, 1999, listOf("Action", "Sci-Fi", "Drama", "War")).cardLine({ it }))
-        assertEquals("Drama", featured(TitleKind.MOVIE, 1999, listOf("Drama")).cardLine({ it }, separator = ", "))
-        assertNull(featured(TitleKind.MOVIE, 1999).cardLine({ it }))
-        assertNull(featured(TitleKind.SHOW, null).cardLine({ it }))
+        assertEquals("Action · Sci-Fi · Drama", featured(TitleKind.MOVIE, 1999, listOf("Action", "Sci-Fi", "Drama", "War")).cardLine())
+        assertEquals("Drama", featured(TitleKind.MOVIE, 1999, listOf("Drama")).cardLine(separator = ", "))
+        assertNull(featured(TitleKind.MOVIE, 1999).cardLine())
+        assertNull(featured(TitleKind.SHOW, null).cardLine())
     }
 
     private fun featured(kind: String, year: Int?, genres: List<String> = emptyList()): FeaturedTitle {

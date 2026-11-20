@@ -1,5 +1,5 @@
 {
-  "id": "e42610f1-94f9-42fe-8832-8e912407fd45",
+  "id": "709de2ab-b69f-4299-a48a-eed7bf9cb94f",
   "prevId": "3ae40096-3237-4fb9-9935-1da6982c3930",
   "version": "7",
   "dialect": "postgresql",
@@ -759,14 +759,8 @@
           "notNull": true,
           "default": 0
         },
-        "client_browser": {
-          "name": "client_browser",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "client_system": {
-          "name": "client_system",
+        "client": {
+          "name": "client",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1706,18 +1700,18 @@
           "primaryKey": false,
           "notNull": true
         },
-        "user_agent": {
-          "name": "user_agent",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "client": {
           "name": "client",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "default": "'web'"
+        },
+        "client_name": {
+          "name": "client_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "device_name": {
           "name": "device_name",

@@ -147,7 +147,7 @@ private struct SearchRows: View {
         .focusedValue(\.tvBrowseFocused, personInfo(person))
       }
     }
-    facetRow(SearchRow.genres, title: Str.searchSectionGenres, facets: found.genres, label: genreName) { nav.genre($0) }
+    facetRow(SearchRow.genres, title: Str.searchSectionGenres, facets: found.genres) { nav.genre($0) }
     facetRow(SearchRow.studios, title: Str.searchSectionStudios, facets: found.studios) { nav.studio($0) }
   }
 
@@ -165,13 +165,12 @@ private struct SearchRows: View {
 
   /// Genres or studios as a row of buttons, each opening its titles.
   @ViewBuilder private func facetRow(
-    _ key: String, title: String, facets: [Facet], label: @escaping (String) -> String = { $0 },
-    open: @escaping (String) -> Void
+    _ key: String, title: String, facets: [Facet], open: @escaping (String) -> Void
   ) -> some View {
     if !facets.isEmpty {
       TVRow(title, key: key, items: facets, itemKey: \.name, memory: memory, spacing: TVButtons.gap) { facet in
-        TVButton(label(facet.name), detail: formatCount(facet.titleCount)) { open(facet.name) }
-          .focusedValue(\.tvBrowseFocused, facetInfo(facet, name: label(facet.name)))
+        TVButton(facet.name, detail: formatCount(facet.titleCount)) { open(facet.name) }
+          .focusedValue(\.tvBrowseFocused, facetInfo(facet))
       }
     }
   }
@@ -183,9 +182,9 @@ private struct SearchRows: View {
       logo: nil, backdrop: [])
   }
 
-  private func facetInfo(_ facet: Facet, name: String) -> FocusedItem {
+  private func facetInfo(_ facet: Facet) -> FocusedItem {
     FocusedItem(
-      key: "facet/\(facet.name)", info: TVItemInfo(name: name, facts: [Str.browseTitleCount(facet.titleCount)]),
+      key: "facet/\(facet.name)", info: TVItemInfo(name: facet.name, facts: [Str.browseTitleCount(facet.titleCount)]),
       logo: nil, backdrop: [])
   }
 }

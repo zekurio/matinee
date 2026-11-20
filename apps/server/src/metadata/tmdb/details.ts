@@ -1,6 +1,7 @@
 import type { ExternalIds } from "@matinee/db"
 
 import { languageTag } from "../../media/language"
+import { showStatus } from "../status"
 import { isYouTubeId, rankTrailers } from "../trailers"
 import {
   type EpisodeDetails,
@@ -11,7 +12,6 @@ import {
   uniqueNames,
   yearOf,
 } from "../types"
-import { titleStatus, tmdbGenres } from "../vocabulary"
 import { image, request } from "./client"
 import { billed, credit, movieCrew, showCast, showCrew } from "./credits"
 import type {
@@ -136,14 +136,15 @@ export async function movieDetails(id: string, language: string) {
     year: yearOf(movie.release_date),
     overview: text(movie.overview),
     tagline: text(movie.tagline),
-    genres: tmdbGenres(movie.genres),
+    genres: movie.genres?.map((genre) => genre.name) ?? [],
     anime: anime(movie.keywords?.keywords),
     genreIds: ids(movie.genres),
     keywordIds: ids(movie.keywords?.keywords),
     rating: rating(movie.vote_average, movie.vote_count),
     contentRating: text(certification?.certification),
     releaseDate: isoDate(movie.release_date),
-    status: titleStatus(movie.status),
+    // Jellyfin keeps a status only for shows.
+    status: null,
     runtimeMinutes: movie.runtime || null,
     externalIds,
     images: {
@@ -229,14 +230,14 @@ export async function showDetails(id: string, language: string) {
     year: yearOf(show.first_air_date),
     overview: text(show.overview),
     tagline: text(show.tagline),
-    genres: tmdbGenres(show.genres),
+    genres: show.genres?.map((genre) => genre.name) ?? [],
     anime: anime(show.keywords?.results),
     genreIds: ids(show.genres),
     keywordIds: ids(show.keywords?.results),
     rating: rating(show.vote_average, show.vote_count),
     contentRating: text(ageRating?.rating),
     releaseDate: isoDate(show.first_air_date),
-    status: titleStatus(show.status),
+    status: showStatus(show.status),
     runtimeMinutes: show.episode_run_time?.[0] || null,
     externalIds,
     images: {

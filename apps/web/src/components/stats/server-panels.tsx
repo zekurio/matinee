@@ -12,7 +12,6 @@ import { Link } from "@tanstack/react-router"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatWatchTime } from "@/lib/format"
-import { clientName } from "@/lib/metadata"
 import { encoderName, methodName } from "@/lib/stats"
 
 import { percent, RankedBars, StatsSection } from "./stat-blocks"
@@ -157,11 +156,11 @@ export function Clients({ stats }: { stats: ServerStats }) {
   return (
     <StatsSection title={tr("stats.server.clients")}>
       <RankedBars
-        rows={stats.clients.map((row) => ({
-          key: `${row.client.browser ?? ""}/${row.client.system ?? ""}`,
-          label: clientName(row.client),
-          value: row.plays,
-          detail: tr("stats.plays", { count: row.plays }),
+        rows={stats.clients.map((client) => ({
+          key: client.name,
+          label: client.name,
+          value: client.plays,
+          detail: tr("stats.plays", { count: client.plays }),
         }))}
       />
     </StatsSection>

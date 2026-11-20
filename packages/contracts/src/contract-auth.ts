@@ -10,6 +10,7 @@ import {
   AuthConfig,
   AuthenticationResponse,
   AvatarUpload,
+  ClientIdentity,
   CodeVerifier,
   DeviceCode,
   DeviceRequest,
@@ -208,6 +209,15 @@ export const accountContract = oc.tag("Account").router({
     revokeOthers: post("/account/sessions/revoke-others").output(
       t.object({ revoked: t.number().int() }),
     ),
+    /**
+     * Say what this client calls itself, for the sessions list, watching
+     * now, and the server's client stats. Every client sends it when it
+     * starts, as Jellyfin's send their client and device names; the
+     * server keeps it on the session and shows it as sent.
+     */
+    identify: put("/account/sessions/current/client")
+      .input(ClientIdentity)
+      .output(t.void()),
   },
   /** The audio, subtitle, and skip choices this account syncs. */
   playback: {

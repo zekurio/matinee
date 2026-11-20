@@ -216,7 +216,7 @@ struct LinksRow: View {
     if !links.isEmpty {
       TVRow(Str.tvDetailLinks, key: DetailRowKey.links, items: links, itemKey: \.key, memory: memory, spacing: TVSpace.s5)
       { link in
-        TVChip(link.genre ? genreName(link.name) : link.name) { if link.genre { nav.genre(link.name) } else { nav.studio(link.name) } }
+        TVChip(link.name) { if link.genre { nav.genre(link.name) } else { nav.studio(link.name) } }
       }
       .detailRow(DetailRowKey.links)
     }

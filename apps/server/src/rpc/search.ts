@@ -99,10 +99,6 @@ export const search = {
       findPeople(context.user, escaped, input.limit),
       tagCounts(context.user, title.genres, {
         match: input.query,
-        also: (input.genres ?? "").split(",").flatMap((key) => {
-          const known = key.trim()
-          return known ? [known] : []
-        }),
         limit: input.limit,
       }),
       tagCounts(context.user, title.studios, {

@@ -42,7 +42,6 @@ import {
 } from "@/components/page-header"
 import { tr } from "@/i18n"
 import type { BrowseSearch } from "@/lib/browse-search"
-import { genreName } from "@/lib/metadata"
 import { errorMessage } from "@/lib/rpc"
 
 import { KindPicker } from "./kind-picker"
@@ -66,9 +65,7 @@ export function BrowsePage({
   /** Writes some of the page's search params. */
   update: (patch: BrowseSearch) => void
 }) {
-  // A genre comes by its key; a studio by its name.
-  const label = by === "genre" ? genreName(name) : name
-  useDocumentTitle(label)
+  useDocumentTitle(name)
   const Icon = icons[by]
   const groupLabel = tr(`browse.${by}`)
   const text = useSearchText(search.q, update)
@@ -104,7 +101,7 @@ export function BrowsePage({
   const controls: ListControlsProps = {
     search: text.search,
     setSearch: text.setSearch,
-    label: tr("browse.search", { name: label }),
+    label: tr("browse.search", { name }),
     sorts: list.sorts,
     sort: list.sort,
     setSort: list.setSort,
@@ -126,7 +123,7 @@ export function BrowsePage({
   return (
     <div>
       <PageHeader
-        title={label}
+        title={name}
         description={
           counts
             ? `${groupLabel} · ${tr("browse.titleCount", { count: counts.movie + counts.show })}`
@@ -214,7 +211,7 @@ export function BrowsePage({
               {tr(`browse.${by}.empty`)}
             </EmptyTitle>
             <EmptyDescription>
-              {tr("browse.emptyDescription", { name: label })}
+              {tr("browse.emptyDescription", { name })}
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>

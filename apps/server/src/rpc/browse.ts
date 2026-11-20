@@ -174,18 +174,12 @@ export function titleOrder(sort: TitleSort, order?: SortOrder): SQL[] {
 /**
  * Each genre or studio in `column`, with how many titles have it, most
  * first. `where` picks the titles. `match` keeps the names that contain
- * it, those that start with it first, as a search does, and `also` the
- * names in it, after those.
+ * it, those that start with it first, as a search does.
  */
 export async function tagCounts(
   viewer: Seer,
   column: typeof title.genres | typeof title.studios,
-  options: {
-    where?: SQL
-    match?: string
-    also?: string[]
-    limit?: number
-  } = {},
+  options: { where?: SQL; match?: string; limit?: number } = {},
 ): Promise<Facet[]> {
   const tags = db
     .select({ name: sql<string>`unnest(${column})`.as("name") })
@@ -197,16 +191,7 @@ export async function tagCounts(
   const query = db
     .select({ name: tags.name, titleCount })
     .from(tags)
-    .where(
-      escaped === null
-        ? undefined
-        : or(
-            ilike(tags.name, `%${escaped}%`),
-            options.also?.length
-              ? anyOf(sql`${tags.name}`, options.also, "text")
-              : undefined,
-          ),
-    )
+    .where(escaped === null ? undefined : ilike(tags.name, `%${escaped}%`))
     .groupBy(tags.name)
     .orderBy(
       ...(escaped === null

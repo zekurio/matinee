@@ -115,7 +115,6 @@ export const title = pgTable(
     year: integer(),
     overview: text(),
     tagline: text(),
-    /** Keys from `GENRES`, or the provider's names for those without one. */
     genres: text()
       .array()
       .notNull()

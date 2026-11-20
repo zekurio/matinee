@@ -3,7 +3,6 @@ package io.github.zekurio.matinee.ui.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import io.github.zekurio.matinee.R
@@ -14,7 +13,6 @@ import io.github.zekurio.matinee.api.Session as AccountSession
 import io.github.zekurio.matinee.api.SubtitleMode
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.auth.Session
-import io.github.zekurio.matinee.ui.clientName
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.components.launchShowing
@@ -82,7 +80,7 @@ fun skipChoices(current: Int, options: PlaybackOptions?) = (options?.skipSteps.o
 /** What a session in the list is called: the device's name, the browser, or the kind of app. */
 @Composable
 fun sessionName(session: AccountSession): String = session.deviceName
-    ?: session.browser?.let { clientName(it, LocalResources.current) }
+    ?: session.browser
     ?: session.platform?.let { stringResource(R.string.account_device_app, platformLabel(it)) }
     ?: stringResource(R.string.account_device_browser)
 

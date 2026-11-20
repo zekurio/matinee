@@ -1,21 +1,6 @@
-import type {
-  ClientAgent,
-  PlaybackMethod,
-  PlaybackQuality,
-} from "@matinee/contracts"
+import type { PlaybackMethod, PlaybackQuality } from "@matinee/contracts"
 import { type MediaItemRow, playbackSession, title } from "@matinee/db"
-import {
-  and,
-  type AnyColumn,
-  count,
-  eq,
-  gt,
-  isNull,
-  ne,
-  or,
-  type SQL,
-  sql,
-} from "drizzle-orm"
+import { and, count, eq, gt, isNull, ne, or, type SQL, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { events } from "../realtime/events"
@@ -80,7 +65,8 @@ export type SessionOwner = {
   id: string
   userId: string
   item: MediaItemRow
-  userAgent: string | undefined
+  /** What the signed-in client called itself; see `SessionUser`. */
+  client: string | null
 }
 
 export type SessionReport = {
@@ -107,39 +93,6 @@ export type StreamPlan = {
   quality: PlaybackQuality
 }
 
-const BROWSERS: [RegExp, string][] = [
-  [/Edg(?:e|A|iOS)?\//, "Edge"],
-  [/OPR\/|Opera/, "Opera"],
-  [/Firefox\/|FxiOS\//, "Firefox"],
-  [/CriOS\/|Chrome\//, "Chrome"],
-  [/Safari\//, "Safari"],
-]
-
-const SYSTEMS: [RegExp, string][] = [
-  [/iPhone|iPad|iPod/, "iOS"],
-  [/Android/, "Android"],
-  [/CrOS/, "ChromeOS"],
-  [/Windows/, "Windows"],
-  [/Macintosh|Mac OS X/, "macOS"],
-  [/Linux/, "Linux"],
-]
-
-/**
- * The browser and system a User-Agent header names, for clients to word
- * like `Firefox on Linux`. An app that's neither gets its first word, like
- * `MatineeTV`, as the browser.
- */
-export function clientAgent(agent: string | undefined): ClientAgent | null {
-  if (!agent) return null
-  const browser = BROWSERS.find(([pattern]) => pattern.test(agent))?.[1]
-  const system = SYSTEMS.find(([pattern]) => pattern.test(agent))?.[1]
-  if (browser || system) {
-    return { browser: browser ?? null, system: system ?? null }
-  }
-  const name = agent.split(/[\s/]/)[0]?.slice(0, 40)
-  return name ? { browser: name, system: null } : null
-}
-
 /** The columns a new session starts with. */
 async function startValues(owner: SessionOwner) {
   // ACCESS: The title is keyed by the visible item passed by the playback route.
@@ -150,7 +103,6 @@ async function startValues(owner: SessionOwner) {
         .where(eq(title.id, owner.item.titleId))
     : []
   const probe = owner.item.probe
-  const client = clientAgent(owner.userAgent)
   const audio = probe?.audio.find((stream) => stream.default) ?? probe?.audio[0]
   return {
     id: owner.id,
@@ -160,17 +112,8 @@ async function startValues(owner: SessionOwner) {
     titleKind: owning?.kind ?? null,
     videoCodec: probe?.video?.codec ?? null,
     audioCodec: audio?.codec ?? null,
-    clientBrowser: client?.browser ?? null,
-    clientSystem: client?.system ?? null,
+    client: owner.client,
   }
-}
-
-/** `column` holds `value`, where null matches null. */
-function isNotDistinctFrom(
-  column: AnyColumn,
-  value: string | null | undefined,
-) {
-  return sql`${column} is not distinct from ${value ?? null}`
 }
 
 /** Updates only touch a session of the same user and file. */
@@ -192,7 +135,7 @@ const inserted = sql<boolean>`xmax = 0`
  * second tab that's still open reopens its session with its next report.
  */
 async function endLeftBehind(owner: SessionOwner): Promise<void> {
-  const client = clientAgent(owner.userAgent)
+  const { client } = owner
   await db
     .update(playbackSession)
     .set({ endedAt: new Date() })
@@ -201,8 +144,9 @@ async function endLeftBehind(owner: SessionOwner): Promise<void> {
         sameOwner(owner),
         ne(playbackSession.id, owner.id),
         isNull(playbackSession.endedAt),
-        isNotDistinctFrom(playbackSession.clientBrowser, client?.browser),
-        isNotDistinctFrom(playbackSession.clientSystem, client?.system),
+        client === null
+          ? isNull(playbackSession.client)
+          : eq(playbackSession.client, client),
       ),
     )
 }

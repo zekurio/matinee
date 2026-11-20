@@ -132,8 +132,7 @@ func filterCountryName(_ code: String) -> String {
 func titleFilterChipLabel(_ chip: TitleFilterChip) -> String {
   switch chip {
   case .watched(let state): watchWord(state)
-  case .genre(let name): genreName(name)
-  case .studio(let name): name
+  case .genre(let name), .studio(let name): name
   case .years(let from, let to):
     rangeText(from.map(Double.init), to.map(Double.init), format: yearText, any: "", words: .year)
   case .score(let min, let max): rangeText(min, max, format: formatRating, any: "", words: .scoreChip)

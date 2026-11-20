@@ -28,7 +28,6 @@ import {
   seasonName,
   timeLeft,
 } from "@/model/format"
-import { genreName, genresNamed } from "@/model/metadata"
 
 /* Search and Favorites: rows of results under a line that names the focused one. */
 
@@ -106,26 +105,20 @@ export function SearchPage() {
     const timer = window.setTimeout(() => {
       setSearching(true)
       setFailed(false)
-      session.api.search
-        .query({
-          query: text,
-          limit: SEARCH_LIMIT,
-          genres: genresNamed(text),
-        })
-        .then(
-          (results) => {
-            if (over) return
-            const answer = { text, results }
-            scope.search = answer
-            setFound(answer)
-            setSearching(false)
-          },
-          () => {
-            if (over) return
-            setFailed(true)
-            setSearching(false)
-          },
-        )
+      session.api.search.query({ query: text, limit: SEARCH_LIMIT }).then(
+        (results) => {
+          if (over) return
+          const answer = { text, results }
+          scope.search = answer
+          setFound(answer)
+          setSearching(false)
+        },
+        () => {
+          if (over) return
+          setFailed(true)
+          setSearching(false)
+        },
+      )
     }, SEARCH_DEBOUNCE_MS)
     return () => {
       over = true
@@ -153,7 +146,6 @@ export function SearchPage() {
     title: string,
     facets: readonly Facet[],
     open: (facet: Facet) => void,
-    label: (name: string) => string = (same) => same,
   ) =>
     facets.length > 0 && (
       <Row title={title} name={name} buttons>
@@ -161,11 +153,11 @@ export function SearchPage() {
           <Button
             key={facet.name}
             fid={facet.name}
-            label={label(facet.name)}
+            label={facet.name}
             onPress={() => open(facet)}
             onFocus={() =>
               setFocusedItem(
-                plainInfo(label(facet.name), [
+                plainInfo(facet.name, [
                   plural("browse_title_count", facet.titleCount),
                 ]),
               )
@@ -263,7 +255,6 @@ export function SearchPage() {
               tr("search_section_genres"),
               results.genres,
               (facet) => nav.genre(facet.name),
-              genreName,
             )}
             {facetRow(
               "studios",

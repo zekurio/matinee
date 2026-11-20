@@ -266,6 +266,9 @@ public struct AccountSessionsApi: Sendable {
     public func revokeOthers() async throws -> AccountSessionsRevokeOthersOutput {
         return try await transport.call(method: "POST", path: ["account", "sessions", "revoke-others"], query: [], body: nil)
     }
+    public func identify(clientIdentity: ClientIdentity) async throws {
+        try await transport.send(method: "PUT", path: ["account", "sessions", "current", "client"], query: [], body: try transport.json(clientIdentity))
+    }
 }
 public struct LibrariesApi: Sendable {
     public let transport: ApiTransport
@@ -355,8 +358,8 @@ public struct PeopleApi: Sendable {
 public struct SearchApi: Sendable {
     public let transport: ApiTransport
     public init(transport: ApiTransport) { self.transport = transport }
-    public func query(query: String, limit: Int? = nil, genres: String? = nil) async throws -> SearchResults {
-        return try await transport.call(method: "GET", path: ["search"], query: [("query", wireText(query)), ("limit", wireText(limit)), ("genres", wireText(genres))], body: nil)
+    public func query(query: String, limit: Int? = nil) async throws -> SearchResults {
+        return try await transport.call(method: "GET", path: ["search"], query: [("query", wireText(query)), ("limit", wireText(limit))], body: nil)
     }
 }
 public struct MediaApi: Sendable {

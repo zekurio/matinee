@@ -1,6 +1,5 @@
 import { t } from "./schema"
 import {
-  ClientAgent,
   LibraryKind,
   MediaItem,
   ProfileSharing,
@@ -136,19 +135,12 @@ export const MethodStat = t.object({
 })
 export type MethodStat = t.infer<typeof MethodStat>
 
-/** Plays per value, such as an encoder or a codec. */
+/** Plays per value, such as an encoder, a codec, or a browser. */
 export const NamedCount = t.object({
   name: t.string(),
   plays: t.number().int(),
 })
 export type NamedCount = t.infer<typeof NamedCount>
-
-/** Plays from one browser on one system, or one app. */
-export const ClientCount = t.object({
-  client: ClientAgent,
-  plays: t.number().int(),
-})
-export type ClientCount = t.infer<typeof ClientCount>
 
 export const TranscodingStats = t.object({
   /** Plays that encoded the video. */
@@ -260,7 +252,7 @@ export const ServerStats = WatchStats.extend({
   /** Most watch time first, at most 10. */
   users: t.array(UserStat),
   /** Browsers and apps, most plays first. */
-  clients: t.array(ClientCount),
+  clients: t.array(NamedCount),
 })
 export type ServerStats = t.infer<typeof ServerStats>
 
@@ -296,8 +288,11 @@ export const NowPlaying = t.object({
    */
   reportAgeSeconds: t.number().min(0),
   paused: t.boolean(),
-  /** The browser and system, from the User-Agent. */
-  client: ClientAgent.nullable(),
+  /**
+   * What the client called itself, like `Chrome Android` or
+   * `Matinee Android TV`. Null when it didn't say.
+   */
+  client: t.string().nullable(),
   startedAt: t.date(),
   /** ffmpeg is running for it right now. */
   streaming: t.boolean(),

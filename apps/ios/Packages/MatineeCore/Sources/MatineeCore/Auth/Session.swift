@@ -217,6 +217,7 @@ public struct SessionChanged: Error {}
       if let user {
         updateSavedUser(key, user)
         state = .signedIn(server: display(key), user: user)
+        identify()
       } else {
         if tokens[key] != nil { try clearToken(key) }
         let checked = version
@@ -350,6 +351,16 @@ public struct SessionChanged: Error {}
     updateSavedUser(key, session.user)
     activate(key)
     state = .signedIn(server: display(key), user: session.user)
+    identify()
+  }
+  /// Tell the server what the app calls itself for the session, as every
+  /// client does when it starts. It's only ever shown, so a failure is let go.
+  private func identify() {
+    let api = requireApi()
+    Task {
+      try? await api.account.sessions.identify(
+        clientIdentity: .init(name: ClientCapabilities.clientName))
+    }
   }
   private func updateSavedUser(_ key: String, _ user: User?) {
     store.servers = store.servers.map {

@@ -20,6 +20,7 @@ import {
 import {
   deleteSession,
   deleteUserSessions,
+  identifySession,
   listSessions,
   publicUser,
 } from "../auth/session"
@@ -241,6 +242,12 @@ export const account = {
           context.user.sessionId,
         ),
       }),
+    ),
+
+    identify: authed.account.sessions.identify.handler(
+      async ({ context, input }) => {
+        await identifySession(context.user, input.name)
+      },
     ),
   },
 }

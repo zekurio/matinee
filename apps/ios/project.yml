@@ -143,14 +143,13 @@ targets:
           - Info.plist
           - Remote
       # Shared with the iPhone app: the generated words and their catalogs,
-      # loading and failure words, formatting, the words for genres and
-      # statuses, the theme, the navigator, toasts, artwork over Nuke, the
-      # QR code, the sign-in flows' state, and the login backdrop.
+      # loading and failure words, formatting, the theme, the navigator,
+      # toasts, artwork over Nuke, the QR code, the sign-in flows' state,
+      # and the login backdrop.
       - Matinee/UI/Strings.gen.swift
       - Matinee/DevSignIn.swift
       - Matinee/UI/State.swift
       - Matinee/UI/Format.swift
-      - Matinee/UI/MetadataText.swift
       - Matinee/UI/ThemeStore.swift
       - Matinee/UI/Navigator.swift
       - Matinee/UI/components/Toasts.swift

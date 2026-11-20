@@ -45,7 +45,7 @@ struct BrowseScreen: View {
       return TitleList(items: page.items, total: page.total)
     }
     .loadsFilterOptions(options, kind: kind, genre: genre, studio: studio)
-    .topBar(genre.map(genreName) ?? studio ?? "") {
+    .topBar(genre ?? studio ?? "") {
       HStack(spacing: wideControls(window, typeSize, shellStyle) ? Space.s2 : 0) {
         DisconnectedAction(options)
         if offered != nil { TitleFilterButton(active: state.activeFilters) { filtering = true } }

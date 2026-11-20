@@ -22,7 +22,6 @@ import {
   seasonName,
   timeLeft,
 } from "./format"
-import { genreName } from "./metadata"
 
 /*
  * What a page's header says about the focused card, and the backdrop
@@ -165,7 +164,7 @@ export function titleInfo(
         ? tr(title.kind === "movie" ? "tv_kind_movie" : "tv_kind_show")
         : null,
       options.genres
-        ? title.genres.slice(0, 2).map(genreName).join(", ")
+        ? title.genres.slice(0, 2).join(", ")
         : title.kind === "movie"
           ? formatRuntime(title.runtimeMinutes)
           : null,

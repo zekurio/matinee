@@ -22,7 +22,6 @@ import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.formatRating
-import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.seasonName
@@ -41,7 +40,7 @@ fun titleInfo(title: TitleSummary, api: MatineeApi, res: Resources, kind: Boolea
     facts = listOfNotNull(
         title.year?.toString(),
         if (kind) res.getString(if (title.kind == TitleKind.MOVIE) R.string.tv_kind_movie else R.string.tv_kind_show) else null,
-        title.genres.take(2).joinToString(", ") { genreName(it, res) }.ifEmpty { null },
+        title.genres.take(2).joinToString(", ").ifEmpty { null },
     ),
     contentRating = title.contentRating,
     rating = title.rating,

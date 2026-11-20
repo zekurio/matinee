@@ -75,7 +75,6 @@ export type TitleDetails = {
   year: number | null
   overview: string | null
   tagline: string | null
-  /** Keys from `GENRES`, or the provider's names for those without one. */
   genres: string[]
   /**
    * The provider calls it anime: TheTVDB's Anime genre, TMDB's "anime"
@@ -89,6 +88,7 @@ export type TitleDetails = {
   rating: number | null
   contentRating: string | null
   releaseDate: string | null
+  /** Null for movies, as in Jellyfin. */
   status: TitleStatus | null
   runtimeMinutes: number | null
   externalIds: ExternalIds

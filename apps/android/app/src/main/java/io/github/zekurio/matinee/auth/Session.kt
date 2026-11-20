@@ -13,6 +13,7 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.AppSession
 import io.github.zekurio.matinee.api.AuthConfig
+import io.github.zekurio.matinee.api.ClientIdentity
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.Paths
@@ -179,6 +180,13 @@ class Session(context: Context) {
 
     /** The contract's `DevicePlatform`, so the person approving a TV sees a TV. */
     val platform: String = if (isTv) "androidtv" else "android"
+
+    /**
+     * What the app calls itself in the server's sessions list, watching
+     * now, and client stats. The server shows it as it is, so it's a
+     * product name, the same in every language.
+     */
+    val clientName: String = if (isTv) "Matinee Android TV" else "Matinee Android"
 
     /** How the app names itself to the server. */
     val userAgent = "Matinee/${BuildConfig.VERSION_NAME} (Android ${Build.VERSION.RELEASE}; ${Build.MODEL})"
@@ -399,6 +407,7 @@ class Session(context: Context) {
             if (verified != null) {
                 cacheUser(verified)
                 _state.value = AuthState.SignedIn(server.display, verified)
+                identify(client)
                 return@launch
             }
             // Only a token the server turned down goes. One this device
@@ -604,6 +613,14 @@ class Session(context: Context) {
         if (key != store.active) store.offlineMode = false
         activate(server, session.token)
         _state.value = AuthState.SignedIn(server.display, session.user)
+        api?.let(::identify)
+    }
+
+    /** Tell the server [clientName] for the session, as every client does when it starts. Only ever shown, so a failure is let go. */
+    private fun identify(client: MatineeApi) {
+        scope.launch {
+            runCatching { client.account.sessions.identify(ClientIdentity(clientName)) }
+        }
     }
 
     /** Make the saved [server] the one in use, with [bearer] as its session. */

@@ -17,7 +17,6 @@ import io.github.zekurio.matinee.ui.browse.BROWSE_KINDS
 import io.github.zekurio.matinee.ui.browse.rememberBrowsePages
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
 import io.github.zekurio.matinee.ui.tv.TvButton
@@ -65,7 +64,7 @@ fun TvBrowseScreen(genre: String?, studio: String?) {
         },
         header = {
             GridHeader(
-                title = genre?.let { genreName(it) } ?: studio.orEmpty(),
+                title = genre ?: studio.orEmpty(),
                 detail = listOfNotNull(
                     stringResource(if (genre != null) R.string.browse_genre else R.string.browse_studio),
                     pages.total?.let { res.getQuantityString(R.plurals.browse_title_count, it, it) },

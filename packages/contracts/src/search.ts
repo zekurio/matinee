@@ -6,12 +6,6 @@ import { ProfileUser } from "./users"
 export const SearchInput = t.object({
   query: t.string().trim().min(1).max(200, "Use at most 200 characters."),
   limit: t.number().int().min(1).max(100).$default(20),
-  /**
-   * Keys from `GENRES`, comma separated, whose names in the client's
-   * language match the query. Genres are stored by key, so the server
-   * finds those as well as the keys and names that contain the query.
-   */
-  genres: t.string().max(2000).optional(),
 })
 export type SearchInput = t.infer<typeof SearchInput>
 

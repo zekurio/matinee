@@ -45,7 +45,6 @@ import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.art
-import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.kit.CardShape
 import io.github.zekurio.matinee.ui.kit.Chip
 import io.github.zekurio.matinee.ui.kit.Gap
@@ -239,7 +238,7 @@ fun Genres(stats: WatchStats, modifier: Modifier = Modifier) {
                 Modifier.fillMaxWidth().clickable(enabled = !offline) { nav.genre(genre.name) }.padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(genreName(genre.name, res), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text(genre.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Text(formatWatchTime(genre.watchSeconds, res), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             }
         }

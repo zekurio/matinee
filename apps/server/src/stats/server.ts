@@ -1,5 +1,4 @@
 import {
-  type ClientCount,
   type MethodStat,
   type NamedCount,
   PLAYBACK_METHODS,
@@ -7,7 +6,7 @@ import {
   type UserStat,
 } from "@matinee/contracts"
 import { playbackSession, user } from "@matinee/db"
-import { and, count, desc, eq, isNotNull, or, type SQL, sql } from "drizzle-orm"
+import { and, count, desc, eq, isNotNull, type SQL, sql } from "drizzle-orm"
 import type { AnyPgColumn } from "drizzle-orm/pg-core"
 
 import { profileUser } from "../auth/session"
@@ -54,25 +53,6 @@ export async function namedCounts(
   return rows.flatMap((row) =>
     row.name ? [{ name: row.name, plays: row.plays }] : [],
   )
-}
-
-/** Plays per browser and system, most first. */
-export async function clientsOf(
-  where: SQL | undefined,
-): Promise<ClientCount[]> {
-  const plays = count()
-  const { clientBrowser: browser, clientSystem: system } = playbackSession
-  const rows = await db
-    .select({ browser, system, plays })
-    .from(playbackSession)
-    .where(and(where, isPlay, or(isNotNull(browser), isNotNull(system))))
-    .groupBy(browser, system)
-    .orderBy(desc(plays))
-    .limit(TOP_NAMES)
-  return rows.map((row) => ({
-    client: { browser: row.browser, system: row.system },
-    plays: row.plays,
-  }))
 }
 
 export async function transcodingOf(
