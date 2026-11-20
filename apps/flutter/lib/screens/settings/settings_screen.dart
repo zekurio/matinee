@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../router.dart';
 import '../sign_in/server_switcher.dart';
 import 'about_page.dart';
+import 'account_page.dart';
 import 'admin/admin_parts.dart';
 import 'admin/admin_settings.dart';
 import 'appearance_page.dart';
@@ -18,9 +19,10 @@ import 'settings_rows.dart';
 
 /// A category of Settings, as the Kotlin app's `SettingsPage`: each is a
 /// row on the first page and opens a page of its own at
-/// `Routes.settingsPage(key)`. The Kotlin app's account, subtitles, and
-/// downloads pages aren't here yet; the admin pages are `AdminCategory`.
+/// `Routes.settingsPage(key)`. The Kotlin app's subtitles and downloads
+/// pages aren't here yet; the admin pages are `AdminCategory`.
 enum SettingsPage {
+  account('account', Lucide.userRound),
   appearance('appearance', Lucide.palette),
   playback('playback', Lucide.tvPlay),
   about('about', Lucide.info),
@@ -32,6 +34,7 @@ enum SettingsPage {
   final String icon;
 
   String title(AppLocalizations l) => switch (this) {
+    account => l.settingsPageAccount,
     appearance => l.settingsPageAppearance,
     playback => l.settingsPagePlayback,
     about => l.aboutTitle,
@@ -124,6 +127,8 @@ class SettingsScreen extends ConsumerWidget {
           ),
         Panel(
           rows: [
+            // The sessions live on the server.
+            if (auth is! Offline) row(SettingsPage.account),
             for (final page in const [
               SettingsPage.appearance,
               SettingsPage.playback,
@@ -184,6 +189,7 @@ class SettingsPageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => switch (SettingsPage.of(pageKey)) {
+    SettingsPage.account => const AccountPage(),
     SettingsPage.appearance => const AppearancePage(),
     SettingsPage.playback => const PlaybackPage(),
     SettingsPage.about => const AboutPage(),

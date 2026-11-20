@@ -422,7 +422,8 @@ and the account rows.
 ## Settings
 
 `lib/screens/settings` is the Kotlin app's Settings for phones and
-tablets: offline mode on top, then Appearance, Playback, and About, then
+tablets: offline mode on top, then Account, Appearance, Playback, and
+About, then
 the server in use and the app's version. Each category opens
 `Routes.settingsPage(key)`, and a key it doesn't know opens the first
 page. Appearance picks light, dark, or the system's scheme and the theme
@@ -432,9 +433,22 @@ the system, and the device, and the licenses page lays out `NOTICE.md`,
 which the app bundles as an asset. The rows (`Panel`, `LinkRow`,
 `SwitchRow`, `ValueRow`, `PickerRow`) are in `settings_rows.dart`. Signing
 out and switching server or account are on the profile. The Kotlin app's
-account and sessions, linking a device, subtitles, downloads, the app
-log, and playback diagnostics aren't here yet. An admin also gets the
-Administration section, which [Admin pages](#admin-pages) covers.
+linking a device, subtitles, downloads, the app log, and playback
+diagnostics aren't here yet. An admin also gets the Administration
+section, which [Admin pages](#admin-pages) covers.
+
+### Account
+
+Account (`account_page.dart`) is there while signed in, not offline,
+since everything on it asks the server. It opens linking a device, then
+lists the account's sessions (`accountSessionsProvider`), each with what
+it runs on, its name, and when it signed in, the server's own words for
+all three: the device's name or the browser the server read, else the
+kind of app (`devices.dart`). This device is marked and can't be signed
+out here, which the profile does; any other signs out with
+`DELETE /account/sessions/{id}`. Back from linking a device, the list
+loads again, and once more after `devicePoll`, a little longer than a
+device takes to poll for its session.
 
 ## Admin pages
 

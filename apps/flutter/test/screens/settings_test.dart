@@ -44,6 +44,7 @@ Future<ProviderContainer> _pump(
   Widget screen, {
   Size size = const Size(412, 915),
   KitColors colors = matineeDark,
+  AuthState? auth,
 }) async {
   await pumpScreen(
     tester,
@@ -52,6 +53,7 @@ Future<ProviderContainer> _pump(
     overrides: _overrides,
     size: size,
     colors: colors,
+    auth: auth,
   );
   return ProviderScope.containerOf(tester.element(find.byWidget(screen)));
 }
@@ -71,6 +73,7 @@ void main() {
     for (final text in [
       'Settings',
       'Offline mode',
+      'Account',
       'Appearance',
       'Playback',
       'About',
@@ -82,6 +85,16 @@ void main() {
     await tester.tap(find.text('Appearance'));
     await tester.pumpAndSettle();
     expect(find.text('/settings/appearance'), findsOneWidget);
+  });
+
+  testWidgets('offline, the account has nothing to show', (tester) async {
+    await _pump(
+      tester,
+      const SettingsScreen(),
+      auth: Offline('$server', User.fromJson(userJson('ada'))),
+    );
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Account'), findsNothing);
   });
 
   testWidgets('an unknown page is the first page', (tester) async {
