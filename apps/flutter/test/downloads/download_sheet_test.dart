@@ -151,6 +151,37 @@ void main() {
       expect(request.spec, contains('"subtitles":[]'));
     });
 
+    testWidgets('a download bigger than the space left asks first', (
+      tester,
+    ) async {
+      final (platform, _) = await _pump(
+        tester,
+        (context) => showDownloadSheet(context, _movie),
+      );
+      platform.free = 500 * 1000 * 1000;
+      await tester.tap(find.text('Download').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Not enough space'), findsOneWidget);
+      expect(
+        find.text(
+          'This needs about 1.2 GB, and 500 MB is free on this device.',
+        ),
+        findsOneWidget,
+      );
+      // Cancel keeps the sheet and starts nothing.
+      await tester.tap(find.text('Cancel').last);
+      await tester.pumpAndSettle();
+      expect(platform.requests, isEmpty);
+      expect(find.text('Download Arrival'), findsOneWidget);
+      // Going on anyway starts it.
+      await tester.tap(find.text('Download').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Download anyway'));
+      await tester.pumpAndSettle();
+      expect(platform.requests, hasLength(1));
+      expect(find.text('Download Arrival'), findsNothing);
+    });
+
     testWidgets('without audio, says so and starts nothing', (tester) async {
       final (platform, _) = await _pump(
         tester,
@@ -245,6 +276,35 @@ void main() {
       await tester.pumpAndSettle();
       expect(platform.requests.map((request) => request.id), ['e2', 'e3']);
       expect(toasts.shown, ['Downloading 2 files']);
+    });
+
+    testWidgets('a batch bigger than the space left asks on its total', (
+      tester,
+    ) async {
+      final backend = DownloadsBackend();
+      backend.answers['/api/v1/titles/s1/items'] = (_) => _episodes();
+      final (platform, _) = await _pump(
+        tester,
+        (context) => showDownloadFilesSheet(
+          context,
+          FileSet(TitleSummary.fromJson(_show)),
+        ),
+        backend: backend,
+        toasts: _Toasts(),
+      );
+      // Each file fits; the three together don't.
+      platform.free = 2 * 1000 * 1000 * 1000;
+      await tester.tap(find.text('Download').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'This needs about 3.5 GB, and 2.0 GB is free on this device.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Download anyway'));
+      await tester.pumpAndSettle();
+      expect(platform.requests, hasLength(3));
     });
 
     testWidgets('a preset asks the server again', (tester) async {

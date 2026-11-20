@@ -1147,6 +1147,26 @@
       }
     }
   },
+  "downloadsSpaceBody": "This needs about {needed}, and {free} is free on this device.",
+  "@downloadsSpaceBody": {
+    "description": "flutter: how much a download needs and how much space is free",
+    "placeholders": {
+      "needed": {
+        "type": "String"
+      },
+      "free": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadsSpaceGo": "Download anyway",
+  "@downloadsSpaceGo": {
+    "description": "flutter: starts a download bigger than the free space"
+  },
+  "downloadsSpaceTitle": "Not enough space",
+  "@downloadsSpaceTitle": {
+    "description": "flutter: asked before a download bigger than the free space"
+  },
   "downloadsStart": "Download",
   "@downloadsStart": {
     "description": "strings.xml"

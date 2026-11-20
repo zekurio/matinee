@@ -89,6 +89,31 @@ String mbps(int bitrate, AppLocalizations l) {
 String videoCodecName(String codec) =>
     codec == 'h264' ? 'H.264' : codec.toUpperCase();
 
+/// Whether to go on with a download of about [needed] bytes: at once when
+/// it fits in the space left, or when the platform can't say how much
+/// that is, else once the person says so, told how much it needs and how
+/// much is free.
+Future<bool> roomFor(BuildContext context, WidgetRef ref, int needed) async {
+  int? free;
+  try {
+    free = await ref.read(downloadsPlatformProvider).freeBytes();
+  } on Object {
+    free = null;
+  }
+  if (free == null || needed <= free || !context.mounted) return true;
+  final l = AppLocalizations.of(context);
+  return ConfirmDialog.show(
+    context,
+    title: l.downloadsSpaceTitle,
+    description: l.downloadsSpaceBody(
+      formatBytes(needed, l),
+      formatBytes(free, l),
+    ),
+    confirmLabel: l.downloadsSpaceGo,
+    cancelLabel: l.commonCancel,
+  );
+}
+
 /// Opens the download sheet for [item].
 Future<void> showDownloadSheet(BuildContext context, MediaItem item) {
   final l = AppLocalizations.of(context);
@@ -250,10 +275,15 @@ class _DownloadSheetState extends ConsumerState<DownloadSheet> {
     });
   }
 
-  void _start() {
+  Future<void> _start() async {
     final source = _source;
     final api = _api;
     if (source == null || api == null) return;
+    final needed = switch (_picked) {
+      OriginalChoice() => source.item.sizeBytes,
+      final DeviceChoice choice => _plans[choice]?.estimatedBytes ?? 0,
+    };
+    if (!await roomFor(context, ref, needed) || !mounted) return;
     final l = AppLocalizations.of(context);
     final downloads = ref.read(downloadsProvider.notifier);
     unawaited(downloads.platform.askToNotify().then((_) {}, onError: _ignore));

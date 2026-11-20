@@ -150,7 +150,14 @@ class _DownloadFilesSheetState extends ConsumerState<DownloadFilesSheet> {
     }
   }
 
-  void _start(List<MediaItem> missing, List<DownloadResolution> results) {
+  Future<void> _start(
+    List<MediaItem> missing,
+    List<DownloadResolution> results,
+    int size,
+  ) async {
+    if (ref.read(apiProvider) == null) return;
+    // The batch as a whole has to fit, or the person says go on anyway.
+    if (!await roomFor(context, ref, size) || !mounted) return;
     final api = ref.read(apiProvider);
     if (api == null) return;
     final l = AppLocalizations.of(context);
@@ -265,7 +272,7 @@ class _DownloadFilesSheetState extends ConsumerState<DownloadFilesSheet> {
       );
       if (missing.isNotEmpty) {
         footer = MatineeButton(
-          onPressed: () => _start(missing, results),
+          onPressed: () => _start(missing, results, size),
           leading: Lucide.download,
           child: Text(l.downloadsStart),
         );
