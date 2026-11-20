@@ -18,6 +18,12 @@ Future<void> main() async {
     const PlatformSecretStore(),
   );
   final device = await Device.load();
+  // A TV is driven by the remote alone, so focus shows from the start,
+  // before the first key, and a stray touch event doesn't hide it.
+  if (device.isTv) {
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+  }
   runApp(
     ProviderScope(
       overrides: [

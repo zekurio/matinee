@@ -9,6 +9,7 @@ import 'core/session.dart';
 import 'kit/tv/tv_metrics.dart';
 import 'player/offline_playback_screen.dart';
 import 'player/player_lab.dart';
+import 'player/tv/tv_playback_screen.dart';
 import 'screens/downloads/downloads_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/library/library_screen.dart';
@@ -487,6 +488,21 @@ bool get _hasPlayerLab =>
 /// requests, and no single library's grid: the drawer's Movies and Shows
 /// take every library at once.
 List<RouteBase> _tvRoutes() => [
+  GoRoute(
+    path: '/play/:id',
+    parentNavigatorKey: _rootKey,
+    pageBuilder: (context, state) => NoTransitionPage<void>(
+      key: state.pageKey,
+      // A TV keeps no downloads, so every file plays from the server.
+      child: TvPlaybackScreen(
+        itemId: state.pathParameters['id']!,
+        startAt: switch (state.extra) {
+          final double value => value,
+          _ => null,
+        },
+      ),
+    ),
+  ),
   ShellRoute(
     navigatorKey: tvPagesKey,
     builder: (context, state, child) =>

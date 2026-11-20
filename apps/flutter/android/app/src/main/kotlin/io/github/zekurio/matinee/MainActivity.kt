@@ -15,6 +15,8 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.RenderMode
 import io.flutter.embedding.android.TransparencyMode
 import io.flutter.embedding.engine.FlutterEngine
+import io.github.zekurio.matinee.display.DisplayApi
+import io.github.zekurio.matinee.display.DisplayBridge
 import io.github.zekurio.matinee.downloads.DownloadsBridge
 import io.github.zekurio.matinee.downloads.DownloadsHostApi
 import io.github.zekurio.matinee.platform.DeviceApi
@@ -57,6 +59,7 @@ class MainActivity : FlutterActivity() {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         DeviceApi.setUp(messenger, device)
         SystemApi.setUp(messenger, system)
+        DisplayApi.setUp(messenger, DisplayBridge(this))
         val camera = ScannerBridge(this, this, flutterEngine.renderer, messenger)
         scanner = camera
         ScannerApi.setUp(messenger, camera)
@@ -107,6 +110,7 @@ class MainActivity : FlutterActivity() {
         playerSystem = null
         DeviceApi.setUp(messenger, null)
         SystemApi.setUp(messenger, null)
+        DisplayApi.setUp(messenger, null)
         ScannerApi.setUp(messenger, null)
         DownloadsHostApi.setUp(messenger, null)
         downloads?.release()
