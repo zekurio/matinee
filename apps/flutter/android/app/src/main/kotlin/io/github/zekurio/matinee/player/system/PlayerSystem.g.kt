@@ -14,7 +14,16 @@ import io.flutter.plugin.common.StandardMethodCodec
 import io.flutter.plugin.common.StandardMessageCodec
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 private object PlayerSystemPigeonUtils {
+
+  fun createConnectionError(channelName: String): FlutterError {
+    return FlutterError("channel-error",  "Unable to establish connection on channel: '$channelName'.", "")  }
 
   fun wrapResult(result: Any?): List<Any?> {
     return listOf(result)
@@ -271,6 +280,21 @@ interface PlayerSystemApi {
   fun setVolume(level: Double): Double
   /** The window's own brightness, which goes back to the system's when null. */
   fun setBrightness(brightness: Double?)
+  /** Whether the device has picture in picture; low-memory ones don't. */
+  fun hasPictureInPicture(): Boolean
+  /** Whether the app shows in the small window now. */
+  fun inPictureInPicture(): Boolean
+  /**
+   * Shrinks the app into the small window now, and answers whether it did.
+   * The system can refuse, as when picture in picture is off for the app
+   * in its settings.
+   */
+  fun enterPictureInPicture(): Boolean
+  /**
+   * Whether leaving the app shrinks it into the small window, as it does
+   * while a video plays.
+   */
+  fun setAutoPictureInPicture(enabled: Boolean)
 
   companion object {
     /** The codec used by PlayerSystemApi. */
@@ -330,6 +354,98 @@ interface PlayerSystemApi {
         } else {
           channel.setMessageHandler(null)
         }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerSystemApi.hasPictureInPicture$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.hasPictureInPicture())
+            } catch (exception: Throwable) {
+              PlayerSystemPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerSystemApi.inPictureInPicture$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.inPictureInPicture())
+            } catch (exception: Throwable) {
+              PlayerSystemPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerSystemApi.enterPictureInPicture$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.enterPictureInPicture())
+            } catch (exception: Throwable) {
+              PlayerSystemPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.matinee.PlayerSystemApi.setAutoPictureInPicture$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val enabledArg = args[0] as Boolean
+            val wrapped: List<Any?> = try {
+              api.setAutoPictureInPicture(enabledArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              PlayerSystemPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+    }
+  }
+}
+/** Generated class from Pigeon that represents Flutter messages that can be called from Kotlin. */
+class PlayerSystemEventsApi(private val binaryMessenger: BinaryMessenger, private val messageChannelSuffix: String = "") {
+  companion object {
+    /** The codec used by PlayerSystemEventsApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      PlayerSystemPigeonCodec()
+    }
+  }
+  /** The app went into the small window or came back out of it. */
+  suspend fun pictureInPictureChanged(activeArg: Boolean)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    return suspendCancellableCoroutine { continuation ->
+      val channelName = "dev.flutter.pigeon.matinee.PlayerSystemEventsApi.pictureInPictureChanged$separatedMessageChannelSuffix"
+      val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+      channel.send(listOf(activeArg)) {
+        if (it is List<*>) {
+          if (it.size > 1) {
+            continuation.resumeWithException(FlutterError(it[0] as String, it[1] as String, it[2] as String?))
+          } else {
+            continuation.resume(Unit)
+          }
+        } else {
+          continuation.resumeWithException(PlayerSystemPigeonUtils.createConnectionError(channelName))
+        } 
       }
     }
   }

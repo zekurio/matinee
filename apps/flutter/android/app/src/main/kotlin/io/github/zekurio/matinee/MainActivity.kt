@@ -5,6 +5,7 @@ package io.github.zekurio.matinee
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.media.tv.TvContract
 import android.os.Build
 import android.provider.Settings
@@ -44,6 +45,7 @@ class MainActivity : FlutterActivity() {
     private var playback: PlayerBridge? = null
     private var scanner: ScannerBridge? = null
     private var downloads: DownloadsBridge? = null
+    private var playerSystem: PlayerSystem? = null
 
     // Flutter paints into a transparent Android TextureView above the video SurfaceView.
     override fun getRenderMode(): RenderMode = RenderMode.texture
@@ -64,7 +66,19 @@ class MainActivity : FlutterActivity() {
         val offline = DownloadsBridge(this, messenger)
         downloads = offline
         DownloadsHostApi.setUp(messenger, offline)
-        PlayerSystemApi.setUp(messenger, PlayerSystem(this))
+        val around = PlayerSystem(this, messenger)
+        playerSystem = around
+        PlayerSystemApi.setUp(messenger, around)
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        playerSystem?.userLeaving()
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        playerSystem?.pictureInPictureChanged(isInPictureInPictureMode)
     }
 
     override fun onStart() {
@@ -89,6 +103,8 @@ class MainActivity : FlutterActivity() {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         PlayerApi.setUp(messenger, null)
         PlayerSystemApi.setUp(messenger, null)
+        playerSystem?.release()
+        playerSystem = null
         DeviceApi.setUp(messenger, null)
         SystemApi.setUp(messenger, null)
         ScannerApi.setUp(messenger, null)

@@ -1,18 +1,33 @@
 package io.github.zekurio.matinee.player.system
 
 import android.app.Activity
+import android.app.PictureInPictureParams
+import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.os.Build
 import android.provider.Settings
+import android.util.Log
+import android.util.Rational
 import android.view.WindowManager
+import io.flutter.plugin.common.BinaryMessenger
 import kotlin.math.roundToInt
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
- * The levels around the video, as the Kotlin app's `DeviceLevels`: the
- * window's own brightness, which a swipe sets and the player puts back,
- * and the media volume. Pigeon calls these on the main thread.
+ * What the player asks of the device around the video, as the Kotlin
+ * app's `DeviceLevels` and `rememberPictureInPicture`: the window's own
+ * brightness, which a swipe sets and the player puts back, the media
+ * volume, and picture in picture. Pigeon calls these on the main thread.
  */
-internal class PlayerSystem(private val activity: Activity) : PlayerSystemApi {
+internal class PlayerSystem(private val activity: Activity, messenger: BinaryMessenger) : PlayerSystemApi {
     private val audio = activity.getSystemService(AudioManager::class.java)
+    private val events = PlayerSystemEventsApi(messenger)
+    private val scope = MainScope()
+
+    /** The player wants the small window when the app is left, as while a video plays. */
+    private var auto = false
 
     override fun levels(): LevelsMessage = LevelsMessage(brightness(), volume())
 
@@ -49,5 +64,54 @@ internal class PlayerSystem(private val activity: Activity) : PlayerSystemApi {
             screenBrightness = brightness?.toFloat()?.coerceIn(0f, 1f)
                 ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
         }
+    }
+
+    override fun hasPictureInPicture(): Boolean =
+        activity.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+
+    override fun inPictureInPicture(): Boolean = activity.isInPictureInPictureMode
+
+    override fun enterPictureInPicture(): Boolean =
+        runCatching { activity.enterPictureInPictureMode(params(auto).build()) }.getOrDefault(false)
+
+    override fun setAutoPictureInPicture(enabled: Boolean) {
+        auto = enabled
+        // From Android 12 the system shrinks the app itself as it leaves,
+        // which animates better than entering from the leave hint.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            runCatching { activity.setPictureInPictureParams(params(enabled).build()) }
+        }
+    }
+
+    private fun params(auto: Boolean): PictureInPictureParams.Builder =
+        PictureInPictureParams.Builder().setAspectRatio(ASPECT).apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setAutoEnterEnabled(auto)
+        }
+
+    /** Home or Recents before Android 12, where nothing enters by itself. */
+    fun userLeaving() {
+        if (auto && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) enterPictureInPicture()
+    }
+
+    fun pictureInPictureChanged(active: Boolean) {
+        scope.launch {
+            try {
+                events.pictureInPictureChanged(active)
+            } catch (failure: Exception) {
+                // Nothing in Dart listens before the player opens.
+                Log.d(TAG, "Dropped a picture in picture change", failure)
+            }
+        }
+    }
+
+    fun release() {
+        scope.cancel()
+    }
+
+    private companion object {
+        const val TAG = "MatineePlayerSystem"
+
+        /** The Kotlin player's shape for the small window, whatever the video's. */
+        val ASPECT = Rational(16, 9)
     }
 }

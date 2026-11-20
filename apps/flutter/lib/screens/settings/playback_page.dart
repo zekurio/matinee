@@ -8,6 +8,7 @@ import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../platform/player.g.dart' as wire;
+import '../../player/picture_in_picture.dart';
 import '../../player/playback_device.dart';
 import '../../player/player_preferences.dart';
 import '../../player/player_state.dart';
@@ -69,6 +70,7 @@ class PlaybackPage extends ConsumerWidget {
     final options = ref.watch(playbackOptionsProvider).value;
     final codecs = ref.watch(_codecsProvider).value;
     final tv = ref.watch(deviceProvider).isTv;
+    final pip = ref.watch(pictureInPictureAvailableProvider).value ?? false;
     void change(PlayerPrefs Function(PlayerPrefs) edit) =>
         ref.read(playerPrefsProvider.notifier).change(edit);
     final passthrough = passthroughCodecs(codecs);
@@ -80,6 +82,7 @@ class PlaybackPage extends ConsumerWidget {
           prefs: prefs,
           options: options,
           tv: tv,
+          pip: pip,
           change: change,
         ),
         if (!tv) ...[
@@ -132,6 +135,15 @@ class PlaybackPage extends ConsumerWidget {
                   onChanged: (on) =>
                       change((prefs) => prefs.copyWith(skipButtons: on)),
                 ),
+                // With picture in picture off, there's no button to hide.
+                if (pip && prefs.pictureInPicture)
+                  SwitchRow(
+                    title: l.playbackPipTitle,
+                    checked: prefs.pictureInPictureButton,
+                    onChanged: (on) => change(
+                      (prefs) => prefs.copyWith(pictureInPictureButton: on),
+                    ),
+                  ),
                 SwitchRow(
                   title: l.playbackButtonsLock,
                   checked: prefs.lockButton,
@@ -271,6 +283,7 @@ class _DeviceSection extends StatelessWidget {
     required this.prefs,
     required this.options,
     required this.tv,
+    required this.pip,
     required this.change,
   });
 
@@ -278,6 +291,9 @@ class _DeviceSection extends StatelessWidget {
   final PlayerPrefs prefs;
   final PlaybackOptions? options;
   final bool tv;
+
+  /// Whether the device has picture in picture.
+  final bool pip;
   final void Function(PlayerPrefs Function(PlayerPrefs)) change;
 
   @override
@@ -351,6 +367,13 @@ class _DeviceSection extends StatelessWidget {
                 onChanged: (on) =>
                     change((prefs) => prefs.copyWith(autoplayNext: on)),
               ),
+              if (pip)
+                SwitchRow(
+                  title: l.playbackPipTitle,
+                  checked: prefs.pictureInPicture,
+                  onChanged: (on) =>
+                      change((prefs) => prefs.copyWith(pictureInPicture: on)),
+                ),
               if (tv)
                 SwitchRow(
                   title: l.tvSettingsFrameRate,

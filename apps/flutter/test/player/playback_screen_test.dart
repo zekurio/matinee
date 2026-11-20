@@ -13,6 +13,7 @@ import 'package:matinee/downloads/downloads.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/media/actions.dart' show mediaChangesProvider;
 import 'package:matinee/platform/player.g.dart' as wire;
+import 'package:matinee/player/picture_in_picture.dart';
 import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
@@ -340,6 +341,70 @@ void main() {
     expect(backend.starts, hasLength(1));
     expect(find.text('Play'), findsOneWidget);
     await tap(tester, 'Back');
+  });
+
+  testWidgets('picture in picture follows the video and shows only it', (
+    tester,
+  ) async {
+    final backend = FakePlaybackApi();
+    backend.start = (input) => FakePlaybackApi.answer(
+      plan(id: input.itemId, start: 18, audio: audioOne),
+    );
+    final player = FakePlayer();
+    final pip = FakePictureInPicture();
+    tester.view.physicalSize = const Size(850, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = ProviderContainer(
+      overrides: [
+        authStateProvider.overrideWithValue(
+          SignedIn('https://matinee.example', User.fromJson(userJson('ada'))),
+        ),
+        apiProvider.overrideWithValue(backend.api),
+        playerHeadersProvider.overrideWithValue(const {}),
+        sessionHttpProvider.overrideWithValue(backend.client),
+        downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
+        playbackPlayerFactoryProvider.overrideWithValue((_, _) => player),
+        playbackFullscreenProvider.overrideWithValue((_, _) async {}),
+        pictureInPictureProvider.overrideWithValue(pip),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MatineeApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
+    await tester.pumpAndSettle();
+    // Playing, leaving the app shrinks it; paused, it doesn't.
+    expect(pip.autos, [true]);
+    await tap(tester, 'Pause');
+    player.emit(PlaybackPhase.ready, 20);
+    await tester.pumpAndSettle();
+    expect(pip.autos, [true, false]);
+    await tap(tester, 'Picture in picture');
+    expect(pip.enters, 1);
+
+    pip.small = true;
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Back'), findsNothing);
+    expect(find.bySemanticsLabel('Play'), findsNothing);
+    pip.small = false;
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Play'), findsOneWidget);
+
+    // Turned off in settings, neither the button nor leaving uses it.
+    await container
+        .read(playerPrefsProvider.notifier)
+        .change((prefs) => prefs.copyWith(pictureInPicture: false));
+    player.emit(PlaybackPhase.ready, 20, playing: true);
+    await tester.pumpAndSettle();
+    expect(pip.autos.last, false);
+    expect(find.bySemanticsLabel('Picture in picture'), findsNothing);
+    await tester.pump(const Duration(seconds: 4));
   });
 }
 

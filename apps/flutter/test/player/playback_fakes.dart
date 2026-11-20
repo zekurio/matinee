@@ -2,9 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:matinee/api/matinee_api.dart';
+import 'package:matinee/player/picture_in_picture.dart';
 import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/playback_session.dart';
 import 'package:matinee/player/player.dart';
@@ -385,4 +388,31 @@ class FakePlayer implements Player {
 
   @override
   Future<void> setVideoFit(VideoFit fit) async => fits.add(fit);
+}
+
+class FakePictureInPicture implements PictureInPicture {
+  FakePictureInPicture({this.has = true});
+
+  final bool has;
+  final autos = <bool>[];
+  int enters = 0;
+  final _active = ValueNotifier(false);
+
+  @override
+  ValueListenable<bool> get active => _active;
+
+  /// The system moved the app into the small window or out of it.
+  set small(bool value) => _active.value = value;
+
+  @override
+  Future<bool> available() async => has;
+
+  @override
+  Future<bool> enter() async {
+    enters++;
+    return has;
+  }
+
+  @override
+  Future<void> setAuto(bool enabled) async => autos.add(enabled);
 }

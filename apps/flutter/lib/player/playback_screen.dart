@@ -15,6 +15,7 @@ import '../media/actions.dart' show MediaChanges, mediaChangesProvider;
 import '../media/format.dart';
 import '../platform/player.g.dart' as wire;
 import '../router.dart';
+import 'picture_in_picture.dart';
 import 'playback_device.dart';
 import 'playback_session.dart';
 import 'player.dart';
@@ -299,6 +300,16 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
 
   /// Counts pinches that switched the fit, so the note shows again for each.
   int _fitNotes = 0;
+
+  late final PictureInPicture _pip;
+
+  /// The app shows in the small window, with the video and its captions
+  /// and nothing to touch.
+  bool _small = false;
+
+  /// What the player last told the system about entering the small window
+  /// on leaving the app, which starts off.
+  bool _autoSent = false;
   PlaybackPhase _phase = PlaybackPhase.idle;
 
   PlaybackSession get _session => widget.session;
@@ -312,6 +323,10 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     _fill = prefs.fillScreen;
     if (_fill) unawaited(_applyFit());
     _levels = ref.read(playbackLevelsProvider);
+    _pip = ref.read(pictureInPictureProvider);
+    _small = _pip.active.value;
+    _pip.active.addListener(_smallChanged);
+    ref.listenManual(playerPrefsProvider, (_, _) => _syncAuto());
     // The brightness the last swipe left, when settings keep it.
     final saved = prefs.brightness;
     if (prefs.swipeLevels &&
@@ -324,6 +339,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     _playing = _session.playback.status.playing;
     _phase = _session.playback.phase;
     if (_playing) _resetHide();
+    _syncAuto();
   }
 
   @override
@@ -332,6 +348,9 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     _hide?.cancel();
     _advance?.cancel();
     _gesture.dispose();
+    _pip.active.removeListener(_smallChanged);
+    // Leaving the app from anywhere else keeps it full size.
+    if (_autoSent) unawaited(_pip.setAuto(false));
     // The window's own brightness was the player's; the system's comes back.
     unawaited(_levels.setBrightness(null).catchError((Object _) {}));
     super.dispose();
@@ -355,6 +374,38 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
       }
       _syncNext();
     });
+    _syncAuto();
+  }
+
+  /// On while the video plays, so leaving the app keeps it on screen,
+  /// unless settings turned it off.
+  void _syncAuto() {
+    final prefs = ref.read(playerPrefsProvider).value ?? const PlayerPrefs();
+    final auto = _playing && prefs.pictureInPicture && !_leaving;
+    if (auto == _autoSent) return;
+    _autoSent = auto;
+    unawaited(_pip.setAuto(auto));
+  }
+
+  void _smallChanged() {
+    final small = _pip.active.value;
+    if (small == _small) return;
+    setState(() {
+      _small = small;
+      // Back at full size, the controls show, as after any time away.
+      _visible = !small;
+      _menu = null;
+      _sheet = false;
+    });
+    _gesture.value = null;
+    if (_holding) _hold(false);
+    // The small window shows the whole picture, then the fit comes back.
+    unawaited(
+      _session.player
+          .setVideoFit(_fill && !small ? VideoFit.cover : VideoFit.contain)
+          .catchError((Object _) {}),
+    );
+    _resetHide();
   }
 
   void _syncNext() {
@@ -393,6 +444,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   void _resetHide() {
     _hide?.cancel();
     if (!_visible ||
+        _small ||
         !_playing ||
         _sheet ||
         _scrubbing != null ||
@@ -523,7 +575,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   }
 
   Future<void> _applyFit() => _session.player
-      .setVideoFit(_fill ? VideoFit.cover : VideoFit.contain)
+      .setVideoFit(_fill && !_small ? VideoFit.cover : VideoFit.contain)
       .catchError((Object _) {});
 
   @override
@@ -538,6 +590,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         (plan == null || _session.busy || buffering);
     final controls =
         !_locked &&
+        !_small &&
         (_visible || error != null || _session.ended || plan == null);
     final enabled =
         plan != null && error == null && !_session.busy && !_leaving;
@@ -545,6 +598,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         _session.captions?.at(_session.position) ?? const <TextSpan>[];
     final menu = _menu;
     final prefs = ref.watch(playerPrefsProvider).value ?? const PlayerPrefs();
+    final small = _small;
 
     return Stack(
       fit: StackFit.expand,
@@ -584,7 +638,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         // skips, two fingers fill the screen or show it whole, and swipes
         // set the brightness, the volume, and the time (video_gestures.dart).
         VideoGestures(
-          enabled: error == null && menu == null && !_locked,
+          enabled: error == null && menu == null && !_locked && !small,
           prefs: prefs,
           levels: _levels,
           duration: () => _session.duration,
@@ -611,20 +665,21 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
           onStart: _gestureStarted,
           onBrightness: _keepBrightness,
         ),
-        GestureNotes(
-          notes: _gesture,
-          duration: _session.duration,
-          holding: _holding,
-          frame: switch (_session.trickplay) {
-            final images? => (seconds, width) => TrickplayFrame(
-              itemId: _session.itemId,
-              images: images,
-              seconds: seconds,
-              width: width,
-            ),
-            null => null,
-          },
-        ),
+        if (!small)
+          GestureNotes(
+            notes: _gesture,
+            duration: _session.duration,
+            holding: _holding,
+            frame: switch (_session.trickplay) {
+              final images? => (seconds, width) => TrickplayFrame(
+                itemId: _session.itemId,
+                images: images,
+                seconds: seconds,
+                width: width,
+              ),
+              null => null,
+            },
+          ),
         TimedNote(
           token: _fitNotes == 0 ? null : _fitNotes,
           duration: const Duration(milliseconds: 1200),
@@ -647,7 +702,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
               label: l.loadingInProgress,
             ),
           ),
-        if (plan == null && error == null)
+        if (plan == null && error == null && !small)
           Align(
             alignment: AlignmentDirectional.topStart,
             child: SafeArea(
@@ -668,7 +723,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
             visible: controls && error == null,
             child: _controls(l, plan, enabled, loading, prefs),
           ),
-        if (error != null)
+        if (error != null && !small)
           // It takes the taps too, so none reaches the video under it.
           GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -678,7 +733,9 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
               child: _failure(l, error),
             ),
           ),
-        if (error == null && !_leaving)
+        // The small window shows the video and its captions, and nothing
+        // that wants a touch.
+        if (error == null && !_leaving && !small)
           PlayerPrompts(
             lifted: controls,
             children: [
@@ -701,7 +758,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
           ),
         // Over everything else, so no touch reaches what's under it. It
         // steps aside while an error shows, so its buttons stay in reach.
-        if (_locked && error == null)
+        if (_locked && error == null && !small)
           PlayerLocked(
             reveals: _lockTouched,
             unlockLabel: l.playerUnlock,
@@ -762,6 +819,14 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
       onBack: widget.back,
       moreLabel: l.playerMore,
       menus: [
+        if (prefs.pictureInPicture &&
+            prefs.pictureInPictureButton &&
+            (ref.watch(pictureInPictureAvailableProvider).value ?? false))
+          PlayerMenuButton(
+            icon: Lucide.pictureInPicture,
+            label: l.playerPip,
+            onPressed: () => unawaited(_pip.enter()),
+          ),
         if (prefs.audioButton)
           PlayerMenuButton(
             icon: Lucide.audioLines,

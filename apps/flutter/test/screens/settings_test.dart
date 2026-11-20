@@ -10,6 +10,7 @@ import 'package:matinee/core/session.dart';
 import 'package:matinee/core/toasts.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/platform/player.g.dart' as wire;
+import 'package:matinee/player/picture_in_picture.dart';
 import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/player/player_state.dart';
@@ -153,10 +154,20 @@ void main() {
             dolbyVision: false,
           ),
         ),
+        pictureInPictureAvailableProvider.overrideWith((ref) => true),
       ],
     );
     await tester.pumpAndSettle();
     expect(find.text('Gestures'), findsOneWidget);
+    // On, and its button in Player buttons; off, the button row goes.
+    expect(find.text('Picture in picture'), findsNWidgets(2));
+    await tester.tap(find.text('Picture in picture').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Picture in picture'), findsOneWidget);
+    expect(
+      container.read(playerPrefsProvider).value!.pictureInPicture,
+      isFalse,
+    );
     expect(find.text('Player buttons'), findsOneWidget);
     // Only on a TV.
     expect(find.text('Match frame rate'), findsNothing);
