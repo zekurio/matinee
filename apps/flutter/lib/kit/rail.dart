@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import 'cards.dart';
@@ -65,7 +67,10 @@ class SectionTitle extends StatelessWidget {
 /// [itemWidth] wide and [itemHeight] tall (see [CardMetrics.height]). The
 /// list builds its cards as they scroll in. With no items, [empty] says
 /// so in the row's place. It opens scrolled to [initialIndex], as a show's
-/// episodes open at the one up next.
+/// episodes open at the one up next, with that card at the leading edge
+/// in either text direction, or as near as the row scrolls: a card near
+/// the end shows with the end of the row, and a row shorter than the
+/// screen stays put.
 class Rail extends StatefulWidget {
   const Rail({
     super.key,
@@ -95,14 +100,27 @@ class Rail extends StatefulWidget {
 }
 
 class _RailState extends State<Rail> {
-  late final _scroll = ScrollController(
-    initialScrollOffset:
-        widget.initialIndex * (widget.itemWidth + CardMetrics.gap),
-  );
+  ScrollController? _scroll;
+
+  /// Made at the first layout, when the row's width is known, so the first
+  /// offset is one the row can scroll to: past its end, the list would
+  /// spring back into place, a movement on first show.
+  ScrollController _scrollFor(double viewport) {
+    final widget = this.widget;
+    final count = widget.itemCount;
+    final extent =
+        2 * CardMetrics.gutter +
+        count * widget.itemWidth +
+        math.max(0, count - 1) * CardMetrics.gap;
+    final wanted = widget.initialIndex * (widget.itemWidth + CardMetrics.gap);
+    return _scroll ??= ScrollController(
+      initialScrollOffset: wanted.clamp(0, math.max(0, extent - viewport)),
+    );
+  }
 
   @override
   void dispose() {
-    _scroll.dispose();
+    _scroll?.dispose();
     super.dispose();
   }
 
@@ -140,20 +158,22 @@ class _RailState extends State<Rail> {
         else
           SizedBox(
             height: widget.itemHeight,
-            child: ListView.separated(
-              controller: _scroll,
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(
-                horizontal: CardMetrics.gutter,
-              ),
-              itemCount: itemCount,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(width: CardMetrics.gap),
-              itemBuilder: (context, index) => SizedBox(
-                width: widget.itemWidth,
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: widget.itemBuilder(context, index),
+            child: LayoutBuilder(
+              builder: (context, constraints) => ListView.separated(
+                controller: _scrollFor(constraints.maxWidth),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CardMetrics.gutter,
+                ),
+                itemCount: itemCount,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(width: CardMetrics.gap),
+                itemBuilder: (context, index) => SizedBox(
+                  width: widget.itemWidth,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: widget.itemBuilder(context, index),
+                  ),
                 ),
               ),
             ),

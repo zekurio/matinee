@@ -1147,13 +1147,15 @@ class SeasonsRail extends StatelessWidget {
   }
 }
 
-/// A season's episodes as a row of stills, starting at the one up next.
+/// A season's episodes as a row of stills, starting at the one up next, or
+/// at [start] when set.
 class EpisodesRail extends StatelessWidget {
   const EpisodesRail({
     super.key,
     required this.title,
     required this.items,
     this.next,
+    this.start,
     this.onSeeAll,
     this.seeAllLabel,
   });
@@ -1161,13 +1163,16 @@ class EpisodesRail extends StatelessWidget {
   final String title;
   final List<MediaItem> items;
   final MediaItem? next;
+
+  /// The card to open at, the leading one.
+  final int? start;
   final VoidCallback? onSeeAll;
   final String? seeAllLabel;
 
   @override
   Widget build(BuildContext context) {
     final size = railCardSize(context, RailArt.wide);
-    final start = items.indexWhere((item) => item.id == next?.id);
+    final start = this.start ?? items.indexWhere((item) => item.id == next?.id);
     return Rail(
       title: title,
       itemWidth: size.width,

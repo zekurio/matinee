@@ -451,6 +451,32 @@ void main() {
     expect(find.text('/title/s1/season/2'), findsOneWidget);
   });
 
+  testWidgets("a late episode's season rail opens at its neighbours", (
+    tester,
+  ) async {
+    final season = [for (var n = 1; n <= 12; n++) _episode(2, n, 'Part $n')];
+    final backend = _show()
+      ..answers['/api/v1/media/e28'] = season[7]
+      ..items['s1'] = {2: season};
+    await pumpScreen(
+      tester,
+      const EpisodeScreen(id: 'e28'),
+      client: backend.client,
+    );
+    await _scrollTo(tester, find.text('More from Season 2'));
+    // Episode 7, the one before, at the leading edge, and 9 after it,
+    // without the row moving to get there.
+    final before = tester.getRect(
+      find.bySemanticsLabel(RegExp('^Episode 7: Part 7')),
+    );
+    expect(before.left, moreOrLessEquals(CardMetrics.gutter));
+    expect(
+      find.bySemanticsLabel(RegExp('^Episode 9: Part 9')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(tester.hasRunningAnimations, isFalse);
+  });
+
   testWidgets('a long press on a Home card opens its menu', (tester) async {
     final backend = HomeBackend();
     await pumpScreen(tester, const HomeScreen(), client: backend.client);

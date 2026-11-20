@@ -230,7 +230,9 @@ class _EpisodeHeading extends StatelessWidget {
   }
 }
 
-/// The season's other episodes, its heading a link to the season.
+/// The season's other episodes, its heading a link to the season. It opens
+/// at this one's place: the episode before it at the leading edge and the
+/// one after beside it, or at the start when it isn't in the season.
 class _MoreFromSeason extends ConsumerWidget {
   const _MoreFromSeason({
     required this.item,
@@ -249,14 +251,18 @@ class _MoreFromSeason extends ConsumerWidget {
     final items = ref
         .watch(seasonItemsProvider((titleId: titleId, season: season)))
         .value;
+    final all = items ?? const <MediaItem>[];
     final others = [
-      for (final other in items ?? const <MediaItem>[])
+      for (final other in all)
         if (other.id != item.id) other,
     ];
     if (others.isEmpty) return const SizedBox.shrink();
+    // With this one left out, the one before it is a place earlier.
+    final here = all.indexWhere((other) => other.id == item.id);
     return EpisodesRail(
       title: l.titleEpisodeMoreFrom(seasonName(season, l)),
       items: others,
+      start: here > 0 ? here - 1 : 0,
       onSeeAll: () => goUp(context, up),
       seeAllLabel: l.mediaHeroEpisodes,
     );
