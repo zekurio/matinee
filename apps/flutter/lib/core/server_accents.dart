@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/matinee_api.dart';
+import 'address.dart';
 import 'session.dart';
 
 /// The accents the server in use gives the Matinee theme, from the
@@ -49,8 +50,11 @@ class ServerAccentsNotifier extends Notifier<ThemeAccents?> {
 
   @override
   ThemeAccents? build() {
-    final origin = ref.watch(activeServerProvider);
     final auth = ref.watch(authStateProvider);
+    // A server being added isn't the one in use yet: its colour waits for
+    // the sign-in.
+    if (auth case SignedOut(adding: true)) return stateOrNull;
+    final origin = _originOf(auth);
     final reached = auth is SignedIn || auth is SignedOut;
     final mine = ++_generation;
     final same = origin == _origin;
@@ -68,10 +72,25 @@ class ServerAccentsNotifier extends Notifier<ThemeAccents?> {
 
   /// Asks the server in use again, as on coming back to the foreground.
   Future<void> refresh() async {
-    final origin = ref.read(activeServerProvider);
     final auth = ref.read(authStateProvider);
+    final origin = _originOf(auth);
     if (origin == null || auth is! SignedIn) return;
     await _ask(_generation, origin);
+  }
+
+  /// The server [auth] is about, by its origin key, or null with none.
+  static String? _originOf(AuthState auth) {
+    final server = switch (auth) {
+      NoServer() => null,
+      Connecting(:final server) ||
+      Unreachable(:final server) ||
+      SignedOut(:final server) ||
+      SignedIn(:final server) ||
+      Offline(:final server) => server,
+    };
+    if (server == null) return null;
+    final url = Uri.tryParse(server);
+    return url == null || !url.hasAuthority ? server : originKey(url);
   }
 
   Future<void> _load(int mine, String origin, {required bool ask}) async {
