@@ -49,7 +49,7 @@ export const NetworkSettings = t.object({
   uploadBitrate: t
     .number()
     .int()
-    .min(MIN_BITRATE_LIMIT, "Pick a limit of at least 1 Mb/s.")
+    .min(MIN_BITRATE_LIMIT, "Pick a limit of at least 1 Mbps.")
     .max(100_000_000_000)
     .nullable(),
 })

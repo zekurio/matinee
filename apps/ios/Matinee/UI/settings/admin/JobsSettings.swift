@@ -145,9 +145,10 @@ private func taskNext(_ task: ScheduledTask) -> String {
   let schedule: String =
     switch taskSchedule(task) {
     case .manual: Str.webJobsScheduleManual
-    case .daily: Str.webJobsScheduleDaily
-    case .hourly: Str.webJobsScheduleHourly
-    case .every(let interval): Str.webJobsScheduleEvery(interval)
+    case .seconds(let count): Str.webJobsScheduleEverySeconds(count)
+    case .minutes(let count): Str.webJobsScheduleEveryMinutes(count)
+    case .hours(let count): Str.webJobsScheduleEveryHours(count)
+    case .days(let count): Str.webJobsScheduleEveryDays(count)
     }
   return task.nextRunAt.map { "\(schedule) · \(relativeTime($0))" } ?? schedule
 }

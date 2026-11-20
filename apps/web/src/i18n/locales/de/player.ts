@@ -71,7 +71,7 @@ export default {
   "player.speed": "Geschwindigkeit",
   "player.speed.normal": "Normal",
   "player.speed.rate": "{rate}×",
-  "player.bitrate.mbps": "{value} MBit/s",
+  "player.bitrate.mbps": "{value} Mbit/s",
   "player.bitrate.kbps": "{value} kBit/s",
 
   "player.stats.toggle": "Wiedergabestatistik",

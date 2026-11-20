@@ -165,16 +165,25 @@ export default defineMessages("jobs", {
   "jobs.schedule.manual": "Runs when you start it",
   "jobs.schedule.atStartup": "Runs at startup",
   "jobs.schedule.afterStartup": "Runs {delay} after startup",
-  "jobs.schedule.daily": "Every day",
-  "jobs.schedule.daily.atStartup": "Every day and at startup",
-  "jobs.schedule.daily.afterStartup": "Every day and {delay} after startup",
-  "jobs.schedule.hourly": "Every hour",
-  "jobs.schedule.hourly.atStartup": "Every hour and at startup",
-  "jobs.schedule.hourly.afterStartup": "Every hour and {delay} after startup",
-  "jobs.schedule.every": "Every {interval}",
-  "jobs.schedule.every.atStartup": "Every {interval} and at startup",
-  "jobs.schedule.every.afterStartup":
-    "Every {interval} and {delay} after startup",
+  // {every} is one of the four below, like "Every 5 minutes".
+  "jobs.schedule.every.atStartup": "{every} and at startup",
+  "jobs.schedule.every.afterStartup": "{every} and {delay} after startup",
+  "jobs.schedule.everySeconds": plural({
+    one: "Every second",
+    other: "Every {count} seconds",
+  }),
+  "jobs.schedule.everyMinutes": plural({
+    one: "Every minute",
+    other: "Every {count} minutes",
+  }),
+  "jobs.schedule.everyHours": plural({
+    one: "Every hour",
+    other: "Every {count} hours",
+  }),
+  "jobs.schedule.everyDays": plural({
+    one: "Every day",
+    other: "Every {count} days",
+  }),
   "jobs.schedule.notScheduled": "Not scheduled",
   "jobs.schedule.afterThisRun": "After this run",
 
