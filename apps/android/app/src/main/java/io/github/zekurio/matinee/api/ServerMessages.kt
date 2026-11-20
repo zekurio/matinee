@@ -2092,7 +2092,7 @@ internal val serverMessages: List<ServerMessage> = listOf(
         plural = false,
     ),
     ServerMessage(
-        text = "Pick a limit of at least 1 Mb/s.",
+        text = "Pick a limit of at least 1 Mbps.",
         names = emptyList(),
         args = emptyList(),
         resId = R.string.web_validation_bitrateLimit,

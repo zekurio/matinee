@@ -3,6 +3,7 @@ import type source from "../en/format"
 
 export default {
   "format.justNow": "gerade eben",
+  "format.soon": "gleich",
   "format.minutes": "{minutes} Min.",
   "format.hours": "{hours} Std.",
   "format.hoursMinutes": "{hours} Std. {minutes} Min.",

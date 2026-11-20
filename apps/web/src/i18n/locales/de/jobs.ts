@@ -28,7 +28,7 @@ export default {
     "Genres, Schlagwörter und Beteiligte von Titeln bei TMDB holen, für Empfehlungen.",
   "jobs.queue.recommendations.name": "Empfehlungen",
   "jobs.queue.recommendations.description":
-    "Die Empfehlungen jeder Person aus dem berechnen, was sie geschaut hat.",
+    "Die Empfehlungen jeder Person danach berechnen, was sie geschaut hat.",
 
   "jobs.queues": "Hintergrundaufgaben",
   "jobs.loadFailed": "Die Aufträge konnten nicht geladen werden. {error}",
@@ -161,16 +161,24 @@ export default {
   "jobs.schedule.manual": "Läuft, wenn du sie startest",
   "jobs.schedule.atStartup": "Läuft beim Start",
   "jobs.schedule.afterStartup": "Läuft {delay} nach dem Start",
-  "jobs.schedule.daily": "Täglich",
-  "jobs.schedule.daily.atStartup": "Täglich und beim Start",
-  "jobs.schedule.daily.afterStartup": "Täglich und {delay} nach dem Start",
-  "jobs.schedule.hourly": "Stündlich",
-  "jobs.schedule.hourly.atStartup": "Stündlich und beim Start",
-  "jobs.schedule.hourly.afterStartup": "Stündlich und {delay} nach dem Start",
-  "jobs.schedule.every": "Alle {interval}",
-  "jobs.schedule.every.atStartup": "Alle {interval} und beim Start",
-  "jobs.schedule.every.afterStartup":
-    "Alle {interval} und {delay} nach dem Start",
+  "jobs.schedule.every.atStartup": "{every} und beim Start",
+  "jobs.schedule.every.afterStartup": "{every} und {delay} nach dem Start",
+  "jobs.schedule.everySeconds": plural({
+    one: "Jede Sekunde",
+    other: "Alle {count} Sekunden",
+  }),
+  "jobs.schedule.everyMinutes": plural({
+    one: "Jede Minute",
+    other: "Alle {count} Minuten",
+  }),
+  "jobs.schedule.everyHours": plural({
+    one: "Jede Stunde",
+    other: "Alle {count} Stunden",
+  }),
+  "jobs.schedule.everyDays": plural({
+    one: "Jeden Tag",
+    other: "Alle {count} Tage",
+  }),
   "jobs.schedule.notScheduled": "Nicht geplant",
   "jobs.schedule.afterThisRun": "Nach diesem Lauf",
 

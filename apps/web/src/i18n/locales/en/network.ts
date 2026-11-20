@@ -19,7 +19,7 @@ export default defineMessages("network", {
   "network.trustedProxies.note":
     "Reverse proxies whose X-Forwarded-For the server believes. One address or range per line.",
   "network.upload.title": "Watch parties",
-  "network.upload": "Upload speed (Mbit/s)",
+  "network.upload": "Upload speed (Mbps)",
   "network.upload.note":
     "A watch party's remote members share this as their bit rate limit. Local members aren't limited by it. Empty for no limit.",
   "network.upload.placeholder": "No limit",

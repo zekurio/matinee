@@ -37,7 +37,7 @@ export const BITRATE_LIMITS: readonly number[] = [
 export const BitrateLimit = t
   .number()
   .int()
-  .min(MIN_BITRATE_LIMIT, "Pick a limit of at least 1 Mb/s.")
+  .min(MIN_BITRATE_LIMIT, "Pick a limit of at least 1 Mbps.")
   .max(1_000_000_000)
   .nullable()
 

@@ -18,7 +18,7 @@
     <string name="web_jobs_queue_title_features_name">Titelmerkmale</string>
     <string name="web_jobs_queue_title_features_description">Genres, Schlagwörter und Beteiligte von Titeln bei TMDB holen, für Empfehlungen.</string>
     <string name="web_jobs_queue_recommendations_name">Empfehlungen</string>
-    <string name="web_jobs_queue_recommendations_description">Die Empfehlungen jeder Person aus dem berechnen, was sie geschaut hat.</string>
+    <string name="web_jobs_queue_recommendations_description">Die Empfehlungen jeder Person danach berechnen, was sie geschaut hat.</string>
     <string name="web_jobs_queues">Hintergrundaufgaben</string>
     <string name="web_jobs_loadFailed">Die Aufträge konnten nicht geladen werden. %1$s</string>
     <string name="web_jobs_retry">Erneut versuchen</string>
@@ -117,15 +117,24 @@
     <string name="web_jobs_schedule_manual">Läuft, wenn du sie startest</string>
     <string name="web_jobs_schedule_atStartup">Läuft beim Start</string>
     <string name="web_jobs_schedule_afterStartup">Läuft %1$s nach dem Start</string>
-    <string name="web_jobs_schedule_daily">Täglich</string>
-    <string name="web_jobs_schedule_daily_atStartup">Täglich und beim Start</string>
-    <string name="web_jobs_schedule_daily_afterStartup">Täglich und %1$s nach dem Start</string>
-    <string name="web_jobs_schedule_hourly">Stündlich</string>
-    <string name="web_jobs_schedule_hourly_atStartup">Stündlich und beim Start</string>
-    <string name="web_jobs_schedule_hourly_afterStartup">Stündlich und %1$s nach dem Start</string>
-    <string name="web_jobs_schedule_every">Alle %1$s</string>
-    <string name="web_jobs_schedule_every_atStartup">Alle %1$s und beim Start</string>
-    <string name="web_jobs_schedule_every_afterStartup">Alle %1$s und %2$s nach dem Start</string>
+    <string name="web_jobs_schedule_every_atStartup">%1$s und beim Start</string>
+    <string name="web_jobs_schedule_every_afterStartup">%1$s und %2$s nach dem Start</string>
+    <plurals name="web_jobs_schedule_everySeconds">
+        <item quantity="one">Jede Sekunde</item>
+        <item quantity="other">Alle %1$d Sekunden</item>
+    </plurals>
+    <plurals name="web_jobs_schedule_everyMinutes">
+        <item quantity="one">Jede Minute</item>
+        <item quantity="other">Alle %1$d Minuten</item>
+    </plurals>
+    <plurals name="web_jobs_schedule_everyHours">
+        <item quantity="one">Jede Stunde</item>
+        <item quantity="other">Alle %1$d Stunden</item>
+    </plurals>
+    <plurals name="web_jobs_schedule_everyDays">
+        <item quantity="one">Jeden Tag</item>
+        <item quantity="other">Alle %1$d Tage</item>
+    </plurals>
     <string name="web_jobs_schedule_notScheduled">Nicht geplant</string>
     <string name="web_jobs_schedule_afterThisRun">Nach diesem Lauf</string>
     <string name="web_jobs_concurrency">Parallelität</string>
