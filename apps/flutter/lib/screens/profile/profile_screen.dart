@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../api/matinee_api.dart';
 import '../../core/device.dart';
 import '../../core/session.dart';
+import '../../downloads/downloads.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/actions.dart' show mediaChangesProvider;
@@ -79,10 +80,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             _Header(user: user),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: EmptyState(
-                icon: Lucide.cloudOff,
-                title: AppLocalizations.of(context).unreachableOfflineTitle,
-                message: AppLocalizations.of(context).unreachableOffline,
+              child: _OfflineNote(
+                downloads: ref.watch(
+                  shownDownloadsProvider.select(
+                    (shown) => shown.values.any((entry) => entry.done),
+                  ),
+                ),
               ),
             ),
             const _Account(),
@@ -497,6 +500,34 @@ class _Account extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// What the tab is offline: the profile waits for the server, and the
+/// downloads, when there are any, still play from their own tab.
+class _OfflineNote extends StatelessWidget {
+  const _OfflineNote({required this.downloads});
+
+  final bool downloads;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return EmptyState(
+      icon: Lucide.cloudOff,
+      title: l.unreachableOfflineTitle,
+      message: [
+        l.profileOffline,
+        if (downloads) l.unreachableOfflineDownloads,
+      ].join(' '),
+      action: downloads
+          ? MatineeButton(
+              look: ButtonLook.outline,
+              onPressed: () => context.go(Routes.downloads),
+              child: Text(l.downloadsTitle),
+            )
+          : null,
     );
   }
 }

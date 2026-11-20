@@ -488,6 +488,7 @@
   "profileJoined": "Dabei seit {p1}",
   "profileLoadFailed": "Dein Profil konnte nicht geladen werden",
   "profileNothingWatched": "Nichts geschaut {p1}",
+  "profileOffline": "Deine Favoriten, Anfragen und Statistiken sind wieder da, sobald der Server erreichbar ist.",
   "profileRecent": "Zuletzt geschaut",
   "profileRecentEmpty": "Noch nichts geschaut",
   "profileRecentLoadFailed": "Was du geschaut hast, konnte nicht geladen werden",

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/session.dart';
+import 'package:matinee/downloads/downloads.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/media/actions.dart' show mediaChangesProvider;
 import 'package:matinee/screens/profile/lists_screens.dart';
@@ -12,6 +13,7 @@ import 'package:matinee/screens/profile/profile_data.dart';
 import 'package:matinee/screens/profile/profile_screen.dart';
 
 import '../core/fakes.dart';
+import '../downloads/fake_downloads.dart';
 import '../media/fixtures.dart';
 import '../media/harness.dart';
 import 'home_backend.dart';
@@ -399,6 +401,36 @@ void main() {
     expect(find.text('ada'), findsOneWidget);
     expect(find.text('Sign out'), findsOneWidget);
     expect(backend.asked, isNot(contains('/api/v1/profiles/ada')));
+  });
+
+  testWidgets('offline with downloads, it says they play and opens them', (
+    tester,
+  ) async {
+    await pumpScreen(
+      tester,
+      const ProfileScreen(),
+      client: _backend().client,
+      overrides: [
+        ..._servers,
+        downloadsPlatformProvider.overrideWithValue(
+          FakeDownloadsPlatform([
+            downloadEntry(itemJson('m1'), server: '$server/'),
+          ]),
+        ),
+      ],
+      auth: Offline('$server', User.fromJson(userJson('ada'))),
+    );
+    expect(find.textContaining('Connect to a network'), findsNothing);
+    expect(
+      find.text(
+        'Your favorites, requests, and stats come back once the server '
+        'can be reached. Your downloads still play.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Downloads'));
+    await tester.pumpAndSettle();
+    expect(find.text('/downloads'), findsOneWidget);
   });
 
   testWidgets('Favorites lists each kind', (tester) async {
