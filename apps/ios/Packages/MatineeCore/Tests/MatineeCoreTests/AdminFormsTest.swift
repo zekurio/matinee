@@ -270,12 +270,20 @@ struct AdminFormsTest {
   @Test func taskStatus() {
     var task = AdminFixtures.decode(ScheduledTask.self, AdminFixtures.task)
     #expect(taskRunLine(task) == .completed(endedAt: "2026-11-13T09:26:51.498Z", took: "2 s"))
-    #expect(taskSchedule(task) == .daily)
+    #expect(taskSchedule(task) == .days(1))
     #expect(!taskFailed(task))
     task.intervalSeconds = 43_200
-    #expect(taskSchedule(task) == .every("12 h 0 min"))
+    #expect(taskSchedule(task) == .hours(12))
     task.intervalSeconds = 600
-    #expect(taskSchedule(task) == .every("10 min"))
+    #expect(taskSchedule(task) == .minutes(10))
+    task.intervalSeconds = 60
+    #expect(taskSchedule(task) == .minutes(1))
+    task.intervalSeconds = 59.6
+    #expect(taskSchedule(task) == .minutes(1))
+    task.intervalSeconds = 90
+    #expect(taskSchedule(task) == .minutes(2))
+    task.intervalSeconds = 0.2
+    #expect(taskSchedule(task) == .seconds(1))
     task.intervalSeconds = nil
     #expect(taskSchedule(task) == .manual)
     task.lastRun?.result = TaskResult.failed
