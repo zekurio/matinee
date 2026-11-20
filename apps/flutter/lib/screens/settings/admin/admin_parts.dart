@@ -11,6 +11,7 @@ import '../../../core/toasts.dart';
 import '../../../kit/kit.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../query/failure_view.dart';
+import '../settings_rows.dart';
 import '../settings_screen.dart';
 
 /* What the admin pages share, as the Kotlin app's AdminParts.kt: who may
@@ -61,7 +62,7 @@ class AdminSections extends StatelessWidget {
     itemBuilder: (context, index) => Align(
       alignment: AlignmentDirectional.topStart,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
+        constraints: const BoxConstraints(maxWidth: settingsWidth),
         child: sections[index],
       ),
     ),

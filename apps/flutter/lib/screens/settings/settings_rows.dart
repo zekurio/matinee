@@ -8,6 +8,9 @@ import '../../kit/kit.dart';
 /// and the web's setting controls: sections of panels, each a card of rows
 /// with lines between them. The profile's account rows use them too.
 
+/// How wide Settings' pages get, at the start of a wider screen.
+const settingsWidth = 720.0;
+
 /// A section's heading over what's under it.
 class SettingsSection extends StatelessWidget {
   const SettingsSection({super.key, required this.title, required this.child});

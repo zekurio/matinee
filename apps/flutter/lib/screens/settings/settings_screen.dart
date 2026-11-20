@@ -90,7 +90,7 @@ class SettingsScaffold extends StatelessWidget {
       itemBuilder: (context, index) => Align(
         alignment: AlignmentDirectional.topStart,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints: const BoxConstraints(maxWidth: settingsWidth),
           child: sections[index],
         ),
       ),

@@ -256,10 +256,15 @@ final class AdminBackend {
         },
       }, 400);
     }
-    return _route(method, path, input);
+    return _route(method, path, input, request.url.queryParameters);
   });
 
-  http.StreamedResponse _route(String method, String path, Object? input) {
+  http.StreamedResponse _route(
+    String method,
+    String path,
+    Object? input, [
+    Map<String, String> query = const {},
+  ]) {
     final segments = path.split('/').where((part) => part.isNotEmpty).toList();
     switch ((method, segments)) {
       case ('GET', ['libraries']):
@@ -274,13 +279,28 @@ final class AdminBackend {
         ];
         return _json(libraries.firstWhere((l) => l['id'] == id), 200);
       case ('GET', ['admin', 'browse']):
-        return _json({
-          'path': '/media',
-          'parent': '/',
-          'directories': [
-            {'name': 'movies', 'path': '/media/movies'},
-            {'name': 'shows', 'path': '/media/shows'},
-          ],
+        // The top holds /media, which holds the libraries' folders.
+        return _json(switch (query['path']) {
+          '/' => {
+            'path': '/',
+            'parent': null,
+            'directories': [
+              {'name': 'media', 'path': '/media'},
+            ],
+          },
+          final path? when path.startsWith('/media/') => {
+            'path': path,
+            'parent': '/media',
+            'directories': <Object>[],
+          },
+          _ => {
+            'path': '/media',
+            'parent': '/',
+            'directories': [
+              {'name': 'movies', 'path': '/media/movies'},
+              {'name': 'shows', 'path': '/media/shows'},
+            ],
+          },
         }, 200);
       case ('PUT', ['admin', 'users', final id, 'access']):
         return _json(users.firstWhere((u) => u['id'] == id), 200);

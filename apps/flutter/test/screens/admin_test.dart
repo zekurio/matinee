@@ -192,6 +192,54 @@ void main() {
       expect(find.text('movies'), findsOneWidget);
       expect(find.text('shows'), findsOneWidget);
     });
+
+    testWidgets('system Back in the folder picker goes up, then leaves', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        '',
+        screen: const FolderPickerScreen(
+          request: FolderPickerRequest(start: '/media/movies'),
+        ),
+      );
+      String shown() => tester
+          .widget<EditableText>(find.byType(EditableText))
+          .controller
+          .text;
+      expect(shown(), '/media/movies');
+      expect(await tester.binding.handlePopRoute(), isTrue);
+      await tester.pumpAndSettle();
+      expect(shown(), '/media');
+      expect(await tester.binding.handlePopRoute(), isTrue);
+      await tester.pumpAndSettle();
+      expect(shown(), '/');
+      // At the top, Back is the system's again, and leaves.
+      expect(await tester.binding.handlePopRoute(), isFalse);
+    });
+
+    testWidgets('the folder picker keeps to the settings pages\' width', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        '',
+        size: const Size(1280, 800),
+        screen: const FolderPickerScreen(request: FolderPickerRequest()),
+      );
+      expect(tester.getSize(find.byType(EditableText)).width, lessThan(720));
+      expect(
+        tester.getRect(find.text('movies')).left,
+        lessThan(CardMetrics.gutter + 80),
+      );
+      final add = tester.getRect(
+        find.ancestor(
+          of: find.textContaining('Add'),
+          matching: find.byType(MatineeButton),
+        ),
+      );
+      expect(add.width, lessThanOrEqualTo(720));
+    });
   });
 
   group('access', () {

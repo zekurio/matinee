@@ -409,119 +409,145 @@ class _FolderPickerState extends ConsumerState<FolderPickerScreen> {
     final root = current?.parent == null;
     final already = current != null && added.contains(current.path);
     final shown = current?.path ?? _path ?? '/';
+    // System Back goes up a folder until the top, then leaves; the bar's
+    // Back always leaves.
+    final up = current?.parent;
     return AdminGate(
-      child: AdminPage(
-        title: l.webLibrariesDialogBrowse,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                CardMetrics.gutter,
-                0,
-                CardMetrics.gutter,
-                8,
-              ),
-              // Keyed by the folder, so opening another one shows its path.
-              child: _PathField(
-                key: ValueKey(shown),
-                path: shown,
-                onOpen: _open,
-              ),
-            ),
-            Expanded(
-              child: switch ((current, listing.error)) {
-                (final DirectoryListing folder, _) => ListView(
-                  children: [
-                    if (folder.parent case final parent?)
-                      _FolderRow(
-                        name: '..',
-                        label: l.webLibrariesBrowserParent,
-                        up: true,
-                        onOpen: () => _open(parent),
-                      ),
-                    if (folder.directories.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: CardMetrics.gutter,
-                          vertical: 16,
-                        ),
-                        child: Note(l.webLibrariesBrowserEmpty),
-                      ),
-                    for (final directory in folder.directories)
-                      _FolderRow(
-                        name: directory.name,
-                        label: l.webLibrariesBrowserOpen(directory.name),
-                        addLabel: l.webLibrariesBrowserAddNamed(directory.name),
-                        onOpen: () => _open(directory.path),
-                        onAdd: added.contains(directory.path)
-                            ? null
-                            : () => _add(directory.path),
-                      ),
-                  ],
+      child: PopScope(
+        canPop: up == null,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop && up != null) _open(up);
+        },
+        child: AdminPage(
+          title: l.webLibrariesDialogBrowse,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  CardMetrics.gutter,
+                  0,
+                  CardMetrics.gutter,
+                  8,
                 ),
-                (_, final Object error) => Center(
-                  child: FailureState(
-                    title: l.foldersLoadFailed,
-                    error: error,
-                    onRetry: () => ref.invalidate(folderProvider(_path)),
-                  ),
+                // Keyed by the folder, so opening another one shows its path.
+                child: _capped(
+                  _PathField(key: ValueKey(shown), path: shown, onOpen: _open),
                 ),
-                _ => LoadingState(label: l.adminLoading),
-              },
-            ),
-            // Always there, so the list above doesn't jump when the first
-            // folder loads.
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.surface,
-                border: Border(top: BorderSide(color: colors.border)),
               ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: CardMetrics.gutter,
-                    vertical: 12,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: 10,
+              Expanded(
+                child: switch ((current, listing.error)) {
+                  (final DirectoryListing folder, _) => ListView(
                     children: [
-                      Note(
-                        current == null || root
-                            ? l.webLibrariesBrowserOpenRoot
-                            : already
-                            ? l.webLibrariesBrowserAlreadyAdded(current.path)
-                            : l.webLibrariesBrowserAdds(current.path),
-                      ),
-                      MatineeButton(
-                        onPressed: current != null && !root && !already
-                            ? () => _add(current.path)
-                            : null,
-                        child: Text(
-                          already
-                              ? l.webLibrariesBrowserAdded
-                              : current == null || root
-                              ? l.webLibrariesBrowserAdd
-                              : l.webLibrariesBrowserAddCurrent(
-                                  _folderName(current.path),
-                                ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+                      for (final row in [
+                        if (folder.parent case final parent?)
+                          _FolderRow(
+                            name: '..',
+                            label: l.webLibrariesBrowserParent,
+                            up: true,
+                            onOpen: () => _open(parent),
+                          ),
+                        if (folder.directories.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: CardMetrics.gutter,
+                              vertical: 16,
+                            ),
+                            child: Note(l.webLibrariesBrowserEmpty),
+                          ),
+                        for (final directory in folder.directories)
+                          _FolderRow(
+                            name: directory.name,
+                            label: l.webLibrariesBrowserOpen(directory.name),
+                            addLabel: l.webLibrariesBrowserAddNamed(
+                              directory.name,
+                            ),
+                            onOpen: () => _open(directory.path),
+                            onAdd: added.contains(directory.path)
+                                ? null
+                                : () => _add(directory.path),
+                          ),
+                      ])
+                        _capped(row),
                     ],
                   ),
+                  (_, final Object error) => Center(
+                    child: FailureState(
+                      title: l.foldersLoadFailed,
+                      error: error,
+                      onRetry: () => ref.invalidate(folderProvider(_path)),
+                    ),
+                  ),
+                  _ => LoadingState(label: l.adminLoading),
+                },
+              ),
+              // Always there, so the list above doesn't jump when the first
+              // folder loads.
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  border: Border(top: BorderSide(color: colors.border)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: CardMetrics.gutter,
+                      vertical: 12,
+                    ),
+                    child: _capped(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        spacing: 10,
+                        children: [
+                          Note(
+                            current == null || root
+                                ? l.webLibrariesBrowserOpenRoot
+                                : already
+                                ? l.webLibrariesBrowserAlreadyAdded(
+                                    current.path,
+                                  )
+                                : l.webLibrariesBrowserAdds(current.path),
+                          ),
+                          MatineeButton(
+                            onPressed: current != null && !root && !already
+                                ? () => _add(current.path)
+                                : null,
+                            child: Text(
+                              already
+                                  ? l.webLibrariesBrowserAdded
+                                  : current == null || root
+                                  ? l.webLibrariesBrowserAdd
+                                  : l.webLibrariesBrowserAddCurrent(
+                                      _folderName(current.path),
+                                    ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+/// [child] no wider than the other settings pages' panels, at the start,
+/// so a tablet doesn't stretch the rows across the screen.
+Widget _capped(Widget child) => Align(
+  alignment: AlignmentDirectional.topStart,
+  child: ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: settingsWidth),
+    child: child,
+  ),
+);
 
 /// The last part of [path], or the path itself at the top.
 String _folderName(String path) {
