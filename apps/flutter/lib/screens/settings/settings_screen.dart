@@ -10,14 +10,16 @@ import '../../l10n/app_localizations.dart';
 import '../../router.dart';
 import '../sign_in/server_switcher.dart';
 import 'about_page.dart';
+import 'admin/admin_parts.dart';
+import 'admin/admin_settings.dart';
 import 'appearance_page.dart';
 import 'playback_page.dart';
 import 'settings_rows.dart';
 
 /// A category of Settings, as the Kotlin app's `SettingsPage`: each is a
 /// row on the first page and opens a page of its own at
-/// `Routes.settingsPage(key)`. The Kotlin app's account, subtitles,
-/// downloads, and admin pages aren't here yet.
+/// `Routes.settingsPage(key)`. The Kotlin app's account, subtitles, and
+/// downloads pages aren't here yet; the admin pages are `AdminCategory`.
 enum SettingsPage {
   appearance('appearance', Lucide.palette),
   playback('playback', Lucide.tvPlay),
@@ -130,6 +132,8 @@ class SettingsScreen extends ConsumerWidget {
               if (page.available) row(page),
           ],
         ),
+        // The server's settings, for an account it says is an admin.
+        if (canAdminister(auth)) const AdminSection(),
         SettingsSection(
           title: l.settingsServer,
           child: Panel(
@@ -171,7 +175,8 @@ class SettingsScreen extends ConsumerWidget {
 }
 
 /// A category's page, by its key in the route; the first page for a key
-/// it doesn't know, or one this device doesn't have.
+/// it doesn't know, or one this device doesn't have. The admin pages'
+/// keys open theirs, for an admin.
 class SettingsPageScreen extends StatelessWidget {
   const SettingsPageScreen({super.key, required this.pageKey});
 
@@ -183,6 +188,6 @@ class SettingsPageScreen extends StatelessWidget {
     SettingsPage.playback => const PlaybackPage(),
     SettingsPage.about => const AboutPage(),
     SettingsPage.licenses => const LicensesPage(),
-    null => const SettingsScreen(),
+    null => AdminCategory.of(pageKey)?.page ?? const SettingsScreen(),
   };
 }

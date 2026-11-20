@@ -15,6 +15,7 @@ export 'progress_ring.dart';
 export 'qr_code.dart';
 export 'rail.dart';
 export 'round_icon_button.dart';
+export 'save_bar.dart';
 export 'search_pill.dart';
 export 'sheet.dart';
 export 'slider.dart';

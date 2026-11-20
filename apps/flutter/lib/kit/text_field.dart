@@ -19,6 +19,7 @@ class MatineeTextField extends StatefulWidget {
     this.enabled = true,
     this.autofocus = false,
     this.obscureText = false,
+    this.autocorrect = true,
     this.keyboardType,
     this.textInputAction,
     this.autofillHints,
@@ -36,6 +37,9 @@ class MatineeTextField extends StatefulWidget {
   final bool enabled;
   final bool autofocus;
   final bool obscureText;
+
+  /// Off for what isn't words, as an address, a path, or a claim's name.
+  final bool autocorrect;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
@@ -123,6 +127,8 @@ class _MatineeTextFieldState extends State<MatineeTextField> {
                                 enabled: widget.enabled,
                                 autofocus: widget.autofocus,
                                 obscureText: widget.obscureText,
+                                autocorrect: widget.autocorrect,
+                                enableSuggestions: widget.autocorrect,
                                 keyboardType: widget.keyboardType,
                                 textInputAction: widget.textInputAction,
                                 autofillHints: widget.autofillHints,

@@ -14,6 +14,7 @@ import 'screens/pending.dart';
 import 'screens/profile/lists_screens.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/search/search_screen.dart';
+import 'screens/settings/admin/library_editor.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/shell/shell.dart';
 import 'screens/sign_in/connect_screen.dart';
@@ -117,6 +118,9 @@ abstract final class Routes {
 
   static String libraryEditor([String? id]) =>
       id == null ? '/admin/library' : '/admin/library/$id';
+
+  /// The server's folders, for the library editor to add one; it takes a
+  /// `FolderPickerRequest` as the push's extra and pops the folder.
   static const folderPicker = '/admin/folders';
 
   static Map<String, String>? _query(Map<String, String?> values) {
@@ -281,6 +285,27 @@ List<RouteBase> _handsetRoutes() => [
   ),
   for (final (path, name) in _pages) _pending(path, name, root: true),
   GoRoute(
+    path: '/admin/library',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const LibraryEditorScreen(),
+  ),
+  GoRoute(
+    path: '/admin/library/:id',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        LibraryEditorScreen(id: state.pathParameters['id']),
+  ),
+  GoRoute(
+    path: Routes.folderPicker,
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => FolderPickerScreen(
+      request: switch (state.extra) {
+        final FolderPickerRequest request => request,
+        _ => const FolderPickerRequest(),
+      },
+    ),
+  ),
+  GoRoute(
     path: '/title/:id',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => TitleScreen(id: state.pathParameters['id']!),
@@ -350,9 +375,6 @@ const _pages = [
   ('/images/:titleId', 'Images'),
   ('/catalog/:kind/:provider/:providerId', 'Catalog title'),
   ('/catalog-browse/:kind', 'Browse the catalog'),
-  ('/admin/library', 'New library'),
-  ('/admin/library/:id', 'Library editor'),
-  ('/admin/folders', 'Folder picker'),
 ];
 
 GoRoute _pending(

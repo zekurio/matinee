@@ -133,9 +133,386 @@
   "@actionsPlayFromStart": {
     "description": "strings.xml: A card\\'s long-press menu"
   },
+  "adminAccessAllowed": "Allowed",
+  "@adminAccessAllowed": {
+    "description": "admin settings"
+  },
+  "adminAccessBitrate": "Bit rate limit",
+  "@adminAccessBitrate": {
+    "description": "admin settings"
+  },
+  "adminAccessBitrateNone": "No bit rate limit",
+  "@adminAccessBitrateNone": {
+    "description": "admin settings"
+  },
+  "adminAccessBitrateUpTo": "Up to {p1} Mbps",
+  "@adminAccessBitrateUpTo": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessClaimsNever": "No claims read from {p1} yet. They're read at the next sign-in.",
+  "@adminAccessClaimsNever": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessClaimsSynced": "Last read groups and claims from {p1} {p2}.",
+  "@adminAccessClaimsSynced": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessDescription": "An account gets the most its groups allow. Settings here override them.",
+  "@adminAccessDescription": {
+    "description": "admin settings"
+  },
+  "adminAccessDownloads": "Downloads",
+  "@adminAccessDownloads": {
+    "description": "admin settings"
+  },
+  "adminAccessEveryone": "Everyone",
+  "@adminAccessEveryone": {
+    "description": "admin settings"
+  },
+  "adminAccessEveryoneHint": "Every account is in it.",
+  "@adminAccessEveryoneHint": {
+    "description": "admin settings"
+  },
+  "adminAccessFromGroups": "From groups",
+  "@adminAccessFromGroups": {
+    "description": "admin settings"
+  },
+  "adminAccessFromGroupsValue": "From groups ({p1})",
+  "@adminAccessFromGroupsValue": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessGets": "What {p1} gets",
+  "@adminAccessGets": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessGetsAfterSave": "Save to see what your changes give.",
+  "@adminAccessGetsAfterSave": {
+    "description": "admin settings"
+  },
+  "adminAccessGone": "This account was deleted, or it's an admin now, and an admin has no limits.",
+  "@adminAccessGone": {
+    "description": "admin settings"
+  },
+  "adminAccessGoneTitle": "Account not found",
+  "@adminAccessGoneTitle": {
+    "description": "admin settings"
+  },
+  "adminAccessGroupFollows": "Also holds the accounts {p1} lists in {p2}.",
+  "@adminAccessGroupFollows": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessGroupFromProvider": "The groups claim from {p1} put this account here. Only {p1} can take it out, at the next sign-in.",
+  "@adminAccessGroupFromProvider": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessGroups": "Groups",
+  "@adminAccessGroups": {
+    "description": "admin settings"
+  },
+  "adminAccessLibraries": "Libraries",
+  "@adminAccessLibraries": {
+    "description": "admin settings"
+  },
+  "adminAccessLibrariesAll": "All libraries",
+  "@adminAccessLibrariesAll": {
+    "description": "admin settings"
+  },
+  "adminAccessLibrariesAllHint": "Includes libraries added later.",
+  "@adminAccessLibrariesAllHint": {
+    "description": "admin settings"
+  },
+  "adminAccessLibrariesCount": "{count, plural, one{{count} library} other{{count} libraries}}",
+  "@adminAccessLibrariesCount": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminAccessLibrariesNone": "No libraries",
+  "@adminAccessLibrariesNone": {
+    "description": "admin settings"
+  },
+  "adminAccessLibrariesPicked": "Picked libraries",
+  "@adminAccessLibrariesPicked": {
+    "description": "admin settings"
+  },
+  "adminAccessNoGroups": "There are no other groups yet. Make one in the web app under Settings → Access.",
+  "@adminAccessNoGroups": {
+    "description": "admin settings"
+  },
+  "adminAccessNotAllowed": "Not allowed",
+  "@adminAccessNotAllowed": {
+    "description": "admin settings"
+  },
+  "adminAccessOverride": "Set on this account",
+  "@adminAccessOverride": {
+    "description": "admin settings"
+  },
+  "adminAccessOverrideFromProvider": "The policy claim from {p1} sets these at each sign-in. A change here lasts only until {p2} signs in again.",
+  "@adminAccessOverrideFromProvider": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessOverrideHint": "From groups leaves a setting to the groups. Anything else wins over them.",
+  "@adminAccessOverrideHint": {
+    "description": "admin settings"
+  },
+  "adminAccessRequestLimit": "Limit",
+  "@adminAccessRequestLimit": {
+    "description": "admin settings"
+  },
+  "adminAccessRequestLimitDaysField": "Days",
+  "@adminAccessRequestLimitDaysField": {
+    "description": "admin settings"
+  },
+  "adminAccessRequestLimitNone": "No limit",
+  "@adminAccessRequestLimitNone": {
+    "description": "admin settings"
+  },
+  "adminAccessRequestLimitPeriod": "{count, plural, =1{a day} other{every {count} days}}",
+  "@adminAccessRequestLimitPeriod": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminAccessRequestLimitRate": "{p1} {p2}",
+  "@adminAccessRequestLimitRate": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessRequestLimitSome": "Limited",
+  "@adminAccessRequestLimitSome": {
+    "description": "admin settings"
+  },
+  "adminAccessRequestLimitTitles": "{count, plural, one{{count} title} other{{count} titles}}",
+  "@adminAccessRequestLimitTitles": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminAccessRequestLimitTitlesField": "Titles",
+  "@adminAccessRequestLimitTitlesField": {
+    "description": "admin settings"
+  },
+  "adminAccessRequests": "Requests",
+  "@adminAccessRequests": {
+    "description": "admin settings"
+  },
+  "adminAccessRequestsAdd": "Add right away",
+  "@adminAccessRequestsAdd": {
+    "description": "admin settings"
+  },
+  "adminAccessRequestsAsk": "Needs approval",
+  "@adminAccessRequestsAsk": {
+    "description": "admin settings"
+  },
+  "adminAccessRequestsLimited": "{p1}, {p2}",
+  "@adminAccessRequestsLimited": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessRequestsOff": "Off",
+  "@adminAccessRequestsOff": {
+    "description": "admin settings"
+  },
+  "adminAccessStreams": "Simultaneous streams",
+  "@adminAccessStreams": {
+    "description": "admin settings"
+  },
+  "adminAccessStreamsCount": "{count, plural, one{{count} device at once} other{{count} devices at once}}",
+  "@adminAccessStreamsCount": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminAccessStreamsNone": "Any number of devices",
+  "@adminAccessStreamsNone": {
+    "description": "admin settings"
+  },
+  "adminAccessTheProvider": "the sign-in provider",
+  "@adminAccessTheProvider": {
+    "description": "admin settings"
+  },
+  "adminAccessTitle": "Access for {p1}",
+  "@adminAccessTitle": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "adminAccessTranscode": "Video encoding",
+  "@adminAccessTranscode": {
+    "description": "admin settings"
+  },
+  "adminDays": "Days until it expires",
+  "@adminDays": {
+    "description": "admin settings"
+  },
+  "adminEnterNumber": "Enter a number.",
+  "@adminEnterNumber": {
+    "description": "admin settings"
+  },
+  "adminInviteRevokeConfirm": "Revoke",
+  "@adminInviteRevokeConfirm": {
+    "description": "admin settings"
+  },
+  "adminInviteRevokeDescription": "Nobody can sign up with this link any more.",
+  "@adminInviteRevokeDescription": {
+    "description": "admin settings"
+  },
+  "adminJobsClearDescription": "The jobs that haven't started are dropped. A running one finishes, and a task or a scan queues them again when it next runs.",
+  "@adminJobsClearDescription": {
+    "description": "admin settings"
+  },
+  "adminJobsClearTitle": "Clear the jobs waiting in {p1}?",
+  "@adminJobsClearTitle": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
   "adminLoadFailed": "Couldn't load these settings",
   "@adminLoadFailed": {
     "description": "strings_loading.xml"
+  },
+  "adminLoading": "Loading…",
+  "@adminLoading": {
+    "description": "admin settings"
+  },
+  "adminTimeDaysAgo": "{count, plural, one{{count} day ago} other{{count} days ago}}",
+  "@adminTimeDaysAgo": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminTimeHoursAgo": "{count, plural, one{{count} hour ago} other{{count} hours ago}}",
+  "@adminTimeHoursAgo": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminTimeInDays": "{count, plural, one{in {count} day} other{in {count} days}}",
+  "@adminTimeInDays": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminTimeInHours": "{count, plural, one{in {count} hour} other{in {count} hours}}",
+  "@adminTimeInHours": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminTimeInMinutes": "{count, plural, one{in {count} minute} other{in {count} minutes}}",
+  "@adminTimeInMinutes": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminTimeMinutesAgo": "{count, plural, one{{count} minute ago} other{{count} minutes ago}}",
+  "@adminTimeMinutesAgo": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminTimeNow": "just now",
+  "@adminTimeNow": {
+    "description": "admin settings"
   },
   "appName": "Matinee",
   "@appName": {
