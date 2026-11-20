@@ -517,7 +517,7 @@ class PlaybackSession extends ChangeNotifier {
       return _current(request);
     } catch (failure) {
       if (_current(request)) {
-        notice = (PlaybackNotice.switchFailed, failure);
+        await _handleRequestFailure(failure);
       }
       return false;
     } finally {

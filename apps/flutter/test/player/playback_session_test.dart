@@ -127,6 +127,17 @@ void main() {
     },
   );
 
+  test('a restricted stream seek closes the current source', () async {
+    backend.start = (_) =>
+        FakePlaybackApi.answer(plan(method: PlaybackMethod.remux));
+    backend.seek = (_) => FakePlaybackApi.reject(403, playbackRestricted);
+    await session.start();
+    await session.seek(60);
+    expect(session.refused, isTrue);
+    expect(player.disposed, isTrue);
+    expect(backend.reports.last.closed, isTrue);
+  });
+
   test('WebVTT stays on the file clock across a seek', () async {
     backend.start = (_) => FakePlaybackApi.answer(
       plan(
