@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../platform/player.g.dart' as wire show SubtitleEdgeMessage;
 import '../platform/player_system.g.dart' as wire;
+import 'player.dart' show PlayerSubtitles;
 import 'player_preferences.dart';
 import 'player_system.dart';
 
@@ -77,6 +79,23 @@ class SubtitleLook {
   @override
   int get hashCode =>
       Object.hash(color, background, edge, edgeColor, scale, window);
+}
+
+/// What the engine needs of [prefs] to draw subtitles as the player
+/// would: Media3 draws its cues natively, in this look.
+PlayerSubtitles playerSubtitles(PlayerPrefs prefs) {
+  final own = SubtitleLook.own(prefs);
+  return PlayerSubtitles(
+    scale: prefs.subtitleScale,
+    system: prefs.subtitleSystemStyle,
+    color: own.color.toARGB32(),
+    background: own.background.toARGB32(),
+    edge: switch (prefs.subtitleEdge) {
+      SubtitleEdge.outline => wire.SubtitleEdgeMessage.outline,
+      SubtitleEdge.none => wire.SubtitleEdgeMessage.none,
+      _ => wire.SubtitleEdgeMessage.shadow,
+    },
+  );
 }
 
 /// The system's caption style, which Settings > Accessibility > Caption

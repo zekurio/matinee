@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:matinee/platform/player.g.dart' show SubtitleEdgeMessage;
 import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/player/player_system.dart';
 import 'package:matinee/player/subtitle_look.dart';
@@ -48,6 +49,26 @@ void main() {
     expect(look.edge, SubtitleEdge.depressed);
     expect(look.edgeColor, const Color(0xFFFF0000));
     expect(look.scale, 2);
+  });
+
+  test('the engine gets the own look, or follows the system', () {
+    final own = playerSubtitles(
+      const PlayerPrefs(
+        subtitleScale: 1.5,
+        subtitleColor: SubtitleColor.yellow,
+        subtitleBackground: SubtitleBackground.none,
+        subtitleEdge: SubtitleEdge.outline,
+      ),
+    );
+    expect(own.scale, 1.5);
+    expect(own.system, isFalse);
+    expect(own.color, 0xFFFFE14D);
+    expect(own.background, 0x00000000);
+    expect(own.edge, SubtitleEdgeMessage.outline);
+    expect(
+      playerSubtitles(const PlayerPrefs(subtitleSystemStyle: true)).system,
+      isTrue,
+    );
   });
 
   testWidgets('a line draws at its size times the scale, outlined under it', (

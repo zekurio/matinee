@@ -71,8 +71,11 @@ void main() {
       'set before it', () async {
     final player = Player(
       engine: PlayerEngine.media3,
-      subtitleScale: 1.25,
-      systemSubtitleScale: true,
+      subtitles: const PlayerSubtitles(
+        scale: 1.25,
+        color: 0xFFFFE14D,
+        edge: wire.SubtitleEdgeMessage.outline,
+      ),
     );
     await player.setVideoFit(VideoFit.cover);
     await player.setVideoViewport(const Rect.fromLTWH(1, 2, 300, 200));
@@ -101,7 +104,9 @@ void main() {
     expect(request.tracks?.subtitleUrl, 'https://example.test/a.sup');
     expect(request.tracks?.subtitleOffset, 90);
     expect(request.subtitleScale, 1.25);
-    expect(request.systemSubtitleScale, isTrue);
+    expect(request.systemSubtitleScale, isFalse);
+    expect(request.subtitleColor, 0xFFFFE14D);
+    expect(request.subtitleEdge, wire.SubtitleEdgeMessage.outline);
     expect(player.state.phase, PlaybackPhase.buffering);
     await player.dispose();
   });

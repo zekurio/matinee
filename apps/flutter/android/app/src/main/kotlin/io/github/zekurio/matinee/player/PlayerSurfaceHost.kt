@@ -7,6 +7,7 @@ import android.app.Activity
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -15,8 +16,12 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
 import kotlin.math.roundToInt
+
+/** The size the Kotlin phone player draws a cue at, in sp, before Settings' size. */
+private const val SUBTITLE_SIZE = 20.0
 
 @UnstableApi
 internal class PlayerSurfaceHost(
@@ -92,6 +97,35 @@ internal class PlayerSurfaceHost(
     /** The screen stays on while the video moves or is about to. */
     fun setKeepAwake(awake: Boolean) {
         container.keepScreenOn = awake
+    }
+
+    /**
+     * The look Settings gives subtitles, for the cues Media3 draws, as the
+     * Kotlin player's `SubtitleLine`: 20sp times the size, in the app's own
+     * colors and edge, or Android's caption style whole, its typeface too.
+     */
+    fun setSubtitleLook(request: OpenMessage) {
+        val view = subtitles ?: return
+        if (request.systemSubtitleScale) {
+            view.setUserDefaultStyle()
+            view.setUserDefaultTextSize()
+            return
+        }
+        view.setStyle(
+            CaptionStyleCompat(
+                request.subtitleColor.toInt(),
+                request.subtitleBackground.toInt(),
+                Color.TRANSPARENT,
+                when (request.subtitleEdge) {
+                    SubtitleEdgeMessage.NONE -> CaptionStyleCompat.EDGE_TYPE_NONE
+                    SubtitleEdgeMessage.OUTLINE -> CaptionStyleCompat.EDGE_TYPE_OUTLINE
+                    SubtitleEdgeMessage.SHADOW -> CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW
+                },
+                Color.BLACK,
+                null,
+            ),
+        )
+        view.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, (SUBTITLE_SIZE * request.subtitleScale).toFloat())
     }
 
     fun setCues(cues: List<Cue>) {

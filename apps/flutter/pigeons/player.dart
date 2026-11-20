@@ -18,6 +18,8 @@ enum PhaseMessage { idle, buffering, ready, ended, error }
 
 enum SourceKindMessage { file, mp4, hls }
 
+enum SubtitleEdgeMessage { none, outline, shadow }
+
 class FrameSizeMessage {
   FrameSizeMessage({required this.width, required this.height});
 
@@ -98,6 +100,9 @@ class OpenMessage {
     this.softwareDecoders = false,
     this.subtitleScale = 1,
     this.systemSubtitleScale = false,
+    this.subtitleColor = 0xFFFFFFFF,
+    this.subtitleBackground = 0x73000000,
+    this.subtitleEdge = SubtitleEdgeMessage.shadow,
   });
 
   final String url;
@@ -113,12 +118,18 @@ class OpenMessage {
   /// Try the device's software decoders before its hardware ones.
   final bool softwareDecoders;
 
-  /// How much bigger than their own size the subtitles mpv draws are.
+  /// How much bigger than their own size subtitles draw, in either engine.
   final double subtitleScale;
 
   /// The system's caption size in place of [subtitleScale], when Settings
   /// follows the system's caption style.
   final bool systemSubtitleScale;
+
+  /// The app's own look for the cues Media3 draws, ARGB, as Settings sets
+  /// it. With [systemSubtitleScale], Android's caption style applies whole.
+  final int subtitleColor;
+  final int subtitleBackground;
+  final SubtitleEdgeMessage subtitleEdge;
 }
 
 sealed class PlaybackEventMessage {}

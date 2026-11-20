@@ -39,8 +39,7 @@ final playbackPlayerFactoryProvider =
           (engine, prefs) => Player(
             engine: engine,
             softwareDecoders: prefs.decoders == Decoders.software,
-            subtitleScale: prefs.subtitleScale,
-            systemSubtitleScale: prefs.subtitleSystemStyle,
+            subtitles: playerSubtitles(prefs),
           ),
     );
 final playbackFullscreenProvider = Provider<Future<void> Function(int, bool)>(

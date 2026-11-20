@@ -30,24 +30,35 @@ class SourceTracks {
   final double subtitleOffset;
 }
 
+/// How the engine draws subtitles, from Settings: the app's own size,
+/// colors (ARGB), and edge, or with [system] the system's caption style.
+class PlayerSubtitles {
+  const PlayerSubtitles({
+    this.scale = 1,
+    this.system = false,
+    this.color = 0xFFFFFFFF,
+    this.background = 0x73000000,
+    this.edge = wire.SubtitleEdgeMessage.shadow,
+  });
+
+  final double scale;
+  final bool system;
+  final int color;
+  final int background;
+  final wire.SubtitleEdgeMessage edge;
+}
+
 /// Android has one active native player per activity. Opening a source
 /// replaces any previous session, including one owned by another [Player].
 abstract class Player {
   /// [softwareDecoders] tries the device's software decoders first, as the
-  /// Decoders setting asks. [subtitleScale] sizes the subtitles mpv draws
-  /// itself, or [systemSubtitleScale] takes the system's caption size in its
-  /// place; Media3's cues are drawn in Flutter with the subtitle look.
+  /// Decoders setting asks. [subtitles] is the look of the subtitles the
+  /// engine draws: mpv takes only its size.
   factory Player({
     PlayerEngine engine = PlayerEngine.mpv,
     bool softwareDecoders = false,
-    double subtitleScale = 1,
-    bool systemSubtitleScale = false,
-  }) => _PigeonPlayer(
-    engine,
-    softwareDecoders,
-    subtitleScale,
-    systemSubtitleScale,
-  );
+    PlayerSubtitles subtitles = const PlayerSubtitles(),
+  }) => _PigeonPlayer(engine, softwareDecoders, subtitles);
 
   PlaybackState get state;
 

@@ -259,6 +259,20 @@ enum class SourceKindMessage(val raw: Int) {
   }
 }
 
+enum class SubtitleEdgeMessage(val raw: Int) {
+  NONE(0),
+  OUTLINE(1),
+  SHADOW(2);
+
+  companion object {
+    private val pigeonValues = values()
+
+    fun ofRaw(raw: Int): SubtitleEdgeMessage? {
+      return pigeonValues.getOrNull(raw)
+    }
+  }
+}
+
 enum class TrackKindMessage(val raw: Int) {
   VIDEO(0),
   AUDIO(1),
@@ -533,13 +547,20 @@ data class OpenMessage (
   val autoplay: Boolean,
   /** Try the device's software decoders before its hardware ones. */
   val softwareDecoders: Boolean,
-  /** How much bigger than their own size the subtitles mpv draws are. */
+  /** How much bigger than their own size subtitles draw, in either engine. */
   val subtitleScale: Double,
   /**
    * The system's caption size in place of [subtitleScale], when Settings
    * follows the system's caption style.
    */
-  val systemSubtitleScale: Boolean
+  val systemSubtitleScale: Boolean,
+  /**
+   * The app's own look for the cues Media3 draws, ARGB, as Settings sets
+   * it. With [systemSubtitleScale], Android's caption style applies whole.
+   */
+  val subtitleColor: Long,
+  val subtitleBackground: Long,
+  val subtitleEdge: SubtitleEdgeMessage
 )
  {
   companion object {
@@ -556,7 +577,10 @@ data class OpenMessage (
       val softwareDecoders = pigeonVar_list[9] as Boolean
       val subtitleScale = pigeonVar_list[10] as Double
       val systemSubtitleScale = pigeonVar_list[11] as Boolean
-      return OpenMessage(url, headers, startMs, engine, fit, viewport, sourceKind, tracks, autoplay, softwareDecoders, subtitleScale, systemSubtitleScale)
+      val subtitleColor = pigeonVar_list[12] as Long
+      val subtitleBackground = pigeonVar_list[13] as Long
+      val subtitleEdge = pigeonVar_list[14] as SubtitleEdgeMessage
+      return OpenMessage(url, headers, startMs, engine, fit, viewport, sourceKind, tracks, autoplay, softwareDecoders, subtitleScale, systemSubtitleScale, subtitleColor, subtitleBackground, subtitleEdge)
     }
   }
   fun toList(): List<Any?> {
@@ -573,6 +597,9 @@ data class OpenMessage (
       softwareDecoders,
       subtitleScale,
       systemSubtitleScale,
+      subtitleColor,
+      subtitleBackground,
+      subtitleEdge,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -583,7 +610,7 @@ data class OpenMessage (
       return true
     }
     val other = other as OpenMessage
-    return PlayerPigeonUtils.deepEquals(this.url, other.url) && PlayerPigeonUtils.deepEquals(this.headers, other.headers) && PlayerPigeonUtils.deepEquals(this.startMs, other.startMs) && PlayerPigeonUtils.deepEquals(this.engine, other.engine) && PlayerPigeonUtils.deepEquals(this.fit, other.fit) && PlayerPigeonUtils.deepEquals(this.viewport, other.viewport) && PlayerPigeonUtils.deepEquals(this.sourceKind, other.sourceKind) && PlayerPigeonUtils.deepEquals(this.tracks, other.tracks) && PlayerPigeonUtils.deepEquals(this.autoplay, other.autoplay) && PlayerPigeonUtils.deepEquals(this.softwareDecoders, other.softwareDecoders) && PlayerPigeonUtils.deepEquals(this.subtitleScale, other.subtitleScale) && PlayerPigeonUtils.deepEquals(this.systemSubtitleScale, other.systemSubtitleScale)
+    return PlayerPigeonUtils.deepEquals(this.url, other.url) && PlayerPigeonUtils.deepEquals(this.headers, other.headers) && PlayerPigeonUtils.deepEquals(this.startMs, other.startMs) && PlayerPigeonUtils.deepEquals(this.engine, other.engine) && PlayerPigeonUtils.deepEquals(this.fit, other.fit) && PlayerPigeonUtils.deepEquals(this.viewport, other.viewport) && PlayerPigeonUtils.deepEquals(this.sourceKind, other.sourceKind) && PlayerPigeonUtils.deepEquals(this.tracks, other.tracks) && PlayerPigeonUtils.deepEquals(this.autoplay, other.autoplay) && PlayerPigeonUtils.deepEquals(this.softwareDecoders, other.softwareDecoders) && PlayerPigeonUtils.deepEquals(this.subtitleScale, other.subtitleScale) && PlayerPigeonUtils.deepEquals(this.systemSubtitleScale, other.systemSubtitleScale) && PlayerPigeonUtils.deepEquals(this.subtitleColor, other.subtitleColor) && PlayerPigeonUtils.deepEquals(this.subtitleBackground, other.subtitleBackground) && PlayerPigeonUtils.deepEquals(this.subtitleEdge, other.subtitleEdge)
   }
 
   override fun hashCode(): Int {
@@ -600,10 +627,13 @@ data class OpenMessage (
     result = 31 * result + PlayerPigeonUtils.deepHash(this.softwareDecoders)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.subtitleScale)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.systemSubtitleScale)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.subtitleColor)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.subtitleBackground)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.subtitleEdge)
     return result
   }
   override fun toString(): String {
-    return "OpenMessage(url=$url, headers=$headers, startMs=$startMs, engine=$engine, fit=$fit, viewport=$viewport, sourceKind=$sourceKind, tracks=$tracks, autoplay=$autoplay, softwareDecoders=$softwareDecoders, subtitleScale=$subtitleScale, systemSubtitleScale=$systemSubtitleScale)"
+    return "OpenMessage(url=$url, headers=$headers, startMs=$startMs, engine=$engine, fit=$fit, viewport=$viewport, sourceKind=$sourceKind, tracks=$tracks, autoplay=$autoplay, softwareDecoders=$softwareDecoders, subtitleScale=$subtitleScale, systemSubtitleScale=$systemSubtitleScale, subtitleColor=$subtitleColor, subtitleBackground=$subtitleBackground, subtitleEdge=$subtitleEdge)"
   }
 }
 
@@ -1206,85 +1236,90 @@ private open class PlayerPigeonCodec : StandardMessageCodec() {
       }
       133.toByte() -> {
         (readValue(buffer) as Long?)?.let {
-          TrackKindMessage.ofRaw(it.toInt())
+          SubtitleEdgeMessage.ofRaw(it.toInt())
         }
       }
       134.toByte() -> {
-        (readValue(buffer) as? List<Any?>)?.let {
-          FrameSizeMessage.fromList(it)
+        (readValue(buffer) as Long?)?.let {
+          TrackKindMessage.ofRaw(it.toInt())
         }
       }
       135.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          VideoDecoderMessage.fromList(it)
+          FrameSizeMessage.fromList(it)
         }
       }
       136.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          CodecCapabilitiesMessage.fromList(it)
+          VideoDecoderMessage.fromList(it)
         }
       }
       137.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          SourceTracksMessage.fromList(it)
+          CodecCapabilitiesMessage.fromList(it)
         }
       }
       138.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          ViewportMessage.fromList(it)
+          SourceTracksMessage.fromList(it)
         }
       }
       139.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          OpenMessage.fromList(it)
+          ViewportMessage.fromList(it)
         }
       }
       140.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          StateMessage.fromList(it)
+          OpenMessage.fromList(it)
         }
       }
       141.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TimelineMessage.fromList(it)
+          StateMessage.fromList(it)
         }
       }
       142.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TrackMessage.fromList(it)
+          TimelineMessage.fromList(it)
         }
       }
       143.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          TracksMessage.fromList(it)
+          TrackMessage.fromList(it)
         }
       }
       144.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          VideoMessage.fromList(it)
+          TracksMessage.fromList(it)
         }
       }
       145.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          ActiveEngineMessage.fromList(it)
+          VideoMessage.fromList(it)
         }
       }
       146.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          FormatDiagnosticsMessage.fromList(it)
+          ActiveEngineMessage.fromList(it)
         }
       }
       147.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          ErrorDiagnosticsMessage.fromList(it)
+          FormatDiagnosticsMessage.fromList(it)
         }
       }
       148.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
-          DiagnosticsMessage.fromList(it)
+          ErrorDiagnosticsMessage.fromList(it)
         }
       }
       149.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          DiagnosticsMessage.fromList(it)
+        }
+      }
+      150.toByte() -> {
         (readValue(buffer) as? List<Any?>)?.let {
           DeviceDiagnosticsMessage.fromList(it)
         }
@@ -1310,72 +1345,76 @@ private open class PlayerPigeonCodec : StandardMessageCodec() {
         stream.write(132)
         writeValue(stream, value.raw.toLong())
       }
-      is TrackKindMessage -> {
+      is SubtitleEdgeMessage -> {
         stream.write(133)
         writeValue(stream, value.raw.toLong())
       }
-      is FrameSizeMessage -> {
+      is TrackKindMessage -> {
         stream.write(134)
-        writeValue(stream, value.toList())
+        writeValue(stream, value.raw.toLong())
       }
-      is VideoDecoderMessage -> {
+      is FrameSizeMessage -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is CodecCapabilitiesMessage -> {
+      is VideoDecoderMessage -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is SourceTracksMessage -> {
+      is CodecCapabilitiesMessage -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is ViewportMessage -> {
+      is SourceTracksMessage -> {
         stream.write(138)
         writeValue(stream, value.toList())
       }
-      is OpenMessage -> {
+      is ViewportMessage -> {
         stream.write(139)
         writeValue(stream, value.toList())
       }
-      is StateMessage -> {
+      is OpenMessage -> {
         stream.write(140)
         writeValue(stream, value.toList())
       }
-      is TimelineMessage -> {
+      is StateMessage -> {
         stream.write(141)
         writeValue(stream, value.toList())
       }
-      is TrackMessage -> {
+      is TimelineMessage -> {
         stream.write(142)
         writeValue(stream, value.toList())
       }
-      is TracksMessage -> {
+      is TrackMessage -> {
         stream.write(143)
         writeValue(stream, value.toList())
       }
-      is VideoMessage -> {
+      is TracksMessage -> {
         stream.write(144)
         writeValue(stream, value.toList())
       }
-      is ActiveEngineMessage -> {
+      is VideoMessage -> {
         stream.write(145)
         writeValue(stream, value.toList())
       }
-      is FormatDiagnosticsMessage -> {
+      is ActiveEngineMessage -> {
         stream.write(146)
         writeValue(stream, value.toList())
       }
-      is ErrorDiagnosticsMessage -> {
+      is FormatDiagnosticsMessage -> {
         stream.write(147)
         writeValue(stream, value.toList())
       }
-      is DiagnosticsMessage -> {
+      is ErrorDiagnosticsMessage -> {
         stream.write(148)
         writeValue(stream, value.toList())
       }
-      is DeviceDiagnosticsMessage -> {
+      is DiagnosticsMessage -> {
         stream.write(149)
+        writeValue(stream, value.toList())
+      }
+      is DeviceDiagnosticsMessage -> {
+        stream.write(150)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)

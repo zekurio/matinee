@@ -49,6 +49,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
             val host = PlayerSurfaceHost(activity, request.engine, next::surfacesChanged)
             next.host = host
             host.setFit(request.fit)
+            host.setSubtitleLook(request)
             host.setViewport(request.viewport)
             val engine = when (request.engine) {
                 EngineMessage.MPV -> MpvEngine(activity, next)

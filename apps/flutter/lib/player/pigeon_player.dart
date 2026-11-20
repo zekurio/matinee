@@ -4,8 +4,7 @@ class _PigeonPlayer implements Player {
   _PigeonPlayer(
     this._engine, [
     this._softwareDecoders = false,
-    this._subtitleScale = 1,
-    this._systemSubtitleScale = false,
+    this._subtitles = const PlayerSubtitles(),
   ]);
 
   static int _lastSession = 0;
@@ -13,8 +12,7 @@ class _PigeonPlayer implements Player {
 
   final PlayerEngine _engine;
   final bool _softwareDecoders;
-  final double _subtitleScale;
-  final bool _systemSubtitleScale;
+  final PlayerSubtitles _subtitles;
   final StreamController<PlaybackState> _updates = StreamController.broadcast();
   final _diagnostics = StreamController<wire.DiagnosticsMessage>.broadcast();
   PlaybackState _state = const PlaybackState();
@@ -105,8 +103,11 @@ class _PigeonPlayer implements Player {
           tracks: tracks == null ? null : _wireTracks(tracks),
           autoplay: autoplay,
           softwareDecoders: _softwareDecoders,
-          subtitleScale: _subtitleScale,
-          systemSubtitleScale: _systemSubtitleScale,
+          subtitleScale: _subtitles.scale,
+          systemSubtitleScale: _subtitles.system,
+          subtitleColor: _subtitles.color,
+          subtitleBackground: _subtitles.background,
+          subtitleEdge: _subtitles.edge,
         ),
       );
     } on Exception {

@@ -133,6 +133,12 @@ enum SourceKindMessage {
   hls;
 }
 
+enum SubtitleEdgeMessage {
+  none,
+  outline,
+  shadow;
+}
+
 enum TrackKindMessage {
   video,
   audio,
@@ -447,6 +453,9 @@ class OpenMessage {
     this.softwareDecoders = false,
     this.subtitleScale = 1,
     this.systemSubtitleScale = false,
+    this.subtitleColor = 0xFFFFFFFF,
+    this.subtitleBackground = 0x73000000,
+    this.subtitleEdge = SubtitleEdgeMessage.shadow,
   });
 
   String url;
@@ -470,12 +479,20 @@ class OpenMessage {
   /// Try the device's software decoders before its hardware ones.
   bool softwareDecoders;
 
-  /// How much bigger than their own size the subtitles mpv draws are.
+  /// How much bigger than their own size subtitles draw, in either engine.
   double subtitleScale;
 
   /// The system's caption size in place of [subtitleScale], when Settings
   /// follows the system's caption style.
   bool systemSubtitleScale;
+
+  /// The app's own look for the cues Media3 draws, ARGB, as Settings sets
+  /// it. With [systemSubtitleScale], Android's caption style applies whole.
+  int subtitleColor;
+
+  int subtitleBackground;
+
+  SubtitleEdgeMessage subtitleEdge;
 
   List<Object?> _toList() {
     return <Object?>[
@@ -491,6 +508,9 @@ class OpenMessage {
       softwareDecoders,
       subtitleScale,
       systemSubtitleScale,
+      subtitleColor,
+      subtitleBackground,
+      subtitleEdge,
     ];
   }
 
@@ -512,6 +532,9 @@ class OpenMessage {
       softwareDecoders: result[9]! as bool,
       subtitleScale: result[10]! as double,
       systemSubtitleScale: result[11]! as bool,
+      subtitleColor: result[12]! as int,
+      subtitleBackground: result[13]! as int,
+      subtitleEdge: result[14]! as SubtitleEdgeMessage,
     );
   }
 
@@ -524,7 +547,7 @@ class OpenMessage {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(url, other.url) && _deepEquals(headers, other.headers) && _deepEquals(startMs, other.startMs) && _deepEquals(engine, other.engine) && _deepEquals(fit, other.fit) && _deepEquals(viewport, other.viewport) && _deepEquals(sourceKind, other.sourceKind) && _deepEquals(tracks, other.tracks) && _deepEquals(autoplay, other.autoplay) && _deepEquals(softwareDecoders, other.softwareDecoders) && _deepEquals(subtitleScale, other.subtitleScale) && _deepEquals(systemSubtitleScale, other.systemSubtitleScale);
+    return _deepEquals(url, other.url) && _deepEquals(headers, other.headers) && _deepEquals(startMs, other.startMs) && _deepEquals(engine, other.engine) && _deepEquals(fit, other.fit) && _deepEquals(viewport, other.viewport) && _deepEquals(sourceKind, other.sourceKind) && _deepEquals(tracks, other.tracks) && _deepEquals(autoplay, other.autoplay) && _deepEquals(softwareDecoders, other.softwareDecoders) && _deepEquals(subtitleScale, other.subtitleScale) && _deepEquals(systemSubtitleScale, other.systemSubtitleScale) && _deepEquals(subtitleColor, other.subtitleColor) && _deepEquals(subtitleBackground, other.subtitleBackground) && _deepEquals(subtitleEdge, other.subtitleEdge);
   }
 
   @override
@@ -533,7 +556,7 @@ class OpenMessage {
 
   @override
   String toString() {
-    return 'OpenMessage(url: $url, headers: $headers, startMs: $startMs, engine: $engine, fit: $fit, viewport: $viewport, sourceKind: $sourceKind, tracks: $tracks, autoplay: $autoplay, softwareDecoders: $softwareDecoders, subtitleScale: $subtitleScale, systemSubtitleScale: $systemSubtitleScale)';
+    return 'OpenMessage(url: $url, headers: $headers, startMs: $startMs, engine: $engine, fit: $fit, viewport: $viewport, sourceKind: $sourceKind, tracks: $tracks, autoplay: $autoplay, softwareDecoders: $softwareDecoders, subtitleScale: $subtitleScale, systemSubtitleScale: $systemSubtitleScale, subtitleColor: $subtitleColor, subtitleBackground: $subtitleBackground, subtitleEdge: $subtitleEdge)';
   }
 }
 
@@ -1242,56 +1265,59 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is SourceKindMessage) {
       buffer.putUint8(132);
       writeValue(buffer, value.index);
-    }    else if (value is TrackKindMessage) {
+    }    else if (value is SubtitleEdgeMessage) {
       buffer.putUint8(133);
       writeValue(buffer, value.index);
-    }    else if (value is FrameSizeMessage) {
+    }    else if (value is TrackKindMessage) {
       buffer.putUint8(134);
-      writeValue(buffer, value.encode());
-    }    else if (value is VideoDecoderMessage) {
+      writeValue(buffer, value.index);
+    }    else if (value is FrameSizeMessage) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    }    else if (value is CodecCapabilitiesMessage) {
+    }    else if (value is VideoDecoderMessage) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    }    else if (value is SourceTracksMessage) {
+    }    else if (value is CodecCapabilitiesMessage) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    }    else if (value is ViewportMessage) {
+    }    else if (value is SourceTracksMessage) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    }    else if (value is OpenMessage) {
+    }    else if (value is ViewportMessage) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    }    else if (value is StateMessage) {
+    }    else if (value is OpenMessage) {
       buffer.putUint8(140);
       writeValue(buffer, value.encode());
-    }    else if (value is TimelineMessage) {
+    }    else if (value is StateMessage) {
       buffer.putUint8(141);
       writeValue(buffer, value.encode());
-    }    else if (value is TrackMessage) {
+    }    else if (value is TimelineMessage) {
       buffer.putUint8(142);
       writeValue(buffer, value.encode());
-    }    else if (value is TracksMessage) {
+    }    else if (value is TrackMessage) {
       buffer.putUint8(143);
       writeValue(buffer, value.encode());
-    }    else if (value is VideoMessage) {
+    }    else if (value is TracksMessage) {
       buffer.putUint8(144);
       writeValue(buffer, value.encode());
-    }    else if (value is ActiveEngineMessage) {
+    }    else if (value is VideoMessage) {
       buffer.putUint8(145);
       writeValue(buffer, value.encode());
-    }    else if (value is FormatDiagnosticsMessage) {
+    }    else if (value is ActiveEngineMessage) {
       buffer.putUint8(146);
       writeValue(buffer, value.encode());
-    }    else if (value is ErrorDiagnosticsMessage) {
+    }    else if (value is FormatDiagnosticsMessage) {
       buffer.putUint8(147);
       writeValue(buffer, value.encode());
-    }    else if (value is DiagnosticsMessage) {
+    }    else if (value is ErrorDiagnosticsMessage) {
       buffer.putUint8(148);
       writeValue(buffer, value.encode());
-    }    else if (value is DeviceDiagnosticsMessage) {
+    }    else if (value is DiagnosticsMessage) {
       buffer.putUint8(149);
+      writeValue(buffer, value.encode());
+    }    else if (value is DeviceDiagnosticsMessage) {
+      buffer.putUint8(150);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -1315,38 +1341,41 @@ class _PigeonCodec extends StandardMessageCodec {
         return value == null ? null : SourceKindMessage.values[value];
       case 133:
         final value = readValue(buffer) as int?;
-        return value == null ? null : TrackKindMessage.values[value];
+        return value == null ? null : SubtitleEdgeMessage.values[value];
       case 134:
-        return FrameSizeMessage.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : TrackKindMessage.values[value];
       case 135:
-        return VideoDecoderMessage.decode(readValue(buffer)!);
+        return FrameSizeMessage.decode(readValue(buffer)!);
       case 136:
-        return CodecCapabilitiesMessage.decode(readValue(buffer)!);
+        return VideoDecoderMessage.decode(readValue(buffer)!);
       case 137:
-        return SourceTracksMessage.decode(readValue(buffer)!);
+        return CodecCapabilitiesMessage.decode(readValue(buffer)!);
       case 138:
-        return ViewportMessage.decode(readValue(buffer)!);
+        return SourceTracksMessage.decode(readValue(buffer)!);
       case 139:
-        return OpenMessage.decode(readValue(buffer)!);
+        return ViewportMessage.decode(readValue(buffer)!);
       case 140:
-        return StateMessage.decode(readValue(buffer)!);
+        return OpenMessage.decode(readValue(buffer)!);
       case 141:
-        return TimelineMessage.decode(readValue(buffer)!);
+        return StateMessage.decode(readValue(buffer)!);
       case 142:
-        return TrackMessage.decode(readValue(buffer)!);
+        return TimelineMessage.decode(readValue(buffer)!);
       case 143:
-        return TracksMessage.decode(readValue(buffer)!);
+        return TrackMessage.decode(readValue(buffer)!);
       case 144:
-        return VideoMessage.decode(readValue(buffer)!);
+        return TracksMessage.decode(readValue(buffer)!);
       case 145:
-        return ActiveEngineMessage.decode(readValue(buffer)!);
+        return VideoMessage.decode(readValue(buffer)!);
       case 146:
-        return FormatDiagnosticsMessage.decode(readValue(buffer)!);
+        return ActiveEngineMessage.decode(readValue(buffer)!);
       case 147:
-        return ErrorDiagnosticsMessage.decode(readValue(buffer)!);
+        return FormatDiagnosticsMessage.decode(readValue(buffer)!);
       case 148:
-        return DiagnosticsMessage.decode(readValue(buffer)!);
+        return ErrorDiagnosticsMessage.decode(readValue(buffer)!);
       case 149:
+        return DiagnosticsMessage.decode(readValue(buffer)!);
+      case 150:
         return DeviceDiagnosticsMessage.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
