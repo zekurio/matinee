@@ -441,6 +441,12 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
         if (plan == null || _session.refused || _leaving)
           const ColoredBox(color: Color(0xFF000000)),
         VideoView(player: _session.player),
+        // The picture dimmed behind the controls, coming and going with
+        // them, but not under a menu, whose own backdrop dims it.
+        PlayerFade(
+          visible: plan != null && controls && error == null && menu == null,
+          child: const PlayerDim(),
+        ),
         if (captions.isNotEmpty)
           IgnorePointer(
             child: Align(

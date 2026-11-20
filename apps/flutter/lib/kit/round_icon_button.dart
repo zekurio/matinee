@@ -23,6 +23,7 @@ class RoundIconButton extends StatelessWidget {
     this.color,
     this.background,
     this.toggled,
+    this.iconShadows,
     this.focusNode,
     this.autofocus = false,
   });
@@ -43,6 +44,10 @@ class RoundIconButton extends StatelessWidget {
 
   /// For a button that turns something on or off, whether it's on.
   final bool? toggled;
+
+  /// Shadows under the icon, for a bare button over a picture; they fade
+  /// with it when it's disabled.
+  final List<Shadow>? iconShadows;
   final FocusNode? focusNode;
   final bool autofocus;
 
@@ -83,6 +88,18 @@ class RoundIconButton extends StatelessWidget {
                   child: KitIcon(
                     icon,
                     size: iconSize,
+                    shadows: [
+                      for (final shadow in iconShadows ?? const <Shadow>[])
+                        onPressed == null
+                            ? Shadow(
+                                color: shadow.color.withValues(
+                                  alpha: shadow.color.a * .4,
+                                ),
+                                offset: shadow.offset,
+                                blurRadius: shadow.blurRadius,
+                              )
+                            : shadow,
+                    ],
                     // Disabled, it fades the way the player's episode
                     // buttons do when there's no episode either side.
                     color: (color ?? colors.foreground).withValues(

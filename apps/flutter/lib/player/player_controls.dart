@@ -4,12 +4,33 @@ import '../kit/kit.dart';
 
 const _clear = Color(0x00000000);
 
+/// A soft shadow under the middle buttons and their numbers, so they read
+/// over a bright picture, as the Kotlin TV overlay's text does.
+const _onPicture = [
+  Shadow(color: Color(0x99000000), offset: Offset(0, 2), blurRadius: 10),
+];
+
+/// The picture dimmed a little behind the controls while they show, so
+/// the middle buttons read where the top and bottom shades don't reach.
+/// It sits under the subtitles, which the controls already lift clear.
+class PlayerDim extends StatelessWidget {
+  const PlayerDim({super.key});
+
+  static const color = Color(0x59000000);
+
+  @override
+  Widget build(BuildContext context) =>
+      const IgnorePointer(child: ColoredBox(color: color));
+}
+
 /// The controls over the video, laid out as the Kotlin phone player's
 /// `Controls`, which a tablet shares at the same sizes: the title and the
 /// menu buttons up top, play in the middle between the skips and, for an
 /// episode, the previous and next episodes outside them, and at the bottom
 /// [seekBar] the full width, with nothing beside it or under it. The top
-/// and bottom are shaded so they read over bright video.
+/// and bottom are shaded so they read over bright video, and the middle
+/// buttons carry a shadow; [PlayerDim], under the subtitles, dims the rest
+/// of the picture while they show.
 class PlayerControls extends StatelessWidget {
   const PlayerControls({
     super.key,
@@ -250,6 +271,7 @@ class PlayerTransport extends StatelessWidget {
                 size: 96,
                 iconSize: 48,
                 background: _clear,
+                iconShadows: _onPicture,
               ),
       ),
       if (ahead case final skip?) _SkipButton(skip, Lucide.rotateCw),
@@ -291,16 +313,23 @@ class _SkipButton extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              KitIcon(icon, size: 40, color: colors.foreground),
+              KitIcon(
+                icon,
+                size: 40,
+                color: colors.foreground,
+                shadows: _onPicture,
+              ),
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: ExcludeSemantics(
                   child: Text(
                     '${skip.seconds}',
-                    style: KitText.xs.style(
-                      color: colors.foreground,
-                      weight: FontWeight.w600,
-                    ),
+                    style: KitText.xs
+                        .style(
+                          color: colors.foreground,
+                          weight: FontWeight.w600,
+                        )
+                        .copyWith(shadows: _onPicture),
                   ),
                 ),
               ),
@@ -333,5 +362,6 @@ class PlayerEpisodeButton extends StatelessWidget {
     size: 64,
     iconSize: 30,
     background: _clear,
+    iconShadows: _onPicture,
   );
 }

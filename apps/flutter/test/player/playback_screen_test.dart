@@ -13,6 +13,7 @@ import 'package:matinee/platform/player.g.dart' as wire;
 import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
+import 'package:matinee/player/player_controls.dart' show PlayerDim;
 import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/router.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -132,14 +133,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(player.seeks.last.inSeconds, closeTo(60, 2));
 
+    // The picture dims behind the controls, and only while they show.
+    expect(find.byType(PlayerDim), findsOneWidget);
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Pause'), findsNothing);
+    expect(find.byType(PlayerDim), findsNothing);
     await tester.tapAt(const Offset(22, 140));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Pause'), findsOneWidget);
+    expect(find.byType(PlayerDim), findsOneWidget);
 
     await tap(tester, 'Audio');
+    // A menu's backdrop dims the picture itself; the two don't stack.
+    expect(find.byType(PlayerDim), findsNothing);
     await tester.tap(find.text('German'));
     await tester.pumpAndSettle();
     expect(backend.picks.last.audio, audioTwo.index);
