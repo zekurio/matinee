@@ -279,7 +279,10 @@ void main() {
       );
       addTearDown(subscription.close);
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await harness.untilValue(
+        deviceCodeSignInProvider(false),
+        (state) => state.expired,
+      );
 
       expect(subscription.read().expired, isTrue);
       expect(subscription.read().code, isNull);
@@ -291,7 +294,11 @@ void main() {
       harness.container
           .read(deviceCodeSignInProvider(false).notifier)
           .newCode();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await harness.untilRequests(
+        (requests) =>
+            requests.where((r) => r.url.path == '/api/v1/auth/device').length >=
+            2,
+      );
       expect(
         harness.backend.to('a.example', '/api/v1/auth/device'),
         hasLength(2),
@@ -344,10 +351,10 @@ void main() {
         (_, _) {},
       );
       addTearDown(subscription.close);
-      for (var i = 0; i < 100 && subscription.read().searching; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 5));
-      }
-      return subscription.read();
+      return harness.untilValue(
+        nearbyServersProvider,
+        (state) => !state.searching,
+      );
     }
 
     test(

@@ -155,8 +155,11 @@ void main() {
         client: noPictures(asked),
         settle: false,
       );
-      for (var i = 0; i < 6; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 20));
+      // Each failed source makes way for the next on the event loop, so
+      // wait for the third ask rather than for a time.
+      final stop = DateTime.now().add(const Duration(seconds: 5));
+      while (asked.length < 3 && DateTime.now().isBefore(stop)) {
+        await Future<void>.delayed(Duration.zero);
         await tester.pump();
       }
     });

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:flutter_riverpod/misc.dart' show Override, ProviderListenable;
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:matinee/api/matinee_api.dart';
@@ -309,6 +309,39 @@ final class Harness {
       );
     } finally {
       subscription.close();
+    }
+  }
+
+  /// Waits until [provider] holds a value [test] likes, from what it
+  /// notifies rather than from how long it takes. The timeout only ends a
+  /// test that would hang.
+  Future<T> untilValue<T>(
+    ProviderListenable<T> provider,
+    bool Function(T value) test,
+  ) async {
+    final done = Completer<T>();
+    final subscription = container.listen<T>(provider, (_, next) {
+      if (!done.isCompleted && test(next)) done.complete(next);
+    }, fireImmediately: true);
+    try {
+      return await done.future.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => throw StateError('stuck at ${subscription.read()}'),
+      );
+    } finally {
+      subscription.close();
+    }
+  }
+
+  /// Waits until the fake server has had a request [test] likes, a turn of
+  /// the event loop at a time. The timeout only ends a test that would hang.
+  Future<void> untilRequests(bool Function(List<http.Request>) test) async {
+    final stop = DateTime.now().add(const Duration(seconds: 5));
+    while (!test(backend.requests)) {
+      if (DateTime.now().isAfter(stop)) {
+        throw StateError('never had the request');
+      }
+      await Future<void>.delayed(Duration.zero);
     }
   }
 

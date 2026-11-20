@@ -204,6 +204,7 @@ void main() {
     test('stops polling when the listener cancels', () async {
       final grant = DeviceGrant([pending, pending, pending, pending]);
       final gate = Completer<void>();
+      final third = Completer<void>();
       var waits = 0;
       final events = <DeviceCodeEvent>[];
       final subscription = deviceCodeSignIn(
@@ -211,11 +212,14 @@ void main() {
         device,
         renewExpired: false,
         delay: (_) async {
-          if (++waits == 3) await gate.future;
+          if (++waits == 3) {
+            third.complete();
+            await gate.future;
+          }
         },
       ).listen(events.add);
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await third.future;
       final cancelled = subscription.cancel();
       gate.complete();
       await cancelled;
