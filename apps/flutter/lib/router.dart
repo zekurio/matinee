@@ -450,9 +450,7 @@ bool get _hasPlayerLab =>
 List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 
 /// The pages over the tabs, by path pattern, until each has its screen.
-const _pages = [
-  ('/downloads/show/:titleId', 'Show downloads'),
-];
+const _pages = [('/downloads/show/:titleId', 'Show downloads')];
 
 GoRoute _pending(
   String path,

@@ -26,7 +26,6 @@ class MatineeTextField extends StatefulWidget {
     this.autofillHints,
     this.inputFormatters,
     this.textCapitalization = TextCapitalization.none,
-    this.autocorrect = true,
     this.onChanged,
     this.onSubmitted,
   });
@@ -42,7 +41,8 @@ class MatineeTextField extends StatefulWidget {
   final bool autofocus;
   final bool obscureText;
 
-  /// Off for what isn't words, as an address, a path, or a claim's name.
+  /// Off for what isn't words, which the keyboard shouldn't change: an
+  /// address, a path, a claim's name, or a code.
   final bool autocorrect;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
@@ -51,9 +51,6 @@ class MatineeTextField extends StatefulWidget {
   /// What the field lets in, as only digits for a year.
   final List<TextInputFormatter>? inputFormatters;
   final TextCapitalization textCapitalization;
-
-  /// Off for codes, which the keyboard shouldn't change.
-  final bool autocorrect;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
 
@@ -145,8 +142,6 @@ class _MatineeTextFieldState extends State<MatineeTextField> {
                                 autofillHints: widget.autofillHints,
                                 inputFormatters: widget.inputFormatters,
                                 textCapitalization: widget.textCapitalization,
-                                autocorrect: widget.autocorrect,
-                                enableSuggestions: widget.autocorrect,
                                 onChanged: widget.onChanged,
                                 onSubmitted: widget.onSubmitted,
                                 style: textStyle,

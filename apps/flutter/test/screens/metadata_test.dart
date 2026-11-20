@@ -32,6 +32,7 @@ final class RecordedToasts extends ToastState {
     String? actionLabel,
     String? closeLabel,
     ToastDuration? duration,
+    Duration? within,
   }) {
     shown.add((message, description));
     return Future.value(ToastResult.dismissed);
