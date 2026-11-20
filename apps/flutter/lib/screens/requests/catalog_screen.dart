@@ -123,6 +123,7 @@ class _CatalogPageState extends ConsumerState<_CatalogPage> {
         first: availability.asks,
         defaultFuture: detail.defaultScope?.future ?? false,
         libraryId: destination?.id,
+        showPoster: detail.poster,
         only: only,
       ),
     );

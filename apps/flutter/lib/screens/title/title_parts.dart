@@ -1295,6 +1295,7 @@ class SeasonsRail extends StatelessWidget {
             first: gaps.first,
             defaultFuture: false,
             libraryId: gaps.libraryId,
+            showPoster: title.images.poster,
             only: season.number,
           ),
         );

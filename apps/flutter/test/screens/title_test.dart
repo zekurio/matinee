@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/l10n/app_localizations_en.dart';
+import 'package:matinee/media/artwork.dart' show ArtSource, Picture;
 import 'package:matinee/media/format.dart';
 import 'package:matinee/media/watched_at.dart';
 import 'package:matinee/screens/home/home_screen.dart';
@@ -475,9 +476,21 @@ void main() {
     expect(frames.where((frame) => frame.dashed), hasLength(1));
     expect(frames.where((frame) => !frame.dashed), isNotEmpty);
     // A tap still asks for it, through the request sheet.
+    int showPosters() => tester
+        .widgetList<Picture>(find.byType(Picture))
+        .where(
+          (picture) => picture.sources.any(
+            (source) => source is ArtSource && source.art.id == 'po-s1',
+          ),
+        )
+        .length;
+    final before = showPosters();
     await tester.tap(find.bySemanticsLabel(RegExp('^Season 3, ')));
     await tester.pumpAndSettle();
     expect(find.text('New seasons as they air'), findsOneWidget);
+    // Its row in the sheet has no poster of its own, so it takes the
+    // show's, as its card does.
+    expect(showPosters(), before + 1);
   });
 
   testWidgets("a season's Play resumes its episode in progress", (

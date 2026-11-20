@@ -34,6 +34,7 @@ Future<void> showRequestSheet(
   required bool first,
   required bool defaultFuture,
   required String? libraryId,
+  Artwork? showPoster,
   int? only,
 }) {
   final l = AppLocalizations.of(context);
@@ -47,6 +48,7 @@ Future<void> showRequestSheet(
       first: first,
       defaultFuture: defaultFuture,
       libraryId: libraryId,
+      showPoster: showPoster,
       only: only,
     ),
   );
@@ -60,6 +62,7 @@ class _RequestSheet extends ConsumerStatefulWidget {
     required this.first,
     required this.defaultFuture,
     required this.libraryId,
+    required this.showPoster,
     required this.only,
   });
 
@@ -69,6 +72,9 @@ class _RequestSheet extends ConsumerStatefulWidget {
   final bool first;
   final bool defaultFuture;
   final String? libraryId;
+
+  /// What a season without a poster of its own shows, as its card does.
+  final Artwork? showPoster;
   final int? only;
 
   @override
@@ -146,6 +152,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
                     key: season.number == widget.only ? _opened : null,
                     show: title,
                     season: season,
+                    showPoster: widget.showPoster,
                     checked: _picked.contains(season.number),
                     onToggle: () => setState(
                       () => _picked = _picked.contains(season.number)
@@ -233,12 +240,14 @@ class _SeasonRow extends StatelessWidget {
     super.key,
     required this.show,
     required this.season,
+    required this.showPoster,
     required this.checked,
     required this.onToggle,
   });
 
   final CatalogRef show;
   final CatalogSeason season;
+  final Artwork? showPoster;
   final bool checked;
   final VoidCallback onToggle;
 
@@ -255,7 +264,7 @@ class _SeasonRow extends StatelessWidget {
         : word == null
         ? l.webAskChooserUnavailable
         : stateText(word, l);
-    final poster = season.poster;
+    final poster = season.poster ?? showPoster;
     return PressIndication(
       onPressed: open ? onToggle : null,
       button: false,
