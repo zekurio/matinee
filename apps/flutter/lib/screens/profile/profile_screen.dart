@@ -15,7 +15,10 @@ import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
 import '../requests/asked_rail.dart';
+import '../requests/discover.dart' show QueueList;
+import '../requests/request_words.dart' show formatCount;
 import '../requests/requests_data.dart' show profileAskedProvider;
+import '../requests/requests_hub.dart' show requestsProvider;
 import '../settings/settings_rows.dart';
 import '../sign_in/server_switcher.dart';
 import 'favorite_cards.dart';
@@ -111,6 +114,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (loaded == null) {
       return [
         header,
+        if (user.isAdmin) const _Requests(),
         if (profile.hasError && !profile.isLoading)
           FailureState(
             title: l.profileLoadFailed,
@@ -131,6 +135,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final asked = ref.watch(profileAskedProvider).value?.items ?? const [];
     return [
       header,
+      if (user.isAdmin) const _Requests(),
       _Favorites(favorites: loaded.favorites ?? const []),
       if (asked.isNotEmpty) AskedRail(items: asked, fresh: false),
       _statistics(context, user),
@@ -429,6 +434,32 @@ class _RecentRail extends StatelessWidget {
       itemHeight: size.height,
       itemCount: entries.length,
       itemBuilder: (context, index) => EpisodeCard(item: entries[index].item),
+    );
+  }
+}
+
+/// An admin's way to the requests, with how many need them, as the
+/// Kotlin app's inbox beside Settings on the profile.
+class _Requests extends ConsumerWidget {
+  const _Requests();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final needsYou = ref.watch(
+      requestsProvider.select((state) => state.needsYou),
+    );
+    return _Narrow(
+      child: Panel(
+        rows: [
+          LinkRow(
+            icon: Lucide.inbox,
+            title: l.webRequestsTitle,
+            value: needsYou > 0 ? formatCount(needsYou, l) : null,
+            onPressed: () => context.push(Routes.requests(QueueList.waiting)),
+          ),
+        ],
+      ),
     );
   }
 }

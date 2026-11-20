@@ -249,6 +249,25 @@ void main() {
     expect(find.bySemanticsLabel(RegExp('On its way')), findsOneWidget);
   });
 
+  testWidgets("an admin's profile opens the requests", (tester) async {
+    final admin = User.fromJson({...userJson('ada'), 'role': 'admin'});
+    await pumpScreen(
+      tester,
+      const ProfileScreen(),
+      client: _backend().client,
+      auth: SignedIn('$server', admin),
+      overrides: _servers,
+    );
+    // Under the person, where the Kotlin app's inbox sat beside Settings.
+    expect(
+      tester.getTopLeft(find.text('Requests')).dy,
+      lessThan(tester.getTopLeft(find.text('Favorites')).dy),
+    );
+    await tester.tap(find.text('Requests'));
+    await tester.pumpAndSettle();
+    expect(find.text('/requests/waiting'), findsOneWidget);
+  });
+
   testWidgets('with nothing asked for there is no row', (tester) async {
     final backend = _backend()
       ..answers['/api/v1/requests/mine'] = {
@@ -267,6 +286,8 @@ void main() {
       scrollable: _list(),
     );
     expect(find.text('My requests'), findsNothing);
+    // Nor the admin's way to the requests.
+    expect(find.text('Requests'), findsNothing);
   });
 
   testWidgets('a long press on a favorite season opens its menu', (

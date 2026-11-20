@@ -444,7 +444,9 @@ catalog's browse.
 
 `lib/screens/profile` is the fifth tab, the Kotlin app's profile: the
 account's picture (`Avatar` in `lib/media`, which the tab bar shows too),
-name, and since when it's here; favorites, whose heading opens
+name, and since when it's here; for an admin, Requests with how many
+need them, opening the waiting list, as the Kotlin app's inbox beside
+Settings; favorites, whose heading opens
 `Routes.favorites`; "My requests", the latest of everything the person
 asked for, each card following its title live, whose heading opens
 `Routes.requests()` (`AskedRail` in `lib/screens/requests`, which Home
