@@ -216,14 +216,10 @@ class _Results extends ConsumerWidget {
             child: Rail(
               title: l.searchSectionCast,
               itemWidth: personWidth,
-              itemHeight: CardMetrics.height(
-                personWidth,
-                CardMetrics.poster,
-                scaler,
-              ),
+              itemHeight: PersonCard.height(personWidth, scaler),
               itemCount: results.people.length,
               itemBuilder: (context, index) =>
-                  _PersonCard(person: results.people[index]),
+                  _Person(person: results.people[index]),
             ),
           ),
           gap,
@@ -293,21 +289,23 @@ class _GroupHeading extends StatelessWidget {
   }
 }
 
-/// Someone in the cast or crew of what matched, as a poster of their photo,
-/// opening their page.
-class _PersonCard extends StatelessWidget {
-  const _PersonCard({required this.person});
+/// Someone in the cast or crew of what matched, as the cast's round photo
+/// on a title's page and the Kotlin app's search have them, opening their
+/// page.
+class _Person extends StatelessWidget {
+  const _Person({required this.person});
 
   final PersonSummary person;
 
   @override
   Widget build(BuildContext context) {
     final photo = person.photo;
-    return PosterCard(
+    return PersonCard(
       name: person.name,
-      detail: creditKind(person.kind, AppLocalizations.of(context)),
-      toneKey: person.name,
-      art: photo == null ? null : Picture([ArtSource(photo)]),
+      role: creditKind(person.kind, AppLocalizations.of(context)),
+      photo: photo == null
+          ? null
+          : Picture([ArtSource(photo, largest: ArtworkSize.small)]),
       onPressed: () => context.push(Routes.person(person.name)),
     );
   }

@@ -67,6 +67,8 @@ void main() {
     expect(find.text('Arrival'), findsWidgets);
     expect(find.text('Cast & crew'), findsOneWidget);
     expect(find.text('Director'), findsOneWidget);
+    // People are the round cards of a title's cast.
+    expect(find.byType(PersonCard), findsOneWidget);
     await tester.tap(find.text('Arrival').first);
     await tester.pumpAndSettle();
     expect(find.text('/title/m1'), findsOneWidget);
