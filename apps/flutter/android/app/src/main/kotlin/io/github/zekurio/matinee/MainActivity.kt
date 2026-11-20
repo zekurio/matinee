@@ -21,6 +21,8 @@ import io.github.zekurio.matinee.platform.DeviceFacts
 import io.github.zekurio.matinee.platform.DisplayNameKind
 import io.github.zekurio.matinee.player.PlayerApi
 import io.github.zekurio.matinee.player.PlayerBridge
+import io.github.zekurio.matinee.player.system.PlayerSystem
+import io.github.zekurio.matinee.player.system.PlayerSystemApi
 import io.github.zekurio.matinee.scanner.ScannerApi
 import io.github.zekurio.matinee.scanner.ScannerBridge
 import io.github.zekurio.matinee.system.SystemApi
@@ -62,6 +64,7 @@ class MainActivity : FlutterActivity() {
         val offline = DownloadsBridge(this, messenger)
         downloads = offline
         DownloadsHostApi.setUp(messenger, offline)
+        PlayerSystemApi.setUp(messenger, PlayerSystem(this))
     }
 
     override fun onStart() {
@@ -85,6 +88,7 @@ class MainActivity : FlutterActivity() {
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         PlayerApi.setUp(messenger, null)
+        PlayerSystemApi.setUp(messenger, null)
         DeviceApi.setUp(messenger, null)
         SystemApi.setUp(messenger, null)
         ScannerApi.setUp(messenger, null)

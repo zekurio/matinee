@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -146,6 +147,8 @@ void main() {
     expect(find.bySemanticsLabel('Pause'), findsNothing);
     expect(find.byType(PlayerDim), findsNothing);
     await tester.tapAt(const Offset(22, 140));
+    // A tap waits to see whether a second makes it a double tap.
+    await tester.pump(kDoubleTapTimeout);
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Pause'), findsOneWidget);
     expect(find.byType(PlayerDim), findsOneWidget);

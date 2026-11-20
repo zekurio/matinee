@@ -43,6 +43,7 @@ class PlayerControls extends StatelessWidget {
     required this.menus,
     required this.transport,
     required this.seekBar,
+    this.moreLabel = 'More',
   });
 
   final String title;
@@ -52,8 +53,11 @@ class PlayerControls extends StatelessWidget {
   final String backLabel;
   final VoidCallback onBack;
 
-  /// The buttons at the end of the top bar, from [PlayerMenuButton].
-  final List<Widget> menus;
+  /// The buttons at the end of the top bar. Those that don't fit beside
+  /// the back button and some of the title go in a menu behind the last
+  /// place, which [moreLabel] names.
+  final List<PlayerMenuButton> menus;
+  final String moreLabel;
   final Widget transport;
   final Widget seekBar;
 
@@ -107,7 +111,7 @@ class PlayerControls extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ...menus,
+                  _Menus(menus: menus, moreLabel: moreLabel),
                 ],
               ),
             ),
@@ -123,6 +127,57 @@ class PlayerControls extends StatelessWidget {
               child: seekBar,
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The top bar's buttons, as many as leave the title [_titleRoom], and the
+/// rest behind a last button that opens them as a menu.
+class _Menus extends StatelessWidget {
+  const _Menus({required this.menus, required this.moreLabel});
+
+  final List<PlayerMenuButton> menus;
+  final String moreLabel;
+
+  static const _button = 52.0;
+
+  /// The least of the title that stays beside the buttons.
+  static const _titleRoom = 64.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final padding = MediaQuery.paddingOf(context);
+    // The bar's padding, the back button, and the gaps either side of the title.
+    final room = width - padding.horizontal - 24 - _button - 16 - _titleRoom;
+    final fits = math.max(1, (room / _button).floor());
+    if (menus.length <= fits) {
+      return Row(mainAxisSize: MainAxisSize.min, children: menus);
+    }
+    final shown = menus.take(fits - 1).toList();
+    final rest = menus.skip(fits - 1).toList();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...shown,
+        Menu(
+          trigger: (context, toggle, open, focus) => PlayerMenuButton(
+            icon: Lucide.ellipsis,
+            label: moreLabel,
+            onPressed: toggle,
+          ),
+          children: [
+            for (final menu in rest)
+              MenuItem(
+                label: menu.state == null
+                    ? menu.label
+                    : '${menu.label}: ${menu.state}',
+                icon: menu.icon,
+                onPressed: menu.onPressed,
+              ),
+          ],
         ),
       ],
     );

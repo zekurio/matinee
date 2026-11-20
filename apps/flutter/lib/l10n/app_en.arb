@@ -2296,6 +2296,10 @@
   "@playerMenuSubtitles": {
     "description": "strings.xml"
   },
+  "playerMore": "More",
+  "@playerMore": {
+    "description": "The top bar's button that holds the buttons that don't fit beside the title."
+  },
   "playerNextEpisode": "Next episode",
   "@playerNextEpisode": {
     "description": "strings.xml"

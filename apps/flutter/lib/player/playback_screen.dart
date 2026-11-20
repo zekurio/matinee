@@ -24,6 +24,8 @@ import 'player_overlays.dart';
 import 'player_panel.dart';
 import 'player_preferences.dart';
 import 'seek_bar.dart';
+import 'swipe.dart';
+import 'video_gestures.dart';
 import 'video_view.dart';
 
 final playbackPlayerFactoryProvider =
@@ -36,6 +38,11 @@ final playbackPlayerFactoryProvider =
     );
 final playbackFullscreenProvider = Provider<Future<void> Function(int, bool)>(
   (ref) => wire.PlayerApi().setFullscreen,
+);
+
+/// The brightness and volume the swipes on the video set.
+final playbackLevelsProvider = Provider<DeviceLevels>(
+  (ref) => PlatformLevels(),
 );
 
 class PlaybackScreen extends ConsumerStatefulWidget {
@@ -235,10 +242,6 @@ enum _PlayerMenu { audio, subtitles, speed, quality }
 /// The speeds the speed menu offers, from half to double.
 const _speeds = [.5, .75, 1.0, 1.25, 1.5, 2.0];
 
-/// How far two fingers spread, or pinch by its inverse, before the video
-/// switches between fitting and filling the screen.
-const _pinchFill = 1.15;
-
 /// The touch controls, laid out in `player_controls.dart` as the Kotlin
 /// phone player's. A menu stays open in the side panel while the video
 /// continues.
@@ -281,7 +284,17 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   _PlayerMenu? _menu;
   double _rate = 1;
   bool _fill = false;
-  bool _pinched = false;
+
+  /// A finger holds the video, so it plays at [holdSpeed] for now.
+  bool _holding = false;
+
+  /// Locked, a touch on the screen only shows the unlock button.
+  bool _locked = false;
+
+  /// Counts keys and touches while locked, each showing the unlock button again.
+  final int _lockTouched = 0;
+  final _gesture = ValueNotifier<GestureInfo?>(null);
+  late final DeviceLevels _levels;
 
   /// Counts pinches that switched the fit, so the note shows again for each.
   int _fitNotes = 0;
@@ -297,6 +310,15 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     _cancelledNext = !_autoplay;
     _fill = prefs.fillScreen;
     if (_fill) unawaited(_applyFit());
+    _levels = ref.read(playbackLevelsProvider);
+    // The brightness the last swipe left, when settings keep it.
+    final saved = prefs.brightness;
+    if (prefs.swipeLevels &&
+        prefs.rememberBrightness &&
+        saved >= 0 &&
+        saved <= 1) {
+      unawaited(_levels.setBrightness(saved).catchError((Object _) {}));
+    }
     _session.addListener(_updated);
     _playing = _session.playback.status.playing;
     _phase = _session.playback.phase;
@@ -308,6 +330,9 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     _session.removeListener(_updated);
     _hide?.cancel();
     _advance?.cancel();
+    _gesture.dispose();
+    // The window's own brightness was the player's; the system's comes back.
+    unawaited(_levels.setBrightness(null).catchError((Object _) {}));
     super.dispose();
   }
 
@@ -370,6 +395,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         !_playing ||
         _sheet ||
         _scrubbing != null ||
+        _gesture.value != null ||
         WidgetsBinding
             .instance
             .platformDispatcher
@@ -430,15 +456,8 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     unawaited(_applyRate());
   }
 
-  void _pinch(ScaleUpdateDetails details) {
-    if (details.pointerCount < 2 || _pinched) return;
-    final want = details.scale > _pinchFill
-        ? true
-        : details.scale < 1 / _pinchFill
-        ? false
-        : null;
-    if (want == null || want == _fill) return;
-    _pinched = true;
+  void _pinch(bool want) {
+    if (want == _fill) return;
     setState(() {
       _fill = want;
       _fitNotes++;
@@ -451,6 +470,55 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
           .change((prefs) => prefs.copyWith(fillScreen: want))
           .catchError((Object _) {}),
     );
+  }
+
+  /// Plays at [holdSpeed] while a finger holds the video, if it plays and
+  /// slower than that, and back to the picked speed as it lifts.
+  bool _hold(bool start) {
+    if (start) {
+      if (_holding || !_playing || _rate >= holdSpeed) return false;
+      setState(() => _holding = true);
+      unawaited(_session.player.setRate(holdSpeed).catchError((Object _) {}));
+      return true;
+    }
+    if (!_holding) return false;
+    if (mounted) setState(() => _holding = false);
+    unawaited(_applyRate());
+    return false;
+  }
+
+  void _gestureStarted(GestureKind kind) {
+    // A seek's note sits where the play button is.
+    if (kind == GestureKind.seek) setState(() => _visible = false);
+    _resetHide();
+  }
+
+  void _keepBrightness(double level) {
+    final prefs = ref.read(playerPrefsProvider).value;
+    if (prefs == null || !prefs.rememberBrightness) return;
+    unawaited(
+      ref
+          .read(playerPrefsProvider.notifier)
+          .change((prefs) => prefs.copyWith(brightness: level))
+          .catchError((Object _) {}),
+    );
+  }
+
+  void _lock() {
+    setState(() {
+      _locked = true;
+      _visible = false;
+      _menu = null;
+      _sheet = false;
+    });
+  }
+
+  void _unlock() {
+    setState(() {
+      _locked = false;
+      _visible = true;
+    });
+    _resetHide();
   }
 
   Future<void> _applyFit() => _session.player
@@ -468,12 +536,14 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         error == null &&
         (plan == null || _session.busy || buffering);
     final controls =
-        _visible || error != null || _session.ended || plan == null;
+        !_locked &&
+        (_visible || error != null || _session.ended || plan == null);
     final enabled =
         plan != null && error == null && !_session.busy && !_leaving;
     final captions =
         _session.captions?.at(_session.position) ?? const <TextSpan>[];
     final menu = _menu;
+    final prefs = ref.watch(playerPrefsProvider).value ?? const PlayerPrefs();
 
     return Stack(
       fit: StackFit.expand,
@@ -509,20 +579,41 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
               ),
             ),
           ),
-        // Taps show and hide the controls; spreading two fingers fills the
-        // screen, and pinching shows the video whole.
-        Semantics(
-          label: l.a11yPlayerVideo,
-          onTapHint: controls
+        // Taps show and hide the controls, a double tap on either side
+        // skips, two fingers fill the screen or show it whole, and swipes
+        // set the brightness, the volume, and the time (video_gestures.dart).
+        VideoGestures(
+          enabled: error == null && menu == null && !_locked,
+          prefs: prefs,
+          levels: _levels,
+          duration: () => _session.duration,
+          position: () => _session.position,
+          playing: () => _playing,
+          notes: _gesture,
+          semanticsLabel: l.a11yPlayerVideo,
+          semanticsHint: controls
               ? l.a11yPlayerHideControls
               : l.a11yPlayerShowControls,
           onTap: _toggleControls,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _toggleControls,
-            onScaleStart: (_) => _pinched = false,
-            onScaleUpdate: _pinch,
-          ),
+          onDoubleTap: (ahead) {
+            final step = ahead ? _session.skipForward : _session.skipBack;
+            if (step != null && enabled) {
+              unawaited(_session.skip(ahead ? step : -step));
+            }
+            _resetHide();
+          },
+          onPinch: _pinch,
+          onSeek: (seconds) {
+            if (enabled) unawaited(_session.seek(seconds));
+          },
+          onHold: _hold,
+          onStart: _gestureStarted,
+          onBrightness: _keepBrightness,
+        ),
+        GestureNotes(
+          notes: _gesture,
+          duration: _session.duration,
+          holding: _holding,
         ),
         TimedNote(
           token: _fitNotes == 0 ? null : _fitNotes,
@@ -565,7 +656,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         if (plan != null)
           PlayerFade(
             visible: controls && error == null,
-            child: _controls(l, plan, enabled, loading),
+            child: _controls(l, plan, enabled, loading, prefs),
           ),
         if (error != null)
           // It takes the taps too, so none reaches the video under it.
@@ -598,6 +689,14 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
                 if (_session.next case final item?) _upNext(l, item, enabled),
             ],
           ),
+        // Over everything else, so no touch reaches what's under it. It
+        // steps aside while an error shows, so its buttons stay in reach.
+        if (_locked && error == null)
+          PlayerLocked(
+            reveals: _lockTouched,
+            unlockLabel: l.playerUnlock,
+            onUnlock: _unlock,
+          ),
         PlayerPanel(
           entries: menu == null || plan == null
               ? null
@@ -614,6 +713,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     PlaybackStart plan,
     bool enabled,
     bool loading,
+    PlayerPrefs prefs,
   ) {
     final item = plan.item;
     final names = itemNames(item, l);
@@ -650,19 +750,22 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
       subtitle: code == null ? null : '$code · ${names.showName}',
       backLabel: l.playerBack,
       onBack: widget.back,
+      moreLabel: l.playerMore,
       menus: [
-        PlayerMenuButton(
-          icon: Lucide.audioLines,
-          label: l.playerMenuAudio,
-          onPressed: enabled ? () => _openMenu(_PlayerMenu.audio) : null,
-        ),
-        PlayerMenuButton(
-          icon: Lucide.captions,
-          label: l.playerMenuSubtitles,
-          active: subtitle != null,
-          state: subtitle?.label ?? l.playerSubtitlesOff,
-          onPressed: enabled ? () => _openMenu(_PlayerMenu.subtitles) : null,
-        ),
+        if (prefs.audioButton)
+          PlayerMenuButton(
+            icon: Lucide.audioLines,
+            label: l.playerMenuAudio,
+            onPressed: enabled ? () => _openMenu(_PlayerMenu.audio) : null,
+          ),
+        if (prefs.subtitlesButton)
+          PlayerMenuButton(
+            icon: Lucide.captions,
+            label: l.playerMenuSubtitles,
+            active: subtitle != null,
+            state: subtitle?.label ?? l.playerSubtitlesOff,
+            onPressed: enabled ? () => _openMenu(_PlayerMenu.subtitles) : null,
+          ),
         PlayerMenuButton(
           icon: Lucide.gauge,
           label: l.playerSpeed,
@@ -674,6 +777,12 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
             label: l.playerQuality,
             onPressed: enabled ? () => _openMenu(_PlayerMenu.quality) : null,
           ),
+        if (prefs.lockButton)
+          PlayerMenuButton(
+            icon: Lucide.lock,
+            label: l.playerLock,
+            onPressed: _lock,
+          ),
       ],
       transport: PlayerTransport(
         playing: _playing,
@@ -681,7 +790,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
         playLabel: l.playerPlay,
         pauseLabel: l.playerPause,
         onTogglePlay: _action(_session.togglePlay, enabled: enabled),
-        back: switch (_session.skipBack) {
+        back: switch (prefs.skipButtons ? _session.skipBack : null) {
           final seconds? => (
             seconds: seconds,
             label: l.playerSkipBack(seconds),
@@ -689,7 +798,7 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
           ),
           null => null,
         },
-        ahead: switch (_session.skipForward) {
+        ahead: switch (prefs.skipButtons ? _session.skipForward : null) {
           final seconds? => (
             seconds: seconds,
             label: l.playerSkipForward(seconds),

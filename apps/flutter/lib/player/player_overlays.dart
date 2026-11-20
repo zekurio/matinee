@@ -335,3 +335,111 @@ class PlayerFailure extends StatelessWidget {
     ),
   );
 }
+
+/// The screen while the controls are locked, as the Kotlin phone player's
+/// `LockedScreen`: the unlock button shows in the corner where the lock
+/// button was, for a few seconds, and tapping it unlocks. Once it's gone, a
+/// touch anywhere brings it back, and so does each change of [reveals].
+/// With a screen reader on, it stays.
+class PlayerLocked extends StatefulWidget {
+  const PlayerLocked({
+    super.key,
+    required this.reveals,
+    required this.unlockLabel,
+    required this.onUnlock,
+  });
+
+  final int reveals;
+  final String unlockLabel;
+  final VoidCallback onUnlock;
+
+  static const hideAfter = Duration(milliseconds: 3500);
+
+  @override
+  State<PlayerLocked> createState() => _PlayerLockedState();
+}
+
+class _PlayerLockedState extends State<PlayerLocked> {
+  bool _shown = true;
+  Timer? _hide;
+
+  /// The touch under way began with the button hidden, so it shows the
+  /// button and doesn't also press it.
+  bool _revealing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _show();
+  }
+
+  @override
+  void didUpdateWidget(PlayerLocked old) {
+    super.didUpdateWidget(old);
+    if (old.reveals != widget.reveals) _show();
+  }
+
+  @override
+  void dispose() {
+    _hide?.cancel();
+    super.dispose();
+  }
+
+  void _show() {
+    _hide?.cancel();
+    if (!_shown) setState(() => _shown = true);
+    final keep = WidgetsBinding
+        .instance
+        .platformDispatcher
+        .accessibilityFeatures
+        .accessibleNavigation;
+    if (keep) return;
+    _hide = Timer(PlayerLocked.hideAfter, () {
+      if (mounted) setState(() => _shown = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    behavior: HitTestBehavior.opaque,
+    onPointerDown: (_) {
+      _revealing = !_shown;
+      _show();
+    },
+    onPointerUp: (_) => Timer.run(() => _revealing = false),
+    child: Stack(
+      children: [
+        // The same size and place as the lock button in the controls' top row.
+        Align(
+          alignment: AlignmentDirectional.topEnd,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: AnimatedOpacity(
+                opacity: _shown ? 1 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: RoundIconButton(
+                  icon: Lucide.lockOpen,
+                  label: widget.unlockLabel,
+                  size: 52,
+                  iconSize: 26,
+                  background: const Color(0x00000000),
+                  onPressed: () {
+                    // Without a touch, as from a switch or a keyboard, a press
+                    // on the hidden button shows it.
+                    if (_revealing) return;
+                    if (_shown) {
+                      widget.onUnlock();
+                    } else {
+                      _show();
+                    }
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
