@@ -63,7 +63,7 @@ type RequestActionsState = {
   /** Choose where a waiting request goes; null keeps where it is. */
   move: (id: string, libraryId: string | null) => void
   /** Ids of actions sent, hidden until the next queue leaves them out. */
-  settled: Map<string, ReturnType<typeof setTimeout>>
+  settled: Map<string, ReturnType<typeof setTimeout> | undefined>
   /** Collapse the rows now, and send the action once Undo's time is up. */
   hold: (action: QueueAction) => void
   /** Take back the latest held action, or the one with `key`. */
@@ -197,9 +197,15 @@ export const useRequestActionsStore = create<RequestActionsState>()((
     const entry = release(key)
     if (!entry) return
     toast.dismiss(entry.toastId)
-    settle(entry.action.ids)
+    const pending = new Map(get().settled)
+    for (const id of entry.action.ids) {
+      clearTimeout(pending.get(id))
+      pending.set(id, undefined)
+    }
+    set({ settled: pending })
     send(entry.action)
       .then(() => {
+        settle(entry.action.ids)
         if (entry.action.kind === "add" && entry.action.moves.size) {
           const moves = new Map(get().moves)
           for (const id of entry.action.moves.keys()) moves.delete(id)
