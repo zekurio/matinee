@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/widgets.dart';
 
@@ -162,12 +164,16 @@ class _TvSidePanelState extends State<TvSidePanel> {
     final loading = widget.loading?.call(context) ?? false;
     final rows = loading ? const <Widget>[] : widget.builder(context);
     if (!loading) {
-      // Nothing in the panel asked for focus: its first row takes it.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _scope.focusedChild != null) return;
-        final first = _scope.traversalDescendants.firstOrNull;
-        first?.requestFocus();
-      });
+      // Nothing in the panel asked for focus: its first row takes it. A
+      // row's autofocus lands in a microtask queued during the build, after
+      // this frame's callbacks, so this waits behind it.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => scheduleMicrotask(() {
+          if (!mounted || _scope.focusedChild != null) return;
+          final first = _scope.traversalDescendants.firstOrNull;
+          first?.requestFocus();
+        }),
+      );
     }
     return Align(
       alignment: AlignmentDirectional.centerEnd,
