@@ -312,26 +312,29 @@ class OptionRow extends StatelessWidget {
       onPressed: onPressed,
       label: label,
       shape: KitRadius.control,
+      // The label above says it, once.
       builder: (context, state) => ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 48),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: KitText.base.style(
-                  color: state == PressState.pressed
-                      ? colors.mutedForeground
-                      : colors.foreground,
+        child: ExcludeSemantics(
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: KitText.base.style(
+                    color: state == PressState.pressed
+                        ? colors.mutedForeground
+                        : colors.foreground,
+                  ),
                 ),
               ),
-            ),
-            KitIcon(
-              Lucide.chevronRight,
-              size: 18,
-              color: colors.mutedForeground,
-            ),
-          ],
+              KitIcon(
+                Lucide.chevronRight,
+                size: 18,
+                color: colors.mutedForeground,
+              ),
+            ],
+          ),
         ),
       ),
     );
