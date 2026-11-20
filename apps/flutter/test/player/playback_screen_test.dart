@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/app.dart';
 import 'package:matinee/core/session.dart';
+import 'package:matinee/downloads/downloads.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/media/actions.dart' show mediaChangesProvider;
 import 'package:matinee/platform/player.g.dart' as wire;
@@ -20,6 +21,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import '../core/fakes.dart';
+import '../downloads/fake_downloads.dart';
 import 'playback_fakes.dart';
 
 Future<void> tap(WidgetTester tester, String label) async {
@@ -85,6 +87,8 @@ void main() {
           'Authorization': 'Bearer test',
         }),
         sessionHttpProvider.overrideWithValue(backend.client),
+        // No downloads, so the route asks the server.
+        downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
         playbackPlayerFactoryProvider.overrideWithValue((engine) {
           engines.add(engine);
           final player = FakePlayer();
@@ -229,6 +233,8 @@ void main() {
         apiProvider.overrideWithValue(backend.api),
         playerHeadersProvider.overrideWithValue(const {}),
         sessionHttpProvider.overrideWithValue(backend.client),
+        // No downloads, so the route asks the server.
+        downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
         playbackCodecsProvider.overrideWith(
           (ref) => wire.CodecCapabilitiesMessage(
             audio: ['aac'],

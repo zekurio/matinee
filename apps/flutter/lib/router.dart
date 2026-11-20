@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'api/matinee_api.dart' show ImageTarget, TitleKind;
 import 'core/device.dart';
 import 'core/session.dart';
-import 'player/playback_screen.dart';
+import 'player/offline_playback_screen.dart';
 import 'player/player_lab.dart';
 import 'screens/downloads/downloads_screen.dart';
 import 'screens/home/home_screen.dart';
@@ -440,8 +440,9 @@ List<RouteBase> _handsetRoutes() => [
       parentNavigatorKey: _rootKey,
       pageBuilder: (context, state) => NoTransitionPage<void>(
         key: state.pageKey,
-        child: PlaybackScreen(
-          itemId: state.pathParameters['id']!,
+        // A finished download plays from the device; the rest from the server.
+        child: PlayRoute(
+          id: state.pathParameters['id']!,
           startAt: switch (state.extra) {
             final double value => value,
             _ => null,
