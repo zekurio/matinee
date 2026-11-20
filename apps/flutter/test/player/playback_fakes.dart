@@ -311,13 +311,16 @@ class FakePlayer implements Player {
     double seconds, {
     bool playing = false,
     bool serverUnavailable = false,
+    double? buffered,
   }) {
     state = PlaybackState(
       status: (phase: phase, playing: playing, message: null),
       timeline: (
         position: Duration(milliseconds: (seconds * 1000).round()),
         duration: const Duration(seconds: 120),
-        buffered: null,
+        buffered: buffered == null
+            ? null
+            : Duration(milliseconds: (buffered * 1000).round()),
       ),
       serverUnavailable: serverUnavailable,
     );

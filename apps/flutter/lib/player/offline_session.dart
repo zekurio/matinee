@@ -139,11 +139,10 @@ class OfflinePlaybackSession extends ChangeNotifier
             : _seconds(playback.timeline.duration!)),
   );
 
+  /// None: the whole file is on the device, so a band for how much has
+  /// arrived would only show how far ahead the engine has read.
   @override
-  double? get buffered => switch (playback.timeline.buffered) {
-    final at? => _seconds(at),
-    null => null,
-  };
+  double? get buffered => null;
 
   @override
   bool get ended => playback.phase == PlaybackPhase.ended;
