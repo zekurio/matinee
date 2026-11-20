@@ -273,6 +273,44 @@ void main() {
     expect(find.text('Season 1'), findsNothing);
   });
 
+  testWidgets("a show's episodes show how far in, from the device", (
+    tester,
+  ) async {
+    // Watched as the server last said; and half way, played offline.
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.withData({
+          'matinee.pending.reports:$_server':
+              '{"e2":{"positionSeconds":1800,"durationSeconds":3600}}',
+        });
+    await _pump(
+      tester,
+      const DownloadsShowScreen(titleId: 's1'),
+      entries: [
+        for (final entry in _library())
+          if (entry.id == 'e1')
+            downloadEntry(
+              itemJson(
+                'e1',
+                title: _show,
+                season: 1,
+                episode: 1,
+                episodeTitle: 'Dulcinea',
+                completed: true,
+              ),
+              server: _server,
+            )
+          else
+            entry,
+      ],
+    );
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel(RegExp('Dulcinea.*, Watched')), findsOne);
+    expect(find.bySemanticsLabel(RegExp('Big Empty.*Watched')), findsNothing);
+    final bar = tester.widget<WatchProgressBar>(find.byType(WatchProgressBar));
+    expect(bar.progress, .5);
+    expect(find.byType(WatchedBadge), findsOneWidget);
+  });
+
   for (final (name, size, colors) in [
     ('downloads_phone_dark', const Size(412, 915), matineeDark),
     ('downloads_tablet_light', const Size(1280, 800), matineeLight),

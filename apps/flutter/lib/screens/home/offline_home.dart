@@ -31,6 +31,43 @@ final class Place {
   }
 }
 
+/// Where the person got to in each download, from what the device knows:
+/// a place the player kept offline for the server, else the place the
+/// server last sent with the file. Home offline and the downloads' rows
+/// read it.
+final class OfflinePlaces {
+  const OfflinePlaces([this.pending = const ServerPending()]);
+
+  /// The places kept for the downloads' server in use.
+  factory OfflinePlaces.watch(WidgetRef ref) {
+    final server = ref.watch(downloadsServerProvider);
+    return OfflinePlaces(
+      server == null
+          ? const ServerPending()
+          : ref.watch(pendingProgressProvider)[server] ?? const ServerPending(),
+    );
+  }
+
+  final ServerPending pending;
+
+  Place? place(OfflineItem entry) {
+    final duration = entry.item.durationSeconds;
+    if (pending.reports[entry.id] case final report?) {
+      return Place(report.positionSeconds, report.durationSeconds ?? duration);
+    }
+    if (entry.item.progress case final progress?) {
+      return Place(progress.positionSeconds, duration);
+    }
+    return null;
+  }
+
+  /// Watched as the server last said, or played nearly to the end offline.
+  bool watched(OfflineItem entry) =>
+      isWatched(entry.item) ||
+      (pending.reports.containsKey(entry.id) &&
+          (place(entry)?.ratio ?? 0) >= .9);
+}
+
 /// A downloaded show, its episodes in order.
 final class OfflineShow {
   const OfflineShow(this.title, this.episodes);
@@ -232,29 +269,9 @@ class OfflineHome extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final entries = ref.watch(shownDownloadsProvider).values;
-    final server = ref.watch(downloadsServerProvider);
-    final pending = server == null
-        ? const ServerPending()
-        : ref.watch(pendingProgressProvider)[server] ?? const ServerPending();
-    Place? place(OfflineItem entry) {
-      final duration = entry.item.durationSeconds;
-      if (pending.reports[entry.id] case final report?) {
-        return Place(
-          report.positionSeconds,
-          report.durationSeconds ?? duration,
-        );
-      }
-      if (entry.item.progress case final progress?) {
-        return Place(progress.positionSeconds, duration);
-      }
-      return null;
-    }
-
-    // Watched as the server last said, or played nearly to the end offline.
-    bool watched(OfflineItem entry) =>
-        isWatched(entry.item) ||
-        (pending.reports.containsKey(entry.id) &&
-            (place(entry)?.ratio ?? 0) >= .9);
+    final places = OfflinePlaces.watch(ref);
+    final place = places.place;
+    final watched = places.watched;
 
     final rows = offlineHomeRows(
       entries,

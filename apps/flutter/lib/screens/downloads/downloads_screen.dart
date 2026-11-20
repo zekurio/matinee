@@ -13,6 +13,7 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/format.dart';
 import '../../router.dart';
+import '../home/offline_home.dart' show OfflinePlaces;
 import '../shell/shell.dart';
 
 /// A downloaded show: its finished episodes by season.
@@ -532,10 +533,21 @@ const _thumbWidth = 112.0;
 
 /// A file's saved picture, or the title's tone without one.
 class _Thumb extends ConsumerWidget {
-  const _Thumb({required this.entry, required this.toneKey});
+  const _Thumb({
+    required this.entry,
+    required this.toneKey,
+    this.progress,
+    this.watchedLabel,
+  });
 
   final OfflineItem? entry;
   final String toneKey;
+
+  /// How far in the person is, 0 to 1, as a bar along the bottom.
+  final double? progress;
+
+  /// Set once it's watched: the check, in place of the bar.
+  final String? watchedLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -563,6 +575,20 @@ class _Thumb extends ConsumerWidget {
               cacheWidth: (_thumbWidth * MediaQuery.devicePixelRatioOf(context))
                   .round(),
               errorBuilder: (context, error, stack) => placeholder,
+            ),
+          if (progress case final progress?)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: WatchProgressBar(progress: progress, inset: 4),
+            ),
+          if (watchedLabel case final label?)
+            PositionedDirectional(
+              top: 4,
+              end: 4,
+              // The row says it already.
+              child: ExcludeSemantics(
+                child: WatchedBadge(label: label, size: 16),
+              ),
             ),
         ],
       ),
@@ -666,7 +692,7 @@ class _ShowRow extends StatelessWidget {
 }
 
 /// A file on the device: a tap plays it, the menu removes it.
-class _DoneRow extends StatelessWidget {
+class _DoneRow extends ConsumerWidget {
   const _DoneRow({
     super.key,
     required this.entry,
@@ -679,14 +705,23 @@ class _DoneRow extends StatelessWidget {
   final VoidCallback onMore;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final (primary, secondary) = names;
+    // How far in, from what the device knows, offline too.
+    final places = OfflinePlaces.watch(ref);
+    final watched = places.watched(entry);
+    final ratio = places.place(entry)?.ratio;
     return _Row(
-      label: secondary == null ? primary : '$primary, $secondary',
+      label: [primary, ?secondary, if (watched) l.mediaWatched].join(', '),
       onPressed: () => unawaited(context.push(Routes.play(entry.id))),
-      thumb: _Thumb(entry: entry, toneKey: entry.item.title?.name ?? primary),
+      thumb: _Thumb(
+        entry: entry,
+        toneKey: entry.item.title?.name ?? primary,
+        progress: watched || ratio == null || ratio <= 0 ? null : ratio,
+        watchedLabel: watched ? l.mediaWatched : null,
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
