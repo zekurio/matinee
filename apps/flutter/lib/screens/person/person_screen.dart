@@ -79,7 +79,6 @@ class _PersonScreenState extends ConsumerState<PersonScreen> {
 
   Widget _page(BuildContext context, Person person) {
     final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
     final catalog = person.catalog;
     return ListenableBuilder(
       listenable: _shown,
@@ -106,60 +105,35 @@ class _PersonScreenState extends ConsumerState<PersonScreen> {
                   padding: const EdgeInsets.only(top: 4, bottom: 20),
                   sliver: SliverToBoxAdapter(child: Overview(text: biography)),
                 ),
-              CardGrid(
-                columns: posterColumns,
-                aspectRatio: CardMetrics.poster,
-                itemCount: person.credits.length,
-                itemBuilder: (context, index) {
-                  final credit = person.credits[index];
-                  return TitleCard(
-                    title: credit.title,
-                    detail:
-                        credit.role ??
-                        credit.title.year?.toString() ??
-                        creditKindWord(credit.kind, l, 1),
-                  );
-                },
-              ),
+              for (final (index, kind) in creditKinds(person).indexed) ...[
+                _sectionHeading(
+                  title: creditSectionWord(kind, l),
+                  count: _credits(person, kind).length,
+                  top: index == 0 ? 0 : 32,
+                ),
+                CardGrid(
+                  columns: posterColumns,
+                  aspectRatio: CardMetrics.poster,
+                  itemCount: _credits(person, kind).length,
+                  itemBuilder: (context, index) {
+                    final credit = _credits(person, kind)[index];
+                    final detail = [
+                      ?credit.title.year?.toString(),
+                      ?credit.role,
+                    ].join(' · ');
+                    return TitleCard(
+                      title: credit.title,
+                      detail: detail.isEmpty ? null : detail,
+                    );
+                  },
+                ),
+              ],
               if (catalog.isNotEmpty) ...[
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                    CardMetrics.gutter,
-                    person.credits.isEmpty ? 0 : 32,
-                    CardMetrics.gutter,
-                    20,
-                  ),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 6,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          spacing: 10,
-                          children: [
-                            Flexible(
-                              child: SectionTitle(title: l.webCatalogNotHere),
-                            ),
-                            Text(
-                              l.browseTitleCount(catalog.length),
-                              style: KitText.sm.style(
-                                color: colors.mutedForeground,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (person.stale)
-                          Text(
-                            l.webDiscoverStale,
-                            style: KitText.sm.style(
-                              color: colors.mutedForeground,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                _sectionHeading(
+                  title: l.webCatalogNotHere,
+                  count: catalog.length,
+                  top: person.credits.isEmpty ? 0 : 32,
+                  note: person.stale ? l.webDiscoverStale : null,
                 ),
                 CardGrid(
                   columns: posterColumns,
@@ -181,6 +155,56 @@ class _PersonScreenState extends ConsumerState<PersonScreen> {
           ),
         );
       },
+    );
+  }
+
+  List<PersonCredit> _credits(Person person, String kind) => [
+    for (final credit in person.credits)
+      if (credit.kind == kind) credit,
+  ];
+
+  /// A section's heading, "Acting" or "Not here yet", with how many
+  /// titles it holds beside it, as the web's person page.
+  Widget _sectionHeading({
+    required String title,
+    required int count,
+    required double top,
+    String? note,
+  }) {
+    final l = AppLocalizations.of(context);
+    final colors = MatineeTheme.of(context);
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        CardMetrics.gutter,
+        top,
+        CardMetrics.gutter,
+        20,
+      ),
+      sliver: SliverToBoxAdapter(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 6,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              spacing: 10,
+              children: [
+                Flexible(child: SectionTitle(title: title)),
+                Text(
+                  l.browseTitleCount(count),
+                  style: KitText.sm.style(color: colors.mutedForeground),
+                ),
+              ],
+            ),
+            if (note != null)
+              Text(
+                note,
+                style: KitText.sm.style(color: colors.mutedForeground),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -326,3 +350,21 @@ String creditKindWord(String kind, AppLocalizations l, int count) =>
       CreditKind.writer => l.peopleCreditWriter(count),
       _ => l.peopleCreditActor(count),
     };
+
+/// The kinds of credit someone has here, what they're known for first,
+/// as the web orders its sections.
+List<String> creditKinds(Person person) {
+  final present = {for (final credit in person.credits) credit.kind};
+  return [
+    person.kind,
+    ...CreditKind.all.where((kind) => kind != person.kind),
+  ].where(present.contains).toList();
+}
+
+/// The heading over someone's titles of one kind of credit: "Acting".
+String creditSectionWord(String kind, AppLocalizations l) => switch (kind) {
+  CreditKind.creator => l.personSectionCreator,
+  CreditKind.director => l.personSectionDirector,
+  CreditKind.writer => l.personSectionWriter,
+  _ => l.personSectionActor,
+};

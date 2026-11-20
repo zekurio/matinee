@@ -81,7 +81,10 @@ void main() {
     );
     // The name is on the card and on its stand-in art.
     expect(find.text('Arrival'), findsNWidgets(2));
-    expect(find.text('Louise Banks'), findsOneWidget);
+    // The titles here are under a heading of their own, each card with
+    // its year and role, as the catalog's below.
+    expect(find.text('Acting'), findsWidgets);
+    expect(find.text('2016 · Louise Banks'), findsOneWidget);
     // A credit without a role says the title's year.
     expect(find.text('2007'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('2024 · Herself').last, 200);
@@ -91,6 +94,34 @@ void main() {
     expect(find.text('2024 · Herself'), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('Requested')), findsWidgets);
     expect(backend.asked, contains('/api/v1/requests/live'));
+  });
+
+  testWidgets('heads each kind of credit, what they are known for first', (
+    tester,
+  ) async {
+    final person = _person(catalog: [])
+      ..['kind'] = 'director'
+      ..['credits'] = [
+        {
+          'title': titleJson('m1', name: 'Arrival'),
+          'kind': 'actor',
+          'role': 'Louise Banks',
+        },
+        {
+          'title': titleJson('m3', name: 'Dune', year: 2021),
+          'kind': 'director',
+          'role': null,
+        },
+      ];
+    await pumpScreen(
+      tester,
+      const PersonScreen(name: 'Amy Adams'),
+      client: _backend(person).client,
+    );
+    final directing = tester.getTopLeft(find.text('Directing'));
+    final acting = tester.getTopLeft(find.text('Acting').last);
+    expect(directing.dy, lessThan(acting.dy));
+    expect(find.text('1 title'), findsNWidgets(2));
   });
 
   testWidgets('without TMDB, says what they do here and in how much', (
@@ -150,7 +181,7 @@ void main() {
       ..answers[_path] = _person();
     await tester.tap(find.text('Try again'));
     await tester.pumpAndSettle();
-    expect(find.text('Louise Banks'), findsOneWidget);
+    expect(find.text('2016 · Louise Banks'), findsOneWidget);
   });
 
   test('follows the blocks around the cards built, six at most', () {

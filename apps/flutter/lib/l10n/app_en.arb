@@ -2001,6 +2001,22 @@
   "@personLoadFailed": {
     "description": "strings.xml: People"
   },
+  "personSectionActor": "Acting",
+  "@personSectionActor": {
+    "description": "people.ts: the heading over the titles here they have this kind of credit in"
+  },
+  "personSectionCreator": "Created",
+  "@personSectionCreator": {
+    "description": "people.ts: the heading over the titles here they have this kind of credit in"
+  },
+  "personSectionDirector": "Directing",
+  "@personSectionDirector": {
+    "description": "people.ts: the heading over the titles here they have this kind of credit in"
+  },
+  "personSectionWriter": "Writing",
+  "@personSectionWriter": {
+    "description": "people.ts: the heading over the titles here they have this kind of credit in"
+  },
   "playbackAudioCodecTitle": "Audio codec",
   "@playbackAudioCodecTitle": {
     "description": "strings.xml"
