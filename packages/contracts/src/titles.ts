@@ -19,6 +19,86 @@ export const TITLE_KINDS = ["movie", "show"] as const
 export const TitleKind = t.enum(TITLE_KINDS)
 export type TitleKind = t.infer<typeof TitleKind>
 
+/**
+ * Where a title is in its life, as the server reads the metadata
+ * provider's own word for it. Each client words it itself.
+ *
+ * - `continuing`: a show that still airs or will air more.
+ * - `ended`: a show that came to its planned end.
+ * - `canceled`: a show or movie that was stopped.
+ * - `upcoming`: announced or planned, and not yet made or out.
+ * - `in-production`: being filmed or finished.
+ * - `pilot`: a show with only a pilot.
+ * - `released`: a movie that came out.
+ */
+export const TITLE_STATUSES = [
+  "continuing",
+  "ended",
+  "canceled",
+  "upcoming",
+  "in-production",
+  "pilot",
+  "released",
+] as const
+export const TitleStatus = t.enum(TITLE_STATUSES)
+export type TitleStatus = t.infer<typeof TitleStatus>
+
+/**
+ * The genres the server knows, by the key titles carry. The server maps
+ * each provider's genres to these, so a genre is one page in every
+ * language, and each client words them itself. A provider genre with no
+ * key here keeps the provider's own name, which clients show as is.
+ */
+export const GENRES = [
+  "action",
+  "adventure",
+  "animation",
+  "anime",
+  "awards-show",
+  "children",
+  "comedy",
+  "crime",
+  "documentary",
+  "drama",
+  "eastern",
+  "family",
+  "fantasy",
+  "food",
+  "game-show",
+  "history",
+  "home-and-garden",
+  "horror",
+  "indie",
+  "martial-arts",
+  "mini-series",
+  "music",
+  "musical",
+  "mystery",
+  "news",
+  "podcast",
+  "politics",
+  "reality",
+  "romance",
+  "science-fiction",
+  "soap",
+  "special-interest",
+  "sport",
+  "suspense",
+  "talk-show",
+  "thriller",
+  "travel",
+  "tv-movie",
+  "war",
+  "western",
+] as const
+export type Genre = (typeof GENRES)[number]
+
+/**
+ * A title's genre: a key from `GENRES`, or the provider's own name for one
+ * the server has no key for.
+ */
+const GenreName = t.string()
+
 /** A movie or show: what a poster stands for. */
 export const TitleSummary = t.object({
   id: t.uuid(),
@@ -28,7 +108,8 @@ export const TitleSummary = t.object({
   year: t.number().int().nullable(),
   overview: t.string().nullable(),
   images: Images,
-  genres: t.array(t.string()),
+  /** Keys from `GENRES`, or the provider's names for genres without one. */
+  genres: t.array(GenreName),
   /** Community rating out of 10. */
   rating: t.number().nullable(),
   /** Age rating, like `TV-14` or `PG-13`. */
@@ -256,8 +337,9 @@ export const Trailer = t.object({
 export type Trailer = t.infer<typeof Trailer>
 
 /**
- * A genre or studio, with how many titles carry it. Titles name them as
- * the provider does, so the name is also how to ask for them.
+ * A genre or studio, with how many titles carry it. The name is how to ask
+ * for them: a genre's is as in `Title.genres`, a studio's as the provider
+ * spells it.
  */
 export const Facet = t.object({
   name: t.string(),
@@ -544,8 +626,8 @@ export const Title = TitleSummary.extend({
   tagline: t.string().nullable(),
   /** First release or air date, YYYY-MM-DD. */
   releaseDate: t.string().nullable(),
-  /** Such as `Ended` or `Returning Series`, in the provider's words. */
-  status: t.string().nullable(),
+  /** Null when the provider doesn't say, or says something the server doesn't know. */
+  status: TitleStatus.nullable(),
   /** The folder or file below the library folder that makes this title. */
   path: t.string(),
   /** Null when the library has no provider or nothing matched. */

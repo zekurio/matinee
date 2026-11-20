@@ -64,6 +64,13 @@
       "when": 1795087221420,
       "tag": "0008_device_poll_interval",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795188233877,
+      "tag": "0009_localize_status_genres_clients",
+      "breakpoints": true
     }
   ]
 }

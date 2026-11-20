@@ -3276,6 +3276,29 @@ public struct BrowsedTitles: Codable, Sendable, Hashable {
     }
 }
 
+public struct ClientAgent: Codable, Sendable, Hashable {
+    public var browser: String?
+    public var system: String?
+    public init(browser: String?, system: String?) {
+        self.browser = browser
+        self.system = system
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.browser, forKey: .browser)
+        try c.encode(self.system, forKey: .system)
+    }
+}
+
+public struct ClientCount: Codable, Sendable, Hashable {
+    public var client: ClientAgent
+    public var plays: Int
+    public init(client: ClientAgent, plays: Int) {
+        self.client = client
+        self.plays = plays
+    }
+}
+
 public struct CreatedInvite: Codable, Sendable, Hashable {
     public var id: String
     public var label: String?
@@ -4333,10 +4356,10 @@ public struct NowPlaying: Codable, Sendable, Hashable {
     public var positionSeconds: Double
     public var reportAgeSeconds: Double
     public var paused: Bool
-    public var client: String?
+    public var client: ClientAgent?
     public var startedAt: String
     public var streaming: Bool
-    public init(user: ProfileUser, item: MediaItem?, method: String, videoCodec: String?, audioCodec: String?, audioConverted: Bool, audioEncoder: String?, videoEncoder: String?, hardwareEncoding: Bool, hardwareDecoding: Bool, toneMapper: String?, quality: String?, positionSeconds: Double, reportAgeSeconds: Double, paused: Bool, client: String?, startedAt: String, streaming: Bool) {
+    public init(user: ProfileUser, item: MediaItem?, method: String, videoCodec: String?, audioCodec: String?, audioConverted: Bool, audioEncoder: String?, videoEncoder: String?, hardwareEncoding: Bool, hardwareDecoding: Bool, toneMapper: String?, quality: String?, positionSeconds: Double, reportAgeSeconds: Double, paused: Bool, client: ClientAgent?, startedAt: String, streaming: Bool) {
         self.user = user
         self.item = item
         self.method = method
@@ -5312,8 +5335,8 @@ public struct ServerStats: Codable, Sendable, Hashable {
     public var methods: [MethodStat]
     public var transcoding: TranscodingStats
     public var users: [UserStat]
-    public var clients: [NamedCount]
-    public init(range: String, unit: String, totals: WatchTotals, buckets: [StatsBucket], activity: [ActivityCell], genres: [GenreStat], titles: [TitleStat], viewers: Int, methods: [MethodStat], transcoding: TranscodingStats, users: [UserStat], clients: [NamedCount]) {
+    public var clients: [ClientCount]
+    public init(range: String, unit: String, totals: WatchTotals, buckets: [StatsBucket], activity: [ActivityCell], genres: [GenreStat], titles: [TitleStat], viewers: Int, methods: [MethodStat], transcoding: TranscodingStats, users: [UserStat], clients: [ClientCount]) {
         self.range = range
         self.unit = unit
         self.totals = totals
@@ -5341,11 +5364,11 @@ public struct Session: Codable, Sendable, Hashable {
     public var client: String
     public var deviceName: String?
     public var platform: String?
-    public var browser: String?
+    public var browser: ClientAgent?
     public var createdAt: String
     public var lastSeenAt: String
     public var expiresAt: String
-    public init(id: String, current: Bool, client: String, deviceName: String?, platform: String?, browser: String?, createdAt: String, lastSeenAt: String, expiresAt: String) {
+    public init(id: String, current: Bool, client: String, deviceName: String?, platform: String?, browser: ClientAgent?, createdAt: String, lastSeenAt: String, expiresAt: String) {
         self.id = id
         self.current = current
         self.client = client
@@ -5458,6 +5481,17 @@ public enum ThemeMode {
     public static let light = "light"
     public static let dark = "dark"
     public static let knownValues = ["system", "light", "dark"]
+}
+
+public enum TitleStatus {
+    public static let continuing = "continuing"
+    public static let ended = "ended"
+    public static let canceled = "canceled"
+    public static let upcoming = "upcoming"
+    public static let in_production = "in-production"
+    public static let pilot = "pilot"
+    public static let released = "released"
+    public static let knownValues = ["continuing", "ended", "canceled", "upcoming", "in-production", "pilot", "released"]
 }
 
 public struct Title: Codable, Sendable, Hashable {

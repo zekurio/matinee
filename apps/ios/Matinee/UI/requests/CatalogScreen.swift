@@ -187,7 +187,7 @@ private struct CatalogHeader: View {
       FactsRow(facts: facts, contentRating: detail.contentRating, rating: detail.rating).padding(.top, Space.s2)
       // Plain text: genre pages list the library's titles.
       if !detail.genres.isEmpty {
-        Text(detail.genres.prefix(4).joined(separator: ", "))
+        Text(detail.genres.prefix(4).map(genreName).joined(separator: ", "))
           .textStyle(.sm).foregroundStyle(palette.mutedForeground).padding(.top, Space.s1_5)
       }
     }

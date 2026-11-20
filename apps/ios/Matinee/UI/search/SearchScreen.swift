@@ -220,7 +220,7 @@ private struct SearchResultsList: View {
           }
         }
         if !found.genres.isEmpty {
-          Facets(title: Str.searchSectionGenres, facets: found.genres) { nav.genre($0) }
+          Facets(title: Str.searchSectionGenres, facets: found.genres, label: genreName) { nav.genre($0) }
         }
         if !found.studios.isEmpty {
           Facets(title: Str.searchSectionStudios, facets: found.studios) { nav.studio($0) }
@@ -240,6 +240,8 @@ private struct SearchResultsList: View {
 private struct Facets: View {
   let title: String
   let facets: [Facet]
+  /// How a facet's name reads: a genre's key in words, a studio's as it is.
+  var label: (String) -> String = { $0 }
   let open: (String) -> Void
   @Environment(\.gutter) private var gutter
 
@@ -247,7 +249,7 @@ private struct Facets: View {
     VStack(alignment: .leading, spacing: Space.s3) {
       SectionTitle(title)
       FlowRow(spacing: Space.s1_5, lineSpacing: Space.s1_5) {
-        ForEach(facets, id: \.name) { facet in Chip(facet.name) { open(facet.name) } }
+        ForEach(facets, id: \.name) { facet in Chip(label(facet.name)) { open(facet.name) } }
       }
     }
     .padding(.horizontal, gutter)

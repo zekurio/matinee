@@ -24,7 +24,7 @@ import {
   viewerStates,
 } from "../media/items"
 import { activityOf, bucketsOf, dated, knownZone, scopeOf } from "./range"
-import { methodsOf, namedCounts, transcodingOf, usersOf } from "./server"
+import { clientsOf, methodsOf, transcodingOf, usersOf } from "./server"
 import { liveSessions, runningStreams } from "./sessions"
 import { isPlay, playCount, watchedSum } from "./sql"
 
@@ -164,7 +164,7 @@ export async function serverStats(
     methodsOf(where),
     transcodingOf(where),
     usersOf(where),
-    namedCounts(playbackSession.client, where),
+    clientsOf(where),
   ])
   return {
     ...stats,
@@ -222,7 +222,10 @@ export async function liveActivity(viewer: Viewer): Promise<LiveActivity> {
         (answeredAt - session.updatedAt.getTime()) / 1000,
       ),
       paused: session.paused,
-      client: session.client,
+      client:
+        session.clientBrowser || session.clientSystem
+          ? { browser: session.clientBrowser, system: session.clientSystem }
+          : null,
       startedAt: session.startedAt,
       streaming: running.sessions.has(session.id) || encoding.has(session.id),
     })),

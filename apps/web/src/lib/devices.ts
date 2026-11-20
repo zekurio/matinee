@@ -1,6 +1,7 @@
 import type { DevicePlatform, Session } from "@matinee/contracts"
 
 import { tr } from "@/i18n"
+import { clientName } from "@/lib/metadata"
 
 // Names of the platforms themselves, the same in every language.
 const PLATFORM_LABELS = {
@@ -29,5 +30,7 @@ export function deviceLabel(
 /** What the sessions list calls a session. */
 export function sessionLabel(session: Session): string {
   if (session.platform) return deviceLabel(session.deviceName, session.platform)
-  return session.browser ?? tr("account.device.browser")
+  return session.browser
+    ? clientName(session.browser)
+    : tr("account.device.browser")
 }

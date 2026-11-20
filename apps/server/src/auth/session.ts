@@ -12,7 +12,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie"
 
 import { arg, db } from "../db"
 import { env } from "../env"
-import { clientName } from "../stats/sessions"
+import { clientAgent } from "../stats/sessions"
 import { randomToken, sha256 } from "./tokens"
 import type { Tx } from "./users"
 
@@ -173,7 +173,7 @@ export async function listSessions(
     deviceName: row.deviceName,
     platform: row.platform,
     browser:
-      row.client === "web" ? clientName(row.userAgent ?? undefined) : null,
+      row.client === "web" ? clientAgent(row.userAgent ?? undefined) : null,
     createdAt: row.createdAt,
     lastSeenAt: row.lastSeenAt,
     expiresAt: row.expiresAt,

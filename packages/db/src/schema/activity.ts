@@ -189,8 +189,10 @@ export const playbackSession = pgTable(
     quality: text().$type<PlaybackQuality>(),
     /** How long ffmpeg ran encoding for it. */
     encodeSeconds: doublePrecision().notNull().default(0),
-    /** The browser and system, like `Firefox on Linux`. */
-    client: text(),
+    /** The browser from the User-Agent, like `Firefox`, or an app's name. */
+    clientBrowser: text(),
+    /** The system from the User-Agent, like `Linux`. */
+    clientSystem: text(),
     startedAt: createdAt(),
     /** The last report or stream. */
     updatedAt: createdAt(),

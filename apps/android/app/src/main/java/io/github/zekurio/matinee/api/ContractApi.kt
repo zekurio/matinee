@@ -845,11 +845,11 @@ class PeopleApi internal constructor(private val transport: ApiTransport) {
 
 class SearchApi internal constructor(private val transport: ApiTransport) {
     /** `GET /search` */
-    suspend fun query(query: String, limit: Int? = null): SearchResults =
+    suspend fun query(query: String, limit: Int? = null, genres: String? = null): SearchResults =
         transport.call(
             "GET",
             listOf("search"),
-            listOf("query" to query, "limit" to limit?.toString()),
+            listOf("query" to query, "limit" to limit?.toString(), "genres" to genres),
             null,
             SearchResults.serializer(),
         )

@@ -402,7 +402,7 @@ struct Genres: View {
           ForEach(stats.genres, id: \.name) { genre in
             RowButton(enabled: !offline, action: { nav.genre(genre.name) }) {
               LabelValue {
-                Text(genre.name).textStyle(.px15).foregroundStyle(palette.foreground)
+                Text(genreName(genre.name)).textStyle(.px15).foregroundStyle(palette.foreground)
               } value: {
                 Text(formatWatchTime(genre.watchSeconds)).textStyle(.px15, weight: .semibold).monospacedDigit()
                   .foregroundStyle(palette.foreground)

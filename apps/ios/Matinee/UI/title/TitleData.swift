@@ -17,7 +17,7 @@ func titleFacts(_ title: Title) -> [String] {
     case .episodes(let count): Str.mediaEpisodeCount(count)
     case nil: nil
     }
-  return [formatYear(title.year), formatRuntime(titleRuntime(title)), size, title.isShow ? title.status : nil]
+  return [formatYear(title.year), formatRuntime(titleRuntime(title)), size, title.isShow ? titleStatusName(title.status) : nil]
     .compactMap(\.self)
 }
 

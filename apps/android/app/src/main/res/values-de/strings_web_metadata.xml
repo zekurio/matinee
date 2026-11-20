@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/metadata.ts. Don't edit. -->
+<resources>
+    <string name="web_metadata_genre_action">Action</string>
+    <string name="web_metadata_genre_adventure">Abenteuer</string>
+    <string name="web_metadata_genre_animation">Animation</string>
+    <string name="web_metadata_genre_anime">Anime</string>
+    <string name="web_metadata_genre_awards_show">Preisverleihung</string>
+    <string name="web_metadata_genre_children">Kinder</string>
+    <string name="web_metadata_genre_comedy">Komödie</string>
+    <string name="web_metadata_genre_crime">Krimi</string>
+    <string name="web_metadata_genre_documentary">Dokumentarfilm</string>
+    <string name="web_metadata_genre_drama">Drama</string>
+    <string name="web_metadata_genre_eastern">Eastern</string>
+    <string name="web_metadata_genre_family">Familie</string>
+    <string name="web_metadata_genre_fantasy">Fantasy</string>
+    <string name="web_metadata_genre_food">Kochen</string>
+    <string name="web_metadata_genre_game_show">Spielshow</string>
+    <string name="web_metadata_genre_history">Historie</string>
+    <string name="web_metadata_genre_home_and_garden">Haus und Garten</string>
+    <string name="web_metadata_genre_horror">Horror</string>
+    <string name="web_metadata_genre_indie">Indie</string>
+    <string name="web_metadata_genre_martial_arts">Kampfkunst</string>
+    <string name="web_metadata_genre_mini_series">Miniserie</string>
+    <string name="web_metadata_genre_music">Musik</string>
+    <string name="web_metadata_genre_musical">Musical</string>
+    <string name="web_metadata_genre_mystery">Mystery</string>
+    <string name="web_metadata_genre_news">Nachrichten</string>
+    <string name="web_metadata_genre_podcast">Podcast</string>
+    <string name="web_metadata_genre_politics">Politik</string>
+    <string name="web_metadata_genre_reality">Reality-TV</string>
+    <string name="web_metadata_genre_romance">Romantik</string>
+    <string name="web_metadata_genre_science_fiction">Science-Fiction</string>
+    <string name="web_metadata_genre_soap">Seifenoper</string>
+    <string name="web_metadata_genre_special_interest">Special Interest</string>
+    <string name="web_metadata_genre_sport">Sport</string>
+    <string name="web_metadata_genre_suspense">Spannung</string>
+    <string name="web_metadata_genre_talk_show">Talkshow</string>
+    <string name="web_metadata_genre_thriller">Thriller</string>
+    <string name="web_metadata_genre_travel">Reisen</string>
+    <string name="web_metadata_genre_tv_movie">TV-Film</string>
+    <string name="web_metadata_genre_war">Krieg</string>
+    <string name="web_metadata_genre_western">Western</string>
+    <string name="web_metadata_status_continuing">Laufend</string>
+    <string name="web_metadata_status_ended">Beendet</string>
+    <string name="web_metadata_status_canceled">Abgesetzt</string>
+    <string name="web_metadata_status_upcoming">Angekündigt</string>
+    <string name="web_metadata_status_in_production">In Produktion</string>
+    <string name="web_metadata_status_pilot">Pilotfolge</string>
+    <string name="web_metadata_status_released">Erschienen</string>
+    <string name="web_metadata_client">%1$s unter %2$s</string>
+</resources>

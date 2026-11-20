@@ -25,6 +25,7 @@ import {
 import { tr } from "@/i18n"
 import { formatRegion, formatRuntime, formatScore } from "@/lib/format"
 import { languageName } from "@/lib/languages"
+import { byGenreName, genreName } from "@/lib/metadata"
 
 import type { ActiveFilter } from "./list-controls"
 import { titleFilterCount } from "./title-filter-params"
@@ -61,7 +62,7 @@ export function activeTitleFilters(
   for (const name of filters.genres) {
     active.push({
       key: `genre:${name}`,
-      label: name,
+      label: genreName(name),
       remove: () =>
         change({ genres: filters.genres.filter((other) => other !== name) }),
     })
@@ -179,11 +180,13 @@ export function TitleFilterPanel({
           {(labelId) => (
             <ToggleChips
               labelId={labelId}
-              choices={options.genres.map((facet) => ({
-                value: facet.name,
-                label: facet.name,
-                count: facet.titleCount,
-              }))}
+              choices={byGenreName(options.genres, (facet) => facet.name).map(
+                (facet) => ({
+                  value: facet.name,
+                  label: genreName(facet.name),
+                  count: facet.titleCount,
+                }),
+              )}
               value={filters.genres}
               onChange={(genres) => change({ genres })}
             />

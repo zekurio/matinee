@@ -52,6 +52,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -256,13 +257,14 @@ private fun cardHeight(slides: List<FeaturedTitle>, arts: List<CardArt>, layout:
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val genres = genresStyle()
+    val res = LocalResources.current
     val base = layout.cardHeight.dp
     val needed = with(density) {
         slides.indices.maxOfOrNull { index ->
             val textWidth = (layout.cardWidth.dp - PADDING * 2 - if (arts[index] is CardArt.Poster) posterRoom(base) else 0.dp).roundToPx()
             val constraints = Constraints(maxWidth = textWidth.coerceAtLeast(0))
             val name = measurer.measure(slides[index].featuredName, nameStyle, maxLines = nameLines, constraints = constraints).size.height
-            val line = slides[index].cardLine()?.let {
+            val line = slides[index].cardLine(res)?.let {
                 measurer.measure(it, genres, maxLines = 1, constraints = constraints).size.height + LINE_GAP.roundToPx()
             } ?: 0
             (name + line + (PADDING * 2).roundToPx()).toDp()
@@ -308,7 +310,7 @@ private fun FeaturedCard(
     val nav = LocalNavigator.current
     val actions = LocalActions.current
     val interaction = remember { MutableInteractionSource() }
-    val line = slide.cardLine()
+    val line = slide.cardLine(LocalResources.current)
     val position = stringResource(R.string.home_featured_position, index + 1, count)
     val description = listOfNotNull(slide.featuredName, line, position).joinToString(", ")
     val shape = Shapes.Xl

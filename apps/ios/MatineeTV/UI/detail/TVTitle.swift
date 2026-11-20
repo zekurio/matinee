@@ -133,7 +133,7 @@ private struct TitleHeader: View {
       )
       .padding(.top, TVSpace.s4)
       if !title.genres.isEmpty {
-        Text(title.genres.prefix(4).joined(separator: ", ")).textStyle(.label)
+        Text(title.genres.prefix(4).map(genreName).joined(separator: ", ")).textStyle(.label)
           .foregroundStyle(palette.mutedForeground).lineLimit(1)
           .padding(.top, TVSpace.s1)
       }

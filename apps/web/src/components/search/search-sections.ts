@@ -8,6 +8,7 @@ import type {
 } from "@matinee/contracts"
 
 import { tr } from "@/i18n"
+import { genreName } from "@/lib/metadata"
 
 /**
  * One thing a search found. A new kind of result is a new member here, a
@@ -38,6 +39,7 @@ export function hitName(hit: SearchHit): string {
     case "person":
       return hit.person.name
     case "genre":
+      return genreName(hit.facet.name)
     case "studio":
       return hit.facet.name
   }

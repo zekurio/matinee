@@ -355,8 +355,8 @@ public struct PeopleApi: Sendable {
 public struct SearchApi: Sendable {
     public let transport: ApiTransport
     public init(transport: ApiTransport) { self.transport = transport }
-    public func query(query: String, limit: Int? = nil) async throws -> SearchResults {
-        return try await transport.call(method: "GET", path: ["search"], query: [("query", wireText(query)), ("limit", wireText(limit))], body: nil)
+    public func query(query: String, limit: Int? = nil, genres: String? = nil) async throws -> SearchResults {
+        return try await transport.call(method: "GET", path: ["search"], query: [("query", wireText(query)), ("limit", wireText(limit)), ("genres", wireText(genres))], body: nil)
     }
 }
 public struct MediaApi: Sendable {

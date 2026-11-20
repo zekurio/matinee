@@ -40,6 +40,21 @@ export const AppDevice = t.object({
 })
 export type AppDevice = t.infer<typeof AppDevice>
 
+/**
+ * The browser and system a User-Agent names, for a client to join in its
+ * own words, like `Firefox on Linux`. Either can be missing, not both.
+ */
+export const ClientAgent = t.object({
+  /**
+   * Like `Firefox`. For an app that isn't a browser and runs on no system
+   * the server knows, its name from the User-Agent, like `MatineeTV`.
+   */
+  browser: t.string().nullable(),
+  /** Like `Linux` or `Android`. */
+  system: t.string().nullable(),
+})
+export type ClientAgent = t.infer<typeof ClientAgent>
+
 /** A place the user is signed in, as their settings list it. */
 export const Session = t.object({
   id: t.uuid(),
@@ -50,8 +65,8 @@ export const Session = t.object({
   deviceName: t.string().nullable(),
   /** What the app runs on. Null for browsers. */
   platform: DevicePlatform.nullable(),
-  /** Like `Firefox on Linux`, from the User-Agent. Null for apps. */
-  browser: t.string().nullable(),
+  /** The browser and system, from the User-Agent. Null for apps. */
+  browser: ClientAgent.nullable(),
   createdAt: t.date(),
   /** The server moves it at most once an hour. */
   lastSeenAt: t.date(),

@@ -7,9 +7,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalResources
 import io.github.zekurio.matinee.api.SearchResults
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.ui.components.LocalApi
+import io.github.zekurio.matinee.ui.genresNamed
 import java.io.IOException
 import kotlinx.coroutines.delay
 
@@ -53,6 +55,7 @@ class SearchState {
 @Composable
 fun SearchEffect(state: SearchState, query: String) {
     val api = LocalApi.current
+    val res = LocalResources.current
     LaunchedEffect(state, query, state.attempt) {
         val text = query.trim()
         if (text.isEmpty()) {
@@ -65,7 +68,7 @@ fun SearchEffect(state: SearchState, query: String) {
         state.searching = true
         state.failed = false
         try {
-            state.results = api.search.query(text, LIMIT)
+            state.results = api.search.query(text, LIMIT, genresNamed(text, res))
             state.resultsFor = text
         } catch (_: IOException) {
             state.failed = true

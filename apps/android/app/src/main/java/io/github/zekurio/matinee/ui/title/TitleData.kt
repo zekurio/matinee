@@ -19,6 +19,7 @@ import io.github.zekurio.matinee.ui.languageList
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.runtimeMinutes
 import io.github.zekurio.matinee.ui.timeLeft
+import io.github.zekurio.matinee.ui.titleStatusName
 import io.github.zekurio.matinee.ui.videoSummary
 
 /* What the title, season, and episode pages load and decide, for the phone's pages and the TV's alike. */
@@ -64,7 +65,7 @@ fun titleFacts(title: Title, res: Resources): List<String> = listOfNotNull(
     title.year?.toString(),
     if (title.isShow) res.getQuantityString(R.plurals.media_episode_count, title.itemCount, title.itemCount)
     else formatRuntime(title.runtimeMinutes, res),
-    if (title.isShow) title.status else null,
+    if (title.isShow) titleStatusName(title.status, res) else null,
 )
 
 /**

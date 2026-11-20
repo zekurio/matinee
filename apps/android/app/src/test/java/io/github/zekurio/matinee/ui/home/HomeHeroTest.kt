@@ -111,7 +111,7 @@ class HomeHeroTest {
         val slide = featured(TitleKind.MOVIE, 1999, 1, listOf("Action", "Sci-Fi", "Drama", "War"))
         assertEquals("Name", slide.featuredName)
         assertEquals(listOf("Action", "Sci-Fi", "Drama"), slide.shownGenres)
-        assertEquals(slide.shownGenres.joinToString(" · "), slide.cardLine())
+        assertEquals(slide.shownGenres.joinToString(" · "), slide.cardLine({ it }))
     }
 
     private fun assertNear(expected: Float, actual: Float) = assertEquals(expected, actual, 0.01f)

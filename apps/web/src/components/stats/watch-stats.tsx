@@ -9,6 +9,7 @@ import { Picture, tone } from "@/components/media-item"
 import { tr } from "@/i18n"
 import { formatCount, formatWatchTime } from "@/lib/format"
 import { art } from "@/lib/media"
+import { genreName } from "@/lib/metadata"
 import { bucketName, rangeName } from "@/lib/stats"
 
 import {
@@ -168,7 +169,7 @@ export function GenresSection({ stats }: { stats: WatchStats }) {
       <RankedBars
         rows={stats.genres.map((genre) => ({
           key: genre.name,
-          label: genre.name,
+          label: genreName(genre.name),
           value: genre.watchSeconds,
           detail: formatWatchTime(genre.watchSeconds),
         }))}

@@ -21,6 +21,7 @@ import { useTitleWatched, WatchedButton } from "@/components/watched-menu"
 import { getLocale, perLocale, tr } from "@/i18n"
 import { formatRuntime } from "@/lib/format"
 import { art, type ImageSource, mediaFlags, timeLeft } from "@/lib/media"
+import { genreName, titleStatusName } from "@/lib/metadata"
 
 import { HeaderOverview } from "./header-overview"
 import { MatchNote } from "./title-menu"
@@ -64,7 +65,9 @@ export function TitleHeader({ title }: { title: Title }) {
         ? tr("title.seasonCount", { count: numbered.length })
         : tr("title.episodeCount", { count: title.itemCount })
       : null,
-    title.kind === "show" ? title.status : null,
+    title.kind === "show" && title.status
+      ? titleStatusName(title.status)
+      : null,
   ].filter(Boolean)
   // Just arrived from its catalog page: what's new fades in, while the
   // backdrop, poster, and name stay where they were.
@@ -140,7 +143,7 @@ export function TitleHeader({ title }: { title: Title }) {
                         params={{ genre }}
                         className={cn(textLink, "hover:text-foreground")}
                       >
-                        {genre}
+                        {genreName(genre)}
                       </Link>
                     )),
                   )}

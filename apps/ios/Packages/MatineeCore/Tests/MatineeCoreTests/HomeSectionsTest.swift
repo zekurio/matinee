@@ -92,10 +92,10 @@ struct HomeSectionsTest {
 
   @Test func aCardNamesUpToThreeGenresAndNothingElse() {
     let genres = ["Action", "Sci-Fi", "Drama", "War"]
-    #expect(featured(kind: TitleKind.movie, year: 1999, count: 1, genres: genres).cardLine() == "Action · Sci-Fi · Drama")
-    #expect(featured(kind: TitleKind.movie, year: 1999, count: 1, genres: ["Drama"]).cardLine(separator: ", ") == "Drama")
-    #expect(featured(kind: TitleKind.movie, year: 1999, count: 1).cardLine() == nil)
-    #expect(featured(kind: TitleKind.show, year: nil, count: 1).cardLine() == nil)
+    #expect(featured(kind: TitleKind.movie, year: 1999, count: 1, genres: genres).cardLine { $0 } == "Action · Sci-Fi · Drama")
+    #expect(featured(kind: TitleKind.movie, year: 1999, count: 1, genres: ["Drama"]).cardLine(separator: ", ") { $0 } == "Drama")
+    #expect(featured(kind: TitleKind.movie, year: 1999, count: 1).cardLine { $0 } == nil)
+    #expect(featured(kind: TitleKind.show, year: nil, count: 1).cardLine { $0 } == nil)
   }
 
   private func featured(kind: String, year: Int?, count: Int, genres: [String] = []) -> FeaturedTitle {

@@ -97,7 +97,10 @@ private struct TVFilterRows: View {
         switch page {
         case .filters: filterRows(offered)
         case .genres:
-          multiRows(offered.genres.filter { $0.name != own.genre }, picked: filters.genres ?? []) { $0.genres = $1 }
+          multiRows(
+            byGenreName(offered.genres.filter { $0.name != own.genre }, \.name), picked: filters.genres ?? [],
+            label: genreName
+          ) { $0.genres = $1 }
         case .studios:
           multiRows(offered.studios.filter { $0.name != own.studio }, picked: filters.studios ?? []) { $0.studios = $1 }
         case .language: languageRows(offered)
@@ -175,7 +178,7 @@ private struct TVFilterRows: View {
     }
     let genres = offered.genres.filter { $0.name != own.genre }
     if !genres.isEmpty {
-      listRow(.genres, value: list(filters.genres) ?? Str.webFiltersAny)
+      listRow(.genres, value: list(filters.genres?.map(genreName)) ?? Str.webFiltersAny)
     }
     let studios = offered.studios.filter { $0.name != own.studio }
     if !studios.isEmpty {
@@ -297,14 +300,15 @@ private struct TVFilterRows: View {
 
   /// Genres or studios, each on or off, with how many titles each has; Any takes them all off.
   @ViewBuilder private func multiRows(
-    _ facets: [Facet], picked: [String], set: @escaping (inout TitleFilters, [String]) -> Void
+    _ facets: [Facet], picked: [String], label: @escaping (String) -> String = { $0 },
+    set: @escaping (inout TitleFilters, [String]) -> Void
   ) -> some View {
     TVListItem(Str.webFiltersAny, quiet: true, checked: picked.isEmpty) { apply { set(&$0, []) } }
       .focused($focused, equals: "any")
     ForEach(facets, id: \.name) { facet in
       let on = picked.contains(facet.name)
       TVListItem(
-        facet.name, quiet: true, checked: on,
+        label(facet.name), quiet: true, checked: on,
         action: { apply { set(&$0, on ? picked.filter { $0 != facet.name } : picked + [facet.name]) } }
       ) {
         TVListValue(formatCount(facet.titleCount), chevron: false)

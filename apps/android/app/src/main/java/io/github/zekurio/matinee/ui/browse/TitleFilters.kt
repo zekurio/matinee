@@ -30,6 +30,7 @@ import io.github.zekurio.matinee.api.TitleSort
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.api.WatchFilter
 import io.github.zekurio.matinee.ui.Loader
+import io.github.zekurio.matinee.ui.byGenreName
 import io.github.zekurio.matinee.ui.components.ActiveFilter
 import io.github.zekurio.matinee.ui.components.ChoiceChips
 import io.github.zekurio.matinee.ui.components.FilterChoice
@@ -50,6 +51,7 @@ import io.github.zekurio.matinee.ui.components.runtimeText
 import io.github.zekurio.matinee.ui.components.yearText
 import io.github.zekurio.matinee.ui.formatRating
 import io.github.zekurio.matinee.ui.formatRuntime
+import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.Menu
 import io.github.zekurio.matinee.ui.kit.MenuItem
@@ -155,7 +157,7 @@ fun activeTitleFilters(filters: TitleFilters, options: TitleFilterOptions?, res:
         active += ActiveFilter("watched", res.getString(watchWord(state))) { change(filters.copy(watched = null)) }
     }
     val genres = filters.genres.orEmpty()
-    genres.forEach { name -> active += ActiveFilter("genre-$name", name) { change(filters.copy(genres = genres - name)) } }
+    genres.forEach { name -> active += ActiveFilter("genre-$name", genreName(name, res)) { change(filters.copy(genres = genres - name)) } }
     val studios = filters.studios.orEmpty()
     studios.forEach { name -> active += ActiveFilter("studio-$name", name) { change(filters.copy(studios = studios - name)) } }
     if (filters.yearFrom != null || filters.yearTo != null) {
@@ -269,7 +271,7 @@ fun TitleFilterSheet(
         if (options.genres.isNotEmpty()) {
             FilterSection(stringResource(R.string.web_filters_genres)) {
                 ToggleChips(
-                    options.genres.map { FilterChoice(it.name, it.name, it.titleCount) },
+                    byGenreName(options.genres, res) { it.name }.map { FilterChoice(it.name, genreName(it.name, res), it.titleCount) },
                     filters.genres.orEmpty(),
                     { onChange(filters.copy(genres = it)) },
                 )

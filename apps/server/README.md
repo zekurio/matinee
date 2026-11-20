@@ -202,7 +202,19 @@ uses. Any other id is a 404.
 
 A new provider implements `MetadataSource` in `src/metadata/types.ts`,
 goes in `sources.ts`, and gets its id in the contract's
-`METADATA_PROVIDERS`.
+`METADATA_PROVIDERS`. It maps its genres and statuses to the server's
+own with `src/metadata/vocabulary.ts`.
+
+### Genres and statuses
+
+Titles keep a genre as a key from the contract's `GENRES`, like `comedy`
+or `science-fiction`, and each client words it in its own language, so a
+genre is one page however its library is set up. TMDB's genres map by
+id. Its show genres that pair two, like Action & Adventure, become both,
+as its movies have them. TheTVDB's map by slug. A genre with no key keeps
+the provider's name, which clients show as it is. A title's status is a
+`TitleStatus`, mapped from either provider's words. A status the server
+doesn't know is left out.
 
 ### Filtering the libraries
 

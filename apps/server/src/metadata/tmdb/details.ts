@@ -11,6 +11,7 @@ import {
   uniqueNames,
   yearOf,
 } from "../types"
+import { titleStatus, tmdbGenres } from "../vocabulary"
 import { image, request } from "./client"
 import { billed, credit, movieCrew, showCast, showCrew } from "./credits"
 import type {
@@ -135,14 +136,14 @@ export async function movieDetails(id: string, language: string) {
     year: yearOf(movie.release_date),
     overview: text(movie.overview),
     tagline: text(movie.tagline),
-    genres: movie.genres?.map((genre) => genre.name) ?? [],
+    genres: tmdbGenres(movie.genres),
     anime: anime(movie.keywords?.keywords),
     genreIds: ids(movie.genres),
     keywordIds: ids(movie.keywords?.keywords),
     rating: rating(movie.vote_average, movie.vote_count),
     contentRating: text(certification?.certification),
     releaseDate: isoDate(movie.release_date),
-    status: text(movie.status),
+    status: titleStatus(movie.status),
     runtimeMinutes: movie.runtime || null,
     externalIds,
     images: {
@@ -228,14 +229,14 @@ export async function showDetails(id: string, language: string) {
     year: yearOf(show.first_air_date),
     overview: text(show.overview),
     tagline: text(show.tagline),
-    genres: show.genres?.map((genre) => genre.name) ?? [],
+    genres: tmdbGenres(show.genres),
     anime: anime(show.keywords?.results),
     genreIds: ids(show.genres),
     keywordIds: ids(show.keywords?.results),
     rating: rating(show.vote_average, show.vote_count),
     contentRating: text(ageRating?.rating),
     releaseDate: isoDate(show.first_air_date),
-    status: text(show.status),
+    status: titleStatus(show.status),
     runtimeMinutes: show.episode_run_time?.[0] || null,
     externalIds,
     images: {

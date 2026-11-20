@@ -51,6 +51,7 @@ import {
   titleFacts,
   videoSummary,
 } from "@/model/format"
+import { genreName } from "@/model/metadata"
 import type { Viewer } from "@/model/viewer"
 
 import { Loaded, Message } from "./parts"
@@ -403,7 +404,7 @@ function TitleView(props: { title: Title }) {
       />
       {title.genres.length > 0 && (
         <div class="t-label muted one-line" style={{ marginTop: "8rem" }}>
-          {title.genres.join(", ")}
+          {title.genres.map(genreName).join(", ")}
         </div>
       )}
       <div class="detail-about">
@@ -504,7 +505,7 @@ function TitleView(props: { title: Title }) {
               <Chip
                 key={`genre-${genre}`}
                 fid={`genre-${genre}`}
-                label={genre}
+                label={genreName(genre)}
                 onPress={() => nav.genre(genre)}
               />
             ))}

@@ -33,7 +33,7 @@ struct TVBrowseScreen: View {
       empty: empty
     ) {
       TVGridHeader(
-        title: genre ?? studio ?? "",
+        title: genre.map(genreName) ?? studio ?? "",
         detail: [genre != nil ? Str.browseGenre : Str.browseStudio, pages.total.map(Str.browseTitleCount)]
           .compactMap(\.self).joined(separator: "  ·  "),
         chips: activeTitleFilters(filters, options: options.state.value),

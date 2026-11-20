@@ -13,6 +13,8 @@ import {
 
 import { language, locale, plural, tr } from "@/i18n"
 
+import { titleStatusName } from "./metadata"
+
 /*
  * How the app words what the server sends: episode numbers, seasons,
  * lengths, and dates, in the TV's language. As the Android app's Format.kt
@@ -329,7 +331,7 @@ export function titleFacts(title: Title): string[] {
     show
       ? plural("media_episode_count", title.itemCount)
       : formatRuntime(title.runtimeMinutes),
-    show ? title.status : null,
+    show ? titleStatusName(title.status) : null,
   ].filter((fact): fact is string => Boolean(fact))
 }
 

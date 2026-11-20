@@ -234,12 +234,14 @@ struct LinkedNames: View {
   var sentence = true
   let color: Color
   let onTap: (String) -> Void
+  /// How a name reads: a genre's key in words, a person's name as it is.
+  var label: (String) -> String = { $0 }
   @Environment(\.palette) private var palette
 
   var body: some View {
     var text = AttributedString()
     for (index, name) in names.enumerated() {
-      var link = AttributedString(name)
+      var link = AttributedString(label(name))
       link.link = URL(string: "matinee-name:\(index)")
       text += link
       if index < names.count - 1 {

@@ -24,6 +24,7 @@ import {
   progressRatio,
   timeLeft,
 } from "@/lib/media"
+import { genreName } from "@/lib/metadata"
 import { createHeroStore } from "@/stores/browse-hero"
 
 import { pageColumn } from "./app-shell"
@@ -414,7 +415,7 @@ function SlideContent({
                   params={{ genre }}
                   className="border-foreground/15 bg-background/30 text-foreground/85 hover:border-foreground/35 hover:text-foreground focus-visible:ring-ring block rounded-full border px-2.5 py-0.5 text-xs backdrop-blur-sm outline-none focus-visible:ring-2"
                 >
-                  {genre}
+                  {genreName(genre)}
                 </Link>
               </li>
             ))}

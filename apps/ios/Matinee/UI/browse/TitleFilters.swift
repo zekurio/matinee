@@ -210,7 +210,9 @@ private struct TitleFilterSections: View {
     if !options.genres.isEmpty {
       FilterSection(Str.webFiltersGenres) {
         ToggleChips(
-          choices: options.genres.map { FilterChoice(value: $0.name, label: $0.name, count: $0.titleCount) },
+          choices: byGenreName(options.genres, \.name).map {
+            FilterChoice(value: $0.name, label: genreName($0.name), count: $0.titleCount)
+          },
           value: list($state.filters.genres))
       }
     }

@@ -10,6 +10,7 @@ import {
   uniqueNames,
   yearOf,
 } from "../types"
+import { titleStatus, tvdbGenres } from "../vocabulary"
 import { request } from "./client"
 import {
   contentRating,
@@ -158,13 +159,13 @@ export async function seriesDetails(id: string, language: string) {
     year: Number(series.year) || yearOf(series.firstAired),
     overview: names.overview ?? text(series.overview),
     tagline: null,
-    genres: series.genres?.map((genre) => genre.name) ?? [],
+    genres: tvdbGenres(series.genres),
     anime: anime(series.genres),
     // TVDB's score counts favourites; it isn't a rating.
     rating: null,
     contentRating: contentRating(series.contentRatings, language),
     releaseDate: isoDate(series.firstAired),
-    status: text(series.status?.name),
+    status: titleStatus(series.status?.name),
     runtimeMinutes: series.averageRuntime || null,
     externalIds: remoteIds(series.id, series.remoteIds),
     images: {
@@ -213,12 +214,12 @@ export async function movieDetails(id: string, language: string) {
     year: Number(movie.year) || yearOf(movie.first_release?.date),
     overview: names.overview,
     tagline: text(tagline),
-    genres: movie.genres?.map((genre) => genre.name) ?? [],
+    genres: tvdbGenres(movie.genres),
     anime: anime(movie.genres),
     rating: null,
     contentRating: contentRating(movie.contentRatings, language),
     releaseDate: isoDate(movie.first_release?.date),
-    status: text(movie.status?.name),
+    status: titleStatus(movie.status?.name),
     runtimeMinutes: movie.runtime || null,
     externalIds: remoteIds(movie.id, movie.remoteIds),
     images: {

@@ -33,6 +33,7 @@ import { type FocusedItem, FocusLine } from "@/kit/misc"
 import { OptionsPanel } from "@/kit/panel"
 import { titleInfo } from "@/model/focused"
 import { art, creditKind, initials } from "@/model/format"
+import { byGenreName, genreName } from "@/model/metadata"
 import type { TitlePages } from "@/model/pages"
 
 import { Loaded } from "./parts"
@@ -371,7 +372,7 @@ export function KindPage(props: { kind: TitleKind }) {
             />
             <Button
               fid="genre"
-              label={genre || tr("library_any_genre")}
+              label={genre ? genreName(genre) : tr("library_any_genre")}
               icon={ListFilter}
               trailing={ChevronDown}
               active={genre !== ""}
@@ -410,11 +411,13 @@ export function KindPage(props: { kind: TitleKind }) {
         title={tr("library_genre")}
         options={[
           { key: "", label: tr("library_any_genre") },
-          ...(genres.value ?? []).map((facet) => ({
-            key: facet.name,
-            label: facet.name,
-            detail: String(facet.titleCount),
-          })),
+          ...byGenreName(genres.value ?? [], (facet) => facet.name).map(
+            (facet) => ({
+              key: facet.name,
+              label: genreName(facet.name),
+              detail: String(facet.titleCount),
+            }),
+          ),
         ]}
         current={genre}
         onPick={(picked) => {
@@ -478,7 +481,10 @@ export function BrowsePage(props: { genre?: string; studio?: string }) {
         }
         scrollKey={kind}
         header={
-          <GridHeader title={genre ?? studio ?? ""} detail={detail}>
+          <GridHeader
+            title={genre ? genreName(genre) : (studio ?? "")}
+            detail={detail}
+          >
             {BROWSE_KINDS.map(([value, label, icon]) => (
               <Button
                 key={value}

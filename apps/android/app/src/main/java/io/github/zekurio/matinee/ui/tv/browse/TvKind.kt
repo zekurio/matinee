@@ -26,8 +26,10 @@ import io.github.zekurio.matinee.ui.browse.libraryEmptyMessage
 import io.github.zekurio.matinee.ui.browse.rememberKindGenres
 import io.github.zekurio.matinee.ui.browse.rememberKindPages
 import io.github.zekurio.matinee.ui.browse.rememberLibraryFilters
+import io.github.zekurio.matinee.ui.byGenreName
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.LocalApi
+import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
 import io.github.zekurio.matinee.ui.tv.TvButton
@@ -107,7 +109,7 @@ fun TvKindScreen(route: KindRoute) {
                         trailingIcon = Lucide.ChevronDown,
                     )
                     TvButton(
-                        filters.genre ?: stringResource(R.string.library_any_genre),
+                        filters.genre?.let { genreName(it) } ?: stringResource(R.string.library_any_genre),
                         { panel = GENRE },
                         with(memory) { Modifier.item(CONTROLS, GENRE) }.focusRequester(genreButton),
                         icon = Lucide.ListFilter,
@@ -142,7 +144,7 @@ fun TvKindScreen(route: KindRoute) {
             open = panel == GENRE,
             title = stringResource(R.string.library_genre),
             options = listOf(TvOption(ANY_GENRE, stringResource(R.string.library_any_genre), selected = filters.genre == null)) +
-                genreList.map { TvOption(it.name, it.name, it.titleCount.toString(), selected = it.name == filters.genre) },
+                byGenreName(genreList, LocalResources.current) { it.name }.map { TvOption(it.name, genreName(it.name), it.titleCount.toString(), selected = it.name == filters.genre) },
             onPick = {
                 filters.genre = it.key.takeIf { key -> key != ANY_GENRE }
                 panel = null

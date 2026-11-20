@@ -54,6 +54,7 @@ import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.formatRating
+import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.kit.Badge
 import io.github.zekurio.matinee.ui.kit.CardShape
 import io.github.zekurio.matinee.ui.kit.Gap
@@ -185,7 +186,7 @@ private fun CatalogPage(detail: CatalogTitleDetail, library: String?) {
                             // Plain text: genre pages list the library's titles.
                             if (detail.genres.isNotEmpty()) {
                                 Gap(6.dp)
-                                Text(detail.genres.take(4).joinToString(", "), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+                                Text(detail.genres.take(4).joinToString(", ") { genreName(it, res) }, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
                             }
                         }
                     }

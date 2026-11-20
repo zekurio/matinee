@@ -87,7 +87,7 @@ struct HomeHeroTest {
     let slide = featured(kind: TitleKind.movie, year: 1999, count: 1, genres: ["Action", "Sci-Fi", "Drama", "War"])
     #expect(slide.featuredName == "Name")
     #expect(slide.shownGenres == ["Action", "Sci-Fi", "Drama"])
-    #expect(slide.cardLine() == slide.shownGenres.joined(separator: " · "))
+    #expect(slide.cardLine { $0 } == slide.shownGenres.joined(separator: " · "))
   }
 
   private func near(_ value: Double, _ expected: Double) -> Bool { abs(value - expected) < 0.001 }

@@ -4,6 +4,7 @@ import type {
   MetadataProviderId,
   TitleImageSlot,
   TitleKind,
+  TitleStatus,
 } from "@matinee/contracts"
 import { sql } from "drizzle-orm"
 import {
@@ -114,6 +115,7 @@ export const title = pgTable(
     year: integer(),
     overview: text(),
     tagline: text(),
+    /** Keys from `GENRES`, or the provider's names for those without one. */
     genres: text()
       .array()
       .notNull()
@@ -121,7 +123,7 @@ export const title = pgTable(
     rating: doublePrecision(),
     contentRating: text(),
     releaseDate: date({ mode: "string" }),
-    status: text(),
+    status: text().$type<TitleStatus>(),
     runtimeMinutes: integer(),
     /** Production companies, in the provider's order. */
     studios: text()

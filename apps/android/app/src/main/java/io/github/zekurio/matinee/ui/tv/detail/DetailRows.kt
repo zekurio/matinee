@@ -22,6 +22,7 @@ import io.github.zekurio.matinee.ui.components.landscape
 import io.github.zekurio.matinee.ui.episodeNumber
 import io.github.zekurio.matinee.ui.formatDay
 import io.github.zekurio.matinee.ui.formatRuntime
+import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.progressRatio
 import io.github.zekurio.matinee.ui.runtimeMinutes
@@ -173,7 +174,7 @@ internal fun LinksRow(title: Title, memory: TvFocusMemory) {
     if (title.genres.isEmpty() && title.studios.isEmpty()) return
     TvRow(stringResource(R.string.tv_detail_links), LINKS, memory) {
         items(title.genres, key = { "genre-$it" }) { genre ->
-            TvChip(genre, { nav.genre(genre) }, with(memory) { Modifier.item(LINKS, "genre-$genre") })
+            TvChip(genreName(genre), { nav.genre(genre) }, with(memory) { Modifier.item(LINKS, "genre-$genre") })
         }
         items(title.studios, key = { "studio-$it" }) { studio ->
             TvChip(studio, { nav.studio(studio) }, with(memory) { Modifier.item(LINKS, "studio-$studio") })

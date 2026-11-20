@@ -25,6 +25,7 @@ import {
   landscape,
   progressRatio,
 } from "@/model/format"
+import { genreName } from "@/model/metadata"
 import {
   type BoardStanding,
   bucketName,
@@ -638,7 +639,7 @@ export function ProfilePage() {
                     <Button
                       key={genre.name}
                       fid={genre.name}
-                      label={genre.name}
+                      label={genreName(genre.name)}
                       detail={formatWatchTime(genre.watchSeconds)}
                       onPress={() =>
                         nav.push({ page: "browse", genre: genre.name })

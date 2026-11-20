@@ -410,7 +410,7 @@ private struct HeroText: View {
         // to the lines around it as the web's.
         .padding(.vertical, -GenreBadge.reach)
       case .line:
-        if let line = slide.cardLine() {
+        if let line = slide.cardLine(genre: genreName) {
           Text(line).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground.opacity(0.85)).lineLimit(1)
         }
       case .none:
@@ -463,7 +463,7 @@ private struct GenreBadge: View {
 
   var body: some View {
     Pressable(shape: Capsule(), action: action) {
-      Text(genre)
+      Text(genreName(genre))
         .textStyle(.xs)
         .lineLimit(1)
         .foregroundStyle(palette.foreground.opacity(0.85))

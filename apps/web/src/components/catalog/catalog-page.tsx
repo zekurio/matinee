@@ -28,6 +28,7 @@ import { TitleSkeleton } from "@/components/title/title-page"
 import { titleOptions } from "@/components/title/title-queries"
 import { tr } from "@/i18n"
 import { art } from "@/lib/media"
+import { genreName } from "@/lib/metadata"
 import { errorMessage } from "@/lib/rpc"
 
 import { PosterBadge } from "./catalog-card"
@@ -245,7 +246,9 @@ function CatalogDetailPage({
                 {/* Plain text: genre pages list the library's titles. */}
                 {detail.genres.length > 0 && (
                   <p className="text-muted-foreground mt-1 text-sm">
-                    {unitList().format(detail.genres.slice(0, 4))}
+                    {unitList().format(
+                      detail.genres.slice(0, 4).map(genreName),
+                    )}
                   </p>
                 )}
                 {detail.stale && (

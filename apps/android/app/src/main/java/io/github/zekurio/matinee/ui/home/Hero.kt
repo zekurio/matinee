@@ -88,6 +88,7 @@ import io.github.zekurio.matinee.ui.components.frame
 import io.github.zekurio.matinee.ui.components.tone
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.formatRating
+import io.github.zekurio.matinee.ui.genreName
 import io.github.zekurio.matinee.ui.kit.ButtonLook
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
@@ -495,7 +496,7 @@ private fun HeroText(slide: FeaturedTitle, layout: HeroLayout, parts: BannerPart
                 BannerParts.Genres.Badges -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     genres.forEach { genre -> GenreBadge(genre) { nav.genre(genre) } }
                 }
-                BannerParts.Genres.Line -> slide.cardLine()?.let {
+                BannerParts.Genres.Line -> slide.cardLine(LocalResources.current)?.let {
                     Text(it, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = Palette.Foreground.copy(alpha = 0.85f), maxLines = 1)
                 }
                 BannerParts.Genres.None -> Unit
@@ -570,7 +571,7 @@ private fun HeroFacts(slide: FeaturedTitle) {
 @Composable
 private fun GenreBadge(genre: String, onClick: () -> Unit) {
     Text(
-        genre,
+        genreName(genre),
         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
         color = Palette.Foreground.copy(alpha = 0.85f),
         maxLines = 1,

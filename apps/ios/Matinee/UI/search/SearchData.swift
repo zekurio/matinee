@@ -32,7 +32,7 @@ private struct SearchEffect: ViewModifier {
   private func update(now: Bool) {
     guard let api else { return }
     state.update(query, now: now) { text in
-      let found = try await api.search.query(query: text, limit: SEARCH_LIMIT)
+      let found = try await api.search.query(query: text, limit: SEARCH_LIMIT, genres: genresNamed(text))
       return found
     }
   }

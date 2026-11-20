@@ -41,6 +41,7 @@ import { useShallow } from "zustand/shallow"
 
 import { tr } from "@/i18n"
 import { art, present } from "@/lib/media"
+import { genreName, genresNamed } from "@/lib/metadata"
 import { orpc } from "@/lib/rpc"
 import { useSearchSpotlightStore } from "@/stores/search-spotlight"
 
@@ -201,7 +202,11 @@ function SpotlightSearch({
   const libraries = useQuery(orpc.libraries.list.queryOptions())
   const results = useQuery({
     ...orpc.search.query.queryOptions({
-      input: { query: settled, limit: FETCH_LIMIT },
+      input: {
+        query: settled,
+        limit: FETCH_LIMIT,
+        genres: genresNamed(settled) || undefined,
+      },
     }),
     enabled: settled !== "",
     // The last results stay up while the next ones load, so typing never
@@ -502,7 +507,10 @@ function EntryRow({
         >
           <Icon className="size-4" />
         </span>
-        <RowText name={facet.name} detail={detail} />
+        <RowText
+          name={entry.kind === "genre" ? genreName(facet.name) : facet.name}
+          detail={detail}
+        />
       </>
     )
     return entry.kind === "genre" ? (

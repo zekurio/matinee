@@ -15,6 +15,7 @@ import {
   toArtwork,
 } from "../media/artwork"
 import { youTubeUrl } from "../metadata/trailers"
+import { genreKeys, titleStatus } from "../metadata/vocabulary"
 import { availability } from "../requests/availability"
 import { withCachedDetails } from "../requests/cached-details"
 import {
@@ -274,7 +275,8 @@ export async function routedDetails(
     poster: art(shown.images.poster),
     availability: state.availability,
     overview: shown.overview,
-    genres: shown.genres,
+    // Entries cached before genres were keys hold the provider's names.
+    genres: genreKeys(shown.genres),
     rating: shown.rating,
     contentRating: shown.contentRating,
     backdrop: art(shown.images.backdrop),
@@ -332,7 +334,9 @@ function gettableSeasons<T extends { number: number; episodeCount: number }>(
   const listed = seasons.filter((season) => season.episodeCount > 0)
   if (!listed.length) return seasons
   const last = Math.max(...listed.map((season) => season.number))
-  const running = !/^(ended|canceled|cancelled)$/i.test(status ?? "")
+  // Entries cached before statuses were mapped hold the provider's words.
+  const known = titleStatus(status)
+  const running = known !== "ended" && known !== "canceled"
   return seasons.filter(
     (season) =>
       season.episodeCount > 0 || (running && season.number === last + 1),

@@ -1,6 +1,8 @@
 package io.github.zekurio.matinee.ui.home
 
+import android.content.res.Resources
 import io.github.zekurio.matinee.api.FeaturedTitle
+import io.github.zekurio.matinee.ui.genreName
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -107,5 +109,8 @@ data class CarouselLayout(val perRow: Int, val stops: Int, val gap: Float, val c
  * words the card cuts short at its end when they don't fit; null with none.
  * The card says nothing else but the name.
  */
-fun FeaturedTitle.cardLine(separator: String = " · "): String? =
-    shownGenres.takeIf { it.isNotEmpty() }?.joinToString(separator)
+fun FeaturedTitle.cardLine(genre: (String) -> String, separator: String = " · "): String? =
+    shownGenres.takeIf { it.isNotEmpty() }?.joinToString(separator, transform = genre)
+
+/** [cardLine] with each genre in the app's language. */
+fun FeaturedTitle.cardLine(res: Resources): String? = cardLine({ genreName(it, res) })
