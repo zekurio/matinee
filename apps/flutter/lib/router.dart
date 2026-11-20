@@ -40,6 +40,7 @@ import 'screens/tv/tv_browse.dart';
 import 'screens/tv/tv_detail.dart';
 import 'screens/tv/tv_home.dart';
 import 'screens/tv/tv_profile.dart';
+import 'screens/tv/tv_settings.dart';
 import 'screens/tv/tv_shell.dart';
 
 /// Every place in the app, as the paths go_router opens. Screens navigate
@@ -511,12 +512,15 @@ List<RouteBase> _tvRoutes() => [
           _tv(Routes.profile.substring(1), (state) => const TvProfileScreen()),
           _tv(
             Routes.settings.substring(1),
-            (state) => _pendingTv(state, 'TV settings'),
+            (state) => const TvSettingsScreen(),
           ),
         ],
       ),
       _tv(Routes.recent, (state) => const TvRecentScreen()),
-      _tv('/settings/:page', (state) => _pendingTv(state, 'TV settings page')),
+      _tv(
+        '/settings/:page',
+        (state) => TvSettingsScreen(initial: state.pathParameters['page']),
+      ),
       _tv(
         '/title/:id',
         (state) => TvTitleScreen(id: state.pathParameters['id']!),
@@ -553,9 +557,6 @@ List<RouteBase> _tvRoutes() => [
     ],
   ),
 ];
-
-Widget _pendingTv(GoRouterState state, String name) =>
-    PendingScreen(name: name, location: state.uri);
 
 /// A TV page at [path], fading in as the last fades out. A page under
 /// Home takes its path without the slash.

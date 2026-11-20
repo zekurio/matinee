@@ -12,6 +12,7 @@ import '../code_details.dart';
 import '../login_backdrop.dart';
 import '../server_switcher.dart';
 import 'tv_frame.dart';
+import 'tv_servers.dart';
 
 /// Signing a TV in with a code, the only way it has: the QR code to scan on
 /// the right, large enough for a phone across the room, and on the left the
@@ -116,7 +117,7 @@ class TvSignInScreen extends ConsumerWidget {
                       icon: Lucide.server,
                       quiet: true,
                       autofocus: !stuck,
-                      onPressed: () => showServerSwitcher(context),
+                      onPressed: () => showTvServerPanel(context),
                     ),
                 ],
               ),
@@ -252,7 +253,7 @@ class TvUnreachableScreen extends ConsumerWidget {
           title: words.connectChangeServer,
           icon: Lucide.server,
           quiet: true,
-          onPressed: () => showServerSwitcher(context),
+          onPressed: () => showTvServerPanel(context),
         ),
       ],
     );

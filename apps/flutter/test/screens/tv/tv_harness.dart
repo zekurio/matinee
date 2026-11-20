@@ -81,6 +81,7 @@ Future<void> pumpTv(
         artworkLoaderProvider.overrideWithValue(
           ArtworkLoader(backend.client, const NoArtworkCache()),
         ),
+        removingServersProvider.overrideWithValue(const {}),
         savedServersProvider.overrideWithValue([
           SavedServer(
             origin: '$server/',
