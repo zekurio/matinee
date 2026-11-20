@@ -79,6 +79,7 @@ export function PosterActionButton({
   busy = false,
   size = "default",
   label,
+  requestName,
   look = "poster",
   className,
 }: {
@@ -93,6 +94,11 @@ export function PosterActionButton({
   size?: "sm" | "default"
   /** Words in place of "Request", like "Request the rest". */
   label?: ReactNode
+  /**
+   * What Request is read aloud as where its words alone don't say what
+   * it asks for, like "Request Season 3" among a show's seasons.
+   */
+  requestName?: string
   look?: ActionLook
   className?: string
 }) {
@@ -123,6 +129,7 @@ export function PosterActionButton({
       disabled={pending || dimmed}
       // Focusable and hoverable, so its tooltip can say why.
       focusableWhenDisabled={dimmed}
+      aria-label={action === "request" ? requestName : undefined}
       aria-describedby={tip ? tipId : undefined}
       onClick={press}
       className={cn(

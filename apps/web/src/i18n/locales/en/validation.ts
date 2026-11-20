@@ -47,7 +47,7 @@ export default defineMessages("validation", {
   "validation.setupToken": "Enter the setup token to claim this server.",
 
   // access.ts: access groups and limits.
-  "validation.bitrateLimit": "Pick a limit of at least 1 Mb/s.",
+  "validation.bitrateLimit": "Pick a limit of at least 1 Mbps.",
   "validation.streamLimit": "Allow at least one stream.",
   "validation.groupName": "Give the group a name.",
   "validation.max256": "Use at most 256 characters.",
