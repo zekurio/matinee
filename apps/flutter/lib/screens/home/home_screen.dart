@@ -253,22 +253,25 @@ class _RecommendationRail extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final size = railCardSize(context, RailArt.poster);
     final items = rail.items;
-    return Rail(
-      title: rail.id == RecommendationRailId.becauseWatched
-          ? l.webDiscoverRailBecauseWatched(rail.seed?.name ?? '')
-          : l.webDiscoverRailForYou,
-      itemWidth: size.width,
-      itemHeight: size.height,
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        final title = item.title;
-        return TitleCard(
-          title: title,
-          detail: title.year?.toString(),
-          recommended: item.ref,
-        );
-      },
+    // The server mixes films and shows here, so each card says which.
+    return NamedKinds(
+      child: Rail(
+        title: rail.id == RecommendationRailId.becauseWatched
+            ? l.webDiscoverRailBecauseWatched(rail.seed?.name ?? '')
+            : l.webDiscoverRailForYou,
+        itemWidth: size.width,
+        itemHeight: size.height,
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          final title = item.title;
+          return TitleCard(
+            title: title,
+            detail: yearLine(context, title.year, title.kind),
+            recommended: item.ref,
+          );
+        },
+      ),
     );
   }
 }

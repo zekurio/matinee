@@ -15,6 +15,7 @@ import 'package:matinee/screens/search/search_data.dart';
 import 'package:matinee/screens/search/search_screen.dart';
 
 import '../core/fakes.dart' show userJson;
+import '../media/fixtures.dart' show titleJson;
 import '../media/harness.dart';
 import 'requests_backend.dart';
 
@@ -152,6 +153,44 @@ void main() {
         find.textContaining('/catalog-browse/movie?filters='),
         findsOneWidget,
       );
+    });
+
+    testWidgets('a row names its cards\' kind only when it can hold both', (
+      tester,
+    ) async {
+      final backend = _explore();
+      (backend.answers['/api/v1/discover/rails']! as JsonMap)['rails'] = [
+        discoverRailJson('popularFilms'),
+        {
+          ...discoverRailJson('trending'),
+          'browse': {
+            'kinds': ['movie', 'show'],
+            'filters': <String, Object?>{},
+            'sort': 'popular',
+          },
+        },
+      ];
+      backend.rows['trending'] = {
+        'items': [
+          // One the library has, as its own card, beside the catalog's.
+          browseTitleJson(
+            'h1',
+            'Arrival',
+            availability: stateJson('here', libraryTitleId: 'm1'),
+            title: titleJson('m1', name: 'Arrival', year: 2016),
+          ),
+          browseTitleJson('s3', 'Andor', kind: 'show'),
+        ],
+        'stale': false,
+        'detail': null,
+      };
+      await pumpScreen(tester, const SearchScreen(), client: backend.client);
+      // Films only: the year alone, as the library's cards say it.
+      expect(find.text('2024'), findsWidgets);
+      expect(find.text('2024 · Movie'), findsNothing);
+      // Films and shows: every card says which, the library's too.
+      expect(find.text('2016 · Movie'), findsOneWidget);
+      expect(find.text('2024 · Show'), findsOneWidget);
     });
 
     testWidgets('an admin sees the requests that wait on them first', (

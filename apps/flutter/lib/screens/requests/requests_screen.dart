@@ -10,6 +10,7 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/artwork.dart';
 import '../../media/avatar.dart';
+import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
 import '../../router.dart';
@@ -136,7 +137,7 @@ class _MinePageState extends ConsumerState<_MinePage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AskedCard(item: item),
+                      NamedKinds(child: AskedCard(item: item)),
                       _DeclinedNote(item: item),
                     ],
                   ),

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../api/matinee_api.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../router.dart';
 import 'catalog_browse.dart' show browseDetail;
@@ -237,33 +238,38 @@ class _DiscoverRow extends ConsumerWidget {
       // The heading opens the row's browse, of its first kind, as the
       // web's does. A row without one has none.
       final browse = rail.browse;
-      child = Rail(
-        title: title,
-        itemWidth: size.width,
-        itemHeight: size.height,
-        itemCount: items.length,
-        onSeeAll: browse == null
-            ? null
-            : () => context.push(
-                Routes.catalogBrowse(
-                  browse.kinds.firstOrNull ?? TitleKind.movie,
-                  filters: jsonEncode(browse.filters.toJson()),
-                  sort: browse.sort,
+      // A row of one kind says only the year; one that holds both, or
+      // a recommendation's without a browse, names each card's kind.
+      child = NamedKinds(
+        named: browse == null || browse.kinds.length > 1,
+        child: Rail(
+          title: title,
+          itemWidth: size.width,
+          itemHeight: size.height,
+          itemCount: items.length,
+          onSeeAll: browse == null
+              ? null
+              : () => context.push(
+                  Routes.catalogBrowse(
+                    browse.kinds.firstOrNull ?? TitleKind.movie,
+                    filters: jsonEncode(browse.filters.toJson()),
+                    sort: browse.sort,
+                  ),
                 ),
-              ),
-        seeAllLabel: l.commonSeeAll,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return CatalogTitleCard.browse(
-            item,
-            // Without a date or a score to say, the year and the kind,
-            // since a row can hold both.
-            detail: value.detail == null
-                ? null
-                : browseDetail(context, value.detail, item),
-            recommended: _recommended(rail),
-          );
-        },
+          seeAllLabel: l.commonSeeAll,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return CatalogTitleCard.browse(
+              item,
+              // Without a date or a score to say, the year, and the kind
+              // where the row can hold both.
+              detail: value.detail == null
+                  ? null
+                  : browseDetail(context, value.detail, item),
+              recommended: _recommended(rail),
+            );
+          },
+        ),
       );
     } else if (row.hasError && !row.isLoading) {
       child = RailFailed(

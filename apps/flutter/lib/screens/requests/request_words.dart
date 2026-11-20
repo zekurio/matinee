@@ -472,10 +472,12 @@ String cardLineText(
   Availability availability,
   AppLocalizations l, {
   String? detail,
+  bool named = true,
 }) {
   final word = stateWord(availability, percent: true);
   if (word != null) return stateText(word, l);
-  return detail ?? yearKind(year, ref.kind, l);
+  return detail ??
+      (named ? yearKind(year, ref.kind, l) : year?.toString() ?? '');
 }
 
 String seasonDetailText(SeasonDetail detail, AppLocalizations l) =>

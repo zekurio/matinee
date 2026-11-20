@@ -21,7 +21,7 @@ class FavoriteCard extends StatelessWidget {
   Widget build(BuildContext context) => switch (favorite) {
     FavoriteMovie(:final title) || FavoriteShow(:final title) => TitleCard(
       title: title,
-      detail: title.year?.toString(),
+      detail: yearLine(context, title.year, title.kind),
     ),
     FavoriteShowSeason(:final title, :final season) => SeasonPosterCard(
       title: title,

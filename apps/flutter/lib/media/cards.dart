@@ -81,6 +81,33 @@ class TitleCard extends StatelessWidget {
 }
 
 /// A movie or show from a library's shelf, saying what it got last: a
+/// Whether the cards under it name their kind beside the year: on for a
+/// row or grid that can hold both movies and shows, so every card there
+/// says "2012 · Movie", off where it holds one kind, so none does. The
+/// cards of one row agree either way. Off when nothing above says.
+class NamedKinds extends InheritedWidget {
+  const NamedKinds({super.key, this.named = true, required super.child});
+
+  final bool named;
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<NamedKinds>()?.named ?? false;
+
+  @override
+  bool updateShouldNotify(NamedKinds oldWidget) => named != oldWidget.named;
+}
+
+/// A title's year for a card's second line, "2012", or "2012 · Movie"
+/// under a [NamedKinds] row.
+String? yearLine(BuildContext context, int? year, String kind) {
+  if (!NamedKinds.of(context)) return year?.toString();
+  final l = AppLocalizations.of(context);
+  final word = kind == TitleKind.show
+      ? l.webRequestsKindShow
+      : l.webRequestsKindMovie;
+  return year == null ? word : l.requestsYearKind('$year', word);
+}
+
 /// movie its year, a show its count of episodes, or what's new, opening the
 /// one new episode or the season that got them. The Kotlin app's
 /// `ShelfCard`.
@@ -95,7 +122,10 @@ class ShelfCard extends StatelessWidget {
     final title = entry.title;
     final added = entry.added;
     if (title.kind == TitleKind.movie) {
-      return TitleCard(title: title, detail: title.year?.toString());
+      return TitleCard(
+        title: title,
+        detail: yearLine(context, title.year, title.kind),
+      );
     }
     if (added == null) {
       return TitleCard(title: title, detail: l.mediaEpisodeCount(entry.count));

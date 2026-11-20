@@ -322,6 +322,7 @@ class _CatalogCardState extends ConsumerState<CatalogCard> {
         availability,
         l,
         detail: widget.detail?.text,
+        named: NamedKinds.of(context),
       ),
       detailIcon: detail?.icon,
       detailLabel: detail?.label,
@@ -362,14 +363,14 @@ class ArrivedCard extends ConsumerWidget {
       return PosterCard(
         name: title.name,
         toneKey: refKey(title.ref),
-        detail: title.year?.toString(),
+        detail: yearLine(context, title.year, title.ref.kind),
         art: poster == null ? null : Picture([ArtSource(poster)]),
         onPressed: () => context.push(Routes.title(titleId)),
       );
     }
     final card = TitleCard(
       title: summary.summary,
-      detail: summary.year?.toString(),
+      detail: yearLine(context, summary.year, summary.kind),
       poster: poster ?? summary.images.poster,
     );
     if (!fresh || summary.watched) return card;
@@ -444,8 +445,8 @@ class CatalogTitleCard extends ConsumerWidget {
         title: library,
         detail:
             detail ??
-            switch (library.year) {
-              final year? => CardDetail('$year'),
+            switch (yearLine(context, library.year, library.kind)) {
+              final line? => CardDetail(line),
               null => null,
             },
       );

@@ -401,16 +401,19 @@ class _Favorites extends StatelessWidget {
       );
     }
     final size = railCardSize(context, RailArt.poster);
-    return Rail(
-      title: l.favoritesTitle,
-      onSeeAll: () => context.push(Routes.favorites),
-      seeAllLabel: l.commonSeeAll,
-      itemWidth: size.width,
-      itemHeight: size.height,
-      itemCount: favorites.length,
-      itemBuilder: (context, index) => FavoriteCard(
-        key: ValueKey(favoriteKey(favorites[index])),
-        favorite: favorites[index],
+    // Favorites of every kind share the row, so a title says which it is.
+    return NamedKinds(
+      child: Rail(
+        title: l.favoritesTitle,
+        onSeeAll: () => context.push(Routes.favorites),
+        seeAllLabel: l.commonSeeAll,
+        itemWidth: size.width,
+        itemHeight: size.height,
+        itemCount: favorites.length,
+        itemBuilder: (context, index) => FavoriteCard(
+          key: ValueKey(favoriteKey(favorites[index])),
+          favorite: favorites[index],
+        ),
       ),
     );
   }

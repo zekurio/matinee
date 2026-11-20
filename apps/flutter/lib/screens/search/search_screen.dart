@@ -399,9 +399,10 @@ class _Results extends ConsumerWidget {
           columns: posterColumns,
           aspectRatio: CardMetrics.poster,
           itemCount: items.length,
-          itemBuilder: (context, index) => CatalogCard(
+          // The catalog's matches are films and shows together.
+          itemBuilder: (context, index) => NamedKinds(
             key: ValueKey(refKey(items[index].ref)),
-            title: items[index],
+            child: CatalogCard(title: items[index]),
           ),
         ),
       ],

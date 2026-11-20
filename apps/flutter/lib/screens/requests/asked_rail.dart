@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../api/matinee_api.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../router.dart';
 import 'catalog_cards.dart';
@@ -32,19 +33,23 @@ class AskedRail extends StatelessWidget {
         for (final item in items)
           CatalogInput(ref: item.title.ref, libraryId: item.library.id),
       ]),
-      child: Rail(
-        // A new ask at the front starts the row there again.
-        key: ValueKey(items.first.id),
-        title: l.webAskMineTitle,
-        onSeeAll: () => context.push(Routes.requests()),
-        seeAllLabel: l.webAskMineSeeAll,
-        itemWidth: size.width,
-        itemHeight: size.height,
-        itemCount: items.length,
-        itemBuilder: (context, index) => AskedCard(
-          key: ValueKey(items[index].id),
-          item: items[index],
-          fresh: fresh,
+      // What they asked for can be films and shows, so each card says
+      // which.
+      child: NamedKinds(
+        child: Rail(
+          // A new ask at the front starts the row there again.
+          key: ValueKey(items.first.id),
+          title: l.webAskMineTitle,
+          onSeeAll: () => context.push(Routes.requests()),
+          seeAllLabel: l.webAskMineSeeAll,
+          itemWidth: size.width,
+          itemHeight: size.height,
+          itemCount: items.length,
+          itemBuilder: (context, index) => AskedCard(
+            key: ValueKey(items[index].id),
+            item: items[index],
+            fresh: fresh,
+          ),
         ),
       ),
     );
