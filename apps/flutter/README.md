@@ -433,9 +433,9 @@ the system, and the device, and the licenses page lays out `NOTICE.md`,
 which the app bundles as an asset. The rows (`Panel`, `LinkRow`,
 `SwitchRow`, `ValueRow`, `PickerRow`) are in `settings_rows.dart`. Signing
 out and switching server or account are on the profile. The Kotlin app's
-linking a device, subtitles, downloads, the app log, and playback
-diagnostics aren't here yet. An admin also gets the Administration
-section, which [Admin pages](#admin-pages) covers.
+subtitles, downloads, the app log, and playback diagnostics aren't here
+yet. An admin also gets the Administration section, which
+[Admin pages](#admin-pages) covers.
 
 ### Account
 
@@ -449,6 +449,28 @@ out here, which the profile does; any other signs out with
 `DELETE /account/sessions/{id}`. Back from linking a device, the list
 loads again, and once more after `devicePoll`, a little longer than a
 device takes to poll for its session.
+
+### Linking a device
+
+`Routes.linkDevice` (`link_device.dart`) signs in a TV or another app as
+this account, as the Kotlin app's `LinkDeviceScreen` and the web's /link
+page: the camera reads the QR code the device shows, or the person types
+its code, then the page shows the device the server names for that code
+(`GET /auth/device/{userCode}`) and approves it. A code the server doesn't
+know says so, and when the QR code named another server, which one. A
+device without a camera, like a TV, only gets the field.
+
+The camera is `pigeons/scanner.dart`, behind `qrScannerProvider`
+(`lib/core/qr_scanner.dart`), which tests replace. `ScannerBridge.kt`
+binds CameraX to the activity, puts the back camera's picture in a
+Flutter texture (`SurfaceProducer`), and reads each frame for a QR code
+with ZXing, the same libraries and versions as the Kotlin app. It says
+how many quarter turns stand the picture upright, and the page starts it
+again when the screen turns. The camera permission is asked when the page
+opens and once more from its button; after the second no, Android won't
+ask again, so the button opens the app's page in the system settings, and
+the page checks again on coming back. The manifest asks for the camera
+without requiring one.
 
 ## Admin pages
 

@@ -19,6 +19,8 @@ import io.github.zekurio.matinee.platform.DeviceFacts
 import io.github.zekurio.matinee.platform.DisplayNameKind
 import io.github.zekurio.matinee.player.PlayerApi
 import io.github.zekurio.matinee.player.PlayerBridge
+import io.github.zekurio.matinee.scanner.ScannerApi
+import io.github.zekurio.matinee.scanner.ScannerBridge
 import io.github.zekurio.matinee.system.SystemApi
 import io.github.zekurio.matinee.system.SystemBridge
 import java.io.File
@@ -36,6 +38,7 @@ class MainActivity : FlutterActivity() {
     private val device by lazy { Device(this) }
     private val system by lazy { SystemBridge(this) }
     private var playback: PlayerBridge? = null
+    private var scanner: ScannerBridge? = null
 
     // Flutter paints into a transparent Android TextureView above the video SurfaceView.
     override fun getRenderMode(): RenderMode = RenderMode.texture
@@ -47,6 +50,9 @@ class MainActivity : FlutterActivity() {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         DeviceApi.setUp(messenger, device)
         SystemApi.setUp(messenger, system)
+        val camera = ScannerBridge(this, this, flutterEngine.renderer, messenger)
+        scanner = camera
+        ScannerApi.setUp(messenger, camera)
         val bridge = PlayerBridge(this, messenger)
         playback = bridge
         PlayerApi.setUp(messenger, bridge)
@@ -66,6 +72,7 @@ class MainActivity : FlutterActivity() {
         // The engine may outlive the activity, but the video views and mpv don't.
         playback?.release()
         system.release()
+        scanner?.release()
         super.onDestroy()
     }
 
@@ -74,8 +81,11 @@ class MainActivity : FlutterActivity() {
         PlayerApi.setUp(messenger, null)
         DeviceApi.setUp(messenger, null)
         SystemApi.setUp(messenger, null)
+        ScannerApi.setUp(messenger, null)
         playback?.release()
         playback = null
+        scanner?.release()
+        scanner = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 
@@ -90,7 +100,7 @@ class MainActivity : FlutterActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         if (requestCode == LOCAL_NETWORK_REQUEST) {
             device.localNetworkAnswered()
-        } else {
+        } else if (scanner?.onRequestPermissionsResult(requestCode) != true) {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }

@@ -22,6 +22,7 @@ import 'screens/requests/requests_screen.dart';
 import 'screens/search/search_screen.dart';
 import 'screens/settings/admin/library_editor.dart';
 import 'screens/settings/admin/user_access_page.dart';
+import 'screens/settings/link_device.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/shell/shell.dart';
 import 'screens/sign_in/connect_screen.dart';
@@ -289,6 +290,11 @@ List<RouteBase> _handsetRoutes() => [
         SettingsPageScreen(pageKey: state.pathParameters['page']!),
   ),
   GoRoute(
+    path: Routes.linkDevice,
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const LinkDeviceScreen(),
+  ),
+  GoRoute(
     path: Routes.search,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const SearchScreen(),
@@ -445,7 +451,6 @@ List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 
 /// The pages over the tabs, by path pattern, until each has its screen.
 const _pages = [
-  ('/link-device', 'Link a device'),
   ('/downloads/show/:titleId', 'Show downloads'),
 ];
 

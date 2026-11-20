@@ -52,6 +52,10 @@ dependencies {
     implementation("androidx.media3:media3-ui:$media3Version")
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    // Reads the QR code a TV shows to sign it in, as the Kotlin app did.
+    implementation("androidx.camera:camera-camera2:1.6.2")
+    implementation("androidx.camera:camera-lifecycle:1.6.2")
+    implementation("com.google.zxing:core:3.5.4")
 }
 
 android {
