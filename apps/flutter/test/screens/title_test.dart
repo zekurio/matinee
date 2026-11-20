@@ -247,6 +247,11 @@ void main() {
       const TitleScreen(id: 'm1'),
       client: backend.client,
     );
+    // A screen reader hears the time left and can press it.
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Resume, 30 min left')),
+      isSemantics(isButton: true, hasTapAction: true),
+    );
     await tester.tap(find.bySemanticsLabel('Resume, 30 min left'));
     await tester.pumpAndSettle();
     expect(find.text('/play/f1'), findsOneWidget);

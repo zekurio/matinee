@@ -63,7 +63,10 @@ class _PressIndicationState extends State<PressIndication> {
       (true, _, _, true) => PressState.hovered,
       _ => PressState.idle,
     };
+    // Its own node, so its label and tap don't merge into whatever holds
+    // it, as a rail's See all heading did into the whole rail.
     return Semantics(
+      container: true,
       button: widget.button,
       checked: widget.checked,
       toggled: widget.toggled,
