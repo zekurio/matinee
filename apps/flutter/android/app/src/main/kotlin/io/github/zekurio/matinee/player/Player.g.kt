@@ -515,7 +515,9 @@ data class OpenMessage (
   val viewport: ViewportMessage? = null,
   val sourceKind: SourceKindMessage? = null,
   val tracks: SourceTracksMessage? = null,
-  val autoplay: Boolean
+  val autoplay: Boolean,
+  /** Try the device's software decoders before its hardware ones. */
+  val softwareDecoders: Boolean
 )
  {
   companion object {
@@ -529,7 +531,8 @@ data class OpenMessage (
       val sourceKind = pigeonVar_list[6] as SourceKindMessage?
       val tracks = pigeonVar_list[7] as SourceTracksMessage?
       val autoplay = pigeonVar_list[8] as Boolean
-      return OpenMessage(url, headers, startMs, engine, fit, viewport, sourceKind, tracks, autoplay)
+      val softwareDecoders = pigeonVar_list[9] as Boolean
+      return OpenMessage(url, headers, startMs, engine, fit, viewport, sourceKind, tracks, autoplay, softwareDecoders)
     }
   }
   fun toList(): List<Any?> {
@@ -543,6 +546,7 @@ data class OpenMessage (
       sourceKind,
       tracks,
       autoplay,
+      softwareDecoders,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -553,7 +557,7 @@ data class OpenMessage (
       return true
     }
     val other = other as OpenMessage
-    return PlayerPigeonUtils.deepEquals(this.url, other.url) && PlayerPigeonUtils.deepEquals(this.headers, other.headers) && PlayerPigeonUtils.deepEquals(this.startMs, other.startMs) && PlayerPigeonUtils.deepEquals(this.engine, other.engine) && PlayerPigeonUtils.deepEquals(this.fit, other.fit) && PlayerPigeonUtils.deepEquals(this.viewport, other.viewport) && PlayerPigeonUtils.deepEquals(this.sourceKind, other.sourceKind) && PlayerPigeonUtils.deepEquals(this.tracks, other.tracks) && PlayerPigeonUtils.deepEquals(this.autoplay, other.autoplay)
+    return PlayerPigeonUtils.deepEquals(this.url, other.url) && PlayerPigeonUtils.deepEquals(this.headers, other.headers) && PlayerPigeonUtils.deepEquals(this.startMs, other.startMs) && PlayerPigeonUtils.deepEquals(this.engine, other.engine) && PlayerPigeonUtils.deepEquals(this.fit, other.fit) && PlayerPigeonUtils.deepEquals(this.viewport, other.viewport) && PlayerPigeonUtils.deepEquals(this.sourceKind, other.sourceKind) && PlayerPigeonUtils.deepEquals(this.tracks, other.tracks) && PlayerPigeonUtils.deepEquals(this.autoplay, other.autoplay) && PlayerPigeonUtils.deepEquals(this.softwareDecoders, other.softwareDecoders)
   }
 
   override fun hashCode(): Int {
@@ -567,10 +571,11 @@ data class OpenMessage (
     result = 31 * result + PlayerPigeonUtils.deepHash(this.sourceKind)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.tracks)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.autoplay)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.softwareDecoders)
     return result
   }
   override fun toString(): String {
-    return "OpenMessage(url=$url, headers=$headers, startMs=$startMs, engine=$engine, fit=$fit, viewport=$viewport, sourceKind=$sourceKind, tracks=$tracks, autoplay=$autoplay)"
+    return "OpenMessage(url=$url, headers=$headers, startMs=$startMs, engine=$engine, fit=$fit, viewport=$viewport, sourceKind=$sourceKind, tracks=$tracks, autoplay=$autoplay, softwareDecoders=$softwareDecoders)"
   }
 }
 

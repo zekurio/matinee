@@ -93,6 +93,9 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
         val autoplay = request.autoplay && requestFocus()
         enqueue("initialize", fatal = true) {
             wantPause = !autoplay
+            // Settings can ask for FFmpeg's decoders from the start, drawn as
+            // when MediaCodec rejects a format.
+            software = request.softwareDecoders
             fit = request.fit
             sourceTracks = request.tracks
             sidecarUrl = request.tracks?.subtitleUrl
@@ -129,6 +132,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
             mpv.observeProperty("vo-format-rejected", PropertyFormat.Flag)
             pendingUrl = request.url
             waitForVideo = request.viewport != null
+            if (software) main.post { if (!closed) output.useGpuSurface() }
             applySurfaces()
             worker.post(ticker)
         }
@@ -136,7 +140,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
 
     private fun MpvPlayerConfig.configureOutput() {
         setOption("vo", "mediacodec,gpu-next")
-        setOption("hwdec", "mediacodec")
+        setOption("hwdec", if (software) "no" else "mediacodec")
         setOption("hwdec-codecs", "h264,hevc,mpeg2video,vp8,vp9,av1")
         val async = if (Build.VERSION.SDK_INT >= 31) ",async=1" else ""
         setOption("vd-lavc-o", "ndk_codec=0,priority=0$async")

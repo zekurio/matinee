@@ -7,6 +7,7 @@ import 'package:matinee/platform/player.g.dart' as wire;
 import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/playback_session.dart';
 import 'package:matinee/player/player.dart';
+import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/player/web_vtt.dart';
 
 import 'playback_fakes.dart';
@@ -443,6 +444,63 @@ void main() {
     expect(mpv.audio, ['*']);
     expect(mpv.video.single.codec, '*');
     expect(mpv.sidecarSubtitles, [PlaybackSubtitleDelivery.pgs]);
+  });
+
+  test('the playback settings narrow the profile as the Kotlin app does', () {
+    final codecs = wire.CodecCapabilitiesMessage(
+      video: [
+        wire.VideoDecoderMessage(codec: 'h264', tenBit: false),
+        wire.VideoDecoderMessage(codec: 'hevc', tenBit: true),
+      ],
+      audio: ['aac', 'opus', 'ac3', 'eac3'],
+      dolbyVision: false,
+    );
+    const prefs = PlayerPrefs(
+      convertAudio: {'eac3', 'dts'},
+      audioCodec: 'opus',
+      videoCodec: 'hevc',
+    );
+    final media3 = playbackDevice(
+      PlayerEngine.media3,
+      codecs,
+      'de',
+      prefs: prefs,
+    );
+    expect(media3.audio, ['aac', 'opus', 'ac3', 'pcm_*']);
+    expect(media3.streamAudio, ['opus', 'aac', 'ac3']);
+    expect(media3.encodeVideo, ['hevc', 'h264']);
+    final mpv = playbackDevice(PlayerEngine.mpv, codecs, 'de', prefs: prefs);
+    expect(mpv.audio, isNot(contains('eac3')));
+    expect(mpv.audio, containsAll(['truehd', 'dts', 'pcm_*']));
+    expect(mpv.encodeVideo, ['hevc', 'h264', 'av1']);
+    // A codec the device can't decode or the server doesn't list stays out.
+    final unknown = playbackDevice(
+      PlayerEngine.media3,
+      codecs,
+      'de',
+      prefs: const PlayerPrefs(videoCodec: 'av1', audioCodec: 'flac'),
+    );
+    expect(unknown.encodeVideo, ['h264', 'hevc']);
+    expect(unknown.streamAudio.first, 'opus');
+    expect(passthroughCodecs(codecs), ['ac3', 'eac3']);
+    expect(convertAudioChoices(['aac', 'opus'], codecs), ['opus', 'aac']);
+    expect(encodeVideoChoices(['h264', 'av1'], codecs), ['h264']);
+  });
+
+  test('player preferences survive a round trip and ignore junk', () {
+    const prefs = PlayerPrefs(
+      quality: '720p-4',
+      convertAudio: {'ac3'},
+      decoders: Decoders.software,
+      subtitleColor: SubtitleColor.cyan,
+      subtitleScale: 1.5,
+    );
+    expect(PlayerPrefs.fromJson(prefs.toJson()), prefs);
+    expect(
+      PlayerPrefs.fromJson({'decoders': 'gpu', 'skipButtons': 'no', 'x': 1}),
+      const PlayerPrefs(),
+    );
+    expect(PlayerPrefs.fromJson('junk'), const PlayerPrefs());
   });
 
   test('reads overlapping WebVTT cues, markup, and entities', () {

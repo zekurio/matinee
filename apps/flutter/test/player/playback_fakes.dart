@@ -261,6 +261,7 @@ typedef OpenedSource = ({
 });
 
 class FakePlayer implements Player {
+  final fits = <VideoFit>[];
   final _updates = StreamController<PlaybackState>.broadcast();
   final opens = <OpenedSource>[];
   final trackChanges = <SourceTracks>[];
@@ -372,5 +373,5 @@ class FakePlayer implements Player {
   Future<void> setSubtitleUrl(String? url) => throw UnimplementedError();
 
   @override
-  Future<void> setVideoFit(VideoFit fit) async {}
+  Future<void> setVideoFit(VideoFit fit) async => fits.add(fit);
 }

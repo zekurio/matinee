@@ -9,6 +9,8 @@ import 'package:matinee/core/device.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/core/toasts.dart';
 import 'package:matinee/kit/kit.dart';
+import 'package:matinee/platform/player.g.dart' as wire;
+import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/player/player_state.dart';
 import 'package:matinee/screens/settings/about_page.dart';
@@ -134,6 +136,45 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(playerEngineProvider).value, PlayerEngine.media3);
     expect(find.text('Media3'), findsOneWidget);
+  });
+
+  testWidgets('Playback keeps the device settings the player reads', (
+    tester,
+  ) async {
+    final container = await _pump(
+      tester,
+      const SettingsPageScreen(pageKey: 'playback'),
+      size: const Size(412, 2400),
+      overrides: [
+        playbackCodecsProvider.overrideWith(
+          (ref) => wire.CodecCapabilitiesMessage(
+            video: [wire.VideoDecoderMessage(codec: 'h264', tenBit: false)],
+            audio: ['aac', 'ac3'],
+            dolbyVision: false,
+          ),
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Gestures'), findsOneWidget);
+    expect(find.text('Player buttons'), findsOneWidget);
+    // Only on a TV.
+    expect(find.text('Match frame rate'), findsNothing);
+    await tester.tap(find.text('Play the next episode'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('AC-3'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Decoders'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Software first'));
+    await tester.pumpAndSettle();
+    final prefs = container.read(playerPrefsProvider).value!;
+    expect(prefs.autoplayNext, isFalse);
+    expect(prefs.convertAudio, {'ac3'});
+    expect(prefs.decoders, Decoders.software);
+    // Saved, so a new start reads the same.
+    container.invalidate(playerPrefsProvider);
+    expect(await container.read(playerPrefsProvider.future), prefs);
   });
 
   testWidgets('About tells the version and opens the licenses', (tester) async {

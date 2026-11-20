@@ -1,12 +1,13 @@
 part of 'player.dart';
 
 class _PigeonPlayer implements Player {
-  _PigeonPlayer(this._engine);
+  _PigeonPlayer(this._engine, [this._softwareDecoders = false]);
 
   static int _lastSession = 0;
   static final wire.PlayerApi _api = wire.PlayerApi();
 
   final PlayerEngine _engine;
+  final bool _softwareDecoders;
   final StreamController<PlaybackState> _updates = StreamController.broadcast();
   PlaybackState _state = const PlaybackState();
   int? _session;
@@ -89,6 +90,7 @@ class _PigeonPlayer implements Player {
           },
           tracks: tracks == null ? null : _wireTracks(tracks),
           autoplay: autoplay,
+          softwareDecoders: _softwareDecoders,
         ),
       );
     } on Exception {

@@ -31,10 +31,14 @@ class PlaybackSession extends ChangeNotifier {
     required this.device,
     required this.preferences,
     this.startAt,
+    String? quality,
     @visibleForTesting String? sessionId,
     @visibleForTesting Duration Function()? elapsed,
   }) : sessionId = sessionId ?? _sessionId(),
-       _elapsed = elapsed ?? (Stopwatch()..start()).elapsedNow;
+       _elapsed = elapsed ?? (Stopwatch()..start()).elapsedNow,
+       // The quality settings start in. The server answers with the nearest
+       // the account may use, and a pick in the player lasts this session.
+       _picks = (audio: null, subtitle: null, quality: quality);
 
   final String itemId;
   final String sessionId;
@@ -57,7 +61,7 @@ class PlaybackSession extends ChangeNotifier {
   WebVtt? captions;
 
   final _failed = <String>{};
-  _Picks _picks = (audio: null, subtitle: null, quality: null);
+  _Picks _picks;
   StreamSubscription<PlaybackState>? _listener;
   Timer? _timer;
   Duration _lastTick = Duration.zero;

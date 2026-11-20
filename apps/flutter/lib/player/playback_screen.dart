@@ -26,10 +26,14 @@ import 'player_preferences.dart';
 import 'seek_bar.dart';
 import 'video_view.dart';
 
-final playbackPlayerFactoryProvider = Provider<Player Function(PlayerEngine)>(
-  (ref) =>
-      (engine) => Player(engine: engine),
-);
+final playbackPlayerFactoryProvider =
+    Provider<Player Function(PlayerEngine, PlayerPrefs)>(
+      (ref) =>
+          (engine, prefs) => Player(
+            engine: engine,
+            softwareDecoders: prefs.decoders == Decoders.software,
+          ),
+    );
 final playbackFullscreenProvider = Provider<Future<void> Function(int, bool)>(
   (ref) => wire.PlayerApi().setFullscreen,
 );
@@ -76,6 +80,11 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
     final api = ref.watch(apiProvider);
     final engineState = ref.watch(playerEngineProvider);
     final engine = engineState.value ?? PlayerEngine.mpv;
+    // Read once when the player opens; a change made while it plays, like a
+    // pinch that saves the fit, doesn't open it again.
+    final prefsLoading = ref.watch(
+      playerPrefsProvider.select((prefs) => prefs.isLoading),
+    );
     final codecs = engine == PlayerEngine.media3
         ? ref.watch(playbackCodecsProvider)
         : null;
@@ -97,13 +106,17 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
         back: back,
         error: auth is Offline ? l.errorUnreachable : l.playerErrorLost,
       );
-    } else if (engineState.isLoading || codecs?.isLoading == true) {
+    } else if (engineState.isLoading ||
+        prefsLoading ||
+        codecs?.isLoading == true) {
       child = _Opening(back: back);
     } else {
+      final prefs = ref.read(playerPrefsProvider).value ?? const PlayerPrefs();
       final profile = playbackDevice(
         engine,
         codecs?.value,
         WidgetsBinding.instance.platformDispatcher.locale.languageCode,
+        prefs: prefs,
       );
       child = _PlaybackHost(
         key: ValueKey((api, widget.itemId, widget.startAt, engine)),
@@ -115,10 +128,11 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
             ...ref.read(playerHeadersProvider),
             'User-Agent': ref.read(deviceProvider).userAgent,
           },
-          player: ref.read(playbackPlayerFactoryProvider)(engine),
+          player: ref.read(playbackPlayerFactoryProvider)(engine, prefs),
           device: profile,
           preferences: user.playback ?? defaultPlaybackPreferences,
           startAt: widget.startAt,
+          quality: prefs.quality,
         ),
         back: back,
         next: (item) => context.replace(Routes.play(item.id), extra: 0.0),
@@ -228,7 +242,7 @@ const _pinchFill = 1.15;
 /// The touch controls, laid out in `player_controls.dart` as the Kotlin
 /// phone player's. A menu stays open in the side panel while the video
 /// continues.
-class _PlaybackControls extends StatefulWidget {
+class _PlaybackControls extends ConsumerStatefulWidget {
   const _PlaybackControls({
     required this.session,
     required this.back,
@@ -240,10 +254,10 @@ class _PlaybackControls extends StatefulWidget {
   final ValueChanged<MediaItem> next;
 
   @override
-  State<_PlaybackControls> createState() => _PlaybackControlsState();
+  ConsumerState<_PlaybackControls> createState() => _PlaybackControlsState();
 }
 
-class _PlaybackControlsState extends State<_PlaybackControls> {
+class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
   static const _hideAfter = Duration(milliseconds: 3500);
   static const _nextDelay = 10;
   Timer? _hide;
@@ -253,7 +267,15 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
   bool _leaving = false;
   bool _playing = false;
   bool _sawNextEarly = false;
+
+  /// The countdown stopped, or never ran with autoplay off, so the next
+  /// episode waits for Play.
   bool _cancelledNext = false;
+
+  /// Hide put the next episode away while the credits roll; it comes back
+  /// at the end.
+  bool _hiddenNext = false;
+  bool _autoplay = true;
   int _nextIn = _nextDelay;
   double? _scrubbing;
   _PlayerMenu? _menu;
@@ -270,6 +292,11 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
   @override
   void initState() {
     super.initState();
+    final prefs = ref.read(playerPrefsProvider).value ?? const PlayerPrefs();
+    _autoplay = prefs.autoplayNext;
+    _cancelledNext = !_autoplay;
+    _fill = prefs.fillScreen;
+    if (_fill) unawaited(_applyFit());
     _session.addListener(_updated);
     _playing = _session.playback.status.playing;
     _phase = _session.playback.phase;
@@ -311,7 +338,10 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
       _advance = null;
       _nextIn = _nextDelay;
       _sawNextEarly = next != null;
-      if (next == null) _cancelledNext = false;
+      if (next == null) {
+        _cancelledNext = !_autoplay;
+        _hiddenNext = false;
+      }
       return;
     }
     if (_leaving || _cancelledNext || _advance != null) return;
@@ -328,7 +358,10 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
   void _cancelNext() {
     _advance?.cancel();
     _advance = null;
-    setState(() => _cancelledNext = true);
+    setState(() {
+      _cancelledNext = true;
+      if (!_session.ended) _hiddenNext = true;
+    });
   }
 
   void _resetHide() {
@@ -410,12 +443,19 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
       _fill = want;
       _fitNotes++;
     });
+    unawaited(_applyFit());
+    // Kept for the next video, as the Kotlin app's fillScreen.
     unawaited(
-      _session.player
-          .setVideoFit(want ? VideoFit.cover : VideoFit.contain)
+      ref
+          .read(playerPrefsProvider.notifier)
+          .change((prefs) => prefs.copyWith(fillScreen: want))
           .catchError((Object _) {}),
     );
   }
+
+  Future<void> _applyFit() => _session.player
+      .setVideoFit(_fill ? VideoFit.cover : VideoFit.contain)
+      .catchError((Object _) {});
 
   @override
   Widget build(BuildContext context) {
@@ -554,7 +594,7 @@ class _PlaybackControlsState extends State<_PlaybackControls> {
                     enabled: enabled,
                   ),
                 ),
-              if (_session.ended || !_cancelledNext)
+              if (_session.ended || !_hiddenNext)
                 if (_session.next case final item?) _upNext(l, item, enabled),
             ],
           ),

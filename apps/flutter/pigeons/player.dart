@@ -95,6 +95,7 @@ class OpenMessage {
     this.sourceKind,
     this.tracks,
     this.autoplay = true,
+    this.softwareDecoders = false,
   });
 
   final String url;
@@ -106,6 +107,9 @@ class OpenMessage {
   final SourceKindMessage? sourceKind;
   final SourceTracksMessage? tracks;
   final bool autoplay;
+
+  /// Try the device's software decoders before its hardware ones.
+  final bool softwareDecoders;
 }
 
 sealed class PlaybackEventMessage {}

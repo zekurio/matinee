@@ -3,6 +3,10 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../player/player_preferences.dart' show automaticCodec;
+
+export '../player/player_preferences.dart' show automaticCodec;
+
 /// Which subtitle languages a download saves beside the video, as
 /// `DownloadWishes.subtitles` names them.
 enum DownloadSubtitles { used, all, none }
@@ -13,9 +17,6 @@ abstract final class DefaultVersion {
   static const device = 'device';
   static const original = 'original';
 }
-
-/// A download's codec when its video is encoded: the server's first.
-const automaticCodec = 'auto';
 
 /// The Kotlin app's download settings, kept on this device.
 final class DownloadSettings {

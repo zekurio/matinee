@@ -437,6 +437,7 @@ class OpenMessage {
     this.sourceKind,
     this.tracks,
     this.autoplay = true,
+    this.softwareDecoders = false,
   });
 
   String url;
@@ -457,6 +458,9 @@ class OpenMessage {
 
   bool autoplay;
 
+  /// Try the device's software decoders before its hardware ones.
+  bool softwareDecoders;
+
   List<Object?> _toList() {
     return <Object?>[
       url,
@@ -468,6 +472,7 @@ class OpenMessage {
       sourceKind,
       tracks,
       autoplay,
+      softwareDecoders,
     ];
   }
 
@@ -486,6 +491,7 @@ class OpenMessage {
       sourceKind: result[6] as SourceKindMessage?,
       tracks: result[7] as SourceTracksMessage?,
       autoplay: result[8]! as bool,
+      softwareDecoders: result[9]! as bool,
     );
   }
 
@@ -498,7 +504,7 @@ class OpenMessage {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(url, other.url) && _deepEquals(headers, other.headers) && _deepEquals(startMs, other.startMs) && _deepEquals(engine, other.engine) && _deepEquals(fit, other.fit) && _deepEquals(viewport, other.viewport) && _deepEquals(sourceKind, other.sourceKind) && _deepEquals(tracks, other.tracks) && _deepEquals(autoplay, other.autoplay);
+    return _deepEquals(url, other.url) && _deepEquals(headers, other.headers) && _deepEquals(startMs, other.startMs) && _deepEquals(engine, other.engine) && _deepEquals(fit, other.fit) && _deepEquals(viewport, other.viewport) && _deepEquals(sourceKind, other.sourceKind) && _deepEquals(tracks, other.tracks) && _deepEquals(autoplay, other.autoplay) && _deepEquals(softwareDecoders, other.softwareDecoders);
   }
 
   @override
@@ -507,7 +513,7 @@ class OpenMessage {
 
   @override
   String toString() {
-    return 'OpenMessage(url: $url, headers: $headers, startMs: $startMs, engine: $engine, fit: $fit, viewport: $viewport, sourceKind: $sourceKind, tracks: $tracks, autoplay: $autoplay)';
+    return 'OpenMessage(url: $url, headers: $headers, startMs: $startMs, engine: $engine, fit: $fit, viewport: $viewport, sourceKind: $sourceKind, tracks: $tracks, autoplay: $autoplay, softwareDecoders: $softwareDecoders)';
   }
 }
 

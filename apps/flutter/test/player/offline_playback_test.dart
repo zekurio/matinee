@@ -183,7 +183,7 @@ void main() {
         auth: auth,
         overrides: [
           downloadsPlatformProvider.overrideWithValue(platform),
-          playbackPlayerFactoryProvider.overrideWithValue((engine) {
+          playbackPlayerFactoryProvider.overrideWithValue((engine, prefs) {
             final player = FakePlayer();
             players.add(player);
             return player;

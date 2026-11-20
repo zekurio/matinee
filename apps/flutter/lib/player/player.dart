@@ -33,8 +33,12 @@ class SourceTracks {
 /// Android has one active native player per activity. Opening a source
 /// replaces any previous session, including one owned by another [Player].
 abstract class Player {
-  factory Player({PlayerEngine engine = PlayerEngine.mpv}) =>
-      _PigeonPlayer(engine);
+  /// [softwareDecoders] tries the device's software decoders first, as the
+  /// Decoders setting asks.
+  factory Player({
+    PlayerEngine engine = PlayerEngine.mpv,
+    bool softwareDecoders = false,
+  }) => _PigeonPlayer(engine, softwareDecoders);
 
   PlaybackState get state;
 

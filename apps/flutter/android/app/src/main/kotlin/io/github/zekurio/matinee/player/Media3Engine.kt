@@ -23,6 +23,7 @@ import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -82,6 +83,12 @@ internal class Media3Engine(private val context: Context, private val output: Pl
         val renderers = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+        if (request.softwareDecoders) {
+            // Software first when settings say so; a decoder that fails to start still hands over.
+            renderers.setMediaCodecSelector { mime, secure, tunneling ->
+                MediaCodecSelector.DEFAULT.getDecoderInfos(mime, secure, tunneling).sortedByDescending { it.softwareOnly }
+            }
+        }
         val player = ExoPlayer.Builder(context, renderers).setMediaSourceFactory(sources).build()
         exo = player
         player.addListener(this)

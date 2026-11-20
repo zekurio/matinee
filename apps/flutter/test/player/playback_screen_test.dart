@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,7 @@ import 'package:matinee/player/player.dart';
 import 'package:matinee/player/player_controls.dart' show PlayerDim;
 import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
@@ -89,7 +91,7 @@ void main() {
         sessionHttpProvider.overrideWithValue(backend.client),
         // No downloads, so the route asks the server.
         downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
-        playbackPlayerFactoryProvider.overrideWithValue((engine) {
+        playbackPlayerFactoryProvider.overrideWithValue((engine, _) {
           engines.add(engine);
           final player = FakePlayer();
           players.add(player);
@@ -242,7 +244,7 @@ void main() {
             dolbyVision: false,
           ),
         ),
-        playbackPlayerFactoryProvider.overrideWithValue((engine) {
+        playbackPlayerFactoryProvider.overrideWithValue((engine, _) {
           expect(engine, PlayerEngine.media3);
           return player;
         }),
@@ -269,4 +271,73 @@ void main() {
     expect(player.opens, isEmpty);
     await tap(tester, 'Back');
   });
+
+  testWidgets('starts as the playback settings say', (tester) async {
+    await _preferences().setString(
+      'matinee.player.prefs',
+      jsonEncode(
+        const PlayerPrefs(
+          quality: '720p-4',
+          decoders: Decoders.software,
+          fillScreen: true,
+          autoplayNext: false,
+        ).toJson(),
+      ),
+    );
+    final backend = FakePlaybackApi();
+    backend.start = (input) => FakePlaybackApi.answer(
+      plan(
+        id: input.itemId,
+        start: input.position ?? 18,
+        audio: audioOne,
+        quality: input.quality ?? PlaybackQuality.original,
+        hasNext: true,
+      ),
+    );
+    final player = FakePlayer();
+    final made = <PlayerPrefs>[];
+    tester.view.physicalSize = const Size(850, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = ProviderContainer(
+      overrides: [
+        authStateProvider.overrideWithValue(
+          SignedIn('https://matinee.example', User.fromJson(userJson('ada'))),
+        ),
+        apiProvider.overrideWithValue(backend.api),
+        playerHeadersProvider.overrideWithValue(const {}),
+        sessionHttpProvider.overrideWithValue(backend.client),
+        downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
+        playbackPlayerFactoryProvider.overrideWithValue((engine, prefs) {
+          made.add(prefs);
+          return player;
+        }),
+        playbackFullscreenProvider.overrideWithValue((_, _) async {}),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MatineeApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
+    await tester.pumpAndSettle();
+    expect(backend.starts.single.quality, '720p-4');
+    expect(made.single.decoders, Decoders.software);
+    expect(player.fits, [VideoFit.cover]);
+
+    // With autoplay off, the next episode waits for Play at the end.
+    player.emit(PlaybackPhase.ended, 120);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Playing in'), findsNothing);
+    await tester.pump(const Duration(seconds: 12));
+    expect(backend.starts, hasLength(1));
+    expect(find.text('Play'), findsOneWidget);
+    await tap(tester, 'Back');
+  });
 }
+
+SharedPreferencesAsync _preferences() => SharedPreferencesAsync();

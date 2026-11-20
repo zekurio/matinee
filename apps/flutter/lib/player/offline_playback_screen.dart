@@ -221,7 +221,10 @@ class _OfflinePlaybackScreenState extends ConsumerState<OfflinePlaybackScreen> {
           kind: download.kind,
           audioTracks: download.audio,
           subtitles: saved,
-          player: ref.read(playbackPlayerFactoryProvider)(engine),
+          player: ref.read(playbackPlayerFactoryProvider)(
+            engine,
+            ref.read(playerPrefsProvider).value ?? const PlayerPrefs(),
+          ),
           mpv: engine == PlayerEngine.mpv,
           audio: audio,
           subtitle: subtitle,
