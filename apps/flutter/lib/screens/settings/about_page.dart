@@ -122,10 +122,15 @@ final class NoticeRow extends NoticeBlock {
 
 /// The notice's Markdown as blocks: `#` headings, table rows past their
 /// header and rule, and paragraphs of the lines between blank ones, with
-/// links read as their text and code without its backticks.
+/// code without its backticks. A link to the web keeps its address after
+/// its text, since the page can't open it and a line like "Plezy revision"
+/// says nothing alone; one into the repository reads as its text.
 List<NoticeBlock> noticeBlocks(String markdown) {
   String plain(String text) => text
-      .replaceAllMapped(RegExp(r'\[([^\]]+)\]\([^)]+\)'), (m) => m[1]!)
+      .replaceAllMapped(
+        RegExp(r'\[([^\]]+)\]\(([^)]+)\)'),
+        (m) => m[2]!.startsWith('https://') ? '${m[1]} (${m[2]})' : m[1]!,
+      )
       .replaceAll('`', '')
       .trim();
   final blocks = <NoticeBlock>[];

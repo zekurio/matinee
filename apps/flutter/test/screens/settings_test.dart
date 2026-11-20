@@ -138,20 +138,27 @@ void main() {
     final blocks = noticeBlocks('''
 # Notices
 
-Adapted from [Plezy](https://example.com) at
-`54f135f`.
+Adapted from Plezy at `54f135f`, under the
+[LICENSE](../../LICENSE).
 
 | File | Source |
 | ---- | ------ |
 | `a.kt` | `b.kt`, the surface |
+
+[Plezy revision](https://example.com/plezy/54f135f)
 ''');
-    expect(blocks, hasLength(3));
+    expect(blocks, hasLength(4));
     expect((blocks[0] as NoticeHeading).text, 'Notices');
     expect(
       (blocks[1] as NoticeParagraph).text,
-      'Adapted from Plezy at 54f135f.',
+      'Adapted from Plezy at 54f135f, under the LICENSE.',
     );
     expect((blocks[2] as NoticeRow).cells, ['a.kt', 'b.kt, the surface']);
+    // A web link keeps where it goes, or the line says nothing.
+    expect(
+      (blocks[3] as NoticeParagraph).text,
+      'Plezy revision (https://example.com/plezy/54f135f)',
+    );
   });
 
   for (final (name, page, colors) in [
