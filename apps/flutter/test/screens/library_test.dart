@@ -49,6 +49,22 @@ void main() {
     expect(find.text('/title/s1'), findsOneWidget);
   });
 
+  testWidgets("a card's words under its poster open it, and its menu", (
+    tester,
+  ) async {
+    final backend = LibraryBackend();
+    await pumpScreen(tester, _shows, client: backend.client);
+    await tester.longPress(find.text('Show B1').last);
+    await tester.pumpAndSettle();
+    expect(find.byType(Sheet), findsOneWidget);
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+    expect(find.byType(Sheet), findsNothing);
+    await tester.tap(find.text('2011'));
+    await tester.pumpAndSettle();
+    expect(find.text('/title/s1'), findsOneWidget);
+  });
+
   testWidgets('the grid pages as it scrolls', (tester) async {
     final backend = LibraryBackend(shows: 130);
     await pumpScreen(tester, _shows, client: backend.client);

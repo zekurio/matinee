@@ -115,10 +115,53 @@ class _PressIndicationState extends State<PressIndication> {
                     widget.focusInsets,
                   )
                 : null,
-            child: widget.builder(context, state),
+            child: _FocusScope(
+              focused: enabled && _focused,
+              child: Builder(
+                builder: (context) => widget.builder(context, state),
+              ),
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Whether the [PressIndication] around it has keyboard or remote focus.
+class _FocusScope extends InheritedWidget {
+  const _FocusScope({required this.focused, required super.child});
+
+  final bool focused;
+
+  @override
+  bool updateShouldNotify(_FocusScope oldWidget) =>
+      focused != oldWidget.focused;
+}
+
+/// The focus ring of the [PressIndication] around it, drawn round [child]
+/// alone: a card that presses as a whole, picture and words, rings only
+/// its picture. That press sets `showFocusRing: false`.
+class FocusOutline extends StatelessWidget {
+  const FocusOutline({super.key, required this.shape, required this.child});
+
+  final BorderRadiusGeometry shape;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final focused =
+        context.dependOnInheritedWidgetOfExactType<_FocusScope>()?.focused ??
+        false;
+    return CustomPaint(
+      foregroundPainter: focused
+          ? _FocusRing(
+              shape.resolve(Directionality.of(context)),
+              MatineeTheme.of(context).accent,
+              EdgeInsets.zero,
+            )
+          : null,
+      child: child,
     );
   }
 }

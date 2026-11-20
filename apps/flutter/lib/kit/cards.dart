@@ -208,8 +208,10 @@ class _PressWash extends StatelessWidget {
 
 /// A movie or show as its 2:3 poster, with its name and a detail under it.
 /// Until [art] shows, and when there's none, the name sits on the title's
-/// tone. A tap on the poster is [onPressed]; to a screen reader the poster
-/// is one button, [name] and [detail].
+/// tone. The card is one target, poster and words: a tap anywhere on it is
+/// [onPressed] and a long press [onLongPress], while the press's wash and
+/// focus ring stay on the poster. To a screen reader it's one button,
+/// [name] and [detail].
 class PosterCard extends StatelessWidget {
   const PosterCard({
     super.key,
@@ -252,48 +254,52 @@ class PosterCard extends StatelessWidget {
     final watched = watchedLabel;
     final mark =
         badge ?? (watched == null ? null : WatchedBadge(label: watched));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        PressIndication(
-          onPressed: onPressed,
-          onLongPress: onLongPress,
-          longPressLabel: longPressLabel,
-          shape: CardMetrics.radius,
-          label: [name, ?detail].join(', '),
-          builder: (context, state) => ArtFrame(
-            toneKey: toneKey ?? name,
-            aspectRatio: CardMetrics.poster,
-            children: [
-              ExcludeSemantics(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(
-                      name,
-                      textAlign: TextAlign.center,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: KitText.sm.style(
-                        color: colors.foreground.withValues(alpha: .7),
-                        weight: FontWeight.w500,
+    return PressIndication(
+      onPressed: onPressed,
+      onLongPress: onLongPress,
+      longPressLabel: longPressLabel,
+      shape: CardMetrics.radius,
+      showFocusRing: false,
+      label: [name, ?detail].join(', '),
+      builder: (context, state) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FocusOutline(
+            shape: CardMetrics.radius,
+            child: ArtFrame(
+              toneKey: toneKey ?? name,
+              aspectRatio: CardMetrics.poster,
+              children: [
+                ExcludeSemantics(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        name,
+                        textAlign: TextAlign.center,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: KitText.sm.style(
+                          color: colors.foreground.withValues(alpha: .7),
+                          weight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              ?art,
-              if (mark != null)
-                PositionedDirectional(top: 6, end: 6, child: mark),
-              _PressWash(state),
-            ],
+                ?art,
+                if (mark != null)
+                  PositionedDirectional(top: 6, end: 6, child: mark),
+                _PressWash(state),
+              ],
+            ),
           ),
-        ),
-        ExcludeSemantics(
-          child: CardText(primary: name, secondary: detail),
-        ),
-      ],
+          ExcludeSemantics(
+            child: CardText(primary: name, secondary: detail),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -302,7 +308,8 @@ class PosterCard extends StatelessWidget {
 /// and a detail under it: Continue watching's and Next up's card. The bar
 /// along the bottom is how far in the person is, the check that it's
 /// watched. Play shows on the still while a mouse is over it or the card
-/// has focus, as on the web's desktop; a phone's cards stay clean.
+/// has focus, as on the web's desktop; a phone's cards stay clean. Like
+/// [PosterCard], the still and its words press as one.
 class WideCard extends StatelessWidget {
   const WideCard({
     super.key,
@@ -342,51 +349,60 @@ class WideCard extends StatelessWidget {
     final progress = this.progress;
     final watched = watchedLabel;
     final play = onPlay;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        PressIndication(
-          onPressed: onPressed,
-          onLongPress: onLongPress,
-          longPressLabel: longPressLabel,
-          shape: CardMetrics.radius,
-          label: [name, ?detail].join(', '),
-          builder: (context, state) => ArtFrame(
-            toneKey: toneKey ?? name,
-            aspectRatio: CardMetrics.wide,
-            children: [
-              Center(
-                child: KitIcon(
-                  Lucide.film,
-                  color: colors.mutedForeground.withValues(alpha: .4),
-                ),
-              ),
-              ?art,
-              if (watched != null)
-                PositionedDirectional(
-                  top: 6,
-                  end: 6,
-                  child: WatchedBadge(label: watched),
-                )
-              else if (progress != null && progress > 0)
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: WatchProgressBar(progress: progress),
-                ),
-              _PressWash(state),
-              if (play != null &&
-                  (state == PressState.hovered || state == PressState.focused))
+    return PressIndication(
+      onPressed: onPressed,
+      onLongPress: onLongPress,
+      longPressLabel: longPressLabel,
+      shape: CardMetrics.radius,
+      showFocusRing: false,
+      label: [name, ?detail].join(', '),
+      builder: (context, state) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FocusOutline(
+            shape: CardMetrics.radius,
+            child: ArtFrame(
+              toneKey: toneKey ?? name,
+              aspectRatio: CardMetrics.wide,
+              children: [
                 Center(
-                  child: PlayGlyph(onPressed: play, label: playLabel!),
+                  child: KitIcon(
+                    Lucide.film,
+                    color: colors.mutedForeground.withValues(alpha: .4),
+                  ),
                 ),
-            ],
+                ?art,
+                if (watched != null)
+                  PositionedDirectional(
+                    top: 6,
+                    end: 6,
+                    child: WatchedBadge(label: watched),
+                  )
+                else if (progress != null && progress > 0)
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: WatchProgressBar(progress: progress),
+                  ),
+                _PressWash(state),
+                if (play != null &&
+                    (state == PressState.hovered ||
+                        state == PressState.focused))
+                  Center(
+                    child: PlayGlyph(onPressed: play, label: playLabel!),
+                  ),
+              ],
+            ),
           ),
-        ),
-        ExcludeSemantics(
-          child: CardText(primary: name, secondary: detail, untitled: untitled),
-        ),
-      ],
+          ExcludeSemantics(
+            child: CardText(
+              primary: name,
+              secondary: detail,
+              untitled: untitled,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -428,7 +444,7 @@ class PlayGlyph extends StatelessWidget {
 
 /// Someone in the cast: their round photo, or their initials on a neutral
 /// circle until it loads and when there's none, with their name and role
-/// under it.
+/// under it, pressing as one, the focus ring round the photo.
 class PersonCard extends StatelessWidget {
   const PersonCard({
     super.key,
@@ -473,6 +489,7 @@ class PersonCard extends StatelessWidget {
     return PressIndication(
       onPressed: onPressed,
       shape: CardMetrics.radius,
+      showFocusRing: false,
       label: [name, ?role].join(', '),
       builder: (context, state) => ExcludeSemantics(
         child: Column(
@@ -480,24 +497,27 @@ class PersonCard extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 1,
-              child: ClipOval(
-                child: ColoredBox(
-                  color: colors.secondary,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Center(
-                        child: Text(
-                          initials(name),
-                          style: KitText.xxl.style(
-                            color: colors.mutedForeground,
-                            weight: FontWeight.w500,
+              child: FocusOutline(
+                shape: KitRadius.pill,
+                child: ClipOval(
+                  child: ColoredBox(
+                    color: colors.secondary,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Center(
+                          child: Text(
+                            initials(name),
+                            style: KitText.xxl.style(
+                              color: colors.mutedForeground,
+                              weight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                      ),
-                      ?photo,
-                      _PressWash(state),
-                    ],
+                        ?photo,
+                        _PressWash(state),
+                      ],
+                    ),
                   ),
                 ),
               ),
