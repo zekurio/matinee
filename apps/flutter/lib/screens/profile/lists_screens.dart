@@ -6,6 +6,7 @@ import '../../api/matinee_api.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/actions.dart' show mediaChangesProvider;
 import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
@@ -55,6 +56,10 @@ class FavoritesScreen extends ConsumerWidget {
     if (username == null) {
       return _Page(title: l.favoritesTitle, child: const SizedBox());
     }
+    ref.listen(
+      mediaChangesProvider,
+      (_, _) => ref.invalidate(favoritesProvider(username)),
+    );
     final result = ref.watch(favoritesProvider(username));
     final lists = result.value;
     Widget body;
@@ -143,6 +148,10 @@ class RecentScreen extends ConsumerWidget {
     if (username == null) {
       return _Page(title: l.profileRecent, child: const SizedBox());
     }
+    ref.listen(
+      mediaChangesProvider,
+      (_, _) => ref.invalidate(recentProvider(username)),
+    );
     final result = ref.watch(recentProvider(username));
     final entries = result.value ?? const <WatchedEntry>[];
     Widget body;

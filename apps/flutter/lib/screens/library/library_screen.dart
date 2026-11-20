@@ -8,6 +8,7 @@ import '../../api/matinee_api.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/actions.dart' show mediaChangesProvider;
 import '../../query/refresh.dart';
 import '../../router.dart';
 import '../home/home_data.dart' show librariesProvider;
@@ -58,7 +59,13 @@ class _KindScreenState extends ConsumerState<KindScreen> {
   void _returned() {
     final now = DateTime.now();
     if (now.difference(_fetched) < _refreshAfter) return;
-    _fetched = now;
+    _changed();
+  }
+
+  /// Something was marked, liked, or played here or on another page: the
+  /// ticks and the titles a filter keeps may have moved.
+  void _changed() {
+    _fetched = DateTime.now();
     _refreshList(ref, _request, _scope);
   }
 
@@ -77,6 +84,7 @@ class _KindScreenState extends ConsumerState<KindScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(mediaChangesProvider, (_, _) => _changed());
     final colors = MatineeTheme.of(context);
     if (ref.watch(authStateProvider) is Offline) {
       return ColoredBox(color: colors.background, child: const _Offline());
@@ -216,12 +224,19 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   void _returned() {
     final now = DateTime.now();
     if (now.difference(_fetched) < _refreshAfter) return;
-    _fetched = now;
+    _changed();
+  }
+
+  /// Something was marked, liked, or played here or on another page: the
+  /// ticks and the titles a filter keeps may have moved.
+  void _changed() {
+    _fetched = DateTime.now();
     _refreshList(ref, _request, _scope);
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(mediaChangesProvider, (_, _) => _changed());
     final l = AppLocalizations.of(context);
     final genre = widget.genre;
     final studio = widget.studio;

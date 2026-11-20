@@ -7,6 +7,7 @@ import '../../core/device.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/actions.dart' show mediaChangesProvider;
 import '../../media/avatar.dart';
 import '../../media/cards.dart';
 import '../../media/layout.dart';
@@ -64,6 +65,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _ => null,
     };
     if (user == null) return ColoredBox(color: colors.background);
+    ref.listen(mediaChangesProvider, (_, _) => _returned(user.username));
     final offline = auth is Offline;
     final sections = offline
         ? [

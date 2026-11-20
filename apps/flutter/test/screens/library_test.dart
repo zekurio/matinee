@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/kit/kit.dart';
+import 'package:matinee/media/actions.dart' show mediaChangesProvider;
 import 'package:matinee/screens/library/library_screen.dart';
 import 'package:matinee/screens/shell/shell.dart';
 
@@ -185,6 +186,18 @@ void main() {
     await pumpScreen(tester, _shows, client: backend.client);
     expect(find.bySemanticsLabel('Server not reachable'), findsOneWidget);
     expect(find.text('Try again'), findsOneWidget);
+  });
+
+  testWidgets('a change made elsewhere fetches the list again', (tester) async {
+    final backend = LibraryBackend();
+    await pumpScreen(tester, _shows, client: backend.client);
+    expect(backend.browsed, hasLength(1));
+    ProviderScope.containerOf(tester.element(find.byType(KindScreen)))
+        .read(mediaChangesProvider.notifier)
+        .changed();
+    await tester.pumpAndSettle();
+    expect(backend.browsed, hasLength(2));
+    expect(backend.browsed.last['offset'], 0);
   });
 
   testWidgets('tapping the open tab scrolls to the top', (tester) async {

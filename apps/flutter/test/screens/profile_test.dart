@@ -1,10 +1,12 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/kit/kit.dart';
+import 'package:matinee/media/actions.dart' show mediaChangesProvider;
 import 'package:matinee/screens/profile/lists_screens.dart';
 import 'package:matinee/screens/profile/profile_data.dart';
 import 'package:matinee/screens/profile/profile_screen.dart';
@@ -322,6 +324,30 @@ void main() {
     await tester.tap(find.text('Arrival').first);
     await tester.pumpAndSettle();
     expect(find.text('/title/m1'), findsOneWidget);
+  });
+
+  testWidgets('Favorites and Recently watched fetch again on a change', (
+    tester,
+  ) async {
+    for (final (screen, path) in [
+      (const FavoritesScreen(), '/api/v1/profiles/ada/favorites'),
+      (const RecentScreen(), '/api/v1/profiles/ada/recent'),
+    ]) {
+      final backend = _backend();
+      await pumpScreen(
+        tester,
+        screen,
+        client: backend.client,
+        overrides: _servers,
+      );
+      int asks() => backend.asked.where((asked) => asked == path).length;
+      expect(asks(), 1);
+      ProviderScope.containerOf(tester.element(find.byWidget(screen)))
+          .read(mediaChangesProvider.notifier)
+          .changed();
+      await tester.pumpAndSettle();
+      expect(asks(), 2, reason: path);
+    }
   });
 
   testWidgets('Recently watched lists what was watched', (tester) async {
