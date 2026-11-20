@@ -90,6 +90,46 @@ void main() {
     });
   }
 
+  testWidgets('system Back closes an open menu, then goes on as usual', (
+    tester,
+  ) async {
+    await pumpScreen(tester, _page(TextDirection.ltr), client: _client);
+    await tester.tap(find.text('Original'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MenuPanel), findsOneWidget);
+    expect(await tester.binding.handlePopRoute(), isTrue);
+    await tester.pumpAndSettle();
+    expect(find.byType(MenuPanel), findsNothing);
+    // The page takes touches again.
+    await tester.tap(find.text('More'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove'), findsOneWidget);
+    expect(await tester.binding.handlePopRoute(), isTrue);
+    await tester.pumpAndSettle();
+    // With none open, Back is the app's: here, nothing to go back to.
+    expect(await tester.binding.handlePopRoute(), isFalse);
+  });
+
+  testWidgets('a menu closes as its page goes out of sight', (tester) async {
+    final shown = ValueNotifier(true);
+    addTearDown(shown.dispose);
+    await pumpScreen(
+      tester,
+      ValueListenableBuilder(
+        valueListenable: shown,
+        builder: (context, on, _) =>
+            TickerMode(enabled: on, child: _page(TextDirection.ltr)),
+      ),
+      client: _client,
+    );
+    await tester.tap(find.text('Original'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MenuPanel), findsOneWidget);
+    shown.value = false;
+    await tester.pumpAndSettle();
+    expect(find.byType(MenuPanel), findsNothing);
+  });
+
   testWidgets("a phone's picker menu keeps to the screen", (tester) async {
     await pumpScreen(tester, _page(TextDirection.ltr), client: _client);
     await tester.tap(find.text('Original'));

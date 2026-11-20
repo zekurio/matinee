@@ -43,6 +43,20 @@ class Menu extends StatefulWidget {
 
 class _MenuState extends State<Menu> {
   final _trigger = FocusNode();
+  final _controller = material.MenuController();
+  var _open = false;
+
+  // No rebuild for these: only a page going out of sight reads them, and
+  // that builds the menu again by itself.
+  void _opened() => _open = true;
+
+  void _closed() => _open = false;
+
+  Future<bool> _back() async {
+    if (!_controller.isOpen) return false;
+    _controller.close();
+    return true;
+  }
 
   @override
   void dispose() {
@@ -52,9 +66,20 @@ class _MenuState extends State<Menu> {
 
   @override
   Widget build(BuildContext context) {
+    // A page that went out of sight, as a tab another replaced, takes its
+    // menu with it; left open, its unseen scrim would eat every touch.
+    if (_open && !TickerMode.valuesOf(context).enabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _controller.close());
+    }
     final direction = Directionality.of(context);
     final anchor = _anchor(context, direction);
-    if (widget.side == MenuSide.start) return anchor;
+    // System Back closes an open menu before it does anything else, and
+    // otherwise goes on as if the menu weren't here. Always in place, so
+    // the anchor under it isn't built anew as the menu opens.
+    final backable = Router.maybeOf(context) == null
+        ? anchor
+        : BackButtonListener(onBackButtonPressed: _back, child: anchor);
+    if (widget.side == MenuSide.start) return backable;
     // Material lines a menu's start up with the anchor's start, and in a
     // right-to-left anchor that's its right edge, measured from the menu's
     // own. So the anchor alone reads the other way, and what it holds
@@ -63,12 +88,15 @@ class _MenuState extends State<Menu> {
       textDirection: direction == TextDirection.ltr
           ? TextDirection.rtl
           : TextDirection.ltr,
-      child: anchor,
+      child: backable,
     );
   }
 
   Widget _anchor(BuildContext context, TextDirection direction) =>
       material.MenuAnchor(
+        controller: _controller,
+        onOpen: _opened,
+        onClose: _closed,
         childFocusNode: _trigger,
         alignmentOffset: const Offset(-8, 4),
         consumeOutsideTap: true,
