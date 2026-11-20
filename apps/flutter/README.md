@@ -644,6 +644,47 @@ watching and Next up start from what the server last sent, which online
 Home saves (`HomeSnapshot`), then what was started offline since; then
 the movies and the shows.
 
+## TV
+
+On a TV (`Device.isTv`, Leanback) the router takes `_tvRoutes()`, ported
+from the Kotlin app's `ui/tv` and `ui/player/tv`. A remote drives all of
+it: the D-pad moves focus, Select presses, Back goes back. `main.dart`
+sets `FocusHighlightStrategy.alwaysTraditional`, so focus shows before the
+first key.
+
+- Frame (`lib/screens/tv/tv_shell.dart`): the drawer at the left, the
+  clock at the top right, and each page in a `TvPageFrame`. Back from a
+  page opens the drawer; from the drawer on Home, it leaves.
+- Focus (`lib/kit/tv`): `TvTraversalPolicy` moves by geometry, as Compose
+  does. A `TvFocusMemory` remembers each row's card, so entering a row
+  lands on it, Back lands where you left, and a list that loads again
+  keeps focus. Rows, grids, and lists scroll to follow focus
+  (`TvFollowFocus`).
+- Panels (`showTvPanel`, `showTvPicker`): choices open at the right
+  edge, Back closes them, and focus goes back to the row that opened
+  them. The TV's server switcher (`sign_in/tv/tv_servers.dart`) is one
+  of these, in place of the phone's sheet.
+- Screens (`lib/screens/tv`): Home; Movies, Shows, Browse, Favorites, and
+  Search; the title, season, episode, and person pages; Profile with its
+  charts and standing, and Recently watched; and Settings, whose
+  categories sit at the left and whose rows are on the right. Left or
+  Back comes out of the rows. `/settings/:page` opens on a category by
+  the Kotlin app's key.
+- Player (`lib/player/tv`): the phone's `PlaybackSession` and video, with
+  the TV's controls. With the controls away, Left and Right skip and
+  glide while held (`KeySeek`), and Select, Up, or Down bring them back.
+  Audio, subtitles, and settings (quality, speed, the picture) open as
+  panels. Skip intro and the next episode wait alone on the picture.
+  Once the file ends, the next episode starts unless autoplay is off in
+  Settings or Back stopped it. With Match frame rate on, the screen
+  switches to a refresh rate that plays the server's frame rate evenly,
+  through `pigeons/display.dart`.
+
+`test/screens/tv` and `test/player/tv_playback_test.dart` send key events
+and check where focus lands. Their goldens are taken at 960 by 540, the
+size the Kotlin app laid out for, and at 1920 by 1080, with the app's
+font.
+
 ## Strings
 
 The ARB files in `lib/l10n` hold every string, English in `app_en.arb`
