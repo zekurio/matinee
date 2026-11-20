@@ -102,6 +102,31 @@ void main() {
     expect(find.text('Continue watching'), findsOneWidget);
   });
 
+  testWidgets('back on another tab goes to Home, and on Home leaves', (
+    tester,
+  ) async {
+    await _pump(tester, const Size(412, 915));
+    await tester.tap(
+      find.descendant(of: find.byType(TabBar), matching: find.text('Shows')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(KindScreen), findsOneWidget);
+    // A page over the tabs goes first.
+    await tester.tap(find.bySemanticsLabel('Settings'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ShellHeader), findsNothing);
+    expect(await tester.binding.handlePopRoute(), isTrue);
+    await tester.pumpAndSettle();
+    expect(find.byType(KindScreen), findsOneWidget);
+    // Then the tab, as the Kotlin app has Home under every other tab.
+    expect(await tester.binding.handlePopRoute(), isTrue);
+    await tester.pumpAndSettle();
+    expect(find.text('Continue watching'), findsOneWidget);
+    expect(find.byType(KindScreen), findsNothing);
+    // Home has nothing under it, so back leaves the app.
+    expect(await tester.binding.handlePopRoute(), isFalse);
+  });
+
   testWidgets('a tablet in landscape keeps the tabs along the bottom', (
     tester,
   ) async {

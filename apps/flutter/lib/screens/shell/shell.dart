@@ -99,21 +99,30 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
               ),
       ),
     ];
-    return ColoredBox(
-      color: MatineeTheme.of(context).background,
-      child: Column(
-        children: [
-          const ShellHeader(),
-          Expanded(
-            child: MediaQuery.removePadding(
-              context: context,
-              removeTop: true,
-              removeBottom: true,
-              child: widget.shell,
+    // Home is under every other tab, as in the Kotlin app: back on another
+    // tab's first page goes to Home, and only Home's leaves the app.
+    final home = widget.shell.currentIndex == 0;
+    return PopScope(
+      canPop: home,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !home) widget.shell.goBranch(0);
+      },
+      child: ColoredBox(
+        color: MatineeTheme.of(context).background,
+        child: Column(
+          children: [
+            const ShellHeader(),
+            Expanded(
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                removeBottom: true,
+                child: widget.shell,
+              ),
             ),
-          ),
-          TabBar(items: items, state: _selected, onSelected: _open),
-        ],
+            TabBar(items: items, state: _selected, onSelected: _open),
+          ],
+        ),
       ),
     );
   }
