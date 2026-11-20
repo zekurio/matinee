@@ -667,18 +667,29 @@ first key.
 - Screens (`lib/screens/tv`): Home; Movies, Shows, Browse, Favorites, and
   Search; the title, season, episode, and person pages; Profile with its
   charts and standing, and Recently watched; and Settings, whose
-  categories sit at the left and whose rows are on the right. Left or
+  categories sit at the left and whose rows are on the right. Its
+  Playback and Subtitles rows set the same `PlayerPrefs` as the phone's
+  pages, and About shows the playback report. Left or
   Back comes out of the rows. `/settings/:page` opens on a category by
   the Kotlin app's key.
-- Player (`lib/player/tv`): the phone's `PlaybackSession` and video, with
-  the TV's controls. With the controls away, Left and Right skip and
-  glide while held (`KeySeek`), and Select, Up, or Down bring them back.
-  Audio, subtitles, and settings (quality, speed, the picture) open as
-  panels. Skip intro and the next episode wait alone on the picture.
-  Once the file ends, the next episode starts unless autoplay is off in
-  Settings or Back stopped it. With Match frame rate on, the screen
-  switches to a refresh rate that plays the server's frame rate evenly,
-  through `pigeons/display.dart`.
+- Player (`lib/player/tv`): the phone's `PlaybackSession`, set up the
+  same way (`createPlaybackSession`, `PlaybackHost`), with the TV's
+  controls. The parts both players use are in `player/player_parts.dart`
+  and `player/subtitle_look.dart`: the failure and notice text, the menu
+  entries, the next episode's countdown, the speed kept across a new
+  source, the media session, and the subtitle layer. With the controls
+  away, Left and Right skip by the server's skip lengths and glide while
+  held (`KeySeek`), with trickplay frames over the time, and Select, Up,
+  or Down bring them back. The TV has one key handler; it never builds
+  the phone's controls. Audio, subtitles, and settings (quality, speed,
+  Fit or Fill, which is kept) open as panels. Skip intro and the next
+  episode wait alone on the picture. Once the file ends, the next episode
+  starts unless autoplay is off in Settings or Back stopped it. With Match
+  frame rate on, the screen switches to a refresh rate that plays the
+  server's frame rate evenly, through `pigeons/display.dart`;
+  `TvDisplayMatch` hands the mode to the next episode, so the same rate
+  asks nothing of the screen. The controls hide after 3.5 s, as the
+  phone's do.
 
 `test/screens/tv` and `test/player/tv_playback_test.dart` send key events
 and check where focus lands. Their goldens are taken at 960 by 540, the
