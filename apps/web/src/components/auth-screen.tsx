@@ -73,7 +73,7 @@ export function StatusScreen({
 }: {
   title: string
   description: ReactNode
-  /** `Button`s, the main one first. */
+  /** `Button`s, and links styled as one, the main one first. */
   actions?: ReactNode
   detail?: ReactNode
 }) {

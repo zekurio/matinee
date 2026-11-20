@@ -1,10 +1,12 @@
-import { Button } from "@matinee/ui/components/button"
+import { Button, buttonVariants } from "@matinee/ui/components/button"
 import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
+import { cn } from "@matinee/ui/lib/utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 
 import { AuthScreen, StatusScreen } from "@/components/auth-screen"
+import { useDocumentTitle } from "@/components/page-header"
 import { tr } from "@/i18n"
 import { partyPosition, setParty } from "@/lib/party"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -50,6 +52,8 @@ function JoinParty() {
     // Over, or not for this account: asking again says the same.
     retry: false,
   })
+  // The party's name in the tab, or "Watch party" for one without.
+  useDocumentTitle(invite.data && (invite.data.name ?? tr("party.title")))
   if (invite.isPending) {
     return (
       <div className="grid min-h-dvh place-items-center">
@@ -63,9 +67,10 @@ function JoinParty() {
         title={tr("party.join.over")}
         description={tr("party.join.overDescription")}
         actions={
-          <Button size="lg" nativeButton={false} render={<Link to="/" />}>
+          // A link styled as a button, so it stays a link to a screen reader.
+          <Link to="/" className={cn(buttonVariants({ size: "lg" }))}>
             {tr("party.join.home")}
-          </Button>
+          </Link>
         }
       />
     )
@@ -96,14 +101,14 @@ function JoinParty() {
         >
           {tr("party.join.button")}
         </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          nativeButton={false}
-          render={<Link to="/" />}
+        <Link
+          to="/"
+          // Merged as `Button` does, or the base's transparent border wins
+          // over the outline's.
+          className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
         >
           {tr("party.join.home")}
-        </Button>
+        </Link>
       </div>
     </AuthScreen>
   )

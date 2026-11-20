@@ -1,6 +1,7 @@
-import { Button } from "@matinee/ui/components/button"
+import { Button, buttonVariants } from "@matinee/ui/components/button"
 import { Toaster } from "@matinee/ui/components/sonner"
 import { TooltipProvider } from "@matinee/ui/components/tooltip"
+import { cn } from "@matinee/ui/lib/utils"
 import type { QueryClient } from "@tanstack/react-query"
 import {
   createRootRouteWithContext,
@@ -62,14 +63,15 @@ function RouteError({ error, reset }: ErrorComponentProps) {
           <Button size="lg" onClick={() => reset()}>
             {tr("common.error.retry")}
           </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            nativeButton={false}
-            render={<Link to="/" />}
+          <Link
+            to="/"
+            // A link styled as a button, so it stays a link to a screen
+            // reader. Merged as `Button` does, or the base's transparent
+            // border wins over the outline's.
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
           >
             {tr("common.backHome")}
-          </Button>
+          </Link>
         </>
       }
     />
@@ -82,9 +84,9 @@ function RouteNotFound() {
       title={tr("common.notFound.title")}
       description={tr("common.notFound.description")}
       actions={
-        <Button size="lg" nativeButton={false} render={<Link to="/" />}>
+        <Link to="/" className={cn(buttonVariants({ size: "lg" }))}>
           {tr("common.backHome")}
-        </Button>
+        </Link>
       }
     />
   )

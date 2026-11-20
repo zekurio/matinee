@@ -3,6 +3,8 @@ import { defineMessages, plural } from "../../catalog"
 export default defineMessages("format", {
   // Formatting helpers in lib/format.ts.
   "format.justNow": "just now",
+  // Something due within a minute, like a task's next run.
+  "format.soon": "soon",
   "format.minutes": "{minutes}m",
   "format.hours": "{hours}h",
   "format.hoursMinutes": "{hours}h {minutes}m",
