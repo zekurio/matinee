@@ -158,6 +158,8 @@ class FakePlaybackApi {
   final reports = <PlaybackReportInput>[];
   final picks = <PlaybackPickTracksInput>[];
   final subtitleRequests = <Uri>[];
+  int trickplayRequests = 0;
+  TrickplayStatus trickplay = const TrickplayStatusUnavailable();
 
   final options = const PlaybackOptions(
     qualities: [
@@ -197,6 +199,15 @@ class FakePlaybackApi {
   Future<http.Response> _request(http.Request request) async {
     final path = request.url.path;
     if (path == '/api/v1/playback/options') return _json(options.toJson());
+    if (path.endsWith('/trickplay')) {
+      trickplayRequests++;
+      return http.Response(
+        'event: message\ndata: ${jsonEncode(trickplay.toJson())}\n\n'
+        'event: done\n\n',
+        200,
+        headers: {'Content-Type': 'text/event-stream'},
+      );
+    }
     if (path == '/caption') {
       subtitleRequests.add(request.url);
       return http.Response(

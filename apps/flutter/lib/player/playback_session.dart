@@ -60,6 +60,10 @@ class PlaybackSession extends ChangeNotifier {
   (PlaybackNotice, Object?)? notice;
   WebVtt? captions;
 
+  /// The server's preview frames for the seek bar, once they're ready.
+  Trickplay? trickplay;
+  StreamSubscription<TrickplayStatus>? _trickplay;
+
   final _failed = <String>{};
   _Picks _picks;
   StreamSubscription<PlaybackState>? _listener;
@@ -150,7 +154,23 @@ class PlaybackSession extends ChangeNotifier {
       if (_elapsed() - _lastReport >= interval) _report();
     });
     unawaited(_readOptions());
+    _readTrickplay();
     return _ask(at: startAt, forceReload: true);
+  }
+
+  /// The seek bar does without previews until they're ready, or at all.
+  void _readTrickplay() {
+    _trickplay = api
+        .trickplayUntilSettled(itemId)
+        .listen(
+          (status) {
+            if (_closed || status is! TrickplayStatusReady) return;
+            trickplay = status.images;
+            notifyListeners();
+          },
+          onError: (Object _) {},
+          cancelOnError: true,
+        );
   }
 
   Future<void> _readOptions() async {
@@ -651,6 +671,7 @@ class PlaybackSession extends ChangeNotifier {
     _closed = true;
     _timer?.cancel();
     unawaited(_listener?.cancel());
+    unawaited(_trickplay?.cancel());
     _countPlayed();
     try {
       await player.dispose();

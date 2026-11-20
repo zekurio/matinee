@@ -25,6 +25,7 @@ import 'player_panel.dart';
 import 'player_preferences.dart';
 import 'seek_bar.dart';
 import 'swipe.dart';
+import 'trickplay.dart';
 import 'video_gestures.dart';
 import 'video_view.dart';
 
@@ -614,6 +615,15 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
           notes: _gesture,
           duration: _session.duration,
           holding: _holding,
+          frame: switch (_session.trickplay) {
+            final images? => (seconds, width) => TrickplayFrame(
+              itemId: _session.itemId,
+              images: images,
+              seconds: seconds,
+              width: width,
+            ),
+            null => null,
+          },
         ),
         TimedNote(
           token: _fitNotes == 0 ? null : _fitNotes,
@@ -816,7 +826,16 @@ class _PlaybackControlsState extends ConsumerState<_PlaybackControls> {
     final length = _session.duration;
     final at = (_scrubbing ?? _session.position).clamp(0.0, length);
     final seekable = enabled && length > 0;
+    final images = _session.trickplay;
     return SeekBar(
+      preview: images == null
+          ? null
+          : (seconds) => TrickplayFrame(
+              itemId: _session.itemId,
+              images: images,
+              seconds: seconds,
+              width: SeekBar.previewWidth,
+            ),
       position: at,
       duration: length,
       buffered: _session.buffered?.clamp(0.0, length),

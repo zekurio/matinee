@@ -23,7 +23,15 @@ class SeekBar extends StatelessWidget {
     required this.onScrub,
     required this.onScrubEnd,
     required this.onSeek,
+    this.preview,
   });
+
+  /// The trickplay frame at a time, [previewWidth] wide, shown over the
+  /// bar while scrubbing; null without frames.
+  final Widget Function(double seconds)? preview;
+
+  /// How wide the preview above the bar is, as the Kotlin player's.
+  static const previewWidth = 176.0;
 
   /// Where the bar shows: the scrubbed time while scrubbing.
   final double position;
@@ -50,6 +58,45 @@ class SeekBar extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (scrubbing && length > 0)
+          if (preview case final preview?)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final fraction = (position / length).clamp(0.0, 1.0);
+                final room = math.max(0.0, constraints.maxWidth - previewWidth);
+                final x = (constraints.maxWidth * fraction - previewWidth / 2)
+                    .clamp(0.0, room);
+                return Padding(
+                  padding: EdgeInsetsDirectional.only(start: x, bottom: 6),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: ExcludeSemantics(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 4,
+                        children: [
+                          DecoratedBox(
+                            position: DecorationPosition.foreground,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: MatineeTheme.of(context).foreground
+                                    .withValues(alpha: .3),
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: preview(position),
+                            ),
+                          ),
+                          Text(formatClock(position), style: style),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
         Row(
           children: [
             SeekClock(seconds: position, duration: length, style: style),
