@@ -39,6 +39,7 @@ import 'screens/title/title_screen.dart';
 import 'screens/tv/tv_browse.dart';
 import 'screens/tv/tv_detail.dart';
 import 'screens/tv/tv_home.dart';
+import 'screens/tv/tv_profile.dart';
 import 'screens/tv/tv_shell.dart';
 
 /// Every place in the app, as the paths go_router opens. Screens navigate
@@ -507,17 +508,14 @@ List<RouteBase> _tvRoutes() => [
             Routes.shows.substring(1),
             (state) => const TvKindScreen(kind: TitleKind.show),
           ),
-          _tv(
-            Routes.profile.substring(1),
-            (state) => _pendingTv(state, 'TV profile'),
-          ),
+          _tv(Routes.profile.substring(1), (state) => const TvProfileScreen()),
           _tv(
             Routes.settings.substring(1),
             (state) => _pendingTv(state, 'TV settings'),
           ),
         ],
       ),
-      _tv(Routes.recent, (state) => _pendingTv(state, 'TV recent')),
+      _tv(Routes.recent, (state) => const TvRecentScreen()),
       _tv('/settings/:page', (state) => _pendingTv(state, 'TV settings page')),
       _tv(
         '/title/:id',
