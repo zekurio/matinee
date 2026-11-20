@@ -36,6 +36,7 @@ import {
 import { Rail, RailItem } from "@/components/rail"
 import { tr } from "@/i18n"
 import { useDismissedStore } from "@/stores/recommendations"
+import { useSendHeldOnLeave } from "@/stores/request-actions"
 
 import { type BrowseEntry, BrowseCard, cardDetail } from "./browse-card"
 import {
@@ -57,6 +58,7 @@ type Page = UseQueryResult<t.infer<typeof DiscoverRowSchema>>
  * from `sm` up, and under the field on a phone's search tab.
  */
 export function DiscoverRails() {
+  useSendHeldOnLeave()
   const rails = useQuery(railsOptions())
   const list = rails.data?.enabled ? rails.data.rails : []
   const pages = useQueries({ queries: list.map(railRowOptions) })
@@ -78,15 +80,19 @@ export function DiscoverRails() {
     <DiscoverRequests which={rails.data.requests} />
   )
   if (list.length > 0 && pages.every((page) => page.isError)) {
-    if (pages.some((page) => page.isFetching)) return <RailsSkeleton />
+    const retrying = pages.some((page) => page.isFetching)
     return (
       <div className="flex flex-col gap-10 max-sm:gap-6">
         {requests}
-        <Failed
-          onRetry={() => {
-            for (const page of pages) void page.refetch()
-          }}
-        />
+        {retrying ? (
+          <RailsSkeleton />
+        ) : (
+          <Failed
+            onRetry={() => {
+              for (const page of pages) void page.refetch()
+            }}
+          />
+        )}
       </div>
     )
   }
@@ -113,6 +119,7 @@ export function DiscoverRails() {
 
   return (
     <div className="flex flex-col gap-10 max-sm:gap-6">
+      {requests}
       {stale && <RailsNote>{tr("discover.stale")}</RailsNote>}
       {failed.length > 1 && (
         <RailsNote
@@ -123,7 +130,6 @@ export function DiscoverRails() {
           {tr("discover.railsFailed", { count: failed.length })}
         </RailsNote>
       )}
-      {requests}
       {rows.map(({ rail, page }) => (
         <DiscoverRow key={railKey(rail)} rail={rail} page={page} live={live} />
       ))}

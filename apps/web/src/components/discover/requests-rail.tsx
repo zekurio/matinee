@@ -26,7 +26,6 @@ import { liveQuery, orpc } from "@/lib/rpc"
 import {
   useHiddenRequests,
   useRequestActionsStore,
-  useSendHeldOnLeave,
 } from "@/stores/request-actions"
 
 import { RAIL_CARDS } from "./discover-data"
@@ -69,7 +68,6 @@ function RequestsRow<Item extends { id: string }>({
   children: (item: Item) => ReactNode
 }) {
   const hidden = useHiddenRequests()
-  useSendHeldOnLeave()
   const shown = items?.filter((item) => !hidden.has(item.id))
   if (shown?.length === 0) return null
   const title = tr("requests.title")
