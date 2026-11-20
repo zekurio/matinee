@@ -176,7 +176,7 @@ class OfflinePlaybackSession extends ChangeNotifier
   @override
   Uri? artworkUrl(String id) => _artwork?.call(id);
 
-  /// The episodes either side, once the server says.
+  /// The episodes either side, once the server or the downloads say.
   void episodes(MediaItem? previous, MediaItem? next) {
     if (_closed) return;
     previousEpisode = previous;

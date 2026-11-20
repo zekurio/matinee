@@ -11,6 +11,7 @@ import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/downloads/downloads.dart';
 import 'package:matinee/downloads/pending_progress.dart';
+import 'package:matinee/platform/downloads.g.dart' as wire;
 import 'package:matinee/player/offline_playback_screen.dart';
 import 'package:matinee/player/offline_session.dart';
 import 'package:matinee/player/playback_report.dart';
@@ -156,6 +157,8 @@ void main() {
       required AuthState auth,
       bool reachable = true,
       List<Override> extra = const [],
+      List<wire.DownloadEntryMessage>? entries,
+      String id = 'm1',
     }) async {
       final players = <FakePlayer>[];
       final sent = <String>[];
@@ -167,24 +170,27 @@ void main() {
         }
         return http.Response('', 404);
       });
-      final platform = FakeDownloadsPlatform([
-        downloadEntry(
-          itemJson(
-            'm1',
-            title: titleJson('m1', name: 'Arrival'),
-            episodeTitle: 'Arrival',
-            position: 600,
-          ),
-          server: _server,
-        ),
-      ]);
+      final platform = FakeDownloadsPlatform(
+        entries ??
+            [
+              downloadEntry(
+                itemJson(
+                  'm1',
+                  title: titleJson('m1', name: 'Arrival'),
+                  episodeTitle: 'Arrival',
+                  position: 600,
+                ),
+                server: _server,
+              ),
+            ],
+      );
       // Opened over a page, as from the downloads, so Back leaves it.
       final screen = Builder(
         builder: (context) => GestureDetector(
           onTap: () => unawaited(
             Navigator.of(context).push(
               PageRouteBuilder<void>(
-                pageBuilder: (_, _, _) => const PlayRoute(id: 'm1'),
+                pageBuilder: (_, _, _) => PlayRoute(id: id),
               ),
             ),
           ),
@@ -239,6 +245,35 @@ void main() {
       final pending = container.read(pendingProgressProvider.notifier);
       expect(pending.report(_server, 'm1')?.positionSeconds, 700);
       expect(sent, isEmpty);
+    });
+
+    testWidgets('offline, Previous and Next go to the downloads either side', (
+      tester,
+    ) async {
+      final show = titleJson('s1', kind: 'show', name: 'The Expanse');
+      wire.DownloadEntryMessage episode(int number) => downloadEntry(
+        itemJson(
+          'e$number',
+          title: show,
+          season: 1,
+          episode: number,
+          episodeTitle: 'Episode $number',
+        ),
+        server: _server,
+      );
+      final (_, players, sent) = await pump(
+        tester,
+        auth: Offline(_server, ada),
+        entries: [episode(1), episode(2), episode(3)],
+        id: 'e2',
+      );
+      players.single.emit(PlaybackPhase.ready, 60, playing: true);
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Previous episode'), findsOneWidget);
+      expect(find.bySemanticsLabel('Next episode'), findsOneWidget);
+      expect(sent, isEmpty);
+      await tester.tap(find.bySemanticsLabel('Back').first);
+      await tester.pumpAndSettle();
     });
 
     testWidgets('online but unreachable, it keeps it for later', (

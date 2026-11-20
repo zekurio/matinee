@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../api/matinee_api.dart';
 import '../core/session.dart';
+import '../downloads/download_neighbours.dart';
 import '../downloads/download_tracks.dart';
 import '../downloads/downloads.dart';
 import '../downloads/pending_progress.dart';
@@ -414,28 +415,34 @@ class _OfflineHostState extends ConsumerState<_OfflineHost> {
     unawaited(_neighbours());
   }
 
-  /// The episodes either side, from the server when it answers; none
-  /// offline.
+  /// The episodes either side, from the server when it answers, and from
+  /// the downloads on the device when it doesn't.
   Future<void> _neighbours() async {
     final title = _session.item.title;
+    if (title == null || title.kind != TitleKind.show) return;
     final api = ref.read(apiProvider);
-    if (title == null ||
-        title.kind != TitleKind.show ||
-        api == null ||
-        ref.read(authStateProvider) is! SignedIn) {
-      return;
+    if (api != null && ref.read(authStateProvider) is SignedIn) {
+      try {
+        final all = await api.titleItems(title.id);
+        final index = all.indexWhere((item) => item.id == _session.item.id);
+        if (!mounted) return;
+        if (index >= 0) {
+          _session.episodes(
+            index > 0 ? all[index - 1] : null,
+            index + 1 < all.length ? all[index + 1] : null,
+          );
+          return;
+        }
+      } on Object {
+        // Out of reach: the downloads say instead.
+        if (!mounted) return;
+      }
     }
-    try {
-      final all = await api.titleItems(title.id);
-      final index = all.indexWhere((item) => item.id == _session.item.id);
-      if (!mounted || index < 0) return;
-      _session.episodes(
-        index > 0 ? all[index - 1] : null,
-        index + 1 < all.length ? all[index + 1] : null,
-      );
-    } on Object {
-      // Without the server, none either side.
-    }
+    final (previous, next) = downloadNeighbours(
+      _session.item,
+      ref.read(shownDownloadsProvider).values,
+    );
+    _session.episodes(previous, next);
   }
 
   @override
