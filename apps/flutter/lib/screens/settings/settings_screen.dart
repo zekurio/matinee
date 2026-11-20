@@ -14,17 +14,19 @@ import 'account_page.dart';
 import 'admin/admin_parts.dart';
 import 'admin/admin_settings.dart';
 import 'appearance_page.dart';
+import 'downloads_page.dart';
 import 'playback_page.dart';
 import 'settings_rows.dart';
 
 /// A category of Settings, as the Kotlin app's `SettingsPage`: each is a
 /// row on the first page and opens a page of its own at
-/// `Routes.settingsPage(key)`. The Kotlin app's subtitles and downloads
-/// pages aren't here yet; the admin pages are `AdminCategory`.
+/// `Routes.settingsPage(key)`. The Kotlin app's subtitles page isn't here
+/// yet; the admin pages are `AdminCategory`.
 enum SettingsPage {
   account('account', Lucide.userRound),
   appearance('appearance', Lucide.palette),
   playback('playback', Lucide.tvPlay),
+  downloads('downloads', Lucide.download),
   about('about', Lucide.info),
   licenses('licenses', Lucide.list);
 
@@ -37,13 +39,16 @@ enum SettingsPage {
     account => l.settingsPageAccount,
     appearance => l.settingsPageAppearance,
     playback => l.settingsPagePlayback,
+    downloads => l.downloadsTitle,
     about => l.aboutTitle,
     licenses => l.aboutLicenses,
   };
 
-  /// Whether this device has the page: the engines are Android's.
+  /// Whether this device has the page: the engines and the downloads are
+  /// Android's.
   bool get available =>
-      this != playback || defaultTargetPlatform == TargetPlatform.android;
+      (this != playback && this != downloads) ||
+      defaultTargetPlatform == TargetPlatform.android;
 
   static SettingsPage? of(String key) {
     for (final page in values) {
@@ -132,6 +137,7 @@ class SettingsScreen extends ConsumerWidget {
             for (final page in const [
               SettingsPage.appearance,
               SettingsPage.playback,
+              SettingsPage.downloads,
               SettingsPage.about,
             ])
               if (page.available) row(page),
@@ -192,6 +198,7 @@ class SettingsPageScreen extends StatelessWidget {
     SettingsPage.account => const AccountPage(),
     SettingsPage.appearance => const AppearancePage(),
     SettingsPage.playback => const PlaybackPage(),
+    SettingsPage.downloads => const DownloadsPage(),
     SettingsPage.about => const AboutPage(),
     SettingsPage.licenses => const LicensesPage(),
     null => AdminCategory.of(pageKey)?.page ?? const SettingsScreen(),

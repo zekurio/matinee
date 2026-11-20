@@ -437,7 +437,13 @@ class Downloads extends Notifier<DownloadsList> {
 
   /// Every download of the server in use.
   Future<void> removeAll(MatineeApi? api) async {
-    for (final id in ref.read(shownDownloadsProvider).keys.toList()) {
+    // Not through shownDownloadsProvider, which follows this one.
+    final server = ref.read(downloadsServerProvider);
+    final ids = [
+      for (final entry in state.all.values)
+        if (entry.server == server) entry.id,
+    ];
+    for (final id in ids) {
       await remove(id, api);
     }
   }

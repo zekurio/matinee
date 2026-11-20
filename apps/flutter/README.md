@@ -9,25 +9,27 @@ So far it has the toolchain, the kit, the API client, the strings, the
 sessions, the screens that connect and sign in, the tabs, Home, Shows,
 Movies, the genre and studio pages, the title, season, and episode
 pages, search with Explore, the catalog's pages and requests, the
-profile, settings, and the Android phone and tablet player. Every other
-screen behind the tabs is a placeholder that shows its route.
+profile, settings, downloads and offline mode on Android phones and
+tablets, and the Android phone and tablet player. Every other screen
+behind the tabs is a placeholder that shows its route.
 
 ## Build
 
 The recipes enter the flake's Flutter shell for you. Entering it accepts
 the Android SDK license.
 
-| Recipe                 | What it does                                  |
-| ---------------------- | --------------------------------------------- |
-| `just flutter build`   | Debug APK in `build/app/outputs/flutter-apk/` |
-| `just flutter install` | Builds and installs the debug app             |
-| `just flutter run`     | Installs the debug app and opens it           |
-| `just flutter check`   | What CI runs: analyzer, format check, tests   |
-| `just flutter format`  | Formats the Dart code                         |
-| `just flutter api`     | Regenerates the API client                    |
-| `just flutter pigeon`  | Regenerates the platform channels             |
-| `just flutter reverse` | Forwards `localhost:5173` to the device       |
-| `just flutter logcat`  | Follows the debug app's log                   |
+| Recipe                      | What it does                                  |
+| --------------------------- | --------------------------------------------- |
+| `just flutter build`        | Debug APK in `build/app/outputs/flutter-apk/` |
+| `just flutter install`      | Builds and installs the debug app             |
+| `just flutter run`          | Installs the debug app and opens it           |
+| `just flutter check`        | What CI runs: analyzer, format check, tests   |
+| `just flutter format`       | Formats the Dart code                         |
+| `just flutter api`          | Regenerates the API client                    |
+| `just flutter pigeon`       | Regenerates the platform channels             |
+| `just flutter android-test` | Runs the Kotlin unit tests on the JVM         |
+| `just flutter reverse`      | Forwards `localhost:5173` to the device       |
+| `just flutter logcat`       | Follows the debug app's log                   |
 
 By hand:
 
@@ -422,9 +424,9 @@ and the account rows.
 ## Settings
 
 `lib/screens/settings` is the Kotlin app's Settings for phones and
-tablets: offline mode on top, then Account, Appearance, Playback, and
-About, then
-the server in use and the app's version. Each category opens
+tablets: offline mode on top, then Account, Appearance, Playback,
+Downloads, and About, then the server in use and the app's version. Each
+category opens
 `Routes.settingsPage(key)`, and a key it doesn't know opens the first
 page. Appearance picks light, dark, or the system's scheme and the theme
 preset (`themeStoreProvider`); Playback, on Android only, picks the
@@ -433,9 +435,8 @@ the system, and the device, and the licenses page lays out `NOTICE.md`,
 which the app bundles as an asset. The rows (`Panel`, `LinkRow`,
 `SwitchRow`, `ValueRow`, `PickerRow`) are in `settings_rows.dart`. Signing
 out and switching server or account are on the profile. The Kotlin app's
-subtitles, downloads, and playback diagnostics aren't here yet. An admin
-also gets the Administration section, which
-[Admin pages](#admin-pages) covers.
+subtitles and playback diagnostics aren't here yet. An admin also gets
+the Administration section, which [Admin pages](#admin-pages) covers.
 
 ### Account
 
@@ -531,6 +532,49 @@ ending an account's sessions, revoking an invite, and clearing a queue.
 The tests in `test/screens/admin_test.dart` run against the fake server in
 `admin_backend.dart`. Try a change by hand only against a throwaway
 server, since these pages change the one they're signed in to.
+
+## Downloads
+
+Downloads work on Android phones and tablets, as in the Kotlin app: the
+download sheet from a file's menu or page, the files sheet for a show or
+a season, the Downloads tab and a show's page of episodes, playback
+without the server, offline mode, and Settings, Downloads. A TV has no
+downloads.
+
+The fetching is native. `pigeons/downloads.dart` declares the channel
+(`just flutter pigeon` writes both ends), and `lib/downloads` is the Dart
+side: `Downloads` follows the platform's list and tells it what to do,
+`DownloadMeta` is what Dart keeps with each entry (the item, its audio
+tracks, the subtitles picked), and the platform hands it back as it was.
+The Kotlin side in `android/app/src/main/kotlin/.../downloads/` keeps the
+list as JSON in `filesDir/offline`, with each file in a folder of its
+own, and runs one WorkManager job per download (`DownloadWorker`). That
+keeps a download going with the app closed, picks it up again after the
+network drops or the device reboots, and shows its progress as a
+notification. A version made for this device comes from the server in
+segments, each added to the end of one mp4; the file as it is comes by byte
+ranges. The tokens the jobs send are sealed with a key in the Android
+Keystore. `just flutter android-test` runs the worker's JVM tests.
+
+Each download belongs to the saved server it came from, by its origin,
+and shows, plays, and syncs only with that one. Removing a server
+removes its downloads. The server decides what a download holds
+(`downloads.resolve`); the app picks the tracks only for a download
+playing without a server (`download_tracks.dart`), as the Kotlin app's
+`DownloadTracks.kt`.
+
+`Routes.play` plays a finished download from the device
+(`offline_playback_screen.dart`, `offline_session.dart`), online or not,
+and starts a stream otherwise. Where the person got to goes to the
+server, or, while it's out of reach, to `PendingProgress`, which sends
+it, with each sitting for the statistics, once the server answers again.
+
+In offline mode, from Settings or from Watch downloads on the
+unreachable screen, the tabs are Home, Downloads, and Profile. Home
+(`offline_home.dart`) lays the downloads out in Home's rows: Continue
+watching and Next up start from what the server last sent, which online
+Home saves (`HomeSnapshot`), then what was started offline since; then
+the movies and the shows.
 
 ## Strings
 
