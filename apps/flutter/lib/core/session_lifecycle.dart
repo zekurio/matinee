@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'server_accents.dart';
 import 'session.dart';
 
 /// Tells the session the app came to the foreground, so a saved server that
@@ -32,6 +35,7 @@ class _SessionLifecycleState extends ConsumerState<SessionLifecycle>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(sessionProvider.notifier).onForeground();
+      unawaited(ref.read(serverAccentsProvider.notifier).refresh());
     }
   }
 

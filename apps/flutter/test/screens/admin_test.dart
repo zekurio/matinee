@@ -1,8 +1,10 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
+import 'package:matinee/core/server_accents.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/screens/settings/admin/library_editor.dart';
@@ -437,6 +439,27 @@ void main() {
         'dark': '#2dd4bf',
       });
     });
+  });
+
+  testWidgets("branding previews an accent on the app until it's reset", (
+    tester,
+  ) async {
+    await _pump(tester, 'branding');
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(SettingsPageScreen)),
+    );
+    expect(container.read(accentPreviewProvider), isNull);
+    final swatches = find.byWidgetPredicate(
+      (widget) =>
+          widget is PressIndication && '${widget.label}'.contains(' / '),
+    );
+    await tester.tap(swatches.at(1));
+    await tester.pumpAndSettle();
+    expect(container.read(accentPreviewProvider)?.dark, '#2dd4bf');
+    // Reset goes back to the server's.
+    await tester.tap(find.text('Reset'));
+    await tester.pumpAndSettle();
+    expect(container.read(accentPreviewProvider), isNull);
   });
 
   testWidgets('transcoding shows ffmpeg and its settings', (tester) async {

@@ -158,6 +158,9 @@ final class FakeBackend {
   /// Which token is whose, by token.
   final tokens = <String, String>{};
 
+  /// The branding's accents each host sends, by host; none by default.
+  final accents = <String, Map<String, Object?>>{};
+
   /// Holds the next `/auth/session` answer until it completes.
   Completer<void>? holdSession;
 
@@ -190,7 +193,7 @@ final class FakeBackend {
       case '/api/v1/auth/login-backdrop':
         return jsonResponse(LoginBackdropTiles(tiles: backdropTiles).toJson());
       case '/api/v1/auth/config':
-        return jsonResponse(configJson);
+        return jsonResponse({...configJson, 'themeAccents': ?accents[host]});
       case '/api/v1/auth/session':
         final gate = holdSession;
         if (gate != null) {

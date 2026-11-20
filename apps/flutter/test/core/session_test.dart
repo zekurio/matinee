@@ -14,11 +14,13 @@ Future<Harness> signedInOn(
   String host, {
   String token = 'token-a',
   String name = 'ada',
+  Map<String, Object?>? accents,
 }) async {
   final harness = Harness();
   harness.backend
     ..hosts.add(host)
     ..tokens[token] = name;
+  if (accents != null) harness.backend.accents[host] = accents;
   await harness.launch();
   await harness.until<NoServer>();
   expect(await harness.session.connect(host), isNull);

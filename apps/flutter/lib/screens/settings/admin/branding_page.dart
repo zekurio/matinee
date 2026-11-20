@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/matinee_api.dart';
 import '../../../core/field_errors.dart';
+import '../../../core/server_accents.dart';
 import '../../../core/session.dart';
 import '../../../kit/kit.dart';
 import '../../../l10n/app_localizations.dart';
@@ -85,6 +88,32 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
   late String _dark = widget.saved.themeAccents.dark ?? _defaultDark;
   Map<String, String> _errors = const {};
 
+  /// Where the app shows the accents being edited, before they're saved,
+  /// as the web's branding panel previews them on the whole page.
+  late final AccentPreview _preview;
+
+  @override
+  void initState() {
+    super.initState();
+    _preview = ref.read(accentPreviewProvider.notifier);
+  }
+
+  @override
+  void dispose() {
+    // Leaving takes the preview off, back to the server's accents. Not
+    // while the tree is being torn down, which mustn't change a provider.
+    final preview = _preview;
+    unawaited(Future.microtask(() => preview.show(null)));
+    super.dispose();
+  }
+
+  /// [change] applied, then the app's colours following the draft, or
+  /// the server's again once it matches them.
+  void _edit(VoidCallback change) {
+    setState(change);
+    _preview.show(_dirty ? _draft : null);
+  }
+
   ThemeAccents get _draft => ThemeAccents(
     light: _stored(_light, _defaultLight),
     dark: _stored(_dark, _defaultDark),
@@ -110,6 +139,11 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
       if (mounted) setState(() => _errors = fieldErrors(error));
       rethrow;
     }
+    if (!mounted) return;
+    // The server's accents are these now: the app keeps them once the
+    // preview goes.
+    await ref.read(serverAccentsProvider.notifier).refresh();
+    _preview.show(null);
     if (mounted) ref.invalidate(brandingProvider);
   }
 
@@ -120,7 +154,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
     return SaveBarPage(
       title: l.settingsAdminBranding,
       dirty: _dirty,
-      onReset: () => setState(() {
+      onReset: () => _edit(() {
         _light = widget.saved.themeAccents.light ?? _defaultLight;
         _dark = widget.saved.themeAccents.dark ?? _defaultDark;
         _errors = const {};
@@ -149,7 +183,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
                         selected:
                             _light.trim().toLowerCase() == light &&
                             _dark.trim().toLowerCase() == dark,
-                        onPressed: () => setState(() {
+                        onPressed: () => _edit(() {
                           _light = light;
                           _dark = dark;
                           _errors = const {};
@@ -163,7 +197,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
                       label: l.webBrandingModeLight,
                       value: _light,
                       error: _errors['themeAccents.light'],
-                      onChanged: (value) => setState(() {
+                      onChanged: (value) => _edit(() {
                         _light = value;
                         _errors = {..._errors}..remove('themeAccents.light');
                       }),
@@ -172,7 +206,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
                       label: l.webBrandingModeDark,
                       value: _dark,
                       error: _errors['themeAccents.dark'],
-                      onChanged: (value) => setState(() {
+                      onChanged: (value) => _edit(() {
                         _dark = value;
                         _errors = {..._errors}..remove('themeAccents.dark');
                       }),

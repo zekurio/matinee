@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/server_accents.dart';
 import 'core/toasts.dart';
+import 'kit/accent.dart';
 import 'kit/theme.dart';
 import 'kit/theme_store.dart';
 import 'kit/toast.dart';
@@ -20,13 +22,16 @@ class MatineeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences =
         ref.watch(themeStoreProvider).value ?? defaultThemePreferences;
+    // The server's accents, or the Branding page's before they're saved,
+    // over the preset's own, as the web paints them.
+    final accents =
+        ref.watch(accentPreviewProvider) ?? ref.watch(serverAccentsProvider);
+    final light = accented(preferences.preset.light, accents?.light);
+    final dark = accented(preferences.preset.dark, accents?.dark);
     return MaterialApp.router(
       routerConfig: ref.watch(routerProvider),
-      theme: MatineeTheme.data(
-        preferences.preset.light,
-        dark: preferences.preset.dark,
-      ),
-      darkTheme: MatineeTheme.data(preferences.preset.dark),
+      theme: MatineeTheme.data(light, dark: dark),
+      darkTheme: MatineeTheme.data(dark),
       themeMode: switch (preferences.appearance) {
         ThemeAppearance.system => ThemeMode.system,
         ThemeAppearance.light => ThemeMode.light,
