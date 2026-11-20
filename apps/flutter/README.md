@@ -8,8 +8,8 @@ in each platform's native player, behind the Flutter view.
 So far it has the toolchain, the kit, the API client, the strings, the
 sessions, the screens that connect and sign in, the tabs, Home, Shows,
 Movies, the genre and studio pages, the title, season, and episode
-pages, and the Android phone and tablet player. Every other screen
-behind the tabs is a placeholder that shows its route.
+pages, search, and the Android phone and tablet player. Every other
+screen behind the tabs is a placeholder that shows its route.
 
 ## Build
 
@@ -265,6 +265,16 @@ the new ones come. A tap on the open tab scrolls its grid to the top
 the titles loaded so far are fetched again in place, and the filters'
 counts with them. The language filter waits for a way to name languages
 in the app's language.
+
+## Search
+
+`lib/screens/search` is the Kotlin app's search. The field searches the
+library 250 ms after typing pauses (`search.query`, 40 matches), and the
+last answer stays on screen, with "Searching…" under it, while the next
+is out. Matches come as the server ranked them: titles by library, then
+cast and crew, then genres and studios as chips that open Browse. Like
+the Kotlin app it keeps no recent searches. The empty field shows
+nothing yet; it's where Explore's rails go.
 
 ## Strings
 

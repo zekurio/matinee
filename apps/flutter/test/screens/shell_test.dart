@@ -113,16 +113,14 @@ void main() {
   testWidgets('the header opens search and settings', (tester) async {
     await _pump(tester, const Size(412, 915));
     expect(find.bySemanticsLabel('Requests'), findsNothing);
-    for (final (label, path) in [
-      ('Search', '/search'),
-      ('Settings', '/settings'),
-    ]) {
+    for (final label in ['Search', 'Settings']) {
       await tester.tap(find.bySemanticsLabel(label));
       await tester.pumpAndSettle();
-      expect(find.text(path), findsOneWidget);
+      // The page covers the tabs, header and all.
       expect(find.byType(ShellHeader), findsNothing);
       await tester.tap(find.bySemanticsLabel('Back'));
       await tester.pumpAndSettle();
+      expect(find.byType(ShellHeader), findsOneWidget);
     }
   });
 

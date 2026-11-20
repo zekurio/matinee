@@ -11,6 +11,7 @@ import 'player/player_lab.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/library/library_screen.dart';
 import 'screens/pending.dart';
+import 'screens/search/search_screen.dart';
 import 'screens/shell/shell.dart';
 import 'screens/sign_in/connect_screen.dart';
 import 'screens/sign_in/sign_in_screen.dart';
@@ -242,6 +243,11 @@ List<RouteBase> _handsetRoutes() => [
       StatefulShellBranch(routes: [_pending(Routes.profile, 'Profile')]),
     ],
   ),
+  GoRoute(
+    path: Routes.search,
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const SearchScreen(),
+  ),
   for (final (path, name) in _pages) _pending(path, name, root: true),
   GoRoute(
     path: '/title/:id',
@@ -304,7 +310,6 @@ List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 
 /// The pages over the tabs, by path pattern, until each has its screen.
 const _pages = [
-  ('/search', 'Search and Explore'),
   ('/favorites', 'Favorites'),
   ('/recent', 'Recently watched'),
   ('/settings', 'Settings'),
