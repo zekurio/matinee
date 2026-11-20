@@ -18,6 +18,7 @@ class Device {
     required this.osVersion,
     required this.appVersion,
     required this.platform,
+    this.timeZone = '',
   });
 
   /// For tests and platforms without the bridge yet: a handset.
@@ -27,7 +28,8 @@ class Device {
       model = 'unknown',
       osVersion = '',
       appVersion = '',
-      platform = 'android';
+      platform = 'android',
+      timeZone = '';
 
   final FormFactor formFactor;
 
@@ -40,6 +42,10 @@ class Device {
   /// The contract's `DevicePlatform`, so the person approving a TV's code
   /// sees a TV.
   final String platform;
+
+  /// The IANA time zone it's set to, like `Europe/Berlin`, or empty where
+  /// the platform didn't say: the server then counts days in its own.
+  final String timeZone;
 
   bool get isTv => formFactor == FormFactor.tv;
 
@@ -58,6 +64,7 @@ class Device {
         osVersion: facts.osVersion,
         appVersion: facts.appVersion,
         platform: facts.television ? 'androidtv' : 'android',
+        timeZone: facts.timeZone,
       );
     } on MissingPluginException {
       return const Device.fallback();

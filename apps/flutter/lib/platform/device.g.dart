@@ -105,6 +105,7 @@ class DeviceFacts {
     required this.model,
     required this.osVersion,
     required this.appVersion,
+    required this.timeZone,
   });
 
   /// Android TV or Apple TV: the remote's screens, code sign-in, no downloads.
@@ -122,6 +123,10 @@ class DeviceFacts {
   /// The app's version, from the root package.json.
   String appVersion;
 
+  /// The IANA time zone the device is set to, like "Europe/Berlin", which
+  /// the server counts a person's watch days and hours in.
+  String timeZone;
+
   List<Object?> _toList() {
     return <Object?>[
       television,
@@ -129,6 +134,7 @@ class DeviceFacts {
       model,
       osVersion,
       appVersion,
+      timeZone,
     ];
   }
 
@@ -143,6 +149,7 @@ class DeviceFacts {
       model: result[2]! as String,
       osVersion: result[3]! as String,
       appVersion: result[4]! as String,
+      timeZone: result[5]! as String,
     );
   }
 
@@ -155,7 +162,7 @@ class DeviceFacts {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(television, other.television) && _deepEquals(name, other.name) && _deepEquals(model, other.model) && _deepEquals(osVersion, other.osVersion) && _deepEquals(appVersion, other.appVersion);
+    return _deepEquals(television, other.television) && _deepEquals(name, other.name) && _deepEquals(model, other.model) && _deepEquals(osVersion, other.osVersion) && _deepEquals(appVersion, other.appVersion) && _deepEquals(timeZone, other.timeZone);
   }
 
   @override
@@ -164,7 +171,7 @@ class DeviceFacts {
 
   @override
   String toString() {
-    return 'DeviceFacts(television: $television, name: $name, model: $model, osVersion: $osVersion, appVersion: $appVersion)';
+    return 'DeviceFacts(television: $television, name: $name, model: $model, osVersion: $osVersion, appVersion: $appVersion, timeZone: $timeZone)';
   }
 }
 

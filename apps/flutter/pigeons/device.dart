@@ -18,6 +18,7 @@ class DeviceFacts {
     required this.model,
     required this.osVersion,
     required this.appVersion,
+    required this.timeZone,
   });
 
   /// Android TV or Apple TV: the remote's screens, code sign-in, no downloads.
@@ -34,6 +35,10 @@ class DeviceFacts {
 
   /// The app's version, from the root package.json.
   final String appVersion;
+
+  /// The IANA time zone the device is set to, like "Europe/Berlin", which
+  /// the server counts a person's watch days and hours in.
+  final String timeZone;
 }
 
 @HostApi()

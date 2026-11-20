@@ -8,8 +8,8 @@ in each platform's native player, behind the Flutter view.
 So far it has the toolchain, the kit, the API client, the strings, the
 sessions, the screens that connect and sign in, the tabs, Home, Shows,
 Movies, the genre and studio pages, the title, season, and episode
-pages, search, and the Android phone and tablet player. Every other
-screen behind the tabs is a placeholder that shows its route.
+pages, search, the profile, and the Android phone and tablet player.
+Every other screen behind the tabs is a placeholder that shows its route.
 
 ## Build
 
@@ -275,6 +275,21 @@ is out. Matches come as the server ranked them: titles by library, then
 cast and crew, then genres and studios as chips that open Browse. Like
 the Kotlin app it keeps no recent searches. The empty field shows
 nothing yet; it's where Explore's rails go.
+
+## Profile
+
+`lib/screens/profile` is the fifth tab, the Kotlin app's profile: the
+account's picture (`Avatar` in `lib/media`, which the tab bar shows too),
+name, and since when it's here; favorites, whose heading opens
+`Routes.favorites`; the statistics for a range, with watch time per day,
+week, or month as bars that read out under a finger, the totals, the most
+watched titles, the genres, where the person stands on the leaderboard,
+and when in the week they watch; what they watched last, opening
+`Routes.recent`; and the account, to switch server or account through
+the server list or to sign out. The statistics count days and hours in
+the device's time zone, which `DeviceFacts.timeZone` reads. The last
+range's figures stay while the next range loads. Offline it's the person
+and the account rows.
 
 ## Strings
 

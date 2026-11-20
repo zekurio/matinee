@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/avatar.dart';
 import 'header.dart';
 
 /// A tap on the tab that's already open: [path] is the tab's first page,
@@ -83,7 +84,19 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
         id: 4,
         icon: Lucide.userRound,
         label: words.tabProfile,
-        picture: avatar == null ? null : _AccountPicture(avatar),
+        picture: avatar == null
+            ? null
+            : Avatar(
+                avatarId: avatar,
+                name: user?.username ?? '',
+                size: 22,
+                // Offline, or when it can't load, the tab's own icon.
+                fallback: KitIcon(
+                  Lucide.userRound,
+                  size: 22,
+                  color: MatineeTheme.of(context).mutedForeground,
+                ),
+              ),
       ),
     ];
     return ColoredBox(
@@ -101,33 +114,6 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
           ),
           TabBar(items: items, state: _selected, onSelected: _open),
         ],
-      ),
-    );
-  }
-}
-
-/// The account's picture in the profile's tab, or its icon when the
-/// picture can't load, as offline.
-class _AccountPicture extends ConsumerWidget {
-  const _AccountPicture(this.avatarId);
-
-  final String avatarId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final api = ref.watch(apiProvider);
-    final fallback = KitIcon(
-      Lucide.userRound,
-      size: 22,
-      color: MatineeTheme.of(context).mutedForeground,
-    );
-    if (api == null) return fallback;
-    return ClipOval(
-      child: Image.network(
-        api.paths.avatar(avatarId).toString(),
-        headers: ref.watch(playerHeadersProvider),
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stack) => fallback,
       ),
     );
   }

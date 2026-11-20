@@ -210,7 +210,12 @@ data class DeviceFacts (
   /** The system's version, like "16" or "18.4". */
   val osVersion: String,
   /** The app's version, from the root package.json. */
-  val appVersion: String
+  val appVersion: String,
+  /**
+   * The IANA time zone the device is set to, like "Europe/Berlin", which
+   * the server counts a person's watch days and hours in.
+   */
+  val timeZone: String
 )
  {
   companion object {
@@ -220,7 +225,8 @@ data class DeviceFacts (
       val model = pigeonVar_list[2] as String
       val osVersion = pigeonVar_list[3] as String
       val appVersion = pigeonVar_list[4] as String
-      return DeviceFacts(television, name, model, osVersion, appVersion)
+      val timeZone = pigeonVar_list[5] as String
+      return DeviceFacts(television, name, model, osVersion, appVersion, timeZone)
     }
   }
   fun toList(): List<Any?> {
@@ -230,6 +236,7 @@ data class DeviceFacts (
       model,
       osVersion,
       appVersion,
+      timeZone,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -240,7 +247,7 @@ data class DeviceFacts (
       return true
     }
     val other = other as DeviceFacts
-    return DevicePigeonUtils.deepEquals(this.television, other.television) && DevicePigeonUtils.deepEquals(this.name, other.name) && DevicePigeonUtils.deepEquals(this.model, other.model) && DevicePigeonUtils.deepEquals(this.osVersion, other.osVersion) && DevicePigeonUtils.deepEquals(this.appVersion, other.appVersion)
+    return DevicePigeonUtils.deepEquals(this.television, other.television) && DevicePigeonUtils.deepEquals(this.name, other.name) && DevicePigeonUtils.deepEquals(this.model, other.model) && DevicePigeonUtils.deepEquals(this.osVersion, other.osVersion) && DevicePigeonUtils.deepEquals(this.appVersion, other.appVersion) && DevicePigeonUtils.deepEquals(this.timeZone, other.timeZone)
   }
 
   override fun hashCode(): Int {
@@ -250,10 +257,11 @@ data class DeviceFacts (
     result = 31 * result + DevicePigeonUtils.deepHash(this.model)
     result = 31 * result + DevicePigeonUtils.deepHash(this.osVersion)
     result = 31 * result + DevicePigeonUtils.deepHash(this.appVersion)
+    result = 31 * result + DevicePigeonUtils.deepHash(this.timeZone)
     return result
   }
   override fun toString(): String {
-    return "DeviceFacts(television=$television, name=$name, model=$model, osVersion=$osVersion, appVersion=$appVersion)"
+    return "DeviceFacts(television=$television, name=$name, model=$model, osVersion=$osVersion, appVersion=$appVersion, timeZone=$timeZone)"
   }
 }
 private open class DevicePigeonCodec : StandardMessageCodec() {

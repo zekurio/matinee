@@ -11,6 +11,8 @@ import 'player/player_lab.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/library/library_screen.dart';
 import 'screens/pending.dart';
+import 'screens/profile/lists_screens.dart';
+import 'screens/profile/profile_screen.dart';
 import 'screens/search/search_screen.dart';
 import 'screens/shell/shell.dart';
 import 'screens/sign_in/connect_screen.dart';
@@ -240,8 +242,25 @@ List<RouteBase> _handsetRoutes() => [
         ],
       ),
       StatefulShellBranch(routes: [_pending(Routes.downloads, 'Downloads')]),
-      StatefulShellBranch(routes: [_pending(Routes.profile, 'Profile')]),
+      StatefulShellBranch(
+        routes: [
+          GoRoute(
+            path: Routes.profile,
+            builder: (context, state) => const ProfileScreen(),
+          ),
+        ],
+      ),
     ],
+  ),
+  GoRoute(
+    path: Routes.favorites,
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const FavoritesScreen(),
+  ),
+  GoRoute(
+    path: Routes.recent,
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const RecentScreen(),
   ),
   GoRoute(
     path: Routes.search,
@@ -310,8 +329,6 @@ List<RouteBase> _tvRoutes() => [_pending(Routes.home, 'TV home')];
 
 /// The pages over the tabs, by path pattern, until each has its screen.
 const _pages = [
-  ('/favorites', 'Favorites'),
-  ('/recent', 'Recently watched'),
   ('/settings', 'Settings'),
   ('/settings/:page', 'Settings page'),
   ('/link-device', 'Link a device'),

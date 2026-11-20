@@ -310,6 +310,10 @@
   "@commonRetry": {
     "description": "strings.xml"
   },
+  "commonSeeAll": "See all",
+  "@commonSeeAll": {
+    "description": "A rail's heading, to a screen reader: it opens the whole list"
+  },
   "connectButton": "Connect",
   "@connectButton": {
     "description": "strings.xml"
@@ -2149,6 +2153,10 @@
   "profileStatsFailed": "Couldn't load your statistics",
   "@profileStatsFailed": {
     "description": "strings_loading.xml"
+  },
+  "profileSwitch": "Switch server or account",
+  "@profileSwitch": {
+    "description": "Profile: opens the saved servers, to switch to another or sign in to one"
   },
   "railFailed": "Couldn't load this row",
   "@railFailed": {

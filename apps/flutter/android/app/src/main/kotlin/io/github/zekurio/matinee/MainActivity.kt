@@ -94,6 +94,7 @@ private class Device(private val activity: MainActivity) : DeviceApi {
             model = Build.MODEL,
             osVersion = Build.VERSION.RELEASE,
             appVersion = packages.getPackageInfo(activity.packageName, 0).versionName ?: "",
+            timeZone = java.util.TimeZone.getDefault().id,
         )
     }
 

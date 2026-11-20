@@ -25,7 +25,8 @@ Future<void> loadFont() async {
 }
 
 /// Shows [screen] at `/`, signed in to [server] through [client], in a
-/// window [size] big. Anywhere it navigates shows its location as text.
+/// window [size] big, or in [auth] when it's set. Anywhere it navigates
+/// shows its location as text.
 Future<GoRouter> pumpScreen(
   WidgetTester tester,
   Widget screen, {
@@ -33,6 +34,7 @@ Future<GoRouter> pumpScreen(
   Size size = const Size(412, 915),
   KitColors colors = matineeDark,
   List<Override> overrides = const [],
+  AuthState? auth,
   bool settle = true,
 }) async {
   tester.view.devicePixelRatio = 1;
@@ -47,7 +49,7 @@ Future<GoRouter> pumpScreen(
     ProviderScope(
       overrides: [
         authStateProvider.overrideWithValue(
-          SignedIn('$server', User.fromJson(userJson('ada'))),
+          auth ?? SignedIn('$server', User.fromJson(userJson('ada'))),
         ),
         apiProvider.overrideWithValue(MatineeApi(base: server, client: client)),
         artworkLoaderProvider.overrideWithValue(
