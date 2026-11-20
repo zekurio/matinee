@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/player/playback_relay.dart';
@@ -63,4 +64,63 @@ void main() {
       expect(storageRange, 'bytes=0-6');
     },
   );
+
+  test('serves while the isolate that opened it is busy', () async {
+    final bound = ReceivePort();
+    final upstream = await Isolate.spawn(_serveFile, bound.sendPort);
+    addTearDown(upstream.kill);
+    final port = await bound.first;
+    final source = 'http://127.0.0.1:$port/media/file.mkv';
+    final relay = await PlaybackRelay.open(Uri.parse(source), {
+      'Authorization': 'Bearer test',
+    });
+    addTearDown(relay.close);
+    // Asked for at once, before the source can have reached the relay.
+    final url = relay.url(source);
+    final fetched = Isolate.run(() => _fetch(url));
+    // Block this isolate the way a long frame blocks the UI isolate.
+    final busy = Stopwatch()..start();
+    while (busy.elapsedMilliseconds < 1500) {}
+    final done = DateTime.now().millisecondsSinceEpoch;
+    final (body, at) = await fetched;
+    expect(body, 'Bearer test');
+    expect(at, lessThan(done));
+  });
+
+  test('stops serving when closed', () async {
+    final source = Uri.parse('http://127.0.0.1:9/file.mkv');
+    final relay = await PlaybackRelay.open(source, const {});
+    final url = Uri.parse(relay.url('$source'));
+    relay.close();
+    final client = HttpClient();
+    addTearDown(() => client.close(force: true));
+    await expectLater(() async {
+      for (var tries = 0; tries < 50; tries++) {
+        await (await client.getUrl(url)).close();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    }(), throwsA(isA<SocketException>()));
+  });
+}
+
+/// Answers with the request's credentials, on a separate isolate so the
+/// test's busy loop doesn't hold it up.
+Future<void> _serveFile(SendPort bound) async {
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  server.listen((request) async {
+    request.response.write(request.headers.value('authorization'));
+    await request.response.close();
+  });
+  bound.send(server.port);
+}
+
+Future<(String, int)> _fetch(String url) async {
+  final client = HttpClient();
+  try {
+    final response = await (await client.getUrl(Uri.parse(url))).close();
+    final body = await utf8.decoder.bind(response).join();
+    return (body, DateTime.now().millisecondsSinceEpoch);
+  } finally {
+    client.close();
+  }
 }
