@@ -6,8 +6,12 @@ import '../../../l10n/app_localizations.dart';
 import '../../../router.dart';
 import '../settings_rows.dart';
 import 'admin_parts.dart';
+import 'authentication_page.dart';
+import 'branding_page.dart';
 import 'jobs_page.dart';
 import 'libraries_page.dart';
+import 'transcoding_page.dart';
+import 'trickplay_page.dart';
 import 'users_page.dart';
 
 /// The server's settings, for admins, as the Kotlin app's admin
@@ -16,7 +20,11 @@ import 'users_page.dart';
 enum AdminCategory {
   libraries('libraries', Lucide.libraryBig),
   users('users', Lucide.users),
-  jobs('jobs', Lucide.listChecks);
+  authentication('authentication', Lucide.keyRound),
+  transcoding('transcoding', Lucide.film),
+  trickplay('trickplay', Lucide.galleryHorizontalEnd),
+  jobs('jobs', Lucide.listChecks),
+  branding('branding', Lucide.paintbrush);
 
   const AdminCategory(this.key, this.icon);
 
@@ -26,7 +34,11 @@ enum AdminCategory {
   String title(AppLocalizations l) => switch (this) {
     libraries => l.settingsAdminLibraries,
     users => l.settingsAdminUsers,
+    authentication => l.settingsAdminAuthentication,
+    transcoding => l.settingsAdminTranscoding,
+    trickplay => l.settingsAdminTrickplay,
     jobs => l.settingsAdminJobs,
+    branding => l.settingsAdminBranding,
   };
 
   /// The page, behind [AdminGate].
@@ -34,7 +46,11 @@ enum AdminCategory {
     child: switch (this) {
       libraries => const LibrariesPage(),
       users => const UsersPage(),
+      authentication => const AuthenticationPage(),
+      transcoding => const TranscodingPage(),
+      trickplay => const TrickplayPage(),
       jobs => const JobsPage(),
+      branding => const BrandingPage(),
     },
   );
 

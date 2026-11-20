@@ -321,7 +321,47 @@ which the app bundles as an asset. The rows (`Panel`, `LinkRow`,
 `SwitchRow`, `ValueRow`, `PickerRow`) are in `settings_rows.dart`. Signing
 out and switching server or account are on the profile. The Kotlin app's
 account and sessions, linking a device, subtitles, downloads, the app
-log, playback diagnostics, and the admin pages aren't here yet.
+log, and playback diagnostics aren't here yet. An admin also gets the
+Administration section, which [Admin pages](#admin-pages) covers.
+
+## Admin pages
+
+`lib/screens/settings/admin` is the Kotlin app's admin settings for
+phones and tablets. The Administration section shows on the first page of
+Settings only when the signed-in account is an admin (`canAdminister`),
+and each page sits behind `AdminGate`, so a plain account that opens an
+admin key gets the first page. Its categories (`AdminCategory`) open at
+`Routes.settingsPage(key)`:
+
+- Libraries: each library with its titles and what the server is doing
+  to it, asking again every two seconds while a scan or a fetch runs.
+  A tap scans it, fetches its metadata again, edits it, or removes it.
+  The editor is `Routes.libraryEditor([id])`, and its folders come from
+  `Routes.folderPicker`, which takes a `FolderPickerRequest` and pops
+  the folder it adds.
+- Users: the accounts, with role, sign-out everywhere, and deletion, and
+  the invite links. The access page, `Routes.userAccess(id)`, sets an
+  account's groups and the limits it overrides. The server has no way to
+  create an account directly, so new people come in through an invite.
+- Authentication: passkeys and the OpenID Connect provider.
+- Transcoding, Trickplay, and Branding: the server's settings for each.
+- Jobs: the queues and tasks, asked again every two seconds through
+  `serverPoll`, since `admin.jobs.get` isn't a live stream. A queue
+  pauses, resumes, or clears; a task runs or stops; and each queue that
+  sends a `concurrencyNote` gets a concurrency stepper.
+
+A page whose fields go together is a `SaveBarPage`: the kit's `SaveBar`
+shows under the list while there are edits, and Back shakes it instead of
+leaving. The page checks nothing the contract checks. On a save the
+server's validation issues come back by field (`fieldErrors` in
+`lib/core/field_errors.dart`) and show under their fields, and the bar
+keeps the failure until the next try. Anything that can't be taken back
+asks first: removing a library, deleting an account, stepping down,
+ending an account's sessions, revoking an invite, and clearing a queue.
+
+The tests in `test/screens/admin_test.dart` run against the fake server in
+`admin_backend.dart`. Try a change by hand only against a throwaway
+server, since these pages change the one they're signed in to.
 
 ## Strings
 
