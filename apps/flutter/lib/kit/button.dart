@@ -185,7 +185,13 @@ class MatineeButton extends StatelessWidget {
                 children: [
                   if (leading case final icon?)
                     KitIcon(icon, size: size.iconSize),
-                  if (child case final content?) Flexible(child: content),
+                  // A label names the button, so its text isn't read too.
+                  if (child case final content?)
+                    Flexible(
+                      child: label == null
+                          ? content
+                          : ExcludeSemantics(child: content),
+                    ),
                   if (trailing case final icon?)
                     KitIcon(icon, size: size.iconSize),
                 ],

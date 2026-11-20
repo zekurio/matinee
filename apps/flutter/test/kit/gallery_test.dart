@@ -52,6 +52,36 @@ void main() {
     }
   }
 
+  testWidgets('a labelled button is read by its label alone', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _frameFor(
+        matineeDark,
+        Center(
+          child: MatineeButton(
+            onPressed: () {},
+            leading: Lucide.plus,
+            label: 'Request. Ask an admin',
+            child: const Text('Request'),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.getSemantics(find.byType(MatineeButton)),
+      matchesSemantics(
+        label: 'Request. Ask an admin',
+        isButton: true,
+        hasTapAction: true,
+        hasFocusAction: true,
+        isFocusable: true,
+        hasEnabledState: true,
+        isEnabled: true,
+      ),
+    );
+    semantics.dispose();
+  });
+
   testWidgets('keyboard focus activates a button and skips disabled buttons', (
     tester,
   ) async {
