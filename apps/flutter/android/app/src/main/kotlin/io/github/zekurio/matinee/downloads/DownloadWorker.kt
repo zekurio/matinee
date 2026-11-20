@@ -3,6 +3,7 @@ package io.github.zekurio.matinee.downloads
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -48,6 +49,9 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             throw e
         } catch (e: IOException) {
             val failure = downloadFailure(e)
+            // The app log's only word on why, as the list shows the kind alone.
+            val status = (e as? DownloadHttpException)?.status?.let { " ($it)" }.orEmpty()
+            Log.w(TAG, "A download stopped: ${failure.kind}$status, try ${runAttemptCount + 1}")
             // Only a refusal keeps the server's words; the rest are shown in the app's language.
             val words = (failure as? DownloadFailure.Server)?.message
             // Downloads off for the account fail at once, rather than wait out every retry.
@@ -96,6 +100,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
     companion object {
         const val KEY_ITEM = "item"
+        private const val TAG = "MatineeDownloads"
         private const val CHANNEL = "downloads"
         private const val MAX_ATTEMPTS = 8
     }
