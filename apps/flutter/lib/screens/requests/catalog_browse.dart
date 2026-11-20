@@ -206,6 +206,7 @@ class _CatalogBrowseScreenState extends ConsumerState<CatalogBrowseScreen> {
             onPressed: () => _showFilters(context, kind, ready, _choices),
           ),
           Menu(
+            side: MenuSide.end,
             trigger: (context, toggle, open, focusNode) => ListBarButton(
               icon: Lucide.arrowUpDown,
               label: l.browseSortCurrent(_sortWord(choices.sort, l)),

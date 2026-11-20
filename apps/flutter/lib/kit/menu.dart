@@ -13,11 +13,29 @@ typedef MenuTriggerBuilder = Widget Function(
   FocusNode focusNode,
 );
 
+/// Which edge of its trigger a menu lines up with.
+enum MenuSide {
+  /// Its start edge, under where the trigger starts: a button's menu.
+  start,
+
+  /// Its end edge, under where the trigger ends: a row whose value sits at
+  /// its end, as a settings picker's.
+  end,
+}
+
+/// A menu that opens under its trigger, lined up with the trigger's
+/// [side], and moved over only where the screen's edge makes it.
 class Menu extends StatefulWidget {
-  const Menu({super.key, required this.trigger, required this.children});
+  const Menu({
+    super.key,
+    required this.trigger,
+    required this.children,
+    this.side = MenuSide.start,
+  });
 
   final MenuTriggerBuilder trigger;
   final List<Widget> children;
+  final MenuSide side;
 
   @override
   State<Menu> createState() => _MenuState();
@@ -33,38 +51,63 @@ class _MenuState extends State<Menu> {
   }
 
   @override
-  Widget build(BuildContext context) => material.MenuAnchor(
-    childFocusNode: _trigger,
-    alignmentOffset: const Offset(-8, 4),
-    consumeOutsideTap: true,
-    animated: !MediaQuery.disableAnimationsOf(context),
-    clipBehavior: Clip.none,
-    style: const material.MenuStyle(
-      alignment: AlignmentDirectional.bottomStart,
-      padding: WidgetStatePropertyAll(EdgeInsets.zero),
-      backgroundColor: WidgetStatePropertyAll(Color(0x00000000)),
-      surfaceTintColor: WidgetStatePropertyAll(Color(0x00000000)),
-      elevation: WidgetStatePropertyAll(0),
-    ),
-    menuChildren: [
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: MenuPanel(children: widget.children),
-      ),
-    ],
-    builder: (context, controller, child) => widget.trigger(
-      context,
-      () {
-        if (controller.isOpen) {
-          controller.close();
-        } else {
-          controller.open();
-        }
-      },
-      controller.isOpen,
-      _trigger,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final direction = Directionality.of(context);
+    final anchor = _anchor(context, direction);
+    if (widget.side == MenuSide.start) return anchor;
+    // Material lines a menu's start up with the anchor's start, and in a
+    // right-to-left anchor that's its right edge, measured from the menu's
+    // own. So the anchor alone reads the other way, and what it holds
+    // reads as the page does.
+    return Directionality(
+      textDirection: direction == TextDirection.ltr
+          ? TextDirection.rtl
+          : TextDirection.ltr,
+      child: anchor,
+    );
+  }
+
+  Widget _anchor(BuildContext context, TextDirection direction) =>
+      material.MenuAnchor(
+        childFocusNode: _trigger,
+        alignmentOffset: const Offset(-8, 4),
+        consumeOutsideTap: true,
+        animated: !MediaQuery.disableAnimationsOf(context),
+        clipBehavior: Clip.none,
+        style: const material.MenuStyle(
+          alignment: AlignmentDirectional.bottomStart,
+          padding: WidgetStatePropertyAll(EdgeInsets.zero),
+          backgroundColor: WidgetStatePropertyAll(Color(0x00000000)),
+          surfaceTintColor: WidgetStatePropertyAll(Color(0x00000000)),
+          elevation: WidgetStatePropertyAll(0),
+        ),
+        menuChildren: [
+          Directionality(
+            textDirection: direction,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: MenuPanel(children: widget.children),
+            ),
+          ),
+        ],
+        builder: (context, controller, child) => Directionality(
+          textDirection: direction,
+          child: Builder(
+            builder: (context) => widget.trigger(
+              context,
+              () {
+                if (controller.isOpen) {
+                  controller.close();
+                } else {
+                  controller.open();
+                }
+              },
+              controller.isOpen,
+              _trigger,
+            ),
+          ),
+        ),
+      );
 }
 
 class MenuPanel extends StatelessWidget {

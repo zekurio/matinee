@@ -361,7 +361,7 @@ class ValueRow extends StatelessWidget {
 }
 
 /// A choice among [options], shown at the row's end and picked from a menu
-/// that opens under it.
+/// that opens under it, lined up with that end.
 class PickerRow<T> extends StatelessWidget {
   const PickerRow({
     super.key,
@@ -384,6 +384,7 @@ class PickerRow<T> extends StatelessWidget {
       if (value == current) shown = label;
     }
     return Menu(
+      side: MenuSide.end,
       trigger: (context, toggle, isOpen, focus) => PressIndication(
         onPressed: toggle,
         focusNode: focus,

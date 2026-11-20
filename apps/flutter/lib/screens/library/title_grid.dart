@@ -315,6 +315,8 @@ class SortButton extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final offered = this.offered;
     return Menu(
+      // The last of the heading's buttons, at its end.
+      side: MenuSide.end,
       trigger: (context, toggle, open, focusNode) => ListBarButton(
         icon: Lucide.arrowUpDown,
         label: l.browseSortCurrent(current.label(l)),

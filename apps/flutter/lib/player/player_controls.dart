@@ -163,6 +163,8 @@ class _Menus extends StatelessWidget {
       children: [
         ...shown,
         Menu(
+          // At the top's end, so it opens under the button.
+          side: MenuSide.end,
           trigger: (context, toggle, open, focus) => PlayerMenuButton(
             icon: Lucide.ellipsis,
             label: moreLabel,
