@@ -753,7 +753,7 @@ class _MediaSamples extends StatelessWidget {
   const _MediaSamples();
 
   static const _posters = [
-    ('Arrival', '2016', Color(0xFF3B5B7A), Color(0xFF0E1A26)),
+    ('Arrival', '7.9 · 2016', Color(0xFF3B5B7A), Color(0xFF0E1A26)),
     ('The Expanse', '6 new episodes', Color(0xFF7A3B2E), Color(0xFF1C0D0A)),
     ('Paterson', '2016', Color(0xFF6E7A3B), Color(0xFF181C0B)),
     ('Severance', 'Season 2 · 3 new episodes', null, null),
@@ -780,6 +780,10 @@ class _MediaSamples extends StatelessWidget {
             return PosterCard(
               name: name,
               detail: detail,
+              // A list sorted by score: the star is an icon, since the
+              // font has no character for it.
+              detailIcon: index == 0 ? Lucide.star : null,
+              detailLabel: index == 0 ? 'Score 7.9, 2016' : null,
               watchedLabel: index == 2 ? 'Watched' : null,
               art: from == null ? null : _SampleArt(from, to!),
               onPressed: () {},

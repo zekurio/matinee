@@ -111,7 +111,7 @@ class _TitleGridState extends ConsumerState<TitleGrid> {
               _more();
             }
             final title = items[index];
-            return TitleCard(
+            return TitleCard.withDetail(
               title: title,
               detail: cardDetail(context, title, request.sort),
             );

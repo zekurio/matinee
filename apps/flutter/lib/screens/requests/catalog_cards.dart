@@ -259,7 +259,7 @@ Availability liveAvailability(
 /// the corner and on the second line. A tap opens its page. When it
 /// arrives, the badge goes and the card becomes the library's, on the same
 /// poster. [detail] stands in for the year and kind while there's no
-/// state, as Coming soon's day does.
+/// state, as Coming soon's day or the score does.
 class CatalogCard extends ConsumerStatefulWidget {
   const CatalogCard({
     super.key,
@@ -272,7 +272,7 @@ class CatalogCard extends ConsumerStatefulWidget {
   });
 
   final CatalogTitleSummary title;
-  final String? detail;
+  final CardDetail? detail;
 
   /// Already here when the list loaded: the library's card at once,
   /// without the badge going.
@@ -309,6 +309,10 @@ class _CatalogCardState extends ConsumerState<CatalogCard> {
     }
     final poster = title.poster;
     final onLongPress = widget.onLongPress;
+    // The state, once there is one, takes the detail's place.
+    final detail = stateWord(availability, percent: true) == null
+        ? widget.detail
+        : null;
     return PosterCard(
       name: title.name,
       toneKey: refKey(title.ref),
@@ -317,8 +321,10 @@ class _CatalogCardState extends ConsumerState<CatalogCard> {
         title.ref,
         availability,
         l,
-        detail: widget.detail,
+        detail: widget.detail?.text,
       ),
+      detailIcon: detail?.icon,
+      detailLabel: detail?.label,
       art: poster == null ? null : Picture([ArtSource(poster)]),
       badge: CatalogBadge(
         availability: availability,
@@ -396,7 +402,7 @@ class CatalogTitleCard extends ConsumerWidget {
   /// The catalog's [CatalogBrowseTitle] or [RelatedTitle], as one card.
   factory CatalogTitleCard.browse(
     CatalogBrowseTitle item, {
-    String? detail,
+    CardDetail? detail,
     bool recommended = false,
   }) => CatalogTitleCard(
     catalogRef: item.ref,
@@ -426,7 +432,7 @@ class CatalogTitleCard extends ConsumerWidget {
 
   /// The library's title, when the server has one.
   final TitleSummary? library;
-  final String? detail;
+  final CardDetail? detail;
   final bool recommended;
 
   @override
@@ -434,9 +440,14 @@ class CatalogTitleCard extends ConsumerWidget {
     final now = liveAvailability(ref, catalogRef, availability);
     final library = this.library;
     if (library != null && now.hereAs == library.id) {
-      return TitleCard(
+      return TitleCard.withDetail(
         title: library,
-        detail: detail ?? library.year?.toString(),
+        detail:
+            detail ??
+            switch (library.year) {
+              final year? => CardDetail('$year'),
+              null => null,
+            },
       );
     }
     final summary = CatalogTitleSummary(

@@ -72,7 +72,7 @@ int filterCount(CatalogFilters filters) =>
 
 /// What a card says under its name, as the server says the list calls
 /// for; else the year.
-String? browseDetail(
+CardDetail? browseDetail(
   BuildContext context,
   String? detail,
   CatalogBrowseTitle item,
@@ -81,15 +81,12 @@ String? browseDetail(
   final score = item.score;
   final year = item.year?.toString();
   if (detail == 'score' && score != null) {
-    final text = formatRating(score, l);
-    return year == null
-        ? l.webFiltersCardScoreOnly(text)
-        : l.webFiltersCardScore(text, year);
+    return scoreDetail(l, formatRating(score, l), year);
   }
   if (detail == 'releaseDate') {
-    if (formatDay(item.releaseDate, l) case final day?) return day;
+    if (formatDay(item.releaseDate, l) case final day?) return CardDetail(day);
   }
-  return year;
+  return year == null ? null : CardDetail(year);
 }
 
 /// [filters] with the fields given changed; a getter, so null can be set.

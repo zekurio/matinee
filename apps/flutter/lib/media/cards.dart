@@ -26,13 +26,36 @@ class TitleCard extends StatelessWidget {
     super.key,
     required this.title,
     this.detail,
+    this.detailIcon,
+    this.detailLabel,
     this.poster,
     this.route,
     this.recommended,
   });
 
+  /// [detail]'s parts as [TitleCard] takes them.
+  TitleCard.withDetail({
+    Key? key,
+    required TitleSummary title,
+    CardDetail? detail,
+    Artwork? poster,
+    String? route,
+    CatalogRef? recommended,
+  }) : this(
+         key: key,
+         title: title,
+         detail: detail?.text,
+         detailIcon: detail?.icon,
+         detailLabel: detail?.label,
+         poster: poster,
+         route: route,
+         recommended: recommended,
+       );
+
   final TitleSummary title;
   final String? detail;
+  final String? detailIcon;
+  final String? detailLabel;
   final Artwork? poster;
   final String? route;
   final CatalogRef? recommended;
@@ -43,6 +66,8 @@ class TitleCard extends StatelessWidget {
     return PosterCard(
       name: title.name,
       detail: detail,
+      detailIcon: detailIcon,
+      detailLabel: detailLabel,
       art: art == null ? null : Picture([ArtSource(art)]),
       watchedLabel: title.watched
           ? AppLocalizations.of(context).mediaWatched

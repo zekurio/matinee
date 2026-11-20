@@ -123,7 +123,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(backend.browsed.last['sort'], 'score');
     expect(backend.browsed.last['order'], 'desc');
-    expect(find.text('★ 8.4 · 2010'), findsOneWidget);
+    // The star is the kit's icon before the words, read out as the score.
+    expect(find.textContaining('8.4 · 2010'), findsOneWidget);
+    expect(find.textContaining('★'), findsNothing);
+    expect(find.bySemanticsLabel(RegExp(r'Score 8\.4, 2010$')), findsOneWidget);
     expect(find.bySemanticsLabel('Sort: Highest score'), findsOneWidget);
   });
 

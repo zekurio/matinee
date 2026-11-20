@@ -279,7 +279,7 @@ class CatalogCreditCard extends StatelessWidget {
         poster: credit.poster,
         availability: credit.availability,
       ),
-      detail: detail.isEmpty ? null : detail,
+      detail: detail.isEmpty ? null : CardDetail(detail),
       hereAtFirst: credit.availability.hereAs != null,
     );
   }

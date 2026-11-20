@@ -279,7 +279,7 @@
   "@adminAccessLibrariesPicked": {
     "description": "admin settings"
   },
-  "adminAccessNoGroups": "There are no other groups yet. Make one in the web app under Settings → Access.",
+  "adminAccessNoGroups": "There are no other groups yet. Make one in the web app's Settings, under Access.",
   "@adminAccessNoGroups": {
     "description": "admin settings"
   },
@@ -4787,7 +4787,7 @@
       }
     }
   },
-  "webFiltersCardScore": "★ {p1} · {p2}",
+  "webFiltersCardScore": "{p1} · {p2}",
   "@webFiltersCardScore": {
     "description": "strings_web_filters.xml",
     "placeholders": {
@@ -4799,9 +4799,18 @@
       }
     }
   },
-  "webFiltersCardScoreOnly": "★ {p1}",
+  "webFiltersCardScoreOnly": "{p1}",
   "@webFiltersCardScoreOnly": {
     "description": "strings_web_filters.xml",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webFiltersCardScoreSpoken": "Score {p1}",
+  "@webFiltersCardScoreSpoken": {
+    "description": "What a screen reader says for the star and the score on a card.",
     "placeholders": {
       "p1": {
         "type": "String"
@@ -6209,7 +6218,7 @@
   "@webOidcPasskeysAllowSignUp": {
     "description": "strings_web_oidc.xml"
   },
-  "webOidcPasskeysAllowSignUpHint": "Anyone who can reach this server can create an account with a passkey. While this is off, a new person needs an invite link from Settings → Users.",
+  "webOidcPasskeysAllowSignUpHint": "Anyone who can reach this server can create an account with a passkey. While this is off, a new person needs an invite link from Users in Settings.",
   "@webOidcPasskeysAllowSignUpHint": {
     "description": "strings_web_oidc.xml"
   },
@@ -6217,7 +6226,7 @@
   "@webOidcPasskeysTitle": {
     "description": "strings_web_oidc.xml"
   },
-  "webOidcPasskeysUnlinked": "{count, plural, one{{count} account isn't linked to {p2}, so it can't sign in while passkeys are off. While still signed in, it can link {p2} under Settings → Account.} other{{count} accounts aren't linked to {p2}, so they can't sign in while passkeys are off. While still signed in, they can link {p2} under Settings → Account.}}",
+  "webOidcPasskeysUnlinked": "{count, plural, one{{count} account isn't linked to {p2}, so it can't sign in while passkeys are off. While still signed in, it can link {p2} under Account in Settings.} other{{count} accounts aren't linked to {p2}, so they can't sign in while passkeys are off. While still signed in, they can link {p2} under Account in Settings.}}",
   "@webOidcPasskeysUnlinked": {
     "description": "strings_web_oidc.xml",
     "placeholders": {
@@ -7076,11 +7085,11 @@
       }
     }
   },
-  "webServerAdminAuthPasskeysOffLink": "Link your account to single sign-on under Settings → Account before turning passkeys off.",
+  "webServerAdminAuthPasskeysOffLink": "Link your account to single sign-on under Account in Settings before turning passkeys off.",
   "@webServerAdminAuthPasskeysOffLink": {
     "description": "strings_web_server.xml"
   },
-  "webServerAdminAuthPasskeysOffSaveFirst": "Save single sign-on first and link your account to it under Settings → Account. Then turn passkeys off.",
+  "webServerAdminAuthPasskeysOffSaveFirst": "Save single sign-on first and link your account to it under Account in Settings. Then turn passkeys off.",
   "@webServerAdminAuthPasskeysOffSaveFirst": {
     "description": "strings_web_server.xml"
   },
@@ -9041,7 +9050,7 @@
   "@webUsersInvitesNoNote": {
     "description": "strings_web_users.xml"
   },
-  "webUsersInvitesPasskeysOff": "An invite link creates an account with a passkey. Turn on passkeys under Settings → Authentication to make one.",
+  "webUsersInvitesPasskeysOff": "An invite link creates an account with a passkey. Turn on passkeys under Authentication in Settings to make one.",
   "@webUsersInvitesPasskeysOff": {
     "description": "strings_web_users.xml"
   },

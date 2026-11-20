@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/display_names.dart';
+import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import 'list_choices.dart';
 
@@ -33,26 +34,36 @@ String countText(BuildContext context, int count) =>
 
 /// What a card says under its name: the year, with the score or the
 /// runtime before it while the list is ordered by that, as the web's cards.
-String? cardDetail(BuildContext context, TitleSummary title, String sort) {
+CardDetail? cardDetail(BuildContext context, TitleSummary title, String sort) {
   final l = AppLocalizations.of(context);
   final year = title.year?.toString();
   final score = title.rating;
   if (sort == TitleSort.score && score != null) {
-    final text = scoreText(context, score);
-    return year == null
-        ? l.webFiltersCardScoreOnly(text)
-        : l.webFiltersCardScore(text, year);
+    return scoreDetail(l, scoreText(context, score), year);
   }
   final runtime = sort == TitleSort.runtime
       ? runtimeText(l, title.runtimeMinutes)
       : null;
   if (runtime != null) {
-    return year == null
-        ? l.webFiltersCardRuntimeOnly(runtime)
-        : l.webFiltersCardRuntime(runtime, year);
+    return CardDetail(
+      year == null
+          ? l.webFiltersCardRuntimeOnly(runtime)
+          : l.webFiltersCardRuntime(runtime, year),
+    );
   }
-  return year;
+  return year == null ? null : CardDetail(year);
 }
+
+/// "7.8 · 2021" after the star, which the web and the Kotlin app draw as
+/// a character the app's font lacks, so it's the kit's icon here.
+CardDetail scoreDetail(AppLocalizations l, String score, String? year) =>
+    CardDetail(
+      year == null
+          ? l.webFiltersCardScoreOnly(score)
+          : l.webFiltersCardScore(score, year),
+      icon: Lucide.star,
+      label: [l.webFiltersCardScoreSpoken(score), ?year].join(', '),
+    );
 
 /// How a range is worded: both ends, only the low one, only the high one.
 typedef RangeWords = ({

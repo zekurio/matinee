@@ -79,6 +79,29 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets("a score's star is the kit's icon, and says what it is", (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await _rail(
+      tester,
+      (index, log) => PosterCard(
+        name: 'Card $index',
+        detail: '7.$index · 2021',
+        detailIcon: Lucide.star,
+        detailLabel: 'Score 7.$index, 2021',
+        onPressed: () {},
+      ),
+    );
+    expect(find.byType(KitIcon), findsNWidgets(3));
+    expect(find.textContaining('★'), findsNothing);
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Card 1, Score 7.1, 2021')),
+      isSemantics(isButton: true, label: 'Card 1, Score 7.1, 2021'),
+    );
+    handle.dispose();
+  });
+
   testWidgets("a wide card's words open it and its menu", (tester) async {
     final log = await _rail(
       tester,

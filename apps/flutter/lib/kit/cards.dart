@@ -123,17 +123,35 @@ class WatchProgressBar extends StatelessWidget {
   );
 }
 
+/// A card's second line: [text], after [icon] when there is one, and what
+/// a screen reader says for it, [label], when the icon carries meaning the
+/// words alone don't, as the score's star does.
+@immutable
+final class CardDetail {
+  const CardDetail(this.text, {this.icon, this.label});
+
+  final String text;
+
+  /// A [Lucide] icon, drawn before [text].
+  final String? icon;
+  final String? label;
+}
+
 /// Name and detail under a card, one line each.
 class CardText extends StatelessWidget {
   const CardText({
     super.key,
     required this.primary,
     this.secondary,
+    this.secondaryIcon,
     this.untitled = false,
   });
 
   final String primary;
   final String? secondary;
+
+  /// A [Lucide] icon before [secondary], as the score's star.
+  final String? secondaryIcon;
 
   /// Nothing named it, so the name is a stand-in, in the regular weight.
   final bool untitled;
@@ -168,8 +186,24 @@ class CardText extends StatelessWidget {
             ),
           ),
           if (detail != null)
-            Text(
-              detail,
+            Text.rich(
+              TextSpan(
+                children: [
+                  if (secondaryIcon case final icon?)
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(end: 4),
+                        child: KitIcon(
+                          icon,
+                          size: 12,
+                          color: colors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                  TextSpan(text: detail),
+                ],
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: KitText.px13.style(color: colors.mutedForeground),
@@ -217,6 +251,8 @@ class PosterCard extends StatelessWidget {
     super.key,
     required this.name,
     this.detail,
+    this.detailIcon,
+    this.detailLabel,
     this.art,
     this.toneKey,
     this.watchedLabel,
@@ -228,6 +264,11 @@ class PosterCard extends StatelessWidget {
 
   final String name;
   final String? detail;
+
+  /// A [Lucide] icon before [detail], and what a screen reader says for
+  /// the two in place of [detail], as [CardDetail] has them.
+  final String? detailIcon;
+  final String? detailLabel;
 
   /// The picture, over the tone: a widget that draws nothing until it
   /// loads, so the name shows through.
@@ -260,7 +301,7 @@ class PosterCard extends StatelessWidget {
       longPressLabel: longPressLabel,
       shape: CardMetrics.radius,
       showFocusRing: false,
-      label: [name, ?detail].join(', '),
+      label: [name, ?(detailLabel ?? detail)].join(', '),
       builder: (context, state) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -296,7 +337,11 @@ class PosterCard extends StatelessWidget {
             ),
           ),
           ExcludeSemantics(
-            child: CardText(primary: name, secondary: detail),
+            child: CardText(
+              primary: name,
+              secondary: detail,
+              secondaryIcon: detailIcon,
+            ),
           ),
         ],
       ),
