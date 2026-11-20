@@ -268,6 +268,29 @@ class DownloadFetcherTest {
     }
 
     @Test
+    fun `a version's segments tell their progress at most once a second`() = runBlocking {
+        store.put(device())
+        clock = 5_000
+        val seen = mutableListOf<Long>()
+        val segments = DownloadFetcher(store, http, wait = {}, now = { clock }, onProgress = { seen += it.bytes })
+        http.answers = { method, url, _ ->
+            when {
+                method == "POST" -> answer(200, """{"id":"d1","plan":{"estimatedBytes":9}}""")
+                method == "DELETE" -> answer(204)
+                url.endsWith("/init.mp4") -> answer(200, "I")
+                url.endsWith("/3.m4s") -> answer(200, "D".toByteArray(), mapOf("X-Matinee-Last-Segment" to "1"))
+                url.endsWith(".m4s") -> answer(200, "S")
+                else -> answer(404)
+            }
+        }
+        segments.fetch("item")
+        assertEquals("ISSSD", video().readText())
+        // Four segments in the same second: only the first is told.
+        assertEquals(listOf(2L), seen)
+        assertEquals(4, store["item"]!!.segment)
+    }
+
+    @Test
     fun `failures are sorted by what they mean`() {
         assertEquals(DownloadFailure.Forbidden, downloadFailure(DownloadHttpException(403, "No.")))
         assertEquals(DownloadFailure.Server("Gone."), downloadFailure(DownloadHttpException(404, "Gone.")))

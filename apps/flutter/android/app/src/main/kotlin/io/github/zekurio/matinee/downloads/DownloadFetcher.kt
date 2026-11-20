@@ -237,7 +237,9 @@ class DownloadFetcher(
                         FileOutputStream(file, true).use { out -> copy(response.body, out) { read -> bytes += read } }
                         segment++
                         store.update(id) { it.copy(segment = segment, bytes = bytes) }
-                        progress(id, bytes, force = true)
+                        // Written down above; the notification hears at most once a
+                        // second, as small segments come many to a second.
+                        progress(id, bytes)
                         response.header("X-Matinee-Last-Segment") == "1"
                     }
                     204 -> true
