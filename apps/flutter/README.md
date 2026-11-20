@@ -424,9 +424,11 @@ in how many titles; the biography; their titles across the libraries in
 the poster grid Browse uses, each with the role; then "Not here yet",
 their other titles at TMDB, opening the catalog's page, or the library's
 once one is here. Those cards follow `requests.live` for the cards built
-around the screen, in blocks of twelve and six blocks at most
-(`FollowWindow`), since the stream takes a hundred titles at most, as
-the Kotlin app follows them.
+around the screen, in blocks of twelve and six blocks at most, since the
+stream takes a hundred titles at most, as the Kotlin app follows them.
+`FollowWindow` (`lib/screens/requests/follow_window.dart`) does that for
+every list that can run past a hundred: this page, My requests, and the
+catalog's browse.
 
 ## Profile
 

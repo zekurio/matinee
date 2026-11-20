@@ -1,6 +1,3 @@
-import 'dart:math' as math;
-
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +12,7 @@ import '../../media/layout.dart';
 import '../../query/failure_view.dart';
 import '../../router.dart';
 import '../requests/catalog_cards.dart';
+import '../requests/follow_window.dart';
 import '../requests/request_words.dart';
 import '../requests/requests_hub.dart';
 import '../title/title_parts.dart';
@@ -167,7 +165,7 @@ class _PersonScreenState extends ConsumerState<PersonScreen> {
                   columns: posterColumns,
                   aspectRatio: CardMetrics.poster,
                   itemCount: catalog.length,
-                  itemBuilder: (context, index) => _Followed(
+                  itemBuilder: (context, index) => FollowedCard(
                     window: _shown,
                     index: index,
                     child: CatalogCreditCard(credit: catalog[index]),
@@ -328,119 +326,3 @@ String creditKindWord(String kind, AppLocalizations l, int count) =>
       CreditKind.writer => l.peopleCreditWriter(count),
       _ => l.peopleCreditActor(count),
     };
-
-/// Which catalog cards are built, by their place in the list, and from
-/// that the ones to follow: the blocks of [block] around them, at most
-/// [blocks] of them, as the Kotlin app follows the cards around the screen.
-/// The live stream takes a hundred titles at most and opens again on a
-/// change, so it follows a window rather than the whole list.
-final class FollowWindow extends ChangeNotifier {
-  FollowWindow({this.block = 12, this.blocks = 6});
-
-  final int block;
-  final int blocks;
-  final _built = <int>{};
-  var _window = (0, 0);
-  var _scheduled = false;
-  var _disposed = false;
-
-  (int, int) get window => _window;
-
-  void add(int index) {
-    _built.add(index);
-    _schedule();
-  }
-
-  void remove(int index) {
-    _built.remove(index);
-    _schedule();
-  }
-
-  /// The part of [items] in the window.
-  List<T> slice<T>(List<T> items) {
-    final (from, to) = _window;
-    return items.sublist(
-      math.min(from, items.length),
-      math.min(to, items.length),
-    );
-  }
-
-  /// The window for the cards at [built]: from the block before the first
-  /// to the block after the last, no more than [blocks] blocks.
-  static (int, int) windowFor(
-    Iterable<int> built, {
-    required int block,
-    required int blocks,
-  }) {
-    if (built.isEmpty) return (0, 0);
-    final first = built.reduce(math.min);
-    final last = built.reduce(math.max);
-    final from = math.max(0, first ~/ block - 1);
-    final to = math.min(last ~/ block + 1, from + blocks - 1);
-    return (from * block, (to + 1) * block);
-  }
-
-  // Cards come and go while the grid lays out, so the window moves once
-  // the frame is done.
-  void _schedule() {
-    if (_scheduled) return;
-    _scheduled = true;
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      _scheduled = false;
-      if (_disposed) return;
-      final next = windowFor(_built, block: block, blocks: blocks);
-      if (next == _window) return;
-      _window = next;
-      notifyListeners();
-    });
-    SchedulerBinding.instance.ensureVisualUpdate();
-  }
-
-  @override
-  void dispose() {
-    _disposed = true;
-    super.dispose();
-  }
-}
-
-/// Tells [window] while its card is built.
-class _Followed extends StatefulWidget {
-  const _Followed({
-    required this.window,
-    required this.index,
-    required this.child,
-  });
-
-  final FollowWindow window;
-  final int index;
-  final Widget child;
-
-  @override
-  State<_Followed> createState() => _FollowedState();
-}
-
-class _FollowedState extends State<_Followed> {
-  @override
-  void initState() {
-    super.initState();
-    widget.window.add(widget.index);
-  }
-
-  @override
-  void didUpdateWidget(_Followed old) {
-    super.didUpdateWidget(old);
-    if (old.index != widget.index || old.window != widget.window) {
-      old.window.remove(old.index);
-      widget.window.add(widget.index);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.window.remove(widget.index);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
-}

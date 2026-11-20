@@ -14,6 +14,7 @@ import '../../query/failure_view.dart';
 import '../../router.dart';
 import 'catalog_cards.dart';
 import 'discover.dart' show QueueList;
+import 'follow_window.dart';
 import 'request_sheet.dart';
 import 'request_words.dart';
 import 'requests_data.dart';
@@ -56,6 +57,16 @@ class _MinePage extends ConsumerStatefulWidget {
 class _MinePageState extends ConsumerState<_MinePage> {
   String _filter = MineFilter.inProgress;
 
+  /// The cards built now, which pick the ones the live stream follows:
+  /// a long list holds more than one stream takes.
+  final _shown = FollowWindow();
+
+  @override
+  void dispose() {
+    _shown.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -92,11 +103,15 @@ class _MinePageState extends ConsumerState<_MinePage> {
         ),
       );
     } else {
-      body = FollowTitles(
-        titles: FollowedTitles([
-          for (final item in items)
-            CatalogInput(ref: item.title.ref, libraryId: item.library.id),
-        ]),
+      body = ListenableBuilder(
+        listenable: _shown,
+        builder: (context, child) => FollowTitles(
+          titles: FollowedTitles([
+            for (final item in _shown.slice(items))
+              CatalogInput(ref: item.title.ref, libraryId: item.library.id),
+          ]),
+          child: child!,
+        ),
         child: CustomScrollView(
           slivers: [
             CardGrid(
@@ -113,13 +128,17 @@ class _MinePageState extends ConsumerState<_MinePage> {
                   });
                 }
                 final item = items[index];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AskedCard(item: item),
-                    _DeclinedNote(item: item),
-                  ],
+                return FollowedCard(
+                  window: _shown,
+                  index: index,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AskedCard(item: item),
+                      _DeclinedNote(item: item),
+                    ],
+                  ),
                 );
               },
             ),

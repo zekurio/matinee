@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart' show TextInputAction;
 import 'package:flutter/widgets.dart';
@@ -17,6 +15,7 @@ import '../library/filter_sheet.dart'
 import '../library/list_words.dart';
 import '../library/title_grid.dart' show ListBarButton;
 import 'catalog_cards.dart';
+import 'follow_window.dart';
 import 'request_sheet.dart';
 import 'request_words.dart';
 import 'requests_data.dart';
@@ -241,12 +240,6 @@ void _change(ValueNotifier<BrowseChoices> choices, CatalogFilters filters) {
   );
 }
 
-/// Cards in a block of the grid the stream follows.
-const _block = 12;
-
-/// Blocks followed at once: the ones on screen and one either side.
-const _mostBlocks = 6;
-
 /// Load the next page once a card this close to the end is built.
 const _nearEnd = 12;
 
@@ -263,37 +256,16 @@ class _BrowseGrid extends ConsumerStatefulWidget {
 class _BrowseGridState extends ConsumerState<_BrowseGrid> {
   final _scroll = ScrollController();
 
-  /// The first block and the block after the last that the stream follows.
-  (int, int) _window = (0, 2);
-  double _rowExtent = 1;
-  int _columns = 1;
+  /// The cards built now, which pick the ones the live stream follows.
+  final _shown = FollowWindow();
   BrowseKey? _key;
   bool _askedMore = false;
 
   @override
-  void initState() {
-    super.initState();
-    _scroll.addListener(_scrolled);
-  }
-
-  @override
   void dispose() {
     _scroll.dispose();
+    _shown.dispose();
     super.dispose();
-  }
-
-  /// The blocks on screen, from how far it's scrolled and how tall a row
-  /// of cards is.
-  void _scrolled() {
-    if (!_scroll.hasClients) return;
-    final position = _scroll.position;
-    final first = (position.pixels / _rowExtent).floor() * _columns;
-    final last =
-        ((position.pixels + position.viewportDimension) / _rowExtent).ceil() *
-        _columns;
-    final from = math.max(0, first ~/ _block - 1);
-    final to = math.min(last ~/ _block + 2, from + _mostBlocks);
-    if ((from, to) != _window) setState(() => _window = (from, to));
   }
 
   void _more(BrowseKey key) {
@@ -317,7 +289,6 @@ class _BrowseGridState extends ConsumerState<_BrowseGrid> {
       // A new browse starts at the top.
       if (_key != null && _scroll.hasClients) _scroll.jumpTo(0);
       _key = key;
-      _window = (0, 2);
     }
     final pages = ref.watch(browsePagesProvider(key));
     final recommended = _recommends(choices.filters);
@@ -335,13 +306,6 @@ class _BrowseGridState extends ConsumerState<_BrowseGrid> {
       onPressed: clear,
       child: Text(l.browseClearFilters),
     );
-    final (from, to) = _window;
-    // Library cards play; only the rest can change.
-    final followed = FollowedTitles([
-      for (final item
-          in pages.items.skip(from * _block).take((to - from) * _block))
-        if (item.title == null) CatalogInput(ref: item.ref),
-    ]);
 
     Widget first() {
       if (pages.error case final error?) {
@@ -378,119 +342,108 @@ class _BrowseGridState extends ConsumerState<_BrowseGrid> {
       );
     }
 
-    return FollowTitles(
-      titles: followed,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final inner = constraints.maxWidth - 2 * CardMetrics.gutter;
-          _columns = math.max(1, posterColumns(inner));
-          final itemWidth =
-              (inner - CardGrid.spacing * (_columns - 1)) / _columns;
-          _rowExtent = math.max(
-            1,
-            CardMetrics.height(
-                  itemWidth,
-                  CardMetrics.poster,
-                  MediaQuery.textScalerOf(context),
-                ) +
-                CardGrid.runSpacing,
-          );
-          return CustomScrollView(
-            controller: _scroll,
-            slivers: [
-              if (pages.stale)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      CardMetrics.gutter,
-                      0,
-                      CardMetrics.gutter,
-                      16,
-                    ),
-                    child: Row(
-                      spacing: 8,
-                      children: [
-                        KitIcon(
-                          Lucide.cloudOff,
-                          size: 16,
-                          color: colors.mutedForeground,
-                        ),
-                        Expanded(
-                          child: Text(
-                            l.webDiscoverStale,
-                            style: KitText.sm.style(
-                              color: colors.mutedForeground,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+    return ListenableBuilder(
+      listenable: _shown,
+      builder: (context, _) => FollowTitles(
+        // The cards around the screen; library cards play, so only the
+        // rest can change.
+        titles: FollowedTitles([
+          for (final item in _shown.slice(shown))
+            if (item.title == null) CatalogInput(ref: item.ref),
+        ]),
+        child: CustomScrollView(
+          controller: _scroll,
+          slivers: [
+            if (pages.stale)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    CardMetrics.gutter,
+                    0,
+                    CardMetrics.gutter,
+                    16,
                   ),
-                ),
-              if (pages.items.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 48),
-                      child: first(),
-                    ),
-                  ),
-                )
-              else ...[
-                const SliverToBoxAdapter(child: SizedBox(height: 4)),
-                CardGrid(
-                  columns: posterColumns,
-                  aspectRatio: CardMetrics.poster,
-                  itemCount: shown.length,
-                  itemBuilder: (context, index) {
-                    if (index >= shown.length - _nearEnd &&
-                        pages.error == null) {
-                      _more(key);
-                    }
-                    final item = shown[index];
-                    return CatalogTitleCard.browse(
-                      item,
-                      detail: browseDetail(context, pages.detail, item),
-                      recommended: recommended,
-                    );
-                  },
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Center(
-                      child: switch (pages) {
-                        BrowsePagesState(loading: true) => LoadingState(
-                          label: l.loadingInProgress,
-                        ),
-                        BrowsePagesState(:final error?) => FailureState(
-                          title: l.gridMoreFailed,
-                          error: error,
-                          onRetry: () => ref
-                              .read(browsePagesProvider(key).notifier)
-                              .more(),
-                        ),
-                        BrowsePagesState(next: null) => Text(
-                          l.webDiscoverEnd,
+                  child: Row(
+                    spacing: 8,
+                    children: [
+                      KitIcon(
+                        Lucide.cloudOff,
+                        size: 16,
+                        color: colors.mutedForeground,
+                      ),
+                      Expanded(
+                        child: Text(
+                          l.webDiscoverStale,
                           style: KitText.sm.style(
                             color: colors.mutedForeground,
                           ),
                         ),
-                        _ => const SizedBox.shrink(),
-                      },
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
+            if (pages.items.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 48),
+                    child: first(),
+                  ),
+                ),
+              )
+            else ...[
+              const SliverToBoxAdapter(child: SizedBox(height: 4)),
+              CardGrid(
+                columns: posterColumns,
+                aspectRatio: CardMetrics.poster,
+                itemCount: shown.length,
+                itemBuilder: (context, index) {
+                  if (index >= shown.length - _nearEnd && pages.error == null) {
+                    _more(key);
+                  }
+                  final item = shown[index];
+                  return FollowedCard(
+                    window: _shown,
+                    index: index,
+                    child: CatalogTitleCard.browse(
+                      item,
+                      detail: browseDetail(context, pages.detail, item),
+                      recommended: recommended,
+                    ),
+                  );
+                },
+              ),
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: MediaQuery.paddingOf(context).bottom + 8,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: switch (pages) {
+                      BrowsePagesState(loading: true) => LoadingState(
+                        label: l.loadingInProgress,
+                      ),
+                      BrowsePagesState(:final error?) => FailureState(
+                        title: l.gridMoreFailed,
+                        error: error,
+                        onRetry: () =>
+                            ref.read(browsePagesProvider(key).notifier).more(),
+                      ),
+                      BrowsePagesState(next: null) => Text(
+                        l.webDiscoverEnd,
+                        style: KitText.sm.style(color: colors.mutedForeground),
+                      ),
+                      _ => const SizedBox.shrink(),
+                    },
+                  ),
                 ),
               ),
             ],
-          );
-        },
+            SliverToBoxAdapter(
+              child: SizedBox(height: MediaQuery.paddingOf(context).bottom + 8),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -8,6 +8,7 @@ import 'package:matinee/kit/kit.dart';
 import 'package:matinee/screens/requests/catalog_browse.dart';
 import 'package:matinee/screens/requests/catalog_cards.dart' show AskedCard;
 import 'package:matinee/screens/requests/catalog_screen.dart';
+import 'package:matinee/screens/requests/requests_hub.dart' show mostFollowed;
 import 'package:matinee/screens/requests/requests_screen.dart';
 import 'package:matinee/screens/search/search_data.dart';
 import 'package:matinee/screens/search/search_screen.dart';
@@ -614,6 +615,65 @@ void main() {
       expect(
         tester.getTopLeft(note).dy,
         greaterThanOrEqualTo(tester.getBottomLeft(why).dy),
+      );
+    });
+
+    testWidgets('a long list follows the cards near the screen', (
+      tester,
+    ) async {
+      final backend = RequestsBackend()
+        ..answers['/api/v1/requests/mine'] = {
+          'items': [
+            for (var i = 0; i < 150; i++)
+              requestJson(
+                'r$i',
+                summaryJson(
+                  'm$i',
+                  'Movie $i',
+                  availability: stateJson('asked', requestId: 'r$i'),
+                ),
+              ),
+          ],
+          'nextCursor': null,
+        };
+      await pumpScreen(
+        tester,
+        const RequestsScreen(),
+        client: backend.client,
+        size: const Size(412, 915),
+      );
+      // The first cards, not the whole list, which one stream can't take.
+      expect(backend.followed.last, contains('m0'));
+      expect(backend.followed.last, isNot(contains('m149')));
+      await tester.scrollUntilVisible(
+        find.byWidgetPredicate(
+          (widget) => widget is AskedCard && widget.item.id == 'r149',
+        ),
+        600,
+        scrollable: find
+            .descendant(
+              of: find.byType(CustomScrollView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+      final last = backend.followed.last;
+      expect(last, contains('m149'));
+      expect(last, isNot(contains('m0')));
+      expect(last.length, lessThanOrEqualTo(mostFollowed));
+      // A card down there changes with the stream.
+      backend.send([
+        {
+          'ref': catalogRefJson('m149'),
+          'availability': stateJson('coming', progress: .5, requestId: 'r149'),
+          'seasons': <Object>[],
+        },
+      ]);
+      await tester.pumpAndSettle();
+      expect(
+        find.bySemanticsLabel(RegExp(r'^Movie 149, On its way')),
+        findsOneWidget,
       );
     });
 

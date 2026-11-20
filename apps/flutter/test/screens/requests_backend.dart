@@ -257,6 +257,9 @@ final class RequestsBackend {
   /// What changed something: the path and the body sent.
   final sent = <(String, Object?)>[];
 
+  /// The titles each `requests.live` stream was opened for, by provider id.
+  final followed = <List<String>>[];
+
   /// The queue the admin's stream starts with.
   JsonMap queue = queueJson();
 
@@ -292,6 +295,13 @@ final class RequestsBackend {
     final text = await body.bytesToString();
     final input = text.isEmpty ? null : jsonDecode(text);
     if (path == '/api/v1/requests/live') {
+      // SAFETY: the client sends the input as a JSON object of titles.
+      final titles = (input as Map<String, Object?>)['titles']! as List;
+      followed.add([
+        for (final title in titles)
+          // SAFETY: each title is a CatalogInput, its ref an object.
+          ((title as Map)['ref'] as Map)['providerId'] as String,
+      ]);
       return http.StreamedResponse(_live.stream, 200);
     }
     if (path == '/api/v1/admin/requests/live') {

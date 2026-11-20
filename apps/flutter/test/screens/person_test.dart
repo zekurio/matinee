@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/screens/person/person_screen.dart';
+import 'package:matinee/screens/requests/follow_window.dart';
 
 import '../media/fixtures.dart';
 import '../media/harness.dart';
