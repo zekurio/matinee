@@ -132,11 +132,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> with PendingMarks {
                 MediaMarks.favoriteTitle(api, title.id, favorite: to),
             pending: pendingFor('favorite', title),
           ),
-          onMore:
-              hasActions(
-                more,
-                admin: mayEditMetadata(ref.watch(authStateProvider)),
-              )
+          onMore: hasActionsFor(ref, more)
               ? () => showActions(context, more)
               : null,
           trailers: title.trailers,

@@ -192,11 +192,7 @@ class _SeasonScreenState extends ConsumerState<SeasonScreen> with PendingMarks {
                   ),
                   pending: pendingFor('favorite', title),
                 ),
-          onMore:
-              hasActions(
-                more,
-                admin: mayEditMetadata(ref.watch(authStateProvider)),
-              )
+          onMore: hasActionsFor(ref, more)
               ? () => showActions(context, more)
               : null,
         ),

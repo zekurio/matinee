@@ -144,11 +144,7 @@ class _EpisodeScreenState extends ConsumerState<EpisodeScreen>
             send: (api, to) => MediaMarks.favoriteItem(api, item, favorite: to),
             pending: pendingFor('favorite', item),
           ),
-          onMore:
-              hasActions(
-                more,
-                admin: mayEditMetadata(ref.watch(authStateProvider)),
-              )
+          onMore: hasActionsFor(ref, more)
               ? () => showActions(context, more)
               : null,
         ),

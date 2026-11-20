@@ -8,9 +8,12 @@ import '../api/matinee_api.dart';
 import '../core/failure_text.dart';
 import '../core/session.dart';
 import '../core/toasts.dart';
+import '../downloads/downloads.dart';
 import '../kit/kit.dart';
 import '../l10n/app_localizations.dart';
 import '../router.dart';
+import '../screens/downloads/download_files_sheet.dart';
+import '../screens/downloads/download_sheet.dart';
 import 'format.dart';
 import 'metadata_items.dart';
 import 'watched_at.dart';
@@ -238,18 +241,34 @@ final class SeasonActions extends ActionTarget {
   final Season season;
 }
 
-/// Whether [target]'s menu holds anything. One opened on its own page has
-/// only Play from the start and, for an [admin], the metadata items, since
-/// downloads aren't in this app yet, so the page leaves its button out
-/// without them.
-bool hasActions(ActionTarget target, {bool admin = false}) {
-  if (!target.here) return true;
+/// Whether [target]'s menu holds anything. One opened on its own page
+/// holds only Play from the start, the downloads, and, for an [admin], the
+/// metadata items, so the page leaves its button out without them: for an
+/// account that may not download, a file on the device can still go.
+/// [stored] is the ids downloaded.
+bool hasActions(
+  ActionTarget target, {
+  bool admin = false,
+  bool mayDownload = false,
+  Set<String> stored = const {},
+}) {
+  if (!target.here || mayDownload) return true;
   return switch (target) {
-    ItemActions(:final item) => admin || isResuming(item),
-    TitleActions(:final file) => admin || isResuming(file),
+    ItemActions(:final item) =>
+      admin || isResuming(item) || stored.contains(item.id),
+    TitleActions(:final file) =>
+      admin || isResuming(file) || (file != null && stored.contains(file.id)),
     SeasonActions(:final season) => admin && season.number != null,
   };
 }
+
+/// [hasActions] with who's signed in and what the downloads say now.
+bool hasActionsFor(WidgetRef ref, ActionTarget target) => hasActions(
+  target,
+  admin: mayEditMetadata(ref.watch(authStateProvider)),
+  mayDownload: ref.watch(mayDownloadProvider),
+  stored: ref.watch(shownDownloadsProvider).keys.toSet(),
+);
 
 /// A season's page, by its number, or -1 for the files without one.
 String seasonRoute(String titleId, int? season) =>
@@ -270,29 +289,44 @@ Future<void> showActions(BuildContext context, ActionTarget target) async {
   if (act != null && context.mounted) await act(context);
 }
 
-class _ActionsSheet extends StatelessWidget {
+/// What the downloads offer in a menu: whether the account may download,
+/// and what's on the device already.
+typedef _Downloads = ({bool may, Set<String> stored});
+
+class _ActionsSheet extends ConsumerWidget {
   const _ActionsSheet(this.target);
 
   final ActionTarget target;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     void run(_Act act) => Navigator.of(context).pop(act);
+    final downloads = (
+      may: ref.watch(mayDownloadProvider),
+      stored: ref.watch(shownDownloadsProvider).keys.toSet(),
+    );
     final (title, description, items) = switch (target) {
-      ItemActions(:final item, :final here) => _item(l, item, here, run),
+      ItemActions(:final item, :final here) => _item(
+        l,
+        item,
+        here,
+        downloads,
+        run,
+      ),
       TitleActions(
         :final title,
         :final file,
         :final recommended,
         :final here,
       ) =>
-        _title(l, title, file, recommended, here, run),
+        _title(l, title, file, recommended, here, downloads, run),
       SeasonActions(:final title, :final season, :final here) => _season(
         l,
         title,
         season,
         here,
+        downloads,
         run,
       ),
     };
@@ -310,6 +344,7 @@ class _ActionsSheet extends StatelessWidget {
     AppLocalizations l,
     MediaItem item,
     bool here,
+    _Downloads downloads,
     void Function(_Act) run,
   ) {
     final names = itemNames(item, l);
@@ -352,6 +387,9 @@ class _ActionsSheet extends StatelessWidget {
             run,
             (api, to) => MediaMarks.favoriteItem(api, item, favorite: to),
           ),
+        ],
+        ?_downloadItem(l, item, downloads, run),
+        if (!here) ...[
           if (title != null && title.kind == TitleKind.show) ...[
             _link(
               l.actionsEpisodeDetails,
@@ -399,6 +437,7 @@ class _ActionsSheet extends StatelessWidget {
     MediaItem? file,
     CatalogRef? recommended,
     bool here,
+    _Downloads downloads,
     void Function(_Act) run,
   ) {
     final show = title.kind == TitleKind.show;
@@ -438,6 +477,20 @@ class _ActionsSheet extends StatelessWidget {
             run,
             (api, to) => MediaMarks.favoriteTitle(api, title.id, favorite: to),
           ),
+        ],
+        // What's on the device already can still go, so a file's own item
+        // comes first; a show downloads all its files.
+        if (show && downloads.may)
+          _download(
+            l,
+            run,
+            (context) => showDownloadFilesSheet(context, FileSet(title)),
+          )
+        else if (file != null)
+          ?_downloadItem(l, file, downloads, run)
+        else if (downloads.may)
+          _download(l, run, (context) => _downloadTitle(context, title)),
+        if (!here) ...[
           _link(
             show ? l.mediaHeroEpisodes : l.mediaHeroDetails,
             Lucide.info,
@@ -467,6 +520,7 @@ class _ActionsSheet extends StatelessWidget {
     TitleSummary title,
     Season season,
     bool here,
+    _Downloads downloads,
     void Function(_Act) run,
   ) {
     final name = seasonName(season.number, l);
@@ -510,6 +564,15 @@ class _ActionsSheet extends StatelessWidget {
                 favorite: to,
               ),
             ),
+        ],
+        if (downloads.may)
+          _download(
+            l,
+            run,
+            (context) =>
+                showDownloadFilesSheet(context, FileSet(title, season: season)),
+          ),
+        if (!here) ...[
           _link(
             l.mediaHeroEpisodes,
             Lucide.list,
@@ -529,6 +592,41 @@ class _ActionsSheet extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  static Widget _download(
+    AppLocalizations l,
+    void Function(_Act) run,
+    _Act open,
+  ) => SheetItem(
+    icon: Lucide.download,
+    label: l.downloadsAction,
+    onPressed: () => run(open),
+  );
+
+  /// Download a file, or take back its download. An account that may not
+  /// download gets only the second, for a file on the device already.
+  static Widget? _downloadItem(
+    AppLocalizations l,
+    MediaItem item,
+    _Downloads downloads,
+    void Function(_Act) run,
+  ) {
+    if (downloads.stored.contains(item.id)) {
+      return SheetItem(
+        icon: Lucide.trash,
+        label: l.downloadsRemove,
+        destructive: true,
+        onPressed: () => run((context) async {
+          final container = ProviderScope.containerOf(context, listen: false);
+          await container
+              .read(downloadsProvider.notifier)
+              .remove(item.id, container.read(apiProvider));
+        }),
+      );
+    }
+    if (!downloads.may) return null;
+    return _download(l, run, (context) => showDownloadSheet(context, item));
   }
 
   static Widget _fromStart(
@@ -583,6 +681,33 @@ Future<void> _playTitle(BuildContext context, TitleSummary title) async {
       unawaited(toasts.show(l.mediaNoFiles(title.name)));
     } else {
       unawaited(router.push(Routes.play(next.id)));
+    }
+  } on Object catch (error) {
+    unawaited(
+      toasts.show(
+        l.mediaPlayFailed(title.name),
+        description: describeFailure(l, error),
+        kind: ToastKind.error,
+      ),
+    );
+  }
+}
+
+/// Opens the download sheet for what the server names next for [title],
+/// a movie's file, or says it has nothing.
+Future<void> _downloadTitle(BuildContext context, TitleSummary title) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+  final l = AppLocalizations.of(context);
+  final toasts = container.read(toastProvider);
+  final api = container.read(apiProvider);
+  try {
+    if (api == null) throw StateError('no server');
+    final next = (await api.titles.get(title.id)).next;
+    if (!context.mounted) return;
+    if (next == null) {
+      unawaited(toasts.show(l.mediaNoFiles(title.name)));
+    } else {
+      await showDownloadSheet(context, next);
     }
   } on Object catch (error) {
     unawaited(
