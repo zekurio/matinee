@@ -104,7 +104,7 @@ class TitleFilterPanel extends ConsumerWidget {
           if (options.total > 0)
             FilterSection(
               title: l.webFiltersProgress,
-              child: _ChoiceChips(
+              child: FilterChoiceChips(
                 anyLabel: l.webFiltersAny,
                 choices: [
                   for (final (state, count) in [
@@ -122,7 +122,7 @@ class TitleFilterPanel extends ConsumerWidget {
           if (options.genres.isNotEmpty)
             FilterSection(
               title: l.webFiltersGenres,
-              child: _ToggleChips(
+              child: FilterToggleChips(
                 choices: _facets(options.genres),
                 value: filters.genres,
                 onChanged: (genres) => change(filters.copyWith(genres: genres)),
@@ -131,7 +131,7 @@ class TitleFilterPanel extends ConsumerWidget {
           if (options.studios.isNotEmpty)
             FilterSection(
               title: l.webFiltersStudios,
-              child: _ToggleChips(
+              child: FilterToggleChips(
                 choices: _facets(options.studios),
                 value: filters.studios,
                 onChanged: (studios) =>
@@ -243,7 +243,7 @@ class TitleFilterPanel extends ConsumerWidget {
     );
   }
 
-  static List<_Choice> _facets(List<Facet> facets) => [
+  static List<FilterChoice> _facets(List<Facet> facets) => [
     for (final facet in facets)
       (value: facet.name, label: facet.name, count: facet.titleCount),
   ];
@@ -311,11 +311,13 @@ class FilterSection extends StatelessWidget {
   }
 }
 
-typedef _Choice = ({String value, String label, int? count});
+/// A chip's choice: what it sets, its words, and how many titles it has.
+typedef FilterChoice = ({String value, String label, int? count});
 
 /// One of a few values, or none: Any first, then each.
-class _ChoiceChips extends StatelessWidget {
-  const _ChoiceChips({
+class FilterChoiceChips extends StatelessWidget {
+  const FilterChoiceChips({
+    super.key,
     required this.anyLabel,
     required this.choices,
     required this.value,
@@ -323,7 +325,7 @@ class _ChoiceChips extends StatelessWidget {
   });
 
   final String anyLabel;
-  final List<_Choice> choices;
+  final List<FilterChoice> choices;
   final String? value;
   final ValueChanged<String?> onChanged;
 
@@ -354,8 +356,9 @@ class _ChoiceChips extends StatelessWidget {
 /// Any number of choices, each a chip that turns on and off. Past [limit]
 /// choices a field finds the rest by name, and only the first [limit] that
 /// match show, after those that are on.
-class _ToggleChips extends StatefulWidget {
-  const _ToggleChips({
+class FilterToggleChips extends StatefulWidget {
+  const FilterToggleChips({
+    super.key,
     required this.choices,
     required this.value,
     required this.onChanged,
@@ -364,7 +367,7 @@ class _ToggleChips extends StatefulWidget {
     this.noMatch,
   });
 
-  final List<_Choice> choices;
+  final List<FilterChoice> choices;
   final List<String> value;
   final ValueChanged<List<String>> onChanged;
   final int? limit;
@@ -372,10 +375,10 @@ class _ToggleChips extends StatefulWidget {
   final String? noMatch;
 
   @override
-  State<_ToggleChips> createState() => _ToggleChipsState();
+  State<FilterToggleChips> createState() => _FilterToggleChipsState();
 }
 
-class _ToggleChipsState extends State<_ToggleChips> {
+class _FilterToggleChipsState extends State<FilterToggleChips> {
   final _query = TextEditingController();
 
   @override
@@ -397,7 +400,7 @@ class _ToggleChipsState extends State<_ToggleChips> {
     final value = widget.value;
     final finding = limit != null && choices.length > limit;
     final query = _query.text.trim().toLowerCase();
-    final List<_Choice> shown;
+    final List<FilterChoice> shown;
     if (finding) {
       final first = choices
           .where(
@@ -472,7 +475,7 @@ class _RatingChips extends StatelessWidget {
   Widget build(BuildContext context) {
     final show = system.kind == TitleKind.show;
     final current = show ? filters.showRating : filters.movieRating;
-    return _ChoiceChips(
+    return FilterChoiceChips(
       anyLabel: AppLocalizations.of(context).webFiltersAny,
       choices: [
         for (final each in system.ratings)

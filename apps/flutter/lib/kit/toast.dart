@@ -217,6 +217,10 @@ class _ToastEntry {
     this.duration,
   );
 
+  /// Ends it [ToastState.show]'s `within` after it was asked for, shown
+  /// or still waiting its turn.
+  Timer? deadline;
+
   final String message;
   final String? description;
   final ToastKind kind;
@@ -227,7 +231,9 @@ class _ToastEntry {
 }
 
 /// Queues notifications in the order they are shown. Durations start when a
-/// toast reaches the front, and [show] reports how it closed.
+/// toast reaches the front, and [show] reports how it closed. A toast
+/// given `within` ends that long after it was asked for, whether it got to
+/// the front or not, as an Undo the server only honours for so long.
 class ToastState extends ChangeNotifier {
   final _queue = Queue<_ToastEntry>();
   Timer? _timer;
@@ -239,6 +245,7 @@ class ToastState extends ChangeNotifier {
     String? actionLabel,
     String? closeLabel,
     ToastDuration? duration,
+    Duration? within,
   }) {
     final entry = _ToastEntry(
       message,
@@ -252,8 +259,19 @@ class ToastState extends ChangeNotifier {
               : ToastDuration.short),
     );
     _queue.addLast(entry);
+    if (within != null) {
+      entry.deadline = Timer(within, () => _expire(entry));
+    }
     if (_queue.length == 1) _start();
     return entry.result.future;
+  }
+
+  void _expire(_ToastEntry entry) {
+    if (_queue.firstOrNull == entry) {
+      _finish(entry, ToastResult.timedOut);
+    } else if (_queue.remove(entry)) {
+      entry.result.complete(ToastResult.timedOut);
+    }
   }
 
   void dismiss() {
@@ -271,6 +289,7 @@ class ToastState extends ChangeNotifier {
   void _finish(_ToastEntry entry, ToastResult result) {
     if (_queue.firstOrNull != entry) return;
     _timer?.cancel();
+    entry.deadline?.cancel();
     _queue.removeFirst().result.complete(result);
     _start();
   }
@@ -279,6 +298,7 @@ class ToastState extends ChangeNotifier {
   void dispose() {
     _timer?.cancel();
     for (final entry in _queue) {
+      entry.deadline?.cancel();
       entry.result.complete(ToastResult.dismissed);
     }
     _queue.clear();
