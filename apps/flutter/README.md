@@ -729,7 +729,9 @@ first key.
   or Down bring them back. The TV has one key handler; it never builds
   the phone's controls. The skip arrows are play's size with their seconds
   at 15 sp, where the Kotlin app's are 40 with 11 sp, too small to read
-  from a sofa. Audio, subtitles, and settings (quality, speed,
+  from a sofa. Subtitles that show light their button with the web
+  player's accent line, 20 by 4 rather than the Kotlin app's 14 by 2.
+  Audio, subtitles, and settings (quality, speed,
   Fit or Fill, which is kept) open as panels. Skip intro and the next
   episode wait alone on the picture; a countdown of a minute or more reads
   as a time (`· 2:46`), where the Kotlin app counts the seconds (`· 166`).

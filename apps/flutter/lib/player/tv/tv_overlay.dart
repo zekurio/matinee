@@ -445,9 +445,9 @@ class _SkipButton extends StatelessWidget {
 }
 
 /// A menu's button: its icon in a circle, which opens to say the menu's
-/// name while focused, as the app's other icon buttons do, with a line
-/// under the icon while [on], as for subtitles that show. Focus returns to
-/// it when the menu closes.
+/// name while focused, as the app's other icon buttons do, with the web
+/// player's accent line under the icon while [on], as for subtitles that
+/// show, at a TV's size. Focus returns to it when the menu closes.
 class _MenuButton extends StatelessWidget {
   const _MenuButton({
     required this.icon,
@@ -495,13 +495,14 @@ class _MenuButton extends StatelessWidget {
                       KitIcon(icon, size: 20, color: content),
                       if (on)
                         Positioned(
-                          bottom: -6,
+                          bottom: -7,
                           child: Container(
-                            width: 14,
-                            height: 2,
+                            key: const Key('player/on'),
+                            width: 20,
+                            height: 4,
                             decoration: BoxDecoration(
                               color: colors.accent,
-                              borderRadius: BorderRadius.circular(1),
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
                         ),

@@ -92,6 +92,7 @@ Future<_Player> _open(
       hasNext: hasNext && input.itemId == itemId,
       upNextAt: input.itemId == itemId ? upNextAt : null,
       segments: input.itemId == itemId ? segments : const [],
+      subtitle: input.subtitle?.trackId == captions.id ? captions : null,
     );
     return FakePlaybackApi.answer(
       frameRate == null ? answer : _withFrameRate(answer, frameRate),
@@ -405,6 +406,22 @@ void main() {
       // As big as play, which they flank.
       expect(tester.getSize(button).height, TvButtons.height);
     }
+  });
+
+  testWidgets('subtitles that show light their button with a line a TV '
+      'shows', (tester) async {
+    await _open(tester);
+    expect(find.byKey(const Key('player/on')), findsNothing);
+    await right(tester, 3);
+    expect(focusedKey(), 'player/subtitles');
+    await select(tester);
+    expect(focusedLabel(), startsWith('Off'));
+    await down(tester);
+    await select(tester);
+    expect(tvOpenPanels.value, 0);
+    final line = find.byKey(const Key('player/on'));
+    expect(line, findsOneWidget);
+    expect(tester.getSize(line).height, greaterThanOrEqualTo(4));
   });
 
   testWidgets('Select toggles play; Up goes to the seek bar, Down back', (
