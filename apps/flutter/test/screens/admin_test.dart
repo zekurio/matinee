@@ -7,6 +7,10 @@ import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/server_accents.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/kit/kit.dart';
+import 'package:matinee/l10n/app_localizations_de.dart';
+import 'package:matinee/l10n/app_localizations_en.dart';
+import 'package:matinee/screens/settings/admin/admin_parts.dart';
+import 'package:matinee/screens/settings/admin/jobs_page.dart';
 import 'package:matinee/screens/settings/admin/library_editor.dart';
 import 'package:matinee/screens/settings/admin/user_access_page.dart';
 import 'package:matinee/screens/settings/settings_screen.dart';
@@ -359,6 +363,56 @@ void main() {
       await tester.tap(find.text('Clear waiting jobs').last);
       await tester.pumpAndSettle();
       expect(backend.sent.single.path, '/admin/jobs/library-scan/clear');
+    });
+
+    test('a schedule reads in the interval\'s largest unit', () {
+      final en = AppLocalizationsEn();
+      final de = AppLocalizationsDe();
+      ScheduledTask every(double? interval, {double? delay}) =>
+          ScheduledTask.fromJson({
+            ...taskJson('scan-libraries'),
+            'intervalSeconds': interval,
+            'startupDelaySeconds': delay,
+          });
+      expect(scheduleOf(en, every(null)), 'Runs when you start it');
+      expect(scheduleOf(en, every(0.4)), 'Every second');
+      expect(scheduleOf(en, every(30)), 'Every 30 seconds');
+      // 59.6 seconds rounds to a minute, and 90 seconds to 2 minutes.
+      expect(scheduleOf(en, every(59.6)), 'Every minute');
+      expect(scheduleOf(en, every(90)), 'Every 2 minutes');
+      expect(scheduleOf(en, every(3600)), 'Every hour');
+      expect(scheduleOf(en, every(6 * 3600)), 'Every 6 hours');
+      expect(scheduleOf(en, every(86400)), 'Every day');
+      expect(scheduleOf(en, every(7 * 86400)), 'Every 7 days');
+      expect(
+        scheduleOf(en, every(3600, delay: 0)),
+        'Every hour and at startup',
+      );
+      expect(
+        scheduleOf(en, every(300, delay: 30)),
+        'Every 5 minutes and 30s after startup',
+      );
+      expect(scheduleOf(de, every(60)), 'Jede Minute');
+      expect(scheduleOf(de, every(86400)), 'Jeden Tag');
+      expect(scheduleOf(de, every(2 * 86400)), 'Alle 2 Tage');
+      expect(
+        scheduleOf(de, every(3600, delay: 0)),
+        'Jede Stunde und beim Start',
+      );
+    });
+
+    test('a run due within a minute is soon, not just now', () {
+      final en = AppLocalizationsEn();
+      final now = DateTime.utc(2026, 11, 21, 12);
+      String due(Duration offset) =>
+          upcomingText(en, now.add(offset).toIso8601String(), now: now);
+      expect(due(const Duration(seconds: 20)), 'soon');
+      expect(due(const Duration(seconds: -5)), 'soon');
+      expect(due(const Duration(minutes: 5)), 'in 5 minutes');
+      expect(
+        upcomingText(AppLocalizationsDe(), now.toIso8601String(), now: now),
+        'gleich',
+      );
     });
   });
 

@@ -496,6 +496,18 @@ String relativeText(AppLocalizations l, String at) =>
       null => at,
     };
 
+/// The same for something due, like a task's next run: under a minute
+/// either way is "soon", as the web's `formatUpcoming` has it, since a run
+/// a few seconds overdue is about to start, not one that just happened.
+String upcomingText(AppLocalizations l, String at, {DateTime? now}) =>
+    switch (DateTime.tryParse(at)) {
+      final DateTime time
+          when time.difference(now ?? DateTime.now()).inSeconds.abs() < 60 =>
+        l.adminTimeSoon,
+      final DateTime time => relativeTime(l, time, now: now),
+      null => at,
+    };
+
 /// "45s", "12m", "3h 20m", for how long something took.
 String shortDuration(AppLocalizations l, int seconds) {
   if (seconds < 60) return l.formatSecondsShort(seconds);
