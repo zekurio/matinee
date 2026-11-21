@@ -35,8 +35,8 @@ void sayAtBottom(WidgetRef ref, String text) {
 }
 
 /// The glyph a state's mark draws, [size] across.
-class _Glyph extends StatelessWidget {
-  const _Glyph({required this.badge, required this.size});
+class StateGlyph extends StatelessWidget {
+  const StateGlyph({super.key, required this.badge, required this.size});
 
   final CardBadge badge;
   final double size;
@@ -145,7 +145,7 @@ class _CatalogBadgeState extends State<CatalogBadge>
             border: Border.all(color: colors.foreground.withValues(alpha: .1)),
           ),
           child: ExcludeSemantics(
-            child: _Glyph(badge: badge, size: size * .58),
+            child: StateGlyph(badge: badge, size: size * .58),
           ),
         ),
       ),
@@ -192,7 +192,7 @@ class PosterBadge extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: 6,
         children: [
-          _Glyph(badge: badge, size: 14),
+          StateGlyph(badge: badge, size: 14),
           Flexible(
             child: Text(
               stateText(word, l),
@@ -692,15 +692,27 @@ String requestedText(AdminRequestItem item, AppLocalizations l) {
 /// the request could go to another library, it says "Add to Films" and
 /// has the "Goes to" menu beside it, as the web's.
 class AddButton extends ConsumerWidget {
-  const AddButton({super.key, required this.item, this.page = false});
+  const AddButton({
+    super.key,
+    required this.item,
+    this.page = false,
+    this.small = false,
+  });
 
   final AdminRequestItem item;
   final bool page;
 
+  /// The small size, as on a request's card.
+  final bool small;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final size = page ? ButtonSize.xl : ButtonSize.standard;
+    final size = page
+        ? ButtonSize.xl
+        : small
+        ? ButtonSize.sm
+        : ButtonSize.standard;
     final choice = choosesLibrary(item);
     final library = ref.watch(
       requestsProvider.select((state) => state.goesTo(item).name),
@@ -782,16 +794,28 @@ Future<void> showGoesToSheet(BuildContext context, AdminRequestItem item) {
 
 /// The quiet button beside [AddButton], opening the Decline sheet.
 class DeclineButton extends ConsumerWidget {
-  const DeclineButton({super.key, required this.item, this.page = false});
+  const DeclineButton({
+    super.key,
+    required this.item,
+    this.page = false,
+    this.small = false,
+  });
 
   final AdminRequestItem item;
   final bool page;
+
+  /// The small size, as on a request's card.
+  final bool small;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     return MatineeButton(
-      size: page ? ButtonSize.xl : ButtonSize.standard,
+      size: page
+          ? ButtonSize.xl
+          : small
+          ? ButtonSize.sm
+          : ButtonSize.standard,
       look: ButtonLook.ghost,
       onPressed: () => unawaited(showDeclineSheet(context, item)),
       child: Text(

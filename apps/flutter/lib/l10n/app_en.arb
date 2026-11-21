@@ -884,6 +884,19 @@
   "@discoverFailed": {
     "description": "strings_loading.xml"
   },
+  "discoverRequestWaiting": "Waiting",
+  "@discoverRequestWaiting": {
+    "description": "The state on a request card in Explore's Requests row, for one nobody has answered yet."
+  },
+  "discoverRequestAskedWhen": "First requested {when}",
+  "@discoverRequestAskedWhen": {
+    "description": "On a person's own request card in Explore's Requests row: when it was first requested, as \"2 days ago\".",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "downloadsAbout": "About {p1}",
   "@downloadsAbout": {
     "description": "strings.xml",
@@ -2707,6 +2720,15 @@
   "requestsAgoNow": "just now",
   "@requestsAgoNow": {
     "description": "When a request was made, under a minute ago"
+  },
+  "requestsToastCancelled": "Cancelled {name}",
+  "@requestsToastCancelled": {
+    "description": "The toast after a person takes back their own request from Explore's Requests row, with Undo.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "requestsAgoMinutes": "{count, plural, one{{count} minute ago} other{{count} minutes ago}}",
   "@requestsAgoMinutes": {
