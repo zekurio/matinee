@@ -84,6 +84,8 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
   /// The engine's error that the next failure is, as it sends it ahead.
   ErrorDiagnostics? _engineError;
   Timer? _timer;
+  Duration _stallSince = Duration.zero;
+  (Duration, Duration?)? _stallMark;
   Duration _lastTick = Duration.zero;
   Duration _lastReport = Duration.zero;
   double _playedSeconds = 0;
@@ -212,6 +214,7 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
     });
     _timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
       _countPlayed();
+      _watchStall();
       final interval = Duration(seconds: playback.status.playing ? 10 : 30);
       if (_elapsed() - _lastReport >= interval) _report();
     });
@@ -534,6 +537,38 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
       _engineError = null;
       _fallback(next);
     }
+    notifyListeners();
+  }
+
+  /// How long the engine may buffer with neither the picture nor what it
+  /// has loaded moving before the server counts as not answering, as the
+  /// Kotlin app's read timeout does: mpv waits on a quiet connection for
+  /// good.
+  static const stallLimit = Duration(seconds: 60);
+
+  void _watchStall() {
+    final now = _elapsed();
+    final waiting =
+        _opened &&
+        _hasTimeline &&
+        !_closed &&
+        !busy &&
+        !_sourceFailed &&
+        error == null &&
+        playback.phase == PlaybackPhase.buffering;
+    final mark = (playback.timeline.position, playback.timeline.buffered);
+    if (!waiting || mark != _stallMark) {
+      _stallMark = mark;
+      _stallSince = now;
+      return;
+    }
+    if (now - _stallSince < stallLimit) return;
+    diagnostics?.failed(ErrorDiagnostics.unknown);
+    _sourceFailed = true;
+    _request++;
+    error = const PlaybackServerUnavailable();
+    unawaited(_command(player.pause));
+    _report();
     notifyListeners();
   }
 

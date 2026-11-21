@@ -178,6 +178,11 @@ returned source. It uses the server's track picks, resume position, skip
 segments, and next episode. The controls send track and quality changes
 back to the server, and progress stays on the file's timeline even when
 `playback.seek` returns a stream that starts partway through the file.
+A source that buffers for a minute with neither the picture nor its
+cache moving fails as the server not answering, with Try again
+(`PlaybackSession.stallLimit`). The Kotlin app gets the same from
+OkHttp's read timeout, but mpv waits on a connection that went quiet
+for good.
 
 Its controls are the Kotlin phone player's, at the same sizes on a phone
 and a tablet: the title and the audio, subtitles, speed, and quality
@@ -708,7 +713,8 @@ first key.
 - Screens (`lib/screens/tv`): Home; Movies, Shows, Browse, Favorites, and
   Search; the title, season, episode, and person pages (a show of one
   season lists its episodes without the Kotlin app's one-card Seasons
-  row; a search field's placeholder is the muted text colour, not the
+  row; a season whose episodes fail to load offers Try again, focused,
+  as Home's rows do, where the Kotlin app only says so; a search field's placeholder is the muted text colour, not the
   Kotlin app's faint one, so it reads over a backdrop; the chips and the
   field over a grid's or Search's backdrop rest on the page's background
   under their fill, `TvFocus.restOnPicture`, where the Kotlin app's

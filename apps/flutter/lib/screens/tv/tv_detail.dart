@@ -678,6 +678,10 @@ class _TvTitleScreenState extends ConsumerState<TvTitleScreen>
 /// under the drawer's rail to the screen's edge.
 const _seasonRowHeight = 200.0;
 
+/// The key of the Try again button in a season's row of episodes, so the
+/// first episode takes focus when they load.
+const _retry = 'retry';
+
 /// Room for what the focused episode is about, above the row.
 const _aboutHeight = 100.0;
 
@@ -761,7 +765,11 @@ class _TvSeasonScreenState extends ConsumerState<TvSeasonScreen>
     final items = itemsLoad.value;
     final next = seasonNext(items, title.next);
     final row = '${_Rows.episodes}-${season.number ?? _noSeason}';
-    _memory.restore(context, () => next == null ? null : (row, next.id));
+    _memory.restore(context, () {
+      if (next != null) return (row, next.id);
+      // Episodes that didn't load: Try again.
+      return itemsLoad.hasError && items == null ? (row, _retry) : null;
+    });
     if (next != null) _memory.startAt(row, next.id);
     final backdrop = title.images.backdrop;
     // Hidden specials, opened from a link, get a tab while on screen.
@@ -844,9 +852,29 @@ class _TvSeasonScreenState extends ConsumerState<TvSeasonScreen>
                     end: TvPage.end,
                     top: 24,
                   ),
-                  child: Text(
-                    l.titleEpisodesError(describeFailure(l, cause)),
-                    style: TvType.body.style(color: colors.mutedForeground),
+                  child: Row(
+                    spacing: 20,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            l.titleEpisodesError(describeFailure(l, cause)),
+                            style: TvType.body.style(
+                              color: colors.mutedForeground,
+                            ),
+                          ),
+                        ),
+                      ),
+                      TvButton(
+                        label: l.commonRetry,
+                        icon: Lucide.refreshCw,
+                        focusNode: _memory.node(row, _retry),
+                        onPressed: () =>
+                            ref.invalidate(seasonItemsProvider(_key)),
+                      ),
+                    ],
                   ),
                 ),
                 _ => Center(
