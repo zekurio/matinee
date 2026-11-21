@@ -532,6 +532,21 @@ void main() {
     expect(opened.players.single.seeks.last, const Duration(seconds: 30));
   });
 
+  testWidgets('Skip intro from the controls hands focus to play', (
+    tester,
+  ) async {
+    final opened = await _open(tester, segments: const [intro]);
+    await _waitForHide(tester);
+    // Past the few seconds the button waits on the picture.
+    await tester.pump(const Duration(seconds: 8));
+    await down(tester);
+    expect(focusedKey(), 'player/action');
+    await select(tester);
+    expect(opened.players.single.seeks.last, const Duration(seconds: 30));
+    expect(find.text('Skip intro'), findsNothing);
+    expect(focusedKey(), 'player/play', reason: 'not lost with the button');
+  });
+
   for (final size in tvSizes) {
     final width = size.width.round();
     testWidgets('the TV player at $width', (tester) async {
