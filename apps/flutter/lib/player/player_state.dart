@@ -7,8 +7,17 @@ enum PlaybackPhase { idle, buffering, ready, ended, error }
 
 /// What the player is doing. [playing] is true only while the picture and
 /// sound are advancing, so it is false while buffering, paused, or ended.
-/// [message] explains an [PlaybackPhase.error].
-typedef PlaybackStatus = ({PlaybackPhase phase, bool playing, String? message});
+/// [wantsPlay] is what the viewer asked for: true while it buffers or
+/// stalls on the way to playing, false once they pause, and false once it
+/// ended or failed. The play button, the media keys, and the system's
+/// controls follow [wantsPlay]; the time it reports and the controls' hiding
+/// follow [playing]. [message] explains an [PlaybackPhase.error].
+typedef PlaybackStatus = ({
+  PlaybackPhase phase,
+  bool playing,
+  bool wantsPlay,
+  String? message,
+});
 
 typedef PlaybackTimeline = ({
   Duration position,
@@ -32,7 +41,12 @@ typedef PlaybackTracks = ({List<MediaTrack> audio, List<MediaTrack> subtitles});
 
 class PlaybackState {
   const PlaybackState({
-    this.status = (phase: PlaybackPhase.idle, playing: false, message: null),
+    this.status = (
+      phase: PlaybackPhase.idle,
+      playing: false,
+      wantsPlay: false,
+      message: null,
+    ),
     this.timeline = (position: Duration.zero, duration: null, buffered: null),
     this.tracks = (audio: const [], subtitles: const []),
     this.video,

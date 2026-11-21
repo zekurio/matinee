@@ -333,7 +333,9 @@ class PlayerMediaSession {
   bool _playing = false;
 
   /// What the controls show: the episode and its show, or the movie and its
-  /// year, with its picture. [rate] is the speed the video moves at.
+  /// year, with its picture. [playing] is what the viewer asked for
+  /// ([PlaybackStatus.wantsPlay]), so a stall still shows pause. [rate] is
+  /// the speed the video moves at.
   void sync(AppLocalizations l, {required bool playing, required double rate}) {
     _playing = playing;
     final item = _sitting.item;

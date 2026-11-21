@@ -96,7 +96,7 @@ class _PlayerLabState extends ConsumerState<PlayerLab> {
 
   Widget _controls(Player player, PlaybackState state, PlayerEngine engine) {
     final l = AppLocalizations.of(context);
-    final (:phase, :playing, :message) = state.status;
+    final (:phase, :playing, :wantsPlay, :message) = state.status;
     final (:position, :duration, :buffered) = state.timeline;
     final video = state.video;
     final enabled = state.isOpen;
@@ -139,8 +139,8 @@ class _PlayerLabState extends ConsumerState<PlayerLab> {
         ),
         _row([
           _button(
-            playing ? 'Pause' : 'Play',
-            enabled ? () => _run(playing ? player.pause : player.play) : null,
+            wantsPlay ? 'Pause' : 'Play',
+            enabled ? () => _run(wantsPlay ? player.pause : player.play) : null,
           ),
           _button(
             '−10 s',

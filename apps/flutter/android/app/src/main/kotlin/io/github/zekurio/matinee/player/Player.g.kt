@@ -645,7 +645,13 @@ sealed class PlaybackEventMessage
 /** Generated class from Pigeon that represents data sent in messages. */
 data class StateMessage (
   val phase: PhaseMessage,
+  /** The picture and sound are advancing. */
   val playing: Boolean,
+  /**
+   * The viewer asked to play and hasn't paused: true while it buffers to
+   * play, false once paused, whether or not frames are moving.
+   */
+  val wantsPlay: Boolean,
   val message: String? = null,
   val serverUnavailable: Boolean
 ) : PlaybackEventMessage()
@@ -654,15 +660,17 @@ data class StateMessage (
     fun fromList(pigeonVar_list: List<Any?>): StateMessage {
       val phase = pigeonVar_list[0] as PhaseMessage
       val playing = pigeonVar_list[1] as Boolean
-      val message = pigeonVar_list[2] as String?
-      val serverUnavailable = pigeonVar_list[3] as Boolean
-      return StateMessage(phase, playing, message, serverUnavailable)
+      val wantsPlay = pigeonVar_list[2] as Boolean
+      val message = pigeonVar_list[3] as String?
+      val serverUnavailable = pigeonVar_list[4] as Boolean
+      return StateMessage(phase, playing, wantsPlay, message, serverUnavailable)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       phase,
       playing,
+      wantsPlay,
       message,
       serverUnavailable,
     )
@@ -675,19 +683,20 @@ data class StateMessage (
       return true
     }
     val other = other as StateMessage
-    return PlayerPigeonUtils.deepEquals(this.phase, other.phase) && PlayerPigeonUtils.deepEquals(this.playing, other.playing) && PlayerPigeonUtils.deepEquals(this.message, other.message) && PlayerPigeonUtils.deepEquals(this.serverUnavailable, other.serverUnavailable)
+    return PlayerPigeonUtils.deepEquals(this.phase, other.phase) && PlayerPigeonUtils.deepEquals(this.playing, other.playing) && PlayerPigeonUtils.deepEquals(this.wantsPlay, other.wantsPlay) && PlayerPigeonUtils.deepEquals(this.message, other.message) && PlayerPigeonUtils.deepEquals(this.serverUnavailable, other.serverUnavailable)
   }
 
   override fun hashCode(): Int {
     var result = javaClass.hashCode()
     result = 31 * result + PlayerPigeonUtils.deepHash(this.phase)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.playing)
+    result = 31 * result + PlayerPigeonUtils.deepHash(this.wantsPlay)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.message)
     result = 31 * result + PlayerPigeonUtils.deepHash(this.serverUnavailable)
     return result
   }
   override fun toString(): String {
-    return "StateMessage(phase=$phase, playing=$playing, message=$message, serverUnavailable=$serverUnavailable)"
+    return "StateMessage(phase=$phase, playing=$playing, wantsPlay=$wantsPlay, message=$message, serverUnavailable=$serverUnavailable)"
   }
 }
 

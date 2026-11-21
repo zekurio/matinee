@@ -567,13 +567,19 @@ class StateMessage extends PlaybackEventMessage {
   StateMessage({
     required this.phase,
     required this.playing,
+    this.wantsPlay = false,
     this.message,
     this.serverUnavailable = false,
   });
 
   PhaseMessage phase;
 
+  /// The picture and sound are advancing.
   bool playing;
+
+  /// The viewer asked to play and hasn't paused: true while it buffers to
+  /// play, false once paused, whether or not frames are moving.
+  bool wantsPlay;
 
   String? message;
 
@@ -583,6 +589,7 @@ class StateMessage extends PlaybackEventMessage {
     return <Object?>[
       phase,
       playing,
+      wantsPlay,
       message,
       serverUnavailable,
     ];
@@ -596,8 +603,9 @@ class StateMessage extends PlaybackEventMessage {
     return StateMessage(
       phase: result[0]! as PhaseMessage,
       playing: result[1]! as bool,
-      message: result[2] as String?,
-      serverUnavailable: result[3]! as bool,
+      wantsPlay: result[2]! as bool,
+      message: result[3] as String?,
+      serverUnavailable: result[4]! as bool,
     );
   }
 
@@ -610,7 +618,7 @@ class StateMessage extends PlaybackEventMessage {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(phase, other.phase) && _deepEquals(playing, other.playing) && _deepEquals(message, other.message) && _deepEquals(serverUnavailable, other.serverUnavailable);
+    return _deepEquals(phase, other.phase) && _deepEquals(playing, other.playing) && _deepEquals(wantsPlay, other.wantsPlay) && _deepEquals(message, other.message) && _deepEquals(serverUnavailable, other.serverUnavailable);
   }
 
   @override
@@ -619,7 +627,7 @@ class StateMessage extends PlaybackEventMessage {
 
   @override
   String toString() {
-    return 'StateMessage(phase: $phase, playing: $playing, message: $message, serverUnavailable: $serverUnavailable)';
+    return 'StateMessage(phase: $phase, playing: $playing, wantsPlay: $wantsPlay, message: $message, serverUnavailable: $serverUnavailable)';
   }
 }
 

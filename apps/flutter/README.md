@@ -184,6 +184,15 @@ cache moving fails as the server not answering, with Try again
 OkHttp's read timeout, but mpv waits on a connection that went quiet
 for good. After 10 seconds of that, a line under the spinner says it's
 waiting for the server (`stallNotice`), and goes as soon as data comes.
+Play and pause follow what the viewer asked for
+(`PlaybackStatus.wantsPlay`, mpv's own pause or Media3's
+`playWhenReady`), not whether frames move: a stall, a seek, or a
+quality change while playing offers pause on the TV's button, the media
+keys, and the system's controls, a press pauses, and it stays paused when
+data comes back. The Kotlin app's button shows play while it buffers,
+though its system controls already followed `playWhenReady`. A stall the
+viewer paused in isn't counted toward the minute. On a phone, as in the
+Kotlin app, the spinner takes the button's place while it loads.
 
 Its controls are the Kotlin phone player's, at the same sizes on a phone
 and a tablet: the title and the audio, subtitles, speed, and quality

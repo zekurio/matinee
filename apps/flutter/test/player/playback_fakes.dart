@@ -311,11 +311,18 @@ class FakePlayer implements Player {
     PlaybackPhase phase,
     double seconds, {
     bool playing = false,
+    bool? wantsPlay,
     bool serverUnavailable = false,
     double? buffered,
   }) {
     state = PlaybackState(
-      status: (phase: phase, playing: playing, message: null),
+      status: (
+        phase: phase,
+        playing: playing,
+        // As the engines say it: buffering is mostly on the way to playing.
+        wantsPlay: wantsPlay ?? (playing || phase == PlaybackPhase.buffering),
+        message: null,
+      ),
       timeline: (
         position: Duration(milliseconds: (seconds * 1000).round()),
         duration: const Duration(seconds: 120),
@@ -355,8 +362,18 @@ class FakePlayer implements Player {
   @override
   Future<void> pause() async {
     pauses++;
-    if (state.phase == PlaybackPhase.ready) {
-      emit(PlaybackPhase.ready, state.timeline.position.inMilliseconds / 1000);
+    // As both engines do: the wish goes at once, buffering or not, and what
+    // has arrived stays.
+    if (state.phase case PlaybackPhase.ready || PlaybackPhase.buffering) {
+      emit(
+        state.phase,
+        state.timeline.position.inMilliseconds / 1000,
+        wantsPlay: false,
+        buffered: switch (state.timeline.buffered) {
+          final buffered? => buffered.inMilliseconds / 1000,
+          null => null,
+        },
+      );
     }
   }
 
