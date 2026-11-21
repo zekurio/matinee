@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/widgets.dart';
 
+import '../cards.dart' show WatchedBadge;
 import '../icon.dart';
 import '../spinner.dart';
 import '../theme.dart';
@@ -92,19 +93,19 @@ class TvProgress extends StatelessWidget {
   );
 }
 
-/// The accent's dot on something watched.
+/// The round check on something watched, the phone's and the web's
+/// [WatchedBadge] at a TV's size, read out as [label].
 class TvWatchedMark extends StatelessWidget {
-  const TvWatchedMark({super.key});
+  const TvWatchedMark({super.key, required this.label});
+
+  /// What a screen reader says, "Watched".
+  final String label;
+
+  /// Across, sized to read from a sofa.
+  static const size = 26.0;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 12,
-    height: 12,
-    decoration: ShapeDecoration(
-      shape: const CircleBorder(),
-      color: MatineeTheme.of(context).accent,
-    ),
-  );
+  Widget build(BuildContext context) => WatchedBadge(label: label, size: size);
 }
 
 /// A row's heading, one line of [TvType.title].

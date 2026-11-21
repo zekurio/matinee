@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:matinee/api/matinee_api.dart';
+import 'package:matinee/kit/kit.dart';
 import 'package:matinee/kit/tv/tv.dart';
 import 'package:matinee/screens/tv/tv_detail.dart';
 import 'package:matinee/screens/tv/tv_shell.dart';
@@ -175,6 +176,19 @@ void main() {
   });
 
   group('Season', () {
+    testWidgets("a watched episode wears the phone's check, at a TV's size", (
+      tester,
+    ) async {
+      await _open(tester, '/title/s1/season/1');
+      final badge = find.byType(WatchedBadge);
+      expect(badge, findsOneWidget, reason: 'e1 alone is done');
+      expect(tester.getSize(badge), const Size.square(TvWatchedMark.size));
+      expect(
+        find.descendant(of: badge, matching: find.byType(KitIcon)),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('tabs change the season, and the show button goes up', (
       tester,
     ) async {

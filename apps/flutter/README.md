@@ -698,6 +698,9 @@ first key.
   never grows into the overscan: rows that run to the right edge keep
   `TvListItems.focusRoom` past it, and panels are 404 wide with 36 at
   their sides, so their rows keep the Kotlin app's width.
+- Cards: a watched card wears the phone's and the web's round check in
+  the accent (`TvWatchedMark`, 26 across), where the Kotlin app's dot
+  read as "new".
 - Screens (`lib/screens/tv`): Home; Movies, Shows, Browse, Favorites, and
   Search; the title, season, episode, and person pages (a show of one
   season lists its episodes without the Kotlin app's one-card Seasons

@@ -380,7 +380,13 @@ class TvPosterCard extends StatelessWidget {
         ),
         if (poster != null) Picture([ArtSource(poster)]),
         if (watched)
-          const PositionedDirectional(top: 8, end: 8, child: TvWatchedMark()),
+          PositionedDirectional(
+            top: 8,
+            end: 8,
+            child: TvWatchedMark(
+              label: AppLocalizations.of(context).mediaWatched,
+            ),
+          ),
       ],
     );
   }
@@ -450,10 +456,12 @@ class TvLandscapeCard extends StatelessWidget {
             children: [
               Picture(art),
               if (watched)
-                const PositionedDirectional(
+                PositionedDirectional(
                   top: 8,
                   end: 8,
-                  child: TvWatchedMark(),
+                  child: TvWatchedMark(
+                    label: AppLocalizations.of(context).mediaWatched,
+                  ),
                 )
               else if (progress != null && progress > 0)
                 Positioned(
