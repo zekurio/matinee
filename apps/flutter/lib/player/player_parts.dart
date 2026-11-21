@@ -422,7 +422,15 @@ class PlayerMediaSession {
 
 /// The player's [spinner], and under it, once [waiting], a quiet line that
 /// it waits on the server. Room above as tall as the line holds the spinner
-/// where it was as the line comes and goes.
+/// where it was as the line comes and goes. The line sits on the paused
+/// picture, so it takes the shadow the overlay's words take, which keeps it
+/// readable on a light frame.
+/// The shadow words over the picture take, so a light frame can't wash
+/// them out.
+const onPicture = [
+  Shadow(color: Color(0x99000000), offset: Offset(0, 2), blurRadius: 10),
+];
+
 class PlayerSpinner extends StatelessWidget {
   const PlayerSpinner({
     super.key,
@@ -457,7 +465,7 @@ class PlayerSpinner extends StatelessWidget {
                     key: const Key('player/waiting'),
                     textAlign: TextAlign.center,
                     maxLines: 1,
-                    style: style,
+                    style: style.copyWith(shadows: onPicture),
                   )
                 : null,
           ),

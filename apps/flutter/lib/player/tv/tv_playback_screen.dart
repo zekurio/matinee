@@ -868,7 +868,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
                   label: l.loadingInProgress,
                 ),
                 waiting: _session.waiting,
-                style: TvType.body.style(color: matineeDark.mutedForeground),
+                style: TvType.body.style(color: matineeDark.foreground),
                 lineHeight: TvType.body.lineHeight,
               ),
             if (item != null && names != null)

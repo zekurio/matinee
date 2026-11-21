@@ -479,6 +479,14 @@ void main() {
     );
     expect(line.top, greaterThan(spinner.bottom));
     expect(line.left, greaterThanOrEqualTo(Overscan.horizontal));
+    // Readable from the sofa on a light frame: the overlay's white, with
+    // its shadow, not the muted grey that washed out on the emulator.
+    final style = tester
+        .widget<Text>(find.text('Waiting for the server…'))
+        .style!;
+    expect(style.color, matineeDark.foreground);
+    expect(style.shadows, onPicture);
+    expect(style.fontSize, greaterThanOrEqualTo(TvType.body.size));
     player.emit(PlaybackPhase.buffering, 30, buffered: 62);
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Waiting for the server…'), findsNothing);

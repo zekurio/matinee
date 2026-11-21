@@ -838,7 +838,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
                   label: l.loadingInProgress,
                 ),
                 waiting: _session.waiting,
-                style: KitText.sm.style(color: matineeDark.mutedForeground),
+                style: KitText.sm.style(color: matineeDark.foreground),
                 lineHeight: KitText.sm.lineHeight,
               ),
             if (item == null && error == null && !small)
