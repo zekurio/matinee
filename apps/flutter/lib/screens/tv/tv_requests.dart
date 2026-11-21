@@ -866,51 +866,66 @@ class _List extends StatelessWidget {
   /// How close to the end of what's loaded the next page is asked for.
   static const _nearEnd = 6;
 
+  /// Between rows.
+  static const _gap = 6.0;
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final error = this.error;
     final lead = this.lead;
-    final offset = lead == null ? 0 : 1;
+    final more = onMore;
+    Widget side(Widget child) => Padding(
+      padding: const EdgeInsetsDirectional.only(
+        start: TvPage.start - TvListItems.inset,
+        end: TvPage.end,
+      ),
+      child: child,
+    );
     return TvMemoryRow(
       memory: memory,
       row: _Rows.list,
       child: TvFollowFocus(
         controller: scroll,
         rule: TvFollowFocus.clear(start: 24, end: Overscan.vertical + 24),
-        child: ListView.separated(
+        sectionTop: _gap,
+        child: TvRowsScroll(
           controller: scroll,
-          clipBehavior: Clip.none,
-          padding: const EdgeInsetsDirectional.only(
-            start: TvPage.start - TvListItems.inset,
-            end: TvPage.end,
-            top: 20,
-            bottom: Overscan.vertical + 24,
-          ),
-          itemCount: itemCount + offset + (done ? 0 : 1),
-          separatorBuilder: (_, _) => const SizedBox(height: 6),
-          itemBuilder: (context, index) {
-            if (lead != null && index == 0) return lead;
-            final at = index - offset;
-            if (at >= itemCount) {
-              return error == null
-                  ? const TvLoading(size: 28, top: 8)
-                  : TvNotice(
-                      headline: l.listMoreFailed,
-                      message: describeFailure(l, error),
-                      onRetry: onRetry,
-                      retryLabel: l.commonRetry,
-                      top: 8,
-                    );
-            }
-            if (at >= itemCount - _nearEnd && !done && error == null) {
-              final more = onMore;
-              if (more != null) {
-                SchedulerBinding.instance.addPostFrameCallback((_) => more());
-              }
-            }
-            return itemBuilder(context, at);
-          },
+          gap: _gap,
+          top: 20,
+          rows: [
+            if (lead != null) side(lead),
+            for (var at = 0; at < itemCount; at++)
+              side(
+                // Built as the list reaches it, so nearing the end of
+                // what's loaded asks for the next page.
+                Builder(
+                  builder: (context) {
+                    if (at >= itemCount - _nearEnd &&
+                        !done &&
+                        error == null &&
+                        more != null) {
+                      SchedulerBinding.instance.addPostFrameCallback(
+                        (_) => more(),
+                      );
+                    }
+                    return itemBuilder(context, at);
+                  },
+                ),
+              ),
+            if (!done)
+              side(
+                error == null
+                    ? const TvLoading(size: 28, top: 8)
+                    : TvNotice(
+                        headline: l.listMoreFailed,
+                        message: describeFailure(l, error),
+                        onRetry: onRetry,
+                        retryLabel: l.commonRetry,
+                        top: 8,
+                      ),
+              ),
+          ],
         ),
       ),
     );
