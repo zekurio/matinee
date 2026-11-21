@@ -62,9 +62,9 @@ bool isTvSelectKey(LogicalKeyboardKey key) =>
 /// Select or Enter presses on release, and held as long as a long press,
 /// or with the remote's Menu key, runs [onLongPress] instead. A tap or a
 /// click focuses it before pressing it, so the pointer and the D-pad share
-/// one focus. [builder] draws it, knowing whether it has focus. [onKey]
-/// sees every key first, as a chart's arrows. Disabled, it can't take
-/// focus.
+/// one focus, unless [focusOnTap] is off. [builder] draws it, knowing
+/// whether it has focus. [onKey] sees every key first, as a chart's arrows.
+/// Disabled, it can't take focus.
 class TvFocusable extends StatefulWidget {
   const TvFocusable({
     super.key,
@@ -81,6 +81,7 @@ class TvFocusable extends StatefulWidget {
     this.checked,
     this.onFocusChange,
     this.onKey,
+    this.focusOnTap = true,
   });
 
   final Widget Function(BuildContext context, bool focused) builder;
@@ -96,6 +97,10 @@ class TvFocusable extends StatefulWidget {
   final bool? checked;
   final ValueChanged<bool>? onFocusChange;
   final KeyEventResult Function(KeyEvent event)? onKey;
+
+  /// Whether a tap or a click focuses it before pressing it. The drawer's
+  /// rail turns this off, since focus there opens the drawer.
+  final bool focusOnTap;
 
   @override
   State<TvFocusable> createState() => _TvFocusableState();
@@ -190,7 +195,7 @@ class _TvFocusableState extends State<TvFocusable> {
   }
 
   void _tap() {
-    _node.requestFocus();
+    if (widget.focusOnTap) _node.requestFocus();
     widget.onPressed?.call();
   }
 
