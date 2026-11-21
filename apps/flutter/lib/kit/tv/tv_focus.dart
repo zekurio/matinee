@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
+import 'package:flutter/rendering.dart' show RenderSliverMultiBoxAdaptor;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -707,6 +708,9 @@ typedef TvScrollRule = double Function(
 /// move as the Kotlin app's do: rows only as far as it takes to keep the
 /// card clear of their edges, a page of rows to put the focused one in the
 /// same place each time, a grid by whole rows. [child] is the scroll view.
+/// With [sections], a page of sections, each a child of its list, the list
+/// only stops where its top shows a section whole: the one above the
+/// focused one comes into view whole, or goes.
 class TvFollowFocus extends StatefulWidget {
   const TvFollowFocus({
     super.key,
@@ -715,12 +719,14 @@ class TvFollowFocus extends StatefulWidget {
     required this.child,
     this.axis = Axis.vertical,
     this.duration = const Duration(milliseconds: 260),
+    this.sections = false,
   });
 
   final ScrollController controller;
   final TvScrollRule rule;
   final Axis axis;
   final Duration duration;
+  final bool sections;
   final Widget child;
 
   /// A row's rule: only as far as keeps the card [start] in from its start
@@ -776,14 +782,84 @@ class _TvFollowFocusState extends State<TvFollowFocus> {
     final viewport = vertical ? view.size.height : view.size.width;
     final distance = widget.rule(start, start + length, viewport);
     final position = controller.position;
-    final to = (position.pixels + distance).clamp(
+    var to = (position.pixels + distance).clamp(
       position.minScrollExtent,
       position.maxScrollExtent,
     );
+    if (widget.sections) {
+      to = _sectionStop(target, position, to, start, length, viewport);
+    }
     if ((to - position.pixels).abs() < .5) return;
     unawaited(
       position.animateTo(to, duration: widget.duration, curve: TvMotion.easing),
     );
+  }
+
+  /// Where the list stops near [to] so its top cuts no section: where a
+  /// section starts at the list's top padding, or where one has just gone
+  /// past the top, so long as no section then runs across the top, and the
+  /// focused child, [start] to [start] + [length] in the viewport now, sits
+  /// as the rule wants it. The nearest to where the list is; [to] when
+  /// none does.
+  double _sectionStop(
+    RenderBox target,
+    ScrollPosition position,
+    double to,
+    double start,
+    double length,
+    double viewport,
+  ) {
+    // The page's own list, the outermost under the viewport: the rows in
+    // it have lists of their own.
+    final view = context.findRenderObject();
+    RenderSliverMultiBoxAdaptor? list;
+    for (var parent = target.parent; parent != null && parent != view;) {
+      if (parent is RenderSliverMultiBoxAdaptor) list = parent;
+      parent = parent.parent;
+    }
+    if (list == null) return to;
+    // Where each section runs in the scroll, the list's padding before it.
+    final before = list.constraints.precedingScrollExtent;
+    final sections = <(double, double)>[];
+    for (var section = list.firstChild; section != null;) {
+      final from = before + list.childScrollOffset(section)!;
+      sections.add((from, from + section.size.height));
+      section = list.childAfter(section);
+    }
+    // Above the first section laid out, what's there is unknown.
+    final known = sections.isEmpty ? 0.0 : sections.first.$1;
+    bool clean(double stop) =>
+        (stop <= position.minScrollExtent || stop >= known - .5) &&
+        !sections.any(
+          (section) => section.$1 < stop - .5 && section.$2 > stop + .5,
+        );
+    final stops = {
+      position.minScrollExtent,
+      for (final (from, end) in sections) ...[from - before, end],
+    };
+    // Where the focused child runs, whatever the scroll.
+    final at = position.pixels + start;
+    double? nearest(bool Function(double top) fits) {
+      double? best;
+      for (final stop in stops) {
+        if (stop > position.maxScrollExtent || !clean(stop)) continue;
+        if (!fits(at - stop)) continue;
+        if (best == null ||
+            (stop - position.pixels).abs() < (best - position.pixels).abs()) {
+          best = stop;
+        }
+      }
+      return best;
+    }
+
+    // Where the rule wants the child, or failing that anywhere it shows
+    // whole.
+    final best =
+        nearest((top) => widget.rule(top, top + length, viewport).abs() < .5) ??
+        nearest((top) => top >= 0 && top + length <= viewport);
+    // Stay put when the list already cuts nothing and needn't move.
+    if (to == position.pixels && clean(to)) return to;
+    return best ?? to;
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -137,6 +138,41 @@ void main() {
     expect(focusedKey(), 'recent/seeAll');
     await right(tester);
     expect(focusedKey(), 'recent/seeAll', reason: 'the end of the row');
+  });
+
+  testWidgets('down to the statistics: the range picked takes focus, and '
+      'no section is left cut at the top', (tester) async {
+    await _open(tester, Routes.profile);
+    // The page's own list, the outermost: its rows have lists of their own.
+    final list = tester.renderObject<RenderSliverMultiBoxAdaptor>(
+      find
+          .descendant(
+            of: find.byType(TvProfileScreen),
+            matching: find.byType(SliverList),
+          )
+          .first,
+    );
+    final top = tester.getTopLeft(find.byType(TvProfileScreen)).dy;
+    void expectNoneCut(String? at) {
+      for (var child = list.firstChild; child != null;) {
+        final box = child.localToGlobal(Offset.zero).dy;
+        final cut = box < top - .5 && box + child.size.height > top + .5;
+        expect(cut, isFalse, reason: 'a section cut at the top, on $at');
+        child = list.childAfter(child);
+      }
+    }
+
+    await down(tester);
+    expect(focusedKey(), 'ranges/${StatsRange.allValue}');
+    expectNoneCut(focusedKey());
+    for (var i = 0; i < 6; i++) {
+      await down(tester);
+      expectNoneCut(focusedKey());
+    }
+    for (var i = 0; i < 7; i++) {
+      await up(tester);
+      expectNoneCut(focusedKey());
+    }
   });
 
   testWidgets('Sign out asks first, with focus on Cancel', (tester) async {
