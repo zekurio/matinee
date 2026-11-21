@@ -89,7 +89,8 @@ bottom, Home, Shows, Movies, Downloads, and the profile. Both stay while a
 tab scrolls. Each tab keeps its own stack, and every other page opens over
 them without either. When a tab's label doesn't fit, as on a small phone
 or with large text, the tabs show only their icons. Search opens Explore,
-headed by the Requests row. A TV gets its own routes.
+headed by the Requests row. A TV gets its own routes, with Discover as a
+page of its own from the drawer (see TV).
 
 A platform channel starts as a Pigeon file in `pigeons/`. Run
 `just flutter pigeon`, then implement the generated interface on the
@@ -795,8 +796,38 @@ first key.
   asks nothing of the screen. The controls hide after 3.5 s, as the
   phone's do.
 
-The TV has no requests, as the Kotlin TV app has none: no Explore, no
-Requests row, and no catalog pages.
+Requests (`tv_discover.dart`, `tv_catalog.dart`, `tv_catalog_browse.dart`,
+`tv_requests.dart`): the Kotlin TV app has none, so the TV follows the
+phone's, through the same `RequestsHub` and server words. Discover is a
+drawer entry after Favorites while the server says it's on, the Requests
+row first and then the server's rows, each loading on its own with Try
+again. Search ends in a "Not here yet" row. A catalog title opens a page
+built like the library's title page, which takes its place once the title
+arrives. The deliberate differences from the phone:
+- A toast's Undo is hard to reach with a remote before it runs out, so the
+  TV asks first and then sends at once (`undo: false`). Cancel request
+  asks with Keep request focused. Decline asks for a reason, focused on
+  the first, with an optional note. Give up asks with Cancel focused. Add,
+  Add all, and the answers to a declined request ask nothing.
+- A row heading can't take focus, so a row that opens a browse or a list
+  ends in a See all card (`TvSeeAllCard`). The Requests row's opens the
+  requests page, which has no entry of its own.
+- A request card opens a panel with what can be done about it, rather
+  than buttons on the card. One of the viewer's own with nothing to
+  cancel opens its title at once.
+- "Not interested" is on a recommendation's long press or Menu, in a
+  panel.
+- The catalog page has no Trailer. A Request that can't be pressed shows
+  only why, and there is no link to the connection's own page, since a TV
+  has no browser to open it in.
+- A show's season panel gives every season a row, so each one's state can
+  be read. Only the ones that can be asked for have a box, and focus
+  starts on the first of those.
+- The browse filters' ranges are step rows that Left and Right move. Each
+  asks again 700 ms after the last step, in place of the phone's sliders,
+  and the language picker has no find field.
+- "Not here yet" is always headed, even when the library found nothing,
+  so the row reads as the catalog's.
 
 `test/screens/tv` and `test/player/tv_playback_test.dart` send key events
 and check where focus lands. Their goldens are taken at 960 by 540, the
