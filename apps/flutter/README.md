@@ -714,7 +714,13 @@ first key.
   Search; the title, season, episode, and person pages (a show of one
   season lists its episodes without the Kotlin app's one-card Seasons
   row; a season whose episodes fail to load offers Try again, focused,
-  as Home's rows do, where the Kotlin app only says so; a search field's placeholder is the muted text colour, not the
+  as Home's rows do, where the Kotlin app only says so; marking a show
+  or a season unwatched asks first in a panel, focus on Cancel, with the
+  episodes counted where the page knows them, where the Kotlin app and
+  the web act at once: it forgets where every episode stopped and can't
+  be taken back, and a TV's tick sits next to Play, or has focus first on
+  a show with nothing up next, so one stray Select reaches it; an episode
+  or a movie still goes at once; a search field's placeholder is the muted text colour, not the
   Kotlin app's faint one, so it reads over a backdrop; the chips and the
   field over a grid's or Search's backdrop rest on the page's background
   under their fill, `TvFocus.restOnPicture`, where the Kotlin app's
