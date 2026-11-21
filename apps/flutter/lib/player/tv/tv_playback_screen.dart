@@ -816,6 +816,13 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
                   l,
                   notice,
                   detail,
+                  // Clear of the edges a TV loses, as the Kotlin app's.
+                  margin: const EdgeInsets.fromLTRB(
+                    Overscan.horizontal,
+                    Overscan.vertical,
+                    Overscan.horizontal,
+                    0,
+                  ),
                 ),
                 null => const SizedBox.shrink(),
               },
