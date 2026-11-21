@@ -382,10 +382,17 @@ final class RequestsHub extends Notifier<RequestsState> {
 
   /// A person takes back their own request [id], from a card in Explore's
   /// Requests row: the card leaves at once, and the cancel goes once the
-  /// toast's Undo has passed, as an admin's answers are held.
-  Future<void> withdraw(AppLocalizations l, String id, String name) => _held(
+  /// toast's Undo has passed, as an admin's answers are held. Without
+  /// [undo], as on a TV that asked first, it goes at once.
+  Future<void> withdraw(
+    AppLocalizations l,
+    String id,
+    String name, {
+    bool undo = true,
+  }) => _held(
     l,
     [id],
+    undo: undo,
     message: l.requestsToastCancelled(name),
     failed: l.webAskToastCancelFailed(name),
     send: (api) => api.requests.cancel(RequestId(id: id)),
@@ -395,17 +402,21 @@ final class RequestsHub extends Notifier<RequestsState> {
   /// up on an accepted one, or Allow requests again or Add after all for a
   /// declined one. The request leaves the lists at once, and the answer
   /// goes once the toast's Undo has passed, as the web's queue holds it.
+  /// Without [undo], as on a TV, whose toast can't take focus for Undo, it
+  /// goes at once.
   Future<void> answer(
     AppLocalizations l,
     AdminRequestItem item,
-    QueueAnswer answer,
-  ) {
+    QueueAnswer answer, {
+    bool undo = true,
+  }) {
     final name = item.title.name;
     // Read now: the choice is the one made before Add was pressed.
     final movedTo = _movedTo(item);
     return _held(
       l,
       [item.id],
+      undo: undo,
       message: switch (answer) {
         AddAnswer() => l.webRequestsToastAdded(name),
         DeclineAnswer() => l.webRequestsToastDeclined(name),
@@ -445,8 +456,13 @@ final class RequestsHub extends Notifier<RequestsState> {
     );
   }
 
-  /// Add for every request that waits, held for Undo as one.
-  Future<void> answerAll(AppLocalizations l, List<AdminRequestItem> items) {
+  /// Add for every request that waits, held for Undo as one, or sent at
+  /// once without [undo].
+  Future<void> answerAll(
+    AppLocalizations l,
+    List<AdminRequestItem> items, {
+    bool undo = true,
+  }) {
     if (items.isEmpty) return Future.value();
     final ids = [for (final item in items) item.id];
     // A move is one approve each, with its library; the rest go together.
@@ -461,6 +477,7 @@ final class RequestsHub extends Notifier<RequestsState> {
     return _held(
       l,
       ids,
+      undo: undo,
       message: l.webRequestsToastAddedMany(items.length),
       failed: l.webRequestsToastAddFailed,
       send: (api) async {
@@ -478,7 +495,8 @@ final class RequestsHub extends Notifier<RequestsState> {
   /// no way to take these back; else [send] goes once the Undo has passed,
   /// [sent] runs once the server took it, and the ids stay out a second
   /// longer, by when the streams have the change, or bring the rows back
-  /// after a failure, which the toast words with [failed].
+  /// after a failure, which the toast words with [failed]. Without [undo]
+  /// the toast only says it, and [send] goes at once.
   Future<void> _held(
     AppLocalizations l,
     List<String> ids, {
@@ -486,20 +504,25 @@ final class RequestsHub extends Notifier<RequestsState> {
     required String failed,
     required Future<void> Function(MatineeApi api) send,
     VoidCallback? sent,
+    bool undo = true,
   }) async {
     final api = _api;
     if (api == null) return;
     _hold(ids, true);
-    final result = await _toasts.show(
-      message,
-      actionLabel: l.webRequestsToastUndo,
-      duration: ToastDuration.indefinite,
-      within: undoWindow,
-    );
-    if (!ref.mounted) return;
-    if (result == ToastResult.action) {
-      _hold(ids, false);
-      return;
+    if (undo) {
+      final result = await _toasts.show(
+        message,
+        actionLabel: l.webRequestsToastUndo,
+        duration: ToastDuration.indefinite,
+        within: undoWindow,
+      );
+      if (!ref.mounted) return;
+      if (result == ToastResult.action) {
+        _hold(ids, false);
+        return;
+      }
+    } else {
+      unawaited(_toasts.show(message));
     }
     try {
       await send(api);
