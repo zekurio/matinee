@@ -277,6 +277,10 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
   late final PlayerMediaSession _media;
   late final bool _matchFrameRate;
   Timer? _hide;
+
+  /// Whether it played when the session last changed, so only starting or
+  /// stopping counts toward hiding the controls, not each tick of the time.
+  bool _playing = false;
   var _controls = true;
   var _menuOpen = false;
   double? _scrub;
@@ -353,7 +357,13 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
       _countdown.sync(_session, leaving: _leaving);
       _syncSegment();
     });
-    _resetHide();
+    // The session changes with every tick of the time; restarting the timer
+    // on each kept the controls up for good.
+    final playing = _session.playback.status.playing;
+    if (playing != _playing) {
+      _playing = playing;
+      _resetHide();
+    }
     _syncMedia();
     if (_matchFrameRate) {
       if (_session.item case final item?) {

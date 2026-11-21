@@ -372,6 +372,22 @@ void main() {
     expect(focusedLabel(), startsWith('Back'));
   });
 
+  testWidgets('the controls hide while the player reports its time', (
+    tester,
+  ) async {
+    final opened = await _open(tester);
+    final player = opened.players.single;
+    expect(find.text('The Crossing'), findsOneWidget);
+    // A real player tells the time every so often; that's no press.
+    for (var second = 0; second < 6; second++) {
+      player.emit(PlaybackPhase.ready, 18.0 + second, playing: true);
+      await tester.pump(const Duration(seconds: 1));
+    }
+    await tester.pumpAndSettle();
+    expect(find.text('The Crossing'), findsNothing);
+    expect(focusedKey(), 'player/root');
+  });
+
   testWidgets('with the controls away, the arrows skip and Select brings '
       'them back on play', (tester) async {
     final opened = await _open(tester);
