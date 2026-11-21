@@ -129,6 +129,8 @@ export default defineMessages("server", {
   // rpc/base.ts: every procedure.
   "server.rpc.signInFirst": "Sign in first.",
   "server.rpc.adminsOnly": "Only admins can do this.",
+  "server.rpc.needsSession":
+    "An API token can't do this. Sign in to Matinee to do it.",
   "server.rpc.passkeysOff": "Passkeys are turned off on this server.",
 
   // rpc/errors.ts: input that fails its schema, when its own message is no
@@ -229,6 +231,7 @@ export default defineMessages("server", {
   "server.account.noLinkedAccount": "No account is linked.",
   "server.account.currentSession": "Sign out to end the session you're using.",
   "server.account.sessionGone": "That session already ended.",
+  "server.account.apiTokenGone": "That API token was already revoked.",
 
   // rpc/admin-users.ts.
   "server.adminUsers.gone": "That user no longer exists. Reload the list.",

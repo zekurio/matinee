@@ -127,6 +127,8 @@ export default {
     "Für dieses Gerät ist keine Audiokonvertierung verfügbar.",
   "server.rpc.signInFirst": "Melde dich zuerst an.",
   "server.rpc.adminsOnly": "Das können nur Admins.",
+  "server.rpc.needsSession":
+    "Mit einem API-Token geht das nicht. Melde dich bei Matinee an, um es zu tun.",
   "server.rpc.passkeysOff": "Passkeys sind auf diesem Server ausgeschaltet.",
   "server.rpc.checkInput": "Prüfe deine Eingabe und versuche es erneut.",
 
@@ -230,6 +232,7 @@ export default {
   "server.account.currentSession":
     "Melde dich ab, um die Sitzung zu beenden, die du gerade nutzt.",
   "server.account.sessionGone": "Diese Sitzung ist bereits beendet.",
+  "server.account.apiTokenGone": "Dieses API-Token wurde bereits widerrufen.",
 
   "server.adminUsers.gone":
     "Diesen Benutzer gibt es nicht mehr. Lade die Liste neu.",

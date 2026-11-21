@@ -40,6 +40,27 @@ export const session = pgTable(
   (t) => [index("session_user_idx").on(t.userId)],
 )
 
+/**
+ * A credential a service uses to call the API as the account, made in its
+ * settings. Only the token's SHA-256 is stored. It never expires; it goes
+ * when its owner revokes it or the account is deleted.
+ */
+export const apiToken = pgTable(
+  "api_token",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    tokenHash: text().notNull().unique(),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    createdAt: createdAt(),
+    /** Null until first used. Moved at most once a minute. */
+    lastUsedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index("api_token_user_idx").on(t.userId)],
+)
+
 /** A single-use sign-up link. Only the token's SHA-256 is stored. */
 export const invite = pgTable("invite", {
   id: uuid().primaryKey().defaultRandom(),

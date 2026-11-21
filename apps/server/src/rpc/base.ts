@@ -3,7 +3,7 @@ import { oo } from "@orpc/openapi"
 import { implement, ORPCError, os } from "@orpc/server"
 import type { Context } from "hono"
 
-import { readViewer } from "../access/viewer"
+import { readViewer, type Viewer } from "../access/viewer"
 import { passkeysEnabled } from "../auth/passkey-settings"
 import { type RateLimit, takeTry, TOO_MANY_TRIES } from "../rate-limit"
 
@@ -35,6 +35,31 @@ export const admin = authed.use(async ({ context, next }) => {
   if (context.user.role !== "admin") throw forbidden()
   return next()
 })
+
+/** What a request made with an API token gets for a procedure it can't call. */
+export const NEEDS_SESSION =
+  "An API token can't do this. Sign in to Matinee to do it."
+
+/**
+ * Refuse a request made with an API token, and hand on the session's id.
+ * For what a long-lived bot credential must not reach: API tokens
+ * themselves, and how the account signs in.
+ */
+const requireRealSession = os
+  .$context<RpcContext & { user: Viewer }>()
+  .middleware(async ({ context, next }) => {
+    const { credential } = context.user
+    if (credential.kind !== "session") {
+      throw new ORPCError("FORBIDDEN", { message: NEEDS_SESSION })
+    }
+    return next({ context: { sessionId: credential.id } })
+  })
+
+/** `authed`, without API tokens. */
+export const sessionOnly = authed.use(requireRealSession)
+
+/** `admin`, without API tokens. */
+export const adminSessionOnly = admin.use(requireRealSession)
 
 /**
  * Hold each client to `limit` for a procedure, with TOO_MANY_REQUESTS past

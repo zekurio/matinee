@@ -165,6 +165,8 @@ export const AdminUser = User.extend({
   oidcLinked: t.boolean(),
   /** Sessions that haven't expired. */
   sessions: t.number().int(),
+  /** API tokens the user made. They don't expire. */
+  apiTokens: t.number().int(),
   /**
    * When the provider's claims were last read for the account: at a
    * sign-in, or a refresh in the background. Null without a linked

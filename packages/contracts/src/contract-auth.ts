@@ -5,12 +5,15 @@ import { del, get, patch, post, put } from "./contract-routes"
 import { LibraryPreferences, PlaybackPreferences } from "./preferences"
 import { t } from "./schema"
 import {
+  ApiToken,
+  ApiTokenInput,
   AppDevice,
   AppSession,
   AuthConfig,
   AuthenticationResponse,
   AvatarUpload,
   ClientIdentity,
+  CreatedApiToken,
   CodeVerifier,
   DeviceCode,
   DeviceRequest,
@@ -218,6 +221,22 @@ export const accountContract = oc.tag("Account").router({
     identify: put("/account/sessions/current/client")
       .input(ClientIdentity)
       .output(t.void()),
+  },
+  /**
+   * Credentials for services that call the API as this account, sent as
+   * `Authorization: Bearer <token>`. They never expire on their own. A
+   * request made with one can't call these, nor change how the account
+   * signs in: passkeys, the linked account, and sessions need a session.
+   */
+  apiTokens: {
+    /** Newest first. */
+    list: get("/account/api-tokens").output(t.array(ApiToken)),
+    /** Returns the secret, which the server never shows again. */
+    create: post("/account/api-tokens")
+      .input(ApiTokenInput)
+      .output(CreatedApiToken),
+    /** It stops working at once; open live streams end within ten minutes. */
+    revoke: del("/account/api-tokens/{id}").input(IdInput).output(t.void()),
   },
   /** The audio, subtitle, and skip choices this account syncs. */
   playback: {

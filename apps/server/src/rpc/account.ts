@@ -2,6 +2,11 @@ import { oidcAccount, passkey, user, type UserRow } from "@matinee/db"
 import { and, desc, eq } from "drizzle-orm"
 
 import {
+  createApiToken,
+  listApiTokens,
+  revokeApiToken,
+} from "../auth/api-tokens"
+import {
   AvatarError,
   followProviderAvatar,
   removeAvatar,
@@ -27,7 +32,13 @@ import {
 } from "../auth/session"
 import { signInMethods } from "../auth/users"
 import { db } from "../db"
-import { authed, badRequest, notFound, requirePasskeys } from "./base"
+import {
+  authed,
+  badRequest,
+  notFound,
+  requirePasskeys,
+  sessionOnly,
+} from "./base"
 
 const LAST_METHOD =
   "Add another passkey or link an account before removing your last way to sign in."
@@ -115,7 +126,7 @@ export const account = {
   },
 
   passkeys: {
-    list: authed.account.passkeys.list.handler(async ({ context }) => {
+    list: sessionOnly.account.passkeys.list.handler(async ({ context }) => {
       const rows = await db
         .select()
         .from(passkey)
@@ -124,7 +135,7 @@ export const account = {
       return rows.map(publicPasskey)
     }),
 
-    registerOptions: authed.account.passkeys.registerOptions.handler(
+    registerOptions: sessionOnly.account.passkeys.registerOptions.handler(
       async ({ context }) => {
         await requirePasskeys()
         return beginRegister({
@@ -134,7 +145,7 @@ export const account = {
       },
     ),
 
-    register: authed.account.passkeys.register.handler(
+    register: sessionOnly.account.passkeys.register.handler(
       async ({ context, input }) => {
         await requirePasskeys()
         const verified = await finishRegistration(
@@ -157,7 +168,7 @@ export const account = {
       },
     ),
 
-    rename: authed.account.passkeys.rename.handler(
+    rename: sessionOnly.account.passkeys.rename.handler(
       async ({ context, input }) => {
         const [row] = await db
           .update(passkey)
@@ -171,7 +182,7 @@ export const account = {
       },
     ),
 
-    remove: authed.account.passkeys.remove.handler(
+    remove: sessionOnly.account.passkeys.remove.handler(
       async ({ context, input }) => {
         // While passkeys are off, they aren't a way to sign in to keep.
         const methods = await signInMethods(context.user.id)
@@ -190,7 +201,7 @@ export const account = {
   },
 
   oidc: {
-    get: authed.account.oidc.get.handler(async ({ context }) => {
+    get: sessionOnly.account.oidc.get.handler(async ({ context }) => {
       const [row] = await db
         .select()
         .from(oidcAccount)
@@ -208,7 +219,7 @@ export const account = {
       }
     }),
 
-    unlink: authed.account.oidc.unlink.handler(async ({ context }) => {
+    unlink: sessionOnly.account.oidc.unlink.handler(async ({ context }) => {
       // A link single sign-on doesn't use signs nobody in.
       const methods = await signInMethods(context.user.id)
       if (methods.linked > 0 && methods.passkeys + methods.linked <= 1) {
@@ -220,14 +231,35 @@ export const account = {
     }),
   },
 
-  sessions: {
-    list: authed.account.sessions.list.handler(({ context }) =>
-      listSessions(context.user.id, context.user.sessionId),
+  // Everything about how the account signs in, and API tokens themselves,
+  // takes a session: `sessionOnly` refuses a request made with an API
+  // token, so a leaked one can't make more, hide itself, or take the account.
+  apiTokens: {
+    list: sessionOnly.account.apiTokens.list.handler(({ context }) =>
+      listApiTokens(context.user.id),
     ),
 
-    revoke: authed.account.sessions.revoke.handler(
+    create: sessionOnly.account.apiTokens.create.handler(({ context, input }) =>
+      createApiToken(context.user.id, input.name),
+    ),
+
+    revoke: sessionOnly.account.apiTokens.revoke.handler(
       async ({ context, input }) => {
-        if (input.id === context.user.sessionId) {
+        if (!(await revokeApiToken(context.user.id, input.id))) {
+          throw notFound("That API token was already revoked.")
+        }
+      },
+    ),
+  },
+
+  sessions: {
+    list: sessionOnly.account.sessions.list.handler(({ context }) =>
+      listSessions(context.user.id, context.sessionId),
+    ),
+
+    revoke: sessionOnly.account.sessions.revoke.handler(
+      async ({ context, input }) => {
+        if (input.id === context.sessionId) {
           throw badRequest("Sign out to end the session you're using.")
         }
         if (!(await deleteSession(context.user.id, input.id))) {
@@ -236,15 +268,14 @@ export const account = {
       },
     ),
 
-    revokeOthers: authed.account.sessions.revokeOthers.handler(
+    revokeOthers: sessionOnly.account.sessions.revokeOthers.handler(
       async ({ context }) => ({
-        revoked: await deleteUserSessions(
-          context.user.id,
-          context.user.sessionId,
-        ),
+        revoked: await deleteUserSessions(context.user.id, context.sessionId),
       }),
     ),
 
+    // An API token may send it, as every client does, and it changes
+    // nothing: the token goes by its name.
     identify: authed.account.sessions.identify.handler(
       async ({ context, input }) => {
         // The contract's minimum counts characters this takes out, like a

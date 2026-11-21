@@ -162,6 +162,13 @@ export const adminContract = oc.tag("Admin").router({
     signOut: post("/admin/users/{id}/sign-out")
       .input(IdInput)
       .output(t.object({ ended: t.number().int() })),
+    /**
+     * Revoke every API token the user made. Returns how many. Needs a
+     * session: a request made with an API token can't call it.
+     */
+    revokeApiTokens: post("/admin/users/{id}/api-tokens/revoke")
+      .input(IdInput)
+      .output(t.object({ revoked: t.number().int() })),
   },
   /**
    * Access groups: which libraries an account opens and how the server
