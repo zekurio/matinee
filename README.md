@@ -43,7 +43,9 @@ To work on Matinee, start with [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT, except the Android and Apple apps in `apps/android` and `apps/ios`.
-They ship GPL builds of FFmpeg and mpv, so they're GPL-3.0. See
-[LICENSE](LICENSE), [apps/android/LICENSE](apps/android/LICENSE), and
-[apps/ios/LICENSE](apps/ios/LICENSE).
+MIT, except the Android, Apple, and Flutter apps in `apps/android`,
+`apps/ios`, and `apps/flutter`. They ship GPL builds of FFmpeg and mpv, so
+they're GPL-3.0. See [LICENSE](LICENSE),
+[apps/android/LICENSE](apps/android/LICENSE),
+[apps/ios/LICENSE](apps/ios/LICENSE), and
+[apps/flutter/LICENSE](apps/flutter/LICENSE).
