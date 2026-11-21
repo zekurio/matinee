@@ -36,6 +36,20 @@ abstract final class _Rows {
   static const viewingTimes = 'viewingTimes';
 }
 
+/// A section on its way: a spinner centred in a row 96 high, as the
+/// Kotlin app's `LoadingRow`.
+class _LoadingRow extends StatelessWidget {
+  const _LoadingRow();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 96,
+    child: Center(
+      child: Spinner(size: 32, color: MatineeTheme.of(context).mutedForeground),
+    ),
+  );
+}
+
 /// The places a board lists at its top, before the person's own
 /// neighbourhood, as the server sends them.
 const _topPlaces = 10;
@@ -144,7 +158,7 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
           detail: describeFailure(l, profile.error!),
         )
       else if (loaded == null)
-        const TvLoading(size: 32, top: 32)
+        const _LoadingRow()
       else if (recent.isNotEmpty)
         _recentRow(recent),
       ..._statistics(username),
@@ -250,7 +264,7 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
             detail: describeFailure(l, result.error!),
           )
         else
-          const TvLoading(size: 32, top: 32),
+          const _LoadingRow(),
       ];
     }
     if (neverWatched) {
