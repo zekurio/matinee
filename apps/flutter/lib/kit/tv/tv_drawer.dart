@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../icon.dart';
 import '../theme.dart';
+import '../tokens.dart';
 import 'tv_focus.dart';
 import 'tv_metrics.dart';
 
@@ -119,7 +120,8 @@ class TvDrawer extends StatelessWidget {
                   spacing: 6,
                   children: [
                     _entry(top, open),
-                    const SizedBox(height: 18),
+                    // The pages, centred between the profile and Settings.
+                    const Spacer(),
                     for (final entry in entries) _entry(entry, open),
                     const Spacer(),
                     _entry(bottom, open),
@@ -143,6 +145,11 @@ class TvDrawer extends StatelessWidget {
   );
 }
 
+/// An entry of the rail, or of the open drawer. Its fill, focused or
+/// marking the [selected] page, is a circle round the icon on the rail and
+/// spans the drawer only while it's [open], so nothing wider than the icon
+/// shows on the rail, as it opens or closes either. Its label fades out as
+/// the drawer closes, rather than leaving the fill to shrink without it.
 class _Entry extends StatelessWidget {
   const _Entry({
     super.key,
@@ -165,59 +172,98 @@ class _Entry extends StatelessWidget {
     final tint = selected
         ? colors.accent
         : colors.foreground.withValues(alpha: open ? .8 : .45);
+    final rest = selected && !open
+        ? colors.foreground.withValues(alpha: .1)
+        : const Color(0x00000000);
     return TvFocusable(
       focusNode: node,
       label: entry.label,
       selected: selected,
+      // A tap picks the page from the rail, without opening the drawer.
+      focusOnTap: false,
       onPressed: () => onPick(entry),
-      builder: (context, focused) => TvControl(
-        focused: focused,
-        scale: TvFocus.rowScale,
-        rest: selected && !open
-            ? colors.foreground.withValues(alpha: .1)
-            : const Color(0x00000000),
-        content: tint,
-        builder: (context, content) => SizedBox(
-          height: _rowHeight,
-          child: Row(
-            children: [
-              SizedBox(
-                width: _railIcon,
-                height: _rowHeight,
-                child: Center(
-                  child:
-                      entry.leading ??
-                      KitIcon(
-                        entry.icon ?? Lucide.house,
-                        size: 24,
-                        color: content,
-                      ),
-                ),
-              ),
-              if (open)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(
-                      start: 6,
-                      end: 18,
-                    ),
-                    child: Text(
-                      entry.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TvType.facts.style(
-                        color: focused
-                            ? colors.background
-                            : selected
-                            ? colors.accent
-                            : colors.foreground.withValues(alpha: .85),
+      builder: (context, focused) => TweenAnimationBuilder<double>(
+        tween: Tween(end: focused ? 1 : 0),
+        duration: focused ? TvMotion.enter : TvMotion.exit,
+        curve: focused ? TvMotion.easing : TvMotion.exitEasing,
+        builder: (context, t, _) {
+          final content = Color.lerp(tint, colors.background, t)!;
+          return Transform.scale(
+            scale: 1 + (TvFocus.rowScale - 1) * t,
+            child: SizedBox(
+              height: _rowHeight,
+              child: Stack(
+                children: [
+                  PositionedDirectional(
+                    key: const ValueKey('fill'),
+                    start: 0,
+                    top: 0,
+                    bottom: 0,
+                    end: open ? 0 : null,
+                    width: open ? null : _railIcon,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Color.lerp(rest, colors.foreground, t),
+                        borderRadius: KitRadius.pill,
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-        ),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: _railIcon,
+                        height: _rowHeight,
+                        child: Center(
+                          child:
+                              entry.leading ??
+                              KitIcon(
+                                entry.icon ?? Lucide.house,
+                                size: 24,
+                                color: content,
+                              ),
+                        ),
+                      ),
+                      Expanded(
+                        // In at once as the drawer opens, as before; out
+                        // ahead of the width as it closes, and gone after.
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(end: open ? 1 : 0),
+                          duration: open ? Duration.zero : TvMotion.exit,
+                          builder: (context, shown, label) => shown == 0
+                              ? const SizedBox.shrink()
+                              : Opacity(opacity: shown, child: label),
+                          child: ExcludeSemantics(
+                            child: Padding(
+                              padding: const EdgeInsetsDirectional.only(
+                                start: 6,
+                                end: 18,
+                              ),
+                              child: Text(
+                                entry.label,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.clip,
+                                style: TvType.facts.style(
+                                  color: focused
+                                      ? colors.background
+                                      : selected
+                                      ? colors.accent
+                                      : colors.foreground.withValues(
+                                          alpha: .85,
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
