@@ -676,11 +676,20 @@ class TvFocusMemory {
       ..ensureVisualUpdate();
   }
 
+  /// What the shell focused when the page had no card to give it, which
+  /// the page's card takes over from while it still has focus.
+  FocusNode? _standIn;
+
+  /// The shell focused [node] after waiting for the page's card.
+  void standIn(FocusNode node) => _standIn = node;
+
   void _try() {
     if (_restored || _disposed) return;
     final route = _route;
     if (route != null && !route.isCurrent) return;
-    final target = _saved ?? _start;
+    // Focus still on the stand-in waits for the page's own card.
+    final waited = _standIn?.hasPrimaryFocus ?? false;
+    final target = waited ? _start : _saved ?? _start;
     if (target == null) return;
     _restored = true;
     opening = false;

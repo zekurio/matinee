@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:matinee/api/matinee_api.dart';
@@ -205,6 +205,29 @@ void main() {
       backend.down.clear();
       await select(tester);
       expect(focusedKey(), 'episodes-1/e2', reason: 'the episode Play starts');
+    });
+
+    testWidgets('episodes that fail late take focus from the tab', (
+      tester,
+    ) async {
+      final backend = _backend();
+      await pumpTv(tester, backend, size: const Size(960, 540));
+      GoRouter.of(tester.element(find.byType(TvShell))).go('/title/s1');
+      await settle(tester);
+      await down(tester, 2);
+      backend.down.add('/api/v1/titles/s1/items');
+      backend.delays['/api/v1/titles/s1/items'] = const Duration(seconds: 10);
+      // Pumped by hand: settling would wait out the spinner and the load.
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.byType(TvSeasonScreen), findsOneWidget);
+      // Waiting, the page has the shell focus what it has.
+      expect(focusedKey(), 'tabs/1');
+      await tester.pump(const Duration(seconds: 8));
+      await settle(tester);
+      expect(focusedLabel(), 'Try again');
     });
 
     testWidgets('tabs change the season, and the show button goes up', (

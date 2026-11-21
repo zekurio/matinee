@@ -129,6 +129,10 @@ final class HomeBackend {
   /// Paths whose requests throw, as a socket does.
   final down = <String>{};
 
+  /// Paths that wait this long before they answer or throw, as a server
+  /// that stopped answering does until the request times out.
+  final delays = <String, Duration>{};
+
   /// The paths asked, in order.
   final asked = <String>[];
 
@@ -145,6 +149,7 @@ final class HomeBackend {
     final path = request.url.path;
     asked.add(path);
     urls.add(request.url);
+    if (delays[path] case final delay?) await Future<void>.delayed(delay);
     if (down.contains(path)) throw const SocketException('down');
     if (path == '/api/v1/requests/live') {
       return http.StreamedResponse(live.stream, 200);

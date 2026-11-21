@@ -187,7 +187,9 @@ class _TvShellState extends ConsumerState<TvShell> {
     final first = scope.traversalDescendants
         .where((node) => node.canRequestFocus && !node.skipTraversal)
         .firstOrNull;
-    first?.requestFocus();
+    if (first == null) return;
+    first.requestFocus();
+    memory?.standIn(first);
   }
 
   void _edge(TraversalDirection direction) {
