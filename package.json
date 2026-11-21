@@ -14,6 +14,7 @@
     "dev:server": "pnpm --filter @matinee/server dev",
     "dev:web": "pnpm --filter @matinee/web dev",
     "logo:dart": "node apps/flutter/scripts/logo.mjs",
+    "server-messages:dart": "python3 -B apps/flutter/scripts/server_messages.py",
     "start": "pnpm --filter @matinee/server start",
     "db:generate": "pnpm --filter @matinee/db db:generate",
     "db:migrate": "pnpm --filter @matinee/db db:migrate",
@@ -24,7 +25,7 @@
     "lint": "oxlint",
     "typecheck": "pnpm -r --parallel typecheck && pnpm typecheck:oxlint",
     "typecheck:oxlint": "tsc -p tools/oxlint",
-    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:android --check && pnpm api:ios --check && pnpm api:dart --check && pnpm themes:dart --check && pnpm icons:dart --check && pnpm logo:dart --check && pnpm --filter @matinee/tizen strings --check"
+    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:android --check && pnpm api:ios --check && pnpm api:dart --check && pnpm themes:dart --check && pnpm icons:dart --check && pnpm logo:dart --check && pnpm server-messages:dart --check && node apps/flutter/scripts/android_strings.mjs --check && pnpm --filter @matinee/tizen strings --check"
   },
   "devDependencies": {
     "@oxlint/plugins": "1.91.0",

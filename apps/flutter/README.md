@@ -731,7 +731,10 @@ placeholder the English doesn't declare.
 
 `scripts/android_strings.mjs` moved the strings over from the Kotlin app.
 It overwrites both files, so don't run it again once this app has strings
-of its own.
+of its own. Its read-only `--check` compares the server and validation
+messages in both ARBs with Android's resources. `pnpm server-messages:dart`
+regenerates Flutter's matching table from the web catalog. `pnpm verify`
+checks both.
 
 ## The kit
 

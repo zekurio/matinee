@@ -2,6 +2,8 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs"
 
 const resources = new URL("../../android/app/src/main/res/", import.meta.url)
 const output = new URL("../lib/l10n/", import.meta.url)
+// Flutter owns its other strings after the initial Android import.
+const check = process.argv.includes("--check")
 const allowBraces = process.argv.includes("--allow-braces")
 
 const entities = { amp: "&", apos: "'", gt: ">", lt: "<", quot: '"' }
@@ -136,6 +138,9 @@ function readCatalog(directory) {
   const folder = new URL(`${directory}/`, resources)
   for (const file of readdirSync(folder)
     .filter((name) => /^strings.*\.xml$/.test(name))
+    .filter(
+      (name) => !check || /^strings_web_(server|validation)\.xml$/.test(name),
+    )
     .sort()) {
     let comment
     for (const node of readXml(readFileSync(new URL(file, folder), "utf8"))) {
@@ -256,13 +261,26 @@ function writeArb(locale, messages) {
   )
   for (const key of keys) {
     const { message, metadata } = messages.get(key)
+    // The bundled Red Hat Text lacks the navigation arrow in these paths.
     arb[key] = message
+      .replaceAll("Settings → Account", "Account in Settings")
+      .replaceAll("Einstellungen → Konto", "Konto in den Einstellungen")
     if (metadata) arb[`@${key}`] = metadata
   }
-  writeFileSync(
-    new URL(`app_${locale}.arb`, output),
-    `${JSON.stringify(arb, null, 2)}\n`,
-  )
+  const file = new URL(`app_${locale}.arb`, output)
+  if (check) {
+    const current = JSON.parse(readFileSync(file, "utf8"))
+    for (const [key, value] of Object.entries(arb)) {
+      if (key === "appName" || key === "@appName") continue
+      if (JSON.stringify(current[key]) !== JSON.stringify(value)) {
+        throw new Error(
+          `app_${locale}.arb: update ${key} from the Android resource`,
+        )
+      }
+    }
+    return
+  }
+  writeFileSync(file, `${JSON.stringify(arb, null, 2)}\n`)
 }
 
 function main() {
