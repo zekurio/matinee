@@ -685,7 +685,10 @@ first key.
 
 - Frame (`lib/screens/tv/tv_shell.dart`): the drawer at the left, the
   clock at the top right, and each page in a `TvPageFrame`. Back from a
-  page opens the drawer; from the drawer on Home, it leaves.
+  page opens the drawer; from the drawer on Home, it leaves. A tap or a
+  click on the rail picks a page without focusing it, so the drawer opens
+  only for the D-pad, and on the rail the current page's marker and the
+  focus are circles round the icon, even as the drawer opens or closes.
 - Signing in (`lib/screens/sign_in/tv`): the address is typed in a
   `TvTextField`, a list row's size that Up and Down leave, as the Kotlin
   app's. The code screen differs from the Kotlin app's on purpose: on the
@@ -714,8 +717,11 @@ first key.
   (`TvFollowFocus`). Unlike the Kotlin app's pivot, which can leave the
   row above cut at the top, a page of rows or sections (Home, the title
   page, Favorites, Profile, Settings) stops only where the one above is
-  whole or gone (`sectionTop`, `TvSection`), with room after the last so
-  it can come up.
+  whole or gone (`sectionTop`, `TvSection`). The scroll ends where the
+  last can come up to, a section's gap below the top, or less where it
+  wouldn't show whole there, and rows that fit don't scroll at all
+  (`TvRowsScroll`), so a drag can't take the last row away either. A drag
+  or fling that settles comes back to the focused card.
 - Panels (`showTvPanel`, `showTvPicker`): choices open at the right
   edge, Back closes them, and focus goes back to the row that opened
   them. The TV's server switcher (`sign_in/tv/tv_servers.dart`) is one
