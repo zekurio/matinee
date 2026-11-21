@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/rendering.dart' show RenderSliverMultiBoxAdaptor;
@@ -560,9 +561,80 @@ class TvFocusMemory {
           lastRow = row;
           lastItem = key;
           rowItems[row] = key;
+          _notePlaces();
         });
         return node;
       });
+
+  /// The cards on screen as focus last moved, each row's keys in reading
+  /// order, and the rows from the top: where a card that leaves had its
+  /// neighbours. Taken at one moment, so a row still scrolling to its
+  /// focused card keeps its order.
+  var _order = const <String, List<String>>{};
+  var _rowOrder = const <String>[];
+
+  void _notePlaces() {
+    final places = <TvMemoryNode, Rect>{};
+    for (final node in _nodes.values) {
+      if (shown(node.row, node.key) == null) continue;
+      final box = node.context?.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) continue;
+      places[node] = box.localToGlobal(Offset.zero) & box.size;
+    }
+    int reading(TvMemoryNode a, TvMemoryNode b) {
+      final (one, other) = (places[a]!, places[b]!);
+      if ((one.top - other.top).abs() > 1) return one.top.compareTo(other.top);
+      return one.left.compareTo(other.left);
+    }
+
+    final rows = <String, List<TvMemoryNode>>{};
+    for (final node in places.keys) {
+      rows.putIfAbsent(node.row, () => []).add(node);
+    }
+    double top(String row) =>
+        rows[row]!.map((node) => places[node]!.top).reduce(math.min);
+    _order = {
+      for (final MapEntry(:key, :value) in rows.entries)
+        key: [for (final node in value..sort(reading)) node.key],
+    };
+    _rowOrder = rows.keys.toList()..sort((a, b) => top(a).compareTo(top(b)));
+  }
+
+  /// The card after [left] in its row as focus last saw it, else the one
+  /// before, of those still on screen.
+  (String, String)? _beside(TvMemoryNode left) {
+    final keys = _order[left.row];
+    final at = keys?.indexOf(left.key) ?? -1;
+    if (keys == null || at < 0) return null;
+    for (final key in [
+      ...keys.skip(at + 1),
+      ...keys.take(at).toList().reversed,
+    ]) {
+      if (shown(left.row, key) != null) return (left.row, key);
+    }
+    return null;
+  }
+
+  /// The card focus would land on in the row under [row], else the one
+  /// over it, for a row that emptied.
+  FocusNode? _nextRow(String row) {
+    final rows = _rowOrder;
+    final at = rows.indexOf(row);
+    if (at < 0) return null;
+    for (final other in [
+      ...rows.skip(at + 1),
+      ...rows.take(at).toList().reversed,
+    ]) {
+      final node =
+          _rows[other]?.remembered ??
+          (_order[other] ?? const <String>[])
+              .map((key) => shown(other, key))
+              .nonNulls
+              .firstOrNull;
+      if (node != null) return node;
+    }
+    return null;
+  }
 
   /// The node of [row], for [TvMemoryRow].
   TvRowNode rowNode(String row) => _rows.putIfAbsent(
@@ -624,12 +696,21 @@ class TvFocusMemory {
   /// The card that had focus as it left the screen, until the frame ends.
   TvMemoryNode? _left;
 
-  /// [node] is leaving the screen. If it has focus, as a row's Try again
-  /// does when the row loads, focus goes to the card [restore] starts on
-  /// if that row has it, or else the first card the row shows, once the
-  /// frame is built, rather than back to the card before it.
+  /// [node] is leaving the screen. If it has focus, or had it last while a
+  /// panel over the page has it, as a request answered from its panel,
+  /// focus goes to the card beside it in its row, the next one or else
+  /// the one before, as focus last saw the row. A row that empties hands
+  /// it to the row under it, or over it. A card that leaves a row of no
+  /// others, as a row's Try again does when the row loads, hands it to
+  /// the card [restore] starts on if that row has it, or else the first
+  /// card the row shows. All once the frame is built, rather than back to
+  /// the card focus had before. While a panel has focus, the card is
+  /// remembered, and takes focus as it comes back to the page.
   void _leaving(TvMemoryNode node) {
-    if (_disposed || !node.hasPrimaryFocus) return;
+    if (_disposed) return;
+    final last = node.row == lastRow && node.key == lastItem;
+    if (!node.hasPrimaryFocus && !(last && _offPage())) return;
+    final beside = _beside(node);
     _left = node;
     SchedulerBinding.instance.addPostFrameCallback((_) {
       final left = _left;
@@ -637,22 +718,74 @@ class TvFocusMemory {
       if (left == null || _disposed || shown(left.row, left.key) != null) {
         return;
       }
+      FocusNode? card = switch (beside) {
+        (final row, final key) => shown(row, key),
+        null => null,
+      };
       final row = _rows[left.row];
-      if (row == null || row.context == null) return;
-      final card =
-          (switch (_fallback?.call()) {
-            (final start, final key) when start == left.row => shown(
-              start,
-              key,
-            ),
-            _ => null,
-          }) ??
-          row.traversalDescendants
-              .where((node) => node.canRequestFocus && !node.skipTraversal)
-              .firstOrNull;
-      if (card == null || !_here()) return;
-      card.requestFocus();
+      if (card == null && row != null && row.context != null) {
+        card =
+            (switch (_fallback?.call()) {
+              (final start, final key) when start == left.row => shown(
+                start,
+                key,
+              ),
+              _ => null,
+            }) ??
+            row.traversalDescendants
+                .where((node) => node.canRequestFocus && !node.skipTraversal)
+                .firstOrNull;
+      }
+      card ??= _nextRow(left.row) ?? _start;
+      if (card == null) return;
+      if (card case TvMemoryNode(:final row, :final key)) {
+        lastRow = row;
+        lastItem = key;
+        rowItems[row] = key;
+      }
+      if (_here()) {
+        card.requestFocus();
+      } else {
+        _awaitReturn(card);
+      }
     });
+  }
+
+  /// Focus is off this page's cards: on none, on the page itself, or in a
+  /// panel over it.
+  bool _offPage() {
+    final primary = FocusManager.instance.primaryFocus;
+    final scope = _scope;
+    if (primary == null || scope == null) return true;
+    return primary == scope || !primary.ancestors.contains(scope);
+  }
+
+  /// The card that takes focus as it comes back to the page, from a panel
+  /// that closes, in place of the one the page had before.
+  FocusNode? _awaited;
+  Timer? _awaitTimer;
+
+  void _awaitReturn(FocusNode card) {
+    if (_awaited == null) FocusManager.instance.addListener(_returned);
+    _awaited = card;
+    _awaitTimer?.cancel();
+    _awaitTimer = Timer(const Duration(seconds: 2), _stopAwaiting);
+  }
+
+  void _returned() {
+    final card = _awaited;
+    if (card == null || _disposed || !_here()) return;
+    _stopAwaiting();
+    if (card.context != null && card.canRequestFocus && !card.hasPrimaryFocus) {
+      card.requestFocus();
+    }
+  }
+
+  void _stopAwaiting() {
+    if (_awaited == null) return;
+    _awaited = null;
+    _awaitTimer?.cancel();
+    FocusManager.instance.removeListener(_returned);
   }
 
   /// Focus is on this page, not the drawer or a panel over it.
@@ -724,6 +857,7 @@ class TvFocusMemory {
     _disposed = true;
     _live.remove(this);
     _openingTimer?.cancel();
+    _stopAwaiting();
     for (final node in _nodes.values) {
       node.dispose();
     }

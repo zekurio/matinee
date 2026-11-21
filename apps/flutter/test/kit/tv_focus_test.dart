@@ -67,6 +67,8 @@ Future<void> _press(WidgetTester tester, LogicalKeyboardKey key) async {
 }
 
 void main() {
+  _leavingTests();
+
   testWidgets('a page focuses where it starts', (tester) async {
     await _rows(tester, [4, 4]);
     expect(_focused(), '0/0');
@@ -202,5 +204,134 @@ void main() {
     await _press(tester, LogicalKeyboardKey.arrowUp);
     expect(_focused(), 'actions/play');
     expect(tester.getRect(card0).top, 450);
+  });
+}
+
+/// Rows whose cards [rows] lists, which a test takes cards out of. Select
+/// on a card opens a panel whose one row takes the card out as it closes,
+/// as answering a request does.
+Future<(TvFocusMemory, ValueNotifier<List<List<String>>>)> _leavingRows(
+  WidgetTester tester,
+  List<List<String>> start,
+) async {
+  tester.view.physicalSize = const Size(960, 540);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  final memory = TvFocusMemory();
+  addTearDown(memory.dispose);
+  final rows = ValueNotifier(start);
+  addTearDown(rows.dispose);
+  void remove(String key) => rows.value = [
+    for (final row in rows.value)
+      [
+        for (final each in row)
+          if (each != key) each,
+      ],
+  ];
+  await tester.pumpWidget(
+    WidgetsApp(
+      color: const Color(0xFF000000),
+      pageRouteBuilder: <T>(settings, builder) => PageRouteBuilder<T>(
+        settings: settings,
+        pageBuilder: (context, _, _) => builder(context),
+      ),
+      home: MatineeTheme.wrap(
+        matineeDark,
+        TvFocusRules(
+          child: ValueListenableBuilder(
+            valueListenable: rows,
+            builder: (context, lists, _) {
+              memory.restore(context, () => ('0', 'a'));
+              return TvPinnedList(
+                children: [
+                  for (final (row, keys) in lists.indexed)
+                    if (keys.isNotEmpty)
+                      TvRow(
+                        key: ValueKey(row),
+                        title: 'Row $row',
+                        row: '$row',
+                        memory: memory,
+                        height: 186,
+                        itemCount: keys.length,
+                        itemBuilder: (context, index) => TvArtCard(
+                          key: ValueKey(keys[index]),
+                          toneKey: keys[index],
+                          aspect: 2 / 3,
+                          width: TvCards.posterWidth,
+                          focusNode: memory.node('$row', keys[index]),
+                          label: keys[index],
+                          onPressed: () async {
+                            final key = keys[index];
+                            final gone = await showTvPanel<bool>(
+                              context,
+                              title: key,
+                              builder: (panel) => [
+                                TvListItem(
+                                  title: 'Take it out',
+                                  onPressed: () =>
+                                      Navigator.of(panel).pop(true),
+                                ),
+                              ],
+                            );
+                            if (gone ?? false) remove(key);
+                          },
+                          children: const [],
+                        ),
+                      ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return (memory, rows);
+}
+
+void _leavingTests() {
+  testWidgets('a focused card that leaves hands focus to the next one', (
+    tester,
+  ) async {
+    final (_, rows) = await _leavingRows(tester, [
+      ['a', 'b', 'c'],
+      ['x', 'y'],
+    ]);
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    expect(_focused(), '0/b');
+    rows.value = [
+      ['a', 'c'],
+      ['x', 'y'],
+    ];
+    await tester.pumpAndSettle();
+    expect(_focused(), '0/c');
+    rows.value = [
+      ['a'],
+      ['x', 'y'],
+    ];
+    await tester.pumpAndSettle();
+    expect(_focused(), '0/a', reason: 'the last card hands it back');
+    rows.value = [
+      <String>[],
+      ['x', 'y'],
+    ];
+    await tester.pumpAndSettle();
+    expect(_focused(), '1/x', reason: 'an empty row hands it down');
+  });
+
+  testWidgets('a card taken out from its panel hands focus on as it closes', (
+    tester,
+  ) async {
+    await _leavingRows(tester, [
+      ['a', 'b', 'c'],
+    ]);
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    expect(_focused(), '0/b');
+    await _press(tester, LogicalKeyboardKey.select);
+    expect(find.text('Take it out'), findsOneWidget);
+    await _press(tester, LogicalKeyboardKey.select);
+    expect(find.text('Take it out'), findsNothing);
+    expect(_focused(), '0/c');
   });
 }
