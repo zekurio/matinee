@@ -211,6 +211,20 @@ private fun duration(seconds: Long, res: Resources): String = when {
     else -> res.getString(R.string.format_hours_minutes_short, seconds / 3600, (seconds % 3600) / 60)
 }
 
+/**
+ * "Every 5 minutes", in the interval's largest unit, rounded as the web
+ * rounds it, so one of a unit reads "Every minute".
+ */
+private fun every(seconds: Double, res: Resources): String {
+    val (plural, count) = when {
+        seconds < 59.5 -> R.plurals.web_jobs_schedule_everySeconds to maxOf(1, Math.round(seconds).toInt())
+        seconds < 3_570.0 -> R.plurals.web_jobs_schedule_everyMinutes to Math.round(seconds / 60).toInt()
+        seconds < 84_600.0 -> R.plurals.web_jobs_schedule_everyHours to Math.round(seconds / 3_600).toInt()
+        else -> R.plurals.web_jobs_schedule_everyDays to Math.round(seconds / 86_400).toInt()
+    }
+    return res.getQuantityString(plural, count, count)
+}
+
 private fun millis(at: String): Long? = runCatching { Instant.parse(at).toEpochMilli() }.getOrNull()
 
 /**
@@ -242,12 +256,7 @@ private fun taskStatus(task: ScheduledTask): String {
         }
     } ?: stringResource(R.string.web_jobs_task_neverRan)
     val interval = task.intervalSeconds
-    val schedule = when {
-        interval == null -> stringResource(R.string.web_jobs_schedule_manual)
-        interval == 86_400.0 -> stringResource(R.string.web_jobs_schedule_daily)
-        interval == 3_600.0 -> stringResource(R.string.web_jobs_schedule_hourly)
-        else -> stringResource(R.string.web_jobs_schedule_every, duration(interval.toLong(), res))
-    }
+    val schedule = if (interval == null) stringResource(R.string.web_jobs_schedule_manual) else every(interval, res)
     val next = task.nextRunAt?.let { "$schedule · ${relative(it)}" } ?: schedule
     return "$last\n$next"
 }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/metadata.ts. Don't edit. -->
+<resources>
+    <string name="web_metadata_status_continuing">Continuing</string>
+    <string name="web_metadata_status_ended">Ended</string>
+    <string name="web_metadata_status_unreleased">Not yet released</string>
+</resources>

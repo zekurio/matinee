@@ -2719,6 +2719,13 @@ object ThemeMode {
     val all = listOf(SYSTEM, LIGHT, DARK)
 }
 
+object TitleStatus {
+    const val CONTINUING = "continuing"
+    const val ENDED = "ended"
+    const val UNRELEASED = "unreleased"
+    val all = listOf(CONTINUING, ENDED, UNRELEASED)
+}
+
 @Serializable
 data class Title(
     val id: String,
@@ -2954,6 +2961,11 @@ data class AuthSettingsInput(
 data class AppDevice(
     val name: String? = null,
     val platform: String,
+)
+
+@Serializable
+data class ClientIdentity(
+    val name: String,
 )
 
 @Serializable

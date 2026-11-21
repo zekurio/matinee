@@ -49,6 +49,7 @@ import {
 
 export type { Schema, StaticInput, StaticOutput } from "./schema-types"
 export {
+  isStaleRequest,
   parse,
   safeParse,
   SchemaError,

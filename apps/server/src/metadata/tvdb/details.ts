@@ -1,4 +1,5 @@
 import { languageTag } from "../../media/language"
+import { showStatus } from "../status"
 import { rankTrailers, youTubeId } from "../trailers"
 import {
   type EpisodeDetails,
@@ -164,7 +165,7 @@ export async function seriesDetails(id: string, language: string) {
     rating: null,
     contentRating: contentRating(series.contentRatings, language),
     releaseDate: isoDate(series.firstAired),
-    status: text(series.status?.name),
+    status: showStatus(series.status?.name),
     runtimeMinutes: series.averageRuntime || null,
     externalIds: remoteIds(series.id, series.remoteIds),
     images: {
@@ -218,7 +219,8 @@ export async function movieDetails(id: string, language: string) {
     rating: null,
     contentRating: contentRating(movie.contentRatings, language),
     releaseDate: isoDate(movie.first_release?.date),
-    status: text(movie.status?.name),
+    // Jellyfin keeps a status only for shows.
+    status: null,
     runtimeMinutes: movie.runtime || null,
     externalIds: remoteIds(movie.id, movie.remoteIds),
     images: {

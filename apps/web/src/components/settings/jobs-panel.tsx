@@ -28,7 +28,13 @@ import {
 import { type ReactNode, useState } from "react"
 
 import { knownMessage, type MessageKey, tr, translateKnown } from "@/i18n"
-import { formatRelative, formatSpan } from "@/lib/format"
+import {
+  formatRelative,
+  formatSpan,
+  formatUpcoming,
+  type SpanUnit,
+  spanParts,
+} from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { ConcurrencySection, tunableQueues } from "./jobs-concurrency"
@@ -66,23 +72,13 @@ function taskDescription(task: ScheduledTask): string {
   return tr(`jobs.task.${id}.description`)
 }
 
-/** Messages for a schedule, by its interval and how it starts. */
-type ScheduleKeys = {
-  plain: MessageKey
-  atStartup: MessageKey
-  afterStartup: MessageKey
-}
-
-const DAILY = {
-  plain: "jobs.schedule.daily",
-  atStartup: "jobs.schedule.daily.atStartup",
-  afterStartup: "jobs.schedule.daily.afterStartup",
-} satisfies ScheduleKeys
-const HOURLY = {
-  plain: "jobs.schedule.hourly",
-  atStartup: "jobs.schedule.hourly.atStartup",
-  afterStartup: "jobs.schedule.hourly.afterStartup",
-} satisfies ScheduleKeys
+/** "Every 5 minutes", by the interval's unit, so one reads "Every minute". */
+const EVERY = {
+  seconds: "jobs.schedule.everySeconds",
+  minutes: "jobs.schedule.everyMinutes",
+  hours: "jobs.schedule.everyHours",
+  days: "jobs.schedule.everyDays",
+} as const satisfies Record<SpanUnit, MessageKey>
 
 /** When the task runs, in a sentence. */
 function scheduleOf(task: ScheduledTask): string {
@@ -93,19 +89,12 @@ function scheduleOf(task: ScheduledTask): string {
     if (delay === 0) return tr("jobs.schedule.atStartup")
     return tr("jobs.schedule.afterStartup", { delay: formatSpan(delay) })
   }
-  const fixed = interval === 86_400 ? DAILY : interval === 3600 ? HOURLY : null
-  if (fixed) {
-    if (delay === null) return tr(fixed.plain)
-    if (delay === 0) return tr(fixed.atStartup)
-    return tr(fixed.afterStartup, { delay: formatSpan(delay) })
-  }
-  const every = formatSpan(interval)
-  if (delay === null) return tr("jobs.schedule.every", { interval: every })
-  if (delay === 0) {
-    return tr("jobs.schedule.every.atStartup", { interval: every })
-  }
+  const { unit, count } = spanParts(interval)
+  const every = tr(EVERY[unit], { count })
+  if (delay === null) return every
+  if (delay === 0) return tr("jobs.schedule.every.atStartup", { every })
   return tr("jobs.schedule.every.afterStartup", {
-    interval: every,
+    every,
     delay: formatSpan(delay),
   })
 }
@@ -577,7 +566,7 @@ function TaskFacts({ task }: { task: ScheduledTask }) {
           {task.startedAt !== null
             ? tr("jobs.schedule.afterThisRun")
             : task.nextRunAt
-              ? formatRelative(task.nextRunAt)
+              ? formatUpcoming(task.nextRunAt)
               : tr("jobs.schedule.notScheduled")}
         </span>
       </Fact>

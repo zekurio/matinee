@@ -204,6 +204,11 @@ A new provider implements `MetadataSource` in `src/metadata/types.ts`,
 goes in `sources.ts`, and gets its id in the contract's
 `METADATA_PROVIDERS`.
 
+A show's status is a `TitleStatus`: `continuing`, `ended`, or
+`unreleased`, which clients word themselves. `src/metadata/status.ts` maps
+the provider's word to it with Jellyfin's table, plus TheTVDB's `Upcoming`
+as `unreleased`. Any other word, and every movie, has none.
+
 ### Filtering the libraries
 
 Library, genre, and studio pages filter by what the metadata says, with
@@ -438,6 +443,14 @@ and how files played, and shows everyone what the libraries hold and a
 leaderboard of the people who share their stats. Times are in the
 browser's time zone. Other clients send `timeZone`, UTC by default.
 
+Sessions, watching now, and the Clients panel name a client by what it
+said it is, as Jellyfin's clients name themselves. Each client sends its
+name to `account.sessions.identify` when it starts: the web app the
+browser's, like `Firefox` or `Chrome Android`, and the apps their own,
+like `Matinee Android TV`. The server keeps it on the session, and a
+player session takes it from the session that asked for it, so a stream
+request names its client too. It never reads a name from the User-Agent.
+
 Profiles at `/profiles/<username>` show a name and picture to accounts on
 the server. Owners can share their favorites and statistics there from
 Settings → Account. Both start off.
@@ -647,6 +660,11 @@ Apps get a session of their own, apart from the browser's. Both flows are
 in the contract's `auth.app` and `auth.device`, and return
 `{ token, user }`. Apps send a device name like `Living room TV` and a
 platform: `android`, `ios`, `linux`, `macos`, `tizen`, or `windows`.
+
+Once signed in, and each time it starts, an app sends what it calls
+itself to `PUT /api/v1/account/sessions/current/client`, like
+`{ "name": "Matinee Android" }`, for the server's sessions list and
+statistics. The server shows it as it is.
 
 Apps that can open a browser use OAuth for native apps, RFC 8252, with
 PKCE:

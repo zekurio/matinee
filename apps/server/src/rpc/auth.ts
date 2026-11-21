@@ -325,13 +325,13 @@ export const auth = {
   },
 
   app: {
-    token: pub.auth.app.token.handler(async ({ context, input }) => {
+    token: pub.auth.app.token.handler(async ({ input }) => {
       const redeemed = await redeemAppCode(input.code, input.codeVerifier)
       if (!redeemed) {
         throw badRequest("This sign-in expired or was used already. Try again.")
       }
       const row = await approvedUser(redeemed.userId)
-      const token = await createSession(context.hono, row.id, redeemed.device)
+      const token = await createSession(row.id, redeemed.device)
       return { token, user: publicUser(row) }
     }),
   },
@@ -352,7 +352,7 @@ export const auth = {
         }
         if (!result) throw notFound("This code expired. Get a new one.")
         const row = await approvedUser(result.userId)
-        const token = await createSession(context.hono, row.id, result.device)
+        const token = await createSession(row.id, result.device)
         return { status: "approved" as const, token, user: publicUser(row) }
       }),
 

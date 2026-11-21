@@ -1987,6 +1987,13 @@ internal val serverMessages: List<ServerMessage> = listOf(
         plural = false,
     ),
     ServerMessage(
+        text = "Enter a name.",
+        names = emptyList(),
+        args = emptyList(),
+        resId = R.string.web_validation_clientName,
+        plural = false,
+    ),
+    ServerMessage(
         text = "Pick an image under 25 MB.",
         names = emptyList(),
         args = emptyList(),
@@ -2092,7 +2099,7 @@ internal val serverMessages: List<ServerMessage> = listOf(
         plural = false,
     ),
     ServerMessage(
-        text = "Pick a limit of at least 1 Mb/s.",
+        text = "Pick a limit of at least 1 Mbps.",
         names = emptyList(),
         args = emptyList(),
         resId = R.string.web_validation_bitrateLimit,
