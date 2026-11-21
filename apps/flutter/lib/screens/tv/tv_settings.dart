@@ -248,9 +248,11 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
                       key: ValueKey(_selected),
                       controller: _scroll,
                       clipBehavior: Clip.none,
-                      padding: const EdgeInsets.only(
+                      padding: const EdgeInsetsDirectional.only(
                         top: 4,
                         bottom: Overscan.vertical + 24,
+                        // A focused row grows, and stays inside the edge.
+                        end: TvListItems.focusRoom,
                       ),
                       children: switch (_selected) {
                         TvSettingsCategory.playback => [const _PlaybackRows()],

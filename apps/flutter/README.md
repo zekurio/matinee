@@ -692,7 +692,10 @@ first key.
 - Panels (`showTvPanel`, `showTvPicker`): choices open at the right
   edge, Back closes them, and focus goes back to the row that opened
   them. The TV's server switcher (`sign_in/tv/tv_servers.dart`) is one
-  of these, in place of the phone's sheet.
+  of these, in place of the phone's sheet. Unlike the Kotlin app's, a focused row
+  never grows into the overscan: rows that run to the right edge keep
+  `TvListItems.focusRoom` past it, and panels are 404 wide with 36 at
+  their sides, so their rows keep the Kotlin app's width.
 - Screens (`lib/screens/tv`): Home; Movies, Shows, Browse, Favorites, and
   Search; the title, season, episode, and person pages; Profile with its
   charts and standing, and Recently watched; and Settings, whose

@@ -97,7 +97,12 @@ class TvAuthFrame extends StatelessWidget {
                   Expanded(
                     flex: 100 - (split * 100).round(),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      // A focused row grows, and stays inside the edge.
+                      padding: const EdgeInsetsDirectional.only(
+                        top: 12,
+                        bottom: 12,
+                        end: TvListItems.focusRoom,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: children,
@@ -178,7 +183,7 @@ class TvListItem extends StatelessWidget {
             ? colors.background.withValues(alpha: .7)
             : colors.mutedForeground;
         return AnimatedScale(
-          scale: focused ? 1.03 : 1,
+          scale: focused ? TvFocus.rowScale : 1,
           duration: const Duration(milliseconds: 120),
           child: DecoratedBox(
             decoration: BoxDecoration(

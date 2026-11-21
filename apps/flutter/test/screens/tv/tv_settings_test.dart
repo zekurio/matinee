@@ -1,4 +1,5 @@
 import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -210,6 +211,29 @@ void main() {
     await back(tester);
     expect(tvOpenPanels.value, 0);
     expect(focusedLabel(), 'Change server');
+  });
+
+  testWidgets('a focused row stays inside the overscan, in a panel too', (
+    tester,
+  ) async {
+    // Where the row ends once focus has grown it.
+    double grownRight() {
+      final box =
+          FocusManager.instance.primaryFocus!.context!.findRenderObject()!
+              as RenderBox;
+      final rect = box.localToGlobal(Offset.zero) & box.size;
+      return rect.right + rect.width * (TvFocus.rowScale - 1) / 2;
+    }
+
+    await _open(tester, '${Routes.settings}/server');
+    await right(tester);
+    expect(focusedLabel(), startsWith('ada'));
+    expect(grownRight(), lessThanOrEqualTo(960 - Overscan.horizontal));
+    await down(tester, 2);
+    expect(focusedLabel(), 'Change server');
+    await select(tester);
+    expect(tvOpenPanels.value, 1);
+    expect(grownRight(), lessThanOrEqualTo(960 - Overscan.horizontal));
   });
 
   testWidgets('signing out asks first, with focus on Cancel', (tester) async {
