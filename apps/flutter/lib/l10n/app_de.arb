@@ -734,6 +734,8 @@
   "tvSettingsLanguagesNote": "Diese gelten für dein Konto, auf jedem Gerät, auf dem du schaust.",
   "tvSettingsSignOutDevice": "{p1} abmelden?",
   "tvSettingsSignOutDeviceDescription": "Das Gerät muss sich erneut anmelden, um Matinee zu nutzen.",
+  "tvSignOutTitle": "Von {p1} abmelden?",
+  "tvSignOutDescription": "Dieser Fernseher muss sich danach erneut mit einem Code anmelden.",
   "tvSettingsThisTv": "Dieser Fernseher",
   "tvSettingsTranscodingNote": "Wird nur verwendet, wenn der Server eine Datei zum Abspielen umwandelt.",
   "tvSigninScanOrEnter": "Scanne den Code oder gib ihn unter {p1} ein",

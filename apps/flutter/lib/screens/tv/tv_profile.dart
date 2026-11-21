@@ -21,6 +21,7 @@ import '../profile/profile_data.dart';
 import 'tv_actions.dart';
 import 'tv_charts.dart';
 import 'tv_media.dart';
+import 'tv_sign_out.dart';
 
 abstract final class _Rows {
   static const actions = 'actions';
@@ -131,7 +132,7 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
                 label: l.shellSignOut,
                 icon: Lucide.logOut,
                 focusNode: _memory.node(_Rows.actions, _Rows.signOut),
-                onPressed: () => ref.read(sessionProvider.notifier).signOut(),
+                onPressed: () => confirmTvSignOut(context, ref),
               ),
             ],
           ),

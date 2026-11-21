@@ -212,6 +212,26 @@ void main() {
     expect(focusedLabel(), 'Change server');
   });
 
+  testWidgets('signing out asks first, with focus on Cancel', (tester) async {
+    await _open(tester, '${Routes.settings}/server');
+    await right(tester);
+    await down(tester, 3);
+    expect(focusedLabel(), 'Sign out');
+    await select(tester);
+    expect(tvOpenPanels.value, 1);
+    expect(find.text('Sign out of media.example.com?'), findsOneWidget);
+    expect(focusedLabel(), 'Cancel');
+    await select(tester);
+    expect(tvOpenPanels.value, 0);
+    expect(find.byType(TvSettingsScreen), findsOneWidget);
+    expect(focusedLabel(), 'Sign out');
+    // Back leaves it too.
+    await select(tester);
+    await back(tester);
+    expect(tvOpenPanels.value, 0);
+    expect(focusedLabel(), 'Sign out');
+  });
+
   for (final size in tvSizes) {
     final width = size.width.round();
     for (final (name, page) in [

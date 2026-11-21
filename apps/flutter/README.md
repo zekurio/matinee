@@ -680,7 +680,10 @@ first key.
   `TvPage.start`, where every page's cards and chips do, clear of the
   drawer's focus ring, not a list item's inset further left against the
   cog. The column is 224 wide, room for the German names, and 32 before
-  the rows, so the rows start a little earlier than Kotlin's.
+  the rows, so the rows start a little earlier than Kotlin's. Sign out,
+  there and on Profile, asks first in a panel with focus on Cancel
+  (`tv_sign_out.dart`), since signing in again takes a phone; the Kotlin
+  app signs out at once.
 - Focus (`lib/kit/tv`): `TvTraversalPolicy` moves by geometry, as Compose
   does. A `TvFocusMemory` remembers each row's card, so entering a row
   lands on it, Back lands where you left, and a list that loads again

@@ -40,6 +40,7 @@ import '../settings/subtitles_page.dart'
     show subtitleBackgroundLabel, subtitleColorLabel, subtitleEdgeLabel;
 import '../sign_in/server_switcher.dart' show withoutScheme;
 import '../sign_in/tv/tv_servers.dart';
+import 'tv_sign_out.dart';
 
 /// Settings' categories on a TV, as the Kotlin app's `TvSettingsCategory`,
 /// by the keys of `Routes.settingsPage`.
@@ -980,7 +981,7 @@ class _AccountRows extends ConsumerWidget {
         icon: Lucide.logOut,
         quiet: true,
         destructive: true,
-        onPressed: () => ref.read(sessionProvider.notifier).signOut(),
+        onPressed: () => confirmTvSignOut(context, ref),
       ),
     ]);
   }
