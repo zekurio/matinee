@@ -656,7 +656,7 @@ class _SubtitlePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
     child: Container(
       height: 128,
       alignment: Alignment.bottomCenter,
