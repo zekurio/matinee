@@ -814,14 +814,28 @@ class _AxisClipper extends CustomClipper<Rect> {
 }
 
 /// Fades the top [fade] of [child], so a row scrolled half away ends softly.
-class TvFadeTop extends StatelessWidget {
+/// A [fade] of zero leaves [child] unmasked. [child] keeps its state as
+/// [fade] comes and goes, so a list that starts fading as it first scrolls
+/// keeps that scroll.
+class TvFadeTop extends StatefulWidget {
   const TvFadeTop({super.key, required this.child, this.fade = TvGrid.fade});
 
   final double fade;
   final Widget child;
 
   @override
+  State<TvFadeTop> createState() => _TvFadeTopState();
+}
+
+class _TvFadeTopState extends State<TvFadeTop> {
+  // The mask going on or off changes the tree above [child]; without the
+  // key, Flutter builds it again from scratch, a list back at its top.
+  final _child = GlobalKey(debugLabel: 'fade top');
+
+  @override
   Widget build(BuildContext context) {
+    final child = KeyedSubtree(key: _child, child: widget.child);
+    final fade = widget.fade;
     if (fade <= 0) return child;
     return ShaderMask(
       blendMode: BlendMode.dstIn,
