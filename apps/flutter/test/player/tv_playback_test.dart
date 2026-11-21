@@ -76,6 +76,7 @@ Future<_Player> _open(
   WidgetTester tester, {
   Size size = const Size(960, 540),
   bool hasNext = false,
+  double? upNextAt,
   List<MediaSegment> segments = const [],
   double? frameRate,
   TrickplayStatus? trickplay,
@@ -89,6 +90,7 @@ Future<_Player> _open(
       start: input.position ?? 18,
       quality: input.quality ?? PlaybackQuality.original,
       hasNext: hasNext && input.itemId == itemId,
+      upNextAt: input.itemId == itemId ? upNextAt : null,
       segments: input.itemId == itemId ? segments : const [],
     );
     return FakePlaybackApi.answer(
@@ -504,6 +506,20 @@ void main() {
     await select(tester);
     expect(find.text('Next episode'), findsWidgets);
     expect(find.textContaining(RegExp(r'· \d')), findsNothing);
+  });
+
+  testWidgets('a countdown of a minute or more reads as a time', (
+    tester,
+  ) async {
+    final opened = await _open(tester, hasNext: true, upNextAt: 20);
+    await _waitForHide(tester);
+    opened.players.single.emit(PlaybackPhase.ready, 30, playing: true);
+    await settle(tester);
+    expect(find.text('Next episode'), findsOneWidget);
+    expect(find.text('· 1:30'), findsOneWidget);
+    opened.players.single.emit(PlaybackPhase.ready, 75, playing: true);
+    await settle(tester);
+    expect(find.text('· 45'), findsOneWidget);
   });
 
   testWidgets('the next episode starts by itself after its countdown', (
