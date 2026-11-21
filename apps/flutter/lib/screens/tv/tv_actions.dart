@@ -55,19 +55,88 @@ Future<void> showTvActions(BuildContext context, ActionTarget target) async {
   if (act != null && context.mounted) await act(context);
 }
 
-/// Marks unwatched at once, or asks in the panel when it was watched.
+/// Asks in the panel when it was watched, and before marking more than
+/// one episode unwatched with [askUnwatched]; one file goes at once.
 Future<void> _toggleWatched(
   BuildContext context, {
   required bool watched,
   required String name,
   required Future<void> Function(MatineeApi api, bool watched, String? at) send,
+  Future<bool> Function(BuildContext context)? askUnwatched,
 }) => toggleWatched(
   context,
   watched: watched,
   name: name,
   send: send,
   ask: askTvWatchedAt,
+  askUnwatched: askUnwatched,
 );
+
+/// Asks before [show]'s [count] episodes, or all of them when the page
+/// doesn't know how many, are marked unwatched, since that also forgets
+/// where each stopped and can't be taken back. Null for a show of one
+/// episode, which goes at once as an episode does.
+Future<bool> Function(BuildContext context)? askTvShowUnwatched(
+  String show, {
+  int? count,
+}) => count != null && count <= 1
+    ? null
+    : (context) {
+        final l = AppLocalizations.of(context);
+        return _askUnwatched(
+          context,
+          title: show,
+          description: count == null
+              ? l.tvUnwatchedShowUncounted(show)
+              : l.tvUnwatchedShow(count, show),
+        );
+      };
+
+/// As [askTvShowUnwatched], for the [count] episodes of [season] of [show].
+Future<bool> Function(BuildContext context)? askTvSeasonUnwatched(
+  String show,
+  String season, {
+  required int count,
+}) => count <= 1
+    ? null
+    : (context) => _askUnwatched(
+        context,
+        title: season,
+        description: AppLocalizations.of(context)
+            .tvUnwatchedSeason(count, season, show),
+      );
+
+/// The question, as signing out asks: what happens, Mark all unwatched,
+/// and Cancel, which has focus so a stray Select keeps the marks.
+Future<bool> _askUnwatched(
+  BuildContext context, {
+  required String title,
+  required String description,
+}) async {
+  final l = AppLocalizations.of(context);
+  final sure = await showTvPanel<bool>(
+    context,
+    title: title,
+    description: description,
+    builder: (panel) => [
+      TvListItem(
+        title: l.mediaMarkAllUnwatched,
+        icon: Lucide.check,
+        quiet: true,
+        destructive: true,
+        onPressed: () => Navigator.of(panel).pop(true),
+      ),
+      TvListItem(
+        title: l.commonCancel,
+        icon: Lucide.x,
+        quiet: true,
+        autofocus: true,
+        onPressed: () => Navigator.of(panel).pop(false),
+      ),
+    ],
+  );
+  return sure ?? false;
+}
 
 (String, String?, List<_Entry>) _item(
   AppLocalizations l,
@@ -157,6 +226,8 @@ Future<void> _toggleWatched(
             name: title.name,
             send: (api, to, at) =>
                 MediaMarks.title(api, title.id, watched: to, at: at),
+            // A summary doesn't say how many episodes a show has.
+            askUnwatched: show ? askTvShowUnwatched(title.name) : null,
           ),
         ),
         _favorite(
@@ -204,6 +275,11 @@ Future<void> _toggleWatched(
           name: l.titleSeasonOf(title.name, name),
           send: (api, to, at) =>
               MediaMarks.season(api, title.id, number, watched: to, at: at),
+          askUnwatched: askTvSeasonUnwatched(
+            title.name,
+            name,
+            count: season.itemCount,
+          ),
         ),
       ),
       // The files without a season number aren't a season to mark.
