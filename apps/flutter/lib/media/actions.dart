@@ -190,6 +190,56 @@ Future<void> toggleWatched(
   if (!done) pending?.call(null);
 }
 
+/// Asks before marking a whole show unwatched, which forgets where every
+/// episode stopped: as the TV does, though the Kotlin app and the web don't.
+/// [count] is its episodes where the page has them; one or none needs no
+/// question, so it's null then.
+Future<bool> Function(BuildContext context)? askShowUnwatched(
+  String show, {
+  int? count,
+}) => count != null && count <= 1
+    ? null
+    : (context) {
+        final l = AppLocalizations.of(context);
+        return _askUnwatched(
+          context,
+          title: show,
+          description: count == null
+              ? l.mediaUnwatchedShowUncounted(show)
+              : l.mediaUnwatchedShow(count, show),
+        );
+      };
+
+/// As [askShowUnwatched], for the [count] episodes of [season] of [show].
+Future<bool> Function(BuildContext context)? askSeasonUnwatched(
+  String show,
+  String season, {
+  required int count,
+}) => count <= 1
+    ? null
+    : (context) => _askUnwatched(
+        context,
+        title: season,
+        description: AppLocalizations.of(context)
+            .mediaUnwatchedSeason(count, season, show),
+      );
+
+Future<bool> _askUnwatched(
+  BuildContext context, {
+  required String title,
+  required String description,
+}) {
+  final l = AppLocalizations.of(context);
+  return ConfirmDialog.show(
+    context,
+    title: title,
+    description: description,
+    confirmLabel: l.mediaMarkAllUnwatched,
+    cancelLabel: l.commonCancel,
+    destructive: true,
+  );
+}
+
 /// Turns a favorite on or off, with [pending] as for [toggleWatched].
 Future<void> toggleFavorite(
   BuildContext context, {
@@ -475,6 +525,7 @@ class _ActionsSheet extends ConsumerWidget {
                 name: title.name,
                 send: (api, to, at) =>
                     MediaMarks.title(api, title.id, watched: to, at: at),
+                askUnwatched: show ? askShowUnwatched(title.name) : null,
               ),
             ),
           ),
@@ -554,6 +605,11 @@ class _ActionsSheet extends ConsumerWidget {
                   number,
                   watched: to,
                   at: at,
+                ),
+                askUnwatched: askSeasonUnwatched(
+                  title.name,
+                  name,
+                  count: season.itemCount,
                 ),
               ),
             ),

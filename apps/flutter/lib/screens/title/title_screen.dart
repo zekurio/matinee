@@ -121,6 +121,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> with PendingMarks {
             send: (api, to, at) =>
                 MediaMarks.title(api, title.id, watched: to, at: at),
             pending: pendingFor('watched', title),
+            askUnwatched: show
+                ? askShowUnwatched(title.name, count: title.itemCount)
+                : null,
           ),
           favorite: favorite,
           onFavorite: () => toggleFavorite(

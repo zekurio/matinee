@@ -9,13 +9,17 @@ import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/app.dart';
 import 'package:matinee/core/device.dart';
 import 'package:matinee/core/session.dart';
+import 'package:matinee/kit/kit.dart';
 import 'package:matinee/kit/tv/tv.dart';
 import 'package:matinee/media/artwork.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
+import 'package:matinee/player/player_motion.dart';
+import 'package:matinee/player/player_parts.dart';
 import 'package:matinee/player/player_system.dart';
 import 'package:matinee/player/trickplay.dart';
 import 'package:matinee/player/tv/tv_display_mode.dart';
+import 'package:matinee/player/tv/tv_overlay.dart' show TvPlayerOverlay;
 import 'package:matinee/player/tv/tv_playback_screen.dart';
 import 'package:matinee/player/tv/tv_seek.dart';
 import 'package:matinee/player/video_view.dart';
@@ -451,6 +455,68 @@ void main() {
     await settle(tester);
     expect(find.text("The server isn't answering."), findsOneWidget);
     expect(focusedLabel(), 'Try again');
+  });
+
+  testWidgets('a stall says it waits under the spinner, keeping focus', (
+    tester,
+  ) async {
+    final opened = await _open(tester);
+    final player = opened.players.last;
+    player.emit(PlaybackPhase.ready, 30, playing: true, buffered: 60);
+    await tester.pump();
+    final focused = focusedKey();
+    player.emit(PlaybackPhase.buffering, 30, buffered: 61);
+    await tester.pump(const Duration(seconds: 9));
+    expect(find.text('Waiting for the server…'), findsNothing);
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Waiting for the server…'), findsOneWidget);
+    expect(focusedKey(), focused, reason: 'a status line, not a dialog');
+    // Inside the overscan, under the spinner.
+    final line = tester.getRect(find.text('Waiting for the server…'));
+    final spinner = tester.getRect(
+      find.descendant(
+        of: find.byType(PlayerSpinner),
+        matching: find.byType(Spinner),
+      ),
+    );
+    expect(line.top, greaterThan(spinner.bottom));
+    expect(line.left, greaterThanOrEqualTo(Overscan.horizontal));
+    // Readable from the sofa on a light frame: the overlay's white, with
+    // its shadow, not the muted grey that washed out on the emulator.
+    final style = tester
+        .widget<Text>(find.text('Waiting for the server…'))
+        .style!;
+    expect(style.color, matineeDark.foreground);
+    expect(style.shadows, onPicture);
+    expect(style.fontSize, greaterThanOrEqualTo(TvType.body.size));
+    // Over the controls' scrim, so a light frame can't dim the line.
+    final stack = tester.widget<Stack>(
+      find
+          .ancestor(
+            of: find.byType(PlayerSpinner),
+            matching: find.byType(Stack),
+          )
+          .first,
+    );
+    final controls = tester.widget(
+      find
+          .ancestor(
+            of: find.byType(TvPlayerOverlay),
+            matching: find.byType(PlayerFade),
+          )
+          .first,
+    );
+    final spinnerLayer = tester.widget(find.byType(PlayerSpinner));
+    expect(stack.children, contains(controls));
+    expect(
+      stack.children.indexOf(spinnerLayer),
+      greaterThan(stack.children.indexOf(controls)),
+    );
+    player.emit(PlaybackPhase.buffering, 30, buffered: 62);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Waiting for the server…'), findsNothing);
+    player.emit(PlaybackPhase.ready, 31, playing: true, buffered: 62);
+    await tester.pump();
   });
 
   testWidgets('after Try again, focus is on play and the controls hide', (

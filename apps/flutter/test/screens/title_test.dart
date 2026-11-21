@@ -159,7 +159,7 @@ JsonMap _episode(
 
 /// A show of two seasons, the first watched, the second's second episode
 /// in progress.
-TitleBackend _show({bool oneSeason = false}) {
+TitleBackend _show({bool oneSeason = false, bool watched = false}) {
   final first = [
     _episode(1, 1, 'Dulcinea', completed: true),
     _episode(1, 2, 'The Big Empty', completed: true),
@@ -179,6 +179,7 @@ TitleBackend _show({bool oneSeason = false}) {
         overview: 'A detective and a ship captain find a conspiracy.',
         next: second[1],
         itemCount: oneSeason ? 3 : 6,
+        watched: watched,
         seasons: [
           if (!oneSeason) seasonJson(1, watched: 3),
           seasonJson(2, watched: 1, overview: 'The war comes to Ganymede.'),
@@ -346,6 +347,102 @@ void main() {
     expect(body, {'watched': true, 'watchedAt': 'released'});
     expect(find.bySemanticsLabel('Mark unwatched'), findsOneWidget);
     expect(backend.asked.where((p) => p == '/api/v1/titles/m1').length, 2);
+  });
+
+  group('Unwatching', () {
+    /// Taps Mark unwatched, cancels the question, then confirms it,
+    /// expecting [question] and one PUT to [path] only after confirming.
+    Future<void> cancelThenConfirm(
+      WidgetTester tester,
+      TitleBackend backend, {
+      required String question,
+      required String path,
+      JsonMap body = const {'watched': false},
+    }) async {
+      await tester.tap(find.bySemanticsLabel('Mark unwatched'));
+      await tester.pumpAndSettle();
+      expect(find.text(question), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.text(question), findsNothing);
+      expect(backend.sent, isEmpty);
+      await tester.tap(find.bySemanticsLabel('Mark unwatched'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mark all unwatched'));
+      await tester.pumpAndSettle();
+      expect(find.text(question), findsNothing);
+      expect(backend.sent, hasLength(1));
+      final (method, sentTo, sentBody) = backend.sent.single;
+      expect((method, sentTo), ('PUT', path));
+      expect(sentBody, body);
+    }
+
+    testWidgets('a show asks with its count before it forgets', (tester) async {
+      final backend = _show(watched: true);
+      await pumpScreen(
+        tester,
+        const TitleScreen(id: 's1'),
+        client: backend.client,
+      );
+      await cancelThenConfirm(
+        tester,
+        backend,
+        question:
+            'Mark all 6 episodes of The Expanse as unwatched? '
+            'This also removes where you stopped.',
+        path: '/api/v1/titles/s1/watched',
+      );
+    });
+
+    testWidgets('a season asks with its count', (tester) async {
+      final backend = _show();
+      await pumpScreen(
+        tester,
+        const SeasonScreen(titleId: 's1', season: 1),
+        client: backend.client,
+      );
+      await cancelThenConfirm(
+        tester,
+        backend,
+        question:
+            'Mark all 3 episodes of Season 1 of The Expanse as unwatched? '
+            'This also removes where you stopped.',
+        path: '/api/v1/titles/s1/watched',
+        body: {'season': 1, 'watched': false},
+      );
+    });
+
+    testWidgets('a movie un-marks at once', (tester) async {
+      final backend = _movie(watched: true);
+      await pumpScreen(
+        tester,
+        const TitleScreen(id: 'm1'),
+        client: backend.client,
+      );
+      await tester.tap(find.bySemanticsLabel('Mark unwatched'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mark all unwatched'), findsNothing);
+      expect(backend.sent.single.$2, '/api/v1/titles/m1/watched');
+    });
+
+    testWidgets('an episode un-marks at once', (tester) async {
+      final backend = _show();
+      backend.answers['/api/v1/media/e22'] = _episode(
+        2,
+        2,
+        'Doors & Corners',
+        completed: true,
+      );
+      await pumpScreen(
+        tester,
+        const EpisodeScreen(id: 'e22'),
+        client: backend.client,
+      );
+      await tester.tap(find.bySemanticsLabel('Mark unwatched'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mark all unwatched'), findsNothing);
+      expect(backend.sent.single.$2, '/api/v1/media/e22/watched');
+    });
   });
 
   testWidgets('a favorite the server refused goes back', (tester) async {
