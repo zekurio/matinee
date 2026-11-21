@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/back_claim.dart';
 import 'core/device.dart';
 import 'core/server_accents.dart';
 import 'core/toasts.dart';
@@ -32,6 +33,7 @@ class MatineeApp extends ConsumerWidget {
     final dark = accented(preferences.preset.dark, accents?.dark);
     return MaterialApp.router(
       routerConfig: ref.watch(routerProvider),
+      onNavigationNotification: ref.watch(backClaimProvider).onNotification,
       theme: MatineeTheme.data(light, dark: dark),
       darkTheme: MatineeTheme.data(dark),
       themeMode: switch (preferences.appearance) {

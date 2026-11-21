@@ -17,7 +17,7 @@ void main() {
       ),
     );
 
-    state.show(
+    final shown = state.show(
       "Couldn't save",
       description: 'The server said no.',
       kind: ToastKind.error,
@@ -33,5 +33,6 @@ void main() {
     );
     state.dismiss();
     await tester.pump();
+    expect(await shown, ToastResult.dismissed);
   });
 }
