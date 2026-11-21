@@ -262,9 +262,11 @@ class TvFocusLine extends StatelessWidget {
 }
 
 /// A title as its [logo], fit into [width] by [height], or as [fallback]
-/// when it has none or the logo won't load. A logo is see-through, so it's
-/// drawn with no blurred stand-in beneath it.
-class TvTitleLogo extends ConsumerWidget {
+/// when it has none or the logo won't load. The fallback takes the room it
+/// needs, never the logo's box, so a long name wraps rather than being cut
+/// off. A logo is see-through, so it's drawn with no blurred stand-in
+/// beneath it.
+class TvTitleLogo extends ConsumerStatefulWidget {
   const TvTitleLogo({
     super.key,
     required this.name,
@@ -283,23 +285,38 @@ class TvTitleLogo extends ConsumerWidget {
   final Widget fallback;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TvTitleLogo> createState() => _TvTitleLogoState();
+}
+
+class _TvTitleLogoState extends ConsumerState<TvTitleLogo> {
+  /// The logo that wouldn't load.
+  String? _failed;
+
+  @override
+  Widget build(BuildContext context) {
     final api = ref.watch(apiProvider);
-    final logo = this.logo;
-    if (logo == null || api == null) return fallback;
+    final logo = widget.logo;
+    if (logo == null || api == null || _failed == logo.id) {
+      return widget.fallback;
+    }
     return SizedBox(
-      width: width,
-      height: height,
+      width: widget.width,
+      height: widget.height,
       child: Image(
         image: ArtworkImage(
           api.paths.artwork(logo.id, size: ArtworkSize.medium),
           ref.watch(artworkLoaderProvider),
         ),
         fit: BoxFit.contain,
-        alignment: alignment,
-        semanticLabel: name,
-        errorBuilder: (context, error, stack) =>
-            Align(alignment: alignment, child: fallback),
+        alignment: widget.alignment,
+        semanticLabel: widget.name,
+        errorBuilder: (context, error, stack) {
+          // The name lays out on its own once this frame is done.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _failed = logo.id);
+          });
+          return const SizedBox.shrink();
+        },
       ),
     );
   }
@@ -451,6 +468,7 @@ class TvLandscapeCard extends StatelessWidget {
               caption,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              strutStyle: TvType.label.strut,
               style: TvType.label.style(color: colors.foreground),
             ),
           ),
@@ -459,6 +477,7 @@ class TvLandscapeCard extends StatelessWidget {
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              strutStyle: TvType.caption.strut,
               style: TvType.caption.style(color: colors.mutedForeground),
             ),
         ],
@@ -549,6 +568,7 @@ class TvCaptionedPoster extends StatelessWidget {
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              strutStyle: TvType.label.strut,
               style: TvType.label.style(color: colors.foreground),
             ),
           ),
@@ -557,6 +577,7 @@ class TvCaptionedPoster extends StatelessWidget {
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              strutStyle: TvType.caption.strut,
               style: TvType.caption.style(color: colors.mutedForeground),
             ),
         ],
@@ -672,6 +693,7 @@ class TvPersonCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
+              strutStyle: TvType.label.strut,
               style: TvType.label.style(color: colors.foreground),
             ),
           ),
@@ -681,6 +703,7 @@ class TvPersonCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
+              strutStyle: TvType.caption.strut,
               style: TvType.caption.style(color: colors.mutedForeground),
             ),
         ],

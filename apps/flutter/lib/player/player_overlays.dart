@@ -168,19 +168,29 @@ class PlayerPrompts extends StatelessWidget {
 }
 
 /// A note in a dark box over the video, centered at the top, like the one
-/// that says what the server did instead of what was asked for.
+/// that says what the server did instead of what was asked for. [margin]
+/// keeps it off the screen's edges; a TV's is its overscan.
 class PlayerNote extends StatelessWidget {
-  const PlayerNote({super.key, required this.title, this.detail});
+  const PlayerNote({
+    super.key,
+    required this.title,
+    this.detail,
+    this.margin = phoneMargin,
+  });
+
+  /// A phone's [margin], clear of the screen's top.
+  static const phoneMargin = EdgeInsets.fromLTRB(24, 16, 24, 0);
 
   final String title;
   final String? detail;
+  final EdgeInsets margin;
 
   @override
   Widget build(BuildContext context) => Align(
     alignment: Alignment.topCenter,
     child: SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        padding: margin,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: DecoratedBox(

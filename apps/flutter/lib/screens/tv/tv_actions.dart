@@ -418,10 +418,13 @@ class _DayField extends StatelessWidget {
                     child: KitIcon(Lucide.chevronLeft, size: 20, color: arrow),
                   ),
                   Expanded(
-                    child: Text(
-                      value,
-                      textAlign: TextAlign.center,
-                      style: TvType.facts.style(color: content),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        value,
+                        textAlign: TextAlign.center,
+                        style: TvType.facts.style(color: content),
+                      ),
                     ),
                   ),
                   GestureDetector(

@@ -354,7 +354,7 @@ class TvConnectingScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           spacing: 28,
           children: [
-            const Logo(height: 36),
+            const LogoMark(size: 72),
             Spinner(size: 32, color: colors.mutedForeground),
             Text(
               AppLocalizations.of(context)

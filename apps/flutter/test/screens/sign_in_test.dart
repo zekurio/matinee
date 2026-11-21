@@ -680,6 +680,10 @@ void main() {
       harness.backend.hosts.add('a.example');
       await _show(tester, harness, device: _tv, size: const Size(960, 540));
       expect(_focusedIn(tester, 'Enter server address'), isTrue);
+      // A row's title at the Kotlin app's size, 16, and not heavier.
+      final title = tester.widget<Text>(find.text('Enter server address'));
+      expect(title.style?.fontSize, 16);
+      expect(title.style?.fontWeight, FontWeight.w500);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
       await _settle(tester);
@@ -728,6 +732,43 @@ void main() {
       await _reach<SignedIn>(tester, harness);
 
       expect(find.text("Can't reach your server"), findsNothing);
+      await _end(tester, harness);
+    });
+
+    testWidgets('cancelling Add server goes back to where it started', (
+      tester,
+    ) async {
+      final saved = await tester.runAsync(_saved);
+      final harness = Harness(prefs: saved!.prefs, secrets: saved.secrets);
+      harness.backend
+        ..hosts.add('a.example')
+        ..tokens['token-a'] = 'ada';
+      await _show(tester, harness, device: _tv, size: const Size(960, 540));
+      final router = harness.container.read(routerProvider);
+      String location() =>
+          router.routerDelegate.currentConfiguration.uri.toString();
+
+      // From a page of its own, it comes back to that page.
+      router.go('/title/t1');
+      await _settle(tester);
+      harness.session.addServer();
+      await _settle(tester);
+      expect(location(), Routes.connect);
+      harness.session.cancelAdd();
+      await _settle(tester);
+      expect(location(), '/title/t1');
+
+      // Settings' server panel names the page to come back to.
+      router.go(Routes.home);
+      await _settle(tester);
+      harness.container
+          .read(addServerReturnProvider.notifier)
+          .remember('${Routes.settings}?category=server');
+      harness.session.addServer();
+      await _settle(tester);
+      harness.session.cancelAdd();
+      await _settle(tester);
+      expect(location(), '${Routes.settings}?category=server');
       await _end(tester, harness);
     });
   });

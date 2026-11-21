@@ -495,7 +495,9 @@ class _TvTitleScreenState extends ConsumerState<TvTitleScreen>
                 memory: _memory,
                 start: next?.id,
               ),
-            ?_seasonsRow(title),
+            // Its episodes are already above; a row of one season adds
+            // nothing.
+            if (only == null) ?_seasonsRow(title),
           ],
           ?_peopleRow(context, title, _memory),
           ?_linksRow(context, title, _memory),

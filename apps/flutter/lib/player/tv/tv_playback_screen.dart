@@ -303,7 +303,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
   var _fill = false;
 
   /// What focus followed last, to move it when the controls come or go.
-  ({bool visible, bool onPicture, String? next})? _followed;
+  ({bool visible, bool onPicture, bool offered, String? next})? _followed;
 
   PlaybackSession get _session => widget.session;
 
@@ -606,6 +606,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
     final now = (
       visible: visible,
       onPicture: onPicture,
+      offered: action != null,
       next: _session.next?.id,
     );
     final before = _followed;
@@ -619,7 +620,18 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
         (onPicture ? _targets.corner : _root).requestFocus();
         return;
       }
-      if (before != null && before.visible && !nextCame) return;
+      if (before != null && before.visible && !nextCame) {
+        // The button the player offered went with focus on it, as Skip
+        // recap does once pressed. Focus falls back to the screen, which
+        // shows none while the controls are up: play takes it instead.
+        final focus = FocusManager.instance.primaryFocus;
+        if (before.offered &&
+            !now.offered &&
+            (focus == null || focus == _root || !_root.hasFocus)) {
+          _targets.play.requestFocus();
+        }
+        return;
+      }
       final target = _focusSeek
           ? _targets.seek
           : action != null && !_away
@@ -804,6 +816,13 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
                   l,
                   notice,
                   detail,
+                  // Clear of the edges a TV loses, as the Kotlin app's.
+                  margin: const EdgeInsets.fromLTRB(
+                    Overscan.horizontal,
+                    Overscan.vertical,
+                    Overscan.horizontal,
+                    0,
+                  ),
                 ),
                 null => const SizedBox.shrink(),
               },

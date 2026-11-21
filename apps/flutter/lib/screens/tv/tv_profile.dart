@@ -21,6 +21,7 @@ import '../profile/profile_data.dart';
 import 'tv_actions.dart';
 import 'tv_charts.dart';
 import 'tv_media.dart';
+import 'tv_sign_out.dart';
 
 abstract final class _Rows {
   static const actions = 'actions';
@@ -33,6 +34,20 @@ abstract final class _Rows {
   static const genres = 'genres';
   static const standing = 'standing';
   static const viewingTimes = 'viewingTimes';
+}
+
+/// A section on its way: a spinner centred in a row 96 high, as the
+/// Kotlin app's `LoadingRow`.
+class _LoadingRow extends StatelessWidget {
+  const _LoadingRow();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 96,
+    child: Center(
+      child: Spinner(size: 32, color: MatineeTheme.of(context).mutedForeground),
+    ),
+  );
 }
 
 /// The places a board lists at its top, before the person's own
@@ -131,7 +146,7 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
                 label: l.shellSignOut,
                 icon: Lucide.logOut,
                 focusNode: _memory.node(_Rows.actions, _Rows.signOut),
-                onPressed: () => ref.read(sessionProvider.notifier).signOut(),
+                onPressed: () => confirmTvSignOut(context, ref),
               ),
             ],
           ),
@@ -143,7 +158,7 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
           detail: describeFailure(l, profile.error!),
         )
       else if (loaded == null)
-        const TvLoading(size: 32, top: 32)
+        const _LoadingRow()
       else if (recent.isNotEmpty)
         _recentRow(recent),
       ..._statistics(username),
@@ -249,7 +264,7 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
             detail: describeFailure(l, result.error!),
           )
         else
-          const TvLoading(size: 32, top: 32),
+          const _LoadingRow(),
       ];
     }
     if (neverWatched) {
@@ -906,34 +921,23 @@ class _TvRecentScreenState extends ConsumerState<TvRecentScreen> {
         ),
       );
     } else {
-      page = LayoutBuilder(
-        builder: (context, constraints) {
-          // As many cards a row as fit at their row width, as the Kotlin
-          // app's fixed-size cells; each fills its cell.
-          final room = constraints.maxWidth - TvPage.start - TvPage.end;
-          final columns =
-              ((room + TvGrid.gap) / (TvCards.landscapeWidth + TvGrid.gap))
-                  .floor()
-                  .clamp(1, 12);
-          final width = (room - TvGrid.gap * (columns - 1)) / columns;
-          return TvPosterGrid(
-            memory: _memory,
-            itemCount: entries.length,
-            columns: columns,
-            cellAspect: 16 / 9,
-            cellExtra: 12 + 20 + 20,
-            header: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: heading,
-            ),
-            itemBuilder: (context, index) {
-              final item = entries[index].item;
-              return TvWatchedCard(
-                item: item,
-                width: width,
-                focusNode: _memory.node(TvGrid.row, item.id),
-              );
-            },
+      // As many cards a row as fit at their row width, as the Kotlin
+      // app's fixed-size cells.
+      page = TvPosterGrid(
+        memory: _memory,
+        itemCount: entries.length,
+        cellWidth: TvCards.landscapeWidth,
+        cellAspect: 16 / 9,
+        cellExtra: 12 + 20 + 20,
+        header: Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: heading,
+        ),
+        itemBuilder: (context, index) {
+          final item = entries[index].item;
+          return TvWatchedCard(
+            item: item,
+            focusNode: _memory.node(TvGrid.row, item.id),
           );
         },
       );

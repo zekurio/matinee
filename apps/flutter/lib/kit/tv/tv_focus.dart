@@ -359,8 +359,18 @@ class TvRowNode extends FocusNode {
     if (node == null || node.context == null || !node.canRequestFocus) {
       return null;
     }
-    return node.ancestors.contains(this) ? node : null;
+    return _inside(node, this) ? node : null;
   }
+}
+
+/// [node] is under [ancestor] now. A detached node keeps its cached
+/// `ancestors`, and its element may hold another card's node by then, as
+/// a row that loaded again reuses its cards, so walk its parents instead.
+bool _inside(FocusNode node, FocusNode ancestor) {
+  for (var parent = node.parent; parent != null; parent = parent.parent) {
+    if (parent == ancestor) return true;
+  }
+  return false;
 }
 
 /// A focus scope over the page, like the drawer or a side panel, which
@@ -556,7 +566,10 @@ class TvFocusMemory {
   /// [row] and [key]'s node, if a card has it on screen.
   FocusNode? shown(String row, String key) {
     final node = _nodes[(row, key)];
-    if (node == null || node.context == null || !node.canRequestFocus) {
+    if (node == null ||
+        node.context == null ||
+        node.parent == null ||
+        !node.canRequestFocus) {
       return null;
     }
     return node;
