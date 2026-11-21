@@ -673,6 +673,12 @@ first key.
   server, or Back to the server in use, as a small `TvAuthAction` at the
   bottom left, beside Get a new code or Retry when the code ran out or
   never came. It says nothing of the phone app's Settings.
+- Settings (`lib/screens/tv/tv_settings.dart`): also spaced apart from
+  the Kotlin app on purpose. The categories' highlight starts at
+  `TvPage.start`, where every page's cards and chips do, clear of the
+  drawer's focus ring, not a list item's inset further left against the
+  cog. The column is 224 wide, room for the German names, and 32 before
+  the rows, so the rows start a little earlier than Kotlin's.
 - Focus (`lib/kit/tv`): `TvTraversalPolicy` moves by geometry, as Compose
   does. A `TvFocusMemory` remembers each row's card, so entering a row
   lands on it, Back lands where you left, and a list that loads again

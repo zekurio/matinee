@@ -72,7 +72,14 @@ enum TvSettingsCategory {
   }
 }
 
-const _categoryWidth = 260.0;
+/// The categories' column, its highlight starting where every TV page's
+/// content does, clear of the rail's focus ring; the Kotlin app has it a
+/// list item's inset further left, almost against the cog. Wide enough
+/// for the longest German name, with little room after it.
+const _categoryWidth = 224.0;
+
+/// Between the categories' highlight and the rows' highlight.
+const _categoryGap = 32.0;
 
 /// Where rows start under the top, clear of the clock.
 const _rowsTop = Overscan.vertical + 60;
@@ -171,7 +178,7 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
       },
       child: Padding(
         padding: const EdgeInsetsDirectional.only(
-          start: TvPage.start - TvListItems.inset,
+          start: TvPage.start,
           end: TvPage.end,
         ),
         child: Row(
@@ -222,7 +229,7 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 48),
+            const SizedBox(width: _categoryGap),
             Expanded(
               child: Padding(
                 // Rows scroll under a fixed top, so they never pass behind
