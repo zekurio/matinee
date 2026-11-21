@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/kit/tv/tv.dart';
 import 'package:matinee/router.dart';
+import 'package:matinee/screens/tv/tv_browse.dart';
 import 'package:matinee/screens/tv/tv_shell.dart';
 
 import '../../media/fixtures.dart';
@@ -198,6 +199,22 @@ void main() {
       expect(focusedKey(), 'genres/Thriller');
       await up(tester, 3);
       expect(focusedKey(), 'field/field');
+    });
+
+    testWidgets('Back while typing ends the typing and keeps the page', (
+      tester,
+    ) async {
+      await _open(tester, Routes.search);
+      await select(tester);
+      await tester.enterText(find.byType(EditableText), 'sicario');
+      await tester.pump(const Duration(milliseconds: 300));
+      await settle(tester);
+      expect(await back(tester), isTrue);
+      expect(find.byType(TvSearchScreen), findsOneWidget, reason: 'stays');
+      expect(focusedLabel(), 'Search movies, shows, people, and more');
+      expect(find.text('Sicario'), findsWidgets, reason: 'the results stay');
+      await back(tester);
+      expect(find.byType(TvSearchScreen), findsNothing, reason: 'then leaves');
     });
   });
 

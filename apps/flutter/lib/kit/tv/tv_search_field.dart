@@ -74,11 +74,12 @@ class _TvSearchFieldState extends State<TvSearchField> {
   void _text() => setState(() {});
 
   void _innerChanged() {
-    setState(() {});
-    if (!_inner.hasFocus && _editing) {
-      _editing = false;
-      _inner.canRequestFocus = false;
-    }
+    setState(() {
+      if (!_inner.hasFocus && _editing) {
+        _editing = false;
+        _inner.canRequestFocus = false;
+      }
+    });
   }
 
   void _edit() {
@@ -90,7 +91,7 @@ class _TvSearchFieldState extends State<TvSearchField> {
 
   void _stop() {
     unawaited(SystemChannels.textInput.invokeMethod<void>('TextInput.hide'));
-    _editing = false;
+    setState(() => _editing = false);
     _inner.canRequestFocus = false;
     _outer.requestFocus();
   }
@@ -114,92 +115,102 @@ class _TvSearchFieldState extends State<TvSearchField> {
     final colors = MatineeTheme.of(context);
     final style = widget.textStyle ?? TvType.facts.style();
     final empty = widget.controller.text.isEmpty;
-    return Row(
-      spacing: 14,
-      children: [
-        Expanded(
-          child: TvFocusable(
-            focusNode: _outer,
-            autofocus: widget.autofocus,
-            label: widget.placeholder,
-            onPressed: _edit,
-            builder: (context, focused) {
-              final lit = focused || _inner.hasFocus;
-              return TvControl(
-                focused: lit,
-                scale: TvFocus.rowScale,
-                rest: widget.rest,
-                builder: (context, content) => SizedBox(
-                  height: widget.height,
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(
-                      start: 18,
-                      end: 22,
-                    ),
-                    child: Row(
-                      spacing: 12,
-                      children: [
-                        KitIcon(
-                          Lucide.search,
-                          size: 22,
-                          color: lit ? content : colors.mutedForeground,
-                        ),
-                        Expanded(
-                          child: Stack(
-                            alignment: AlignmentDirectional.centerStart,
-                            children: [
-                              if (empty)
-                                Text(
-                                  widget.placeholder,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: style.copyWith(
-                                    // Muted, not faint: it has to read
-                                    // over a page's backdrop.
-                                    color: lit
-                                        ? content.withValues(alpha: .55)
-                                        : colors.mutedForeground,
+    // Back while typing ends the typing and keeps the page, as the Kotlin
+    // app's field does once its keyboard has gone: a keyboard that takes
+    // no Back of its own, or none at all, would otherwise leave the page
+    // and what was typed with it.
+    return PopScope(
+      canPop: !_editing,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _editing) _stop();
+      },
+      child: Row(
+        spacing: 14,
+        children: [
+          Expanded(
+            child: TvFocusable(
+              focusNode: _outer,
+              autofocus: widget.autofocus,
+              label: widget.placeholder,
+              onPressed: _edit,
+              builder: (context, focused) {
+                final lit = focused || _inner.hasFocus;
+                return TvControl(
+                  focused: lit,
+                  scale: TvFocus.rowScale,
+                  rest: widget.rest,
+                  builder: (context, content) => SizedBox(
+                    height: widget.height,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 18,
+                        end: 22,
+                      ),
+                      child: Row(
+                        spacing: 12,
+                        children: [
+                          KitIcon(
+                            Lucide.search,
+                            size: 22,
+                            color: lit ? content : colors.mutedForeground,
+                          ),
+                          Expanded(
+                            child: Stack(
+                              alignment: AlignmentDirectional.centerStart,
+                              children: [
+                                if (empty)
+                                  Text(
+                                    widget.placeholder,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: style.copyWith(
+                                      // Muted, not faint: it has to read
+                                      // over a page's backdrop.
+                                      color: lit
+                                          ? content.withValues(alpha: .55)
+                                          : colors.mutedForeground,
+                                    ),
+                                  ),
+                                Focus(
+                                  canRequestFocus: false,
+                                  skipTraversal: true,
+                                  onKeyEvent: _key,
+                                  child: EditableText(
+                                    controller: widget.controller,
+                                    focusNode: _inner,
+                                    style: style.copyWith(color: content),
+                                    cursorColor: colors.accent,
+                                    backgroundCursorColor: colors.textFaint,
+                                    textInputAction: TextInputAction.search,
+                                    onChanged: widget.onChanged,
+                                    onSubmitted: (_) => _stop(),
+                                    maxLines: 1,
                                   ),
                                 ),
-                              Focus(
-                                canRequestFocus: false,
-                                skipTraversal: true,
-                                onKeyEvent: _key,
-                                child: EditableText(
-                                  controller: widget.controller,
-                                  focusNode: _inner,
-                                  style: style.copyWith(color: content),
-                                  cursorColor: colors.accent,
-                                  backgroundCursorColor: colors.textFaint,
-                                  textInputAction: TextInputAction.search,
-                                  onChanged: widget.onChanged,
-                                  onSubmitted: (_) => _stop(),
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-        if (!empty)
-          TvRoundButton(
-            icon: Lucide.x,
-            label: widget.clearLabel,
-            size: widget.height,
-            onPressed: () {
-              widget.controller.clear();
-              widget.onChanged?.call('');
-              _outer.requestFocus();
-            },
-          ),
-      ],
+          if (!empty)
+            TvRoundButton(
+              icon: Lucide.x,
+              label: widget.clearLabel,
+              size: widget.height,
+              onPressed: () {
+                widget.controller.clear();
+                widget.onChanged?.call('');
+                _outer.requestFocus();
+              },
+            ),
+        ],
+      ),
     );
   }
 }
