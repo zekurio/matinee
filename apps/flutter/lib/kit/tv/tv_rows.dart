@@ -271,6 +271,7 @@ class _TvPinnedListState extends State<TvPinnedList> {
     child: TvFollowFocus(
       controller: _scroll,
       rule: TvFollowFocus.pinned(widget.pivot),
+      sectionTop: widget.gap,
       child: ListView.separated(
         controller: _scroll,
         clipBehavior: Clip.none,
@@ -602,15 +603,17 @@ class TvLoading extends StatelessWidget {
 /// A detail page, as the Kotlin app's `DetailList`: [header] first, with
 /// its buttons, then [rows] below it, reached with Down. While the header
 /// has focus the page sits at its top; once a row has it, each row scrolls
-/// to [pivot] below the top, as Home's do. Rows scrolled past the top fade
-/// out over [fade] rather than end hard under the clock.
+/// to [pivot] below the top, as Home's do, but stops where the row above
+/// has just gone, a [gap] over its heading, rather than leave it cut at the
+/// top. The top fades over [fade] while scrolled, no further than the gap,
+/// so a row's heading there stays clear.
 class TvHeaderList extends StatefulWidget {
   const TvHeaderList({
     super.key,
     required this.header,
     required this.rows,
     this.pivot = 88,
-    this.fade = 44,
+    this.fade = 32,
     this.gap = 32,
     this.end = 360,
   });
@@ -662,6 +665,7 @@ class _TvHeaderListState extends State<TvHeaderList> {
     child: TvFollowFocus(
       controller: _scroll,
       rule: _rule,
+      sectionTop: widget.gap,
       child: ListView.separated(
         controller: _scroll,
         clipBehavior: Clip.none,

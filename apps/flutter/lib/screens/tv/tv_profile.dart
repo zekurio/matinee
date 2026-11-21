@@ -175,7 +175,8 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
       child: TvFollowFocus(
         controller: _scroll,
         rule: TvFollowFocus.clear(start: _edge, end: _edge),
-        sections: true,
+        // The gap between its sections.
+        sectionTop: 32,
         // Half a screen under the last section, so it can come up to the
         // top rather than stop with the one above it cut.
         child: LayoutBuilder(
