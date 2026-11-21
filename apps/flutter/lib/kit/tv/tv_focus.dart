@@ -131,6 +131,12 @@ class _TvFocusableState extends State<TvFocusable> {
   }
 
   @override
+  void deactivate() {
+    if (_node case final TvMemoryNode node) node.memory._leaving(node);
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
     _node.removeListener(_changed);
     _held?.cancel();
@@ -615,6 +621,41 @@ class TvFocusMemory {
     if (!_restored && _fallback != null) _schedule();
   }
 
+  /// The card that had focus as it left the screen, until the frame ends.
+  TvMemoryNode? _left;
+
+  /// [node] is leaving the screen. If it has focus, as a row's Try again
+  /// does when the row loads, focus goes to the first card its row shows
+  /// once the frame is built, rather than back to the card before it.
+  void _leaving(TvMemoryNode node) {
+    if (_disposed || !node.hasPrimaryFocus) return;
+    _left = node;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      final left = _left;
+      _left = null;
+      if (left == null || _disposed || shown(left.row, left.key) != null) {
+        return;
+      }
+      final row = _rows[left.row];
+      if (row == null || row.context == null) return;
+      final card = row.traversalDescendants
+          .where((node) => node.canRequestFocus && !node.skipTraversal)
+          .firstOrNull;
+      if (card == null || !_here()) return;
+      card.requestFocus();
+    });
+  }
+
+  /// Focus is on this page, not the drawer or a panel over it.
+  bool _here() {
+    final primary = FocusManager.instance.primaryFocus;
+    final scope = _scope;
+    if (primary == null || scope == null) return true;
+    return primary == scope ||
+        primary.ancestors.contains(scope) ||
+        (primary is FocusScopeNode && scope.ancestors.contains(primary));
+  }
+
   void _schedule() {
     if (_scheduled || _disposed) return;
     _scheduled = true;
@@ -636,15 +677,7 @@ class TvFocusMemory {
     opening = false;
     _openingTimer?.cancel();
     // The drawer or a panel took focus meanwhile: it keeps it.
-    final primary = FocusManager.instance.primaryFocus;
-    final scope = _scope;
-    if (primary != null && scope != null) {
-      final here =
-          primary == scope ||
-          primary.ancestors.contains(scope) ||
-          (primary is FocusScopeNode && scope.ancestors.contains(primary));
-      if (!here) return;
-    }
+    if (!_here()) return;
     target.requestFocus();
   }
 

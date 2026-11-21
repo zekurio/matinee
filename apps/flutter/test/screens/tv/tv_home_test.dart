@@ -160,6 +160,29 @@ void main() {
     expect(focusedKey(), 'continue/e9');
   });
 
+  testWidgets("a row's Try again gives focus to the row it loads", (
+    tester,
+  ) async {
+    final backend = HomeBackend();
+    backend.answers['/api/v1/libraries'] = [
+      libraryJson('lib1', name: 'Movies'),
+      libraryJson('lib2', name: 'Shows'),
+    ];
+    backend.answers['/api/v1/libraries/lib2/shelf'] = [
+      shelfJson(titleJson('s2', kind: 'show', name: 'Severance')),
+    ];
+    backend.down.add('/api/v1/libraries/lib2/shelf');
+    await pumpTv(tester, backend);
+    for (var i = 0; i < 10 && focusedLabel() != 'Try again'; i++) {
+      await down(tester);
+    }
+    expect(focusedLabel(), 'Try again');
+    backend.down.clear();
+    await select(tester);
+    // On its first card, not back on the row above.
+    expect(focusedKey(), 'shelf-lib2/s2');
+  });
+
   testWidgets('holding Select opens the actions panel, Back closes it', (
     tester,
   ) async {
