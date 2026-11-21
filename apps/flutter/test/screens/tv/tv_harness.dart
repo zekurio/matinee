@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/app.dart';
 import 'package:matinee/core/device.dart';
@@ -45,13 +46,16 @@ void loadTvFont() {
   });
 }
 
-/// The signed-in app on a TV at [size], talking to [backend], with the
-/// drawer's Movies and Shows.
+/// The signed-in app on a TV at [size], talking to [backend], or to
+/// [client] where a test answers more than Home, with the drawer's Movies
+/// and Shows. Ada signs in, as an admin with [admin].
 Future<void> pumpTv(
   WidgetTester tester,
   HomeBackend backend, {
   Size size = const Size(960, 540),
   String? location,
+  http.Client? client,
+  bool admin = false,
 }) async {
   backend.answers.putIfAbsent(
     '/api/v1/titles/browse',
@@ -67,7 +71,7 @@ Future<void> pumpTv(
   tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-  final user = User.fromJson(userJson('ada'));
+  final user = User.fromJson({...userJson('ada'), if (admin) 'role': 'admin'});
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -76,10 +80,10 @@ Future<void> pumpTv(
           SignedIn('https://media.example.com', user),
         ),
         apiProvider.overrideWithValue(
-          MatineeApi(base: server, client: backend.client),
+          MatineeApi(base: server, client: client ?? backend.client),
         ),
         artworkLoaderProvider.overrideWithValue(
-          ArtworkLoader(backend.client, const NoArtworkCache()),
+          ArtworkLoader(client ?? backend.client, const NoArtworkCache()),
         ),
         removingServersProvider.overrideWithValue(const {}),
         savedServersProvider.overrideWithValue([
