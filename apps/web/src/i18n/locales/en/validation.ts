@@ -12,6 +12,9 @@ export default defineMessages("validation", {
   // contract-library.ts: searching a provider for a match.
   "validation.searchQuery": "Enter a name to search for.",
 
+  // sessions.ts: the name a client gives itself.
+  "validation.clientName": "Enter a name.",
+
   // titles.ts: uploading a title's, season's, or episode's image. The
   // empty file and image type messages are the avatar ones below.
   "validation.imageSize": "Pick an image under 25 MB.",
@@ -44,7 +47,7 @@ export default defineMessages("validation", {
   "validation.setupToken": "Enter the setup token to claim this server.",
 
   // access.ts: access groups and limits.
-  "validation.bitrateLimit": "Pick a limit of at least 1 Mb/s.",
+  "validation.bitrateLimit": "Pick a limit of at least 1 Mbps.",
   "validation.streamLimit": "Allow at least one stream.",
   "validation.groupName": "Give the group a name.",
   "validation.max256": "Use at most 256 characters.",

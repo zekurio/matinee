@@ -24,8 +24,12 @@ export const session = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
-    userAgent: text(),
     client: text().$type<SessionClient>().notNull().default("web"),
+    /**
+     * What the client calls itself, as it last sent it through
+     * `account.sessions.identify`, like `Chrome Android`. Shown, never parsed.
+     */
+    clientName: text(),
     /** What an app calls its device. Null for browsers and unnamed ones. */
     deviceName: text(),
     /** What an app runs on. Null for browsers. */

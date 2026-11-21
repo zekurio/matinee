@@ -43,7 +43,11 @@ export const recommendations = defineQueue({
     if (!env.MATINEE_TMDB_API_KEY) return
     const [account] = await db.select().from(user).where(eq(user.id, userId))
     if (!account) return
-    const viewer = await viewerOf({ ...account, sessionId: "" })
+    const viewer = await viewerOf({
+      ...account,
+      sessionId: "",
+      clientName: null,
+    })
     const { signals, signalsAt } = await rebuildSignals(viewer)
     const candidates = signals.some((s) => s.score > 0)
       ? await candidatesFor(viewer, signals)

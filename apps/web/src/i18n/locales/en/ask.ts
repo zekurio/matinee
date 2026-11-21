@@ -7,6 +7,9 @@ import { defineMessages, plural } from "../../catalog"
  */
 export default defineMessages("ask", {
   "ask.ask": "Request",
+  // Read aloud on a season's card, where "Request" alone would not say
+  // which: "Request Season 3", "Request Specials".
+  "ask.askNamed": "Request {name}",
   "ask.more": "Request more",
   "ask.cancel": "Cancel request",
 

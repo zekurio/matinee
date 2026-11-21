@@ -1,4 +1,4 @@
-import { perLocale, tr } from "@/i18n"
+import { type MessageKey, perLocale, tr } from "@/i18n"
 
 /*
  * Dates, numbers, and durations in the interface's language, so they read
@@ -55,11 +55,30 @@ const steps: [Intl.RelativeTimeFormatUnit, number][] = [
   ["minute", 60],
 ]
 
+/**
+ * "5 minutes ago" or "in 2 hours", for something that happened. Under a
+ * minute either way is "just now", since the server's clock and this one
+ * can disagree by a few seconds.
+ */
 export function formatRelative(date: Date): string {
-  return relativeSpan((date.getTime() - Date.now()) / 1000)
+  return relativeSpan(secondsUntil(date)) ?? tr("format.justNow")
 }
 
-function relativeSpan(seconds: number): string {
+/**
+ * "in 5 minutes", for something due, like a task's next run. Under a
+ * minute either way is "soon": a run a few seconds overdue is about to
+ * start, not one that just happened.
+ */
+export function formatUpcoming(date: Date): string {
+  return relativeSpan(secondsUntil(date)) ?? tr("format.soon")
+}
+
+function secondsUntil(date: Date): number {
+  return (date.getTime() - Date.now()) / 1000
+}
+
+/** The span in its largest whole unit, or null under a minute. */
+function relativeSpan(seconds: number): string | null {
   for (const [index, [unit, size]] of steps.entries()) {
     if (Math.abs(seconds) >= size) {
       const count = Math.round(seconds / size)
@@ -71,7 +90,7 @@ function relativeSpan(seconds: number): string {
       return relative().format(count, unit)
     }
   }
-  return tr("format.justNow")
+  return null
 }
 
 const dates = perLocale(
@@ -129,26 +148,47 @@ export function formatCount(n: number): string {
   return counts().format(n)
 }
 
-/** "45 seconds", "3 minutes", "12 hours", "2 days". */
-export function formatSpan(seconds: number): string {
+export type SpanUnit = "seconds" | "minutes" | "hours" | "days"
+
+/** A span as a whole count of one unit: 2 minutes. */
+export type Span = { unit: SpanUnit; count: number }
+
+/**
+ * A span as a count of its largest unit, rounded: 90 seconds is 2 minutes,
+ * 59.6 seconds is 1 minute, and anything under a second is 1 second.
+ */
+export function spanParts(seconds: number): Span {
   // Each count is checked after rounding, since 59.6 seconds rounds to a
   // count of 60, which is a minute.
   if (seconds < 60) {
     const count = Math.max(1, Math.round(seconds))
-    if (count < 60) return tr("format.seconds", { count })
-    return formatSpan(60)
+    if (count < 60) return { unit: "seconds", count }
+    return spanParts(60)
   }
   if (seconds < 3600) {
     const count = Math.round(seconds / 60)
-    if (count < 60) return tr("format.minutesLong", { count })
-    return formatSpan(3600)
+    if (count < 60) return { unit: "minutes", count }
+    return spanParts(3600)
   }
   if (seconds < 86_400) {
     const count = Math.round(seconds / 3600)
-    if (count < 24) return tr("format.hoursLong", { count })
-    return formatSpan(86_400)
+    if (count < 24) return { unit: "hours", count }
+    return spanParts(86_400)
   }
-  return tr("format.daysLong", { count: Math.round(seconds / 86_400) })
+  return { unit: "days", count: Math.round(seconds / 86_400) }
+}
+
+const spanKeys = {
+  seconds: "format.seconds",
+  minutes: "format.minutesLong",
+  hours: "format.hoursLong",
+  days: "format.daysLong",
+} as const satisfies Record<SpanUnit, MessageKey>
+
+/** "45 seconds", "3 minutes", "12 hours", "2 days". */
+export function formatSpan(seconds: number): string {
+  const { unit, count } = spanParts(seconds)
+  return tr(spanKeys[unit], { count })
 }
 
 const months = perLocale(

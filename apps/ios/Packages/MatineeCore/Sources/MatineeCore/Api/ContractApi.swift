@@ -269,6 +269,9 @@ public struct AccountSessionsApi: Sendable {
     public func revokeOthers() async throws -> AccountSessionsRevokeOthersOutput {
         return try await transport.call(method: "POST", path: ["account", "sessions", "revoke-others"], query: [], body: nil)
     }
+    public func identify(clientIdentity: ClientIdentity) async throws {
+        try await transport.send(method: "PUT", path: ["account", "sessions", "current", "client"], query: [], body: try transport.json(clientIdentity))
+    }
 }
 public struct LibrariesApi: Sendable {
     public let transport: ApiTransport

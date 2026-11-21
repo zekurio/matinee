@@ -17,8 +17,19 @@ func titleFacts(_ title: Title) -> [String] {
     case .episodes(let count): Str.mediaEpisodeCount(count)
     case nil: nil
     }
-  return [formatYear(title.year), formatRuntime(titleRuntime(title)), size, title.isShow ? title.status : nil]
+  return [formatYear(title.year), formatRuntime(titleRuntime(title)), size, title.isShow ? titleStatusName(title.status) : nil]
     .compactMap(\.self)
+}
+
+/// A show's status in the app's words, from the web's; nil for none, or one
+/// this build doesn't know.
+func titleStatusName(_ status: String?) -> String? {
+  switch status ?? "" {
+  case TitleStatus.continuing: Str.webMetadataStatusContinuing
+  case TitleStatus.ended: Str.webMetadataStatusEnded
+  case TitleStatus.unreleased: Str.webMetadataStatusUnreleased
+  default: nil
+  }
 }
 
 /// A season's facts: the year it started, its episodes, and how many are watched.

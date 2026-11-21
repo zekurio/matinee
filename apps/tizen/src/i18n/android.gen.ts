@@ -313,6 +313,9 @@ export const ANDROID_STRINGS = {
     unreachable_title: "Can't reach your server",
     web_discover_rail_becauseWatched: "Because you watched {0}",
     web_discover_rail_forYou: "Recommended for you",
+    web_metadata_status_continuing: "Continuing",
+    web_metadata_status_ended: "Ended",
+    web_metadata_status_unreleased: "Not yet released",
   },
   de: {
     a11y_player_seek: "Wiedergabeposition",
@@ -624,6 +627,9 @@ export const ANDROID_STRINGS = {
     unreachable_title: "Server nicht erreichbar",
     web_discover_rail_becauseWatched: "Weil du {0} geschaut hast",
     web_discover_rail_forYou: "Empfehlungen für dich",
+    web_metadata_status_continuing: "Fortlaufend",
+    web_metadata_status_ended: "Beendet",
+    web_metadata_status_unreleased: "Noch nicht veröffentlicht",
   },
 } as const
 

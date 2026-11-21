@@ -6,6 +6,7 @@ export default {
   "validation.scopesOpenid": "Die Scopes müssen openid enthalten.",
 
   "validation.searchQuery": "Gib einen Namen für die Suche ein.",
+  "validation.clientName": "Gib einen Namen ein.",
 
   "validation.imageSize": "Wähle ein Bild unter 25 MB.",
 
