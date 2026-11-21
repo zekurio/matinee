@@ -274,6 +274,7 @@
   "libraryNoMatchShows": "Keine Serien passen zu „{p1}“",
   "libraryNoneMovies": "Keine Filme gefunden",
   "libraryNoneShows": "Keine Serien gefunden",
+  "libraryOffline": "Deine Serien und Filme sind wieder da, sobald der Server erreichbar ist.",
   "librarySearchMovies": "Filme durchsuchen",
   "librarySearchShows": "Serien durchsuchen",
   "librarySort": "Sortierung",

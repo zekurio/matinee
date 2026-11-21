@@ -1493,6 +1493,10 @@
   "@libraryNoneShows": {
     "description": "strings.xml"
   },
+  "libraryOffline": "Your shows and movies come back once the server can be reached.",
+  "@libraryOffline": {
+    "description": "Shows, Movies, or a genre's or studio's page while the server can't be reached."
+  },
   "librarySearchMovies": "Search movies",
   "@librarySearchMovies": {
     "description": "strings.xml: A library"
