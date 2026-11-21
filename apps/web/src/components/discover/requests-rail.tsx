@@ -1,6 +1,7 @@
 import type { AdminRequestItem } from "@matinee/contracts"
 import { AvatarGroup } from "@matinee/ui/components/avatar"
 import { Button } from "@matinee/ui/components/button"
+import { cn } from "@matinee/ui/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import {
   getRouteApi,
@@ -40,6 +41,12 @@ import {
 
 /** How many askers' avatars a card shows; the count after them says the rest. */
 const AVATARS = 3
+
+/**
+ * Each avatar's place in the stack, first asker on top: the card names
+ * them, so theirs is the face that shows whole, with the others behind.
+ */
+const STACK = ["z-3", "z-2", "z-1"]
 
 const authed = getRouteApi("/_authed")
 
@@ -239,7 +246,7 @@ function Askers({ item }: { item: AdminRequestItem }) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
       <AvatarGroup className="shrink-0">
-        {[first, ...rest.slice(0, AVATARS - 1)].map((asker) => (
+        {[first, ...rest.slice(0, AVATARS - 1)].map((asker, index) => (
           <UserAvatar
             key={asker.id}
             user={{
@@ -247,7 +254,7 @@ function Askers({ item }: { item: AdminRequestItem }) {
               displayName: asker.name,
               username: asker.name,
             }}
-            className="text-11px size-6"
+            className={cn("text-11px size-6", STACK[index])}
           />
         ))}
       </AvatarGroup>
