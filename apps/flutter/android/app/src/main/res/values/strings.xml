@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Matinee</string>
+    <!-- The downloads' notification, shown while the app may be closed, so
+         it can't take Dart's strings; the same words as app_en.arb's
+         downloadsChannel and downloadsStateRunning. -->
+    <string name="downloads_channel">Downloads</string>
+    <string name="downloads_state_running">Downloading</string>
+</resources>

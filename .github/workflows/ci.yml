@@ -29,6 +29,7 @@ jobs:
       pnpm: ${{ steps.changes.outputs.pnpm }}
       android: ${{ steps.changes.outputs.android }}
       ios: ${{ steps.changes.outputs.ios }}
+      flutter: ${{ steps.changes.outputs.flutter }}
       nix: ${{ steps.changes.outputs.nix }}
 
     steps:
@@ -39,7 +40,7 @@ jobs:
 
       - name: find the checks to run
         id: changes
-        run: node tools/ci/changes.mjs pnpm android ios nix
+        run: node tools/ci/changes.mjs pnpm android ios flutter nix
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           PATHS_PNPM: |
@@ -77,6 +78,20 @@ jobs:
             tools/ci/**
             .github/workflows/ci.yml
             !**/*.md
+          # The generated API client lives in the app, and the analyzer
+          # checks it, so a contract change runs this too.
+          PATHS_FLUTTER: |
+            apps/flutter/**
+            brand/android/**
+            packages/contracts/**
+            apps/server/scripts/**
+            nix/flutter.nix
+            flake.nix
+            flake.lock
+            package.json
+            tools/ci/**
+            .github/workflows/ci.yml
+            !**/*.md
           PATHS_NIX: |
             nix/**
             apps/**
@@ -93,6 +108,7 @@ jobs:
             !**/*.md
             !apps/android/**
             !apps/ios/**
+            !apps/flutter/**
 
   checks:
     name: ${{ matrix.name }}
@@ -206,6 +222,36 @@ jobs:
       - name: build unsigned Apple TV simulator app
         run: nix shell nixpkgs#just -c just ios tv-build
 
+  flutter:
+    name: flutter analyze, test, and build
+    needs: changes
+    if: needs.changes.outputs.flutter == 'true' && github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install nix
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Caches Gradle's downloads and build cache. Flutter runs Gradle in
+      # the flake's Flutter shell, with its JDK and SDK.
+      - name: set up gradle cache
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: analyze, format check, and test
+        run: nix shell nixpkgs#just -c just flutter check
+
+      - name: build debug apk
+        run: nix shell nixpkgs#just -c just flutter build
+
   nix:
     name: nix flake check
     needs: changes
@@ -250,7 +296,7 @@ jobs:
   # fails only on a check that failed or was cancelled, `changes` included.
   ci:
     name: ci
-    needs: [changes, checks, android, ios, nix]
+    needs: [changes, checks, android, ios, flutter, nix]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
