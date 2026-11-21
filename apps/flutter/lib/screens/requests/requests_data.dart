@@ -10,6 +10,7 @@ import '../../query/server_data.dart';
 import '../title/title_data.dart' show titleProvider;
 import 'request_words.dart';
 import 'requests_hub.dart';
+import 'requests_rail.dart' show requestRowCards;
 
 /// What Explore, the catalog's pages, and the requests page read, as the
 /// Kotlin app's loaders in `ui/requests`. Each read that holds a request's
@@ -285,6 +286,13 @@ final class MyRequests extends CursorList<RequestItem> {
 
 final myRequestsProvider = NotifierProvider.autoDispose
     .family<MyRequests, CursorPages<RequestItem>, String>(MyRequests.new);
+
+/// Explore's Requests row for anyone but an admin: their requests in
+/// progress, live from `requests.mineLive`, which sends the whole first
+/// page again on each change, so a reconnect loses nothing.
+final myLiveRequestsProvider = serverStream(
+  (api) => api.requests.mineLive(limit: requestRowCards),
+);
 
 /// The profile's "My requests": the latest of everything the viewer asked
 /// for, as the Kotlin app's `ProfileAskedRail` loads it. Fetched again

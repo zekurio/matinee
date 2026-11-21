@@ -1,12 +1,18 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:matinee/api/matinee_api.dart' show User;
 import 'package:matinee/core/display_names.dart';
+import 'package:matinee/core/session.dart';
+import 'package:matinee/downloads/downloads.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/media/actions.dart' show mediaChangesProvider;
 import 'package:matinee/screens/library/library_screen.dart';
 import 'package:matinee/screens/shell/shell.dart';
 
+import '../core/fakes.dart' show userJson;
+import '../downloads/fake_downloads.dart';
+import '../media/fixtures.dart' show itemJson;
 import '../media/harness.dart';
 import 'library_backend.dart';
 
@@ -54,6 +60,51 @@ void main() {
     // One library of the kind: no menu.
     expect(find.text('All libraries'), findsNothing);
   });
+
+  for (final (name, entries, line) in [
+    ('without downloads', <Object>[], ''),
+    ('with downloads', [Object()], ' Your downloads still play.'),
+  ]) {
+    testWidgets('offline $name, it says what comes back', (tester) async {
+      final backend = LibraryBackend();
+      await pumpScreen(
+        tester,
+        _shows,
+        client: backend.client,
+        overrides: [
+          savedServersProvider.overrideWithValue([
+            SavedServer(
+              origin: '$server/',
+              address: '$server',
+              name: null,
+              user: User.fromJson(userJson('ada')),
+              active: true,
+            ),
+          ]),
+          downloadsPlatformProvider.overrideWithValue(
+            FakeDownloadsPlatform([
+              for (final _ in entries)
+                downloadEntry(itemJson('m1'), server: '$server/'),
+            ]),
+          ),
+        ],
+        auth: Offline('$server', User.fromJson(userJson('ada'))),
+      );
+      expect(find.textContaining('Connect to a network'), findsNothing);
+      expect(
+        find.text(
+          'Your shows and movies come back once the server can be '
+          'reached.$line',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Downloads'),
+        entries.isEmpty ? findsNothing : findsOneWidget,
+      );
+      expect(backend.browsed, isEmpty);
+    });
+  }
 
   testWidgets('a card opens its title', (tester) async {
     final backend = LibraryBackend();

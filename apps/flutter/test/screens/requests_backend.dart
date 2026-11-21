@@ -10,7 +10,7 @@ import 'home_backend.dart';
 
 /// The server Explore, the catalog's pages, and the requests page talk to,
 /// answering each path as the test sets it, with the two live streams as
-/// server-sent events.
+/// server-sent events, and the viewer's own requests as a third.
 
 /// A time [days] before now, so the words for it stay the same whenever
 /// the tests run.
@@ -277,8 +277,12 @@ final class RequestsBackend {
   /// The queue the admin's stream starts with.
   JsonMap queue = queueJson();
 
+  /// The page the viewer's own `requests.mineLive` starts with.
+  JsonMap mine = {'items': <Object>[], 'nextCursor': null};
+
   final _live = StreamController<List<int>>.broadcast();
   final _adminLive = StreamController<List<int>>.broadcast();
+  final _mineLive = StreamController<List<int>>.broadcast();
 
   /// The titles' live stream says [events].
   void send(List<JsonMap> events) =>
@@ -288,6 +292,12 @@ final class RequestsBackend {
   void sendQueue(JsonMap next) {
     queue = next;
     _adminLive.add(utf8.encode('data: ${jsonEncode(next)}\n\n'));
+  }
+
+  /// The viewer's own stream says their requests are now [next].
+  void sendMine(JsonMap next) {
+    mine = next;
+    _mineLive.add(utf8.encode('data: ${jsonEncode(next)}\n\n'));
   }
 
   static const _changes = {
@@ -321,6 +331,12 @@ final class RequestsBackend {
     if (path == '/api/v1/admin/requests/live') {
       return http.StreamedResponse(
         _startWith(utf8.encode('data: ${jsonEncode(queue)}\n\n'), _adminLive),
+        200,
+      );
+    }
+    if (path == '/api/v1/requests/mine/live') {
+      return http.StreamedResponse(
+        _startWith(utf8.encode('data: ${jsonEncode(mine)}\n\n'), _mineLive),
         200,
       );
     }

@@ -85,7 +85,7 @@ bottom, Home, Shows, Movies, Downloads, and the profile. Both stay while a
 tab scrolls. Each tab keeps its own stack, and every other page opens over
 them without either. When a tab's label doesn't fit, as on a small phone
 or with large text, the tabs show only their icons. Search opens Explore,
-which an admin's waiting requests head. A TV gets its own routes.
+headed by the Requests row. A TV gets its own routes.
 
 A platform channel starts as a Pigeon file in `pigeons/`. Run
 `just flutter pigeon`, then implement the generated interface on the
@@ -375,11 +375,24 @@ which `recommendations.dismissed` takes and the rows leave out for the
 sitting. Titles here already are the library's cards; the rest follow
 `requests.live`. With Discover off, the page under the field stays empty.
 
-`Explore(leading: ...)` takes slivers to put before the rows. The search
-page passes an admin's `RequestsLink`, the way to the queue with how many
-requests need them. A row of request cards goes in the same place once
-the server sends one: add its sliver to `leading`, before or instead of
-the link.
+The first row is "Requests" (`requests_rail.dart`), the web's
+`requests-rail.tsx`, which `DiscoverRails.requests` names: `"queue"` for
+an admin, the waiting requests from the hub's `admin.requests.live`, up
+to 20, each with who asked and when and Add and Decline; `"mine"` for
+anyone else, their requests in progress from `requests.mineLive`, each
+with its state (the season it waits on, how far along and how long it
+has left, when it's out, why it was declined and the admin's note, or
+here) and when they asked, and Cancel while the server's action says
+so. The cards are the poster beside the request, over the poster blurred
+and darkened, in the theme's dark half. Add, Decline, and Cancel go
+through the hub, held for the toast's Undo before anything is sent. The
+row follows its list even while it's empty and shows once it has cards;
+it stays when Discover's rows fail, with its own Try again when its list
+does. The heading opens the queue or My requests, so there's no separate
+link to the queue beside it; the profile keeps the count of what needs
+an admin. A server from before `requests` sends no field, which reads as
+null, and gets no row. Home and the profile don't show this row, as the
+web's don't.
 
 `CatalogBrowseScreen` (`catalog_browse.dart`) is `Routes.catalogBrowse`:
 `discover.browse` a page at a time as the grid's end comes near, the sort
@@ -398,8 +411,10 @@ before sending them, and bumps `requestsVersionProvider`, which every
 read that holds a request's state watches, so pages that are covered
 fetch again too. A screen follows its titles by wrapping them in
 `FollowTitles`. For an admin, the hub also follows
-`admin.requests.live`, which the queue, the Add and Decline buttons, and
-the count beside "Requests" read.
+`admin.requests.live`, which the queue, the Add and Decline buttons,
+Explore's Requests row, and the profile's count read. A person's Cancel
+from Explore's Requests row is held for Undo the same way (`withdraw`);
+the poster's Cancel request goes at once.
 
 `Routes.catalog` (`catalog_screen.dart`) is a title the server doesn't
 have, laid out like a library title's page, with the state on the
@@ -696,6 +711,9 @@ first key.
   `TvDisplayMatch` hands the mode to the next episode, so the same rate
   asks nothing of the screen. The controls hide after 3.5 s, as the
   phone's do.
+
+The TV has no requests, as the Kotlin TV app has none: no Explore, no
+Requests row, and no catalog pages.
 
 `test/screens/tv` and `test/player/tv_playback_test.dart` send key events
 and check where focus lands. Their goldens are taken at 960 by 540, the

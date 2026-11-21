@@ -111,14 +111,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: MediaQuery.removePadding(
               context: context,
               removeTop: true,
-              child: _text.isEmpty
-                  ? Explore(
-                      leading: [
-                        if (ref.watch(isAdminProvider))
-                          const SliverToBoxAdapter(child: RequestsLink()),
-                      ],
-                    )
-                  : _found(l),
+              child: _text.isEmpty ? const Explore() : _found(l),
             ),
           ),
         ],

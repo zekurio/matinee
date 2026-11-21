@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/link_opener.dart';
 import 'package:matinee/core/session.dart';
@@ -9,7 +10,10 @@ import 'package:matinee/kit/kit.dart';
 import 'package:matinee/screens/requests/catalog_browse.dart';
 import 'package:matinee/screens/requests/catalog_cards.dart' show AskedCard;
 import 'package:matinee/screens/requests/catalog_screen.dart';
+import 'package:matinee/screens/requests/requests_data.dart'
+    show myLiveRequestsProvider;
 import 'package:matinee/screens/requests/requests_hub.dart' show mostFollowed;
+import 'package:matinee/screens/requests/requests_rail.dart';
 import 'package:matinee/screens/requests/requests_screen.dart';
 import 'package:matinee/screens/search/search_data.dart';
 import 'package:matinee/screens/search/search_screen.dart';
@@ -54,40 +58,45 @@ final _dune = summaryJson(
   ),
 );
 
-RequestsBackend _explore() => RequestsBackend()
-  ..answers['/api/v1/discover/rails'] = {
-    'enabled': true,
-    'rails': [
-      discoverRailJson('popularFilms'),
-      discoverRailJson('popularShows', kind: 'show'),
-    ],
-    'browse': ['movie', 'show'],
-  }
-  ..rows['popularFilms'] = {
-    'items': [
-      browseTitleJson(
-        'd2',
-        'Dune: Part Two',
-        availability: _dune['availability']! as JsonMap,
-      ),
-      browseTitleJson('a1', 'Anora'),
-      browseTitleJson(
-        'c1',
-        'Conclave',
-        availability: stateJson('coming', progress: .4, requestId: 'r2'),
-      ),
-    ],
-    'stale': false,
-    'detail': null,
-  }
-  ..rows['popularShows'] = {
-    'items': [
-      browseTitleJson('s1', 'Severance', kind: 'show'),
-      browseTitleJson('s2', 'Shogun', kind: 'show'),
-    ],
-    'stale': false,
-    'detail': null,
-  };
+/// Explore with two rows. [requests] is the Requests row the server names,
+/// `"mine"` by default; [older] leaves the field out, as a server from
+/// before the row sends it.
+RequestsBackend _explore({String? requests = 'mine', bool older = false}) =>
+    RequestsBackend()
+      ..answers['/api/v1/discover/rails'] = {
+        'enabled': true,
+        if (!older) 'requests': requests,
+        'rails': [
+          discoverRailJson('popularFilms'),
+          discoverRailJson('popularShows', kind: 'show'),
+        ],
+        'browse': ['movie', 'show'],
+      }
+      ..rows['popularFilms'] = {
+        'items': [
+          browseTitleJson(
+            'd2',
+            'Dune: Part Two',
+            availability: _dune['availability']! as JsonMap,
+          ),
+          browseTitleJson('a1', 'Anora'),
+          browseTitleJson(
+            'c1',
+            'Conclave',
+            availability: stateJson('coming', progress: .4, requestId: 'r2'),
+          ),
+        ],
+        'stale': false,
+        'detail': null,
+      }
+      ..rows['popularShows'] = {
+        'items': [
+          browseTitleJson('s1', 'Severance', kind: 'show'),
+          browseTitleJson('s2', 'Shogun', kind: 'show'),
+        ],
+        'stale': false,
+        'detail': null,
+      };
 
 /// One request to answer, one that failed, and one on its way.
 JsonMap _queue() => queueJson(
@@ -133,8 +142,95 @@ JsonMap _queue() => queueJson(
   ],
 );
 
+/// A person's own requests, one in each state: waiting with Cancel, on
+/// its way, out later, declined with why, a show's season, and here.
+JsonMap _mineStates() => {
+  'items': [
+    requestJson('r1', _dune),
+    requestJson(
+      'r2',
+      summaryJson(
+        'c1',
+        'Conclave',
+        availability: {
+          ...stateJson('coming', progress: .4, requestId: 'r2'),
+          'etaSeconds': 1200,
+        },
+      ),
+    ),
+    requestJson(
+      'r3',
+      summaryJson(
+        'n1',
+        'Nosferatu',
+        availability: {
+          ...stateJson('release', requestId: 'r3'),
+          'releaseDate': '2099-01-01',
+        },
+      ),
+    ),
+    requestJson(
+      'r4',
+      summaryJson(
+        'a1',
+        'Anora',
+        availability: stateJson(
+          'unavailable',
+          requestId: 'r4',
+          disabledReason: 'declined',
+          reason: {
+            'kind': 'declined',
+            'code': 'alreadyHere',
+            'note': 'It is on the shelf in the living room.',
+          },
+        ),
+      ),
+    ),
+    {
+      ...requestJson(
+        'r5',
+        summaryJson(
+          's1',
+          'Severance',
+          kind: 'show',
+          availability: stateJson('here', libraryTitleId: 's-lib'),
+        ),
+        scope: {
+          'seasons': [2],
+          'future': false,
+        },
+      ),
+      'season': {
+        ...stateJson(
+          'asked',
+          action: 'cancel',
+          requestId: 'r5',
+          askedBySelf: true,
+        ),
+        'number': 2,
+        'episodesHere': 0,
+        'episodesAired': 10,
+      },
+    },
+    {
+      ...requestJson(
+        'r6',
+        summaryJson(
+          'h1',
+          'Arrival',
+          availability: stateJson('here', libraryTitleId: 'm1'),
+        ),
+      ),
+      'arrivedAt': daysAgo(1),
+    },
+  ],
+  'nextCursor': null,
+};
+
 void main() {
   setUpAll(loadFont);
+  // The release day on a request's card.
+  setUpAll(() => initializeDateFormatting('en'));
 
   group('Explore', () {
     testWidgets('lists Discover under the empty field', (tester) async {
@@ -143,7 +239,7 @@ void main() {
       expect(find.text('Popular movies'), findsOneWidget);
       expect(find.text('Popular shows'), findsOneWidget);
       expect(find.text('Anora'), findsWidgets);
-      // Only an admin has the way to the queue.
+      // Nothing asked for yet: no Requests row, and no admin's queue.
       expect(find.text('Requests'), findsNothing);
       expect(backend.asked, isNot(contains('/api/v1/admin/requests/live')));
       // The heading opens the row's browse.
@@ -193,24 +289,6 @@ void main() {
       expect(find.text('2024 · Show'), findsOneWidget);
     });
 
-    testWidgets('an admin sees the requests that wait on them first', (
-      tester,
-    ) async {
-      final backend = _explore()..queue = _queue();
-      await pumpScreen(
-        tester,
-        const SearchScreen(),
-        client: backend.client,
-        auth: _admin,
-      );
-      expect(find.text('Requests'), findsOneWidget);
-      // Two waiting and one that needs attention.
-      expect(find.text('3'), findsOneWidget);
-      await tester.tap(find.text('Requests'));
-      await tester.pumpAndSettle();
-      expect(find.text('/requests/waiting'), findsOneWidget);
-    });
-
     testWidgets('Discover off leaves the page empty', (tester) async {
       final backend = RequestsBackend()
         ..answers['/api/v1/discover/rails'] = {
@@ -228,7 +306,9 @@ void main() {
       ('tablet_light_admin', const Size(1280, 800), matineeLight, _admin),
     ]) {
       testWidgets('Explore on a $name', (tester) async {
-        final backend = _explore()..queue = _queue();
+        final backend = _explore(requests: auth == null ? 'mine' : 'queue')
+          ..queue = _queue()
+          ..mine = _mineStates();
         await pumpScreen(
           tester,
           const SearchScreen(),
@@ -240,6 +320,298 @@ void main() {
         await expectLater(
           find.byType(SearchScreen),
           matchesGoldenFile('goldens/explore_$name.png'),
+        );
+      });
+    }
+  });
+
+  group("Explore's Requests row", () {
+    Finder inCard(String name, Finder matching) => find.descendant(
+      of: find.ancestor(
+        of: find.text(name),
+        matching: find.byType(RequestCard),
+      ),
+      matching: matching,
+    );
+
+    testWidgets("an admin's waiting requests come first, with who asked", (
+      tester,
+    ) async {
+      final backend = _explore(requests: 'queue')..queue = _queue();
+      await pumpScreen(
+        tester,
+        const SearchScreen(),
+        client: backend.client,
+        auth: _admin,
+      );
+      // The heading is the one way to the queue: no link row beside it.
+      expect(find.text('Requests'), findsOneWidget);
+      // The waiting two, not the one that needs attention or on its way.
+      expect(find.byType(RequestCard), findsNWidgets(2));
+      expect(inCard('Anora', find.text('2024 · Movie')), findsOneWidget);
+      expect(inCard('Anora', find.text('Waiting')), findsOneWidget);
+      // The first to ask, how many more, and when the first asked.
+      expect(inCard('Anora', find.text('ben')), findsOneWidget);
+      expect(inCard('Anora', find.text('+1')), findsOneWidget);
+      expect(inCard('Anora', find.text('2 days ago')), findsOneWidget);
+      expect(inCard('Anora', find.text('Add')), findsOneWidget);
+      expect(inCard('Anora', find.text('Decline')), findsOneWidget);
+      expect(backend.asked, isNot(contains('/api/v1/requests/mine/live')));
+      // Ahead of Discover's rows.
+      expect(
+        tester.getTopLeft(find.text('Requests')).dy,
+        lessThan(tester.getTopLeft(find.text('Popular movies')).dy),
+      );
+      await tester.tap(find.text('Requests'));
+      await tester.pumpAndSettle();
+      expect(find.text('/requests/waiting'), findsOneWidget);
+    });
+
+    testWidgets('Add is held for Undo, then sent', (tester) async {
+      final backend = _explore(requests: 'queue')..queue = _queue();
+      await pumpScreen(
+        tester,
+        _withToasts(const SearchScreen()),
+        client: backend.client,
+        auth: _admin,
+      );
+      await tester.tap(inCard('Anora', find.text('Add')));
+      await tester.pumpAndSettle();
+      expect(find.byType(RequestCard), findsOneWidget);
+      expect(find.text('Undo'), findsOneWidget);
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RequestCard), findsNWidgets(2));
+      await _undoRunsOut(tester);
+      expect(backend.sent, isEmpty);
+
+      await tester.tap(inCard('Anora', find.text('Add')));
+      await tester.pumpAndSettle();
+      await _undoRunsOut(tester);
+      expect(backend.sent.single.$1, '/api/v1/admin/requests/approve');
+      expect((backend.sent.single.$2! as Map)['id'], 'q1');
+    });
+
+    testWidgets('Decline takes a reason, held for Undo', (tester) async {
+      final backend = _explore(requests: 'queue')..queue = _queue();
+      await pumpScreen(
+        tester,
+        _withToasts(const SearchScreen()),
+        client: backend.client,
+        auth: _admin,
+      );
+      await tester.tap(inCard('Anora', find.text('Decline')));
+      await tester.pumpAndSettle();
+      expect(find.text('Decline Anora'), findsOneWidget);
+      await tester.tap(find.text('Not for this server'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Decline').last);
+      await tester.pumpAndSettle();
+      expect(find.byType(RequestCard), findsOneWidget);
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RequestCard), findsNWidgets(2));
+      await _undoRunsOut(tester);
+      expect(backend.sent, isEmpty);
+
+      await tester.tap(inCard('Anora', find.text('Decline')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Not for this server'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Decline').last);
+      await tester.pumpAndSettle();
+      await _undoRunsOut(tester);
+      final (path, body) = backend.sent.single;
+      expect(path, '/api/v1/admin/requests/decline');
+      expect(body, containsPair('id', 'q1'));
+      expect(body, containsPair('reason', 'notForServer'));
+    });
+
+    testWidgets("a person's own requests, each as it stands", (tester) async {
+      final backend = _explore()..mine = _mineStates();
+      await pumpScreen(
+        tester,
+        const SearchScreen(),
+        client: backend.client,
+        size: const Size(2400, 915),
+      );
+      expect(backend.asked, contains('/api/v1/requests/mine/live'));
+      expect(backend.asked, isNot(contains('/api/v1/admin/requests/live')));
+      expect(find.byType(RequestCard), findsNWidgets(6));
+      expect(inCard('Dune: Part Two', find.text('Waiting')), findsOneWidget);
+      expect(
+        inCard('Dune: Part Two', find.text('First requested 2 days ago')),
+        findsOneWidget,
+      );
+      expect(
+        inCard('Dune: Part Two', find.text('Cancel request')),
+        findsOneWidget,
+      );
+      expect(inCard('Conclave', find.text('On its way · 40%')), findsOneWidget);
+      expect(inCard('Conclave', find.text('20 minutes left')), findsOneWidget);
+      expect(inCard('Conclave', find.text('Cancel request')), findsNothing);
+      expect(inCard('Nosferatu', find.textContaining('Out ')), findsOneWidget);
+      expect(inCard('Anora', find.text('Not available')), findsOneWidget);
+      expect(inCard('Anora', find.text('Already have it.')), findsOneWidget);
+      expect(
+        inCard('Anora', find.text('It is on the shelf in the living room.')),
+        findsOneWidget,
+      );
+      // A show's request for a season names it, with the season's state.
+      // What the request covers under the name, and the season it waits
+      // on over its state, as the web's card has both.
+      expect(inCard('Severance', find.text('Season 2')), findsNWidgets(2));
+      expect(inCard('Severance', find.text('Waiting')), findsOneWidget);
+      expect(inCard('Severance', find.text('Cancel request')), findsOneWidget);
+      expect(inCard('Arrival', find.text('Here now')), findsOneWidget);
+      // The heading opens My requests; a card, its title's page.
+      await tester.tap(find.text('Arrival').first);
+      await tester.pumpAndSettle();
+      expect(find.text('/title/m1'), findsOneWidget);
+    });
+
+    testWidgets('the heading opens My requests', (tester) async {
+      final backend = _explore()..mine = _mineStates();
+      await pumpScreen(tester, const SearchScreen(), client: backend.client);
+      await tester.tap(find.text('Requests'));
+      await tester.pumpAndSettle();
+      expect(find.text('/requests'), findsOneWidget);
+    });
+
+    testWidgets('Cancel is held for Undo, then sent', (tester) async {
+      final backend = _explore()..mine = _mineStates();
+      await pumpScreen(
+        tester,
+        _withToasts(const SearchScreen()),
+        client: backend.client,
+        size: const Size(2400, 915),
+      );
+      await tester.tap(inCard('Dune: Part Two', find.text('Cancel request')));
+      await tester.pumpAndSettle();
+      expect(find.byType(RequestCard), findsNWidgets(5));
+      expect(find.text('Cancelled Dune: Part Two'), findsOneWidget);
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RequestCard), findsNWidgets(6));
+      await _undoRunsOut(tester);
+      expect(backend.sent, isEmpty);
+
+      await tester.tap(inCard('Dune: Part Two', find.text('Cancel request')));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 7));
+      expect(backend.sent.single.$1, '/api/v1/requests/cancel');
+      expect((backend.sent.single.$2! as Map)['id'], 'r1');
+      // The server's stream leaves it out, so it stays gone.
+      final items = (backend.mine['items']! as List).skip(1).toList();
+      backend.sendMine({'items': items, 'nextCursor': null});
+      await tester.pumpAndSettle();
+      await _undoRunsOut(tester);
+      expect(find.byType(RequestCard), findsNWidgets(5));
+      expect(find.text('Dune: Part Two'), findsWidgets);
+    });
+
+    testWidgets('an empty list shows no row, and follows it all the same', (
+      tester,
+    ) async {
+      final backend = _explore();
+      await pumpScreen(tester, const SearchScreen(), client: backend.client);
+      expect(find.text('Requests'), findsNothing);
+      expect(backend.asked, contains('/api/v1/requests/mine/live'));
+      backend.sendMine({
+        'items': [requestJson('r1', _dune)],
+        'nextCursor': null,
+      });
+      await tester.pumpAndSettle();
+      expect(find.text('Requests'), findsOneWidget);
+      expect(find.byType(RequestCard), findsOneWidget);
+    });
+
+    testWidgets("an admin's empty queue shows no row", (tester) async {
+      final backend = _explore(requests: 'queue');
+      await pumpScreen(
+        tester,
+        const SearchScreen(),
+        client: backend.client,
+        auth: _admin,
+      );
+      expect(find.text('Requests'), findsNothing);
+      expect(find.text('Popular movies'), findsOneWidget);
+    });
+
+    testWidgets('a list that fails offers Try again in its place', (
+      tester,
+    ) async {
+      final backend = _explore();
+      var opened = 0;
+      await pumpScreen(
+        tester,
+        const SearchScreen(),
+        client: backend.client,
+        overrides: [
+          // A failure, then the list on Try again. A failed request over
+          // the fake client reaches the provider only in real time, which
+          // a widget test's clock doesn't run.
+          myLiveRequestsProvider.overrideWith(
+            (ref) => opened++ == 0
+                ? Stream.error(Exception('down'))
+                : Stream.value(RequestPage.fromJson(_mineStates())),
+          ),
+        ],
+      );
+      expect(find.text('Requests'), findsOneWidget);
+      expect(find.text("This row didn't load."), findsOneWidget);
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RequestCard), findsWidgets);
+      expect(find.text("This row didn't load."), findsNothing);
+    });
+
+    test("an older server's rails read without a Requests row", () {
+      final rails = DiscoverRails.fromJson({
+        'enabled': true,
+        'rails': <Object>[],
+        'browse': ['movie'],
+      });
+      expect(rails.requests, isNull);
+    });
+
+    for (final (who, auth) in [('an admin', _admin), ('anyone else', null)]) {
+      testWidgets('an older server shows $who no Requests row', (tester) async {
+        final backend = _explore(older: true)
+          ..queue = _queue()
+          ..mine = _mineStates();
+        await pumpScreen(
+          tester,
+          const SearchScreen(),
+          client: backend.client,
+          auth: auth,
+        );
+        expect(find.text('Popular movies'), findsOneWidget);
+        expect(find.text('Requests'), findsNothing);
+        expect(find.byType(RequestCard), findsNothing);
+        expect(backend.asked, isNot(contains('/api/v1/requests/mine/live')));
+      });
+    }
+
+    for (final (name, colors) in [
+      ('dark', matineeDark),
+      ('light', matineeLight),
+    ]) {
+      testWidgets('every state of a person\'s own, $name', (tester) async {
+        final backend = RequestsBackend()..mine = _mineStates();
+        await pumpScreen(
+          tester,
+          const Align(
+            alignment: Alignment.topLeft,
+            child: RequestsRail(which: 'mine'),
+          ),
+          client: backend.client,
+          size: const Size(2160, 300),
+          colors: colors,
+        );
+        await expectLater(
+          find.byType(RequestsRail),
+          matchesGoldenFile('goldens/requests_row_mine_$name.png'),
         );
       });
     }
