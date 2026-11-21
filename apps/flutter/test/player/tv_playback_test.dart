@@ -453,6 +453,34 @@ void main() {
     expect(focusedLabel(), 'Try again');
   });
 
+  testWidgets('after Try again, focus is on play and the controls hide', (
+    tester,
+  ) async {
+    final opened = await _open(tester);
+    final player = opened.players.last;
+    player.emit(PlaybackPhase.error, 30, serverUnavailable: true);
+    await settle(tester);
+    expect(focusedLabel(), 'Try again');
+    await select(tester);
+    await settle(tester);
+    final again = opened.players.last;
+    for (var second = 0; second < 2; second++) {
+      again.emit(PlaybackPhase.ready, 30.0 + second, playing: true);
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+    expect(find.text('The Crossing'), findsOneWidget, reason: 'still up');
+    expect(focusedKey(), 'player/play', reason: 'not lost with Try again');
+    await right(tester);
+    expect(focusedLabel(), startsWith('Forward'), reason: 'the D-pad moves');
+    await left(tester);
+    for (var second = 2; second < 8; second++) {
+      again.emit(PlaybackPhase.ready, 30.0 + second, playing: true);
+      await tester.pump(const Duration(seconds: 1));
+    }
+    await tester.pumpAndSettle();
+    expect(find.text('The Crossing'), findsNothing, reason: 'they hid');
+  });
+
   testWidgets('the controls hide while the player reports its time', (
     tester,
   ) async {
