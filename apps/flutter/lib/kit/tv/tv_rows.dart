@@ -1,6 +1,11 @@
 import 'dart:math' as math;
 
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:flutter/rendering.dart'
+    show
+        RenderSliverSingleBoxAdapter,
+        ScrollCacheExtent,
+        SliverConstraints,
+        SliverGeometry;
 import 'package:flutter/widgets.dart';
 
 import '../cards.dart' show WatchedBadge;
@@ -227,15 +232,14 @@ class _TvRowState extends State<TvRow> {
 /// A page of rows under a fixed header, as the Kotlin app's `PinnedRows`:
 /// whichever row takes focus scrolls to the same place, the focused card
 /// [pivot] below the list's top with its heading above it, and the list's
-/// top fades over [fade]. [children] are the rows, [gap] apart, and [end]
-/// is the room after the last one, so it can come up to the pivot too.
+/// top fades over [fade]. [children] are the rows, [gap] apart, and the
+/// last can come up to where the others stop, no further ([TvRowsScroll]).
 class TvPinnedList extends StatefulWidget {
   const TvPinnedList({
     super.key,
     required this.children,
     this.pivot = TvCards.titleHeight + TvCards.titleGap + 12,
     this.gap = 28,
-    this.end = 320,
     this.top = 12,
     this.fade = 0,
     this.controller,
@@ -244,7 +248,6 @@ class TvPinnedList extends StatefulWidget {
   final List<Widget> children;
   final double pivot;
   final double gap;
-  final double end;
   final double top;
   final double fade;
   final ScrollController? controller;
@@ -277,14 +280,11 @@ class _TvPinnedListState extends State<TvPinnedList> {
         controller: _scroll,
         rule: TvFollowFocus.pinned(widget.pivot),
         sectionTop: widget.gap,
-        child: ListView.separated(
+        child: TvRowsScroll(
           controller: _scroll,
-          clipBehavior: Clip.none,
-          scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
-          padding: EdgeInsets.only(top: widget.top, bottom: widget.end),
-          itemCount: widget.children.length,
-          separatorBuilder: (_, _) => SizedBox(height: widget.gap),
-          itemBuilder: (context, index) => widget.children[index],
+          top: widget.top,
+          gap: widget.gap,
+          rows: widget.children,
         ),
       ),
     ),
@@ -630,7 +630,6 @@ class TvHeaderList extends StatefulWidget {
     this.pivot = 88,
     this.fade = 32,
     this.gap = 32,
-    this.end = 360,
   });
 
   final Widget header;
@@ -638,7 +637,6 @@ class TvHeaderList extends StatefulWidget {
   final double pivot;
   final double fade;
   final double gap;
-  final double end;
 
   @override
   State<TvHeaderList> createState() => _TvHeaderListState();
@@ -681,16 +679,13 @@ class _TvHeaderListState extends State<TvHeaderList> {
       controller: _scroll,
       rule: _rule,
       sectionTop: widget.gap,
-      child: ListView.separated(
+      child: TvRowsScroll(
         controller: _scroll,
-        clipBehavior: Clip.none,
-        scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
-        padding: EdgeInsets.only(bottom: widget.end),
-        itemCount: widget.rows.length + 1,
-        separatorBuilder: (_, _) => SizedBox(height: widget.gap),
-        itemBuilder: (context, index) => index == 0
-            ? Focus(focusNode: _header, child: widget.header)
-            : widget.rows[index - 1],
+        gap: widget.gap,
+        rows: [
+          Focus(focusNode: _header, child: widget.header),
+          ...widget.rows,
+        ],
       ),
     ),
   );
@@ -706,4 +701,116 @@ class _ClipAbove extends CustomClipper<Rect> {
 
   @override
   bool shouldReclip(_ClipAbove oldClipper) => false;
+}
+
+/// A page's rows, [gap] apart under [top], as one scroll for a
+/// [TvFollowFocus] with a `sectionTop` of [gap]: each row is a [TvSection].
+/// The scroll ends where the D-pad leaves the last row, [gap] below the top
+/// where it shows whole there, so neither the D-pad nor a drag takes it
+/// further; rows that fit on the screen don't scroll at all.
+class TvRowsScroll extends StatelessWidget {
+  const TvRowsScroll({
+    super.key,
+    required this.controller,
+    required this.rows,
+    required this.gap,
+    this.top = 0,
+    this.cacheExtent = 1200,
+  });
+
+  final ScrollController controller;
+  final List<Widget> rows;
+  final double gap;
+  final double top;
+  final double cacheExtent;
+
+  @override
+  Widget build(BuildContext context) {
+    final last = rows.length - 1;
+    return CustomScrollView(
+      controller: controller,
+      clipBehavior: Clip.none,
+      scrollCacheExtent: ScrollCacheExtent.pixels(cacheExtent),
+      slivers: [
+        if (top > 0) SliverToBoxAdapter(child: SizedBox(height: top)),
+        if (last > 0)
+          SliverList.separated(
+            itemCount: last,
+            separatorBuilder: (_, _) => SizedBox(height: gap),
+            itemBuilder: (context, index) => TvSection(child: rows[index]),
+          ),
+        if (last > 0) SliverToBoxAdapter(child: SizedBox(height: gap)),
+        if (last >= 0)
+          _LastRow(
+            stop: gap,
+            child: TvSection(child: rows[last]),
+          ),
+      ],
+    );
+  }
+}
+
+/// The last row, whose scroll ends with it [stop] below the top, higher
+/// when it wouldn't show whole there, and at the list's start when it
+/// starts higher than that. Room follows it to there, and when it's taller
+/// than what's left, it draws past the end.
+class _LastRow extends SingleChildRenderObjectWidget {
+  const _LastRow({required this.stop, super.child});
+
+  final double stop;
+
+  @override
+  _RenderLastRow createRenderObject(BuildContext context) =>
+      _RenderLastRow(stop);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderLastRow renderObject) {
+    renderObject.stop = stop;
+  }
+}
+
+class _RenderLastRow extends RenderSliverSingleBoxAdapter {
+  _RenderLastRow(this._stop);
+
+  double _stop;
+  set stop(double value) {
+    if (value == _stop) return;
+    _stop = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void performLayout() {
+    final child = this.child;
+    if (child == null) {
+      geometry = SliverGeometry.zero;
+      return;
+    }
+    final SliverConstraints constraints = this.constraints;
+    child.layout(constraints.asBoxConstraints(), parentUsesSize: true);
+    final height = child.size.height;
+    // The scroll ends with the row [stop] below the top, or higher when
+    // it would not show whole there, or at 0 when it starts higher than
+    // that: what's above it, plus this, less the viewport.
+    final above = constraints.precedingScrollExtent;
+    final viewport = constraints.viewportMainAxisExtent;
+    // A row starting that high is where focus puts it already.
+    final top = above <= _stop ? above : (viewport - height).clamp(0.0, _stop);
+    final extent = math.max(0.0, viewport - top);
+    final drawn = math.max(extent, height);
+    final laid = calculatePaintOffset(constraints, from: 0, to: extent);
+    final painted = calculatePaintOffset(constraints, from: 0, to: drawn);
+    geometry = SliverGeometry(
+      scrollExtent: extent,
+      layoutExtent: laid,
+      paintExtent: painted,
+      cacheExtent: calculateCacheOffset(constraints, from: 0, to: drawn),
+      maxPaintExtent: drawn,
+      hitTestExtent: painted,
+      hasVisualOverflow:
+          drawn > constraints.remainingPaintExtent ||
+          constraints.scrollOffset > 0,
+    );
+    setChildParentData(child, constraints, geometry!);
+  }
 }

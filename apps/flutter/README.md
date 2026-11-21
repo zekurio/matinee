@@ -714,8 +714,11 @@ first key.
   (`TvFollowFocus`). Unlike the Kotlin app's pivot, which can leave the
   row above cut at the top, a page of rows or sections (Home, the title
   page, Favorites, Profile, Settings) stops only where the one above is
-  whole or gone (`sectionTop`, `TvSection`), with room after the last so
-  it can come up.
+  whole or gone (`sectionTop`, `TvSection`). The scroll ends where the
+  last can come up to, a section's gap below the top, or less where it
+  wouldn't show whole there, and rows that fit don't scroll at all
+  (`TvRowsScroll`), so a drag can't take the last row away either. A drag
+  or fling that settles comes back to the focused card.
 - Panels (`showTvPanel`, `showTvPicker`): choices open at the right
   edge, Back closes them, and focus goes back to the row that opened
   them. The TV's server switcher (`sign_in/tv/tv_servers.dart`) is one

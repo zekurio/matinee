@@ -1,7 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
-import 'package:flutter/rendering.dart' show RenderSliverMultiBoxAdaptor;
+import 'package:flutter/rendering.dart'
+    show RenderSliverMultiBoxAdaptor, ScrollDirection;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -831,6 +832,36 @@ class _TvFollowFocusState extends State<TvFollowFocus> {
   void _changed() {
     final node = FocusManager.instance.primaryFocus;
     if (node == null || !node.ancestors.contains(_anchor)) return;
+    _follow(node);
+  }
+
+  /// A drag or fling of the list itself, as a touch or a mouse sends.
+  var _dragged = false;
+
+  /// Once a drag of the list settles, it comes back to the focused child,
+  /// as a move of focus would take it: a TV's focus is never left on
+  /// something scrolled away.
+  bool _scrolled(ScrollNotification notification) {
+    if (notification.depth != 0 || notification.metrics.axis != widget.axis) {
+      return false;
+    }
+    if (notification is UserScrollNotification &&
+        notification.direction != ScrollDirection.idle) {
+      _dragged = true;
+    } else if (notification is ScrollEndNotification && _dragged) {
+      _dragged = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final node = FocusManager.instance.primaryFocus;
+        if (!mounted || node == null || !node.ancestors.contains(_anchor)) {
+          return;
+        }
+        _follow(node);
+      });
+    }
+    return false;
+  }
+
+  void _follow(FocusNode node) {
     final target = node.context?.findRenderObject();
     final view = context.findRenderObject();
     if (target is! RenderBox || view is! RenderBox) return;
@@ -912,6 +943,8 @@ class _TvFollowFocusState extends State<TvFollowFocus> {
     final stops = {
       position.minScrollExtent,
       for (final (from, _) in sections) from - sectionTop,
+      // Where the list ends, which keeps its last section in view.
+      position.maxScrollExtent,
     };
     // Where the focused child runs, whatever the scroll.
     final at = position.pixels + start;
@@ -943,7 +976,10 @@ class _TvFollowFocusState extends State<TvFollowFocus> {
   @override
   Widget build(BuildContext context) => _TvSectionScope(
     state: this,
-    child: Focus(focusNode: _anchor, child: widget.child),
+    child: NotificationListener<ScrollNotification>(
+      onNotification: _scrolled,
+      child: Focus(focusNode: _anchor, child: widget.child),
+    ),
   );
 }
 
