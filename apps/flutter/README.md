@@ -708,7 +708,8 @@ first key.
 - Screens (`lib/screens/tv`): Home; Movies, Shows, Browse, Favorites, and
   Search; the title, season, episode, and person pages (a show of one
   season lists its episodes without the Kotlin app's one-card Seasons
-  row; a search field's placeholder is the muted text colour, not the
+  row; a season whose episodes fail to load offers Try again, focused,
+  as Home's rows do, where the Kotlin app only says so; a search field's placeholder is the muted text colour, not the
   Kotlin app's faint one, so it reads over a backdrop; the chips and the
   field over a grid's or Search's backdrop rest on the page's background
   under their fill, `TvFocus.restOnPicture`, where the Kotlin app's

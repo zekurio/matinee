@@ -625,8 +625,9 @@ class TvFocusMemory {
   TvMemoryNode? _left;
 
   /// [node] is leaving the screen. If it has focus, as a row's Try again
-  /// does when the row loads, focus goes to the first card its row shows
-  /// once the frame is built, rather than back to the card before it.
+  /// does when the row loads, focus goes to the card [restore] starts on
+  /// if that row has it, or else the first card the row shows, once the
+  /// frame is built, rather than back to the card before it.
   void _leaving(TvMemoryNode node) {
     if (_disposed || !node.hasPrimaryFocus) return;
     _left = node;
@@ -638,9 +639,17 @@ class TvFocusMemory {
       }
       final row = _rows[left.row];
       if (row == null || row.context == null) return;
-      final card = row.traversalDescendants
-          .where((node) => node.canRequestFocus && !node.skipTraversal)
-          .firstOrNull;
+      final card =
+          (switch (_fallback?.call()) {
+            (final start, final key) when start == left.row => shown(
+              start,
+              key,
+            ),
+            _ => null,
+          }) ??
+          row.traversalDescendants
+              .where((node) => node.canRequestFocus && !node.skipTraversal)
+              .firstOrNull;
       if (card == null || !_here()) return;
       card.requestFocus();
     });
