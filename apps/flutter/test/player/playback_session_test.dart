@@ -472,6 +472,31 @@ void main() {
     expect(backend.reports.last.paused, isTrue);
   });
 
+  testWidgets('a minute buffering with nothing coming says the server is '
+      'not answering', (tester) async {
+    final clock = tester.binding.clock;
+    final started = clock.now();
+    final engine = FakePlayer();
+    final playback = backend.session(
+      engine,
+      elapsed: () => clock.now().difference(started),
+    );
+    await playback.start();
+    engine.emit(PlaybackPhase.ready, 10, playing: true, buffered: 40);
+    await tester.pump();
+    // Data still arriving keeps it waiting.
+    engine.emit(PlaybackPhase.buffering, 10, buffered: 41);
+    await tester.pump(const Duration(seconds: 50));
+    engine.emit(PlaybackPhase.buffering, 10, buffered: 42);
+    await tester.pump(const Duration(seconds: 50));
+    expect(playback.error, isNull);
+    await tester.pump(const Duration(seconds: 11));
+    expect(playback.error, isA<PlaybackServerUnavailable>());
+    expect(engine.pauses, 1);
+    await playback.close();
+    playback.dispose();
+  });
+
   testWidgets('reports every 10 seconds playing and every 30 seconds paused', (
     tester,
   ) async {

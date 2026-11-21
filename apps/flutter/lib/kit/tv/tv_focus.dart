@@ -131,6 +131,12 @@ class _TvFocusableState extends State<TvFocusable> {
   }
 
   @override
+  void deactivate() {
+    if (_node case final TvMemoryNode node) node.memory._leaving(node);
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
     _node.removeListener(_changed);
     _held?.cancel();
@@ -615,6 +621,50 @@ class TvFocusMemory {
     if (!_restored && _fallback != null) _schedule();
   }
 
+  /// The card that had focus as it left the screen, until the frame ends.
+  TvMemoryNode? _left;
+
+  /// [node] is leaving the screen. If it has focus, as a row's Try again
+  /// does when the row loads, focus goes to the card [restore] starts on
+  /// if that row has it, or else the first card the row shows, once the
+  /// frame is built, rather than back to the card before it.
+  void _leaving(TvMemoryNode node) {
+    if (_disposed || !node.hasPrimaryFocus) return;
+    _left = node;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      final left = _left;
+      _left = null;
+      if (left == null || _disposed || shown(left.row, left.key) != null) {
+        return;
+      }
+      final row = _rows[left.row];
+      if (row == null || row.context == null) return;
+      final card =
+          (switch (_fallback?.call()) {
+            (final start, final key) when start == left.row => shown(
+              start,
+              key,
+            ),
+            _ => null,
+          }) ??
+          row.traversalDescendants
+              .where((node) => node.canRequestFocus && !node.skipTraversal)
+              .firstOrNull;
+      if (card == null || !_here()) return;
+      card.requestFocus();
+    });
+  }
+
+  /// Focus is on this page, not the drawer or a panel over it.
+  bool _here() {
+    final primary = FocusManager.instance.primaryFocus;
+    final scope = _scope;
+    if (primary == null || scope == null) return true;
+    return primary == scope ||
+        primary.ancestors.contains(scope) ||
+        (primary is FocusScopeNode && scope.ancestors.contains(primary));
+  }
+
   void _schedule() {
     if (_scheduled || _disposed) return;
     _scheduled = true;
@@ -626,25 +676,26 @@ class TvFocusMemory {
       ..ensureVisualUpdate();
   }
 
+  /// What the shell focused when the page had no card to give it, which
+  /// the page's card takes over from while it still has focus.
+  FocusNode? _standIn;
+
+  /// The shell focused [node] after waiting for the page's card.
+  void standIn(FocusNode node) => _standIn = node;
+
   void _try() {
     if (_restored || _disposed) return;
     final route = _route;
     if (route != null && !route.isCurrent) return;
-    final target = _saved ?? _start;
+    // Focus still on the stand-in waits for the page's own card.
+    final waited = _standIn?.hasPrimaryFocus ?? false;
+    final target = waited ? _start : _saved ?? _start;
     if (target == null) return;
     _restored = true;
     opening = false;
     _openingTimer?.cancel();
     // The drawer or a panel took focus meanwhile: it keeps it.
-    final primary = FocusManager.instance.primaryFocus;
-    final scope = _scope;
-    if (primary != null && scope != null) {
-      final here =
-          primary == scope ||
-          primary.ancestors.contains(scope) ||
-          (primary is FocusScopeNode && scope.ancestors.contains(primary));
-      if (!here) return;
-    }
+    if (!_here()) return;
     target.requestFocus();
   }
 

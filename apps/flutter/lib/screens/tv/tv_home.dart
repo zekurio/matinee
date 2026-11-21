@@ -339,6 +339,7 @@ class _TvHomeScreenState extends ConsumerState<TvHomeScreen> {
           headline: failed,
           message: describeFailure(l, load.error!),
           onRetry: retry,
+          retryNode: _memory.node(key, _RowNotice.retryKey),
         ),
       );
     }
@@ -486,6 +487,7 @@ class _ShelfRow extends ConsumerWidget {
           headline: l.homeShelfFailed,
           message: describeFailure(l, load.error!),
           onRetry: () => ref.invalidate(shelfProvider(library.id)),
+          retryNode: memory.node(key, _RowNotice.retryKey),
           height: _shelfHeight,
         );
       }
@@ -638,13 +640,19 @@ class _RowNotice extends StatelessWidget {
     this.headline,
     this.message,
     this.onRetry,
+    this.retryNode,
     this.height = _noticeHeight,
   });
+
+  /// The key of the Try again button's node in its row's memory, so the
+  /// row's first card takes focus when it loads.
+  static const retryKey = 'retry';
 
   final String? title;
   final String? headline;
   final String? message;
   final VoidCallback? onRetry;
+  final FocusNode? retryNode;
   final double height;
 
   @override
@@ -699,6 +707,7 @@ class _RowNotice extends StatelessWidget {
                     TvButton(
                       label: l.commonRetry,
                       icon: Lucide.refreshCw,
+                      focusNode: retryNode,
                       onPressed: retry,
                     ),
                 ],
