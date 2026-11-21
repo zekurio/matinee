@@ -24,6 +24,7 @@ import '../../player/player.dart' show PlayerEngine;
 import '../../player/player_preferences.dart';
 import '../../player/player_system.dart';
 import '../../player/subtitle_look.dart';
+import '../../router.dart' show Routes;
 import '../settings/account_page.dart'
     show accountSessionsProvider, sessionName;
 import '../settings/devices.dart';
@@ -968,7 +969,11 @@ class _AccountRows extends ConsumerWidget {
         title: l.connectChangeServer,
         icon: Lucide.refreshCw,
         quiet: true,
-        onPressed: () => showTvServerPanel(context),
+        onPressed: () => showTvServerPanel(
+          context,
+          returnTo:
+              '${Routes.settings}?category=${TvSettingsCategory.account.key}',
+        ),
       ),
       TvListItem(
         title: l.shellSignOut,

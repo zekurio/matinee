@@ -672,7 +672,9 @@ first key.
   code with its waiting line; the QR code alone on the right; and Change
   server, or Back to the server in use, as a small `TvAuthAction` at the
   bottom left, beside Get a new code or Retry when the code ran out or
-  never came. It says nothing of the phone app's Settings.
+  never came. It says nothing of the phone app's Settings. Cancelling Add
+  server goes back to the page it started from (Settings › Account from
+  the server switcher there), where the Kotlin app starts again on Home.
 - Settings (`lib/screens/tv/tv_settings.dart`): also spaced apart from
   the Kotlin app on purpose. The categories' highlight starts at
   `TvPage.start`, where every page's cards and chips do, clear of the
