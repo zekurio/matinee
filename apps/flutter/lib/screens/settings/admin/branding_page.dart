@@ -136,7 +136,11 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
         ),
       );
     } on Object catch (error) {
-      if (mounted) setState(() => _errors = fieldErrors(error));
+      if (mounted) {
+        setState(
+          () => _errors = fieldErrors(AppLocalizations.of(context), error),
+        );
+      }
       rethrow;
     }
     if (!mounted) return;

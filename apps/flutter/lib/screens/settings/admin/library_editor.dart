@@ -179,7 +179,7 @@ class _LibraryEditorState extends ConsumerState<_LibraryEditor> {
       if (mounted) context.pop();
     } on Object catch (error) {
       if (!mounted) return;
-      final errors = fieldErrors(error);
+      final errors = fieldErrors(l, error);
       setState(() {
         _saving = false;
         _errors = errors;

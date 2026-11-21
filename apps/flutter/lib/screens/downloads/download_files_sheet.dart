@@ -11,6 +11,7 @@ import '../../downloads/download_settings.dart';
 import '../../downloads/downloads.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../l10n/server_text.dart';
 import '../../media/format.dart';
 import 'download_sheet.dart';
 
@@ -264,7 +265,7 @@ class _DownloadFilesSheetState extends ConsumerState<DownloadFilesSheet> {
             for (final unavailable
                 in results.whereType<DownloadResolutionUnavailable>())
               Text(
-                unavailable.message,
+                unavailable.message.serverWords(l),
                 style: KitText.sm.style(color: colors.danger),
               ),
           ],

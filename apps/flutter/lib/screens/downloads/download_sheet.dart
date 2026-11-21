@@ -11,6 +11,7 @@ import '../../downloads/download_settings.dart';
 import '../../downloads/downloads.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../l10n/server_text.dart';
 import '../../media/format.dart';
 import '../settings/settings_rows.dart';
 import 'downloads_screen.dart' show downloadNames;
@@ -178,7 +179,7 @@ class _DownloadSheetState extends ConsumerState<DownloadSheet> {
       if (!mounted) return;
       switch (result) {
         case DownloadResolutionUnavailable(:final message):
-          setState(() => _error = message);
+          setState(() => _error = message.serverWords(l));
         case final DownloadResolutionReady ready:
           final source = DownloadSource(widget.item, ready);
           final codecs = ready.choices.codecs;
@@ -255,7 +256,7 @@ class _DownloadSheetState extends ConsumerState<DownloadSheet> {
             case DownloadResolutionUnavailable(:final message):
               _specs.remove(choice);
               _plans.remove(choice);
-              if (choice == _picked) _error = message;
+              if (choice == _picked) _error = message.serverWords(l);
           }
         });
       } on Object catch (error) {

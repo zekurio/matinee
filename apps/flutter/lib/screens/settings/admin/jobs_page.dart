@@ -8,6 +8,7 @@ import '../../../api/matinee_api.dart';
 import '../../../core/session.dart';
 import '../../../kit/kit.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../l10n/server_text.dart';
 import '../settings_rows.dart';
 import 'admin_data.dart';
 import 'admin_parts.dart';
@@ -196,6 +197,15 @@ String queueName(AppLocalizations l, JobQueueStatus queue) =>
       _ => queue.name,
     };
 
+// Other queues use file paths, media names, or IDs as their labels.
+String _jobLabel(AppLocalizations l, String queue, String label) =>
+    switch (queue) {
+      JobQueueId.libraryScan ||
+      JobQueueId.artwork ||
+      JobQueueId.avatars => label.serverWords(l),
+      _ => label,
+    };
+
 /// A task's name in the app's language, else what the server calls it.
 String taskName(AppLocalizations l, ScheduledTask task) => switch (task.id) {
   TaskId.dispatchRequests => l.webJobsTaskDispatchRequestsName,
@@ -278,7 +288,7 @@ String taskStatus(AppLocalizations l, ScheduledTask task) {
         '${relativeText(l, run.endedAt)} · '
             '${l.webJobsTaskCancelledAfter(_took(l, run))}',
       _ => switch (run.error) {
-        final error? => l.webJobsTaskFailedWith(error),
+        final error? => l.webJobsTaskFailedWith(error.serverWords(l)),
         null => l.webJobsTaskFailed,
       },
     },
@@ -478,7 +488,7 @@ class _ConcurrencyRow extends StatelessWidget {
                 ),
                 if (queue.concurrencyNote case final note?)
                   Text(
-                    note,
+                    note.serverWords(l),
                     style: KitText.sm.style(color: colors.mutedForeground),
                   ),
               ],
@@ -579,7 +589,7 @@ class _QueueSheet extends ConsumerWidget {
                   ),
                 for (final job in queue.running)
                   Text(
-                    job.label,
+                    _jobLabel(l, queue.id, job.label),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: KitText.xs.style(color: colors.foreground),
@@ -602,13 +612,13 @@ class _QueueSheet extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        failure.label,
+                        _jobLabel(l, queue.id, failure.label),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: KitText.xs.style(color: colors.foreground),
                       ),
                       Text(
-                        '${relativeText(l, failure.at)} · ${failure.message}',
+                        '${relativeText(l, failure.at)} · ${failure.message.serverWords(l)}',
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: KitText.xs.style(color: colors.danger),

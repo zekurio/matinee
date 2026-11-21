@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../api/matinee_api.dart';
 import '../core/failure_text.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/server_text.dart';
 import '../media/format.dart';
 import 'offline_session.dart' show DownloadUnplayable;
 import 'playback_session.dart';
@@ -39,7 +40,7 @@ import 'player_system.dart';
           PlaybackRestriction.bitrateFailed => l.playerRestrictedFailed,
           PlaybackRestriction.bitrate => l.playerRestrictedBitrate,
           PlaybackRestriction.transcode => l.playerRestrictedTranscode,
-          _ => error.message ?? l.playerRestrictedGeneric,
+          _ => error.message?.serverWords(l) ?? l.playerRestrictedGeneric,
         },
       );
     case ApiException(code: playbackUnplayable):

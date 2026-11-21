@@ -9661,5 +9661,36 @@
   "webValidationWholeNumber": "Use a whole number.",
   "@webValidationWholeNumber": {
     "description": "strings_web_validation.xml"
+  },
+  "webAskAskNamed": "Request {p1}",
+  "@webAskAskNamed": {
+    "description": "ask.askNamed",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webDiscoverRequestWaiting": "Waiting",
+  "@webDiscoverRequestWaiting": {
+    "description": "discover.request.waiting"
+  },
+  "webDiscoverRequestAskedWhen": "First requested {p1}",
+  "@webDiscoverRequestAskedWhen": {
+    "description": "discover.request.askedWhen",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webRequestsToastCancelled": "Cancelled {p1}",
+  "@webRequestsToastCancelled": {
+    "description": "requests.toast.cancelled",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
   }
 }

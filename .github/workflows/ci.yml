@@ -82,6 +82,8 @@ jobs:
           # checks it, so a contract change runs this too.
           PATHS_FLUTTER: |
             apps/flutter/**
+            apps/web/src/i18n/locales/en/*.ts
+            apps/web/src/i18n/locales/de/*.ts
             brand/android/**
             packages/contracts/**
             apps/server/scripts/**

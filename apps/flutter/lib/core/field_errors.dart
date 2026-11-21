@@ -1,11 +1,13 @@
 import '../api/matinee_api.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/server_text.dart';
 
 /// What the server said is wrong with each field of a refused form, by the
 /// field's path, as `name` or `oidc.issuerUrl`: the schema's issues it
 /// sends with a 400 (`data.issues`, each a message and a path). The form
 /// shows each under its field, so the client never retypes the contract's
 /// rules. Empty for any other failure, or an issue without a path.
-Map<String, String> fieldErrors(Object error) {
+Map<String, String> fieldErrors(AppLocalizations l, Object error) {
   if (error is! ApiException) return const {};
   final issues = switch (error.data) {
     {'issues': final List<Object?> issues} => issues,
@@ -24,7 +26,7 @@ Map<String, String> fieldErrors(Object error) {
           },
       ].join('.');
       // The first issue for a field is the one to fix first.
-      errors.putIfAbsent(key, () => message);
+      errors.putIfAbsent(key, () => message.serverWords(l));
     }
   }
   return errors;

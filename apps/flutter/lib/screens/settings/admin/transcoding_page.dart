@@ -10,6 +10,7 @@ import '../../../core/field_errors.dart';
 import '../../../core/session.dart';
 import '../../../kit/kit.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../l10n/server_text.dart';
 import '../settings_rows.dart';
 import 'admin_data.dart';
 import 'admin_parts.dart';
@@ -104,7 +105,11 @@ class _TranscodingFormState extends ConsumerState<_TranscodingForm> {
     try {
       await api.admin.transcoding.update(TranscodingSettings.fromJson(_draft));
     } on Object catch (error) {
-      if (mounted) setState(() => _errors = fieldErrors(error));
+      if (mounted) {
+        setState(
+          () => _errors = fieldErrors(AppLocalizations.of(context), error),
+        );
+      }
       rethrow;
     }
     if (mounted) ref.invalidate(transcodingProvider);
@@ -523,7 +528,7 @@ class _Ffmpeg extends StatelessWidget {
         ),
         if (error != null) ...[
           Note(l.webTranscodingFfmpegFailed, danger: true),
-          Note(error),
+          Note(error.serverWords(l)),
         ],
       ],
     );
@@ -542,7 +547,9 @@ String? _deviceFailure(
     if (entry.acceleration != acceleration) continue;
     if (entry.device.status == CheckStatus.ok) return null;
     return switch (entry.device.error) {
-      final error? => l.webTranscodingHardwareDeviceFailedDetail(error),
+      final error? => l.webTranscodingHardwareDeviceFailedDetail(
+        error.serverWords(l),
+      ),
       null => l.webTranscodingHardwareDeviceFailed,
     };
   }

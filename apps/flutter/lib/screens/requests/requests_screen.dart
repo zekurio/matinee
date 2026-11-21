@@ -8,6 +8,7 @@ import '../../api/matinee_api.dart';
 import '../../core/link_opener.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../l10n/server_text.dart';
 import '../../media/artwork.dart';
 import '../../media/avatar.dart';
 import '../../media/cards.dart';
@@ -763,7 +764,7 @@ class QueueRow extends ConsumerWidget {
         ],
       ),
       QueueList.needsAttention => Text(
-        item.error ?? l.webRequestsAttentionUnknown,
+        item.error?.serverWords(l) ?? l.webRequestsAttentionUnknown,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: KitText.xs.style(color: colors.danger),

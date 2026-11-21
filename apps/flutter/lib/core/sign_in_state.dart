@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/matinee_api.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/server_text.dart';
 import 'device.dart';
 import 'device_codes.dart';
 import 'local_network.dart';
@@ -81,12 +82,12 @@ String describeConnectFailure(
   return localNetworkHint ? '$text\n${l.connectLocalNetwork}' : text;
 }
 
-/// A browser sign-in failure in a line. The server's own words come as they
-/// are; translating them is the screens' business.
+/// A browser sign-in failure in the app's language.
 String describeSignInFailure(AppLocalizations l, SignInFailure failure) =>
     switch (failure.kind) {
       SignInFailureKind.wrongState => l.signinWrongState,
-      SignInFailureKind.server => failure.serverMessage ?? l.signinFailed,
+      SignInFailureKind.server =>
+        failure.serverMessage?.serverWords(l) ?? l.signinFailed,
       SignInFailureKind.generic => l.signinFailed,
     };
 
