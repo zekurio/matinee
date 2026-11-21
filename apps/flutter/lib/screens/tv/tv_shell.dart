@@ -15,6 +15,7 @@ import '../../media/artwork.dart';
 import '../../media/avatar.dart';
 import '../../query/server_data.dart';
 import '../../router.dart';
+import '../requests/requests_data.dart' show discoverRailsProvider;
 
 /// How many movies and shows there are, so the drawer offers only the
 /// kinds the server has.
@@ -31,6 +32,7 @@ abstract final class TvDrawerKeys {
   static const search = 'search';
   static const home = 'home';
   static const favorites = 'favorites';
+  static const discover = 'discover';
   static const settings = 'settings';
   static String kind(String kind) => 'kind-$kind';
 }
@@ -40,6 +42,7 @@ String? tvDrawerKey(String path) {
   if (path == Routes.home) return TvDrawerKeys.home;
   if (path == Routes.search) return TvDrawerKeys.search;
   if (path == Routes.favorites) return TvDrawerKeys.favorites;
+  if (path == Routes.discover) return TvDrawerKeys.discover;
   if (path == Routes.movies) return TvDrawerKeys.kind(TitleKind.movie);
   if (path == Routes.shows) return TvDrawerKeys.kind(TitleKind.show);
   if (path == Routes.profile || path == Routes.recent) {
@@ -212,6 +215,7 @@ class _TvShellState extends ConsumerState<TvShell> {
       TvDrawerKeys.home => Routes.home,
       TvDrawerKeys.search => Routes.search,
       TvDrawerKeys.favorites => Routes.favorites,
+      TvDrawerKeys.discover => Routes.discover,
       TvDrawerKeys.profile => Routes.profile,
       TvDrawerKeys.settings => Routes.settings,
       _ when entry.key == TvDrawerKeys.kind(TitleKind.movie) => Routes.movies,
@@ -255,6 +259,7 @@ class _TvShellState extends ConsumerState<TvShell> {
       _ => null,
     };
     final counts = ref.watch(tvKindsProvider).value;
+    final discover = ref.watch(discoverRailsProvider).value?.enabled == true;
     final stack = widget.stack;
     final top = stack.lastOrNull ?? Routes.home;
     final current =
@@ -325,6 +330,12 @@ class _TvShellState extends ConsumerState<TvShell> {
                       label: l.favoritesTitle,
                       icon: Lucide.heart,
                     ),
+                    if (discover)
+                      TvDrawerEntry(
+                        key: TvDrawerKeys.discover,
+                        label: l.webDiscoverTitle,
+                        icon: Lucide.compass,
+                      ),
                     if ((counts?.movie ?? 0) > 0)
                       TvDrawerEntry(
                         key: TvDrawerKeys.kind(TitleKind.movie),
