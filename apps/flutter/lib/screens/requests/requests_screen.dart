@@ -275,14 +275,16 @@ class _More extends StatelessWidget {
   }
 }
 
-String _listLabel(String list, AppLocalizations l) => switch (list) {
+/// A queue list's name, as its chip has it.
+String queueListLabel(String list, AppLocalizations l) => switch (list) {
   QueueList.waiting => l.webRequestsListWaiting,
   QueueList.needsAttention => l.webRequestsListNeedsAttention,
   QueueList.onTheWay => l.webRequestsListOnTheWay,
   _ => l.webRequestsListDone,
 };
 
-String _emptyLabel(String list, AppLocalizations l) => switch (list) {
+/// What a queue list says with nothing in it.
+String queueEmptyLabel(String list, AppLocalizations l) => switch (list) {
   QueueList.waiting => l.webRequestsEmptyWaiting,
   QueueList.needsAttention => l.webRequestsEmptyNeedsAttention,
   QueueList.onTheWay => l.webRequestsEmptyOnTheWay,
@@ -335,7 +337,7 @@ class _QueuePageState extends ConsumerState<_QueuePage> {
               children: [
                 for (final list in QueueList.all)
                   ChoiceChip(
-                    label: _listLabel(list, l),
+                    label: queueListLabel(list, l),
                     // Done only grows, so it says no count.
                     count: switch (counts[list]) {
                       final count? when count > 0 => formatCount(count, l),
@@ -395,7 +397,10 @@ class _QueueRows extends ConsumerWidget {
       return Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-          child: EmptyState(icon: Lucide.inbox, title: _emptyLabel(list, l)),
+          child: EmptyState(
+            icon: Lucide.inbox,
+            title: queueEmptyLabel(list, l),
+          ),
         ),
       );
     }
@@ -524,7 +529,7 @@ void _open(BuildContext context, AdminRequestItem item) {
 
 /// "Films · Radarr": where a request goes, the library chosen under
 /// "Goes to" for a waiting one, and what fills it.
-String _whereText(
+String whereText(
   RequestsState state,
   AdminRequestItem item,
   AppLocalizations l,
@@ -561,7 +566,7 @@ Future<void> _showRowMenu(
       final connection = item.connection;
       return Sheet(
         title: item.title.name,
-        description: _whereText(ref.read(requestsProvider), item, l),
+        description: whereText(ref.read(requestsProvider), item, l),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -848,6 +853,33 @@ class QueueRow extends ConsumerWidget {
   }
 }
 
+/// How far along a request on its way is, in the server's words: when
+/// it's out, the share that's in and the time left, or what it waits on.
+String progressText(AdminRequestItem item, AppLocalizations l) {
+  final availability = item.availability;
+  final progress = availability.progress;
+  final eta = availability.etaSeconds;
+  if (availability.state == AvailabilityState.release) {
+    final day = parseDay(availability.releaseDate);
+    return day == null
+        ? l.webRequestsProgressNotOut
+        : l.webRequestsProgressRelease(formatShortDay(day, l));
+  } else if (progress != null) {
+    return [
+      formatPercent(progress, l),
+      if (eta != null) l.webRequestsProgressLeft(formatSpan(eta, l)),
+    ].join(' · ');
+  } else if (availability.stillLooking) {
+    return l.webRequestsProgressLooking;
+  } else if (item.fulfilmentState == FulfilmentState.queued) {
+    return l.webRequestsProgressQueued;
+  } else if (item.connection?.reportsProgress == false) {
+    return l.webRequestsProgressByHand;
+  } else {
+    return l.webRequestsProgressSent;
+  }
+}
+
 /// How far along a request on its way is.
 class _Progress extends StatelessWidget {
   const _Progress({required this.item});
@@ -858,29 +890,8 @@ class _Progress extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final availability = item.availability;
-    final progress = availability.progress;
-    final eta = availability.etaSeconds;
-    final String status;
-    if (availability.state == AvailabilityState.release) {
-      final day = parseDay(availability.releaseDate);
-      status = day == null
-          ? l.webRequestsProgressNotOut
-          : l.webRequestsProgressRelease(formatShortDay(day, l));
-    } else if (progress != null) {
-      status = [
-        formatPercent(progress, l),
-        if (eta != null) l.webRequestsProgressLeft(formatSpan(eta, l)),
-      ].join(' · ');
-    } else if (availability.stillLooking) {
-      status = l.webRequestsProgressLooking;
-    } else if (item.fulfilmentState == FulfilmentState.queued) {
-      status = l.webRequestsProgressQueued;
-    } else if (item.connection?.reportsProgress == false) {
-      status = l.webRequestsProgressByHand;
-    } else {
-      status = l.webRequestsProgressSent;
-    }
+    final progress = item.availability.progress;
+    final status = progressText(item, l);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -916,6 +927,28 @@ class _Progress extends StatelessWidget {
   }
 }
 
+/// What became of a done request: arrived, declined, or given up on, with
+/// the reason; null for one with nothing to say.
+String? outcomeText(AdminRequestItem item, AppLocalizations l) {
+  if (item.status == RequestStatus.declined) {
+    final gaveUp = item.reason == DeclineReason.notFound;
+    final at = relativeTime(item.declinedAt, l);
+    final reason = item.reason;
+    return [
+      switch ((gaveUp, at)) {
+        (true, final at?) => l.webRequestsDoneGaveUp(at),
+        (false, final at?) => l.webRequestsDoneDeclined(at),
+        (true, null) => l.webRequestsDoneGaveUpUndated,
+        (false, null) => l.webRequestsDoneDeclinedUndated,
+      },
+      if (reason != null) adminReasonText(reason, l),
+    ].join(' · ');
+  }
+  final arrived = relativeTime(item.arrivedAt, l);
+  if (arrived == null) return null;
+  return [l.webRequestsDoneArrived(arrived), item.library.name].join(' · ');
+}
+
 /// What became of a done request, with the note an admin left: arrived,
 /// declined, or given up on.
 class _Outcome extends StatelessWidget {
@@ -927,51 +960,31 @@ class _Outcome extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final strong = KitText.xs.style(
-      color: colors.foreground.withValues(alpha: .85),
-    );
-    if (item.status == RequestStatus.declined) {
-      final gaveUp = item.reason == DeclineReason.notFound;
-      final at = relativeTime(item.declinedAt, l);
-      final reason = item.reason;
-      final note = item.note;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    final text = outcomeText(item, l);
+    if (text == null) return const SizedBox.shrink();
+    final note = item.status == RequestStatus.declined ? item.note : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: KitText.xs.style(
+            color: colors.foreground.withValues(alpha: .85),
+          ),
+        ),
+        if (note != null)
           Text(
-            [
-              switch ((gaveUp, at)) {
-                (true, final at?) => l.webRequestsDoneGaveUp(at),
-                (false, final at?) => l.webRequestsDoneDeclined(at),
-                (true, null) => l.webRequestsDoneGaveUpUndated,
-                (false, null) => l.webRequestsDoneDeclinedUndated,
-              },
-              if (reason != null) adminReasonText(reason, l),
-            ].join(' · '),
+            note,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: strong,
+            style: KitText.xs
+                .style(color: colors.mutedForeground)
+                .copyWith(fontStyle: FontStyle.italic),
           ),
-          if (note != null)
-            Text(
-              note,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KitText.xs
-                  .style(color: colors.mutedForeground)
-                  .copyWith(fontStyle: FontStyle.italic),
-            ),
-        ],
-      );
-    }
-    final arrived = relativeTime(item.arrivedAt, l);
-    if (arrived == null) return const SizedBox.shrink();
-    return Text(
-      [l.webRequestsDoneArrived(arrived), item.library.name].join(' · '),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: strong,
+      ],
     );
   }
 }
