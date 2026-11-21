@@ -152,6 +152,15 @@ void main() {
     expect(find.byType(TvProfileScreen), findsOneWidget);
   });
 
+  testWidgets("recent cards keep the row's width, as Kotlin's fixed cells", (
+    tester,
+  ) async {
+    await _open(tester, Routes.recent);
+    final cards = find.byType(TvWatchedCard);
+    expect(cards, findsWidgets);
+    expect(tester.getSize(cards.first).width, TvCards.landscapeWidth);
+  });
+
   testWidgets('the chart takes the arrows until its edge', (tester) async {
     await _open(tester, Routes.profile);
     await down(tester);

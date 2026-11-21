@@ -907,34 +907,23 @@ class _TvRecentScreenState extends ConsumerState<TvRecentScreen> {
         ),
       );
     } else {
-      page = LayoutBuilder(
-        builder: (context, constraints) {
-          // As many cards a row as fit at their row width, as the Kotlin
-          // app's fixed-size cells; each fills its cell.
-          final room = constraints.maxWidth - TvPage.start - TvPage.end;
-          final columns =
-              ((room + TvGrid.gap) / (TvCards.landscapeWidth + TvGrid.gap))
-                  .floor()
-                  .clamp(1, 12);
-          final width = (room - TvGrid.gap * (columns - 1)) / columns;
-          return TvPosterGrid(
-            memory: _memory,
-            itemCount: entries.length,
-            columns: columns,
-            cellAspect: 16 / 9,
-            cellExtra: 12 + 20 + 20,
-            header: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: heading,
-            ),
-            itemBuilder: (context, index) {
-              final item = entries[index].item;
-              return TvWatchedCard(
-                item: item,
-                width: width,
-                focusNode: _memory.node(TvGrid.row, item.id),
-              );
-            },
+      // As many cards a row as fit at their row width, as the Kotlin
+      // app's fixed-size cells.
+      page = TvPosterGrid(
+        memory: _memory,
+        itemCount: entries.length,
+        cellWidth: TvCards.landscapeWidth,
+        cellAspect: 16 / 9,
+        cellExtra: 12 + 20 + 20,
+        header: Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: heading,
+        ),
+        itemBuilder: (context, index) {
+          final item = entries[index].item;
+          return TvWatchedCard(
+            item: item,
+            focusNode: _memory.node(TvGrid.row, item.id),
           );
         },
       );
