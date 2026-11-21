@@ -629,7 +629,9 @@ class _Askers extends StatelessWidget {
               height: 24,
               child: Stack(
                 children: [
-                  for (final (index, face) in faces.indexed)
+                  // Painted last to first, so the first asker, the one the
+                  // card names, is the face that shows whole.
+                  for (final (index, face) in faces.indexed.toList().reversed)
                     PositionedDirectional(
                       start: index * 18,
                       child: Container(
