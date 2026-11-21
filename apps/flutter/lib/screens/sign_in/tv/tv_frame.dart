@@ -210,20 +210,14 @@ class TvListItem extends StatelessWidget {
                             title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: KitText.xl.style(
-                              color: content,
-                              weight: FontWeight.w600,
-                            ),
+                            style: TvType.facts.style(color: content),
                           ),
                           if (subtitle case final text?)
                             Text(
                               text,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: KitText.px15.style(
-                                color: muted,
-                                weight: FontWeight.w500,
-                              ),
+                              style: TvType.label.style(color: muted),
                             ),
                         ],
                       ),

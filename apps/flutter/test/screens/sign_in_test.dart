@@ -680,6 +680,10 @@ void main() {
       harness.backend.hosts.add('a.example');
       await _show(tester, harness, device: _tv, size: const Size(960, 540));
       expect(_focusedIn(tester, 'Enter server address'), isTrue);
+      // A row's title at the Kotlin app's size, 16, and not heavier.
+      final title = tester.widget<Text>(find.text('Enter server address'));
+      expect(title.style?.fontSize, 16);
+      expect(title.style?.fontWeight, FontWeight.w500);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.select);
       await _settle(tester);
