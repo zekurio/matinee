@@ -851,7 +851,6 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
                 cues: captions,
                 look: subtitleLook(ref, prefs),
                 bottom: visible ? tvOverlayHeight : 40,
-                side: 80,
               ),
             if (error != null)
               ColoredBox(
