@@ -3927,6 +3927,23 @@
   "@tvSignOutDescription": {
     "description": "Under the TV's sign-out confirmation."
   },
+  "tvRequestsCancelTitle": "Cancel your request for {p1}?",
+  "@tvRequestsCancelTitle": {
+    "description": "The TV asks before taking back the viewer's own request; p1 is the title's name.",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "tvRequestsCancelDescription": "You can request it again afterwards.",
+  "@tvRequestsCancelDescription": {
+    "description": "Under the TV's question before cancelling a request."
+  },
+  "tvRequestsKeep": "Keep request",
+  "@tvRequestsKeep": {
+    "description": "The TV's safe answer to cancelling a request, focused first."
+  },
   "mediaUnwatchedShow": "{count, plural, one{Mark the one episode of {show} as unwatched? This also removes where you stopped.} other{Mark all {count} episodes of {show} as unwatched? This also removes where you stopped.}}",
   "@mediaUnwatchedShow": {
     "description": "The TV and the phone ask before marking a whole show unwatched; count is its episodes, show its name.",
