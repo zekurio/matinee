@@ -58,7 +58,11 @@ Kotlin app's debug build, so installing one replaces the other.
 Debug builds render with Vulkan (`src/debug/AndroidManifest.xml`). On an
 emulator Impeller would pick OpenGL ES, and the emulator's software GPU,
 which `-gpu auto` picks when there's no display, crashes in its GLES
-decoder as soon as the app draws.
+decoder as soon as the app draws. An emulator on the host's GPU (`-gpu
+host`) is the other way round: Vulkan crashes in the first artwork it
+decodes, since Impeller decodes into memory gfxstream maps, and OpenGL ES
+renders. Build for one with `MATINEE_IMPELLER_BACKEND=opengles`, as in
+`MATINEE_IMPELLER_BACKEND=opengles flutter build apk --debug`.
 
 ## Layout
 

@@ -112,6 +112,10 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            // The renderer the debug manifest asks Impeller for: Vulkan for an
+            // emulator on its software GPU, OpenGL ES for one on the host's.
+            manifestPlaceholders["impellerBackend"] =
+                providers.environmentVariable("MATINEE_IMPELLER_BACKEND").getOrElse("vulkan")
         }
         release {
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
