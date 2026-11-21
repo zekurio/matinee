@@ -1,4 +1,5 @@
 import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -148,6 +149,24 @@ void main() {
     expect(find.textContaining('Nothing played since'), findsOneWidget);
   });
 
+  testWidgets('rows scroll to stop a focused one at the overscan', (
+    tester,
+  ) async {
+    await _open(tester, '${Routes.settings}/playback');
+    await right(tester);
+    String? last;
+    for (var i = 0; i < 12 && focusedLabel() != last; i++) {
+      last = focusedLabel();
+      final box =
+          FocusManager.instance.primaryFocus!.context!.findRenderObject()!
+              as RenderBox;
+      final rect = box.localToGlobal(Offset.zero) & box.size;
+      final grown = rect.bottom + rect.height * (TvFocus.rowScale - 1) / 2;
+      expect(grown, lessThanOrEqualTo(540 - Overscan.vertical), reason: last);
+      await down(tester);
+    }
+  });
+
   testWidgets('a subtitle style opens its picker and keeps the pick', (
     tester,
   ) async {
@@ -210,6 +229,49 @@ void main() {
     await back(tester);
     expect(tvOpenPanels.value, 0);
     expect(focusedLabel(), 'Change server');
+  });
+
+  testWidgets('a focused row stays inside the overscan, in a panel too', (
+    tester,
+  ) async {
+    // Where the row ends once focus has grown it.
+    double grownRight() {
+      final box =
+          FocusManager.instance.primaryFocus!.context!.findRenderObject()!
+              as RenderBox;
+      final rect = box.localToGlobal(Offset.zero) & box.size;
+      return rect.right + rect.width * (TvFocus.rowScale - 1) / 2;
+    }
+
+    await _open(tester, '${Routes.settings}/server');
+    await right(tester);
+    expect(focusedLabel(), startsWith('ada'));
+    expect(grownRight(), lessThanOrEqualTo(960 - Overscan.horizontal));
+    await down(tester, 2);
+    expect(focusedLabel(), 'Change server');
+    await select(tester);
+    expect(tvOpenPanels.value, 1);
+    expect(grownRight(), lessThanOrEqualTo(960 - Overscan.horizontal));
+  });
+
+  testWidgets('signing out asks first, with focus on Cancel', (tester) async {
+    await _open(tester, '${Routes.settings}/server');
+    await right(tester);
+    await down(tester, 3);
+    expect(focusedLabel(), 'Sign out');
+    await select(tester);
+    expect(tvOpenPanels.value, 1);
+    expect(find.text('Sign out of media.example.com?'), findsOneWidget);
+    expect(focusedLabel(), 'Cancel');
+    await select(tester);
+    expect(tvOpenPanels.value, 0);
+    expect(find.byType(TvSettingsScreen), findsOneWidget);
+    expect(focusedLabel(), 'Sign out');
+    // Back leaves it too.
+    await select(tester);
+    await back(tester);
+    expect(tvOpenPanels.value, 0);
+    expect(focusedLabel(), 'Sign out');
   });
 
   for (final size in tvSizes) {

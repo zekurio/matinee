@@ -105,6 +105,7 @@ PlaybackStart plan({
   String quality = PlaybackQuality.original,
   bool original = true,
   bool hasNext = false,
+  double? upNextAt,
   List<MediaSegment> segments = const [],
 }) => PlaybackStart(
   item: item(id),
@@ -136,7 +137,7 @@ PlaybackStart plan({
   reasons: const [],
   previous: null,
   next: hasNext ? item(nextId) : null,
-  upNextAt: null,
+  upNextAt: upNextAt,
   segments: segments,
 );
 

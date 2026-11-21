@@ -95,6 +95,9 @@ class TvPictureButton extends StatelessWidget {
       child: TvButton(
         label: action.label,
         detail: switch (action.countdown) {
+          // A minute or more reads as the time it is, like the seek bar's.
+          final seconds? when seconds >= 60 =>
+            '· ${formatClock(seconds.toDouble())}',
           final seconds? => '· $seconds',
           null => null,
         },

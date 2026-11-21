@@ -184,6 +184,22 @@ final class _AuthRefresh extends ChangeNotifier {
   void changed() => notifyListeners();
 }
 
+/// Where the app goes back to if adding a server is cancelled, when the
+/// page that started it says more than its location does, as Settings
+/// naming its category. The router takes it as the add begins.
+final addServerReturnProvider = NotifierProvider<AddServerReturn, String?>(
+  AddServerReturn.new,
+);
+
+class AddServerReturn extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void remember(String location) => state = location;
+
+  void forget() => state = null;
+}
+
 /// The router for this device. Touch screens get the tabs and the pages
 /// over them; a TV gets its own tree (to come with the TV screens). Both
 /// follow the session: [authRedirect] decides where the app is, and
@@ -191,14 +207,43 @@ final class _AuthRefresh extends ChangeNotifier {
 final routerProvider = Provider<GoRouter>((ref) {
   final device = ref.watch(deviceProvider);
   final refresh = _AuthRefresh();
+  // Adding a server leaves the app for the connect screen. Cancelling it
+  // brings back the very session it left, and with it the page it left,
+  // instead of Home.
+  AuthState? addingFrom;
+  String? addReturn;
   // Not a watch: a new state moves the router, it doesn't make a new one.
-  ref.listen(authStateProvider, (_, _) => refresh.changed());
+  ref.listen(authStateProvider, (before, now) {
+    if (now is NoServer &&
+        now.canCancel &&
+        (before is SignedIn || before is Offline)) {
+      addingFrom = before;
+    }
+    refresh.changed();
+  });
+  String? redirect(String location, String path) {
+    final auth = ref.read(authStateProvider);
+    if (auth is NoServer &&
+        addingFrom != null &&
+        addReturn == null &&
+        !Routes.auth.contains(path)) {
+      addReturn = ref.read(addServerReturnProvider) ?? location;
+      ref.read(addServerReturnProvider.notifier).forget();
+    }
+    if ((auth is SignedIn || auth is Offline) && Routes.auth.contains(path)) {
+      final (back, from) = (addReturn, addingFrom);
+      addReturn = addingFrom = null;
+      if (back != null && identical(from, auth)) return back;
+    }
+    return authRedirect(auth, path);
+  }
+
   final router = GoRouter(
     navigatorKey: _rootKey,
     initialLocation: Routes.home,
     refreshListenable: refresh,
     redirect: (context, state) =>
-        authRedirect(ref.read(authStateProvider), state.uri.path),
+        redirect(state.uri.toString(), state.uri.path),
     routes: [
       ..._authRoutes(tv: device.isTv),
       ...(device.isTv ? _tvRoutes() : _handsetRoutes()),
@@ -528,7 +573,9 @@ List<RouteBase> _tvRoutes() => [
           _tv(Routes.profile.substring(1), (state) => const TvProfileScreen()),
           _tv(
             Routes.settings.substring(1),
-            (state) => const TvSettingsScreen(),
+            (state) => TvSettingsScreen(
+              initial: state.uri.queryParameters['category'],
+            ),
           ),
         ],
       ),

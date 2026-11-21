@@ -55,6 +55,15 @@ enum TvType {
     color: color,
     shadows: shadows,
   );
+
+  /// Holds a line to [lineHeight] whatever font its glyphs fall back to,
+  /// for text in a box sized by it, like a card's caption.
+  StrutStyle get strut => StrutStyle(
+    fontFamily: KitText.family,
+    fontSize: size,
+    height: lineHeight / size,
+    forceStrutHeight: true,
+  );
 }
 
 /// A code to type on another device, like the sign-in code.
@@ -150,14 +159,20 @@ abstract final class TvListItems {
 
   /// Between a row's edge and its content.
   static const inset = 20.0;
+
+  /// Room a row that runs to the overscan keeps beyond it, for its growth
+  /// while focused: [TvFocus.rowScale] adds a hundredth of its width on
+  /// each side, so a focused row stays where every TV shows it.
+  static const focusRoom = 8.0;
 }
 
 /// The size of every right-edge panel on a TV, the player's too.
 abstract final class TvPanels {
-  static const width = 380.0;
+  static const width = 404.0;
 
-  /// Between the panel's edges and its rows.
-  static const listPadding = 24.0;
+  /// Between the panel's edges and its rows: the overscan, and room for a
+  /// focused row's growth, so it stays inside the edge the panel sits on.
+  static const listPadding = Overscan.horizontal + 4;
 
   /// Where the panel's heading starts, in line with its rows' text.
   static const textStart = listPadding + TvListItems.inset;
