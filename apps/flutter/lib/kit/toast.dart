@@ -9,6 +9,7 @@ import 'press_indication.dart';
 import 'spinner.dart';
 import 'theme.dart';
 import 'tokens.dart';
+import 'tv/tv_metrics.dart';
 
 enum ToastKind { message, success, info, warning, error, loading }
 
@@ -306,10 +307,14 @@ class ToastState extends ChangeNotifier {
   }
 }
 
+/// The front of [state]'s queue. On a [tv], as the Kotlin app's TV shell
+/// shows them: the words alone in the TV's body type, on a raised fill,
+/// with nothing to press, since focus stays on the page.
 class ToastHost extends StatelessWidget {
-  const ToastHost({super.key, required this.state});
+  const ToastHost({super.key, required this.state, this.tv = false});
 
   final ToastState state;
+  final bool tv;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -317,6 +322,13 @@ class ToastHost extends StatelessWidget {
     builder: (context, child) {
       final entry = state._queue.firstOrNull;
       if (entry == null) return const SizedBox.shrink();
+      if (tv) {
+        return _TvToast(
+          key: ObjectKey(entry),
+          message: entry.message,
+          description: entry.description,
+        );
+      }
       return SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -338,4 +350,48 @@ class ToastHost extends StatelessWidget {
       );
     },
   );
+}
+
+class _TvToast extends StatelessWidget {
+  const _TvToast({super.key, required this.message, this.description});
+
+  final String message;
+  final String? description;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surfaceRaised,
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 2,
+              children: [
+                Text(
+                  message,
+                  style: TvType.body.style(color: colors.foreground),
+                ),
+                if (description case final text?)
+                  Text(
+                    text,
+                    style: TvType.caption.style(color: colors.mutedForeground),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

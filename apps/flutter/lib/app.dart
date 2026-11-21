@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/device.dart';
 import 'core/server_accents.dart';
 import 'core/toasts.dart';
 import 'kit/accent.dart';
@@ -9,6 +10,7 @@ import 'kit/theme.dart';
 import 'kit/theme_store.dart';
 import 'kit/toast.dart';
 import 'kit/tokens.dart';
+import 'kit/tv/tv_metrics.dart';
 
 import 'l10n/app_localizations.dart';
 import 'router.dart';
@@ -52,12 +54,26 @@ class MatineeApp extends ConsumerWidget {
         child: Stack(
           children: [
             child!,
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 64,
-              child: Center(child: ToastHost(state: ref.watch(toastProvider))),
-            ),
+            if (ref.watch(deviceProvider).isTv)
+              // Clear of the drawer's rail and the overscan, as the Kotlin
+              // app's TV shell places them.
+              Positioned(
+                left: TvPage.start,
+                right: TvPage.end,
+                bottom: Overscan.vertical + 16,
+                child: Center(
+                  child: ToastHost(state: ref.watch(toastProvider), tv: true),
+                ),
+              )
+            else
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 64,
+                child: Center(
+                  child: ToastHost(state: ref.watch(toastProvider)),
+                ),
+              ),
           ],
         ),
       ),
