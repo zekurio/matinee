@@ -55,6 +55,15 @@ enum TvType {
     color: color,
     shadows: shadows,
   );
+
+  /// Holds a line to [lineHeight] whatever font its glyphs fall back to,
+  /// for text in a box sized by it, like a card's caption.
+  StrutStyle get strut => StrutStyle(
+    fontFamily: KitText.family,
+    fontSize: size,
+    height: lineHeight / size,
+    forceStrutHeight: true,
+  );
 }
 
 /// A code to type on another device, like the sign-in code.
