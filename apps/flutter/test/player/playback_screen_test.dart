@@ -17,7 +17,10 @@ import 'package:matinee/platform/player.g.dart' as wire;
 import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
-import 'package:matinee/player/player_controls.dart' show PlayerDim;
+import 'package:matinee/player/player_controls.dart'
+    show PlayerDim, PlayerTransport;
+import 'package:matinee/player/player_motion.dart';
+import 'package:matinee/player/player_parts.dart';
 import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/player/player_system.dart';
 import 'package:matinee/router.dart';
@@ -263,11 +266,37 @@ void main() {
     expect(find.text('Waiting for the server…'), findsNothing);
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('Waiting for the server…'), findsOneWidget);
+    // Over the controls' scrim, so a light frame can't dim the line.
+    final stack = tester.widget<Stack>(
+      find
+          .ancestor(
+            of: find.byType(PlayerSpinner),
+            matching: find.byType(Stack),
+          )
+          .first,
+    );
+    final controls = tester.widget(
+      find
+          .ancestor(
+            of: find.byType(PlayerTransport),
+            matching: find.byType(PlayerFade),
+          )
+          .first,
+    );
+    final spinnerLayer = tester.widget(find.byType(PlayerSpinner));
+    expect(stack.children, contains(controls));
+    expect(
+      stack.children.indexOf(spinnerLayer),
+      greaterThan(stack.children.indexOf(controls)),
+    );
     player.emit(PlaybackPhase.buffering, 30, buffered: 62);
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Waiting for the server…'), findsNothing);
     // Quiet again until the minute: the failure takes over from the line.
     await tester.pump(const Duration(seconds: 61));
+    // The controls fade out from that frame, then drop out on the next.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
     expect(find.text('Waiting for the server…'), findsNothing);
     expect(find.text("The server isn't answering."), findsOneWidget);
     await tap(tester, 'Back');

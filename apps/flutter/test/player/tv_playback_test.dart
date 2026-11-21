@@ -14,10 +14,12 @@ import 'package:matinee/kit/tv/tv.dart';
 import 'package:matinee/media/artwork.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
+import 'package:matinee/player/player_motion.dart';
 import 'package:matinee/player/player_parts.dart';
 import 'package:matinee/player/player_system.dart';
 import 'package:matinee/player/trickplay.dart';
 import 'package:matinee/player/tv/tv_display_mode.dart';
+import 'package:matinee/player/tv/tv_overlay.dart' show TvPlayerOverlay;
 import 'package:matinee/player/tv/tv_playback_screen.dart';
 import 'package:matinee/player/tv/tv_seek.dart';
 import 'package:matinee/player/video_view.dart';
@@ -487,6 +489,29 @@ void main() {
     expect(style.color, matineeDark.foreground);
     expect(style.shadows, onPicture);
     expect(style.fontSize, greaterThanOrEqualTo(TvType.body.size));
+    // Over the controls' scrim, so a light frame can't dim the line.
+    final stack = tester.widget<Stack>(
+      find
+          .ancestor(
+            of: find.byType(PlayerSpinner),
+            matching: find.byType(Stack),
+          )
+          .first,
+    );
+    final controls = tester.widget(
+      find
+          .ancestor(
+            of: find.byType(TvPlayerOverlay),
+            matching: find.byType(PlayerFade),
+          )
+          .first,
+    );
+    final spinnerLayer = tester.widget(find.byType(PlayerSpinner));
+    expect(stack.children, contains(controls));
+    expect(
+      stack.children.indexOf(spinnerLayer),
+      greaterThan(stack.children.indexOf(controls)),
+    );
     player.emit(PlaybackPhase.buffering, 30, buffered: 62);
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Waiting for the server…'), findsNothing);

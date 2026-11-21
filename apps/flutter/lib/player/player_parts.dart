@@ -422,9 +422,9 @@ class PlayerMediaSession {
 
 /// The player's [spinner], and under it, once [waiting], a quiet line that
 /// it waits on the server. Room above as tall as the line holds the spinner
-/// where it was as the line comes and goes. The line sits on the paused
-/// picture, so it takes the shadow the overlay's words take, which keeps it
-/// readable on a light frame.
+/// where it was as the line comes and goes. It goes over the controls'
+/// scrim, and the line takes the shadow the overlay's words take, so both
+/// stay readable on a light frame.
 /// The shadow words over the picture take, so a light frame can't wash
 /// them out.
 const onPicture = [
@@ -450,26 +450,29 @@ class PlayerSpinner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final room = SizedBox(height: gap + lineHeight);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          room,
-          spinner,
-          SizedBox(height: gap),
-          SizedBox(
-            height: lineHeight,
-            child: waiting
-                ? Text(
-                    AppLocalizations.of(context).playerWaiting,
-                    key: const Key('player/waiting'),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    style: style.copyWith(shadows: onPicture),
-                  )
-                : null,
-          ),
-        ],
+    // It lies over the controls, so a tap meant for them passes through.
+    return IgnorePointer(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            room,
+            spinner,
+            SizedBox(height: gap),
+            SizedBox(
+              height: lineHeight,
+              child: waiting
+                  ? Text(
+                      AppLocalizations.of(context).playerWaiting,
+                      key: const Key('player/waiting'),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      style: style.copyWith(shadows: onPicture),
+                    )
+                  : null,
+            ),
+          ],
+        ),
       ),
     );
   }
