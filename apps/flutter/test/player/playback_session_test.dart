@@ -531,6 +531,44 @@ void main() {
     playback.dispose();
   });
 
+  testWidgets('a press while it stalls pauses, and it stays paused', (
+    tester,
+  ) async {
+    final clock = tester.binding.clock;
+    final started = clock.now();
+    final engine = FakePlayer();
+    final playback = backend.session(
+      engine,
+      elapsed: () => clock.now().difference(started),
+    );
+    await playback.start();
+    engine.emit(PlaybackPhase.ready, 10, playing: true, buffered: 40);
+    await tester.pump();
+    engine.emit(PlaybackPhase.buffering, 10, buffered: 41);
+    await tester.pump(const Duration(seconds: 11));
+    expect(playback.playback.status.wantsPlay, isTrue);
+    expect(playback.waiting, isTrue);
+    final plays = engine.plays;
+    await playback.togglePlay();
+    expect(engine.pauses, 1, reason: 'the viewer never paused, so it pauses');
+    expect(engine.plays, plays);
+    expect(playback.playback.status.wantsPlay, isFalse);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(playback.waiting, isFalse, reason: "paused, it isn't waiting");
+    // Paused, a stall isn't the server failing it.
+    await tester.pump(const Duration(seconds: 70));
+    expect(playback.error, isNull);
+    // Data comes back: the engine has it ready, still paused.
+    engine.emit(PlaybackPhase.ready, 10, wantsPlay: false, buffered: 60);
+    await tester.pump(const Duration(seconds: 1));
+    expect(engine.plays, plays, reason: 'nothing starts it but the viewer');
+    expect(playback.playback.status.wantsPlay, isFalse);
+    await playback.togglePlay();
+    expect(engine.plays, plays + 1);
+    await playback.close();
+    playback.dispose();
+  });
+
   testWidgets('a seek buffering for a moment never says it waits', (
     tester,
   ) async {

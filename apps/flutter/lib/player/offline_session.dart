@@ -342,7 +342,7 @@ class OfflinePlaybackSession extends ChangeNotifier
   Future<void> togglePlay() async {
     if (!_canChange) return;
     if (ended) await seek(0);
-    if (playback.status.playing && !ended) {
+    if (playback.status.wantsPlay && !ended) {
       await _command(player.pause);
     } else {
       await _command(player.play);

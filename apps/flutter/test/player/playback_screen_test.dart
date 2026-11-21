@@ -228,6 +228,74 @@ void main() {
     expect(container.read(mediaChangesProvider), 2);
   });
 
+  testWidgets('while it stalls, the keys and the system pause, and it stays '
+      'paused', (tester) async {
+    final backend = FakePlaybackApi();
+    backend.start = (input) =>
+        FakePlaybackApi.answer(plan(id: input.itemId, start: 18));
+    final player = FakePlayer();
+    final media = FakeMediaControls();
+    tester.view.physicalSize = const Size(850, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = ProviderContainer(
+      overrides: [
+        authStateProvider.overrideWithValue(
+          SignedIn('https://matinee.example', User.fromJson(userJson('ada'))),
+        ),
+        apiProvider.overrideWithValue(backend.api),
+        playerHeadersProvider.overrideWithValue(const {}),
+        sessionHttpProvider.overrideWithValue(backend.client),
+        downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
+        playbackPlayerFactoryProvider.overrideWithValue((_, _) => player),
+        playbackFullscreenProvider.overrideWithValue((_, _) async {}),
+        pictureInPictureProvider.overrideWithValue(FakePictureInPicture()),
+        mediaControlsProvider.overrideWithValue(media),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MatineeApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
+    await tester.pumpAndSettle();
+    player.emit(PlaybackPhase.ready, 30, playing: true, buffered: 60);
+    await tester.pump();
+    player.emit(PlaybackPhase.buffering, 30, buffered: 61);
+    await tester.pump(const Duration(seconds: 11));
+    expect(find.text('Waiting for the server…'), findsOneWidget);
+    expect(
+      media.states.last.playing,
+      isTrue,
+      reason: 'the viewer never paused',
+    );
+    final plays = player.plays;
+    await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlay);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(player.plays, plays, reason: 'it already wants to play');
+    await tester.sendKeyEvent(LogicalKeyboardKey.mediaPause);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(player.pauses, 1);
+    expect(media.states.last.playing, isFalse);
+    // The server answers again: it stays paused, the system agreeing.
+    player.emit(PlaybackPhase.ready, 30, wantsPlay: false, buffered: 90);
+    await tester.pump(const Duration(seconds: 2));
+    expect(player.plays, plays);
+    expect(find.bySemanticsLabel('Play'), findsOneWidget);
+    expect(media.states.last.playing, isFalse);
+    // Paused, then buffering, still offers play.
+    player.emit(PlaybackPhase.buffering, 30, wantsPlay: false, buffered: 90);
+    await tester.pump(const Duration(seconds: 1));
+    expect(media.states.last.playing, isFalse);
+    media.press(MediaCommandKind.play);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(player.plays, plays + 1);
+  });
+
   testWidgets('a stall says it waits under the spinner', (tester) async {
     final backend = FakePlaybackApi();
     backend.start = (input) =>

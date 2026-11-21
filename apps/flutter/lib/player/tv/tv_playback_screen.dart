@@ -405,7 +405,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
     if (_leaving) return;
     _media.sync(
       AppLocalizations.of(context),
-      playing: _session.playback.status.playing,
+      playing: _session.playback.status.wantsPlay,
       rate: _speed.value,
     );
   }
@@ -545,7 +545,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
       _swallow = null;
       return true;
     }
-    final playing = _session.playback.status.playing;
+    final playing = _session.playback.status.wantsPlay;
     final back = _session.skipBack;
     final ahead = _session.skipForward;
     final previous = _session.previousEpisode;
@@ -868,7 +868,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
                   targets: _targets,
                   title: names.title,
                   subtitle: code == null ? null : '$code · ${names.showName}',
-                  playing: _session.playback.status.playing,
+                  playing: _session.playback.status.wantsPlay,
                   position: (_scrub ?? _session.position).clamp(
                     0,
                     _session.duration,

@@ -54,7 +54,12 @@ class _PigeonPlayer implements Player {
     _session = session;
     _update(
       const PlaybackState(
-        status: (phase: PlaybackPhase.buffering, playing: false, message: null),
+        status: (
+          phase: PlaybackPhase.buffering,
+          playing: false,
+          wantsPlay: false,
+          message: null,
+        ),
       ),
     );
     wire.PlayerEventsApi.setUp(
@@ -118,6 +123,7 @@ class _PigeonPlayer implements Player {
             StatusChanged((
               phase: PlaybackPhase.error,
               playing: false,
+              wantsPlay: false,
               message: 'Could not open the player.',
             )),
           ),

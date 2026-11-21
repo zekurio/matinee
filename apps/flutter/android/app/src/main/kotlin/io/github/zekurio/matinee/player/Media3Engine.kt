@@ -75,7 +75,7 @@ internal class Media3Engine(private val context: Context, private val output: Pl
                 frozen = true
                 player.pause()
                 output.emit(DiagnosticsMessage(error = frozenDiagnostics()))
-                output.emit(StateMessage(PhaseMessage.ERROR, playing = false, message = "Video frames stopped arriving.", serverUnavailable = false))
+                output.emit(StateMessage(PhaseMessage.ERROR, playing = false, wantsPlay = false, message = "Video frames stopped arriving.", serverUnavailable = false))
             }
             main.postDelayed(this, 250L)
         }
@@ -263,6 +263,8 @@ internal class Media3Engine(private val context: Context, private val output: Pl
                 else -> PhaseMessage.IDLE
             },
             playing = player.isPlaying,
+            // What the viewer asked for, which a stall doesn't change.
+            wantsPlay = player.playWhenReady,
             message = error?.let { "Media3 playback failed (${it.errorCodeName})." },
             serverUnavailable = error != null && serverUnavailable(error),
         )

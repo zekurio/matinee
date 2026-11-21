@@ -456,7 +456,8 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
             !started || mpv.getFlag("seeking") == true || mpv.getFlag("paused-for-cache") == true -> PhaseMessage.BUFFERING
             else -> PhaseMessage.READY
         }
-        publish(StateMessage(phase, phase == PhaseMessage.READY && mpv.getFlag("pause") == false, serverUnavailable = false))
+        // The viewer's pause, not mpv's own while it waits on the cache.
+        publish(StateMessage(phase, phase == PhaseMessage.READY && mpv.getFlag("pause") == false, wantsPlay = !wantPause, serverUnavailable = false))
         if (!loaded) return
         publish(
             TimelineMessage(
@@ -571,7 +572,7 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
         if (error != null) return
         error = message
         runCatching { player?.setProperty("pause", true) }
-        publish(StateMessage(PhaseMessage.ERROR, playing = false, message = message, serverUnavailable = unreachable))
+        publish(StateMessage(PhaseMessage.ERROR, playing = false, wantsPlay = false, message = message, serverUnavailable = unreachable))
     }
 
     /** mpv's error by its code and name, as `MPV_ERROR_LOADING_FAILED`, never its message. */
