@@ -804,6 +804,7 @@ row first and then the server's rows, each loading on its own with Try
 again. Search ends in a "Not here yet" row. A catalog title opens a page
 built like the library's title page, which takes its place once the title
 arrives. The deliberate differences from the phone:
+
 - A toast's Undo is hard to reach with a remote before it runs out, so the
   TV asks first and then sends at once (`undo: false`). Cancel request
   asks with Keep request focused. Decline asks for a reason, focused on
