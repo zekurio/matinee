@@ -402,7 +402,8 @@ class _Heading extends StatelessWidget {
   }
 }
 
-/// A skip arrow with how far it skips in its middle, as the phone draws it.
+/// A skip arrow with how far it skips in its middle, as the phone draws it,
+/// as big as play so the number reads from the couch.
 class _SkipButton extends StatelessWidget {
   const _SkipButton({
     required this.icon,
@@ -423,15 +424,16 @@ class _SkipButton extends StatelessWidget {
     builder: (context, focused) => TvControl(
       focused: focused,
       builder: (context, content) => SizedBox.square(
-        dimension: _small,
+        dimension: _play,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            KitIcon(icon, size: 28, color: content),
+            KitIcon(icon, size: 38, color: content),
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: 3),
               child: Text(
                 '$seconds',
+                textAlign: TextAlign.center,
                 style: TvType.iconNumber.style(color: content),
               ),
             ),

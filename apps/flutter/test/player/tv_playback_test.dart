@@ -385,6 +385,28 @@ void main() {
     expect(heading(), lifted);
   });
 
+  testWidgets('the skip arrows say their seconds big enough to read', (
+    tester,
+  ) async {
+    await _open(tester);
+    for (final (label, seconds) in [
+      ('Back 5 seconds', '5'),
+      ('Forward 5 seconds', '5'),
+    ]) {
+      final button = find.byWidgetPredicate(
+        (widget) => widget is TvFocusable && widget.label == label,
+      );
+      final number = find.descendant(of: button, matching: find.text(seconds));
+      expect(
+        tester.widget<Text>(number).style!.fontSize,
+        greaterThanOrEqualTo(TvType.caption.size),
+        reason: "the couch's least",
+      );
+      // As big as play, which they flank.
+      expect(tester.getSize(button).height, TvButtons.height);
+    }
+  });
+
   testWidgets('Select toggles play; Up goes to the seek bar, Down back', (
     tester,
   ) async {
