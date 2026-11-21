@@ -90,6 +90,7 @@ import {
   AdminUser,
   ApiToken,
   ApiTokenInput,
+  ApiTokenUpdate,
   AppDevice,
   AppSession,
   CreatedApiToken,
@@ -603,6 +604,7 @@ const commonSchemas = {
   AuthenticationResponse: input(AuthenticationResponse),
   AuthSettingsInput: input(AuthSettingsInput),
   ApiTokenInput: input(ApiTokenInput),
+  ApiTokenUpdate: input(ApiTokenUpdate),
   AppDevice: input(AppDevice),
   ClientIdentity: input(ClientIdentity),
   DownloadAudio: input(DownloadAudio),
@@ -642,7 +644,11 @@ export function openapiSpec(): ReturnType<OpenAPIGenerator["generate"]> {
             type: "http",
             scheme: "bearer",
             description:
-              "A session token from an app sign-in, or an API token from Settings → Account.",
+              "A session token from an app sign-in, or an API token from " +
+              "Settings → Account. Each operation's description names the " +
+              "permission it takes. The account needs it, from its access " +
+              "groups or as an admin, and an API token needs it too, or " +
+              "`all`.",
           },
           cookie: { type: "apiKey", in: "cookie", name: SESSION_COOKIE },
         },

@@ -1,5 +1,4 @@
 import {
-  type AccessPolicy,
   BITRATE_LIMITS,
   type Library,
   type RequestQuota,
@@ -10,6 +9,7 @@ import { useId } from "react"
 
 import { libraryIcons } from "@/components/app-shell"
 import { tr } from "@/i18n"
+import { REQUESTS_CHOICES, type RequestsChoice } from "@/lib/permissions"
 
 import { bitrateLimitLabel, streamLimitLabel } from "./access-facts"
 
@@ -119,13 +119,9 @@ export function LibraryPicker({
 }
 
 /** Who may ask for titles the server doesn't have, and whether an admin approves. */
-export const REQUEST_CHOICES: readonly AccessPolicy["requests"][] = [
-  "off",
-  "ask",
-  "add",
-]
+export const REQUEST_CHOICES = REQUESTS_CHOICES
 
-export function requestsLabel(value: AccessPolicy["requests"]): string {
+export function requestsLabel(value: RequestsChoice): string {
   return tr(`access.requests.${value}`)
 }
 

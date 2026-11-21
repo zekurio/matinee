@@ -10,6 +10,7 @@ import { Picture, tone } from "@/components/media-item"
 import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { tr } from "@/i18n"
 import { art } from "@/lib/media"
+import { can } from "@/lib/permissions"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 export const Route = createFileRoute("/_authed/_shell/media")({
@@ -50,7 +51,7 @@ function MediaPage() {
           {errorMessage(libraries.error)}
         </p>
       ) : libraries.data.length === 0 ? (
-        <NoLibraries admin={user.role === "admin"} />
+        <NoLibraries admin={can(user, "library.create")} />
       ) : (
         <ul className={libraryGrid}>
           {libraries.data.map((library) => (

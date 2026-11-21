@@ -1,4 +1,8 @@
-import { type AdminUser, AccessOverride } from "@matinee/contracts"
+import {
+  type AdminUser,
+  holdsPermission,
+  type Permission,
+} from "@matinee/contracts"
 import {
   apiToken,
   invite,
@@ -11,21 +15,28 @@ import {
 import { ORPCError } from "@orpc/server"
 import { asc, count, eq, inArray, max, sql } from "drizzle-orm"
 
-import { describeAccess, forgetGroups, setMemberships } from "../access/groups"
+import {
+  accessOf,
+  describeAccess,
+  forgetGroups,
+  groupPermissions,
+  manualGroupIds,
+  overrideOf,
+  setMemberships,
+} from "../access/groups"
+import { can, type Viewer } from "../access/viewer"
 import { revokeUserApiTokens } from "../auth/api-tokens"
 import { deleteAvatarFile } from "../auth/avatars"
-import { deleteUserSessions, publicUser, signOut } from "../auth/session"
+import {
+  deleteUserSessions,
+  publicUser,
+  sessionIdOf,
+  signOut,
+} from "../auth/session"
 import { lockUsers, otherAdminCanSignIn, type Tx } from "../auth/users"
 import { db } from "../db"
 import { log } from "../log"
-import {
-  admin,
-  adminSessionOnly,
-  badRequest,
-  forbidden,
-  NEEDS_SESSION,
-  notFound,
-} from "./base"
+import { authed, badRequest, forbidden, notFound, requireOwn } from "./base"
 
 const USER_GONE = "That user no longer exists. Reload the list."
 
@@ -69,7 +80,7 @@ async function toAdminUsers(rows: UserRow[]): Promise<AdminUser[]> {
     if (!described) return []
     return [
       {
-        ...publicUser(row),
+        ...publicUser(row, described.effective.permissions),
         createdAt: row.createdAt,
         lastSeenAt: activity.get(row.id)?.lastSeenAt ?? null,
         passkeys: passkeyCount.get(row.id) ?? 0,
@@ -90,16 +101,25 @@ async function toAdminUser(row: UserRow): Promise<AdminUser> {
 }
 
 /**
- * Lock the users table, then check the caller is still an admin: a demotion
- * may have committed while this request waited for the lock.
+ * Lock the users table, then check the caller's account still holds
+ * `permission`: a demotion, or a change to its groups, may have committed
+ * while this request waited for the lock.
  */
-async function lockAsAdmin(tx: Tx, actorId: string): Promise<void> {
+async function lockAsHolder(
+  tx: Tx,
+  actorId: string,
+  permission: Permission,
+): Promise<void> {
   await lockUsers(tx)
-  const [actor] = await tx
-    .select({ role: user.role })
-    .from(user)
-    .where(eq(user.id, actorId))
-  if (actor?.role !== "admin") throw forbidden()
+  const [actor] = await tx.select().from(user).where(eq(user.id, actorId))
+  // Whoever held the lock before forgets the groups only once it's gone.
+  forgetGroups()
+  if (
+    !actor ||
+    !holdsPermission((await accessOf(actor)).permissions, permission)
+  ) {
+    throw forbidden(permission)
+  }
 }
 
 /** The user, locked against other changes for the rest of the transaction. */
@@ -107,11 +127,36 @@ async function lockedUser(
   tx: Tx,
   id: string,
   actorId: string,
+  permission: Permission,
 ): Promise<UserRow> {
-  await lockAsAdmin(tx, actorId)
+  await lockAsHolder(tx, actorId, permission)
   const [row] = await tx.select().from(user).where(eq(user.id, id))
   if (!row) throw notFound(USER_GONE)
   return row
+}
+
+/**
+ * Refuse a change to an admin's account by anyone who isn't one, so
+ * nobody a group let manage accounts signs out, strips, or deletes an
+ * admin. Among everyone else `requireOwn` is the limit: an account's
+ * permissions move only by the hand of someone who holds them. Their own
+ * account is theirs.
+ */
+async function requirePeer(actor: Viewer, target: UserRow): Promise<void> {
+  if (target.id === actor.id || can(actor, "all")) return
+  const { permissions } = await accessOf(target)
+  if (!permissions.includes("all")) return
+  throw new ORPCError("FORBIDDEN", {
+    message: `${target.username} is an admin, and only an admin changes an admin's account.`,
+  })
+}
+
+/** What is in one list and not the other. */
+function changed<T>(before: readonly T[], after: readonly T[]): T[] {
+  return [
+    ...before.filter((entry) => !after.includes(entry)),
+    ...after.filter((entry) => !before.includes(entry)),
+  ]
 }
 
 /** Why the admin can't demote or delete `target`, the last admin left. */
@@ -130,13 +175,13 @@ function lastAdminMessage(
 }
 
 export const adminUsers = {
-  list: admin.admin.users.list.handler(async () =>
+  list: authed.admin.users.list.handler(async () =>
     toAdminUsers(await db.select().from(user).orderBy(asc(user.createdAt))),
   ),
 
-  setRole: admin.admin.users.setRole.handler(async ({ context, input }) => {
+  setRole: authed.admin.users.setRole.handler(async ({ context, input }) => {
     const row = await db.transaction(async (tx) => {
-      const target = await lockedUser(tx, input.id, context.user.id)
+      const target = await lockedUser(tx, input.id, context.user.id, "all")
       if (target.role === input.role) return target
       if (
         target.role === "admin" &&
@@ -163,34 +208,58 @@ export const adminUsers = {
     return toAdminUser(row)
   }),
 
-  setAccess: admin.admin.users.setAccess.handler(async ({ context, input }) => {
-    // The fields the form left out drop out of the stored override too.
-    const override = AccessOverride.parse(input.override)
-    const row = await db.transaction(async (tx) => {
-      const target = await lockedUser(tx, input.id, context.user.id)
-      await setMemberships(tx, target.id, "manual", input.groupIds)
-      const [updated] = await tx
-        .update(user)
-        .set({
-          accessOverride: Object.keys(override).length > 0 ? override : null,
-          accessOverrideSource: "manual",
-          updatedAt: new Date(),
-        })
-        .where(eq(user.id, target.id))
-        .returning()
-      if (!updated) throw notFound(USER_GONE)
-      return updated
-    })
-    forgetGroups()
-    log.info(`${context.user.username} changed ${row.username}'s access`)
-    return toAdminUser(row)
-  }),
+  setAccess: authed.admin.users.setAccess.handler(
+    async ({ context, input }) => {
+      // The fields the form left out drop out of the stored override too.
+      const override = overrideOf({ accessOverride: input.override })
+      const row = await db.transaction(async (tx) => {
+        const target = await lockedUser(
+          tx,
+          input.id,
+          context.user.id,
+          "adminUser.update",
+        )
+        await requirePeer(context.user, target)
+        // Moving the account between groups moves what they grant, and so
+        // does what the override allows and denies.
+        const before = overrideOf(target)
+        requireOwn(context.user, [
+          ...(await groupPermissions(
+            changed(await manualGroupIds(target.id), input.groupIds),
+          )),
+          ...changed(before.allow ?? [], override.allow ?? []),
+          ...changed(before.deny ?? [], override.deny ?? []),
+        ])
+        await setMemberships(tx, target.id, "manual", input.groupIds)
+        const [updated] = await tx
+          .update(user)
+          .set({
+            accessOverride: Object.keys(override).length > 0 ? override : null,
+            accessOverrideSource: "manual",
+            updatedAt: new Date(),
+          })
+          .where(eq(user.id, target.id))
+          .returning()
+        if (!updated) throw notFound(USER_GONE)
+        return updated
+      })
+      forgetGroups()
+      log.info(`${context.user.username} changed ${row.username}'s access`)
+      return toAdminUser(row)
+    },
+  ),
 
-  remove: admin.admin.users.remove.handler(async ({ context, input }) => {
+  remove: authed.admin.users.remove.handler(async ({ context, input }) => {
     // Sessions, passkeys, linked accounts, and watch progress go with the
     // user through their foreign keys.
     const removed = await db.transaction(async (tx) => {
-      const target = await lockedUser(tx, input.id, context.user.id)
+      const target = await lockedUser(
+        tx,
+        input.id,
+        context.user.id,
+        "adminUser.delete",
+      )
+      await requirePeer(context.user, target)
       if (
         target.role === "admin" &&
         !(await otherAdminCanSignIn(tx, target.id))
@@ -207,22 +276,15 @@ export const adminUsers = {
     if (removed.id === context.user.id) await signOut(context.hono)
   }),
 
-  signOut: admin.admin.users.signOut.handler(async ({ context, input }) => {
-    const [target] = await db
-      .select({ id: user.id, username: user.username })
-      .from(user)
-      .where(eq(user.id, input.id))
+  signOut: authed.admin.users.signOut.handler(async ({ context, input }) => {
+    const [target] = await db.select().from(user).where(eq(user.id, input.id))
     if (!target) throw notFound(USER_GONE)
+    await requirePeer(context.user, target)
     const self = target.id === context.user.id
-    const { credential } = context.user
-    // Signing yourself out everywhere is a sessions change, which an API
-    // token can't make. It may still sign out others, as any admin can.
-    if (self && credential.kind !== "session") {
-      throw new ORPCError("FORBIDDEN", { message: NEEDS_SESSION })
-    }
     const ended = await deleteUserSessions(
       target.id,
-      self ? credential.id : undefined,
+      // An API token has no session to keep.
+      self ? sessionIdOf(context.user) : undefined,
     )
     log.info(
       `${context.user.username} signed ${target.username} out of ${ended} sessions`,
@@ -230,13 +292,11 @@ export const adminUsers = {
     return { ended }
   }),
 
-  revokeApiTokens: adminSessionOnly.admin.users.revokeApiTokens.handler(
+  revokeApiTokens: authed.admin.users.revokeApiTokens.handler(
     async ({ context, input }) => {
-      const [target] = await db
-        .select({ id: user.id, username: user.username })
-        .from(user)
-        .where(eq(user.id, input.id))
+      const [target] = await db.select().from(user).where(eq(user.id, input.id))
       if (!target) throw notFound(USER_GONE)
+      await requirePeer(context.user, target)
       const revoked = await revokeUserApiTokens(target.id)
       log.info(
         `${context.user.username} revoked ${revoked} API tokens of ${target.username}`,

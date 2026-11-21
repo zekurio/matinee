@@ -338,7 +338,7 @@ export function deleteAvatarFile(id: string | null): Promise<void> {
 export const avatarRoutes = new Hono()
 
 avatarRoutes.get("/:id", async (c) => {
-  if (!(await readSession(c))) return c.body(null, 401)
+  if (!(await readSession(c, "profile.read"))) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f]{32}$/.test(id)) return c.body(null, 404)
   const file = await findFile(id)

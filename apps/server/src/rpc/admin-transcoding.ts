@@ -11,7 +11,7 @@ import {
   transcodingFromEnvironment,
   transcodingSettings,
 } from "../transcode/settings"
-import { admin } from "./base"
+import { authed } from "./base"
 
 async function describe(
   settings: TranscodingSettings,
@@ -26,17 +26,19 @@ async function describe(
 }
 
 export const adminTranscoding = {
-  get: admin.admin.transcoding.get.handler(async () =>
+  get: authed.admin.transcoding.get.handler(async () =>
     describe(await transcodingSettings()),
   ),
 
-  update: admin.admin.transcoding.update.handler(async ({ context, input }) => {
-    const settings = await saveTranscoding(input)
-    log.info(`Transcoding settings saved by ${context.user.username}`)
-    return describe(settings)
-  }),
+  update: authed.admin.transcoding.update.handler(
+    async ({ context, input }) => {
+      const settings = await saveTranscoding(input)
+      log.info(`Transcoding settings saved by ${context.user.username}`)
+      return describe(settings)
+    },
+  ),
 
-  detect: admin.admin.transcoding.detect.handler(async () =>
+  detect: authed.admin.transcoding.detect.handler(async () =>
     describe(await transcodingSettings(), true),
   ),
 }

@@ -8,12 +8,17 @@ type ApiTokensState = {
    * dropped when the next one starts, so nothing opens it again.
    */
   created: CreatedApiToken | null
-  /** The token waiting for a yes to revoke, kept while the dialog closes. */
+  /** The token being changed, kept while its dialog closes. */
+  editing: ApiToken | null
+  editOpen: boolean
+  /** The token waiting for a yes to revoke, kept the same way. */
   revoking: ApiToken | null
   revokeOpen: boolean
   start: () => void
   setCreating: (creating: boolean) => void
   setCreated: (created: CreatedApiToken) => void
+  edit: (token: ApiToken) => void
+  closeEdit: () => void
   ask: (token: ApiToken) => void
   closeRevoke: () => void
 }
@@ -23,11 +28,15 @@ export function createSettingsApiTokensStore() {
   return createStore<ApiTokensState>()((set) => ({
     creating: false,
     created: null,
+    editing: null,
+    editOpen: false,
     revoking: null,
     revokeOpen: false,
     start: () => set({ creating: true, created: null }),
     setCreating: (creating) => set({ creating }),
     setCreated: (created) => set({ created }),
+    edit: (editing) => set({ editing, editOpen: true }),
+    closeEdit: () => set({ editOpen: false }),
     ask: (revoking) => set({ revoking, revokeOpen: true }),
     closeRevoke: () => set({ revokeOpen: false }),
   }))

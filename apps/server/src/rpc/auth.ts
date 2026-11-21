@@ -3,6 +3,7 @@ import { user } from "@matinee/db"
 import { eq } from "drizzle-orm"
 
 import { forgetGroups, inviteGroupIds, setMemberships } from "../access/groups"
+import { userOf } from "../access/viewer"
 import { redeemAppCode } from "../auth/apps"
 import { branding, loginBackdrop } from "../auth/branding"
 import {
@@ -32,7 +33,7 @@ import {
 } from "../auth/passkeys"
 import {
   createSession,
-  publicUser,
+  readCaller,
   readSession,
   signIn,
   signOut,
@@ -53,12 +54,12 @@ import { log } from "../log"
 import { loginBackdropTiles } from "../media/login-backdrop"
 import { LIMITS } from "../rate-limit"
 import {
+  authed,
   badRequest,
   limited,
   notFound,
   pub,
   requirePasskeys,
-  sessionOnly,
   tooManyRequests,
 } from "./base"
 
@@ -143,9 +144,10 @@ export const auth = {
     }
   }),
 
+  // An API token gets its account too, whatever it may do.
   session: pub.auth.session.handler(async ({ context }) => {
-    const current = await readSession(context.hono)
-    return { user: current ? publicUser(current) : null }
+    const current = await readCaller(context.hono)
+    return { user: current ? await userOf(current) : null }
   }),
 
   signOut: pub.auth.signOut.handler(async ({ context }) => {
@@ -189,7 +191,7 @@ export const auth = {
       await signIn(context.hono, userId)
       const [row] = await db.select().from(user).where(eq(user.id, userId))
       if (!row) throw badRequest("This account no longer exists.")
-      return publicUser(row)
+      return userOf(row)
     }),
 
     signUpOptions: pub.auth.passkey.signUpOptions
@@ -274,7 +276,7 @@ export const auth = {
         endSetupAccess(context.hono)
       }
       await signIn(context.hono, created.id)
-      return publicUser(created)
+      return userOf(created)
     }),
   },
 
@@ -285,8 +287,7 @@ export const auth = {
         return pending ? { accountLabel: pending.identity.label } : null
       }),
 
-      // Linking changes how the account signs in, so an API token can't.
-      link: sessionOnly.auth.oidc.pending.link.handler(async ({ context }) => {
+      link: authed.auth.oidc.pending.link.handler(async ({ context }) => {
         const pending = await takePendingLink(context.hono)
         if (!pending) throw badRequest(PENDING_GONE)
         if (!(await activeOidc())) {
@@ -316,7 +317,7 @@ export const auth = {
         )
         log.info(`OIDC sign-in created ${created.username}`)
         await signIn(context.hono, created.id)
-        return { user: publicUser(created), redirect: pending.redirect }
+        return { user: await userOf(created), redirect: pending.redirect }
       }),
 
       discard: pub.auth.oidc.pending.discard.handler(async ({ context }) => {
@@ -333,7 +334,7 @@ export const auth = {
       }
       const row = await approvedUser(redeemed.userId)
       const token = await createSession(row.id, redeemed.device)
-      return { token, user: publicUser(row) }
+      return { token, user: await userOf(row) }
     }),
   },
 
@@ -354,23 +355,19 @@ export const auth = {
         if (!result) throw notFound("This code expired. Get a new one.")
         const row = await approvedUser(result.userId)
         const token = await createSession(row.id, result.device)
-        return { status: "approved" as const, token, user: publicUser(row) }
+        return { status: "approved" as const, token, user: await userOf(row) }
       }),
 
-    // Approving signs a device in as the account, which would let an API
-    // token mint sessions, so both take a session.
-    get: sessionOnly.auth.device.get.handler(async ({ input }) => {
+    get: authed.auth.device.get.handler(async ({ input }) => {
       const request = await findDeviceRequest(input.userCode)
       if (!request) throw notFound(DEVICE_GONE)
       return request
     }),
 
-    approve: sessionOnly.auth.device.approve.handler(
-      async ({ context, input }) => {
-        if (!(await approveDeviceRequest(input.userCode, context.user.id))) {
-          throw notFound(DEVICE_GONE)
-        }
-      },
-    ),
+    approve: authed.auth.device.approve.handler(async ({ context, input }) => {
+      if (!(await approveDeviceRequest(input.userCode, context.user.id))) {
+        throw notFound(DEVICE_GONE)
+      }
+    }),
   },
 }

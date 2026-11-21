@@ -1,4 +1,9 @@
-import type { DevicePlatform, SessionClient } from "@matinee/contracts"
+import type {
+  DevicePlatform,
+  Permission,
+  SessionClient,
+} from "@matinee/contracts"
+import { sql } from "drizzle-orm"
 import {
   boolean,
   index,
@@ -54,6 +59,15 @@ export const apiToken = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     name: text().notNull(),
+    /**
+     * What it may do, from `PERMISSIONS`. A token without any reaches
+     * next to nothing, as one made before permissions does.
+     */
+    permissions: text()
+      .array()
+      .$type<Permission[]>()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     createdAt: createdAt(),
     /** Null until first used. Moved at most once a minute. */
     lastUsedAt: timestamp({ withTimezone: true }),

@@ -2,7 +2,9 @@ import {
   type ApiToken,
   ApiTokenInput,
   ApiTokenName,
+  ApiTokenPermissions,
   type CreatedApiToken,
+  PERMISSIONS,
 } from "@matinee/contracts"
 import {
   AlertDialog,
@@ -14,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@matinee/ui/components/alert-dialog"
+import { Badge } from "@matinee/ui/components/badge"
 import { Button } from "@matinee/ui/components/button"
 import {
   Dialog,
@@ -23,15 +26,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@matinee/ui/components/dialog"
+import { FieldGroup } from "@matinee/ui/components/field"
 import { Input } from "@matinee/ui/components/input"
 import { List, ListItem } from "@matinee/ui/components/list"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { toast } from "@matinee/ui/components/sonner"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useRouteContext } from "@tanstack/react-router"
 import {
   CheckIcon,
   CopyIcon,
   KeySquareIcon,
+  PencilIcon,
   PlusIcon,
   Trash2Icon,
 } from "lucide-react"
@@ -39,33 +45,42 @@ import { useState } from "react"
 import { useStore } from "zustand"
 
 import { tr } from "@/i18n"
-import { useAppForm } from "@/lib/form"
+import { firstError, useAppForm } from "@/lib/form"
 import { formatDate, formatRelative } from "@/lib/format"
+import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { useActionFeedback } from "@/lib/use-action-feedback"
 import { createSettingsApiTokensStore } from "@/stores/settings-api-tokens"
 
+import { PermissionPicker } from "./permission-picker"
 import { RowIcon, SettingNote, SettingsSubsection } from "./settings-panel"
 
 // The server moves a token's last use at most once a minute.
 const LAST_USED_STEP_MS = 60 * 1000
 
 /**
- * Tokens a service calls the API with as this account: making one, whose
- * secret shows once, and revoking those it has.
+ * Tokens a service or an app calls the API with as this account: making
+ * one, whose secret shows once, changing what it may do, and revoking it.
  */
 export function ApiTokens() {
   const queryClient = useQueryClient()
   const tokens = useQuery(orpc.account.apiTokens.list.queryOptions())
+  const { user } = useRouteContext({ from: "/_authed" })
+  // Groups grant making tokens. The ones an account has stay its own.
+  const mayCreate = can(user, "apiToken.create")
   const [store] = useState(createSettingsApiTokensStore)
   const {
     creating,
     created,
+    editing,
+    editOpen,
     revoking,
     revokeOpen,
     start,
     setCreating,
     setCreated,
+    edit,
+    closeEdit,
     ask,
     closeRevoke,
   } = useStore(store)
@@ -91,10 +106,12 @@ export function ApiTokens() {
       id="api-tokens"
       title={tr("account.apiTokens.title")}
       action={
-        <Button variant="outline" onClick={start}>
-          <PlusIcon />
-          {tr("account.apiTokens.create")}
-        </Button>
+        mayCreate && (
+          <Button variant="outline" onClick={start}>
+            <PlusIcon />
+            {tr("account.apiTokens.create")}
+          </Button>
+        )
       }
     >
       <SettingNote>{tr("account.apiTokens.description")}</SettingNote>
@@ -107,7 +124,11 @@ export function ApiTokens() {
           })}
         </SettingNote>
       ) : tokens.data.length === 0 ? (
-        <SettingNote>{tr("account.apiTokens.empty")}</SettingNote>
+        <SettingNote>
+          {mayCreate
+            ? tr("account.apiTokens.empty")
+            : tr("account.apiTokens.notAllowed")}
+        </SettingNote>
       ) : (
         <List>
           {tokens.data.map((token) => (
@@ -115,6 +136,7 @@ export function ApiTokens() {
               key={token.id}
               token={token}
               revoking={revoke.isPending && revoke.variables.id === token.id}
+              onEdit={() => edit(token)}
               onRevoke={() => ask(token)}
             />
           ))}
@@ -129,7 +151,7 @@ export function ApiTokens() {
       >
         <DialogContent
           showCloseButton={false}
-          className="gap-5 p-6 sm:max-w-md"
+          className="gap-5 p-6 sm:max-w-lg"
         >
           {created ? (
             <CreatedSecret
@@ -137,9 +159,28 @@ export function ApiTokens() {
               onDone={() => setCreating(false)}
             />
           ) : (
-            <ApiTokenForm
+            <CreateForm
               onCreated={(token) => {
                 setCreated(token)
+                void refresh()
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={(open) => !open && closeEdit()}>
+        <DialogContent
+          showCloseButton={false}
+          className="gap-5 p-6 sm:max-w-lg"
+        >
+          {editing && (
+            <EditForm
+              // A form per token, so one opened after another starts from it.
+              key={editing.id}
+              token={editing}
+              onSaved={() => {
+                closeEdit()
                 void refresh()
               }}
             />
@@ -183,10 +224,12 @@ export function ApiTokens() {
 function ApiTokenRow({
   token,
   revoking,
+  onEdit,
   onRevoke,
 }: {
   token: ApiToken
   revoking: boolean
+  onEdit: () => void
   onRevoke: () => void
 }) {
   return (
@@ -195,7 +238,22 @@ function ApiTokenRow({
         <KeySquareIcon />
       </RowIcon>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm leading-5 font-medium">{token.name}</p>
+        <p className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-sm leading-5 font-medium">
+            {token.name}
+          </span>
+          <Badge
+            variant={token.permissions.length > 0 ? "secondary" : "outline"}
+            // The names themselves, for whoever wants to check.
+            title={token.permissions.join(", ") || undefined}
+          >
+            {token.permissions.includes("all")
+              ? tr("account.apiTokens.allPermissions")
+              : tr("account.apiTokens.permissionCount", {
+                  count: token.permissions.length,
+                })}
+          </Badge>
+        </p>
         <p className="text-muted-foreground text-13px truncate leading-5">
           {[
             lastUsed(token),
@@ -205,6 +263,15 @@ function ApiTokenRow({
           ].join(" · ")}
         </p>
       </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-muted-foreground hover:text-foreground shrink-0"
+        aria-label={tr("account.apiTokens.editNamed", { name: token.name })}
+        onClick={onEdit}
+      >
+        <PencilIcon />
+      </Button>
       <Button
         variant="ghost"
         size="icon"
@@ -229,7 +296,7 @@ function lastUsed(token: ApiToken): string {
   })
 }
 
-function ApiTokenForm({
+function CreateForm({
   onCreated,
 }: {
   onCreated: (token: CreatedApiToken) => void
@@ -243,13 +310,78 @@ function ApiTokenForm({
         description: errorMessage(error),
       }),
   })
+  return (
+    <TokenForm
+      title={tr("account.apiTokens.createTitle")}
+      description={tr("account.apiTokens.createDescription")}
+      submitLabel={tr("account.apiTokens.create")}
+      initial={{ name: "", permissions: [] }}
+      pending={create.isPending}
+      onSubmit={(input) => create.mutate(input)}
+    />
+  )
+}
+
+function EditForm({
+  token,
+  onSaved,
+}: {
+  token: ApiToken
+  onSaved: () => void
+}) {
+  const save = useMutation({
+    mutationFn: (input: ApiTokenInput) =>
+      client.account.apiTokens.update({ id: token.id, ...input }),
+    onSuccess: (saved) => {
+      toast.success(tr("account.apiTokens.saved", { name: saved.name }))
+      onSaved()
+    },
+    onError: (error) =>
+      toast.error(tr("account.apiTokens.saveFailed"), {
+        description: errorMessage(error),
+      }),
+  })
+  return (
+    <TokenForm
+      title={tr("account.apiTokens.editTitle", { name: token.name })}
+      description={tr("account.apiTokens.editDescription")}
+      submitLabel={tr("account.apiTokens.save")}
+      initial={{ name: token.name, permissions: token.permissions }}
+      pending={save.isPending}
+      onSubmit={(input) => save.mutate(input)}
+    />
+  )
+}
+
+/** A token's name and what it may do, for making one and for changing one. */
+function TokenForm({
+  title,
+  description,
+  submitLabel,
+  initial,
+  pending,
+  onSubmit,
+}: {
+  title: string
+  description: string
+  submitLabel: string
+  initial: ApiTokenInput
+  pending: boolean
+  onSubmit: (input: ApiTokenInput) => void
+}) {
+  const { user } = useRouteContext({ from: "/_authed" })
   const form = useAppForm({
-    defaultValues: { name: "" },
+    defaultValues: initial,
     onSubmit: ({ value }) => {
-      if (create.isPending) return
-      create.mutate(ApiTokenInput.parse(value))
+      if (!pending) onSubmit(ApiTokenInput.parse(value))
     },
   })
+  // A token never does more than its account, so only what the account
+  // may do is worth picking. One it already has stays in the list.
+  const offered = PERMISSIONS.filter(
+    (permission) =>
+      can(user, permission) || initial.permissions.includes(permission),
+  )
 
   return (
     <form.AppForm>
@@ -261,26 +393,43 @@ function ApiTokenForm({
         }}
       >
         <DialogHeader>
-          <DialogTitle>{tr("account.apiTokens.createTitle")}</DialogTitle>
-          <DialogDescription>
-            {tr("account.apiTokens.createDescription")}
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <form.AppField name="name" validators={{ onChange: ApiTokenName }}>
-          {(field) => (
-            <field.TextField
-              id="api-token-name"
-              label={tr("account.apiTokens.name")}
-              placeholder={tr("account.apiTokens.namePlaceholder")}
-              maxLength={64}
-              autoComplete="off"
-            />
-          )}
-        </form.AppField>
+        <FieldGroup>
+          <form.AppField name="name" validators={{ onChange: ApiTokenName }}>
+            {(field) => (
+              <field.TextField
+                id="api-token-name"
+                label={tr("account.apiTokens.name")}
+                placeholder={tr("account.apiTokens.namePlaceholder")}
+                maxLength={64}
+                autoComplete="off"
+              />
+            )}
+          </form.AppField>
+          {/* Checked when the form is sent, so the dialog doesn't open on an error. */}
+          <form.Field
+            name="permissions"
+            validators={{ onSubmit: ApiTokenPermissions }}
+          >
+            {(field) => (
+              <PermissionPicker
+                legend={tr("account.apiTokens.permissions")}
+                offered={offered}
+                all={{
+                  label: tr("account.apiTokens.allPermissions"),
+                  hint: tr("account.apiTokens.allPermissionsHint"),
+                }}
+                value={field.state.value}
+                error={firstError(field.state.meta.errors)}
+                onChange={field.handleChange}
+              />
+            )}
+          </form.Field>
+        </FieldGroup>
         <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
-          <form.SubmitButton pending={create.isPending}>
-            {tr("account.apiTokens.create")}
-          </form.SubmitButton>
+          <form.SubmitButton pending={pending}>{submitLabel}</form.SubmitButton>
         </DialogFooter>
       </form>
     </form.AppForm>

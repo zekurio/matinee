@@ -1,4 +1,9 @@
-import type { AccessPolicy, Library, RequestLimit } from "@matinee/contracts"
+import {
+  type AccessPolicy,
+  holdsPermission,
+  type Library,
+  type RequestLimit,
+} from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
 import {
   DownloadIcon,
@@ -7,11 +12,13 @@ import {
   InboxIcon,
   LibraryBigIcon,
   MonitorPlayIcon,
+  ShieldCheckIcon,
 } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { formatBitrate } from "@/components/player-format"
 import { perLocale, tr } from "@/i18n"
+import { POLICY_PERMISSIONS, requestsOf } from "@/lib/permissions"
 
 /*
  * What an access policy allows, in the words the access panel, the group
@@ -55,15 +62,16 @@ export function requestLimitLabel(limit: RequestLimit): string {
 
 /** "Requests need approval, 5 titles every 7 days", or "No requests". */
 export function requestsFactLabel(
-  policy: Pick<AccessPolicy, "requests" | "requestLimit">,
+  policy: Pick<AccessPolicy, "permissions" | "requestLimit">,
 ): string {
+  const choice = requestsOf(policy.permissions)
   const requests =
-    policy.requests === "off"
+    choice === "off"
       ? tr("access.requests.factOff")
-      : policy.requests === "ask"
+      : choice === "ask"
         ? tr("access.requests.factAsk")
         : tr("access.requests.factAdd")
-  if (policy.requests === "off" || policy.requestLimit === null) return requests
+  if (choice === "off" || policy.requestLimit === null) return requests
   return tr("access.requests.factLimited", {
     requests,
     limit: requestLimitLabel(policy.requestLimit),
@@ -130,8 +138,30 @@ export function Fact({
 }
 
 /**
+ * "Every permission" for an admin, or how many a policy grants besides
+ * downloading and requesting, which have facts of their own. Null for
+ * none. The tooltip names them.
+ */
+function permissionsFact(
+  permissions: AccessPolicy["permissions"],
+): { label: string; names: string | undefined } | null {
+  if (permissions.includes("all")) {
+    return { label: tr("access.permissions.all"), names: undefined }
+  }
+  const more = permissions.filter(
+    (permission) => !POLICY_PERMISSIONS.includes(permission),
+  )
+  if (more.length === 0) return null
+  return {
+    label: tr("access.permissions.count", { count: more.length }),
+    names: more.join(", "),
+  }
+}
+
+/**
  * A line of what a policy allows: its libraries, its bit rate limit, the
- * encoding and download switches, its stream limit, and its requests.
+ * encoding and download switches, its stream limit, its requests, and
+ * what else it grants.
  */
 export function PolicyFacts({
   policy,
@@ -144,6 +174,7 @@ export function PolicyFacts({
   className?: string
 }) {
   const library = librariesFact(policy.libraries, libraries)
+  const more = permissionsFact(policy.permissions)
   return (
     <p
       className={cn(
@@ -161,7 +192,7 @@ export function PolicyFacts({
           : tr("access.transcode.off")}
       </Fact>
       <Fact icon={<DownloadIcon />}>
-        {policy.downloads
+        {holdsPermission(policy.permissions, "media.download")
           ? tr("access.downloads.on")
           : tr("access.downloads.off")}
       </Fact>
@@ -169,6 +200,11 @@ export function PolicyFacts({
         {streamLimitLabel(policy.maxStreams)}
       </Fact>
       <Fact icon={<InboxIcon />}>{requestsFactLabel(policy)}</Fact>
+      {more && (
+        <Fact icon={<ShieldCheckIcon />} title={more.names}>
+          {more.label}
+        </Fact>
+      )}
     </p>
   )
 }

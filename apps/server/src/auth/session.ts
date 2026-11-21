@@ -1,5 +1,7 @@
 import {
   type AppDevice,
+  grantsPermissions,
+  type Permission,
   PlaybackPreferences,
   type ProfileUser,
   type Session,
@@ -23,9 +25,15 @@ const SESSION_TOUCH_MS = 60 * 60 * 1000
 
 /**
  * What a request signed in with: a session from a sign-in, or an API token
- * the account made. Both carry the row's id.
+ * the account made, with what that token may do. Both carry the row's id.
  */
-export type Credential = { kind: "session" | "apiToken"; id: string }
+export type Credential =
+  | { kind: "session"; id: string }
+  | {
+      kind: "apiToken"
+      id: string
+      permissions: readonly Permission[]
+    }
 
 export type SessionUser = UserRow & {
   credential: Credential
@@ -38,12 +46,20 @@ export type SessionUser = UserRow & {
   clientName: string | null
 }
 
-export function publicUser(row: UserRow): User {
+/**
+ * The account as its own clients get it. `permissions` is what it was
+ * granted, from its access; `userOf` in access/viewer.ts looks it up.
+ */
+export function publicUser(
+  row: UserRow,
+  permissions: readonly Permission[],
+): User {
   return {
     id: row.id,
     username: row.username,
     displayName: row.displayName,
     role: row.role,
+    permissions: [...permissions],
     avatarId: row.avatarId,
     avatarSource: row.avatarSource,
     playback:
@@ -92,12 +108,16 @@ const sessionByToken = db
   .prepare("session_by_token")
 
 /**
- * The signed-in user, or null. Cached on the request. An API token counts
- * only from the Authorization header: a browser sends the cookie on
- * requests other sites start, and the CSRF reasoning in app.ts rests on
- * a bearer token never coming that way.
+ * Whoever the request's credential names, a session's user or an API
+ * token's, or null. Cached on the request. An API token counts only from
+ * the Authorization header: a browser sends the cookie on requests other
+ * sites start, and the CSRF reasoning in app.ts rests on a bearer token
+ * never coming that way.
+ *
+ * Only for code that then checks what a token may do, as `authed` in
+ * rpc/base.ts does. Anything else reads `readSession`.
  */
-export async function readSession(c: Context): Promise<SessionUser | null> {
+export async function readCaller(c: Context): Promise<SessionUser | null> {
   const cached = c.get("sessionUser")
   if (cached !== undefined) return cached
   const sent = requestToken(c)
@@ -108,7 +128,11 @@ export async function readSession(c: Context): Promise<SessionUser | null> {
     if (row) {
       result = {
         ...row.user,
-        credential: { kind: "apiToken", id: row.apiToken.id },
+        credential: {
+          kind: "apiToken",
+          id: row.apiToken.id,
+          permissions: row.apiToken.permissions,
+        },
         clientName: row.apiToken.name,
       }
     }
@@ -138,6 +162,37 @@ export async function readSession(c: Context): Promise<SessionUser | null> {
   }
   c.set("sessionUser", result)
   return result
+}
+
+/** The caller's session id, or undefined for an API token, which has none. */
+export function sessionIdOf(user: SessionUser): string | undefined {
+  return user.credential.kind === "session" ? user.credential.id : undefined
+}
+
+/**
+ * Whether the caller's credential covers `permission`. A session covers
+ * everything; what the account itself may do is `can` in access/viewer.ts.
+ */
+export function mayUse(user: SessionUser, permission: Permission): boolean {
+  return (
+    user.credential.kind === "session" ||
+    grantsPermissions(user.credential.permissions, [permission])
+  )
+}
+
+/**
+ * The signed-in user of a plain HTTP route, or null. An API token counts
+ * only for a route that names the permission covering it, and only when
+ * the token holds it. A route that names none takes a session: those are
+ * the browser's own, like approving an app or linking an account.
+ */
+export async function readSession(
+  c: Context,
+  permission?: Permission,
+): Promise<SessionUser | null> {
+  const caller = await readCaller(c)
+  if (!caller || caller.credential.kind === "session") return caller
+  return permission && mayUse(caller, permission) ? caller : null
 }
 
 /**
@@ -193,7 +248,7 @@ export async function signIn(c: Context, userId: string): Promise<string> {
  * token: only a session can.
  */
 export async function signOut(c: Context): Promise<void> {
-  const current = await readSession(c)
+  const current = await readCaller(c)
   if (current?.credential.kind === "session") {
     await db.delete(session).where(eq(session.id, current.credential.id))
   }
@@ -205,16 +260,22 @@ export async function deleteExpiredSessions(): Promise<void> {
   await db.delete(session).where(lt(session.expiresAt, new Date()))
 }
 
-/** The user's live sessions: `current` first, then the most recently used. */
+/**
+ * The user's live sessions: `current` first, then the most recently used.
+ * An API token has no current one.
+ */
 export async function listSessions(
   userId: string,
-  current: string,
+  current: string | undefined,
 ): Promise<Session[]> {
   const rows = await db
     .select()
     .from(session)
     .where(and(eq(session.userId, userId), gt(session.expiresAt, new Date())))
-    .orderBy(desc(eq(session.id, current)), desc(session.lastSeenAt))
+    .orderBy(
+      ...(current ? [desc(eq(session.id, current))] : []),
+      desc(session.lastSeenAt),
+    )
   return rows.map((row) => ({
     id: row.id,
     current: row.id === current,
@@ -229,21 +290,17 @@ export async function listSessions(
 }
 
 /**
- * Keep what the current session's client calls itself, as
- * `cleanDeviceName` leaves it. Only the session's own token can name it,
- * and it is only ever shown.
+ * Keep what the session's client calls itself, as `cleanDeviceName` leaves
+ * it. Only the session's own token can name it, and it is only ever shown.
  */
 export async function identifySession(
-  current: SessionUser,
+  sessionId: string,
   name: string,
 ): Promise<void> {
-  // An API token goes by the name its owner gave it.
-  if (current.credential.kind !== "session") return
-  if (name === current.clientName) return
   await db
     .update(session)
     .set({ clientName: name })
-    .where(eq(session.id, current.credential.id))
+    .where(eq(session.id, sessionId))
 }
 
 /** End one of the user's sessions. False when they have no such session. */

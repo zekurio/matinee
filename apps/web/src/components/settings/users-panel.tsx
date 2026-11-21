@@ -1,4 +1,4 @@
-import type { AdminUser } from "@matinee/contracts"
+import type { AdminUser, Permission } from "@matinee/contracts"
 import { Badge } from "@matinee/ui/components/badge"
 import { Button } from "@matinee/ui/components/button"
 import {
@@ -37,6 +37,7 @@ import { useStore } from "zustand"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatDate, formatRelative } from "@/lib/format"
+import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createUsersPanelStore, type UserAction } from "@/stores/users-panel"
 
@@ -64,6 +65,9 @@ export function UsersPanel() {
   const session = useQuery(orpc.auth.session.queryOptions())
   const config = useQuery(orpc.auth.config.queryOptions())
   const me = session.data?.user ?? null
+  // The menu offers only what the account may do. The server also keeps
+  // anyone from changing an account that may do more than they may.
+  const may = (permission: Permission) => me !== null && can(me, permission)
   const oidcName = config.data?.oidc?.displayName ?? null
   const [store] = useState(createUsersPanelStore)
   const confirming = useStore(store, (state) => state.confirming)
@@ -220,6 +224,7 @@ export function UsersPanel() {
                 oidcName={oidcName}
                 passkeysOn={passkeysOn}
                 lastAdmin={isLastAdmin(user)}
+                may={may}
                 onConfirm={(action) => ask(action, user)}
                 onAccess={() => openAccess(user)}
               />
@@ -228,7 +233,7 @@ export function UsersPanel() {
         )}
       </SettingsSubsection>
 
-      <Invites passkeysOn={passkeysOn} />
+      {may("invite.read") && <Invites passkeysOn={passkeysOn} />}
 
       <UserAccessDialog
         userId={accessUserId}
@@ -259,6 +264,7 @@ function UserItem({
   oidcName,
   passkeysOn,
   lastAdmin,
+  may,
   onConfirm,
   onAccess,
 }: {
@@ -267,6 +273,7 @@ function UserItem({
   oidcName: string | null
   passkeysOn: boolean
   lastAdmin: boolean
+  may: (permission: Permission) => boolean
   onConfirm: (action: UserAction) => void
   onAccess: () => void
 }) {
@@ -275,6 +282,14 @@ function UserItem({
     ? tr("users.menu.signOutOthers")
     : tr("users.menu.signOut")
   const lastAdminNote = tr("users.lastAdmin")
+  // The access dialog lists the groups to put the account in.
+  const mayAccess = may("adminUser.update") && may("group.read")
+  // Making an admin hands over every permission, so it takes them all.
+  const mayRole = may("all")
+  const maySignOut = may("adminSession.delete")
+  const mayRevoke = may("adminApiToken.delete")
+  const mayDelete = may("adminUser.delete")
+  const anything = mayAccess || mayRole || maySignOut || mayRevoke || mayDelete
 
   return (
     <ListItem className="gap-3 py-2.5 pr-2">
@@ -308,65 +323,83 @@ function UserItem({
         />
         <UserGroups user={user} oidcName={oidcName} />
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-foreground shrink-0"
-              aria-label={tr("users.actions", { name })}
-            />
-          }
-        >
-          <EllipsisIcon />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={6} className="min-w-56">
-          {/* An admin's access is everything, so there's nothing to set. */}
-          <BlockableItem
-            blocked={user.role === "admin" ? tr("users.adminAccess") : null}
-            onClick={onAccess}
+      {anything && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground shrink-0"
+                aria-label={tr("users.actions", { name })}
+              />
+            }
           >
-            <SlidersHorizontalIcon />
-            {tr("users.menu.access")}
-          </BlockableItem>
-          <DropdownMenuSeparator />
-          <BlockableItem
-            blocked={user.role === "admin" && lastAdmin ? lastAdminNote : null}
-            onClick={() => onConfirm("role")}
-          >
-            {user.role === "admin" ? <ShieldOffIcon /> : <ShieldIcon />}
-            {user.role === "admin"
-              ? self
-                ? tr("users.menu.stepDown")
-                : tr("users.menu.removeAdmin")
-              : tr("users.menu.makeAdmin")}
-          </BlockableItem>
-          <DropdownMenuItem
-            disabled={user.sessions <= (self ? 1 : 0)}
-            onClick={() => onConfirm("sign-out")}
-          >
-            <LogOutIcon />
-            {signOutLabel}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={user.apiTokens === 0}
-            onClick={() => onConfirm("revoke-tokens")}
-          >
-            <KeySquareIcon />
-            {tr("users.menu.revokeTokens")}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <BlockableItem
-            variant="destructive"
-            blocked={lastAdmin ? lastAdminNote : null}
-            onClick={() => onConfirm("delete")}
-          >
-            <Trash2Icon />
-            {self ? tr("users.menu.deleteOwn") : tr("users.menu.delete")}
-          </BlockableItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <EllipsisIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={6} className="min-w-56">
+            {/* An admin's access is everything, so there's nothing to set. */}
+            {mayAccess && (
+              <BlockableItem
+                blocked={user.role === "admin" ? tr("users.adminAccess") : null}
+                onClick={onAccess}
+              >
+                <SlidersHorizontalIcon />
+                {tr("users.menu.access")}
+              </BlockableItem>
+            )}
+            {mayAccess && (mayRole || maySignOut || mayRevoke) && (
+              <DropdownMenuSeparator />
+            )}
+            {mayRole && (
+              <BlockableItem
+                blocked={
+                  user.role === "admin" && lastAdmin ? lastAdminNote : null
+                }
+                onClick={() => onConfirm("role")}
+              >
+                {user.role === "admin" ? <ShieldOffIcon /> : <ShieldIcon />}
+                {user.role === "admin"
+                  ? self
+                    ? tr("users.menu.stepDown")
+                    : tr("users.menu.removeAdmin")
+                  : tr("users.menu.makeAdmin")}
+              </BlockableItem>
+            )}
+            {maySignOut && (
+              <DropdownMenuItem
+                disabled={user.sessions <= (self ? 1 : 0)}
+                onClick={() => onConfirm("sign-out")}
+              >
+                <LogOutIcon />
+                {signOutLabel}
+              </DropdownMenuItem>
+            )}
+            {mayRevoke && (
+              <DropdownMenuItem
+                disabled={user.apiTokens === 0}
+                onClick={() => onConfirm("revoke-tokens")}
+              >
+                <KeySquareIcon />
+                {tr("users.menu.revokeTokens")}
+              </DropdownMenuItem>
+            )}
+            {mayDelete && (mayAccess || mayRole || maySignOut || mayRevoke) && (
+              <DropdownMenuSeparator />
+            )}
+            {mayDelete && (
+              <BlockableItem
+                variant="destructive"
+                blocked={lastAdmin ? lastAdminNote : null}
+                onClick={() => onConfirm("delete")}
+              >
+                <Trash2Icon />
+                {self ? tr("users.menu.deleteOwn") : tr("users.menu.delete")}
+              </BlockableItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </ListItem>
   )
 }

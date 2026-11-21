@@ -10,11 +10,7 @@ import { title, type MediaItemRow } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
 import { eq } from "drizzle-orm"
 
-import {
-  DOWNLOADS_OFF,
-  DOWNLOAD_VIDEO_OFF,
-  downloadVideoAllowed,
-} from "../access/media"
+import { DOWNLOAD_VIDEO_OFF, downloadVideoAllowed } from "../access/media"
 import type { Access } from "../access/policy"
 import { itemFor, type Seer } from "../access/visible"
 import { db } from "../db"
@@ -46,11 +42,6 @@ async function asBadRequest<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
-function requireDownloads(access: Access): void {
-  if (!access.downloads)
-    throw new ORPCError("FORBIDDEN", { message: DOWNLOADS_OFF })
-}
-
 function requireDownloadVideo(access: Access, spec: DownloadSpec): void {
   if (!downloadVideoAllowed(access, spec))
     throw new ORPCError("FORBIDDEN", { message: DOWNLOAD_VIDEO_OFF })
@@ -58,7 +49,6 @@ function requireDownloadVideo(access: Access, spec: DownloadSpec): void {
 
 export const downloads = {
   resolve: authed.downloads.resolve.handler(async ({ context, input }) => {
-    requireDownloads(context.user.access)
     const transcoding = await currentTranscoding()
     const results: DownloadResolution[] = []
     // Bound memory and filesystem pressure, even for a whole season.
@@ -111,14 +101,12 @@ export const downloads = {
   }),
 
   plan: authed.downloads.plan.handler(async ({ context, input }) => {
-    requireDownloads(context.user.access)
     requireDownloadVideo(context.user.access, input.spec)
     const row = await itemRow(context.user, input.id)
     return asBadRequest(async () => (await buildDownload(row, input.spec)).plan)
   }),
 
   start: authed.downloads.start.handler(async ({ context, input }) => {
-    requireDownloads(context.user.access)
     requireDownloadVideo(context.user.access, input.spec)
     const row = await itemRow(context.user, input.id)
     return asBadRequest(() => startDownload(row, input.spec, context.user.id))

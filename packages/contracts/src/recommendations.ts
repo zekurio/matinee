@@ -62,12 +62,14 @@ export const HomeRecommendations = t.object({
 
 export const recommendationsContract = {
   /** The recommendation rows Home shows, of titles in the viewer's libraries. */
-  home: get("/recommendations/home").output(HomeRecommendations),
+  home: get("/recommendations/home", "recommendation.read").output(
+    HomeRecommendations,
+  ),
   /**
    * "Not interested": leave a title out of the viewer's recommendations,
    * or let it back in. Either is fine to repeat.
    */
-  dismiss: put("/recommendations/dismissed")
+  dismiss: put("/recommendations/dismissed", "recommendation.update")
     .input(t.object({ ref: CatalogRef, dismissed: t.boolean() }))
     .output(t.void()),
 }

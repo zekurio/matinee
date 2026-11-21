@@ -14,7 +14,7 @@ import { type MediaItemRow } from "@matinee/db"
 import { Hono } from "hono"
 
 import { encodeAllowed } from "../access/media"
-import { readViewer } from "../access/viewer"
+import { can, readViewer } from "../access/viewer"
 import { itemFor } from "../access/visible"
 import type { SessionUser } from "../auth/session"
 import { log } from "../log"
@@ -75,7 +75,7 @@ function parseRange(header: string, size: number): ByteRange | null {
 export const streamRoutes = new Hono()
 
 streamRoutes.get("/:id/thumbnail", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -104,7 +104,7 @@ const TILE_NAME = /^(\d{1,5})\.jpg$/
 
 /** Trickplay images as an HLS image playlist; see `trickplayPlaylistPath`. */
 streamRoutes.get("/:id/trickplay/tiles.m3u8", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -122,7 +122,7 @@ streamRoutes.get("/:id/trickplay/tiles.m3u8", async (c) => {
 
 /** A tile of trickplay images; see `trickplayTilePath`. */
 streamRoutes.get("/:id/trickplay/:key/:name", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   const key = c.req.param("key")
@@ -191,7 +191,7 @@ const playerStreams = new Map<string, AbortController>()
 
 /** One audio track, the video copied or encoded; see `mediaPlaybackPath`. */
 streamRoutes.get("/:id/play", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -322,7 +322,7 @@ function fileBody(path: string): ReadableStream<Uint8Array> {
 
 /** An encode as HLS; see `mediaHlsPath`. */
 streamRoutes.get("/:id/hls/main.m3u8", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -355,7 +355,7 @@ const SEGMENT_NAME = /^(?:init\.mp4|(\d{1,6})\.m4s)$/
 
 /** One segment of an encode, or its init segment. */
 streamRoutes.get("/:id/hls/:key/:name", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   const key = c.req.param("key")
@@ -408,7 +408,7 @@ streamRoutes.get("/:id/hls/:key/:name", async (c) => {
 })
 
 streamRoutes.get("/:id/fonts/:index?", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -439,7 +439,7 @@ streamRoutes.get("/:id/fonts/:index?", async (c) => {
 })
 
 streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -482,7 +482,7 @@ streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
 })
 
 streamRoutes.on(["GET", "HEAD"], "/:id/stream", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -494,7 +494,7 @@ streamRoutes.on(["GET", "HEAD"], "/:id/stream", async (c) => {
   if (!info?.isFile()) return c.body(null, 404)
   // This route also serves original downloads, which have no bit rate limit.
   if (
-    !viewer.access.downloads &&
+    !can(viewer, "media.download") &&
     !(await mayStreamOriginal(viewer.access, item, info))
   )
     return c.body(null, 403)

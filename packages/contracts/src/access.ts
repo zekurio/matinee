@@ -1,16 +1,19 @@
 import { RequestLimit } from "./catalog"
+import { Permission, PERMISSIONS } from "./permissions"
 import { t } from "./schema"
 import { PLAYBACK_QUALITIES } from "./transcoding"
 
 /*
- * What an account may open, and how the server streams to it. Admins set
- * it on groups. An account is in any number of them, and gets the most
- * generous of what they allow: every library any of them opens, and the
- * loosest of their limits. A group that opens no library has no say in
- * the limits while another of the account's groups opens one, so the
+ * What an account may open, how the server streams to it, and what it may
+ * do beyond what every account may. Groups hold it. An account is in any
+ * number of them, and gets the most generous of what they allow: every
+ * library any of them opens, the loosest of their limits, and every
+ * permission any of them grants. A group that opens no library has no say
+ * in the limits while another of the account's groups opens one, so the
  * built-in group, emptied to make access opt-in, doesn't lift the limits
- * other groups set. What's set on the account itself wins over its
- * groups. Admins have no limits.
+ * other groups set. Permissions always add up. What's set on the account
+ * itself wins over its groups. Admins have no limits and every
+ * permission.
  *
  * Group membership comes from an admin, from an invite link, or from the
  * OIDC provider: a group that names a provider group holds whoever the
@@ -56,7 +59,8 @@ export const LibraryAccess = t.object({
 })
 export type LibraryAccess = t.infer<typeof LibraryAccess>
 
-export const AccessPolicy = t.object({
+/** Which libraries open, and how the server streams. */
+const AccessLimits = t.object({
   libraries: LibraryAccess,
   maxBitrate: BitrateLimit,
   /**
@@ -65,11 +69,24 @@ export const AccessPolicy = t.object({
    * doesn't play. Audio is still converted.
    */
   transcode: t.boolean(),
-  /** The account may download, files as they are and versions made for a device. */
-  downloads: t.boolean(),
-  requests: t.enum(["off", "ask", "add"]),
+  /** How much the account may request, where `request.create` lets it. */
   requestLimit: RequestLimit,
   maxStreams: StreamLimit,
+})
+
+/** A list of permissions, as a group grants them. */
+export const PermissionList = t.array(Permission).max(PERMISSIONS.length)
+
+export const AccessPolicy = AccessLimits.extend({
+  /**
+   * What the account may do beyond `BASE_PERMISSIONS`, from
+   * `GRANTABLE_PERMISSIONS` and in the order of `PERMISSIONS`:
+   * `media.download` to download, `request.create` to ask for titles and
+   * `request.autoApprove` to have them added without an approval, and
+   * whatever part of running the server a group hands on. An admin's is
+   * `all`.
+   */
+  permissions: PermissionList,
 })
 export type AccessPolicy = t.infer<typeof AccessPolicy>
 
@@ -77,7 +94,12 @@ export type AccessPolicy = t.infer<typeof AccessPolicy>
  * What's set on one account over its groups. A field left out follows the
  * groups.
  */
-export const AccessOverride = AccessPolicy.partial()
+export const AccessOverride = AccessLimits.partial().extend({
+  /** Permissions the account has whatever its groups grant. */
+  allow: PermissionList.optional(),
+  /** Permissions it lacks whatever its groups grant. It wins over `allow`. */
+  deny: PermissionList.optional(),
+})
 export type AccessOverride = t.infer<typeof AccessOverride>
 
 /** Who put an account in a group, or set its override. */

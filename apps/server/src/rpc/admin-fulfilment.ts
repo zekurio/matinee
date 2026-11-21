@@ -28,7 +28,7 @@ import {
 } from "../requests/fulfilment/connections"
 import { sourceList } from "../requests/fulfilment/sources"
 import type { FulfilmentSource } from "../requests/fulfilment/types"
-import { admin } from "./base"
+import { authed } from "./base"
 import { providerFailure } from "./titles"
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
@@ -301,7 +301,7 @@ function knownLanguages(language: string) {
 }
 
 export const adminFulfilment = {
-  sources: admin.admin.fulfilment.sources.handler(() =>
+  sources: authed.admin.fulfilment.sources.handler(() =>
     sourceList().map((source) => ({
       id: source.id,
       name: source.name,
@@ -314,7 +314,7 @@ export const adminFulfilment = {
       values: source.defaults,
     })),
   ),
-  connections: admin.admin.fulfilment.connections.handler(async () => {
+  connections: authed.admin.fulfilment.connections.handler(async () => {
     const [rows, routing] = await Promise.all([
       db
         .select()
@@ -324,23 +324,23 @@ export const adminFulfilment = {
     ])
     return rows.map((row) => redactConnection(row, routing))
   }),
-  create: admin.admin.fulfilment.create.handler(({ input }) =>
+  create: authed.admin.fulfilment.create.handler(({ input }) =>
     saveConnection(input),
   ),
-  update: admin.admin.fulfilment.update.handler(async ({ input }) =>
+  update: authed.admin.fulfilment.update.handler(async ({ input }) =>
     saveConnection(input, await connectionById(input.id)),
   ),
-  remove: admin.admin.fulfilment.remove.handler(async ({ input }) => {
+  remove: authed.admin.fulfilment.remove.handler(async ({ input }) => {
     await db
       .delete(fulfilmentConnection)
       .where(eq(fulfilmentConnection.id, input.id))
     events.publish("fulfilment", undefined)
   }),
-  test: admin.admin.fulfilment.test.handler(async ({ input }) => {
+  test: authed.admin.fulfilment.test.handler(async ({ input }) => {
     const row = await connectionById(input.id)
     await getSource(row.source).test(resolveConnection(row))
   }),
-  options: admin.admin.fulfilment.options.handler(async ({ input }) => {
+  options: authed.admin.fulfilment.options.handler(async ({ input }) => {
     const source = getSource(input.source)
     const saved = input.id ? await connectionById(input.id) : null
     const settings = parse(
@@ -365,24 +365,24 @@ export const adminFulfilment = {
       apiKey,
     })
   }),
-  landing: admin.admin.fulfilment.landing.handler(({ input }) =>
+  landing: authed.admin.fulfilment.landing.handler(({ input }) =>
     landing(input.kind, input.folder),
   ),
-  rules: admin.admin.fulfilment.rules.handler(async ({ input }) => {
+  rules: authed.admin.fulfilment.rules.handler(async ({ input }) => {
     await connectionById(input.connectionId)
     return rulesOf(input.connectionId)
   }),
-  createRule: admin.admin.fulfilment.createRule.handler(({ input }) =>
+  createRule: authed.admin.fulfilment.createRule.handler(({ input }) =>
     saveRule(input),
   ),
-  updateRule: admin.admin.fulfilment.updateRule.handler(({ input }) =>
+  updateRule: authed.admin.fulfilment.updateRule.handler(({ input }) =>
     saveRule(input, input.id),
   ),
-  removeRule: admin.admin.fulfilment.removeRule.handler(async ({ input }) => {
+  removeRule: authed.admin.fulfilment.removeRule.handler(async ({ input }) => {
     await db.delete(fulfilmentRule).where(eq(fulfilmentRule.id, input.id))
     events.publish("fulfilment", undefined)
   }),
-  reorderRules: admin.admin.fulfilment.reorderRules.handler(
+  reorderRules: authed.admin.fulfilment.reorderRules.handler(
     async ({ input }) => {
       const current = await rulesOf(input.connectionId)
       if (
@@ -403,44 +403,46 @@ export const adminFulfilment = {
       return rulesOf(input.connectionId)
     },
   ),
-  ruleChoices: admin.admin.fulfilment.ruleChoices.handler(async ({ input }) => {
-    const language = await languageFor(input.kind)
-    const tmdb = metadata.tmdb.configured()
-    const [genres, languages, users] = await Promise.all([
-      tmdb
-        ? genreProvider(input.kind, language)
-            .then((result) => result.value)
-            .catch((cause: unknown) =>
-              providerFailure(metadata.tmdb.name, cause),
-            )
-        : [],
-      tmdb
-        ? languagesIn(language)
-            .then((result) => result.languages)
-            .catch((cause: unknown) =>
-              providerFailure(metadata.tmdb.name, cause),
-            )
-        : knownLanguages(language),
-      db
-        .select({
-          id: user.id,
-          username: user.username,
-          displayName: user.displayName,
-        })
-        .from(user)
-        .orderBy(asc(user.username)),
-    ])
-    return {
-      tmdb,
-      genres: genres.map((genre) => ({ id: genre.id, name: genre.name })),
-      languages,
-      users: users.map((row) => ({
-        id: row.id,
-        name: row.displayName ?? row.username,
-      })),
-    }
-  }),
-  keywords: admin.admin.fulfilment.keywords.handler(async ({ input }) => {
+  ruleChoices: authed.admin.fulfilment.ruleChoices.handler(
+    async ({ input }) => {
+      const language = await languageFor(input.kind)
+      const tmdb = metadata.tmdb.configured()
+      const [genres, languages, users] = await Promise.all([
+        tmdb
+          ? genreProvider(input.kind, language)
+              .then((result) => result.value)
+              .catch((cause: unknown) =>
+                providerFailure(metadata.tmdb.name, cause),
+              )
+          : [],
+        tmdb
+          ? languagesIn(language)
+              .then((result) => result.languages)
+              .catch((cause: unknown) =>
+                providerFailure(metadata.tmdb.name, cause),
+              )
+          : knownLanguages(language),
+        db
+          .select({
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName,
+          })
+          .from(user)
+          .orderBy(asc(user.username)),
+      ])
+      return {
+        tmdb,
+        genres: genres.map((genre) => ({ id: genre.id, name: genre.name })),
+        languages,
+        users: users.map((row) => ({
+          id: row.id,
+          name: row.displayName ?? row.username,
+        })),
+      }
+    },
+  ),
+  keywords: authed.admin.fulfilment.keywords.handler(async ({ input }) => {
     if (!metadata.tmdb.configured())
       throw new ORPCError("BAD_REQUEST", {
         message: "Keywords come from TMDB. Set MATINEE_TMDB_API_KEY first.",

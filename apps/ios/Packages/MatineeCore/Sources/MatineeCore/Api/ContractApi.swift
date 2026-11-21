@@ -264,8 +264,17 @@ public struct AccountApiTokensApi: Sendable {
     public func create(apiTokenInput: ApiTokenInput) async throws -> CreatedApiToken {
         return try await transport.call(method: "POST", path: ["account", "api-tokens"], query: [], body: try transport.json(apiTokenInput))
     }
+    public func me() async throws -> ApiToken {
+        return try await transport.call(method: "GET", path: ["account", "api-tokens", "me"], query: [], body: nil)
+    }
+    public func update(id: String, name: String? = nil, permissions: [String]? = nil) async throws -> ApiToken {
+        return try await transport.call(method: "PATCH", path: ["account", "api-tokens", wireText(id)!], query: [], body: try transport.json(AccountApiTokensUpdateInput(name: name, permissions: permissions)))
+    }
     public func revoke(id: String) async throws {
         try await transport.send(method: "DELETE", path: ["account", "api-tokens", wireText(id)!], query: [], body: nil)
+    }
+    public func rotate(id: String) async throws -> CreatedApiToken {
+        return try await transport.call(method: "POST", path: ["account", "api-tokens", wireText(id)!, "rotate"], query: [], body: nil)
     }
 }
 public struct AccountSessionsApi: Sendable {

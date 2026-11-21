@@ -13,7 +13,7 @@ import Testing
   return SessionStore(defaults: defaults, secrets: MemorySecrets())
 }
 let authUser = User(
-  id: "one", username: "viewer", displayName: nil, role: "user", avatarId: nil,
+  id: "one", username: "viewer", displayName: nil, role: "user", permissions: [], avatarId: nil,
   avatarSource: "none", playback: nil, library: .init(showSpecials: false), sharing: .init(favorites: false, stats: false))
 let authConfig =
   #"{"setup":null,"passkeys":true,"passkeySignUp":false,"oidc":null,"themeAccents":{"light":null,"dark":null},"loginBackdrop":{"enabled":false,"artwork":"","blur":0,"fade":0}}"#

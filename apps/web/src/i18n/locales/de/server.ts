@@ -127,8 +127,12 @@ export default {
     "Für dieses Gerät ist keine Audiokonvertierung verfügbar.",
   "server.rpc.signInFirst": "Melde dich zuerst an.",
   "server.rpc.adminsOnly": "Das können nur Admins.",
-  "server.rpc.needsSession":
-    "Mit einem API-Token geht das nicht. Melde dich bei Matinee an, um es zu tun.",
+  "server.rpc.accountPermission":
+    "Dein Konto hat die Berechtigung {permission} nicht.",
+  "server.rpc.tokenPermission":
+    "Dieses API-Token hat die Berechtigung {permission} nicht.",
+  "server.rpc.ownPermissions":
+    "Du kannst nur Berechtigungen vergeben oder entziehen, die du selbst hast. Dir fehlt {permissions}.",
   "server.rpc.passkeysOff": "Passkeys sind auf diesem Server ausgeschaltet.",
   "server.rpc.checkInput": "Prüfe deine Eingabe und versuche es erneut.",
 
@@ -233,13 +237,17 @@ export default {
     "Melde dich ab, um die Sitzung zu beenden, die du gerade nutzt.",
   "server.account.sessionGone": "Diese Sitzung ist bereits beendet.",
   "server.account.apiTokenGone": "Dieses API-Token wurde bereits widerrufen.",
+  "server.account.apiTokenGrant":
+    "Ein API-Token kann keine Berechtigungen vergeben, die es selbst nicht hat.",
+  "server.account.noApiToken": "Diese Anfrage kam nicht mit einem API-Token.",
 
   "server.adminUsers.gone":
     "Diesen Benutzer gibt es nicht mehr. Lade die Liste neu.",
+  "server.adminUsers.above":
+    "{name} ist Admin, und das Konto eines Admins ändert nur ein Admin.",
   "server.adminInvites.gone":
     "Diese Einladung gibt es nicht mehr. Lade die Liste neu.",
   // access/media.ts and rpc/playback-start.ts: an account's limits.
-  "server.access.downloadsOff": "Downloads sind für dein Konto ausgeschaltet.",
   "server.access.downloadVideoOff":
     "Der Server darf für dein Konto kein Video umwandeln. Lade die Datei unverändert herunter oder behalte ihr Video bei.",
   "server.access.overLimitSeek":

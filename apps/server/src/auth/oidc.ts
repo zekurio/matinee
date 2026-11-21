@@ -185,8 +185,7 @@ export const oidcRoutes = new Hono()
       // role claim says who may become the admin.
       const setup = mode === "sign-in" && (await setupRequired())
       const current = mode === "link" ? await readSession(c) : null
-      // Linking changes how the account signs in, so an API token can't.
-      if (mode === "link" && current?.credential.kind !== "session") {
+      if (mode === "link" && !current) {
         return errorRedirect(c, "/login", "Sign in before linking an account.")
       }
       return {
@@ -241,10 +240,7 @@ export const oidcRoutes = new Hono()
 
       if (mode === "link") {
         const current = await readSession(c)
-        if (
-          current?.credential.kind !== "session" ||
-          current.id !== payload.userId
-        ) {
+        if (!current || current.id !== payload.userId) {
           throw new OidcError("Sign in again before linking an account.")
         }
         await linkOidcAccount(current.id, identity)

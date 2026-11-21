@@ -5,7 +5,9 @@ import {
   AccessOverride,
   type AccessPolicy,
   type AccessSource,
+  type Permission,
   type ProviderGroup,
+  sortPermissions,
   type UserAccess,
   type UserRole,
 } from "@matinee/contracts"
@@ -26,6 +28,7 @@ import { db } from "../db"
 import {
   type Access,
   EVERYTHING,
+  grantable,
   mostGenerous,
   toAccess,
   withOverride,
@@ -91,10 +94,9 @@ async function read(): Promise<Snapshot> {
         },
         maxBitrate: row.maxBitrate,
         transcode: row.transcode,
-        downloads: row.downloads,
-        requests: row.requests,
         requestLimit: RequestLimit.parse(row.requestLimit),
         maxStreams: row.maxStreams,
+        permissions: grantable(row.permissions),
       },
     })
   }
@@ -118,8 +120,17 @@ type Account = {
   accessOverride: AccessOverride | null
 }
 
-function overrideOf(account: Account): AccessOverride {
-  return AccessOverride.safeParse(account.accessOverride).data ?? {}
+/** The override as stored, holding only permissions an override can. */
+export function overrideOf(account: {
+  accessOverride: AccessOverride | null
+}): AccessOverride {
+  const { allow, deny, ...limits } =
+    AccessOverride.safeParse(account.accessOverride).data ?? {}
+  return {
+    ...limits,
+    ...(allow && { allow: grantable(allow) }),
+    ...(deny && { deny: grantable(deny) }),
+  }
 }
 
 /** What the account's groups give it, before its override. */
@@ -221,12 +232,35 @@ export async function listGroups(): Promise<AccessGroup[]> {
   return toGroups(groups, state)
 }
 
-async function groupById(id: string): Promise<AccessGroup | null> {
+/** The group as the admin's list shows it, or null when it is gone. */
+export async function groupById(id: string): Promise<AccessGroup | null> {
   const state = await load()
   const group = state.groups.get(id)
   if (!group) return null
   const [described] = await toGroups([group], state)
   return described ?? null
+}
+
+/**
+ * Every permission the groups grant between them, for whoever would put
+ * an account in them or take it out. Ids of groups that are gone count
+ * for nothing.
+ */
+export async function groupPermissions(
+  ids: readonly string[],
+): Promise<Permission[]> {
+  const state = await load()
+  return sortPermissions(
+    ids.flatMap((id) => state.groups.get(id)?.policy.permissions ?? []),
+  )
+}
+
+/** The groups an admin, or the account's invite, put it in. */
+export async function manualGroupIds(userId: string): Promise<string[]> {
+  const state = await load()
+  return (state.members.get(userId) ?? [])
+    .filter((membership) => membership.source === "manual")
+    .map((membership) => membership.groupId)
 }
 
 /** Why a group can't be saved or removed, for the admin to act on. */
@@ -306,10 +340,9 @@ function policyColumns(policy: AccessPolicy) {
     allLibraries: policy.libraries.all,
     maxBitrate: policy.maxBitrate,
     transcode: policy.transcode,
-    downloads: policy.downloads,
-    requests: policy.requests,
     requestLimit: policy.requestLimit,
     maxStreams: policy.maxStreams,
+    permissions: grantable(policy.permissions),
   }
 }
 

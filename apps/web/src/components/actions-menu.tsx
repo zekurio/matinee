@@ -48,6 +48,7 @@ import { useLibraryProvider } from "@/components/title/library-provider"
 import { tr } from "@/i18n"
 import { seasonName } from "@/lib/media"
 import { type PartyRole, usePartyRole } from "@/lib/party"
+import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createTitleActionsStore } from "@/stores/title-actions"
 
@@ -266,7 +267,8 @@ export function ActionsMenu({
   className?: string
 }) {
   const { user } = authed.useRouteContext()
-  const admin = user.role === "admin"
+  // What the menu calls an admin's: fixing a match, refreshing, images.
+  const admin = can(user, "title.update")
   const scope = scopeOf(target)
   const role = usePartyRole()
   const file = fileOf(target)

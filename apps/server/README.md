@@ -230,27 +230,75 @@ in the database again.
 
 ## Access
 
-Admins see everything. Everyone else gets access from groups in
-Settings → Access. A group sets:
+Admins see everything and may do everything. Everyone else gets access
+from groups in Settings → Access. A group sets:
 
 - which libraries, or all of them, future ones too. A library someone
   can't see doesn't show up anywhere, not even by URL.
 - a bit rate limit for streaming. Files over it play as an encode.
   Downloads aren't limited.
 - whether the server may encode video for them
-- whether they may download
 - how many devices may play at once
+- what its members may do, as permissions: downloading, requesting
+  titles, and any part of running the server it hands on. See
+  [Permissions](#permissions).
 
 Someone in several groups gets the most generous mix. The built-in
 Everyone group holds every account and starts with all libraries and no
 limits. To make access opt-in, take its libraries away and grant them
 through other groups. A group that opens no libraries doesn't count for
-limits, so an emptied Everyone won't hold anyone back.
+limits, so an emptied Everyone won't hold anyone back. Permissions always
+add up, whether a group opens a library or not.
 
 Settings → Users puts accounts in groups. Invite links can assign groups,
 and a group can follow an OIDC group. Edit access in the user menu
 overrides one account, as the OIDC policy claim does. Changes apply on the
 next request, the next chunk of a playing stream included.
+
+### Permissions
+
+What an account may do is a list of permissions named `resource.action`,
+like `media.download`, `library.scan`, or `adminRequest.update`.
+`PERMISSIONS` in `packages/contracts/src/permissions.ts` lists them. API
+tokens use the same list, see [API tokens](#api-tokens).
+
+- Every procedure behind a sign-in names the permission it takes, as the
+  second argument of `get`, `post`, and the rest in `packages/contracts`,
+  and the OpenAPI document repeats it in each operation's description.
+  `authed` in `rpc/base.ts` checks it on every call. A procedure that
+  names none takes `all`, so a new one is an admin's alone until someone
+  names its permission.
+- Every account holds `BASE_PERMISSIONS`: using the app as a viewer and
+  looking after its own account, its passkeys, sessions, and existing API
+  tokens included. Nobody grants or takes those.
+- A group grants any of the rest, and an account holds every permission
+  any of its groups grants. The Everyone group starts with
+  `media.download` and `apiToken.create`. `request.create` lets members
+  ask for titles, and `request.autoApprove` adds what they ask for without
+  an approval. The others hand on parts of running the server:
+  `adminRequest.update` to someone who approves requests,
+  `library.scan` and `title.update` to someone who looks after the
+  libraries, `adminUser.read` and `invite.create` to someone who brings
+  people in.
+- An admin holds `all`. Only `all` makes someone an admin or takes it
+  away, and no group grants it: the role is in Settings → Users, or the
+  OIDC role claim.
+- An account's override can allow or deny permissions over its groups.
+  The dialog in Settings → Users does it for downloads and requests, and
+  `admin.users.setAccess` takes any.
+- Nobody grants or takes away a permission they don't hold. That covers
+  the permissions someone adds to a group or removes from it, deleting a
+  group, putting an account in a group or taking it out, an invite link's
+  groups, and an override's allow and deny. Someone who edits groups
+  can't give themselves more through one. Only an admin changes, signs
+  out, or deletes an admin's account.
+- Some permissions amount to running the server, whoever holds them:
+  `authSettings.update` decides who signs in as an admin, and
+  `library.create` opens any folder the server can read as a library.
+  Grant those as you would the admin role.
+- The web app shows a section of Settings, or the request queue, to
+  whoever holds its permission. The Android, iOS, and TV apps still show
+  their admin screens to admins only.
 
 Settings → Branding sets the accent for light and dark mode, and can put a
 wall of artwork behind the login form. Anyone can open the login page, so
@@ -438,8 +486,9 @@ with the encoder, GPU, and tone mapping. A session counts as a play after
 a minute or at the end. Marking a file watched asks when, and counts as a
 play everywhere but the breakdown of how files played.
 
-Statistics, in the account menu, shows admins current streams, watch time,
-and how files played, and shows everyone what the libraries hold and a
+Statistics, in the account menu, shows whoever holds `serverStats.read`
+current streams, watch time, and how files played, and shows everyone what
+the libraries hold and a
 leaderboard of the people who share their stats. Times are in the
 browser's time zone. Other clients send `timeZone`, UTC by default.
 
@@ -458,10 +507,11 @@ Settings → Account. Both start off.
 ## Requests
 
 People can request a title the server lacks from search, from Discover, or
-from a library show missing seasons. A group's access says whether its
-members may request, whether their requests wait for an admin, and how
-many titles they may request in a number of days. Existing groups start
-with requests off.
+from a library show missing seasons. A group says whether its members may
+request, with the `request.create` permission, whether what they ask for
+is added at once, with `request.autoApprove`, or waits for someone with
+`adminRequest.update`, and how many titles they may request in a number of
+days. Groups start with requests off.
 
 There's one request per title and library, with the seasons asked for and
 everyone who asked or wants to hear. Whether a title is here is never stored. Every
@@ -580,8 +630,11 @@ account, as an object or as JSON text:
 }
 ```
 
-Fields left out follow the account's groups. Libraries are ids or names,
-whatever their case, and `"all"` includes future ones. Bit rates are bits
+Fields left out follow the account's groups. `downloads` allows or denies
+the `media.download` permission. `requests` does the same for asking:
+`"off"` denies `request.create`, `"ask"` allows it and denies
+`request.autoApprove`, and `"add"` allows both. Libraries are ids or
+names, whatever their case, and `"all"` includes future ones. Bit rates are bits
 per second, at least 1000000, and `null` lifts a limit. A missing claim
 clears an override the provider set, but keeps one an admin set. Only the
 provider's admins should be able to set the role, groups, and policy
@@ -617,8 +670,8 @@ everywhere once the provider refuses its token for good.
   account make one. An OIDC username that matches an unlinked account
   never signs in to it, since whoever controls the claim would get the
   account. The login page offers to link it instead.
-- Invite links work once, expire, and stop working when the admin who made
-  them is deleted or demoted.
+- Invite links work once, expire, and stop working when whoever made them
+  is deleted or may no longer invite.
 - Deleting a user deletes their sessions, API tokens, passkeys, links,
   progress, favorites, and history.
 - A client secret saved in Settings is stored as plain text.
@@ -636,38 +689,52 @@ everywhere once the provider refuses its token for good.
 
 ### API tokens
 
-An API token lets a service call the API as an account without anyone
-signing in, for months if need be. Make one in Settings → Account → API
-tokens. Name it after the service. The secret shows once, when it's made.
-The list afterwards shows each token's name, when it was made, and when it
-was last used, to the minute, and revokes one.
+An API token lets a service or an app call the API as an account without
+anyone signing in, for months if need be. Make one in Settings → Account →
+API tokens: name it after what will use it and choose what it may do. The
+secret shows once, when it's made. The list afterwards shows each token's
+name, how much it may do, when it was made, and when it was last used, to
+the minute. It changes a token's name and permissions, and revokes one.
 
+Permissions work as Immich's API keys do. A token holds `all`, or a list
+from the same [permissions](#permissions) its account's groups grant,
+like `title.read`, `library.scan`, or `adminRequest.update`. The settings
+dialog offers the ones the account holds.
+
+- A call made with a token needs its permission twice: the account holds
+  it, and the token holds it or `all`. A token narrows its account and
+  never widens it. The account's role and groups are read again on every
+  request, so a token sees the libraries its account opens, asks within
+  its account's quota, and loses a permission the moment its account
+  does. Put a service that asks for titles on an account in the group
+  whose rules it should follow, and give its token `request.autoApprove`
+  too if the group's members skip the approval.
+- Making a token takes `apiToken.create`, which a group grants. An
+  account without it keeps, changes, and revokes the tokens it has.
+- `all` is the whole account: everything its owner can do signed in, the
+  account's passkeys, sessions, and tokens included, and for an admin all
+  of administration. On any other account it reaches what the account
+  holds and no further. Give it to nothing that works with less.
+- A token with the `apiToken` permissions manages the account's tokens,
+  but only hands on what it holds: it can't make, change, or rotate a
+  token to hold a permission it lacks.
+- The plain routes name their permission where they read the session:
+  streams take `media.play`, downloads `media.download`, artwork
+  `title.read`, and profile pictures `profile.read`. Approving an app at
+  `/authorize` and the single sign-on link flow are the browser's own and
+  take a session.
 - A token is `matinee_` and 43 random base64url characters, 256 bits. The
   server stores its SHA-256, as for sessions. A session token is always 43
   characters, so the prefix and length tell the two apart before any
   lookup, and a secret scanner can find a leaked one.
-- It never expires. It stops working when its owner revokes it, an admin
-  revokes the account's tokens in Settings → Users, or the account is
-  deleted.
+- It never expires. It stops working when its owner revokes it or rotates
+  its secret, someone with `adminApiToken.delete` revokes the account's
+  tokens in Settings → Users,
+  or the account is deleted.
 - The server reads it only from `Authorization: Bearer`, never from the
-  `matinee_session` cookie, so the CSRF check in `app.ts` holds: a browser
-  sends that header to another site only after a preflight, which fails.
-- A request with it acts as the account, with its role and access read
-  again on every request. An admin's token can call admin procedures, and
-  a demoted account's token loses them on its next request.
-- It can't reach what a long-lived bot credential shouldn't. These answer
-  403 to a token and need a session: `account.apiTokens.*`,
-  `account.passkeys.*`, `account.oidc.*`, `account.sessions` list, revoke,
-  and revoke-others, linking a pending OIDC sign-in, the OIDC link flow,
-  looking up and approving a device code (`/link`), approving an app at
-  `/authorize`, `admin.users.revokeApiTokens`, and `admin.users.signOut`
-  on the token's own account. `auth.signOut` with a token ends nothing.
-  `account.sessions.identify` succeeds and changes nothing, since a token
-  goes by its name, which watching now and the statistics show as its
-  client.
-- What a token can still do as an admin is all of administration: the
-  users, their roles, the single sign-on and passkey settings, invites. Give
-  a service an admin's token only when it needs that.
+  `matinee_session` cookie or the query string, so the CSRF check in
+  `app.ts` holds: a browser sends that header to another site only after a
+  preflight, which fails.
 - A live stream checks its credential when it opens and ends after ten
   minutes at most, so a revoked token's streams end by then, as a revoked
   session's do. Its next request, the reconnect included, gets 401.
@@ -677,12 +744,16 @@ every request:
 
 ```sh
 curl -H "Authorization: Bearer $MATINEE_TOKEN" \
-  https://media.example.com/api/v1/auth/session
+  https://media.example.com/api/v1/account/api-tokens/me
 ```
 
-Calls under `/api/v1` are the REST API in [The API](#the-api). A 401 means
-the token was revoked or its account deleted, and retrying won't help. A
-403 means the account's role or the token can't do that.
+`/account/api-tokens/me` answers any token with its own name and
+permissions, and `/auth/session` with its account, so a service can check
+what it was given when it starts. Calls under `/api/v1` are the REST API
+in [The API](#the-api). A 401 means the token was revoked or its account
+deleted, and retrying won't help. A 403 names the permission that is
+missing, and says whether the account lacks it or the token does. The
+plain routes answer 401 for a token without their permission.
 
 ## For app developers
 

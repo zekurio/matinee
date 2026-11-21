@@ -34,7 +34,7 @@ open class ContractApi(transport: ApiTransport) {
 }
 
 class RecommendationsApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /recommendations/home` */
+    /** The account needs the `recommendation.read` permission, and so does an API token. `GET /recommendations/home` */
     suspend fun home(): HomeRecommendations =
         transport.call(
             "GET",
@@ -44,7 +44,7 @@ class RecommendationsApi internal constructor(private val transport: ApiTranspor
             HomeRecommendations.serializer(),
         )
 
-    /** `PUT /recommendations/dismissed` */
+    /** The account needs the `recommendation.update` permission, and so does an API token. `PUT /recommendations/dismissed` */
     suspend fun dismiss(ref: CatalogRef, dismissed: Boolean) {
         transport.send(
             "PUT",
@@ -56,7 +56,7 @@ class RecommendationsApi internal constructor(private val transport: ApiTranspor
 }
 
 class CatalogApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /catalog/search` */
+    /** The account needs the `catalog.read` permission, and so does an API token. `GET /catalog/search` */
     suspend fun search(
         query: String,
         kind: String? = null,
@@ -71,7 +71,7 @@ class CatalogApi internal constructor(private val transport: ApiTransport) {
             CatalogPage.serializer(),
         )
 
-    /** `POST /catalog/details` */
+    /** The account needs the `catalog.read` permission, and so does an API token. `POST /catalog/details` */
     suspend fun details(catalogInput: CatalogInput): CatalogTitleDetail =
         transport.call(
             "POST",
@@ -81,7 +81,7 @@ class CatalogApi internal constructor(private val transport: ApiTransport) {
             CatalogTitleDetail.serializer(),
         )
 
-    /** `POST /catalog/related` */
+    /** The account needs the `catalog.read` permission, and so does an API token. `POST /catalog/related` */
     suspend fun related(catalogInput: CatalogInput): RelatedRails =
         transport.call(
             "POST",
@@ -91,7 +91,7 @@ class CatalogApi internal constructor(private val transport: ApiTransport) {
             RelatedRails.serializer(),
         )
 
-    /** `POST /catalog/related/titles` */
+    /** The account needs the `catalog.read` permission, and so does an API token. `POST /catalog/related/titles` */
     suspend fun relatedTitles(
         ref: CatalogRef,
         rail: String,
@@ -105,7 +105,7 @@ class CatalogApi internal constructor(private val transport: ApiTransport) {
             RelatedPage.serializer(),
         )
 
-    /** `GET /catalog/missing-seasons` */
+    /** The account needs the `catalog.read` permission, and so does an API token. `GET /catalog/missing-seasons` */
     suspend fun missingSeasons(titleId: String): CatalogMissingSeasonsOutput =
         transport.call(
             "GET",
@@ -117,7 +117,7 @@ class CatalogApi internal constructor(private val transport: ApiTransport) {
 }
 
 class DiscoverApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /discover/rails` */
+    /** The account needs the `catalog.read` permission, and so does an API token. `GET /discover/rails` */
     suspend fun rails(): DiscoverRails =
         transport.call(
             "GET",
@@ -127,7 +127,7 @@ class DiscoverApi internal constructor(private val transport: ApiTransport) {
             DiscoverRails.serializer(),
         )
 
-    /** `POST /discover/row` */
+    /** The account needs the `catalog.read` permission, and so does an API token. `POST /discover/row` */
     suspend fun row(id: String, seed: RecommendationSeed? = null): DiscoverRow =
         transport.call(
             "POST",
@@ -137,7 +137,7 @@ class DiscoverApi internal constructor(private val transport: ApiTransport) {
             DiscoverRow.serializer(),
         )
 
-    /** `GET /discover/browse/options` */
+    /** The account needs the `catalog.read` permission, and so does an API token. `GET /discover/browse/options` */
     suspend fun browseOptions(kind: String): CatalogBrowseOptions =
         transport.call(
             "GET",
@@ -147,7 +147,7 @@ class DiscoverApi internal constructor(private val transport: ApiTransport) {
             CatalogBrowseOptions.serializer(),
         )
 
-    /** `POST /discover/browse` */
+    /** The account needs the `catalog.read` permission, and so does an API token. `POST /discover/browse` */
     suspend fun browse(catalogBrowseInput: CatalogBrowseInput): CatalogBrowsePage =
         transport.call(
             "POST",
@@ -159,7 +159,7 @@ class DiscoverApi internal constructor(private val transport: ApiTransport) {
 }
 
 class RequestsApi internal constructor(private val transport: ApiTransport) {
-    /** `POST /requests/live` */
+    /** The account needs the `request.read` permission, and so does an API token. `POST /requests/live` */
     fun live(titles: List<CatalogInput>): Flow<List<RequestsLiveEvent>> =
         transport.events(
             "POST",
@@ -169,7 +169,7 @@ class RequestsApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(RequestsLiveEvent.serializer()),
         )
 
-    /** `POST /requests/ask` */
+    /** The account needs the `request.create` permission, and so does an API token. `POST /requests/ask` */
     suspend fun ask(
         ref: CatalogRef,
         libraryId: String? = null,
@@ -183,7 +183,7 @@ class RequestsApi internal constructor(private val transport: ApiTransport) {
             RequestItem.serializer(),
         )
 
-    /** `POST /requests/add-seasons` */
+    /** The account needs the `request.create` permission, and so does an API token. `POST /requests/add-seasons` */
     suspend fun addSeasons(id: String, scope: ShowScope): RequestItem =
         transport.call(
             "POST",
@@ -193,7 +193,7 @@ class RequestsApi internal constructor(private val transport: ApiTransport) {
             RequestItem.serializer(),
         )
 
-    /** `POST /requests/cancel` */
+    /** The account needs the `request.delete` permission, and so does an API token. `POST /requests/cancel` */
     suspend fun cancel(requestId: RequestId) {
         transport.send(
             "POST",
@@ -203,7 +203,7 @@ class RequestsApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `GET /requests/mine` */
+    /** The account needs the `request.read` permission, and so does an API token. `GET /requests/mine` */
     suspend fun mine(
         cursor: String? = null,
         limit: Int? = null,
@@ -339,7 +339,7 @@ class AuthOidcPendingApi internal constructor(private val transport: ApiTranspor
         transport.send("DELETE", listOf("auth", "oidc", "pending"), emptyList(), null)
     }
 
-    /** `POST /auth/oidc/pending/link` */
+    /** The account needs the `oidcAccount.create` permission, and so does an API token. `POST /auth/oidc/pending/link` */
     suspend fun link(): AuthOidcPendingLinkOutput =
         transport.call(
             "POST",
@@ -393,7 +393,7 @@ class AuthDeviceApi internal constructor(private val transport: ApiTransport) {
             DeviceSignIn.serializer(),
         )
 
-    /** `GET /auth/device/{userCode}` */
+    /** The account needs the `session.create` permission, and so does an API token. `GET /auth/device/{userCode}` */
     suspend fun get(userCode: String): DeviceRequest =
         transport.call(
             "GET",
@@ -403,7 +403,7 @@ class AuthDeviceApi internal constructor(private val transport: ApiTransport) {
             DeviceRequest.serializer(),
         )
 
-    /** `POST /auth/device/{userCode}/approve` */
+    /** The account needs the `session.create` permission, and so does an API token. `POST /auth/device/{userCode}/approve` */
     suspend fun approve(userCode: String) {
         transport.send("POST", listOf("auth", "device", userCode, "approve"), emptyList(), null)
     }
@@ -421,7 +421,7 @@ class AccountApi internal constructor(private val transport: ApiTransport) {
 }
 
 class AccountProfileApi internal constructor(private val transport: ApiTransport) {
-    /** `PATCH /account/profile` */
+    /** The account needs the `account.update` permission, and so does an API token. `PATCH /account/profile` */
     suspend fun update(
         displayName: String? = null,
         sharing: AccountProfileUpdateInput.Sharing? = null,
@@ -436,7 +436,7 @@ class AccountProfileApi internal constructor(private val transport: ApiTransport
 }
 
 class AccountAvatarApi internal constructor(private val transport: ApiTransport) {
-    /** `PUT /account/avatar` */
+    /** The account needs the `account.update` permission, and so does an API token. `PUT /account/avatar` */
     suspend fun upload(file: FilePart): User =
         transport.call(
             "PUT",
@@ -446,11 +446,11 @@ class AccountAvatarApi internal constructor(private val transport: ApiTransport)
             User.serializer(),
         )
 
-    /** `DELETE /account/avatar` */
+    /** The account needs the `account.update` permission, and so does an API token. `DELETE /account/avatar` */
     suspend fun remove(): User =
         transport.call("DELETE", listOf("account", "avatar"), emptyList(), null, User.serializer())
 
-    /** `POST /account/avatar/provider` */
+    /** The account needs the `account.update` permission, and so does an API token. `POST /account/avatar/provider` */
     suspend fun useProvider(): User =
         transport.call(
             "POST",
@@ -462,7 +462,7 @@ class AccountAvatarApi internal constructor(private val transport: ApiTransport)
 }
 
 class AccountPlaybackApi internal constructor(private val transport: ApiTransport) {
-    /** `PUT /account/playback` */
+    /** The account needs the `account.update` permission, and so does an API token. `PUT /account/playback` */
     suspend fun setPreferences(playbackPreferences: PlaybackPreferences): User =
         transport.call(
             "PUT",
@@ -474,7 +474,7 @@ class AccountPlaybackApi internal constructor(private val transport: ApiTranspor
 }
 
 class AccountLibraryApi internal constructor(private val transport: ApiTransport) {
-    /** `PATCH /account/library` */
+    /** The account needs the `account.update` permission, and so does an API token. `PATCH /account/library` */
     suspend fun setPreferences(showSpecials: Boolean? = null): User =
         transport.call(
             "PATCH",
@@ -486,7 +486,7 @@ class AccountLibraryApi internal constructor(private val transport: ApiTransport
 }
 
 class AccountPasskeysApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /account/passkeys` */
+    /** The account needs the `passkey.read` permission, and so does an API token. `GET /account/passkeys` */
     suspend fun list(): List<Passkey> =
         transport.call(
             "GET",
@@ -496,7 +496,7 @@ class AccountPasskeysApi internal constructor(private val transport: ApiTranspor
             ListSerializer(Passkey.serializer()),
         )
 
-    /** `POST /account/passkeys` */
+    /** The account needs the `passkey.create` permission, and so does an API token. `POST /account/passkeys` */
     suspend fun register(
         challengeId: String,
         response: RegistrationResponse,
@@ -510,7 +510,7 @@ class AccountPasskeysApi internal constructor(private val transport: ApiTranspor
             Passkey.serializer(),
         )
 
-    /** `POST /account/passkeys/options` */
+    /** The account needs the `passkey.create` permission, and so does an API token. `POST /account/passkeys/options` */
     suspend fun registerOptions(): PasskeyCreation =
         transport.call(
             "POST",
@@ -520,7 +520,7 @@ class AccountPasskeysApi internal constructor(private val transport: ApiTranspor
             PasskeyCreation.serializer(),
         )
 
-    /** `PATCH /account/passkeys/{id}` */
+    /** The account needs the `passkey.update` permission, and so does an API token. `PATCH /account/passkeys/{id}` */
     suspend fun rename(id: String, name: String?): Passkey =
         transport.call(
             "PATCH",
@@ -530,14 +530,14 @@ class AccountPasskeysApi internal constructor(private val transport: ApiTranspor
             Passkey.serializer(),
         )
 
-    /** `DELETE /account/passkeys/{id}` */
+    /** The account needs the `passkey.delete` permission, and so does an API token. `DELETE /account/passkeys/{id}` */
     suspend fun remove(id: String) {
         transport.send("DELETE", listOf("account", "passkeys", id), emptyList(), null)
     }
 }
 
 class AccountOidcApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /account/oidc` */
+    /** The account needs the `oidcAccount.read` permission, and so does an API token. `GET /account/oidc` */
     suspend fun get(): OidcAccount? =
         transport.call(
             "GET",
@@ -547,14 +547,14 @@ class AccountOidcApi internal constructor(private val transport: ApiTransport) {
             OidcAccount.serializer().nullable,
         )
 
-    /** `DELETE /account/oidc` */
+    /** The account needs the `oidcAccount.delete` permission, and so does an API token. `DELETE /account/oidc` */
     suspend fun unlink() {
         transport.send("DELETE", listOf("account", "oidc"), emptyList(), null)
     }
 }
 
 class AccountApiTokensApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /account/api-tokens` */
+    /** The account needs the `apiToken.read` permission, and so does an API token. `GET /account/api-tokens` */
     suspend fun list(): List<ApiToken> =
         transport.call(
             "GET",
@@ -564,7 +564,7 @@ class AccountApiTokensApi internal constructor(private val transport: ApiTranspo
             ListSerializer(ApiToken.serializer()),
         )
 
-    /** `POST /account/api-tokens` */
+    /** The account needs the `apiToken.create` permission, and so does an API token. `POST /account/api-tokens` */
     suspend fun create(apiTokenInput: ApiTokenInput): CreatedApiToken =
         transport.call(
             "POST",
@@ -574,14 +574,48 @@ class AccountApiTokensApi internal constructor(private val transport: ApiTranspo
             CreatedApiToken.serializer(),
         )
 
-    /** `DELETE /account/api-tokens/{id}` */
+    /** Any account and any API token may call this. `GET /account/api-tokens/me` */
+    suspend fun me(): ApiToken =
+        transport.call(
+            "GET",
+            listOf("account", "api-tokens", "me"),
+            emptyList(),
+            null,
+            ApiToken.serializer(),
+        )
+
+    /** The account needs the `apiToken.update` permission, and so does an API token. `PATCH /account/api-tokens/{id}` */
+    suspend fun update(
+        id: String,
+        name: String? = null,
+        permissions: List<String>? = null,
+    ): ApiToken =
+        transport.call(
+            "PATCH",
+            listOf("account", "api-tokens", id),
+            emptyList(),
+            transport.json(AccountApiTokensUpdateInput.serializer(), AccountApiTokensUpdateInput(name = name, permissions = permissions)),
+            ApiToken.serializer(),
+        )
+
+    /** The account needs the `apiToken.delete` permission, and so does an API token. `DELETE /account/api-tokens/{id}` */
     suspend fun revoke(id: String) {
         transport.send("DELETE", listOf("account", "api-tokens", id), emptyList(), null)
     }
+
+    /** The account needs the `apiToken.rotate` permission, and so does an API token. `POST /account/api-tokens/{id}/rotate` */
+    suspend fun rotate(id: String): CreatedApiToken =
+        transport.call(
+            "POST",
+            listOf("account", "api-tokens", id, "rotate"),
+            emptyList(),
+            null,
+            CreatedApiToken.serializer(),
+        )
 }
 
 class AccountSessionsApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /account/sessions` */
+    /** The account needs the `session.read` permission, and so does an API token. `GET /account/sessions` */
     suspend fun list(): List<Session> =
         transport.call(
             "GET",
@@ -591,12 +625,12 @@ class AccountSessionsApi internal constructor(private val transport: ApiTranspor
             ListSerializer(Session.serializer()),
         )
 
-    /** `DELETE /account/sessions/{id}` */
+    /** The account needs the `session.delete` permission, and so does an API token. `DELETE /account/sessions/{id}` */
     suspend fun revoke(id: String) {
         transport.send("DELETE", listOf("account", "sessions", id), emptyList(), null)
     }
 
-    /** `POST /account/sessions/revoke-others` */
+    /** The account needs the `session.delete` permission, and so does an API token. `POST /account/sessions/revoke-others` */
     suspend fun revokeOthers(): AccountSessionsRevokeOthersOutput =
         transport.call(
             "POST",
@@ -606,7 +640,7 @@ class AccountSessionsApi internal constructor(private val transport: ApiTranspor
             AccountSessionsRevokeOthersOutput.serializer(),
         )
 
-    /** `PUT /account/sessions/current/client` */
+    /** The account needs the `session.update` permission, and so does an API token. `PUT /account/sessions/current/client` */
     suspend fun identify(clientIdentity: ClientIdentity) {
         transport.send(
             "PUT",
@@ -618,7 +652,7 @@ class AccountSessionsApi internal constructor(private val transport: ApiTranspor
 }
 
 class LibrariesApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /libraries` */
+    /** The account needs the `library.read` permission, and so does an API token. `GET /libraries` */
     suspend fun list(): List<Library> =
         transport.call(
             "GET",
@@ -628,7 +662,7 @@ class LibrariesApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(Library.serializer()),
         )
 
-    /** `POST /libraries` */
+    /** The account needs the `library.create` permission, and so does an API token. `POST /libraries` */
     suspend fun create(libraryInput: LibraryInput): Library =
         transport.call(
             "POST",
@@ -638,11 +672,11 @@ class LibrariesApi internal constructor(private val transport: ApiTransport) {
             Library.serializer(),
         )
 
-    /** `GET /libraries/{id}` */
+    /** The account needs the `library.read` permission, and so does an API token. `GET /libraries/{id}` */
     suspend fun get(id: String): Library =
         transport.call("GET", listOf("libraries", id), emptyList(), null, Library.serializer())
 
-    /** `PUT /libraries/{id}` */
+    /** The account needs the `library.update` permission, and so does an API token. `PUT /libraries/{id}` */
     suspend fun update(
         id: String,
         name: String,
@@ -659,24 +693,24 @@ class LibrariesApi internal constructor(private val transport: ApiTransport) {
             Library.serializer(),
         )
 
-    /** `DELETE /libraries/{id}` */
+    /** The account needs the `library.delete` permission, and so does an API token. `DELETE /libraries/{id}` */
     suspend fun remove(id: String) {
         transport.send("DELETE", listOf("libraries", id), emptyList(), null)
     }
 
-    /** `POST /libraries/{id}/scan` */
+    /** The account needs the `library.scan` permission, and so does an API token. `POST /libraries/{id}/scan` */
     suspend fun scan(id: String) {
         transport.send("POST", listOf("libraries", id, "scan"), emptyList(), null)
     }
 
-    /** `POST /libraries/{id}/refresh-metadata` */
+    /** The account needs the `library.scan` permission, and so does an API token. `POST /libraries/{id}/refresh-metadata` */
     suspend fun refreshMetadata(id: String) {
         transport.send("POST", listOf("libraries", id, "refresh-metadata"), emptyList(), null)
     }
 }
 
 class MetadataApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /metadata/providers` */
+    /** The account needs the `library.read` permission, and so does an API token. `GET /metadata/providers` */
     suspend fun providers(): List<MetadataProvider> =
         transport.call(
             "GET",
@@ -688,7 +722,7 @@ class MetadataApi internal constructor(private val transport: ApiTransport) {
 }
 
 class TitlesApi internal constructor(private val transport: ApiTransport) {
-    /** `POST /libraries/{libraryId}/titles/browse` */
+    /** The account needs the `title.read` permission, and so does an API token. `POST /libraries/{libraryId}/titles/browse` */
     suspend fun list(
         libraryId: String,
         query: String? = null,
@@ -707,7 +741,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             TitleList.serializer(),
         )
 
-    /** `POST /titles/browse` */
+    /** The account needs the `title.read` permission, and so does an API token. `POST /titles/browse` */
     suspend fun browse(
         query: String? = null,
         kind: String? = null,
@@ -726,7 +760,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             BrowsedTitles.serializer(),
         )
 
-    /** `GET /titles/filter-options` */
+    /** The account needs the `title.read` permission, and so does an API token. `GET /titles/filter-options` */
     suspend fun filterOptions(
         libraryId: String? = null,
         kind: String? = null,
@@ -741,7 +775,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             TitleFilterOptions.serializer(),
         )
 
-    /** `GET /titles/facets` */
+    /** The account needs the `title.read` permission, and so does an API token. `GET /titles/facets` */
     suspend fun facets(libraryId: String? = null, kind: String? = null): TitleFacets =
         transport.call(
             "GET",
@@ -751,11 +785,11 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             TitleFacets.serializer(),
         )
 
-    /** `GET /titles/{id}` */
+    /** The account needs the `title.read` permission, and so does an API token. `GET /titles/{id}` */
     suspend fun get(id: String): Title =
         transport.call("GET", listOf("titles", id), emptyList(), null, Title.serializer())
 
-    /** `POST /titles/{id}/items` */
+    /** The account needs the `title.read` permission, and so does an API token. `POST /titles/{id}/items` */
     suspend fun items(id: String, season: Explicit<Int>? = null): List<MediaItem> =
         transport.call(
             "POST",
@@ -765,7 +799,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(MediaItem.serializer()),
         )
 
-    /** `GET /titles/{id}/matches` */
+    /** The account needs the `title.update` permission, and so does an API token. `GET /titles/{id}/matches` */
     suspend fun findMatches(id: String, query: String, year: Int? = null): List<MetadataMatch> =
         transport.call(
             "GET",
@@ -775,7 +809,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(MetadataMatch.serializer()),
         )
 
-    /** `POST /titles/{id}/identify` */
+    /** The account needs the `title.update` permission, and so does an API token. `POST /titles/{id}/identify` */
     suspend fun identify(id: String, providerId: String): Title =
         transport.call(
             "POST",
@@ -785,7 +819,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             Title.serializer(),
         )
 
-    /** `POST /titles/{id}/refresh` */
+    /** The account needs the `title.update` permission, and so does an API token. `POST /titles/{id}/refresh` */
     suspend fun refresh(id: String): Title =
         transport.call(
             "POST",
@@ -795,7 +829,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             Title.serializer(),
         )
 
-    /** `GET /titles/{id}/images` */
+    /** The account needs the `title.update` permission, and so does an API token. `GET /titles/{id}/images` */
     suspend fun images(id: String, season: Int? = null, episode: Int? = null): List<ItemImage> =
         transport.call(
             "GET",
@@ -805,7 +839,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(ItemImage.serializer()),
         )
 
-    /** `GET /titles/{id}/images/{slot}/remote` */
+    /** The account needs the `title.update` permission, and so does an API token. `GET /titles/{id}/images/{slot}/remote` */
     suspend fun remoteImages(
         id: String,
         slot: String,
@@ -821,7 +855,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(RemoteImage.serializer()),
         )
 
-    /** `POST /titles/{id}/images/{slot}` */
+    /** The account needs the `title.update` permission, and so does an API token. `POST /titles/{id}/images/{slot}` */
     suspend fun uploadImage(
         id: String,
         slot: String,
@@ -837,7 +871,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(ItemImage.serializer()),
         )
 
-    /** `PUT /titles/{id}/images/{slot}` */
+    /** The account needs the `title.update` permission, and so does an API token. `PUT /titles/{id}/images/{slot}` */
     suspend fun setImage(
         id: String,
         slot: String,
@@ -853,7 +887,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(ItemImage.serializer()),
         )
 
-    /** `POST /titles/{id}/images/{slot}/reset` */
+    /** The account needs the `title.update` permission, and so does an API token. `POST /titles/{id}/images/{slot}/reset` */
     suspend fun resetImage(
         id: String,
         slot: String,
@@ -870,7 +904,7 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
 }
 
 class PeopleApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /people/{name}` */
+    /** The account needs the `title.read` permission, and so does an API token. `GET /people/{name}` */
     suspend fun get(name: String, tmdbId: String? = null): Person =
         transport.call(
             "GET",
@@ -882,7 +916,7 @@ class PeopleApi internal constructor(private val transport: ApiTransport) {
 }
 
 class SearchApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /search` */
+    /** The account needs the `title.read` permission, and so does an API token. `GET /search` */
     suspend fun query(query: String, limit: Int? = null): SearchResults =
         transport.call(
             "GET",
@@ -894,7 +928,7 @@ class SearchApi internal constructor(private val transport: ApiTransport) {
 }
 
 class MediaApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /libraries/{libraryId}/media` */
+    /** The account needs the `media.read` permission, and so does an API token. `GET /libraries/{libraryId}/media` */
     suspend fun list(
         libraryId: String,
         query: String? = null,
@@ -911,7 +945,7 @@ class MediaApi internal constructor(private val transport: ApiTransport) {
             MediaListOutput.serializer(),
         )
 
-    /** `GET /libraries/{libraryId}/shelf` */
+    /** The account needs the `media.read` permission, and so does an API token. `GET /libraries/{libraryId}/shelf` */
     suspend fun shelf(libraryId: String, limit: Int? = null): List<ShelfEntry> =
         transport.call(
             "GET",
@@ -921,11 +955,11 @@ class MediaApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(ShelfEntry.serializer()),
         )
 
-    /** `GET /media/{id}` */
+    /** The account needs the `media.read` permission, and so does an API token. `GET /media/{id}` */
     suspend fun get(id: String): MediaItem =
         transport.call("GET", listOf("media", id), emptyList(), null, MediaItem.serializer())
 
-    /** `GET /media/{id}/subtitles` */
+    /** The account needs the `media.read` permission, and so does an API token. `GET /media/{id}/subtitles` */
     suspend fun subtitles(id: String): Subtitles =
         transport.call(
             "GET",
@@ -935,7 +969,7 @@ class MediaApi internal constructor(private val transport: ApiTransport) {
             Subtitles.serializer(),
         )
 
-    /** `GET /media/{id}/audio` */
+    /** The account needs the `media.read` permission, and so does an API token. `GET /media/{id}/audio` */
     suspend fun audio(id: String): List<AudioTrack> =
         transport.call(
             "GET",
@@ -945,7 +979,7 @@ class MediaApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(AudioTrack.serializer()),
         )
 
-    /** `GET /media/{id}/keyframes` */
+    /** The account needs the `media.read` permission, and so does an API token. `GET /media/{id}/keyframes` */
     suspend fun keyframes(id: String, seconds: Double): Keyframes =
         transport.call(
             "GET",
@@ -955,7 +989,7 @@ class MediaApi internal constructor(private val transport: ApiTransport) {
             Keyframes.serializer(),
         )
 
-    /** `GET /media/{id}/trickplay` */
+    /** The account needs the `media.read` permission, and so does an API token. `GET /media/{id}/trickplay` */
     fun trickplay(id: String): Flow<TrickplayStatus> =
         transport.events(
             "GET",
@@ -967,7 +1001,7 @@ class MediaApi internal constructor(private val transport: ApiTransport) {
 }
 
 class DownloadsApi internal constructor(private val transport: ApiTransport) {
-    /** `POST /downloads/resolve` */
+    /** The account needs the `media.download` permission, and so does an API token. `POST /downloads/resolve` */
     suspend fun resolve(downloadResolveInput: DownloadResolveInput): List<DownloadResolution> =
         transport.call(
             "POST",
@@ -977,7 +1011,7 @@ class DownloadsApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(DownloadResolution.serializer()),
         )
 
-    /** `POST /media/{id}/download-plan` */
+    /** The account needs the `media.download` permission, and so does an API token. `POST /media/{id}/download-plan` */
     suspend fun plan(id: String, spec: DownloadSpec): DownloadPlan =
         transport.call(
             "POST",
@@ -987,7 +1021,7 @@ class DownloadsApi internal constructor(private val transport: ApiTransport) {
             DownloadPlan.serializer(),
         )
 
-    /** `POST /media/{id}/downloads` */
+    /** The account needs the `media.download` permission, and so does an API token. `POST /media/{id}/downloads` */
     suspend fun start(id: String, spec: DownloadSpec): Download =
         transport.call(
             "POST",
@@ -997,14 +1031,14 @@ class DownloadsApi internal constructor(private val transport: ApiTransport) {
             Download.serializer(),
         )
 
-    /** `DELETE /downloads/{downloadId}` */
+    /** The account needs the `media.download` permission, and so does an API token. `DELETE /downloads/{downloadId}` */
     suspend fun remove(downloadId: String) {
         transport.send("DELETE", listOf("downloads", downloadId), emptyList(), null)
     }
 }
 
 class PlaybackApi internal constructor(private val transport: ApiTransport) {
-    /** `POST /playback/start` */
+    /** The account needs the `media.play` permission, and so does an API token. `POST /playback/start` */
     suspend fun start(playbackStartInput: PlaybackStartInput): PlaybackStart =
         transport.call(
             "POST",
@@ -1014,7 +1048,7 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
             PlaybackStart.serializer(),
         )
 
-    /** `POST /playback/seek` */
+    /** The account needs the `media.play` permission, and so does an API token. `POST /playback/seek` */
     suspend fun seek(playbackSeekInput: PlaybackSeekInput): PlaybackSeek =
         transport.call(
             "POST",
@@ -1024,7 +1058,7 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
             PlaybackSeek.serializer(),
         )
 
-    /** `POST /media/{itemId}/progress` */
+    /** The account needs the `watchState.update` permission, and so does an API token. `POST /media/{itemId}/progress` */
     suspend fun report(
         itemId: String,
         positionSeconds: Double,
@@ -1042,7 +1076,7 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `GET /media/{itemId}/tracks` */
+    /** The account needs the `media.play` permission, and so does an API token. `GET /media/{itemId}/tracks` */
     suspend fun tracks(itemId: String): TrackPicks =
         transport.call(
             "GET",
@@ -1052,7 +1086,7 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
             TrackPicks.serializer(),
         )
 
-    /** `PUT /media/{itemId}/tracks` */
+    /** The account needs the `media.play` permission, and so does an API token. `PUT /media/{itemId}/tracks` */
     suspend fun pickTracks(itemId: String, audio: Int? = null, subtitle: SubtitlePick? = null) {
         transport.send(
             "PUT",
@@ -1062,7 +1096,7 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `GET /playback/sessions/{sessionId}/stream` */
+    /** The account needs the `media.play` permission, and so does an API token. `GET /playback/sessions/{sessionId}/stream` */
     fun stream(sessionId: String): Flow<SessionStream?> =
         transport.events(
             "GET",
@@ -1072,7 +1106,7 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
             SessionStream.serializer().nullable,
         )
 
-    /** `POST /playback/offline` */
+    /** The account needs the `watchState.update` permission, and so does an API token. `POST /playback/offline` */
     suspend fun offline(plays: List<PlaybackOfflineInput.Play>) {
         transport.send(
             "POST",
@@ -1082,7 +1116,7 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `GET /playback/options` */
+    /** The account needs the `media.play` permission, and so does an API token. `GET /playback/options` */
     suspend fun options(): PlaybackOptions =
         transport.call(
             "GET",
@@ -1092,7 +1126,7 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
             PlaybackOptions.serializer(),
         )
 
-    /** `PUT /media/{itemId}/watched` */
+    /** The account needs the `watchState.update` permission, and so does an API token. `PUT /media/{itemId}/watched` */
     suspend fun setWatched(itemId: String, watched: Boolean, watchedAt: String? = null) {
         transport.send(
             "PUT",
@@ -1102,7 +1136,7 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `PUT /titles/{titleId}/watched` */
+    /** The account needs the `watchState.update` permission, and so does an API token. `PUT /titles/{titleId}/watched` */
     suspend fun setTitleWatched(
         titleId: String,
         watched: Boolean,
@@ -1121,11 +1155,11 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
 class PartyApi internal constructor(private val transport: ApiTransport) {
     val queue = PartyQueueApi(transport)
 
-    /** `GET /party` */
+    /** The account needs the `party.read` permission, and so does an API token. `GET /party` */
     suspend fun get(): Party? =
         transport.call("GET", listOf("party"), emptyList(), null, Party.serializer().nullable)
 
-    /** `POST /party` */
+    /** The account needs the `party.create` permission, and so does an API token. `POST /party` */
     suspend fun create(name: String? = null): Party =
         transport.call(
             "POST",
@@ -1135,7 +1169,7 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
             Party.serializer(),
         )
 
-    /** `GET /party/live` */
+    /** The account needs the `party.read` permission, and so does an API token. `GET /party/live` */
     fun follow(): Flow<Party?> =
         transport.events(
             "GET",
@@ -1145,7 +1179,7 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
             Party.serializer().nullable,
         )
 
-    /** `GET /parties/{partyId}` */
+    /** The account needs the `party.read` permission, and so does an API token. `GET /parties/{partyId}` */
     suspend fun invite(partyId: String): PartyInvite =
         transport.call(
             "GET",
@@ -1155,7 +1189,7 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
             PartyInvite.serializer(),
         )
 
-    /** `POST /parties/{partyId}/join` */
+    /** The account needs the `party.update` permission, and so does an API token. `POST /parties/{partyId}/join` */
     suspend fun join(partyId: String): Party =
         transport.call(
             "POST",
@@ -1165,12 +1199,12 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
             Party.serializer(),
         )
 
-    /** `POST /party/leave` */
+    /** The account needs the `party.update` permission, and so does an API token. `POST /party/leave` */
     suspend fun leave() {
         transport.send("POST", listOf("party", "leave"), emptyList(), null)
     }
 
-    /** `PUT /party/name` */
+    /** The account needs the `party.update` permission, and so does an API token. `PUT /party/name` */
     suspend fun rename(name: String) {
         transport.send(
             "PUT",
@@ -1180,7 +1214,7 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `PUT /party/owner` */
+    /** The account needs the `party.update` permission, and so does an API token. `PUT /party/owner` */
     suspend fun transfer(userId: String) {
         transport.send(
             "PUT",
@@ -1190,12 +1224,12 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `DELETE /party/members/{userId}` */
+    /** The account needs the `party.update` permission, and so does an API token. `DELETE /party/members/{userId}` */
     suspend fun kick(userId: String) {
         transport.send("DELETE", listOf("party", "members", userId), emptyList(), null)
     }
 
-    /** `PUT /party/item` */
+    /** The account needs the `party.update` permission, and so does an API token. `PUT /party/item` */
     suspend fun play(itemId: String, positionSeconds: Double? = null) {
         transport.send(
             "PUT",
@@ -1205,7 +1239,7 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `PUT /party/playback` */
+    /** The account needs the `party.update` permission, and so does an API token. `PUT /party/playback` */
     suspend fun control(itemId: String, playing: Boolean, positionSeconds: Double) {
         transport.send(
             "PUT",
@@ -1215,7 +1249,7 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `POST /party/next` */
+    /** The account needs the `party.update` permission, and so does an API token. `POST /party/next` */
     suspend fun next(itemId: String) {
         transport.send(
             "POST",
@@ -1225,7 +1259,7 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `PUT /party/status` */
+    /** The account needs the `party.update` permission, and so does an API token. `PUT /party/status` */
     suspend fun status(partyStatusReport: PartyStatusReport) {
         transport.send(
             "PUT",
@@ -1235,7 +1269,7 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `GET /party/health` */
+    /** The account needs the `party.read` permission, and so does an API token. `GET /party/health` */
     fun health(): Flow<PartyHealth?> =
         transport.events(
             "GET",
@@ -1247,7 +1281,7 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
 }
 
 class PartyQueueApi internal constructor(private val transport: ApiTransport) {
-    /** `POST /party/queue` */
+    /** The account needs the `party.update` permission, and so does an API token. `POST /party/queue` */
     suspend fun add(itemId: String) {
         transport.send(
             "POST",
@@ -1257,12 +1291,12 @@ class PartyQueueApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `POST /party/queue/{entryId}/accept` */
+    /** The account needs the `party.update` permission, and so does an API token. `POST /party/queue/{entryId}/accept` */
     suspend fun accept(entryId: String) {
         transport.send("POST", listOf("party", "queue", entryId, "accept"), emptyList(), null)
     }
 
-    /** `PUT /party/queue/{entryId}` */
+    /** The account needs the `party.update` permission, and so does an API token. `PUT /party/queue/{entryId}` */
     suspend fun move(entryId: String, index: Int) {
         transport.send(
             "PUT",
@@ -1272,14 +1306,14 @@ class PartyQueueApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `DELETE /party/queue/{entryId}` */
+    /** The account needs the `party.update` permission, and so does an API token. `DELETE /party/queue/{entryId}` */
     suspend fun remove(entryId: String) {
         transport.send("DELETE", listOf("party", "queue", entryId), emptyList(), null)
     }
 }
 
 class HomeApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /home/continue-watching` */
+    /** The account needs the `watchState.read` permission, and so does an API token. `GET /home/continue-watching` */
     suspend fun continueWatching(limit: Int? = null): List<MediaItem> =
         transport.call(
             "GET",
@@ -1289,7 +1323,7 @@ class HomeApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(MediaItem.serializer()),
         )
 
-    /** `GET /home/next-up` */
+    /** The account needs the `watchState.read` permission, and so does an API token. `GET /home/next-up` */
     suspend fun nextUp(limit: Int? = null): List<NextUpEntry> =
         transport.call(
             "GET",
@@ -1299,7 +1333,7 @@ class HomeApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(NextUpEntry.serializer()),
         )
 
-    /** `GET /home/featured` */
+    /** The account needs the `title.read` permission, and so does an API token. `GET /home/featured` */
     suspend fun featured(limit: Int? = null): List<FeaturedTitle> =
         transport.call(
             "GET",
@@ -1311,7 +1345,7 @@ class HomeApi internal constructor(private val transport: ApiTransport) {
 }
 
 class FavoritesApi internal constructor(private val transport: ApiTransport) {
-    /** `PUT /titles/{titleId}/favorite` */
+    /** The account needs the `favorite.update` permission, and so does an API token. `PUT /titles/{titleId}/favorite` */
     suspend fun set(titleId: String, favorite: Boolean) {
         transport.send(
             "PUT",
@@ -1321,7 +1355,7 @@ class FavoritesApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `PUT /titles/{titleId}/season-favorite` */
+    /** The account needs the `favorite.update` permission, and so does an API token. `PUT /titles/{titleId}/season-favorite` */
     suspend fun setSeason(titleId: String, season: Int, favorite: Boolean) {
         transport.send(
             "PUT",
@@ -1331,7 +1365,7 @@ class FavoritesApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `PUT /media/{itemId}/favorite` */
+    /** The account needs the `favorite.update` permission, and so does an API token. `PUT /media/{itemId}/favorite` */
     suspend fun setItem(itemId: String, favorite: Boolean) {
         transport.send(
             "PUT",
@@ -1343,11 +1377,11 @@ class FavoritesApi internal constructor(private val transport: ApiTransport) {
 }
 
 class ProfilesApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /profiles/{username}` */
+    /** The account needs the `profile.read` permission, and so does an API token. `GET /profiles/{username}` */
     suspend fun get(username: String): Profile =
         transport.call("GET", listOf("profiles", username), emptyList(), null, Profile.serializer())
 
-    /** `GET /profiles/{username}/stats` */
+    /** The account needs the `profile.read` permission, and so does an API token. `GET /profiles/{username}/stats` */
     suspend fun stats(
         username: String,
         range: String? = null,
@@ -1361,7 +1395,7 @@ class ProfilesApi internal constructor(private val transport: ApiTransport) {
             WatchStats.serializer().nullable,
         )
 
-    /** `GET /profiles/{username}/recent` */
+    /** The account needs the `profile.read` permission, and so does an API token. `GET /profiles/{username}/recent` */
     suspend fun recent(username: String, limit: Int? = null): List<WatchedEntry>? =
         transport.call(
             "GET",
@@ -1371,7 +1405,7 @@ class ProfilesApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(WatchedEntry.serializer()).nullable,
         )
 
-    /** `GET /profiles/{username}/favorites` */
+    /** The account needs the `profile.read` permission, and so does an API token. `GET /profiles/{username}/favorites` */
     suspend fun favorites(username: String, limit: Int? = null): Favorites? =
         transport.call(
             "GET",
@@ -1383,7 +1417,7 @@ class ProfilesApi internal constructor(private val transport: ApiTransport) {
 }
 
 class StatsApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /stats` */
+    /** The account needs the `serverStats.read` permission, and so does an API token. `GET /stats` */
     suspend fun server(range: String? = null, timeZone: String? = null): ServerStats =
         transport.call(
             "GET",
@@ -1393,7 +1427,7 @@ class StatsApi internal constructor(private val transport: ApiTransport) {
             ServerStats.serializer(),
         )
 
-    /** `GET /stats/live` */
+    /** The account needs the `serverStats.read` permission, and so does an API token. `GET /stats/live` */
     fun live(): Flow<LiveActivity> =
         transport.events(
             "GET",
@@ -1403,7 +1437,7 @@ class StatsApi internal constructor(private val transport: ApiTransport) {
             LiveActivity.serializer(),
         )
 
-    /** `GET /stats/library` */
+    /** The account needs the `stats.read` permission, and so does an API token. `GET /stats/library` */
     suspend fun library(range: String? = null, timeZone: String? = null): LibraryStats =
         transport.call(
             "GET",
@@ -1413,7 +1447,7 @@ class StatsApi internal constructor(private val transport: ApiTransport) {
             LibraryStats.serializer(),
         )
 
-    /** `GET /stats/leaderboard` */
+    /** The account needs the `stats.read` permission, and so does an API token. `GET /stats/leaderboard` */
     suspend fun leaderboard(range: String? = null, timeZone: String? = null): Leaderboard =
         transport.call(
             "GET",
@@ -1438,7 +1472,7 @@ class AdminApi internal constructor(private val transport: ApiTransport) {
     val trickplay = AdminTrickplayApi(transport)
     val users = AdminUsersApi(transport)
 
-    /** `GET /admin/browse` */
+    /** The account needs the `folder.read` permission, and so does an API token. `GET /admin/browse` */
     suspend fun browse(path: String? = null): DirectoryListing =
         transport.call(
             "GET",
@@ -1450,7 +1484,7 @@ class AdminApi internal constructor(private val transport: ApiTransport) {
 }
 
 class AdminRequestsApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/requests` */
+    /** The account needs the `adminRequest.read` permission, and so does an API token. `GET /admin/requests` */
     suspend fun queue(cursor: String? = null, limit: Int? = null): RequestQueue =
         transport.call(
             "GET",
@@ -1460,7 +1494,7 @@ class AdminRequestsApi internal constructor(private val transport: ApiTransport)
             RequestQueue.serializer(),
         )
 
-    /** `GET /admin/requests/live` */
+    /** The account needs the `adminRequest.read` permission, and so does an API token. `GET /admin/requests/live` */
     fun live(cursor: String? = null, limit: Int? = null): Flow<RequestQueue> =
         transport.events(
             "GET",
@@ -1470,7 +1504,7 @@ class AdminRequestsApi internal constructor(private val transport: ApiTransport)
             RequestQueue.serializer(),
         )
 
-    /** `POST /admin/requests/approve` */
+    /** The account needs the `adminRequest.update` permission, and so does an API token. `POST /admin/requests/approve` */
     suspend fun approve(id: String, libraryId: String? = null) {
         transport.send(
             "POST",
@@ -1480,7 +1514,7 @@ class AdminRequestsApi internal constructor(private val transport: ApiTransport)
         )
     }
 
-    /** `POST /admin/requests/approve-all` */
+    /** The account needs the `adminRequest.update` permission, and so does an API token. `POST /admin/requests/approve-all` */
     suspend fun approveAll(ids: List<String>) {
         transport.send(
             "POST",
@@ -1490,7 +1524,7 @@ class AdminRequestsApi internal constructor(private val transport: ApiTransport)
         )
     }
 
-    /** `POST /admin/requests/decline` */
+    /** The account needs the `adminRequest.update` permission, and so does an API token. `POST /admin/requests/decline` */
     suspend fun decline(id: String, reason: String, note: String?) {
         transport.send(
             "POST",
@@ -1500,7 +1534,7 @@ class AdminRequestsApi internal constructor(private val transport: ApiTransport)
         )
     }
 
-    /** `POST /admin/requests/give-up` */
+    /** The account needs the `adminRequest.update` permission, and so does an API token. `POST /admin/requests/give-up` */
     suspend fun giveUp(id: String, note: String?) {
         transport.send(
             "POST",
@@ -1510,7 +1544,7 @@ class AdminRequestsApi internal constructor(private val transport: ApiTransport)
         )
     }
 
-    /** `POST /admin/requests/allow-again` */
+    /** The account needs the `adminRequest.update` permission, and so does an API token. `POST /admin/requests/allow-again` */
     suspend fun allowAgain(requestId: RequestId) {
         transport.send(
             "POST",
@@ -1520,7 +1554,7 @@ class AdminRequestsApi internal constructor(private val transport: ApiTransport)
         )
     }
 
-    /** `POST /admin/requests/add-after-all` */
+    /** The account needs the `adminRequest.update` permission, and so does an API token. `POST /admin/requests/add-after-all` */
     suspend fun addAfterAll(requestId: RequestId) {
         transport.send(
             "POST",
@@ -1530,7 +1564,7 @@ class AdminRequestsApi internal constructor(private val transport: ApiTransport)
         )
     }
 
-    /** `POST /admin/requests/retry` */
+    /** The account needs the `adminRequest.update` permission, and so does an API token. `POST /admin/requests/retry` */
     suspend fun retry(requestId: RequestId) {
         transport.send(
             "POST",
@@ -1542,7 +1576,7 @@ class AdminRequestsApi internal constructor(private val transport: ApiTransport)
 }
 
 class AdminFulfilmentApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/fulfilment/sources` */
+    /** The account needs the `fulfilment.read` permission, and so does an API token. `GET /admin/fulfilment/sources` */
     suspend fun sources(): List<FulfilmentSourceDescription> =
         transport.call(
             "GET",
@@ -1552,7 +1586,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             ListSerializer(FulfilmentSourceDescription.serializer()),
         )
 
-    /** `GET /admin/fulfilment/connections` */
+    /** The account needs the `fulfilment.read` permission, and so does an API token. `GET /admin/fulfilment/connections` */
     suspend fun connections(): List<FulfilmentConnection> =
         transport.call(
             "GET",
@@ -1562,7 +1596,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             ListSerializer(FulfilmentConnection.serializer()),
         )
 
-    /** `POST /admin/fulfilment/connections` */
+    /** The account needs the `fulfilment.create` permission, and so does an API token. `POST /admin/fulfilment/connections` */
     suspend fun create(fulfilmentConnectionInput: FulfilmentConnectionInput): FulfilmentConnection =
         transport.call(
             "POST",
@@ -1572,7 +1606,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             FulfilmentConnection.serializer(),
         )
 
-    /** `PUT /admin/fulfilment/connections/{id}` */
+    /** The account needs the `fulfilment.update` permission, and so does an API token. `PUT /admin/fulfilment/connections/{id}` */
     suspend fun update(
         id: String,
         name: String,
@@ -1592,7 +1626,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             FulfilmentConnection.serializer(),
         )
 
-    /** `DELETE /admin/fulfilment/connections/{id}` */
+    /** The account needs the `fulfilment.delete` permission, and so does an API token. `DELETE /admin/fulfilment/connections/{id}` */
     suspend fun remove(id: String) {
         transport.send(
             "DELETE",
@@ -1602,7 +1636,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
         )
     }
 
-    /** `POST /admin/fulfilment/test` */
+    /** The account needs the `fulfilment.update` permission, and so does an API token. `POST /admin/fulfilment/test` */
     suspend fun test(id: String) {
         transport.send(
             "POST",
@@ -1612,7 +1646,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
         )
     }
 
-    /** `POST /admin/fulfilment/options` */
+    /** The account needs the `fulfilment.update` permission, and so does an API token. `POST /admin/fulfilment/options` */
     suspend fun options(
         source: String,
         slug: String,
@@ -1628,7 +1662,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             FulfilmentOptions.serializer(),
         )
 
-    /** `GET /admin/fulfilment/landing` */
+    /** The account needs the `fulfilment.read` permission, and so does an API token. `GET /admin/fulfilment/landing` */
     suspend fun landing(kind: String, folder: String): AdminFulfilmentLandingOutput =
         transport.call(
             "GET",
@@ -1638,7 +1672,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             AdminFulfilmentLandingOutput.serializer(),
         )
 
-    /** `GET /admin/fulfilment/connections/{connectionId}/rules` */
+    /** The account needs the `fulfilment.read` permission, and so does an API token. `GET /admin/fulfilment/connections/{connectionId}/rules` */
     suspend fun rules(connectionId: String): List<FulfilmentRule> =
         transport.call(
             "GET",
@@ -1648,7 +1682,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             ListSerializer(FulfilmentRule.serializer()),
         )
 
-    /** `POST /admin/fulfilment/connections/{connectionId}/rules` */
+    /** The account needs the `fulfilment.create` permission, and so does an API token. `POST /admin/fulfilment/connections/{connectionId}/rules` */
     suspend fun createRule(
         connectionId: String,
         settings: Map<String, JsonElement>,
@@ -1666,7 +1700,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             FulfilmentRule.serializer(),
         )
 
-    /** `PUT /admin/fulfilment/rules/{id}` */
+    /** The account needs the `fulfilment.update` permission, and so does an API token. `PUT /admin/fulfilment/rules/{id}` */
     suspend fun updateRule(
         id: String,
         connectionId: String,
@@ -1685,12 +1719,12 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             FulfilmentRule.serializer(),
         )
 
-    /** `DELETE /admin/fulfilment/rules/{id}` */
+    /** The account needs the `fulfilment.delete` permission, and so does an API token. `DELETE /admin/fulfilment/rules/{id}` */
     suspend fun removeRule(id: String) {
         transport.send("DELETE", listOf("admin", "fulfilment", "rules", id), emptyList(), null)
     }
 
-    /** `PUT /admin/fulfilment/connections/{connectionId}/rules/order` */
+    /** The account needs the `fulfilment.update` permission, and so does an API token. `PUT /admin/fulfilment/connections/{connectionId}/rules/order` */
     suspend fun reorderRules(connectionId: String, ids: List<String>): List<FulfilmentRule> =
         transport.call(
             "PUT",
@@ -1700,7 +1734,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             ListSerializer(FulfilmentRule.serializer()),
         )
 
-    /** `GET /admin/fulfilment/rule-choices` */
+    /** The account needs the `fulfilment.read` permission, and so does an API token. `GET /admin/fulfilment/rule-choices` */
     suspend fun ruleChoices(kind: String): FulfilmentRuleChoices =
         transport.call(
             "GET",
@@ -1710,7 +1744,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
             FulfilmentRuleChoices.serializer(),
         )
 
-    /** `GET /admin/fulfilment/keywords` */
+    /** The account needs the `fulfilment.read` permission, and so does an API token. `GET /admin/fulfilment/keywords` */
     suspend fun keywords(query: String): List<FulfilmentKeyword> =
         transport.call(
             "GET",
@@ -1722,7 +1756,7 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
 }
 
 class AdminAuthApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/auth` */
+    /** The account needs the `authSettings.read` permission, and so does an API token. `GET /admin/auth` */
     suspend fun get(): AdminAuthSettings =
         transport.call(
             "GET",
@@ -1732,7 +1766,7 @@ class AdminAuthApi internal constructor(private val transport: ApiTransport) {
             AdminAuthSettings.serializer(),
         )
 
-    /** `PUT /admin/auth` */
+    /** The account needs the `authSettings.update` permission, and so does an API token. `PUT /admin/auth` */
     suspend fun update(authSettingsInput: AuthSettingsInput): AdminAuthSettings =
         transport.call(
             "PUT",
@@ -1744,11 +1778,11 @@ class AdminAuthApi internal constructor(private val transport: ApiTransport) {
 }
 
 class AdminBrandingApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/branding` */
+    /** The account needs the `branding.read` permission, and so does an API token. `GET /admin/branding` */
     suspend fun get(): Branding =
         transport.call("GET", listOf("admin", "branding"), emptyList(), null, Branding.serializer())
 
-    /** `PUT /admin/branding` */
+    /** The account needs the `branding.update` permission, and so does an API token. `PUT /admin/branding` */
     suspend fun update(branding: Branding): Branding =
         transport.call(
             "PUT",
@@ -1758,7 +1792,7 @@ class AdminBrandingApi internal constructor(private val transport: ApiTransport)
             Branding.serializer(),
         )
 
-    /** `GET /admin/branding/login-backdrop` */
+    /** The account needs the `branding.read` permission, and so does an API token. `GET /admin/branding/login-backdrop` */
     suspend fun preview(artwork: String): LoginBackdropTiles =
         transport.call(
             "GET",
@@ -1770,7 +1804,7 @@ class AdminBrandingApi internal constructor(private val transport: ApiTransport)
 }
 
 class AdminGroupsApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/groups` */
+    /** The account needs the `group.read` permission, and so does an API token. `GET /admin/groups` */
     suspend fun list(): List<AdminGroupsListOutput> =
         transport.call(
             "GET",
@@ -1780,7 +1814,7 @@ class AdminGroupsApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(AdminGroupsListOutput.serializer()),
         )
 
-    /** `POST /admin/groups` */
+    /** The account needs the `group.create` permission, and so does an API token. `POST /admin/groups` */
     suspend fun create(
         name: String,
         providerGroup: String?,
@@ -1794,7 +1828,7 @@ class AdminGroupsApi internal constructor(private val transport: ApiTransport) {
             AdminGroupsCreateOutput.serializer(),
         )
 
-    /** `PUT /admin/groups/{id}` */
+    /** The account needs the `group.update` permission, and so does an API token. `PUT /admin/groups/{id}` */
     suspend fun update(
         id: String,
         name: String,
@@ -1809,12 +1843,12 @@ class AdminGroupsApi internal constructor(private val transport: ApiTransport) {
             AdminGroupsUpdateOutput.serializer(),
         )
 
-    /** `DELETE /admin/groups/{id}` */
+    /** The account needs the `group.delete` permission, and so does an API token. `DELETE /admin/groups/{id}` */
     suspend fun remove(id: String) {
         transport.send("DELETE", listOf("admin", "groups", id), emptyList(), null)
     }
 
-    /** `GET /admin/provider-groups` */
+    /** The account needs the `group.read` permission, and so does an API token. `GET /admin/provider-groups` */
     suspend fun providerGroups(): List<AdminGroupsProviderGroupsOutput> =
         transport.call(
             "GET",
@@ -1826,7 +1860,7 @@ class AdminGroupsApi internal constructor(private val transport: ApiTransport) {
 }
 
 class AdminInvitesApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/invites` */
+    /** The account needs the `invite.read` permission, and so does an API token. `GET /admin/invites` */
     suspend fun list(): List<Invite> =
         transport.call(
             "GET",
@@ -1836,7 +1870,7 @@ class AdminInvitesApi internal constructor(private val transport: ApiTransport) 
             ListSerializer(Invite.serializer()),
         )
 
-    /** `POST /admin/invites` */
+    /** The account needs the `invite.create` permission, and so does an API token. `POST /admin/invites` */
     suspend fun create(
         expiresInDays: Int,
         label: String? = null,
@@ -1850,18 +1884,18 @@ class AdminInvitesApi internal constructor(private val transport: ApiTransport) 
             CreatedInvite.serializer(),
         )
 
-    /** `DELETE /admin/invites/{id}` */
+    /** The account needs the `invite.delete` permission, and so does an API token. `DELETE /admin/invites/{id}` */
     suspend fun revoke(id: String) {
         transport.send("DELETE", listOf("admin", "invites", id), emptyList(), null)
     }
 }
 
 class AdminJobsApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/jobs` */
+    /** The account needs the `job.read` permission, and so does an API token. `GET /admin/jobs` */
     suspend fun get(): JobsOverview =
         transport.call("GET", listOf("admin", "jobs"), emptyList(), null, JobsOverview.serializer())
 
-    /** `POST /admin/jobs/{queue}/pause` */
+    /** The account needs the `job.update` permission, and so does an API token. `POST /admin/jobs/{queue}/pause` */
     suspend fun pause(queue: String): JobQueueStatus =
         transport.call(
             "POST",
@@ -1871,7 +1905,7 @@ class AdminJobsApi internal constructor(private val transport: ApiTransport) {
             JobQueueStatus.serializer(),
         )
 
-    /** `POST /admin/jobs/{queue}/resume` */
+    /** The account needs the `job.update` permission, and so does an API token. `POST /admin/jobs/{queue}/resume` */
     suspend fun resume(queue: String): JobQueueStatus =
         transport.call(
             "POST",
@@ -1881,7 +1915,7 @@ class AdminJobsApi internal constructor(private val transport: ApiTransport) {
             JobQueueStatus.serializer(),
         )
 
-    /** `POST /admin/jobs/{queue}/clear` */
+    /** The account needs the `job.update` permission, and so does an API token. `POST /admin/jobs/{queue}/clear` */
     suspend fun clear(queue: String): JobQueueStatus =
         transport.call(
             "POST",
@@ -1891,7 +1925,7 @@ class AdminJobsApi internal constructor(private val transport: ApiTransport) {
             JobQueueStatus.serializer(),
         )
 
-    /** `PUT /admin/jobs/concurrency` */
+    /** The account needs the `job.update` permission, and so does an API token. `PUT /admin/jobs/concurrency` */
     suspend fun updateConcurrency(concurrency: Map<String, Int>): JobsOverview =
         transport.call(
             "PUT",
@@ -1901,7 +1935,7 @@ class AdminJobsApi internal constructor(private val transport: ApiTransport) {
             JobsOverview.serializer(),
         )
 
-    /** `POST /admin/tasks/{task}/run` */
+    /** The account needs the `job.update` permission, and so does an API token. `POST /admin/tasks/{task}/run` */
     suspend fun runTask(task: String): ScheduledTask =
         transport.call(
             "POST",
@@ -1911,7 +1945,7 @@ class AdminJobsApi internal constructor(private val transport: ApiTransport) {
             ScheduledTask.serializer(),
         )
 
-    /** `POST /admin/tasks/{task}/cancel` */
+    /** The account needs the `job.update` permission, and so does an API token. `POST /admin/tasks/{task}/cancel` */
     suspend fun cancelTask(task: String): ScheduledTask =
         transport.call(
             "POST",
@@ -1923,7 +1957,7 @@ class AdminJobsApi internal constructor(private val transport: ApiTransport) {
 }
 
 class AdminNetworkApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/network` */
+    /** The account needs the `networkSettings.read` permission, and so does an API token. `GET /admin/network` */
     suspend fun get(): AdminNetworkSettings =
         transport.call(
             "GET",
@@ -1933,7 +1967,7 @@ class AdminNetworkApi internal constructor(private val transport: ApiTransport) 
             AdminNetworkSettings.serializer(),
         )
 
-    /** `PUT /admin/network` */
+    /** The account needs the `networkSettings.update` permission, and so does an API token. `PUT /admin/network` */
     suspend fun update(networkSettings: NetworkSettings): AdminNetworkSettings =
         transport.call(
             "PUT",
@@ -1945,14 +1979,14 @@ class AdminNetworkApi internal constructor(private val transport: ApiTransport) 
 }
 
 class AdminSetupApi internal constructor(private val transport: ApiTransport) {
-    /** `POST /admin/setup/complete` */
+    /** The account needs the `serverSetup.update` permission, and so does an API token. `POST /admin/setup/complete` */
     suspend fun complete() {
         transport.send("POST", listOf("admin", "setup", "complete"), emptyList(), null)
     }
 }
 
 class AdminTranscodingApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/transcoding` */
+    /** The account needs the `transcodingSettings.read` permission, and so does an API token. `GET /admin/transcoding` */
     suspend fun get(): AdminTranscodingSettings =
         transport.call(
             "GET",
@@ -1962,7 +1996,7 @@ class AdminTranscodingApi internal constructor(private val transport: ApiTranspo
             AdminTranscodingSettings.serializer(),
         )
 
-    /** `PUT /admin/transcoding` */
+    /** The account needs the `transcodingSettings.update` permission, and so does an API token. `PUT /admin/transcoding` */
     suspend fun update(transcodingSettings: TranscodingSettings): AdminTranscodingSettings =
         transport.call(
             "PUT",
@@ -1972,7 +2006,7 @@ class AdminTranscodingApi internal constructor(private val transport: ApiTranspo
             AdminTranscodingSettings.serializer(),
         )
 
-    /** `POST /admin/transcoding/detect` */
+    /** The account needs the `transcodingSettings.update` permission, and so does an API token. `POST /admin/transcoding/detect` */
     suspend fun detect(): AdminTranscodingSettings =
         transport.call(
             "POST",
@@ -1984,7 +2018,7 @@ class AdminTranscodingApi internal constructor(private val transport: ApiTranspo
 }
 
 class AdminTrickplayApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/trickplay` */
+    /** The account needs the `trickplaySettings.read` permission, and so does an API token. `GET /admin/trickplay` */
     suspend fun get(): AdminTrickplaySettings =
         transport.call(
             "GET",
@@ -1994,7 +2028,7 @@ class AdminTrickplayApi internal constructor(private val transport: ApiTransport
             AdminTrickplaySettings.serializer(),
         )
 
-    /** `PUT /admin/trickplay` */
+    /** The account needs the `trickplaySettings.update` permission, and so does an API token. `PUT /admin/trickplay` */
     suspend fun update(trickplaySettings: TrickplaySettings): AdminTrickplaySettings =
         transport.call(
             "PUT",
@@ -2006,7 +2040,7 @@ class AdminTrickplayApi internal constructor(private val transport: ApiTransport
 }
 
 class AdminUsersApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/users` */
+    /** The account needs the `adminUser.read` permission, and so does an API token. `GET /admin/users` */
     suspend fun list(): List<AdminUser> =
         transport.call(
             "GET",
@@ -2016,7 +2050,7 @@ class AdminUsersApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(AdminUser.serializer()),
         )
 
-    /** `PUT /admin/users/{id}/role` */
+    /** Only an admin calls this, and an API token needs the `all` permission. `PUT /admin/users/{id}/role` */
     suspend fun setRole(id: String, role: String): AdminUser =
         transport.call(
             "PUT",
@@ -2026,7 +2060,7 @@ class AdminUsersApi internal constructor(private val transport: ApiTransport) {
             AdminUser.serializer(),
         )
 
-    /** `PUT /admin/users/{id}/access` */
+    /** The account needs the `adminUser.update` permission, and so does an API token. `PUT /admin/users/{id}/access` */
     suspend fun setAccess(
         id: String,
         groupIds: List<String>,
@@ -2040,12 +2074,12 @@ class AdminUsersApi internal constructor(private val transport: ApiTransport) {
             AdminUser.serializer(),
         )
 
-    /** `DELETE /admin/users/{id}` */
+    /** The account needs the `adminUser.delete` permission, and so does an API token. `DELETE /admin/users/{id}` */
     suspend fun remove(id: String) {
         transport.send("DELETE", listOf("admin", "users", id), emptyList(), null)
     }
 
-    /** `POST /admin/users/{id}/sign-out` */
+    /** The account needs the `adminSession.delete` permission, and so does an API token. `POST /admin/users/{id}/sign-out` */
     suspend fun signOut(id: String): AdminUsersSignOutOutput =
         transport.call(
             "POST",
@@ -2055,7 +2089,7 @@ class AdminUsersApi internal constructor(private val transport: ApiTransport) {
             AdminUsersSignOutOutput.serializer(),
         )
 
-    /** `POST /admin/users/{id}/api-tokens/revoke` */
+    /** The account needs the `adminApiToken.delete` permission, and so does an API token. `POST /admin/users/{id}/api-tokens/revoke` */
     suspend fun revokeApiTokens(id: String): AdminUsersRevokeApiTokensOutput =
         transport.call(
             "POST",

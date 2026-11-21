@@ -1,12 +1,20 @@
 import {
   type CreatedInvite,
+  holdsPermission,
   type Invite,
   type InviteInput,
   invitePagePath,
 } from "@matinee/contracts"
-import { accessGroup, invite, inviteGroup, user } from "@matinee/db"
+import {
+  accessGroup,
+  invite,
+  inviteGroup,
+  user,
+  type UserRow,
+} from "@matinee/db"
 import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm"
 
+import { accessOf, forgetGroups } from "../access/groups"
 import { db } from "../db"
 import { env } from "../env"
 import { randomToken, sha256 } from "./tokens"
@@ -22,6 +30,10 @@ const publicColumns = {
   expiresAt: invite.expiresAt,
 }
 
+async function mayInvite(creator: UserRow): Promise<boolean> {
+  return holdsPermission((await accessOf(creator)).permissions, "invite.create")
+}
+
 export async function createInvite(
   createdBy: string,
   input: InviteInput,
@@ -29,13 +41,13 @@ export async function createInvite(
   const token = randomToken()
   const row = await db.transaction(async (tx) => {
     // Serialize with demotion: a request that passed middleware before its
-    // creator lost the role must not leave a new link behind afterwards.
+    // creator lost the permission must not leave a new link behind
+    // afterwards.
     await lockUsers(tx)
-    const [creator] = await tx
-      .select({ role: user.role })
-      .from(user)
-      .where(eq(user.id, createdBy))
-    if (creator?.role !== "admin") return null
+    const [creator] = await tx.select().from(user).where(eq(user.id, createdBy))
+    // Whoever held the lock before forgets the groups only once it's gone.
+    forgetGroups()
+    if (!creator || !(await mayInvite(creator))) return null
     await tx.delete(invite).where(lte(invite.expiresAt, new Date()))
     const [created] = await tx
       .insert(invite)
@@ -113,18 +125,23 @@ export async function revokeInvite(id: string): Promise<boolean> {
   return rows.length > 0
 }
 
-/** Check without using the link up or exposing its hash. */
+/**
+ * Check without using the link up or exposing its hash. A link whose
+ * maker may no longer invite doesn't work, as if it had been revoked.
+ */
 export async function findInvite(token: string) {
   const [row] = await db
-    .select({ id: invite.id, expiresAt: invite.expiresAt })
+    .select({ id: invite.id, expiresAt: invite.expiresAt, creator: user })
     .from(invite)
+    .innerJoin(user, eq(user.id, invite.createdBy))
     .where(
       and(
         eq(invite.tokenHash, sha256(token)),
         gt(invite.expiresAt, new Date()),
       ),
     )
-  return row ?? null
+  if (!row || !(await mayInvite(row.creator))) return null
+  return { id: row.id, expiresAt: row.expiresAt }
 }
 
 /** Call under lockUsers, in the transaction that creates the account. */

@@ -89,10 +89,11 @@ export const appRoutes = new Hono()
         })}`,
       )
     }
+    // The page's own form, so only its session approves: `readSession`
+    // takes no API token here. A token approves a device through
+    // `auth.device.approve` instead, with `session.create`.
     const current = await readSession(c)
-    // An API token in the header would skip the origin check and could
-    // trade itself for an app session, so only a session approves.
-    if (current?.credential.kind !== "session") {
+    if (!current) {
       // Signed out since the page loaded: sign in, then approve again.
       const page = appAuthorizePagePath(request.data)
       return c.redirect(`/login?${new URLSearchParams({ redirect: page })}`)

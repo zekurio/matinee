@@ -86,16 +86,33 @@ export default {
 
   "account.apiTokens.title": "API-Tokens",
   "account.apiTokens.description":
-    "Ein Dienst sendet ein Token als Authorization: Bearer, um die API als du aufzurufen, mit deiner Rolle und deinem Zugriff. Tokens laufen nicht ab. Widerrufe eines, sobald der Dienst es nicht mehr braucht.",
+    "Ein Dienst oder eine App sendet ein Token als Authorization: Bearer, um die API als du aufzurufen, im Rahmen dessen, was dein Konto darf. Tokens laufen nicht ab. Widerrufe eines, sobald es nicht mehr gebraucht wird.",
   "account.apiTokens.empty": "Noch keine API-Tokens.",
+  "account.apiTokens.notAllowed": "Dein Konto darf keine API-Tokens erstellen.",
   "account.apiTokens.loadFailed":
     "Deine API-Tokens konnten nicht geladen werden. {reason}",
   "account.apiTokens.create": "Token erstellen",
   "account.apiTokens.createTitle": "API-Token erstellen",
   "account.apiTokens.createDescription":
-    "Benenne es nach dem Dienst, der es nutzen wird.",
+    "Benenne es nach dem, was es nutzen wird, und gib ihm nur, was das braucht.",
   "account.apiTokens.name": "Name",
   "account.apiTokens.namePlaceholder": "Hausautomation",
+  "account.apiTokens.permissions": "Was es darf",
+  "account.apiTokens.allPermissions": "Alle Berechtigungen",
+  "account.apiTokens.allPermissionsHint":
+    "Alles, was du in Matinee tun kannst, auch dieses Konto und seine Tokens ändern.",
+  "account.apiTokens.permissionCount": plural({
+    one: "{count} Berechtigung",
+    other: "{count} Berechtigungen",
+  }),
+  "account.apiTokens.editNamed": "{name} ändern",
+  "account.apiTokens.editTitle": "{name} ändern",
+  "account.apiTokens.editDescription":
+    "Das Token behält sein Geheimnis. Änderungen gelten ab seiner nächsten Anfrage.",
+  "account.apiTokens.save": "Speichern",
+  "account.apiTokens.saved": "{name} gespeichert",
+  "account.apiTokens.saveFailed":
+    "Das API-Token konnte nicht gespeichert werden",
   "account.apiTokens.createFailed":
     "Das API-Token konnte nicht erstellt werden",
   "account.apiTokens.secretTitle": "Token für {name} kopieren",

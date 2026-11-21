@@ -1,7 +1,10 @@
 import {
   type AccessOverride,
   type AccessPolicy,
+  GRANTABLE_PERMISSIONS,
   MIN_BITRATE_LIMIT,
+  type Permission,
+  sortPermissions,
 } from "@matinee/contracts"
 
 /*
@@ -15,10 +18,21 @@ export const EVERYTHING: AccessPolicy = {
   libraries: { all: true, ids: [] },
   maxBitrate: null,
   transcode: true,
-  downloads: true,
   maxStreams: null,
-  requests: "add",
   requestLimit: null,
+  permissions: ["all"],
+}
+
+/**
+ * The permissions a group or an override can hold, each once and in the
+ * contract's order. Anything else a client sent, or an older version
+ * stored, drops out: `all` is the admin role's, and nobody needs granting
+ * what every account has.
+ */
+export function grantable(permissions: readonly string[]): Permission[] {
+  return GRANTABLE_PERMISSIONS.filter((permission) =>
+    permissions.includes(permission),
+  )
 }
 
 /**
@@ -29,10 +43,9 @@ const NOTHING: AccessPolicy = {
   libraries: { all: false, ids: [] },
   maxBitrate: MIN_BITRATE_LIMIT,
   transcode: false,
-  downloads: false,
   maxStreams: 1,
-  requests: "off",
   requestLimit: null,
+  permissions: [],
 }
 
 /** The larger of two limits, where null is no limit. */
@@ -40,13 +53,12 @@ function looser(a: number | null, b: number | null): number | null {
   return a === null || b === null ? null : Math.max(a, b)
 }
 
-type Limits = Omit<AccessPolicy, "libraries" | "requests" | "requestLimit">
+type Limits = Omit<AccessPolicy, "libraries" | "requestLimit" | "permissions">
 
 function looserLimits(a: Limits, b: Limits): Limits {
   return {
     maxBitrate: looser(a.maxBitrate, b.maxBitrate),
     transcode: a.transcode || b.transcode,
-    downloads: a.downloads || b.downloads,
     maxStreams: looser(a.maxStreams, b.maxStreams),
   }
 }
@@ -57,7 +69,7 @@ function opensSomething(policy: AccessPolicy): boolean {
 
 /**
  * The most generous of `policies`: every library any of them opens, the
- * highest of their limits, and what any of them allows.
+ * highest of their limits, and every permission any of them grants.
  *
  * A group that opens no library has no say in the limits while another
  * one opens something. Otherwise the built-in group, once its libraries
@@ -72,7 +84,6 @@ export function mostGenerous(policies: readonly AccessPolicy[]): AccessPolicy {
     .map((policy): Limits => ({
       maxBitrate: policy.maxBitrate,
       transcode: policy.transcode,
-      downloads: policy.downloads,
       maxStreams: policy.maxStreams,
     }))
     .reduce(looserLimits)
@@ -84,14 +95,13 @@ export function mostGenerous(policies: readonly AccessPolicy[]): AccessPolicy {
         : [...new Set(policies.flatMap((policy) => policy.libraries.ids))],
     },
     ...limits,
-    // Request grants merge across ALL groups, independently of streaming access.
-    // A request-only group must be able to grant permission without opening a library.
-    requests: policies.some((p) => p.requests === "add")
-      ? "add"
-      : policies.some((p) => p.requests === "ask")
-        ? "ask"
-        : "off",
     requestLimit: requestQuota(policies),
+    // Permissions add up across every group, whether it opens a library
+    // or not, so a group can grant asking for titles, or a part of
+    // running the server, and nothing else.
+    permissions: sortPermissions(
+      policies.flatMap((policy) => policy.permissions),
+    ),
   }
 }
 
@@ -99,7 +109,9 @@ export function mostGenerous(policies: readonly AccessPolicy[]): AccessPolicy {
 function requestQuota(
   policies: readonly AccessPolicy[],
 ): AccessPolicy["requestLimit"] {
-  const granting = policies.filter((p) => p.requests !== "off")
+  const granting = policies.filter((p) =>
+    p.permissions.includes("request.create"),
+  )
   if (granting.some((p) => p.requestLimit === null)) return null
   return granting.reduce<AccessPolicy["requestLimit"]>((best, p) => {
     const next = p.requestLimit
@@ -120,8 +132,15 @@ export function withOverride(
   policy: AccessPolicy,
   override: AccessOverride,
 ): AccessPolicy {
+  const deny = override.deny ?? []
   return {
-    requests: override.requests ?? policy.requests,
+    // An admin's `all` is the role's, which no override takes apart.
+    permissions: policy.permissions.includes("all")
+      ? policy.permissions
+      : sortPermissions([
+          ...policy.permissions,
+          ...(override.allow ?? []),
+        ]).filter((permission) => !deny.includes(permission)),
     requestLimit:
       override.requestLimit === undefined
         ? policy.requestLimit
@@ -132,7 +151,6 @@ export function withOverride(
         ? policy.maxBitrate
         : override.maxBitrate,
     transcode: override.transcode ?? policy.transcode,
-    downloads: override.downloads ?? policy.downloads,
     maxStreams:
       override.maxStreams === undefined
         ? policy.maxStreams
@@ -148,20 +166,23 @@ export type Access = {
   libraries: ReadonlySet<string> | null
   maxBitrate: number | null
   transcode: boolean
-  downloads: boolean
-  requests: AccessPolicy["requests"]
   requestLimit: AccessPolicy["requestLimit"]
   maxStreams: number | null
+  /**
+   * What the account was granted beyond what every account may; `all`
+   * for an admin. Ask `can` in viewer.ts, which also holds an API token
+   * to its own permissions.
+   */
+  permissions: readonly Permission[]
 }
 
 export function toAccess(policy: AccessPolicy): Access {
   return {
-    requests: policy.requests,
+    permissions: policy.permissions,
     requestLimit: policy.requestLimit,
     libraries: policy.libraries.all ? null : new Set(policy.libraries.ids),
     maxBitrate: policy.maxBitrate,
     transcode: policy.transcode,
-    downloads: policy.downloads,
     maxStreams: policy.maxStreams,
   }
 }

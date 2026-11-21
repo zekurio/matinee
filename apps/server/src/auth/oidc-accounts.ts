@@ -208,7 +208,9 @@ export async function createOidcUser(
   })
   await syncAccess(created.id, identity)
   await takePicture(created.id, identity)
-  return created
+  // As the claims left it, with the override they set.
+  const [synced] = await db.select().from(user).where(eq(user.id, created.id))
+  return synced ?? created
 }
 
 /** Remove what only the old provider vouched for, within the unlink transaction. */

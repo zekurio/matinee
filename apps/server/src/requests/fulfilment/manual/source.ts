@@ -40,7 +40,7 @@ export const manual = {
   },
   folder: (value) => sending.parse(value).folder,
   async options() {
-    // ACCESS: an admin procedure, over every library.
+    // ACCESS: fulfilment settings span every library, for whoever may read them.
     const rows = await db
       .select({
         path: libraryFolder.path,

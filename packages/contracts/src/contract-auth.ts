@@ -7,6 +7,7 @@ import { t } from "./schema"
 import {
   ApiToken,
   ApiTokenInput,
+  ApiTokenUpdate,
   AppDevice,
   AppSession,
   AuthConfig,
@@ -101,7 +102,7 @@ export const authContract = oc.tag("Auth").router({
       /** The sign-in this browser holds, or null. Doesn't use it up. */
       get: get("/auth/oidc/pending").output(PendingOidcLink.nullable()),
       /** Link it to the signed-in account. Returns where sign-in started. */
-      link: post("/auth/oidc/pending/link").output(
+      link: post("/auth/oidc/pending/link", "oidcAccount.create").output(
         t.object({ redirect: t.string() }),
       ),
       /**
@@ -143,11 +144,11 @@ export const authContract = oc.tag("Auth").router({
       .input(t.object({ deviceCode: t.string().min(1).max(128) }))
       .output(DeviceSignIn),
     /** The device a code belongs to, for the person to check. */
-    get: get("/auth/device/{userCode}")
+    get: get("/auth/device/{userCode}", "session.create")
       .input(t.object({ userCode: UserCode }))
       .output(DeviceRequest),
     /** Sign the device in as the user who calls this. */
-    approve: post("/auth/device/{userCode}/approve")
+    approve: post("/auth/device/{userCode}/approve", "session.create")
       .input(t.object({ userCode: UserCode }))
       .output(t.void()),
   },
@@ -157,7 +158,7 @@ export const accountContract = oc.tag("Account").router({
   /** Change how the account shows to others. Returns the user. */
   profile: {
     /** Fields left out stay as they are. */
-    update: patch("/account/profile")
+    update: patch("/account/profile", "account.update")
       .input(
         t.object({
           displayName: DisplayName.optional(),
@@ -168,22 +169,26 @@ export const accountContract = oc.tag("Account").router({
   },
   avatar: {
     /** A multipart upload. Fails with BAD_REQUEST for unreadable images. */
-    upload: put("/account/avatar")
+    upload: put("/account/avatar", "account.update")
       .input(t.object({ file: AvatarUpload }))
       .output(User),
     /**
      * Use the picture of a linked OIDC account, and follow it from now on.
      * Fails with BAD_REQUEST when no provider sent one or it won't load.
      */
-    useProvider: post("/account/avatar/provider").output(User),
+    useProvider: post("/account/avatar/provider", "account.update").output(
+      User,
+    ),
     /** Show the initial, and stop taking the provider's picture. */
-    remove: del("/account/avatar").output(User),
+    remove: del("/account/avatar", "account.update").output(User),
   },
   passkeys: {
-    list: get("/account/passkeys").output(t.array(Passkey)),
+    list: get("/account/passkeys", "passkey.read").output(t.array(Passkey)),
     /** Adding a passkey fails while an admin has passkeys off. */
-    registerOptions: post("/account/passkeys/options").output(PasskeyCreation),
-    register: post("/account/passkeys")
+    registerOptions: post("/account/passkeys/options", "passkey.create").output(
+      PasskeyCreation,
+    ),
+    register: post("/account/passkeys", "passkey.create")
       .input(
         t.object({
           challengeId: t.uuid(),
@@ -192,63 +197,92 @@ export const accountContract = oc.tag("Account").router({
         }),
       )
       .output(Passkey),
-    rename: patch("/account/passkeys/{id}")
+    rename: patch("/account/passkeys/{id}", "passkey.update")
       .input(t.object({ id: t.uuid(), name: PasskeyName }))
       .output(Passkey),
-    remove: del("/account/passkeys/{id}").input(IdInput).output(t.void()),
+    remove: del("/account/passkeys/{id}", "passkey.delete")
+      .input(IdInput)
+      .output(t.void()),
   },
   oidc: {
     /** The linked account, or null when none is. */
-    get: get("/account/oidc").output(OidcAccount.nullable()),
-    unlink: del("/account/oidc").output(t.void()),
+    get: get("/account/oidc", "oidcAccount.read").output(
+      OidcAccount.nullable(),
+    ),
+    unlink: del("/account/oidc", "oidcAccount.delete").output(t.void()),
   },
   /** Where the account is signed in: browsers and apps. */
   sessions: {
     /** The current session first, then the most recently used. */
-    list: get("/account/sessions").output(t.array(Session)),
+    list: get("/account/sessions", "session.read").output(t.array(Session)),
     /** Sign out another session. The current one uses `auth.signOut`. */
-    revoke: del("/account/sessions/{id}").input(IdInput).output(t.void()),
+    revoke: del("/account/sessions/{id}", "session.delete")
+      .input(IdInput)
+      .output(t.void()),
     /** Sign out everywhere else. Returns how many sessions ended. */
-    revokeOthers: post("/account/sessions/revoke-others").output(
-      t.object({ revoked: t.number().int() }),
-    ),
+    revokeOthers: post(
+      "/account/sessions/revoke-others",
+      "session.delete",
+    ).output(t.object({ revoked: t.number().int() })),
     /**
      * Say what this client calls itself, for the sessions list, watching
      * now, and the server's client stats. Every client sends it when it
      * starts, as Jellyfin's send their client and device names; the
      * server keeps it on the session and shows it as sent.
      */
-    identify: put("/account/sessions/current/client")
+    identify: put("/account/sessions/current/client", "session.update")
       .input(ClientIdentity)
       .output(t.void()),
   },
   /**
-   * Credentials for services that call the API as this account, sent as
-   * `Authorization: Bearer <token>`. They never expire on their own. A
-   * request made with one can't call these, nor change how the account
-   * signs in: passkeys, the linked account, and sessions need a session.
+   * Credentials for services and apps that call the API as this account,
+   * sent as `Authorization: Bearer <token>`. They never expire on their
+   * own. Each does what its permissions cover, see `API_TOKEN_PERMISSIONS`,
+   * within what the account may do.
+   *
+   * A token with these permissions manages the account's tokens too, but
+   * only hands on what it holds: it can't make, change, or rotate a token
+   * to hold a permission it lacks.
    */
   apiTokens: {
     /** Newest first. */
-    list: get("/account/api-tokens").output(t.array(ApiToken)),
+    list: get("/account/api-tokens", "apiToken.read").output(t.array(ApiToken)),
     /** Returns the secret, which the server never shows again. */
-    create: post("/account/api-tokens")
+    create: post("/account/api-tokens", "apiToken.create")
       .input(ApiTokenInput)
       .output(CreatedApiToken),
+    /**
+     * The token the request came with, for a service to check what it was
+     * given. Fails with FORBIDDEN for a session.
+     */
+    me: get("/account/api-tokens/me", false).output(ApiToken),
+    /** Rename it or change what it may do, from its next request on. */
+    update: patch("/account/api-tokens/{id}", "apiToken.update")
+      .input(ApiTokenUpdate)
+      .output(ApiToken),
+    /**
+     * Give it a new secret, which the old one stops working for at once.
+     * Returns it, this once.
+     */
+    rotate: post("/account/api-tokens/{id}/rotate", "apiToken.rotate")
+      .input(IdInput)
+      .output(CreatedApiToken),
     /** It stops working at once; open live streams end within ten minutes. */
-    revoke: del("/account/api-tokens/{id}").input(IdInput).output(t.void()),
+    revoke: del("/account/api-tokens/{id}", "apiToken.delete")
+      .input(IdInput)
+      .output(t.void()),
   },
   /** The audio, subtitle, and skip choices this account syncs. */
   playback: {
     /** Save them. Returns the user with them. */
-    setPreferences: put("/account/playback")
+    setPreferences: put("/account/playback", "account.update")
       .input(PlaybackPreferences)
       .output(User),
   },
   /** How shows list for this account, on every device. */
   library: {
     /** Fields left out stay as they are. Returns the user with them. */
-    setPreferences: patch("/account/library")
+    setPreferences: patch("/account/library", "account.update")
       .input(LibraryPreferences.partial())
       .output(User),
   },
