@@ -9404,7 +9404,7 @@
   "@webValidationAvatarType": {
     "description": "strings_web_validation.xml"
   },
-  "webValidationBitrateLimit": "Pick a limit of at least 1 Mb/s.",
+  "webValidationBitrateLimit": "Pick a limit of at least 1 Mbps.",
   "@webValidationBitrateLimit": {
     "description": "strings_web_validation.xml"
   },
@@ -9426,6 +9426,10 @@
   },
   "webValidationBrowseYears": "The first year can't be after the last.",
   "@webValidationBrowseYears": {
+    "description": "strings_web_validation.xml"
+  },
+  "webValidationClientName": "Enter a name.",
+  "@webValidationClientName": {
     "description": "strings_web_validation.xml"
   },
   "webValidationCodeChallenge": "Invalid code challenge",
