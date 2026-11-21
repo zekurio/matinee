@@ -3,6 +3,7 @@
 library;
 
 export 'tv_buttons.dart';
+export 'tv_choices.dart';
 export 'tv_drawer.dart';
 export 'tv_focus.dart';
 export 'tv_list.dart';
