@@ -121,6 +121,18 @@ Future<void> _end(WidgetTester tester, Harness harness) async {
 
 Finder _field() => find.byType(EditableText);
 
+/// Whether focus is on the control that shows [text].
+bool _focusedIn(WidgetTester tester, String text) {
+  final focused = FocusManager.instance.primaryFocus?.context;
+  if (focused == null) return false;
+  var found = false;
+  tester.element(find.text(text)).visitAncestorElements((element) {
+    found = element == focused;
+    return !found;
+  });
+  return found;
+}
+
 void main() {
   setUpAll(() async {
     await (FontLoader(
@@ -608,6 +620,41 @@ void main() {
       expect(find.text('BCDF-GHJK'), findsOneWidget);
       // The code is all a TV has: no browser button.
       expect(find.text('Sign in with your browser'), findsNothing);
+      await _end(tester, harness);
+    });
+
+    testWidgets('types an address and reaches Connect with the D-pad', (
+      tester,
+    ) async {
+      final harness = Harness();
+      harness.backend.hosts.add('a.example');
+      await _show(tester, harness, device: _tv, size: const Size(960, 540));
+      expect(_focusedIn(tester, 'Enter server address'), isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+      expect(
+        tester.widget<EditableText>(_field()).focusNode.hasPrimaryFocus,
+        isTrue,
+      );
+      await tester.enterText(_field(), 'a.example');
+
+      // A one-line field keeps the arrows for its caret unless the TV
+      // hands them on.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(_focusedIn(tester, 'Connect'), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump();
+      expect(
+        tester.widget<EditableText>(_field()).focusNode.hasPrimaryFocus,
+        isTrue,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _reach<SignedOut>(tester, harness);
       await _end(tester, harness);
     });
 
