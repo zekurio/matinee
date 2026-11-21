@@ -152,13 +152,22 @@ void main() {
     expect(find.byType(TvProfileScreen), findsOneWidget);
   });
 
-  testWidgets("recent cards keep the row's width, as Kotlin's fixed cells", (
+  testWidgets('recent cards run from the page start to the overscan', (
     tester,
   ) async {
     await _open(tester, Routes.recent);
     final cards = find.byType(TvWatchedCard);
-    expect(cards, findsWidgets);
-    expect(tester.getSize(cards.first).width, TvCards.landscapeWidth);
+    expect(cards, findsNWidgets(2));
+    final first = tester.getRect(cards.at(0));
+    final second = tester.getRect(cards.at(1));
+    expect(first.left, TvPage.start);
+    // Three across, the third's place ending at the right overscan.
+    final pitch = second.left - first.left;
+    expect(
+      first.left + 2 * pitch + first.width,
+      closeTo(960 - TvPage.end, .01),
+    );
+    expect(first.width, greaterThan(TvCards.landscapeWidth));
   });
 
   testWidgets('the chart takes the arrows until its edge', (tester) async {

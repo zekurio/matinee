@@ -703,7 +703,9 @@ first key.
   season lists its episodes without the Kotlin app's one-card Seasons
   row; a search field's placeholder is the muted text colour, not the
   Kotlin app's faint one, so it reads over a backdrop); Profile with its
-  charts and standing, and Recently watched; and Settings, whose
+  charts and standing, and Recently watched (whose grid's cards stretch
+  to run to the overscan, where the Kotlin app's fixed cells leave a
+  strip at the right); and Settings, whose
   categories sit at the left and whose rows are on the right. Its
   Playback and Subtitles rows set the same `PlayerPrefs` as the phone's
   pages, and About shows the playback report. Left or

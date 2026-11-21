@@ -421,7 +421,9 @@ class TvLandscapeCard extends StatelessWidget {
   final VoidCallback onPressed;
   final VoidCallback? onLongPress;
   final VoidCallback? onFocused;
-  final double width;
+
+  /// Null fills the cell it's given, as in a grid.
+  final double? width;
 
   @override
   Widget build(BuildContext context) {

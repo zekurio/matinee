@@ -291,8 +291,8 @@ class _TvPinnedListState extends State<TvPinnedList> {
 /// header is away. [onNearEnd] asks for more as the last rows near.
 /// [scrollKey] changing, as a new sort, scrolls back to the top. [cellAspect]
 /// is a cell's width over its height, and [cellExtra] what a caption adds.
-/// With [cellWidth], cells keep that width and as many fit as will, the
-/// room left over at the end, as Compose's `GridCells.FixedSize`.
+/// With [cellWidth], as many columns as fit cells that wide, which then
+/// stretch to fill the row, so no strip is left at the end.
 class TvPosterGrid extends StatefulWidget {
   const TvPosterGrid({
     super.key,
@@ -454,11 +454,7 @@ class _TvPosterGridState extends State<TvPosterGrid> {
                           .floor()
                           .clamp(1, 24);
                 final cellWidth =
-                    fixed ?? (width - TvGrid.gap * (columns - 1)) / columns;
-                final spare = math.max(
-                  0.0,
-                  width - columns * cellWidth - TvGrid.gap * (columns - 1),
-                );
+                    (width - TvGrid.gap * (columns - 1)) / columns;
                 _cell = cellWidth / widget.cellAspect + widget.cellExtra;
                 _pitch = _cell + TvGrid.rowGap;
                 final room = math.max(
@@ -478,9 +474,9 @@ class _TvPosterGridState extends State<TvPosterGrid> {
                         scrollCacheExtent: const ScrollCacheExtent.pixels(800),
                         slivers: [
                           SliverPadding(
-                            padding: EdgeInsetsDirectional.only(
+                            padding: const EdgeInsetsDirectional.only(
                               start: TvGrid.inset,
-                              end: TvPage.end + spare,
+                              end: TvPage.end,
                               top: TvGrid.inset,
                             ),
                             sliver: SliverGrid.builder(

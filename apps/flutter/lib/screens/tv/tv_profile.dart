@@ -617,7 +617,9 @@ class TvWatchedCard extends StatelessWidget {
 
   final MediaItem item;
   final FocusNode focusNode;
-  final double width;
+
+  /// Null fills the grid's cell.
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
@@ -921,8 +923,8 @@ class _TvRecentScreenState extends ConsumerState<TvRecentScreen> {
         ),
       );
     } else {
-      // As many cards a row as fit at their row width, as the Kotlin
-      // app's fixed-size cells.
+      // As many cards a row as fit at a row's width, stretched to run to
+      // the overscan, where the Kotlin app's fixed cells leave a strip.
       page = TvPosterGrid(
         memory: _memory,
         itemCount: entries.length,
@@ -937,6 +939,7 @@ class _TvRecentScreenState extends ConsumerState<TvRecentScreen> {
           final item = entries[index].item;
           return TvWatchedCard(
             item: item,
+            width: null,
             focusNode: _memory.node(TvGrid.row, item.id),
           );
         },
