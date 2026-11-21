@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:matinee/kit/kit.dart';
 import 'package:matinee/kit/tv/tv.dart';
 import 'package:matinee/router.dart';
 import 'package:matinee/screens/tv/tv_shell.dart';
@@ -102,6 +103,34 @@ void main() {
       expect(find.text('Name'), findsOneWidget);
       await up(tester);
       expect(focusedLabel(), 'Name', reason: 'the sort button');
+    });
+
+    testWidgets('the header controls rest on a fill the backdrop keeps', (
+      tester,
+    ) async {
+      await _open(tester, Routes.movies);
+      final onPicture = TvFocus.restOnPicture(
+        MatineeTheme.of(tester.element(find.byType(TvShell))),
+      );
+      Color? rest(Finder inside) => tester
+          .widget<TvControl>(
+            find.ancestor(of: inside, matching: find.byType(TvControl)).first,
+          )
+          .rest;
+      expect(rest(find.text('Name')), onPicture, reason: 'the sort');
+      expect(rest(find.text('Any genre')), onPicture);
+      expect(
+        tester
+            .widget<TvControl>(
+              find.descendant(
+                of: find.byType(TvSearchField),
+                matching: find.byType(TvControl),
+              ),
+            )
+            .rest,
+        onPicture,
+        reason: 'the search field',
+      );
     });
 
     testWidgets('the sort panel opens on its choice and gives focus back', (

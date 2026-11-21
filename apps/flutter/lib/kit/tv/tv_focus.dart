@@ -41,6 +41,12 @@ abstract final class TvFocus {
   /// any backdrop or picture.
   static Color rest(KitColors colors) =>
       colors.foreground.withValues(alpha: .12);
+
+  /// [rest] over most of the background, for a control that sits on a
+  /// backdrop busy or light enough to swallow the plain fill, as a grid
+  /// page's sort, genre, and search.
+  static Color restOnPicture(KitColors colors) =>
+      Color.alphaBlend(rest(colors), colors.background.withValues(alpha: .78));
 }
 
 /// The keys that press a TV control: the remote's centre, Enter, and a

@@ -26,6 +26,7 @@ class TvSearchField extends StatefulWidget {
     this.height = TvButtons.height,
     this.textStyle,
     this.autofocus = false,
+    this.rest,
   });
 
   final TextEditingController controller;
@@ -36,6 +37,9 @@ class TvSearchField extends StatefulWidget {
   final double height;
   final TextStyle? textStyle;
   final bool autofocus;
+
+  /// The fill without focus, in place of [TvFocus.rest].
+  final Color? rest;
 
   @override
   State<TvSearchField> createState() => _TvSearchFieldState();
@@ -124,6 +128,7 @@ class _TvSearchFieldState extends State<TvSearchField> {
               return TvControl(
                 focused: lit,
                 scale: TvFocus.rowScale,
+                rest: widget.rest,
                 builder: (context, content) => SizedBox(
                   height: widget.height,
                   child: Padding(

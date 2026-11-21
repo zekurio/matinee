@@ -709,7 +709,10 @@ first key.
   Search; the title, season, episode, and person pages (a show of one
   season lists its episodes without the Kotlin app's one-card Seasons
   row; a search field's placeholder is the muted text colour, not the
-  Kotlin app's faint one, so it reads over a backdrop); Profile with its
+  Kotlin app's faint one, so it reads over a backdrop; the chips and the
+  field over a grid's or Search's backdrop rest on the page's background
+  under their fill, `TvFocus.restOnPicture`, where the Kotlin app's
+  translucent fill lets a light picture through); Profile with its
   charts and standing, and Recently watched (whose grid's cards stretch
   to run to the overscan, where the Kotlin app's fixed cells leave a
   strip at the right); and Settings, whose

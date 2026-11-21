@@ -304,6 +304,7 @@ class _TvKindScreenState extends ConsumerState<TvKindScreen> {
     final sortLabel =
         _sorts(l).where((sort) => sort.$1 == _sort).firstOrNull?.$2 ??
         l.librarySortName;
+    final onPicture = TvFocus.restOnPicture(MatineeTheme.of(context));
     return TvBackdrop(
       sources: _focused?.backdrop ?? const [],
       child: TvTitleGrid(
@@ -321,6 +322,7 @@ class _TvKindScreenState extends ConsumerState<TvKindScreen> {
               label: sortLabel,
               icon: Lucide.arrowUpDown,
               trailingIcon: Lucide.chevronDown,
+              rest: onPicture,
               focusNode: _memory.node(_controls, 'sort'),
               onPressed: _pickSort,
             ),
@@ -329,6 +331,7 @@ class _TvKindScreenState extends ConsumerState<TvKindScreen> {
               icon: Lucide.listFilter,
               trailingIcon: Lucide.chevronDown,
               active: _genre != null,
+              rest: _genre == null ? onPicture : null,
               focusNode: _memory.node(_controls, 'genre'),
               onPressed: _pickGenre,
             ),
@@ -340,6 +343,7 @@ class _TvKindScreenState extends ConsumerState<TvKindScreen> {
                     ? l.librarySearchShows
                     : l.librarySearchMovies,
                 clearLabel: l.libraryClearSearch,
+                rest: onPicture,
                 focusNode: _memory.node(_controls, 'search'),
                 onChanged: _typed,
               ),
@@ -423,6 +427,9 @@ class _TvBrowseScreenState extends ConsumerState<TvBrowseScreen> {
                 label: label,
                 icon: icon,
                 active: _kind == value,
+                rest: _kind == value
+                    ? null
+                    : TvFocus.restOnPicture(MatineeTheme.of(context)),
                 focusNode: _memory.node(_controls, value ?? 'all'),
                 onPressed: () => setState(() {
                   _kind = value;
@@ -972,6 +979,7 @@ class _TvSearchScreenState extends ConsumerState<TvSearchScreen> {
                         clearLabel: l.searchClear,
                         focusNode: _memory.node(_Search.field, _Search.field),
                         onChanged: _typed,
+                        rest: TvFocus.restOnPicture(MatineeTheme.of(context)),
                         height: 56,
                         textStyle: TvType.title.style(),
                       ),
