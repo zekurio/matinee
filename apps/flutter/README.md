@@ -178,6 +178,11 @@ returned source. It uses the server's track picks, resume position, skip
 segments, and next episode. The controls send track and quality changes
 back to the server, and progress stays on the file's timeline even when
 `playback.seek` returns a stream that starts partway through the file.
+A source that buffers for a minute with neither the picture nor its
+cache moving fails as the server not answering, with Try again
+(`PlaybackSession.stallLimit`). The Kotlin app gets the same from
+OkHttp's read timeout, but mpv waits on a connection that went quiet
+for good.
 
 Its controls are the Kotlin phone player's, at the same sizes on a phone
 and a tablet: the title and the audio, subtitles, speed, and quality
