@@ -701,7 +701,8 @@ first key.
 - Screens (`lib/screens/tv`): Home; Movies, Shows, Browse, Favorites, and
   Search; the title, season, episode, and person pages (a show of one
   season lists its episodes without the Kotlin app's one-card Seasons
-  row); Profile with its
+  row; a search field's placeholder is the muted text colour, not the
+  Kotlin app's faint one, so it reads over a backdrop); Profile with its
   charts and standing, and Recently watched; and Settings, whose
   categories sit at the left and whose rows are on the right. Its
   Playback and Subtitles rows set the same `PlayerPrefs` as the phone's
@@ -719,7 +720,9 @@ first key.
   or Down bring them back. The TV has one key handler; it never builds
   the phone's controls. Audio, subtitles, and settings (quality, speed,
   Fit or Fill, which is kept) open as panels. Skip intro and the next
-  episode wait alone on the picture. Once the file ends, the next episode
+  episode wait alone on the picture; a countdown of a minute or more reads
+  as a time (`· 2:46`), where the Kotlin app counts the seconds (`· 166`).
+  Once the file ends, the next episode
   starts unless autoplay is off in Settings or Back stopped it. With Match
   frame rate on, the screen switches to a refresh rate that plays the
   server's frame rate evenly, through `pigeons/display.dart`;
