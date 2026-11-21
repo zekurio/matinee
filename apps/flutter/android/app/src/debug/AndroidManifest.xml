@@ -8,10 +8,13 @@
     <application>
         <!-- On an emulator Impeller picks OpenGL ES, and the emulator's
              software GPU (lavapipe, what -gpu auto picks without a display)
-             crashes on it. Vulkan renders. Only debug builds read this, and
-             phones pick Vulkan on their own. -->
+             crashes on it, so debug builds render with Vulkan. An emulator
+             on the host's GPU crashes on Vulkan instead, decoding images
+             into memory gfxstream maps; build for it with
+             MATINEE_IMPELLER_BACKEND=opengles (build.gradle.kts). Only
+             debug builds read this, and phones pick Vulkan on their own. -->
         <meta-data
             android:name="io.flutter.embedding.android.ImpellerBackend"
-            android:value="vulkan" />
+            android:value="${impellerBackend}" />
     </application>
 </manifest>

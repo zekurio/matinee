@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
@@ -17,6 +18,7 @@ import 'package:matinee/player/trickplay.dart';
 import 'package:matinee/player/tv/tv_display_mode.dart';
 import 'package:matinee/player/tv/tv_playback_screen.dart';
 import 'package:matinee/player/tv/tv_seek.dart';
+import 'package:matinee/player/video_view.dart';
 import 'package:matinee/router.dart';
 
 import '../core/fakes.dart';
@@ -67,6 +69,9 @@ PlaybackStart _withFrameRate(PlaybackStart start, double frameRate) {
   return PlaybackStart.fromJson(json);
 }
 
+/// The screen with its stand-in video, for goldens.
+const _screen = Key('screen');
+
 Future<_Player> _open(
   WidgetTester tester, {
   Size size = const Size(960, 540),
@@ -74,6 +79,7 @@ Future<_Player> _open(
   List<MediaSegment> segments = const [],
   double? frameRate,
   TrickplayStatus? trickplay,
+  bool backdrop = false,
 }) async {
   final backend = FakePlaybackApi();
   if (trickplay != null) backend.trickplay = trickplay;
@@ -124,8 +130,19 @@ Future<_Player> _open(
     ],
   );
   addTearDown(container.dispose);
+  final Widget app = UncontrolledProviderScope(
+    container: container,
+    child: const MatineeApp(),
+  );
   await tester.pumpWidget(
-    UncontrolledProviderScope(container: container, child: const MatineeApp()),
+    // Black stands in for the native video beneath the Flutter view, which
+    // a test has none of.
+    backdrop
+        ? RepaintBoundary(
+            key: _screen,
+            child: ColoredBox(color: const Color(0xFF000000), child: app),
+          )
+        : app,
   );
   await tester.pump();
   unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
@@ -246,6 +263,26 @@ void main() {
     expect(opened.display.asked, isEmpty);
   });
 
+  testWidgets('nothing above the video paints over it while it plays', (
+    tester,
+  ) async {
+    // The picture plays in a native view beneath the Flutter view, seen
+    // only through what Flutter leaves clear.
+    await _open(tester);
+    expect(find.byType(VideoView), findsOneWidget);
+    final fills = find.ancestor(
+      of: find.byType(VideoView),
+      matching: find.byWidgetPredicate(
+        (widget) => switch (widget) {
+          ColoredBox(:final color) => color.a > 0,
+          DecoratedBox(decoration: BoxDecoration(:final color?)) => color.a > 0,
+          _ => false,
+        },
+      ),
+    );
+    expect(fills, findsNothing);
+  });
+
   testWidgets('asks for the frame rate, and lets go on leaving', (
     tester,
   ) async {
@@ -318,6 +355,34 @@ void main() {
     expect(find.byType(TrickplayFrame), findsNothing);
   });
 
+  testWidgets('the heading stays clear of the time when a seek buffers into '
+      'a segment', (tester) async {
+    final opened = await _open(
+      tester,
+      segments: const [
+        MediaSegment(kind: MediaSegmentKind.recap, start: 40, end: 60),
+      ],
+    );
+    final player = opened.players.single;
+    double heading() => tester.getTopLeft(find.text('The Crossing')).dy;
+    await select(tester);
+    final resting = heading();
+    await up(tester);
+    expect(focusedKey(), 'player/seek');
+    final lifted = heading();
+    expect(lifted, lessThan(resting), reason: "out of the time's way");
+    // The seek lands in the recap while the player buffers: the spinner
+    // and the skip button come in the same frame.
+    await right(tester, 2);
+    player.emit(PlaybackPhase.buffering, 48);
+    // The spinner turns for as long as it buffers, so no settling.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Skip recap'), findsOneWidget);
+    expect(focusedKey(), 'player/seek');
+    expect(heading(), lifted);
+  });
+
   testWidgets('Select toggles play; Up goes to the seek bar, Down back', (
     tester,
   ) async {
@@ -333,6 +398,22 @@ void main() {
     expect(focusedLabel(), startsWith('Forward'));
     await left(tester, 2);
     expect(focusedLabel(), startsWith('Back'));
+  });
+
+  testWidgets('the controls hide while the player reports its time', (
+    tester,
+  ) async {
+    final opened = await _open(tester);
+    final player = opened.players.single;
+    expect(find.text('The Crossing'), findsOneWidget);
+    // A real player tells the time every so often; that's no press.
+    for (var second = 0; second < 6; second++) {
+      player.emit(PlaybackPhase.ready, 18.0 + second, playing: true);
+      await tester.pump(const Duration(seconds: 1));
+    }
+    await tester.pumpAndSettle();
+    expect(find.text('The Crossing'), findsNothing);
+    expect(focusedKey(), 'player/root');
   });
 
   testWidgets('with the controls away, the arrows skip and Select brings '
@@ -454,7 +535,7 @@ void main() {
   for (final size in tvSizes) {
     final width = size.width.round();
     testWidgets('the TV player at $width', (tester) async {
-      await _open(tester, size: size, segments: const [intro]);
+      await _open(tester, size: size, segments: const [intro], backdrop: true);
       await up(tester);
       await tester.pumpAndSettle();
       // The time over the focused bar clears the title.
@@ -468,7 +549,7 @@ void main() {
       final title = tester.getRect(find.text('The Crossing'));
       expect(bubble.top, greaterThan(title.bottom));
       await expectLater(
-        find.byType(TvPlaybackScreen),
+        find.byKey(_screen),
         matchesGoldenFile('goldens/tv_player_$width.png'),
       );
     });

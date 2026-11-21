@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/session.dart';
 import '../../../core/sign_in_state.dart';
 import '../../../kit/kit.dart';
+import '../../../kit/tv/tv_text_field.dart';
 import '../../../l10n/app_localizations.dart';
 import '../server_switcher.dart';
 import 'tv_frame.dart';
@@ -220,11 +221,10 @@ class _AddressEntryState extends ConsumerState<_AddressEntry> {
       title: words.tvConnectEnter,
       description: words.connectDescription,
       children: [
-        MatineeTextField(
+        TvTextField(
           controller: _address,
           autofocus: true,
           placeholder: words.connectPlaceholder,
-          leading: Lucide.server,
           enabled: !connect.busy,
           error: error == null
               ? null

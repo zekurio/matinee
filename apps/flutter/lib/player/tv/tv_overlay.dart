@@ -263,6 +263,7 @@ class _TvPlayerOverlayState extends State<TvPlayerOverlay> {
                           icon: Lucide.skipBack,
                           label: l.playerPreviousEpisode,
                           size: _small,
+                          iconSize: 20,
                           onPressed: previous,
                         ),
                         const SizedBox(width: 12),
@@ -280,6 +281,7 @@ class _TvPlayerOverlayState extends State<TvPlayerOverlay> {
                         icon: widget.playing ? Lucide.pause : Lucide.play,
                         label: widget.playing ? l.playerPause : l.playerPlay,
                         size: _play,
+                        iconSize: 22,
                         lit: playLit,
                         focusNode: targets.play,
                         onFocusChange: (focused) =>
@@ -301,6 +303,7 @@ class _TvPlayerOverlayState extends State<TvPlayerOverlay> {
                           icon: Lucide.skipForward,
                           label: l.playerNextEpisode,
                           size: _small,
+                          iconSize: 20,
                           onPressed: next,
                         ),
                       ],

@@ -10,3 +10,4 @@ export 'tv_metrics.dart';
 export 'tv_panel.dart';
 export 'tv_rows.dart';
 export 'tv_search_field.dart';
+export 'tv_text_field.dart';

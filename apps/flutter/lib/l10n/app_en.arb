@@ -3107,15 +3107,6 @@
   "@signinCodeBack": {
     "description": "strings.xml"
   },
-  "signinCodeEnter": "Or enter this code at {p1}",
-  "@signinCodeEnter": {
-    "description": "strings.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "signinCodeEnterOnly": "Enter this code at {p1}",
   "@signinCodeEnterOnly": {
     "description": "strings.xml",
@@ -3927,13 +3918,9 @@
   "@tvSettingsTranscodingNote": {
     "description": "strings.xml"
   },
-  "tvSigninDescription": "Scan the QR code with your phone's camera, or in the Matinee app under Settings › Account.",
-  "@tvSigninDescription": {
-    "description": "strings.xml"
-  },
-  "tvSigninEnter": "Or go to {p1} and enter",
-  "@tvSigninEnter": {
-    "description": "strings.xml",
+  "tvSigninScanOrEnter": "Scan the code, or go to {p1} and enter",
+  "@tvSigninScanOrEnter": {
+    "description": "The TV's sign-in screen, before the code; p1 is the address of the link page.",
     "placeholders": {
       "p1": {
         "type": "String"

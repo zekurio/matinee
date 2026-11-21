@@ -123,4 +123,82 @@ void main() {
     expect(memory.focusLast(), isTrue);
     expect(_focused(), '1/0');
   });
+
+  testWidgets('Down from a detail header brings the first row up at once', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(960, 540);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final memory = TvFocusMemory();
+    addTearDown(memory.dispose);
+    Widget card(String row, int index) => TvArtCard(
+      toneKey: '$row/$index',
+      aspect: 16 / 9,
+      width: 224,
+      focusNode: memory.node(row, '$index'),
+      label: '$row/$index',
+      onPressed: () {},
+      children: const [],
+    );
+    await tester.pumpWidget(
+      WidgetsApp(
+        color: const Color(0xFF000000),
+        builder: (context, _) => MatineeTheme.wrap(
+          matineeDark,
+          TvFocusRules(
+            child: Builder(
+              builder: (context) {
+                memory.restore(context, () => ('actions', 'play'));
+                return TvHeaderList(
+                  // A show's header: its facts, then Play near the bottom.
+                  header: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 330),
+                      TvMemoryRow(
+                        memory: memory,
+                        row: 'actions',
+                        child: TvFocusable(
+                          focusNode: memory.node('actions', 'play'),
+                          label: 'play',
+                          onPressed: () {},
+                          builder: (context, _) =>
+                              const SizedBox(width: 180, height: 48),
+                        ),
+                      ),
+                    ],
+                  ),
+                  rows: [
+                    for (final row in ['0', '1'])
+                      TvRow(
+                        title: 'Row $row',
+                        row: row,
+                        memory: memory,
+                        height: 126,
+                        itemCount: 4,
+                        itemBuilder: (context, index) => card(row, index),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(_focused(), 'actions/play');
+    final card0 = find.bySemanticsLabel('0/0');
+    expect(tester.getRect(card0).bottom, greaterThan(540));
+
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    expect(_focused(), '0/0');
+    // The card comes up to the pivot, its heading above it, in full view.
+    expect(tester.getRect(card0).top, 88);
+
+    await _press(tester, LogicalKeyboardKey.arrowUp);
+    expect(_focused(), 'actions/play');
+    expect(tester.getRect(card0).top, 450);
+  });
 }

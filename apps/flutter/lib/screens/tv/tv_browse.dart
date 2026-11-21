@@ -615,7 +615,7 @@ class _TvFavoritesScreenState extends ConsumerState<TvFavoritesScreen> {
                 0,
               ),
               child: SizedBox(
-                height: 150 - Overscan.vertical - 6,
+                height: 150,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1016,7 +1016,6 @@ class _TvSearchScreenState extends ConsumerState<TvSearchScreen> {
       memory: _memory,
       height: TvButtons.height,
       itemCount: facets.length,
-      gap: 14,
       itemBuilder: (context, index) {
         final facet = facets[index];
         return Focus(

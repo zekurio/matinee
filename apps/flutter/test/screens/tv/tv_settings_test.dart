@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -76,6 +76,30 @@ void main() {
     expect(focusedKey(), 'category/languages', reason: 'Left comes out');
     await right(tester);
     expect(focusedLabel(), 'Audio', reason: 'the rows start at the top');
+  });
+
+  testWidgets('the heading and categories fit their column in German', (
+    tester,
+  ) async {
+    tester.platformDispatcher.localesTestValue = const [Locale('de')];
+    addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+    await _open(tester, Routes.settings);
+    for (final name in [
+      'Einstellungen',
+      'Wiedergabe',
+      'Untertitel',
+      'Sprachen',
+      'Geräte',
+      'Konto',
+      'Über die App',
+    ]) {
+      final text = tester.renderObject<RenderParagraph>(find.text(name).first);
+      expect(
+        text.getMaxIntrinsicWidth(double.infinity),
+        lessThanOrEqualTo(text.size.width),
+        reason: '$name fits on one line',
+      );
+    }
   });
 
   testWidgets('Back in the rows goes to the category, then leaves', (
