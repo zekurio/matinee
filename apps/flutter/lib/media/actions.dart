@@ -158,6 +158,8 @@ Future<bool> sendChange(
 /// with the answer, as the web's tick does. [pending] hears the value the
 /// page should show before the server answers, and null when it refused.
 /// [ask] asks in place of the phone's sheet, as a TV's panel does.
+/// [askUnwatched], when set, has to say yes before marking unwatched, as a
+/// TV asks before a whole show or season loses where it was.
 Future<void> toggleWatched(
   BuildContext context, {
   required bool watched,
@@ -165,6 +167,7 @@ Future<void> toggleWatched(
   required Future<void> Function(MatineeApi api, bool watched, String? at) send,
   void Function(bool? pending)? pending,
   Future<WatchedWhen?> Function(BuildContext context, String name)? ask,
+  Future<bool> Function(BuildContext context)? askUnwatched,
 }) async {
   final container = ProviderScope.containerOf(context, listen: false);
   final l = AppLocalizations.of(context);
@@ -174,6 +177,8 @@ Future<void> toggleWatched(
     final answer = await (ask ?? askWatchedAt)(context, name);
     if (answer == null) return;
     at = answer.at;
+  } else if (askUnwatched != null && !await askUnwatched(context)) {
+    return;
   }
   pending?.call(to);
   final done = await sendChange(

@@ -588,6 +588,9 @@ class _TvTitleScreenState extends ConsumerState<TvTitleScreen>
           watched: watched,
           name: title.name,
           ask: askTvWatchedAt,
+          askUnwatched: title.kind == TitleKind.show
+              ? askTvShowUnwatched(title.name, count: title.itemCount)
+              : null,
           send: (api, to, at) =>
               MediaMarks.title(api, title.id, watched: to, at: at),
           pending: pendingFor('watched', title),
@@ -938,6 +941,11 @@ class _TvSeasonScreenState extends ConsumerState<TvSeasonScreen>
           watched: watched,
           name: l.titleSeasonOf(title.name, seasonName(number, l)),
           ask: askTvWatchedAt,
+          askUnwatched: askTvSeasonUnwatched(
+            title.name,
+            seasonName(number, l),
+            count: season.itemCount,
+          ),
           send: (api, to, at) =>
               MediaMarks.season(api, title.id, number, watched: to, at: at),
           pending: items == null ? null : pendingFor('watched', items),
