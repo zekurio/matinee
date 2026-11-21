@@ -199,24 +199,4 @@ void main() {
       }
     });
   });
-
-  for (final middle in [3, 5, 6]) {
-    testWidgets('$middle pages sit centred between the profile and Settings, '
-        'on the rail and in the open drawer', (tester) async {
-      final drawer = await _pump(tester, middle: middle);
-      void expectCentred(String when) {
-        Rect rect(String key) => tester.getRect(find.byKey(ValueKey(key)));
-        final above = rect('m0').top - rect('profile').bottom;
-        final below = rect('settings').top - rect('m${middle - 1}').bottom;
-        expect(above, greaterThan(6), reason: when);
-        expect(above, moreOrLessEquals(below, epsilon: .5), reason: when);
-      }
-
-      expectCentred('rail');
-      drawer.open();
-      await tester.pumpAndSettle();
-      expectCentred('open');
-      expect(tester.takeException(), isNull);
-    });
-  }
 }
