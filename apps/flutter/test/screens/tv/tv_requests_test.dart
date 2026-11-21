@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:matinee/api/matinee_api.dart';
-import 'package:matinee/kit/kit.dart';
 import 'package:matinee/kit/tv/tv.dart';
 import 'package:matinee/router.dart';
 import 'package:matinee/screens/requests/discover.dart' show QueueList;
