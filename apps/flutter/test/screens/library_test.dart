@@ -130,6 +130,38 @@ void main() {
     expect(find.text('/title/s1'), findsOneWidget);
   });
 
+  testWidgets("a watched show's menu asks before it forgets", (tester) async {
+    const question =
+        'Mark every episode of Show B1 as unwatched? '
+        'This also removes where you stopped.';
+    final backend = LibraryBackend();
+    backend.titles[1]['watched'] = true;
+    await pumpScreen(tester, _shows, client: backend.client);
+    await tester.longPress(find.text('Show B1').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mark all unwatched'));
+    await tester.pumpAndSettle();
+    expect(find.text(question), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text(question), findsNothing);
+    expect(
+      backend.unanswered,
+      isNot(contains('PUT /api/v1/titles/s1/watched')),
+    );
+    await tester.longPress(find.text('Show B1').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mark all unwatched'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mark all unwatched').last);
+    await tester.pumpAndSettle();
+    expect(find.text(question), findsNothing);
+    expect(
+      backend.unanswered.where((r) => r == 'PUT /api/v1/titles/s1/watched'),
+      hasLength(1),
+    );
+  });
+
   testWidgets('the grid pages as it scrolls', (tester) async {
     final backend = LibraryBackend(shows: 130);
     await pumpScreen(tester, _shows, client: backend.client);

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -34,7 +35,7 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
     @visibleForTesting String? sessionId,
     @visibleForTesting Duration Function()? elapsed,
   }) : sessionId = sessionId ?? _sessionId(),
-       _elapsed = elapsed ?? (Stopwatch()..start()).elapsedNow,
+       _elapsed = elapsed ?? (clock.stopwatch()..start()).elapsedNow,
        // The quality settings start in. The server answers with the nearest
        // the account may use, and a pick in the player lasts this session.
        _picks = (audio: null, subtitle: null, quality: quality);
@@ -66,6 +67,8 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
   bool busy = false;
   @override
   Object? error;
+  @override
+  bool waiting = false;
   @override
   (PlaybackNotice, Object?)? notice;
   @override
@@ -546,9 +549,23 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
   /// good.
   static const stallLimit = Duration(seconds: 60);
 
+  /// How long such a stall goes before the spinner says it waits.
+  static const stallNotice = Duration(seconds: 10);
+
   void _watchStall() {
+    final was = waiting;
+    _checkStall();
+    waiting =
+        _stalled && error == null && _elapsed() - _stallSince >= stallNotice;
+    if (waiting != was) notifyListeners();
+  }
+
+  /// Whether the last check found it buffering with nothing moving.
+  var _stalled = false;
+
+  void _checkStall() {
     final now = _elapsed();
-    final waiting =
+    final buffering =
         _opened &&
         _hasTimeline &&
         !_closed &&
@@ -557,11 +574,13 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
         error == null &&
         playback.phase == PlaybackPhase.buffering;
     final mark = (playback.timeline.position, playback.timeline.buffered);
-    if (!waiting || mark != _stallMark) {
+    if (!buffering || mark != _stallMark) {
       _stallMark = mark;
       _stallSince = now;
+      _stalled = false;
       return;
     }
+    _stalled = true;
     if (now - _stallSince < stallLimit) return;
     diagnostics?.failed(ErrorDiagnostics.unknown);
     _sourceFailed = true;

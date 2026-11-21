@@ -830,14 +830,6 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
                 null => const SizedBox.shrink(),
               },
             ),
-            if (loading)
-              Center(
-                child: Spinner(
-                  size: 48,
-                  color: matineeDark.foreground,
-                  label: l.loadingInProgress,
-                ),
-              ),
             if (item == null && error == null && !small)
               Align(
                 alignment: AlignmentDirectional.topStart,
@@ -858,6 +850,19 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
               PlayerFade(
                 visible: controls && error == null,
                 child: _controls(l, item, enabled, loading, prefs),
+              ),
+            // Over the controls' scrim, in the play button's empty place, so
+            // the scrim can't dim the spinner and its line on a light frame.
+            if (loading)
+              PlayerSpinner(
+                spinner: Spinner(
+                  size: 48,
+                  color: matineeDark.foreground,
+                  label: l.loadingInProgress,
+                ),
+                waiting: _session.waiting,
+                style: KitText.sm.style(color: matineeDark.foreground),
+                lineHeight: KitText.sm.lineHeight,
               ),
             if (error != null && !small)
               // It takes the taps too, so none reaches the video under it.

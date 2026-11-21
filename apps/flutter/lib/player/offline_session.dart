@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 
 import '../api/matinee_api.dart';
@@ -58,7 +59,7 @@ class OfflinePlaybackSession extends ChangeNotifier
     @visibleForTesting Future<String> Function(String path)? readText,
     @visibleForTesting Duration Function()? elapsed,
   }) : _readText = readText ?? _readFile,
-       _elapsed = elapsed ?? (Stopwatch()..start()).elapsedNow;
+       _elapsed = elapsed ?? (clock.stopwatch()..start()).elapsedNow;
 
   @override
   final MediaItem item;

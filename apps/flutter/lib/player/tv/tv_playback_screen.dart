@@ -860,14 +860,6 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
                 null => const SizedBox.shrink(),
               },
             ),
-            if (loading)
-              Center(
-                child: Spinner(
-                  size: 56,
-                  color: matineeDark.foreground,
-                  label: l.loadingInProgress,
-                ),
-              ),
             if (item != null && names != null)
               PlayerFade(
                 key: const ValueKey('controls'),
@@ -914,6 +906,19 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
                           width: tvTrickplayWidth,
                         ),
                 ),
+              ),
+            // Over the controls' scrim, as the captions are, so it can't dim
+            // the spinner and its line on a light frame.
+            if (loading)
+              PlayerSpinner(
+                spinner: Spinner(
+                  size: 56,
+                  color: matineeDark.foreground,
+                  label: l.loadingInProgress,
+                ),
+                waiting: _session.waiting,
+                style: TvType.body.style(color: matineeDark.foreground),
+                lineHeight: TvType.body.lineHeight,
               ),
             // Over the scrim, so it doesn't dim them; they rise clear of
             // the controls.

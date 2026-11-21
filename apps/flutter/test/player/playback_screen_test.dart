@@ -17,7 +17,10 @@ import 'package:matinee/platform/player.g.dart' as wire;
 import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/playback_screen.dart';
 import 'package:matinee/player/player.dart';
-import 'package:matinee/player/player_controls.dart' show PlayerDim;
+import 'package:matinee/player/player_controls.dart'
+    show PlayerDim, PlayerTransport;
+import 'package:matinee/player/player_motion.dart';
+import 'package:matinee/player/player_parts.dart';
 import 'package:matinee/player/player_preferences.dart';
 import 'package:matinee/player/player_system.dart';
 import 'package:matinee/router.dart';
@@ -223,6 +226,80 @@ void main() {
     // Each closed file told the pages under the player to fetch again.
     await tester.pumpAndSettle();
     expect(container.read(mediaChangesProvider), 2);
+  });
+
+  testWidgets('a stall says it waits under the spinner', (tester) async {
+    final backend = FakePlaybackApi();
+    backend.start = (input) =>
+        FakePlaybackApi.answer(plan(id: input.itemId, start: 18));
+    final player = FakePlayer();
+    tester.view.physicalSize = const Size(850, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = ProviderContainer(
+      overrides: [
+        authStateProvider.overrideWithValue(
+          SignedIn('https://matinee.example', User.fromJson(userJson('ada'))),
+        ),
+        apiProvider.overrideWithValue(backend.api),
+        playerHeadersProvider.overrideWithValue(const {}),
+        sessionHttpProvider.overrideWithValue(backend.client),
+        downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
+        playbackPlayerFactoryProvider.overrideWithValue((_, _) => player),
+        playbackFullscreenProvider.overrideWithValue((_, _) async {}),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MatineeApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
+    await tester.pumpAndSettle();
+    player.emit(PlaybackPhase.ready, 30, playing: true, buffered: 60);
+    await tester.pump();
+    player.emit(PlaybackPhase.buffering, 30, buffered: 61);
+    await tester.pump(const Duration(seconds: 9));
+    expect(find.text('Waiting for the server…'), findsNothing);
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Waiting for the server…'), findsOneWidget);
+    // Over the controls' scrim, so a light frame can't dim the line.
+    final stack = tester.widget<Stack>(
+      find
+          .ancestor(
+            of: find.byType(PlayerSpinner),
+            matching: find.byType(Stack),
+          )
+          .first,
+    );
+    final controls = tester.widget(
+      find
+          .ancestor(
+            of: find.byType(PlayerTransport),
+            matching: find.byType(PlayerFade),
+          )
+          .first,
+    );
+    final spinnerLayer = tester.widget(find.byType(PlayerSpinner));
+    expect(stack.children, contains(controls));
+    expect(
+      stack.children.indexOf(spinnerLayer),
+      greaterThan(stack.children.indexOf(controls)),
+    );
+    player.emit(PlaybackPhase.buffering, 30, buffered: 62);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Waiting for the server…'), findsNothing);
+    // Quiet again until the minute: the failure takes over from the line.
+    await tester.pump(const Duration(seconds: 61));
+    // The controls fade out from that frame, then drop out on the next.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
+    expect(find.text('Waiting for the server…'), findsNothing);
+    expect(find.text("The server isn't answering."), findsOneWidget);
+    await tap(tester, 'Back');
   });
 
   testWidgets('uses the saved Media3 preference and reports a refusal', (

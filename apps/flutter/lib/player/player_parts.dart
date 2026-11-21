@@ -419,3 +419,61 @@ class PlayerMediaSession {
     if (_shown != null) unawaited(_controls.hide());
   }
 }
+
+/// The player's [spinner], and under it, once [waiting], a quiet line that
+/// it waits on the server. Room above as tall as the line holds the spinner
+/// where it was as the line comes and goes. It goes over the controls'
+/// scrim, and the line takes the shadow the overlay's words take, so both
+/// stay readable on a light frame.
+/// The shadow words over the picture take, so a light frame can't wash
+/// them out.
+const onPicture = [
+  Shadow(color: Color(0x99000000), offset: Offset(0, 2), blurRadius: 10),
+];
+
+class PlayerSpinner extends StatelessWidget {
+  const PlayerSpinner({
+    super.key,
+    required this.spinner,
+    required this.waiting,
+    required this.style,
+    required this.lineHeight,
+    this.gap = 16,
+  });
+
+  final Widget spinner;
+  final bool waiting;
+  final TextStyle style;
+  final double lineHeight;
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = SizedBox(height: gap + lineHeight);
+    // It lies over the controls, so a tap meant for them passes through.
+    return IgnorePointer(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            room,
+            spinner,
+            SizedBox(height: gap),
+            SizedBox(
+              height: lineHeight,
+              child: waiting
+                  ? Text(
+                      AppLocalizations.of(context).playerWaiting,
+                      key: const Key('player/waiting'),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      style: style.copyWith(shadows: onPicture),
+                    )
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

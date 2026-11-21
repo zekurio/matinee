@@ -497,6 +497,66 @@ void main() {
     playback.dispose();
   });
 
+  testWidgets('says it waits after 10 seconds with nothing coming, until '
+      'data comes', (tester) async {
+    final clock = tester.binding.clock;
+    final started = clock.now();
+    final engine = FakePlayer();
+    final playback = backend.session(
+      engine,
+      elapsed: () => clock.now().difference(started),
+    );
+    await playback.start();
+    engine.emit(PlaybackPhase.ready, 10, playing: true, buffered: 40);
+    await tester.pump();
+    expect(playback.waiting, isFalse);
+    engine.emit(PlaybackPhase.buffering, 10, buffered: 41);
+    await tester.pump(const Duration(seconds: 9));
+    expect(playback.waiting, isFalse, reason: 'ordinary buffering');
+    await tester.pump(const Duration(seconds: 2));
+    expect(playback.waiting, isTrue, reason: 'nothing for 10 seconds');
+    // Data flowing again takes the line away at once.
+    engine.emit(PlaybackPhase.buffering, 10, buffered: 42);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(playback.waiting, isFalse);
+    // Quiet again: the line, then the failure at the minute, which ends it.
+    await tester.pump(const Duration(seconds: 11));
+    expect(playback.waiting, isTrue);
+    await tester.pump(const Duration(seconds: 40));
+    expect(playback.error, isNull);
+    await tester.pump(const Duration(seconds: 10));
+    expect(playback.error, isA<PlaybackServerUnavailable>());
+    expect(playback.waiting, isFalse);
+    await playback.close();
+    playback.dispose();
+  });
+
+  testWidgets('a seek buffering for a moment never says it waits', (
+    tester,
+  ) async {
+    final clock = tester.binding.clock;
+    final started = clock.now();
+    final engine = FakePlayer();
+    final playback = backend.session(
+      engine,
+      elapsed: () => clock.now().difference(started),
+    );
+    await playback.start();
+    engine.emit(PlaybackPhase.ready, 10, playing: true, buffered: 40);
+    await tester.pump();
+    await playback.seek(300);
+    for (var i = 0; i < 8; i++) {
+      engine.emit(PlaybackPhase.buffering, 300, buffered: 300.0 + i);
+      await tester.pump(const Duration(seconds: 1));
+      expect(playback.waiting, isFalse);
+    }
+    engine.emit(PlaybackPhase.ready, 300, playing: true, buffered: 330);
+    await tester.pump(const Duration(seconds: 12));
+    expect(playback.waiting, isFalse);
+    await playback.close();
+    playback.dispose();
+  });
+
   testWidgets('reports every 10 seconds playing and every 30 seconds paused', (
     tester,
   ) async {

@@ -76,6 +76,9 @@ final class LibraryBackend {
   /// Paths whose requests throw, as a socket does.
   final down = <String>{};
 
+  /// The requests it has no answer for, as `METHOD path`.
+  final unanswered = <String>[];
+
   late final client = MockClient.streaming((request, body) async {
     final path = request.url.path;
     if (down.contains(path)) throw const SocketException('down');
@@ -94,6 +97,7 @@ final class LibraryBackend {
         browsed.add(input);
         return _json(_browse(input), 200);
     }
+    unanswered.add('${request.method} $path');
     return http.StreamedResponse(const Stream.empty(), 404);
   });
 
