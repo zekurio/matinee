@@ -92,17 +92,11 @@ Rect _shown(RenderBox box) {
   return rect;
 }
 
-/// No poster shows above the grid's top, over its header or line, and at
-/// [rest] each shows whole or not at all.
-void _expectNothingAboveTheGrid({required bool rest}) {
-  final top = find
-      .descendant(
-        of: find.byType(TvPosterGrid),
-        matching: find.byType(CustomScrollView),
-      )
-      .evaluate()
-      .single
-      .renderObject!;
+/// No poster shows above the top of the list or grid [scroll] finds, over
+/// the header above it, and at [rest] each shows whole or not at all.
+void _expectNothingAbove(Finder scroll, {required bool rest}) {
+  final top = scroll.evaluate().single.renderObject!;
+  // SAFETY: a scroll view's render object is a box.
   final gridTop = (top as RenderBox).localToGlobal(Offset.zero).dy;
   for (final element in find.byType(TvPosterCard).evaluate()) {
     final box = element.renderObject! as RenderBox;
@@ -123,6 +117,18 @@ void _expectNothingAboveTheGrid({required bool rest}) {
     }
   }
 }
+
+final _grid = find.descendant(
+  of: find.byType(TvPosterGrid),
+  matching: find.byType(CustomScrollView),
+);
+
+final _rows = find
+    .descendant(of: find.byType(TvPinnedList), matching: find.byType(ListView))
+    .first;
+
+void _expectNothingAboveTheGrid({required bool rest}) =>
+    _expectNothingAbove(_grid, rest: rest);
 
 void main() {
   loadTvFont();
@@ -260,6 +266,25 @@ void main() {
       expect(focusedKey(), 'movies/fm1');
       await up(tester);
       expect(focusedKey(), 'shows/fs2');
+    });
+
+    testWidgets('rows scroll away under the header, never over it', (
+      tester,
+    ) async {
+      await _open(tester, Routes.favorites);
+      for (final key in [
+        LogicalKeyboardKey.arrowDown,
+        LogicalKeyboardKey.arrowUp,
+      ]) {
+        await tester.sendKeyEvent(key);
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+          _expectNothingAbove(_rows, rest: false);
+        }
+        await settle(tester);
+        _expectNothingAbove(_rows, rest: true);
+      }
+      expect(focusedKey(), 'shows/fs1');
     });
   });
 

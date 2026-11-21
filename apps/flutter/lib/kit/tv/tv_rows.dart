@@ -265,21 +265,27 @@ class _TvPinnedListState extends State<TvPinnedList> {
     super.dispose();
   }
 
+  // Rows that scrolled away are still laid out, and the list doesn't clip
+  // so a focused card's ring keeps its sides: clipped at its top alone,
+  // they can't show over the fixed header above it.
   @override
-  Widget build(BuildContext context) => TvFadeTop(
-    fade: widget.fade,
-    child: TvFollowFocus(
-      controller: _scroll,
-      rule: TvFollowFocus.pinned(widget.pivot),
-      sectionTop: widget.gap,
-      child: ListView.separated(
+  Widget build(BuildContext context) => ClipRect(
+    clipper: const _ClipAbove(),
+    child: TvFadeTop(
+      fade: widget.fade,
+      child: TvFollowFocus(
         controller: _scroll,
-        clipBehavior: Clip.none,
-        scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
-        padding: EdgeInsets.only(top: widget.top, bottom: widget.end),
-        itemCount: widget.children.length,
-        separatorBuilder: (_, _) => SizedBox(height: widget.gap),
-        itemBuilder: (context, index) => widget.children[index],
+        rule: TvFollowFocus.pinned(widget.pivot),
+        sectionTop: widget.gap,
+        child: ListView.separated(
+          controller: _scroll,
+          clipBehavior: Clip.none,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
+          padding: EdgeInsets.only(top: widget.top, bottom: widget.end),
+          itemCount: widget.children.length,
+          separatorBuilder: (_, _) => SizedBox(height: widget.gap),
+          itemBuilder: (context, index) => widget.children[index],
+        ),
       ),
     ),
   );
