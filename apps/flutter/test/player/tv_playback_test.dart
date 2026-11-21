@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
@@ -17,6 +18,7 @@ import 'package:matinee/player/trickplay.dart';
 import 'package:matinee/player/tv/tv_display_mode.dart';
 import 'package:matinee/player/tv/tv_playback_screen.dart';
 import 'package:matinee/player/tv/tv_seek.dart';
+import 'package:matinee/player/video_view.dart';
 import 'package:matinee/router.dart';
 
 import '../core/fakes.dart';
@@ -67,6 +69,9 @@ PlaybackStart _withFrameRate(PlaybackStart start, double frameRate) {
   return PlaybackStart.fromJson(json);
 }
 
+/// The screen with its stand-in video, for goldens.
+const _screen = Key('screen');
+
 Future<_Player> _open(
   WidgetTester tester, {
   Size size = const Size(960, 540),
@@ -74,6 +79,7 @@ Future<_Player> _open(
   List<MediaSegment> segments = const [],
   double? frameRate,
   TrickplayStatus? trickplay,
+  bool backdrop = false,
 }) async {
   final backend = FakePlaybackApi();
   if (trickplay != null) backend.trickplay = trickplay;
@@ -124,8 +130,19 @@ Future<_Player> _open(
     ],
   );
   addTearDown(container.dispose);
+  final Widget app = UncontrolledProviderScope(
+    container: container,
+    child: const MatineeApp(),
+  );
   await tester.pumpWidget(
-    UncontrolledProviderScope(container: container, child: const MatineeApp()),
+    // Black stands in for the native video beneath the Flutter view, which
+    // a test has none of.
+    backdrop
+        ? RepaintBoundary(
+            key: _screen,
+            child: ColoredBox(color: const Color(0xFF000000), child: app),
+          )
+        : app,
   );
   await tester.pump();
   unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
@@ -244,6 +261,26 @@ void main() {
     expect(focusedKey(), 'player/play');
     // The fixture's probe has no frame rate, so the screen stays.
     expect(opened.display.asked, isEmpty);
+  });
+
+  testWidgets('nothing above the video paints over it while it plays', (
+    tester,
+  ) async {
+    // The picture plays in a native view beneath the Flutter view, seen
+    // only through what Flutter leaves clear.
+    await _open(tester);
+    expect(find.byType(VideoView), findsOneWidget);
+    final fills = find.ancestor(
+      of: find.byType(VideoView),
+      matching: find.byWidgetPredicate(
+        (widget) => switch (widget) {
+          ColoredBox(:final color) => color.a > 0,
+          DecoratedBox(decoration: BoxDecoration(:final color?)) => color.a > 0,
+          _ => false,
+        },
+      ),
+    );
+    expect(fills, findsNothing);
   });
 
   testWidgets('asks for the frame rate, and lets go on leaving', (
@@ -454,7 +491,7 @@ void main() {
   for (final size in tvSizes) {
     final width = size.width.round();
     testWidgets('the TV player at $width', (tester) async {
-      await _open(tester, size: size, segments: const [intro]);
+      await _open(tester, size: size, segments: const [intro], backdrop: true);
       await up(tester);
       await tester.pumpAndSettle();
       // The time over the focused bar clears the title.
@@ -468,7 +505,7 @@ void main() {
       final title = tester.getRect(find.text('The Crossing'));
       expect(bubble.top, greaterThan(title.bottom));
       await expectLater(
-        find.byType(TvPlaybackScreen),
+        find.byKey(_screen),
         matchesGoldenFile('goldens/tv_player_$width.png'),
       );
     });

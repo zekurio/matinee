@@ -137,10 +137,14 @@ class _TvPlaybackScreenState extends ConsumerState<TvPlaybackScreen> {
       );
     }
     // Dark, in the theme's own dark half, so the server's accent shows.
+    // Black while it opens or failed; once a file plays, nothing here
+    // paints, since the picture shows through from the native view beneath
+    // the Flutter view, and the player paints its own black until then.
+    final playing = child is PlaybackHost;
     return MatineeTheme.alwaysDark(
       context,
       ColoredBox(
-        color: const Color(0xFF000000),
+        color: playing ? const Color(0x00000000) : const Color(0xFF000000),
         child: TvFocusRules(child: child),
       ),
     );
