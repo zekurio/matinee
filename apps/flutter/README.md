@@ -182,7 +182,8 @@ A source that buffers for a minute with neither the picture nor its
 cache moving fails as the server not answering, with Try again
 (`PlaybackSession.stallLimit`). The Kotlin app gets the same from
 OkHttp's read timeout, but mpv waits on a connection that went quiet
-for good.
+for good. After 10 seconds of that, a line under the spinner says it's
+waiting for the server (`stallNotice`), and goes as soon as data comes.
 
 Its controls are the Kotlin phone player's, at the same sizes on a phone
 and a tablet: the title and the audio, subtitles, speed, and quality

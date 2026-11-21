@@ -861,12 +861,15 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
               },
             ),
             if (loading)
-              Center(
-                child: Spinner(
+              PlayerSpinner(
+                spinner: Spinner(
                   size: 56,
                   color: matineeDark.foreground,
                   label: l.loadingInProgress,
                 ),
+                waiting: _session.waiting,
+                style: TvType.body.style(color: matineeDark.mutedForeground),
+                lineHeight: TvType.body.lineHeight,
               ),
             if (item != null && names != null)
               PlayerFade(

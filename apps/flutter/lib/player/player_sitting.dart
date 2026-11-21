@@ -43,6 +43,10 @@ abstract interface class PlayerSitting implements Listenable {
   /// The server won't play it for this account, so trying again won't help.
   bool get refused;
 
+  /// Nothing has arrived for a while as it buffers, so the spinner says
+  /// it waits on the server.
+  bool get waiting;
+
   /// The text subtitle the app draws itself, when one is shown.
   WebVtt? get captions;
 
@@ -100,6 +104,9 @@ mixin NoServerExtras on ChangeNotifier implements PlayerSitting {
 
   @override
   bool get refused => false;
+
+  @override
+  bool get waiting => false;
 
   @override
   Future<void> skipSegment(MediaSegment segment) async {}

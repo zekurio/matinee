@@ -831,12 +831,15 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
               },
             ),
             if (loading)
-              Center(
-                child: Spinner(
+              PlayerSpinner(
+                spinner: Spinner(
                   size: 48,
                   color: matineeDark.foreground,
                   label: l.loadingInProgress,
                 ),
+                waiting: _session.waiting,
+                style: KitText.sm.style(color: matineeDark.mutedForeground),
+                lineHeight: KitText.sm.lineHeight,
               ),
             if (item == null && error == null && !small)
               Align(

@@ -2570,6 +2570,10 @@
       }
     }
   },
+  "playerWaiting": "Waiting for the server…",
+  "@playerWaiting": {
+    "description": "Under the player's spinner once nothing has arrived for 10 seconds while it buffers. A status line, nothing to press."
+  },
   "profileAdmin": "Admin",
   "@profileAdmin": {
     "description": "strings.xml"

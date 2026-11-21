@@ -485,6 +485,7 @@
   "playerUpNextCancel": "Abbrechen",
   "playerUpNextHide": "Ausblenden",
   "playerUpNextIn": "Startet in {p1}",
+  "playerWaiting": "Warte auf den Server…",
   "profileAdmin": "Admin",
   "profileJoined": "Dabei seit {p1}",
   "profileLoadFailed": "Dein Profil konnte nicht geladen werden",

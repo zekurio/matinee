@@ -225,6 +225,54 @@ void main() {
     expect(container.read(mediaChangesProvider), 2);
   });
 
+  testWidgets('a stall says it waits under the spinner', (tester) async {
+    final backend = FakePlaybackApi();
+    backend.start = (input) =>
+        FakePlaybackApi.answer(plan(id: input.itemId, start: 18));
+    final player = FakePlayer();
+    tester.view.physicalSize = const Size(850, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = ProviderContainer(
+      overrides: [
+        authStateProvider.overrideWithValue(
+          SignedIn('https://matinee.example', User.fromJson(userJson('ada'))),
+        ),
+        apiProvider.overrideWithValue(backend.api),
+        playerHeadersProvider.overrideWithValue(const {}),
+        sessionHttpProvider.overrideWithValue(backend.client),
+        downloadsPlatformProvider.overrideWithValue(FakeDownloadsPlatform()),
+        playbackPlayerFactoryProvider.overrideWithValue((_, _) => player),
+        playbackFullscreenProvider.overrideWithValue((_, _) async {}),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MatineeApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    unawaited(container.read(routerProvider).push<void>(Routes.play(itemId)));
+    await tester.pumpAndSettle();
+    player.emit(PlaybackPhase.ready, 30, playing: true, buffered: 60);
+    await tester.pump();
+    player.emit(PlaybackPhase.buffering, 30, buffered: 61);
+    await tester.pump(const Duration(seconds: 9));
+    expect(find.text('Waiting for the server…'), findsNothing);
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Waiting for the server…'), findsOneWidget);
+    player.emit(PlaybackPhase.buffering, 30, buffered: 62);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Waiting for the server…'), findsNothing);
+    // Quiet again until the minute: the failure takes over from the line.
+    await tester.pump(const Duration(seconds: 61));
+    expect(find.text('Waiting for the server…'), findsNothing);
+    expect(find.text("The server isn't answering."), findsOneWidget);
+    await tap(tester, 'Back');
+  });
+
   testWidgets('uses the saved Media3 preference and reports a refusal', (
     tester,
   ) async {
