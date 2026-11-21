@@ -3923,6 +3923,42 @@
   "@tvSignOutDescription": {
     "description": "Under the TV's sign-out confirmation."
   },
+  "tvUnwatchedShow": "{count, plural, one{Mark the one episode of {show} as unwatched? This also removes where you stopped.} other{Mark all {count} episodes of {show} as unwatched? This also removes where you stopped.}}",
+  "@tvUnwatchedShow": {
+    "description": "The TV asks before marking a whole show unwatched; count is its episodes, show its name.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "show": {
+        "type": "String"
+      }
+    }
+  },
+  "tvUnwatchedShowUncounted": "Mark every episode of {show} as unwatched? This also removes where you stopped.",
+  "@tvUnwatchedShowUncounted": {
+    "description": "As tvUnwatchedShow, where the page doesn't know how many episodes the show has.",
+    "placeholders": {
+      "show": {
+        "type": "String"
+      }
+    }
+  },
+  "tvUnwatchedSeason": "{count, plural, one{Mark the one episode of {season} of {show} as unwatched? This also removes where you stopped.} other{Mark all {count} episodes of {season} of {show} as unwatched? This also removes where you stopped.}}",
+  "@tvUnwatchedSeason": {
+    "description": "The TV asks before marking a whole season unwatched; count is its episodes, season its name, as Season 2, show the show's.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "season": {
+        "type": "String"
+      },
+      "show": {
+        "type": "String"
+      }
+    }
+  },
   "tvSettingsThisTv": "This TV",
   "@tvSettingsThisTv": {
     "description": "strings.xml"

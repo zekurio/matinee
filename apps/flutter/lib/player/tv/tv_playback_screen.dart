@@ -800,7 +800,13 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
     final visible = _visible;
     final action = _action(l);
     final onPicture = _onPicture(l);
-    if (item != null && error == null) _follow(visible, onPicture, action);
+    if (item != null && error == null) {
+      _follow(visible, onPicture, action);
+    } else if (error != null) {
+      // Try again takes the failure, and its focus, away while the controls
+      // stay up: what focus followed is forgotten, so it lands on play.
+      _followed = null;
+    }
     final captions =
         _session.captions?.at(_session.position) ?? const <TextSpan>[];
     final prefs = ref.watch(playerPrefsProvider).value ?? const PlayerPrefs();

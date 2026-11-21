@@ -86,6 +86,65 @@ Future<void> _open(WidgetTester tester, String path, {Size? size}) async {
   await settle(tester);
 }
 
+/// A show watched to the end, two seasons of three, and a watched movie,
+/// with their marks answered.
+HomeBackend _watchedBackend() => HomeBackend()
+  ..answers.addAll({
+    '/api/v1/titles/s1': fullTitleJson(
+      's1',
+      kind: 'show',
+      name: 'The Expanse',
+      seasons: [seasonJson(1, watched: 3), seasonJson(2, watched: 3)],
+      itemCount: 6,
+      watched: true,
+    ),
+    '/api/v1/titles/s1/items': [
+      _episode('e1', 1, done: true),
+      _episode('e2', 2, done: true),
+      _episode('e3', 3, done: true),
+    ],
+    '/api/v1/media/e1': _episode('e1', 1, done: true),
+    '/api/v1/titles/m1': fullTitleJson('m1', name: 'Arrival', watched: true),
+    '/api/v1/titles/s1/watched': null,
+    '/api/v1/media/e1/watched': null,
+    '/api/v1/titles/m1/watched': null,
+  });
+
+Future<HomeBackend> _openWatched(WidgetTester tester, String path) async {
+  final backend = _watchedBackend();
+  await pumpTv(tester, backend, size: const Size(960, 540));
+  GoRouter.of(tester.element(find.byType(TvShell))).go(path);
+  await settle(tester);
+  return backend;
+}
+
+int _sent(HomeBackend backend, String path) =>
+    backend.asked.where((asked) => asked == path).length;
+
+/// Select on the focused tick, Cancel in the panel it opens, then the tick
+/// again and Mark all unwatched: nothing goes until the second.
+Future<void> _cancelThenConfirm(
+  WidgetTester tester,
+  HomeBackend backend,
+  String path,
+  String question,
+) async {
+  await select(tester);
+  expect(tvOpenPanels.value, 1);
+  expect(find.text(question), findsOneWidget);
+  expect(focusedLabel(), 'Cancel');
+  await select(tester);
+  expect(tvOpenPanels.value, 0);
+  expect(_sent(backend, path), 0);
+  expect(focusedKey(), 'actions/watched', reason: 'back on the tick');
+  await select(tester);
+  await up(tester);
+  expect(focusedLabel(), 'Mark all unwatched');
+  await select(tester);
+  expect(tvOpenPanels.value, 0);
+  expect(_sent(backend, path), 1);
+}
+
 void main() {
   loadTvFont();
 
@@ -275,6 +334,54 @@ void main() {
       expect(find.text('More from Season 1'), findsOneWidget);
       await up(tester);
       expect(focusedKey(), 'actions/show');
+    });
+  });
+
+  group('Unwatching', () {
+    testWidgets('a show asks first, with its episodes counted', (tester) async {
+      final backend = await _openWatched(tester, '/title/s1');
+      // Nothing up next: the page starts on the tick.
+      expect(focusedKey(), 'actions/watched');
+      await _cancelThenConfirm(
+        tester,
+        backend,
+        '/api/v1/titles/s1/watched',
+        'Mark all 6 episodes of The Expanse as unwatched? This also '
+            'removes where you stopped.',
+      );
+    });
+
+    testWidgets('a season asks first, with its episodes counted', (
+      tester,
+    ) async {
+      final backend = await _openWatched(tester, '/title/s1/season/1');
+      await up(tester);
+      await right(tester);
+      expect(focusedKey(), 'actions/watched');
+      await _cancelThenConfirm(
+        tester,
+        backend,
+        '/api/v1/titles/s1/watched',
+        'Mark all 3 episodes of Season 1 of The Expanse as unwatched? This '
+            'also removes where you stopped.',
+      );
+    });
+
+    testWidgets('an episode goes at once', (tester) async {
+      final backend = await _openWatched(tester, '/episode/e1');
+      await right(tester);
+      expect(focusedKey(), 'actions/watched');
+      await select(tester);
+      expect(tvOpenPanels.value, 0);
+      expect(_sent(backend, '/api/v1/media/e1/watched'), 1);
+    });
+
+    testWidgets('a movie goes at once', (tester) async {
+      final backend = await _openWatched(tester, '/title/m1');
+      expect(focusedKey(), 'actions/watched');
+      await select(tester);
+      expect(tvOpenPanels.value, 0);
+      expect(_sent(backend, '/api/v1/titles/m1/watched'), 1);
     });
   });
 

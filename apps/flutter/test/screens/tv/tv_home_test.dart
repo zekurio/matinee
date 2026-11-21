@@ -183,6 +183,36 @@ void main() {
     expect(focusedKey(), 'shelf-lib2/s2');
   });
 
+  testWidgets("a watched show's actions ask before marking it unwatched", (
+    tester,
+  ) async {
+    final backend = HomeBackend();
+    final show = titleJson('s1', kind: 'show', name: 'The Expanse');
+    backend.answers['/api/v1/home/featured'] = [
+      featuredJson({...show, 'watched': true}),
+    ];
+    backend.answers['/api/v1/titles/s1/watched'] = null;
+    await pumpTv(tester, backend);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+    await settle(tester);
+    await down(tester);
+    expect(focusedLabel(), 'Mark all unwatched');
+    await select(tester);
+    // A summary doesn't count the episodes, so the question doesn't.
+    expect(
+      find.text(
+        'Mark every episode of The Expanse as unwatched? This also removes '
+        'where you stopped.',
+      ),
+      findsOneWidget,
+    );
+    expect(focusedLabel(), 'Cancel');
+    await select(tester);
+    expect(backend.asked, isNot(contains('/api/v1/titles/s1/watched')));
+  });
+
   testWidgets('holding Select opens the actions panel, Back closes it', (
     tester,
   ) async {

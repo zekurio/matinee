@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +7,7 @@ import 'package:matinee/kit/kit.dart';
 import 'package:matinee/kit/tv/tv.dart';
 import 'package:matinee/router.dart';
 import 'package:matinee/screens/tv/tv_browse.dart';
+import 'package:matinee/screens/tv/tv_media.dart';
 import 'package:matinee/screens/tv/tv_shell.dart';
 
 import '../../media/fixtures.dart';
@@ -60,12 +62,73 @@ HomeBackend _backend({int count = 30}) => HomeBackend()
     },
   });
 
-Future<void> _open(WidgetTester tester, String path, {Size? size}) async {
-  await pumpTv(tester, _backend(), size: size ?? const Size(960, 540));
+Future<void> _open(
+  WidgetTester tester,
+  String path, {
+  Size? size,
+  int count = 30,
+}) async {
+  await pumpTv(
+    tester,
+    _backend(count: count),
+    size: size ?? const Size(960, 540),
+  );
   final context = tester.element(find.byType(TvShell));
   GoRouter.of(context).go(path);
   await settle(tester);
 }
+
+/// What of [box] can show on screen: its rect inside every clip above it.
+Rect _shown(RenderBox box) {
+  var rect = box.localToGlobal(Offset.zero) & box.size;
+  for (RenderObject? node = box.parent; node != null; node = node.parent) {
+    if (node is RenderClipRect && node.clipBehavior != Clip.none) {
+      final clip = node.clipper?.getClip(node.size) ?? Offset.zero & node.size;
+      rect = rect.intersect(
+        MatrixUtils.transformRect(node.getTransformTo(null), clip),
+      );
+    }
+  }
+  return rect;
+}
+
+/// No poster shows above the top of the list or grid [scroll] finds, over
+/// the header above it, and at [rest] each shows whole or not at all.
+void _expectNothingAbove(Finder scroll, {required bool rest}) {
+  final top = scroll.evaluate().single.renderObject!;
+  // SAFETY: a scroll view's render object is a box.
+  final gridTop = (top as RenderBox).localToGlobal(Offset.zero).dy;
+  for (final element in find.byType(TvPosterCard).evaluate()) {
+    final box = element.renderObject! as RenderBox;
+    final whole = box.localToGlobal(Offset.zero) & box.size;
+    final shown = _shown(box);
+    if (shown.isEmpty || shown.height <= 0 || shown.width <= 0) continue;
+    expect(
+      shown.top,
+      greaterThanOrEqualTo(gridTop - 1),
+      reason: 'a poster shows above the grid, over its header',
+    );
+    if (rest) {
+      expect(
+        shown.height,
+        closeTo(whole.height, 1),
+        reason: 'a poster sliced at the top at rest',
+      );
+    }
+  }
+}
+
+final _grid = find.descendant(
+  of: find.byType(TvPosterGrid),
+  matching: find.byType(CustomScrollView),
+);
+
+final _rows = find
+    .descendant(of: find.byType(TvPinnedList), matching: find.byType(ListView))
+    .first;
+
+void _expectNothingAboveTheGrid({required bool rest}) =>
+    _expectNothingAbove(_grid, rest: rest);
 
 void main() {
   loadTvFont();
@@ -104,6 +167,34 @@ void main() {
       expect(find.text('Name'), findsOneWidget);
       await up(tester);
       expect(focusedLabel(), 'Name', reason: 'the sort button');
+    });
+
+    testWidgets('rows scroll away whole, never over the header', (
+      tester,
+    ) async {
+      await _open(tester, Routes.movies, count: 70);
+      Future<void> step(LogicalKeyboardKey key) async {
+        await tester.sendKeyEvent(key);
+        // Through the header's step away and the scroll, frame by frame.
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+          _expectNothingAboveTheGrid(rest: false);
+        }
+        await settle(tester);
+        _expectNothingAboveTheGrid(rest: true);
+      }
+
+      for (var row = 1; row < 9; row++) {
+        await step(LogicalKeyboardKey.arrowDown);
+        expect(focusedKey(), 'grid/t${row * 7}');
+      }
+      expect(find.text('Name'), findsNothing, reason: 'the header went');
+      for (var row = 7; row >= 0; row--) {
+        await step(LogicalKeyboardKey.arrowUp);
+        expect(focusedKey(), 'grid/t${row * 7}');
+      }
+      await up(tester);
+      expect(focusedLabel(), 'Name', reason: 'the header came back whole');
     });
 
     testWidgets('the header controls rest on a fill the backdrop keeps', (
@@ -175,6 +266,25 @@ void main() {
       expect(focusedKey(), 'movies/fm1');
       await up(tester);
       expect(focusedKey(), 'shows/fs2');
+    });
+
+    testWidgets('rows scroll away under the header, never over it', (
+      tester,
+    ) async {
+      await _open(tester, Routes.favorites);
+      for (final key in [
+        LogicalKeyboardKey.arrowDown,
+        LogicalKeyboardKey.arrowUp,
+      ]) {
+        await tester.sendKeyEvent(key);
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 40));
+          _expectNothingAbove(_rows, rest: false);
+        }
+        await settle(tester);
+        _expectNothingAbove(_rows, rest: true);
+      }
+      expect(focusedKey(), 'shows/fs1');
     });
   });
 

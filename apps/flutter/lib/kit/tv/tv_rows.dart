@@ -265,21 +265,27 @@ class _TvPinnedListState extends State<TvPinnedList> {
     super.dispose();
   }
 
+  // Rows that scrolled away are still laid out, and the list doesn't clip
+  // so a focused card's ring keeps its sides: clipped at its top alone,
+  // they can't show over the fixed header above it.
   @override
-  Widget build(BuildContext context) => TvFadeTop(
-    fade: widget.fade,
-    child: TvFollowFocus(
-      controller: _scroll,
-      rule: TvFollowFocus.pinned(widget.pivot),
-      sectionTop: widget.gap,
-      child: ListView.separated(
+  Widget build(BuildContext context) => ClipRect(
+    clipper: const _ClipAbove(),
+    child: TvFadeTop(
+      fade: widget.fade,
+      child: TvFollowFocus(
         controller: _scroll,
-        clipBehavior: Clip.none,
-        scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
-        padding: EdgeInsets.only(top: widget.top, bottom: widget.end),
-        itemCount: widget.children.length,
-        separatorBuilder: (_, _) => SizedBox(height: widget.gap),
-        itemBuilder: (context, index) => widget.children[index],
+        rule: TvFollowFocus.pinned(widget.pivot),
+        sectionTop: widget.gap,
+        child: ListView.separated(
+          controller: _scroll,
+          clipBehavior: Clip.none,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
+          padding: EdgeInsets.only(top: widget.top, bottom: widget.end),
+          itemCount: widget.children.length,
+          separatorBuilder: (_, _) => SizedBox(height: widget.gap),
+          itemBuilder: (context, index) => widget.children[index],
+        ),
       ),
     ),
   );
@@ -463,55 +469,64 @@ class _TvPosterGridState extends State<TvPosterGrid> {
                   constraints.maxHeight - TvGrid.inset - _cell,
                   48.0,
                 );
-                return TvFadeTop(
-                  child: TvMemoryRow(
-                    memory: widget.memory,
-                    row: TvGrid.row,
-                    child: TvFollowFocus(
-                      controller: _scroll,
-                      rule: _rule,
-                      child: CustomScrollView(
+                // Rows that scrolled away are still laid out, and the
+                // grid doesn't clip so a focused card's ring keeps its
+                // sides: clipped at its top alone, they can't show over
+                // the header or the line above it.
+                return ClipRect(
+                  clipper: const _ClipAbove(),
+                  child: TvFadeTop(
+                    child: TvMemoryRow(
+                      memory: widget.memory,
+                      row: TvGrid.row,
+                      child: TvFollowFocus(
                         controller: _scroll,
-                        clipBehavior: Clip.none,
-                        scrollCacheExtent: const ScrollCacheExtent.pixels(800),
-                        slivers: [
-                          SliverPadding(
-                            padding: const EdgeInsetsDirectional.only(
-                              start: TvGrid.inset,
-                              end: TvPage.end,
-                              top: TvGrid.inset,
-                            ),
-                            sliver: SliverGrid.builder(
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: columns,
-                                    crossAxisSpacing: TvGrid.gap,
-                                    mainAxisSpacing: TvGrid.rowGap,
-                                    mainAxisExtent: _cell,
-                                  ),
-                              itemCount: widget.itemCount,
-                              itemBuilder: (context, index) => Focus(
-                                canRequestFocus: false,
-                                skipTraversal: true,
-                                onFocusChange: (focused) {
-                                  if (focused) {
-                                    _focusedRow(index ~/ _columns);
-                                  }
-                                },
-                                child: widget.itemBuilder(context, index),
-                              ),
-                            ),
+                        rule: _rule,
+                        child: CustomScrollView(
+                          controller: _scroll,
+                          clipBehavior: Clip.none,
+                          scrollCacheExtent: const ScrollCacheExtent.pixels(
+                            800,
                           ),
-                          if (widget.footer case final footer?)
+                          slivers: [
                             SliverPadding(
                               padding: const EdgeInsetsDirectional.only(
                                 start: TvGrid.inset,
                                 end: TvPage.end,
+                                top: TvGrid.inset,
                               ),
-                              sliver: SliverToBoxAdapter(child: footer),
+                              sliver: SliverGrid.builder(
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: columns,
+                                      crossAxisSpacing: TvGrid.gap,
+                                      mainAxisSpacing: TvGrid.rowGap,
+                                      mainAxisExtent: _cell,
+                                    ),
+                                itemCount: widget.itemCount,
+                                itemBuilder: (context, index) => Focus(
+                                  canRequestFocus: false,
+                                  skipTraversal: true,
+                                  onFocusChange: (focused) {
+                                    if (focused) {
+                                      _focusedRow(index ~/ _columns);
+                                    }
+                                  },
+                                  child: widget.itemBuilder(context, index),
+                                ),
+                              ),
                             ),
-                          SliverToBoxAdapter(child: SizedBox(height: room)),
-                        ],
+                            if (widget.footer case final footer?)
+                              SliverPadding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  start: TvGrid.inset,
+                                  end: TvPage.end,
+                                ),
+                                sliver: SliverToBoxAdapter(child: footer),
+                              ),
+                            SliverToBoxAdapter(child: SizedBox(height: room)),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -679,4 +694,16 @@ class _TvHeaderListState extends State<TvHeaderList> {
       ),
     ),
   );
+}
+
+/// Clips what's above the top edge and nothing at the sides or below.
+class _ClipAbove extends CustomClipper<Rect> {
+  const _ClipAbove();
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTRB(-size.width, 0, size.width * 2, size.height * 2);
+
+  @override
+  bool shouldReclip(_ClipAbove oldClipper) => false;
 }
