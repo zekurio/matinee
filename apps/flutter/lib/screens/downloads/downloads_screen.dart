@@ -11,6 +11,7 @@ import '../../downloads/download_settings.dart';
 import '../../downloads/downloads.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../l10n/server_text.dart';
 import '../../media/format.dart';
 import '../../router.dart';
 import '../home/offline_home.dart' show OfflinePlaces;
@@ -931,7 +932,8 @@ String? downloadFailure(OfflineItem entry, AppLocalizations l) =>
       DownloadError.unreachable => l.downloadsErrorUnreachable,
       DownloadError.brokeOff => l.downloadsErrorBrokeOff,
       DownloadError.forbidden => l.downloadsErrorForbidden,
-      DownloadError.server => entry.errorMessage ?? l.errorServer,
+      DownloadError.server =>
+        entry.errorMessage?.serverWords(l) ?? l.errorServer,
       null => null,
     };
 

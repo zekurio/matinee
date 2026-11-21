@@ -222,7 +222,11 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
         override: _draft.own,
       );
     } on Object catch (error) {
-      if (mounted) setState(() => _errors = fieldErrors(error));
+      if (mounted) {
+        setState(
+          () => _errors = fieldErrors(AppLocalizations.of(context), error),
+        );
+      }
       rethrow;
     }
     if (!mounted) return;
