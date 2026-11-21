@@ -680,7 +680,9 @@ first key.
   `TvPage.start`, where every page's cards and chips do, clear of the
   drawer's focus ring, not a list item's inset further left against the
   cog. The column is 224 wide, room for the German names, and 32 before
-  the rows, so the rows start a little earlier than Kotlin's. Sign out,
+  the rows, so the rows start a little earlier than Kotlin's. Rows
+  scroll to stop a focused one at the bottom overscan, where Compose
+  scrolls only until it shows, which can leave it in the overscan. Sign out,
   there and on Profile, asks first in a panel with focus on Cancel
   (`tv_sign_out.dart`), since signing in again takes a phone; the Kotlin
   app signs out at once.

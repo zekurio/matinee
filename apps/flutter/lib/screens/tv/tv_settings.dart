@@ -242,7 +242,12 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
                   onKeyEvent: _rowsKey,
                   child: TvFollowFocus(
                     controller: _scroll,
-                    rule: TvFollowFocus.clear(start: 8, end: 24),
+                    // A focused row stops at the overscan, where every TV
+                    // still shows it, and its growth with it.
+                    rule: TvFollowFocus.clear(
+                      start: 8,
+                      end: Overscan.vertical + 2,
+                    ),
                     child: ListView(
                       // A new category starts its rows afresh, at the top.
                       key: ValueKey(_selected),

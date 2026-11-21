@@ -149,6 +149,24 @@ void main() {
     expect(find.textContaining('Nothing played since'), findsOneWidget);
   });
 
+  testWidgets('rows scroll to stop a focused one at the overscan', (
+    tester,
+  ) async {
+    await _open(tester, '${Routes.settings}/playback');
+    await right(tester);
+    String? last;
+    for (var i = 0; i < 12 && focusedLabel() != last; i++) {
+      last = focusedLabel();
+      final box =
+          FocusManager.instance.primaryFocus!.context!.findRenderObject()!
+              as RenderBox;
+      final rect = box.localToGlobal(Offset.zero) & box.size;
+      final grown = rect.bottom + rect.height * (TvFocus.rowScale - 1) / 2;
+      expect(grown, lessThanOrEqualTo(540 - Overscan.vertical), reason: last);
+      await down(tester);
+    }
+  });
+
   testWidgets('a subtitle style opens its picker and keeps the pick', (
     tester,
   ) async {
