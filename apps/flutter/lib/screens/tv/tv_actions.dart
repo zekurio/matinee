@@ -87,8 +87,8 @@ Future<bool> Function(BuildContext context)? askTvShowUnwatched(
           context,
           title: show,
           description: count == null
-              ? l.tvUnwatchedShowUncounted(show)
-              : l.tvUnwatchedShow(count, show),
+              ? l.mediaUnwatchedShowUncounted(show)
+              : l.mediaUnwatchedShow(count, show),
         );
       };
 
@@ -103,7 +103,7 @@ Future<bool> Function(BuildContext context)? askTvSeasonUnwatched(
         context,
         title: season,
         description: AppLocalizations.of(context)
-            .tvUnwatchedSeason(count, season, show),
+            .mediaUnwatchedSeason(count, season, show),
       );
 
 /// The question, as signing out asks: what happens, Mark all unwatched,

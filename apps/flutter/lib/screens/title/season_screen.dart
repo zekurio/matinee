@@ -174,6 +174,11 @@ class _SeasonScreenState extends ConsumerState<SeasonScreen> with PendingMarks {
             send: (api, to, at) =>
                 MediaMarks.season(api, title.id, number, watched: to, at: at),
             pending: items == null ? null : pendingFor('watched', items),
+            askUnwatched: askSeasonUnwatched(
+              title.name,
+              name,
+              count: season.itemCount,
+            ),
           ),
           favorite: favorite,
           // The files without a season number aren't a season to mark.

@@ -3901,9 +3901,9 @@
   "@tvSignOutDescription": {
     "description": "Under the TV's sign-out confirmation."
   },
-  "tvUnwatchedShow": "{count, plural, one{Mark the one episode of {show} as unwatched? This also removes where you stopped.} other{Mark all {count} episodes of {show} as unwatched? This also removes where you stopped.}}",
-  "@tvUnwatchedShow": {
-    "description": "The TV asks before marking a whole show unwatched; count is its episodes, show its name.",
+  "mediaUnwatchedShow": "{count, plural, one{Mark the one episode of {show} as unwatched? This also removes where you stopped.} other{Mark all {count} episodes of {show} as unwatched? This also removes where you stopped.}}",
+  "@mediaUnwatchedShow": {
+    "description": "The TV and the phone ask before marking a whole show unwatched; count is its episodes, show its name.",
     "placeholders": {
       "count": {
         "type": "int"
@@ -3913,18 +3913,18 @@
       }
     }
   },
-  "tvUnwatchedShowUncounted": "Mark every episode of {show} as unwatched? This also removes where you stopped.",
-  "@tvUnwatchedShowUncounted": {
-    "description": "As tvUnwatchedShow, where the page doesn't know how many episodes the show has.",
+  "mediaUnwatchedShowUncounted": "Mark every episode of {show} as unwatched? This also removes where you stopped.",
+  "@mediaUnwatchedShowUncounted": {
+    "description": "As mediaUnwatchedShow, where the page doesn't know how many episodes the show has.",
     "placeholders": {
       "show": {
         "type": "String"
       }
     }
   },
-  "tvUnwatchedSeason": "{count, plural, one{Mark the one episode of {season} of {show} as unwatched? This also removes where you stopped.} other{Mark all {count} episodes of {season} of {show} as unwatched? This also removes where you stopped.}}",
-  "@tvUnwatchedSeason": {
-    "description": "The TV asks before marking a whole season unwatched; count is its episodes, season its name, as Season 2, show the show's.",
+  "mediaUnwatchedSeason": "{count, plural, one{Mark the one episode of {season} of {show} as unwatched? This also removes where you stopped.} other{Mark all {count} episodes of {season} of {show} as unwatched? This also removes where you stopped.}}",
+  "@mediaUnwatchedSeason": {
+    "description": "The TV and the phone ask before marking a whole season unwatched; count is its episodes, season its name, as Season 2, show the show's.",
     "placeholders": {
       "count": {
         "type": "int"

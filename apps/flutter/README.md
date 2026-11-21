@@ -299,6 +299,12 @@ change lands.
 The tick and the heart show their new state at once and go back if the
 server refuses, with a toast (`toastProvider`, shown over every screen).
 Marking watched asks when, as the web does (`lib/media/watched_at.dart`).
+Marking a show or a season unwatched asks first, as the TV does and
+where the Kotlin app and the web act at once, since it forgets where
+every episode stopped and can't be taken back: the kit's dialog, focus
+on Cancel, Mark all unwatched in the destructive style, with the
+episodes counted where the page knows them (a show card's menu doesn't,
+so it says "every episode"). An episode or a movie still goes at once.
 A long press on a card, here or on Home, opens its menu
 (`lib/media/actions.dart`): Play, Play from the start, the tick and heart,
 the pages it belongs to, and "Not interested" on a recommendation. Every
