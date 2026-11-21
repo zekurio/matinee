@@ -80,6 +80,24 @@ void main() {
     expect(focusedKey(), 'featured/m2', reason: 'Home kept its place');
   });
 
+  testWidgets("the drawer's Home from another page gives Home its place", (
+    tester,
+  ) async {
+    await pumpTv(tester, HomeBackend());
+    await right(tester);
+    await back(tester);
+    await down(tester);
+    await select(tester);
+    expect(find.byType(TvFavoritesScreen), findsOneWidget);
+    await left(tester);
+    expect(focusedLabel(), 'Favorites');
+    await up(tester);
+    await select(tester);
+    expect(find.byType(TvHomeScreen), findsOneWidget);
+    expect(focusedKey(), 'featured/m2', reason: 'on the page, not the drawer');
+    expect(find.text('Favorites'), findsNothing, reason: 'the drawer closed');
+  });
+
   testWidgets('a card opens its page, and Back returns to the card', (
     tester,
   ) async {
