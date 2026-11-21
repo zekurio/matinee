@@ -355,6 +355,34 @@ void main() {
     expect(find.byType(TrickplayFrame), findsNothing);
   });
 
+  testWidgets('the heading stays clear of the time when a seek buffers into '
+      'a segment', (tester) async {
+    final opened = await _open(
+      tester,
+      segments: const [
+        MediaSegment(kind: MediaSegmentKind.recap, start: 40, end: 60),
+      ],
+    );
+    final player = opened.players.single;
+    double heading() => tester.getTopLeft(find.text('The Crossing')).dy;
+    await select(tester);
+    final resting = heading();
+    await up(tester);
+    expect(focusedKey(), 'player/seek');
+    final lifted = heading();
+    expect(lifted, lessThan(resting), reason: "out of the time's way");
+    // The seek lands in the recap while the player buffers: the spinner
+    // and the skip button come in the same frame.
+    await right(tester, 2);
+    player.emit(PlaybackPhase.buffering, 48);
+    // The spinner turns for as long as it buffers, so no settling.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Skip recap'), findsOneWidget);
+    expect(focusedKey(), 'player/seek');
+    expect(heading(), lifted);
+  });
+
   testWidgets('Select toggles play; Up goes to the seek bar, Down back', (
     tester,
   ) async {

@@ -787,11 +787,15 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
         autofocus: true,
         child: Stack(
           fit: StackFit.expand,
+          // The layers that keep state have keys, so one coming or going
+          // around them, like the spinner as a seek buffers, doesn't build
+          // them anew: the controls would forget the seek bar's focus.
           children: [
             if (item == null || _session.refused || _leaving)
               const ColoredBox(color: Color(0xFF000000)),
-            VideoView(player: _session.player),
+            VideoView(key: const ValueKey('video'), player: _session.player),
             TimedNote(
+              key: const ValueKey('notice'),
               token: _session.notice,
               duration: const Duration(seconds: 5),
               onHidden: _session.dismissNotice,
@@ -814,6 +818,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
               ),
             if (item != null && names != null)
               PlayerFade(
+                key: const ValueKey('controls'),
                 visible: visible && error == null,
                 child: TvPlayerOverlay(
                   targets: _targets,
@@ -875,6 +880,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
             // their row, beside the menus.
             if (action != null)
               Positioned(
+                key: const ValueKey('corner'),
                 right: Overscan.horizontal,
                 bottom: Overscan.vertical,
                 child: PlayerFade(
