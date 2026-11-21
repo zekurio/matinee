@@ -5469,6 +5469,13 @@ public enum ThemeMode {
     public static let knownValues = ["system", "light", "dark"]
 }
 
+public enum TitleStatus {
+    public static let continuing = "continuing"
+    public static let ended = "ended"
+    public static let unreleased = "unreleased"
+    public static let knownValues = ["continuing", "ended", "unreleased"]
+}
+
 public struct Title: Codable, Sendable, Hashable {
     public var id: String
     public var libraryId: String
@@ -5963,6 +5970,13 @@ public struct AppDevice: Codable, Sendable, Hashable {
     public init(name: String? = nil, platform: String) {
         self.name = name
         self.platform = platform
+    }
+}
+
+public struct ClientIdentity: Codable, Sendable, Hashable {
+    public var name: String
+    public init(name: String) {
+        self.name = name
     }
 }
 

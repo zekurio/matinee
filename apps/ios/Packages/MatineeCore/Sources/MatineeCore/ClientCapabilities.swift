@@ -11,6 +11,7 @@ public enum ClientCapabilities {
     public static let cameraLinking = false
     public static let pictureInPicture = false
     public static let sessionPlatform = "tvos"
+    public static let clientName = "Matinee Apple TV"
   #else
     public static let downloads = true
     public static let browserSignIn = true
@@ -20,6 +21,9 @@ public enum ClientCapabilities {
     public static let cameraLinking = true
     public static let pictureInPicture = true
     public static let sessionPlatform = "ios"
+    /// What the app calls itself in the server's sessions list, watching
+    /// now, and client stats: a product name, the same in every language.
+    public static let clientName = "Matinee iOS"
   #endif
 }
 

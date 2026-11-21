@@ -12,7 +12,6 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie"
 
 import { arg, db } from "../db"
 import { env } from "../env"
-import { clientName } from "../stats/sessions"
 import { randomToken, sha256 } from "./tokens"
 import type { Tx } from "./users"
 
@@ -21,7 +20,16 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 // Moving the idle deadline costs a write, so do it at most this often.
 const SESSION_TOUCH_MS = 60 * 60 * 1000
 
-export type SessionUser = UserRow & { sessionId: string }
+export type SessionUser = UserRow & {
+  sessionId: string
+  /**
+   * What the session's client called itself, through
+   * `account.sessions.identify`. Playback sessions take it from here, so
+   * a stream request, which a media element can't add a header to, names
+   * its client too.
+   */
+  clientName: string | null
+}
 
 export function publicUser(row: UserRow): User {
   return {
@@ -80,7 +88,11 @@ export async function readSession(c: Context): Promise<SessionUser | null> {
       now,
     })
     if (row) {
-      result = { ...row.user, sessionId: row.session.id }
+      result = {
+        ...row.user,
+        sessionId: row.session.id,
+        clientName: row.session.clientName,
+      }
       if (now.getTime() - row.session.lastSeenAt.getTime() > SESSION_TOUCH_MS) {
         await db
           .update(session)
@@ -101,7 +113,6 @@ export async function readSession(c: Context): Promise<SessionUser | null> {
  * a browser's, which `signIn` hands the cookie; with one, an app's.
  */
 export async function createSession(
-  c: Context,
   userId: string,
   device?: AppDevice,
 ): Promise<string> {
@@ -110,7 +121,6 @@ export async function createSession(
     tokenHash: sha256(token),
     userId,
     expiresAt: new Date(Date.now() + SESSION_TTL_MS),
-    userAgent: c.req.header("user-agent")?.slice(0, 512) ?? null,
     client: device ? "app" : "web",
     deviceName: device ? cleanDeviceName(device.name) : null,
     platform: device?.platform ?? null,
@@ -133,7 +143,7 @@ export function cleanDeviceName(name: string | undefined): string | null {
 
 /** Start a session for the user and hand the browser its cookie. */
 export async function signIn(c: Context, userId: string): Promise<string> {
-  const token = await createSession(c, userId)
+  const token = await createSession(userId)
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
     secure: env.secureCookies,
@@ -172,12 +182,27 @@ export async function listSessions(
     client: row.client,
     deviceName: row.deviceName,
     platform: row.platform,
-    browser:
-      row.client === "web" ? clientName(row.userAgent ?? undefined) : null,
+    browser: row.client === "web" ? row.clientName : null,
     createdAt: row.createdAt,
     lastSeenAt: row.lastSeenAt,
     expiresAt: row.expiresAt,
   }))
+}
+
+/**
+ * Keep what the current session's client calls itself, as
+ * `cleanDeviceName` leaves it. Only the session's own token can name it,
+ * and it is only ever shown.
+ */
+export async function identifySession(
+  current: SessionUser,
+  name: string,
+): Promise<void> {
+  if (name === current.clientName) return
+  await db
+    .update(session)
+    .set({ clientName: name })
+    .where(eq(session.id, current.sessionId))
 }
 
 /** End one of the user's sessions. False when they have no such session. */

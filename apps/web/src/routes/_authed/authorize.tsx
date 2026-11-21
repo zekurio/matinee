@@ -1,10 +1,11 @@
 import { APP_AUTHORIZE_PATH, AppAuthorizeRequest } from "@matinee/contracts"
+import { isStaleRequest } from "@matinee/contracts/schema"
 import { Button } from "@matinee/ui/components/button"
 import { createFileRoute, useLocation } from "@tanstack/react-router"
 import { LogInIcon } from "lucide-react"
 import { useState } from "react"
 
-import { AuthScreen } from "@/components/auth-screen"
+import { AuthScreen, StatusScreen } from "@/components/auth-screen"
 import { DeviceCard } from "@/components/device-card"
 import { tr, translateKnown } from "@/i18n"
 import { trRich } from "@/i18n/react"
@@ -28,15 +29,15 @@ function AuthorizeApp() {
   const [sent, setSent] = useState(false)
 
   if (!request.success) {
+    // A missing or unknown key reads "reload the page", which can't fix
+    // the app's request, so only a problem with a value the app sent shows.
+    const issue = request.error.issues.find((each) => !isStaleRequest(each))
     return (
-      <AuthScreen
+      <StatusScreen
         title={tr("link.app.invalid")}
         description={tr("link.app.invalidDescription")}
-      >
-        <p className="text-muted-foreground text-13px leading-5">
-          {translateKnown(request.error.issues[0]?.message ?? "")}
-        </p>
-      </AuthScreen>
+        detail={issue && translateKnown(issue.message)}
+      />
     )
   }
 

@@ -19,6 +19,18 @@ export const TITLE_KINDS = ["movie", "show"] as const
 export const TitleKind = t.enum(TITLE_KINDS)
 export type TitleKind = t.infer<typeof TitleKind>
 
+/**
+ * Where a show is in its run, as Jellyfin's `SeriesStatus` has it. The
+ * server maps the provider's word to it, and each client words it itself.
+ *
+ * - `continuing`: more is airing or coming.
+ * - `ended`: it finished or was canceled.
+ * - `unreleased`: it hasn't aired yet.
+ */
+export const TITLE_STATUSES = ["continuing", "ended", "unreleased"] as const
+export const TitleStatus = t.enum(TITLE_STATUSES)
+export type TitleStatus = t.infer<typeof TitleStatus>
+
 /** A movie or show: what a poster stands for. */
 export const TitleSummary = t.object({
   id: t.uuid(),
@@ -544,8 +556,11 @@ export const Title = TitleSummary.extend({
   tagline: t.string().nullable(),
   /** First release or air date, YYYY-MM-DD. */
   releaseDate: t.string().nullable(),
-  /** Such as `Ended` or `Returning Series`, in the provider's words. */
-  status: t.string().nullable(),
+  /**
+   * A show's status. Null for movies, and when the provider doesn't say or
+   * says something the server doesn't map.
+   */
+  status: TitleStatus.nullable(),
   /** The folder or file below the library folder that makes this title. */
   path: t.string(),
   /** Null when the library has no provider or nothing matched. */

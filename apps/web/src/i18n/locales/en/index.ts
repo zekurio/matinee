@@ -17,6 +17,7 @@ import libraries from "./libraries"
 import library from "./library"
 import link from "./link"
 import media from "./media"
+import metadata from "./metadata"
 import network from "./network"
 import oidc from "./oidc"
 import party from "./party"
@@ -58,6 +59,7 @@ export default {
   ...media,
   ...downloads,
   ...title,
+  ...metadata,
   ...people,
   ...search,
   ...catalog,

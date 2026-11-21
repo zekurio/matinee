@@ -1,12 +1,22 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:matinee/core/device.dart';
 import 'package:matinee/core/network_monitor.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/core/unreachability.dart';
 
 import 'fakes.dart';
+
+const _identify = '/api/v1/account/sessions/current/client';
+
+/// The names [harness]'s session gave [host], in order.
+List<Object?> namesSent(Harness harness, String host) => [
+  for (final request in harness.backend.to(host, _identify))
+    (jsonDecode(request.body) as Map<String, Object?>)['name'],
+];
 
 /// A launch with one server saved and signed in: [host] answers, and its
 /// token is [token].
@@ -27,6 +37,11 @@ Future<Harness> signedInOn(
   await harness.until<SignedOut>();
   harness.session.signedIn(appSession(token, name));
   await harness.until<SignedIn>();
+  // The session names itself in the background once it's in; wait for
+  // that, so a test counting requests from here doesn't count it.
+  await harness.untilRequests(
+    (_) => harness.backend.to(host, _identify).isNotEmpty,
+  );
   return harness;
 }
 
@@ -677,5 +692,99 @@ void main() {
       again.session.setOfflineMode(on: false);
       await again.until<SignedIn>();
     });
+  });
+
+  group('naming the client', () {
+    test('signing in tells the server what the app calls itself', () async {
+      final harness = await signedInOn('a.example');
+      addTearDown(harness.quit);
+
+      final request = harness.backend.to('a.example', _identify).single;
+      expect(request.method, 'PUT');
+      expect(request.headers['authorization'], 'Bearer token-a');
+      expect(namesSent(harness, 'a.example'), ['Matinee Android']);
+    });
+
+    test('a TV names itself again each time its session checks out', () async {
+      final first = await signedInOn('a.example');
+      await first.quit();
+
+      final again = Harness(prefs: first.prefs, secrets: first.secrets);
+      again.backend
+        ..hosts.add('a.example')
+        ..tokens['token-a'] = 'ada';
+      await again.launch(
+        device: const Device(
+          formFactor: FormFactor.tv,
+          name: 'Living room',
+          model: 'Chromecast',
+          osVersion: '14',
+          appVersion: '1.0.0',
+          platform: 'androidtv',
+        ),
+      );
+      addTearDown(again.quit);
+
+      await again.until<SignedIn>();
+      await again.untilRequests(
+        (_) => again.backend.to('a.example', _identify).isNotEmpty,
+      );
+      expect(namesSent(again, 'a.example'), ['Matinee Android TV']);
+    });
+
+    test('a token the server turned down names nothing', () async {
+      final first = await signedInOn('a.example');
+      await first.quit();
+
+      final again = Harness(prefs: first.prefs, secrets: first.secrets);
+      again.backend.hosts.add('a.example');
+      await again.launch();
+      addTearDown(again.quit);
+
+      await again.until<SignedOut>();
+      await again.settle();
+      expect(again.backend.to('a.example', _identify), isEmpty);
+    });
+
+    test(
+      'an older server that doesn\'t know the request stays signed in',
+      () async {
+        final harness = Harness();
+        harness.backend
+          ..hosts.add('a.example')
+          ..unnamed.add('a.example')
+          ..tokens['token-a'] = 'ada';
+        await harness.launch();
+        addTearDown(harness.quit);
+        await harness.session.connect('a.example');
+        await harness.until<SignedOut>();
+
+        harness.session.signedIn(appSession('token-a', 'ada'));
+        await harness.until<SignedIn>();
+        await harness.untilRequests(
+          (_) => harness.backend.to('a.example', _identify).isNotEmpty,
+        );
+        await harness.settle();
+
+        expect(harness.auth, isA<SignedIn>());
+      },
+    );
+  });
+
+  test('each platform has its own client name', () {
+    Device on(String platform) => Device(
+      formFactor: platform.endsWith('tv') || platform == 'tvos'
+          ? FormFactor.tv
+          : FormFactor.handset,
+      name: 'Device',
+      model: 'model',
+      osVersion: '1',
+      appVersion: '1.0.0',
+      platform: platform,
+    );
+    expect(on('android').clientName, 'Matinee Android');
+    expect(on('androidtv').clientName, 'Matinee Android TV');
+    expect(on('ios').clientName, 'Matinee iOS');
+    expect(on('tvos').clientName, 'Matinee Apple TV');
   });
 }

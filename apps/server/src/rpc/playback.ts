@@ -103,7 +103,8 @@ export const playback = {
           id: input.sessionId,
           userId: context.user.id,
           item,
-          userAgent: context.hono.req.header("user-agent"),
+          client: context.user.clientName,
+          authSessionId: context.user.sessionId,
         },
         {
           positionSeconds: input.positionSeconds,
@@ -177,13 +178,18 @@ export const playback = {
           ),
         ),
       )
-    const userAgent = context.hono.req.header("user-agent")
     for (const play of plays) {
       const item = items.find((entry) => entry.id === play.itemId)
       if (!item) continue
       const duration = play.durationSeconds ?? item.durationSeconds
       await recordOfflinePlay(
-        { id: play.sessionId, userId: context.user.id, item, userAgent },
+        {
+          id: play.sessionId,
+          userId: context.user.id,
+          item,
+          client: context.user.clientName,
+          authSessionId: context.user.sessionId,
+        },
         {
           startedAt: play.startedAt,
           endedAt: play.endedAt,

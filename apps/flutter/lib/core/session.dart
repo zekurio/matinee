@@ -454,6 +454,7 @@ final class SessionNotifier extends Notifier<SessionState> {
     if (verified != null) {
       _cacheUser(verified);
       _setAuth(SignedIn(displayOf(server), verified));
+      _identify(client);
       return;
     }
     // Only a token the server turned down goes. One this device couldn't
@@ -773,6 +774,18 @@ final class SessionNotifier extends Notifier<SessionState> {
     if (key != _store.active) _store.offlineMode = false;
     _activate(server, session.token);
     _setAuth(SignedIn(displayOf(server), session.user));
+    if (_api case final api?) _identify(api);
+  }
+
+  /// Tells the server [Device.clientName] for the session, as every client
+  /// does when it starts. It's only ever shown, so a failure, or a server
+  /// from before it asked (a 404), is let go.
+  void _identify(MatineeApi client) {
+    unawaited(
+      client.account.sessions
+          .identify(ClientIdentity(name: _device.clientName))
+          .then<void>((_) {}, onError: (Object _) {}),
+    );
   }
 
   /// Make the saved [server] the one in use, with [bearer] as its session.

@@ -40,7 +40,7 @@ JsonMap fullTitleJson(
   'originalName': null,
   'tagline': tagline,
   'releaseDate': '2016-11-11',
-  'status': kind == 'show' ? 'Ended' : null,
+  'status': kind == 'show' ? TitleStatus.ended : null,
   'path': '/media/$id',
   'provider': provider,
   'providerId': provider == null ? null : '329865',

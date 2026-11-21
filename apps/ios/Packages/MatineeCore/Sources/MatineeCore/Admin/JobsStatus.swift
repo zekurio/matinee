@@ -64,19 +64,20 @@ public func taskRunLine(_ task: ScheduledTask) -> TaskRunLine {
   }
 }
 
-/// How often a task runs.
+/// How often a task runs: by hand, or every so many of the interval's largest unit.
 public enum TaskSchedule: Equatable, Sendable {
-  case manual, daily, hourly
-  case every(String)
+  case manual
+  case seconds(Int), minutes(Int), hours(Int), days(Int)
 }
 
+/// Rounded as the web rounds it, so one of a unit reads "Every minute": 59.6 seconds is a
+/// minute, and 90 seconds is 2 minutes.
 public func taskSchedule(_ task: ScheduledTask) -> TaskSchedule {
-  switch task.intervalSeconds {
-  case nil: .manual
-  case 86_400: .daily
-  case 3_600: .hourly
-  case let interval?: .every(formatTook(seconds: Int64(interval)))
-  }
+  guard let seconds = task.intervalSeconds else { return .manual }
+  if seconds < 59.5 { return .seconds(max(1, Int(seconds.rounded()))) }
+  if seconds < 3_570 { return .minutes(Int((seconds / 60).rounded())) }
+  if seconds < 84_600 { return .hours(Int((seconds / 3_600).rounded())) }
+  return .days(Int((seconds / 86_400).rounded()))
 }
 
 /// Whether the task's last run failed, and nothing runs now, which its row shows in red.

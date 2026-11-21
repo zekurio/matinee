@@ -587,6 +587,16 @@ class AccountSessionsApi internal constructor(private val transport: ApiTranspor
             null,
             AccountSessionsRevokeOthersOutput.serializer(),
         )
+
+    /** `PUT /account/sessions/current/client` */
+    suspend fun identify(clientIdentity: ClientIdentity) {
+        transport.send(
+            "PUT",
+            listOf("account", "sessions", "current", "client"),
+            emptyList(),
+            transport.json(ClientIdentity.serializer(), clientIdentity),
+        )
+    }
 }
 
 class LibrariesApi internal constructor(private val transport: ApiTransport) {

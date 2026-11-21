@@ -539,6 +539,10 @@
   "@adminTimeNow": {
     "description": "admin settings"
   },
+  "adminTimeSoon": "soon",
+  "@adminTimeSoon": {
+    "description": "admin settings: something due within a minute, like a task's next run"
+  },
   "appName": "Matinee",
   "@appName": {
     "description": "strings.xml. The app's name, never translated."
@@ -5574,33 +5578,7 @@
   "@webJobsScheduleAtStartup": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsScheduleDaily": "Every day",
-  "@webJobsScheduleDaily": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsScheduleDailyAfterStartup": "Every day and {p1} after startup",
-  "@webJobsScheduleDailyAfterStartup": {
-    "description": "strings_web_jobs.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webJobsScheduleDailyAtStartup": "Every day and at startup",
-  "@webJobsScheduleDailyAtStartup": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsScheduleEvery": "Every {p1}",
-  "@webJobsScheduleEvery": {
-    "description": "strings_web_jobs.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webJobsScheduleEveryAfterStartup": "Every {p1} and {p2} after startup",
+  "webJobsScheduleEveryAfterStartup": "{p1} and {p2} after startup",
   "@webJobsScheduleEveryAfterStartup": {
     "description": "strings_web_jobs.xml",
     "placeholders": {
@@ -5612,7 +5590,7 @@
       }
     }
   },
-  "webJobsScheduleEveryAtStartup": "Every {p1} and at startup",
+  "webJobsScheduleEveryAtStartup": "{p1} and at startup",
   "@webJobsScheduleEveryAtStartup": {
     "description": "strings_web_jobs.xml",
     "placeholders": {
@@ -5621,22 +5599,41 @@
       }
     }
   },
-  "webJobsScheduleHourly": "Every hour",
-  "@webJobsScheduleHourly": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsScheduleHourlyAfterStartup": "Every hour and {p1} after startup",
-  "@webJobsScheduleHourlyAfterStartup": {
+  "webJobsScheduleEveryDays": "{count, plural, one{Every day} other{Every {count} days}}",
+  "@webJobsScheduleEveryDays": {
     "description": "strings_web_jobs.xml",
     "placeholders": {
-      "p1": {
-        "type": "String"
+      "count": {
+        "type": "int"
       }
     }
   },
-  "webJobsScheduleHourlyAtStartup": "Every hour and at startup",
-  "@webJobsScheduleHourlyAtStartup": {
-    "description": "strings_web_jobs.xml"
+  "webJobsScheduleEveryHours": "{count, plural, one{Every hour} other{Every {count} hours}}",
+  "@webJobsScheduleEveryHours": {
+    "description": "strings_web_jobs.xml",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webJobsScheduleEveryMinutes": "{count, plural, one{Every minute} other{Every {count} minutes}}",
+  "@webJobsScheduleEveryMinutes": {
+    "description": "strings_web_jobs.xml",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webJobsScheduleEverySeconds": "{count, plural, one{Every second} other{Every {count} seconds}}",
+  "@webJobsScheduleEverySeconds": {
+    "description": "strings_web_jobs.xml",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "webJobsScheduleManual": "Runs when you start it",
   "@webJobsScheduleManual": {
@@ -6162,6 +6159,18 @@
   "webLibrariesTitle": "Libraries",
   "@webLibrariesTitle": {
     "description": "strings_web_libraries.xml"
+  },
+  "webMetadataStatusContinuing": "Continuing",
+  "@webMetadataStatusContinuing": {
+    "description": "strings_web_metadata.xml"
+  },
+  "webMetadataStatusEnded": "Ended",
+  "@webMetadataStatusEnded": {
+    "description": "strings_web_metadata.xml"
+  },
+  "webMetadataStatusUnreleased": "Not yet released",
+  "@webMetadataStatusUnreleased": {
+    "description": "strings_web_metadata.xml"
   },
   "webOidcAccessTitle": "Groups and access",
   "@webOidcAccessTitle": {
@@ -9421,7 +9430,7 @@
   "@webValidationAvatarType": {
     "description": "strings_web_validation.xml"
   },
-  "webValidationBitrateLimit": "Pick a limit of at least 1 Mb/s.",
+  "webValidationBitrateLimit": "Pick a limit of at least 1 Mbps.",
   "@webValidationBitrateLimit": {
     "description": "strings_web_validation.xml"
   },
@@ -9443,6 +9452,10 @@
   },
   "webValidationBrowseYears": "The first year can't be after the last.",
   "@webValidationBrowseYears": {
+    "description": "strings_web_validation.xml"
+  },
+  "webValidationClientName": "Enter a name.",
+  "@webValidationClientName": {
     "description": "strings_web_validation.xml"
   },
   "webValidationCodeChallenge": "Invalid code challenge",

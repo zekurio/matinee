@@ -738,6 +738,15 @@ function issuePath(value: SchemaBoundaryInput, pointer: string) {
 /** What a client that sent keys the schema doesn't know is told. */
 const STALE_REQUEST = "Reload the page and try again."
 
+/**
+ * Whether an issue is the one for a missing or unknown key, which tells the
+ * reader to reload. A page reading a request a reload can't change, such as
+ * an app's, shows its own text instead.
+ */
+export function isStaleRequest(issue: ValidationIssue): boolean {
+  return issue.message === STALE_REQUEST
+}
+
 function pointerKey(key: string) {
   return key.replaceAll("~", "~0").replaceAll("/", "~1")
 }

@@ -26,7 +26,10 @@ final class AuthProtocol: URLProtocol, @unchecked Sendable {
   override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
   override func startLoading() {
     let mode = Self.lock.withLock {
-      Self.requests.append(request.url!)
+      // The session names itself in the background after each sign-in, so
+      // that request lands whenever it does, even in the next test. It
+      // stays out of what the tests count and order.
+      if !request.url!.path.hasSuffix("/sessions/current/client") { Self.requests.append(request.url!) }
       return Self.mode
     }
     if mode == "offline" || (mode == "https-fails" && request.url?.scheme == "https") {
