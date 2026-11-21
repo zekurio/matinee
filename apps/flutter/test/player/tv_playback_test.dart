@@ -441,6 +441,18 @@ void main() {
     expect(focusedLabel(), startsWith('Back'));
   });
 
+  testWidgets('a failure while playing takes focus on Try again', (
+    tester,
+  ) async {
+    final opened = await _open(tester);
+    final player = opened.players.single;
+    expect(focusedKey(), 'player/play');
+    player.emit(PlaybackPhase.error, 30, serverUnavailable: true);
+    await settle(tester);
+    expect(find.text("The server isn't answering."), findsOneWidget);
+    expect(focusedLabel(), 'Try again');
+  });
+
   testWidgets('the controls hide while the player reports its time', (
     tester,
   ) async {

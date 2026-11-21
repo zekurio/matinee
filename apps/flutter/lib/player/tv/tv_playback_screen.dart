@@ -167,7 +167,7 @@ class _Opening extends StatelessWidget {
 /// Why nothing plays, with Try again focused and Back beside it, as the
 /// Kotlin app's `TvPlayerFailure`. Without [onRetry], only Back, since
 /// asking again gets the same answer.
-class TvPlayerFailure extends StatelessWidget {
+class TvPlayerFailure extends StatefulWidget {
   const TvPlayerFailure({
     super.key,
     required this.title,
@@ -182,9 +182,36 @@ class TvPlayerFailure extends StatelessWidget {
   final VoidCallback? onRetry;
 
   @override
+  State<TvPlayerFailure> createState() => _TvPlayerFailureState();
+}
+
+class _TvPlayerFailureState extends State<TvPlayerFailure> {
+  final _retry = FocusNode(debugLabel: 'player/retry');
+  final _back = FocusNode(debugLabel: 'player/back');
+
+  @override
+  void initState() {
+    super.initState();
+    // Autofocus gives way to the control that had focus as playback
+    // failed, so the failure takes it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      (widget.onRetry == null ? _back : _retry).requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _retry.dispose();
+    _back.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
+    final TvPlayerFailure(:title, :message, :onBack, :onRetry) = widget;
     return Padding(
       padding: Overscan.padding,
       child: Column(
@@ -215,12 +242,12 @@ class TvPlayerFailure extends StatelessWidget {
                 TvButton(
                   label: l.commonRetry,
                   icon: Lucide.refreshCw,
-                  autofocus: true,
+                  focusNode: _retry,
                   onPressed: retry,
                 ),
               TvButton(
                 label: l.playerBack,
-                autofocus: onRetry == null,
+                focusNode: _back,
                 onPressed: onBack,
               ),
             ],
