@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/widgets.dart';
 
+import '../cards.dart' show WatchedBadge;
 import '../icon.dart';
 import '../spinner.dart';
 import '../theme.dart';
@@ -92,19 +93,19 @@ class TvProgress extends StatelessWidget {
   );
 }
 
-/// The accent's dot on something watched.
+/// The round check on something watched, the phone's and the web's
+/// [WatchedBadge] at a TV's size, read out as [label].
 class TvWatchedMark extends StatelessWidget {
-  const TvWatchedMark({super.key});
+  const TvWatchedMark({super.key, required this.label});
+
+  /// What a screen reader says, "Watched".
+  final String label;
+
+  /// Across, sized to read from a sofa.
+  static const size = 26.0;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 12,
-    height: 12,
-    decoration: ShapeDecoration(
-      shape: const CircleBorder(),
-      color: MatineeTheme.of(context).accent,
-    ),
-  );
+  Widget build(BuildContext context) => WatchedBadge(label: label, size: size);
 }
 
 /// A row's heading, one line of [TvType.title].
@@ -270,6 +271,7 @@ class _TvPinnedListState extends State<TvPinnedList> {
     child: TvFollowFocus(
       controller: _scroll,
       rule: TvFollowFocus.pinned(widget.pivot),
+      sectionTop: widget.gap,
       child: ListView.separated(
         controller: _scroll,
         clipBehavior: Clip.none,
@@ -291,8 +293,8 @@ class _TvPinnedListState extends State<TvPinnedList> {
 /// header is away. [onNearEnd] asks for more as the last rows near.
 /// [scrollKey] changing, as a new sort, scrolls back to the top. [cellAspect]
 /// is a cell's width over its height, and [cellExtra] what a caption adds.
-/// With [cellWidth], cells keep that width and as many fit as will, the
-/// room left over at the end, as Compose's `GridCells.FixedSize`.
+/// With [cellWidth], as many columns as fit cells that wide, which then
+/// stretch to fill the row, so no strip is left at the end.
 class TvPosterGrid extends StatefulWidget {
   const TvPosterGrid({
     super.key,
@@ -454,11 +456,7 @@ class _TvPosterGridState extends State<TvPosterGrid> {
                           .floor()
                           .clamp(1, 24);
                 final cellWidth =
-                    fixed ?? (width - TvGrid.gap * (columns - 1)) / columns;
-                final spare = math.max(
-                  0.0,
-                  width - columns * cellWidth - TvGrid.gap * (columns - 1),
-                );
+                    (width - TvGrid.gap * (columns - 1)) / columns;
                 _cell = cellWidth / widget.cellAspect + widget.cellExtra;
                 _pitch = _cell + TvGrid.rowGap;
                 final room = math.max(
@@ -478,9 +476,9 @@ class _TvPosterGridState extends State<TvPosterGrid> {
                         scrollCacheExtent: const ScrollCacheExtent.pixels(800),
                         slivers: [
                           SliverPadding(
-                            padding: EdgeInsetsDirectional.only(
+                            padding: const EdgeInsetsDirectional.only(
                               start: TvGrid.inset,
-                              end: TvPage.end + spare,
+                              end: TvPage.end,
                               top: TvGrid.inset,
                             ),
                             sliver: SliverGrid.builder(
@@ -605,15 +603,17 @@ class TvLoading extends StatelessWidget {
 /// A detail page, as the Kotlin app's `DetailList`: [header] first, with
 /// its buttons, then [rows] below it, reached with Down. While the header
 /// has focus the page sits at its top; once a row has it, each row scrolls
-/// to [pivot] below the top, as Home's do. Rows scrolled past the top fade
-/// out over [fade] rather than end hard under the clock.
+/// to [pivot] below the top, as Home's do, but stops where the row above
+/// has just gone, a [gap] over its heading, rather than leave it cut at the
+/// top. The top fades over [fade] while scrolled, no further than the gap,
+/// so a row's heading there stays clear.
 class TvHeaderList extends StatefulWidget {
   const TvHeaderList({
     super.key,
     required this.header,
     required this.rows,
     this.pivot = 88,
-    this.fade = 44,
+    this.fade = 32,
     this.gap = 32,
     this.end = 360,
   });
@@ -665,6 +665,7 @@ class _TvHeaderListState extends State<TvHeaderList> {
     child: TvFollowFocus(
       controller: _scroll,
       rule: _rule,
+      sectionTop: widget.gap,
       child: ListView.separated(
         controller: _scroll,
         clipBehavior: Clip.none,

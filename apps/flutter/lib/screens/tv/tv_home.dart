@@ -41,7 +41,10 @@ const _noticeHeight = 96.0;
 const _logoWidth = 360.0;
 const _logoHeight = 70.0;
 const _nameLine = 40.0;
-const _subtitleHeight = 28.0;
+
+/// Between a logo and the episode line under it, so the two don't touch.
+const _subtitleGap = 10.0;
+const _subtitleHeight = _subtitleGap + 26;
 const _factsHeight = 32.0;
 const _overviewLine = 24.0;
 
@@ -586,7 +589,8 @@ class _HeaderBody extends StatelessWidget {
             ),
             if (item.subtitle case final text?)
               Padding(
-                padding: const EdgeInsets.only(top: 2),
+                key: const Key('hero/subtitle'),
+                padding: const EdgeInsets.only(top: _subtitleGap),
                 child: Text(
                   text,
                   maxLines: 1,

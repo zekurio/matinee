@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/app.dart';
@@ -6,6 +7,7 @@ import 'package:matinee/screens/home/home_data.dart';
 import 'package:matinee/screens/tv/tv_browse.dart';
 import 'package:matinee/screens/tv/tv_detail.dart';
 import 'package:matinee/screens/tv/tv_home.dart';
+import 'package:matinee/screens/tv/tv_media.dart';
 import 'package:matinee/screens/tv/tv_shell.dart';
 
 import '../../media/fixtures.dart';
@@ -23,6 +25,22 @@ void main() {
     expect(focusedKey(), 'featured/s1');
     // The header names it.
     expect(find.text('The Expanse'), findsWidgets);
+  });
+
+  testWidgets("the header's episode line keeps clear of the logo", (
+    tester,
+  ) async {
+    await pumpTv(tester, HomeBackend());
+    await down(tester);
+    expect(focusedKey(), 'continue/e1');
+    final mark = tester.getRect(find.byType(TvTitleLogo));
+    final line = tester.getRect(
+      find.descendant(
+        of: find.byKey(const Key('hero/subtitle')),
+        matching: find.byType(Text),
+      ),
+    );
+    expect(line.top - mark.bottom, inInclusiveRange(8, 12));
   });
 
   testWidgets('rows keep their cards as focus moves between them', (

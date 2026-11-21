@@ -194,8 +194,10 @@ void main() {
 
     await _press(tester, LogicalKeyboardKey.arrowDown);
     expect(_focused(), '0/0');
-    // The card comes up to the pivot, its heading above it, in full view.
-    expect(tester.getRect(card0).top, 88);
+    // The row comes up near the pivot, but where the header has just gone
+    // whole: its heading a gap below the top, the card in full view.
+    expect(tester.getRect(find.text('Row 0')).top, 32);
+    expect(tester.getRect(card0).top, lessThanOrEqualTo(88));
 
     await _press(tester, LogicalKeyboardKey.arrowUp);
     expect(_focused(), 'actions/play');
