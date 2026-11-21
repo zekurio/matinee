@@ -1,7 +1,8 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/widgets.dart' hide Title;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/kit/kit.dart';
+import 'package:matinee/l10n/app_localizations_de.dart';
 import 'package:matinee/l10n/app_localizations_en.dart';
 import 'package:matinee/media/artwork.dart' show ArtSource, Picture;
 import 'package:matinee/media/format.dart';
@@ -576,6 +577,28 @@ void main() {
     await tester.tap(find.text('Just now'));
     await tester.pumpAndSettle();
     expect(backend.asked, contains('/api/v1/media/e1/watched'));
+  });
+
+  test('a show\'s status is worded in the app\'s language', () {
+    final en = AppLocalizationsEn();
+    final de = AppLocalizationsDe();
+    expect(titleStatusName(TitleStatus.continuing, en), 'Continuing');
+    expect(titleStatusName(TitleStatus.ended, en), 'Ended');
+    expect(titleStatusName(TitleStatus.unreleased, en), 'Not yet released');
+    expect(titleStatusName(TitleStatus.continuing, de), 'Fortlaufend');
+    expect(titleStatusName(TitleStatus.ended, de), 'Beendet');
+    expect(
+      titleStatusName(TitleStatus.unreleased, de),
+      'Noch nicht veröffentlicht',
+    );
+    // None, or one from a newer server, shows nothing rather than its key.
+    expect(titleStatusName(null, en), isNull);
+    expect(titleStatusName('cancelled', en), isNull);
+    final show = Title.fromJson({
+      ...fullTitleJson('s1', kind: 'show', itemCount: 6),
+      'status': 'cancelled',
+    });
+    expect(titleFacts(show, en), isNot(contains('cancelled')));
   });
 
   test('what the pages work out from what the server sends', () {

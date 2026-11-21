@@ -6137,6 +6137,18 @@
   "@webLibrariesTitle": {
     "description": "strings_web_libraries.xml"
   },
+  "webMetadataStatusContinuing": "Continuing",
+  "@webMetadataStatusContinuing": {
+    "description": "strings_web_metadata.xml"
+  },
+  "webMetadataStatusEnded": "Ended",
+  "@webMetadataStatusEnded": {
+    "description": "strings_web_metadata.xml"
+  },
+  "webMetadataStatusUnreleased": "Not yet released",
+  "@webMetadataStatusUnreleased": {
+    "description": "strings_web_metadata.xml"
+  },
   "webOidcAccessTitle": "Groups and access",
   "@webOidcAccessTitle": {
     "description": "strings_web_oidc.xml"
