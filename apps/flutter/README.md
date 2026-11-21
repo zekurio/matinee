@@ -705,7 +705,11 @@ first key.
   does. A `TvFocusMemory` remembers each row's card, so entering a row
   lands on it, Back lands where you left, and a list that loads again
   keeps focus. Rows, grids, and lists scroll to follow focus
-  (`TvFollowFocus`).
+  (`TvFollowFocus`). Unlike the Kotlin app's pivot, which can leave the
+  row above cut at the top, a page of rows or sections (Home, the title
+  page, Favorites, Profile, Settings) stops only where the one above is
+  whole or gone (`sectionTop`, `TvSection`), with room after the last so
+  it can come up.
 - Panels (`showTvPanel`, `showTvPicker`): choices open at the right
   edge, Back closes them, and focus goes back to the row that opened
   them. The TV's server switcher (`sign_in/tv/tv_servers.dart`) is one
@@ -713,12 +717,20 @@ first key.
   never grows into the overscan: rows that run to the right edge keep
   `TvListItems.focusRoom` past it, and panels are 404 wide with 36 at
   their sides, so their rows keep the Kotlin app's width.
+- Cards: a watched card wears the phone's and the web's round check in
+  the accent (`TvWatchedMark`, 26 across), where the Kotlin app's dot
+  read as "new".
 - Screens (`lib/screens/tv`): Home; Movies, Shows, Browse, Favorites, and
   Search; the title, season, episode, and person pages (a show of one
   season lists its episodes without the Kotlin app's one-card Seasons
   row; a search field's placeholder is the muted text colour, not the
-  Kotlin app's faint one, so it reads over a backdrop); Profile with its
-  charts and standing, and Recently watched; and Settings, whose
+  Kotlin app's faint one, so it reads over a backdrop; the chips and the
+  field over a grid's or Search's backdrop rest on the page's background
+  under their fill, `TvFocus.restOnPicture`, where the Kotlin app's
+  translucent fill lets a light picture through); Profile with its
+  charts and standing, and Recently watched (whose grid's cards stretch
+  to run to the overscan, where the Kotlin app's fixed cells leave a
+  strip at the right); and Settings, whose
   categories sit at the left and whose rows are on the right. Its
   Playback and Subtitles rows set the same `PlayerPrefs` as the phone's
   pages, and About shows the playback report. Left or
@@ -733,7 +745,11 @@ first key.
   away, Left and Right skip by the server's skip lengths and glide while
   held (`KeySeek`), with trickplay frames over the time, and Select, Up,
   or Down bring them back. The TV has one key handler; it never builds
-  the phone's controls. Audio, subtitles, and settings (quality, speed,
+  the phone's controls. The skip arrows are play's size with their seconds
+  at 15 sp, where the Kotlin app's are 40 with 11 sp, too small to read
+  from a sofa. Subtitles that show light their button with the web
+  player's accent line, 20 by 4 rather than the Kotlin app's 14 by 2.
+  Audio, subtitles, and settings (quality, speed,
   Fit or Fill, which is kept) open as panels. Skip intro and the next
   episode wait alone on the picture; a countdown of a minute or more reads
   as a time (`· 2:46`), where the Kotlin app counts the seconds (`· 166`).

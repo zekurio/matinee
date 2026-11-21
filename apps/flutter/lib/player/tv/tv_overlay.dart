@@ -402,7 +402,8 @@ class _Heading extends StatelessWidget {
   }
 }
 
-/// A skip arrow with how far it skips in its middle, as the phone draws it.
+/// A skip arrow with how far it skips in its middle, as the phone draws it,
+/// as big as play so the number reads from the couch.
 class _SkipButton extends StatelessWidget {
   const _SkipButton({
     required this.icon,
@@ -423,15 +424,16 @@ class _SkipButton extends StatelessWidget {
     builder: (context, focused) => TvControl(
       focused: focused,
       builder: (context, content) => SizedBox.square(
-        dimension: _small,
+        dimension: _play,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            KitIcon(icon, size: 28, color: content),
+            KitIcon(icon, size: 38, color: content),
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: 3),
               child: Text(
                 '$seconds',
+                textAlign: TextAlign.center,
                 style: TvType.iconNumber.style(color: content),
               ),
             ),
@@ -443,9 +445,9 @@ class _SkipButton extends StatelessWidget {
 }
 
 /// A menu's button: its icon in a circle, which opens to say the menu's
-/// name while focused, as the app's other icon buttons do, with a line
-/// under the icon while [on], as for subtitles that show. Focus returns to
-/// it when the menu closes.
+/// name while focused, as the app's other icon buttons do, with the web
+/// player's accent line under the icon while [on], as for subtitles that
+/// show, at a TV's size. Focus returns to it when the menu closes.
 class _MenuButton extends StatelessWidget {
   const _MenuButton({
     required this.icon,
@@ -493,13 +495,14 @@ class _MenuButton extends StatelessWidget {
                       KitIcon(icon, size: 20, color: content),
                       if (on)
                         Positioned(
-                          bottom: -6,
+                          bottom: -7,
                           child: Container(
-                            width: 14,
-                            height: 2,
+                            key: const Key('player/on'),
+                            width: 20,
+                            height: 4,
                             decoration: BoxDecoration(
                               color: colors.accent,
-                              borderRadius: BorderRadius.circular(1),
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
                         ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
+import 'package:flutter/rendering.dart' show RenderSliverMultiBoxAdaptor;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -40,6 +41,12 @@ abstract final class TvFocus {
   /// any backdrop or picture.
   static Color rest(KitColors colors) =>
       colors.foreground.withValues(alpha: .12);
+
+  /// [rest] over most of the background, for a control that sits on a
+  /// backdrop busy or light enough to swallow the plain fill, as a grid
+  /// page's sort, genre, and search.
+  static Color restOnPicture(KitColors colors) =>
+      Color.alphaBlend(rest(colors), colors.background.withValues(alpha: .78));
 }
 
 /// The keys that press a TV control: the remote's centre, Enter, and a
@@ -707,6 +714,10 @@ typedef TvScrollRule = double Function(
 /// move as the Kotlin app's do: rows only as far as it takes to keep the
 /// card clear of their edges, a page of rows to put the focused one in the
 /// same place each time, a grid by whole rows. [child] is the scroll view.
+/// With [sectionTop], a page of sections, each a child of its list, the
+/// list only stops where a section starts [sectionTop] below its top, the
+/// gap between sections, so the one above has just gone: none is left cut
+/// at the top.
 class TvFollowFocus extends StatefulWidget {
   const TvFollowFocus({
     super.key,
@@ -715,12 +726,14 @@ class TvFollowFocus extends StatefulWidget {
     required this.child,
     this.axis = Axis.vertical,
     this.duration = const Duration(milliseconds: 260),
+    this.sectionTop,
   });
 
   final ScrollController controller;
   final TvScrollRule rule;
   final Axis axis;
   final Duration duration;
+  final double? sectionTop;
   final Widget child;
 
   /// A row's rule: only as far as keeps the card [start] in from its start
@@ -741,6 +754,10 @@ class TvFollowFocus extends StatefulWidget {
 }
 
 class _TvFollowFocusState extends State<TvFollowFocus> {
+  /// The [TvSection]s inside, for a list whose sections aren't its own
+  /// children, as rows in one column.
+  final _marked = <BuildContext>{};
+
   final _anchor = FocusNode(
     skipTraversal: true,
     canRequestFocus: false,
@@ -776,19 +793,153 @@ class _TvFollowFocusState extends State<TvFollowFocus> {
     final viewport = vertical ? view.size.height : view.size.width;
     final distance = widget.rule(start, start + length, viewport);
     final position = controller.position;
-    final to = (position.pixels + distance).clamp(
+    var to = (position.pixels + distance).clamp(
       position.minScrollExtent,
       position.maxScrollExtent,
     );
+    if (widget.sectionTop case final top?) {
+      to = _sectionStop(target, position, to, start, length, viewport, top);
+    }
     if ((to - position.pixels).abs() < .5) return;
     unawaited(
       position.animateTo(to, duration: widget.duration, curve: TvMotion.easing),
     );
   }
 
+  /// Where the list stops near [to] so its top cuts no section: the top,
+  /// or a section starting [sectionTop] down, so long as no section then
+  /// runs across the top and the focused child, [start] to [start] +
+  /// [length] in the viewport now, sits as the rule wants it, or failing
+  /// that in full view. The nearest to [to]; [to] when none does.
+  double _sectionStop(
+    RenderBox target,
+    ScrollPosition position,
+    double to,
+    double start,
+    double length,
+    double viewport,
+    double sectionTop,
+  ) {
+    final view = context.findRenderObject();
+    if (view is! RenderBox) return to;
+    // Where each section runs in the scroll.
+    final sections = <(double, double)>[];
+    var known = double.negativeInfinity;
+    if (_marked.isNotEmpty) {
+      for (final marked in _marked) {
+        final box = marked.findRenderObject();
+        if (box is! RenderBox || !box.attached || !box.hasSize) continue;
+        final from =
+            position.pixels + box.localToGlobal(Offset.zero, ancestor: view).dy;
+        sections.add((from, from + box.size.height));
+      }
+      sections.sort((a, b) => a.$1.compareTo(b.$1));
+    } else {
+      // The page's own list, the outermost under the viewport: the rows in
+      // it have lists of their own.
+      RenderSliverMultiBoxAdaptor? list;
+      for (var parent = target.parent; parent != null && parent != view;) {
+        if (parent is RenderSliverMultiBoxAdaptor) list = parent;
+        parent = parent.parent;
+      }
+      if (list == null) return to;
+      // The list's padding before its first child counts.
+      final before = list.constraints.precedingScrollExtent;
+      for (var section = list.firstChild; section != null;) {
+        final from = before + list.childScrollOffset(section)!;
+        sections.add((from, from + section.size.height));
+        section = list.childAfter(section);
+      }
+      // Above the first child laid out, what's there is unknown.
+      if (sections.isNotEmpty) known = sections.first.$1;
+    }
+    bool clean(double stop) =>
+        (stop <= position.minScrollExtent || stop >= known - .5) &&
+        !sections.any(
+          (section) => section.$1 < stop - .5 && section.$2 > stop + .5,
+        );
+    final stops = {
+      position.minScrollExtent,
+      for (final (from, _) in sections) from - sectionTop,
+    };
+    // Where the focused child runs, whatever the scroll.
+    final at = position.pixels + start;
+    double? nearest(bool Function(double top) fits) {
+      double? best;
+      for (final stop in stops) {
+        if (stop < position.minScrollExtent ||
+            stop > position.maxScrollExtent ||
+            !clean(stop) ||
+            !fits(at - stop)) {
+          continue;
+        }
+        if (best == null || (stop - to).abs() < (best - to).abs()) {
+          best = stop;
+        }
+      }
+      return best;
+    }
+
+    // Stay put when the list already cuts nothing and needn't move.
+    if (to == position.pixels && clean(to)) return to;
+    return nearest(
+          (top) => widget.rule(top, top + length, viewport).abs() < .5,
+        ) ??
+        nearest((top) => top >= 0 && top + length <= viewport) ??
+        to;
+  }
+
   @override
-  Widget build(BuildContext context) =>
-      Focus(focusNode: _anchor, child: widget.child);
+  Widget build(BuildContext context) => _TvSectionScope(
+    state: this,
+    child: Focus(focusNode: _anchor, child: widget.child),
+  );
+}
+
+class _TvSectionScope extends InheritedWidget {
+  const _TvSectionScope({required this.state, required super.child});
+
+  final _TvFollowFocusState state;
+
+  @override
+  bool updateShouldNotify(_TvSectionScope old) => old.state != state;
+}
+
+/// Marks [child] as one of a page's sections for the [TvFollowFocus] it's
+/// in, where the list's own children aren't the sections, as a column of
+/// rows: the list stops only where none of them is cut at its top.
+class TvSection extends StatefulWidget {
+  const TvSection({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<TvSection> createState() => _TvSectionState();
+}
+
+class _TvSectionState extends State<TvSection> {
+  _TvFollowFocusState? _follow;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final follow = context
+        .dependOnInheritedWidgetOfExactType<_TvSectionScope>()
+        ?.state;
+    if (follow != _follow) {
+      _follow?._marked.remove(context);
+      _follow = follow?.._marked.add(context);
+    }
+  }
+
+  @override
+  void dispose() {
+    _follow?._marked.remove(context);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Clips along one axis only, so a focused card can grow past a row's top

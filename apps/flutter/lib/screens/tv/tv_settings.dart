@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -248,25 +249,48 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
                       start: 8,
                       end: Overscan.vertical + 2,
                     ),
-                    child: ListView(
-                      // A new category starts its rows afresh, at the top.
-                      key: ValueKey(_selected),
-                      controller: _scroll,
-                      clipBehavior: Clip.none,
-                      padding: const EdgeInsetsDirectional.only(
-                        top: 4,
-                        bottom: Overscan.vertical + 24,
-                        // A focused row grows, and stays inside the edge.
-                        end: TvListItems.focusRoom,
+                    // Each row a section, 4 apart, none left cut at the top.
+                    sectionTop: 4,
+                    // Rows end at the fixed top rather than pass behind the
+                    // clock; a focused row still grows sideways.
+                    child: TvAxisClip(
+                      axis: Axis.vertical,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) => ListView(
+                          // A new category starts its rows afresh, at the top.
+                          key: ValueKey(_selected),
+                          controller: _scroll,
+                          clipBehavior: Clip.none,
+                          padding: EdgeInsetsDirectional.only(
+                            top: 4,
+                            // Half the rows' height after the last, so it can
+                            // rise past the row above rather than leave that
+                            // one cut at the top.
+                            bottom: math.max(
+                              Overscan.vertical + 24,
+                              constraints.maxHeight / 2,
+                            ),
+                            // A focused row grows, and stays inside the edge.
+                            end: TvListItems.focusRoom,
+                          ),
+                          children: switch (_selected) {
+                            TvSettingsCategory.playback => [
+                              const _PlaybackRows(),
+                            ],
+                            TvSettingsCategory.subtitles => [
+                              const _SubtitleRows(),
+                            ],
+                            TvSettingsCategory.languages => [
+                              const _LanguageRows(),
+                            ],
+                            TvSettingsCategory.devices => [const _DeviceRows()],
+                            TvSettingsCategory.account => [
+                              const _AccountRows(),
+                            ],
+                            TvSettingsCategory.about => [const _AboutRows()],
+                          },
+                        ),
                       ),
-                      children: switch (_selected) {
-                        TvSettingsCategory.playback => [const _PlaybackRows()],
-                        TvSettingsCategory.subtitles => [const _SubtitleRows()],
-                        TvSettingsCategory.languages => [const _LanguageRows()],
-                        TvSettingsCategory.devices => [const _DeviceRows()],
-                        TvSettingsCategory.account => [const _AccountRows()],
-                        TvSettingsCategory.about => [const _AboutRows()],
-                      },
                     ),
                   ),
                 ),
@@ -289,7 +313,7 @@ class _Rows extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     spacing: 4,
-    children: children,
+    children: [for (final child in children) TvSection(child: child)],
   );
 }
 

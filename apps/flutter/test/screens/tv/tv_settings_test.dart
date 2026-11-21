@@ -167,6 +167,41 @@ void main() {
     }
   });
 
+  testWidgets('rows end at their top, none left cut there, down and up', (
+    tester,
+  ) async {
+    await _open(tester, '${Routes.settings}/playback');
+    await right(tester);
+    final top = tester
+        .getRect(
+          find.descendant(
+            of: find.byType(TvSettingsScreen),
+            matching: find.byType(TvAxisClip),
+          ),
+        )
+        .top;
+    void expectNoneCut(String? at) {
+      for (final row in find.byType(TvSection).evaluate()) {
+        final box = row.renderObject! as RenderBox;
+        final y = box.localToGlobal(Offset.zero).dy;
+        final cut = y < top - .5 && y + box.size.height > top + .5;
+        expect(cut, isFalse, reason: 'a row cut at the top, on $at');
+      }
+    }
+
+    String? last;
+    for (var i = 0; i < 20 && focusedLabel() != last; i++) {
+      last = focusedLabel();
+      await down(tester);
+      expectNoneCut(focusedLabel());
+    }
+    for (var i = 0; i < 20; i++) {
+      await up(tester);
+      expectNoneCut(focusedLabel());
+    }
+    expect(focusedLabel(), 'Quality', reason: 'back at the first row');
+  });
+
   testWidgets('a subtitle style opens its picker and keeps the pick', (
     tester,
   ) async {

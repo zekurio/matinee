@@ -33,8 +33,9 @@ enum TvType {
   /// The clock at the top right.
   clock(20, 26, FontWeight.w500),
 
-  /// A number inside an icon, like the seconds in the player's skip arrows.
-  iconNumber(11, 12, FontWeight.w600);
+  /// A number inside an icon, like the seconds in the player's skip arrows,
+  /// no smaller than [caption] so it reads from the couch.
+  iconNumber(15, 16, FontWeight.w700);
 
   const TvType(this.size, this.lineHeight, this.weight, [this.tracking = 0]);
 

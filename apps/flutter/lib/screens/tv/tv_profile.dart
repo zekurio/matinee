@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -130,6 +133,9 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
       return now.hasError ? (_Rows.actions, _Rows.signOut) : null;
     });
 
+    // Into the ranges, the one picked rather than the chip under the card.
+    _memory.startAt(_Rows.ranges, _range);
+
     final recent = [
       for (final entry in loaded?.recent ?? const <WatchedEntry>[]) entry.item,
     ];
@@ -169,16 +175,25 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
       child: TvFollowFocus(
         controller: _scroll,
         rule: TvFollowFocus.clear(start: _edge, end: _edge),
-        child: ListView.separated(
-          controller: _scroll,
-          clipBehavior: Clip.none,
-          padding: const EdgeInsets.only(
-            top: Overscan.vertical + 8,
-            bottom: 120,
+        // The gap between its sections.
+        sectionTop: 32,
+        // Half a screen under the last section, so it can come up to the
+        // top rather than stop with the one above it cut.
+        child: LayoutBuilder(
+          builder: (context, constraints) => ListView.separated(
+            controller: _scroll,
+            clipBehavior: Clip.none,
+            // Its few sections all laid out, so a move up knows where the
+            // one above starts.
+            scrollCacheExtent: const ScrollCacheExtent.pixels(2400),
+            padding: EdgeInsets.only(
+              top: Overscan.vertical + 8,
+              bottom: math.max(120, constraints.maxHeight / 2),
+            ),
+            itemCount: sections.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 32),
+            itemBuilder: (context, index) => sections[index],
           ),
-          itemCount: sections.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 32),
-          itemBuilder: (context, index) => sections[index],
         ),
       ),
     );
@@ -617,7 +632,9 @@ class TvWatchedCard extends StatelessWidget {
 
   final MediaItem item;
   final FocusNode focusNode;
-  final double width;
+
+  /// Null fills the grid's cell.
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
@@ -921,8 +938,8 @@ class _TvRecentScreenState extends ConsumerState<TvRecentScreen> {
         ),
       );
     } else {
-      // As many cards a row as fit at their row width, as the Kotlin
-      // app's fixed-size cells.
+      // As many cards a row as fit at a row's width, stretched to run to
+      // the overscan, where the Kotlin app's fixed cells leave a strip.
       page = TvPosterGrid(
         memory: _memory,
         itemCount: entries.length,
@@ -937,6 +954,7 @@ class _TvRecentScreenState extends ConsumerState<TvRecentScreen> {
           final item = entries[index].item;
           return TvWatchedCard(
             item: item,
+            width: null,
             focusNode: _memory.node(TvGrid.row, item.id),
           );
         },

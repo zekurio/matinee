@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -139,6 +140,41 @@ void main() {
     expect(focusedKey(), 'recent/seeAll', reason: 'the end of the row');
   });
 
+  testWidgets('down to the statistics: the range picked takes focus, and '
+      'no section is left cut at the top', (tester) async {
+    await _open(tester, Routes.profile);
+    // The page's own list, the outermost: its rows have lists of their own.
+    final list = tester.renderObject<RenderSliverMultiBoxAdaptor>(
+      find
+          .descendant(
+            of: find.byType(TvProfileScreen),
+            matching: find.byType(SliverList),
+          )
+          .first,
+    );
+    final top = tester.getTopLeft(find.byType(TvProfileScreen)).dy;
+    void expectNoneCut(String? at) {
+      for (var child = list.firstChild; child != null;) {
+        final box = child.localToGlobal(Offset.zero).dy;
+        final cut = box < top - .5 && box + child.size.height > top + .5;
+        expect(cut, isFalse, reason: 'a section cut at the top, on $at');
+        child = list.childAfter(child);
+      }
+    }
+
+    await down(tester);
+    expect(focusedKey(), 'ranges/${StatsRange.allValue}');
+    expectNoneCut(focusedKey());
+    for (var i = 0; i < 6; i++) {
+      await down(tester);
+      expectNoneCut(focusedKey());
+    }
+    for (var i = 0; i < 7; i++) {
+      await up(tester);
+      expectNoneCut(focusedKey());
+    }
+  });
+
   testWidgets('Sign out asks first, with focus on Cancel', (tester) async {
     await _open(tester, Routes.profile);
     await up(tester);
@@ -152,13 +188,22 @@ void main() {
     expect(find.byType(TvProfileScreen), findsOneWidget);
   });
 
-  testWidgets("recent cards keep the row's width, as Kotlin's fixed cells", (
+  testWidgets('recent cards run from the page start to the overscan', (
     tester,
   ) async {
     await _open(tester, Routes.recent);
     final cards = find.byType(TvWatchedCard);
-    expect(cards, findsWidgets);
-    expect(tester.getSize(cards.first).width, TvCards.landscapeWidth);
+    expect(cards, findsNWidgets(2));
+    final first = tester.getRect(cards.at(0));
+    final second = tester.getRect(cards.at(1));
+    expect(first.left, TvPage.start);
+    // Three across, the third's place ending at the right overscan.
+    final pitch = second.left - first.left;
+    expect(
+      first.left + 2 * pitch + first.width,
+      closeTo(960 - TvPage.end, .01),
+    );
+    expect(first.width, greaterThan(TvCards.landscapeWidth));
   });
 
   testWidgets('the chart takes the arrows until its edge', (tester) async {
