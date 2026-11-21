@@ -336,7 +336,7 @@ class TvNote extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(left: 20, top: 4, bottom: 4),
+      padding: const EdgeInsets.only(left: 20, top: 12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
         child: Semantics(

@@ -302,7 +302,7 @@ class TvPosterGrid extends StatefulWidget {
     this.columns = TvGrid.columns,
     this.header,
     this.line,
-    this.lineHeight = 28,
+    this.lineHeight = 30,
     this.onNearEnd,
     this.scrollKey,
     this.footer,

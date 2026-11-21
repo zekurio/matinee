@@ -1213,6 +1213,8 @@ class _TextViewerState extends State<_TextViewer> {
                       fontSize: 14,
                       height: 20 / 14,
                       fontWeight: FontWeight.w400,
+                      // A code's spacing would spread a log's lines wide.
+                      letterSpacing: 0,
                       color: colors.foreground,
                     ),
                   ),

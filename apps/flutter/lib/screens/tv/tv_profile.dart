@@ -319,7 +319,6 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
       row: _Rows.genres,
       memory: _memory,
       height: TvButtons.height,
-      gap: 14,
       itemCount: stats.genres.length,
       itemBuilder: (context, index) {
         final genre = stats.genres[index];
