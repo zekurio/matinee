@@ -6,19 +6,23 @@ import '../../../core/session.dart';
 import '../../../core/sign_in_state.dart';
 import '../../../core/unreachability.dart';
 import '../../../kit/kit.dart';
+import '../../../kit/tv/tv_metrics.dart';
 import '../../../l10n/app_localizations.dart';
 import '../auth_layout.dart';
-import '../code_details.dart';
 import '../login_backdrop.dart';
 import '../server_switcher.dart';
 import 'tv_frame.dart';
 import 'tv_servers.dart';
 
-/// Signing a TV in with a code, the only way it has: the QR code to scan on
-/// the right, large enough for a phone across the room, and on the left the
-/// address and the code to type there, read from the couch. A code that
-/// runs out waits for a new one to be asked for, so a TV left here doesn't
-/// keep asking the server for codes.
+/// Signing a TV in with a code, the only way it has: on the left, the
+/// title, one sentence on where to go, and the code to type there, read
+/// from the couch; on the right, the QR code to scan, large enough for a
+/// phone across the room. Changing the server waits small at the bottom
+/// left. A code that runs out waits for a new one to be asked for, so a TV
+/// left here doesn't keep asking the server for codes.
+///
+/// This is quieter than the Kotlin app's screen on purpose: no line on the
+/// phone app's Settings, and the server row out of the content.
 class TvSignInScreen extends ConsumerWidget {
   const TvSignInScreen({super.key});
 
@@ -41,11 +45,12 @@ class TvSignInScreen extends ConsumerWidget {
         ? activeServer(ref.watch(savedServersProvider))
         : null;
     final server = withoutScheme(auth.server);
+    final muted = TvType.body.style(color: colors.mutedForeground);
 
     return KeyedSubtree(
       key: ValueKey(auth.server),
       // A server being added: Back goes to finding or typing another, its
-      // row back to the one in use.
+      // control back to the one in use.
       child: PopScope(
         canPop: !auth.adding,
         onPopInvokedWithResult: (didPop, _) {
@@ -53,76 +58,119 @@ class TvSignInScreen extends ConsumerWidget {
         },
         child: TvAuthFrame(
           title: words.tvSigninTitle,
-          // A server not set up yet can't approve anyone; its setup runs in
-          // a browser.
-          description: auth.config.setup != null
-              ? words.signinSetup
-              : words.tvSigninDescription,
           split: .56,
           backdrop: LoginBackdropWall(settings: auth.config.loginBackdrop),
           side: [
-            Padding(
-              padding: const EdgeInsets.only(top: 28),
-              child: flow.expired
-                  ? Text(
-                      words.tvSigninExpired,
-                      style: KitText.xl.style(
-                        color: colors.foreground,
-                        weight: FontWeight.w600,
-                      ),
-                    )
-                  : CodeDetails(
-                      code: code,
-                      error: error == null
-                          ? null
-                          : describeFailure(words, error),
-                      onRetry: null,
-                      afterQr: true,
-                      large: true,
-                    ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: 360,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 10,
-                children: [
-                  if (stuck)
-                    TvListItem(
-                      title: flow.expired
-                          ? words.tvSigninNewCode
-                          : words.commonRetry,
-                      icon: Lucide.refreshCw,
-                      autofocus: true,
-                      onPressed: ref
-                          .read(deviceCodeSignInProvider(false).notifier)
-                          .newCode,
-                    ),
-                  // Nothing else gets a TV out of here, and it may have the
-                  // wrong server.
-                  if (current != null)
-                    TvListItem(
-                      title: words.serversBackTo(serverTitle(current)),
-                      subtitle: server,
-                      icon: Lucide.arrowLeft,
-                      quiet: true,
-                      autofocus: !stuck,
-                      onPressed: session.cancelAdd,
-                    )
-                  else
-                    TvListItem(
-                      title: words.connectChangeServer,
-                      subtitle: server,
-                      icon: Lucide.server,
-                      quiet: true,
-                      autofocus: !stuck,
-                      onPressed: () => showTvServerPanel(context),
-                    ),
-                ],
+            // A server not set up yet can't approve anyone; its setup runs
+            // in a browser.
+            if (auth.config.setup != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(words.signinSetup, style: muted),
               ),
-            ),
+            if (flow.expired)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(
+                  words.tvSigninExpired,
+                  style: TvType.title.style(color: colors.foreground),
+                ),
+              )
+            else if (code != null) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: _Where(
+                  words: words,
+                  address: withoutScheme(code.verificationUri),
+                  style: muted,
+                  emphasis: colors.foreground,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Semantics(
+                  label: code.userCode,
+                  child: ExcludeSemantics(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        code.userCode,
+                        maxLines: 1,
+                        style: tvCodeStyle.copyWith(
+                          fontSize: 56,
+                          height: 1.2,
+                          color: colors.foreground,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Row(
+                  spacing: 12,
+                  children: [
+                    Spinner(size: 18, color: colors.mutedForeground),
+                    Flexible(
+                      child: Text(words.signinCodeWaiting, style: muted),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (error == null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(words.signinCodeLoading, style: muted),
+              ),
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    describeFailure(words, error),
+                    style: TvType.body.style(color: colors.danger),
+                  ),
+                ),
+              ),
           ],
+          footer: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 12,
+            children: [
+              if (stuck)
+                TvAuthAction(
+                  label: flow.expired
+                      ? words.tvSigninNewCode
+                      : words.commonRetry,
+                  icon: Lucide.refreshCw,
+                  quiet: false,
+                  autofocus: true,
+                  onPressed: ref
+                      .read(deviceCodeSignInProvider(false).notifier)
+                      .newCode,
+                ),
+              // Nothing else gets a TV out of here, and it may have the
+              // wrong server.
+              if (current != null)
+                TvAuthAction(
+                  label: words.serversBackTo(serverTitle(current)),
+                  icon: Lucide.arrowLeft,
+                  autofocus: !stuck,
+                  onPressed: session.cancelAdd,
+                )
+              else
+                TvAuthAction(
+                  label: words.connectChangeServer,
+                  detail: server,
+                  icon: Lucide.server,
+                  autofocus: !stuck,
+                  onPressed: () => showTvServerPanel(context),
+                ),
+            ],
+          ),
           children: [
             Center(
               child: _CodeQr(flow: flow, size: _qrSize),
@@ -130,6 +178,42 @@ class TvSignInScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Where to type the code, with its address in [emphasis].
+class _Where extends StatelessWidget {
+  const _Where({
+    required this.words,
+    required this.address,
+    required this.style,
+    required this.emphasis,
+  });
+
+  final AppLocalizations words;
+  final String address;
+  final TextStyle style;
+  final Color emphasis;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = words.tvSigninScanOrEnter(address);
+    final at = text.indexOf(address);
+    return Text.rich(
+      at < 0
+          ? TextSpan(text: text)
+          : TextSpan(
+              children: [
+                TextSpan(text: text.substring(0, at)),
+                TextSpan(
+                  text: address,
+                  style: TextStyle(color: emphasis),
+                ),
+                TextSpan(text: text.substring(at + address.length)),
+              ],
+            ),
+      style: style,
     );
   }
 }
@@ -173,10 +257,7 @@ class _CodeQr extends StatelessWidget {
                   child: Text(
                     words.tvSigninExpiredShort,
                     textAlign: TextAlign.center,
-                    style: KitText.xl.style(
-                      color: colors.mutedForeground,
-                      weight: FontWeight.w600,
-                    ),
+                    style: TvType.title.style(color: colors.mutedForeground),
                   ),
                 )
               : flow.error == null
@@ -220,10 +301,7 @@ class TvUnreachableScreen extends ConsumerWidget {
           padding: const EdgeInsets.only(top: 36),
           child: Text(
             auth.server,
-            style: KitText.px15.style(
-              color: colors.mutedForeground,
-              weight: FontWeight.w500,
-            ),
+            style: TvType.label.style(color: colors.mutedForeground),
           ),
         ),
       ],
@@ -281,7 +359,7 @@ class TvConnectingScreen extends ConsumerWidget {
             Text(
               AppLocalizations.of(context)
                   .connectConnecting(withoutScheme(auth.server)),
-              style: KitText.base.style(color: colors.mutedForeground),
+              style: TvType.body.style(color: colors.mutedForeground),
             ),
           ],
         ),

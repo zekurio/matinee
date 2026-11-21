@@ -121,6 +121,18 @@ Future<void> _end(WidgetTester tester, Harness harness) async {
 
 Finder _field() => find.byType(EditableText);
 
+/// Whether focus is on the control that shows [text].
+bool _focusedIn(WidgetTester tester, String text) {
+  final focused = FocusManager.instance.primaryFocus?.context;
+  if (focused == null) return false;
+  var found = false;
+  tester.element(find.text(text)).visitAncestorElements((element) {
+    found = element == focused;
+    return !found;
+  });
+  return found;
+}
+
 void main() {
   setUpAll(() async {
     await (FontLoader(
@@ -608,6 +620,91 @@ void main() {
       expect(find.text('BCDF-GHJK'), findsOneWidget);
       // The code is all a TV has: no browser button.
       expect(find.text('Sign in with your browser'), findsNothing);
+      // One sentence says where to go, and nothing about the phone app.
+      expect(
+        find.textContaining('Scan the code, or go to', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Settings › Account', findRichText: true),
+        findsNothing,
+      );
+      // The way out sits small at the bottom left, and takes focus.
+      expect(_focusedIn(tester, 'Change server'), isTrue);
+      expect(find.text('192.168.1.5:8420'), findsOneWidget);
+      final change = tester.getRect(find.text('Change server'));
+      expect(change.bottom, greaterThan(540 - 27 - 48));
+      await _end(tester, harness);
+    });
+
+    testWidgets('a code that ran out puts focus on getting a new one', (
+      tester,
+    ) async {
+      final harness = Harness();
+      harness.backend
+        ..hosts.add('192.168.1.5')
+        ..devicePolls.add(
+          jsonResponse({
+            'code': 'NOT_FOUND',
+            'status': 404,
+            'message': 'x',
+          }, 404),
+        );
+      await _show(
+        tester,
+        harness,
+        device: _tv,
+        size: const Size(960, 540),
+        nearby: const [DiscoveredServer('Matinee', 'http://192.168.1.5:8420')],
+        poll: (_) async {},
+      );
+      await tester.tap(find.text('192.168.1.5:8420'));
+      await _reach<SignedOut>(tester, harness);
+      await _settle(tester);
+
+      expect(find.text('That code expired.'), findsOneWidget);
+      expect(find.text('Code expired'), findsOneWidget);
+      expect(find.text('BCDF-GHJK'), findsNothing);
+      expect(_focusedIn(tester, 'Get a new code'), isTrue);
+      // Changing the server stays beside it.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      expect(_focusedIn(tester, 'Change server'), isTrue);
+      await _end(tester, harness);
+    });
+
+    testWidgets('types an address and reaches Connect with the D-pad', (
+      tester,
+    ) async {
+      final harness = Harness();
+      harness.backend.hosts.add('a.example');
+      await _show(tester, harness, device: _tv, size: const Size(960, 540));
+      expect(_focusedIn(tester, 'Enter server address'), isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+      expect(
+        tester.widget<EditableText>(_field()).focusNode.hasPrimaryFocus,
+        isTrue,
+      );
+      await tester.enterText(_field(), 'a.example');
+
+      // A one-line field keeps the arrows for its caret unless the TV
+      // hands them on.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(_focusedIn(tester, 'Connect'), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump();
+      expect(
+        tester.widget<EditableText>(_field()).focusNode.hasPrimaryFocus,
+        isTrue,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await _reach<SignedOut>(tester, harness);
       await _end(tester, harness);
     });
 

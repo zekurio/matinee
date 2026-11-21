@@ -137,10 +137,14 @@ class _TvPlaybackScreenState extends ConsumerState<TvPlaybackScreen> {
       );
     }
     // Dark, in the theme's own dark half, so the server's accent shows.
+    // Black while it opens or failed; once a file plays, nothing here
+    // paints, since the picture shows through from the native view beneath
+    // the Flutter view, and the player paints its own black until then.
+    final playing = child is PlaybackHost;
     return MatineeTheme.alwaysDark(
       context,
       ColoredBox(
-        color: const Color(0xFF000000),
+        color: playing ? const Color(0x00000000) : const Color(0xFF000000),
         child: TvFocusRules(child: child),
       ),
     );
@@ -273,6 +277,10 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
   late final PlayerMediaSession _media;
   late final bool _matchFrameRate;
   Timer? _hide;
+
+  /// Whether it played when the session last changed, so only starting or
+  /// stopping counts toward hiding the controls, not each tick of the time.
+  bool _playing = false;
   var _controls = true;
   var _menuOpen = false;
   double? _scrub;
@@ -349,7 +357,13 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
       _countdown.sync(_session, leaving: _leaving);
       _syncSegment();
     });
-    _resetHide();
+    // The session changes with every tick of the time; restarting the timer
+    // on each kept the controls up for good.
+    final playing = _session.playback.status.playing;
+    if (playing != _playing) {
+      _playing = playing;
+      _resetHide();
+    }
     _syncMedia();
     if (_matchFrameRate) {
       if (_session.item case final item?) {
@@ -773,11 +787,15 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
         autofocus: true,
         child: Stack(
           fit: StackFit.expand,
+          // The layers that keep state have keys, so one coming or going
+          // around them, like the spinner as a seek buffers, doesn't build
+          // them anew: the controls would forget the seek bar's focus.
           children: [
             if (item == null || _session.refused || _leaving)
               const ColoredBox(color: Color(0xFF000000)),
-            VideoView(player: _session.player),
+            VideoView(key: const ValueKey('video'), player: _session.player),
             TimedNote(
+              key: const ValueKey('notice'),
               token: _session.notice,
               duration: const Duration(seconds: 5),
               onHidden: _session.dismissNotice,
@@ -800,6 +818,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
               ),
             if (item != null && names != null)
               PlayerFade(
+                key: const ValueKey('controls'),
                 visible: visible && error == null,
                 child: TvPlayerOverlay(
                   targets: _targets,
@@ -851,7 +870,6 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
                 cues: captions,
                 look: subtitleLook(ref, prefs),
                 bottom: visible ? tvOverlayHeight : 40,
-                side: 80,
               ),
             if (error != null)
               ColoredBox(
@@ -862,6 +880,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
             // their row, beside the menus.
             if (action != null)
               Positioned(
+                key: const ValueKey('corner'),
                 right: Overscan.horizontal,
                 bottom: Overscan.vertical,
                 child: PlayerFade(

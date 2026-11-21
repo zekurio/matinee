@@ -211,6 +211,14 @@ class _TvShellState extends ConsumerState<TvShell> {
     };
     _pageFocus = null;
     context.go(path);
+    // A new page takes focus from the drawer as it opens. Home is already
+    // under the others, so going there only uncovers it, and nothing would.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final node = FocusManager.instance.primaryFocus;
+      if (mounted && (node?.ancestors.contains(drawer.scope) ?? false)) {
+        toPage();
+      }
+    });
   }
 
   bool _scroll(ScrollNotification notification) {

@@ -167,8 +167,8 @@ class TvIconButton extends StatelessWidget {
 }
 
 /// A round button that stays an icon, like the search field's clear or the
-/// player's play and pause, [size] across. [label] names it for a screen
-/// reader. [lit] gives it the focused look ahead of focus, for one that is
+/// player's play and pause, [size] across, its icon [iconSize] or .42 of
+/// that. [label] names it for a screen reader. [lit] gives it the focused look ahead of focus, for one that is
 /// about to take it as it appears.
 class TvRoundButton extends StatelessWidget {
   const TvRoundButton({
@@ -177,6 +177,7 @@ class TvRoundButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.size = TvButtons.height,
+    this.iconSize,
     this.lit = false,
     this.focusNode,
     this.autofocus = false,
@@ -188,6 +189,7 @@ class TvRoundButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final double size;
+  final double? iconSize;
   final bool lit;
   final FocusNode? focusNode;
   final bool autofocus;
@@ -207,7 +209,7 @@ class TvRoundButton extends StatelessWidget {
       builder: (context, content) => SizedBox.square(
         dimension: size,
         child: Center(
-          child: KitIcon(icon, size: size * .42, color: content),
+          child: KitIcon(icon, size: iconSize ?? size * .42, color: content),
         ),
       ),
     ),

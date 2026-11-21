@@ -402,7 +402,6 @@ Widget? _linksRow(BuildContext context, Title title, TvFocusMemory memory) {
     row: _Rows.links,
     memory: memory,
     height: _chipHeight,
-    gap: 12,
     itemCount: links.length,
     itemBuilder: (context, index) {
       final (key, label, route) = links[index];
@@ -518,7 +517,7 @@ class _TvTitleScreenState extends ConsumerState<TvTitleScreen>
           logo: title.images.logo,
           width: 420,
           height: 110,
-          alignment: Alignment.bottomLeft,
+          alignment: Alignment.centerLeft,
           fallback: SizedBox(
             width: 720,
             child: Text(
