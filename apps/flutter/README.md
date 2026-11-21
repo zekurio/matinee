@@ -114,6 +114,12 @@ the sign-in screens do apart from how they look.
 - Every HTTP client adds the User-Agent, and the bearer token only to its
   server's origin. A client made for one sign-in refuses to send once the
   sign-in changes, so use `apiProvider` again after one.
+- Once a session signs in, or checks out at launch, the app names itself
+  through `account.sessions.identify` with `Device.clientName`: Matinee
+  Android, Matinee Android TV, Matinee iOS, or Matinee Apple TV, the names
+  the native apps send. The server shows it in the sessions list and
+  watching now as it is, so it isn't translated. It's sent in the
+  background, and a failure, or an older server's 404, is let go.
 - Browser sign-in is RFC 8252 with PKCE through flutter_web_auth_2, back
   to `matinee://auth/callback`. A TV signs in with a code instead.
 - On Android 17, reaching or finding a server on the local network needs

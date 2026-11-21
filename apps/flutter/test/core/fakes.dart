@@ -161,6 +161,10 @@ final class FakeBackend {
   /// The branding's accents each host sends, by host; none by default.
   final accents = <String, Map<String, Object?>>{};
 
+  /// Hosts from before clients named themselves: naming the session gets
+  /// a 404 there.
+  final unnamed = <String>{};
+
   /// Holds the next `/auth/session` answer until it completes.
   Completer<void>? holdSession;
 
@@ -206,6 +210,9 @@ final class FakeBackend {
         return jsonResponse({'user': name == null ? null : userJson(name)});
       case '/api/v1/auth/sign-out':
         return http.Response('', 200);
+      case '/api/v1/account/sessions/current/client'
+          when request.method == 'PUT' && !unnamed.contains(host):
+        return http.Response('', 204);
       case '/api/v1/auth/device':
         return jsonResponse({
           'deviceCode': 'device-${requests.length}',

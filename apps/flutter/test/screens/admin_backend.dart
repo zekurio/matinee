@@ -79,7 +79,8 @@ JsonMap _queue(
   'retryAfterSeconds': null,
 };
 
-JsonMap _task(String id, {String? queue}) => {
+/// A scheduled task as the jobs overview sends it, run daily.
+JsonMap taskJson(String id, {String? queue}) => {
   'id': id,
   'name': id,
   'description': '',
@@ -398,8 +399,8 @@ final class AdminBackend {
   JsonMap get _jobs => {
     'queues': queues,
     'tasks': [
-      _task('scan-libraries', queue: 'library-scan'),
-      _task('clean-sessions'),
+      taskJson('scan-libraries', queue: 'library-scan'),
+      taskJson('clean-sessions'),
     ],
   };
 

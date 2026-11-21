@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -231,26 +232,33 @@ String queueStatus(AppLocalizations l, JobQueueStatus queue) => [
 /// When the task runs, in a sentence, by its interval and how it starts.
 String scheduleOf(AppLocalizations l, ScheduledTask task) {
   final delay = task.startupDelaySeconds?.round();
-  final interval = task.intervalSeconds?.round();
+  final interval = task.intervalSeconds;
   String span(int seconds) => shortDuration(l, seconds);
   if (interval == null) {
     if (delay == null) return l.webJobsScheduleManual;
     if (delay == 0) return l.webJobsScheduleAtStartup;
     return l.webJobsScheduleAfterStartup(span(delay));
   }
-  if (interval == 86400) {
-    if (delay == null) return l.webJobsScheduleDaily;
-    if (delay == 0) return l.webJobsScheduleDailyAtStartup;
-    return l.webJobsScheduleDailyAfterStartup(span(delay));
+  final every = everyText(l, interval);
+  if (delay == null) return every;
+  if (delay == 0) return l.webJobsScheduleEveryAtStartup(every);
+  return l.webJobsScheduleEveryAfterStartup(every, span(delay));
+}
+
+/// "Every 5 minutes", in the interval's largest unit, rounded as the web
+/// and the Kotlin app round it, so one of a unit reads "Every minute":
+/// 59.6 seconds is a minute, and 90 seconds is 2 minutes.
+String everyText(AppLocalizations l, double seconds) {
+  if (seconds < 59.5) {
+    return l.webJobsScheduleEverySeconds(math.max(1, seconds.round()));
   }
-  if (interval == 3600) {
-    if (delay == null) return l.webJobsScheduleHourly;
-    if (delay == 0) return l.webJobsScheduleHourlyAtStartup;
-    return l.webJobsScheduleHourlyAfterStartup(span(delay));
+  if (seconds < 3570) {
+    return l.webJobsScheduleEveryMinutes((seconds / 60).round());
   }
-  if (delay == null) return l.webJobsScheduleEvery(span(interval));
-  if (delay == 0) return l.webJobsScheduleEveryAtStartup(span(interval));
-  return l.webJobsScheduleEveryAfterStartup(span(interval), span(delay));
+  if (seconds < 84600) {
+    return l.webJobsScheduleEveryHours((seconds / 3600).round());
+  }
+  return l.webJobsScheduleEveryDays((seconds / 86400).round());
 }
 
 /// The task's last run and its schedule, or how far the run is now.
@@ -277,7 +285,7 @@ String taskStatus(AppLocalizations l, ScheduledTask task) {
   };
   final schedule = scheduleOf(l, task);
   final next = switch (task.nextRunAt) {
-    final at? => '$schedule · ${relativeText(l, at)}',
+    final at? => '$schedule · ${upcomingText(l, at)}',
     null => schedule,
   };
   return '$last\n$next';

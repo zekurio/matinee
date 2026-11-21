@@ -100,15 +100,26 @@ bool showsNextUp(Title title) {
 }
 
 /// A title's facts: its year, then its episode count or runtime, then a
-/// show's status, as the server words it.
+/// show's status in the app's language.
 List<String> titleFacts(Title title, AppLocalizations l) => [
   ?title.year?.toString(),
   if (title.isShow)
     l.mediaEpisodeCount(title.itemCount)
   else
     ?formatRuntime(title.runtimeMinutes, l),
-  if (title.isShow) ?title.status,
+  if (title.isShow) ?titleStatusName(title.status, l),
 ];
+
+/// A show's status in the app's language, with the web's words, as the
+/// Kotlin app's `titleStatusName`: null for none, or for one from a newer
+/// server this build doesn't know, which shows nothing rather than the
+/// server's key.
+String? titleStatusName(String? status, AppLocalizations l) => switch (status) {
+  TitleStatus.continuing => l.webMetadataStatusContinuing,
+  TitleStatus.ended => l.webMetadataStatusEnded,
+  TitleStatus.unreleased => l.webMetadataStatusUnreleased,
+  _ => null,
+};
 
 /// An episode's facts: its air date, then its runtime.
 List<String> episodeFacts(MediaItem item, AppLocalizations l) => [
