@@ -140,12 +140,14 @@ class _TvShellState extends ConsumerState<TvShell> {
         node.ancestors.contains(page)) {
       _pageFocus = node;
     }
-    if (_lost(node)) {
-      _refocus?.cancel();
-      _refocus = Timer(const Duration(milliseconds: 120), () {
-        if (mounted && _lost(FocusManager.instance.primaryFocus)) toPage();
-      });
-    }
+    if (_lost(node)) _refocusIn(const Duration(milliseconds: 120));
+  }
+
+  void _refocusIn(Duration delay) {
+    _refocus?.cancel();
+    _refocus = Timer(delay, () {
+      if (mounted && _lost(FocusManager.instance.primaryFocus)) toPage();
+    });
   }
 
   /// Nothing has focus that should: it went with a card that's gone, or a
@@ -175,7 +177,11 @@ class _TvShellState extends ConsumerState<TvShell> {
       return;
     }
     final route = page._route;
-    if (route != null && (TvFocusMemory.of(route)?.focusLast() ?? false)) {
+    final memory = route == null ? null : TvFocusMemory.of(route);
+    if (memory != null && memory.focusLast()) {
+      // Still waiting for its card: ask again, so a page that never shows
+      // it, as one whose episodes failed to load, still gets focus.
+      if (memory.opening) _refocusIn(const Duration(milliseconds: 250));
       return;
     }
     final first = scope.traversalDescendants

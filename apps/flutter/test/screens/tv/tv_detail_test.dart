@@ -189,6 +189,24 @@ void main() {
       );
     });
 
+    testWidgets("a season whose episodes don't load still gives focus", (
+      tester,
+    ) async {
+      final backend = _backend();
+      await pumpTv(tester, backend, size: const Size(960, 540));
+      GoRouter.of(tester.element(find.byType(TvShell))).go('/title/s1');
+      await settle(tester);
+      await down(tester, 2);
+      expect(focusedKey(), 'seasons/1');
+      backend.down.add('/api/v1/titles/s1/items');
+      await select(tester);
+      expect(find.byType(TvSeasonScreen), findsOneWidget);
+      // The page waits a moment for an episode, then focuses what it has.
+      await tester.pump(const Duration(seconds: 3));
+      await settle(tester);
+      expect(focusedKey(), startsWith('tabs/'));
+    });
+
     testWidgets('tabs change the season, and the show button goes up', (
       tester,
     ) async {
