@@ -178,7 +178,10 @@ jobs:
           persist-credentials: false
 
       # Use Nix for XcodeGen, just, and Node, as the local recipes do.
-      # The flake's dev shell is Linux-only; use Nixpkgs tools directly.
+      # The flake's dev shell is Linux-only, so these come from Nixpkgs
+      # directly, at the flake's locked revision (`--inputs-from .`).
+      # The newest Nixpkgs may not have a tool built for macOS yet, and
+      # building XcodeGen from source here fails.
       - name: install nix
         uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
         with:
@@ -194,17 +197,17 @@ jobs:
 
       # The kit's icon check reads lucide-react from node_modules.
       - name: install dependencies
-        run: nix shell nixpkgs#nodejs_24 nixpkgs#pnpm_11 -c pnpm install --frozen-lockfile
+        run: nix shell --inputs-from . nixpkgs#nodejs_24 nixpkgs#pnpm_11 -c pnpm install --frozen-lockfile
 
       # Includes swift test in Packages/MatineeCore. No simulator is booted.
       - name: test core and check generated resources
-        run: nix shell nixpkgs#just -c just ios test
+        run: nix shell --inputs-from . nixpkgs#just -c just ios test
 
       - name: generate project and build unsigned simulator app
-        run: nix shell nixpkgs#just -c just ios build
+        run: nix shell --inputs-from . nixpkgs#just -c just ios build
 
       - name: build unsigned Apple TV simulator app
-        run: nix shell nixpkgs#just -c just ios tv-build
+        run: nix shell --inputs-from . nixpkgs#just -c just ios tv-build
 
   nix:
     name: nix flake check

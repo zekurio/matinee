@@ -25,9 +25,9 @@ tv_xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme MatineeTV -deriv
 default:
     @just --list --unsorted
 
-# Generate with XcodeGen from Nixpkgs, or XCODEGEN on PATH.
+# Generate with XcodeGen from the flake's Nixpkgs, or XCODEGEN on PATH.
 generate:
-    {{ env("XCODEGEN", "nix run nixpkgs#xcodegen --") }} generate --quiet
+    {{ env("XCODEGEN", "nix run --inputs-from ../.. nixpkgs#xcodegen --") }} generate --quiet
 
 # Build for any simulator without booting one; extra xcodebuild flags follow
 build *args: generate
@@ -65,7 +65,7 @@ test: boundary
     cd Packages/MatineeCore && swift test
     scripts/lucide.py --kit --check
     scripts/lucide.py --check
-    {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
+    {{ env("NODE", "nix shell --inputs-from ../.. nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
 
 # Fail on a stock SwiftUI control in either app's screens, and on a phone component, a phone text size, or a phone overlay in the Apple TV app's
 boundary:
@@ -73,13 +73,13 @@ boundary:
 
 # Generate the API client again after a contract change
 api:
-    cd ../.. && nix shell nixpkgs#nodejs_24 nixpkgs#pnpm_11 -c pnpm api:ios
+    cd ../.. && nix shell --inputs-from . nixpkgs#nodejs_24 nixpkgs#pnpm_11 -c pnpm api:ios
 
 # Write the kit's icons from Android's, the app's logo from brand/, and the palettes from the web's
 icons:
     scripts/lucide.py --kit
     scripts/lucide.py
-    {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs
+    {{ env("NODE", "nix shell --inputs-from ../.. nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs
 
 # Build the Apple TV app for any tvOS simulator without booting one; extra xcodebuild flags follow
 tv-build *args: generate
