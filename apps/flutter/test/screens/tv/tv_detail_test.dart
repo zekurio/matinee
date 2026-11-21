@@ -128,6 +128,24 @@ void main() {
       expect(name.top, greaterThan(0));
     });
 
+    testWidgets('one season lists its episodes, with no row of seasons', (
+      tester,
+    ) async {
+      final backend = _backend();
+      backend.answers['/api/v1/titles/s1'] = fullTitleJson(
+        's1',
+        kind: 'show',
+        name: 'The Expanse',
+        seasons: [seasonJson(1, watched: 1)],
+        itemCount: 3,
+      );
+      await pumpTv(tester, backend, size: const Size(960, 540));
+      GoRouter.of(tester.element(find.byType(TvShell))).go('/title/s1');
+      await settle(tester);
+      expect(find.text('Episodes'), findsOneWidget);
+      expect(find.text('Seasons'), findsNothing);
+    });
+
     testWidgets('a season opens on the episode Play starts, and Back returns', (
       tester,
     ) async {

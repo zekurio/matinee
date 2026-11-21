@@ -699,7 +699,9 @@ first key.
   `TvListItems.focusRoom` past it, and panels are 404 wide with 36 at
   their sides, so their rows keep the Kotlin app's width.
 - Screens (`lib/screens/tv`): Home; Movies, Shows, Browse, Favorites, and
-  Search; the title, season, episode, and person pages; Profile with its
+  Search; the title, season, episode, and person pages (a show of one
+  season lists its episodes without the Kotlin app's one-card Seasons
+  row); Profile with its
   charts and standing, and Recently watched; and Settings, whose
   categories sit at the left and whose rows are on the right. Its
   Playback and Subtitles rows set the same `PlayerPrefs` as the phone's
