@@ -60,6 +60,8 @@ export function PermissionPicker({
   onChange: (value: Permission[]) => void
 }) {
   const [search, setSearch] = useState("")
+  // What was picked before `all` went on, for when it goes off again.
+  const [picked, setPicked] = useState<Permission[]>([])
   const everything = all !== undefined && value.includes("all")
   const needle = search.trim().toLowerCase()
   const groups = groupByResource(offered)
@@ -85,7 +87,10 @@ export function PermissionPicker({
             className="mt-0.5"
             checked={everything}
             // `all` stands alone: picked permissions would mean nothing beside it.
-            onCheckedChange={(on) => onChange(on ? ["all"] : [])}
+            onCheckedChange={(on) => {
+              if (on) setPicked([...value])
+              onChange(on ? ["all"] : picked)
+            }}
           />
           <span className="min-w-0">
             <span className="block text-sm leading-5">{all.label}</span>

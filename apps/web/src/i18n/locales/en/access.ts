@@ -100,7 +100,7 @@ export default defineMessages("access", {
   "access.permission.folder":
     "Browsing the server's folders, as adding a library does.",
   "access.permission.fulfilment":
-    "Connections that fetch requested titles, and their rules.",
+    "Connections that fetch requested titles, and their rules. Shows every library's name and folders.",
   "access.permission.group": "Access groups.",
   "access.permission.invite": "Invite links.",
   "access.permission.job": "Queues and scheduled tasks.",

@@ -292,10 +292,12 @@ tokens use the same list, see [API tokens](#api-tokens).
   groups, and an override's allow and deny. Someone who edits groups
   can't give themselves more through one. Only an admin changes, signs
   out, or deletes an admin's account.
-- Some permissions amount to running the server, whoever holds them:
-  `authSettings.update` decides who signs in as an admin, and
-  `library.create` opens any folder the server can read as a library.
-  Grant those as you would the admin role.
+- Saving Settings → Authentication takes `all`, since the provider and its
+  role claim decide who signs in as an admin. `library.create` opens any
+  folder the server can read as a library, so grant it as you would the
+  admin role. The `fulfilment` permissions decide where requested titles
+  land across the server, so they show every library's name and folders,
+  whatever libraries the holder's groups open.
 - The web app shows a section of Settings, or the request queue, to
   whoever holds its permission. The Android, iOS, and TV apps still show
   their admin screens to admins only.
@@ -717,7 +719,12 @@ dialog offers the ones the account holds.
   holds and no further. Give it to nothing that works with less.
 - A token with the `apiToken` permissions manages the account's tokens,
   but only hands on what it holds: it can't make, change, or rotate a
-  token to hold a permission it lacks.
+  token to hold a permission it lacks. An invite made with a token is
+  checked against the token when it's made, and against its maker's
+  account when someone uses it. For the same reason only a token
+  with `all` adds a way to sign in: registering a passkey, linking a
+  single sign-on account, or approving a device, each of which does all
+  the account may.
 - The plain routes name their permission where they read the session:
   streams take `media.play`, downloads `media.download`, artwork
   `title.read`, and profile pictures `profile.read`. Approving an app at

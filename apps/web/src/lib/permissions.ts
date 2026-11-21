@@ -27,6 +27,15 @@ export function canAny(
   return permissions.some((permission) => can(user, permission))
 }
 
+/**
+ * Whether the account runs the request queue: reading everyone's
+ * requests and answering them. The queue's screen is all answers, so it
+ * takes both.
+ */
+export function runsQueue(user: Pick<User, "permissions">): boolean {
+  return can(user, "adminRequest.read") && can(user, "adminRequest.update")
+}
+
 /** `permissions` with `changed` all held or all gone, in the contract's order. */
 export function withPermissions(
   permissions: readonly Permission[],
@@ -47,6 +56,12 @@ export function withPermissions(
  */
 export type RequestsChoice = "off" | "ask" | "add"
 export const REQUESTS_CHOICES: readonly RequestsChoice[] = ["off", "ask", "add"]
+
+/** The two permissions a request choice stands for. */
+export const REQUEST_PERMISSIONS: readonly Permission[] = [
+  "request.create",
+  "request.autoApprove",
+]
 
 /** The permissions the access forms give a control of their own. */
 export const POLICY_PERMISSIONS: readonly Permission[] = [

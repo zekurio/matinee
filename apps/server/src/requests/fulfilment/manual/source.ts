@@ -40,7 +40,8 @@ export const manual = {
   },
   folder: (value) => sending.parse(value).folder,
   async options() {
-    // ACCESS: fulfilment settings span every library, for whoever may read them.
+    // ACCESS: `fulfilment.read` shows every library's folders, whatever
+    // libraries the account's groups open.
     const rows = await db
       .select({
         path: libraryFolder.path,

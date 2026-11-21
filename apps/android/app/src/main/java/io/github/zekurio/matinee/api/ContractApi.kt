@@ -1766,7 +1766,7 @@ class AdminAuthApi internal constructor(private val transport: ApiTransport) {
             AdminAuthSettings.serializer(),
         )
 
-    /** The account needs the `authSettings.update` permission, and so does an API token. `PUT /admin/auth` */
+    /** Only an admin calls this, and an API token needs the `all` permission. `PUT /admin/auth` */
     suspend fun update(authSettingsInput: AuthSettingsInput): AdminAuthSettings =
         transport.call(
             "PUT",

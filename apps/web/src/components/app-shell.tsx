@@ -28,7 +28,7 @@ import { type ComponentType, type ReactNode, useEffect } from "react"
 
 import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
-import { can } from "@/lib/permissions"
+import { runsQueue } from "@/lib/permissions"
 import { orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import { useSignOut } from "@/lib/sign-out"
@@ -171,7 +171,7 @@ function AccountMenu({ user }: { user: User }) {
   const openSettings = useOpenSettings()
   const navigate = useNavigate()
   const name = user.displayName ?? user.username
-  const admin = can(user, "adminRequest.read")
+  const admin = runsQueue(user)
   const needsYou = useNeedsYou(admin)
   const actions: {
     label: string

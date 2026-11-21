@@ -88,7 +88,7 @@ export default {
   "access.permission.folder":
     "Die Ordner des Servers durchsuchen, wie beim Anlegen einer Mediathek.",
   "access.permission.fulfilment":
-    "Verbindungen, die angefragte Titel holen, und ihre Regeln.",
+    "Verbindungen, die angefragte Titel holen, und ihre Regeln. Zeigt Namen und Ordner aller Mediatheken.",
   "access.permission.group": "Zugriffsgruppen.",
   "access.permission.invite": "Einladungslinks.",
   "access.permission.job": "Warteschlangen und geplante Aufgaben.",

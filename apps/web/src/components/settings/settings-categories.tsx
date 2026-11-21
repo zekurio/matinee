@@ -18,7 +18,7 @@ import {
 import { type ComponentType, useMemo } from "react"
 
 import { tr } from "@/i18n"
-import { canAny } from "@/lib/permissions"
+import { can, canAny } from "@/lib/permissions"
 import type { SettingsSectionId } from "@/lib/settings"
 
 import { AccessPanel } from "./access-panel"
@@ -58,10 +58,16 @@ type SectionEntry = Pick<
 > & {
   /**
    * The permissions that open the section: an account with any of them
-   * sees it. They are what its panel reads with. None for a section every
-   * account has.
+   * sees it. Its panel checks each action itself, so holding one is
+   * enough to use it. None for a section every account has.
    */
   needs?: readonly Permission[]
+  /**
+   * The permissions a section needs every one of: those its panel calls
+   * with. The panel is one form or list with no read-only form, so an
+   * account short of one would see controls that always fail.
+   */
+  needsAll?: readonly Permission[]
 }
 
 const SECTIONS: SectionEntry[] = [
@@ -107,49 +113,54 @@ const SECTIONS: SectionEntry[] = [
   {
     id: "requests",
     group: "admin",
-    needs: ["fulfilment.read"],
+    needsAll: [
+      "fulfilment.read",
+      "fulfilment.create",
+      "fulfilment.update",
+      "fulfilment.delete",
+    ],
     icon: InboxIcon,
     Panel: RequestsPanel,
   },
   {
     id: "authentication",
     group: "admin",
-    needs: ["authSettings.read"],
+    needs: ["all"],
     icon: KeyRoundIcon,
     Panel: AuthPanel,
   },
   {
     id: "transcoding",
     group: "admin",
-    needs: ["transcodingSettings.read"],
+    needsAll: ["transcodingSettings.read", "transcodingSettings.update"],
     icon: FilmIcon,
     Panel: TranscodingPanel,
   },
   {
     id: "trickplay",
     group: "admin",
-    needs: ["trickplaySettings.read"],
+    needsAll: ["trickplaySettings.read", "trickplaySettings.update"],
     icon: GalleryHorizontalEndIcon,
     Panel: TrickplayPanel,
   },
   {
     id: "network",
     group: "admin",
-    needs: ["networkSettings.read"],
+    needsAll: ["networkSettings.read", "networkSettings.update"],
     icon: NetworkIcon,
     Panel: NetworkPanel,
   },
   {
     id: "jobs",
     group: "admin",
-    needs: ["job.read"],
+    needsAll: ["job.read", "job.update"],
     icon: ListChecksIcon,
     Panel: JobsPanel,
   },
   {
     id: "branding",
     group: "admin",
-    needs: ["branding.read"],
+    needsAll: ["branding.read", "branding.update"],
     icon: PaintbrushIcon,
     Panel: BrandingPanel,
   },
@@ -175,7 +186,11 @@ export function useSettingsCategories(user: User): SettingsCategory[] {
   return useMemo(
     () =>
       SECTIONS.filter(
-        (section) => !section.needs || canAny({ permissions }, section.needs),
+        (section) =>
+          (!section.needs || canAny({ permissions }, section.needs)) &&
+          (section.needsAll ?? []).every((permission) =>
+            can({ permissions }, permission),
+          ),
       ).map(describe),
     [permissions],
   )

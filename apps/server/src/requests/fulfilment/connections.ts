@@ -206,7 +206,8 @@ const libraryKind = (kind: Kind): Library["kind"] =>
  * that can take requests: those with a metadata provider.
  */
 async function scannedFolders(tx: Reader = db) {
-  // ACCESS: fulfilment settings and internal routing, over every library.
+  // ACCESS: routing, and the `fulfilment` permissions, which show every
+  // library's folders whatever the account's groups open.
   const rows = await tx
     .select({ path: libraryFolder.path, library })
     .from(libraryFolder)

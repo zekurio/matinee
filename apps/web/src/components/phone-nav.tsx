@@ -17,7 +17,7 @@ import {
 import { type ReactNode, useEffect } from "react"
 
 import { tr } from "@/i18n"
-import { can } from "@/lib/permissions"
+import { runsQueue } from "@/lib/permissions"
 
 import { useNeedsYou } from "./requests/request-queue"
 import { AvatarWithDot, UserAvatar } from "./user-avatar"
@@ -101,7 +101,7 @@ export function TabBar({ user, current }: { user: User; current: PhoneTab }) {
   // Home stays under the other tabs, so Back from one goes Home rather
   // than through every tab picked on the way.
   const replace = current !== "home"
-  const needsYou = useNeedsYou(can(user, "adminRequest.read"))
+  const needsYou = useNeedsYou(runsQueue(user))
   return (
     <nav
       aria-label={tr("shell.tabs")}

@@ -49,9 +49,8 @@ export const PERMISSIONS = [
   "apiToken.delete",
   "apiToken.rotate",
 
-  /** Passkey and single sign-on settings. */
+  /** Passkey and single sign-on settings. Changing them takes `all`. */
   "authSettings.read",
-  "authSettings.update",
 
   "branding.read",
   "branding.update",
@@ -64,7 +63,12 @@ export const PERMISSIONS = [
   /** The server's folders, as the library form browses them. */
   "folder.read",
 
-  /** Connections that fetch requested titles, and their rules. */
+  /**
+   * Connections that fetch requested titles, and their rules. They decide
+   * where titles land across the whole server, so these show every
+   * library's name and folders, whatever libraries the account's groups
+   * open.
+   */
   "fulfilment.create",
   "fulfilment.read",
   "fulfilment.update",
@@ -99,7 +103,11 @@ export const PERMISSIONS = [
   "networkSettings.read",
   "networkSettings.update",
 
-  /** The account's link to the single sign-on provider. */
+  /**
+   * The account's link to the single sign-on provider. Linking one adds a
+   * way to sign in, so an API token needs `all` for it, as for
+   * `passkey.create` and for approving a device with `session.create`.
+   */
   "oidcAccount.create",
   "oidcAccount.read",
   "oidcAccount.delete",
@@ -134,7 +142,10 @@ export const PERMISSIONS = [
   /** Everyone's watch time, and who is watching now. */
   "serverStats.read",
 
-  /** The account's sessions. `create` approves a device's sign-in. */
+  /**
+   * The account's sessions. `create` reads a device's sign-in request;
+   * approving it takes `all` from an API token.
+   */
   "session.create",
   "session.read",
   "session.update",

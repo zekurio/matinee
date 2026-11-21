@@ -28,6 +28,7 @@ import { firstError, useAppForm } from "@/lib/form"
 import { formatDateTime, formatRelative } from "@/lib/format"
 import {
   POLICY_PERMISSIONS,
+  REQUEST_PERMISSIONS,
   type RequestsChoice as Requests,
   requestsOf,
 } from "@/lib/permissions"
@@ -177,9 +178,28 @@ function valuesOf(access: UserAccess): AccessValues {
   }
 }
 
-function overrideOf(value: AccessValues): AccessOverride {
+/** The request permissions among `permissions`. */
+const requestOnes = (permissions: readonly Permission[] | undefined) =>
+  (permissions ?? []).filter((permission) =>
+    REQUEST_PERMISSIONS.includes(permission),
+  )
+
+/**
+ * The override to save. The request choice shows three mixes of its two
+ * permissions, so one never touched keeps what `saved` allows and denies
+ * of them: an override may deny adding without an approval and leave
+ * asking to the groups. Once changed, even back to how it opened, the
+ * choice is what it shows.
+ */
+function overrideOf(
+  value: AccessValues,
+  saved: AccessOverride,
+  requestsChanged: boolean,
+): AccessOverride {
   const all = value.libraries === "all"
-  const requests = requestsLists(value.requests)
+  const requests = !requestsChanged
+    ? { allow: requestOnes(saved.allow), deny: requestOnes(saved.deny) }
+    : requestsLists(value.requests)
   const allow: Permission[] = [...value.allow, ...requests.allow]
   const deny: Permission[] = [...value.deny, ...requests.deny]
   if (value.downloads === "on") allow.push("media.download")
@@ -310,7 +330,11 @@ function AccessEditor({
       const parsed = UserAccessInput.safeParse({
         id: user.id,
         groupIds: value.groupIds,
-        override: overrideOf(value),
+        override: overrideOf(
+          value,
+          user.access.override,
+          formApi.getFieldMeta("requests")?.isDirty ?? false,
+        ),
       })
       if (!parsed.success) {
         throw new ShownError(
@@ -368,7 +392,7 @@ function AccessEditor({
 
   return (
     <form
-      className="flex flex-col gap-6"
+      className="flex min-w-0 flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault()
         submit()

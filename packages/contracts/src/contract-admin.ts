@@ -64,9 +64,10 @@ export const adminContract = oc.tag("Admin").router({
     /**
      * Save passkeys and the OIDC provider. Applies to the next sign-in, no
      * restart. Fails when it would leave no way in, or leave you unable to
-     * sign in.
+     * sign in. The provider and its role claim say who signs in as an
+     * admin, so only an admin saves them.
      */
-    update: put("/admin/auth", "authSettings.update")
+    update: put("/admin/auth", "all")
       .input(AuthSettingsInput)
       .output(AdminAuthSettings),
   },

@@ -2,7 +2,6 @@ import type { Permission } from "@matinee/contracts"
 
 import {
   createGroup,
-  groupById,
   GroupError,
   listGroups,
   providerGroups,
@@ -32,8 +31,9 @@ function changed(
 }
 
 // Whoever saves a group holds every permission they add to it or take
-// from it, see `requireOwn`. Its libraries and limits are theirs to set
-// with `group.update` alone.
+// from it, see `requireOwn`. Following another provider group swaps the
+// members the provider picks, which moves everything the group grants.
+// Its libraries and limits are theirs to set with `group.update` alone.
 export const adminGroups = {
   list: authed.admin.groups.list.handler(() => listGroups()),
 
@@ -46,23 +46,27 @@ export const adminGroups = {
 
   update: authed.admin.groups.update.handler(async ({ context, input }) => {
     const { id, ...group } = input
-    const before = await groupById(id)
-    if (!before) throw notFound(GROUP_GONE)
-    requireOwn(
-      context.user,
-      changed(before.policy.permissions, grantable(group.policy.permissions)),
-    )
-    const updated = await updateGroup(id, group).catch(groupFailure)
+    const granted = grantable(group.policy.permissions)
+    const updated = await updateGroup(id, group, (before) => {
+      const remapped =
+        !before.everyone &&
+        before.providerGroup !== (group.providerGroup || null)
+      requireOwn(
+        context.user,
+        remapped
+          ? [...before.permissions, ...granted]
+          : changed(before.permissions, granted),
+      )
+    }).catch(groupFailure)
     if (!updated) throw notFound(GROUP_GONE)
     log.info(`${context.user.username} changed the group ${updated.name}`)
     return updated
   }),
 
   remove: authed.admin.groups.remove.handler(async ({ context, input }) => {
-    const before = await groupById(input.id)
-    if (!before) throw notFound(GROUP_GONE)
-    requireOwn(context.user, before.policy.permissions)
-    const removed = await removeGroup(input.id).catch(groupFailure)
+    const removed = await removeGroup(input.id, (before) =>
+      requireOwn(context.user, before.permissions),
+    ).catch(groupFailure)
     if (!removed) throw notFound(GROUP_GONE)
     log.info(`${context.user.username} deleted the group ${input.id}`)
   }),

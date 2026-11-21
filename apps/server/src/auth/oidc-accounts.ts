@@ -11,7 +11,12 @@ import {
 } from "@matinee/db"
 import { and, eq } from "drizzle-orm"
 
-import { forgetGroups, groupsFollowing, setMemberships } from "../access/groups"
+import {
+  forgetGroups,
+  groupsFollowingIn,
+  readAccess,
+  setMemberships,
+} from "../access/groups"
 import { db } from "../db"
 import { log } from "../log"
 import { recordProviderPicture } from "./avatars"
@@ -239,11 +244,18 @@ export async function syncAccess(
   userId: string,
   identity: OidcIdentity,
 ): Promise<void> {
-  const groupIds =
-    identity.groups === undefined
-      ? undefined
-      : await groupsFollowing(identity.groups)
   const changes = await db.transaction(async (tx) => {
+    // Which groups follow the claimed names is read here, with every group
+    // row share-locked, so a remap can't commit between the read and the
+    // write and leave the account in a group neither order would. It comes
+    // before the user's row lock: a group edit holds its row and then, as
+    // it adds members, key-share-locks their user rows, so taking the
+    // group locks first makes the edit wait at its first lock, holding
+    // nothing this transaction needs.
+    const groupIds =
+      identity.groups === undefined
+        ? undefined
+        : groupsFollowingIn(await readAccess(tx), identity.groups)
     const [current] = await tx
       .select()
       .from(user)

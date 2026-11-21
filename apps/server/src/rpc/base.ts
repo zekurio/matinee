@@ -3,6 +3,7 @@ import {
   holdsPermission,
   type Permission,
   ProcedureMeta,
+  sortPermissions,
 } from "@matinee/contracts"
 import { oo } from "@orpc/openapi"
 import { implement, ORPCError, os } from "@orpc/server"
@@ -97,10 +98,29 @@ export function requireOwn(
   viewer: Viewer,
   permissions: readonly Permission[],
 ): void {
-  const missing = permissions.filter((permission) => !can(viewer, permission))
+  const missing = sortPermissions(
+    permissions.filter((permission) => !can(viewer, permission)),
+  )
   if (missing.length === 0) return
   throw new ORPCError("FORBIDDEN", {
     message: `You can only grant or take away permissions you have yourself. You don't have ${missing.join(", ")}.`,
+  })
+}
+
+/**
+ * Refuse an API token that would add a way to sign in as its account,
+ * unless it holds `all`. A session, a passkey, or a linked sign-in does
+ * everything the account may, so only a token that already does hands
+ * one on, as a token grants another only what it holds. A session passes.
+ */
+export function requireWholeAccount(viewer: Viewer): void {
+  const { credential } = viewer
+  if (credential.kind === "session" || credential.permissions.includes("all")) {
+    return
+  }
+  throw new ORPCError("FORBIDDEN", {
+    message:
+      "Adding a way to sign in takes a session, or an API token with all permissions.",
   })
 }
 

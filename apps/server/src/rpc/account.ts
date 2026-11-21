@@ -43,7 +43,13 @@ import {
 } from "../auth/session"
 import { signInMethods } from "../auth/users"
 import { db } from "../db"
-import { authed, badRequest, notFound, requirePasskeys } from "./base"
+import {
+  authed,
+  badRequest,
+  notFound,
+  requirePasskeys,
+  requireWholeAccount,
+} from "./base"
 
 const LAST_METHOD =
   "Add another passkey or link an account before removing your last way to sign in."
@@ -161,6 +167,7 @@ export const account = {
 
     registerOptions: authed.account.passkeys.registerOptions.handler(
       async ({ context }) => {
+        requireWholeAccount(context.user)
         await requirePasskeys()
         return beginRegister({
           userId: context.user.id,
@@ -171,6 +178,7 @@ export const account = {
 
     register: authed.account.passkeys.register.handler(
       async ({ context, input }) => {
+        requireWholeAccount(context.user)
         await requirePasskeys()
         const verified = await finishRegistration(
           "passkey-register",
@@ -291,10 +299,11 @@ export const account = {
     rotate: authed.account.apiTokens.rotate.handler(
       async ({ context, input }) => {
         // A new secret for a token that holds more would hand that on too.
-        const existing = await getApiToken(context.user.id, input.id)
-        if (!existing) throw notFound(TOKEN_GONE)
-        requireGrantable(context.user, existing.permissions)
-        const rotated = await rotateApiToken(context.user.id, input.id)
+        const rotated = await rotateApiToken(
+          context.user.id,
+          input.id,
+          (permissions) => requireGrantable(context.user, permissions),
+        )
         if (!rotated) throw notFound(TOKEN_GONE)
         return rotated
       },

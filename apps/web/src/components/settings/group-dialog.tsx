@@ -6,6 +6,7 @@ import {
   GroupName,
   type Permission,
   type ProviderGroup,
+  sortPermissions,
   ProviderGroupName,
 } from "@matinee/contracts"
 import {
@@ -42,6 +43,7 @@ import { firstError, useAppForm, useFieldContext } from "@/lib/form"
 import {
   can,
   POLICY_PERMISSIONS,
+  REQUEST_PERMISSIONS,
   type RequestsChoice,
   requestsOf,
   withPermissions,
@@ -103,9 +105,13 @@ type GroupValues = {
 
 /**
  * A new group opens every library and limits nothing, as Everyone starts,
- * and grants downloading and nothing else.
+ * and grants downloading and nothing else. Downloading starts off for an
+ * editor who can't grant it, since the server would refuse the group.
  */
-function valuesOf(group: AccessGroup | undefined): GroupValues {
+function valuesOf(
+  group: AccessGroup | undefined,
+  mayDownload: boolean,
+): GroupValues {
   return {
     name: group?.name ?? "",
     providerGroup: group?.providerGroup ?? "",
@@ -115,7 +121,8 @@ function valuesOf(group: AccessGroup | undefined): GroupValues {
     transcode: group?.policy.transcode ?? true,
     requests: group ? requestsOf(group.policy.permissions) : "off",
     requestLimit: group?.policy.requestLimit ?? null,
-    downloads: group?.policy.permissions.includes("media.download") ?? true,
+    downloads:
+      group?.policy.permissions.includes("media.download") ?? mayDownload,
     maxStreams: limitValue(group?.policy.maxStreams ?? null),
     permissions:
       group?.policy.permissions.filter(
@@ -124,7 +131,30 @@ function valuesOf(group: AccessGroup | undefined): GroupValues {
   }
 }
 
-function policyOf(value: GroupValues): AccessPolicy {
+/**
+ * The request permissions to save. The choice shows three of their four
+ * mixes, so one never touched keeps the group's own: a group may grant
+ * adding without an approval alone, for members another group lets ask.
+ * Once changed, even back to how it opened, the choice is what it shows.
+ */
+function requestPermissions(
+  value: GroupValues,
+  group: AccessGroup | undefined,
+  requestsChanged: boolean,
+): Permission[] {
+  if (group && !requestsChanged) {
+    return group.policy.permissions.filter((permission) =>
+      REQUEST_PERMISSIONS.includes(permission),
+    )
+  }
+  return withRequests([], value.requests)
+}
+
+function policyOf(
+  value: GroupValues,
+  group: AccessGroup | undefined,
+  requestsChanged: boolean,
+): AccessPolicy {
   const all = value.libraries === "all"
   return {
     libraries: { all, ids: all ? [] : value.libraryIds },
@@ -132,10 +162,14 @@ function policyOf(value: GroupValues): AccessPolicy {
     transcode: value.transcode,
     requestLimit: value.requestLimit,
     maxStreams: limitOf(value.maxStreams),
-    permissions: withRequests(
-      withPermissions(value.permissions, ["media.download"], value.downloads),
-      value.requests,
-    ),
+    permissions: sortPermissions([
+      ...withPermissions(
+        value.permissions,
+        ["media.download"],
+        value.downloads,
+      ),
+      ...requestPermissions(value, group, requestsChanged),
+    ]),
   }
 }
 
@@ -156,7 +190,11 @@ export function GroupDialog({
         showCloseButton={false}
         className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-lg"
       >
-        <GroupForm group={group} onDone={() => onOpenChange(false)} />
+        <GroupForm
+          key={group?.id ?? "new"}
+          group={group}
+          onDone={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   )
@@ -195,19 +233,21 @@ function GroupForm({
     onError: (error) => toast.error(errorMessage(error)),
   })
 
-  const toInput = (value: GroupValues) => ({
+  const toInput = (value: GroupValues, requestsChanged: boolean) => ({
     // The server keeps the built-in group's name and provider group.
     name: everyone && group ? group.name : value.name,
     providerGroup: everyone ? null : value.providerGroup.trim() || null,
-    policy: policyOf(value),
+    policy: policyOf(value, group, requestsChanged),
   })
 
   const form = useAppForm({
-    defaultValues: valuesOf(group),
+    defaultValues: valuesOf(group, mayGrant("media.download")),
     validators: {
       // One message for the whole form, in a toast.
-      onSubmit: ({ value }) => {
-        const parsed = AccessGroupInput.safeParse(toInput(value))
+      onSubmit: ({ value, formApi }) => {
+        const parsed = AccessGroupInput.safeParse(
+          toInput(value, formApi.getFieldMeta("requests")?.isDirty ?? false),
+        )
         if (parsed.success) return undefined
         return {
           message:
@@ -215,8 +255,12 @@ function GroupForm({
         }
       },
     },
-    onSubmit: ({ value }) =>
-      save.mutate(AccessGroupInput.parse(toInput(value))),
+    onSubmit: ({ value, formApi }) =>
+      save.mutate(
+        AccessGroupInput.parse(
+          toInput(value, formApi.getFieldMeta("requests")?.isDirty ?? false),
+        ),
+      ),
     onSubmitInvalid: ({ formApi }) => {
       // Field errors show under their fields.
       const message = firstError(formApi.state.errors)
@@ -333,6 +377,7 @@ function GroupForm({
               {() => (
                 <SwitchField
                   title={tr("access.downloads")}
+                  disabled={!mayGrant("media.download")}
                   footer={
                     <SettingNote>{tr("access.downloads.hint")}</SettingNote>
                   }
@@ -355,6 +400,7 @@ function GroupForm({
               {() => (
                 <SelectField
                   title={tr("access.requests")}
+                  disabled={!REQUEST_PERMISSIONS.every(mayGrant)}
                   options={REQUEST_CHOICES}
                   labelOf={requestsLabel}
                 />

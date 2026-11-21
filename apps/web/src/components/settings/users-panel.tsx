@@ -233,7 +233,13 @@ export function UsersPanel() {
         )}
       </SettingsSubsection>
 
-      {may("invite.read") && <Invites passkeysOn={passkeysOn} />}
+      {may("invite.read") && (
+        <Invites
+          passkeysOn={passkeysOn}
+          mayCreate={may("invite.create")}
+          mayRevoke={may("invite.delete")}
+        />
+      )}
 
       <UserAccessDialog
         userId={accessUserId}
@@ -289,7 +295,10 @@ function UserItem({
   const maySignOut = may("adminSession.delete")
   const mayRevoke = may("adminApiToken.delete")
   const mayDelete = may("adminUser.delete")
-  const anything = mayAccess || mayRole || maySignOut || mayRevoke || mayDelete
+  // Only an admin changes an admin's account, their own aside.
+  const reachable = user.role !== "admin" || mayRole || self
+  const anything =
+    reachable && (mayAccess || mayRole || maySignOut || mayRevoke || mayDelete)
 
   return (
     <ListItem className="gap-3 py-2.5 pr-2">
@@ -447,6 +456,13 @@ function UserDetails({
   oidcName: string | null
   passkeysOn: boolean
 }) {
+  // A service can still call the API with a token of an account nobody
+  // signs in to.
+  const tokens = user.apiTokens > 0 && (
+    <Fact icon={<KeySquareIcon />}>
+      {tr("users.apiTokens", { count: user.apiTokens })}
+    </Fact>
+  )
   let facts: ReactNode
   if (hasSignInMethod(user)) {
     const { label, tone } = activity(user, self)
@@ -463,18 +479,17 @@ function UserDetails({
         {user.oidcLinked && (
           <Fact icon={<LogInIcon />}>{oidcName ?? tr("users.oidcOff")}</Fact>
         )}
-        {user.apiTokens > 0 && (
-          <Fact icon={<KeySquareIcon />}>
-            {tr("users.apiTokens", { count: user.apiTokens })}
-          </Fact>
-        )}
+        {tokens}
       </>
     )
   } else {
     facts = (
-      <Fact icon={<TriangleAlertIcon className="text-warning" />}>
-        {tr("users.noSignIn")}
-      </Fact>
+      <>
+        <Fact icon={<TriangleAlertIcon className="text-warning" />}>
+          {tr("users.noSignIn")}
+        </Fact>
+        {tokens}
+      </>
     )
   }
 

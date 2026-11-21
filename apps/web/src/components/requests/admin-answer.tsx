@@ -8,7 +8,7 @@ import { useRef, useState } from "react"
 import type { BadgeTip } from "@/components/catalog/catalog-card"
 import { tr } from "@/i18n"
 import { formatRelative } from "@/lib/format"
-import { can } from "@/lib/permissions"
+import { runsQueue } from "@/lib/permissions"
 import {
   useHiddenRequests,
   useRequestActionsStore,
@@ -48,9 +48,7 @@ export function useWaitingRequest(
   availability: Availability,
 ): { item: AdminRequestItem; answered: boolean } | null {
   const { user } = useRouteContext({ from: "/_authed/_shell" })
-  // Answering takes reading the queue and changing it.
-  const admin =
-    can(user, "adminRequest.read") && can(user, "adminRequest.update")
+  const admin = runsQueue(user)
   const queue = useRequestQueue(admin)
   const hidden = useHiddenRequests()
   useSendHeldOnLeave()

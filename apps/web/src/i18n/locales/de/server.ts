@@ -131,6 +131,8 @@ export default {
     "Dein Konto hat die Berechtigung {permission} nicht.",
   "server.rpc.tokenPermission":
     "Dieses API-Token hat die Berechtigung {permission} nicht.",
+  "server.rpc.wholeAccount":
+    "Eine Anmeldemöglichkeit hinzufügen geht nur mit einer Sitzung oder einem API-Token mit allen Berechtigungen.",
   "server.rpc.ownPermissions":
     "Du kannst nur Berechtigungen vergeben oder entziehen, die du selbst hast. Dir fehlt {permissions}.",
   "server.rpc.passkeysOff": "Passkeys sind auf diesem Server ausgeschaltet.",

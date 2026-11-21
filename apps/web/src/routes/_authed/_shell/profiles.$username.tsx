@@ -53,7 +53,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatMonth } from "@/lib/format"
-import { can } from "@/lib/permissions"
+import { runsQueue } from "@/lib/permissions"
 import { reloadOnEnter } from "@/lib/route-loading"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
@@ -255,7 +255,7 @@ function ProfileHeader({ profile }: { profile: Profile }) {
           />
           {own && (
             <>
-              {can(me, "adminRequest.read") && <RequestsButton />}
+              {runsQueue(me) && <RequestsButton />}
               <Link
                 to="/stats"
                 aria-label={tr("shell.statistics")}

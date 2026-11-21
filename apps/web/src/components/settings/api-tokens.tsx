@@ -115,6 +115,10 @@ export function ApiTokens() {
       }
     >
       <SettingNote>{tr("account.apiTokens.description")}</SettingNote>
+      {/* Says why there is no create button, with tokens or without. */}
+      {!mayCreate && (
+        <SettingNote>{tr("account.apiTokens.notAllowed")}</SettingNote>
+      )}
       {tokens.isPending ? (
         <Skeleton className="h-16 rounded-xl" />
       ) : tokens.isError ? (
@@ -124,11 +128,7 @@ export function ApiTokens() {
           })}
         </SettingNote>
       ) : tokens.data.length === 0 ? (
-        <SettingNote>
-          {mayCreate
-            ? tr("account.apiTokens.empty")
-            : tr("account.apiTokens.notAllowed")}
-        </SettingNote>
+        mayCreate && <SettingNote>{tr("account.apiTokens.empty")}</SettingNote>
       ) : (
         <List>
           {tokens.data.map((token) => (

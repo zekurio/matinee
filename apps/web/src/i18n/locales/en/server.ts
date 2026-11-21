@@ -134,6 +134,8 @@ export default defineMessages("server", {
     "Your account doesn't have the {permission} permission.",
   "server.rpc.tokenPermission":
     "This API token doesn't have the {permission} permission.",
+  "server.rpc.wholeAccount":
+    "Adding a way to sign in takes a session, or an API token with all permissions.",
   // {permissions} like "group.update, invite.create".
   "server.rpc.ownPermissions":
     "You can only grant or take away permissions you have yourself. You don't have {permissions}.",

@@ -1,8 +1,4 @@
-import {
-  type AdminUser,
-  holdsPermission,
-  type Permission,
-} from "@matinee/contracts"
+import { type AdminUser, type Permission } from "@matinee/contracts"
 import {
   apiToken,
   invite,
@@ -16,12 +12,14 @@ import { ORPCError } from "@orpc/server"
 import { asc, count, eq, inArray, max, sql } from "drizzle-orm"
 
 import {
-  accessOf,
+  accessIn,
+  type AccessState,
   describeAccess,
   forgetGroups,
-  groupPermissions,
-  manualGroupIds,
+  groupPermissionsIn,
+  manualGroupIdsIn,
   overrideOf,
+  readAccess,
   setMemberships,
 } from "../access/groups"
 import { can, type Viewer } from "../access/viewer"
@@ -101,51 +99,59 @@ async function toAdminUser(row: UserRow): Promise<AdminUser> {
 }
 
 /**
- * Lock the users table, then check the caller's account still holds
- * `permission`: a demotion, or a change to its groups, may have committed
- * while this request waited for the lock.
+ * Lock the users table, then read the caller again: a demotion, or a
+ * change to its groups, may have committed while this request waited for
+ * the lock. The viewer it returns is the caller as the transaction sees
+ * it, with the request's credential, so a token's narrowing still holds.
+ * Every check inside the transaction judges with it, not `context.user`.
  */
 async function lockAsHolder(
   tx: Tx,
-  actorId: string,
+  caller: Viewer,
   permission: Permission,
-): Promise<void> {
+): Promise<{ actor: Viewer; state: AccessState }> {
   await lockUsers(tx)
-  const [actor] = await tx.select().from(user).where(eq(user.id, actorId))
-  // Whoever held the lock before forgets the groups only once it's gone.
-  forgetGroups()
-  if (
-    !actor ||
-    !holdsPermission((await accessOf(actor)).permissions, permission)
-  ) {
-    throw forbidden(permission)
+  const [row] = await tx.select().from(user).where(eq(user.id, caller.id))
+  // Through the transaction: see `readAccess`.
+  const state = await readAccess(tx)
+  if (!row) throw forbidden(permission)
+  const actor: Viewer = {
+    ...row,
+    credential: caller.credential,
+    clientName: caller.clientName,
+    access: accessIn(state, row),
   }
+  if (!can(actor, permission)) throw forbidden(permission)
+  return { actor, state }
 }
 
-/** The user, locked against other changes for the rest of the transaction. */
+/**
+ * The user, locked against other changes for the rest of the transaction,
+ * with the caller and the groups as the transaction sees them.
+ */
 async function lockedUser(
   tx: Tx,
   id: string,
-  actorId: string,
+  caller: Viewer,
   permission: Permission,
-): Promise<UserRow> {
-  await lockAsHolder(tx, actorId, permission)
-  const [row] = await tx.select().from(user).where(eq(user.id, id))
-  if (!row) throw notFound(USER_GONE)
-  return row
+): Promise<{ target: UserRow; actor: Viewer; state: AccessState }> {
+  const { actor, state } = await lockAsHolder(tx, caller, permission)
+  const [target] = await tx.select().from(user).where(eq(user.id, id))
+  if (!target) throw notFound(USER_GONE)
+  return { target, actor, state }
 }
 
 /**
  * Refuse a change to an admin's account by anyone who isn't one, so
  * nobody a group let manage accounts signs out, strips, or deletes an
- * admin. Among everyone else `requireOwn` is the limit: an account's
- * permissions move only by the hand of someone who holds them. Their own
- * account is theirs.
+ * admin. Only the role holds `all`, so the role says who is one. Among
+ * everyone else `requireOwn` is the limit: an account's permissions move
+ * only by the hand of someone who holds them. Their own account is
+ * theirs.
  */
-async function requirePeer(actor: Viewer, target: UserRow): Promise<void> {
+function requirePeer(actor: Viewer, target: UserRow): void {
   if (target.id === actor.id || can(actor, "all")) return
-  const { permissions } = await accessOf(target)
-  if (!permissions.includes("all")) return
+  if (target.role !== "admin") return
   throw new ORPCError("FORBIDDEN", {
     message: `${target.username} is an admin, and only an admin changes an admin's account.`,
   })
@@ -181,7 +187,7 @@ export const adminUsers = {
 
   setRole: authed.admin.users.setRole.handler(async ({ context, input }) => {
     const row = await db.transaction(async (tx) => {
-      const target = await lockedUser(tx, input.id, context.user.id, "all")
+      const { target } = await lockedUser(tx, input.id, context.user, "all")
       if (target.role === input.role) return target
       if (
         target.role === "admin" &&
@@ -213,20 +219,21 @@ export const adminUsers = {
       // The fields the form left out drop out of the stored override too.
       const override = overrideOf({ accessOverride: input.override })
       const row = await db.transaction(async (tx) => {
-        const target = await lockedUser(
+        const { target, actor, state } = await lockedUser(
           tx,
           input.id,
-          context.user.id,
+          context.user,
           "adminUser.update",
         )
-        await requirePeer(context.user, target)
+        requirePeer(actor, target)
         // Moving the account between groups moves what they grant, and so
         // does what the override allows and denies.
         const before = overrideOf(target)
-        requireOwn(context.user, [
-          ...(await groupPermissions(
-            changed(await manualGroupIds(target.id), input.groupIds),
-          )),
+        requireOwn(actor, [
+          ...groupPermissionsIn(
+            state,
+            changed(manualGroupIdsIn(state, target.id), input.groupIds),
+          ),
           ...changed(before.allow ?? [], override.allow ?? []),
           ...changed(before.deny ?? [], override.deny ?? []),
         ])
@@ -253,13 +260,13 @@ export const adminUsers = {
     // Sessions, passkeys, linked accounts, and watch progress go with the
     // user through their foreign keys.
     const removed = await db.transaction(async (tx) => {
-      const target = await lockedUser(
+      const { target, actor } = await lockedUser(
         tx,
         input.id,
-        context.user.id,
+        context.user,
         "adminUser.delete",
       )
-      await requirePeer(context.user, target)
+      requirePeer(actor, target)
       if (
         target.role === "admin" &&
         !(await otherAdminCanSignIn(tx, target.id))
@@ -277,15 +284,25 @@ export const adminUsers = {
   }),
 
   signOut: authed.admin.users.signOut.handler(async ({ context, input }) => {
-    const [target] = await db.select().from(user).where(eq(user.id, input.id))
-    if (!target) throw notFound(USER_GONE)
-    await requirePeer(context.user, target)
-    const self = target.id === context.user.id
-    const ended = await deleteUserSessions(
-      target.id,
-      // An API token has no session to keep.
-      self ? sessionIdOf(context.user) : undefined,
-    )
+    const { target, ended } = await db.transaction(async (tx) => {
+      const locked = await lockedUser(
+        tx,
+        input.id,
+        context.user,
+        "adminSession.delete",
+      )
+      requirePeer(locked.actor, locked.target)
+      const self = locked.target.id === context.user.id
+      return {
+        target: locked.target,
+        ended: await deleteUserSessions(
+          locked.target.id,
+          // An API token has no session to keep.
+          self ? sessionIdOf(context.user) : undefined,
+          tx,
+        ),
+      }
+    })
     log.info(
       `${context.user.username} signed ${target.username} out of ${ended} sessions`,
     )
@@ -294,10 +311,19 @@ export const adminUsers = {
 
   revokeApiTokens: authed.admin.users.revokeApiTokens.handler(
     async ({ context, input }) => {
-      const [target] = await db.select().from(user).where(eq(user.id, input.id))
-      if (!target) throw notFound(USER_GONE)
-      await requirePeer(context.user, target)
-      const revoked = await revokeUserApiTokens(target.id)
+      const { target, revoked } = await db.transaction(async (tx) => {
+        const locked = await lockedUser(
+          tx,
+          input.id,
+          context.user,
+          "adminApiToken.delete",
+        )
+        requirePeer(locked.actor, locked.target)
+        return {
+          target: locked.target,
+          revoked: await revokeUserApiTokens(locked.target.id, tx),
+        }
+      })
       log.info(
         `${context.user.username} revoked ${revoked} API tokens of ${target.username}`,
       )

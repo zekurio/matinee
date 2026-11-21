@@ -482,7 +482,11 @@ streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
 })
 
 streamRoutes.on(["GET", "HEAD"], "/:id/stream", async (c) => {
-  const viewer = await readViewer(c, "media.play")
+  // This route also serves original downloads, so a token that only
+  // downloads reaches it too. Which of the two it is, the check below says.
+  const viewer =
+    (await readViewer(c, "media.play")) ??
+    (await readViewer(c, "media.download"))
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -492,10 +496,14 @@ streamRoutes.on(["GET", "HEAD"], "/:id/stream", async (c) => {
 
   const info = await stat(item.path).catch(() => null)
   if (!info?.isFile()) return c.body(null, 404)
-  // This route also serves original downloads, which have no bit rate limit.
+  // An original download has no bit rate limit. Playing the file as it is
+  // needs both the right to play and a file within the viewer's limit.
   if (
     !can(viewer, "media.download") &&
-    !(await mayStreamOriginal(viewer.access, item, info))
+    !(
+      can(viewer, "media.play") &&
+      (await mayStreamOriginal(viewer.access, item, info))
+    )
   )
     return c.body(null, 403)
 

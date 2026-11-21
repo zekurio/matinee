@@ -60,6 +60,7 @@ import {
   notFound,
   pub,
   requirePasskeys,
+  requireWholeAccount,
   tooManyRequests,
 } from "./base"
 
@@ -288,6 +289,7 @@ export const auth = {
       }),
 
       link: authed.auth.oidc.pending.link.handler(async ({ context }) => {
+        requireWholeAccount(context.user)
         const pending = await takePendingLink(context.hono)
         if (!pending) throw badRequest(PENDING_GONE)
         if (!(await activeOidc())) {
@@ -365,6 +367,8 @@ export const auth = {
     }),
 
     approve: authed.auth.device.approve.handler(async ({ context, input }) => {
+      // The device gets a session of its own, which does all the account may.
+      requireWholeAccount(context.user)
       if (!(await approveDeviceRequest(input.userCode, context.user.id))) {
         throw notFound(DEVICE_GONE)
       }

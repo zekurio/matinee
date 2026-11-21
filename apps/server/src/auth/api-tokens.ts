@@ -9,6 +9,7 @@ import { and, desc, eq } from "drizzle-orm"
 
 import { arg, db } from "../db"
 import { randomToken, sha256 } from "./tokens"
+import type { Tx } from "./users"
 
 /*
  * API tokens: credentials an account makes for a service that calls the
@@ -155,18 +156,31 @@ export async function updateApiToken(
 
 /**
  * Give one of the user's tokens a new secret. The old one stops working
- * at once. Null when they have no such token.
+ * at once. `allow` sees what the token holds with its row locked and
+ * throws to refuse, so the secret never goes out for a token that was
+ * given more in the meantime. Null when they have no such token.
  */
 export async function rotateApiToken(
   userId: string,
   id: string,
+  allow: (permissions: Permission[]) => void,
 ): Promise<{ token: string; apiToken: ApiToken } | null> {
   const token = newSecret()
-  const [row] = await db
-    .update(apiToken)
-    .set({ tokenHash: sha256(token) })
-    .where(ownedBy(userId, id))
-    .returning()
+  const row = await db.transaction(async (tx) => {
+    const [current] = await tx
+      .select({ permissions: apiToken.permissions })
+      .from(apiToken)
+      .where(ownedBy(userId, id))
+      .for("update")
+    if (!current) return undefined
+    allow(known(current.permissions))
+    const [rotated] = await tx
+      .update(apiToken)
+      .set({ tokenHash: sha256(token) })
+      .where(ownedBy(userId, id))
+      .returning()
+    return rotated
+  })
   return row ? { token, apiToken: publicApiToken(row) } : null
 }
 
@@ -183,8 +197,11 @@ export async function revokeApiToken(
 }
 
 /** Revoke every token the user made. Returns how many. */
-export async function revokeUserApiTokens(userId: string): Promise<number> {
-  const revoked = await db
+export async function revokeUserApiTokens(
+  userId: string,
+  tx: Tx | typeof db = db,
+): Promise<number> {
+  const revoked = await tx
     .delete(apiToken)
     .where(eq(apiToken.userId, userId))
     .returning({ id: apiToken.id })

@@ -73,12 +73,17 @@ export function forgetGroups(): void {
   snapshot = null
 }
 
-async function read(): Promise<Snapshot> {
-  const [rows, libraries, memberships] = await Promise.all([
-    db.select().from(accessGroup),
-    db.select().from(accessGroupLibrary),
-    db.select().from(accessGroupMember),
-  ])
+/** With `tx`, the groups it reads are share-locked; see `readAccess`. */
+async function read(tx?: Tx): Promise<Snapshot> {
+  const from = tx ?? db
+  // One after another: a transaction has one connection. The lock comes
+  // with the read, so the groups read are exactly the groups locked, and
+  // one made a moment later is neither.
+  const rows = tx
+    ? await tx.select().from(accessGroup).for("share")
+    : await db.select().from(accessGroup)
+  const libraries = await from.select().from(accessGroupLibrary)
+  const memberships = await from.select().from(accessGroupMember)
   const groups = new Map<string, Group>()
   for (const row of rows) {
     groups.set(row.id, {
@@ -161,6 +166,46 @@ export async function everyoneAccess(): Promise<Access> {
 /** What the account may open and how the server streams to it. */
 export async function accessOf(account: Account): Promise<Access> {
   return toAccess(policyOf(account, await load()))
+}
+
+/**
+ * Groups and memberships as a transaction sees them, for a decision made
+ * while it holds a lock. The kept copy may be a moment behind, and
+ * reading it again there would take a second connection from the pool,
+ * which the lock's own waiters may all be holding.
+ *
+ * It share-locks every group row as it reads it, so an edit or deletion of a group,
+ * which locks its row for update, waits until the transaction ends and
+ * can't change what a group grants under a decision made from it. Account
+ * changes take the users lock before this one, and group edits never take
+ * the users lock, so the two can't wait on each other.
+ */
+export type AccessState = Snapshot
+
+export function readAccess(tx: Tx): Promise<AccessState> {
+  return read(tx)
+}
+
+/** `accessOf`, from what `readAccess` read. */
+export function accessIn(state: AccessState, account: Account): Access {
+  return toAccess(policyOf(account, state))
+}
+
+/** `groupPermissions`, from what `readAccess` read. */
+export function groupPermissionsIn(
+  state: AccessState,
+  ids: readonly string[],
+): Permission[] {
+  return sortPermissions(
+    ids.flatMap((id) => state.groups.get(id)?.policy.permissions ?? []),
+  )
+}
+
+/** The groups an admin, or the account's invite, put it in. */
+export function manualGroupIdsIn(state: AccessState, userId: string): string[] {
+  return (state.members.get(userId) ?? [])
+    .filter((membership) => membership.source === "manual")
+    .map((membership) => membership.groupId)
 }
 
 /** Each account's access as the admin's user list shows it, by user id. */
@@ -249,18 +294,7 @@ export async function groupById(id: string): Promise<AccessGroup | null> {
 export async function groupPermissions(
   ids: readonly string[],
 ): Promise<Permission[]> {
-  const state = await load()
-  return sortPermissions(
-    ids.flatMap((id) => state.groups.get(id)?.policy.permissions ?? []),
-  )
-}
-
-/** The groups an admin, or the account's invite, put it in. */
-export async function manualGroupIds(userId: string): Promise<string[]> {
-  const state = await load()
-  return (state.members.get(userId) ?? [])
-    .filter((membership) => membership.source === "manual")
-    .map((membership) => membership.groupId)
+  return groupPermissionsIn(await load(), ids)
 }
 
 /** Why a group can't be saved or removed, for the admin to act on. */
@@ -371,20 +405,38 @@ export async function createGroup(
 }
 
 /**
+ * A group as its locked row holds it, for `allow` to refuse the change
+ * about to be made: what it grants, and whose members the provider picks.
+ */
+export type GroupBefore = {
+  everyone: boolean
+  permissions: Permission[]
+  providerGroup: string | null
+}
+
+/**
  * Save a group. The built-in one keeps its name and follows no provider
- * group. Null when the group is gone.
+ * group. `allow` sees the group as it is with its row locked and throws
+ * to refuse, so it never judges a copy someone has changed since. Null
+ * when the group is gone.
  */
 export async function updateGroup(
   id: string,
   input: AccessGroupInput,
+  allow?: (before: GroupBefore) => void,
 ): Promise<AccessGroup | null> {
   const found = await db.transaction(async (tx) => {
     const [current] = await tx
-      .select({ everyone: accessGroup.everyone })
+      .select({
+        everyone: accessGroup.everyone,
+        permissions: accessGroup.permissions,
+        providerGroup: accessGroup.providerGroup,
+      })
       .from(accessGroup)
       .where(eq(accessGroup.id, id))
       .for("update")
     if (!current) return false
+    allow?.({ ...current, permissions: grantable(current.permissions) })
     if (!current.everyone && (await nameTaken(tx, input.name, id))) {
       throw new GroupError(NAME_TAKEN)
     }
@@ -406,21 +458,33 @@ export async function updateGroup(
   return found ? groupById(id) : null
 }
 
-/** False when the group is gone already. */
-export async function removeGroup(id: string): Promise<boolean> {
-  const [current] = await db
-    .select({ everyone: accessGroup.everyone })
-    .from(accessGroup)
-    .where(eq(accessGroup.id, id))
-  if (!current) return false
-  if (current.everyone) {
-    throw new GroupError(
-      "Every account is in this group, so it can't be deleted. Take its libraries away instead.",
-    )
-  }
-  await db.delete(accessGroup).where(eq(accessGroup.id, id))
+/** False when the group is gone already. `allow` is as for `updateGroup`. */
+export async function removeGroup(
+  id: string,
+  allow?: (before: GroupBefore) => void,
+): Promise<boolean> {
+  const found = await db.transaction(async (tx) => {
+    const [current] = await tx
+      .select({
+        everyone: accessGroup.everyone,
+        permissions: accessGroup.permissions,
+        providerGroup: accessGroup.providerGroup,
+      })
+      .from(accessGroup)
+      .where(eq(accessGroup.id, id))
+      .for("update")
+    if (!current) return false
+    if (current.everyone) {
+      throw new GroupError(
+        "Every account is in this group, so it can't be deleted. Take its libraries away instead.",
+      )
+    }
+    allow?.({ ...current, permissions: grantable(current.permissions) })
+    await tx.delete(accessGroup).where(eq(accessGroup.id, id))
+    return true
+  })
   forgetGroups()
-  return true
+  return found
 }
 
 /**
@@ -462,13 +526,14 @@ export async function setMemberships(
 /**
  * The groups that follow one of the provider's group `names`, for
  * `setMemberships` with the `provider` source. Names compare without
- * regard to case.
+ * regard to case. From what `readAccess` read, so a remap of a group
+ * waits for whoever writes the memberships.
  */
-export async function groupsFollowing(
+export function groupsFollowingIn(
+  state: AccessState,
   names: readonly string[],
-): Promise<string[]> {
+): string[] {
   const wanted = new Set(names.map((name) => name.trim().toLowerCase()))
-  const state = await load()
   return [...state.groups.values()]
     .filter(
       (group) =>
@@ -480,7 +545,7 @@ export async function groupsFollowing(
 
 /** The groups an invite's account starts in. Read it before the invite is used up. */
 export async function inviteGroupIds(
-  tx: Tx,
+  tx: Tx | typeof db,
   inviteId: string,
 ): Promise<string[]> {
   const rows = await tx

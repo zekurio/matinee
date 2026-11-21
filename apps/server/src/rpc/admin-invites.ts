@@ -1,4 +1,3 @@
-import { groupPermissions } from "../access/groups"
 import { createInvite, listInvites, revokeInvite } from "../auth/invites"
 import { log } from "../log"
 import {
@@ -14,9 +13,13 @@ export const adminInvites = {
 
   create: authed.admin.invites.create.handler(async ({ context, input }) => {
     await requirePasskeys()
-    // The link puts whoever uses it in these groups, with what they grant.
-    requireOwn(context.user, await groupPermissions(input.groupIds))
-    const created = await createInvite(context.user.id, input)
+    // Judged with the maker's access as the transaction reads it, and the
+    // request's credential, so a token still grants only what it holds.
+    const created = await createInvite(
+      context.user.id,
+      input,
+      (access, granted) => requireOwn({ ...context.user, access }, granted),
+    )
     if (!created) throw forbidden("invite.create")
     log.info(`${context.user.username} created invite ${created.id}`)
     return created
