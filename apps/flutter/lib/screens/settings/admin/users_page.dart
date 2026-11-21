@@ -577,7 +577,7 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
       if (mounted) setState(() => _created = created);
     } on Object catch (error) {
       if (!mounted) return;
-      final errors = fieldErrors(error);
+      final errors = fieldErrors(l, error);
       setState(() {
         _creating = false;
         _errors = errors;

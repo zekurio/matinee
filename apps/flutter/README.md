@@ -723,15 +723,19 @@ font.
 ## Strings
 
 The ARB files in `lib/l10n` hold every string, English in `app_en.arb`
-and German in `app_de.arb`. Add a message to the English file first,
+and German in `app_de.arb`. Add a Flutter-only message to the English file first,
 with its placeholders declared, then translate it. `flutter pub get`
 writes the `AppLocalizations` class from them. `test/l10n_test.dart`
 fails when a German message has a key the English lacks or uses a
 placeholder the English doesn't declare.
 
-`scripts/android_strings.mjs` moved the strings over from the Kotlin app.
-It overwrites both files, so don't run it again once this app has strings
-of its own.
+For shared messages, edit the web's English and German catalogs in
+`apps/web/src/i18n/locales`, then run `pnpm strings:dart` from the root.
+It updates the shared entries in both ARBs and rebuilds
+`lib/l10n/server_messages.g.dart` from the English server and validation
+messages. Flutter-only entries stay in place. `pnpm verify` checks all three
+files. The other Flutter generators are `pnpm api:dart`, `pnpm themes:dart`,
+`pnpm icons:dart`, and `pnpm logo:dart`.
 
 ## The kit
 

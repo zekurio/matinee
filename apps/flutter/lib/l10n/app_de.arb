@@ -1838,5 +1838,6 @@
   "webValidationUsernameChars": "Verwende Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche.",
   "webValidationUsernameMax": "Verwende höchstens 32 Zeichen.",
   "webValidationUsernameMin": "Verwende mindestens 2 Zeichen.",
-  "webValidationWholeNumber": "Verwende eine ganze Zahl."
+  "webValidationWholeNumber": "Verwende eine ganze Zahl.",
+  "webAskAskNamed": "{p1} anfragen"
 }

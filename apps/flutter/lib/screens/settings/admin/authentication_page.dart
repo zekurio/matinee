@@ -130,7 +130,7 @@ class _AuthFormState extends ConsumerState<_AuthForm> {
     } on Object catch (error) {
       if (mounted) {
         setState(() {
-          _errors = fieldErrors(error);
+          _errors = fieldErrors(AppLocalizations.of(context), error);
           // A field the server names opens Advanced if it's in there.
           if (_errors.keys.any(
             (key) => _advanced.any((field) => key == 'oidc.$field'),
