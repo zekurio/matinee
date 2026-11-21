@@ -8980,6 +8980,14 @@ abstract final class ThemeMode {
   static const all = <String>[system, light, dark];
 }
 
+abstract final class TitleStatus {
+  static const continuing = 'continuing';
+  static const ended = 'ended';
+  static const unreleased = 'unreleased';
+
+  static const all = <String>[continuing, ended, unreleased];
+}
+
 final class Title {
   const Title({
     required this.id,
@@ -9762,6 +9770,19 @@ final class AppDevice {
   final String platform;
 
   JsonMap toJson() => {'name': ?name, 'platform': platform};
+}
+
+final class ClientIdentity {
+  const ClientIdentity({required this.name});
+
+  factory ClientIdentity.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return ClientIdentity(name: fields['name'] as String);
+  }
+
+  final String name;
+
+  JsonMap toJson() => {'name': name};
 }
 
 final class LibraryInput {

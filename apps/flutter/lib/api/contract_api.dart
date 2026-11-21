@@ -736,6 +736,17 @@ final class AccountSessionsApi {
       'revoke-others',
     ], AccountSessionsRevokeOthersOutput.fromJson);
   }
+
+  /// `PUT /account/sessions/current/client`
+  Future<void> identify(ClientIdentity clientIdentity) {
+    final body = JsonBody(clientIdentity.toJson());
+    return _transport.send('PUT', [
+      'account',
+      'sessions',
+      'current',
+      'client',
+    ], body: body);
+  }
 }
 
 final class LibrariesApi {
