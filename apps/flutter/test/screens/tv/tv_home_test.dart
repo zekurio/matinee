@@ -1,10 +1,14 @@
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:matinee/app.dart';
+import 'package:matinee/screens/home/home_data.dart';
 import 'package:matinee/screens/tv/tv_browse.dart';
 import 'package:matinee/screens/tv/tv_detail.dart';
 import 'package:matinee/screens/tv/tv_home.dart';
 import 'package:matinee/screens/tv/tv_shell.dart';
 
+import '../../media/fixtures.dart';
 import '../home_backend.dart';
 import 'tv_harness.dart';
 
@@ -107,6 +111,35 @@ void main() {
     expect(find.byType(TvEpisodeScreen), findsOneWidget);
     expect(await back(tester), isTrue);
     expect(focusedKey(), 'continue/e1');
+  });
+
+  testWidgets('a row whose card left while away still takes focus', (
+    tester,
+  ) async {
+    final backend = HomeBackend();
+    await pumpTv(tester, backend);
+    await down(tester);
+    expect(focusedKey(), 'continue/e1');
+    await select(tester);
+    expect(find.byType(TvEpisodeScreen), findsOneWidget);
+    // Watched to the end meanwhile, the episode leaves Continue watching.
+    final show = titleJson('s1', kind: 'show', name: 'The Expanse');
+    backend.answers['/api/v1/home/continue-watching'] = [
+      itemJson(
+        'e9',
+        title: show,
+        season: 1,
+        episode: 3,
+        duration: 1800,
+        position: 600,
+      ),
+    ];
+    ProviderScope.containerOf(tester.element(find.byType(MatineeApp)))
+        .invalidate(continueWatchingProvider);
+    expect(await back(tester), isTrue);
+    expect(find.byType(TvHomeScreen), findsOneWidget);
+    await down(tester);
+    expect(focusedKey(), 'continue/e9');
   });
 
   testWidgets('holding Select opens the actions panel, Back closes it', (
