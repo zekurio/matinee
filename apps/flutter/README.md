@@ -690,7 +690,11 @@ first key.
   does. A `TvFocusMemory` remembers each row's card, so entering a row
   lands on it, Back lands where you left, and a list that loads again
   keeps focus. Rows, grids, and lists scroll to follow focus
-  (`TvFollowFocus`).
+  (`TvFollowFocus`). Unlike the Kotlin app's pivot, which can leave the
+  row above cut at the top, a page of rows or sections (Home, the title
+  page, Favorites, Profile, Settings) stops only where the one above is
+  whole or gone (`sectionTop`, `TvSection`), with room after the last so
+  it can come up.
 - Panels (`showTvPanel`, `showTvPicker`): choices open at the right
   edge, Back closes them, and focus goes back to the row that opened
   them. The TV's server switcher (`sign_in/tv/tv_servers.dart`) is one
