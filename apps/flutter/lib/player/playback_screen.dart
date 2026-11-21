@@ -483,7 +483,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     if (_leaving) return;
     _media.sync(
       AppLocalizations.of(context),
-      playing: _playing,
+      playing: _session.playback.status.wantsPlay,
       rate: _holding ? holdSpeed : _speed.value,
     );
   }
@@ -513,10 +513,14 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
       LogicalKeyboardKey.mediaPlayPause ||
       LogicalKeyboardKey.space => () => unawaited(_session.togglePlay()),
       LogicalKeyboardKey.mediaPlay => () {
-        if (!_playing) unawaited(_session.togglePlay());
+        if (!_session.playback.status.wantsPlay) {
+          unawaited(_session.togglePlay());
+        }
       },
       LogicalKeyboardKey.mediaPause => () {
-        if (_playing) unawaited(_session.togglePlay());
+        if (_session.playback.status.wantsPlay) {
+          unawaited(_session.togglePlay());
+        }
       },
       LogicalKeyboardKey.mediaFastForward => () => skip(ahead),
       LogicalKeyboardKey.mediaRewind => () => skip(back == null ? null : -back),
@@ -1010,7 +1014,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
       transport: RelayedGestures(
         relay: _relay,
         child: PlayerTransport(
-          playing: _playing,
+          playing: _session.playback.status.wantsPlay,
           loading: loading,
           playLabel: l.playerPlay,
           pauseLabel: l.playerPause,

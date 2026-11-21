@@ -6,17 +6,7 @@ sealed class PlayerEvent {
 
   factory PlayerEvent.fromMessage(wire.PlaybackEventMessage message) =>
       switch (message) {
-        wire.StateMessage() => StatusChanged((
-          phase: switch (message.phase) {
-            wire.PhaseMessage.idle => PlaybackPhase.idle,
-            wire.PhaseMessage.buffering => PlaybackPhase.buffering,
-            wire.PhaseMessage.ready => PlaybackPhase.ready,
-            wire.PhaseMessage.ended => PlaybackPhase.ended,
-            wire.PhaseMessage.error => PlaybackPhase.error,
-          },
-          playing: message.playing,
-          message: message.message,
-        ), serverUnavailable: message.serverUnavailable),
+        wire.StateMessage() => _status(message),
         wire.TimelineMessage() => TimelineChanged((
           position: Duration(milliseconds: message.positionMs),
           duration: _duration(message.durationMs),
@@ -104,3 +94,23 @@ MediaTrack _track(wire.TrackMessage message) => (
   isForced: message.isForced,
   selected: message.selected,
 );
+
+StatusChanged _status(wire.StateMessage message) {
+  final phase = switch (message.phase) {
+    wire.PhaseMessage.idle => PlaybackPhase.idle,
+    wire.PhaseMessage.buffering => PlaybackPhase.buffering,
+    wire.PhaseMessage.ready => PlaybackPhase.ready,
+    wire.PhaseMessage.ended => PlaybackPhase.ended,
+    wire.PhaseMessage.error => PlaybackPhase.error,
+  };
+  return StatusChanged((
+    phase: phase,
+    playing: message.playing,
+    // Both engines keep the viewer's wish past the end, where play means
+    // from the start again, so it shows play there.
+    wantsPlay:
+        message.wantsPlay &&
+        (phase == PlaybackPhase.buffering || phase == PlaybackPhase.ready),
+    message: message.message,
+  ), serverUnavailable: message.serverUnavailable);
+}

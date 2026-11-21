@@ -44,7 +44,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
         val next = Session(session)
         current = next
         next.emit(ActiveEngineMessage(request.engine))
-        next.emit(StateMessage(PhaseMessage.BUFFERING, playing = false, serverUnavailable = false))
+        next.emit(StateMessage(PhaseMessage.BUFFERING, playing = false, wantsPlay = request.autoplay, serverUnavailable = false))
         try {
             val host = PlayerSurfaceHost(activity, request.engine, next::surfacesChanged)
             next.host = host
@@ -110,7 +110,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
     /** Closes the live session, if any. The Dart side only listens for [notify] when something else replaced it. */
     fun closeCurrent(notify: Boolean) {
         val previous = current ?: return
-        if (notify) previous.emit(StateMessage(PhaseMessage.IDLE, playing = false, serverUnavailable = false))
+        if (notify) previous.emit(StateMessage(PhaseMessage.IDLE, playing = false, wantsPlay = false, serverUnavailable = false))
         current = null
         try {
             // The engine moves off the surfaces before they're destroyed.
@@ -142,7 +142,7 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
 
         fun failed(failure: Throwable) {
             Log.w(TAG, "Player setup failed (${failure.javaClass.simpleName})")
-            emit(StateMessage(PhaseMessage.ERROR, playing = false, message = "Could not start the player.", serverUnavailable = false))
+            emit(StateMessage(PhaseMessage.ERROR, playing = false, wantsPlay = false, message = "Could not start the player.", serverUnavailable = false))
         }
 
         override fun emit(event: PlaybackEventMessage) {

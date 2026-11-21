@@ -138,12 +138,19 @@ class StateMessage extends PlaybackEventMessage {
   StateMessage({
     required this.phase,
     required this.playing,
+    this.wantsPlay = false,
     this.message,
     this.serverUnavailable = false,
   });
 
   final PhaseMessage phase;
+
+  /// The picture and sound are advancing.
   final bool playing;
+
+  /// The viewer asked to play and hasn't paused: true while it buffers to
+  /// play, false once paused, whether or not frames are moving.
+  final bool wantsPlay;
   final String? message;
   final bool serverUnavailable;
 }

@@ -7,7 +7,7 @@ PlaybackState _state({
   PlaybackPhase phase = PlaybackPhase.ready,
   bool playing = true,
 }) => PlaybackState(
-  status: (phase: phase, playing: playing, message: null),
+  status: (phase: phase, playing: playing, wantsPlay: playing, message: null),
   timeline: (
     position: const Duration(seconds: 5),
     duration: const Duration(seconds: 60),
@@ -42,12 +42,21 @@ void main() {
         (wire.PhaseMessage.error, PlaybackPhase.error),
       ]) {
         final event = PlayerEvent.fromMessage(
-          wire.StateMessage(phase: message, playing: true, message: 'why'),
+          wire.StateMessage(
+            phase: message,
+            playing: true,
+            wantsPlay: true,
+            message: 'why',
+          ),
         );
         expect(event, isA<StatusChanged>());
         expect((event as StatusChanged).status, (
           phase: phase,
           playing: true,
+          // The viewer's wish holds while it buffers or plays; at the end,
+          // or failed or closed, play means something else.
+          wantsPlay:
+              phase == PlaybackPhase.buffering || phase == PlaybackPhase.ready,
           message: 'why',
         ));
       }
@@ -139,6 +148,7 @@ void main() {
         const StatusChanged((
           phase: PlaybackPhase.buffering,
           playing: false,
+          wantsPlay: false,
           message: null,
         )),
       );
@@ -172,6 +182,7 @@ void main() {
         const StatusChanged((
           phase: PlaybackPhase.idle,
           playing: false,
+          wantsPlay: false,
           message: null,
         )),
       );
@@ -188,6 +199,7 @@ void main() {
         const StatusChanged((
           phase: PlaybackPhase.error,
           playing: false,
+          wantsPlay: false,
           message: 'Media3 playback failed (ERROR_CODE_IO_UNSPECIFIED).',
         )),
       );

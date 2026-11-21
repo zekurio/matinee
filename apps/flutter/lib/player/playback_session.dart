@@ -271,8 +271,9 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
     final wants = picks ?? _picks;
     final pause =
         _opened &&
-        !playback.status.playing &&
-        playback.phase == PlaybackPhase.ready;
+        !playback.status.wantsPlay &&
+        (playback.phase == PlaybackPhase.ready ||
+            playback.phase == PlaybackPhase.buffering);
     busy = true;
     error = null;
     notice = null;
@@ -572,7 +573,9 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
         !busy &&
         !_sourceFailed &&
         error == null &&
-        playback.phase == PlaybackPhase.buffering;
+        playback.phase == PlaybackPhase.buffering &&
+        // Paused by the viewer, it isn't waiting to play.
+        playback.status.wantsPlay;
     final mark = (playback.timeline.position, playback.timeline.buffered);
     if (!buffering || mark != _stallMark) {
       _stallMark = mark;
@@ -632,7 +635,8 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
       return;
     }
     if (_closed || error != null) return;
-    if (playback.status.playing && !ended) {
+    // What the viewer asked for, so a press while it stalls pauses.
+    if (playback.status.wantsPlay && !ended) {
       await _command(player.pause);
     } else {
       await _command(player.play);
@@ -681,7 +685,7 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
 
   Future<bool> _seekStream(PlaybackStart answer, double target) async {
     final request = ++_request;
-    final autoplay = playback.status.playing || ended;
+    final autoplay = playback.status.wantsPlay || ended;
     busy = true;
     notice = null;
     notifyListeners();

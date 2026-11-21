@@ -519,6 +519,78 @@ void main() {
     await tester.pump();
   });
 
+  group('play and pause follow what the viewer asked for', () {
+    /// Presses [key] with the spinner turning, which never settles.
+    Future<void> key(WidgetTester tester, LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('a stall offers pause, a press pauses, and it stays paused', (
+      tester,
+    ) async {
+      final opened = await _open(tester);
+      final player = opened.players.last;
+      player.emit(PlaybackPhase.ready, 30, playing: true, buffered: 60);
+      await tester.pump();
+      expect(focusedKey(), 'player/play');
+      player.emit(PlaybackPhase.buffering, 30, buffered: 61);
+      await tester.pump(const Duration(seconds: 11));
+      expect(find.text('Waiting for the server…'), findsOneWidget);
+      expect(focusedLabel(), 'Pause', reason: 'the viewer never paused');
+      expect(
+        opened.media.states.last.playing,
+        isTrue,
+        reason: 'nor the system',
+      );
+      final plays = player.plays;
+      await key(tester, LogicalKeyboardKey.select);
+      expect(player.pauses, 1);
+      expect(player.plays, plays);
+      expect(focusedLabel(), 'Play');
+      expect(opened.media.states.last.playing, isFalse);
+      // The server answers again: what came stays paused.
+      player.emit(PlaybackPhase.ready, 30, wantsPlay: false, buffered: 90);
+      await tester.pump(const Duration(seconds: 2));
+      expect(player.plays, plays, reason: 'nothing moves by surprise');
+      expect(focusedLabel(), 'Play');
+      await key(tester, LogicalKeyboardKey.select);
+      expect(player.plays, plays + 1);
+    });
+
+    testWidgets('paused, then buffering, still offers play', (tester) async {
+      final opened = await _open(tester);
+      final player = opened.players.last;
+      player.emit(PlaybackPhase.ready, 30, buffered: 60);
+      await tester.pump();
+      player.emit(PlaybackPhase.buffering, 30, wantsPlay: false, buffered: 60);
+      await tester.pump(const Duration(seconds: 1));
+      expect(focusedLabel(), 'Play');
+      expect(opened.media.states.last.playing, isFalse);
+    });
+
+    testWidgets('media keys and the system act on the wish while it stalls', (
+      tester,
+    ) async {
+      final opened = await _open(tester);
+      final player = opened.players.last;
+      player.emit(PlaybackPhase.ready, 30, playing: true, buffered: 60);
+      await tester.pump();
+      player.emit(PlaybackPhase.buffering, 30, buffered: 61);
+      await tester.pump(const Duration(seconds: 2));
+      final plays = player.plays;
+      await key(tester, LogicalKeyboardKey.mediaPlay);
+      expect(player.plays, plays, reason: 'it already wants to play');
+      expect(player.pauses, 0);
+      await key(tester, LogicalKeyboardKey.mediaPause);
+      expect(player.pauses, 1);
+      // The headset's play, once paused, plays.
+      opened.media.press(MediaCommandKind.play);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(player.plays, plays + 1);
+    });
+  });
+
   testWidgets('after Try again, focus is on play and the controls hide', (
     tester,
   ) async {
