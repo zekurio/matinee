@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:matinee/api/matinee_api.dart';
+import 'package:matinee/kit/kit.dart';
 import 'package:matinee/kit/tv/tv.dart';
 import 'package:matinee/router.dart';
 import 'package:matinee/screens/requests/discover.dart' show QueueList;
@@ -154,6 +155,56 @@ void main() {
         expect(find.byType(TvDiscoverScreen), findsOneWidget);
       });
     }
+  });
+
+  testWidgets('the rail holds its six pages at 960 by 540, closed and open', (
+    tester,
+  ) async {
+    await _open(tester, _discover());
+    const keys = [
+      TvDrawerKeys.profile,
+      TvDrawerKeys.search,
+      TvDrawerKeys.home,
+      TvDrawerKeys.favorites,
+      TvDrawerKeys.discover,
+      'kind-movie',
+      'kind-show',
+      TvDrawerKeys.settings,
+    ];
+    void expectFits(String state) {
+      expect(tester.takeException(), isNull, reason: 'no overflow $state');
+      final rects = [
+        for (final key in keys)
+          tester.getRect(
+            find
+                .descendant(
+                  of: find.byType(TvDrawer),
+                  matching: find.byKey(ValueKey(key)),
+                )
+                .first,
+          ),
+      ];
+      for (var i = 1; i < rects.length; i++) {
+        expect(
+          rects[i].top,
+          greaterThanOrEqualTo(rects[i - 1].bottom),
+          reason: '${keys[i]} under ${keys[i - 1]} $state',
+        );
+      }
+      expect(rects.first.top, greaterThanOrEqualTo(Overscan.vertical));
+      expect(
+        rects.last.bottom,
+        lessThanOrEqualTo(540 - Overscan.vertical),
+        reason: 'Settings inside the overscan $state',
+      );
+      // The pages sit under the profile, the room left before Settings.
+      expect(rects[1].top - rects[0].bottom, closeTo(6 + 18 + 6, 1));
+    }
+
+    expectFits('closed');
+    await back(tester);
+    expect(focusedLabel(), 'Home', reason: 'the drawer is open');
+    expectFits('open');
   });
 
   group('Discover', () {
