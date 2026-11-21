@@ -21,6 +21,7 @@ import { useNavigate, useRouter } from "@tanstack/react-router"
 import {
   EllipsisIcon,
   KeyRoundIcon,
+  KeySquareIcon,
   LogInIcon,
   LogOutIcon,
   RefreshCwIcon,
@@ -137,10 +138,30 @@ export function UsersPanel() {
     onError: (error) => toast.error(errorMessage(error)),
   })
 
+  const revokeTokens = useMutation({
+    mutationFn: (user: AdminUser) =>
+      client.admin.users.revokeApiTokens({ id: user.id }),
+    onSuccess: async ({ revoked }, user) => {
+      closeConfirm()
+      toast.success(
+        tr("users.revokedTokens", { count: revoked, name: displayName(user) }),
+      )
+      await refresh()
+      // Your own tokens are listed in your account too.
+      if (user.id === me?.id) {
+        await queryClient.invalidateQueries({
+          queryKey: orpc.account.apiTokens.key(),
+        })
+      }
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  })
+
   const ask = (action: UserAction, user: AdminUser) => {
     setRole.reset()
     remove.reset()
     signOut.reset()
+    revokeTokens.reset()
     openConfirm(action, user)
   }
 
@@ -159,7 +180,12 @@ export function UsersPanel() {
 
   // Kept while the dialog closes, so its words stay put as it fades.
   const mutation = confirming
-    ? { role: setRole, "sign-out": signOut, delete: remove }[confirming.action]
+    ? {
+        role: setRole,
+        "sign-out": signOut,
+        "revoke-tokens": revokeTokens,
+        delete: remove,
+      }[confirming.action]
     : null
   const copy = confirming
     ? confirmCopy(
@@ -323,6 +349,13 @@ function UserItem({
             <LogOutIcon />
             {signOutLabel}
           </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={user.apiTokens === 0}
+            onClick={() => onConfirm("revoke-tokens")}
+          >
+            <KeySquareIcon />
+            {tr("users.menu.revokeTokens")}
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <BlockableItem
             variant="destructive"
@@ -396,6 +429,11 @@ function UserDetails({
         )}
         {user.oidcLinked && (
           <Fact icon={<LogInIcon />}>{oidcName ?? tr("users.oidcOff")}</Fact>
+        )}
+        {user.apiTokens > 0 && (
+          <Fact icon={<KeySquareIcon />}>
+            {tr("users.apiTokens", { count: user.apiTokens })}
+          </Fact>
         )}
       </>
     )

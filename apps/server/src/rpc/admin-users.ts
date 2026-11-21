@@ -1,5 +1,6 @@
 import { type AdminUser, AccessOverride } from "@matinee/contracts"
 import {
+  apiToken,
   invite,
   oidcAccount,
   passkey,
@@ -7,22 +8,31 @@ import {
   user,
   type UserRow,
 } from "@matinee/db"
+import { ORPCError } from "@orpc/server"
 import { asc, count, eq, inArray, max, sql } from "drizzle-orm"
 
 import { describeAccess, forgetGroups, setMemberships } from "../access/groups"
+import { revokeUserApiTokens } from "../auth/api-tokens"
 import { deleteAvatarFile } from "../auth/avatars"
 import { deleteUserSessions, publicUser, signOut } from "../auth/session"
 import { lockUsers, otherAdminCanSignIn, type Tx } from "../auth/users"
 import { db } from "../db"
 import { log } from "../log"
-import { admin, badRequest, forbidden, notFound } from "./base"
+import {
+  admin,
+  adminSessionOnly,
+  badRequest,
+  forbidden,
+  NEEDS_SESSION,
+  notFound,
+} from "./base"
 
 const USER_GONE = "That user no longer exists. Reload the list."
 
 async function toAdminUsers(rows: UserRow[]): Promise<AdminUser[]> {
   if (rows.length === 0) return []
   const ids = rows.map((row) => row.id)
-  const [passkeys, accounts, sessions, access] = await Promise.all([
+  const [passkeys, accounts, sessions, tokens, access] = await Promise.all([
     db
       .select({ userId: passkey.userId, n: count() })
       .from(passkey)
@@ -43,11 +53,17 @@ async function toAdminUsers(rows: UserRow[]): Promise<AdminUser[]> {
       .from(session)
       .where(inArray(session.userId, ids))
       .groupBy(session.userId),
+    db
+      .select({ userId: apiToken.userId, n: count() })
+      .from(apiToken)
+      .where(inArray(apiToken.userId, ids))
+      .groupBy(apiToken.userId),
     describeAccess(rows),
   ])
   const passkeyCount = new Map(passkeys.map((row) => [row.userId, row.n]))
   const linked = new Map(accounts.map((row) => [row.userId, row]))
   const activity = new Map(sessions.map((row) => [row.userId, row]))
+  const tokenCount = new Map(tokens.map((row) => [row.userId, row.n]))
   return rows.flatMap((row) => {
     const described = access.get(row.id)
     if (!described) return []
@@ -59,6 +75,7 @@ async function toAdminUsers(rows: UserRow[]): Promise<AdminUser[]> {
         passkeys: passkeyCount.get(row.id) ?? 0,
         oidcLinked: linked.has(row.id),
         sessions: activity.get(row.id)?.live ?? 0,
+        apiTokens: tokenCount.get(row.id) ?? 0,
         claimsSyncedAt: linked.get(row.id)?.syncedAt ?? null,
         access: described,
       },
@@ -197,13 +214,34 @@ export const adminUsers = {
       .where(eq(user.id, input.id))
     if (!target) throw notFound(USER_GONE)
     const self = target.id === context.user.id
+    const { credential } = context.user
+    // Signing yourself out everywhere is a sessions change, which an API
+    // token can't make. It may still sign out others, as any admin can.
+    if (self && credential.kind !== "session") {
+      throw new ORPCError("FORBIDDEN", { message: NEEDS_SESSION })
+    }
     const ended = await deleteUserSessions(
       target.id,
-      self ? context.user.sessionId : undefined,
+      self ? credential.id : undefined,
     )
     log.info(
       `${context.user.username} signed ${target.username} out of ${ended} sessions`,
     )
     return { ended }
   }),
+
+  revokeApiTokens: adminSessionOnly.admin.users.revokeApiTokens.handler(
+    async ({ context, input }) => {
+      const [target] = await db
+        .select({ id: user.id, username: user.username })
+        .from(user)
+        .where(eq(user.id, input.id))
+      if (!target) throw notFound(USER_GONE)
+      const revoked = await revokeUserApiTokens(target.id)
+      log.info(
+        `${context.user.username} revoked ${revoked} API tokens of ${target.username}`,
+      )
+      return { revoked }
+    },
+  ),
 }

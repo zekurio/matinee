@@ -16,6 +16,7 @@ import { Hono } from "hono"
 import { encodeAllowed } from "../access/media"
 import { readViewer } from "../access/viewer"
 import { itemFor } from "../access/visible"
+import type { SessionUser } from "../auth/session"
 import { log } from "../log"
 import {
   addEncodeSeconds,
@@ -234,7 +235,7 @@ streamRoutes.get("/:id/play", async (c) => {
         userId: viewer.id,
         item,
         client: viewer.clientName,
-        authSessionId: viewer.sessionId,
+        authSessionId: viewer.credential.id,
       }
     : null
   const { plan } = opened
@@ -295,7 +296,7 @@ async function hlsRequest(
 }
 
 function watcherFor(
-  viewer: { id: string; clientName: string | null; sessionId: string },
+  viewer: Pick<SessionUser, "id" | "clientName" | "credential">,
   item: MediaItemRow,
   session: string | undefined,
 ): Watcher {
@@ -307,7 +308,7 @@ function watcherFor(
           userId: viewer.id,
           item,
           client: viewer.clientName,
-          authSessionId: viewer.sessionId,
+          authSessionId: viewer.credential.id,
         }
       : null,
   }

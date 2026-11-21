@@ -87,6 +87,39 @@ export default defineMessages("account", {
   // {time} is relative, like "3 days ago".
   "account.sessions.active": "Active {time}",
 
+  // API tokens, for services that call the API as the account.
+  "account.apiTokens.title": "API tokens",
+  "account.apiTokens.description":
+    "A service sends one as Authorization: Bearer to call the API as you, with your role and access. Tokens don't expire. Revoke one when the service no longer needs it.",
+  "account.apiTokens.empty": "No API tokens yet.",
+  "account.apiTokens.loadFailed": "Couldn't load your API tokens. {reason}",
+  "account.apiTokens.create": "Create token",
+  "account.apiTokens.createTitle": "Create an API token",
+  "account.apiTokens.createDescription":
+    "Name it after the service that will use it.",
+  "account.apiTokens.name": "Name",
+  "account.apiTokens.namePlaceholder": "Home automation",
+  "account.apiTokens.createFailed": "Couldn't create the API token",
+  "account.apiTokens.secretTitle": "Copy the token for {name}",
+  "account.apiTokens.secretDescription":
+    "This is the only time Matinee shows it. Keep it where the service keeps secrets.",
+  "account.apiTokens.secretLabel": "API token",
+  "account.apiTokens.copy": "Copy",
+  "account.apiTokens.copied": "Copied",
+  "account.apiTokens.done": "Done",
+  "account.apiTokens.neverUsed": "Never used",
+  "account.apiTokens.usedNow": "Used just now",
+  // {time} is relative, like "3 days ago".
+  "account.apiTokens.used": "Used {time}",
+  "account.apiTokens.created": "Created {date}",
+  "account.apiTokens.revoke": "Revoke",
+  "account.apiTokens.revokeNamed": "Revoke {name}",
+  "account.apiTokens.revokeTitle": "Revoke {name}?",
+  "account.apiTokens.revokeDescription":
+    "The service using it stops working with Matinee until you give it a new token.",
+  "account.apiTokens.revoked": "Revoked {name}",
+  "account.apiTokens.revokeFailed": "Couldn't revoke the API token",
+
   // Devices, in lib/devices.ts. {platform} is a name like Android or iOS.
   "account.device.app": "{platform} app",
   "account.device.browser": "Browser",

@@ -416,6 +416,7 @@ class AccountApi internal constructor(private val transport: ApiTransport) {
     val library = AccountLibraryApi(transport)
     val passkeys = AccountPasskeysApi(transport)
     val oidc = AccountOidcApi(transport)
+    val apiTokens = AccountApiTokensApi(transport)
     val sessions = AccountSessionsApi(transport)
 }
 
@@ -549,6 +550,33 @@ class AccountOidcApi internal constructor(private val transport: ApiTransport) {
     /** `DELETE /account/oidc` */
     suspend fun unlink() {
         transport.send("DELETE", listOf("account", "oidc"), emptyList(), null)
+    }
+}
+
+class AccountApiTokensApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /account/api-tokens` */
+    suspend fun list(): List<ApiToken> =
+        transport.call(
+            "GET",
+            listOf("account", "api-tokens"),
+            emptyList(),
+            null,
+            ListSerializer(ApiToken.serializer()),
+        )
+
+    /** `POST /account/api-tokens` */
+    suspend fun create(apiTokenInput: ApiTokenInput): CreatedApiToken =
+        transport.call(
+            "POST",
+            listOf("account", "api-tokens"),
+            emptyList(),
+            transport.json(ApiTokenInput.serializer(), apiTokenInput),
+            CreatedApiToken.serializer(),
+        )
+
+    /** `DELETE /account/api-tokens/{id}` */
+    suspend fun revoke(id: String) {
+        transport.send("DELETE", listOf("account", "api-tokens", id), emptyList(), null)
     }
 }
 
@@ -2025,5 +2053,15 @@ class AdminUsersApi internal constructor(private val transport: ApiTransport) {
             emptyList(),
             null,
             AdminUsersSignOutOutput.serializer(),
+        )
+
+    /** `POST /admin/users/{id}/api-tokens/revoke` */
+    suspend fun revokeApiTokens(id: String): AdminUsersRevokeApiTokensOutput =
+        transport.call(
+            "POST",
+            listOf("admin", "users", id, "api-tokens", "revoke"),
+            emptyList(),
+            null,
+            AdminUsersRevokeApiTokensOutput.serializer(),
         )
 }

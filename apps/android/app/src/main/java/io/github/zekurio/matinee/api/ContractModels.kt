@@ -1474,6 +1474,7 @@ data class AdminUser(
     val passkeys: Int,
     val oidcLinked: Boolean,
     val sessions: Int,
+    val apiTokens: Int,
     val claimsSyncedAt: String?,
     val access: AdminUser.Access,
 ) {
@@ -1546,6 +1547,14 @@ data class AdminUser(
 }
 
 @Serializable
+data class ApiToken(
+    val id: String,
+    val name: String,
+    val createdAt: String,
+    val lastUsedAt: String?,
+)
+
+@Serializable
 data class User(
     val id: String,
     val username: String,
@@ -1562,6 +1571,12 @@ data class User(
 data class AppSession(
     val token: String,
     val user: User,
+)
+
+@Serializable
+data class CreatedApiToken(
+    val token: String,
+    val apiToken: ApiToken,
 )
 
 @Serializable
@@ -2958,6 +2973,11 @@ data class AuthSettingsInput(
 )
 
 @Serializable
+data class ApiTokenInput(
+    val name: String,
+)
+
+@Serializable
 data class AppDevice(
     val name: String? = null,
     val platform: String,
@@ -3588,4 +3608,9 @@ data class AdminUsersSetAccessInput(
 @Serializable
 data class AdminUsersSignOutOutput(
     val ended: Int,
+)
+
+@Serializable
+data class AdminUsersRevokeApiTokensOutput(
+    val revoked: Int,
 )

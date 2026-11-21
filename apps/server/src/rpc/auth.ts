@@ -53,12 +53,12 @@ import { log } from "../log"
 import { loginBackdropTiles } from "../media/login-backdrop"
 import { LIMITS } from "../rate-limit"
 import {
-  authed,
   badRequest,
   limited,
   notFound,
   pub,
   requirePasskeys,
+  sessionOnly,
   tooManyRequests,
 } from "./base"
 
@@ -285,7 +285,8 @@ export const auth = {
         return pending ? { accountLabel: pending.identity.label } : null
       }),
 
-      link: authed.auth.oidc.pending.link.handler(async ({ context }) => {
+      // Linking changes how the account signs in, so an API token can't.
+      link: sessionOnly.auth.oidc.pending.link.handler(async ({ context }) => {
         const pending = await takePendingLink(context.hono)
         if (!pending) throw badRequest(PENDING_GONE)
         if (!(await activeOidc())) {
@@ -356,16 +357,20 @@ export const auth = {
         return { status: "approved" as const, token, user: publicUser(row) }
       }),
 
-    get: authed.auth.device.get.handler(async ({ input }) => {
+    // Approving signs a device in as the account, which would let an API
+    // token mint sessions, so both take a session.
+    get: sessionOnly.auth.device.get.handler(async ({ input }) => {
       const request = await findDeviceRequest(input.userCode)
       if (!request) throw notFound(DEVICE_GONE)
       return request
     }),
 
-    approve: authed.auth.device.approve.handler(async ({ context, input }) => {
-      if (!(await approveDeviceRequest(input.userCode, context.user.id))) {
-        throw notFound(DEVICE_GONE)
-      }
-    }),
+    approve: sessionOnly.auth.device.approve.handler(
+      async ({ context, input }) => {
+        if (!(await approveDeviceRequest(input.userCode, context.user.id))) {
+          throw notFound(DEVICE_GONE)
+        }
+      },
+    ),
   },
 }

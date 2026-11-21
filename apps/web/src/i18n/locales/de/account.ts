@@ -84,6 +84,40 @@ export default {
   "account.sessions.activeLastHour": "In der letzten Stunde aktiv",
   "account.sessions.active": "Aktiv {time}",
 
+  "account.apiTokens.title": "API-Tokens",
+  "account.apiTokens.description":
+    "Ein Dienst sendet ein Token als Authorization: Bearer, um die API als du aufzurufen, mit deiner Rolle und deinem Zugriff. Tokens laufen nicht ab. Widerrufe eines, sobald der Dienst es nicht mehr braucht.",
+  "account.apiTokens.empty": "Noch keine API-Tokens.",
+  "account.apiTokens.loadFailed":
+    "Deine API-Tokens konnten nicht geladen werden. {reason}",
+  "account.apiTokens.create": "Token erstellen",
+  "account.apiTokens.createTitle": "API-Token erstellen",
+  "account.apiTokens.createDescription":
+    "Benenne es nach dem Dienst, der es nutzen wird.",
+  "account.apiTokens.name": "Name",
+  "account.apiTokens.namePlaceholder": "Hausautomation",
+  "account.apiTokens.createFailed":
+    "Das API-Token konnte nicht erstellt werden",
+  "account.apiTokens.secretTitle": "Token für {name} kopieren",
+  "account.apiTokens.secretDescription":
+    "Matinee zeigt es nur dieses eine Mal. Bewahre es dort auf, wo der Dienst seine Geheimnisse ablegt.",
+  "account.apiTokens.secretLabel": "API-Token",
+  "account.apiTokens.copy": "Kopieren",
+  "account.apiTokens.copied": "Kopiert",
+  "account.apiTokens.done": "Fertig",
+  "account.apiTokens.neverUsed": "Nie verwendet",
+  "account.apiTokens.usedNow": "Gerade verwendet",
+  "account.apiTokens.used": "Verwendet {time}",
+  "account.apiTokens.created": "Erstellt am {date}",
+  "account.apiTokens.revoke": "Widerrufen",
+  "account.apiTokens.revokeNamed": "{name} widerrufen",
+  "account.apiTokens.revokeTitle": "{name} widerrufen?",
+  "account.apiTokens.revokeDescription":
+    "Der Dienst, der es nutzt, funktioniert mit Matinee erst wieder, wenn du ihm ein neues Token gibst.",
+  "account.apiTokens.revoked": "{name} widerrufen",
+  "account.apiTokens.revokeFailed":
+    "Das API-Token konnte nicht widerrufen werden",
+
   "account.device.app": "{platform}-App",
   "account.device.browser": "Browser",
 

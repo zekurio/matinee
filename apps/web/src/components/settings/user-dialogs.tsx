@@ -86,6 +86,15 @@ export function confirmCopy(
         : tr("users.signOut.confirm"),
     }
   }
+  if (action === "revoke-tokens") {
+    return {
+      title: self
+        ? tr("users.revokeTokens.ownTitle")
+        : tr("users.revokeTokens.title", { name }),
+      description: tr("users.revokeTokens.description"),
+      confirmLabel: tr("users.revokeTokens.confirm"),
+    }
+  }
   return {
     title: self
       ? tr("users.delete.ownTitle")

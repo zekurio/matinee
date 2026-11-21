@@ -2884,9 +2884,10 @@ public struct AdminUser: Codable, Sendable, Hashable {
     public var passkeys: Int
     public var oidcLinked: Bool
     public var sessions: Int
+    public var apiTokens: Int
     public var claimsSyncedAt: String?
     public var access: AdminUser.Access
-    public init(id: String, username: String, displayName: String?, role: String, avatarId: String?, avatarSource: String, playback: PlaybackPreferences?, library: LibraryPreferences, sharing: ProfileSharing, createdAt: String, lastSeenAt: String?, passkeys: Int, oidcLinked: Bool, sessions: Int, claimsSyncedAt: String?, access: AdminUser.Access) {
+    public init(id: String, username: String, displayName: String?, role: String, avatarId: String?, avatarSource: String, playback: PlaybackPreferences?, library: LibraryPreferences, sharing: ProfileSharing, createdAt: String, lastSeenAt: String?, passkeys: Int, oidcLinked: Bool, sessions: Int, apiTokens: Int, claimsSyncedAt: String?, access: AdminUser.Access) {
         self.id = id
         self.username = username
         self.displayName = displayName
@@ -2901,6 +2902,7 @@ public struct AdminUser: Codable, Sendable, Hashable {
         self.passkeys = passkeys
         self.oidcLinked = oidcLinked
         self.sessions = sessions
+        self.apiTokens = apiTokens
         self.claimsSyncedAt = claimsSyncedAt
         self.access = access
     }
@@ -2920,6 +2922,7 @@ public struct AdminUser: Codable, Sendable, Hashable {
         try c.encode(self.passkeys, forKey: .passkeys)
         try c.encode(self.oidcLinked, forKey: .oidcLinked)
         try c.encode(self.sessions, forKey: .sessions)
+        try c.encode(self.apiTokens, forKey: .apiTokens)
         try c.encode(self.claimsSyncedAt, forKey: .claimsSyncedAt)
         try c.encode(self.access, forKey: .access)
     }
@@ -3088,6 +3091,26 @@ public struct AdminUser: Codable, Sendable, Hashable {
     }
 }
 
+public struct ApiToken: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public var createdAt: String
+    public var lastUsedAt: String?
+    public init(id: String, name: String, createdAt: String, lastUsedAt: String?) {
+        self.id = id
+        self.name = name
+        self.createdAt = createdAt
+        self.lastUsedAt = lastUsedAt
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.createdAt, forKey: .createdAt)
+        try c.encode(self.lastUsedAt, forKey: .lastUsedAt)
+    }
+}
+
 public struct User: Codable, Sendable, Hashable {
     public var id: String
     public var username: String
@@ -3129,6 +3152,15 @@ public struct AppSession: Codable, Sendable, Hashable {
     public init(token: String, user: User) {
         self.token = token
         self.user = user
+    }
+}
+
+public struct CreatedApiToken: Codable, Sendable, Hashable {
+    public var token: String
+    public var apiToken: ApiToken
+    public init(token: String, apiToken: ApiToken) {
+        self.token = token
+        self.apiToken = apiToken
     }
 }
 
@@ -5955,6 +5987,13 @@ public struct AuthSettingsInput: Codable, Sendable, Hashable {
     }
 }
 
+public struct ApiTokenInput: Codable, Sendable, Hashable {
+    public var name: String
+    public init(name: String) {
+        self.name = name
+    }
+}
+
 public struct AppDevice: Codable, Sendable, Hashable {
     public var name: String?
     public var platform: String
@@ -7258,5 +7297,12 @@ public struct AdminUsersSignOutOutput: Codable, Sendable, Hashable {
     public var ended: Int
     public init(ended: Int) {
         self.ended = ended
+    }
+}
+
+public struct AdminUsersRevokeApiTokensOutput: Codable, Sendable, Hashable {
+    public var revoked: Int
+    public init(revoked: Int) {
+        self.revoked = revoked
     }
 }

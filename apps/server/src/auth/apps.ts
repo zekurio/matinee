@@ -90,7 +90,9 @@ export const appRoutes = new Hono()
       )
     }
     const current = await readSession(c)
-    if (!current) {
+    // An API token in the header would skip the origin check and could
+    // trade itself for an app session, so only a session approves.
+    if (current?.credential.kind !== "session") {
       // Signed out since the page loaded: sign in, then approve again.
       const page = appAuthorizePagePath(request.data)
       return c.redirect(`/login?${new URLSearchParams({ redirect: page })}`)

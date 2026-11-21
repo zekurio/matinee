@@ -619,8 +619,8 @@ everywhere once the provider refuses its token for good.
   account. The login page offers to link it instead.
 - Invite links work once, expire, and stop working when the admin who made
   them is deleted or demoted.
-- Deleting a user deletes their sessions, passkeys, links, progress,
-  favorites, and history.
+- Deleting a user deletes their sessions, API tokens, passkeys, links,
+  progress, favorites, and history.
 - A client secret saved in Settings is stored as plain text.
   `MATINEE_OIDC_CLIENT_SECRET_FILE` keeps it out of the database.
 - What anyone can call without signing in is limited per client address:
@@ -634,6 +634,56 @@ everywhere once the provider refuses its token for good.
 - Request bodies are capped at 1 MB before anything parses them, except
   avatar and title image uploads, which get the file's limit.
 
+### API tokens
+
+An API token lets a service call the API as an account without anyone
+signing in, for months if need be. Make one in Settings → Account → API
+tokens. Name it after the service. The secret shows once, when it's made.
+The list afterwards shows each token's name, when it was made, and when it
+was last used, to the minute, and revokes one.
+
+- A token is `matinee_` and 43 random base64url characters, 256 bits. The
+  server stores its SHA-256, as for sessions. A session token is always 43
+  characters, so the prefix and length tell the two apart before any
+  lookup, and a secret scanner can find a leaked one.
+- It never expires. It stops working when its owner revokes it, an admin
+  revokes the account's tokens in Settings → Users, or the account is
+  deleted.
+- The server reads it only from `Authorization: Bearer`, never from the
+  `matinee_session` cookie, so the CSRF check in `app.ts` holds: a browser
+  sends that header to another site only after a preflight, which fails.
+- A request with it acts as the account, with its role and access read
+  again on every request. An admin's token can call admin procedures, and
+  a demoted account's token loses them on its next request.
+- It can't reach what a long-lived bot credential shouldn't. These answer
+  403 to a token and need a session: `account.apiTokens.*`,
+  `account.passkeys.*`, `account.oidc.*`, `account.sessions` list, revoke,
+  and revoke-others, linking a pending OIDC sign-in, the OIDC link flow,
+  looking up and approving a device code (`/link`), approving an app at
+  `/authorize`, `admin.users.revokeApiTokens`, and `admin.users.signOut`
+  on the token's own account. `auth.signOut` with a token ends nothing.
+  `account.sessions.identify` succeeds and changes nothing, since a token
+  goes by its name, which watching now and the statistics show as its
+  client.
+- What a token can still do as an admin is all of administration: the
+  users, their roles, the single sign-on and passkey settings, invites. Give
+  a service an admin's token only when it needs that.
+- A live stream checks its credential when it opens and ends after ten
+  minutes at most, so a revoked token's streams end by then, as a revoked
+  session's do. Its next request, the reconnect included, gets 401.
+
+A service should keep the token where it keeps secrets and send it on
+every request:
+
+```sh
+curl -H "Authorization: Bearer $MATINEE_TOKEN" \
+  https://media.example.com/api/v1/auth/session
+```
+
+Calls under `/api/v1` are the REST API in [The API](#the-api). A 401 means
+the token was revoked or its account deleted, and retrying won't help. A
+403 means the account's role or the token can't do that.
+
 ## For app developers
 
 ### The API
@@ -645,8 +695,9 @@ are plain HTTP routes in `packages/contracts/src/paths.ts`.
 
 The same contract is REST under `/api/v1`, with the OpenAPI document at
 `/api/v1/openapi.json` and a reference at `/api-docs` in the web app.
-Browsers use the session cookie, and apps send a bearer token from
-[Signing in apps](#signing-in-apps). Errors are JSON with `code`,
+Browsers use the session cookie, apps send a bearer token from
+[Signing in apps](#signing-in-apps), and services send an
+[API token](#api-tokens) the same way. Errors are JSON with `code`,
 `status`, and `message`.
 
 `/api/health` returns `{ "ok": true, "contract": "…" }` without a session.
