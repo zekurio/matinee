@@ -149,9 +149,11 @@ class _TvSearchFieldState extends State<TvSearchField> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: style.copyWith(
+                                    // Muted, not faint: it has to read
+                                    // over a page's backdrop.
                                     color: lit
                                         ? content.withValues(alpha: .55)
-                                        : colors.textFaint,
+                                        : colors.mutedForeground,
                                   ),
                                 ),
                               Focus(

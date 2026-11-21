@@ -24,6 +24,7 @@ import '../../player/player.dart' show PlayerEngine;
 import '../../player/player_preferences.dart';
 import '../../player/player_system.dart';
 import '../../player/subtitle_look.dart';
+import '../../router.dart' show Routes;
 import '../settings/account_page.dart'
     show accountSessionsProvider, sessionName;
 import '../settings/devices.dart';
@@ -39,6 +40,7 @@ import '../settings/subtitles_page.dart'
     show subtitleBackgroundLabel, subtitleColorLabel, subtitleEdgeLabel;
 import '../sign_in/server_switcher.dart' show withoutScheme;
 import '../sign_in/tv/tv_servers.dart';
+import 'tv_sign_out.dart';
 
 /// Settings' categories on a TV, as the Kotlin app's `TvSettingsCategory`,
 /// by the keys of `Routes.settingsPage`.
@@ -240,15 +242,22 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
                   onKeyEvent: _rowsKey,
                   child: TvFollowFocus(
                     controller: _scroll,
-                    rule: TvFollowFocus.clear(start: 8, end: 24),
+                    // A focused row stops at the overscan, where every TV
+                    // still shows it, and its growth with it.
+                    rule: TvFollowFocus.clear(
+                      start: 8,
+                      end: Overscan.vertical + 2,
+                    ),
                     child: ListView(
                       // A new category starts its rows afresh, at the top.
                       key: ValueKey(_selected),
                       controller: _scroll,
                       clipBehavior: Clip.none,
-                      padding: const EdgeInsets.only(
+                      padding: const EdgeInsetsDirectional.only(
                         top: 4,
                         bottom: Overscan.vertical + 24,
+                        // A focused row grows, and stays inside the edge.
+                        end: TvListItems.focusRoom,
                       ),
                       children: switch (_selected) {
                         TvSettingsCategory.playback => [const _PlaybackRows()],
@@ -654,7 +663,7 @@ class _SubtitlePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
     child: Container(
       height: 128,
       alignment: Alignment.bottomCenter,
@@ -968,14 +977,18 @@ class _AccountRows extends ConsumerWidget {
         title: l.connectChangeServer,
         icon: Lucide.refreshCw,
         quiet: true,
-        onPressed: () => showTvServerPanel(context),
+        onPressed: () => showTvServerPanel(
+          context,
+          returnTo:
+              '${Routes.settings}?category=${TvSettingsCategory.account.key}',
+        ),
       ),
       TvListItem(
         title: l.shellSignOut,
         icon: Lucide.logOut,
         quiet: true,
         destructive: true,
-        onPressed: () => ref.read(sessionProvider.notifier).signOut(),
+        onPressed: () => confirmTvSignOut(context, ref),
       ),
     ]);
   }

@@ -97,7 +97,12 @@ class TvAuthFrame extends StatelessWidget {
                   Expanded(
                     flex: 100 - (split * 100).round(),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      // A focused row grows, and stays inside the edge.
+                      padding: const EdgeInsetsDirectional.only(
+                        top: 12,
+                        bottom: 12,
+                        end: TvListItems.focusRoom,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: children,
@@ -178,7 +183,7 @@ class TvListItem extends StatelessWidget {
             ? colors.background.withValues(alpha: .7)
             : colors.mutedForeground;
         return AnimatedScale(
-          scale: focused ? 1.03 : 1,
+          scale: focused ? TvFocus.rowScale : 1,
           duration: const Duration(milliseconds: 120),
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -210,20 +215,14 @@ class TvListItem extends StatelessWidget {
                             title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: KitText.xl.style(
-                              color: content,
-                              weight: FontWeight.w600,
-                            ),
+                            style: TvType.facts.style(color: content),
                           ),
                           if (subtitle case final text?)
                             Text(
                               text,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: KitText.px15.style(
-                                color: muted,
-                                weight: FontWeight.w500,
-                              ),
+                              style: TvType.label.style(color: muted),
                             ),
                         ],
                       ),

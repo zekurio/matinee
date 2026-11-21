@@ -28,3 +28,43 @@ class Logo extends StatelessWidget {
     );
   }
 }
+
+/// The sunset mark alone, [size] square, as the Kotlin app's `LogoMark`:
+/// the logo's art seen through the mark's 24-unit icon box, which the art
+/// places with the first path's `translate(x y) scale(s)`.
+class LogoMark extends StatelessWidget {
+  const LogoMark({super.key, this.size = 24});
+
+  final double size;
+
+  static String _crop(String art) {
+    final place = RegExp(
+      r'translate\((-?[\d.]+) (-?[\d.]+)\) scale\(([\d.]+)\)',
+    ).firstMatch(art);
+    if (place == null) return art;
+    final [x, y, scale] = [
+      for (final i in [1, 2, 3]) double.parse(place.group(i)!),
+    ];
+    final side = 24 * scale;
+    return art.replaceFirst(
+      RegExp(r'viewBox="[^"]*"'),
+      'viewBox="$x $y $side $side"',
+    );
+  }
+
+  static final _dark = _crop(LogoArt.dark);
+  static final _light = _crop(LogoArt.light);
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = MatineeTheme.of(context).isDark;
+    return ClipRect(
+      child: SvgPicture.string(
+        dark ? _dark : _light,
+        width: size,
+        height: size,
+        excludeFromSemantics: true,
+      ),
+    );
+  }
+}

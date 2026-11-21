@@ -687,13 +687,20 @@ first key.
   code with its waiting line; the QR code alone on the right; and Change
   server, or Back to the server in use, as a small `TvAuthAction` at the
   bottom left, beside Get a new code or Retry when the code ran out or
-  never came. It says nothing of the phone app's Settings.
+  never came. It says nothing of the phone app's Settings. Cancelling Add
+  server goes back to the page it started from (Settings › Account from
+  the server switcher there), where the Kotlin app starts again on Home.
 - Settings (`lib/screens/tv/tv_settings.dart`): also spaced apart from
   the Kotlin app on purpose. The categories' highlight starts at
   `TvPage.start`, where every page's cards and chips do, clear of the
   drawer's focus ring, not a list item's inset further left against the
   cog. The column is 224 wide, room for the German names, and 32 before
-  the rows, so the rows start a little earlier than Kotlin's.
+  the rows, so the rows start a little earlier than Kotlin's. Rows
+  scroll to stop a focused one at the bottom overscan, where Compose
+  scrolls only until it shows, which can leave it in the overscan. Sign out,
+  there and on Profile, asks first in a panel with focus on Cancel
+  (`tv_sign_out.dart`), since signing in again takes a phone; the Kotlin
+  app signs out at once.
 - Focus (`lib/kit/tv`): `TvTraversalPolicy` moves by geometry, as Compose
   does. A `TvFocusMemory` remembers each row's card, so entering a row
   lands on it, Back lands where you left, and a list that loads again
@@ -702,9 +709,15 @@ first key.
 - Panels (`showTvPanel`, `showTvPicker`): choices open at the right
   edge, Back closes them, and focus goes back to the row that opened
   them. The TV's server switcher (`sign_in/tv/tv_servers.dart`) is one
-  of these, in place of the phone's sheet.
+  of these, in place of the phone's sheet. Unlike the Kotlin app's, a focused row
+  never grows into the overscan: rows that run to the right edge keep
+  `TvListItems.focusRoom` past it, and panels are 404 wide with 36 at
+  their sides, so their rows keep the Kotlin app's width.
 - Screens (`lib/screens/tv`): Home; Movies, Shows, Browse, Favorites, and
-  Search; the title, season, episode, and person pages; Profile with its
+  Search; the title, season, episode, and person pages (a show of one
+  season lists its episodes without the Kotlin app's one-card Seasons
+  row; a search field's placeholder is the muted text colour, not the
+  Kotlin app's faint one, so it reads over a backdrop); Profile with its
   charts and standing, and Recently watched; and Settings, whose
   categories sit at the left and whose rows are on the right. Its
   Playback and Subtitles rows set the same `PlayerPrefs` as the phone's
@@ -722,7 +735,9 @@ first key.
   or Down bring them back. The TV has one key handler; it never builds
   the phone's controls. Audio, subtitles, and settings (quality, speed,
   Fit or Fill, which is kept) open as panels. Skip intro and the next
-  episode wait alone on the picture. Once the file ends, the next episode
+  episode wait alone on the picture; a countdown of a minute or more reads
+  as a time (`· 2:46`), where the Kotlin app counts the seconds (`· 166`).
+  Once the file ends, the next episode
   starts unless autoplay is off in Settings or Back stopped it. With Match
   frame rate on, the screen switches to a refresh rate that plays the
   server's frame rate evenly, through `pigeons/display.dart`;

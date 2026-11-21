@@ -76,6 +76,7 @@ Future<_Player> _open(
   WidgetTester tester, {
   Size size = const Size(960, 540),
   bool hasNext = false,
+  double? upNextAt,
   List<MediaSegment> segments = const [],
   double? frameRate,
   TrickplayStatus? trickplay,
@@ -89,6 +90,7 @@ Future<_Player> _open(
       start: input.position ?? 18,
       quality: input.quality ?? PlaybackQuality.original,
       hasNext: hasNext && input.itemId == itemId,
+      upNextAt: input.itemId == itemId ? upNextAt : null,
       segments: input.itemId == itemId ? segments : const [],
     );
     return FakePlaybackApi.answer(
@@ -506,6 +508,20 @@ void main() {
     expect(find.textContaining(RegExp(r'· \d')), findsNothing);
   });
 
+  testWidgets('a countdown of a minute or more reads as a time', (
+    tester,
+  ) async {
+    final opened = await _open(tester, hasNext: true, upNextAt: 20);
+    await _waitForHide(tester);
+    opened.players.single.emit(PlaybackPhase.ready, 30, playing: true);
+    await settle(tester);
+    expect(find.text('Next episode'), findsOneWidget);
+    expect(find.text('· 1:30'), findsOneWidget);
+    opened.players.single.emit(PlaybackPhase.ready, 75, playing: true);
+    await settle(tester);
+    expect(find.text('· 45'), findsOneWidget);
+  });
+
   testWidgets('the next episode starts by itself after its countdown', (
     tester,
   ) async {
@@ -530,6 +546,21 @@ void main() {
     expect(focusedKey(), 'player/corner');
     await select(tester);
     expect(opened.players.single.seeks.last, const Duration(seconds: 30));
+  });
+
+  testWidgets('Skip intro from the controls hands focus to play', (
+    tester,
+  ) async {
+    final opened = await _open(tester, segments: const [intro]);
+    await _waitForHide(tester);
+    // Past the few seconds the button waits on the picture.
+    await tester.pump(const Duration(seconds: 8));
+    await down(tester);
+    expect(focusedKey(), 'player/action');
+    await select(tester);
+    expect(opened.players.single.seeks.last, const Duration(seconds: 30));
+    expect(find.text('Skip intro'), findsNothing);
+    expect(focusedKey(), 'player/play', reason: 'not lost with the button');
   });
 
   for (final size in tvSizes) {

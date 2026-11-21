@@ -3910,6 +3910,19 @@
   "@tvSettingsSignOutDeviceDescription": {
     "description": "strings.xml"
   },
+  "tvSignOutTitle": "Sign out of {p1}?",
+  "@tvSignOutTitle": {
+    "description": "The confirmation before a TV signs itself out; p1 is the server.",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "tvSignOutDescription": "This TV has to sign in again with a code.",
+  "@tvSignOutDescription": {
+    "description": "Under the TV's sign-out confirmation."
+  },
   "tvSettingsThisTv": "This TV",
   "@tvSettingsThisTv": {
     "description": "strings.xml"

@@ -291,6 +291,8 @@ class _TvPinnedListState extends State<TvPinnedList> {
 /// header is away. [onNearEnd] asks for more as the last rows near.
 /// [scrollKey] changing, as a new sort, scrolls back to the top. [cellAspect]
 /// is a cell's width over its height, and [cellExtra] what a caption adds.
+/// With [cellWidth], cells keep that width and as many fit as will, the
+/// room left over at the end, as Compose's `GridCells.FixedSize`.
 class TvPosterGrid extends StatefulWidget {
   const TvPosterGrid({
     super.key,
@@ -300,6 +302,7 @@ class TvPosterGrid extends StatefulWidget {
     required this.cellAspect,
     this.cellExtra = 0,
     this.columns = TvGrid.columns,
+    this.cellWidth,
     this.header,
     this.line,
     this.lineHeight = 30,
@@ -316,6 +319,7 @@ class TvPosterGrid extends StatefulWidget {
   /// Height a cell has beyond its [cellAspect], as a caption under a poster.
   final double cellExtra;
   final int columns;
+  final double? cellWidth;
   final Widget? header;
   final Widget? line;
   final double lineHeight;
@@ -334,6 +338,7 @@ class _TvPosterGridState extends State<TvPosterGrid> {
   int _focusRow = 0;
   double _pitch = 0;
   double _cell = 0;
+  late int _columns = widget.columns;
 
   @override
   void initState() {
@@ -442,9 +447,18 @@ class _TvPosterGridState extends State<TvPosterGrid> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final width = constraints.maxWidth - TvGrid.inset - TvPage.end;
+                final fixed = widget.cellWidth;
+                final columns = _columns = fixed == null
+                    ? widget.columns
+                    : ((width + TvGrid.gap) / (fixed + TvGrid.gap))
+                          .floor()
+                          .clamp(1, 24);
                 final cellWidth =
-                    (width - TvGrid.gap * (widget.columns - 1)) /
-                    widget.columns;
+                    fixed ?? (width - TvGrid.gap * (columns - 1)) / columns;
+                final spare = math.max(
+                  0.0,
+                  width - columns * cellWidth - TvGrid.gap * (columns - 1),
+                );
                 _cell = cellWidth / widget.cellAspect + widget.cellExtra;
                 _pitch = _cell + TvGrid.rowGap;
                 final room = math.max(
@@ -464,15 +478,15 @@ class _TvPosterGridState extends State<TvPosterGrid> {
                         scrollCacheExtent: const ScrollCacheExtent.pixels(800),
                         slivers: [
                           SliverPadding(
-                            padding: const EdgeInsetsDirectional.only(
+                            padding: EdgeInsetsDirectional.only(
                               start: TvGrid.inset,
-                              end: TvPage.end,
+                              end: TvPage.end + spare,
                               top: TvGrid.inset,
                             ),
                             sliver: SliverGrid.builder(
                               gridDelegate:
                                   SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: widget.columns,
+                                    crossAxisCount: columns,
                                     crossAxisSpacing: TvGrid.gap,
                                     mainAxisSpacing: TvGrid.rowGap,
                                     mainAxisExtent: _cell,
@@ -483,7 +497,7 @@ class _TvPosterGridState extends State<TvPosterGrid> {
                                 skipTraversal: true,
                                 onFocusChange: (focused) {
                                   if (focused) {
-                                    _focusedRow(index ~/ widget.columns);
+                                    _focusedRow(index ~/ _columns);
                                   }
                                 },
                                 child: widget.itemBuilder(context, index),

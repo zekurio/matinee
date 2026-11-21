@@ -54,25 +54,33 @@ import 'player_system.dart';
   }
 }
 
-/// The note for a [PlaybackNotice], over the video.
+/// The note for a [PlaybackNotice], over the video, [margin] off its
+/// edges.
 PlayerNote playbackNoticeNote(
   AppLocalizations l,
   PlaybackNotice notice,
-  Object? detail,
-) => switch (notice) {
+  Object? detail, {
+  EdgeInsets margin = PlayerNote.phoneMargin,
+}) => switch (notice) {
   PlaybackNotice.burnInFailed => PlayerNote(
+    margin: margin,
     title: l.playerNoticeBurnInFailed,
     detail: l.playerNoticeBurnInFailedDetail,
   ),
   PlaybackNotice.qualityFailed => PlayerNote(
+    margin: margin,
     title: l.playerNoticeSwitchFailed,
     detail: l.playerNoticeQualityFailedDetail,
   ),
   PlaybackNotice.switchFailed => PlayerNote(
+    margin: margin,
     title: l.playerNoticeSwitchFailed,
     detail: detail == null ? null : playbackErrorText(l, detail).$2,
   ),
-  PlaybackNotice.subtitleFailed => PlayerNote(title: l.playerErrorSubtitles),
+  PlaybackNotice.subtitleFailed => PlayerNote(
+    margin: margin,
+    title: l.playerErrorSubtitles,
+  ),
 };
 
 /// What the button that skips [segment] says.

@@ -5,6 +5,7 @@ import '../../../core/session.dart';
 import '../../../kit/kit.dart';
 import '../../../kit/tv/tv.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../router.dart' show addServerReturnProvider;
 import '../server_switcher.dart' show serverFacts, serverTitle;
 
 /// What the server panel does once it has closed.
@@ -17,7 +18,9 @@ typedef _Then = void Function(SessionNotifier session);
 /// Remove a server turns to picking one, then to asking, focused on
 /// Cancel; each step is a panel of its own over the last, so Back goes a
 /// step back, then closes, and focus goes back to the row that opened it.
-Future<void> showTvServerPanel(BuildContext context) async {
+/// [returnTo] is where cancelling Add server comes back to, when it's
+/// more than the page's location.
+Future<void> showTvServerPanel(BuildContext context, {String? returnTo}) async {
   final l = AppLocalizations.of(context);
   final session = ProviderScope.containerOf(
     context,
@@ -26,7 +29,7 @@ Future<void> showTvServerPanel(BuildContext context) async {
   final then = await showTvPanel<_Then>(
     context,
     title: l.serversTitle,
-    builder: (panel) => [_ServerList(panel: panel)],
+    builder: (panel) => [_ServerList(panel: panel, returnTo: returnTo)],
   );
   then?.call(session);
 }
@@ -52,10 +55,11 @@ TvListItem _serverRow(
 );
 
 class _ServerList extends ConsumerWidget {
-  const _ServerList({required this.panel});
+  const _ServerList({required this.panel, this.returnTo});
 
   /// The panel's own context, which closes it.
   final BuildContext panel;
+  final String? returnTo;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -82,7 +86,12 @@ class _ServerList extends ConsumerWidget {
           icon: Lucide.plus,
           quiet: true,
           autofocus: !active,
-          onPressed: () => close((session) => session.addServer()),
+          onPressed: () => close((session) {
+            if (returnTo case final location?) {
+              ref.read(addServerReturnProvider.notifier).remember(location);
+            }
+            session.addServer();
+          }),
         ),
         if (servers.isNotEmpty)
           TvListItem(
