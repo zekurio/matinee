@@ -2,6 +2,7 @@ import {
   NO_CATALOG_FILTERS,
   type CatalogRef,
   type DiscoverRail,
+  type DiscoverRails,
   type DiscoverRow,
 } from "@matinee/contracts"
 import type { t } from "@matinee/contracts/schema"
@@ -69,12 +70,16 @@ async function askableKinds(viewer: Viewer) {
   return kinds
 }
 
-export async function rails(viewer: Viewer) {
+export async function rails(
+  viewer: Viewer,
+): Promise<t.infer<typeof DiscoverRails>> {
   const kinds = await askableKinds(viewer)
   // Discover is for eligible request destinations, not a standalone TMDB browser.
-  if (!kinds.length) return { enabled: false, rails: [], browse: [] }
+  if (!kinds.length)
+    return { enabled: false, requests: null, rails: [], browse: [] }
   return {
     enabled: true,
+    requests: viewer.role === "admin" ? "queue" : "mine",
     rails: [...(await discoverRails(viewer, kinds)), ...catalogRails(kinds)],
     browse: kinds,
   }

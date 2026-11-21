@@ -36,6 +36,7 @@ import {
 import { Rail, RailItem } from "@/components/rail"
 import { tr } from "@/i18n"
 import { useDismissedStore } from "@/stores/recommendations"
+import { useSendHeldOnLeave } from "@/stores/request-actions"
 
 import { type BrowseEntry, BrowseCard, cardDetail } from "./browse-card"
 import {
@@ -47,6 +48,8 @@ import {
   railLink,
   railsOptions,
 } from "./discover-data"
+import { RailFailed } from "./rail-failed"
+import { DiscoverRequests } from "./requests-rail"
 
 type Page = UseQueryResult<t.infer<typeof DiscoverRowSchema>>
 
@@ -56,6 +59,7 @@ type Page = UseQueryResult<t.infer<typeof DiscoverRowSchema>>
  * from `sm` up, and under the field on a phone's search tab.
  */
 export function DiscoverRails() {
+  useSendHeldOnLeave()
   const rails = useQuery(railsOptions())
   const list = rails.data?.enabled ? rails.data.rails : []
   const pages = useQueries({ queries: list.map(railRowOptions) })
@@ -71,14 +75,26 @@ export function DiscoverRails() {
     return <Failed onRetry={() => void rails.refetch()} />
   }
   if (!rails.data.enabled) return <DiscoverOff />
+  // The requests come from their own stream or list, so they stay when the
+  // catalog's rows are down or empty.
+  const requests = rails.data.requests && (
+    <DiscoverRequests which={rails.data.requests} />
+  )
   if (list.length > 0 && pages.every((page) => page.isError)) {
-    if (pages.some((page) => page.isFetching)) return <RailsSkeleton />
+    const retrying = pages.some((page) => page.isFetching)
     return (
-      <Failed
-        onRetry={() => {
-          for (const page of pages) void page.refetch()
-        }}
-      />
+      <div className="flex flex-col gap-10 max-sm:gap-6">
+        {requests}
+        {retrying ? (
+          <RailsSkeleton />
+        ) : (
+          <Failed
+            onRetry={() => {
+              for (const page of pages) void page.refetch()
+            }}
+          />
+        )}
+      </div>
     )
   }
   // A row whose titles are all here already has nothing to show.
@@ -87,7 +103,14 @@ export function DiscoverRails() {
     if (!page || (page.isSuccess && page.data.items.length === 0)) return []
     return [{ rail, page }]
   })
-  if (shown.length === 0) return <Nothing />
+  if (shown.length === 0) {
+    return (
+      <div className="flex flex-col gap-10 max-sm:gap-6">
+        {requests}
+        <Nothing />
+      </div>
+    )
+  }
   const stale = pages.some((page) => page.data?.stale)
   // One row that failed says so in its place. Several say it once, at the
   // top, rather than as a stack of empty boxes.
@@ -97,6 +120,7 @@ export function DiscoverRails() {
 
   return (
     <div className="flex flex-col gap-10 max-sm:gap-6">
+      {requests}
       {stale && <RailsNote>{tr("discover.stale")}</RailsNote>}
       {failed.length > 1 && (
         <RailsNote
@@ -208,19 +232,6 @@ export function useRailDismiss(rail: RailInfo) {
     of: (item: BrowseEntry) =>
       recommended ? () => dismiss(queryClient, item.ref, item.name) : undefined,
   }
-}
-
-/** In a row's place, when its cards didn't load. */
-export function RailFailed({ onRetry }: { onRetry: () => void }) {
-  return (
-    <li className="text-muted-foreground flex w-full flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed p-6 text-sm">
-      {tr("discover.railFailed")}
-      <Button variant="outline" size="sm" onClick={onRetry}>
-        <RotateCwIcon />
-        {tr("discover.retry")}
-      </Button>
-    </li>
-  )
 }
 
 /** A row's cards on their way, the size of the cards they stand in for. */

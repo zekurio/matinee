@@ -22,6 +22,8 @@ import { requestAction, requestLimit, undoable } from "./rules"
 
 export const ExternalIds = t.record(t.string(), t.string())
 export type AvailabilityInput = {
+  /** Request cards describe this exact row and only the seasons it covers. */
+  requestId?: string
   ref: CatalogRef
   libraryId?: string
   externalIds?: t.infer<typeof ExternalIds>
@@ -192,7 +194,9 @@ export async function availability(
       destination: !!selected,
       limit,
     })
-    const row = pick(matching)
+    const row = input.requestId
+      ? matching.find((entry) => entry.id === input.requestId)
+      : pick(matching)
     const context = contextOf(row)
     return {
       ref: input.ref,
@@ -204,7 +208,7 @@ export async function availability(
         true,
         input.releaseDate ?? null,
       ),
-      seasons: (input.seasons ?? []).map((season) => {
+      seasons: (input.seasons ?? []).flatMap((season) => {
         const files = owned.filter((file) => file.season === season.number)
         // The request that covers the season, whichever library it's in.
         const covering = pick(
@@ -222,6 +226,7 @@ export async function availability(
                   season.airDate >= row.createdAt.toISOString().slice(0, 10))),
           ),
         )
+        if (input.requestId && covering?.id !== input.requestId) return []
         return {
           ...availabilityForScope(
             viewer,

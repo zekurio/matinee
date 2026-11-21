@@ -116,7 +116,9 @@ export function scopeLabel(scope: AdminRequestItem["scope"]): string | null {
  * Where a request's title opens: its page in the library once it's here,
  * the catalog page while it isn't.
  */
-export function titleLink(item: AdminRequestItem) {
+export function titleLink(
+  item: Pick<AdminRequestItem, "title" | "library" | "availability">,
+) {
   const titleId = item.availability.libraryTitleId
   if (titleId) {
     return linkOptions({ to: "/titles/$titleId", params: { titleId } })

@@ -137,7 +137,11 @@ function ShowSeasonCard({
 }
 
 /** Why a declined title isn't coming, under its card in the full list. */
-export function DeclinedNote({ item }: { item: AskedItem }) {
+export function DeclinedNote({
+  item,
+}: {
+  item: Pick<AskedItem, "availability">
+}) {
   const { reason } = item.availability
   if (item.availability.state !== "unavailable" || !reason) return null
   return (

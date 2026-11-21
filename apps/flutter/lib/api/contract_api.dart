@@ -258,6 +258,16 @@ final class RequestsApi {
     return _transport.send('POST', ['requests', 'cancel'], body: body);
   }
 
+  /// `GET /requests/mine/live`
+  Stream<RequestPage> mineLive({String? cursor, int? limit}) {
+    return _transport.events(
+      'GET',
+      ['requests', 'mine', 'live'],
+      RequestPage.fromJson,
+      query: {'cursor': ?cursor, 'limit': ?limit?.toString()},
+    );
+  }
+
   /// `GET /requests/mine`
   Future<RequestPage> mine({String? cursor, int? limit, String? filter}) {
     return _transport.call(

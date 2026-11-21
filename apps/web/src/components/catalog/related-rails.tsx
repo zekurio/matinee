@@ -9,9 +9,9 @@ import {
 
 import {
   PosterSkeletons,
-  RailFailed,
   RailsNote,
 } from "@/components/discover/discover-rails"
+import { RailFailed } from "@/components/discover/rail-failed"
 import { PosterCard } from "@/components/media-item"
 import { Rail, RailItem } from "@/components/rail"
 import { tr } from "@/i18n"

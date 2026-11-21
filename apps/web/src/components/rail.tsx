@@ -310,7 +310,7 @@ export function RailItem({
   artwork = "landscape",
   children,
 }: {
-  artwork?: "landscape" | "poster" | "person"
+  artwork?: "landscape" | "poster" | "person" | "request"
   children: ReactNode
 }) {
   return (
@@ -322,6 +322,8 @@ export function RailItem({
         artwork === "poster" &&
           "w-[44%] sm:w-[176px] lg:w-[188px] 2xl:w-[204px]",
         artwork === "person" && "w-[28%] sm:w-[116px] lg:w-[128px]",
+        // A request's card: one and a bit on a phone, three or four wide.
+        artwork === "request" && "w-[min(88%,21rem)] sm:w-84",
       )}
     >
       {children}

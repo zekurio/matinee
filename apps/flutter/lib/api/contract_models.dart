@@ -1490,6 +1490,7 @@ final class DiscoverRail {
 final class DiscoverRails {
   const DiscoverRails({
     required this.enabled,
+    required this.requests,
     required this.rails,
     required this.browse,
   });
@@ -1498,17 +1499,20 @@ final class DiscoverRails {
     final fields = json as JsonMap;
     return DiscoverRails(
       enabled: fields['enabled'] as bool,
+      requests: fields['requests'] as String?,
       rails: readList(fields['rails'], DiscoverRail.fromJson),
       browse: readList(fields['browse'], (value) => value as String),
     );
   }
 
   final bool enabled;
+  final String? requests;
   final List<DiscoverRail> rails;
   final List<String> browse;
 
   JsonMap toJson() => {
     'enabled': enabled,
+    'requests': requests,
     'rails': rails.map((item) => item.toJson()).toList(),
     'browse': browse,
   };

@@ -915,12 +915,21 @@ public struct DiscoverRail: Codable, Sendable, Hashable {
 
 public struct DiscoverRails: Codable, Sendable, Hashable {
     public var enabled: Bool
+    public var requests: String?
     public var rails: [DiscoverRail]
     public var browse: [String]
-    public init(enabled: Bool, rails: [DiscoverRail], browse: [String]) {
+    public init(enabled: Bool, requests: String?, rails: [DiscoverRail], browse: [String]) {
         self.enabled = enabled
+        self.requests = requests
         self.rails = rails
         self.browse = browse
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.enabled, forKey: .enabled)
+        try c.encode(self.requests, forKey: .requests)
+        try c.encode(self.rails, forKey: .rails)
+        try c.encode(self.browse, forKey: .browse)
     }
 }
 

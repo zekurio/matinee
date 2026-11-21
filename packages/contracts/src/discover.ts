@@ -229,6 +229,12 @@ export const DiscoverRail = t.object({
 
 export const DiscoverRails = t.object({
   enabled: t.boolean(),
+  /**
+   * The list to follow even while empty. Admins get the waiting list
+   * from admin.requests.live; other viewers get their in-progress
+   * requests from requests.mineLive. Null when Discover is disabled.
+   */
+  requests: t.enum(["queue", "mine"]).nullable(),
   rails: t.array(DiscoverRail),
   /** The kinds this viewer can browse with filters, through `browse`. */
   browse: t.array(TitleKind),
