@@ -7,45 +7,31 @@ import 'auth_layout.dart';
 import 'server_switcher.dart';
 
 /// The code to type, where to type it, and whether it's still waiting, as
-/// the phone's screen and the TV's show them.
+/// the phone's screen shows them. The TV lays its own out.
 class CodeDetails extends StatelessWidget {
   const CodeDetails({
     super.key,
     required this.code,
     required this.error,
     required this.onRetry,
-    this.afterQr = false,
-    this.large = false,
   });
 
   final DeviceCode? code;
   final String? error;
   final VoidCallback? onRetry;
 
-  /// Words the steps as the other way in, under a QR code.
-  final bool afterQr;
-
-  /// A TV's sizes, read from across a room.
-  final bool large;
-
   @override
   Widget build(BuildContext context) {
     final words = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final muted = (large ? KitText.lg : KitText.sm).style(
-      color: colors.mutedForeground,
-    );
+    final muted = KitText.sm.style(color: colors.mutedForeground);
     final shown = code;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (shown != null) ...[
           Text(
-            afterQr
-                ? words.signinCodeEnter(withoutScheme(shown.verificationUri))
-                : words.signinCodeEnterOnly(
-                    withoutScheme(shown.verificationUri),
-                  ),
+            words.signinCodeEnterOnly(withoutScheme(shown.verificationUri)),
             style: muted,
           ),
           const SizedBox(height: 4),
@@ -59,7 +45,7 @@ class CodeDetails extends StatelessWidget {
                   maxLines: 1,
                   style: TextStyle(
                     fontFamily: 'monospace',
-                    fontSize: large ? 56 : 36,
+                    fontSize: 36,
                     height: 1.2,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 4,

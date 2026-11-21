@@ -665,6 +665,14 @@ first key.
 - Frame (`lib/screens/tv/tv_shell.dart`): the drawer at the left, the
   clock at the top right, and each page in a `TvPageFrame`. Back from a
   page opens the drawer; from the drawer on Home, it leaves.
+- Signing in (`lib/screens/sign_in/tv`): the address is typed in a
+  `TvTextField`, a list row's size that Up and Down leave, as the Kotlin
+  app's. The code screen differs from the Kotlin app's on purpose: on the
+  left only the title, one sentence with the link page's address, and the
+  code with its waiting line; the QR code alone on the right; and Change
+  server, or Back to the server in use, as a small `TvAuthAction` at the
+  bottom left, beside Get a new code or Retry when the code ran out or
+  never came. It says nothing of the phone app's Settings.
 - Focus (`lib/kit/tv`): `TvTraversalPolicy` moves by geometry, as Compose
   does. A `TvFocusMemory` remembers each row's card, so entering a row
   lands on it, Back lands where you left, and a list that loads again
