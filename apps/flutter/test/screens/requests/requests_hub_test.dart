@@ -13,9 +13,13 @@ import 'package:matinee/kit/toast.dart';
 import 'package:matinee/l10n/app_localizations_en.dart';
 import 'package:matinee/screens/requests/requests_hub.dart';
 
-/// Toasts that close as the test says, without anyone pressing them.
+/// Toasts that close as the test says, without anyone pressing them, or
+/// never with no [answer].
 final class _Toasts extends ToastState {
-  ToastResult answer = ToastResult.timedOut;
+  ToastResult? answer = ToastResult.timedOut;
+
+  /// The action each toast offered.
+  final actions = <String?>[];
 
   @override
   Future<ToastResult> show(
@@ -25,7 +29,13 @@ final class _Toasts extends ToastState {
     String? actionLabel,
     ToastDuration? duration,
     Duration? within,
-  }) async => answer;
+  }) {
+    actions.add(actionLabel);
+    return switch (answer) {
+      final answer? => Future.value(answer),
+      null => Completer<ToastResult>().future,
+    };
+  }
 }
 
 const _emptyQueue = {
@@ -103,6 +113,30 @@ void main() {
       await done;
       expect(c.read(requestsProvider).held, isEmpty);
     });
+  });
+
+  // The bug it pins: a TV, which asks first because its toast can't take
+  // focus for Undo, waiting on an Undo nobody can press.
+  test('without Undo, as on a TV, a Cancel goes at once', () async {
+    final sent = <String>[];
+    final toasts = _Toasts()..answer = null;
+    final c = hub(
+      MockClient((request) async {
+        sent.add(request.url.path);
+        return http.Response('null', 200);
+      }),
+      runsQueue: false,
+      toasts: toasts,
+    );
+    final done = c
+        .read(requestsProvider.notifier)
+        .withdraw(l, 'r1', 'Dune', undo: false);
+    await pumpEventQueue();
+    expect(sent, ['/api/v1/requests/cancel']);
+    expect(toasts.actions, [null], reason: 'the toast offers no Undo');
+    expect(c.read(requestsProvider).held, {'r1'});
+    await done;
+    expect(c.read(requestsProvider).held, isEmpty);
   });
 
   // The bug it pins: a stream that drops after the queue was shown

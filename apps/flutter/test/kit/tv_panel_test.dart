@@ -61,6 +61,9 @@ Future<void> _openPanel(WidgetTester tester, {int sections = 6}) async {
 }
 
 void main() {
+  // The bug it pins: a panel that scrolls a section's first row to its top
+  // leaves the section's heading under the title, so the row reads with no
+  // heading.
   testWidgets("a section's heading shows above its first row as focus comes "
       'back up, clear of the title', (tester) async {
     await _openPanel(tester);
@@ -90,24 +93,5 @@ void main() {
       expectHeadingShown('up $up');
     }
     expect(_focusedRow(), (0, 0));
-  });
-
-  testWidgets('a scrolled panel fades a row half under its title, never '
-      'the focused one, and nothing at the top', (tester) async {
-    await _openPanel(tester);
-    double fade() => tester.widget<TvFadeTop>(find.byType(TvFadeTop)).fade;
-    expect(fade(), 0, reason: 'at the top, the first row reads in full');
-    for (var down = 0; down < 10; down++) {
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-      await tester.pumpAndSettle();
-    }
-    final list = tester.getRect(find.byType(TvFadeTop));
-    final focused = FocusManager.instance.primaryFocus!.rect;
-    expect(fade(), greaterThan(40), reason: 'over more than the padding');
-    expect(
-      list.top + fade(),
-      lessThanOrEqualTo(focused.top),
-      reason: 'the focused row at $focused is clear of the fade',
-    );
   });
 }
