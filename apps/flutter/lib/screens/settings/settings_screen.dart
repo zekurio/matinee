@@ -46,11 +46,12 @@ enum SettingsPage {
     licenses => l.aboutLicenses,
   };
 
-  /// Whether this device has the page: the engines, the caption style
-  /// subtitles can follow, and the downloads are Android's.
+  /// Whether this device has the page: the player's settings, the caption
+  /// style subtitles can follow, and the downloads are Android's and iOS's.
   bool get available =>
       (this != playback && this != subtitles && this != downloads) ||
-      defaultTargetPlatform == TargetPlatform.android;
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
 
   static SettingsPage? of(String key) {
     for (final page in values) {

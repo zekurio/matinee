@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -360,19 +361,21 @@ class _DeviceSection extends StatelessWidget {
                   onPicked: (picked) =>
                       change((prefs) => prefs.copyWith(quality: picked)),
                 ),
-              PickerRow<PlayerEngine>(
-                title: l.playbackEngineTitle,
-                // Their own names, the same in every language.
-                options: const [
-                  (PlayerEngine.mpv, 'mpv'),
-                  (PlayerEngine.media3, 'Media3'),
-                ],
-                current: engine,
-                onPicked: (picked) => ProviderScope.containerOf(
-                  context,
-                  listen: false,
-                ).read(playerEngineProvider.notifier).setEngine(picked),
-              ),
+              // iOS has mpv alone.
+              if (defaultTargetPlatform == TargetPlatform.android)
+                PickerRow<PlayerEngine>(
+                  title: l.playbackEngineTitle,
+                  // Their own names, the same in every language.
+                  options: const [
+                    (PlayerEngine.mpv, 'mpv'),
+                    (PlayerEngine.media3, 'Media3'),
+                  ],
+                  current: engine,
+                  onPicked: (picked) => ProviderScope.containerOf(
+                    context,
+                    listen: false,
+                  ).read(playerEngineProvider.notifier).setEngine(picked),
+                ),
               PickerRow<Decoders>(
                 title: l.playbackDecodersTitle,
                 options: [

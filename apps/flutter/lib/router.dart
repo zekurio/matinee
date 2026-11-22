@@ -498,7 +498,7 @@ List<RouteBase> _handsetRoutes() => [
       studio: state.uri.queryParameters['studio'],
     ),
   ),
-  if (defaultTargetPlatform == TargetPlatform.android)
+  if (_hasPlayer)
     GoRoute(
       path: '/play/:id',
       parentNavigatorKey: _rootKey,
@@ -522,9 +522,12 @@ List<RouteBase> _handsetRoutes() => [
     ),
 ];
 
-/// Only Android has the native players so far.
-bool get _hasPlayerLab =>
-    kDebugMode && defaultTargetPlatform == TargetPlatform.android;
+/// Only Android and iOS have the native players so far.
+bool get _hasPlayer =>
+    defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.iOS;
+
+bool get _hasPlayerLab => kDebugMode && _hasPlayer;
 
 /// The TV's pages, under its drawer, as the Kotlin app's `TvSignedInApp`:
 /// the phone's paths, TV screens. The pages from the drawer sit over Home,
