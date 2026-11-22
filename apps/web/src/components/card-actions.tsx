@@ -17,13 +17,15 @@ import { tr } from "@/i18n"
 import type { Toggle, WatchedState } from "@/lib/viewer-state"
 
 // Bare icons over the picture, which `CardScrim` blurs and dims behind
-// them, with a shadow for touch screens, where it doesn't. No scale on
-// hover: an open menu follows its trigger's box, so it would shift each
-// time the pointer crossed the icon. Touch screens get a bigger target.
-// The tick draws a step larger than the heart beside it: its glyph fills
-// less of its box, so at the same size it looked smaller.
+// them, with a shadow for touch screens, where it doesn't. No fill on
+// hover: the scrim already answers the pointer, and the ghost variant's
+// would be a slab of the page over the picture. No scale either: an open
+// menu follows its trigger's box, so it would shift each time the pointer
+// crossed the icon. Touch screens get a bigger target. The tick draws a
+// step larger than the heart beside it: its glyph fills less of its box,
+// so at the same size it looked smaller.
 export const cardIconButton =
-  "size-8 text-white/85 drop-shadow-[0_1px_3px_rgb(0_0_0/0.9)] hover:text-white aria-expanded:text-white [@media(pointer:coarse)]:size-10"
+  "size-8 text-white/85 drop-shadow-[0_1px_3px_rgb(0_0_0/0.9)] hover:bg-transparent hover:text-white aria-expanded:bg-transparent aria-expanded:text-white [@media(pointer:coarse)]:size-10"
 
 /**
  * Blurs and dims a poster or still while its {@link CardActions} show, so
