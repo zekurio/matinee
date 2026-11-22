@@ -219,8 +219,8 @@ void main() {
         lessThanOrEqualTo(540 - Overscan.vertical),
         reason: 'Settings inside the overscan $state',
       );
-      // The pages sit under the profile, the room left before Settings.
-      expect(rects[1].top - rects[0].bottom, closeTo(6 + 18 + 6, 1));
+      // The pages sit right under the profile, at the same spacing.
+      expect(rects[1].top - rects[0].bottom, closeTo(6, 1));
     }
 
     expectFits('closed');
