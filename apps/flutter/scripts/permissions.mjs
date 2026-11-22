@@ -38,7 +38,9 @@ function names(header) {
 }
 
 const all = names(/export const PERMISSIONS = \[/)
-const base = names(/export const BASE_PERMISSIONS: readonly Permission\[\] = \[/)
+const base = names(
+  /export const BASE_PERMISSIONS: readonly Permission\[\] = \[/,
+)
 for (const name of base) {
   if (!all.includes(name)) throw new Error(`${name} isn't in PERMISSIONS`)
 }
