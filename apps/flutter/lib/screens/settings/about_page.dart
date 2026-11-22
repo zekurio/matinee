@@ -31,7 +31,7 @@ class AboutPage extends ConsumerWidget {
                   ? '${device.appVersion}, debug'
                   : device.appVersion,
             ),
-            ValueRow(title: l.aboutAndroid, value: device.osVersion),
+            ValueRow(title: device.systemName, value: device.osVersion),
             ValueRow(title: l.aboutDevice, value: device.model),
           ],
         ),

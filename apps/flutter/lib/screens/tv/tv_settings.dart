@@ -986,7 +986,7 @@ class _AccountRows extends ConsumerWidget {
         ),
       TvListItem(
         title: withoutScheme(server),
-        subtitle: l.settingsVersion(device.appVersion),
+        subtitle: l.settingsVersion(device.systemName, device.appVersion),
         icon: Lucide.server,
         quiet: true,
         onPressed: () {},
@@ -1075,7 +1075,7 @@ class _AboutRowsState extends ConsumerState<_AboutRows> {
         l.aboutVersion,
         kDebugMode ? '${device.appVersion}, debug' : device.appVersion,
       ),
-      value(l.aboutAndroid, device.osVersion),
+      value(device.systemName, device.osVersion),
       value(l.aboutDevice, device.model),
       _groupGap,
       TvListHeading(l.diagnosticsTitle),

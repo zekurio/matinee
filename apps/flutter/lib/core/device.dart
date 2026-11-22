@@ -62,6 +62,14 @@ class Device {
     _ => 'Matinee Android',
   };
 
+  /// The system it runs, as Settings and About name it: a product name, the
+  /// same in every language. [model] is the hardware's, like `iPad16,3`.
+  String get systemName => switch (platform) {
+    DevicePlatform.ios => model.startsWith('iPad') ? 'iPadOS' : 'iOS',
+    DevicePlatform.tvos => 'tvOS',
+    _ => 'Android',
+  };
+
   /// How the app names itself to the server.
   String get userAgent => 'Matinee/$appVersion ($platform $osVersion; $model)';
 

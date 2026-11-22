@@ -171,7 +171,10 @@ class SettingsScreen extends ConsumerWidget {
                             style: KitText.base.style(color: colors.foreground),
                           ),
                           Text(
-                            l.settingsVersion(device.appVersion),
+                            l.settingsVersion(
+                              device.systemName,
+                              device.appVersion,
+                            ),
                             style: KitText.xs.style(
                               color: colors.mutedForeground,
                             ),
