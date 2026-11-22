@@ -572,10 +572,6 @@
   "@askedLoadFailed": {
     "description": "strings_loading.xml"
   },
-  "browseClearAll": "Clear all",
-  "@browseClearAll": {
-    "description": "strings.xml"
-  },
   "browseClearFilters": "Clear filters",
   "@browseClearFilters": {
     "description": "strings.xml"
@@ -663,15 +659,6 @@
   },
   "browseRecentlyAdded": "Recently added in {p1}",
   "@browseRecentlyAdded": {
-    "description": "strings.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "browseRemoveFilter": "Remove filter {p1}",
-  "@browseRemoveFilter": {
     "description": "strings.xml",
     "placeholders": {
       "p1": {
@@ -4624,93 +4611,6 @@
   "webFiltersCardScoreSpoken": "Score {p1}",
   "@webFiltersCardScoreSpoken": {
     "description": "What a screen reader says for the star and the score on a card.",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipMovieRating": "Movies rated up to {p1}",
-  "@webFiltersChipMovieRating": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipRating": "Rated up to {p1}",
-  "@webFiltersChipRating": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipRuntimeAtLeast": "At least {p1} long",
-  "@webFiltersChipRuntimeAtLeast": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipRuntimeBetween": "{p1} to {p2} long",
-  "@webFiltersChipRuntimeBetween": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      },
-      "p2": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipRuntimeUpTo": "Up to {p1} long",
-  "@webFiltersChipRuntimeUpTo": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipScoreAtLeast": "Score at least {p1}",
-  "@webFiltersChipScoreAtLeast": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipScoreBetween": "Score {p1} to {p2}",
-  "@webFiltersChipScoreBetween": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      },
-      "p2": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipScoreUpTo": "Score up to {p1}",
-  "@webFiltersChipScoreUpTo": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipShowRating": "Shows rated up to {p1}",
-  "@webFiltersChipShowRating": {
-    "description": "strings_web_filters.xml",
     "placeholders": {
       "p1": {
         "type": "String"
