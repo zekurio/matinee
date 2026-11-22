@@ -80,7 +80,7 @@ function Problem({
 export function Diagnostics({ item }: { item: AdminRequestItem }) {
   if (item.diagnostics.length === 0) return null
   return (
-    <dl className="grid w-full grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 rounded-md bg-black/25 px-2.5 py-1.5 text-xs">
+    <dl className="bg-muted grid w-full grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 rounded-md px-2.5 py-1.5 text-xs">
       {item.diagnostics.map((entry, index) => (
         <div key={`${entry.label}-${index}`} className="contents">
           <dt className="text-muted-foreground">{entry.label}</dt>

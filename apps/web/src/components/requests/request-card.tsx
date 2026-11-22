@@ -23,7 +23,7 @@ import {
 } from "react"
 
 import { ProgressRing } from "@/components/catalog/catalog-card"
-import { Picture, tone } from "@/components/picture"
+import { Picture } from "@/components/picture"
 import { tr } from "@/i18n"
 import { formatPercent } from "@/lib/format"
 import { art } from "@/lib/media"
@@ -31,12 +31,11 @@ import { art } from "@/lib/media"
 import { scopeLabel, titleLink } from "./request-queue"
 
 /*
- * The one card every list of requests draws, as Seerr draws its request
- * cards: the poster, sharp, beside the request's details, over the same
- * poster blurred and darkened, so the card takes its colors from the
- * title. The picture is dark whatever the theme, so the card is a forced
- * `.dark` subtree: the theme's own tokens resolve dark inside it, and its
- * text, badges, and buttons read the same in both.
+ * The one card every list of requests draws: the poster, sharp, beside
+ * the request's details, on the same surface as every other card in the
+ * app, so it follows the theme's light and dark. The picture stays a
+ * picture: it never spreads behind the words, where they would have to
+ * fight whatever colours it brought.
  */
 
 /**
@@ -93,24 +92,17 @@ export function RequestCard({
       aria-labelledby={`${id}-name`}
       {...props}
       className={cn(
-        "dark text-foreground relative isolate flex h-full min-w-0 gap-3 overflow-hidden rounded-xl border p-3 outline-none",
+        "bg-card text-foreground flex h-full min-w-0 gap-3 overflow-hidden rounded-xl border p-3 outline-none",
         wide && "sm:gap-4 sm:p-4",
-        tone(title.ref.providerId),
         className,
       )}
     >
-      <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0 scale-150 blur-2xl">
-          {poster && <Picture sources={[poster]} sizes="96px" />}
-        </div>
-        <div className="bg-background/65 absolute inset-0" />
-      </div>
       <Link
         {...link}
         tabIndex={-1}
         aria-hidden
         className={cn(
-          "bg-muted relative block aspect-[2/3] shrink-0 self-start overflow-hidden rounded-md shadow-lg ring-1 shadow-black/40 ring-white/10",
+          "bg-muted relative block aspect-[2/3] shrink-0 self-start overflow-hidden rounded-md shadow-sm ring-1 ring-border",
           admin ? posterWidth.admin : posterWidth.own,
         )}
       >
