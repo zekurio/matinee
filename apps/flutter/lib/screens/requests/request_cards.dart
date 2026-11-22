@@ -936,11 +936,13 @@ Future<void> showRequestMenu(
   );
 }
 
-/// What a queue card cuts, whole, for its menu: the error or the decline's
-/// reason and note, and everyone who asked.
+/// What a queue card cuts, whole, for its menu: the seasons a show's
+/// request covers, the error or the decline's reason and note, and
+/// everyone who asked.
 List<String> _menuWhole(AdminRequestItem item, AppLocalizations l) {
   final names = [for (final each in askers(item)) each.name];
   return [
+    ?scopeText(item.scope, l),
     if (item.state == RequestState.needsAttention) queueError(item, l),
     if (item.state == RequestState.declined) ...[
       queueReason(item, l),
