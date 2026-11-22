@@ -45,6 +45,10 @@ const _libraryTabs = {1, 2};
 class _HandsetShellState extends ConsumerState<HandsetShell> {
   late final _selected = TabBarState(widget.shell.currentIndex);
 
+  /// Home's header floats over the hero until its page scrolls, then it
+  /// takes its band back so its words read over whatever is under them.
+  var _homeScrolled = false;
+
   @override
   void didUpdateWidget(HandsetShell old) {
     super.didUpdateWidget(old);
@@ -68,6 +72,8 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
       if (first != null) {
         ref.read(tabReselectProvider.notifier).tapped(first.path);
       }
+      // Home goes back to its top, where the header floats again.
+      if (branch == 0) setState(() => _homeScrolled = false);
     }
   }
 
@@ -145,19 +151,31 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
                         // Home's own box starts under the status bar, so
                         // its hero can run under the header.
                         Positioned.fill(
-                          child: SafeArea(
-                            top: true,
-                            bottom: false,
-                            left: false,
-                            right: false,
-                            child: page,
+                          child: NotificationListener<ScrollNotification>(
+                            onNotification: (notification) {
+                              // Only Home's own list moves the header; the
+                              // rails inside it and the hero's pages don't.
+                              if (notification.depth != 0) return false;
+                              final scrolled = notification.metrics.pixels > 0;
+                              if (scrolled != _homeScrolled) {
+                                setState(() => _homeScrolled = scrolled);
+                              }
+                              return false;
+                            },
+                            child: SafeArea(
+                              top: true,
+                              bottom: false,
+                              left: false,
+                              right: false,
+                              child: page,
+                            ),
                           ),
                         ),
-                        const Positioned(
+                        Positioned(
                           top: 0,
                           left: 0,
                           right: 0,
-                          child: ShellHeader(floating: true),
+                          child: ShellHeader(floating: !_homeScrolled),
                         ),
                       ],
                     )
