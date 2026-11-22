@@ -20,8 +20,7 @@ export const requests = {
   mineLive: authed.requests.mineLive.handler(({ context, input, signal }) =>
     follow({
       topics: ["requests", "library", "fulfilment"],
-      load: () =>
-        lifecycle.mine(context.user, { ...input, filter: "inProgress" }),
+      load: () => lifecycle.mine(context.user, { ...input, filter: "all" }),
       signal,
     }),
   ),
