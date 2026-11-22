@@ -24,9 +24,9 @@ import '../requests/requests_screen.dart'
 import 'tv_browse.dart' show TvGridHeader;
 import 'tv_media.dart';
 
-/// Requests on a TV, as the Kotlin app's TV requests: the questions the TV
-/// asks where the phone offers Undo, since a TV's toast can't take focus,
-/// what Select on a request offers, and the requests page.
+/// Requests on a TV: the questions the TV asks where the phone offers Undo,
+/// since a TV's toast can't take focus, what Select on a request offers, and
+/// the requests page.
 
 // ---------------------------------------------------------------------------
 // The questions.

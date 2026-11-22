@@ -26,9 +26,8 @@ import 'tv_media.dart';
 import 'tv_requests.dart';
 import 'tv_shell.dart' show TvBackdrop;
 
-/// A title the server doesn't have on a TV, its card, and asking for it,
-/// as the Kotlin app's TV catalog page: built like a library title's page,
-/// so it reads as the same page.
+/// A title the server doesn't have on a TV, its card, and asking for it:
+/// built like a library title's page, so it reads as the same page.
 
 /// What a catalog card's header line says: its name, its year and kind,
 /// or only the year where the row holds one kind, and its state.

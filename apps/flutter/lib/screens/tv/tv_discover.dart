@@ -24,9 +24,8 @@ import 'tv_media.dart';
 import 'tv_requests.dart';
 import 'tv_shell.dart' show TvBackdrop;
 
-/// Discover on a TV, from the drawer, as the Kotlin app's TV Discover:
-/// rows as Home has them, the Requests row first, then the server's rows
-/// in its order, each loading on its own.
+/// Discover on a TV, from the drawer: rows as Home has them, the Requests
+/// row first, then the server's rows in its order, each loading on its own.
 
 /// The rows of the page in its focus memory.
 abstract final class _Rows {
