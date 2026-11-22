@@ -178,16 +178,11 @@ function QueueRequest({ item }: { item: AdminRequestItem }) {
           urgent
         />
       }
-      // Add names where a waiting one goes, and chooses another.
-      line={<QueueLine item={item} goesTo={false} />}
+      line={<QueueLine item={item} />}
       who={<Askers item={item} />}
       actions={
         item.state === "waiting" ? (
-          <AdminAnswer
-            item={item}
-            look="plain"
-            className="flex-wrap *:min-w-0"
-          />
+          <AdminAnswer item={item} look="fill" />
         ) : item.state === "needsAttention" ? (
           <Button
             variant="outline"

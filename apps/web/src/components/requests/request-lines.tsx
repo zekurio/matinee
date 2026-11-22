@@ -71,19 +71,12 @@ function Second({ children }: { children: ReactNode }) {
 /**
  * The line a request in the queue has for its state, as the server put
  * it in its list: where a waiting one goes, which it can change before
- * Add; the problem; the progress; or how it ended. `goesTo` false leaves
- * a waiting one's out where Add names the library itself.
+ * Add; the problem; the progress; or how it ended.
  */
-export function QueueLine({
-  item,
-  goesTo = true,
-}: {
-  item: AdminRequestItem
-  goesTo?: boolean
-}) {
+export function QueueLine({ item }: { item: AdminRequestItem }) {
   switch (item.state) {
     case "waiting":
-      return goesTo ? <GoesToLine item={item} /> : null
+      return <GoesToLine item={item} />
     case "needsAttention":
       return <ProblemLine item={item} />
     case "onTheWay":

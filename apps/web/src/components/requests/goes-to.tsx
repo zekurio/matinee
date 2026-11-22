@@ -85,7 +85,10 @@ export function GoesToLibrary({
 
   if (!current || !choosesLibrary(item)) {
     return (
-      <span className={cn("truncate", className)}>
+      <span
+        title={current?.name ?? item.library.name}
+        className={cn("truncate", className)}
+      >
         {current?.name ?? item.library.name}
       </span>
     )
@@ -111,7 +114,9 @@ export function GoesToLibrary({
             className,
           )}
         >
-          <span className="truncate">{current.name}</span>
+          <span title={current.name} className="truncate">
+            {current.name}
+          </span>
           <ChevronDownIcon
             aria-hidden
             className="text-muted-foreground size-3.5 shrink-0"
