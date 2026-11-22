@@ -170,6 +170,86 @@ StateWord? stateWord(
   _ => null,
 };
 
+/// Where a request stands, as the one badge on its card says it, on every
+/// request card for everyone.
+enum RequestState {
+  waiting,
+  needsAttention,
+  onTheWay,
+  here,
+  declined;
+
+  /// It arrived or was declined: nothing more will happen to it.
+  bool get finished => this == here || this == declined;
+}
+
+/// A person's own request's state, from the `Availability` the server sent
+/// for it: asked waits, coming and release are on the way, here arrived,
+/// and unavailable was declined. Null for a state a request doesn't have.
+RequestState? ownState(Availability availability) =>
+    switch (availability.state) {
+      AvailabilityState.asked => RequestState.waiting,
+      AvailabilityState.coming ||
+      AvailabilityState.release => RequestState.onTheWay,
+      AvailabilityState.here => RequestState.here,
+      AvailabilityState.unavailable => RequestState.declined,
+      _ => null,
+    };
+
+/// A request of the admin's queue with the state its list gives it.
+typedef QueuedRequest = ({AdminRequestItem item, RequestState state});
+
+/// The queue as one list, in the server's order of its lists: waiting,
+/// needs attention, on the way, then [done] (the queue's own when null),
+/// without the ids in [held]. Which list a request is in is its state;
+/// in Done, a declined one is declined and the rest arrived.
+List<QueuedRequest> queueInOrder(
+  RequestQueue queue, {
+  Set<String> held = const {},
+  List<AdminRequestItem>? done,
+}) => [
+  for (final (list, state) in [
+    (queue.waiting, RequestState.waiting),
+    (queue.needsAttention, RequestState.needsAttention),
+    (queue.onTheWay, RequestState.onTheWay),
+  ])
+    for (final item in list)
+      if (!held.contains(item.id)) (item: item, state: state),
+  for (final item in done ?? queue.done)
+    if (!held.contains(item.id))
+      (
+        item: item,
+        state: item.status == RequestStatus.declined
+            ? RequestState.declined
+            : RequestState.here,
+      ),
+];
+
+/// Done as the overview lists it: the newest the live queue holds, then
+/// what the pages read from the start of Done have after the live list's
+/// last, so a request that left Done since a page was read doesn't come
+/// back from it. [more] says whether a further page is still to be read.
+({List<AdminRequestItem> items, bool more}) doneInOrder(
+  List<AdminRequestItem> live, {
+  required bool liveIsAll,
+  required List<AdminRequestItem> paged,
+  required bool pagedDone,
+}) {
+  if (liveIsAll) return (items: live, more: false);
+  final last = live.lastOrNull;
+  final at = last == null ? -1 : paged.indexWhere((p) => p.id == last.id);
+  if (last != null && at < 0) return (items: live, more: !pagedDone);
+  final seen = {for (final item in live) item.id};
+  return (
+    items: [
+      ...live,
+      for (final item in paged.skip(at + 1))
+        if (!seen.contains(item.id)) item,
+    ],
+    more: !pagedDone,
+  );
+}
+
 /// The glyph in a catalog card's corner.
 enum Glyph { clock, ring, calendar, slash }
 

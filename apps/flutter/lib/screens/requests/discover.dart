@@ -54,9 +54,9 @@ List<CatalogBrowseTitle> railShown(
     if (!recommendedRail(rail) || !hidden.contains(refKey(item.ref))) item,
 ].take(_railCards).toList();
 
-/// Under the empty search field: the Requests row the server names
+/// Under the empty search field: the Recent requests row the server names
 /// ([RequestsRail]), then Discover's rows when the server has Discover on,
-/// or why there are none. The Requests row stays when the rows fail or
+/// or why there are none. That row stays when the rows fail or
 /// are empty, since it reads streams of its own.
 class Explore extends ConsumerWidget {
   const Explore({super.key});
@@ -339,14 +339,4 @@ class RailFailed extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The admin's lists, by the names their routes take.
-abstract final class QueueList {
-  static const waiting = 'waiting';
-  static const needsAttention = 'needsAttention';
-  static const onTheWay = 'onTheWay';
-  static const done = 'done';
-
-  static const all = [waiting, needsAttention, onTheWay, done];
 }

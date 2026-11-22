@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,31 +5,23 @@ import 'package:go_router/go_router.dart';
 import '../../api/matinee_api.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
-import '../../media/artwork.dart';
-import '../../media/avatar.dart';
-import '../../media/format.dart' show seasonName;
 import '../../media/layout.dart';
 import '../../router.dart';
-import 'catalog_cards.dart';
-import 'discover.dart' show QueueList, RailFailed;
+import 'discover.dart' show RailFailed;
+import 'request_cards.dart';
 import 'request_words.dart';
 import 'requests_data.dart';
 import 'requests_hub.dart';
 
-/// Explore's first row, "Requests", as the web's `requests-rail.tsx`: an
-/// admin's waiting requests with Add and Decline, or anyone else's own in
-/// progress with Cancel, whichever `discover.rails` names in `requests`.
-/// It follows its list even while that's empty and shows only once there
-/// are cards, so the first request appears without a reload. Both lists
-/// come from streams of their own, so the row stays when the catalog's
-/// rows are down.
-
-/// How many cards the row shows. Its heading leads to the rest.
-const requestRowCards = 20;
-
-/// How many askers' faces a waiting card shows; the count after the first
-/// name says the rest.
-const _faces = 3;
+/// Explore's first row, "Recent requests", as the web's `requests-rail.tsx`
+/// and Seerr's: for whoever runs the queue, the latest of it in every state,
+/// waiting first, each card with its state's actions; for anyone else their
+/// own requests as `requests.mineLive` sends them, with Cancel. Which one
+/// `discover.rails` names in `requests`. It follows its list even while
+/// that's empty and shows only once there are cards, so the first request
+/// appears without a reload. Both lists come from streams of their own, so
+/// the row stays when the catalog's rows are down. The heading opens the
+/// requests overview, or the person's own requests.
 
 /// The row for [which], `"queue"` or `"mine"`, as `DiscoverRails.requests`
 /// says. Nothing for anything else, as an older server's missing field.
@@ -43,7 +32,7 @@ class RequestsRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => switch (which) {
-    DiscoverRequests.queue => const _WaitingRequests(),
+    DiscoverRequests.queue => const _QueueRequests(),
     DiscoverRequests.mine => const _OwnRequests(),
     _ => const SizedBox.shrink(),
   };
@@ -55,11 +44,11 @@ abstract final class DiscoverRequests {
   static const mine = 'mine';
 }
 
-/// The requests that wait for an admin, from the queue the hub streams for
-/// the whole app. One answered leaves at once, and the row with the last.
-/// The heading opens the queue.
-class _WaitingRequests extends ConsumerWidget {
-  const _WaitingRequests();
+/// The queue the hub streams for the whole app, in its lists' order, the
+/// newest [recentRequests] of it. One answered leaves at once, and the row
+/// with the last. The heading opens the overview.
+class _QueueRequests extends ConsumerWidget {
+  const _QueueRequests();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -67,13 +56,15 @@ class _WaitingRequests extends ConsumerWidget {
     final failed = ref.watch(
       requestsProvider.select((state) => state.queueFailed),
     );
-    return _RequestsRow<AdminRequestItem>(
-      items: queue?.waiting,
-      id: (item) => item.id,
-      onSeeAll: () => context.push(Routes.requests(QueueList.waiting)),
+    return _RequestsRow<QueuedRequest>(
+      // Held ones are left out by the row.
+      items: queue == null ? null : queueInOrder(queue),
+      id: (entry) => entry.item.id,
+      onSeeAll: () => context.push(Routes.requestQueue),
       error: failed && queue == null ? const _QueueDown() : null,
       onRetry: () => ref.read(requestsProvider.notifier).retryQueue(),
-      card: (item) => _QueueCard(item: item),
+      card: (entry) =>
+          QueueCard(item: entry.item, state: entry.state, compact: true),
     );
   }
 }
@@ -83,7 +74,7 @@ final class _QueueDown implements Exception {
   const _QueueDown();
 }
 
-/// The viewer's own requests in progress, live from `requests.mineLive`,
+/// The viewer's own requests, live from `requests.mineLive`, in its order,
 /// each as the server says it stands. The heading opens My requests.
 class _OwnRequests extends ConsumerWidget {
   const _OwnRequests();
@@ -97,7 +88,7 @@ class _OwnRequests extends ConsumerWidget {
       onSeeAll: () => context.push(Routes.requests()),
       error: mine.hasError && !mine.hasValue ? mine.error : null,
       onRetry: () => ref.invalidate(myLiveRequestsProvider),
-      card: (item) => _OwnCard(item: item),
+      card: (item) => OwnRequestCard(item: item, compact: true),
     );
   }
 }
@@ -127,7 +118,7 @@ class _RequestsRow<T> extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final title = l.webRequestsTitle;
+    final title = l.requestsRecent;
     final width = requestCardWidth(MediaQuery.sizeOf(context));
     final held = ref.watch(requestsProvider.select((state) => state.held));
     final error = this.error;
@@ -141,7 +132,7 @@ class _RequestsRow<T> extends ConsumerWidget {
       final shown = [
         for (final item in items)
           if (!held.contains(id(item))) item,
-      ].take(requestRowCards).toList();
+      ].take(recentRequests).toList();
       if (shown.isEmpty) return const SizedBox.shrink();
       child = Rail(
         title: title,
@@ -209,7 +200,10 @@ class _RowSkeleton extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         spacing: 12,
                         children: [
-                          SkeletonBox(width: _poster, height: _poster * 1.5),
+                          SkeletonBox(
+                            width: requestPosterWidth,
+                            height: requestPosterWidth * 1.5,
+                          ),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,537 +225,6 @@ class _RowSkeleton extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// The poster's width on a card, 2:3.
-const _poster = 96.0;
-
-/// A title's page from a request: the library's once it's here, the
-/// catalog's while it isn't.
-void _open(
-  BuildContext context,
-  CatalogTitleSummary title,
-  String library,
-  Availability availability,
-) {
-  final here = availability.libraryTitleId;
-  unawaited(
-    context.push(
-      here != null
-          ? Routes.title(here)
-          : catalogRoute(title.ref, library: library),
-    ),
-  );
-}
-
-/// One request, as Seerr draws its request cards and the web's
-/// `request-card.tsx` does: the poster, sharp, beside the request's
-/// details, over the same poster blurred and darkened, so the card takes
-/// its colours from the title. The picture is dark in either scheme, so
-/// the card is drawn in the theme's dark half. The year and kind, the
-/// name, and what a show's request covers open the title; then [state],
-/// [who], and [actions], which each row fills with its own.
-class RequestCard extends StatelessWidget {
-  const RequestCard({
-    super.key,
-    required this.title,
-    required this.library,
-    required this.scope,
-    required this.availability,
-    required this.state,
-    required this.who,
-    this.actions,
-  });
-
-  final CatalogTitleSummary title;
-  final String library;
-  final ShowScope? scope;
-
-  /// The title's, which says where its page is.
-  final Availability availability;
-  final List<Widget> state;
-  final Widget who;
-  final Widget? actions;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return MatineeTheme.alwaysDark(
-      context,
-      Builder(
-        builder: (context) {
-          final colors = MatineeTheme.of(context);
-          final poster = title.poster;
-          final scope = scopeText(this.scope, l);
-          final facts = yearKind(title.year, title.ref.kind, l);
-          final actions = this.actions;
-          void open() => _open(context, title, library, availability);
-          return ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(KitRadius.xl)),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: ExcludeSemantics(
-                    child: Tone(
-                      toneKey: refKey(title.ref),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          if (poster != null)
-                            ImageFiltered(
-                              imageFilter: ImageFilter.blur(
-                                sigmaX: 24,
-                                sigmaY: 24,
-                                tileMode: TileMode.decal,
-                              ),
-                              child: Transform.scale(
-                                scale: 1.5,
-                                child: Picture([ArtSource(poster)]),
-                              ),
-                            ),
-                          ColoredBox(
-                            color: colors.background.withValues(alpha: .65),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.all(
-                          Radius.circular(KitRadius.xl),
-                        ),
-                        border: Border.all(color: colors.border),
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 12,
-                    children: [
-                      SizedBox(
-                        width: _poster,
-                        child: ExcludeSemantics(
-                          child: PressIndication(
-                            onPressed: open,
-                            shape: const BorderRadius.all(
-                              Radius.circular(KitRadius.md),
-                            ),
-                            builder: (context, _) => ArtFrame(
-                              toneKey: refKey(title.ref),
-                              aspectRatio: CardMetrics.poster,
-                              children: [
-                                if (poster != null)
-                                  Picture([ArtSource(poster)]),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            PressIndication(
-                              onPressed: open,
-                              label: [title.name, facts, ?scope].join(', '),
-                              shape: const BorderRadius.all(Radius.circular(4)),
-                              builder: (context, _) => ExcludeSemantics(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      facts,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: KitText.xs.style(
-                                        color: colors.mutedForeground,
-                                      ),
-                                    ),
-                                    Text(
-                                      title.name,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: KitText.base.style(
-                                        color: colors.foreground,
-                                        weight: FontWeight.w600,
-                                        leading: 20,
-                                      ),
-                                    ),
-                                    if (scope != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 2),
-                                        child: Text(
-                                          scope,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: KitText.xs.style(
-                                            color: colors.mutedForeground,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              spacing: 4,
-                              children: state,
-                            ),
-                            const SizedBox(height: 8),
-                            who,
-                            if (actions != null) ...[
-                              const Spacer(),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 12),
-                                child: actions,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// A state's pill on a card: a mark and a word.
-class _StatePill extends StatelessWidget {
-  const _StatePill({required this.icon, required this.text});
-
-  final Widget icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    return Container(
-      height: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: colors.secondary,
-        borderRadius: KitRadius.pill,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 6,
-        children: [
-          DefaultTextStyle.merge(
-            style: TextStyle(color: colors.foreground),
-            child: icon,
-          ),
-          Flexible(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KitText.xs.style(
-                color: colors.foreground,
-                weight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A request nobody has answered yet, on either row.
-class _WaitingPill extends StatelessWidget {
-  const _WaitingPill();
-
-  @override
-  Widget build(BuildContext context) => _StatePill(
-    icon: const KitIcon(Lucide.clock, size: 12),
-    text: AppLocalizations.of(context).discoverRequestWaiting,
-  );
-}
-
-/// Where a request stands, in the server's words: waiting, on its way
-/// with how far along it is and how long it has left, when it's out,
-/// declined, or here. Nothing for a title nobody asked for.
-List<Widget> _stateOf(BuildContext context, Availability availability) {
-  final l = AppLocalizations.of(context);
-  final colors = MatineeTheme.of(context);
-  if (availability.state == AvailabilityState.here) {
-    return [
-      _StatePill(
-        icon: const KitIcon(Lucide.check, size: 12),
-        text: l.webCatalogBadgeHere,
-      ),
-    ];
-  }
-  if (availability.state == AvailabilityState.asked) {
-    return const [_WaitingPill()];
-  }
-  final badge = badgeOf(availability);
-  final word = stateWord(availability, percent: true);
-  if (badge == null || word == null) return const [];
-  final eta = availability.etaSeconds;
-  return [
-    _StatePill(
-      icon: StateGlyph(badge: badge, size: 12),
-      text: stateText(word, l),
-    ),
-    if (availability.state == AvailabilityState.coming && eta != null)
-      Text(
-        l.webRequestsProgressLeft(formatSpan(eta, l)),
-        style: KitText.px13.style(color: colors.mutedForeground),
-      ),
-  ];
-}
-
-/// Why a declined request isn't coming, and the note the admin left, each
-/// with two lines of its own.
-List<Widget> _declined(BuildContext context, Availability availability) {
-  final reason = availability.reason;
-  if (reason == null || availability.state != AvailabilityState.unavailable) {
-    return const [];
-  }
-  final l = AppLocalizations.of(context);
-  final colors = MatineeTheme.of(context);
-  final note = reason.note?.trim();
-  return [
-    Text(
-      declineText(reason, l),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: KitText.px13.style(color: colors.mutedForeground),
-    ),
-    if (note != null && note.isNotEmpty)
-      Text(
-        note,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: KitText.px13
-            .style(color: colors.foreground.withValues(alpha: .7))
-            .copyWith(fontStyle: FontStyle.italic),
-      ),
-  ];
-}
-
-/// A waiting request: who asked and when, and Add and Decline.
-class _QueueCard extends StatelessWidget {
-  const _QueueCard({required this.item});
-
-  final AdminRequestItem item;
-
-  // In the card's dark theme, so its words read on the darkened poster.
-  @override
-  Widget build(BuildContext context) => _dark(
-    context,
-    (context) => RequestCard(
-      title: item.title,
-      library: item.library.id,
-      scope: item.scope,
-      availability: item.availability,
-      state: const [_WaitingPill()],
-      who: _Askers(item: item),
-      actions: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          AddButton(item: item, small: true),
-          DeclineButton(item: item, small: true),
-        ],
-      ),
-    ),
-  );
-}
-
-/// [build] under the theme's dark half, where a card draws, so what it
-/// builds for the card takes the card's colours.
-Widget _dark(BuildContext context, WidgetBuilder build) =>
-    MatineeTheme.alwaysDark(context, Builder(builder: build));
-
-/// The first few who asked, the first one's name, how many others, and
-/// when the first asked.
-class _Askers extends StatelessWidget {
-  const _Askers({required this.item});
-
-  final AdminRequestItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
-    final people = askers(item);
-    final first = people.firstOrNull;
-    if (first == null) return const SizedBox.shrink();
-    final others = [for (final each in people.skip(1)) each.name];
-    final faces = people.take(_faces).toList();
-    final when = relativeTime(first.createdAt, l);
-    return Semantics(
-      container: true,
-      label: [
-        if (others.isEmpty)
-          first.name
-        else
-          '${first.name}, ${l.webRequestsAlsoRequested(formatList(others, l))}',
-        ?when,
-      ].join(', '),
-      child: ExcludeSemantics(
-        child: Row(
-          spacing: 10,
-          children: [
-            SizedBox(
-              width: 24 + (faces.length - 1) * 18,
-              height: 24,
-              child: Stack(
-                children: [
-                  // Painted last to first, so the first asker, the one the
-                  // card names, is the face that shows whole.
-                  for (final (index, face) in faces.indexed.toList().reversed)
-                    PositionedDirectional(
-                      start: index * 18,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: colors.background,
-                            width: 2,
-                          ),
-                        ),
-                        child: Avatar(
-                          avatarId: face.avatarId,
-                          name: face.name,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    spacing: 6,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          first.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: KitText.px13.style(
-                            color: colors.foreground.withValues(alpha: .9),
-                          ),
-                        ),
-                      ),
-                      if (others.isNotEmpty)
-                        Text(
-                          l.webRequestsOthersCount(
-                            formatCount(others.length, l),
-                          ),
-                          style: KitText.px13.style(
-                            color: colors.mutedForeground,
-                          ),
-                        ),
-                    ],
-                  ),
-                  if (when != null)
-                    Text(
-                      when,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: KitText.px13.style(color: colors.mutedForeground),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// One of the viewer's own requests, as the server says it stands: the
-/// season it waits on, its state, under a declined one why, when they
-/// asked, and Cancel while the server allows it. Cancel is held for Undo,
-/// as an admin's answers are, rather than sent from the poster's button.
-class _OwnCard extends ConsumerWidget {
-  const _OwnCard({required this.item});
-
-  final RequestItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      _dark(context, (context) => _card(context, ref));
-
-  Widget _card(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
-    final season = item.season;
-    final availability = season?.asTitle() ?? item.availability;
-    final when = relativeTime(item.createdAt, l);
-    final cancels =
-        item.availability.action == AvailabilityAction.cancel ||
-        availability.action == AvailabilityAction.cancel;
-    return RequestCard(
-      title: item.title,
-      library: item.library.id,
-      scope: item.scope,
-      availability: item.availability,
-      state: [
-        if (season != null)
-          Text(
-            seasonName(season.number, l),
-            style: KitText.xs.style(color: colors.mutedForeground),
-          ),
-        ..._stateOf(context, availability),
-        ..._declined(context, availability),
-      ],
-      who: when == null
-          ? const SizedBox.shrink()
-          : Text(
-              l.discoverRequestAskedWhen(when),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KitText.px13.style(color: colors.mutedForeground),
-            ),
-      actions: cancels
-          ? MatineeButton(
-              look: ButtonLook.secondary,
-              size: ButtonSize.sm,
-              leading: Lucide.x,
-              label: '${l.webAskCancel}, ${item.title.name}',
-              onPressed: () => unawaited(
-                ref
-                    .read(requestsProvider.notifier)
-                    .withdraw(l, item.id, item.title.name),
-              ),
-              child: Text(
-                l.webAskCancel,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            )
-          : null,
     );
   }
 }

@@ -10,7 +10,6 @@ import '../../query/server_data.dart';
 import '../title/title_data.dart' show titleProvider;
 import 'request_words.dart';
 import 'requests_hub.dart';
-import 'requests_rail.dart' show requestRowCards;
 
 /// What Explore, the catalog's pages, and the requests page read. Each read
 /// that holds a request's state fetches again when an ask, a cancel, or an
@@ -285,11 +284,11 @@ final class MyRequests extends CursorList<RequestItem> {
 final myRequestsProvider = NotifierProvider.autoDispose
     .family<MyRequests, CursorPages<RequestItem>, String>(MyRequests.new);
 
-/// Explore's Requests row for anyone but an admin: their requests in
-/// progress, live from `requests.mineLive`, which sends the whole first
-/// page again on each change, so a reconnect loses nothing.
+/// Explore's Recent requests row for anyone who doesn't run the queue:
+/// their requests as `requests.mineLive` sends them, which sends the whole
+/// first page again on each change, so a reconnect loses nothing.
 final myLiveRequestsProvider = serverStream(
-  (api) => api.requests.mineLive(limit: requestRowCards),
+  (api) => api.requests.mineLive(limit: recentRequests),
 );
 
 /// The profile's "My requests": the latest of everything the viewer asked for.
@@ -299,7 +298,8 @@ final profileAskedProvider = FutureProvider.autoDispose<RequestPage>((ref) {
   return serverApi(ref).requests.mine(limit: 24, filter: MineFilter.all);
 }, retry: (_, _) => null);
 
-/// An admin's Done, a page at a time from its own call, newest first.
+/// An admin's Done, a page at a time from its own call, newest first, for
+/// the overview past what the live queue holds of it ([doneInOrder]).
 final class DoneRequests extends CursorList<AdminRequestItem> {
   @override
   Future<(List<AdminRequestItem>, String?)> page(
