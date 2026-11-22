@@ -13,7 +13,7 @@ import Testing
   return SessionStore(defaults: defaults, secrets: MemorySecrets())
 }
 let authUser = User(
-  id: "one", username: "viewer", displayName: nil, role: "user", avatarId: nil,
+  id: "one", username: "viewer", displayName: nil, role: "user", permissions: [], avatarId: nil,
   avatarSource: "none", playback: nil, library: .init(showSpecials: false), sharing: .init(favorites: false, stats: false))
 let authConfig =
   #"{"setup":null,"passkeys":true,"passkeySignUp":false,"oidc":null,"themeAccents":{"light":null,"dark":null},"loginBackdrop":{"enabled":false,"artwork":"","blur":0,"fade":0}}"#
@@ -203,6 +203,16 @@ final class AuthProtocol: URLProtocol, @unchecked Sendable {
     try await session.removeServer(origin: "http://two.example/")
     #expect(handed["http://two.example/"] == false)
     #expect(AuthProtocol.lock.withLock { AuthProtocol.requests.contains { $0.path.hasSuffix("sign-out") } } == false)
+  }
+  /// A server saved before accounts had permissions keeps its user, with
+  /// none, so offline start still has one.
+  @Test func storedUserWithoutPermissionsReads() throws {
+    let saved =
+      #"{"origin":"http://one.example/","user":{"id":"one","username":"viewer","displayName":null,"role":"user","avatarId":null,"avatarSource":"none","playback":null,"library":{"showSpecials":false},"sharing":{"favorites":false,"stats":false}}}"#
+    let server = try JSONDecoder().decode(StoredServer.self, from: Data(saved.utf8))
+    #expect(server.origin == "http://one.example/")
+    #expect(server.user == authUser)
+    #expect(server.user?.permissions == [])
   }
   @Test @MainActor func connectFailuresSayWhy() async throws {
     AuthProtocol.lock.withLock {

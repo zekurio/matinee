@@ -1,4 +1,9 @@
-import type { DevicePlatform, SessionClient } from "@matinee/contracts"
+import type {
+  DevicePlatform,
+  Permission,
+  SessionClient,
+} from "@matinee/contracts"
+import { sql } from "drizzle-orm"
 import {
   boolean,
   index,
@@ -38,6 +43,36 @@ export const session = pgTable(
     lastSeenAt: createdAt(),
   },
   (t) => [index("session_user_idx").on(t.userId)],
+)
+
+/**
+ * A credential a service uses to call the API as the account, made in its
+ * settings. Only the token's SHA-256 is stored. It never expires; it goes
+ * when its owner revokes it or the account is deleted.
+ */
+export const apiToken = pgTable(
+  "api_token",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    tokenHash: text().notNull().unique(),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    /**
+     * What it may do, from `PERMISSIONS`. A token without any reaches
+     * next to nothing, as one made before permissions does.
+     */
+    permissions: text()
+      .array()
+      .$type<Permission[]>()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    createdAt: createdAt(),
+    /** Null until first used. Moved at most once a minute. */
+    lastUsedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index("api_token_user_idx").on(t.userId)],
 )
 
 /** A single-use sign-up link. Only the token's SHA-256 is stored. */

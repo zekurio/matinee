@@ -71,6 +71,20 @@
       "when": 1795191675945,
       "tag": "0009_title_status_and_client_names",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795221560789,
+      "tag": "0010_api_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795281522548,
+      "tag": "0011_permissions",
+      "breakpoints": true
     }
   ]
 }

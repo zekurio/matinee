@@ -60,6 +60,27 @@ public struct StoredServer: Codable, Sendable, Hashable {
     self.user = user
     self.name = name
   }
+  /// A user saved before the server sent a field the model now needs no
+  /// longer reads. The server and its token stay, and the session fetches
+  /// the user again, where dropping the record would sign the server out.
+  public init(from decoder: any Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    origin = try c.decode(String.self, forKey: .origin)
+    user = (try? c.decodeIfPresent(JSONValue.self, forKey: .user)).flatMap(Self.savedUser)
+    name = try c.decodeIfPresent(String.self, forKey: .name)
+  }
+  /// A user saved before accounts had permissions lacks the list. Offline
+  /// start and Watch Offline need the user, so it reads with none, and the
+  /// session fetches the real ones once the server answers.
+  static func savedUser(_ raw: JSONValue) -> User? {
+    if let user = try? decodeUser(raw) { return user }
+    guard case .object(var fields) = raw, fields["permissions"] == nil else { return nil }
+    fields["permissions"] = .array([])
+    return try? decodeUser(.object(fields))
+  }
+  private static func decodeUser(_ raw: JSONValue) throws -> User {
+    try JSONDecoder().decode(User.self, from: JSONEncoder().encode(raw))
+  }
 }
 public struct PendingSignIn: Codable, Sendable {
   public let state: String

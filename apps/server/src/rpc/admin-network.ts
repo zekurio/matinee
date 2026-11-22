@@ -9,18 +9,18 @@ import {
   networkRules,
   saveNetwork,
 } from "../network/settings"
-import { admin, badRequest } from "./base"
+import { authed, badRequest } from "./base"
 
 function describe(c: Context, rules: NetworkRules): AdminNetworkSettings {
   return { settings: rules.settings, connection: connectionOf(c, rules) }
 }
 
 export const adminNetwork = {
-  get: admin.admin.network.get.handler(async ({ context }) =>
+  get: authed.admin.network.get.handler(async ({ context }) =>
     describe(context.hono, await networkRules()),
   ),
 
-  update: admin.admin.network.update.handler(async ({ context, input }) => {
+  update: authed.admin.network.update.handler(async ({ context, input }) => {
     const invalid = invalidRange(input)
     if (invalid !== null) {
       throw badRequest(

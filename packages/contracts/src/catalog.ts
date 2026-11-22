@@ -189,7 +189,7 @@ export const RelatedPage = t.object({
 })
 
 export const catalogContract = {
-  search: get("/catalog/search")
+  search: get("/catalog/search", "catalog.read")
     .input(
       t.object({
         query: t.string().trim().min(1).max(256, "Use at most 256 characters."),
@@ -199,16 +199,18 @@ export const catalogContract = {
       }),
     )
     .output(CatalogPage),
-  details: post("/catalog/details")
+  details: post("/catalog/details", "catalog.read")
     .input(CatalogInput)
     .output(CatalogTitleDetail),
   /** The rows of related titles a title's page has, in order. */
-  related: post("/catalog/related").input(CatalogInput).output(RelatedRails),
+  related: post("/catalog/related", "catalog.read")
+    .input(CatalogInput)
+    .output(RelatedRails),
   /** One row's titles, marked with the viewer's availability. */
-  relatedTitles: post("/catalog/related/titles")
+  relatedTitles: post("/catalog/related/titles", "catalog.read")
     .input(CatalogInput.extend({ rail: RelatedRailId }))
     .output(RelatedPage),
-  missingSeasons: get("/catalog/missing-seasons")
+  missingSeasons: get("/catalog/missing-seasons", "catalog.read")
     .input(t.object({ titleId: t.uuid() }))
     .output(
       t.object({

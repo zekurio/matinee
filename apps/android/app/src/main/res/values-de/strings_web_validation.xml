@@ -5,6 +5,7 @@
     <string name="web_validation_scopesOpenid">Die Scopes müssen openid enthalten.</string>
     <string name="web_validation_searchQuery">Gib einen Namen für die Suche ein.</string>
     <string name="web_validation_clientName">Gib einen Namen ein.</string>
+    <string name="web_validation_apiTokenPermissions">Wähle, was das Token darf.</string>
     <string name="web_validation_imageSize">Wähle ein Bild unter 25 MB.</string>
     <string name="web_validation_metadataLanguage">Verwende einen Sprachcode wie en oder de-DE.</string>
     <string name="web_validation_absolutePath">Verwende einen absoluten Pfad.</string>

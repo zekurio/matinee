@@ -209,6 +209,14 @@ iPad, and Apple TV apps, `apps/tizen/README.md` for the Samsung TV app.
   exception is a download playing offline on Android or iOS, which picks its
   tracks in `DownloadTracks.kt` or `DownloadTracks.swift` because there's no
   server to ask.
+- A procedure behind a sign-in names the permission it takes in the
+  contract, as the second argument of `get`, `post`, and the rest, from
+  `PERMISSIONS` in `packages/contracts/src/permissions.ts`. `authed` in
+  `rpc/base.ts` holds the account and its API token to it. Don't check
+  `role` in a handler; ask `can(viewer, permission)` from
+  `access/viewer.ts`, and gate a screen with `can(user, permission)` from
+  the web app's `lib/permissions.ts`. Code that changes who holds a
+  permission calls `requireOwn`, so nobody grants what they lack.
 - Validate inputs in the contract schemas. Procedures throw `ORPCError` with a
   message the user can act on; anything 500 is logged and hidden.
 - The server fetches only image URLs a metadata provider returned, stored in

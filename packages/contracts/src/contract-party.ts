@@ -12,63 +12,65 @@ import { t } from "./schema"
 
 export const partyContract = oc.tag("Watch party").router({
   /** The party the viewer is in. Null while they're in none. */
-  get: get("/party").output(Party.nullable()),
+  get: get("/party", "party.read").output(Party.nullable()),
   /**
    * The viewer's party as a stream: the current state first, then again
    * on each change, and every little while for its clock. Null once
    * they're in none. A member with no stream open for a minute has left,
    * so a client keeps one open for as long as it's in a party.
    */
-  follow: get("/party/live").output(eventIterator(Party.nullable())),
+  follow: get("/party/live", "party.read").output(
+    eventIterator(Party.nullable()),
+  ),
   /**
    * Start a party the viewer owns, leaving any they were in. It watches
    * nothing until the owner calls `play`.
    */
-  create: post("/party")
+  create: post("/party", "party.create")
     .input(t.object({ name: PartyName.optional() }))
     .output(Party),
   /**
    * What an invite leads to, for asking before joining. Not found for a
    * party that is over, and for one the viewer was removed from.
    */
-  invite: get("/parties/{partyId}")
+  invite: get("/parties/{partyId}", "party.read")
     .input(t.object({ partyId: t.uuid() }))
     .output(PartyInvite),
   /**
    * Join the party with this id, leaving any other. Someone the owner
    * removed can't join it again.
    */
-  join: post("/parties/{partyId}/join")
+  join: post("/parties/{partyId}/join", "party.update")
     .input(t.object({ partyId: t.uuid() }))
     .output(Party),
   /**
    * Leave the viewer's party. The member who joined after the owner
    * owns it once the owner leaves, and it ends with its last member.
    */
-  leave: post("/party/leave").output(t.void()),
+  leave: post("/party/leave", "party.update").output(t.void()),
   /** Name the party, or clear its name with an empty one. Only the owner. */
-  rename: put("/party/name")
+  rename: put("/party/name", "party.update")
     .input(t.object({ name: PartyName }))
     .output(t.void()),
   /**
    * Hand the party to another member, who owns it from then on. Only the
    * owner, who stays in it as a member.
    */
-  transfer: put("/party/owner")
+  transfer: put("/party/owner", "party.update")
     .input(t.object({ userId: t.uuid() }))
     .output(t.void()),
   /**
    * Remove a member, who can't join this party again. Their proposals go
    * with them. Only the owner.
    */
-  kick: del("/party/members/{userId}")
+  kick: del("/party/members/{userId}", "party.update")
     .input(t.object({ userId: t.uuid() }))
     .output(t.void()),
   /**
    * Have the party watch a file, from `positionSeconds` or its start.
    * Only the owner. A file from the queue leaves the queue.
    */
-  play: put("/party/item")
+  play: put("/party/item", "party.update")
     .input(
       t.object({
         itemId: t.uuid(),
@@ -82,7 +84,7 @@ export const partyContract = oc.tag("Watch party").router({
    * party. `itemId` is the file the player has, so a call that arrives
    * after the party moved on does nothing.
    */
-  control: put("/party/playback")
+  control: put("/party/playback", "party.update")
     .input(
       t.object({
         itemId: t.uuid(),
@@ -97,7 +99,7 @@ export const partyContract = oc.tag("Watch party").router({
    * party on when the file ends. Without a queue the party pauses at the
    * end. `itemId` is the file the player has, as in `control`.
    */
-  next: post("/party/next")
+  next: post("/party/next", "party.update")
     .input(t.object({ itemId: t.uuid() }))
     .output(t.void()),
   /**
@@ -107,33 +109,37 @@ export const partyContract = oc.tag("Watch party").router({
    * pauses it for everyone, until it has caught up. A member who keeps
    * it waiting too long isn't waited for again in that file.
    */
-  status: put("/party/status").input(PartyStatusReport).output(t.void()),
+  status: put("/party/status", "party.update")
+    .input(PartyStatusReport)
+    .output(t.void()),
   /**
    * How each member's player keeps up, as a stream: now, then on each
    * report. Null once the viewer is in no party.
    */
-  health: get("/party/health").output(eventIterator(PartyHealth.nullable())),
+  health: get("/party/health", "party.read").output(
+    eventIterator(PartyHealth.nullable()),
+  ),
   queue: {
     /**
      * From the owner, the file goes to the end of the queue. From anyone
      * else it becomes a proposal. A file already in either stays once.
      */
-    add: post("/party/queue")
+    add: post("/party/queue", "party.update")
       .input(t.object({ itemId: t.uuid() }))
       .output(t.void()),
     /** Take a proposal into the queue, at its end. Only the owner. */
-    accept: post("/party/queue/{entryId}/accept")
+    accept: post("/party/queue/{entryId}/accept", "party.update")
       .input(t.object({ entryId: t.uuid() }))
       .output(t.void()),
     /**
      * Take an entry out: the owner any from the queue or the proposals,
      * a member a proposal of their own.
      */
-    remove: del("/party/queue/{entryId}")
+    remove: del("/party/queue/{entryId}", "party.update")
       .input(t.object({ entryId: t.uuid() }))
       .output(t.void()),
     /** Move a queued file to `index`, 0 for next. Only the owner. */
-    move: put("/party/queue/{entryId}")
+    move: put("/party/queue/{entryId}", "party.update")
       .input(t.object({ entryId: t.uuid(), index: t.number().int().min(0) }))
       .output(t.void()),
   },

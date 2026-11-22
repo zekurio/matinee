@@ -10,6 +10,9 @@
     <string name="web_server_fulfilment_optionsMissing">Wähle jede Option der Verbindung.</string>
     <string name="web_server_fulfilment_settingsInvalid">Prüfe die Einstellungen der Verbindung.</string>
     <string name="web_server_fulfilment_folderLost">%1$s liegt in keiner Mediathek, die Matinee für diese Art Titel durchsucht. Wähle die Mediathek, in der es landet, oder speichere in einen anderen Ordner.</string>
+    <string name="web_server_fulfilment_hiddenLibrary">Diese Verbindung schickt Titel in eine Mediathek, die du nicht sehen kannst, deshalb kannst du sie nicht ändern.</string>
+    <string name="web_server_fulfilment_defaultFilmsHidden">Der Standard für Filme schickt Titel in eine Mediathek, die du nicht sehen kannst, deshalb kannst du ihn nicht ersetzen.</string>
+    <string name="web_server_fulfilment_defaultShowsHidden">Der Standard für Serien schickt Titel in eine Mediathek, die du nicht sehen kannst, deshalb kannst du ihn nicht ersetzen.</string>
     <string name="web_server_fulfilment_filmFolder">Wähle den Ordner, in dem Filme landen.</string>
     <string name="web_server_fulfilment_showFolder">Wähle den Ordner, in dem Serien landen.</string>
     <string name="web_server_fulfilment_noRules">Diese Verbindung nimmt keine Überschreibungsregeln.</string>
@@ -84,6 +87,10 @@
     <string name="web_server_downloads_noDownloadAudio">Für dieses Gerät ist keine Audiokonvertierung verfügbar.</string>
     <string name="web_server_rpc_signInFirst">Melde dich zuerst an.</string>
     <string name="web_server_rpc_adminsOnly">Das können nur Admins.</string>
+    <string name="web_server_rpc_accountPermission">Dein Konto hat die Berechtigung %1$s nicht.</string>
+    <string name="web_server_rpc_tokenPermission">Dieses API-Token hat die Berechtigung %1$s nicht.</string>
+    <string name="web_server_rpc_wholeAccount">Eine Anmeldemöglichkeit hinzufügen geht nur mit einer Sitzung oder einem API-Token mit allen Berechtigungen.</string>
+    <string name="web_server_rpc_ownPermissions">Du kannst nur Berechtigungen vergeben oder entziehen, die du selbst hast. Dir fehlt %1$s.</string>
     <string name="web_server_rpc_passkeysOff">Passkeys sind auf diesem Server ausgeschaltet.</string>
     <string name="web_server_rpc_checkInput">Prüfe deine Eingabe und versuche es erneut.</string>
     <string name="web_server_auth_signUpClosed">Auf diesem Server ist die Registrierung geschlossen.</string>
@@ -142,9 +149,12 @@
     <string name="web_server_account_noLinkedAccount">Es ist kein Konto verknüpft.</string>
     <string name="web_server_account_currentSession">Melde dich ab, um die Sitzung zu beenden, die du gerade nutzt.</string>
     <string name="web_server_account_sessionGone">Diese Sitzung ist bereits beendet.</string>
+    <string name="web_server_account_apiTokenGone">Dieses API-Token wurde bereits widerrufen.</string>
+    <string name="web_server_account_apiTokenGrant">Ein API-Token kann keine Berechtigungen vergeben, die es selbst nicht hat.</string>
+    <string name="web_server_account_noApiToken">Diese Anfrage kam nicht mit einem API-Token.</string>
     <string name="web_server_adminUsers_gone">Diesen Benutzer gibt es nicht mehr. Lade die Liste neu.</string>
+    <string name="web_server_adminUsers_above">%1$s ist Admin, und das Konto eines Admins ändert nur ein Admin.</string>
     <string name="web_server_adminInvites_gone">Diese Einladung gibt es nicht mehr. Lade die Liste neu.</string>
-    <string name="web_server_access_downloadsOff">Downloads sind für dein Konto ausgeschaltet.</string>
     <string name="web_server_access_downloadVideoOff">Der Server darf für dein Konto kein Video umwandeln. Lade die Datei unverändert herunter oder behalte ihr Video bei.</string>
     <string name="web_server_access_overLimitSeek">Diese Datei liegt über der Bitrate, die dein Konto streamen darf. Wähle eine niedrigere Qualität, um sie anzusehen.</string>
     <string name="web_server_access_overLimitNoEncoding">Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und der Server darf für dein Konto kein Video umwandeln. Frag die Person, die den Server betreibt.</string>

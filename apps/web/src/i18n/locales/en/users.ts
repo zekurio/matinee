@@ -19,6 +19,15 @@ export default defineMessages("users", {
   }),
 
   // Confirming a sign-out or a deletion.
+  "users.revokedTokens": plural({
+    one: "Revoked {count} API token of {name}",
+    other: "Revoked {count} API tokens of {name}",
+  }),
+  "users.revokeTokens.ownTitle": "Revoke your API tokens?",
+  "users.revokeTokens.title": "Revoke {name}'s API tokens?",
+  "users.revokeTokens.description":
+    "Every service using one stops working with Matinee. Sessions stay signed in.",
+  "users.revokeTokens.confirm": "Revoke tokens",
   "users.signOut.ownTitle": "Sign out your other sessions?",
   "users.signOut.title": "Sign {name} out everywhere?",
   "users.signOut.ownDescription": "Every other device has to sign in again.",
@@ -43,6 +52,7 @@ export default defineMessages("users", {
   "users.menu.makeAdmin": "Make admin",
   "users.menu.signOutOthers": "Sign out other sessions",
   "users.menu.signOut": "Sign out everywhere",
+  "users.menu.revokeTokens": "Revoke API tokens",
   "users.menu.deleteOwn": "Delete my account",
   "users.menu.delete": "Delete user",
   "users.lastAdmin": "Make someone else an admin first.",
@@ -57,6 +67,10 @@ export default defineMessages("users", {
   "users.ownAccessHint": "Has settings of its own over its groups",
   "users.ownAccessFromProvider":
     "Set at sign-in by the policy claim from {provider}",
+  "users.apiTokens": plural({
+    one: "{count} API token",
+    other: "{count} API tokens",
+  }),
   "users.passkeys": plural({
     one: "{count} passkey",
     other: "{count} passkeys",

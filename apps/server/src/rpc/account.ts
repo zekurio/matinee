@@ -1,6 +1,21 @@
+import {
+  grantsPermissions,
+  type Permission,
+  type User,
+} from "@matinee/contracts"
 import { oidcAccount, passkey, user, type UserRow } from "@matinee/db"
+import { ORPCError } from "@orpc/server"
 import { and, desc, eq } from "drizzle-orm"
 
+import { userOf } from "../access/viewer"
+import {
+  createApiToken,
+  getApiToken,
+  listApiTokens,
+  revokeApiToken,
+  rotateApiToken,
+  updateApiToken,
+} from "../auth/api-tokens"
 import {
   AvatarError,
   followProviderAvatar,
@@ -23,27 +38,53 @@ import {
   deleteUserSessions,
   identifySession,
   listSessions,
-  publicUser,
+  sessionIdOf,
+  type SessionUser,
 } from "../auth/session"
 import { signInMethods } from "../auth/users"
 import { db } from "../db"
-import { authed, badRequest, notFound, requirePasskeys } from "./base"
+import {
+  authed,
+  badRequest,
+  notFound,
+  requirePasskeys,
+  requireWholeAccount,
+} from "./base"
 
 const LAST_METHOD =
   "Add another passkey or link an account before removing your last way to sign in."
 const LAST_LINK =
   "Passkeys are off, so single sign-on is your only way to sign in. Keep it linked."
 
+const TOKEN_GONE = "That API token was already revoked."
+
+/**
+ * Refuse a token that asks for permissions it doesn't hold itself, for
+ * another token it makes, changes, or rotates. A session grants any.
+ */
+function requireGrantable(
+  caller: SessionUser,
+  permissions: readonly Permission[],
+): void {
+  const { credential } = caller
+  if (
+    credential.kind === "apiToken" &&
+    !grantsPermissions(credential.permissions, permissions)
+  ) {
+    throw badRequest("An API token can't grant permissions it doesn't have.")
+  }
+}
+
 /** The updated user, with avatar failures turned into a message to act on. */
 async function avatarChange(
   change: () => Promise<UserRow | null>,
-): Promise<ReturnType<typeof publicUser>> {
+): Promise<User> {
   const row = await change().catch((cause: unknown) => {
     if (cause instanceof AvatarError) throw badRequest(cause.message)
     throw cause
   })
   if (!row) throw notFound("Account not found.")
-  return publicUser(row)
+  return userOf(row)
 }
 
 export const account = {
@@ -65,7 +106,7 @@ export const account = {
           .where(eq(user.id, context.user.id))
           .returning()
         if (!row) throw notFound("Account not found.")
-        return publicUser(row)
+        return userOf(row)
       },
     ),
   },
@@ -94,7 +135,7 @@ export const account = {
           .where(eq(user.id, context.user.id))
           .returning()
         if (!row) throw notFound("Account not found.")
-        return publicUser(row)
+        return userOf(row)
       },
     ),
   },
@@ -109,7 +150,7 @@ export const account = {
           .where(eq(user.id, context.user.id))
           .returning()
         if (!row) throw notFound("Account not found.")
-        return publicUser(row)
+        return userOf(row)
       },
     ),
   },
@@ -126,6 +167,7 @@ export const account = {
 
     registerOptions: authed.account.passkeys.registerOptions.handler(
       async ({ context }) => {
+        requireWholeAccount(context.user)
         await requirePasskeys()
         return beginRegister({
           userId: context.user.id,
@@ -136,6 +178,7 @@ export const account = {
 
     register: authed.account.passkeys.register.handler(
       async ({ context, input }) => {
+        requireWholeAccount(context.user)
         await requirePasskeys()
         const verified = await finishRegistration(
           "passkey-register",
@@ -220,14 +263,71 @@ export const account = {
     }),
   },
 
+  apiTokens: {
+    list: authed.account.apiTokens.list.handler(({ context }) =>
+      listApiTokens(context.user.id),
+    ),
+
+    create: authed.account.apiTokens.create.handler(({ context, input }) => {
+      requireGrantable(context.user, input.permissions)
+      return createApiToken(context.user.id, input.name, input.permissions)
+    }),
+
+    me: authed.account.apiTokens.me.handler(async ({ context }) => {
+      const { credential } = context.user
+      if (credential.kind !== "apiToken") {
+        throw new ORPCError("FORBIDDEN", {
+          message: "This request didn't come with an API token.",
+        })
+      }
+      const token = await getApiToken(context.user.id, credential.id)
+      if (!token) throw notFound(TOKEN_GONE)
+      return token
+    }),
+
+    update: authed.account.apiTokens.update.handler(
+      async ({ context, input }) => {
+        if (input.permissions) {
+          requireGrantable(context.user, input.permissions)
+        }
+        const token = await updateApiToken(context.user.id, input.id, input)
+        if (!token) throw notFound(TOKEN_GONE)
+        return token
+      },
+    ),
+
+    rotate: authed.account.apiTokens.rotate.handler(
+      async ({ context, input }) => {
+        // A new secret for a token that holds more would hand that on too.
+        const rotated = await rotateApiToken(
+          context.user.id,
+          input.id,
+          (permissions) => requireGrantable(context.user, permissions),
+        )
+        if (!rotated) throw notFound(TOKEN_GONE)
+        return rotated
+      },
+    ),
+
+    revoke: authed.account.apiTokens.revoke.handler(
+      async ({ context, input }) => {
+        if (!(await revokeApiToken(context.user.id, input.id))) {
+          throw notFound(TOKEN_GONE)
+        }
+      },
+    ),
+  },
+
+  // An API token has no session of its own, so none is the current one:
+  // it may end any of them, and "the others" are all of them.
   sessions: {
     list: authed.account.sessions.list.handler(({ context }) =>
-      listSessions(context.user.id, context.user.sessionId),
+      listSessions(context.user.id, sessionIdOf(context.user)),
     ),
 
     revoke: authed.account.sessions.revoke.handler(
       async ({ context, input }) => {
-        if (input.id === context.user.sessionId) {
+        if (input.id === sessionIdOf(context.user)) {
           throw badRequest("Sign out to end the session you're using.")
         }
         if (!(await deleteSession(context.user.id, input.id))) {
@@ -240,7 +340,7 @@ export const account = {
       async ({ context }) => ({
         revoked: await deleteUserSessions(
           context.user.id,
-          context.user.sessionId,
+          sessionIdOf(context.user),
         ),
       }),
     ),
@@ -251,7 +351,10 @@ export const account = {
         // zero-width space, and a name of only those is no name.
         const name = cleanDeviceName(input.name)
         if (!name) throw badRequest("Enter a name.")
-        await identifySession(context.user, name)
+        // An API token goes by the name its owner gave it.
+        const sessionId = sessionIdOf(context.user)
+        if (!sessionId || name === context.user.clientName) return
+        await identifySession(sessionId, name)
       },
     ),
   },

@@ -2,8 +2,11 @@ import {
   type AccessGroup,
   AccessGroupInput,
   type AccessPolicy,
+  GRANTABLE_PERMISSIONS,
   GroupName,
+  type Permission,
   type ProviderGroup,
+  sortPermissions,
   ProviderGroupName,
 } from "@matinee/contracts"
 import {
@@ -32,10 +35,20 @@ import { Input } from "@matinee/ui/components/input"
 import { toast } from "@matinee/ui/components/sonner"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useRouteContext } from "@tanstack/react-router"
 import { useId } from "react"
 
 import { tr } from "@/i18n"
 import { firstError, useAppForm, useFieldContext } from "@/lib/form"
+import {
+  can,
+  POLICY_PERMISSIONS,
+  REQUEST_PERMISSIONS,
+  type RequestsChoice,
+  requestsOf,
+  withPermissions,
+  withRequests,
+} from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import {
@@ -56,11 +69,21 @@ import {
   streamOptions,
 } from "./access-controls"
 import { groupName } from "./access-facts"
+import { PermissionPicker } from "./permission-picker"
 import { SelectField, SelectRow, SwitchField } from "./setting-controls"
 import { SettingNote, SettingRows } from "./settings-panel"
 
 type LibraryChoice = "all" | "some"
 const LIBRARY_CHOICES: readonly LibraryChoice[] = ["all", "some"]
+
+/**
+ * What the list under the settings offers: every permission a group can
+ * grant but the ones the download switch and the request choice stand
+ * for.
+ */
+const MORE_PERMISSIONS = GRANTABLE_PERMISSIONS.filter(
+  (permission) => !POLICY_PERMISSIONS.includes(permission),
+)
 
 /** The editor's form. Limits are text, as the selects hold them. */
 type GroupValues = {
@@ -70,14 +93,25 @@ type GroupValues = {
   libraryIds: string[]
   maxBitrate: string
   transcode: boolean
-  requests: AccessPolicy["requests"]
+  /** `request.create` and `request.autoApprove`, as one choice. */
+  requests: RequestsChoice
   requestLimit: AccessPolicy["requestLimit"]
+  /** `media.download`. */
   downloads: boolean
   maxStreams: string
+  /** Every permission the group grants but those three. */
+  permissions: Permission[]
 }
 
-/** A new group opens every library and limits nothing, as Everyone starts. */
-function valuesOf(group: AccessGroup | undefined): GroupValues {
+/**
+ * A new group opens every library and limits nothing, as Everyone starts,
+ * and grants downloading and nothing else. Downloading starts off for an
+ * editor who can't grant it, since the server would refuse the group.
+ */
+function valuesOf(
+  group: AccessGroup | undefined,
+  mayDownload: boolean,
+): GroupValues {
   return {
     name: group?.name ?? "",
     providerGroup: group?.providerGroup ?? "",
@@ -85,23 +119,57 @@ function valuesOf(group: AccessGroup | undefined): GroupValues {
     libraryIds: group?.policy.libraries.ids ?? [],
     maxBitrate: limitValue(group?.policy.maxBitrate ?? null),
     transcode: group?.policy.transcode ?? true,
-    requests: group?.policy.requests ?? "off",
+    requests: group ? requestsOf(group.policy.permissions) : "off",
     requestLimit: group?.policy.requestLimit ?? null,
-    downloads: group?.policy.downloads ?? true,
+    downloads:
+      group?.policy.permissions.includes("media.download") ?? mayDownload,
     maxStreams: limitValue(group?.policy.maxStreams ?? null),
+    permissions:
+      group?.policy.permissions.filter(
+        (permission) => !POLICY_PERMISSIONS.includes(permission),
+      ) ?? [],
   }
 }
 
-function policyOf(value: GroupValues): AccessPolicy {
+/**
+ * The request permissions to save. The choice shows three of their four
+ * mixes, so one never touched keeps the group's own: a group may grant
+ * adding without an approval alone, for members another group lets ask.
+ * Once changed, even back to how it opened, the choice is what it shows.
+ */
+function requestPermissions(
+  value: GroupValues,
+  group: AccessGroup | undefined,
+  requestsChanged: boolean,
+): Permission[] {
+  if (group && !requestsChanged) {
+    return group.policy.permissions.filter((permission) =>
+      REQUEST_PERMISSIONS.includes(permission),
+    )
+  }
+  return withRequests([], value.requests)
+}
+
+function policyOf(
+  value: GroupValues,
+  group: AccessGroup | undefined,
+  requestsChanged: boolean,
+): AccessPolicy {
   const all = value.libraries === "all"
   return {
     libraries: { all, ids: all ? [] : value.libraryIds },
     maxBitrate: limitOf(value.maxBitrate),
     transcode: value.transcode,
-    requests: value.requests,
     requestLimit: value.requestLimit,
-    downloads: value.downloads,
     maxStreams: limitOf(value.maxStreams),
+    permissions: sortPermissions([
+      ...withPermissions(
+        value.permissions,
+        ["media.download"],
+        value.downloads,
+      ),
+      ...requestPermissions(value, group, requestsChanged),
+    ]),
   }
 }
 
@@ -122,7 +190,11 @@ export function GroupDialog({
         showCloseButton={false}
         className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-lg"
       >
-        <GroupForm group={group} onDone={() => onOpenChange(false)} />
+        <GroupForm
+          key={group?.id ?? "new"}
+          group={group}
+          onDone={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   )
@@ -136,8 +208,13 @@ function GroupForm({
   onDone: () => void
 }) {
   const queryClient = useQueryClient()
+  const { user } = useRouteContext({ from: "/_authed" })
   const libraries = useQuery(orpc.libraries.list.queryOptions())
   const everyone = group?.everyone ?? false
+  // The server refuses a change to a permission its maker lacks, so those
+  // boxes stay as they are.
+  const mayGrant = (permission: Permission) => can(user, permission)
+  const grantsAll = MORE_PERMISSIONS.every(mayGrant)
 
   const save = useMutation({
     mutationFn: (input: AccessGroupInput) =>
@@ -156,19 +233,21 @@ function GroupForm({
     onError: (error) => toast.error(errorMessage(error)),
   })
 
-  const toInput = (value: GroupValues) => ({
+  const toInput = (value: GroupValues, requestsChanged: boolean) => ({
     // The server keeps the built-in group's name and provider group.
     name: everyone && group ? group.name : value.name,
     providerGroup: everyone ? null : value.providerGroup.trim() || null,
-    policy: policyOf(value),
+    policy: policyOf(value, group, requestsChanged),
   })
 
   const form = useAppForm({
-    defaultValues: valuesOf(group),
+    defaultValues: valuesOf(group, mayGrant("media.download")),
     validators: {
       // One message for the whole form, in a toast.
-      onSubmit: ({ value }) => {
-        const parsed = AccessGroupInput.safeParse(toInput(value))
+      onSubmit: ({ value, formApi }) => {
+        const parsed = AccessGroupInput.safeParse(
+          toInput(value, formApi.getFieldMeta("requests")?.isDirty ?? false),
+        )
         if (parsed.success) return undefined
         return {
           message:
@@ -176,8 +255,12 @@ function GroupForm({
         }
       },
     },
-    onSubmit: ({ value }) =>
-      save.mutate(AccessGroupInput.parse(toInput(value))),
+    onSubmit: ({ value, formApi }) =>
+      save.mutate(
+        AccessGroupInput.parse(
+          toInput(value, formApi.getFieldMeta("requests")?.isDirty ?? false),
+        ),
+      ),
     onSubmitInvalid: ({ formApi }) => {
       // Field errors show under their fields.
       const message = firstError(formApi.state.errors)
@@ -294,6 +377,7 @@ function GroupForm({
               {() => (
                 <SwitchField
                   title={tr("access.downloads")}
+                  disabled={!mayGrant("media.download")}
                   footer={
                     <SettingNote>{tr("access.downloads.hint")}</SettingNote>
                   }
@@ -316,6 +400,7 @@ function GroupForm({
               {() => (
                 <SelectField
                   title={tr("access.requests")}
+                  disabled={!REQUEST_PERMISSIONS.every(mayGrant)}
                   options={REQUEST_CHOICES}
                   labelOf={requestsLabel}
                 />
@@ -348,6 +433,24 @@ function GroupForm({
             )}
           </SettingRows>
         </div>
+
+        <form.Field name="permissions">
+          {(field) => (
+            <div className="flex flex-col gap-2">
+              <PermissionPicker
+                legend={tr("access.permissions")}
+                offered={MORE_PERMISSIONS}
+                mayChange={mayGrant}
+                value={field.state.value}
+                onChange={field.handleChange}
+              />
+              <SettingNote>
+                {tr("access.permissions.groupHint")}
+                {!grantsAll && ` ${tr("access.permissions.ownOnly")}`}
+              </SettingNote>
+            </div>
+          )}
+        </form.Field>
 
         <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
           <form.Subscribe

@@ -45,7 +45,8 @@ export const recommendations = defineQueue({
     if (!account) return
     const viewer = await viewerOf({
       ...account,
-      sessionId: "",
+      // Nobody signed in: the task runs for the account on its own.
+      credential: { kind: "session", id: "" },
       clientName: null,
     })
     const { signals, signalsAt } = await rebuildSignals(viewer)

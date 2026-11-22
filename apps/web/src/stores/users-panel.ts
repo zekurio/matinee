@@ -2,7 +2,7 @@ import type { AdminUser } from "@matinee/contracts"
 import { createStore } from "zustand/vanilla"
 
 /** What the users panel asks about before it does it. */
-export type UserAction = "role" | "sign-out" | "delete"
+export type UserAction = "role" | "sign-out" | "revoke-tokens" | "delete"
 
 type UsersPanelState = {
   /**

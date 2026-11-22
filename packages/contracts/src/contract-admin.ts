@@ -32,7 +32,7 @@ import { AdminTrickplaySettings, TrickplaySettings } from "./trickplay"
 
 export const adminContract = oc.tag("Admin").router({
   /** List directories on the server, for picking library folders. */
-  browse: get("/admin/browse")
+  browse: get("/admin/browse", "folder.read")
     .input(t.object({ path: t.string().optional() }))
     .output(DirectoryListing),
   /**
@@ -40,29 +40,34 @@ export const adminContract = oc.tag("Admin").router({
    * Matinee theme, and the login backdrop.
    */
   branding: {
-    get: get("/admin/branding").output(Branding),
-    update: put("/admin/branding").input(Branding).output(Branding),
+    get: get("/admin/branding", "branding.read").output(Branding),
+    update: put("/admin/branding", "branding.update")
+      .input(Branding)
+      .output(Branding),
     /**
      * Artwork the login backdrop would show with `artwork`, whether or not
      * it's on, for previewing it before saving.
      */
-    preview: get("/admin/branding/login-backdrop")
+    preview: get("/admin/branding/login-backdrop", "branding.read")
       .input(t.object({ artwork: LoginBackdropArtwork }))
       .output(LoginBackdropTiles),
   },
   /** First-run setup, after the admin account exists. */
   setup: {
     /** Finish setup. Admins land on Home instead of the setup steps. */
-    complete: post("/admin/setup/complete").output(t.void()),
+    complete: post("/admin/setup/complete", "serverSetup.update").output(
+      t.void(),
+    ),
   },
   auth: {
-    get: get("/admin/auth").output(AdminAuthSettings),
+    get: get("/admin/auth", "authSettings.read").output(AdminAuthSettings),
     /**
      * Save passkeys and the OIDC provider. Applies to the next sign-in, no
      * restart. Fails when it would leave no way in, or leave you unable to
-     * sign in.
+     * sign in. The provider and its role claim say who signs in as an
+     * admin, so only an admin saves them.
      */
-    update: put("/admin/auth")
+    update: put("/admin/auth", "all")
       .input(AuthSettingsInput)
       .output(AdminAuthSettings),
   },
@@ -71,16 +76,16 @@ export const adminContract = oc.tag("Admin").router({
    * them. Changes apply at once, without a restart.
    */
   jobs: {
-    get: get("/admin/jobs").output(JobsOverview),
+    get: get("/admin/jobs", "job.read").output(JobsOverview),
     /** Start no more jobs from the queue. Running ones finish. */
-    pause: post("/admin/jobs/{queue}/pause")
+    pause: post("/admin/jobs/{queue}/pause", "job.update")
       .input(QueueInput)
       .output(JobQueueStatus),
-    resume: post("/admin/jobs/{queue}/resume")
+    resume: post("/admin/jobs/{queue}/resume", "job.update")
       .input(QueueInput)
       .output(JobQueueStatus),
     /** Drop the waiting jobs. The tasks that queued them find them again. */
-    clear: post("/admin/jobs/{queue}/clear")
+    clear: post("/admin/jobs/{queue}/clear", "job.update")
       .input(QueueInput)
       .output(JobQueueStatus),
     /**
@@ -88,15 +93,15 @@ export const adminContract = oc.tag("Admin").router({
      * the next start. Fails for a queue that can't be changed or a number
      * past its maximum.
      */
-    updateConcurrency: put("/admin/jobs/concurrency")
+    updateConcurrency: put("/admin/jobs/concurrency", "job.update")
       .input(ConcurrencyInput)
       .output(JobsOverview),
     /** Start the task now, unless it's running. */
-    runTask: post("/admin/tasks/{task}/run")
+    runTask: post("/admin/tasks/{task}/run", "job.update")
       .input(TaskInput)
       .output(ScheduledTask),
     /** Stop the task's run, and the jobs it queued that haven't finished. */
-    cancelTask: post("/admin/tasks/{task}/cancel")
+    cancelTask: post("/admin/tasks/{task}/cancel", "job.update")
       .input(TaskInput)
       .output(ScheduledTask),
   },
@@ -105,12 +110,17 @@ export const adminContract = oc.tag("Admin").router({
    * without a restart; new devices are detected before the answer.
    */
   transcoding: {
-    get: get("/admin/transcoding").output(AdminTranscodingSettings),
-    update: put("/admin/transcoding")
+    get: get("/admin/transcoding", "transcodingSettings.read").output(
+      AdminTranscodingSettings,
+    ),
+    update: put("/admin/transcoding", "transcodingSettings.update")
       .input(TranscodingSettings)
       .output(AdminTranscodingSettings),
     /** Detect ffmpeg and the GPUs again, after a driver or ffmpeg update. */
-    detect: post("/admin/transcoding/detect").output(AdminTranscodingSettings),
+    detect: post(
+      "/admin/transcoding/detect",
+      "transcodingSettings.update",
+    ).output(AdminTranscodingSettings),
   },
   /**
    * The seek bar's preview images. Saving applies at once. Files whose
@@ -118,8 +128,10 @@ export const adminContract = oc.tag("Admin").router({
    * show the old ones until then.
    */
   trickplay: {
-    get: get("/admin/trickplay").output(AdminTrickplaySettings),
-    update: put("/admin/trickplay")
+    get: get("/admin/trickplay", "trickplaySettings.read").output(
+      AdminTrickplaySettings,
+    ),
+    update: put("/admin/trickplay", "trickplaySettings.update")
       .input(TrickplaySettings)
       .output(AdminTrickplaySettings),
   },
@@ -130,8 +142,10 @@ export const adminContract = oc.tag("Admin").router({
    * that asked, for checking the result.
    */
   network: {
-    get: get("/admin/network").output(AdminNetworkSettings),
-    update: put("/admin/network")
+    get: get("/admin/network", "networkSettings.read").output(
+      AdminNetworkSettings,
+    ),
+    update: put("/admin/network", "networkSettings.update")
       .input(NetworkSettings)
       .output(AdminNetworkSettings),
   },
@@ -143,9 +157,9 @@ export const adminContract = oc.tag("Admin").router({
    */
   users: {
     /** Everyone, oldest account first. */
-    list: get("/admin/users").output(t.array(AdminUser)),
+    list: get("/admin/users", "adminUser.read").output(t.array(AdminUser)),
     /** Takes effect on the user's next request. */
-    setRole: put("/admin/users/{id}/role")
+    setRole: put("/admin/users/{id}/role", "all")
       .input(t.object({ id: t.uuid(), role: UserRole }))
       .output(AdminUser),
     /**
@@ -153,15 +167,24 @@ export const adminContract = oc.tag("Admin").router({
      * user's next request. An override the provider's policy claim set
      * comes back at the account's next sign-in.
      */
-    setAccess: put("/admin/users/{id}/access")
+    setAccess: put("/admin/users/{id}/access", "adminUser.update")
       .input(UserAccessInput)
       .output(AdminUser),
     /** Delete the account with its sessions, passkeys, and progress. */
-    remove: del("/admin/users/{id}").input(IdInput).output(t.void()),
+    remove: del("/admin/users/{id}", "adminUser.delete")
+      .input(IdInput)
+      .output(t.void()),
     /** End the user's sessions. Yours keeps the one making the call. */
-    signOut: post("/admin/users/{id}/sign-out")
+    signOut: post("/admin/users/{id}/sign-out", "adminSession.delete")
       .input(IdInput)
       .output(t.object({ ended: t.number().int() })),
+    /** Revoke every API token the user made. Returns how many. */
+    revokeApiTokens: post(
+      "/admin/users/{id}/api-tokens/revoke",
+      "adminApiToken.delete",
+    )
+      .input(IdInput)
+      .output(t.object({ revoked: t.number().int() })),
   },
   /**
    * Access groups: which libraries an account opens and how the server
@@ -170,19 +193,23 @@ export const adminContract = oc.tag("Admin").router({
    */
   groups: {
     /** The built-in group first, then by name. */
-    list: get("/admin/groups").output(t.array(AccessGroup)),
-    create: post("/admin/groups").input(AccessGroupInput).output(AccessGroup),
+    list: get("/admin/groups", "group.read").output(t.array(AccessGroup)),
+    create: post("/admin/groups", "group.create")
+      .input(AccessGroupInput)
+      .output(AccessGroup),
     /** For the built-in group, only the policy changes. */
-    update: put("/admin/groups/{id}")
+    update: put("/admin/groups/{id}", "group.update")
       .input(AccessGroupInput.extend({ id: t.uuid() }))
       .output(AccessGroup),
     /** Its members lose what only it allowed. Fails for the built-in group. */
-    remove: del("/admin/groups/{id}").input(IdInput).output(t.void()),
+    remove: del("/admin/groups/{id}", "group.delete")
+      .input(IdInput)
+      .output(t.void()),
     /**
      * The group names the provider sent for linked accounts at their last
      * sign-ins, most accounts first. Empty while no groups claim is set.
      */
-    providerGroups: get("/admin/provider-groups").output(
+    providerGroups: get("/admin/provider-groups", "group.read").output(
       t.array(ProviderGroup),
     ),
   },
@@ -193,10 +220,14 @@ export const adminContract = oc.tag("Admin").router({
    */
   invites: {
     /** The links that still work, newest first. */
-    list: get("/admin/invites").output(t.array(Invite)),
+    list: get("/admin/invites", "invite.read").output(t.array(Invite)),
     /** Fails while passkeys are off, since nobody could use the link. */
-    create: post("/admin/invites").input(InviteInput).output(CreatedInvite),
+    create: post("/admin/invites", "invite.create")
+      .input(InviteInput)
+      .output(CreatedInvite),
     /** Stop a link from working. */
-    revoke: del("/admin/invites/{id}").input(IdInput).output(t.void()),
+    revoke: del("/admin/invites/{id}", "invite.delete")
+      .input(IdInput)
+      .output(t.void()),
   },
 })
