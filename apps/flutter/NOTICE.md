@@ -23,6 +23,14 @@ The Android build uses the GPL-3.0 libmpv AAR from
 [edde746/mpv-build at `6dbda06021b128b7adc30161bf7870977e575135`](https://github.com/edde746/mpv-build/tree/6dbda06021b128b7adc30161bf7870977e575135).
 The AAR includes notices for its bundled libraries.
 
+# Home hero notice
+
+`lib/screens/home/home_hero.dart` adapts the crossfade-and-drift backdrop
+from Plezy's `lib/widgets/hero_carousel_backdrop.dart` at revision
+`54f135fe46f1aed4edc36a04241152fc9cac7bf5`, rewritten in Matinee's style.
+Copyright © edde746 and Plezy contributors. Licensed under GPL-3.0. The
+Matinee copy of the license is in [LICENSE](LICENSE).
+
 # iOS player notices
 
 The following files adapt code from the same Plezy revision. All paths
