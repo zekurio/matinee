@@ -128,6 +128,12 @@ class TvPanelRoute<T> extends PopupRoute<T> {
 }
 
 /// A panel's frame at the right edge: its heading and its rows, which
+/// Between the panel's title and its first row.
+const _listTop = 20.0;
+
+/// A [TvListHeading]'s height with the gap under it.
+const _headingRoom = 40.0;
+
 /// scroll to keep the focused one in view.
 class TvSidePanel extends StatefulWidget {
   const TvSidePanel({
@@ -238,29 +244,41 @@ class _TvSidePanelState extends State<TvSidePanel> {
                       )
                     else
                       Expanded(
-                        child: TvFollowFocus(
-                          controller: _scroll,
-                          rule: TvFollowFocus.clear(start: 20, end: 40),
-                          child: ListView(
+                        // A row scrolled half under the title fades out
+                        // over the list's own padding, rather than end in
+                        // a cut against it.
+                        child: TvFadeTop(
+                          fade: _listTop,
+                          child: TvFollowFocus(
                             controller: _scroll,
-                            scrollCacheExtent: const ScrollCacheExtent.pixels(
-                              4000,
+                            // Coming back up, room above the row for a
+                            // heading over it, so a group's first row shows
+                            // with its heading.
+                            rule: TvFollowFocus.clear(
+                              start: _listTop + _headingRoom,
+                              end: 40,
                             ),
-                            padding: const EdgeInsets.fromLTRB(
-                              TvPanels.listPadding,
-                              20,
-                              TvPanels.listPadding,
-                              Overscan.vertical + 16,
-                            ),
-                            children: [
-                              for (final (index, row) in rows.indexed)
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    top: index == 0 ? 0 : 4,
+                            child: ListView(
+                              controller: _scroll,
+                              scrollCacheExtent: const ScrollCacheExtent.pixels(
+                                4000,
+                              ),
+                              padding: const EdgeInsets.fromLTRB(
+                                TvPanels.listPadding,
+                                _listTop,
+                                TvPanels.listPadding,
+                                Overscan.vertical + 16,
+                              ),
+                              children: [
+                                for (final (index, row) in rows.indexed)
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      top: index == 0 ? 0 : 4,
+                                    ),
+                                    child: row,
                                   ),
-                                  child: row,
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
