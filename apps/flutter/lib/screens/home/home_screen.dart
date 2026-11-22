@@ -128,6 +128,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         builder: (context, constraints) {
           final box = constraints.biggest;
           final libs = libraries.value;
+          // The hero's dots sit on its last pixel; the first row's gap is
+          // then the spacing a row's heading normally has under the row
+          // above.
+          final heroShown = featured.value?.isNotEmpty ?? !featured.hasError;
           final sections = <Widget>[
             _top(box, featured),
             if (libs != null && libs.isEmpty)
@@ -155,7 +159,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           return ListView.separated(
             padding: const EdgeInsets.only(bottom: 24),
             itemCount: sections.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 24),
+            separatorBuilder: (context, index) =>
+                SizedBox(height: heroShown && index == 0 ? 12 : 24),
             itemBuilder: (context, index) => sections[index],
           );
         },

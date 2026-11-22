@@ -13,8 +13,8 @@ import '../../router.dart';
 /// Offline, where search can't work, the header says so in its place.
 ///
 /// [floating] puts it over Home's hero: no band of its own, its words and
-/// icons white from the dark half of the theme, with a soft shadow and a
-/// scrim so they read over the art. Other tabs keep the band.
+/// icons white from the dark half of the theme, with a soft shadow so they
+/// read over the hero's top shade. Other tabs keep the band.
 class ShellHeader extends ConsumerWidget {
   const ShellHeader({super.key, this.floating = false});
 
@@ -47,44 +47,17 @@ class ShellHeader extends ConsumerWidget {
     );
   }
 
-  /// The band over the hero: the status bar's room left to the page, then
-  /// the icons over a scrim, which also keeps them readable once Home's
-  /// content scrolls under them.
+  /// Over the hero: the status bar's room left to the page, then the row.
+  /// The hero's own top scrim shades the art under both, so the header adds
+  /// no band of its own.
   Widget _floating(BuildContext context, AppLocalizations words, bool offline) {
     final top = MediaQuery.paddingOf(context).top;
-    return Stack(
-      children: [
-        Positioned(
-          top: top,
-          left: 0,
-          right: 0,
-          height: height + 24,
-          child: const IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x99000000), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.only(top: top),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: height,
-                child: _row(context, words, offline, floating: true),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ],
+    return Padding(
+      padding: EdgeInsets.only(top: top),
+      child: SizedBox(
+        height: height,
+        child: _row(context, words, offline, floating: true),
+      ),
     );
   }
 

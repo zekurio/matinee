@@ -39,6 +39,19 @@ void main() {
       expect(HomeHeroLayout(width: 400, height: 800).logoHeight, 120);
     });
 
+    test('the art behind the status bar takes the inset into the hero', () {
+      // The hero includes the status bar, as Plezy's does, but not past the
+      // two-thirds cap.
+      expect(
+        HomeHeroLayout(width: 400, height: 900, topInset: 24).heroHeight,
+        524,
+      );
+      expect(
+        HomeHeroLayout(width: 400, height: 800, topInset: 24).heroHeight,
+        520,
+      );
+    });
+
     test('a phone on its side fills its page and shrinks the logo', () {
       final layout = HomeHeroLayout(width: 800, height: 400);
       expect(layout.tablet, isFalse);

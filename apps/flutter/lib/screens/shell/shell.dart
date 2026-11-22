@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,7 @@ import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/avatar.dart';
+import '../../router.dart';
 import '../home/home_data.dart';
 import 'header.dart';
 
@@ -49,6 +51,33 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
   /// takes its band back so its words read over whatever is under them.
   var _homeScrolled = false;
 
+  /// A page is open over the shell, so Home's status bar belongs to it.
+  var _homeCovered = false;
+  GoRouter? _router;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final router = GoRouter.maybeOf(context);
+    if (router == _router) return;
+    _router?.routerDelegate.removeListener(_routeMoved);
+    _router?.routeInformationProvider.removeListener(_routeMoved);
+    _router = router;
+    _router?.routerDelegate.addListener(_routeMoved);
+    _router?.routeInformationProvider.addListener(_routeMoved);
+    _syncCovered();
+  }
+
+  void _routeMoved() => _syncCovered();
+
+  void _syncCovered() {
+    final router = _router;
+    if (router == null) return;
+    final path = router.routeInformationProvider.value.uri.path;
+    final covered = path != Routes.home;
+    if (covered != _homeCovered) setState(() => _homeCovered = covered);
+  }
+
   @override
   void didUpdateWidget(HandsetShell old) {
     super.didUpdateWidget(old);
@@ -57,6 +86,8 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
 
   @override
   void dispose() {
+    _router?.routerDelegate.removeListener(_routeMoved);
+    _router?.routeInformationProvider.removeListener(_routeMoved);
     _selected.dispose();
     super.dispose();
   }
@@ -72,8 +103,6 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
       if (first != null) {
         ref.read(tabReselectProvider.notifier).tapped(first.path);
       }
-      // Home goes back to its top, where the header floats again.
-      if (branch == 0) setState(() => _homeScrolled = false);
     }
   }
 
@@ -130,10 +159,50 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
         home && !offline && (featured.value?.isNotEmpty ?? !featured.hasError);
     final page = MediaQuery.removePadding(
       context: context,
-      removeTop: true,
+      // A hero runs from the screen's top, under the status bar, and reads
+      // that inset for its height. Other tabs start below the header.
+      removeTop: !hero,
       removeBottom: true,
       child: widget.shell,
     );
+    Widget body = hero
+        ? Stack(
+            children: [
+              Positioned.fill(
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    // Only Home's own list moves the header; the rails
+                    // inside it and the hero's pages don't.
+                    if (notification.depth != 0) return false;
+                    final scrolled = notification.metrics.pixels > 0;
+                    if (scrolled != _homeScrolled) {
+                      setState(() => _homeScrolled = scrolled);
+                    }
+                    return false;
+                  },
+                  child: page,
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: ShellHeader(floating: !_homeScrolled),
+              ),
+            ],
+          )
+        : page;
+    // While Home is the page showing, its status bar sits over the hero's
+    // dark art (or, scrolled, over the header's band). A pushed page keeps
+    // the theme's usual bar.
+    if (hero) {
+      body = AnnotatedRegion<SystemUiOverlayStyle>(
+        value: _homeCovered
+            ? _themeStatusBarStyle(context)
+            : _heroStatusBarStyle(context),
+        child: body,
+      );
+    }
     return PopScope(
       canPop: home,
       onPopInvokedWithResult: (didPop, _) {
@@ -144,47 +213,32 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
         child: Column(
           children: [
             if (!hero) const ShellHeader(),
-            Expanded(
-              child: hero
-                  ? Stack(
-                      children: [
-                        // Home's own box starts under the status bar, so
-                        // its hero can run under the header.
-                        Positioned.fill(
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: (notification) {
-                              // Only Home's own list moves the header; the
-                              // rails inside it and the hero's pages don't.
-                              if (notification.depth != 0) return false;
-                              final scrolled = notification.metrics.pixels > 0;
-                              if (scrolled != _homeScrolled) {
-                                setState(() => _homeScrolled = scrolled);
-                              }
-                              return false;
-                            },
-                            child: SafeArea(
-                              top: true,
-                              bottom: false,
-                              left: false,
-                              right: false,
-                              child: page,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: ShellHeader(floating: !_homeScrolled),
-                        ),
-                      ],
-                    )
-                  : page,
-            ),
+            Expanded(child: body),
             TabBar(items: items, state: _selected, onSelected: _open),
           ],
         ),
       ),
+    );
+  }
+
+  /// Light icons over the hero, whose art is dark in either scheme; the
+  /// usual brightness once the header has its band back.
+  SystemUiOverlayStyle _heroStatusBarStyle(BuildContext context) {
+    final darkIcons = _homeScrolled && !MatineeTheme.of(context).isDark;
+    return SystemUiOverlayStyle(
+      statusBarColor: const Color(0x00000000),
+      statusBarIconBrightness: darkIcons ? Brightness.dark : Brightness.light,
+      statusBarBrightness: darkIcons ? Brightness.light : Brightness.dark,
+    );
+  }
+
+  /// The theme's usual status bar, for a page opened over Home.
+  SystemUiOverlayStyle _themeStatusBarStyle(BuildContext context) {
+    final dark = MatineeTheme.of(context).isDark;
+    return SystemUiOverlayStyle(
+      statusBarColor: const Color(0x00000000),
+      statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: dark ? Brightness.light : Brightness.dark,
     );
   }
 }

@@ -51,16 +51,25 @@ abstract final class HeroPaging {
 /// that; a phone fills it on its side and takes no more than 500 or two
 /// thirds of it upright, leaving the first rows in sight.
 final class HomeHeroLayout {
-  HomeHeroLayout({required this.width, required this.height});
+  HomeHeroLayout({
+    required this.width,
+    required this.height,
+    this.topInset = 0,
+  });
 
   final double width;
   final double height;
 
+  /// The status bar's height, which a hero at the top of Home draws under.
+  final double topInset;
+
   /// The logo's box, as a tablet's hero shows it.
   static const logoWidth = 400.0;
 
-  /// From the hero's bottom to the controls' bottom edge.
-  static const controlsBottom = 16.0;
+  /// From the hero's bottom to the controls' bottom edge. The dots sit on
+  /// the hero's last pixel, so the first row's gap is the row spacing
+  /// under them.
+  static const controlsBottom = 0.0;
 
   /// A tablet's shorter side is at least this; a phone on its side is
   /// shorter than it.
@@ -71,8 +80,8 @@ final class HomeHeroLayout {
   late final double heroHeight = tablet
       ? height * .75
       : width > height
-      ? math.min(500, height)
-      : math.min(500, height * .65);
+      ? math.min(500 + topInset, height)
+      : math.min(500 + topInset, height * .65);
 
   /// A landscape phone has little height: its logo shrinks so the words
   /// stay off the controls.

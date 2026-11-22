@@ -25,18 +25,17 @@ const _shadow = [
 
 /// The featured titles at the top of Home, as one full-bleed hero on a phone
 /// and a tablet: the title's art under its logo, facts, overview, and Play,
-/// with the slideshow's pause and dots under them. A wide screen puts the
-/// words low on the left; a phone centres them. A tap opens the title, and
-/// Play starts the file. The slides move on every eight seconds, always
-/// forward; not while a finger or pointer is on it, while focus is in it,
-/// while the pause button holds it, with animations off, with a screen reader
-/// on, or while Home is out of sight.
+/// with the slideshow's dots under them. A wide screen puts the words low on
+/// the left; a phone centres them. A tap opens the title, and Play starts the
+/// file. The slides move on every eight seconds, always forward; not while a
+/// finger or pointer is on it, while focus is in it, with animations off,
+/// with a screen reader on, or while Home is out of sight.
 ///
 /// It's dark in either scheme, as the web's: art under a white wash looks
-/// faded, and light text over a dark shade reads on any picture. In light it
-/// ends at the dark page colour in a straight edge, the light page below, as
-/// the banner did. [box] is Home's own, not the window, so the dots stay above
-/// the tab bar.
+/// faded, and light text over a dark shade reads on any picture. The art
+/// fades into the page's own background at the bottom, light or dark, and a
+/// dark shade behind the words keeps them white there. [box] is Home's own,
+/// not the window, so the dots stay above the tab bar.
 class HomeHero extends StatefulWidget {
   const HomeHero({super.key, required this.slides, required this.box});
 
@@ -55,7 +54,6 @@ class _HomeHeroState extends State<HomeHero> {
   bool _touched = false;
   bool _hovered = false;
   bool _focused = false;
-  bool _held = false;
   late int _page = HeroPaging.initialPage(_count);
 
   int get _count => widget.slides.length;
@@ -70,7 +68,6 @@ class _HomeHeroState extends State<HomeHero> {
   }
 
   bool get _paused =>
-      _held ||
       _touched ||
       _hovered ||
       _focused ||
@@ -79,14 +76,10 @@ class _HomeHeroState extends State<HomeHero> {
       MediaQuery.accessibleNavigationOf(context) ||
       !TickerMode.valuesOf(context).enabled;
 
-  void _hold({bool? touched, bool? hovered, bool? focused, bool? held}) {
-    final wasHeld = _held;
+  void _hold({bool? touched, bool? hovered, bool? focused}) {
     _touched = touched ?? _touched;
     _hovered = hovered ?? _hovered;
     _focused = focused ?? _focused;
-    _held = held ?? _held;
-    // The button shows what a press will do, so it has to follow the hold.
-    if (_held != wasHeld) setState(() {});
     _restart();
   }
 
@@ -130,14 +123,20 @@ class _HomeHeroState extends State<HomeHero> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final pageColors = MatineeTheme.of(context);
     final layout = HomeHeroLayout(
       width: widget.box.width,
       height: widget.box.height,
+      topInset: MediaQuery.paddingOf(context).top,
     );
-    return MatineeTheme.alwaysDark(context, _hero(l, layout));
+    return MatineeTheme.alwaysDark(context, _hero(l, layout, pageColors));
   }
 
-  Widget _hero(AppLocalizations l, HomeHeroLayout layout) {
+  Widget _hero(
+    AppLocalizations l,
+    HomeHeroLayout layout,
+    KitColors pageColors,
+  ) {
     return Semantics(
       label: l.tvHomeFeatured,
       container: true,
@@ -158,7 +157,7 @@ class _HomeHeroState extends State<HomeHero> {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Positioned.fill(child: _backdrop(layout)),
+                  Positioned.fill(child: _backdrop(layout, pageColors)),
                   Positioned.fill(
                     child: NotificationListener<ScrollEndNotification>(
                       onNotification: (_) {
@@ -192,7 +191,7 @@ class _HomeHeroState extends State<HomeHero> {
                     left: 0,
                     right: 0,
                     bottom: HomeHeroLayout.controlsBottom,
-                    child: _controls(l),
+                    child: _controls(l, pageColors),
                   ),
                 ],
               ),
@@ -205,33 +204,31 @@ class _HomeHeroState extends State<HomeHero> {
 
   /// The art crossfading between slides while they move, and the shades that
   /// carry the words and the header.
-  Widget _backdrop(HomeHeroLayout layout) => _HeroBackdrop(
-    controller: _pager,
-    page: _page,
-    count: _count,
-    slides: widget.slides,
-    alignsLeft: layout.alignsLeft,
-  );
+  Widget _backdrop(HomeHeroLayout layout, KitColors pageColors) =>
+      _HeroBackdrop(
+        controller: _pager,
+        page: _page,
+        count: _count,
+        slides: widget.slides,
+        alignsLeft: layout.alignsLeft,
+        pageBackground: pageColors.background,
+      );
 
-  /// The pause and the dots, centred under the words.
-  Widget _controls(AppLocalizations l) {
+  /// The dots, centred under the words. They take the page's colour, since
+  /// the art has faded into the page behind them.
+  Widget _controls(AppLocalizations l, KitColors pageColors) {
     if (_count < 2) return const SizedBox.shrink();
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        MatineeButton(
-          look: ButtonLook.ghost,
-          size: ButtonSize.icon,
-          leading: _held ? Lucide.play : Lucide.pause,
-          label: _held ? l.playerPlay : l.playerPause,
-          onPressed: () => _hold(held: !_held),
-        ),
-        const SizedBox(width: 8),
-        PageDots(
-          count: _count,
-          current: _current,
-          onSelected: (index) => _go(HeroPaging.page(index, _page, _count)),
-          labelForPage: (index) => l.homeFeaturedShowSlide(index + 1),
+        MatineeTheme.wrap(
+          pageColors,
+          PageDots(
+            count: _count,
+            current: _current,
+            onSelected: (index) => _go(HeroPaging.page(index, _page, _count)),
+            labelForPage: (index) => l.homeFeaturedShowSlide(index + 1),
+          ),
         ),
       ],
     );
@@ -250,6 +247,7 @@ class _HeroBackdrop extends StatelessWidget {
     required this.count,
     required this.slides,
     required this.alignsLeft,
+    required this.pageBackground,
   });
 
   /// Share of the width a backdrop travels on its way in or out.
@@ -263,6 +261,9 @@ class _HeroBackdrop extends StatelessWidget {
   final int count;
   final List<FeaturedTitle> slides;
   final bool alignsLeft;
+
+  /// The page's colour behind the hero, which the art fades into.
+  final Color pageBackground;
 
   /// Drift for a viewport of [aspectRatio], as a share of its width. Art
   /// that already overflows a narrower viewport spends that spare width; a
@@ -303,10 +304,8 @@ class _HeroBackdrop extends StatelessWidget {
                 drift: drift,
                 child: _HeroArt(slide: slides[HeroPaging.slide(index, count)]),
               ),
-            // The shades stay over every slide, so the words and the header
-            // read on whichever picture is showing. The art fades into the
-            // page's own dark background at the bottom, where the next row
-            // starts on solid colour.
+            // The art fades into the page's own background at the bottom,
+            // so the next row starts on solid colour without an edge.
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -314,32 +313,23 @@ class _HeroBackdrop extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   stops: const [.5, .85, .94, 1],
                   colors: [
-                    background.withValues(alpha: 0),
-                    background.withValues(alpha: .9),
-                    background,
-                    background,
+                    pageBackground.withValues(alpha: 0),
+                    pageBackground.withValues(alpha: .9),
+                    pageBackground,
+                    pageBackground,
                   ],
                 ),
               ),
             ),
-            if (alignsLeft)
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    stops: const [0, .6],
-                    colors: [
-                      background.withValues(alpha: .8),
-                      background.withValues(alpha: 0),
-                    ],
-                  ),
-                ),
-              ),
+            // The words stay light over a soft dark shade from their side,
+            // ending before the faded bottom so the art meets the page.
+            _TextShade(alignsLeft: alignsLeft, dark: background),
+            // The status bar and the header row, no more: the hero art
+            // should not read as a dark band of its own.
             Align(
               alignment: Alignment.topCenter,
               child: SizedBox(
-                height: 120,
+                height: 88,
                 width: double.infinity,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -358,6 +348,48 @@ class _HeroBackdrop extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// A dark shade behind the words only, from the side they lead on, faded
+/// out before the bottom so the art can meet the page there. White words
+/// and the Play pill sit over it; the page-coloured dots sit below it.
+class _TextShade extends StatelessWidget {
+  const _TextShade({required this.alignsLeft, required this.dark});
+
+  final bool alignsLeft;
+  final Color dark;
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (rect) => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        stops: [0, .22, .5, .9, .96, 1],
+        colors: [
+          Color(0x00FFFFFF),
+          Color(0xFFFFFFFF),
+          Color(0xFFFFFFFF),
+          Color(0xFFFFFFFF),
+          Color(0x00FFFFFF),
+          Color(0x00FFFFFF),
+        ],
+      ).createShader(rect),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: alignsLeft ? Alignment.centerLeft : Alignment.bottomCenter,
+            end: alignsLeft ? Alignment.centerRight : Alignment.topCenter,
+            stops: alignsLeft ? const [0, .65] : const [0, 1],
+            colors: alignsLeft
+                ? [dark.withValues(alpha: .82), dark.withValues(alpha: 0)]
+                : [dark.withValues(alpha: .62), dark.withValues(alpha: 0)],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -713,7 +745,11 @@ class HomeHeroSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final layout = HomeHeroLayout(width: box.width, height: box.height);
+    final layout = HomeHeroLayout(
+      width: box.width,
+      height: box.height,
+      topInset: MediaQuery.paddingOf(context).top,
+    );
     // Dark as the hero it stands for, so light doesn't flash to dark.
     return MatineeTheme.alwaysDark(context, _skeleton(context, layout));
   }
