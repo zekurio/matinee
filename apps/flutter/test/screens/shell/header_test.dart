@@ -4,12 +4,15 @@ import 'package:flutter/material.dart' show Material, MaterialApp;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/l10n/app_localizations.dart';
+import 'package:matinee/media/avatar.dart';
+import 'package:matinee/router.dart';
 import 'package:matinee/screens/library/library_screen.dart';
 import 'package:matinee/screens/library/list_choices.dart';
 import 'package:matinee/screens/library/title_grid.dart';
@@ -43,7 +46,10 @@ Future<void> _pump(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [authStateProvider.overrideWithValue(auth)],
+      overrides: [
+        authStateProvider.overrideWithValue(auth),
+        apiProvider.overrideWithValue(null),
+      ],
       child: MaterialApp(
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -113,13 +119,14 @@ Future<ProviderContainer> _pumpLibrary(
   String kind, {
   double textScale = 1,
   Size size = const Size(400, 800),
+  AuthState auth = const SignedIn('https://media.test', _user),
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final container = ProviderContainer(
     overrides: [
-      authStateProvider.overrideWithValue(const NoServer()),
+      authStateProvider.overrideWithValue(auth),
       apiProvider.overrideWithValue(_libraryApi()),
     ],
   );
@@ -170,19 +177,32 @@ Finder _offlineMark(String label) => find.byWidgetPredicate(
 );
 
 void main() {
-  testWidgets('Home keeps the logo, settings, and search', (tester) async {
-    await _pump(tester, 0);
+  testWidgets('Home keeps the logo, settings, and search, then the avatar', (
+    tester,
+  ) async {
+    await _pump(tester, 0, auth: const SignedIn('https://media.test', _user));
     expect(find.byType(Logo), findsOneWidget);
     expect(_button('Settings'), findsOneWidget);
     expect(_button('Search'), findsOneWidget);
+    expect(_button('Profile'), findsOneWidget);
     expect(find.byType(TabHeader), findsNothing);
+
+    final search = tester.getCenter(_button('Search')).dx;
+    final avatar = tester.getCenter(_button('Profile'));
+    expect(search, lessThan(avatar.dx));
+    expect(tester.getSize(_button('Profile')), const Size(44, 44));
+    expect(tester.getSize(find.byType(Avatar)), const Size(30, 30));
   });
 
   testWidgets('Shows and Movies leave the header to the library tab', (
     tester,
   ) async {
     for (final index in [1, 2]) {
-      await _pump(tester, index);
+      await _pump(
+        tester,
+        index,
+        auth: const SignedIn('https://media.test', _user),
+      );
       expect(find.byType(TabHeader), findsNothing, reason: 'tab $index');
       expect(find.byType(PressIndication), findsNothing, reason: 'tab $index');
       expect(find.byType(Logo), findsNothing, reason: 'tab $index');
@@ -198,16 +218,20 @@ void main() {
     expect(_button('Filters'), findsOneWidget);
     expect(_buttonStarting('Sort: '), findsOneWidget);
     expect(_button('Search'), findsOneWidget);
+    expect(_button('Profile'), findsOneWidget);
     expect(find.byType(ListBarButton), findsNothing);
     expect(find.text('0 titles'), findsOneWidget);
 
-    // Filter, then Sort, then Search at the edge, all above the count line.
+    // Filter, then Sort, Search, and the avatar at the edge, all above the
+    // count line.
     final filter = tester.getCenter(_button('Filters')).dx;
     final sort = tester.getCenter(_buttonStarting('Sort: ')).dx;
     final search = tester.getCenter(_button('Search')).dx;
+    final avatar = tester.getCenter(_button('Profile')).dx;
     expect(filter, lessThan(sort));
     expect(sort, lessThan(search));
-    expect(search, lessThan(400));
+    expect(search, lessThan(avatar));
+    expect(avatar, lessThan(400));
     expect(
       tester.getCenter(_button('Search')).dy,
       lessThan(tester.getTopLeft(find.text('0 titles')).dy),
@@ -228,19 +252,18 @@ void main() {
     expect(_button('Filters, 2 on'), findsOneWidget);
   });
 
-  testWidgets(
-    'the library header keeps its three actions at the largest text',
-    (tester) async {
-      await _pumpLibrary(tester, TitleKind.show, textScale: 3);
-      for (final label in ['Filters', 'Search']) {
-        expect(tester.getSize(_button(label)), const Size(44, 44));
-      }
-      expect(tester.getSize(_buttonStarting('Sort: ')), const Size(44, 44));
-      expect(tester.getSize(find.byType(TabHeader)).height, ShellHeader.height);
-      expect(find.text('0 titles'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('the library header keeps its four actions at the largest text', (
+    tester,
+  ) async {
+    await _pumpLibrary(tester, TitleKind.show, textScale: 3);
+    for (final label in ['Filters', 'Search', 'Profile']) {
+      expect(tester.getSize(_button(label)), const Size(44, 44));
+    }
+    expect(tester.getSize(_buttonStarting('Sort: ')), const Size(44, 44));
+    expect(tester.getSize(find.byType(TabHeader)).height, ShellHeader.height);
+    expect(find.text('0 titles'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   for (final (name, size) in const [
     ('a phone', Size(400, 800)),
@@ -252,19 +275,19 @@ void main() {
     ) async {
       await _pumpLibrary(tester, TitleKind.show, textScale: 3, size: size);
       expect(tester.getSize(find.byType(TabHeader)).height, ShellHeader.height);
-      for (final label in ['Filters', 'Search']) {
+      for (final label in ['Filters', 'Search', 'Profile']) {
         expect(tester.getSize(_button(label)), const Size(44, 44));
       }
       expect(tester.getSize(_buttonStarting('Sort: ')), const Size(44, 44));
       expect(
-        tester.getRect(_button('Search')).right,
+        tester.getRect(_button('Profile')).right,
         lessThanOrEqualTo(size.width),
       );
       expect(tester.takeException(), isNull);
     });
   }
 
-  testWidgets('Downloads has no action, and says offline when it is', (
+  testWidgets('Downloads ends with the avatar and says offline when it is', (
     tester,
   ) async {
     await _pump(tester, 3);
@@ -272,18 +295,67 @@ void main() {
     expect(find.byType(PressIndication), findsNothing);
     expect(_offlineMark('Offline'), findsNothing);
 
+    await _pump(tester, 3, auth: const SignedIn('https://media.test', _user));
+    expect(find.text('Downloads'), findsOneWidget);
+    expect(_button('Profile'), findsOneWidget);
+    expect(_button('Settings'), findsNothing);
+    expect(
+      tester.getCenter(_button('Profile')).dx,
+      greaterThan(tester.getCenter(find.text('Downloads')).dx),
+    );
+
     await _pump(tester, 3, auth: const Offline('https://media.test', _user));
     expect(find.text('Downloads'), findsOneWidget);
-    expect(find.byType(PressIndication), findsNothing);
+    expect(_button('Profile'), findsOneWidget);
     expect(_offlineMark('Offline'), findsOneWidget);
   });
 
-  testWidgets('Profile offers settings only', (tester) async {
-    await _pump(tester, 4);
-    expect(find.text('Profile'), findsOneWidget);
-    expect(_button('Settings'), findsOneWidget);
-    expect(_button('Search'), findsNothing);
-    expect(find.byType(Logo), findsNothing);
+  testWidgets('the avatar opens the profile over the tab', (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final router = GoRouter(
+      initialLocation: Routes.home,
+      routes: [
+        GoRoute(
+          path: Routes.home,
+          builder: (context, state) => Material(
+            child: MatineeTheme.wrap(
+              matineeDark,
+              const Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(width: 400, child: ShellTopBar(index: 0)),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: Routes.profile,
+          builder: (context, state) => const Text('the profile'),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authStateProvider.overrideWithValue(
+            const SignedIn('https://media.test', _user),
+          ),
+          apiProvider.overrideWithValue(null),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.tap(_button('Profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('the profile'), findsOneWidget);
+    expect(router.state.uri.path, Routes.profile);
   });
 
   testWidgets('tab titles use the wordmark-sized heading', (tester) async {
@@ -305,7 +377,7 @@ void main() {
   });
 
   testWidgets('every header is the same height', (tester) async {
-    for (final index in [0, 3, 4]) {
+    for (final index in [0, 3]) {
       await _pump(tester, index);
       expect(
         tester.getSize(find.byType(ShellTopBar)).height,
