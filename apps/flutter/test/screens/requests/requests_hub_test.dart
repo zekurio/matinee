@@ -62,7 +62,7 @@ void main() {
     return container;
   }
 
-  group("a person's Cancel from Explore's Requests row", () {
+  group("a person's Cancel from Explore's Recent requests row", () {
     // The bug it pins: a cancel sent at once, or sent after Undo, which
     // the server can't take back.
     test('Undo sends nothing and brings the card back', () async {

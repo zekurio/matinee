@@ -1,251 +1,99 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
-import '../../core/link_opener.dart';
 import '../../core/permissions.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
-import '../../l10n/server_text.dart';
-import '../../media/artwork.dart';
-import '../../media/avatar.dart';
-import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
-import '../../router.dart';
-import 'catalog_cards.dart';
-import 'discover.dart' show QueueList;
 import 'follow_window.dart';
-import 'request_sheet.dart';
+import 'request_cards.dart';
 import 'request_words.dart';
 import 'requests_data.dart';
 import 'requests_hub.dart';
 
-/// The requests page. Without a list, what the viewer asked for, newest first,
-/// "In progress" or "All", with why a declined title isn't coming. With one of
-/// [QueueList]'s, for an admin, the requests to answer and follow: Waiting,
-/// Needs attention, On the way, and Done, live from the stream the whole app
-/// follows, for whoever runs the queue: reads everyone's requests and answers
-/// them. Anyone else gets their own requests.
+/// The requests pages, one list each with the state on every card rather
+/// than tabs of states. With [queue], for whoever runs the queue: everyone's
+/// requests, live from the stream the whole app follows, waiting first,
+/// then needs attention, on the way, and done, a page of Done at a time.
+/// Anyone else, and the queue's runner from Home's row, gets their own
+/// requests, what's still going first.
 class RequestsScreen extends ConsumerWidget {
-  const RequestsScreen({super.key, this.list});
+  const RequestsScreen({super.key, this.queue = false});
 
-  final String? list;
+  final bool queue;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final list = this.list;
-    if (ref.watch(runsQueueProvider) && list != null) {
-      return _QueuePage(
-        start: QueueList.all.contains(list) ? list : QueueList.waiting,
-      );
-    }
-    return const _MinePage();
-  }
+  Widget build(BuildContext context, WidgetRef ref) =>
+      queue && ref.watch(runsQueueProvider)
+      ? const _QueuePage()
+      : const _MinePage();
 }
 
 /// How far from the end of what's loaded the next page is asked for.
 const _nearEnd = 8;
 
-class _MinePage extends ConsumerStatefulWidget {
-  const _MinePage();
+/// The gap between cards, across and down.
+const _gap = 16.0;
+
+/// Cards in rows: one column on a phone, two on a tablet upright, three
+/// on its side, each row as tall as its tallest card, so the actions line
+/// up along the foot.
+class _CardRows extends StatelessWidget {
+  const _CardRows({required this.itemCount, required this.itemBuilder});
+
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
 
   @override
-  ConsumerState<_MinePage> createState() => _MinePageState();
-}
-
-class _MinePageState extends ConsumerState<_MinePage> {
-  String _filter = MineFilter.inProgress;
-
-  /// The cards built now, which pick the ones the live stream follows:
-  /// a long list holds more than one stream takes.
-  final _shown = FollowWindow();
-
-  @override
-  void dispose() {
-    _shown.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final provider = myRequestsProvider(_filter);
-    final pages = ref.watch(provider);
-    final items = pages.items;
-    final error = pages.error;
-    final Widget body;
-    if (error != null && items.isEmpty) {
-      body = Center(
-        child: SingleChildScrollView(
-          child: FailureState(
-            title: l.askedLoadFailed,
-            error: error,
-            onRetry: () => ref.read(provider.notifier).retry(),
-          ),
-        ),
-      );
-    } else if (!pages.loaded) {
-      body = Center(child: LoadingState(label: l.loadingInProgress));
-    } else if (items.isEmpty) {
-      body = Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-          child: EmptyState(
-            icon: Lucide.clock,
-            title: _filter == MineFilter.inProgress
-                ? l.webAskMineEmptyInProgress
-                : l.webAskMineEmpty,
-            message: _filter == MineFilter.inProgress
-                ? null
-                : l.webAskMineEmptyHint,
-          ),
-        ),
-      );
-    } else {
-      body = ListenableBuilder(
-        listenable: _shown,
-        builder: (context, child) => FollowTitles(
-          titles: FollowedTitles([
-            for (final item in _shown.slice(items))
-              CatalogInput(ref: item.title.ref, libraryId: item.library.id),
-          ]),
-          child: child!,
-        ),
-        child: CustomScrollView(
-          slivers: [
-            CardGrid(
-              columns: posterColumns,
-              aspectRatio: CardMetrics.poster,
-              itemCount: items.length,
-              // Why a title was declined goes under its card, so a row
-              // with one is taller than the rest.
-              fitRows: true,
-              itemBuilder: (context, index) {
-                if (index >= items.length - _nearEnd && !pages.done) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) ref.read(provider.notifier).more();
-                  });
-                }
-                final item = items[index];
-                return FollowedCard(
-                  window: _shown,
-                  index: index,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      NamedKinds(child: AskedCard(item: item)),
-                      _DeclinedNote(item: item),
-                    ],
-                  ),
-                );
-              },
-            ),
-            if (!pages.done)
-              SliverToBoxAdapter(
-                child: _More(
-                  error: error,
-                  onRetry: () => ref.read(provider.notifier).retry(),
-                ),
-              ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.paddingOf(context).bottom + 32,
+  Widget build(BuildContext context) => SliverPadding(
+    padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
+    sliver: SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final count = math.max(1, wideColumns(constraints.crossAxisExtent));
+        return SliverList.builder(
+          itemCount: (itemCount + count - 1) ~/ count,
+          itemBuilder: (context, row) => Padding(
+            padding: EdgeInsets.only(top: row == 0 ? 0 : _gap),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: _gap,
+                children: [
+                  for (var column = 0; column < count; column++)
+                    Expanded(
+                      child: row * count + column < itemCount
+                          ? itemBuilder(context, row * count + column)
+                          : const SizedBox.shrink(),
+                    ),
+                ],
               ),
             ),
-          ],
-        ),
-      );
-    }
-    return PageFrame(
-      title: l.webAskMineTitle,
-      onBack: () => context.pop(),
-      backLabel: l.commonBack,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(
-              CardMetrics.gutter,
-              0,
-              CardMetrics.gutter,
-              12,
-            ),
-            child: Row(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: l.webAskMineInProgress,
-                  selected: _filter == MineFilter.inProgress,
-                  onPressed: () =>
-                      setState(() => _filter = MineFilter.inProgress),
-                ),
-                ChoiceChip(
-                  label: l.webAskMineAll,
-                  selected: _filter == MineFilter.all,
-                  onPressed: () => setState(() => _filter = MineFilter.all),
-                ),
-              ],
-            ),
           ),
-          Expanded(child: body),
-        ],
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
 }
 
-/// Why a declined title isn't coming, under its card, and under that the note
-/// an admin left, each with two lines of its own.
-class _DeclinedNote extends ConsumerWidget {
-  const _DeclinedNote({required this.item});
+/// A whole-page message in the middle of the room.
+class _Middle extends StatelessWidget {
+  const _Middle({required this.child});
 
-  final RequestItem item;
+  final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
-    final availability = ref.watch(
-      requestsProvider.select(
-        (state) => state.availability(item.title.ref, item.availability),
-      ),
-    );
-    final reason = availability.reason;
-    if (reason == null || availability.state != AvailabilityState.unavailable) {
-      return const SizedBox.shrink();
-    }
-    final note = reason.note?.trim();
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            declineText(reason, l),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: KitText.xs.style(color: colors.mutedForeground),
-          ),
-          if (note != null && note.isNotEmpty)
-            Text(
-              note,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: KitText.xs
-                  .style(color: colors.foreground.withValues(alpha: .7))
-                  .copyWith(fontStyle: FontStyle.italic),
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+      child: child,
+    ),
+  );
 }
 
 /// The end of a list while more of it comes: a spinner, or why the next
@@ -274,92 +122,52 @@ class _More extends StatelessWidget {
   }
 }
 
-String _listLabel(String list, AppLocalizations l) => switch (list) {
-  QueueList.waiting => l.webRequestsListWaiting,
-  QueueList.needsAttention => l.webRequestsListNeedsAttention,
-  QueueList.onTheWay => l.webRequestsListOnTheWay,
-  _ => l.webRequestsListDone,
-};
-
-String _emptyLabel(String list, AppLocalizations l) => switch (list) {
-  QueueList.waiting => l.webRequestsEmptyWaiting,
-  QueueList.needsAttention => l.webRequestsEmptyNeedsAttention,
-  QueueList.onTheWay => l.webRequestsEmptyOnTheWay,
-  _ => l.webRequestsEmptyDone,
-};
-
-class _QueuePage extends ConsumerStatefulWidget {
-  const _QueuePage({required this.start});
-
-  final String start;
-
-  @override
-  ConsumerState<_QueuePage> createState() => _QueuePageState();
+/// Asks for [more] after this frame when [index] is near the end of
+/// [count], as a lazy list builds its last cards, or at once for an empty
+/// list that has more.
+void _askNearEnd(
+  BuildContext context,
+  int index,
+  int count,
+  VoidCallback more,
+) {
+  if (index < count - _nearEnd) return;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (context.mounted) more();
+  });
 }
 
-class _QueuePageState extends ConsumerState<_QueuePage> {
-  late String _list = widget.start;
+/// Room under the last card for the system's bar.
+Widget _bottom(BuildContext context) => SliverToBoxAdapter(
+  child: SizedBox(height: MediaQuery.paddingOf(context).bottom + 32),
+);
+
+// The overview.
+
+class _QueuePage extends ConsumerWidget {
+  const _QueuePage();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final queue = ref.watch(requestsProvider.select((state) => state.queue));
+    final failed = ref.watch(
+      requestsProvider.select((state) => state.queueFailed),
+    );
     final held = ref.watch(requestsProvider.select((state) => state.held));
     final Widget body;
     if (queue == null) {
-      body = Center(child: LoadingState(label: l.loadingInProgress));
+      body = failed
+          ? _Middle(
+              child: FailureState(
+                title: l.requestsLoadFailed,
+                error: const _QueueDown(),
+                onRetry: () => ref.read(requestsProvider.notifier).retryQueue(),
+              ),
+            )
+          : Center(child: LoadingState(label: l.loadingInProgress));
     } else {
-      final waiting = [
-        for (final item in queue.waiting)
-          if (!held.contains(item.id)) item,
-      ];
-      final counts = {
-        QueueList.waiting: waiting.length,
-        QueueList.needsAttention: queue.counts.needsAttention,
-        QueueList.onTheWay: queue.counts.onTheWay,
-      };
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(
-              CardMetrics.gutter,
-              0,
-              CardMetrics.gutter,
-              8,
-            ),
-            child: Row(
-              spacing: 8,
-              children: [
-                for (final list in QueueList.all)
-                  ChoiceChip(
-                    label: _listLabel(list, l),
-                    // Done only grows, so it says no count.
-                    count: switch (counts[list]) {
-                      final count? when count > 0 => formatCount(count, l),
-                      _ => null,
-                    },
-                    selected: _list == list,
-                    onPressed: () => setState(() => _list = list),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _list == QueueList.done
-                ? const _DoneList()
-                : _QueueRows(
-                    list: _list,
-                    rows: switch (_list) {
-                      QueueList.waiting => waiting,
-                      QueueList.needsAttention => queue.needsAttention,
-                      _ => queue.onTheWay,
-                    },
-                  ),
-          ),
-        ],
-      );
+      body = _QueueList(queue: queue, held: held);
     }
     return PageFrame(
       title: l.webRequestsTitle,
@@ -370,607 +178,255 @@ class _QueuePageState extends ConsumerState<_QueuePage> {
   }
 }
 
-/// A list's rows, or what it says when there are none.
-class _QueueRows extends ConsumerWidget {
-  const _QueueRows({
-    required this.list,
-    required this.rows,
-    this.footer,
-    this.onAnswered,
-  });
+/// Why the overview has no queue, for [FailureState]'s words.
+final class _QueueDown implements Exception {
+  const _QueueDown();
+}
 
-  final String list;
-  final List<AdminRequestItem> rows;
-  final Widget? footer;
+/// The queue as one list: a line of what's in it, Add all while more than
+/// one waits, then the cards in the server's order of its lists, Done
+/// read on past what the live queue holds as its end shows.
+class _QueueList extends ConsumerWidget {
+  const _QueueList({required this.queue, required this.held});
 
-  /// An answer to a row was given, as an answered row leaving Done.
-  final ValueChanged<AdminRequestItem>? onAnswered;
+  final RequestQueue queue;
+  final Set<String> held;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    if (rows.isEmpty) {
-      return Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-          child: EmptyState(icon: Lucide.inbox, title: _emptyLabel(list, l)),
+    // The live queue holds the newest of Done; the rest comes a page at a
+    // time, only when there is more.
+    final liveIsAll = queue.nextCursor == null;
+    final pages = liveIsAll ? null : ref.watch(doneRequestsProvider);
+    final done = doneInOrder(
+      queue.done,
+      liveIsAll: liveIsAll,
+      paged: pages?.items ?? const [],
+      pagedDone: pages?.done ?? true,
+    );
+    final entries = queueInOrder(queue, held: held, done: done.items);
+    final waiting = [
+      for (final entry in entries)
+        if (entry.state == RequestState.waiting) entry.item,
+    ];
+    int left(List<AdminRequestItem> list) =>
+        list.where((item) => !held.contains(item.id)).length;
+    final counts = [
+      if (waiting.isNotEmpty) l.requestsCountWaiting(waiting.length),
+      if (left(queue.needsAttention) case final n when n > 0)
+        l.requestsCountNeedsAttention(n),
+      if (left(queue.onTheWay) case final n when n > 0)
+        l.requestsCountOnTheWay(n),
+      if (queue.counts.done > 0) l.requestsCountDone(queue.counts.done),
+    ];
+    final notifier = pages == null
+        ? null
+        : ref.read(doneRequestsProvider.notifier);
+    // Nothing to build that would ask for Done's next page.
+    if (entries.isEmpty && done.more && notifier != null) {
+      _askNearEnd(context, 0, 0, notifier.more);
+    }
+    if (entries.isEmpty && !done.more) {
+      return _Middle(
+        child: EmptyState(
+          icon: Lucide.inbox,
+          title: l.requestsOverviewEmpty,
+          message: l.requestsOverviewEmptyHint,
         ),
       );
     }
-    final all = list == QueueList.waiting && rows.length > 1;
-    final footer = this.footer;
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        CardMetrics.gutter,
-        0,
-        CardMetrics.gutter,
-        24 + MediaQuery.paddingOf(context).bottom,
-      ),
-      children: [
-        if (all)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: MatineeButton(
-              look: ButtonLook.outline,
-              leading: Lucide.listChecks,
-              onPressed: () => unawaited(
-                ref.read(requestsProvider.notifier).answerAll(l, rows),
-              ),
-              child: Text(l.webRequestsAddAll(rows.length)),
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            CardMetrics.gutter,
+            0,
+            CardMetrics.gutter,
+            16,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: Row(
+              spacing: 12,
+              children: [
+                Expanded(
+                  child: Text(
+                    counts.join(' · '),
+                    style: KitText.sm.style(color: colors.mutedForeground),
+                  ),
+                ),
+                if (waiting.length > 1)
+                  MatineeButton(
+                    look: ButtonLook.outline,
+                    size: ButtonSize.sm,
+                    leading: Lucide.listChecks,
+                    onPressed: () => unawaited(
+                      ref.read(requestsProvider.notifier).answerAll(l, waiting),
+                    ),
+                    child: Text(l.webRequestsAddAll(waiting.length)),
+                  ),
+              ],
             ),
           ),
-        for (final (index, item) in rows.indexed) ...[
-          if (index > 0) Container(height: 1, color: colors.border),
-          QueueRow(
-            key: ValueKey(item.id),
-            item: item,
-            list: list,
-            onMenu: () => unawaited(
-              _showRowMenu(context, ref, item, list, onAnswered: onAnswered),
-            ),
+        ),
+        _CardRows(
+          itemCount: entries.length,
+          itemBuilder: (context, index) {
+            if (done.more && notifier != null) {
+              _askNearEnd(context, index, entries.length, notifier.more);
+            }
+            final entry = entries[index];
+            return QueueCard(
+              key: ValueKey(entry.item.id),
+              item: entry.item,
+              state: entry.state,
+              // Done's pages keep what they read, so an answered request
+              // leaves them here.
+              onAnswered: notifier == null
+                  ? null
+                  : (item) => notifier.drop(item.id),
+            );
+          },
+        ),
+        if (done.more && notifier != null)
+          SliverToBoxAdapter(
+            child: _More(error: pages?.error, onRetry: notifier.retry),
           ),
-        ],
-        ?footer,
+        _bottom(context),
       ],
     );
   }
 }
 
-/// Done, a page at a time from its own call, the next as its end shows.
-class _DoneList extends ConsumerWidget {
-  const _DoneList();
+// A person's own requests.
+
+class _MinePage extends ConsumerStatefulWidget {
+  const _MinePage();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MinePage> createState() => _MinePageState();
+}
+
+class _MinePageState extends ConsumerState<_MinePage> {
+  /// The cards built now, which pick the ones the live stream follows:
+  /// a long list holds more than one stream takes.
+  final _shown = FollowWindow();
+
+  /// The pages last loaded, shown while an ask, a cancel, or an answer
+  /// reads them again, so the list doesn't blink to a spinner.
+  CursorPages<RequestItem>? _lastGoing;
+  CursorPages<RequestItem>? _lastAll;
+
+  @override
+  void dispose() {
+    _shown.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final pages = ref.watch(doneRequestsProvider);
-    final notifier = ref.read(doneRequestsProvider.notifier);
-    final error = pages.error;
-    if (!pages.loaded) {
-      if (error != null) {
-        return Center(
-          child: SingleChildScrollView(
-            child: FailureState(
-              title: l.requestsLoadFailed,
-              error: error,
-              onRetry: notifier.retry,
-            ),
+    final goingProvider = myRequestsProvider(MineFilter.inProgress);
+    final allProvider = myRequestsProvider(MineFilter.all);
+    var going = ref.watch(goingProvider);
+    var all = ref.watch(allProvider);
+    if (going.loaded) {
+      _lastGoing = going;
+    } else if (going.error == null) {
+      going = _lastGoing ?? going;
+    }
+    if (all.loaded) {
+      _lastAll = all;
+    } else if (all.error == null) {
+      all = _lastAll ?? all;
+    }
+    final held = ref.watch(requestsProvider.select((state) => state.held));
+    final Widget body;
+    if (!going.loaded) {
+      final error = going.error;
+      body = error != null
+          ? _Middle(
+              child: FailureState(
+                title: l.askedLoadFailed,
+                error: error,
+                onRetry: () => ref.read(goingProvider.notifier).retry(),
+              ),
+            )
+          : Center(child: LoadingState(label: l.loadingInProgress));
+    } else {
+      // What's still going, from the server's list of those in progress,
+      // which also has what settled lately; then everything else, newest
+      // first, from the whole list.
+      final still = [
+        for (final item in going.items)
+          if (!held.contains(item.id) &&
+              !(ownState(item.season?.asTitle() ?? item.availability)
+                      ?.finished ??
+                  false))
+            item,
+      ];
+      final first = {for (final item in still) item.id};
+      final items = [
+        ...still,
+        if (going.done)
+          for (final item in all.items)
+            if (!held.contains(item.id) && !first.contains(item.id)) item,
+      ];
+      final (pages, notifier) = going.done
+          ? (all, ref.read(allProvider.notifier))
+          : (going, ref.read(goingProvider.notifier));
+      final more = !pages.done;
+      if (items.isEmpty && !more) {
+        body = _Middle(
+          child: EmptyState(
+            icon: Lucide.clock,
+            title: l.webAskMineEmpty,
+            message: l.webAskMineEmptyHint,
+          ),
+        );
+      } else {
+        body = ListenableBuilder(
+          listenable: _shown,
+          builder: (context, child) => FollowTitles(
+            titles: FollowedTitles([
+              for (final item in _shown.slice(items))
+                CatalogInput(ref: item.title.ref, libraryId: item.library.id),
+            ]),
+            child: child!,
+          ),
+          child: CustomScrollView(
+            slivers: [
+              _CardRows(
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  if (more) {
+                    _askNearEnd(context, index, items.length, notifier.more);
+                  }
+                  final item = items[index];
+                  return FollowedCard(
+                    key: ValueKey(item.id),
+                    window: _shown,
+                    index: index,
+                    child: OwnRequestCard(item: item, live: true),
+                  );
+                },
+              ),
+              if (more)
+                SliverToBoxAdapter(
+                  child: _More(error: pages.error, onRetry: notifier.retry),
+                ),
+              _bottom(context),
+            ],
           ),
         );
       }
-      return Center(child: LoadingState(label: l.loadingInProgress));
     }
-    return _QueueRows(
-      list: QueueList.done,
-      rows: pages.items,
-      // Done is read page by page, so an answered row leaves it here.
-      onAnswered: (item) => notifier.drop(item.id),
-      footer: pages.done
-          ? null
-          : _DoneMore(
-              error: error,
-              onMore: notifier.more,
-              onRetry: notifier.retry,
-            ),
-    );
-  }
-}
-
-/// The end of Done while more of it comes, which asks for the next page
-/// once it's built.
-class _DoneMore extends StatefulWidget {
-  const _DoneMore({
-    required this.error,
-    required this.onMore,
-    required this.onRetry,
-  });
-
-  final Object? error;
-  final VoidCallback onMore;
-  final VoidCallback onRetry;
-
-  @override
-  State<_DoneMore> createState() => _DoneMoreState();
-}
-
-class _DoneMoreState extends State<_DoneMore> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) widget.onMore();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) =>
-      _More(error: widget.error, onRetry: widget.onRetry);
-}
-
-/// A request's title: its library page once it's here, its catalog page
-/// while it isn't.
-void _open(BuildContext context, AdminRequestItem item) {
-  final here = item.availability.libraryTitleId;
-  unawaited(
-    context.push(
-      here != null
-          ? Routes.title(here)
-          : catalogRoute(item.title.ref, library: item.library.id),
-    ),
-  );
-}
-
-/// "Films · Radarr": where a request goes, the library chosen under
-/// "Goes to" for a waiting one, and what fills it.
-String _whereText(
-  RequestsState state,
-  AdminRequestItem item,
-  AppLocalizations l,
-) {
-  final goes = state.goesTo(item);
-  return [goes.name, goes.connection ?? l.webRequestsNoConnection].join(' · ');
-}
-
-/// A row's menu: what the list allows, and its title's page.
-Future<void> _showRowMenu(
-  BuildContext context,
-  WidgetRef ref,
-  AdminRequestItem item,
-  String list, {
-  ValueChanged<AdminRequestItem>? onAnswered,
-}) {
-  final l = AppLocalizations.of(context);
-  final hub = ref.read(requestsProvider.notifier);
-  return Sheet.show<void>(
-    context,
-    dismissLabel: l.commonCancel,
-    builder: (sheet) {
-      void then(VoidCallback action) {
-        Navigator.of(sheet).pop();
-        action();
-      }
-
-      void reopen(QueueAnswer answer) => then(() {
-        onAnswered?.call(item);
-        unawaited(hub.answer(l, item, answer));
-      });
-
-      final remote = item.remoteUrl;
-      final connection = item.connection;
-      return Sheet(
-        title: item.title.name,
-        description: _whereText(ref.read(requestsProvider), item, l),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (list == QueueList.waiting && choosesLibrary(item))
-              SheetItem(
-                icon: Lucide.libraryBig,
-                label: l.webRequestsGoesToTitle,
-                onPressed: () =>
-                    then(() => unawaited(showGoesToSheet(context, item))),
-              ),
-            if (list == QueueList.waiting) ...[
-              SheetItem(
-                icon: Lucide.check,
-                label: l.webRequestsAdd,
-                onPressed: () => then(
-                  () => unawaited(hub.answer(l, item, const AddAnswer())),
-                ),
-              ),
-              SheetItem(
-                icon: Lucide.x,
-                label: l.webRequestsDecline,
-                onPressed: () =>
-                    then(() => unawaited(showDeclineSheet(context, item))),
-              ),
-            ] else if (list == QueueList.needsAttention) ...[
-              SheetItem(
-                icon: Lucide.rotateCw,
-                label: l.webRequestsRetry,
-                onPressed: () => then(() => unawaited(hub.retry(l, item))),
-              ),
-              SheetItem(
-                icon: Lucide.circleSlash,
-                label: l.webRequestsGiveUp,
-                onPressed: () => then(
-                  () =>
-                      unawaited(showDeclineSheet(context, item, giveUp: true)),
-                ),
-              ),
-            ] else if (list == QueueList.onTheWay)
-              SheetItem(
-                icon: Lucide.circleSlash,
-                label: l.webRequestsGiveUp,
-                onPressed: () => then(
-                  () =>
-                      unawaited(showDeclineSheet(context, item, giveUp: true)),
-                ),
-              )
-            else if (item.status == RequestStatus.declined) ...[
-              SheetItem(
-                icon: Lucide.check,
-                label: l.webRequestsAddAfterAll,
-                onPressed: () => reopen(const AddAfterAllAnswer()),
-              ),
-              SheetItem(
-                icon: Lucide.lockOpen,
-                label: l.webRequestsAllowAgain,
-                onPressed: () => reopen(const AllowAgainAnswer()),
-              ),
-            ],
-            SheetItem(
-              icon: Lucide.info,
-              label: l.webRequestsOpenTitle,
-              onPressed: () => then(() => _open(context, item)),
-            ),
-            if (remote != null && connection != null)
-              SheetItem(
-                icon: Lucide.externalLink,
-                label: l.webRequestsOpenRemote(connection.sourceName),
-                onPressed: () => then(
-                  () => unawaited(
-                    ref.read(linkOpenerProvider)(Uri.parse(remote)),
-                  ),
-                ),
-              ),
-            if (item.diagnostics.isNotEmpty)
-              SheetItem(
-                icon: Lucide.activity,
-                label: l.webRequestsDiagnostics,
-                onPressed: () =>
-                    then(() => unawaited(_showDiagnostics(context, item))),
-              ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
-/// What the connection reported about a request, label and value as the
-/// server words them, for an admin finding out why it's stuck.
-Future<void> _showDiagnostics(BuildContext context, AdminRequestItem item) {
-  final l = AppLocalizations.of(context);
-  return Sheet.show<void>(
-    context,
-    dismissLabel: l.diagnosticsClose,
-    builder: (sheet) {
-      final colors = MatineeTheme.of(sheet);
-      return Sheet(
-        title: l.webRequestsDiagnostics,
-        description: [item.title.name, ?item.connection?.name].join(' · '),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 12,
-            children: [
-              for (final entry in item.diagnostics)
-                Semantics(
-                  container: true,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 2,
-                    children: [
-                      Text(
-                        entry.label,
-                        style: KitText.xs.style(color: colors.mutedForeground),
-                      ),
-                      Text(
-                        entry.value,
-                        style: KitText.sm.style(color: colors.foreground),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
-
-/// A request in the queue, as Downloads lists files: the poster, then the
-/// title and what it is, then who requested it and where it goes, or how
-/// it stands; Add or Retry at the end. A tap opens its menu.
-class QueueRow extends ConsumerWidget {
-  const QueueRow({
-    super.key,
-    required this.item,
-    required this.list,
-    required this.onMenu,
-  });
-
-  final AdminRequestItem item;
-  final String list;
-  final VoidCallback onMenu;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
-    final hub = ref.read(requestsProvider.notifier);
-    // Where a waiting one goes: its own library, or the one chosen under
-    // "Goes to".
-    final goes = ref.watch(
-      requestsProvider.select((state) => state.goesTo(item)),
-    );
-    final people = askers(item);
-    final first = people.firstOrNull;
-    final small = KitText.xs.style(color: colors.mutedForeground);
-    final strong = KitText.xs.style(
-      color: colors.foreground.withValues(alpha: .85),
-    );
-    final poster = item.title.poster;
-    final Widget status = switch (list) {
-      QueueList.waiting => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            spacing: 6,
-            children: [
-              if (first != null)
-                Avatar(avatarId: first.avatarId, name: first.name, size: 16),
-              Expanded(
-                child: Text(
-                  [
-                    if (first != null)
-                      [
-                        people.length > 1
-                            ? '${first.name} ${l.webRequestsOthersCount('${people.length - 1}')}'
-                            : first.name,
-                        ?relativeTime(first.createdAt, l),
-                      ].join(' · '),
-                    goes.name,
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: strong,
-                ),
-              ),
-            ],
-          ),
-          if (goes.connection == null)
-            Text(
-              l.webRequestsNoConnection,
-              maxLines: 1,
-              style: KitText.xs.style(color: colors.danger),
-            ),
-        ],
-      ),
-      QueueList.needsAttention => Text(
-        item.error?.serverWords(l) ?? l.webRequestsAttentionUnknown,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: KitText.xs.style(color: colors.danger),
-      ),
-      QueueList.onTheWay => _Progress(item: item),
-      _ => _Outcome(item: item),
-    };
-    return PressIndication(
-      onPressed: onMenu,
-      label: l.webRequestsMore(item.title.name),
-      shape: KitRadius.control,
-      builder: (context, state) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        color: colors.foreground.withValues(
-          alpha: state == PressState.idle ? 0 : .04,
-        ),
-        child: Row(
-          spacing: 14,
-          children: [
-            SizedBox(
-              width: 40,
-              child: ArtFrame(
-                toneKey: refKey(item.title.ref),
-                aspectRatio: CardMetrics.poster,
-                children: [
-                  if (poster != null) Picture([ArtSource(poster)]),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    item.title.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KitText.sm.style(
-                      color: colors.foreground,
-                      weight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    [
-                      yearKind(item.title.year, item.title.ref.kind, l),
-                      ?scopeText(item.scope, l),
-                    ].join(' · '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: small,
-                  ),
-                  status,
-                ],
-              ),
-            ),
-            if (list == QueueList.waiting)
-              MatineeButton(
-                look: ButtonLook.outline,
-                size: ButtonSize.sm,
-                leading: Lucide.check,
-                label: l.webRequestsAddNamed(item.title.name),
-                onPressed: () =>
-                    unawaited(hub.answer(l, item, const AddAnswer())),
-                child: Text(l.webRequestsAdd),
-              )
-            else if (list == QueueList.needsAttention)
-              RoundIconButton(
-                icon: Lucide.rotateCw,
-                label: l.webRequestsRetryNamed(item.title.name),
-                size: 40,
-                iconSize: 18,
-                color: colors.mutedForeground,
-                background: const Color(0x00000000),
-                onPressed: () => unawaited(hub.retry(l, item)),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// How far along a request on its way is.
-class _Progress extends StatelessWidget {
-  const _Progress({required this.item});
-
-  final AdminRequestItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
-    final availability = item.availability;
-    final progress = availability.progress;
-    final eta = availability.etaSeconds;
-    final String status;
-    if (availability.state == AvailabilityState.release) {
-      final day = parseDay(availability.releaseDate);
-      status = day == null
-          ? l.webRequestsProgressNotOut
-          : l.webRequestsProgressRelease(formatShortDay(day, l));
-    } else if (progress != null) {
-      status = [
-        formatPercent(progress, l),
-        if (eta != null) l.webRequestsProgressLeft(formatSpan(eta, l)),
-      ].join(' · ');
-    } else if (availability.stillLooking) {
-      status = l.webRequestsProgressLooking;
-    } else if (item.fulfilmentState == FulfilmentState.queued) {
-      status = l.webRequestsProgressQueued;
-    } else if (item.connection?.reportsProgress == false) {
-      status = l.webRequestsProgressByHand;
-    } else {
-      status = l.webRequestsProgressSent;
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (progress != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: ClipRRect(
-              borderRadius: KitRadius.pill,
-              child: SizedBox(
-                height: 3,
-                child: ColoredBox(
-                  color: colors.secondary,
-                  child: FractionallySizedBox(
-                    alignment: AlignmentDirectional.centerStart,
-                    widthFactor: progress.clamp(0, 1).toDouble(),
-                    child: ColoredBox(color: colors.accent),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        Text(
-          [status, item.library.name].join(' · '),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: KitText.xs.style(
-            color: colors.foreground.withValues(alpha: .85),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// What became of a done request, with the note an admin left: arrived,
-/// declined, or given up on.
-class _Outcome extends StatelessWidget {
-  const _Outcome({required this.item});
-
-  final AdminRequestItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
-    final strong = KitText.xs.style(
-      color: colors.foreground.withValues(alpha: .85),
-    );
-    if (item.status == RequestStatus.declined) {
-      final gaveUp = item.reason == DeclineReason.notFound;
-      final at = relativeTime(item.declinedAt, l);
-      final reason = item.reason;
-      final note = item.note;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            [
-              switch ((gaveUp, at)) {
-                (true, final at?) => l.webRequestsDoneGaveUp(at),
-                (false, final at?) => l.webRequestsDoneDeclined(at),
-                (true, null) => l.webRequestsDoneGaveUpUndated,
-                (false, null) => l.webRequestsDoneDeclinedUndated,
-              },
-              if (reason != null) adminReasonText(reason, l),
-            ].join(' · '),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: strong,
-          ),
-          if (note != null)
-            Text(
-              note,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KitText.xs
-                  .style(color: colors.mutedForeground)
-                  .copyWith(fontStyle: FontStyle.italic),
-            ),
-        ],
-      );
-    }
-    final arrived = relativeTime(item.arrivedAt, l);
-    if (arrived == null) return const SizedBox.shrink();
-    return Text(
-      [l.webRequestsDoneArrived(arrived), item.library.name].join(' · '),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: strong,
+    return PageFrame(
+      title: l.webAskMineTitle,
+      onBack: () => context.pop(),
+      backLabel: l.commonBack,
+      child: body,
     );
   }
 }

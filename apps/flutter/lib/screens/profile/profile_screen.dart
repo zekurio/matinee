@@ -16,7 +16,6 @@ import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
 import '../requests/asked_rail.dart';
-import '../requests/discover.dart' show QueueList;
 import '../requests/request_words.dart' show formatCount;
 import '../requests/requests_data.dart' show profileAskedProvider;
 import '../requests/requests_hub.dart' show requestsProvider;
@@ -456,7 +455,7 @@ class _Requests extends ConsumerWidget {
             icon: Lucide.inbox,
             title: l.webRequestsTitle,
             value: needsYou > 0 ? formatCount(needsYou, l) : null,
-            onPressed: () => context.push(Routes.requests(QueueList.waiting)),
+            onPressed: () => context.push(Routes.requestQueue),
           ),
         ],
       ),

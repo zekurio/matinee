@@ -889,18 +889,91 @@
   "@discoverFailed": {
     "description": "strings_loading.xml"
   },
-  "discoverRequestWaiting": "Waiting",
-  "@discoverRequestWaiting": {
-    "description": "The state on a request card in Explore's Requests row, for one nobody has answered yet."
-  },
   "discoverRequestAskedWhen": "First requested {when}",
   "@discoverRequestAskedWhen": {
-    "description": "On a person's own request card in Explore's Requests row: when it was first requested, as \"2 days ago\".",
+    "description": "On a person's own request card, in Explore's Recent requests row and on My requests: when it was first requested, as \"2 days ago\".",
     "placeholders": {
       "when": {
         "type": "String"
       }
     }
+  },
+  "requestsRecent": "Recent requests",
+  "@requestsRecent": {
+    "description": "The heading of Explore's first row: the latest requests, which opens the requests overview."
+  },
+  "requestStateWaiting": "Waiting",
+  "@requestStateWaiting": {
+    "description": "The state badge on a request card: nobody has answered the request yet."
+  },
+  "requestStateNeedsAttention": "Needs attention",
+  "@requestStateNeedsAttention": {
+    "description": "The state badge on a request card: the request was accepted but sending it failed, so an admin has to look at it."
+  },
+  "requestStateOnTheWay": "On its way",
+  "@requestStateOnTheWay": {
+    "description": "The state badge on a request card: accepted and on its way, without a share known."
+  },
+  "requestStateOnTheWayPercent": "On its way · {percent}",
+  "@requestStateOnTheWayPercent": {
+    "description": "The state badge on a request card: on its way, with the share that's in, as \"64%\".",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "requestStateHere": "Here",
+  "@requestStateHere": {
+    "description": "The state badge on a request card: the title arrived in the library."
+  },
+  "requestStateDeclined": "Declined",
+  "@requestStateDeclined": {
+    "description": "The state badge on a request card: an admin declined the request or gave up on it."
+  },
+  "requestsCountWaiting": "{count, plural, one{{count} waiting} other{{count} waiting}}",
+  "@requestsCountWaiting": {
+    "description": "In the line of counts at the top of the requests overview: how many requests wait for an answer.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestsCountNeedsAttention": "{count, plural, one{{count} needs attention} other{{count} need attention}}",
+  "@requestsCountNeedsAttention": {
+    "description": "In the line of counts at the top of the requests overview: how many accepted requests failed to send.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestsCountOnTheWay": "{count, plural, one{{count} on its way} other{{count} on the way}}",
+  "@requestsCountOnTheWay": {
+    "description": "In the line of counts at the top of the requests overview: how many accepted requests are on their way.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestsCountDone": "{count, plural, one{{count} done} other{{count} done}}",
+  "@requestsCountDone": {
+    "description": "In the line of counts at the top of the requests overview: how many requests arrived or were declined.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestsOverviewEmpty": "No requests yet",
+  "@requestsOverviewEmpty": {
+    "description": "The requests overview when nobody has requested anything."
+  },
+  "requestsOverviewEmptyHint": "What people request from a title's page shows up here.",
+  "@requestsOverviewEmptyHint": {
+    "description": "Under requestsOverviewEmpty."
   },
   "downloadsAbout": "About {p1}",
   "@downloadsAbout": {

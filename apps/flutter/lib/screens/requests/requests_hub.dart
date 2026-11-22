@@ -24,7 +24,7 @@ import 'request_words.dart';
 /// goes. A stream starts with the current state, so reconnecting loses
 /// nothing. What one screen hears, every screen shows, since a title's
 /// state is the same wherever it sits. An admin's queue streams once for
-/// the whole app, for Explore's Requests row, the queue, and Add and
+/// the whole app, for Explore's Recent requests row, the overview, and Add and
 /// Decline on a title.
 
 /// A title's live answer: the title and each of its seasons.
@@ -36,6 +36,10 @@ typedef LiveEntry = ({
 /// How long the toast offers Undo. The server holds an ask that needs no
 /// approval for ten seconds.
 const undoWindow = Duration(seconds: 6);
+
+/// How many requests Explore's "Recent requests" row shows, and so how much
+/// of Done the admin's live queue carries. The heading opens the rest.
+const recentRequests = 20;
 
 /// Titles one stream follows at most, as the contract takes.
 const mostFollowed = 100;
@@ -207,14 +211,16 @@ final class RequestsHub extends Notifier<RequestsState> {
 
   void _followQueue(MatineeApi api) {
     unawaited(_queue?.cancel());
-    _queue = reconnecting(() => api.admin.requests.live(limit: 1)).listen(
-      (queue) => state = state.copyWith(queue: () => queue, queueFailed: false),
-      // The queue stays as it was while the stream is down; only a queue
-      // never heard says so.
-      onError: (Object cause) {
-        if (state.queue == null) state = state.copyWith(queueFailed: true);
-      },
-    );
+    _queue = reconnecting(() => api.admin.requests.live(limit: recentRequests))
+        .listen(
+          (queue) =>
+              state = state.copyWith(queue: () => queue, queueFailed: false),
+          // The queue stays as it was while the stream is down; only a queue
+          // never heard says so.
+          onError: (Object cause) {
+            if (state.queue == null) state = state.copyWith(queueFailed: true);
+          },
+        );
   }
 
   /// Opens the queue again now, rather than after the wait.
@@ -365,9 +371,10 @@ final class RequestsHub extends Notifier<RequestsState> {
     bump();
   }
 
-  /// A person takes back their own request [id], from a card in Explore's
-  /// Requests row: the card leaves at once, and the cancel goes once the
-  /// toast's Undo has passed, as an admin's answers are held.
+  /// A person takes back their own request [id], from its card in
+  /// Explore's Recent requests row or My requests: the card leaves at once,
+  /// and the cancel goes once the toast's Undo has passed, as an admin's
+  /// answers are held.
   Future<void> withdraw(AppLocalizations l, String id, String name) => _held(
     l,
     [id],

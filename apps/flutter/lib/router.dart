@@ -46,9 +46,9 @@ import 'screens/tv/tv_shell.dart';
 
 /// Every place in the app, as the paths go_router opens. Screens navigate with
 /// these, `context.push(Routes.title(id))`, never with a path typed out, so a
-/// route's shape changes in one place. Shows and Movies are tabs, and the
-/// requests are one page, which an admin reaches from the waiting requests at
-/// the top of Explore.
+/// route's shape changes in one place. Shows and Movies are tabs, and an
+/// admin's requests are one overview, which Explore's Recent requests row
+/// at the top opens.
 abstract final class Routes {
   // Before the app: the session's state picks one (see [authRedirect]).
   /// Typing or picking a server's address.
@@ -74,8 +74,8 @@ abstract final class Routes {
   static const downloads = '/downloads';
   static const profile = '/profile';
 
-  /// Search, with Explore under the field: the catalog's rows, an
-  /// admin's waiting requests first.
+  /// Search, with Explore under the field: the catalog's rows, the recent
+  /// requests first.
   static const search = '/search';
   static const favorites = '/favorites';
   static const recent = '/recent';
@@ -87,10 +87,12 @@ abstract final class Routes {
   static String license(String package) =>
       '/licenses/${Uri.encodeComponent(package)}';
 
-  /// Yours, and for an admin the ones waiting on them; [list] picks one
-  /// of an admin's lists.
-  static String requests([String? list]) =>
-      list == null ? '/requests' : '/requests/$list';
+  /// The viewer's own requests.
+  static String requests() => '/requests';
+
+  /// Everyone's requests in one list, for whoever runs the queue; anyone
+  /// else gets their own.
+  static const requestQueue = '/requests/queue';
 
   static String browse({String? genre, String? studio}) => Uri(
     path: '/browse',
@@ -432,10 +434,9 @@ List<RouteBase> _handsetRoutes() => [
     builder: (context, state) => const RequestsScreen(),
   ),
   GoRoute(
-    path: '/requests/:list',
+    path: Routes.requestQueue,
     parentNavigatorKey: _rootKey,
-    builder: (context, state) =>
-        RequestsScreen(list: state.pathParameters['list']),
+    builder: (context, state) => const RequestsScreen(queue: true),
   ),
   GoRoute(
     path: '/catalog/:kind/:provider/:providerId',
