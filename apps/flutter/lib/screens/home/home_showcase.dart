@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,13 +24,13 @@ import 'home_layout.dart';
 /// over while Play and Details stay put; it moves on every eight seconds, and
 /// not while a finger is on it, with animations off, with a screen reader on,
 /// or while Home is out of sight.
-class HomeShowcase extends StatefulWidget {
+class HomeShowcase extends ConsumerStatefulWidget {
   const HomeShowcase({super.key, required this.slides});
 
   final List<FeaturedTitle> slides;
 
   @override
-  State<HomeShowcase> createState() => _HomeShowcaseState();
+  ConsumerState<HomeShowcase> createState() => _HomeShowcaseState();
 }
 
 /// The card's corners: a big card takes a bigger one than a rail's.
@@ -39,7 +40,7 @@ const _radius = BorderRadius.all(Radius.circular(KitRadius.xxl));
 const _swipeDistance = 40.0;
 const _swipeVelocity = 300.0;
 
-class _HomeShowcaseState extends State<HomeShowcase>
+class _HomeShowcaseState extends ConsumerState<HomeShowcase>
     with SingleTickerProviderStateMixin {
   /// The art and words crossing over: 0 shows [_leaving], 1 [_current].
   late final _fade = AnimationController(
@@ -97,6 +98,50 @@ class _HomeShowcaseState extends State<HomeShowcase>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _restart();
+    _prime();
+  }
+
+  /// The slides whose art and logo are already loading.
+  final _primed = <int>{};
+
+  /// Loads the title showing and the one after it before they take the card,
+  /// so a change shows the new picture at once rather than the one leaving.
+  void _prime() {
+    if (!mounted) return;
+    final api = ref.read(apiProvider);
+    if (api == null) return;
+    final loader = ref.read(artworkLoaderProvider);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final card = ShowcaseLayout.width(
+      MediaQuery.sizeOf(context),
+      CardMetrics.gutter,
+    );
+    for (final index in {_current, (_current + 1) % _count}) {
+      if (!_primed.add(index)) continue;
+      final slide = widget.slides[index];
+      if (slide.title.images.backdrop case final backdrop?) {
+        unawaited(
+          precacheImage(
+            ArtworkImage(
+              ArtSource(backdrop).url(api.paths, card * dpr),
+              loader,
+            ),
+            context,
+          ).catchError((Object _) {}),
+        );
+      }
+      if (slide.title.images.logo case final logo?) {
+        unawaited(
+          precacheImage(
+            ArtworkImage(
+              api.paths.artwork(logo.id, size: ArtworkSize.medium),
+              loader,
+            ),
+            context,
+          ).catchError((Object _) {}),
+        );
+      }
+    }
   }
 
   /// Changes the title in place. The one showing stays under the one coming
@@ -114,6 +159,7 @@ class _HomeShowcaseState extends State<HomeShowcase>
       _fade.forward(from: 0);
     }
     _restart();
+    _prime();
   }
 
   void _endDrag(DragEndDetails details) {
@@ -465,77 +511,80 @@ class _SlideWords extends StatelessWidget {
     final overview = title.overview;
     final ratio = progressRatio(slide.item);
     final left = timeLeft(slide.item, l);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _TitleMark(
-          name: title.name,
-          logo: title.images.logo,
-          width: math.min(ShowcaseLayout.logoMax, width),
-          height: logoHeight,
-          nameSize: nameSize,
-        ),
-        if (facts.isNotEmpty || contentRating != null || rating != null) ...[
-          const SizedBox(height: 12),
-          _Facts(facts: facts, contentRating: contentRating, rating: rating),
-        ],
-        if (genres.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            genres.join(' · '),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: KitText.sm.style(color: foreground.withValues(alpha: .8)),
+    return Semantics(
+      container: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _TitleMark(
+            name: title.name,
+            logo: title.images.logo,
+            width: math.min(ShowcaseLayout.logoMax, width),
+            height: logoHeight,
+            nameSize: nameSize,
           ),
-        ],
-        if (overview != null) ...[
-          const SizedBox(height: 10),
-          Text(
-            overview,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: KitText.sm.style(
-              color: foreground.withValues(alpha: .72),
-              leading: 24,
+          if (facts.isNotEmpty || contentRating != null || rating != null) ...[
+            const SizedBox(height: 12),
+            _Facts(facts: facts, contentRating: contentRating, rating: rating),
+          ],
+          if (genres.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              genres.join(' · '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: KitText.sm.style(color: foreground.withValues(alpha: .8)),
             ),
-          ),
-        ],
-        if (ratio != null && left != null) ...[
-          const SizedBox(height: 16),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
-            child: Row(
-              spacing: 12,
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: KitRadius.pill,
-                    child: SizedBox(
-                      height: 4,
-                      child: ColoredBox(
-                        color: foreground.withValues(alpha: .25),
-                        child: FractionallySizedBox(
-                          alignment: AlignmentDirectional.centerStart,
-                          widthFactor: ratio,
-                          child: ColoredBox(color: foreground),
+          ],
+          if (overview != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              overview,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: KitText.sm.style(
+                color: foreground.withValues(alpha: .72),
+                leading: 24,
+              ),
+            ),
+          ],
+          if (ratio != null && left != null) ...[
+            const SizedBox(height: 16),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: Row(
+                spacing: 12,
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: KitRadius.pill,
+                      child: SizedBox(
+                        height: 4,
+                        child: ColoredBox(
+                          color: foreground.withValues(alpha: .25),
+                          child: FractionallySizedBox(
+                            alignment: AlignmentDirectional.centerStart,
+                            widthFactor: ratio,
+                            child: ColoredBox(color: foreground),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                Text(
-                  [?episodeCode(slide.item, l), left].join(' · '),
-                  maxLines: 1,
-                  style: KitText.xs.style(
-                    color: foreground.withValues(alpha: .8),
+                  Text(
+                    [?episodeCode(slide.item, l), left].join(' · '),
+                    maxLines: 1,
+                    style: KitText.xs.style(
+                      color: foreground.withValues(alpha: .8),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -597,25 +646,50 @@ class _TitleMarkState extends ConsumerState<_TitleMark> {
         child: SizedBox(
           width: widget.width,
           height: widget.height,
-          child: Image(
-            image: ArtworkImage(
-              api.paths.artwork(logo.id, size: ArtworkSize.medium),
-              ref.watch(artworkLoaderProvider),
-            ),
-            fit: BoxFit.contain,
+          child: Stack(
+            clipBehavior: Clip.none,
             alignment: AlignmentDirectional.centerStart,
-            errorBuilder: (context, error, stack) {
-              // The name takes the logo's place once this frame is done.
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) setState(() => _failed = logo.id);
-              });
-              return const SizedBox.shrink();
-            },
+            children: [
+              // The mark's own shadow, so a light one reads on a light
+              // picture, as the web's does.
+              Positioned.fill(
+                child: ImageFiltered(
+                  imageFilter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Transform.translate(
+                    offset: const Offset(0, 2),
+                    child: ColorFiltered(
+                      colorFilter: const ui.ColorFilter.mode(
+                        Color(0x99000000),
+                        BlendMode.srcIn,
+                      ),
+                      child: _logo(api, logo),
+                    ),
+                  ),
+                ),
+              ),
+              _logo(api, logo),
+            ],
           ),
         ),
       ),
     );
   }
+
+  Widget _logo(MatineeApi api, Artwork logo) => Image(
+    image: ArtworkImage(
+      api.paths.artwork(logo.id, size: ArtworkSize.medium),
+      ref.watch(artworkLoaderProvider),
+    ),
+    fit: BoxFit.contain,
+    alignment: AlignmentDirectional.centerStart,
+    errorBuilder: (context, error, stack) {
+      // The name takes the logo's place once this frame is done.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _failed = logo.id);
+      });
+      return const SizedBox.shrink();
+    },
+  );
 }
 
 /// A small, soft shadow under words on a picture, as the phone's cards have.
@@ -730,14 +804,18 @@ class _Buttons extends StatelessWidget {
 }
 
 /// The showcase's place while the featured titles load: the card as dark as
-/// it'll be, so light doesn't flash to dark.
+/// it'll be, with the words' places low on the leading side, so light doesn't
+/// flash to dark and the page doesn't jump.
 class HomeShowcaseSkeleton extends StatelessWidget {
   const HomeShowcaseSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) {
     final window = MediaQuery.sizeOf(context);
+    final width = ShowcaseLayout.width(window, CardMetrics.gutter);
     final height = ShowcaseLayout.height(window, CardMetrics.gutter);
+    final words = ShowcaseLayout.wordsWidth(width);
+    final dark = MatineeTheme.darkOf(context);
     return Semantics(
       label: AppLocalizations.of(context).loadingInProgress,
       container: true,
@@ -745,10 +823,55 @@ class HomeShowcaseSkeleton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
         child: SizedBox(
           height: height,
-          child: SkeletonBox(
-            height: height,
-            radius: KitRadius.xxl,
-            color: MatineeTheme.darkOf(context).surface,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: dark.surface,
+              borderRadius: _radius,
+            ),
+            child: Align(
+              alignment: AlignmentDirectional.bottomStart,
+              child: Padding(
+                padding: const EdgeInsets.all(ShowcaseLayout.padding),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonBox(
+                      width: math.min(words, 320),
+                      height: 40,
+                      color: dark.secondary,
+                    ),
+                    const SizedBox(height: 12),
+                    SkeletonBox(width: 200, height: 16, color: dark.secondary),
+                    const SizedBox(height: 10),
+                    SkeletonBox(
+                      width: math.min(words, 440),
+                      height: 12,
+                      color: dark.secondary,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 8,
+                      children: [
+                        SkeletonBox(
+                          width: 112,
+                          height: ButtonSize.lg.height,
+                          radius: ButtonSize.lg.height / 2,
+                          color: dark.secondary,
+                        ),
+                        SkeletonBox(
+                          width: 120,
+                          height: ButtonSize.lg.height,
+                          radius: ButtonSize.lg.height / 2,
+                          color: dark.secondary,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
