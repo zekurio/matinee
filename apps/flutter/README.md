@@ -485,7 +485,7 @@ to more than one library gets "Goes to" in its menu, and on the
 catalog's page "Add to Films" with the libraries beside it, as the web
 has them: the choice is kept by request (`RequestsState.moves`) and only
 sent with Add, and Add all sends a moved one on its own. An account that
-that doesn't run the queue gets its own requests on either route.
+doesn't run the queue gets its own requests on either route.
 
 ## People
 
