@@ -14,7 +14,6 @@ import '../../router.dart';
 
 /// The contract's `Availability.state`.
 abstract final class AvailabilityState {
-  static const none = 'none';
   static const asked = 'asked';
   static const coming = 'coming';
   static const release = 'release';

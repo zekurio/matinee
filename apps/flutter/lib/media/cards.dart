@@ -38,18 +38,12 @@ class TitleCard extends StatelessWidget {
     Key? key,
     required TitleSummary title,
     CardDetail? detail,
-    Artwork? poster,
-    String? route,
-    CatalogRef? recommended,
   }) : this(
          key: key,
          title: title,
          detail: detail?.text,
          detailIcon: detail?.icon,
          detailLabel: detail?.label,
-         poster: poster,
-         route: route,
-         recommended: recommended,
        );
 
   final TitleSummary title;

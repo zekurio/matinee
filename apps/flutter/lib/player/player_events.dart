@@ -21,7 +21,7 @@ sealed class PlayerEvent {
           height: message.height,
           frameRate: message.frameRate,
         )),
-        wire.DiagnosticsMessage() => Diagnosed(message),
+        wire.DiagnosticsMessage() => const Diagnosed(),
         wire.ActiveEngineMessage() => EngineChanged(switch (message.engine) {
           wire.EngineMessage.mpv => PlayerEngine.mpv,
           wire.EngineMessage.media3 => PlayerEngine.media3,
@@ -63,9 +63,7 @@ class EngineChanged extends PlayerEvent {
 /// What the engine says for the playback report, which leaves the state
 /// as it is ([Player.diagnostics]).
 class Diagnosed extends PlayerEvent {
-  const Diagnosed(this.message);
-
-  final wire.DiagnosticsMessage message;
+  const Diagnosed();
 }
 
 /// Applies one native event to the state. A new idle status clears

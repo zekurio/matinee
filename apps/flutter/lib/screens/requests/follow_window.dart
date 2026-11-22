@@ -22,8 +22,6 @@ final class FollowWindow extends ChangeNotifier {
   var _scheduled = false;
   var _disposed = false;
 
-  (int, int) get window => _window;
-
   void add(int index) {
     _built.add(index);
     _schedule();

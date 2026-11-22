@@ -30,17 +30,15 @@ double seekFraction(double seconds, double duration) =>
 /// Where Left and Right on a remote have taken the seek bar, as the Kotlin
 /// app's `KeySeek`. A press steps by the skip length; a held key glides on
 /// from there, faster the longer it's held, up to a tenth of the video a
-/// second. The player seeks once, to [target], when the key comes up.
+/// second. The player seeks once, when the key comes up.
 class KeySeek {
-  /// Where the keys have got to, until [release].
-  double? get target => _target;
   double? _target;
 
   Duration _heldSince = Duration.zero;
   Duration _last = Duration.zero;
 
   /// A key down: [repeat] is whether the system repeats it while held, and
-  /// [at] the event's time. Moves on from [target], or from [from] for a
+  /// [at] the event's time. Moves on from where the keys got to, or from [from] for a
   /// first press, by [step] seconds toward [direction].
   double? press({
     required double from,

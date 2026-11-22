@@ -33,17 +33,15 @@ int _hash(String key) {
 
 /// A box filled with [key]'s tone, under [child].
 class Tone extends StatelessWidget {
-  const Tone({super.key, required this.toneKey, this.radius, this.child});
+  const Tone({super.key, required this.toneKey, this.child});
 
   final String toneKey;
-  final BorderRadius? radius;
   final Widget? child;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
       gradient: toneGradient(MatineeTheme.of(context), toneKey),
-      borderRadius: radius,
     ),
     child: child,
   );

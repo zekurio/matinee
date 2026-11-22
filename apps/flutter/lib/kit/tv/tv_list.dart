@@ -28,8 +28,6 @@ class TvListItem extends StatelessWidget {
     this.autofocus = false,
     this.focusNode,
     this.minHeight = TvListItems.height,
-    this.subtitleLines = 2,
-    this.onLongPress,
     this.onFocusChange,
   });
 
@@ -39,7 +37,6 @@ class TvListItem extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onPressed;
-  final VoidCallback? onLongPress;
   final bool quiet;
   final bool selected;
   final bool destructive;
@@ -48,7 +45,6 @@ class TvListItem extends StatelessWidget {
   final bool autofocus;
   final FocusNode? focusNode;
   final double minHeight;
-  final int subtitleLines;
   final ValueChanged<bool>? onFocusChange;
 
   @override
@@ -71,7 +67,6 @@ class TvListItem extends StatelessWidget {
       autofocus: autofocus,
       enabled: enabled,
       onPressed: onPressed,
-      onLongPress: onLongPress,
       onFocusChange: onFocusChange,
       label: subtitle == null ? title : '$title, $subtitle',
       checked: checked ? true : null,
@@ -118,7 +113,7 @@ class TvListItem extends StatelessWidget {
                         if (subtitle case final text?)
                           Text(
                             text,
-                            maxLines: subtitleLines,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TvType.caption.style(
                               color: focused

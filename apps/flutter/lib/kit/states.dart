@@ -85,7 +85,6 @@ class ErrorState extends StatelessWidget {
     this.message,
     required this.retryLabel,
     this.onRetry,
-    this.retrying = false,
     this.homeLabel,
     this.onHome,
     this.disconnected = false,
@@ -98,7 +97,6 @@ class ErrorState extends StatelessWidget {
   final String? message;
   final String retryLabel;
   final VoidCallback? onRetry;
-  final bool retrying;
   final String? homeLabel;
   final VoidCallback? onHome;
   final bool disconnected;
@@ -113,7 +111,7 @@ class ErrorState extends StatelessWidget {
       if (retry != null)
         MatineeButton(
           look: ButtonLook.outline,
-          onPressed: retrying ? null : retry,
+          onPressed: retry,
           child: Text(retryLabel),
         ),
       if (home != null)

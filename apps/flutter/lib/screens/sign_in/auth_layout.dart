@@ -77,14 +77,11 @@ class AuthLayout extends StatelessWidget {
 
 /// The logo, in the top corner of the sign-in screens.
 class AuthBrand extends StatelessWidget {
-  const AuthBrand({super.key, this.padding});
-
-  final EdgeInsetsGeometry? padding;
+  const AuthBrand({super.key});
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding:
-        padding ?? const EdgeInsets.symmetric(horizontal: 26, vertical: 24),
+    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 24),
     child: Logo(height: 22, label: AppLocalizations.of(context).appName),
   );
 }

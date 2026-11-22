@@ -99,14 +99,6 @@ enum PlayerMenu { audio, subtitles, speed, quality }
 /// The speeds the speed menu offers, from half to double.
 const playerSpeeds = [.5, .75, 1.0, 1.25, 1.5, 2.0];
 
-/// The name a [PlayerMenu] goes by, over its entries.
-String playerMenuName(AppLocalizations l, PlayerMenu menu) => switch (menu) {
-  PlayerMenu.audio => l.playerMenuAudio,
-  PlayerMenu.subtitles => l.playerMenuSubtitles,
-  PlayerMenu.speed => l.playerSpeed,
-  PlayerMenu.quality => l.playerQuality,
-};
-
 /// Whether [sitting] offers the quality menu: only a stream does, and only
 /// with a choice.
 bool offersQuality(PlayerSitting sitting) =>

@@ -329,12 +329,7 @@ final class RequestsHub extends Notifier<RequestsState> {
   }
 
   /// Takes an ask back, from Undo or the poster's Cancel request.
-  Future<void> cancel(
-    AppLocalizations l,
-    String id,
-    String name, {
-    VoidCallback? onDone,
-  }) async {
+  Future<void> cancel(AppLocalizations l, String id, String name) async {
     final api = _api;
     if (api == null) return;
     try {
@@ -345,7 +340,6 @@ final class RequestsHub extends Notifier<RequestsState> {
     }
     if (!ref.mounted) return;
     bump();
-    onDone?.call();
   }
 
   /// An admin's answer to one request: Add or Decline a waiting one, Give

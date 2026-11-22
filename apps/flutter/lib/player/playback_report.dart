@@ -621,9 +621,6 @@ class PlaybackReport {
 
   AttemptDiagnostics? get latest => attempts.lastOrNull;
 
-  /// Whether the latest attempt failed with nothing after it.
-  bool get failed => latest?.outcome == AttemptOutcome.failed;
-
   PlaybackReport copyWith({
     DeviceDiagnostics? device,
     SettingsDiagnostics? settings,

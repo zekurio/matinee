@@ -13,18 +13,14 @@ class Calendar extends StatefulWidget {
     super.key,
     required this.selected,
     required this.onSelected,
-    this.earliest,
     this.latest,
     this.today,
-    this.showOutsideDays = true,
   });
 
   final DateTime? selected;
   final ValueChanged<DateTime>? onSelected;
-  final DateTime? earliest;
   final DateTime? latest;
   final DateTime? today;
-  final bool showOutsideDays;
 
   @override
   State<Calendar> createState() => _CalendarState();
@@ -38,9 +34,7 @@ class _CalendarState extends State<Calendar> {
   );
 
   DateTime _clampMonth(DateTime date) {
-    final first = widget.earliest;
     final last = widget.latest;
-    if (first != null && date.isBefore(_monthOf(first))) return _monthOf(first);
     if (last != null && date.isAfter(_monthOf(last))) return _monthOf(last);
     return date;
   }
@@ -163,20 +157,13 @@ class _CalendarState extends State<Calendar> {
   ) {
     final date = DateTime(shown.year, shown.month, dayOfMonth);
     final outside = date.month != shown.month;
-    if (outside && !widget.showOutsideDays) {
-      return const AspectRatio(aspectRatio: 1);
-    }
-
     final colors = MatineeTheme.of(context);
     final selected = material.DateUtils.isSameDay(date, widget.selected);
     final current = date == today;
     final onSelected = widget.onSelected;
-    final earliest = widget.earliest;
     final latest = widget.latest;
     final disabled =
         onSelected == null ||
-        (earliest != null &&
-            date.isBefore(material.DateUtils.dateOnly(earliest))) ||
         (latest != null && date.isAfter(material.DateUtils.dateOnly(latest)));
     const shape = BorderRadius.all(Radius.circular(KitRadius.md));
     return PressIndication(

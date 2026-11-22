@@ -4,32 +4,27 @@ import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
-enum SwitchSize { standard, sm }
-
 class Switch extends StatelessWidget {
   const Switch({
     super.key,
     required this.checked,
     required this.onChanged,
-    this.size = SwitchSize.standard,
     this.label,
   });
 
   final bool checked;
   final ValueChanged<bool>? onChanged;
-  final SwitchSize size;
   final String? label;
 
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     final change = onChanged;
-    final small = size == SwitchSize.sm;
     final motion = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 150);
-    final width = small ? 24.0 : 36.0;
-    final height = small ? 14.0 : 20.0;
+    const width = 36.0;
+    const height = 20.0;
     return PressIndication(
       onPressed: change == null ? null : () => change(!checked),
       button: false,
@@ -51,15 +46,15 @@ class Switch extends StatelessWidget {
                 color: checked ? colors.accent : colors.inputHover,
                 borderRadius: KitRadius.pill,
               ),
-              padding: EdgeInsets.symmetric(horizontal: small ? 1 : 2),
+              padding: const EdgeInsets.symmetric(horizontal: 2),
               child: AnimatedAlign(
                 duration: motion,
                 alignment: checked
                     ? AlignmentDirectional.centerEnd
                     : AlignmentDirectional.centerStart,
                 child: Container(
-                  width: small ? 12 : 16,
-                  height: small ? 12 : 16,
+                  width: 16,
+                  height: 16,
                   decoration: BoxDecoration(
                     color: checked
                         ? colors.accentForeground

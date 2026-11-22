@@ -236,9 +236,6 @@ ArtworkSize artworkSizeFor(
   return largest;
 }
 
-/// Artwork for a poster, when there's any.
-ArtSource? posterSource(Artwork? art) => art == null ? null : ArtSource(art);
-
 /// Wide pictures for a file, best first: the episode's still, then a frame
 /// from the file, then the show's backdrop; for a movie, its backdrop
 /// first. The Kotlin app's `landscape`.

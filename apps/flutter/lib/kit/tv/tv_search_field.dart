@@ -25,7 +25,6 @@ class TvSearchField extends StatefulWidget {
     this.focusNode,
     this.height = TvButtons.height,
     this.textStyle,
-    this.autofocus = false,
     this.rest,
   });
 
@@ -36,7 +35,6 @@ class TvSearchField extends StatefulWidget {
   final FocusNode? focusNode;
   final double height;
   final TextStyle? textStyle;
-  final bool autofocus;
 
   /// The fill without focus, in place of [TvFocus.rest].
   final Color? rest;
@@ -130,7 +128,6 @@ class _TvSearchFieldState extends State<TvSearchField> {
           Expanded(
             child: TvFocusable(
               focusNode: _outer,
-              autofocus: widget.autofocus,
               label: widget.placeholder,
               onPressed: _edit,
               builder: (context, focused) {

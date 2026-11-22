@@ -5,17 +5,16 @@ import 'package:flutter/widgets.dart';
 import 'theme.dart';
 
 class ProgressRing extends StatelessWidget {
-  const ProgressRing(this.progress, {super.key, this.size = 20, this.label});
+  const ProgressRing(this.progress, {super.key, this.size = 20});
 
   final double? progress;
   final double size;
-  final String? label;
 
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     final value = progress?.clamp(0.0, 1.0);
-    final ring = TweenAnimationBuilder<double>(
+    return TweenAnimationBuilder<double>(
       tween: Tween<double>(end: value ?? 0),
       duration: MediaQuery.disableAnimationsOf(context)
           ? Duration.zero
@@ -29,7 +28,6 @@ class ProgressRing extends StatelessWidget {
         ),
       ),
     );
-    return label == null ? ring : Semantics(label: label, child: ring);
   }
 }
 

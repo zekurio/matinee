@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import '../icon.dart';
 import '../theme.dart';
 import 'tv_focus.dart';
 import 'tv_metrics.dart';
@@ -21,11 +20,9 @@ class TvTextField extends StatefulWidget {
     required this.controller,
     required this.placeholder,
     this.focusNode,
-    this.icon,
     this.error,
     this.enabled = true,
     this.autofocus = false,
-    this.autocorrect = false,
     this.keyboardType,
     this.textInputAction,
     this.onChanged,
@@ -35,11 +32,9 @@ class TvTextField extends StatefulWidget {
   final TextEditingController controller;
   final String placeholder;
   final FocusNode? focusNode;
-  final String? icon;
   final String? error;
   final bool enabled;
   final bool autofocus;
-  final bool autocorrect;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onChanged;
@@ -142,14 +137,6 @@ class _TvTextFieldState extends State<TvTextField> {
               child: Row(
                 spacing: 16,
                 children: [
-                  if (widget.icon case final name?)
-                    KitIcon(
-                      name,
-                      size: 24,
-                      color: focused
-                          ? content
-                          : colors.foreground.withValues(alpha: .7),
-                    ),
                   Expanded(
                     child: Stack(
                       alignment: AlignmentDirectional.centerStart,
@@ -178,8 +165,8 @@ class _TvTextFieldState extends State<TvTextField> {
                             style: style,
                             cursorColor: colors.accent,
                             backgroundCursorColor: colors.textFaint,
-                            autocorrect: widget.autocorrect,
-                            enableSuggestions: widget.autocorrect,
+                            autocorrect: false,
+                            enableSuggestions: false,
                             keyboardType: widget.keyboardType,
                             textInputAction: widget.textInputAction,
                             onChanged: widget.onChanged,

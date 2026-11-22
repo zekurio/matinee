@@ -32,14 +32,12 @@ class TvArtCard extends StatelessWidget {
     this.focusNode,
     this.label,
     this.width,
-    this.circle = false,
     this.onFocusChange,
   });
 
   final String toneKey;
   final double aspect;
   final double? width;
-  final bool circle;
   final VoidCallback? onPressed;
   final VoidCallback? onLongPress;
   final FocusNode? focusNode;
@@ -60,7 +58,6 @@ class TvArtCard extends StatelessWidget {
         label: label,
         builder: (context, focused) => TvPictureFocus(
           focused: focused,
-          circle: circle,
           child: Tone(
             toneKey: toneKey,
             child: Stack(

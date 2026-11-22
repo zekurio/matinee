@@ -595,9 +595,6 @@ class RequestButton extends ConsumerWidget {
   final bool plain;
   final bool page;
 
-  /// Whether it draws anything for [availability].
-  static bool shows(Availability availability) => hasPosterButton(availability);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);

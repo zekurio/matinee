@@ -5,18 +5,10 @@ import 'press_indication.dart';
 import 'theme.dart';
 
 class Checkbox extends StatelessWidget {
-  const Checkbox({
-    super.key,
-    required this.checked,
-    required this.onChanged,
-    this.label,
-    this.focusNode,
-  });
+  const Checkbox({super.key, required this.checked, required this.onChanged});
 
   final bool checked;
   final ValueChanged<bool>? onChanged;
-  final String? label;
-  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +18,6 @@ class Checkbox extends StatelessWidget {
       onPressed: change == null ? null : () => change(!checked),
       button: false,
       checked: checked,
-      label: label,
-      focusNode: focusNode,
       shape: const BorderRadius.all(Radius.circular(5)),
       focusInsets: const EdgeInsets.all(10),
       builder: (context, state) => Opacity(
