@@ -24,10 +24,6 @@
   "@a11yPlayerSeek": {
     "description": "strings_accessibility.xml"
   },
-  "a11yPlayerSeekAction": "Seek",
-  "@a11yPlayerSeekAction": {
-    "description": "strings_accessibility.xml"
-  },
   "a11yPlayerShowControls": "Show controls",
   "@a11yPlayerShowControls": {
     "description": "strings_accessibility.xml"
@@ -564,10 +560,6 @@
   "@appName": {
     "description": "strings.xml. The app's name, never translated."
   },
-  "appearanceMaterialYou": "Wallpaper colors",
-  "@appearanceMaterialYou": {
-    "description": "strings.xml"
-  },
   "appearancePreset": "Theme",
   "@appearancePreset": {
     "description": "Appearance: the section picking the color preset"
@@ -712,14 +704,6 @@
         "type": "int"
       }
     }
-  },
-  "calendarNextMonth": "Go to the next month",
-  "@calendarNextMonth": {
-    "description": "strings.xml"
-  },
-  "calendarPreviousMonth": "Go to the previous month",
-  "@calendarPreviousMonth": {
-    "description": "strings.xml"
   },
   "catalogSearchFailed": "Couldn't search the catalog",
   "@catalogSearchFailed": {
@@ -949,15 +933,6 @@
       }
     }
   },
-  "downloadsAllLoadFailed": "Couldn't list the files. {p1}",
-  "@downloadsAllLoadFailed": {
-    "description": "strings.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "downloadsAllStarted": "{count, plural, one{Downloading {count} file} other{Downloading {count} files}}",
   "@downloadsAllStarted": {
     "description": "strings.xml",
@@ -973,10 +948,6 @@
   },
   "downloadsAudioTitle": "Audio tracks",
   "@downloadsAudioTitle": {
-    "description": "strings.xml"
-  },
-  "downloadsChannel": "Downloads",
-  "@downloadsChannel": {
     "description": "strings.xml"
   },
   "downloadsChoiceDevice": "Full quality",
@@ -1217,10 +1188,6 @@
   "@downloadsStatePaused": {
     "description": "strings.xml"
   },
-  "downloadsStateRunning": "Downloading",
-  "@downloadsStateRunning": {
-    "description": "strings.xml"
-  },
   "downloadsStateWaiting": "Waiting",
   "@downloadsStateWaiting": {
     "description": "strings.xml"
@@ -1459,10 +1426,6 @@
   "@libraryClearSearch": {
     "description": "strings.xml"
   },
-  "libraryFilter": "Filter",
-  "@libraryFilter": {
-    "description": "strings.xml"
-  },
   "libraryGenre": "Genre",
   "@libraryGenre": {
     "description": "strings.xml"
@@ -1666,10 +1629,6 @@
   },
   "loadingInProgress": "Loading",
   "@loadingInProgress": {
-    "description": "strings_loading.xml"
-  },
-  "loadingStale": "Couldn't refresh",
-  "@loadingStale": {
     "description": "strings_loading.xml"
   },
   "logsCopied": "Log copied",
@@ -2196,10 +2155,6 @@
   "@playbackQualityTitle": {
     "description": "strings.xml"
   },
-  "playbackShowsTitle": "Shows",
-  "@playbackShowsTitle": {
-    "description": "strings.xml"
-  },
   "playbackSkipBack": "Skip back",
   "@playbackSkipBack": {
     "description": "strings.xml"
@@ -2656,10 +2611,6 @@
   "profileSwitch": "Switch server or account",
   "@profileSwitch": {
     "description": "Profile: opens the saved servers, to switch to another or sign in to one"
-  },
-  "railFailed": "Couldn't load this row",
-  "@railFailed": {
-    "description": "strings_loading.xml"
   },
   "requestsLoadFailed": "Couldn't load requests",
   "@requestsLoadFailed": {
@@ -3128,14 +3079,6 @@
       }
     }
   },
-  "signinCodeScan": "Scan the code with your phone's camera, or in the Matinee app under Settings › Account.",
-  "@signinCodeScan": {
-    "description": "strings.xml"
-  },
-  "signinCodeTitle": "Scan to sign in",
-  "@signinCodeTitle": {
-    "description": "strings.xml"
-  },
   "signinCodeTitleTyped": "Sign in with a code",
   "@signinCodeTitleTyped": {
     "description": "strings.xml"
@@ -3552,15 +3495,6 @@
   "@titleImagesInUse": {
     "description": "strings.xml"
   },
-  "titleImagesLoadError": "Couldn't load the images. {p1}",
-  "@titleImagesLoadError": {
-    "description": "strings.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "titleImagesNoProvider": "This library has no metadata provider, so there's nothing to pick from. Upload an image instead.",
   "@titleImagesNoProvider": {
     "description": "strings.xml"
@@ -3782,10 +3716,6 @@
   },
   "titleTrailer": "Watch the trailer on YouTube",
   "@titleTrailer": {
-    "description": "strings.xml"
-  },
-  "toastClose": "Close notification",
-  "@toastClose": {
     "description": "strings.xml"
   },
   "tvConnectBackToList": "Back to servers found",
@@ -4084,10 +4014,6 @@
   "@unreachableTitle": {
     "description": "strings.xml: The saved server didn't answer"
   },
-  "usersSso": "SSO",
-  "@usersSso": {
-    "description": "strings.xml"
-  },
   "webAppearanceColorScheme": "Color scheme",
   "@webAppearanceColorScheme": {
     "description": "strings_web_appearance.xml"
@@ -4102,23 +4028,6 @@
   },
   "webAppearanceColorSchemeSystem": "System",
   "@webAppearanceColorSchemeSystem": {
-    "description": "strings_web_appearance.xml"
-  },
-  "webAppearanceLanguage": "Language",
-  "@webAppearanceLanguage": {
-    "description": "strings_web_appearance.xml"
-  },
-  "webAppearanceLanguageAuto": "Same as this browser ({p1})",
-  "@webAppearanceLanguageAuto": {
-    "description": "strings_web_appearance.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webAppearanceLanguageTitle": "Interface language",
-  "@webAppearanceLanguageTitle": {
     "description": "strings_web_appearance.xml"
   },
   "webAskAsk": "Request",
@@ -4158,10 +4067,6 @@
         "type": "String"
       }
     }
-  },
-  "webAskChooserSeasons": "Seasons",
-  "@webAskChooserSeasons": {
-    "description": "strings_web_ask.xml"
   },
   "webAskChooserSpecials": "Request the specials",
   "@webAskChooserSpecials": {
@@ -4218,15 +4123,6 @@
   "@webAskDisabledOff": {
     "description": "strings_web_ask.xml"
   },
-  "webAskLeft": "{count, plural, one{{count} request left.} other{{count} requests left.}}",
-  "@webAskLeft": {
-    "description": "strings_web_ask.xml",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "webAskLimitLater": "No requests left for now.",
   "@webAskLimitLater": {
     "description": "strings_web_ask.xml"
@@ -4254,19 +4150,6 @@
   },
   "webAskMineEmptyInProgress": "Nothing on its way",
   "@webAskMineEmptyInProgress": {
-    "description": "strings_web_ask.xml"
-  },
-  "webAskMineError": "Couldn't load your requests. {p1}",
-  "@webAskMineError": {
-    "description": "strings_web_ask.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webAskMineFilter": "Show",
-  "@webAskMineFilter": {
     "description": "strings_web_ask.xml"
   },
   "webAskMineInProgress": "In progress",
@@ -4332,96 +4215,9 @@
   "@webAskToastUndo": {
     "description": "strings_web_ask.xml"
   },
-  "webBrandingAccentDark": "Dark mode accent",
-  "@webBrandingAccentDark": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingAccentLight": "Light mode accent",
-  "@webBrandingAccentLight": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropArtwork": "Artwork",
-  "@webBrandingBackdropArtwork": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropArtworkMixed": "Posters and thumbs",
-  "@webBrandingBackdropArtworkMixed": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropArtworkPosters": "Posters",
-  "@webBrandingBackdropArtworkPosters": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropArtworkThumbs": "Thumbs",
-  "@webBrandingBackdropArtworkThumbs": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropBlur": "Blur",
-  "@webBrandingBackdropBlur": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropBlurValue": "{p1} px",
-  "@webBrandingBackdropBlurValue": {
-    "description": "strings_web_branding.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webBrandingBackdropEmpty": "No artwork to show yet. The libraries the Everyone group opens have no titles with images the server has downloaded.",
-  "@webBrandingBackdropEmpty": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropEnabled": "Show artwork behind the form",
-  "@webBrandingBackdropEnabled": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropFade": "Fade",
-  "@webBrandingBackdropFade": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropFadeValue": "{p1} %",
-  "@webBrandingBackdropFadeValue": {
-    "description": "strings_web_branding.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webBrandingBackdropPreview": "Preview",
-  "@webBrandingBackdropPreview": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropPreviewOff": "The login screen shows no artwork.",
-  "@webBrandingBackdropPreviewOff": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropShuffle": "Shuffle",
-  "@webBrandingBackdropShuffle": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropSource": "Shows titles from the libraries the Everyone group opens.",
-  "@webBrandingBackdropSource": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingBackdropTitle": "Login screen",
-  "@webBrandingBackdropTitle": {
-    "description": "strings_web_branding.xml"
-  },
   "webBrandingDefault": "Default",
   "@webBrandingDefault": {
     "description": "strings_web_branding.xml"
-  },
-  "webBrandingLoadFailed": "Couldn't load the branding settings. {p1}",
-  "@webBrandingLoadFailed": {
-    "description": "strings_web_branding.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
   },
   "webBrandingModeDark": "Dark mode",
   "@webBrandingModeDark": {
@@ -4429,10 +4225,6 @@
   },
   "webBrandingModeLight": "Light mode",
   "@webBrandingModeLight": {
-    "description": "strings_web_branding.xml"
-  },
-  "webBrandingPresets": "Suggested accents",
-  "@webBrandingPresets": {
     "description": "strings_web_branding.xml"
   },
   "webBrandingTitle": "Accent color",
@@ -4451,10 +4243,6 @@
   "@webCatalogNotHere": {
     "description": "strings_web_catalog.xml"
   },
-  "webCatalogPageBadLink": "This link doesn't lead to a title.",
-  "@webCatalogPageBadLink": {
-    "description": "strings_web_catalog.xml"
-  },
   "webCatalogPageStale": "These details may be out of date.",
   "@webCatalogPageStale": {
     "description": "strings_web_catalog.xml"
@@ -4465,10 +4253,6 @@
   },
   "webCatalogRelatedStale": "Some of these may be out of date.",
   "@webCatalogRelatedStale": {
-    "description": "strings_web_catalog.xml"
-  },
-  "webCatalogSearchFailed": "Couldn't search for new titles right now.",
-  "@webCatalogSearchFailed": {
     "description": "strings_web_catalog.xml"
   },
   "webCatalogSearchStale": "Some of these may be out of date.",
@@ -4521,70 +4305,6 @@
   "@webCatalogStateUnavailable": {
     "description": "strings_web_catalog.xml"
   },
-  "webCatalogTipAloud": "{p1}. {p2}",
-  "@webCatalogTipAloud": {
-    "description": "strings_web_catalog.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      },
-      "p2": {
-        "type": "String"
-      }
-    }
-  },
-  "webCatalogTipJoin": "{p1} {p2}",
-  "@webCatalogTipJoin": {
-    "description": "strings_web_catalog.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      },
-      "p2": {
-        "type": "String"
-      }
-    }
-  },
-  "webCommonBackHome": "Back home",
-  "@webCommonBackHome": {
-    "description": "strings_web_common.xml"
-  },
-  "webCommonErrorInvalidInput": "That didn't go through. Check what you entered and try again.",
-  "@webCommonErrorInvalidInput": {
-    "description": "strings_web_common.xml"
-  },
-  "webCommonErrorPageDescription": "The page couldn't be shown. Try again, or go back home.",
-  "@webCommonErrorPageDescription": {
-    "description": "strings_web_common.xml"
-  },
-  "webCommonErrorPasskeyClosed": "The passkey prompt was closed before it finished.",
-  "@webCommonErrorPasskeyClosed": {
-    "description": "strings_web_common.xml"
-  },
-  "webCommonErrorPasskeyExists": "This device already has a passkey for your account.",
-  "@webCommonErrorPasskeyExists": {
-    "description": "strings_web_common.xml"
-  },
-  "webCommonErrorRetry": "Try again",
-  "@webCommonErrorRetry": {
-    "description": "strings_web_common.xml"
-  },
-  "webCommonErrorServer": "The server ran into a problem. Check its log.",
-  "@webCommonErrorServer": {
-    "description": "strings_web_common.xml"
-  },
-  "webCommonErrorUnknown": "Something went wrong.",
-  "@webCommonErrorUnknown": {
-    "description": "strings_web_common.xml"
-  },
-  "webCommonNotFoundDescription": "The address may be mistyped, or the page may have moved.",
-  "@webCommonNotFoundDescription": {
-    "description": "strings_web_common.xml"
-  },
-  "webCommonNotFoundTitle": "Page not found",
-  "@webCommonNotFoundTitle": {
-    "description": "strings_web_common.xml"
-  },
   "webCommonSaveBarDone": "Saved",
   "@webCommonSaveBarDone": {
     "description": "strings_web_common.xml"
@@ -4616,10 +4336,6 @@
   "webCommonSaveBarUnsaved": "Unsaved changes",
   "@webCommonSaveBarUnsaved": {
     "description": "strings_web_common.xml"
-  },
-  "webDiscoverBrowseFailed": "These titles didn't load.",
-  "@webDiscoverBrowseFailed": {
-    "description": "strings_web_discover.xml"
   },
   "webDiscoverBrowseFloorList": "Only titles with at least {p1} votes, so the list isn't filled with ones hardly anyone has seen.",
   "@webDiscoverBrowseFloorList": {
@@ -4669,10 +4385,6 @@
   },
   "webDiscoverBrowseOnlyHint": "Coming soon looks three months ahead.",
   "@webDiscoverBrowseOnlyHint": {
-    "description": "strings_web_discover.xml"
-  },
-  "webDiscoverBrowseOptionsFailed": "The filters didn't load.",
-  "@webDiscoverBrowseOptionsFailed": {
     "description": "strings_web_discover.xml"
   },
   "webDiscoverBrowseRecommended": "Recommended for you",
@@ -4750,37 +4462,16 @@
   "@webDiscoverEnd": {
     "description": "strings_web_discover.xml"
   },
-  "webDiscoverFailed": "Discover isn't available right now.",
-  "@webDiscoverFailed": {
-    "description": "strings_web_discover.xml"
-  },
   "webDiscoverFailedHint": "The catalog didn't answer. Search still works.",
   "@webDiscoverFailedHint": {
-    "description": "strings_web_discover.xml"
-  },
-  "webDiscoverMoreFailed": "The next titles didn't load.",
-  "@webDiscoverMoreFailed": {
     "description": "strings_web_discover.xml"
   },
   "webDiscoverNotInterested": "Not interested",
   "@webDiscoverNotInterested": {
     "description": "strings_web_discover.xml"
   },
-  "webDiscoverNotInterestedNamed": "Not interested in {p1}",
-  "@webDiscoverNotInterestedNamed": {
-    "description": "strings_web_discover.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webDiscoverOff": "Discover isn't set up here",
   "@webDiscoverOff": {
-    "description": "strings_web_discover.xml"
-  },
-  "webDiscoverOffAdmin": "It needs a TMDB API key and a library that requests can go to.",
-  "@webDiscoverOffAdmin": {
     "description": "strings_web_discover.xml"
   },
   "webDiscoverOffHint": "Search still finds everything in the libraries you can open.",
@@ -4825,42 +4516,8 @@
       }
     }
   },
-  "webDiscoverReasonPerson": "With {p1}",
-  "@webDiscoverReasonPerson": {
-    "description": "strings_web_discover.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webDiscoverReasonTaste": "Picked from what you watch",
-  "@webDiscoverReasonTaste": {
-    "description": "strings_web_discover.xml"
-  },
-  "webDiscoverReasonWatched": "Because you watched {p1}",
-  "@webDiscoverReasonWatched": {
-    "description": "strings_web_discover.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webDiscoverRetry": "Try again",
-  "@webDiscoverRetry": {
-    "description": "strings_web_discover.xml"
-  },
   "webDiscoverStale": "Some of these may be out of date.",
   "@webDiscoverStale": {
-    "description": "strings_web_discover.xml"
-  },
-  "webDiscoverTitle": "Discover",
-  "@webDiscoverTitle": {
-    "description": "strings_web_discover.xml"
-  },
-  "webDiscoverUndo": "Undo",
-  "@webDiscoverUndo": {
     "description": "strings_web_discover.xml"
   },
   "webFiltersAny": "Any",
@@ -5063,16 +4720,8 @@
   "@webFiltersGenres": {
     "description": "strings_web_filters.xml"
   },
-  "webFiltersHighest": "Highest",
-  "@webFiltersHighest": {
-    "description": "strings_web_filters.xml"
-  },
   "webFiltersLanguage": "Original language",
   "@webFiltersLanguage": {
-    "description": "strings_web_filters.xml"
-  },
-  "webFiltersLowest": "Lowest",
-  "@webFiltersLowest": {
     "description": "strings_web_filters.xml"
   },
   "webFiltersNoStudio": "No studio by that name",
@@ -5223,15 +4872,6 @@
   "@webJobsConcurrency": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsConcurrencyAtOnce": "{count, plural, one{{count} job at once} other{{count} jobs at once}}",
-  "@webJobsConcurrencyAtOnce": {
-    "description": "strings_web_jobs.xml",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "webJobsConcurrencyDecrease": "Decrease {p1}",
   "@webJobsConcurrencyDecrease": {
     "description": "strings_web_jobs.xml",
@@ -5266,10 +4906,6 @@
   "@webJobsDetailsFailures": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsDetailsKept": "The last five since the server started.",
-  "@webJobsDetailsKept": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsDetailsNoFailures": "None since the server started.",
   "@webJobsDetailsNoFailures": {
     "description": "strings_web_jobs.xml"
@@ -5299,40 +4935,6 @@
   "@webJobsDetailsRunning": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsDetailsRunningFor": "For {p1}",
-  "@webJobsDetailsRunningFor": {
-    "description": "strings_web_jobs.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webJobsFactCurrentRun": "Current run",
-  "@webJobsFactCurrentRun": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsFactLastRun": "Last run",
-  "@webJobsFactLastRun": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsFactNextRun": "Next run",
-  "@webJobsFactNextRun": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsFactStatus": "Status",
-  "@webJobsFactStatus": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsLoadFailed": "Couldn't load the jobs. {p1}",
-  "@webJobsLoadFailed": {
-    "description": "strings_web_jobs.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webJobsQueueActions": "{p1} actions",
   "@webJobsQueueActions": {
     "description": "strings_web_jobs.xml",
@@ -5342,24 +4944,12 @@
       }
     }
   },
-  "webJobsQueueArtworkDescription": "Download images from the metadata provider, scale them, and read their blurred placeholders.",
-  "@webJobsQueueArtworkDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsQueueArtworkName": "Artwork",
   "@webJobsQueueArtworkName": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsQueueAvatarsDescription": "Crop and scale uploads and the pictures sign-in providers send.",
-  "@webJobsQueueAvatarsDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsQueueAvatarsName": "Profile pictures",
   "@webJobsQueueAvatarsName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsQueueCatalogDescription": "Refresh cached catalog and Discover responses.",
-  "@webJobsQueueCatalogDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsQueueCatalogName": "Catalog",
@@ -5379,29 +4969,8 @@
       }
     }
   },
-  "webJobsQueueDetails": "Details",
-  "@webJobsQueueDetails": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsQueueDone": "{count, plural, one{{count} done} other{{count} done}}",
-  "@webJobsQueueDone": {
-    "description": "strings_web_jobs.xml",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "webJobsQueueDownloadCopiesDescription": "Put together downloads that keep their video as it is, while the app or browser fetches them.",
-  "@webJobsQueueDownloadCopiesDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsQueueDownloadCopiesName": "Download copies",
   "@webJobsQueueDownloadCopiesName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsQueueDownloadsDescription": "Encode the video of downloads in another size or codec, while the app or browser fetches them.",
-  "@webJobsQueueDownloadsDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsQueueDownloadsName": "Download encodes",
@@ -5421,32 +4990,16 @@
   "@webJobsQueueIdle": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsQueueLibraryScanDescription": "Walk library folders for new, changed, and removed files.",
-  "@webJobsQueueLibraryScanDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsQueueLibraryScanName": "Library scans",
   "@webJobsQueueLibraryScanName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsQueueMediaProbeDescription": "Read the streams of new and changed files with ffprobe.",
-  "@webJobsQueueMediaProbeDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsQueueMediaProbeName": "Media info",
   "@webJobsQueueMediaProbeName": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsQueueMediaSegmentsDescription": "Find the intro and credits of each episode, for Skip intro and for offering the next episode while the credits roll.",
-  "@webJobsQueueMediaSegmentsDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsQueueMediaSegmentsName": "Intros and credits",
   "@webJobsQueueMediaSegmentsName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsQueueMetadataDescription": "Fetch details, artwork, and episodes from TMDB or TheTVDB.",
-  "@webJobsQueueMetadataDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsQueueMetadataName": "Metadata",
@@ -5470,32 +5023,16 @@
   "@webJobsQueuePaused": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsQueueRecommendationsDescription": "Work out each person's recommendations from what they watched.",
-  "@webJobsQueueRecommendationsDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsQueueRecommendationsName": "Recommendations",
   "@webJobsQueueRecommendationsName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsQueueRequestArrivalDescription": "Match library arrivals to their requests.",
-  "@webJobsQueueRequestArrivalDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsQueueRequestArrivalName": "Request arrivals",
   "@webJobsQueueRequestArrivalName": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsQueueRequestDispatchDescription": "Send accepted titles to their library connection.",
-  "@webJobsQueueRequestDispatchDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsQueueRequestDispatchName": "Request delivery",
   "@webJobsQueueRequestDispatchName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsQueueRequestProgressDescription": "Check progress for titles on their way.",
-  "@webJobsQueueRequestProgressDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsQueueRequestProgressName": "Request progress",
@@ -5527,48 +5064,24 @@
       }
     }
   },
-  "webJobsQueueSubtitleFontsDescription": "Extract font attachments for styled subtitles.",
-  "@webJobsQueueSubtitleFontsDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsQueueSubtitleFontsName": "Subtitle fonts",
   "@webJobsQueueSubtitleFontsName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsQueueSubtitlePrepareDescription": "Cache indexed text subtitles without reading video streams.",
-  "@webJobsQueueSubtitlePrepareDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsQueueSubtitlePrepareName": "Prepare subtitles",
   "@webJobsQueueSubtitlePrepareName": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsQueueSubtitlesDescription": "Convert subtitles to WebVTT, and copy PGS subtitles out of videos.",
-  "@webJobsQueueSubtitlesDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsQueueSubtitlesName": "Subtitles",
   "@webJobsQueueSubtitlesName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsQueueThumbnailsDescription": "Take a frame from videos that have no artwork.",
-  "@webJobsQueueThumbnailsDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsQueueThumbnailsName": "Thumbnails",
   "@webJobsQueueThumbnailsName": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsQueueTitleFeaturesDescription": "Fetch the genres, keywords, and people of titles from TMDB, for recommendations.",
-  "@webJobsQueueTitleFeaturesDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsQueueTitleFeaturesName": "Title features",
   "@webJobsQueueTitleFeaturesName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsQueueTrickplayDescription": "Make the thumbnails the seek bar shows while scrubbing.",
-  "@webJobsQueueTrickplayDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsQueueTrickplayName": "Trickplay images",
@@ -5588,10 +5101,6 @@
   "@webJobsQueues": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsRetry": "Try again",
-  "@webJobsRetry": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsScheduleAfterStartup": "Runs {p1} after startup",
   "@webJobsScheduleAfterStartup": {
     "description": "strings_web_jobs.xml",
@@ -5600,10 +5109,6 @@
         "type": "String"
       }
     }
-  },
-  "webJobsScheduleAfterThisRun": "After this run",
-  "@webJobsScheduleAfterThisRun": {
-    "description": "strings_web_jobs.xml"
   },
   "webJobsScheduleAtStartup": "Runs at startup",
   "@webJobsScheduleAtStartup": {
@@ -5670,10 +5175,6 @@
   "@webJobsScheduleManual": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsScheduleNotScheduled": "Not scheduled",
-  "@webJobsScheduleNotScheduled": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsTaskCancel": "Cancel",
   "@webJobsTaskCancel": {
     "description": "strings_web_jobs.xml"
@@ -5696,10 +5197,6 @@
       }
     }
   },
-  "webJobsTaskCleanSessionsDescription": "Remove sign-ins that expired from the database.",
-  "@webJobsTaskCleanSessionsDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsTaskCleanSessionsName": "Delete expired sessions",
   "@webJobsTaskCleanSessionsName": {
     "description": "strings_web_jobs.xml"
@@ -5708,20 +5205,12 @@
   "@webJobsTaskCleanTranscodesName": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsTaskDispatchRequestsDescription": "Find accepted requests waiting to be sent.",
-  "@webJobsTaskDispatchRequestsDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsTaskDispatchRequestsName": "Send requests",
   "@webJobsTaskDispatchRequestsName": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsTaskFailed": "Failed",
   "@webJobsTaskFailed": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsTaskFailedUnknown": "This failed. The server log has the details.",
-  "@webJobsTaskFailedUnknown": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsTaskFailedWith": "Failed: {p1}",
@@ -5733,24 +5222,12 @@
       }
     }
   },
-  "webJobsTaskFindSegmentsDescription": "Look for the intro and credits of episodes not looked at yet, or whose file changed, in their chapters and in the audio they share with their season. Scans queue their new files on their own.",
-  "@webJobsTaskFindSegmentsDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsTaskFindSegmentsName": "Find intros and credits",
   "@webJobsTaskFindSegmentsName": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsTaskForgetBrowsedPagesDescription": "Delete pages of the filtered catalog that nobody opened for a week.",
-  "@webJobsTaskForgetBrowsedPagesDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsTaskForgetBrowsedPagesName": "Forget browsed catalog pages",
   "@webJobsTaskForgetBrowsedPagesName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsTaskMakeTrickplayDescription": "Make the seek bar's thumbnails for videos without them, or whose file or settings changed, newest first. Scans queue their new files on their own. Also deletes the images of files that are gone.",
-  "@webJobsTaskMakeTrickplayDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsTaskMakeTrickplayName": "Make trickplay images",
@@ -5770,73 +5247,32 @@
       }
     }
   },
-  "webJobsTaskPollRequestsDescription": "Check active requests through each connection once.",
-  "@webJobsTaskPollRequestsDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsTaskPollRequestsName": "Read request progress",
   "@webJobsTaskPollRequestsName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsTaskPrefetchArtworkDescription": "Download images the server has no blurred placeholder for yet, posters and backdrops first. Metadata fetches queue their images on their own; this catches up after a restart or a failed download.",
-  "@webJobsTaskPrefetchArtworkDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsTaskPrefetchArtworkName": "Fetch artwork",
   "@webJobsTaskPrefetchArtworkName": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsTaskPrepareDiscoverDescription": "Read Discover's rows ahead and fetch their posters, so they show their blurred placeholders the first time someone opens Discover.",
-  "@webJobsTaskPrepareDiscoverDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsTaskPrepareDiscoverName": "Prepare Discover",
   "@webJobsTaskPrepareDiscoverName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsTaskPrepareSubtitlesDescription": "Cache indexed text subtitles and delete outputs of removed or changed files. Picture subtitles stay on demand.",
-  "@webJobsTaskPrepareSubtitlesDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsTaskPrepareSubtitlesName": "Prepare subtitles",
   "@webJobsTaskPrepareSubtitlesName": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsTaskProbeMediaDescription": "Run ffprobe on files that weren't read yet. Scans queue their new files on their own.",
-  "@webJobsTaskProbeMediaDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsTaskProbeMediaName": "Read media info",
   "@webJobsTaskProbeMediaName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsTaskProgress": "{p1} progress",
-  "@webJobsTaskProgress": {
-    "description": "strings_web_jobs.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webJobsTaskRecommendTitlesDescription": "Work out recommendations again for people who watched something since, or whose list is a day old. Finishing a title or marking a favorite queues the person on its own.",
-  "@webJobsTaskRecommendTitlesDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsTaskRecommendTitlesName": "Update recommendations",
   "@webJobsTaskRecommendTitlesName": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsTaskReconcileRequestsDescription": "Find playable films and seasons for accepted requests.",
-  "@webJobsTaskReconcileRequestsDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsTaskReconcileRequestsName": "Reconcile request arrivals",
   "@webJobsTaskReconcileRequestsName": {
-    "description": "strings_web_jobs.xml"
-  },
-  "webJobsTaskRefreshMetadataDescription": "Fetch metadata for titles without a match and for ones that went stale, for new episodes and artwork.",
-  "@webJobsTaskRefreshMetadataDescription": {
     "description": "strings_web_jobs.xml"
   },
   "webJobsTaskRefreshMetadataName": "Refresh metadata",
@@ -5851,10 +5287,6 @@
   "@webJobsTaskRunning": {
     "description": "strings_web_jobs.xml"
   },
-  "webJobsTaskScanLibrariesDescription": "Look for new, changed, and removed files in every library, for changes the folder watcher can't see, like a network share written by another host.",
-  "@webJobsTaskScanLibrariesDescription": {
-    "description": "strings_web_jobs.xml"
-  },
   "webJobsTaskScanLibrariesName": "Scan libraries",
   "@webJobsTaskScanLibrariesName": {
     "description": "strings_web_jobs.xml"
@@ -5867,19 +5299,6 @@
         "type": "String"
       }
     }
-  },
-  "webJobsTaskStarted": "Started {p1}",
-  "@webJobsTaskStarted": {
-    "description": "strings_web_jobs.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webJobsTaskSyncOidcAccountsDescription": "Refresh roles, pictures, and access from the sign-in provider for accounts with a refresh token.",
-  "@webJobsTaskSyncOidcAccountsDescription": {
-    "description": "strings_web_jobs.xml"
   },
   "webJobsTaskSyncOidcAccountsName": "Sync provider accounts",
   "@webJobsTaskSyncOidcAccountsName": {
@@ -5980,10 +5399,6 @@
   "@webLibrariesBrowserPath": {
     "description": "strings_web_libraries.xml"
   },
-  "webLibrariesDialogAdd": "Add library",
-  "@webLibrariesDialogAdd": {
-    "description": "strings_web_libraries.xml"
-  },
   "webLibrariesDialogAddFolder": "Add folder",
   "@webLibrariesDialogAddFolder": {
     "description": "strings_web_libraries.xml"
@@ -5994,14 +5409,6 @@
   },
   "webLibrariesDialogBrowse": "Browse server",
   "@webLibrariesDialogBrowse": {
-    "description": "strings_web_libraries.xml"
-  },
-  "webLibrariesDialogCancel": "Cancel",
-  "@webLibrariesDialogCancel": {
-    "description": "strings_web_libraries.xml"
-  },
-  "webLibrariesDialogCheckFields": "Check the fields.",
-  "@webLibrariesDialogCheckFields": {
     "description": "strings_web_libraries.xml"
   },
   "webLibrariesDialogEditTitle": "Edit library",
@@ -6040,10 +5447,6 @@
   "@webLibrariesDialogNeedsKey": {
     "description": "strings_web_libraries.xml"
   },
-  "webLibrariesDialogNoFolders": "No folders yet.",
-  "@webLibrariesDialogNoFolders": {
-    "description": "strings_web_libraries.xml"
-  },
   "webLibrariesDialogNoProvider": "None",
   "@webLibrariesDialogNoProvider": {
     "description": "strings_web_libraries.xml"
@@ -6064,15 +5467,6 @@
   "webLibrariesDialogSave": "Save",
   "@webLibrariesDialogSave": {
     "description": "strings_web_libraries.xml"
-  },
-  "webLibrariesDialogSelected": "{count, plural, one{{count} selected} other{{count} selected}}",
-  "@webLibrariesDialogSelected": {
-    "description": "strings_web_libraries.xml",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "webLibrariesDialogType": "Type",
   "@webLibrariesDialogType": {
@@ -6110,15 +5504,6 @@
   "webLibrariesFetchingFromProvider": "Fetching metadata from the provider…",
   "@webLibrariesFetchingFromProvider": {
     "description": "strings_web_libraries.xml"
-  },
-  "webLibrariesLoadFailed": "Couldn't load libraries. {p1}",
-  "@webLibrariesLoadFailed": {
-    "description": "strings_web_libraries.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
   },
   "webLibrariesRefreshMetadata": "Refresh metadata",
   "@webLibrariesRefreshMetadata": {
@@ -6167,14 +5552,6 @@
       }
     }
   },
-  "webLibrariesRemovedDescription": "Your files are still on disk.",
-  "@webLibrariesRemovedDescription": {
-    "description": "strings_web_libraries.xml"
-  },
-  "webLibrariesRetry": "Try again",
-  "@webLibrariesRetry": {
-    "description": "strings_web_libraries.xml"
-  },
   "webLibrariesScanFailed": "Couldn't start the scan",
   "@webLibrariesScanFailed": {
     "description": "strings_web_libraries.xml"
@@ -6185,10 +5562,6 @@
   },
   "webLibrariesScanning": "Scanning…",
   "@webLibrariesScanning": {
-    "description": "strings_web_libraries.xml"
-  },
-  "webLibrariesTitle": "Libraries",
-  "@webLibrariesTitle": {
     "description": "strings_web_libraries.xml"
   },
   "webMetadataStatusContinuing": "Continuing",
@@ -6203,49 +5576,12 @@
   "@webMetadataStatusUnreleased": {
     "description": "strings_web_metadata.xml"
   },
-  "webOidcAccessTitle": "Groups and access",
-  "@webOidcAccessTitle": {
-    "description": "strings_web_oidc.xml"
-  },
   "webOidcAdvanced": "Advanced",
   "@webOidcAdvanced": {
     "description": "strings_web_oidc.xml"
   },
-  "webOidcAdvancedHide": "Hide",
-  "@webOidcAdvancedHide": {
-    "description": "strings_web_oidc.xml"
-  },
-  "webOidcAdvancedShow": "Show",
-  "@webOidcAdvancedShow": {
-    "description": "strings_web_oidc.xml"
-  },
   "webOidcAllowSignUp": "Create accounts",
   "@webOidcAllowSignUp": {
-    "description": "strings_web_oidc.xml"
-  },
-  "webOidcCheckField": "Check {p1}.",
-  "@webOidcCheckField": {
-    "description": "strings_web_oidc.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webOidcCheckFieldIssue": "{p1} {p2}",
-  "@webOidcCheckFieldIssue": {
-    "description": "strings_web_oidc.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      },
-      "p2": {
-        "type": "String"
-      }
-    }
-  },
-  "webOidcCheckFields": "Check the fields.",
-  "@webOidcCheckFields": {
     "description": "strings_web_oidc.xml"
   },
   "webOidcClaimOff": "Off",
@@ -6348,15 +5684,6 @@
   "@webOidcIssuerUrlOverride": {
     "description": "strings_web_oidc.xml"
   },
-  "webOidcLoadFailed": "Couldn't load the sign-in settings. {p1}",
-  "@webOidcLoadFailed": {
-    "description": "strings_web_oidc.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webOidcPasskeysAllowSignUp": "Create accounts",
   "@webOidcPasskeysAllowSignUp": {
     "description": "strings_web_oidc.xml"
@@ -6425,15 +5752,6 @@
   "@webRequestsAddAfterAll": {
     "description": "strings_web_requests.xml"
   },
-  "webRequestsAddAfterAllNamed": "Add {p1} after all",
-  "@webRequestsAddAfterAllNamed": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webRequestsAddAll": "{count, plural, one{Add {count}} other{Add all {count}}}",
   "@webRequestsAddAll": {
     "description": "strings_web_requests.xml",
@@ -6463,28 +5781,6 @@
   },
   "webRequestsAllowAgain": "Allow requests again",
   "@webRequestsAllowAgain": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsAllowAgainNamed": "Allow requests for {p1} again",
-  "@webRequestsAllowAgainNamed": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webRequestsAlsoRequested": "also {p1}",
-  "@webRequestsAlsoRequested": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webRequestsAttentionFailedUnknown": "This failed. The server log has the details.",
-  "@webRequestsAttentionFailedUnknown": {
     "description": "strings_web_requests.xml"
   },
   "webRequestsAttentionUnknown": "Failed without a reason",
@@ -6518,10 +5814,6 @@
   },
   "webRequestsDecline": "Decline",
   "@webRequestsDecline": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsDeclineCancel": "Cancel",
-  "@webRequestsDeclineCancel": {
     "description": "strings_web_requests.xml"
   },
   "webRequestsDeclineNote": "Note",
@@ -6609,18 +5901,6 @@
   "@webRequestsEmptyOnTheWay": {
     "description": "strings_web_requests.xml"
   },
-  "webRequestsEmptySetupAction": "Set up requests",
-  "@webRequestsEmptySetupAction": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsEmptySetupDescription": "Add a connection, then choose the libraries it fills.",
-  "@webRequestsEmptySetupDescription": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsEmptySetupTitle": "Nothing fills your libraries yet",
-  "@webRequestsEmptySetupTitle": {
-    "description": "strings_web_requests.xml"
-  },
   "webRequestsEmptyWaiting": "Nothing is waiting",
   "@webRequestsEmptyWaiting": {
     "description": "strings_web_requests.xml"
@@ -6631,15 +5911,6 @@
   },
   "webRequestsGiveUpKeeps": "{p1} keeps what it has. If the file turns up anyway, it arrives as usual.",
   "@webRequestsGiveUpKeeps": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webRequestsGiveUpNamed": "Give up on {p1}",
-  "@webRequestsGiveUpNamed": {
     "description": "strings_web_requests.xml",
     "placeholders": {
       "p1": {
@@ -6676,16 +5947,8 @@
       }
     }
   },
-  "webRequestsGoesToLabel": "Goes to",
-  "@webRequestsGoesToLabel": {
-    "description": "strings_web_requests.xml"
-  },
   "webRequestsGoesToTitle": "Goes to",
   "@webRequestsGoesToTitle": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsKeysAddAll": "Add all",
-  "@webRequestsKeysAddAll": {
     "description": "strings_web_requests.xml"
   },
   "webRequestsKindMovie": "Movie",
@@ -6695,15 +5958,6 @@
   "webRequestsKindShow": "Show",
   "@webRequestsKindShow": {
     "description": "strings_web_requests.xml"
-  },
-  "webRequestsLabelled": "{p1}. Requests need you",
-  "@webRequestsLabelled": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
   },
   "webRequestsListDone": "Done",
   "@webRequestsListDone": {
@@ -6719,23 +5973,6 @@
   },
   "webRequestsListWaiting": "Waiting",
   "@webRequestsListWaiting": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsLists": "Lists",
-  "@webRequestsLists": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsLoadFailed": "Couldn't load requests. {p1}",
-  "@webRequestsLoadFailed": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webRequestsMenu": "Requests",
-  "@webRequestsMenu": {
     "description": "strings_web_requests.xml"
   },
   "webRequestsMenuWaiting": "{count, plural, one{Requests, {count} needs you} other{Requests, {count} need you}}",
@@ -6786,15 +6023,6 @@
   "@webRequestsProgressByHand": {
     "description": "strings_web_requests.xml"
   },
-  "webRequestsProgressLabel": "Progress for {p1}",
-  "@webRequestsProgressLabel": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webRequestsProgressLeft": "{p1} left",
   "@webRequestsProgressLeft": {
     "description": "strings_web_requests.xml",
@@ -6840,53 +6068,6 @@
   "webRequestsReasonNotFound": "Can't find a copy",
   "@webRequestsReasonNotFound": {
     "description": "strings_web_requests.xml"
-  },
-  "webRequestsReload": "Try again",
-  "@webRequestsReload": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsRemove": "Remove request…",
-  "@webRequestsRemove": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsRemoveConfirm": "Remove",
-  "@webRequestsRemoveConfirm": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsRemoveDescription": "{p1} won't be told and can request it again.",
-  "@webRequestsRemoveDescription": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webRequestsRemoveDescriptionNobody": "Nobody is told.",
-  "@webRequestsRemoveDescriptionNobody": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsRemoveFailed": "Couldn't remove the request",
-  "@webRequestsRemoveFailed": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsRemoveTitle": "Remove the request for {p1}?",
-  "@webRequestsRemoveTitle": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webRequestsRemoved": "Removed the request for {p1}",
-  "@webRequestsRemoved": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
   },
   "webRequestsRetried": "Sending {p1} again",
   "@webRequestsRetried": {
@@ -6998,18 +6179,6 @@
     "placeholders": {
       "count": {
         "type": "int"
-      }
-    }
-  },
-  "webRequestsToastAddedTo": "Added {p1} to {p2}",
-  "@webRequestsToastAddedTo": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      },
-      "p2": {
-        "type": "String"
       }
     }
   },
@@ -8528,10 +7697,6 @@
   "@webTranscodingAudioDownmix": {
     "description": "strings_web_transcoding.xml"
   },
-  "webTranscodingAudioNoOpus": "Players get a track as it is when they decode it. The rest becomes AAC, since this ffmpeg lacks libopus.",
-  "@webTranscodingAudioNoOpus": {
-    "description": "strings_web_transcoding.xml"
-  },
   "webTranscodingAudioTitle": "Audio",
   "@webTranscodingAudioTitle": {
     "description": "strings_web_transcoding.xml"
@@ -8540,54 +7705,8 @@
   "@webTranscodingAudioVbr": {
     "description": "strings_web_transcoding.xml"
   },
-  "webTranscodingAudioVbrUnavailable": "Needs aac_at or libfdk_aac, which this ffmpeg lacks.",
-  "@webTranscodingAudioVbrUnavailable": {
-    "description": "strings_web_transcoding.xml"
-  },
   "webTranscodingAuto": "Auto",
   "@webTranscodingAuto": {
-    "description": "strings_web_transcoding.xml"
-  },
-  "webTranscodingCheckFailed": "It failed on this server: {p1}",
-  "@webTranscodingCheckFailed": {
-    "description": "strings_web_transcoding.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webTranscodingCheckFailedPlain": "It failed on this server.",
-  "@webTranscodingCheckFailedPlain": {
-    "description": "strings_web_transcoding.xml"
-  },
-  "webTranscodingCheckField": "Check {p1}.",
-  "@webTranscodingCheckField": {
-    "description": "strings_web_transcoding.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webTranscodingCheckFieldIssue": "{p1} {p2}",
-  "@webTranscodingCheckFieldIssue": {
-    "description": "strings_web_transcoding.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      },
-      "p2": {
-        "type": "String"
-      }
-    }
-  },
-  "webTranscodingCheckFields": "Check the fields.",
-  "@webTranscodingCheckFields": {
-    "description": "strings_web_transcoding.xml"
-  },
-  "webTranscodingCheckMissing": "This ffmpeg build or GPU doesn't have it.",
-  "@webTranscodingCheckMissing": {
     "description": "strings_web_transcoding.xml"
   },
   "webTranscodingDecodingHevc10": "HEVC 10-bit",
@@ -8646,16 +7765,8 @@
   "@webTranscodingEncodingAv1": {
     "description": "strings_web_transcoding.xml"
   },
-  "webTranscodingEncodingAv1Unavailable": "No AV1 encoder works on this server.",
-  "@webTranscodingEncodingAv1Unavailable": {
-    "description": "strings_web_transcoding.xml"
-  },
   "webTranscodingEncodingHevc": "Allow HEVC encoding",
   "@webTranscodingEncodingHevc": {
-    "description": "strings_web_transcoding.xml"
-  },
-  "webTranscodingEncodingHevcUnavailable": "No HEVC encoder works on this server.",
-  "@webTranscodingEncodingHevcUnavailable": {
     "description": "strings_web_transcoding.xml"
   },
   "webTranscodingEncodingPreset": "Encoder preset",
@@ -8686,33 +7797,8 @@
   "@webTranscodingFfmpegDetecting": {
     "description": "strings_web_transcoding.xml"
   },
-  "webTranscodingFfmpegDoviRemoval": "Dolby Vision removal",
-  "@webTranscodingFfmpegDoviRemoval": {
-    "description": "strings_web_transcoding.xml"
-  },
-  "webTranscodingFfmpegErrorDetail": "The check ended with this error:",
-  "@webTranscodingFfmpegErrorDetail": {
-    "description": "strings_web_transcoding.xml"
-  },
   "webTranscodingFfmpegFailed": "ffmpeg didn't run, so nothing can be transcoded.",
   "@webTranscodingFfmpegFailed": {
-    "description": "strings_web_transcoding.xml"
-  },
-  "webTranscodingFfmpegLacks": "This build lacks {p1}. Use jellyfin-ffmpeg.",
-  "@webTranscodingFfmpegLacks": {
-    "description": "strings_web_transcoding.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webTranscodingFfmpegPauseKeys": "pause keys",
-  "@webTranscodingFfmpegPauseKeys": {
-    "description": "strings_web_transcoding.xml"
-  },
-  "webTranscodingFfmpegTonemapx": "tone mapping (tonemapx)",
-  "@webTranscodingFfmpegTonemapx": {
     "description": "strings_web_transcoding.xml"
   },
   "webTranscodingFfmpegUnknownVersion": "unknown",
@@ -8805,15 +7891,6 @@
   "@webTranscodingHardwareTitle": {
     "description": "strings_web_transcoding.xml"
   },
-  "webTranscodingLoadFailed": "Couldn't load the transcoding settings. {p1}",
-  "@webTranscodingLoadFailed": {
-    "description": "strings_web_transcoding.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webTranscodingNumberDownMixAudioBoost": "0.5 to 3. Downmixed surround is quiet; 1 leaves it.",
   "@webTranscodingNumberDownMixAudioBoost": {
     "description": "strings_web_transcoding.xml"
@@ -8862,10 +7939,6 @@
   "@webTranscodingSegmentsThrottle": {
     "description": "strings_web_transcoding.xml"
   },
-  "webTranscodingSegmentsThrottleUnavailable": "Needs jellyfin-ffmpeg.",
-  "@webTranscodingSegmentsThrottleUnavailable": {
-    "description": "strings_web_transcoding.xml"
-  },
   "webTranscodingSegmentsTitle": "Throttling and segments",
   "@webTranscodingSegmentsTitle": {
     "description": "strings_web_transcoding.xml"
@@ -8880,10 +7953,6 @@
   },
   "webTranscodingToneMappingMode": "Mode",
   "@webTranscodingToneMappingMode": {
-    "description": "strings_web_transcoding.xml"
-  },
-  "webTranscodingToneMappingNoTonemapx": "This ffmpeg lacks tonemapx, so HDR looks washed out without GPU tone mapping. Install jellyfin-ffmpeg.",
-  "@webTranscodingToneMappingNoTonemapx": {
     "description": "strings_web_transcoding.xml"
   },
   "webTranscodingToneMappingRange": "Range",
@@ -8901,10 +7970,6 @@
   "webTranscodingToneMappingVpp": "VPP tone mapping",
   "@webTranscodingToneMappingVpp": {
     "description": "strings_web_transcoding.xml"
-  },
-  "webTrickplayCheckFields": "Check the fields.",
-  "@webTrickplayCheckFields": {
-    "description": "strings_web_trickplay.xml"
   },
   "webTrickplayDescriptionCount": "{count, plural, one{Thumbnails over the seek bar while scrubbing. {p2} of {count} video has them.} other{Thumbnails over the seek bar while scrubbing. {p2} of {count} videos have them.}}",
   "@webTrickplayDescriptionCount": {
@@ -8947,15 +8012,6 @@
   "@webTrickplayKeyframesOnly": {
     "description": "strings_web_trickplay.xml"
   },
-  "webTrickplayLoadFailed": "Couldn't load the trickplay settings. {p1}",
-  "@webTrickplayLoadFailed": {
-    "description": "strings_web_trickplay.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webTrickplayTitle": "Trickplay images",
   "@webTrickplayTitle": {
     "description": "strings_web_trickplay.xml"
@@ -8992,10 +8048,6 @@
   },
   "webUsersAdmin": "Admin",
   "@webUsersAdmin": {
-    "description": "strings_web_users.xml"
-  },
-  "webUsersAdminAccess": "Admins open every library and have no limits.",
-  "@webUsersAdminAccess": {
     "description": "strings_web_users.xml"
   },
   "webUsersDeleteConfirm": "Delete user",
@@ -9061,24 +8113,6 @@
       }
     }
   },
-  "webUsersGroupFromProvider": "Set by {p1} at sign-in",
-  "@webUsersGroupFromProvider": {
-    "description": "strings_web_users.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webUsersGroupFromProviderShort": "(from {p1})",
-  "@webUsersGroupFromProviderShort": {
-    "description": "strings_web_users.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webUsersInvitesCreate": "Invite someone",
   "@webUsersInvitesCreate": {
     "description": "strings_web_users.xml"
@@ -9117,15 +8151,6 @@
   },
   "webUsersInvitesExpires": "Expires {p1}",
   "@webUsersInvitesExpires": {
-    "description": "strings_web_users.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webUsersInvitesExpiresAt": "Expires {p1}",
-  "@webUsersInvitesExpiresAt": {
     "description": "strings_web_users.xml",
     "placeholders": {
       "p1": {
@@ -9244,15 +8269,6 @@
       }
     }
   },
-  "webUsersLoadFailed": "Couldn't load users. {p1}",
-  "@webUsersLoadFailed": {
-    "description": "strings_web_users.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webUsersMadeAdmin": "{p1} is now an admin",
   "@webUsersMadeAdmin": {
     "description": "strings_web_users.xml",
@@ -9306,19 +8322,6 @@
   "@webUsersOwnAccess": {
     "description": "strings_web_users.xml"
   },
-  "webUsersOwnAccessFromProvider": "Set at sign-in by the policy claim from {p1}",
-  "@webUsersOwnAccessFromProvider": {
-    "description": "strings_web_users.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webUsersOwnAccessHint": "Has settings of its own over its groups",
-  "@webUsersOwnAccessHint": {
-    "description": "strings_web_users.xml"
-  },
   "webUsersPasskeys": "{count, plural, one{{count} passkey} other{{count} passkeys}}",
   "@webUsersPasskeys": {
     "description": "strings_web_users.xml",
@@ -9345,10 +8348,6 @@
         "type": "String"
       }
     }
-  },
-  "webUsersRetry": "Try again",
-  "@webUsersRetry": {
-    "description": "strings_web_users.xml"
   },
   "webUsersRoleMakeConfirm": "Make admin",
   "@webUsersRoleMakeConfirm": {
@@ -9431,14 +8430,6 @@
   },
   "webUsersSteppedDown": "You're no longer an admin",
   "@webUsersSteppedDown": {
-    "description": "strings_web_users.xml"
-  },
-  "webUsersTitle": "Users",
-  "@webUsersTitle": {
-    "description": "strings_web_users.xml"
-  },
-  "webUsersYou": "(you)",
-  "@webUsersYou": {
     "description": "strings_web_users.xml"
   },
   "webValidationAbsolutePath": "Use an absolute path.",
@@ -9701,15 +8692,6 @@
   "webValidationWholeNumber": "Use a whole number.",
   "@webValidationWholeNumber": {
     "description": "strings_web_validation.xml"
-  },
-  "webAskAskNamed": "Request {p1}",
-  "@webAskAskNamed": {
-    "description": "ask.askNamed",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
   },
   "webServerFulfilmentHiddenLibrary": "This connection sends titles to a library you can't see, so you can't change it.",
   "@webServerFulfilmentHiddenLibrary": {

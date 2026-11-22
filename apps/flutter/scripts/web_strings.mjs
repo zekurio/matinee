@@ -149,6 +149,29 @@ const arbs = Object.fromEntries(
 const table = []
 const shared = new Set()
 
+// Copy a message only when the app or the TV app names it. The server
+// lookup needs every server and validation message, so those always come.
+const named = new Set(
+  [
+    ...globSync(["lib/**/*.dart", "test/**/*.dart"], {
+      cwd: flutter,
+      exclude: [
+        "lib/l10n/app_localizations*.dart",
+        "lib/l10n/server_messages.g.dart",
+      ],
+    }),
+    ...globSync("../tizen/src/**/*.{ts,tsx}", {
+      cwd: flutter,
+      exclude: ["../tizen/src/**/*.gen.ts"],
+    }),
+  ].flatMap((file) =>
+    Array.from(
+      readFileSync(join(flutter, file), "utf8").matchAll(/\bweb[A-Z]\w*/g),
+      (m) => m[0],
+    ),
+  ),
+)
+
 for (const area of areas) {
   const english = readCatalog("en", area)
   const german = readCatalog("de", area)
@@ -157,6 +180,7 @@ for (const area of areas) {
     const id = dartKey(key)
     if (!key.startsWith(area + ".") || shared.has(id))
       throw new Error(`Invalid or duplicate key: ${key}`)
+    if (area !== "server" && area !== "validation" && !named.has(id)) continue
     shared.add(id)
     const plural = en instanceof Map
     if (plural !== de instanceof Map) throw new Error(`${key}: plural mismatch`)
