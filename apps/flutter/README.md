@@ -64,6 +64,16 @@ The Runner targets iOS 16 on iPhone and iPad, with the bundle id
 in Xcode. Don't commit it. `just flutter pigeon` writes the Swift side of
 the platform channels into `ios/Runner/Pigeon`.
 
+The version comes from the root `package.json`, as on Android, since
+`pubspec.yaml` has none. Flutter warns that the build name and number are
+missing and leaves them empty. The Runner's last build phase, Version, then
+runs `ios/version.sh`, which writes the version into the built app's
+`Info.plist` as `CFBundleShortVersionString` and the Android version code
+as `CFBundleVersion`, 9 for 0.0.9. It runs however the build starts,
+`flutter build`, `flutter run`, or Xcode, and fails it when the version
+isn't `major.minor.patch`. CI reads both back with
+`ios/version.sh --check`.
+
 ### Tests
 
 The tests guard logic that breaks without anyone seeing it: the API
