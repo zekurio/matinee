@@ -1,20 +1,20 @@
-import { ANDROID_PLURALS, ANDROID_STRINGS } from "./android.gen"
 import { OWN_PLURALS, OWN_STRINGS } from "./own"
+import { SHARED_PLURALS, SHARED_STRINGS } from "./shared.gen"
 
 /*
- * The app's words. Those it shares with the Android app come from
- * Android's string resources (see scripts/strings.mjs), so both TV apps
- * read alike; those only a Samsung TV needs are in own.ts. The TV's own
- * language picks between English and German.
+ * The app's words. Those it shares with the Flutter app come from its ARB
+ * files (see scripts/strings.mjs), so both TV apps read alike; those only
+ * a Samsung TV needs are in own.ts. The TV's own language picks between
+ * English and German.
  */
 
-type Language = keyof typeof ANDROID_STRINGS
+type Language = keyof typeof SHARED_STRINGS
 
 export type StringKey =
-  | keyof (typeof ANDROID_STRINGS)["en"]
+  | keyof (typeof SHARED_STRINGS)["en"]
   | keyof (typeof OWN_STRINGS)["en"]
 export type PluralKey =
-  | keyof (typeof ANDROID_PLURALS)["en"]
+  | keyof (typeof SHARED_PLURALS)["en"]
   | keyof (typeof OWN_PLURALS)["en"]
 
 type PluralForms = { one?: string; other: string }
@@ -31,11 +31,11 @@ export const language = pickLanguage()
 export const locale = navigator.language || language
 
 const strings = new Map<string, string>([
-  ...Object.entries(ANDROID_STRINGS[language]),
+  ...Object.entries(SHARED_STRINGS[language]),
   ...Object.entries(OWN_STRINGS[language]),
 ])
 const plurals = new Map<string, PluralForms>([
-  ...Object.entries(ANDROID_PLURALS[language]),
+  ...Object.entries(SHARED_PLURALS[language]),
   ...Object.entries(OWN_PLURALS[language]),
 ])
 

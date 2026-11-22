@@ -1,4 +1,10 @@
-import { METHODS, SchemaWalker, camel, endpoint, pascal } from "./openapi-walker"
+import {
+  METHODS,
+  SchemaWalker,
+  camel,
+  endpoint,
+  pascal,
+} from "./openapi-walker"
 import type {
   Declaration,
   Document,
