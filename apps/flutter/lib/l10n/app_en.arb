@@ -8818,42 +8818,6 @@
       }
     }
   },
-  "webRequestsSummaryWaiting": "{p1} waiting",
-  "@webRequestsSummaryWaiting": {
-    "description": "requests.summary.waiting",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webRequestsSummaryNeedsAttention": "{count, plural, one{{count} needs attention} other{{count} need attention}}",
-  "@webRequestsSummaryNeedsAttention": {
-    "description": "requests.summary.needsAttention",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "webRequestsSummaryOnTheWay": "{count, plural, one{{count} on its way} other{{count} on their way}}",
-  "@webRequestsSummaryOnTheWay": {
-    "description": "requests.summary.onTheWay",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "webRequestsSummaryDone": "{p1} done",
-  "@webRequestsSummaryDone": {
-    "description": "requests.summary.done",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webRequestsAddAfterAllNamed": "Add {p1} after all",
   "@webRequestsAddAfterAllNamed": {
     "description": "requests.addAfterAllNamed",

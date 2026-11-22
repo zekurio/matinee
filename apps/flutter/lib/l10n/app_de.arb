@@ -1674,10 +1674,6 @@
   "webRequestsStateHere": "Da",
   "webRequestsStateDeclined": "Abgelehnt",
   "webRequestsAskedWhen": "Zuerst angefragt: {p1}",
-  "webRequestsSummaryWaiting": "{p1} wartend",
-  "webRequestsSummaryNeedsAttention": "{count, plural, one{{count} braucht Aufmerksamkeit} other{{count} brauchen Aufmerksamkeit}}",
-  "webRequestsSummaryOnTheWay": "{count, plural, one{{count} unterwegs} other{{count} unterwegs}}",
-  "webRequestsSummaryDone": "{p1} erledigt",
   "webRequestsAddAfterAllNamed": "{p1} doch hinzufügen",
   "webRequestsEmptyNone": "Noch keine Anfragen",
   "webRequestsEmptyNoneHint": "Wenn jemand einen Film oder eine Serie anfragt, erscheint das hier."
