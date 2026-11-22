@@ -844,6 +844,11 @@ arrives. The deliberate differences from the phone:
 - A request card opens a panel with what can be done about it, rather
   than buttons on the card. One of the viewer's own with nothing to
   cancel opens its title at once.
+- The requests page is a grid of the Requests row's cards under its tabs,
+  not a list. The line over the grid says what the phone's row says under
+  the name. The tabs stay put. Up from the first row and Left from the
+  first column go to the tab shown, and Down comes back to the card left.
+  The queue's Add all is at the end of the tabs.
 - "Not interested" is on a recommendation's long press or Menu, in a
   panel.
 - The catalog page has no Trailer. A Request that can't be pressed shows

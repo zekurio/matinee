@@ -16,6 +16,7 @@ import 'package:matinee/screens/tv/tv_catalog.dart';
 import 'package:matinee/screens/tv/tv_catalog_browse.dart';
 import 'package:matinee/screens/tv/tv_discover.dart';
 import 'package:matinee/screens/tv/tv_media.dart' show TvFocusLine;
+import 'package:matinee/screens/tv/tv_requests.dart' show TvRequestPoster;
 import 'package:matinee/screens/tv/tv_shell.dart';
 
 import '../home_backend.dart';
@@ -34,6 +35,10 @@ const _requestPaths = [
 /// The last input sent to each path: a POST's body, a GET's query.
 final _inputs = <String, Object?>{};
 
+/// The viewer's requests after each cursor, answered in place of the
+/// first page.
+final _minePages = <String, JsonMap>{};
+
 /// One server out of the two fakes, each path to the one that knows it.
 http.Client _both(HomeBackend home, RequestsBackend requests) =>
     MockClient.streaming((request, body) async {
@@ -42,9 +47,18 @@ http.Client _both(HomeBackend home, RequestsBackend requests) =>
           ? requests.client
           : home.client;
       final bytes = await body.toBytes();
-      _inputs[path] = bytes.isEmpty
+      final input = _inputs[path] = bytes.isEmpty
           ? request.url.queryParameters
           : jsonDecode(utf8.decode(bytes));
+      final cursor = input is Map ? input['cursor'] : null;
+      final page = path == '/api/v1/requests/mine' ? _minePages[cursor] : null;
+      if (page != null) {
+        return http.StreamedResponse(
+          Stream.value(utf8.encode(jsonEncode(page))),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
       final copy = http.Request(request.method, request.url)
         ..headers.addAll(request.headers)
         ..bodyBytes = bytes;
@@ -543,7 +557,7 @@ void main() {
         path: Routes.requests(QueueList.needsAttention),
         admin: true,
       );
-      expect(focusedKey(), 'list/q3');
+      expect(focusedKey(), 'grid/q3');
       await select(tester);
       await down(tester);
       expect(focusedLabel(), 'Give up');
@@ -551,7 +565,7 @@ void main() {
       expect(focusedLabel(), 'Cancel', reason: 'the safe choice');
       await select(tester);
       expect(requests.sentPaths, isEmpty);
-      expect(focusedKey(), 'list/q3');
+      expect(focusedKey(), 'grid/q3');
     });
   });
 
@@ -581,6 +595,120 @@ void main() {
   }
 
   group('My requests', () {
+    /// What the line over the grid says.
+    String lineText(WidgetTester tester) => tester
+        .widgetList<Text>(
+          find.descendant(
+            of: find.byType(TvFocusLine),
+            matching: find.byType(Text),
+          ),
+        )
+        .map((text) => text.data ?? '')
+        .join(' ');
+
+    testWidgets("a grid of the row's cards, the line naming the focused one, "
+        'with Up and Left to the tab shown', (tester) async {
+      final requests = _discover()
+        ..answers['/api/v1/requests/mine'] = {
+          'items': [
+            for (var i = 0; i < 10; i++) _mineJson('r$i', 't$i', 'Movie $i'),
+          ],
+          'nextCursor': null,
+        };
+      await _open(tester, requests, path: Routes.requests());
+      expect(find.byType(TvPosterGrid), findsOneWidget);
+      expect(find.byType(TvRequestPoster), findsNWidgets(10));
+      expect(focusedKey(), 'grid/r0');
+      expect(lineText(tester), contains('Movie 0'));
+      expect(lineText(tester), contains('Waiting'), reason: 'its state');
+      await right(tester, 3);
+      expect(focusedKey(), 'grid/r3');
+      expect(lineText(tester), contains('Movie 3'));
+      await up(tester);
+      expect(focusedKey(), 'tabs/inProgress', reason: 'the tab shown');
+      await down(tester);
+      expect(focusedKey(), 'grid/r3', reason: 'the card it left');
+      await down(tester);
+      expect(focusedKey(), 'grid/r9', reason: 'the last card, under it');
+      await left(tester, 2);
+      expect(focusedKey(), 'grid/r7');
+      await left(tester);
+      expect(focusedKey(), 'tabs/inProgress', reason: 'Left at the edge');
+      await down(tester);
+      expect(focusedKey(), 'grid/r7', reason: 'the card it left');
+      await select(tester);
+      expect(find.text('Open title'), findsOneWidget, reason: 'its panel');
+      expect(await back(tester), isTrue);
+      expect(focusedKey(), 'grid/r7');
+      expect(requests.sentPaths, isEmpty);
+    });
+
+    testWidgets('an empty list keeps its sentence, focus on its tab', (
+      tester,
+    ) async {
+      final requests = _discover()
+        ..answers['/api/v1/requests/mine'] = {
+          'items': <Object>[],
+          'nextCursor': null,
+        };
+      await _open(tester, requests, path: Routes.requests());
+      expect(find.text('Nothing on its way'), findsOneWidget);
+      expect(focusedKey(), 'tabs/inProgress');
+    });
+
+    testWidgets('the next page comes as the end nears, as the browse grid '
+        'has it', (tester) async {
+      final requests = _discover()
+        ..answers['/api/v1/requests/mine'] = {
+          'items': [
+            for (var i = 0; i < 28; i++) _mineJson('r$i', 't$i', 'Movie $i'),
+          ],
+          'nextCursor': 'p2',
+        };
+      _minePages['p2'] = {
+        'items': [
+          for (var i = 28; i < 32; i++) _mineJson('r$i', 't$i', 'Movie $i'),
+        ],
+        'nextCursor': null,
+      };
+      addTearDown(_minePages.clear);
+      await _open(tester, requests, path: Routes.requests());
+      expect(_inputs['/api/v1/requests/mine'], containsPair('cursor', 'p2'));
+      await down(tester, 4);
+      expect(focusedKey(), 'grid/r28', reason: 'a card of the next page');
+      expect(find.byType(TvLoading), findsNothing, reason: 'the last page');
+    });
+
+    testWidgets(
+      "the queue's Add all is beside the tabs, and Up from under it still "
+      'goes to the tab shown',
+      (tester) async {
+        final requests = _discover(requests: 'queue')
+          ..queue = queueJson(
+            waiting: [
+              for (var i = 0; i < 9; i++)
+                queueItemJson('q$i', summaryJson('t$i', 'Movie $i')),
+            ],
+          );
+        await _open(
+          tester,
+          requests,
+          path: Routes.requests(QueueList.waiting),
+          admin: true,
+        );
+        expect(focusedKey(), 'grid/q0');
+        expect(lineText(tester), contains('ben'), reason: 'who asked');
+        await right(tester, 6);
+        await up(tester);
+        expect(focusedKey(), 'tabs/waiting');
+        await right(tester, 4);
+        expect(focusedLabel(), 'Add all 9');
+        await down(tester);
+        expect(focusedKey(), 'grid/q6', reason: 'the card it left');
+        expect(requests.sentPaths, isEmpty);
+      },
+    );
+
     testWidgets('open on the first row, and a declined one says why', (
       tester,
     ) async {
@@ -613,11 +741,15 @@ void main() {
       expect(focusedKey(), 'requests/see-all');
       await select(tester);
       expect(find.text('My requests'), findsOneWidget);
-      expect(focusedKey(), 'list/r1');
-      expect(
-        find.textContaining('Already have it. “It is on the shelf.”'),
-        findsOneWidget,
+      expect(focusedKey(), 'grid/r1');
+      final why = find.descendant(
+        of: find.byType(TvFocusLine),
+        matching: find.textContaining('Already have it. “It is on the shelf.”'),
       );
+      expect(why, findsNothing, reason: 'the line names the focused one');
+      await right(tester);
+      expect(focusedKey(), 'grid/r4');
+      expect(why, findsOneWidget);
       await up(tester);
       expect(focusedKey(), 'tabs/inProgress');
       await right(tester);

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +12,6 @@ import '../../kit/kit.dart';
 import '../../kit/tv/tv.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/server_text.dart';
-import '../../media/artwork.dart';
 import '../../media/format.dart' show seasonName;
 import '../../router.dart';
 import '../requests/catalog_cards.dart';
@@ -22,6 +21,8 @@ import '../requests/requests_data.dart';
 import '../requests/requests_hub.dart';
 import '../requests/requests_screen.dart'
     show outcomeText, progressText, queueEmptyLabel, queueListLabel, whereText;
+import 'tv_browse.dart' show TvGridHeader;
+import 'tv_media.dart';
 
 /// Requests on a TV, as the Kotlin app's TV requests: the questions the TV
 /// asks where the phone offers Undo, since a TV's toast can't take focus,
@@ -488,23 +489,24 @@ String queueStatusText(
 // ---------------------------------------------------------------------------
 // The requests page.
 
-/// The rows of the requests page in its focus memory.
+/// The rows of the requests page in its focus memory, beside the grid's
+/// own [TvGrid.row].
 abstract final class _Rows {
   static const tabs = 'tabs';
-  static const list = 'list';
   static const addAll = 'add-all';
 }
 
-/// How tall a request's row is: room for its poster and three lines.
-const _rowHeight = 96.0;
-
-/// The requests page on a TV, from the Requests row's See all card. Without
-/// a list, what the viewer asked for, "In progress" or "All", newest first,
-/// with why a declined one isn't coming. With one of [QueueList]'s, for an
-/// admin, the four lists, the first three live from the queue the whole
-/// app follows and Done a page at a time. Each request is a row with its
-/// poster; Select offers what can be done about it. Focus starts on the
-/// first request, else the list's tab.
+/// The requests page on a TV, from the Requests row's See all card or
+/// Discover's Requests chip. Without a list, what the viewer asked for,
+/// "In progress" or "All", newest first. With one of [QueueList]'s, for
+/// whoever runs the queue, the four lists, the first three live from the
+/// queue the whole app follows and Done a page at a time. Each list is a
+/// grid of the Requests row's cards under the tabs, which stay put; the
+/// line over it names the focused one with what its list says of it, and
+/// Select offers what can be done about it. Up from the first row and Left
+/// from the first column go to the tab shown, and Down from the tabs comes
+/// back to the card left. Focus starts on the first request, else the
+/// list's tab.
 class TvRequestsScreen extends ConsumerStatefulWidget {
   const TvRequestsScreen({super.key, this.list});
 
@@ -516,8 +518,8 @@ class TvRequestsScreen extends ConsumerStatefulWidget {
 
 class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
   final _memory = TvFocusMemory();
-  final _scroll = ScrollController();
   late String _tab = _start();
+  FocusedItem? _focused;
 
   String _start() {
     final list = widget.list;
@@ -528,20 +530,47 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
   @override
   void dispose() {
     _memory.dispose();
-    _scroll.dispose();
     super.dispose();
   }
 
   void _show(String tab) {
     if (tab == _tab) return;
-    setState(() => _tab = tab);
-    if (_scroll.hasClients) _scroll.jumpTo(0);
+    // A card of the last list isn't one to come back to.
+    _memory.rowItems.remove(TvGrid.row);
+    setState(() {
+      _tab = tab;
+      _focused = null;
+    });
   }
+
+  void _focus(FocusedItem item) {
+    if (identical(item, _focused)) return;
+    setState(() => _focused = item);
+  }
+
+  /// [card], at [index] in the grid: Up from the first row and Left from
+  /// the first column go to the tab shown, rather than past the grid.
+  Widget _edges(int index, Widget card) => Focus(
+    canRequestFocus: false,
+    skipTraversal: true,
+    onKeyEvent: (node, event) {
+      if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+        return KeyEventResult.ignored;
+      }
+      final key = event.logicalKey;
+      final edge =
+          (key == LogicalKeyboardKey.arrowUp && index < TvGrid.columns) ||
+          (key == LogicalKeyboardKey.arrowLeft && index % TvGrid.columns == 0);
+      if (!edge) return KeyEventResult.ignored;
+      _memory.node(_Rows.tabs, _tab).requestFocus();
+      return KeyEventResult.handled;
+    },
+    child: card,
+  );
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
     // Anyone who doesn't run the queue gets their own requests, whatever
     // the path, as the phone's page.
     final queue = widget.list != null && ref.watch(runsQueueProvider);
@@ -550,40 +579,32 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
         : const [MineFilter.inProgress, MineFilter.all];
     if (!tabs.contains(_tab)) _tab = tabs.first;
     final body = queue ? _queueBody(l) : _mineBody(l);
-    // Up from the list lands on the tab it shows.
+    final cards = body.cards;
+    // Up from the grid lands on the tab it shows.
     _memory.startAt(_Rows.tabs, _tab);
     _memory.restore(context, () {
-      final first = body.first;
-      if (first != null) return (_Rows.list, first);
+      if (cards.isNotEmpty) return (TvGrid.row, cards.first.id);
       return body.settled ? (_Rows.tabs, _tab) : null;
     });
     final counts = queue ? _counts() : const <String, int>{};
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: TvPage.start,
-            end: TvPage.end + TvGrid.clockRoom,
-            top: TvGrid.top,
-          ),
-          child: Text(
-            queue ? l.webRequestsTitle : l.webAskMineTitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TvType.headline.style(color: colors.foreground),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: TvPage.start,
-            end: TvPage.end,
-            top: 16,
-          ),
-          child: TvMemoryRow(
+    // Add for all of them, as the phone's queue has over its rows. Like
+    // Add, it asks nothing.
+    final all = queue && _tab == QueueList.waiting && cards.length > 1;
+    final grid = TvPosterGrid(
+      memory: _memory,
+      itemCount: cards.length,
+      cellAspect: 2 / 3,
+      pinHeader: true,
+      scrollKey: _tab,
+      header: TvGridHeader(
+        title: queue ? l.webRequestsTitle : l.webAskMineTitle,
+        detail: null,
+        controls: [
+          TvMemoryRow(
             memory: _memory,
             row: _Rows.tabs,
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               spacing: 12,
               children: [
                 for (final tab in tabs)
@@ -602,12 +623,43 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
                     focusNode: _memory.node(_Rows.tabs, tab),
                     onPressed: () => _show(tab),
                   ),
+                // In the tabs' row, so Right from the last tab reaches it.
+                if (all)
+                  TvButton(
+                    label: l.webRequestsAddAll(cards.length),
+                    icon: Lucide.listChecks,
+                    focusNode: _memory.node(_Rows.tabs, _Rows.addAll),
+                    onPressed: () => unawaited(
+                      ref.read(requestsProvider.notifier).answerAll(l, [
+                        for (final card in cards) ?card.queued,
+                      ], undo: false),
+                    ),
+                  ),
               ],
             ),
           ),
-        ),
-        Expanded(child: body.child),
-      ],
+        ],
+      ),
+      line: TvFocusLine(_focused),
+      lineHeight: tvFocusLineHeight,
+      onNearEnd: body.more,
+      footer: body.footer,
+      itemBuilder: (context, index) {
+        final card = cards[index];
+        return KeyedSubtree(
+          key: ValueKey(card.id),
+          child: _edges(
+            index,
+            card.focused(_memory.node(TvGrid.row, card.id), _focus),
+          ),
+        );
+      },
+    );
+    // Wrapped whatever the state, so the grid keeps its place as a list
+    // loads.
+    return FollowTitles(
+      titles: body.followed ?? FollowedTitles(const []),
+      child: grid,
     );
   }
 
@@ -636,18 +688,19 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     ];
     final error = pages.error;
     if (error != null && items.isEmpty) {
-      return _Body.settled(
-        _Notice(
+      return _Body.notice(
+        TvNotice(
           headline: l.askedLoadFailed,
           message: describeFailure(l, error),
           onRetry: notifier.retry,
+          retryLabel: l.commonRetry,
         ),
       );
     }
     if (!pages.loaded) return const _Body.loading();
     if (items.isEmpty) {
-      return _Body.settled(
-        _Notice(
+      return _Body.notice(
+        TvNotice(
           headline: _tab == MineFilter.inProgress
               ? l.webAskMineEmptyInProgress
               : l.webAskMineEmpty,
@@ -655,61 +708,46 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
         ),
       );
     }
-    return _Body(
-      first: items.first.id,
-      child: FollowTitles(
-        titles: FollowedTitles([
-          for (final item in items)
-            CatalogInput(ref: item.title.ref, libraryId: item.library.id),
-        ]),
-        child: _List(
-          memory: _memory,
-          scroll: _scroll,
-          itemCount: items.length,
-          done: pages.done,
-          error: error,
-          onMore: notifier.more,
-          onRetry: notifier.retry,
-          itemBuilder: (context, index) => _MineRow(
-            item: items[index],
-            focusNode: _memory.node(_Rows.list, items[index].id),
-          ),
-        ),
-      ),
+    return _Body.cards(
+      l,
+      [for (final item in items) TvRequestPoster.mine(item, width: null)],
+      done: pages.done,
+      error: error,
+      onMore: notifier.more,
+      onRetry: notifier.retry,
+      followed: FollowedTitles([
+        for (final item in items)
+          CatalogInput(ref: item.title.ref, libraryId: item.library.id),
+      ]),
     );
   }
 
-  /// One of the admin's lists: the first three live, Done a page at a time.
+  /// One of the queue's lists: the first three live, Done a page at a time.
   _Body _queueBody(AppLocalizations l) {
     final state = ref.watch(requestsProvider);
     final queue = state.queue;
     if (_tab == QueueList.done) return _doneBody(l);
     if (queue == null) {
       if (state.queueFailed) {
-        return _Body.settled(
-          _Notice(
+        return _Body.notice(
+          TvNotice(
             headline: l.requestsLoadFailed,
             onRetry: () => ref.read(requestsProvider.notifier).retryQueue(),
+            retryLabel: l.commonRetry,
           ),
         );
       }
       return const _Body.loading();
     }
     final rows = switch (_tab) {
-      QueueList.waiting => [
-        for (final item in queue.waiting)
-          if (!state.held.contains(item.id)) item,
-      ],
-      QueueList.needsAttention => [
-        for (final item in queue.needsAttention)
-          if (!state.held.contains(item.id)) item,
-      ],
-      _ => [
-        for (final item in queue.onTheWay)
-          if (!state.held.contains(item.id)) item,
-      ],
+      QueueList.waiting => queue.waiting,
+      QueueList.needsAttention => queue.needsAttention,
+      _ => queue.onTheWay,
     };
-    return _queueRows(l, rows, done: true);
+    return _queueCards(l, [
+      for (final item in rows)
+        if (!state.held.contains(item.id)) item,
+    ], done: true);
   }
 
   _Body _doneBody(AppLocalizations l) {
@@ -719,17 +757,18 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     final error = pages.error;
     if (!pages.loaded) {
       if (error != null) {
-        return _Body.settled(
-          _Notice(
+        return _Body.notice(
+          TvNotice(
             headline: l.requestsLoadFailed,
             message: describeFailure(l, error),
             onRetry: notifier.retry,
+            retryLabel: l.commonRetry,
           ),
         );
       }
       return const _Body.loading();
     }
-    return _queueRows(
+    return _queueCards(
       l,
       [
         for (final item in pages.items)
@@ -739,14 +778,14 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
       error: error,
       onMore: notifier.more,
       onRetry: notifier.retry,
-      // Done is read page by page, so an answered row leaves it here.
+      // Done is read page by page, so an answered one leaves it here.
       onAnswered: (item) => notifier.drop(item.id),
     );
   }
 
-  _Body _queueRows(
+  _Body _queueCards(
     AppLocalizations l,
-    List<AdminRequestItem> rows, {
+    List<AdminRequestItem> items, {
     required bool done,
     Object? error,
     VoidCallback? onMore,
@@ -754,278 +793,192 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     ValueChanged<AdminRequestItem>? onAnswered,
   }) {
     final list = _tab;
-    if (rows.isEmpty) {
-      return _Body.settled(_Notice(headline: queueEmptyLabel(list, l)));
+    if (items.isEmpty) {
+      return _Body.notice(TvNotice(headline: queueEmptyLabel(list, l)));
     }
-    // Add for all of them, as the phone's queue has over its rows. Like
-    // Add, it asks nothing.
-    final all = list == QueueList.waiting && rows.length > 1;
-    return _Body(
-      first: rows.first.id,
-      child: _List(
-        memory: _memory,
-        scroll: _scroll,
-        itemCount: rows.length,
-        done: done,
-        error: error,
-        onMore: onMore,
-        onRetry: onRetry,
-        lead: all
-            ? TvListItem(
-                title: l.webRequestsAddAll(rows.length),
-                icon: Lucide.listChecks,
-                focusNode: _memory.node(_Rows.list, _Rows.addAll),
-                onPressed: () => unawaited(
-                  ref
-                      .read(requestsProvider.notifier)
-                      .answerAll(l, rows, undo: false),
-                ),
-              )
-            : null,
-        itemBuilder: (context, index) {
-          final item = rows[index];
-          return _QueueRow(
-            item: item,
+    return _Body.cards(
+      l,
+      [
+        for (final item in items)
+          TvRequestPoster.queued(
+            item,
             list: list,
-            focusNode: _memory.node(_Rows.list, item.id),
+            width: null,
             onAnswered: onAnswered == null ? null : () => onAnswered(item),
-          );
-        },
-      ),
+          ),
+      ],
+      done: done,
+      error: error,
+      onMore: onMore,
+      onRetry: onRetry,
     );
   }
 }
 
-/// What a list shows: its rows, with the key of the first for focus, or a
-/// notice; [settled] once it's said what it has.
+/// What a list shows: its cards, with what goes under them and asks for
+/// more, or a notice in their place; [settled] once it's said what it has.
 class _Body {
-  const _Body({required this.child, this.first}) : settled = true;
+  /// [cards] of a list, with a spinner under them while a page comes, or
+  /// why one didn't, with Try again.
+  _Body.cards(
+    AppLocalizations l,
+    this.cards, {
+    required bool done,
+    Object? error,
+    VoidCallback? onMore,
+    VoidCallback? onRetry,
+    this.followed,
+  }) : settled = true,
+       more = done || error != null ? null : onMore,
+       footer = done
+           ? null
+           : error == null
+           ? const TvLoading(size: 28, top: 16)
+           : TvNotice(
+               headline: l.listMoreFailed,
+               message: describeFailure(l, error),
+               onRetry: onRetry,
+               retryLabel: l.commonRetry,
+               top: 8,
+             );
 
-  const _Body.settled(this.child) : first = null, settled = true;
+  const _Body.notice(Widget this.footer)
+    : cards = const [],
+      settled = true,
+      more = null,
+      followed = null;
 
   const _Body.loading()
-    : child = const TvLoading(top: 48),
-      first = null,
-      settled = false;
+    : cards = const [],
+      footer = const TvLoading(top: 76),
+      settled = false,
+      more = null,
+      followed = null;
 
-  final Widget child;
-  final String? first;
+  final List<TvRequestPoster> cards;
+  final Widget? footer;
+  final VoidCallback? more;
+  final FollowedTitles? followed;
   final bool settled;
 }
 
-/// A list's notice, under its tabs.
-class _Notice extends StatelessWidget {
-  const _Notice({required this.headline, this.message, this.onRetry});
+// ---------------------------------------------------------------------------
+// A request's card.
 
-  final String headline;
-  final String? message;
-  final VoidCallback? onRetry;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.only(
-      start: TvPage.start,
-      end: TvPage.end,
-    ),
-    child: Align(
-      alignment: AlignmentDirectional.topStart,
-      child: TvNotice(
-        headline: headline,
-        message: message,
-        onRetry: onRetry,
-        retryLabel: AppLocalizations.of(context).commonRetry,
-      ),
-    ),
-  );
-}
-
-/// The rows, one under the other, scrolled to keep the focused one clear
-/// of the overscan. As its end nears, [onMore] asks for the next page;
-/// a page that didn't come says so with Try again.
-class _List extends StatelessWidget {
-  const _List({
-    required this.memory,
-    required this.scroll,
-    required this.itemCount,
-    required this.itemBuilder,
-    required this.done,
-    this.error,
-    this.onMore,
-    this.onRetry,
-    this.lead,
-  });
-
-  final TvFocusMemory memory;
-  final ScrollController scroll;
-  final int itemCount;
-  final IndexedWidgetBuilder itemBuilder;
-  final bool done;
-  final Object? error;
-  final VoidCallback? onMore;
-  final VoidCallback? onRetry;
-  final Widget? lead;
-
-  /// How close to the end of what's loaded the next page is asked for.
-  static const _nearEnd = 6;
-
-  /// Between rows.
-  static const _gap = 6.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final error = this.error;
-    final lead = this.lead;
-    final more = onMore;
-    Widget side(Widget child) => Padding(
-      padding: const EdgeInsetsDirectional.only(
-        start: TvPage.start - TvListItems.inset,
-        end: TvPage.end,
-      ),
-      child: child,
-    );
-    return TvMemoryRow(
-      memory: memory,
-      row: _Rows.list,
-      child: TvFollowFocus(
-        controller: scroll,
-        rule: TvFollowFocus.clear(start: 24, end: Overscan.vertical + 24),
-        sectionTop: _gap,
-        child: TvRowsScroll(
-          controller: scroll,
-          gap: _gap,
-          top: 20,
-          rows: [
-            if (lead != null) side(lead),
-            for (var at = 0; at < itemCount; at++)
-              side(
-                // Built as the list reaches it, so nearing the end of
-                // what's loaded asks for the next page.
-                Builder(
-                  builder: (context) {
-                    if (at >= itemCount - _nearEnd &&
-                        !done &&
-                        error == null &&
-                        more != null) {
-                      SchedulerBinding.instance.addPostFrameCallback(
-                        (_) => more(),
-                      );
-                    }
-                    return itemBuilder(context, at);
-                  },
-                ),
-              ),
-            if (!done)
-              side(
-                error == null
-                    ? const TvLoading(size: 28, top: 8)
-                    : TvNotice(
-                        headline: l.listMoreFailed,
-                        message: describeFailure(l, error),
-                        onRetry: onRetry,
-                        retryLabel: l.commonRetry,
-                        top: 8,
-                      ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A request's poster at the start of its row.
-class _RowPoster extends StatelessWidget {
-  const _RowPoster({required this.title});
-
-  final CatalogTitleSummary title;
-
-  @override
-  Widget build(BuildContext context) {
-    final poster = title.poster;
-    return SizedBox(
-      width: 48,
-      child: ArtFrame(
-        toneKey: refKey(title.ref),
-        aspectRatio: 2 / 3,
-        children: [
-          if (poster != null) Picture([ArtSource(poster)]),
-        ],
-      ),
-    );
-  }
-}
-
-/// One of the viewer's requests: its poster, its name, what it is, and
-/// where it stands, with why a declined one isn't coming.
-class _MineRow extends ConsumerWidget {
-  const _MineRow({required this.item, required this.focusNode});
-
-  final RequestItem item;
-  final FocusNode focusNode;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final title = item.title;
-    final now = liveAvailability(ref, title.ref, item.availability);
-    final lines = [
-      [
-        yearKind(title.year, title.ref.kind, l),
-        ?scopeText(item.scope, l),
-      ].join(' · '),
-      mineStateText(item, now, l),
-      ?declinedText(now, l),
-    ].where((line) => line.isNotEmpty);
-    return TvListItem(
-      title: title.name,
-      subtitle: lines.join('\n'),
-      subtitleLines: 3,
-      leading: _RowPoster(title: title),
-      minHeight: _rowHeight,
-      quiet: true,
-      focusNode: focusNode,
-      onPressed: () => unawaited(openTvMine(context, item)),
-    );
-  }
-}
-
-/// A request in an admin's list: its poster, its name, what it is, and who
-/// asked, where it stands, or what became of it.
-class _QueueRow extends ConsumerWidget {
-  const _QueueRow({
-    required this.item,
-    required this.list,
-    required this.focusNode,
+/// A request as a poster with its state in the corner, in Discover's
+/// Requests row and the requests page's grid: one of the queue's in
+/// [list], or one of the viewer's own. Focus tells [onFocus] its name and
+/// what its list says of it; Select offers what can be done about it.
+class TvRequestPoster extends ConsumerWidget {
+  const TvRequestPoster.queued(
+    AdminRequestItem this.queued, {
+    super.key,
+    this.list = QueueList.waiting,
     this.onAnswered,
+    this.width = TvCards.posterWidth,
+    this.focusNode,
+    this.onFocus,
+  }) : mine = null;
+
+  const TvRequestPoster.mine(
+    RequestItem this.mine, {
+    super.key,
+    this.width = TvCards.posterWidth,
+    this.focusNode,
+    this.onFocus,
+  }) : queued = null,
+       list = QueueList.waiting,
+       onAnswered = null;
+
+  const TvRequestPoster._({
+    super.key,
+    required this.queued,
+    required this.mine,
+    required this.list,
+    required this.onAnswered,
+    required this.width,
+    required this.focusNode,
+    required this.onFocus,
   });
 
-  final AdminRequestItem item;
+  final AdminRequestItem? queued;
+  final RequestItem? mine;
+
+  /// The queue's list [queued] is in.
   final String list;
-  final FocusNode focusNode;
+
+  /// Runs once an answer is given, as one leaving Done.
   final VoidCallback? onAnswered;
 
+  /// A row's card width; null fills a grid's cell.
+  final double? width;
+  final FocusNode? focusNode;
+  final ValueChanged<FocusedItem>? onFocus;
+
+  /// The request's id.
+  String get id => queued?.id ?? mine!.id;
+
+  /// This card with [node], telling [onFocus] what it is.
+  TvRequestPoster focused(FocusNode node, ValueChanged<FocusedItem> onFocus) =>
+      TvRequestPoster._(
+        key: key,
+        queued: queued,
+        mine: mine,
+        list: list,
+        onAnswered: onAnswered,
+        width: width,
+        focusNode: node,
+        onFocus: onFocus,
+      );
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final state = ref.watch(requestsProvider);
-    final title = item.title;
-    return TvListItem(
-      title: title.name,
-      subtitle: [
-        [
-          yearKind(title.year, title.ref.kind, l),
-          ?scopeText(item.scope, l),
-        ].join(' · '),
+    final onFocus = this.onFocus;
+    if (queued case final item?) {
+      final title = item.title;
+      final state = ref.watch(requestsProvider);
+      final facts = [
+        yearKind(title.year, title.ref.kind, l),
+        ?scopeText(item.scope, l),
         queueStatusText(state, item, list, l),
-      ].where((line) => line.isNotEmpty).join('\n'),
-      subtitleLines: 3,
-      leading: _RowPoster(title: title),
-      minHeight: _rowHeight,
-      quiet: true,
+      ].where((fact) => fact.isNotEmpty).toList();
+      return TvPosterCard(
+        name: title.name,
+        poster: title.poster,
+        width: width,
+        focusNode: focusNode,
+        label: [title.name, ...facts].join(', '),
+        corner: CatalogBadge(availability: item.availability, size: 28),
+        onPressed: () => unawaited(
+          openTvQueued(context, item, list, onAnswered: onAnswered),
+        ),
+        onFocused: onFocus == null
+            ? null
+            : () => onFocus(FocusedItem(name: title.name, facts: facts)),
+      );
+    }
+    final item = mine!;
+    final title = item.title;
+    final now = liveAvailability(ref, title.ref, item.availability);
+    final shown = item.season?.asTitle() ?? now;
+    final facts = [
+      yearKind(title.year, title.ref.kind, l),
+      ?scopeText(item.scope, l),
+      mineStateText(item, now, l),
+      ?declinedText(now, l),
+    ].where((fact) => fact.isNotEmpty).toList();
+    return TvPosterCard(
+      name: title.name,
+      poster: title.poster,
+      width: width,
       focusNode: focusNode,
-      onPressed: () =>
-          unawaited(openTvQueued(context, item, list, onAnswered: onAnswered)),
+      label: [title.name, ...facts].join(', '),
+      corner: CatalogBadge(availability: shown, size: 28),
+      onPressed: () => unawaited(openTvMine(context, item)),
+      onFocused: onFocus == null
+          ? null
+          : () => onFocus(FocusedItem(name: title.name, facts: facts)),
     );
   }
 }

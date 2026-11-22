@@ -12,7 +12,6 @@ import '../../kit/tv/tv.dart';
 import '../../l10n/app_localizations.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
-import '../requests/catalog_cards.dart';
 import '../requests/discover.dart';
 import '../requests/request_sheet.dart' show hiddenRecommendationsProvider;
 import '../requests/request_words.dart';
@@ -561,96 +560,6 @@ class _Empty extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// A request in Discover's Requests row, as a poster with its state in
-/// the corner: an admin's waiting request, or one of the viewer's own.
-/// Select offers what can be done about it, as on the requests page.
-class TvRequestPoster extends ConsumerWidget {
-  const TvRequestPoster.queued(
-    AdminRequestItem this.queued, {
-    super.key,
-    this.focusNode,
-    this.onFocus,
-  }) : mine = null;
-
-  const TvRequestPoster.mine(
-    RequestItem this.mine, {
-    super.key,
-    this.focusNode,
-    this.onFocus,
-  }) : queued = null;
-
-  final AdminRequestItem? queued;
-  final RequestItem? mine;
-  final FocusNode? focusNode;
-  final ValueChanged<FocusedItem>? onFocus;
-
-  /// The request's id.
-  String get id => queued?.id ?? mine!.id;
-
-  /// This card with [node], telling [onFocus] what it is.
-  TvRequestPoster focused(FocusNode node, ValueChanged<FocusedItem> onFocus) =>
-      switch (queued) {
-        final item? => TvRequestPoster.queued(
-          item,
-          focusNode: node,
-          onFocus: onFocus,
-        ),
-        null => TvRequestPoster.mine(mine!, focusNode: node, onFocus: onFocus),
-      };
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final onFocus = this.onFocus;
-    if (queued case final item?) {
-      final title = item.title;
-      final state = ref.watch(requestsProvider);
-      final facts = [
-        yearKind(title.year, title.ref.kind, l),
-        ?scopeText(item.scope, l),
-        queueStatusText(state, item, QueueList.waiting, l),
-      ];
-      return TvPosterCard(
-        name: title.name,
-        poster: title.poster,
-        focusNode: focusNode,
-        label: [title.name, ...facts].join(', '),
-        corner: CatalogBadge(availability: item.availability, size: 28),
-        onPressed: () =>
-            unawaited(openTvQueued(context, item, QueueList.waiting)),
-        onFocused: onFocus == null
-            ? null
-            : () => onFocus(FocusedItem(name: title.name, facts: facts)),
-      );
-    }
-    final item = mine!;
-    final title = item.title;
-    final now = liveAvailability(ref, title.ref, item.availability);
-    final shown = item.season?.asTitle() ?? now;
-    final facts = [
-      yearKind(title.year, title.ref.kind, l),
-      mineStateText(item, now, l),
-    ];
-    return TvPosterCard(
-      name: title.name,
-      poster: title.poster,
-      focusNode: focusNode,
-      label: [title.name, ...facts].join(', '),
-      corner: CatalogBadge(availability: shown, size: 28),
-      onPressed: () => unawaited(openTvMine(context, item)),
-      onFocused: onFocus == null
-          ? null
-          : () => onFocus(
-              FocusedItem(
-                name: title.name,
-                facts: facts,
-                overview: declinedText(now, l),
-              ),
-            ),
     );
   }
 }

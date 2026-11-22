@@ -300,7 +300,9 @@ class _TvPinnedListState extends State<TvPinnedList> {
 /// [scrollKey] changing, as a new sort, scrolls back to the top. [cellAspect]
 /// is a cell's width over its height, and [cellExtra] what a caption adds.
 /// With [cellWidth], as many columns as fit cells that wide, which then
-/// stretch to fill the row, so no strip is left at the end.
+/// stretch to fill the row, so no strip is left at the end. With
+/// [pinHeader], the header stays however far the grid scrolls, for one
+/// that's the way off every card, as a page's tabs.
 class TvPosterGrid extends StatefulWidget {
   const TvPosterGrid({
     super.key,
@@ -317,6 +319,7 @@ class TvPosterGrid extends StatefulWidget {
     this.onNearEnd,
     this.scrollKey,
     this.footer,
+    this.pinHeader = false,
   });
 
   final TvFocusMemory memory;
@@ -334,6 +337,7 @@ class TvPosterGrid extends StatefulWidget {
   final VoidCallback? onNearEnd;
   final Object? scrollKey;
   final Widget? footer;
+  final bool pinHeader;
 
   @override
   State<TvPosterGrid> createState() => _TvPosterGridState();
@@ -352,6 +356,8 @@ class _TvPosterGridState extends State<TvPosterGrid> {
   void initState() {
     super.initState();
     _scroll.addListener(_nearEnd);
+    // A grid that starts with its cards asks for more as one that gets them.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _nearEnd());
   }
 
   @override
@@ -408,7 +414,7 @@ class _TvPosterGridState extends State<TvPosterGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final shown = _focusRow < 1;
+    final shown = widget.pinHeader || _focusRow < 1;
     final header = widget.header;
     final line = widget.line;
     return Column(
