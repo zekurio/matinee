@@ -28,10 +28,12 @@ bool canAny(User user, Iterable<String> permissions) =>
     permissions.any((permission) => can(user, permission));
 
 /// Whether [user] runs the request queue: reading everyone's requests and
-/// answering them. The queue's screens are all answers, so it takes both.
+/// answering them, which takes approving or declining. A token that only
+/// retries failed sends reads the queue but doesn't run it.
 bool runsQueue(User user) =>
     can(user, Permission.adminRequestRead) &&
-    can(user, Permission.adminRequestUpdate);
+    (can(user, Permission.adminRequestApprove) ||
+        can(user, Permission.adminRequestDecline));
 
 /// The account signed in to the server, while the server answers; null
 /// offline and signed out, where nothing that asks the server shows.

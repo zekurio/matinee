@@ -103,7 +103,11 @@ export const AREA_PERMISSIONS = {
   /** Everyone's requests: the queue, and approving, declining, retrying. */
   requests: {
     view: ["adminRequest.read"],
-    manage: ["adminRequest.update"],
+    manage: [
+      "adminRequest.approve",
+      "adminRequest.decline",
+      "adminRequest.retry",
+    ],
   },
   /** The connections that fetch requested titles, and their rules. */
   connections: {

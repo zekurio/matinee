@@ -17,7 +17,7 @@ import {
   useMutation,
   useQuery,
 } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
+import { useNavigate, useRouteContext } from "@tanstack/react-router"
 import {
   CableIcon,
   CheckCheckIcon,
@@ -33,6 +33,7 @@ import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { ConfirmDialog } from "@/components/settings/user-dialogs"
 import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
+import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc, queryClient } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import {
@@ -84,6 +85,10 @@ export function QueuePage({
   onList: (list: QueueList) => void
 }) {
   useDocumentTitle(tr("requests.title"))
+  const { user } = useRouteContext({ from: "/_authed/_shell" })
+  const canApprove = can(user, "adminRequest.approve")
+  const canDecline = can(user, "adminRequest.decline")
+  const canRetry = can(user, "adminRequest.retry")
   const queue = useRequestQueue()
   const connections = useQuery(orpc.admin.fulfilment.connections.queryOptions())
   const hidden = useHiddenRequests()
@@ -178,10 +183,12 @@ export function QueuePage({
   }
 
   const add = (item: AdminRequestItem, index: number) => {
+    if (!canApprove) return
     hold(addAction([item]))
     moveOn(index)?.focus()
   }
   const answer = (item: AdminRequestItem, index: number, why: Answer) => {
+    if (!canDecline) return
     const next = moveOn(index)
     afterDecline.current = next
     setDeclining(null)
@@ -192,11 +199,12 @@ export function QueuePage({
     index: number,
     kind: "allowAgain" | "addAfterAll",
   ) => {
+    if (kind === "allowAgain" ? !canDecline : !canApprove) return
     hold({ kind, ids: [item.id], names: [item.title.name] })
     moveOn(index)?.focus()
   }
   const addAll = () => {
-    if (waiting.length === 0) return
+    if (!canApprove || waiting.length === 0) return
     hold(addAction(waiting))
     // The button goes with the rows, so focus waits on the list's chip.
     chipsRef.current?.querySelector<HTMLElement>("[aria-pressed=true]")?.focus()
@@ -259,12 +267,15 @@ export function QueuePage({
         event.preventDefault()
         focusRow(inList ? Math.max(activeIndex - 1, 0) : activeIndex)
       } else if (key === "a" && event.shiftKey && list === "waiting") {
+        if (!canApprove) return
         event.preventDefault()
         addAll()
       } else if (key === "a" && list === "waiting") {
+        if (!canApprove) return
         event.preventDefault()
         add(activeItem, activeIndex)
       } else if (key === "d" && list === "waiting") {
+        if (!canDecline) return
         event.preventDefault()
         afterDecline.current = null
         setDeclining(activeItem.id)
@@ -272,10 +283,12 @@ export function QueuePage({
         key === "g" &&
         (list === "needsAttention" || list === "onTheWay")
       ) {
+        if (!canDecline) return
         event.preventDefault()
         afterDecline.current = null
         setDeclining(activeItem.id)
       } else if (key === "r" && list === "needsAttention") {
+        if (!canRetry) return
         event.preventDefault()
         retry.mutate(activeItem)
       } else if (
@@ -299,7 +312,7 @@ export function QueuePage({
   const noConnection = connections.data?.length === 0
 
   const addAllButton = (size: "sm" | "default") =>
-    list === "waiting" && waiting.length > 1 ? (
+    canApprove && list === "waiting" && waiting.length > 1 ? (
       <KeyTip label={tr("requests.keys.addAll")} keys="Shift A">
         <Button
           variant="outline"
@@ -375,6 +388,10 @@ export function QueuePage({
                 collapsed={index < 0}
                 focusable={index === activeIndex}
                 reserveReopen={reserveReopen}
+                canApprove={canApprove}
+                canDecline={canDecline}
+                canRetry={canRetry}
+                canRemove={canApprove || canDecline}
                 rowRef={(element) => {
                   if (element) rowRefs.current.set(item.id, element)
                   else rowRefs.current.delete(item.id)

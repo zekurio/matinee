@@ -607,7 +607,7 @@ class RequestButton extends ConsumerWidget {
         ? dimmedText(
             availability,
             l,
-            admin: ref.watch(canProvider(Permission.adminRequestUpdate)),
+            admin: ref.watch(canProvider(Permission.adminRequestDecline)),
           )
         : null;
     final words = act == PosterAction.request && label != null

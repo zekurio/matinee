@@ -8,7 +8,7 @@ import { useRef, useState } from "react"
 import type { BadgeTip } from "@/components/catalog/catalog-card"
 import { tr } from "@/i18n"
 import { formatRelative } from "@/lib/format"
-import { runsQueue } from "@/lib/permissions"
+import { can, runsQueue } from "@/lib/permissions"
 import {
   useHiddenRequests,
   useRequestActionsStore,
@@ -107,6 +107,9 @@ export function AdminAnswer({
   const hold = useRequestActionsStore((state) => state.hold)
   const [declining, setDeclining] = useState(false)
   const root = useRef<HTMLDivElement>(null)
+  const { user } = useRouteContext({ from: "/_authed/_shell" })
+  const canApprove = can(user, "adminRequest.approve")
+  const canDecline = can(user, "adminRequest.decline")
   const { library } = useGoesTo(item)
   const choice = choosesLibrary(item)
   const page = look === "page"
@@ -148,54 +151,57 @@ export function AdminAnswer({
       ref={root}
       className={cn("flex min-w-0 gap-2", page && "contents", className)}
     >
-      {choice ? (
-        <div className={cn("flex min-w-0", page && "max-sm:flex-1")}>
-          {add}
-          <GoesToChooser
-            item={item}
-            trigger={
-              <Button
-                size={size}
-                aria-label={tr("requests.goesTo.change", {
-                  name: item.title.name,
-                  library,
-                })}
-                className={cn(
-                  "border-l-primary-foreground/25 shrink-0 rounded-l-none",
-                  page ? "px-2.5 max-sm:h-11" : "px-1.5",
-                )}
-              >
-                <ChevronDownIcon aria-hidden />
-              </Button>
-            }
-          />
-        </div>
-      ) : (
-        add
+      {canApprove &&
+        (choice ? (
+          <div className={cn("flex min-w-0", page && "max-sm:flex-1")}>
+            {add}
+            <GoesToChooser
+              item={item}
+              trigger={
+                <Button
+                  size={size}
+                  aria-label={tr("requests.goesTo.change", {
+                    name: item.title.name,
+                    library,
+                  })}
+                  className={cn(
+                    "border-l-primary-foreground/25 shrink-0 rounded-l-none",
+                    page ? "px-2.5 max-sm:h-11" : "px-1.5",
+                  )}
+                >
+                  <ChevronDownIcon aria-hidden />
+                </Button>
+              }
+            />
+          </div>
+        ) : (
+          add
+        ))}
+      {canDecline && (
+        <DeclinePopover
+          item={item}
+          open={declining}
+          onOpenChange={setDeclining}
+          onAnswer={(answer) => {
+            setDeclining(false)
+            hold({ ...answer, ids: [item.id], names: [item.title.name] })
+            answered()
+          }}
+          trigger={
+            <Button
+              variant="ghost"
+              size={size}
+              className={cn(
+                page &&
+                  "hover:bg-foreground/10 data-popup-open:bg-foreground/10 max-sm:h-11",
+                look === "plain" && "hover:bg-muted data-popup-open:bg-muted",
+              )}
+            >
+              {tr("requests.decline")}
+            </Button>
+          }
+        />
       )}
-      <DeclinePopover
-        item={item}
-        open={declining}
-        onOpenChange={setDeclining}
-        onAnswer={(answer) => {
-          setDeclining(false)
-          hold({ ...answer, ids: [item.id], names: [item.title.name] })
-          answered()
-        }}
-        trigger={
-          <Button
-            variant="ghost"
-            size={size}
-            className={cn(
-              page &&
-                "hover:bg-foreground/10 data-popup-open:bg-foreground/10 max-sm:h-11",
-              look === "plain" && "hover:bg-muted data-popup-open:bg-muted",
-            )}
-          >
-            {tr("requests.decline")}
-          </Button>
-        }
-      />
     </div>
   )
 }

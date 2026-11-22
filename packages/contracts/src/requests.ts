@@ -166,18 +166,18 @@ export const adminRequestsContract = {
    * Only a waiting request moves, and not into a library that already
    * has a request for the title.
    */
-  approve: post("/admin/requests/approve", "adminRequest.update")
+  approve: post("/admin/requests/approve", "adminRequest.approve")
     .input(RequestId.extend({ libraryId: t.uuid().optional() }))
     .output(t.void()),
   /** Explicit ids from the rendered waiting list, not unseen concurrent asks. */
-  approveAll: post("/admin/requests/approve-all", "adminRequest.update")
+  approveAll: post("/admin/requests/approve-all", "adminRequest.approve")
     .input(t.object({ ids: t.array(t.uuid()).min(1).max(500) }))
     .output(t.void()),
   /**
    * Declines a waiting request. A declined title can't be requested by
    * anyone until an admin allows requests for it again.
    */
-  decline: post("/admin/requests/decline", "adminRequest.update")
+  decline: post("/admin/requests/decline", "adminRequest.decline")
     .input(
       RequestId.extend({
         reason: WaitingDeclineReason,
@@ -194,7 +194,7 @@ export const adminRequestsContract = {
    * "Can't find a copy". Whatever the connection holds for it is left
    * alone, and if the file turns up anyway the request counts as arrived.
    */
-  giveUp: post("/admin/requests/give-up", "adminRequest.update")
+  giveUp: post("/admin/requests/give-up", "adminRequest.decline")
     .input(
       RequestId.extend({
         note: t
@@ -209,17 +209,17 @@ export const adminRequestsContract = {
    * Lifts a decline by removing the declined request, so anyone may
    * request the title afresh. Nobody is told.
    */
-  allowAgain: post("/admin/requests/allow-again", "adminRequest.update")
+  allowAgain: post("/admin/requests/allow-again", "adminRequest.decline")
     .input(RequestId)
     .output(t.void()),
   /**
    * Accepts a declined request as it stands, with its requesters and
    * seasons, and sends it.
    */
-  addAfterAll: post("/admin/requests/add-after-all", "adminRequest.update")
+  addAfterAll: post("/admin/requests/add-after-all", "adminRequest.approve")
     .input(RequestId)
     .output(t.void()),
-  retry: post("/admin/requests/retry", "adminRequest.update")
+  retry: post("/admin/requests/retry", "adminRequest.retry")
     .input(RequestId)
     .output(t.void()),
 }

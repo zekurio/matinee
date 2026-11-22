@@ -28,7 +28,9 @@ export const PERMISSIONS = [
 
   /** Everyone's requests: the queue, and approving, declining, retrying. */
   "adminRequest.read",
-  "adminRequest.update",
+  "adminRequest.approve",
+  "adminRequest.decline",
+  "adminRequest.retry",
 
   /** Signing another account out. */
   "adminSession.delete",

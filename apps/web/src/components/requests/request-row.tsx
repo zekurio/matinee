@@ -80,6 +80,10 @@ export function RequestRow({
   rowRef,
   focusable,
   reserveReopen,
+  canApprove,
+  canDecline,
+  canRetry,
+  canRemove,
   declineOpen,
   onDeclineOpenChange,
   declineFinalFocus,
@@ -102,6 +106,11 @@ export function RequestRow({
    * room its buttons take, for the columns to line up.
    */
   reserveReopen: boolean
+  /** Whether the viewer may approve, decline, or retry, and so remove. */
+  canApprove: boolean
+  canDecline: boolean
+  canRetry: boolean
+  canRemove: boolean
   /** The popover that declines it, or gives it up. */
   declineOpen: boolean
   onDeclineOpenChange: (open: boolean) => void
@@ -190,73 +199,78 @@ export function RequestRow({
           <div className="flex items-center gap-1 max-sm:col-start-2 max-sm:pt-1 sm:justify-end">
             {list === "waiting" && (
               <>
+                {canDecline && (
+                  <DeclinePopover
+                    item={item}
+                    open={declineOpen}
+                    onOpenChange={onDeclineOpenChange}
+                    onAnswer={onAnswer}
+                    finalFocus={declineFinalFocus}
+                    onClosed={onDeclineClosed}
+                    trigger={
+                      <KeyTip label={tr("requests.decline")} keys="D">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-keyshortcuts="D"
+                          aria-label={tr("requests.decline.title", {
+                            name: item.title.name,
+                          })}
+                          className={cn(rowButton, "data-popup-open:bg-muted")}
+                        >
+                          {tr("requests.decline")}
+                        </Button>
+                      </KeyTip>
+                    }
+                  />
+                )}
+                {canApprove && (
+                  <KeyTip label={tr("requests.add")} keys="A">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-keyshortcuts="A"
+                      aria-label={tr("requests.addNamed", {
+                        name: item.title.name,
+                      })}
+                      className={rowButton}
+                      onClick={onAdd}
+                    >
+                      <CheckIcon />
+                      {tr("requests.add")}
+                    </Button>
+                  </KeyTip>
+                )}
+              </>
+            )}
+            {(list === "needsAttention" || list === "onTheWay") &&
+              canDecline && (
                 <DeclinePopover
                   item={item}
+                  giveUp
                   open={declineOpen}
                   onOpenChange={onDeclineOpenChange}
                   onAnswer={onAnswer}
                   finalFocus={declineFinalFocus}
                   onClosed={onDeclineClosed}
                   trigger={
-                    <KeyTip label={tr("requests.decline")} keys="D">
+                    <KeyTip label={tr("requests.giveUp")} keys="G">
                       <Button
                         variant="ghost"
                         size="sm"
-                        aria-keyshortcuts="D"
-                        aria-label={tr("requests.decline.title", {
+                        aria-keyshortcuts="G"
+                        aria-label={tr("requests.giveUpNamed", {
                           name: item.title.name,
                         })}
                         className={cn(rowButton, "data-popup-open:bg-muted")}
                       >
-                        {tr("requests.decline")}
+                        {tr("requests.giveUp")}
                       </Button>
                     </KeyTip>
                   }
                 />
-                <KeyTip label={tr("requests.add")} keys="A">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    aria-keyshortcuts="A"
-                    aria-label={tr("requests.addNamed", {
-                      name: item.title.name,
-                    })}
-                    className={rowButton}
-                    onClick={onAdd}
-                  >
-                    <CheckIcon />
-                    {tr("requests.add")}
-                  </Button>
-                </KeyTip>
-              </>
-            )}
-            {(list === "needsAttention" || list === "onTheWay") && (
-              <DeclinePopover
-                item={item}
-                giveUp
-                open={declineOpen}
-                onOpenChange={onDeclineOpenChange}
-                onAnswer={onAnswer}
-                finalFocus={declineFinalFocus}
-                onClosed={onDeclineClosed}
-                trigger={
-                  <KeyTip label={tr("requests.giveUp")} keys="G">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-keyshortcuts="G"
-                      aria-label={tr("requests.giveUpNamed", {
-                        name: item.title.name,
-                      })}
-                      className={cn(rowButton, "data-popup-open:bg-muted")}
-                    >
-                      {tr("requests.giveUp")}
-                    </Button>
-                  </KeyTip>
-                }
-              />
-            )}
-            {list === "needsAttention" && (
+              )}
+            {list === "needsAttention" && canRetry && (
               <KeyTip label={tr("requests.retry")} keys="R">
                 <Button
                   variant="outline"
@@ -275,16 +289,26 @@ export function RequestRow({
             )}
             {list === "done" &&
               (item.status === "declined" ? (
-                <ReopenButtons item={item} onReopen={onReopen} />
+                <ReopenButtons
+                  item={item}
+                  canApprove={canApprove}
+                  canDecline={canDecline}
+                  onReopen={onReopen}
+                />
               ) : (
                 reserveReopen && (
                   // The same buttons, unseen, holding their room.
                   <span aria-hidden inert className="invisible flex gap-1">
-                    <ReopenButtons item={item} onReopen={onReopen} />
+                    <ReopenButtons
+                      item={item}
+                      canApprove={canApprove}
+                      canDecline={canDecline}
+                      onReopen={onReopen}
+                    />
                   </span>
                 )
               ))}
-            <RowMenu item={item} onRemove={onRemove} />
+            <RowMenu item={item} onRemove={onRemove} canRemove={canRemove} />
           </div>
         </article>
       </div>
@@ -299,32 +323,44 @@ export function RequestRow({
  */
 function ReopenButtons({
   item,
+  canApprove,
+  canDecline,
   onReopen,
 }: {
   item: AdminRequestItem
+  canApprove: boolean
+  canDecline: boolean
   onReopen: (kind: "allowAgain" | "addAfterAll") => void
 }) {
   return (
     <>
-      <Button
-        variant="ghost"
-        size="sm"
-        aria-label={tr("requests.allowAgainNamed", { name: item.title.name })}
-        className={rowButton}
-        onClick={() => onReopen("allowAgain")}
-      >
-        {tr("requests.allowAgain")}
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        aria-label={tr("requests.addAfterAllNamed", { name: item.title.name })}
-        className={rowButton}
-        onClick={() => onReopen("addAfterAll")}
-      >
-        <CheckIcon />
-        {tr("requests.addAfterAll")}
-      </Button>
+      {canDecline && (
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={tr("requests.allowAgainNamed", {
+            name: item.title.name,
+          })}
+          className={rowButton}
+          onClick={() => onReopen("allowAgain")}
+        >
+          {tr("requests.allowAgain")}
+        </Button>
+      )}
+      {canApprove && (
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label={tr("requests.addAfterAllNamed", {
+            name: item.title.name,
+          })}
+          className={rowButton}
+          onClick={() => onReopen("addAfterAll")}
+        >
+          <CheckIcon />
+          {tr("requests.addAfterAll")}
+        </Button>
+      )}
     </>
   )
 }
@@ -581,9 +617,11 @@ function OutcomeCell({ item }: { item: AdminRequestItem }) {
 function RowMenu({
   item,
   onRemove,
+  canRemove,
 }: {
   item: AdminRequestItem
   onRemove: () => void
+  canRemove: boolean
 }) {
   const navigate = useNavigate()
   return (
@@ -619,7 +657,7 @@ function RowMenu({
         )}
         {/* A declined request's removal is "Allow requests again",
             beside the menu. */}
-        {item.status !== "declined" && (
+        {canRemove && item.status !== "declined" && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={onRemove}>

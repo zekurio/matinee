@@ -264,7 +264,7 @@ next request, the next chunk of a playing stream included.
 ### Permissions
 
 The server checks permissions named `resource.action`, like
-`media.download`, `library.scan`, or `adminRequest.update`.
+`media.download`, `library.scan`, or `adminRequest.approve`.
 `PERMISSIONS` in `packages/contracts/src/permissions.ts` lists them.
 Groups and accounts never list them: `permissionsOf` in
 `packages/contracts/src/access.ts` works them out from the capabilities.
@@ -287,7 +287,7 @@ Only API tokens pick permissions one by one, see [API tokens](#api-tokens).
 
   | Part             | View                                                              | Manage adds                                                                               |
   | ---------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-  | Request queue    | `adminRequest.read`                                               | `adminRequest.update`                                                                     |
+  | Request queue    | `adminRequest.read`                                               | `adminRequest.approve`, `.decline`, `.retry`                                              |
   | Connections      | `fulfilment.read`                                                 | `fulfilment.create`, `.update`, `.delete`                                                 |
   | Libraries        |                                                                   | `folder.read`, `library.create`, `.update`, `.delete`, `.scan`                            |
   | Metadata         |                                                                   | `title.update`                                                                            |
@@ -529,7 +529,7 @@ People can request a title the server lacks from search, from Discover, or
 from a library show missing seasons. A group says whether its members may
 request, with the `request.create` permission, whether what they ask for
 is added at once, with `request.autoApprove`, or waits for someone with
-`adminRequest.update`, and how many titles they may request in a number of
+`adminRequest.approve`, and how many titles they may request in a number of
 days. Groups start with requests off.
 
 There's one request per title and library, with the seasons asked for and
@@ -717,9 +717,13 @@ the minute. It changes a token's name and permissions, and revokes one.
 
 Permissions work as Immich's API keys do. A token holds `all`, or a list
 of [permissions](#permissions), like `title.read`, `library.scan`, or
-`adminRequest.update`. It can only be given ones its account holds, so a
+`adminRequest.retry`. It can only be given ones its account holds, so a
 token never waits on a permission for its account to be granted it. The
 settings dialog offers those.
+
+Approving, declining, and retrying are separate permissions, so an
+automation token can retry failed sends without being able to approve or
+decline requests, its own included.
 
 - A call made with a token needs its permission twice: the account holds
   it, and the token holds it or `all`. A token narrows its account and

@@ -29,11 +29,15 @@ export function canAny(
 
 /**
  * Whether the account runs the request queue: reading everyone's
- * requests and answering them. The queue's screen is all answers, so it
- * takes both.
+ * requests and answering them, which takes approving or declining. A
+ * token that only retries failed sends reads the queue but doesn't run
+ * it.
  */
 export function runsQueue(user: Pick<User, "permissions">): boolean {
-  return can(user, "adminRequest.read") && can(user, "adminRequest.update")
+  return (
+    can(user, "adminRequest.read") &&
+    (can(user, "adminRequest.approve") || can(user, "adminRequest.decline"))
+  )
 }
 
 /** `permissions` with `changed` all held or all gone, in the contract's order. */

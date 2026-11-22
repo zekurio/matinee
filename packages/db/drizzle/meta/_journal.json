@@ -92,6 +92,13 @@
       "when": 1795345843510,
       "tag": "0012_capability_access",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795364347858,
+      "tag": "0013_split_request_queue_permissions",
+      "breakpoints": true
     }
   ]
 }

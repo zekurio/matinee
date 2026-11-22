@@ -54,12 +54,22 @@ void main() {
 
     test('running the queue takes reading and answering it', () {
       expect(runsQueue(_user(const [Permission.adminRequestRead])), isFalse);
-      expect(runsQueue(_user(const [Permission.adminRequestUpdate])), isFalse);
+      expect(runsQueue(_user(const [Permission.adminRequestApprove])), isFalse);
+      expect(runsQueue(_user(const [Permission.adminRequestRetry])), isFalse);
       expect(
         runsQueue(
           _user(const [
             Permission.adminRequestRead,
-            Permission.adminRequestUpdate,
+            Permission.adminRequestApprove,
+          ]),
+        ),
+        isTrue,
+      );
+      expect(
+        runsQueue(
+          _user(const [
+            Permission.adminRequestRead,
+            Permission.adminRequestDecline,
           ]),
         ),
         isTrue,
