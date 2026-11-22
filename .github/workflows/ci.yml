@@ -28,6 +28,7 @@ jobs:
     outputs:
       pnpm: ${{ steps.changes.outputs.pnpm }}
       flutter: ${{ steps.changes.outputs.flutter }}
+      flutter_ios: ${{ steps.changes.outputs.flutter_ios }}
       nix: ${{ steps.changes.outputs.nix }}
 
     steps:
@@ -38,7 +39,7 @@ jobs:
 
       - name: find the checks to run
         id: changes
-        run: node tools/ci/changes.mjs pnpm flutter nix
+        run: node tools/ci/changes.mjs pnpm flutter flutter_ios nix
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           PATHS_PNPM: |
@@ -60,6 +61,18 @@ jobs:
             tools/ci/**
             .github/workflows/ci.yml
             !**/*.md
+          # What the iOS build compiles: the Dart and the Runner, icon included.
+          PATHS_FLUTTER_IOS: |
+            apps/flutter/**
+            apps/web/src/i18n/locales/en/*.ts
+            apps/web/src/i18n/locales/de/*.ts
+            packages/contracts/**
+            apps/server/scripts/**
+            tools/ci/**
+            .github/workflows/ci.yml
+            !**/*.md
+            !apps/flutter/android/**
+            !apps/flutter/test/**
           PATHS_NIX: |
             nix/**
             apps/**
@@ -147,6 +160,39 @@ jobs:
       - name: build debug apk
         run: nix shell nixpkgs#just -c just flutter build
 
+  flutter-ios:
+    name: flutter ios build
+    needs: changes
+    if: needs.changes.outputs.flutter_ios == 'true' && github.event_name != 'push'
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: select xcode
+        run: |
+          sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      # The flake's Flutter shell is Linux-only. The same version as its
+      # nixpkgs, from Flutter's own releases.
+      - name: set up flutter
+        uses: subosito/flutter-action@1508160852fb97248640997f7cfb38da241df0ba # v2.9.1
+        with:
+          flutter-version: 3.47.4
+          channel: stable
+          cache: true
+
+      # Unsigned, for a device: it compiles the Dart, the Runner's Swift,
+      # and links MPVKit, but nothing runs.
+      - name: build unsigned debug app
+        working-directory: apps/flutter
+        run: flutter build ios --debug --no-codesign
+
   nix:
     name: nix flake check
     needs: changes
@@ -191,7 +237,7 @@ jobs:
   # fails only on a check that failed or was cancelled, `changes` included.
   ci:
     name: ci
-    needs: [changes, checks, flutter, nix]
+    needs: [changes, checks, flutter, flutter-ios, nix]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

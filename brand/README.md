@@ -20,6 +20,8 @@ height, with a gap of 30% of its width.
 | `logo-dark.svg`          | Fixed colors for dark backgrounds                           |
 | `social-preview.png`     | GitHub social preview, 1280×640. Upload it in Settings      |
 | `app-icon.svg`           | 1024px full-bleed app icon. Platforms round the corners     |
+| `app-icon-dark.svg`      | iOS dark appearance, mark on transparency                   |
+| `app-icon-tinted.svg`    | iOS tinted appearance, gray mark on transparency            |
 | `android/res`            | Adaptive and themed icon, used directly by the Gradle build |
 | `android/play-store.png` | 512px Play Console icon                                     |
 | `wordmark.py`            | Draws the wordmark and writes the logo files                |
@@ -28,9 +30,12 @@ height, with a gap of 30% of its width.
 `wordmark.py` also writes `apps/web/src/components/logo.gen.ts`, and
 `pnpm logo:dart` copies `logo-light.svg` and `logo-dark.svg` into the
 Flutter app, whose Android build takes its launcher icon from
-`android/res`. The web app serves copies as `favicon.svg` and
-`apple-touch-icon.png`, and `brand.tsx` draws the mark inline. The Samsung TV app's `apps/tizen/public/icon.png` is the
-app icon at 512 px.
+`android/res`. `render.sh` renders the three app icon SVGs into the
+Flutter app's iOS asset catalog,
+`apps/flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset`. The web
+app serves copies as `favicon.svg` and `apple-touch-icon.png`, and
+`brand.tsx` draws the mark inline. The Samsung TV app's
+`apps/tizen/public/icon.png` is the app icon at 512 px.
 
 ## Colors
 

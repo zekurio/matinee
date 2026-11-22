@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -75,7 +76,11 @@ class Device {
         model: facts.model,
         osVersion: facts.osVersion,
         appVersion: facts.appVersion,
-        platform: facts.television ? 'androidtv' : 'android',
+        platform: switch (defaultTargetPlatform) {
+          TargetPlatform.iOS => DevicePlatform.ios,
+          _ when facts.television => DevicePlatform.androidtv,
+          _ => DevicePlatform.android,
+        },
         timeZone: facts.timeZone,
       );
     } on MissingPluginException {

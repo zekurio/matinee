@@ -36,8 +36,9 @@ TV app.
   favicon, and `apps/web/src/components/logo.gen.ts`. See `brand/README.md`.
 - `apps/flutter`: the app for phones, tablets, and TVs, one Flutter
   codebase with each platform's player behind the Flutter view. It ships
-  for Android, Android tablets, and Android TV; its iPhone, iPad, and
-  Apple TV side has no player yet. Its API client, `lib/api`, is
+  for Android, Android tablets, and Android TV. Its iPhone and iPad side,
+  `ios/Runner`, compiles in CI, but nobody has run it on a device yet,
+  and Apple TV isn't started. Its API client, `lib/api`, is
   generated from the OpenAPI document by `pnpm api:dart`
   (`apps/server/scripts/dart-client.ts`), and its theme presets, icons,
   and logo by `pnpm themes:dart`, `pnpm icons:dart`, and

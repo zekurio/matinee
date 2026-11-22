@@ -11,6 +11,8 @@ import 'package:pigeon/pigeon.dart';
     kotlinOptions: KotlinOptions(
       package: 'io.github.zekurio.matinee.player.system',
     ),
+    swiftOut: 'ios/Runner/Pigeon/PlayerSystem.g.swift',
+    swiftOptions: SwiftOptions(includeErrorClass: false),
     copyrightHeader: 'pigeons/header.txt',
   ),
 )

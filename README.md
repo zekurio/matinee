@@ -31,8 +31,8 @@ README with the details.
   install. Hosting it starts there.
 - [The web app](apps/web) is what you get in a browser.
 - [The Flutter app](apps/flutter) runs on Android phones, tablets, and
-  Android TV, and keeps downloads for watching offline. Its iPhone, iPad,
-  and Apple TV side has no player yet.
+  Android TV, and keeps downloads for watching offline. Its iPhone and
+  iPad side is written, but nobody has run it on a device yet.
 - [The Samsung TV app](apps/tizen) is for Tizen TVs from 2018 on. Nobody
   has tried it on a real TV yet.
 - [Brand](brand) has the logo, the app icons, and the scripts that draw

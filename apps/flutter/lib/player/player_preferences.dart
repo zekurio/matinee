@@ -17,12 +17,20 @@ class PlayerEnginePreference extends AsyncNotifier<PlayerEngine> {
   final _preferences = SharedPreferencesAsync();
   Future<void> _pending = Future<void>.value();
 
+  /// Media3 is Android's; iOS has mpv alone.
+  static bool get _choosable => defaultTargetPlatform == TargetPlatform.android;
+
   @override
-  Future<PlayerEngine> build() async =>
-      PlayerEngine.values.asNameMap()[await _preferences.getString(_key)] ??
-      PlayerEngine.mpv;
+  Future<PlayerEngine> build() async {
+    if (!_choosable) return PlayerEngine.mpv;
+    return PlayerEngine.values.asNameMap()[await _preferences.getString(
+          _key,
+        )] ??
+        PlayerEngine.mpv;
+  }
 
   Future<void> setEngine(PlayerEngine engine) {
+    if (!_choosable) return Future<void>.value();
     final write = _pending.then((_) async {
       if (await future == engine) return;
       await _preferences.setString(_key, engine.name);

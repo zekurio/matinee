@@ -14,6 +14,7 @@ fi
 brand="$(cd "$(dirname "$0")" && pwd)"
 web="$brand/../apps/web/public"
 tizen="$brand/../apps/tizen/public"
+ios="$brand/../apps/flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset"
 
 python3 "$brand/wordmark.py"
 
@@ -21,13 +22,17 @@ render() { # <svg> <size> <png>
   resvg --width "$2" --height "$2" "$brand/$1" "$3"
 }
 
+render app-icon.svg 1024 "$ios/AppIcon.png"
+render app-icon-dark.svg 1024 "$ios/AppIcon-Dark.png"
+render app-icon-tinted.svg 1024 "$ios/AppIcon-Tinted.png"
 render app-icon.svg 512 "$brand/android/play-store.png"
 render app-icon.svg 180 "$web/apple-touch-icon.png"
 render app-icon.svg 512 "$tizen/icon.png"
 resvg --width 1280 "$brand/social-preview.svg" "$brand/social-preview.png"
 install -m 644 "$brand/mark.svg" "$web/favicon.svg"
 
-# Lossless. It also drops the alpha channel from the opaque icons.
+# Lossless. It also drops the alpha channel from the opaque icons, which App
+# Store Connect requires of an app icon.
 oxipng --quiet --opt 4 --strip safe \
-  "$brand/android/play-store.png" "$web/apple-touch-icon.png" \
+  "$ios"/*.png "$brand/android/play-store.png" "$web/apple-touch-icon.png" \
   "$tizen/icon.png" "$brand/social-preview.png"

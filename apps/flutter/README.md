@@ -1,12 +1,15 @@
 # Matinee for phones, tablets, and TVs
 
-One Flutter app for Android phones, tablets, and TVs, and for iPhone, iPad,
-and Apple TV. Screens are Flutter. Video plays in each platform's native
-player, which sits behind the Flutter view.
+One Flutter app for Android phones, tablets, and TVs, and for iPhone and
+iPad. Screens are Flutter. Video plays in each platform's native player,
+which sits behind the Flutter view.
 
 Android phones and tablets have every screen, downloads, and offline mode.
-Android TV has its own routes and player. A route a platform doesn't have
-yet shows a placeholder with its path.
+Android TV has its own routes and player. iPhone and iPad have the same
+screens as Android phones and tablets, with the native side in
+`ios/Runner`. CI compiles it, but nobody has run it on a device yet.
+Apple TV isn't started. A route a platform doesn't have yet shows a
+placeholder with its path.
 
 ## Build, run, check
 
@@ -45,6 +48,21 @@ crashes in its GLES decoder as soon as the app draws. An emulator on the
 host's GPU (`-gpu host`) is the reverse: Vulkan crashes on the first
 artwork it decodes, and OpenGL ES works. Build for that one with
 `MATINEE_IMPELLER_BACKEND=opengles flutter build apk --debug`.
+
+### iOS
+
+The flake's Flutter shell is Linux-only, so the iOS build needs a Mac with
+Xcode and the same Flutter version, 3.47.4. From `apps/flutter`:
+
+```sh
+flutter build ios --debug --no-codesign   # what CI builds
+flutter run                               # on a simulator or a device
+```
+
+The Runner targets iOS 16 on iPhone and iPad, with the bundle id
+`io.github.zekurio.matinee`. Running on a device needs your own team set
+in Xcode. Don't commit it. `just flutter pigeon` writes the Swift side of
+the platform channels into `ios/Runner/Pigeon`.
 
 ### Tests
 
@@ -189,6 +207,13 @@ doesn't match. To update it, change both. `test/licenses_test.dart` fails
 when the Gradle build bundles a library whose license
 `lib/core/licenses.dart` doesn't carry.
 
+On iOS there is one engine, libmpv, in `ios/Runner/Player`. It is the
+MPVKit Swift package from the same repository, pinned by revision in the
+Xcode project. mpv's avfoundation output draws into a layer beneath the
+Flutter view, at the rectangle `VideoView` leaves transparent, and the
+same layer feeds picture in picture. `NOTICE.md` lists what the player
+adapts from Plezy.
+
 ## Downloads
 
 Downloads are native. `lib/downloads` follows the platform's list and tells
@@ -201,6 +226,9 @@ to one mp4, and a version still waiting its turn on the server waits
 rather than failing. Media3 can't seek in that mp4 by itself, so
 `FragmentIndex.kt` reads the fragments' headers for it. The tokens the jobs
 send are sealed with a key in the Android Keystore.
+
+The Swift side, `ios/Runner/Downloads`, follows the same rules on a
+background URLSession, which carries on with the app suspended or closed.
 
 Each download belongs to the server it came from and shows, plays, and
 syncs only with that one. The server decides what a download holds. The

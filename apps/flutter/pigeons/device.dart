@@ -8,6 +8,7 @@ import 'package:pigeon/pigeon.dart';
     kotlinOut:
         'android/app/src/main/kotlin/io/github/zekurio/matinee/platform/Device.g.kt',
     kotlinOptions: KotlinOptions(package: 'io.github.zekurio.matinee.platform'),
+    swiftOut: 'ios/Runner/Pigeon/Device.g.swift',
     copyrightHeader: 'pigeons/header.txt',
   ),
 )
