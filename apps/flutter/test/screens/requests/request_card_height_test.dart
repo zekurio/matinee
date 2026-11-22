@@ -273,4 +273,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Seasons'), findsNWidgets(2));
   });
+
+  // The bug it pins: one line cut every error and note to a few words.
+  testWidgets('a long error and a long decline note take two lines', (
+    tester,
+  ) async {
+    const error =
+        'Radarr answered 503 Service Unavailable at http://radarr.local:7878 '
+        'after three tries over the last hour';
+    const note =
+        'We keep this one on the shelf at home, ask me for the disc whenever '
+        'you want to watch it and I will bring it round.';
+    final failed = _item('needsAttention', error: error);
+    final declined = _own(
+      'declined',
+      reason: {'kind': 'declined', 'code': 'notForServer', 'note': note},
+    );
+    await _pump(tester, 336, 'en', [
+      (ValueKey(failed.id), QueueCard(item: failed)),
+      (ValueKey(declined.id), OwnRequestCard(item: declined)),
+    ]);
+    for (final text in ['Radarr answered 503', 'We keep this one']) {
+      final line = find.textContaining(text);
+      expect(line, findsOneWidget);
+      expect(
+        tester.getSize(line).height,
+        closeTo(2 * KitText.px13.lineHeight, .01),
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
 }

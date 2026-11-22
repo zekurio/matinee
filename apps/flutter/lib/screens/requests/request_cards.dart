@@ -20,14 +20,14 @@ import 'requests_hub.dart';
 
 /// The request cards that Explore's Recent requests row, the requests
 /// overview, and My requests share, as Seerr draws them: the poster beside
-/// the same rows on every card, each one line, each in its place whether a
-/// card has it or not. The year (a show's with the seasons asked for), the
-/// name, who asked (an admin's cards only), the state's badge
-/// ([RequestStateBadge]), and a line only when something went wrong: the
-/// error, or why it was declined and the note. The actions sit on the
+/// the same rows on every card, each in its place whether a card has it or
+/// not. The year (a show's with the seasons asked for), the name, who asked
+/// (an admin's cards only), the state's badge ([RequestStateBadge]), and,
+/// only when something went wrong, the problem: the error, or why it was
+/// declined and the note, on up to two lines. The actions sit on the
 /// poster's bottom edge. The poster sets the card's height. What doesn't
-/// fit ends in "…", and the card's menu, or a tap on the cut line, has all
-/// of it.
+/// fit ends in "…", and the card's menu, or a tap on the cut problem, has
+/// all of it.
 
 /// How many askers' faces a card shows; the count after the first name
 /// says the rest.
@@ -49,15 +49,20 @@ const _afterYear = 2.0;
 const _rowGap = 6.0;
 const _badge = 24.0;
 
+/// The lines the problem row keeps, filled or not, so a card is as tall
+/// with one as without and every badge stays at its height.
+const _problemLines = 2;
+
 /// A request card's layout: the poster's width, and the text column's
 /// height, which is the poster's.
 typedef RequestCardLayout = ({double poster, double height});
 
 /// The layout of a card whose rows are at the text size [scaler] gives:
-/// the year, the name, who asked on a [queue] card, the badge, the problem
-/// line, and the actions, with the gaps between. Every card of a list has
-/// the same rows, so it's as tall as the next, and the poster as tall as
-/// the rows, at 2:3, so no band is left empty between them.
+/// the year, the name, who asked on a [queue] card, the badge, the two
+/// lines the problem may take, and the actions, with the gaps between.
+/// Every card of a list has the same rows, so it's as tall as the next,
+/// and the poster as tall as the rows, at 2:3, so no band is left empty
+/// between them.
 RequestCardLayout requestCardLayout(TextScaler scaler, {required bool queue}) {
   double line(double height) => scaler.scale(height);
   final rows =
@@ -68,7 +73,7 @@ RequestCardLayout requestCardLayout(TextScaler scaler, {required bool queue}) {
       _rowGap +
       _badge +
       _rowGap +
-      line(KitText.px13.lineHeight) +
+      _problemLines * line(KitText.px13.lineHeight) +
       _rowGap +
       ButtonSize.sm.height;
   return (poster: rows / _posterHeight, height: rows);
@@ -274,7 +279,8 @@ class RequestCard extends StatelessWidget {
                           ),
                           const SizedBox(height: _rowGap),
                           SizedBox(
-                            height: line(KitText.px13.lineHeight),
+                            height:
+                                _problemLines * line(KitText.px13.lineHeight),
                             child: problem,
                           ),
                           const Spacer(),
@@ -415,7 +421,7 @@ class RequestStateBadge extends StatelessWidget {
 }
 
 /// A line under the badge, muted unless [color] says otherwise, cut to
-/// one.
+/// two.
 class _Line extends StatelessWidget {
   const _Line(String this.text, {this.color}) : spans = null;
 
@@ -428,7 +434,7 @@ class _Line extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text.rich(
     TextSpan(text: text, children: spans),
-    maxLines: 1,
+    maxLines: _problemLines,
     overflow: TextOverflow.ellipsis,
     style: KitText.px13.style(
       color: color ?? MatineeTheme.of(context).mutedForeground,
@@ -440,7 +446,7 @@ class _Line extends StatelessWidget {
 
 /// One request of the queue, in the state the server gave it: who asked,
 /// the state's badge, the error or the decline's answer when there's one,
-/// and the state's actions. Its menu has the rest: when
+/// on up to two lines, and the state's actions. Its menu has the rest: when
 /// they asked, where it goes and how, how far along it is or when it
 /// arrived, the request's whole problem, "Goes to", the title's page, the
 /// request in its connection, and what the connection reported.
