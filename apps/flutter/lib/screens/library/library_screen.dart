@@ -143,8 +143,7 @@ class _KindScreenState extends ConsumerState<KindScreen> {
           controller: _scroll,
           header: (context, shown) => [
             SliverToBoxAdapter(
-              child: _Heading(
-                title: shows ? l.tabShows : l.tabMovies,
+              child: _ListBar(
                 subtitle: [
                   if (ofKind.length > 1)
                     LibraryMenu(
@@ -352,16 +351,11 @@ void _refreshList(
   if (scope != null) ref.invalidate(filterOptionsProvider(scope));
 }
 
-/// A tab's heading: its name, the library menu and the count under it, and
-/// the filter and sort at the end.
-class _Heading extends StatelessWidget {
-  const _Heading({
-    required this.title,
-    required this.subtitle,
-    required this.actions,
-  });
+/// A tab's bar under its header: the library menu and the count, and the
+/// filter and sort at the end. The tab's name is the shell header's, above.
+class _ListBar extends StatelessWidget {
+  const _ListBar({required this.subtitle, required this.actions});
 
-  final String title;
   final List<Widget> subtitle;
   final List<Widget> actions;
 
@@ -381,47 +375,25 @@ class _Heading extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KitText.xl
-                        .style(
-                          color: colors.foreground,
-                          weight: FontWeight.w600,
-                        )
-                        .copyWith(letterSpacing: KitText.xl.size * -.025),
-                  ),
+            child: DefaultTextStyle(
+              style: muted,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 20),
+                child: Row(
+                  children: [
+                    for (final (index, part) in subtitle.indexed) ...[
+                      if (index > 0)
+                        ExcludeSemantics(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Text('·', style: muted),
+                          ),
+                        ),
+                      Flexible(child: part),
+                    ],
+                  ],
                 ),
-                if (subtitle.isNotEmpty)
-                  DefaultTextStyle(
-                    style: muted,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 20),
-                      child: Row(
-                        children: [
-                          for (final (index, part) in subtitle.indexed) ...[
-                            if (index > 0)
-                              ExcludeSemantics(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                  ),
-                                  child: Text('·', style: muted),
-                                ),
-                              ),
-                            Flexible(child: part),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
           ...actions,

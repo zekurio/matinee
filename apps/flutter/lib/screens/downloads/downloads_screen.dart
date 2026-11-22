@@ -200,7 +200,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
     ]..sort((a, b) => b.$1.compareTo(a.$1));
 
     final children = <Widget>[
-      _TabHeading(title: l.downloadsTitle),
+      const _StorageLine(),
       if (loaded && items.isEmpty) _Empty(offline: offline),
       if (coming.isNotEmpty) ...[
         _ListHeading(
@@ -277,11 +277,9 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
   }
 }
 
-/// The tab's name, and the space its downloads take and what's left.
-class _TabHeading extends ConsumerWidget {
-  const _TabHeading({required this.title});
-
-  final String title;
+/// The space the downloads take and what's left, under the tab's header.
+class _StorageLine extends ConsumerWidget {
+  const _StorageLine();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -289,33 +287,14 @@ class _TabHeading extends ConsumerWidget {
     final colors = MatineeTheme.of(context);
     final used = ref.watch(downloadsBytesProvider);
     final free = ref.watch(freeBytesProvider).value;
+    if (free == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KitText.xl
-                  .style(color: colors.foreground, weight: FontWeight.w600)
-                  .copyWith(letterSpacing: KitText.xl.size * -.025),
-            ),
-          ),
-          if (free != null)
-            Text(
-              l.downloadsStorageValue(
-                formatBytes(used, l),
-                formatBytes(free, l),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KitText.sm.style(color: colors.mutedForeground),
-            ),
-        ],
+      child: Text(
+        l.downloadsStorageValue(formatBytes(used, l), formatBytes(free, l)),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: KitText.sm.style(color: colors.mutedForeground),
       ),
     );
   }

@@ -25,6 +25,30 @@ final class _TabReselects extends Notifier<TabReselect?> {
       state = (path: path, count: (state?.count ?? 0) + 1);
 }
 
+/// The header above the tabs: Home keeps the logo with settings and search,
+/// and each other tab gets its own name and only the actions it has.
+class ShellTopBar extends ConsumerWidget {
+  const ShellTopBar({super.key, required this.index});
+
+  /// The shell's branch index: Home, Shows, Movies, Downloads, or Profile.
+  final int index;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final words = AppLocalizations.of(context);
+    return switch (index) {
+      0 => const ShellHeader(),
+      1 => TabHeader(title: words.tabShows, action: HeaderAction.search),
+      2 => TabHeader(title: words.tabMovies, action: HeaderAction.search),
+      3 => TabHeader(
+        title: words.downloadsTitle,
+        offline: ref.watch(authStateProvider) is Offline,
+      ),
+      _ => TabHeader(title: words.tabProfile, action: HeaderAction.settings),
+    };
+  }
+}
+
 /// The signed-in touch screens' frame, the same on a phone and a tablet:
 /// the header on top, and the tabs along the bottom, Home, Shows, Movies,
 /// Downloads, and the profile, each keeping its own stack. Both stay while
@@ -125,7 +149,7 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
         color: MatineeTheme.of(context).background,
         child: Column(
           children: [
-            const ShellHeader(),
+            ShellTopBar(index: widget.shell.currentIndex),
             Expanded(
               child: MediaQuery.removePadding(
                 context: context,
