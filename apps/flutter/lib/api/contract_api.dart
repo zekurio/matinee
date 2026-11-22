@@ -57,6 +57,7 @@ final class RecommendationsApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `recommendation.read` permission, and so does an API token.
   /// `GET /recommendations/home`
   Future<HomeRecommendations> home() {
     return _transport.call('GET', [
@@ -65,6 +66,7 @@ final class RecommendationsApi {
     ], HomeRecommendations.fromJson);
   }
 
+  /// The account needs the `recommendation.update` permission, and so does an API token.
   /// `PUT /recommendations/dismissed`
   Future<void> dismiss({required CatalogRef ref, required bool dismissed}) {
     final input = RecommendationsDismissInput(ref: ref, dismissed: dismissed);
@@ -78,6 +80,7 @@ final class CatalogApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `catalog.read` permission, and so does an API token.
   /// `GET /catalog/search`
   Future<CatalogPage> search({
     required String query,
@@ -98,6 +101,7 @@ final class CatalogApi {
     );
   }
 
+  /// The account needs the `catalog.read` permission, and so does an API token.
   /// `POST /catalog/details`
   Future<CatalogTitleDetail> details(CatalogInput catalogInput) {
     final body = JsonBody(catalogInput.toJson());
@@ -109,6 +113,7 @@ final class CatalogApi {
     );
   }
 
+  /// The account needs the `catalog.read` permission, and so does an API token.
   /// `POST /catalog/related`
   Future<RelatedRails> related(CatalogInput catalogInput) {
     final body = JsonBody(catalogInput.toJson());
@@ -120,6 +125,7 @@ final class CatalogApi {
     );
   }
 
+  /// The account needs the `catalog.read` permission, and so does an API token.
   /// `POST /catalog/related/titles`
   Future<RelatedPage> relatedTitles({
     required CatalogRef ref,
@@ -140,6 +146,7 @@ final class CatalogApi {
     );
   }
 
+  /// The account needs the `catalog.read` permission, and so does an API token.
   /// `GET /catalog/missing-seasons`
   Future<CatalogMissingSeasonsOutput> missingSeasons({
     required String titleId,
@@ -158,6 +165,7 @@ final class DiscoverApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `catalog.read` permission, and so does an API token.
   /// `GET /discover/rails`
   Future<DiscoverRails> rails() {
     return _transport.call('GET', [
@@ -166,6 +174,7 @@ final class DiscoverApi {
     ], DiscoverRails.fromJson);
   }
 
+  /// The account needs the `catalog.read` permission, and so does an API token.
   /// `POST /discover/row`
   Future<DiscoverRow> row({required String id, RecommendationSeed? seed}) {
     final input = DiscoverRowInput(id: id, seed: seed);
@@ -178,6 +187,7 @@ final class DiscoverApi {
     );
   }
 
+  /// The account needs the `catalog.read` permission, and so does an API token.
   /// `GET /discover/browse/options`
   Future<CatalogBrowseOptions> browseOptions({required String kind}) {
     return _transport.call(
@@ -188,6 +198,7 @@ final class DiscoverApi {
     );
   }
 
+  /// The account needs the `catalog.read` permission, and so does an API token.
   /// `POST /discover/browse`
   Future<CatalogBrowsePage> browse(CatalogBrowseInput catalogBrowseInput) {
     final body = JsonBody(catalogBrowseInput.toJson());
@@ -205,6 +216,7 @@ final class RequestsApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `request.read` permission, and so does an API token.
   /// `POST /requests/live`
   Stream<List<RequestsLiveEvent>> live({required List<CatalogInput> titles}) {
     final input = RequestsLiveInput(titles: titles);
@@ -217,6 +229,7 @@ final class RequestsApi {
     );
   }
 
+  /// The account needs the `request.create` permission, and so does an API token.
   /// `POST /requests/ask`
   Future<RequestItem> ask({
     required CatalogRef ref,
@@ -237,6 +250,7 @@ final class RequestsApi {
     );
   }
 
+  /// The account needs the `request.create` permission, and so does an API token.
   /// `POST /requests/add-seasons`
   Future<RequestItem> addSeasons({
     required String id,
@@ -252,12 +266,14 @@ final class RequestsApi {
     );
   }
 
+  /// The account needs the `request.delete` permission, and so does an API token.
   /// `POST /requests/cancel`
   Future<void> cancel(RequestId requestId) {
     final body = JsonBody(requestId.toJson());
     return _transport.send('POST', ['requests', 'cancel'], body: body);
   }
 
+  /// The account needs the `request.read` permission, and so does an API token.
   /// `GET /requests/mine`
   Future<RequestPage> mine({String? cursor, int? limit, String? filter}) {
     return _transport.call(
@@ -437,6 +453,7 @@ final class AuthOidcPendingApi {
     return _transport.send('DELETE', ['auth', 'oidc', 'pending']);
   }
 
+  /// The account needs the `oidcAccount.create` permission, and so does an API token.
   /// `POST /auth/oidc/pending/link`
   Future<AuthOidcPendingLinkOutput> link() {
     return _transport.call('POST', [
@@ -507,6 +524,7 @@ final class AuthDeviceApi {
     );
   }
 
+  /// The account needs the `session.create` permission, and so does an API token.
   /// `GET /auth/device/{userCode}`
   Future<DeviceRequest> get(String userCode) {
     return _transport.call('GET', [
@@ -516,6 +534,7 @@ final class AuthDeviceApi {
     ], DeviceRequest.fromJson);
   }
 
+  /// The account needs the `session.create` permission, and so does an API token.
   /// `POST /auth/device/{userCode}/approve`
   Future<void> approve(String userCode) {
     return _transport.send('POST', ['auth', 'device', userCode, 'approve']);
@@ -530,6 +549,7 @@ final class AccountApi {
       library = AccountLibraryApi._(transport),
       passkeys = AccountPasskeysApi._(transport),
       oidc = AccountOidcApi._(transport),
+      apiTokens = AccountApiTokensApi._(transport),
       sessions = AccountSessionsApi._(transport);
 
   final AccountProfileApi profile;
@@ -538,6 +558,7 @@ final class AccountApi {
   final AccountLibraryApi library;
   final AccountPasskeysApi passkeys;
   final AccountOidcApi oidc;
+  final AccountApiTokensApi apiTokens;
   final AccountSessionsApi sessions;
 }
 
@@ -546,6 +567,7 @@ final class AccountProfileApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `account.update` permission, and so does an API token.
   /// `PATCH /account/profile`
   Future<User> update({
     String? displayName,
@@ -570,6 +592,7 @@ final class AccountAvatarApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `account.update` permission, and so does an API token.
   /// `PUT /account/avatar`
   Future<User> upload({required FilePart file}) {
     final body = MultipartBody(files: {'file': file});
@@ -581,11 +604,13 @@ final class AccountAvatarApi {
     );
   }
 
+  /// The account needs the `account.update` permission, and so does an API token.
   /// `DELETE /account/avatar`
   Future<User> remove() {
     return _transport.call('DELETE', ['account', 'avatar'], User.fromJson);
   }
 
+  /// The account needs the `account.update` permission, and so does an API token.
   /// `POST /account/avatar/provider`
   Future<User> useProvider() {
     return _transport.call('POST', [
@@ -601,6 +626,7 @@ final class AccountPlaybackApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `account.update` permission, and so does an API token.
   /// `PUT /account/playback`
   Future<User> setPreferences(PlaybackPreferences playbackPreferences) {
     final body = JsonBody(playbackPreferences.toJson());
@@ -618,6 +644,7 @@ final class AccountLibraryApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `account.update` permission, and so does an API token.
   /// `PATCH /account/library`
   Future<User> setPreferences({bool? showSpecials}) {
     final input = AccountLibrarySetPreferencesInput(showSpecials: showSpecials);
@@ -636,6 +663,7 @@ final class AccountPasskeysApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `passkey.read` permission, and so does an API token.
   /// `GET /account/passkeys`
   Future<List<Passkey>> list() {
     return _transport.call('GET', [
@@ -644,6 +672,7 @@ final class AccountPasskeysApi {
     ], (value) => readList(value, Passkey.fromJson));
   }
 
+  /// The account needs the `passkey.create` permission, and so does an API token.
   /// `POST /account/passkeys`
   Future<Passkey> register({
     required String challengeId,
@@ -664,6 +693,7 @@ final class AccountPasskeysApi {
     );
   }
 
+  /// The account needs the `passkey.create` permission, and so does an API token.
   /// `POST /account/passkeys/options`
   Future<PasskeyCreation> registerOptions() {
     return _transport.call('POST', [
@@ -673,6 +703,7 @@ final class AccountPasskeysApi {
     ], PasskeyCreation.fromJson);
   }
 
+  /// The account needs the `passkey.update` permission, and so does an API token.
   /// `PATCH /account/passkeys/{id}`
   Future<Passkey> rename(String id, {required String? name}) {
     final input = AccountPasskeysRenameInput(name: name);
@@ -685,6 +716,7 @@ final class AccountPasskeysApi {
     );
   }
 
+  /// The account needs the `passkey.delete` permission, and so does an API token.
   /// `DELETE /account/passkeys/{id}`
   Future<void> remove(String id) {
     return _transport.send('DELETE', ['account', 'passkeys', id]);
@@ -696,6 +728,7 @@ final class AccountOidcApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `oidcAccount.read` permission, and so does an API token.
   /// `GET /account/oidc`
   Future<OidcAccount?> get() {
     return _transport.call('GET', [
@@ -704,9 +737,84 @@ final class AccountOidcApi {
     ], (value) => readNullable(value, OidcAccount.fromJson));
   }
 
+  /// The account needs the `oidcAccount.delete` permission, and so does an API token.
   /// `DELETE /account/oidc`
   Future<void> unlink() {
     return _transport.send('DELETE', ['account', 'oidc']);
+  }
+}
+
+final class AccountApiTokensApi {
+  AccountApiTokensApi._(this._transport);
+
+  final ApiTransport _transport;
+
+  /// The account needs the `apiToken.read` permission, and so does an API token.
+  /// `GET /account/api-tokens`
+  Future<List<ApiToken>> list() {
+    return _transport.call('GET', [
+      'account',
+      'api-tokens',
+    ], (value) => readList(value, ApiToken.fromJson));
+  }
+
+  /// The account needs the `apiToken.create` permission, and so does an API token.
+  /// `POST /account/api-tokens`
+  Future<CreatedApiToken> create(ApiTokenInput apiTokenInput) {
+    final body = JsonBody(apiTokenInput.toJson());
+    return _transport.call(
+      'POST',
+      ['account', 'api-tokens'],
+      CreatedApiToken.fromJson,
+      body: body,
+    );
+  }
+
+  /// Any account and any API token may call this.
+  /// `GET /account/api-tokens/me`
+  Future<ApiToken> me() {
+    return _transport.call('GET', [
+      'account',
+      'api-tokens',
+      'me',
+    ], ApiToken.fromJson);
+  }
+
+  /// The account needs the `apiToken.update` permission, and so does an API token.
+  /// `PATCH /account/api-tokens/{id}`
+  Future<ApiToken> update(
+    String id, {
+    String? name,
+    List<String>? permissions,
+  }) {
+    final input = AccountApiTokensUpdateInput(
+      name: name,
+      permissions: permissions,
+    );
+    final body = JsonBody(input.toJson());
+    return _transport.call(
+      'PATCH',
+      ['account', 'api-tokens', id],
+      ApiToken.fromJson,
+      body: body,
+    );
+  }
+
+  /// The account needs the `apiToken.delete` permission, and so does an API token.
+  /// `DELETE /account/api-tokens/{id}`
+  Future<void> revoke(String id) {
+    return _transport.send('DELETE', ['account', 'api-tokens', id]);
+  }
+
+  /// The account needs the `apiToken.rotate` permission, and so does an API token.
+  /// `POST /account/api-tokens/{id}/rotate`
+  Future<CreatedApiToken> rotate(String id) {
+    return _transport.call('POST', [
+      'account',
+      'api-tokens',
+      id,
+      'rotate',
+    ], CreatedApiToken.fromJson);
   }
 }
 
@@ -715,6 +823,7 @@ final class AccountSessionsApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `session.read` permission, and so does an API token.
   /// `GET /account/sessions`
   Future<List<Session>> list() {
     return _transport.call('GET', [
@@ -723,11 +832,13 @@ final class AccountSessionsApi {
     ], (value) => readList(value, Session.fromJson));
   }
 
+  /// The account needs the `session.delete` permission, and so does an API token.
   /// `DELETE /account/sessions/{id}`
   Future<void> revoke(String id) {
     return _transport.send('DELETE', ['account', 'sessions', id]);
   }
 
+  /// The account needs the `session.delete` permission, and so does an API token.
   /// `POST /account/sessions/revoke-others`
   Future<AccountSessionsRevokeOthersOutput> revokeOthers() {
     return _transport.call('POST', [
@@ -737,6 +848,7 @@ final class AccountSessionsApi {
     ], AccountSessionsRevokeOthersOutput.fromJson);
   }
 
+  /// The account needs the `session.update` permission, and so does an API token.
   /// `PUT /account/sessions/current/client`
   Future<void> identify(ClientIdentity clientIdentity) {
     final body = JsonBody(clientIdentity.toJson());
@@ -754,6 +866,7 @@ final class LibrariesApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `library.read` permission, and so does an API token.
   /// `GET /libraries`
   Future<List<Library>> list() {
     return _transport.call('GET', [
@@ -761,17 +874,20 @@ final class LibrariesApi {
     ], (value) => readList(value, Library.fromJson));
   }
 
+  /// The account needs the `library.create` permission, and so does an API token.
   /// `POST /libraries`
   Future<Library> create(LibraryInput libraryInput) {
     final body = JsonBody(libraryInput.toJson());
     return _transport.call('POST', ['libraries'], Library.fromJson, body: body);
   }
 
+  /// The account needs the `library.read` permission, and so does an API token.
   /// `GET /libraries/{id}`
   Future<Library> get(String id) {
     return _transport.call('GET', ['libraries', id], Library.fromJson);
   }
 
+  /// The account needs the `library.update` permission, and so does an API token.
   /// `PUT /libraries/{id}`
   Future<Library> update(
     String id, {
@@ -797,16 +913,19 @@ final class LibrariesApi {
     );
   }
 
+  /// The account needs the `library.delete` permission, and so does an API token.
   /// `DELETE /libraries/{id}`
   Future<void> remove(String id) {
     return _transport.send('DELETE', ['libraries', id]);
   }
 
+  /// The account needs the `library.scan` permission, and so does an API token.
   /// `POST /libraries/{id}/scan`
   Future<void> scan(String id) {
     return _transport.send('POST', ['libraries', id, 'scan']);
   }
 
+  /// The account needs the `library.scan` permission, and so does an API token.
   /// `POST /libraries/{id}/refresh-metadata`
   Future<void> refreshMetadata(String id) {
     return _transport.send('POST', ['libraries', id, 'refresh-metadata']);
@@ -818,6 +937,7 @@ final class MetadataApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `library.read` permission, and so does an API token.
   /// `GET /metadata/providers`
   Future<List<MetadataProvider>> providers() {
     return _transport.call('GET', [
@@ -832,6 +952,7 @@ final class TitlesApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `title.read` permission, and so does an API token.
   /// `POST /libraries/{libraryId}/titles/browse`
   Future<TitleList> list(
     String libraryId, {
@@ -861,6 +982,7 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.read` permission, and so does an API token.
   /// `POST /titles/browse`
   Future<BrowsedTitles> browse({
     String? query,
@@ -891,6 +1013,7 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.read` permission, and so does an API token.
   /// `GET /titles/filter-options`
   Future<TitleFilterOptions> filterOptions({
     String? libraryId,
@@ -911,6 +1034,7 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.read` permission, and so does an API token.
   /// `GET /titles/facets`
   Future<TitleFacets> facets({String? libraryId, String? kind}) {
     return _transport.call(
@@ -921,11 +1045,13 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.read` permission, and so does an API token.
   /// `GET /titles/{id}`
   Future<Title> get(String id) {
     return _transport.call('GET', ['titles', id], Title.fromJson);
   }
 
+  /// The account needs the `title.read` permission, and so does an API token.
   /// `POST /titles/{id}/items`
   Future<List<MediaItem>> items(String id, {Explicit<int>? season}) {
     final input = TitlesItemsInput(season: season);
@@ -938,6 +1064,7 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.update` permission, and so does an API token.
   /// `GET /titles/{id}/matches`
   Future<List<MetadataMatch>> findMatches(
     String id, {
@@ -952,6 +1079,7 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.update` permission, and so does an API token.
   /// `POST /titles/{id}/identify`
   Future<Title> identify(String id, {required String providerId}) {
     final input = TitlesIdentifyInput(providerId: providerId);
@@ -964,11 +1092,13 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.update` permission, and so does an API token.
   /// `POST /titles/{id}/refresh`
   Future<Title> refresh(String id) {
     return _transport.call('POST', ['titles', id, 'refresh'], Title.fromJson);
   }
 
+  /// The account needs the `title.update` permission, and so does an API token.
   /// `GET /titles/{id}/images`
   Future<List<ItemImage>> images(String id, {int? season, int? episode}) {
     return _transport.call(
@@ -979,6 +1109,7 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.update` permission, and so does an API token.
   /// `GET /titles/{id}/images/{slot}/remote`
   Future<List<RemoteImage>> remoteImages(
     String id,
@@ -999,6 +1130,7 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.update` permission, and so does an API token.
   /// `POST /titles/{id}/images/{slot}`
   Future<List<ItemImage>> uploadImage(
     String id,
@@ -1019,6 +1151,7 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.update` permission, and so does an API token.
   /// `PUT /titles/{id}/images/{slot}`
   Future<List<ItemImage>> setImage(
     String id,
@@ -1041,6 +1174,7 @@ final class TitlesApi {
     );
   }
 
+  /// The account needs the `title.update` permission, and so does an API token.
   /// `POST /titles/{id}/images/{slot}/reset`
   Future<List<ItemImage>> resetImage(
     String id,
@@ -1064,6 +1198,7 @@ final class PeopleApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `title.read` permission, and so does an API token.
   /// `GET /people/{name}`
   Future<Person> get(String name, {String? tmdbId}) {
     return _transport.call(
@@ -1080,6 +1215,7 @@ final class SearchApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `title.read` permission, and so does an API token.
   /// `GET /search`
   Future<SearchResults> query({required String query, int? limit}) {
     return _transport.call(
@@ -1096,6 +1232,7 @@ final class MediaApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `media.read` permission, and so does an API token.
   /// `GET /libraries/{libraryId}/media`
   Future<MediaListOutput> list(
     String libraryId, {
@@ -1119,6 +1256,7 @@ final class MediaApi {
     );
   }
 
+  /// The account needs the `media.read` permission, and so does an API token.
   /// `GET /libraries/{libraryId}/shelf`
   Future<List<ShelfEntry>> shelf(String libraryId, {int? limit}) {
     return _transport.call(
@@ -1129,11 +1267,13 @@ final class MediaApi {
     );
   }
 
+  /// The account needs the `media.read` permission, and so does an API token.
   /// `GET /media/{id}`
   Future<MediaItem> get(String id) {
     return _transport.call('GET', ['media', id], MediaItem.fromJson);
   }
 
+  /// The account needs the `media.read` permission, and so does an API token.
   /// `GET /media/{id}/subtitles`
   Future<Subtitles> subtitles(String id) {
     return _transport.call('GET', [
@@ -1143,6 +1283,7 @@ final class MediaApi {
     ], Subtitles.fromJson);
   }
 
+  /// The account needs the `media.read` permission, and so does an API token.
   /// `GET /media/{id}/audio`
   Future<List<AudioTrack>> audio(String id) {
     return _transport.call('GET', [
@@ -1152,6 +1293,7 @@ final class MediaApi {
     ], (value) => readList(value, AudioTrack.fromJson));
   }
 
+  /// The account needs the `media.read` permission, and so does an API token.
   /// `GET /media/{id}/keyframes`
   Future<Keyframes> keyframes(String id, {required double seconds}) {
     return _transport.call(
@@ -1162,6 +1304,7 @@ final class MediaApi {
     );
   }
 
+  /// The account needs the `media.read` permission, and so does an API token.
   /// `GET /media/{id}/trickplay`
   Stream<TrickplayStatus> trickplay(String id) {
     return _transport.events('GET', [
@@ -1177,6 +1320,7 @@ final class DownloadsApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `media.download` permission, and so does an API token.
   /// `POST /downloads/resolve`
   Future<List<DownloadResolution>> resolve(
     DownloadResolveInput downloadResolveInput,
@@ -1190,6 +1334,7 @@ final class DownloadsApi {
     );
   }
 
+  /// The account needs the `media.download` permission, and so does an API token.
   /// `POST /media/{id}/download-plan`
   Future<DownloadPlan> plan(String id, {required DownloadSpec spec}) {
     final input = DownloadsPlanInput(spec: spec);
@@ -1202,6 +1347,7 @@ final class DownloadsApi {
     );
   }
 
+  /// The account needs the `media.download` permission, and so does an API token.
   /// `POST /media/{id}/downloads`
   Future<Download> start(String id, {required DownloadSpec spec}) {
     final input = DownloadsStartInput(spec: spec);
@@ -1214,6 +1360,7 @@ final class DownloadsApi {
     );
   }
 
+  /// The account needs the `media.download` permission, and so does an API token.
   /// `DELETE /downloads/{downloadId}`
   Future<void> remove(String downloadId) {
     return _transport.send('DELETE', ['downloads', downloadId]);
@@ -1225,6 +1372,7 @@ final class PlaybackApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `media.play` permission, and so does an API token.
   /// `POST /playback/start`
   Future<PlaybackStart> start(PlaybackStartInput playbackStartInput) {
     final body = JsonBody(playbackStartInput.toJson());
@@ -1236,6 +1384,7 @@ final class PlaybackApi {
     );
   }
 
+  /// The account needs the `media.play` permission, and so does an API token.
   /// `POST /playback/seek`
   Future<PlaybackSeek> seek(PlaybackSeekInput playbackSeekInput) {
     final body = JsonBody(playbackSeekInput.toJson());
@@ -1247,6 +1396,7 @@ final class PlaybackApi {
     );
   }
 
+  /// The account needs the `watchState.update` permission, and so does an API token.
   /// `POST /media/{itemId}/progress`
   Future<void> report(
     String itemId, {
@@ -1269,6 +1419,7 @@ final class PlaybackApi {
     return _transport.send('POST', ['media', itemId, 'progress'], body: body);
   }
 
+  /// The account needs the `media.play` permission, and so does an API token.
   /// `GET /media/{itemId}/tracks`
   Future<TrackPicks> tracks(String itemId) {
     return _transport.call('GET', [
@@ -1278,6 +1429,7 @@ final class PlaybackApi {
     ], TrackPicks.fromJson);
   }
 
+  /// The account needs the `media.play` permission, and so does an API token.
   /// `PUT /media/{itemId}/tracks`
   Future<void> pickTracks(String itemId, {int? audio, SubtitlePick? subtitle}) {
     final input = PlaybackPickTracksInput(audio: audio, subtitle: subtitle);
@@ -1285,6 +1437,7 @@ final class PlaybackApi {
     return _transport.send('PUT', ['media', itemId, 'tracks'], body: body);
   }
 
+  /// The account needs the `media.play` permission, and so does an API token.
   /// `GET /playback/sessions/{sessionId}/stream`
   Stream<SessionStream?> stream(String sessionId) {
     return _transport.events('GET', [
@@ -1295,6 +1448,7 @@ final class PlaybackApi {
     ], (value) => readNullable(value, SessionStream.fromJson));
   }
 
+  /// The account needs the `watchState.update` permission, and so does an API token.
   /// `POST /playback/offline`
   Future<void> offline({required List<PlaybackOfflineInputPlay> plays}) {
     final input = PlaybackOfflineInput(plays: plays);
@@ -1302,6 +1456,7 @@ final class PlaybackApi {
     return _transport.send('POST', ['playback', 'offline'], body: body);
   }
 
+  /// The account needs the `media.play` permission, and so does an API token.
   /// `GET /playback/options`
   Future<PlaybackOptions> options() {
     return _transport.call('GET', [
@@ -1310,6 +1465,7 @@ final class PlaybackApi {
     ], PlaybackOptions.fromJson);
   }
 
+  /// The account needs the `watchState.update` permission, and so does an API token.
   /// `PUT /media/{itemId}/watched`
   Future<void> setWatched(
     String itemId, {
@@ -1324,6 +1480,7 @@ final class PlaybackApi {
     return _transport.send('PUT', ['media', itemId, 'watched'], body: body);
   }
 
+  /// The account needs the `watchState.update` permission, and so does an API token.
   /// `PUT /titles/{titleId}/watched`
   Future<void> setTitleWatched(
     String titleId, {
@@ -1349,6 +1506,7 @@ final class PartyApi {
   final ApiTransport _transport;
   final PartyQueueApi queue;
 
+  /// The account needs the `party.read` permission, and so does an API token.
   /// `GET /party`
   Future<Party?> get() {
     return _transport.call('GET', [
@@ -1356,6 +1514,7 @@ final class PartyApi {
     ], (value) => readNullable(value, Party.fromJson));
   }
 
+  /// The account needs the `party.create` permission, and so does an API token.
   /// `POST /party`
   Future<Party> create({String? name}) {
     final input = PartyCreateInput(name: name);
@@ -1363,6 +1522,7 @@ final class PartyApi {
     return _transport.call('POST', ['party'], Party.fromJson, body: body);
   }
 
+  /// The account needs the `party.read` permission, and so does an API token.
   /// `GET /party/live`
   Stream<Party?> follow() {
     return _transport.events('GET', [
@@ -1371,11 +1531,13 @@ final class PartyApi {
     ], (value) => readNullable(value, Party.fromJson));
   }
 
+  /// The account needs the `party.read` permission, and so does an API token.
   /// `GET /parties/{partyId}`
   Future<PartyInvite> invite(String partyId) {
     return _transport.call('GET', ['parties', partyId], PartyInvite.fromJson);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `POST /parties/{partyId}/join`
   Future<Party> join(String partyId) {
     return _transport.call('POST', [
@@ -1385,11 +1547,13 @@ final class PartyApi {
     ], Party.fromJson);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `POST /party/leave`
   Future<void> leave() {
     return _transport.send('POST', ['party', 'leave']);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `PUT /party/name`
   Future<void> rename({required String name}) {
     final input = PartyRenameInput(name: name);
@@ -1397,6 +1561,7 @@ final class PartyApi {
     return _transport.send('PUT', ['party', 'name'], body: body);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `PUT /party/owner`
   Future<void> transfer({required String userId}) {
     final input = PartyTransferInput(userId: userId);
@@ -1404,11 +1569,13 @@ final class PartyApi {
     return _transport.send('PUT', ['party', 'owner'], body: body);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `DELETE /party/members/{userId}`
   Future<void> kick(String userId) {
     return _transport.send('DELETE', ['party', 'members', userId]);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `PUT /party/item`
   Future<void> play({required String itemId, double? positionSeconds}) {
     final input = PartyPlayInput(
@@ -1419,6 +1586,7 @@ final class PartyApi {
     return _transport.send('PUT', ['party', 'item'], body: body);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `PUT /party/playback`
   Future<void> control({
     required String itemId,
@@ -1434,6 +1602,7 @@ final class PartyApi {
     return _transport.send('PUT', ['party', 'playback'], body: body);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `POST /party/next`
   Future<void> next({required String itemId}) {
     final input = PartyNextInput(itemId: itemId);
@@ -1441,12 +1610,14 @@ final class PartyApi {
     return _transport.send('POST', ['party', 'next'], body: body);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `PUT /party/status`
   Future<void> status(PartyStatusReport partyStatusReport) {
     final body = JsonBody(partyStatusReport.toJson());
     return _transport.send('PUT', ['party', 'status'], body: body);
   }
 
+  /// The account needs the `party.read` permission, and so does an API token.
   /// `GET /party/health`
   Stream<PartyHealth?> health() {
     return _transport.events('GET', [
@@ -1461,6 +1632,7 @@ final class PartyQueueApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `POST /party/queue`
   Future<void> add({required String itemId}) {
     final input = PartyQueueAddInput(itemId: itemId);
@@ -1468,11 +1640,13 @@ final class PartyQueueApi {
     return _transport.send('POST', ['party', 'queue'], body: body);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `POST /party/queue/{entryId}/accept`
   Future<void> accept(String entryId) {
     return _transport.send('POST', ['party', 'queue', entryId, 'accept']);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `PUT /party/queue/{entryId}`
   Future<void> move(String entryId, {required int index}) {
     final input = PartyQueueMoveInput(index: index);
@@ -1480,6 +1654,7 @@ final class PartyQueueApi {
     return _transport.send('PUT', ['party', 'queue', entryId], body: body);
   }
 
+  /// The account needs the `party.update` permission, and so does an API token.
   /// `DELETE /party/queue/{entryId}`
   Future<void> remove(String entryId) {
     return _transport.send('DELETE', ['party', 'queue', entryId]);
@@ -1491,6 +1666,7 @@ final class HomeApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `watchState.read` permission, and so does an API token.
   /// `GET /home/continue-watching`
   Future<List<MediaItem>> continueWatching({int? limit}) {
     return _transport.call(
@@ -1501,6 +1677,7 @@ final class HomeApi {
     );
   }
 
+  /// The account needs the `watchState.read` permission, and so does an API token.
   /// `GET /home/next-up`
   Future<List<NextUpEntry>> nextUp({int? limit}) {
     return _transport.call(
@@ -1511,6 +1688,7 @@ final class HomeApi {
     );
   }
 
+  /// The account needs the `title.read` permission, and so does an API token.
   /// `GET /home/featured`
   Future<List<FeaturedTitle>> featured({int? limit}) {
     return _transport.call(
@@ -1527,6 +1705,7 @@ final class FavoritesApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `favorite.update` permission, and so does an API token.
   /// `PUT /titles/{titleId}/favorite`
   Future<void> set(String titleId, {required bool favorite}) {
     final input = FavoritesSetInput(favorite: favorite);
@@ -1534,6 +1713,7 @@ final class FavoritesApi {
     return _transport.send('PUT', ['titles', titleId, 'favorite'], body: body);
   }
 
+  /// The account needs the `favorite.update` permission, and so does an API token.
   /// `PUT /titles/{titleId}/season-favorite`
   Future<void> setSeason(
     String titleId, {
@@ -1549,6 +1729,7 @@ final class FavoritesApi {
     ], body: body);
   }
 
+  /// The account needs the `favorite.update` permission, and so does an API token.
   /// `PUT /media/{itemId}/favorite`
   Future<void> setItem(String itemId, {required bool favorite}) {
     final input = FavoritesSetItemInput(favorite: favorite);
@@ -1562,11 +1743,13 @@ final class ProfilesApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `profile.read` permission, and so does an API token.
   /// `GET /profiles/{username}`
   Future<Profile> get(String username) {
     return _transport.call('GET', ['profiles', username], Profile.fromJson);
   }
 
+  /// The account needs the `profile.read` permission, and so does an API token.
   /// `GET /profiles/{username}/stats`
   Future<WatchStats?> stats(
     String username, {
@@ -1581,6 +1764,7 @@ final class ProfilesApi {
     );
   }
 
+  /// The account needs the `profile.read` permission, and so does an API token.
   /// `GET /profiles/{username}/recent`
   Future<List<WatchedEntry>?> recent(String username, {int? limit}) {
     return _transport.call(
@@ -1591,6 +1775,7 @@ final class ProfilesApi {
     );
   }
 
+  /// The account needs the `profile.read` permission, and so does an API token.
   /// `GET /profiles/{username}/favorites`
   Future<Favorites?> favorites(String username, {int? limit}) {
     return _transport.call(
@@ -1607,6 +1792,7 @@ final class StatsApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `serverStats.read` permission, and so does an API token.
   /// `GET /stats`
   Future<ServerStats> server({String? range, String? timeZone}) {
     return _transport.call(
@@ -1617,11 +1803,13 @@ final class StatsApi {
     );
   }
 
+  /// The account needs the `serverStats.read` permission, and so does an API token.
   /// `GET /stats/live`
   Stream<LiveActivity> live() {
     return _transport.events('GET', ['stats', 'live'], LiveActivity.fromJson);
   }
 
+  /// The account needs the `stats.read` permission, and so does an API token.
   /// `GET /stats/library`
   Future<LibraryStats> library({String? range, String? timeZone}) {
     return _transport.call(
@@ -1632,6 +1820,7 @@ final class StatsApi {
     );
   }
 
+  /// The account needs the `stats.read` permission, and so does an API token.
   /// `GET /stats/leaderboard`
   Future<Leaderboard> leaderboard({String? range, String? timeZone}) {
     return _transport.call(
@@ -1673,6 +1862,7 @@ final class AdminApi {
   final AdminTrickplayApi trickplay;
   final AdminUsersApi users;
 
+  /// The account needs the `folder.read` permission, and so does an API token.
   /// `GET /admin/browse`
   Future<DirectoryListing> browse({String? path}) {
     return _transport.call(
@@ -1689,6 +1879,7 @@ final class AdminRequestsApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `adminRequest.read` permission, and so does an API token.
   /// `GET /admin/requests`
   Future<RequestQueue> queue({String? cursor, int? limit}) {
     return _transport.call(
@@ -1699,6 +1890,7 @@ final class AdminRequestsApi {
     );
   }
 
+  /// The account needs the `adminRequest.read` permission, and so does an API token.
   /// `GET /admin/requests/live`
   Stream<RequestQueue> live({String? cursor, int? limit}) {
     return _transport.events(
@@ -1709,6 +1901,7 @@ final class AdminRequestsApi {
     );
   }
 
+  /// The account needs the `adminRequest.update` permission, and so does an API token.
   /// `POST /admin/requests/approve`
   Future<void> approve({required String id, String? libraryId}) {
     final input = AdminRequestsApproveInput(id: id, libraryId: libraryId);
@@ -1720,6 +1913,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
+  /// The account needs the `adminRequest.update` permission, and so does an API token.
   /// `POST /admin/requests/approve-all`
   Future<void> approveAll({required List<String> ids}) {
     final input = AdminRequestsApproveAllInput(ids: ids);
@@ -1731,6 +1925,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
+  /// The account needs the `adminRequest.update` permission, and so does an API token.
   /// `POST /admin/requests/decline`
   Future<void> decline({
     required String id,
@@ -1746,6 +1941,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
+  /// The account needs the `adminRequest.update` permission, and so does an API token.
   /// `POST /admin/requests/give-up`
   Future<void> giveUp({required String id, required String? note}) {
     final input = AdminRequestsGiveUpInput(id: id, note: note);
@@ -1757,6 +1953,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
+  /// The account needs the `adminRequest.update` permission, and so does an API token.
   /// `POST /admin/requests/allow-again`
   Future<void> allowAgain(RequestId requestId) {
     final body = JsonBody(requestId.toJson());
@@ -1767,6 +1964,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
+  /// The account needs the `adminRequest.update` permission, and so does an API token.
   /// `POST /admin/requests/add-after-all`
   Future<void> addAfterAll(RequestId requestId) {
     final body = JsonBody(requestId.toJson());
@@ -1777,6 +1975,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
+  /// The account needs the `adminRequest.update` permission, and so does an API token.
   /// `POST /admin/requests/retry`
   Future<void> retry(RequestId requestId) {
     final body = JsonBody(requestId.toJson());
@@ -1789,6 +1988,7 @@ final class AdminFulfilmentApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `fulfilment.read` permission, and so does an API token.
   /// `GET /admin/fulfilment/sources`
   Future<List<FulfilmentSourceDescription>> sources() {
     return _transport.call('GET', [
@@ -1798,6 +1998,7 @@ final class AdminFulfilmentApi {
     ], (value) => readList(value, FulfilmentSourceDescription.fromJson));
   }
 
+  /// The account needs the `fulfilment.read` permission, and so does an API token.
   /// `GET /admin/fulfilment/connections`
   Future<List<FulfilmentConnection>> connections() {
     return _transport.call('GET', [
@@ -1807,6 +2008,7 @@ final class AdminFulfilmentApi {
     ], (value) => readList(value, FulfilmentConnection.fromJson));
   }
 
+  /// The account needs the `fulfilment.create` permission, and so does an API token.
   /// `POST /admin/fulfilment/connections`
   Future<FulfilmentConnection> create(
     FulfilmentConnectionInput fulfilmentConnectionInput,
@@ -1820,6 +2022,7 @@ final class AdminFulfilmentApi {
     );
   }
 
+  /// The account needs the `fulfilment.update` permission, and so does an API token.
   /// `PUT /admin/fulfilment/connections/{id}`
   Future<FulfilmentConnection> update(
     String id, {
@@ -1851,6 +2054,7 @@ final class AdminFulfilmentApi {
     );
   }
 
+  /// The account needs the `fulfilment.delete` permission, and so does an API token.
   /// `DELETE /admin/fulfilment/connections/{id}`
   Future<void> remove(String id) {
     return _transport.send('DELETE', [
@@ -1861,6 +2065,7 @@ final class AdminFulfilmentApi {
     ]);
   }
 
+  /// The account needs the `fulfilment.update` permission, and so does an API token.
   /// `POST /admin/fulfilment/test`
   Future<void> test({required String id}) {
     final input = AdminFulfilmentTestInput(id: id);
@@ -1868,6 +2073,7 @@ final class AdminFulfilmentApi {
     return _transport.send('POST', ['admin', 'fulfilment', 'test'], body: body);
   }
 
+  /// The account needs the `fulfilment.update` permission, and so does an API token.
   /// `POST /admin/fulfilment/options`
   Future<FulfilmentOptions> options({
     String? id,
@@ -1892,6 +2098,7 @@ final class AdminFulfilmentApi {
     );
   }
 
+  /// The account needs the `fulfilment.read` permission, and so does an API token.
   /// `GET /admin/fulfilment/landing`
   Future<AdminFulfilmentLandingOutput> landing({
     required String kind,
@@ -1905,6 +2112,7 @@ final class AdminFulfilmentApi {
     );
   }
 
+  /// The account needs the `fulfilment.read` permission, and so does an API token.
   /// `GET /admin/fulfilment/connections/{connectionId}/rules`
   Future<List<FulfilmentRule>> rules(String connectionId) {
     return _transport.call('GET', [
@@ -1916,6 +2124,7 @@ final class AdminFulfilmentApi {
     ], (value) => readList(value, FulfilmentRule.fromJson));
   }
 
+  /// The account needs the `fulfilment.create` permission, and so does an API token.
   /// `POST /admin/fulfilment/connections/{connectionId}/rules`
   Future<FulfilmentRule> createRule(
     String connectionId, {
@@ -1943,6 +2152,7 @@ final class AdminFulfilmentApi {
     );
   }
 
+  /// The account needs the `fulfilment.update` permission, and so does an API token.
   /// `PUT /admin/fulfilment/rules/{id}`
   Future<FulfilmentRule> updateRule(
     String id, {
@@ -1972,11 +2182,13 @@ final class AdminFulfilmentApi {
     );
   }
 
+  /// The account needs the `fulfilment.delete` permission, and so does an API token.
   /// `DELETE /admin/fulfilment/rules/{id}`
   Future<void> removeRule(String id) {
     return _transport.send('DELETE', ['admin', 'fulfilment', 'rules', id]);
   }
 
+  /// The account needs the `fulfilment.update` permission, and so does an API token.
   /// `PUT /admin/fulfilment/connections/{connectionId}/rules/order`
   Future<List<FulfilmentRule>> reorderRules(
     String connectionId, {
@@ -1992,6 +2204,7 @@ final class AdminFulfilmentApi {
     );
   }
 
+  /// The account needs the `fulfilment.read` permission, and so does an API token.
   /// `GET /admin/fulfilment/rule-choices`
   Future<FulfilmentRuleChoices> ruleChoices({required String kind}) {
     return _transport.call(
@@ -2002,6 +2215,7 @@ final class AdminFulfilmentApi {
     );
   }
 
+  /// The account needs the `fulfilment.read` permission, and so does an API token.
   /// `GET /admin/fulfilment/keywords`
   Future<List<FulfilmentKeyword>> keywords({required String query}) {
     return _transport.call(
@@ -2018,6 +2232,7 @@ final class AdminAuthApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `authSettings.read` permission, and so does an API token.
   /// `GET /admin/auth`
   Future<AdminAuthSettings> get() {
     return _transport.call('GET', [
@@ -2026,6 +2241,7 @@ final class AdminAuthApi {
     ], AdminAuthSettings.fromJson);
   }
 
+  /// Only an admin calls this, and an API token needs the `all` permission.
   /// `PUT /admin/auth`
   Future<AdminAuthSettings> update(AuthSettingsInput authSettingsInput) {
     final body = JsonBody(authSettingsInput.toJson());
@@ -2043,11 +2259,13 @@ final class AdminBrandingApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `branding.read` permission, and so does an API token.
   /// `GET /admin/branding`
   Future<Branding> get() {
     return _transport.call('GET', ['admin', 'branding'], Branding.fromJson);
   }
 
+  /// The account needs the `branding.update` permission, and so does an API token.
   /// `PUT /admin/branding`
   Future<Branding> update(Branding branding) {
     final body = JsonBody(branding.toJson());
@@ -2059,6 +2277,7 @@ final class AdminBrandingApi {
     );
   }
 
+  /// The account needs the `branding.read` permission, and so does an API token.
   /// `GET /admin/branding/login-backdrop`
   Future<LoginBackdropTiles> preview({required String artwork}) {
     return _transport.call(
@@ -2075,6 +2294,7 @@ final class AdminGroupsApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `group.read` permission, and so does an API token.
   /// `GET /admin/groups`
   Future<List<AdminGroupsListOutput>> list() {
     return _transport.call('GET', [
@@ -2083,6 +2303,7 @@ final class AdminGroupsApi {
     ], (value) => readList(value, AdminGroupsListOutput.fromJson));
   }
 
+  /// The account needs the `group.create` permission, and so does an API token.
   /// `POST /admin/groups`
   Future<AdminGroupsCreateOutput> create({
     required String name,
@@ -2103,6 +2324,7 @@ final class AdminGroupsApi {
     );
   }
 
+  /// The account needs the `group.update` permission, and so does an API token.
   /// `PUT /admin/groups/{id}`
   Future<AdminGroupsUpdateOutput> update(
     String id, {
@@ -2124,11 +2346,13 @@ final class AdminGroupsApi {
     );
   }
 
+  /// The account needs the `group.delete` permission, and so does an API token.
   /// `DELETE /admin/groups/{id}`
   Future<void> remove(String id) {
     return _transport.send('DELETE', ['admin', 'groups', id]);
   }
 
+  /// The account needs the `group.read` permission, and so does an API token.
   /// `GET /admin/provider-groups`
   Future<List<AdminGroupsProviderGroupsOutput>> providerGroups() {
     return _transport.call('GET', [
@@ -2143,6 +2367,7 @@ final class AdminInvitesApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `invite.read` permission, and so does an API token.
   /// `GET /admin/invites`
   Future<List<Invite>> list() {
     return _transport.call('GET', [
@@ -2151,6 +2376,7 @@ final class AdminInvitesApi {
     ], (value) => readList(value, Invite.fromJson));
   }
 
+  /// The account needs the `invite.create` permission, and so does an API token.
   /// `POST /admin/invites`
   Future<CreatedInvite> create({
     String? label,
@@ -2171,6 +2397,7 @@ final class AdminInvitesApi {
     );
   }
 
+  /// The account needs the `invite.delete` permission, and so does an API token.
   /// `DELETE /admin/invites/{id}`
   Future<void> revoke(String id) {
     return _transport.send('DELETE', ['admin', 'invites', id]);
@@ -2182,11 +2409,13 @@ final class AdminJobsApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `job.read` permission, and so does an API token.
   /// `GET /admin/jobs`
   Future<JobsOverview> get() {
     return _transport.call('GET', ['admin', 'jobs'], JobsOverview.fromJson);
   }
 
+  /// The account needs the `job.update` permission, and so does an API token.
   /// `POST /admin/jobs/{queue}/pause`
   Future<JobQueueStatus> pause(String queue) {
     return _transport.call('POST', [
@@ -2197,6 +2426,7 @@ final class AdminJobsApi {
     ], JobQueueStatus.fromJson);
   }
 
+  /// The account needs the `job.update` permission, and so does an API token.
   /// `POST /admin/jobs/{queue}/resume`
   Future<JobQueueStatus> resume(String queue) {
     return _transport.call('POST', [
@@ -2207,6 +2437,7 @@ final class AdminJobsApi {
     ], JobQueueStatus.fromJson);
   }
 
+  /// The account needs the `job.update` permission, and so does an API token.
   /// `POST /admin/jobs/{queue}/clear`
   Future<JobQueueStatus> clear(String queue) {
     return _transport.call('POST', [
@@ -2217,6 +2448,7 @@ final class AdminJobsApi {
     ], JobQueueStatus.fromJson);
   }
 
+  /// The account needs the `job.update` permission, and so does an API token.
   /// `PUT /admin/jobs/concurrency`
   Future<JobsOverview> updateConcurrency({
     required Map<String, int> concurrency,
@@ -2231,6 +2463,7 @@ final class AdminJobsApi {
     );
   }
 
+  /// The account needs the `job.update` permission, and so does an API token.
   /// `POST /admin/tasks/{task}/run`
   Future<ScheduledTask> runTask(String task) {
     return _transport.call('POST', [
@@ -2241,6 +2474,7 @@ final class AdminJobsApi {
     ], ScheduledTask.fromJson);
   }
 
+  /// The account needs the `job.update` permission, and so does an API token.
   /// `POST /admin/tasks/{task}/cancel`
   Future<ScheduledTask> cancelTask(String task) {
     return _transport.call('POST', [
@@ -2257,6 +2491,7 @@ final class AdminNetworkApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `networkSettings.read` permission, and so does an API token.
   /// `GET /admin/network`
   Future<AdminNetworkSettings> get() {
     return _transport.call('GET', [
@@ -2265,6 +2500,7 @@ final class AdminNetworkApi {
     ], AdminNetworkSettings.fromJson);
   }
 
+  /// The account needs the `networkSettings.update` permission, and so does an API token.
   /// `PUT /admin/network`
   Future<AdminNetworkSettings> update(NetworkSettings networkSettings) {
     final body = JsonBody(networkSettings.toJson());
@@ -2282,6 +2518,7 @@ final class AdminSetupApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `serverSetup.update` permission, and so does an API token.
   /// `POST /admin/setup/complete`
   Future<void> complete() {
     return _transport.send('POST', ['admin', 'setup', 'complete']);
@@ -2293,6 +2530,7 @@ final class AdminTranscodingApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `transcodingSettings.read` permission, and so does an API token.
   /// `GET /admin/transcoding`
   Future<AdminTranscodingSettings> get() {
     return _transport.call('GET', [
@@ -2301,6 +2539,7 @@ final class AdminTranscodingApi {
     ], AdminTranscodingSettings.fromJson);
   }
 
+  /// The account needs the `transcodingSettings.update` permission, and so does an API token.
   /// `PUT /admin/transcoding`
   Future<AdminTranscodingSettings> update(
     TranscodingSettings transcodingSettings,
@@ -2314,6 +2553,7 @@ final class AdminTranscodingApi {
     );
   }
 
+  /// The account needs the `transcodingSettings.update` permission, and so does an API token.
   /// `POST /admin/transcoding/detect`
   Future<AdminTranscodingSettings> detect() {
     return _transport.call('POST', [
@@ -2329,6 +2569,7 @@ final class AdminTrickplayApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `trickplaySettings.read` permission, and so does an API token.
   /// `GET /admin/trickplay`
   Future<AdminTrickplaySettings> get() {
     return _transport.call('GET', [
@@ -2337,6 +2578,7 @@ final class AdminTrickplayApi {
     ], AdminTrickplaySettings.fromJson);
   }
 
+  /// The account needs the `trickplaySettings.update` permission, and so does an API token.
   /// `PUT /admin/trickplay`
   Future<AdminTrickplaySettings> update(TrickplaySettings trickplaySettings) {
     final body = JsonBody(trickplaySettings.toJson());
@@ -2354,6 +2596,7 @@ final class AdminUsersApi {
 
   final ApiTransport _transport;
 
+  /// The account needs the `adminUser.read` permission, and so does an API token.
   /// `GET /admin/users`
   Future<List<AdminUser>> list() {
     return _transport.call('GET', [
@@ -2362,6 +2605,7 @@ final class AdminUsersApi {
     ], (value) => readList(value, AdminUser.fromJson));
   }
 
+  /// Only an admin calls this, and an API token needs the `all` permission.
   /// `PUT /admin/users/{id}/role`
   Future<AdminUser> setRole(String id, {required String role}) {
     final input = AdminUsersSetRoleInput(role: role);
@@ -2374,6 +2618,7 @@ final class AdminUsersApi {
     );
   }
 
+  /// The account needs the `adminUser.update` permission, and so does an API token.
   /// `PUT /admin/users/{id}/access`
   Future<AdminUser> setAccess(
     String id, {
@@ -2393,11 +2638,13 @@ final class AdminUsersApi {
     );
   }
 
+  /// The account needs the `adminUser.delete` permission, and so does an API token.
   /// `DELETE /admin/users/{id}`
   Future<void> remove(String id) {
     return _transport.send('DELETE', ['admin', 'users', id]);
   }
 
+  /// The account needs the `adminSession.delete` permission, and so does an API token.
   /// `POST /admin/users/{id}/sign-out`
   Future<AdminUsersSignOutOutput> signOut(String id) {
     return _transport.call('POST', [
@@ -2406,5 +2653,17 @@ final class AdminUsersApi {
       id,
       'sign-out',
     ], AdminUsersSignOutOutput.fromJson);
+  }
+
+  /// The account needs the `adminApiToken.delete` permission, and so does an API token.
+  /// `POST /admin/users/{id}/api-tokens/revoke`
+  Future<AdminUsersRevokeApiTokensOutput> revokeApiTokens(String id) {
+    return _transport.call('POST', [
+      'admin',
+      'users',
+      id,
+      'api-tokens',
+      'revoke',
+    ], AdminUsersRevokeApiTokensOutput.fromJson);
   }
 }
