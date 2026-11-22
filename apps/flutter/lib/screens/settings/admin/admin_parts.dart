@@ -213,6 +213,9 @@ class _SaveBarPageState extends State<SaveBarPage> {
     final status = shown ?? SaveBarStatus.unsaved;
     final visible = widget.dirty || shown != null;
     final saving = status == SaveBarStatus.saving;
+    final motion = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
     return PopScope(
       canPop: !widget.dirty,
       onPopInvokedWithResult: (didPop, result) {
@@ -232,33 +235,39 @@ class _SaveBarPageState extends State<SaveBarPage> {
                 child: widget.child,
               ),
             ),
-            if (visible)
-              SaveBar(
-                status: status,
-                attention: _attention,
-                message: _message,
-                statusLabel: switch (status) {
-                  SaveBarStatus.saved => l.webCommonSaveBarSaved,
-                  SaveBarStatus.failed => l.webCommonSaveBarFailed,
-                  _ => l.webCommonSaveBarUnsaved,
-                },
-                resetLabel: l.webCommonSaveBarReset,
-                saveLabel: switch (status) {
-                  SaveBarStatus.saving => l.webCommonSaveBarSaving,
-                  SaveBarStatus.saved => l.webCommonSaveBarDone,
-                  SaveBarStatus.failed => l.webCommonSaveBarRetry,
-                  SaveBarStatus.unsaved => l.webCommonSaveBarSave,
-                },
-                onReset: widget.dirty && !saving
-                    ? () {
-                        setState(() => _status = null);
-                        widget.onReset();
-                      }
-                    : null,
-                onSave: widget.dirty && widget.canSave && !saving
-                    ? () => unawaited(_save())
-                    : null,
-              ),
+            AnimatedSize(
+              duration: motion,
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.bottomCenter,
+              child: visible
+                  ? SaveBar(
+                      status: status,
+                      attention: _attention,
+                      message: _message,
+                      statusLabel: switch (status) {
+                        SaveBarStatus.saved => l.webCommonSaveBarSaved,
+                        SaveBarStatus.failed => l.webCommonSaveBarFailed,
+                        _ => l.webCommonSaveBarUnsaved,
+                      },
+                      resetLabel: l.webCommonSaveBarReset,
+                      saveLabel: switch (status) {
+                        SaveBarStatus.saving => l.webCommonSaveBarSaving,
+                        SaveBarStatus.saved => l.webCommonSaveBarDone,
+                        SaveBarStatus.failed => l.webCommonSaveBarRetry,
+                        SaveBarStatus.unsaved => l.webCommonSaveBarSave,
+                      },
+                      onReset: widget.dirty && !saving
+                          ? () {
+                              setState(() => _status = null);
+                              widget.onReset();
+                            }
+                          : null,
+                      onSave: widget.dirty && widget.canSave && !saving
+                          ? () => unawaited(_save())
+                          : null,
+                    )
+                  : const SizedBox(width: double.infinity),
+            ),
           ],
         ),
       ),
