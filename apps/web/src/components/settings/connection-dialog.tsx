@@ -8,13 +8,7 @@ import {
   type TitleKind,
 } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
+import { Dialog } from "@matinee/ui/components/dialog"
 import {
   Field,
   FieldDescription,
@@ -42,7 +36,7 @@ import {
   Trash2Icon,
   Undo2Icon,
 } from "lucide-react"
-import { Fragment, type ReactNode, useId, useState } from "react"
+import { Fragment, useId, useState } from "react"
 
 import { tr, translateKnown } from "@/i18n"
 import { trRich } from "@/i18n/react"
@@ -59,6 +53,17 @@ import {
   sendValues,
   textOf,
 } from "./connection-fields"
+import {
+  FormColumn,
+  FormColumns,
+  FormDialogBody,
+  FormDialogContent,
+  FormDialogFooter,
+  FormDialogForm,
+  FormDialogHeader,
+  FormSection,
+} from "./form-dialog"
+import { SettingNote } from "./settings-panel"
 
 /** The query key of a connection's test, under which each connection has its own. */
 export const CONNECTION_TEST = "fulfilment-test"
@@ -185,10 +190,7 @@ export function ConnectionDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-xl"
-      >
+      <FormDialogContent width="2xl">
         <ConnectionForm
           connection={connection}
           sources={sources}
@@ -197,24 +199,8 @@ export function ConnectionDialog({
           )}
           onDone={() => onOpenChange(false)}
         />
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
-  )
-}
-
-/** A titled part of the connection form. */
-function FormSection({
-  title,
-  children,
-}: {
-  title?: string
-  children: ReactNode
-}) {
-  return (
-    <section className="flex flex-col gap-4">
-      {title && <h3 className="text-sm font-semibold">{title}</h3>}
-      {children}
-    </section>
   )
 }
 
@@ -388,6 +374,28 @@ function ConnectionForm({
           [field.key]: next,
         }))
   const ready = !source?.fields.length || choices.isSuccess
+  // The defaults, and anime's beside them, are the columns after the
+  // connection's. How a title is added goes under the defaults then, or
+  // has the last column to itself.
+  const sections = SECTIONS.map((section) => ({
+    section,
+    fields: fieldsIn(section),
+  })).filter((entry) => entry.fields.length > 0)
+  const withAnime = sections.some((entry) => entry.section === "anime")
+  const second = sections.filter(
+    (entry) =>
+      entry.section === "defaults" ||
+      (withAnime && entry.section === "behaviour"),
+  )
+  const third = sections.filter((entry) => !second.includes(entry))
+  const sectionOf = (entry: (typeof sections)[number]) => (
+    <FormSection
+      key={entry.section}
+      title={tr(`connections.section.${entry.section}`)}
+    >
+      <FieldGroup>{entry.fields.map(input)}</FieldGroup>
+    </FormSection>
+  )
 
   const input = (field: DescribedField) => {
     const value = valueOf(field)
@@ -425,199 +433,210 @@ function ConnectionForm({
 
   return (
     <form.AppForm>
-      <form
-        className="flex flex-col gap-7"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-lg leading-7 font-semibold">
-            {connection
+      <FormDialogForm onSubmit={() => void form.handleSubmit()}>
+        <FormDialogHeader
+          title={
+            connection
               ? tr("connections.dialog.editTitle", { name: connection.name })
-              : tr("connections.dialog.addTitle")}
-          </DialogTitle>
-        </DialogHeader>
+              : tr("connections.dialog.addTitle")
+          }
+        />
 
-        <FormSection>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor={`${id}-source`}>
-                {tr("connections.dialog.source")}
-              </FieldLabel>
-              <Select
-                items={sourceItems}
-                value={values.source}
-                disabled={connection !== undefined}
-                onValueChange={(next) => {
-                  if (!next) return
-                  const picked = sourceOf(next)
-                  form.setFieldValue("source", next)
-                  form.setFieldValue(
-                    "settings",
-                    formValues(picked?.fields ?? [], picked?.values ?? {}),
-                  )
-                  form.setFieldValue("options", {})
-                  form.setFieldValue(
-                    "defaultFor",
-                    freeKinds(picked, connections),
-                  )
-                  setTested(
-                    picked?.fields.length === 0
-                      ? { source: next, slug: values.slug, settings: {} }
-                      : null,
-                  )
-                }}
-              >
-                <SelectTrigger id={`${id}-source`} className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {sourceItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <form.Field name="name">
-                {(field) => (
+        <FormDialogBody>
+          <FormColumns count={3}>
+            <FormColumn tall>
+              <FormSection>
+                <FieldGroup>
                   <Field>
-                    <FieldLabel htmlFor={`${id}-name`}>
-                      {tr("connections.dialog.name")}
+                    <FieldLabel htmlFor={`${id}-source`}>
+                      {tr("connections.dialog.source")}
                     </FieldLabel>
-                    <Input
-                      id={`${id}-name`}
-                      value={field.state.value}
-                      maxLength={128}
-                      autoComplete="off"
-                      placeholder={tr("connections.dialog.namePlaceholder")}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value)
-                        if (!form.getFieldValue("slugEdited")) {
-                          form.setFieldValue("slug", slugOf(event.target.value))
-                        }
+                    <Select
+                      items={sourceItems}
+                      value={values.source}
+                      disabled={connection !== undefined}
+                      onValueChange={(next) => {
+                        if (!next) return
+                        const picked = sourceOf(next)
+                        form.setFieldValue("source", next)
+                        form.setFieldValue(
+                          "settings",
+                          formValues(
+                            picked?.fields ?? [],
+                            picked?.values ?? {},
+                          ),
+                        )
+                        form.setFieldValue("options", {})
+                        form.setFieldValue(
+                          "defaultFor",
+                          freeKinds(picked, connections),
+                        )
+                        setTested(
+                          picked?.fields.length === 0
+                            ? { source: next, slug: values.slug, settings: {} }
+                            : null,
+                        )
                       }}
-                    />
+                    >
+                      <SelectTrigger id={`${id}-source`} className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sourceItems.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </Field>
-                )}
-              </form.Field>
-              <form.Field name="slug">
-                {(field) => (
-                  <Field
-                    data-invalid={values.slug && !slugValid ? true : undefined}
-                  >
-                    <FieldLabel htmlFor={`${id}-slug`}>
-                      {tr("connections.dialog.slug")}
-                    </FieldLabel>
-                    <Input
-                      id={`${id}-slug`}
-                      value={field.state.value}
-                      maxLength={64}
-                      autoComplete="off"
-                      spellCheck={false}
-                      aria-invalid={
-                        values.slug && !slugValid ? true : undefined
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <form.Field name="name">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel htmlFor={`${id}-name`}>
+                            {tr("connections.dialog.name")}
+                          </FieldLabel>
+                          <Input
+                            id={`${id}-name`}
+                            value={field.state.value}
+                            maxLength={128}
+                            autoComplete="off"
+                            placeholder={tr(
+                              "connections.dialog.namePlaceholder",
+                            )}
+                            onChange={(event) => {
+                              field.handleChange(event.target.value)
+                              if (!form.getFieldValue("slugEdited")) {
+                                form.setFieldValue(
+                                  "slug",
+                                  slugOf(event.target.value),
+                                )
+                              }
+                            }}
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                    <form.Field name="slug">
+                      {(field) => (
+                        <Field
+                          data-invalid={
+                            values.slug && !slugValid ? true : undefined
+                          }
+                        >
+                          <FieldLabel htmlFor={`${id}-slug`}>
+                            {tr("connections.dialog.slug")}
+                          </FieldLabel>
+                          <Input
+                            id={`${id}-slug`}
+                            value={field.state.value}
+                            maxLength={64}
+                            autoComplete="off"
+                            spellCheck={false}
+                            aria-invalid={
+                              values.slug && !slugValid ? true : undefined
+                            }
+                            aria-describedby={`${id}-slug-hint`}
+                            className="text-13px font-mono uppercase"
+                            onChange={(event) => {
+                              field.handleChange(
+                                event.target.value.toUpperCase(),
+                              )
+                              form.setFieldValue("slugEdited", true)
+                            }}
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                    <FieldDescription
+                      id={`${id}-slug-hint`}
+                      className={cn(
+                        "-mt-2 sm:col-span-2",
+                        values.slug && !slugValid && "text-destructive",
+                      )}
+                    >
+                      {values.slug && !slugValid
+                        ? tr("connections.dialog.slugInvalid")
+                        : source?.apiKey === false
+                          ? tr("connections.dialog.slugHintNoKey")
+                          : trRich("connections.dialog.slugHint", {
+                              variable: <KeyVariable slug={values.slug} />,
+                            })}
+                    </FieldDescription>
+                  </div>
+
+                  {connectionFields.map(input)}
+
+                  {source?.apiKey && (
+                    <KeyField
+                      connection={connection}
+                      slug={values.slug}
+                      typed={values.apiKey}
+                      dropKey={values.dropKey}
+                      onType={(next) => {
+                        form.setFieldValue("apiKey", next)
+                        if (next) form.setFieldValue("dropKey", false)
+                      }}
+                      onDropKey={(drop) => form.setFieldValue("dropKey", drop)}
+                    />
+                  )}
+
+                  {connectionFields.length > 0 && (
+                    <TestRow
+                      pending={choices.isFetching}
+                      error={
+                        choices.isError ? errorMessage(choices.error) : null
                       }
-                      aria-describedby={`${id}-slug-hint`}
-                      className="text-13px font-mono uppercase"
-                      onChange={(event) => {
-                        field.handleChange(event.target.value.toUpperCase())
-                        form.setFieldValue("slugEdited", true)
-                      }}
+                      connected={choices.isSuccess && !untested}
+                      untested={untested}
+                      disabled={!values.slug}
+                      onTest={() =>
+                        untested ? setTested(current) : void choices.refetch()
+                      }
                     />
-                  </Field>
-                )}
-              </form.Field>
-              <FieldDescription
-                id={`${id}-slug-hint`}
-                className={cn(
-                  "-mt-2 sm:col-span-2",
-                  values.slug && !slugValid && "text-destructive",
-                )}
-              >
-                {values.slug && !slugValid
-                  ? tr("connections.dialog.slugInvalid")
-                  : source?.apiKey === false
-                    ? tr("connections.dialog.slugHintNoKey")
-                    : trRich("connections.dialog.slugHint", {
-                        variable: <KeyVariable slug={values.slug} />,
-                      })}
-              </FieldDescription>
-            </div>
+                  )}
 
-            {connectionFields.map(input)}
+                  {(source?.kinds ?? []).map((kind) => (
+                    <Field
+                      key={kind}
+                      orientation="horizontal"
+                      className="justify-between"
+                    >
+                      <FieldLabel htmlFor={`${id}-default-${kind}`}>
+                        {tr(`connections.dialog.default.${kind}`)}
+                      </FieldLabel>
+                      <Switch
+                        id={`${id}-default-${kind}`}
+                        checked={values.defaultFor.includes(kind)}
+                        onCheckedChange={(checked) =>
+                          form.setFieldValue("defaultFor", (kinds) =>
+                            checked
+                              ? [...kinds.filter((each) => each !== kind), kind]
+                              : kinds.filter((each) => each !== kind),
+                          )
+                        }
+                      />
+                    </Field>
+                  ))}
+                </FieldGroup>
+              </FormSection>
+            </FormColumn>
 
-            {source?.apiKey && (
-              <KeyField
-                connection={connection}
-                slug={values.slug}
-                typed={values.apiKey}
-                dropKey={values.dropKey}
-                onType={(next) => {
-                  form.setFieldValue("apiKey", next)
-                  if (next) form.setFieldValue("dropKey", false)
-                }}
-                onDropKey={(drop) => form.setFieldValue("dropKey", drop)}
-              />
+            <FormColumn>
+              {second.map(sectionOf)}
+              {!ready && (
+                <SettingNote>{tr("connections.dialog.testFirst")}</SettingNote>
+              )}
+            </FormColumn>
+            {third.length > 0 && (
+              <FormColumn>{third.map(sectionOf)}</FormColumn>
             )}
+          </FormColumns>
+        </FormDialogBody>
 
-            {connectionFields.length > 0 && (
-              <TestRow
-                pending={choices.isFetching}
-                error={choices.isError ? errorMessage(choices.error) : null}
-                connected={choices.isSuccess && !untested}
-                untested={untested}
-                disabled={!values.slug}
-                onTest={() =>
-                  untested ? setTested(current) : void choices.refetch()
-                }
-              />
-            )}
-
-            {(source?.kinds ?? []).map((kind) => (
-              <Field
-                key={kind}
-                orientation="horizontal"
-                className="justify-between"
-              >
-                <FieldLabel htmlFor={`${id}-default-${kind}`}>
-                  {tr(`connections.dialog.default.${kind}`)}
-                </FieldLabel>
-                <Switch
-                  id={`${id}-default-${kind}`}
-                  checked={values.defaultFor.includes(kind)}
-                  onCheckedChange={(checked) =>
-                    form.setFieldValue("defaultFor", (kinds) =>
-                      checked
-                        ? [...kinds.filter((each) => each !== kind), kind]
-                        : kinds.filter((each) => each !== kind),
-                    )
-                  }
-                />
-              </Field>
-            ))}
-          </FieldGroup>
-        </FormSection>
-
-        {SECTIONS.map((section) => {
-          const fields = fieldsIn(section)
-          if (!fields.length) return null
-          return (
-            <FormSection
-              key={section}
-              title={tr(`connections.section.${section}`)}
-            >
-              <FieldGroup>{fields.map(input)}</FieldGroup>
-            </FormSection>
-          )
-        })}
-
-        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
+        <FormDialogFooter>
           <form.SubmitButton
             disabled={
               !values.name.trim() || !slugValid || (!ready && !connection)
@@ -628,8 +647,8 @@ function ConnectionForm({
               ? tr("connections.dialog.save")
               : tr("connections.dialog.create")}
           </form.SubmitButton>
-        </DialogFooter>
-      </form>
+        </FormDialogFooter>
+      </FormDialogForm>
     </form.AppForm>
   )
 }

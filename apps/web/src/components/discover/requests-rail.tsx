@@ -28,6 +28,7 @@ import {
   workItems,
 } from "@/components/requests/request-queue"
 import { tr } from "@/i18n"
+import { queueActions } from "@/lib/permissions"
 import { client, errorMessage, liveQuery, orpc } from "@/lib/rpc"
 import {
   isHidden,
@@ -172,6 +173,8 @@ function OwnRequests() {
  * requests page.
  */
 function QueueRequest({ item }: { item: AdminRequestItem }) {
+  const { user } = authed.useRouteContext()
+  const may = queueActions(user)
   const retry = useMutation({
     mutationFn: () => client.admin.requests.retry({ id: item.id }),
     onSuccess: () =>
@@ -194,11 +197,13 @@ function QueueRequest({ item }: { item: AdminRequestItem }) {
       }
       who={<Askers item={item} />}
       problem={<QueueProblem item={item} />}
-      menu={<CardMenu item={item} onAdd={() => hold(addAction([item]))} />}
+      menu={
+        <CardMenu item={item} onAdd={() => hold(addAction([item]))} may={may} />
+      }
       actions={
-        item.state === "waiting" ? (
+        item.state === "waiting" && (may.approve || may.decline) ? (
           <AdminAnswer item={item} look="fill" />
-        ) : item.state === "needsAttention" ? (
+        ) : item.state === "needsAttention" && may.retry ? (
           <Button
             variant="outline"
             size="sm"

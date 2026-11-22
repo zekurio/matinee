@@ -59,30 +59,26 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0 flex-1">
-        {/* An open phone filter (`data-filter-open`) takes the bar. */}
         <div
           className={cn(
-            "group/title-row flex items-center gap-2",
+            "flex items-center gap-2",
             "max-sm:h-16 max-sm:gap-1 max-sm:pr-1",
             back ? "max-sm:pl-1" : "max-sm:pl-4",
-            "max-sm:has-data-filter-open:pl-4",
           )}
         >
-          {back && (
-            <BackButton className="group-has-data-filter-open/title-row:hidden sm:hidden" />
-          )}
+          {back && <BackButton className="sm:hidden" />}
           <h1
             title={title}
             className={cn(
               "line-clamp-2 min-w-0 text-26px leading-8 font-semibold tracking-tight text-balance break-words md:text-32px md:leading-10",
-              "max-sm:line-clamp-1 max-sm:flex-1 max-sm:pl-1 max-sm:text-xl max-sm:leading-7 max-sm:group-has-data-filter-open/title-row:sr-only",
+              "max-sm:line-clamp-1 max-sm:flex-1 max-sm:pl-1 max-sm:text-xl max-sm:leading-7",
               !back && "max-sm:pl-0",
             )}
           >
             {title}
           </h1>
           {phoneActions && (
-            <div className="ml-auto flex shrink-0 items-center gap-1 group-has-data-filter-open/title-row:ml-0 group-has-data-filter-open/title-row:min-w-0 group-has-data-filter-open/title-row:flex-1 sm:hidden">
+            <div className="ml-auto flex shrink-0 items-center gap-1 sm:hidden">
               {phoneActions}
             </div>
           )}

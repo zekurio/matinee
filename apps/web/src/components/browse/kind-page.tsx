@@ -25,7 +25,6 @@ import {
   type ListControlsProps,
   PhoneControls,
 } from "@/components/library/list-controls"
-import { useSearchText } from "@/components/library/list-params"
 import { TitleFilterPanel } from "@/components/library/title-filter-panel"
 import {
   cardDetail,
@@ -111,7 +110,6 @@ export function KindPage({
     (library) => library.kind === libraryKind[kind],
   )
   const libraryId = pickedLibrary(search, libraries.data, kind)
-  const text = useSearchText(search.q, update)
   const list = useTitleFilters(
     search,
     update,
@@ -120,7 +118,6 @@ export function KindPage({
   const [panelOpen, setPanelOpen] = useState(false)
   const titles = useInfiniteQuery({
     ...browsedTitlesOptions({
-      query: text.query,
       kind,
       libraryId,
       filters: list.filters,
@@ -138,9 +135,6 @@ export function KindPage({
   const count =
     total === undefined ? undefined : tr("browse.titleCount", { count: total })
   const controls: ListControlsProps = {
-    search: text.search,
-    setSearch: text.setSearch,
-    label: tr(`library.search.${words}`),
     sorts: list.sorts,
     sort: list.sort,
     setSort: list.setSort,
@@ -197,22 +191,15 @@ export function KindPage({
       ) : rows.length === 0 ? (
         <EmptyList
           title={
-            text.query
-              ? tr(`library.noMatch.${words}`, { query: text.query })
-              : filtered
-                ? tr(`library.noFilterMatch.${words}`)
-                : tr(`library.none.${words}`)
+            filtered
+              ? tr(`library.noFilterMatch.${words}`)
+              : tr(`library.none.${words}`)
           }
           scanning={ofKind.some((library) => library.scanning)}
           clear={
-            text.query
-              ? {
-                  label: tr("library.clearSearch"),
-                  onClick: () => text.setSearch(""),
-                }
-              : filtered
-                ? { label: tr("library.clearFilters"), onClick: list.clear }
-                : undefined
+            filtered
+              ? { label: tr("library.clearFilters"), onClick: list.clear }
+              : undefined
           }
         />
       ) : (

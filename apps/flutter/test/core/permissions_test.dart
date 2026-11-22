@@ -54,12 +54,22 @@ void main() {
 
     test('running the queue takes reading and answering it', () {
       expect(runsQueue(_user(const [Permission.adminRequestRead])), isFalse);
-      expect(runsQueue(_user(const [Permission.adminRequestUpdate])), isFalse);
+      expect(runsQueue(_user(const [Permission.adminRequestApprove])), isFalse);
+      expect(runsQueue(_user(const [Permission.adminRequestRetry])), isFalse);
       expect(
         runsQueue(
           _user(const [
             Permission.adminRequestRead,
-            Permission.adminRequestUpdate,
+            Permission.adminRequestApprove,
+          ]),
+        ),
+        isTrue,
+      );
+      expect(
+        runsQueue(
+          _user(const [
+            Permission.adminRequestRead,
+            Permission.adminRequestDecline,
           ]),
         ),
         isTrue,
@@ -90,19 +100,6 @@ void main() {
         ]),
         [Permission.adminUserRead, Permission.mediaDownload],
       );
-    });
-  });
-
-  group('requests', () {
-    test('read as one choice from their two permissions', () {
-      expect(requestsOf(const []), RequestsChoice.off);
-      expect(
-        requestsOf(const [Permission.requestAutoApprove]),
-        RequestsChoice.off,
-      );
-      expect(requestsOf(const [Permission.requestCreate]), RequestsChoice.ask);
-      expect(requestsOf(requestPermissions), RequestsChoice.add);
-      expect(requestsOf(const [Permission.all]), RequestsChoice.add);
     });
   });
 }

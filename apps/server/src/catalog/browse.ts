@@ -125,21 +125,53 @@ export async function languagesIn(language: string) {
     // Unknown to ICU: the English names stand.
   }
   const collator = new Intl.Collator(language)
-  const entries = list.value
-    // TMDB's "No Language", for silent films and the like, isn't one to pick.
-    .filter((entry) => entry.id !== "xx")
-    .map((entry) => {
-      let name = entry.name
-      try {
-        const local = names?.of(entry.id)
-        if (local && local !== entry.id) name = local
-      } catch {
-        // Not a code ICU takes: the English name stands.
-      }
-      return { id: entry.id, name }
-    })
-    .toSorted((a, b) => collator.compare(a.name, b.name))
+  // TMDB's "No Language", for silent films and the like, isn't one to pick.
+  const listed = list.value.filter((entry) => entry.id !== "xx")
+  const local = listed.map((entry) => {
+    let name = entry.name
+    try {
+      const found = names?.of(entry.id)
+      if (found && found !== entry.id) name = found
+    } catch {
+      // Not a code ICU takes: the English name stands.
+    }
+    return { id: entry.id, name }
+  })
+  // ICU calls some codes by another's name, like Twi by Akan's. Those
+  // keep TMDB's own name, which tells them apart.
+  const clashing = sharedNames(local)
+  const entries = withCodes(
+    local.map((entry, index) =>
+      clashing.has(entry.name)
+        ? { id: entry.id, name: listed[index]?.name ?? entry.name }
+        : entry,
+    ),
+  ).toSorted((a, b) => collator.compare(a.name, b.name))
   return { languages: entries, stale: list.stale }
+}
+
+/** The names more than one of `entries` has. */
+function sharedNames(entries: { name: string }[]) {
+  const seen = new Set<string>()
+  const shared = new Set<string>()
+  for (const { name } of entries) {
+    if (seen.has(name)) shared.add(name)
+    seen.add(name)
+  }
+  return shared
+}
+
+/**
+ * Languages with a name each, so a list never offers the same one twice:
+ * where two still share a name, each says its code after it.
+ */
+export function withCodes(entries: { id: string; name: string }[]) {
+  const shared = sharedNames(entries)
+  return entries.map((entry) =>
+    shared.has(entry.name)
+      ? { id: entry.id, name: `${entry.name} (${entry.id})` }
+      : entry,
+  )
 }
 
 export async function options(

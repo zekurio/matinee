@@ -8,14 +8,9 @@ export default defineMessages("library", {
   "library.noVideosHint":
     "Check that the library folders contain video files the server can read.",
   "library.showMore": "Show more",
-  "library.clearSearch": "Clear search",
   "library.clearFilters": "Clear filters",
   "library.loadFailed": "Couldn't load this library",
   // A library's poster grid, by the library's kind.
-  "library.search.movies": "Search movies",
-  "library.search.shows": "Search shows",
-  "library.noMatch.movies": "No movies match “{query}”",
-  "library.noMatch.shows": "No shows match “{query}”",
   "library.noFilterMatch.movies": "No movies match these filters",
   "library.noFilterMatch.shows": "No shows match these filters",
   "library.none.movies": "No movies found",
@@ -27,8 +22,6 @@ export default defineMessages("library", {
     other: "Filters, {count} on",
   }),
   "library.filter": "Filter",
-  "library.clearFilter": "Clear filter",
-  "library.closeFilter": "Close filter",
   "library.sort": "Sort",
   "library.sortCurrent": "Sort: {sort}",
   "library.sortBy": "Sort by",

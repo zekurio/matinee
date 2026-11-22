@@ -28,7 +28,7 @@ import { type ComponentType, type ReactNode, useEffect } from "react"
 
 import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
-import { runsQueue } from "@/lib/permissions"
+import { can, runsQueue } from "@/lib/permissions"
 import { orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import { useSignOut } from "@/lib/sign-out"
@@ -171,8 +171,10 @@ function AccountMenu({ user }: { user: User }) {
   const openSettings = useOpenSettings()
   const navigate = useNavigate()
   const name = user.displayName ?? user.username
-  const admin = runsQueue(user)
-  const needsYou = useNeedsYou(admin)
+  // Anyone who may look at the queue gets the way to it; the count is
+  // for those who answer it.
+  const readsQueue = can(user, "adminRequest.read")
+  const needsYou = useNeedsYou(runsQueue(user))
   const actions: {
     label: string
     icon: ComponentType
@@ -189,7 +191,7 @@ function AccountMenu({ user }: { user: User }) {
           params: { username: user.username },
         }),
     },
-    ...(admin
+    ...(readsQueue
       ? [
           {
             label: tr("requests.menu"),

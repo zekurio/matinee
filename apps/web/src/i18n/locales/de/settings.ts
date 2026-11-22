@@ -22,6 +22,11 @@ export default {
   "settings.section.playback.description": "Sprachen, Qualität und Codecs",
   "settings.section.playback.keywords":
     "Audiosprache, Untertitel, Erzwungene Untertitel, Sprache, Qualität, Videocodec, Audiocodec, HEVC, AV1, Opus, Passthrough, Dolby, Surround, Specials, Staffel 0",
+  "settings.section.apiTokens.label": "API-Tokens",
+  "settings.section.apiTokens.description":
+    "Tokens für Skripte und Dienste, und was jedes darf",
+  "settings.section.apiTokens.keywords":
+    "API, Token, Schlüssel, API-Schlüssel, Bearer, Skripte, Automatisierung, Home Assistant, Berechtigungen, Widerrufen, Erneuern",
   "settings.section.libraries.label": "Mediatheken",
   "settings.section.libraries.description":
     "Ordner, die Matinee nach Videos durchsucht",

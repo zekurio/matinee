@@ -23,7 +23,6 @@ import {
   type ListControlsProps,
   PhoneControls,
 } from "@/components/library/list-controls"
-import { useSearchText } from "@/components/library/list-params"
 import { TitleFilterPanel } from "@/components/library/title-filter-panel"
 import {
   cardDetail,
@@ -67,7 +66,6 @@ export function BrowsePage({
   useDocumentTitle(name)
   const Icon = icons[by]
   const groupLabel = tr(`browse.${by}`)
-  const text = useSearchText(search.q, update)
   const kind = search.kind
   const scope = by === "genre" ? { genre: name } : { studio: name }
   const list = useTitleFilters(search, update, { ...scope, kind })
@@ -85,7 +83,6 @@ export function BrowsePage({
       : { ...shown, studios: [name, ...shown.studios] }
   const titles = useInfiniteQuery({
     ...browsedTitlesOptions({
-      query: text.query,
       kind,
       filters,
       order: list.order,
@@ -98,9 +95,6 @@ export function BrowsePage({
   const options = list.options
   const filtered = titleFilterCount(shown) > 0
   const controls: ListControlsProps = {
-    search: text.search,
-    setSearch: text.setSearch,
-    label: tr("browse.search", { name }),
     sorts: list.sorts,
     sort: list.sort,
     setSort: list.setSort,
@@ -174,15 +168,6 @@ export function BrowsePage({
             />
           )}
         </>
-      ) : text.query ? (
-        <EmptyList
-          title={tr("browse.noMatch", { query: text.query })}
-          scanning={false}
-          clear={{
-            label: tr("browse.clearSearch"),
-            onClick: () => text.setSearch(""),
-          }}
-        />
       ) : filtered ? (
         <EmptyList
           title={tr("browse.noFilterMatch")}

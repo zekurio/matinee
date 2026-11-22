@@ -256,7 +256,7 @@ export async function addSeasons(
 
 /**
  * Takes the viewer's ask back, and the request with it once nobody asks.
- * Whoever runs the queue removes it outright.
+ * Whoever may approve or decline removes it outright.
  */
 export async function cancel(viewer: Viewer, id: string) {
   await db.transaction(async (tx) => {
@@ -266,7 +266,10 @@ export async function cancel(viewer: Viewer, id: string) {
       eq(requestFollower.userId, viewer.id),
     )
     const [self] = await tx.select().from(requestFollower).where(identity)
-    if (can(viewer, "adminRequest.update")) {
+    if (
+      can(viewer, "adminRequest.approve") ||
+      can(viewer, "adminRequest.decline")
+    ) {
       await tx.delete(request).where(eq(request.id, id))
       return
     }
