@@ -89,7 +89,24 @@ bottom, Home, Shows, Movies, Downloads, and the profile. Both stay while a
 tab scrolls. Each tab keeps its own stack, and every other page opens over
 them without either. When a tab's label doesn't fit, as on a small phone
 or with large text, the tabs show only their icons. Search opens Explore,
-which an admin's waiting requests head. A TV gets its own routes.
+which the waiting requests head for whoever runs the queue. A TV gets its
+own routes.
+
+## Permissions
+
+What a screen offers follows the account's permissions, as the web's
+`lib/permissions.ts` reads them, never its role: `can(user, permission)`
+in `lib/core/permissions.dart`, or `canProvider(permission)` and
+`runsQueueProvider` for the account signed in, which are false offline.
+The server sends `User.permissions`, with `all` for an admin, and leaves
+out what every account has; `can` adds those. The names are
+`Permission.*` in `lib/core/permissions.g.dart`, which
+`pnpm permissions:dart` writes from `packages/contracts/src/permissions.ts`,
+since the API client types a permission list as strings. The role stays
+where the server checks the role: the Admin badge, the last admin who can
+sign in, and the Users page, where only an admin reaches an admin's
+account. A user saved before the server sent permissions reads with none
+until the session saves the server's answer (`decodeUser`).
 
 A platform channel starts as a Pigeon file in `pigeons/`. Run
 `just flutter pigeon`, then implement the generated interface on the
@@ -334,7 +351,7 @@ it takes JPEG, PNG, or WebP up to 25 MB, as the contract does, and
 removes one or goes back to the provider's. The menus of a card and of
 the title, season, and episode pages end with Fix match, Refresh
 metadata, and Edit images (`lib/media/metadata_items.dart`) for an
-admin, the server's only role that may; fix match and refresh only for a
+account with `title.update`; fix match and refresh only for a
 movie or show whose library's provider has its API key. On a tablet the
 image grid keeps a phone's width, as Settings does, where the Kotlin app
 stretched its three columns across the screen.
@@ -401,7 +418,7 @@ sitting. Titles here already are the library's cards; the rest follow
 `requests.live`. With Discover off, the page under the field stays empty.
 
 `Explore(leading: ...)` takes slivers to put before the rows. The search
-page passes an admin's `RequestsLink`, the way to the queue with how many
+page passes `RequestsLink`, for whoever runs the queue, the way to it with how many
 requests need them. A row of request cards goes in the same place once
 the server sends one: add its sliver to `leading`, before or instead of
 the link.
@@ -422,7 +439,8 @@ it, asks and cancels, holds an admin's answers for the toast's Undo
 before sending them, and bumps `requestsVersionProvider`, which every
 read that holds a request's state watches, so pages that are covered
 fetch again too. A screen follows its titles by wrapping them in
-`FollowTitles`. For an admin, the hub also follows
+`FollowTitles`. For whoever runs the queue, holding
+`adminRequest.read` and `adminRequest.update` (`runsQueue`), the hub also follows
 `admin.requests.live`, which the queue, the Add and Decline buttons, and
 the count beside "Requests" read.
 
@@ -453,7 +471,7 @@ to more than one library gets "Goes to" in its menu, and on the
 catalog's page "Add to Films" with the libraries beside it, as the web
 has them: the choice is kept by request (`RequestsState.moves`) and only
 sent with Add, and Add all sends a moved one on its own. An account that
-isn't an admin gets its own requests on either route.
+that doesn't run the queue gets its own requests on either route.
 
 ## People
 
@@ -475,7 +493,7 @@ catalog's browse.
 
 `lib/screens/profile` is the fifth tab, the Kotlin app's profile: the
 account's picture (`Avatar` in `lib/media`, which the tab bar shows too),
-name, and since when it's here; for an admin, Requests with how many
+name, and since when it's here; for whoever runs the queue, Requests with how many
 need them, opening the waiting list, as the Kotlin app's inbox beside
 Settings; favorites, whose heading opens
 `Routes.favorites`; "My requests", the latest of everything the person
@@ -516,7 +534,8 @@ with their texts in `assets/licenses`. A test fails when
 `android/app/build.gradle.kts` adds a library that list doesn't cover.
 The rows (`Panel`, `LinkRow`, `SwitchRow`, `ValueRow`, `PickerRow`) are in
 `settings_rows.dart`. Signing out and switching server or account are on
-the profile. An admin also gets the Administration section, which
+the profile. An account whose permissions open any admin page also gets
+the Administration section, which
 [Admin pages](#admin-pages) covers.
 
 ### Account
@@ -578,11 +597,14 @@ without requiring one.
 ## Admin pages
 
 `lib/screens/settings/admin` is the Kotlin app's admin settings for
-phones and tablets. The Administration section shows on the first page of
-Settings only when the signed-in account is an admin (`canAdminister`),
-and each page sits behind `AdminGate`, so a plain account that opens an
-admin key gets the first page. Its categories (`AdminCategory`) open at
-`Routes.settingsPage(key)`:
+phones and tablets. Each category (`AdminCategory`) shows on the first
+page of Settings for an account with the permissions the web's section
+needs, any of `needs` and all of `needsAll`, and the Administration
+section only when one does (`AdminCategory.openTo`). Each page sits
+behind `AdminGate` with what it calls the server with, so an account
+without them that opens its key gets the first page. They open at
+`Routes.settingsPage(key)`, and each action on them shows only for an
+account that holds its permission:
 
 - Libraries: each library with its titles and what the server is doing
   to it, asking again every two seconds while a scan or a fetch runs.
@@ -590,9 +612,13 @@ admin key gets the first page. Its categories (`AdminCategory`) open at
   The editor is `Routes.libraryEditor([id])`, and its folders come from
   `Routes.folderPicker`, which takes a `FolderPickerRequest` and pops
   the folder it adds.
-- Users: the accounts, with role, sign-out everywhere, and deletion, and
-  the invite links. The access page, `Routes.userAccess(id)`, sets an
-  account's groups and the limits it overrides. The server has no way to
+- Users: the accounts, with role, sign-out everywhere, how many API
+  tokens each made and revoking them, and deletion, and the invite
+  links. The access page, `Routes.userAccess(id)`, sets an account's
+  groups and the limits it overrides; downloads and requests are
+  permissions its override allows or denies, and the override's other
+  permissions, which it has no control for, as the web's dialog has
+  none, save as they were. The server has no way to
   create an account directly, so new people come in through an invite.
 - Authentication: passkeys and the OpenID Connect provider.
 - Transcoding, Trickplay, and Branding: the server's settings for each.
