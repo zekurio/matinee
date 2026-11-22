@@ -7,6 +7,7 @@ import 'api/matinee_api.dart' show ImageTarget, TitleKind;
 import 'core/device.dart';
 import 'core/session.dart';
 import 'kit/route_page.dart';
+import 'kit/theme.dart';
 import 'kit/tv/tv_metrics.dart';
 import 'player/offline_playback_screen.dart';
 import 'player/player_lab.dart';
@@ -289,7 +290,16 @@ final class PushedRoute extends GoRoute {
          pageBuilder: (context, state) => kitPage(
            key: state.pageKey,
            name: state.name ?? state.path,
-           child: builder(context, state),
+           // Clear of a landscape phone's notch or Dynamic Island, with the
+           // page's background behind it.
+           child: ColoredBox(
+             color: MatineeTheme.of(context).background,
+             child: SafeArea(
+               top: false,
+               bottom: false,
+               child: builder(context, state),
+             ),
+           ),
          ),
        );
 }

@@ -131,7 +131,9 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
                 context: context,
                 removeTop: true,
                 removeBottom: true,
-                child: widget.shell,
+                // Clear of a landscape phone's notch or Dynamic Island, as
+                // the header and the tab bar are.
+                child: SafeArea(top: false, bottom: false, child: widget.shell),
               ),
             ),
             TabBar(items: items, state: _selected, onSelected: _open),
