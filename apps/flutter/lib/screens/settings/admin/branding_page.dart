@@ -173,31 +173,44 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 16,
               children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 10,
                   children: [
-                    for (final (index, (light, dark)) in presets.indexed)
-                      _Swatch(
-                        light: light,
-                        dark: dark,
-                        name: index == 0
-                            ? l.webBrandingDefault
-                            : '$light / $dark',
-                        selected:
-                            _light.trim().toLowerCase() == light &&
-                            _dark.trim().toLowerCase() == dark,
-                        onPressed: () => _edit(() {
-                          _light = light;
-                          _dark = dark;
-                          _errors = const {};
-                        }),
+                    Text(
+                      l.brandingPresets,
+                      style: KitText.sm.style(
+                        color: MatineeTheme.of(context).mutedForeground,
+                        weight: FontWeight.w500,
                       ),
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final (index, (light, dark)) in presets.indexed)
+                          _Swatch(
+                            light: light,
+                            dark: dark,
+                            name: index == 0
+                                ? l.webBrandingDefault
+                                : '$light / $dark',
+                            selected:
+                                _light.trim().toLowerCase() == light &&
+                                _dark.trim().toLowerCase() == dark,
+                            onPressed: () => _edit(() {
+                              _light = light;
+                              _dark = dark;
+                              _errors = const {};
+                            }),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
                 Panel(
                   rows: [
-                    _ColorRow(
+                    _AccentRow(
                       label: l.webBrandingModeLight,
                       value: _light,
                       error: _errors['themeAccents.light'],
@@ -206,7 +219,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
                         _errors = {..._errors}..remove('themeAccents.light');
                       }),
                     ),
-                    _ColorRow(
+                    _AccentRow(
                       label: l.webBrandingModeDark,
                       value: _dark,
                       error: _errors['themeAccents.dark'],
@@ -257,7 +270,7 @@ class _Swatch extends StatelessWidget {
         builder: (context, state) => Container(
           width: 40,
           height: 40,
-          padding: const EdgeInsets.all(4),
+          padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
@@ -307,9 +320,10 @@ class _SplitPainter extends CustomPainter {
       old.light != light || old.dark != dark;
 }
 
-/// A mode's accent: its hex value, with a dot of the color it names.
-class _ColorRow extends StatelessWidget {
-  const _ColorRow({
+/// A mode's accent as a settings row: its name, then a compact hex field in
+/// the kit's input style, with a dot of the color it names at the field's end.
+class _AccentRow extends StatefulWidget {
+  const _AccentRow({
     required this.label,
     required this.value,
     required this.error,
@@ -322,26 +336,68 @@ class _ColorRow extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
   @override
+  State<_AccentRow> createState() => _AccentRowState();
+}
+
+class _AccentRowState extends State<_AccentRow> {
+  late final _controller = TextEditingController(text: widget.value);
+
+  @override
+  void didUpdateWidget(_AccentRow old) {
+    super.didUpdateWidget(old);
+    if (widget.value != _controller.text) _controller.text = widget.value;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    final shown = _shown(value);
-    return TextRow(
-      label: label,
-      value: value,
-      placeholder: '#rrggbb',
-      error: error,
-      onChanged: onChanged,
-      trailing: Padding(
-        padding: const EdgeInsetsDirectional.only(end: 12),
-        child: Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: shown,
-            border: Border.all(color: colors.foreground.withValues(alpha: .15)),
+    final shown = _shown(widget.value);
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 12, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 16,
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(top: 10),
+              child: Text(
+                widget.label,
+                style: KitText.base.style(color: colors.foreground),
+              ),
+            ),
           ),
-        ),
+          SizedBox(
+            width: 148,
+            child: MatineeTextField(
+              controller: _controller,
+              placeholder: '#rrggbb',
+              error: widget.error,
+              autocorrect: false,
+              trailing: Padding(
+                padding: const EdgeInsetsDirectional.only(end: 10),
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: shown,
+                    border: Border.all(
+                      color: colors.foreground.withValues(alpha: .15),
+                    ),
+                  ),
+                ),
+              ),
+              onChanged: widget.onChanged,
+            ),
+          ),
+        ],
       ),
     );
   }
