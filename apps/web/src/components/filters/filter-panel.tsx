@@ -56,6 +56,7 @@ export function FilterPanel({
   open,
   onOpenChange,
   compact = false,
+  done = tr("filters.done"),
   children,
 }: {
   /** How many filters are on. */
@@ -65,6 +66,8 @@ export function FilterPanel({
   onOpenChange: (open: boolean) => void
   /** The icon the phone bar has room for. */
   compact?: boolean
+  /** The phone drawer's closing button, which shows the list. */
+  done?: string
   children: ReactNode
 }) {
   const phone = usePhone()
@@ -94,7 +97,7 @@ export function FilterPanel({
           <div className="border-foreground/10 flex items-center justify-between gap-2 border-t px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {clear || <span />}
             <DrawerClose render={<Button className="h-11 px-5" />}>
-              {tr("filters.done")}
+              {done}
             </DrawerClose>
           </div>
         </DrawerContent>

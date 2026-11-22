@@ -26,7 +26,7 @@ import { tr } from "@/i18n"
 import { type Answer, DeclinePopover } from "./decline-popover"
 import { KeyTip } from "./key-tip"
 import { RequestCard, RequestStateBadge, requestProgress } from "./request-card"
-import { Askers, Diagnostics, QueueLine } from "./request-lines"
+import { Askers, QueueLine } from "./request-lines"
 import { titleLink } from "./request-queue"
 
 /*
@@ -76,6 +76,8 @@ export function QueueCard({
   onRemove: () => void
 }) {
   const { state } = item
+  // A finished card's line says when; who asked needs no time of its own.
+  const finished = state === "here" || state === "declined"
   const decline = (giveUp: boolean) => (
     <DeclinePopover
       item={item}
@@ -133,15 +135,9 @@ export function QueueCard({
             urgent
           />
         }
-        line={
-          <>
-            <QueueLine item={item} />
-            {(state === "needsAttention" || state === "onTheWay") && (
-              <Diagnostics item={item} />
-            )}
-          </>
-        }
-        who={<Askers item={item} />}
+        line={<QueueLine item={item} />}
+        who={<Askers item={item} when={!finished} />}
+        whoUp={<Askers item={item} when={!finished} faces />}
         menu={
           <CardMenu
             item={item}

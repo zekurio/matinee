@@ -10,8 +10,9 @@ import { AskedWhen, OwnLine } from "./request-lines"
 
 /**
  * One of the viewer's requests, as the server says it stands: its
- * state, the state's line, when they asked, and Cancel while the server
- * allows it. Cancel holds the call for Undo as the queue's answers do.
+ * state, how it ended once it has, when they asked while it hasn't, and
+ * a small Cancel while the server allows it. Cancel holds the call for
+ * Undo as the queue's answers do.
  */
 export function OwnRequest({
   item,
@@ -24,7 +25,7 @@ export function OwnRequest({
   const availability = item.season ?? item.availability
   const cancellable =
     item.availability.action === "cancel" || availability.action === "cancel"
-  const rail = size === "rail"
+  const finished = item.state === "here" || item.state === "declined"
   return (
     <RequestCard
       item={item}
@@ -35,13 +36,15 @@ export function OwnRequest({
           progress={requestProgress(item)}
         />
       }
-      line={<OwnLine item={item} />}
-      who={<AskedWhen item={item} />}
+      // A finished one says how it ended; one in progress, when it was asked.
+      line={finished ? <OwnLine item={item} /> : null}
+      who={finished ? null : <AskedWhen item={item} />}
       actions={
         cancellable && (
           <Button
-            variant={rail ? "secondary" : "ghost"}
+            variant="ghost"
             size="sm"
+            aria-label={tr("requests.cancelNamed", { name: item.title.name })}
             onClick={() =>
               hold({
                 kind: "cancel",
@@ -49,15 +52,16 @@ export function OwnRequest({
                 names: [item.title.name],
               })
             }
-            className={
-              rail
-                ? // Long words, like German's, wrap rather than cut off.
-                  "h-auto min-h-8 w-full py-1.5 leading-tight whitespace-normal"
-                : "hover:bg-foreground/10"
-            }
+            className="hover:bg-foreground/10 text-foreground/85 hover:text-foreground -mr-1 px-2 [@media(pointer:coarse)]:h-10"
           >
-            <XIcon aria-hidden strokeWidth={2.5} />
-            <span className="text-balance">{tr("ask.cancel")}</span>
+            {/* Where the card is too narrow for both, the time keeps
+                its words and Cancel drops its mark. */}
+            <XIcon
+              aria-hidden
+              strokeWidth={2.5}
+              className="@max-[14rem]/card:hidden"
+            />
+            {tr("requests.cancel")}
           </Button>
         )
       }

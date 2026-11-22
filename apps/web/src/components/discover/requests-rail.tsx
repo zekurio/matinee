@@ -153,7 +153,7 @@ function OwnRequests() {
 }
 
 /**
- * A request in the queue: its state, the state's line, who asked and
+ * A request in the queue: its state, its detail line, who asked and
  * when, and what the row lets an admin do about it: Add and Decline
  * while it waits, Retry once sending it failed. The rest is on the
  * requests page.
@@ -168,6 +168,8 @@ function QueueRequest({ item }: { item: AdminRequestItem }) {
         description: errorMessage(error),
       }),
   })
+  // A finished card's line says when; who asked needs no time of its own.
+  const finished = item.state === "here" || item.state === "declined"
   return (
     <RequestCard
       item={item}
@@ -179,7 +181,8 @@ function QueueRequest({ item }: { item: AdminRequestItem }) {
         />
       }
       line={<QueueLine item={item} />}
-      who={<Askers item={item} />}
+      who={<Askers item={item} when={!finished} />}
+      whoUp={<Askers item={item} when={!finished} faces />}
       actions={
         item.state === "waiting" ? (
           <AdminAnswer item={item} look="fill" />
@@ -190,7 +193,6 @@ function QueueRequest({ item }: { item: AdminRequestItem }) {
             disabled={retry.isPending}
             aria-label={tr("requests.retryNamed", { name: item.title.name })}
             onClick={() => retry.mutate()}
-            className="w-full"
           >
             <RotateCwIcon />
             {tr("requests.retry")}

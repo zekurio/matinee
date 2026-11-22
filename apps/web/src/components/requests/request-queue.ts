@@ -12,6 +12,8 @@ import {
   useRequestActionsStore,
 } from "@/stores/request-actions"
 
+import type { RequestFilter } from "./request-filter"
+
 /*
  * The admin's queue as the server streams it, and the words its rows
  * share. The stream starts with the whole queue and sends it again on
@@ -26,14 +28,25 @@ import {
 export const RECENT_DONE = 20
 
 /**
+ * A list filter as the server takes it, with nothing for what's off, so
+ * an unfiltered list asks exactly what every other unfiltered one does.
+ */
+export function filterInput(filter: RequestFilter | undefined) {
+  const input: Partial<RequestFilter> = {}
+  if (filter?.states.length) input.states = filter.states
+  if (filter?.kind) input.kind = filter.kind
+  return input
+}
+
+/**
  * The live queue, which every part of the page that shows it shares:
  * the avatar's dot, Discover's row, a title page's Add, and the
- * requests page.
+ * requests page. The requests page alone passes a `filter`.
  */
-export function useRequestQueue(enabled = true) {
+export function useRequestQueue(enabled = true, filter?: RequestFilter) {
   return useQuery({
     ...orpc.admin.requests.live.experimental_liveOptions({
-      input: { limit: RECENT_DONE },
+      input: { limit: RECENT_DONE, ...filterInput(filter) },
     }),
     ...liveQuery,
     enabled,
