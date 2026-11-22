@@ -450,6 +450,20 @@ String? declinedText(Availability availability, AppLocalizations l) {
   ].join(' ');
 }
 
+/// Who asked for [item], the first and how many more, and when the first
+/// did: nothing when nobody's left asking.
+List<String> askedText(AdminRequestItem item, AppLocalizations l) {
+  final people = askers(item);
+  final first = people.firstOrNull;
+  if (first == null) return const [];
+  return [
+    people.length > 1
+        ? '${first.name} ${l.webRequestsOthersCount('${people.length - 1}')}'
+        : first.name,
+    ?relativeTime(first.createdAt, l),
+  ];
+}
+
 /// What a row of [list] says of [item] under its name: who asked and where
 /// it goes, why it needs attention, how far along it is, or what became
 /// of it.
@@ -461,15 +475,9 @@ String queueStatusText(
 ) {
   switch (list) {
     case QueueList.waiting:
-      final people = askers(item);
-      final first = people.firstOrNull;
       final goes = state.goesTo(item);
       return [
-        if (first != null)
-          people.length > 1
-              ? '${first.name} ${l.webRequestsOthersCount('${people.length - 1}')}'
-              : first.name,
-        if (first != null) ?relativeTime(first.createdAt, l),
+        ...askedText(item, l),
         goes.name,
         if (goes.connection == null) l.webRequestsNoConnection,
       ].join(' · ');
@@ -942,6 +950,8 @@ class TvRequestPoster extends ConsumerWidget {
         yearKind(title.year, title.ref.kind, l),
         ?scopeText(item.scope, l),
         queueStatusText(state, item, list, l),
+        // Waiting's status starts with who asked; the rest say it after.
+        if (list != QueueList.waiting) ...askedText(item, l),
       ].where((fact) => fact.isNotEmpty).toList();
       return TvPosterCard(
         name: title.name,
