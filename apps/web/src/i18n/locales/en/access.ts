@@ -35,7 +35,6 @@ export default defineMessages("access", {
     one: "{count} device at once",
     other: "{count} devices at once",
   }),
-  "access.streams.hint": "How many devices may play at the same time.",
   "access.requests": "Requests",
   "access.requests.off": "Off",
   "access.requests.ask": "Needs approval",
@@ -63,23 +62,58 @@ export default defineMessages("access", {
   // Between the two numbers: [5] titles every [7] days.
   "access.requestLimit.titlesEvery": "titles every",
   "access.requestLimit.days": "days",
+  // What a group or an account allows, by part of the editor.
+  "access.section.watching": "Watching",
+  "access.section.requests": "Requests",
+  "access.section.api": "API",
+  "access.section.server": "Running the server",
+  "access.section.serverHint":
+    "Parts of running the server that members take on. View lets them look, Manage lets them change it too.",
+  "access.apiTokens": "API tokens",
+  "access.apiTokens.on": "Can make API tokens",
+  "access.apiTokens.hint":
+    "Tokens for scripts and services that use the API as the account.",
+  // The parts of running the server, and what each covers.
+  "access.area.requests": "Request queue",
+  "access.area.requests.hint":
+    "Everyone's requests: approving, declining, retrying.",
+  "access.area.connections": "Connections",
+  "access.area.connections.hint":
+    "Radarr, Sonarr, and the rules that send requests to them.",
+  "access.area.libraries": "Libraries",
+  "access.area.libraries.hint":
+    "Adding, changing, scanning, and deleting libraries.",
+  "access.area.metadata": "Metadata",
+  "access.area.metadata.hint":
+    "Fixing matches, refreshing metadata, and images.",
+  "access.area.users": "Users and groups",
+  "access.area.users.hint":
+    "Accounts, access groups, invites, and who's watching.",
+  "access.area.server": "Server settings",
+  "access.area.server.hint":
+    "Transcoding, trickplay, network, branding, and the jobs.",
+  "access.level.none": "None",
+  "access.level.view": "View",
+  "access.level.manage": "Manage",
+  "access.level.on": "On",
+  "access.level.off": "Off",
+  // A fact on a group or an account: how many parts it hands on.
+  "access.manages.count": plural({
+    one: "Runs {count} part of the server",
+    other: "Runs {count} parts of the server",
+  }),
+  // {area} like "Request queue", {level} like "Manage".
+  "access.manages.area": "{area}: {level}",
   "access.done": "Done",
   "access.retry": "Try again",
 
-  // Permissions: what a group grants and an API token may do. They show
-  // as the API names them, like library.scan, under each resource's line.
+  // Permissions: what an API token may do. They show as the API names
+  // them, like library.scan, under each resource's line.
   "access.permissions": "Permissions",
   "access.permissions.search": "Search permissions",
   "access.permissions.noMatch": "No permission matches.",
-  // A fact on a group or an account, beside its downloads and requests.
-  "access.permissions.count": plural({
-    one: "{count} more permission",
-    other: "{count} more permissions",
-  }),
   "access.permissions.all": "Every permission",
-  // Under the group editor's list.
-  "access.permissions.groupHint":
-    "Parts of running the server that members take on, like approving requests or scanning libraries. An account has every permission any of its groups grants.",
+  "access.permissions.allHint": "Admins can do everything.",
   // When the person editing lacks some of them.
   "access.permissions.ownOnly":
     "You can only grant or take away permissions you have yourself.",
@@ -134,7 +168,7 @@ export default defineMessages("access", {
   "access.groups.title": "Access groups",
   "access.groups.create": "New group",
   "access.groups.intro":
-    "An account gets the most its groups allow, and every permission any of them grants. Settings under Users override groups. Admins have no limits and every permission.",
+    "An account gets the most its groups allow. Settings under Users override groups. Admins have no limits and can do everything.",
   "access.groups.loadFailed": "Couldn't load the groups. {error}",
   "access.groups.onlyEveryone":
     "Every account is in Everyone. Add groups to give some accounts more.",

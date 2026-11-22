@@ -1,4 +1,9 @@
-import type { AccessSource, Permission, RequestLimit } from "@matinee/contracts"
+import type {
+  AccessSource,
+  ManagedAccess,
+  RequestLimit,
+  RequestMode,
+} from "@matinee/contracts"
 import { sql } from "drizzle-orm"
 import {
   jsonb,
@@ -19,7 +24,7 @@ import { user } from "./users"
 
 /**
  * What its members may open, how the server streams to them, and what
- * they may do; see `access.ts` in the contracts. An account gets the most
+ * else they may do, as capabilities; see `access.ts` in the contracts. An account gets the most
  * generous of its groups.
  */
 export const accessGroup = pgTable(
@@ -39,20 +44,18 @@ export const accessGroup = pgTable(
     /** Bits per second. Null for no limit. */
     maxBitrate: integer(),
     transcode: boolean().notNull().default(true),
-    /**
-     * What members may do beyond what every account may, from
-     * `GRANTABLE_PERMISSIONS`: downloading, asking for titles, and
-     * whatever part of running the server the group hands on.
-     */
-    permissions: text()
-      .array()
-      .$type<Permission[]>()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+    downloads: boolean().notNull().default(false),
+    requests: text().$type<RequestMode>().notNull().default("off"),
     /** Titles per days. Null for no limit. Readers parse the JSON. */
     requestLimit: jsonb().$type<RequestLimit>(),
     /** Null for no limit. */
     maxStreams: integer(),
+    apiTokens: boolean().notNull().default(false),
+    /**
+     * The level in each part of running the server, as `ManagedAccess`.
+     * An area left out is `none`. Readers parse the JSON.
+     */
+    manages: jsonb().$type<Partial<ManagedAccess>>().notNull().default({}),
     createdAt: createdAt(),
     updatedAt: createdAt(),
   },

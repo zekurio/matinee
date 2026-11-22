@@ -248,6 +248,8 @@ export default defineMessages("server", {
   "server.account.apiTokenGone": "That API token was already revoked.",
   "server.account.apiTokenGrant":
     "An API token can't grant permissions it doesn't have.",
+  "server.account.apiTokenAccountGrant":
+    "You can only give an API token permissions your account has.",
   "server.account.noApiToken": "This request didn't come with an API token.",
 
   // rpc/admin-users.ts.

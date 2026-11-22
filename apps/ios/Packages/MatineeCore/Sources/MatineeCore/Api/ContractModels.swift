@@ -47,6 +47,174 @@ public struct RequestQuota: Codable, Sendable, Hashable {
     }
 }
 
+public enum RequestMode {
+    public static let off = "off"
+    public static let ask = "ask"
+    public static let add = "add"
+    public static let knownValues = ["off", "ask", "add"]
+}
+
+public enum AccessLevel {
+    public static let none = "none"
+    public static let view = "view"
+    public static let manage = "manage"
+    public static let knownValues = ["none", "view", "manage"]
+}
+
+public struct ManagedAccess: Codable, Sendable, Hashable {
+    public var requests: String
+    public var connections: String
+    public var libraries: String
+    public var metadata: String
+    public var users: String
+    public var server: String
+    public init(requests: String, connections: String, libraries: String, metadata: String, users: String, server: String) {
+        self.requests = requests
+        self.connections = connections
+        self.libraries = libraries
+        self.metadata = metadata
+        self.users = users
+        self.server = server
+    }
+}
+
+public struct AccessPolicy: Codable, Sendable, Hashable {
+    public var libraries: AccessPolicy.Libraries
+    public var maxBitrate: Int?
+    public var transcode: Bool
+    public var maxStreams: Int?
+    public var downloads: Bool
+    public var requests: String
+    public var requestLimit: RequestQuota?
+    public var apiTokens: Bool
+    public var manages: ManagedAccess
+    public init(libraries: AccessPolicy.Libraries, maxBitrate: Int?, transcode: Bool, maxStreams: Int?, downloads: Bool, requests: String, requestLimit: RequestQuota?, apiTokens: Bool, manages: ManagedAccess) {
+        self.libraries = libraries
+        self.maxBitrate = maxBitrate
+        self.transcode = transcode
+        self.maxStreams = maxStreams
+        self.downloads = downloads
+        self.requests = requests
+        self.requestLimit = requestLimit
+        self.apiTokens = apiTokens
+        self.manages = manages
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.libraries, forKey: .libraries)
+        try c.encode(self.maxBitrate, forKey: .maxBitrate)
+        try c.encode(self.transcode, forKey: .transcode)
+        try c.encode(self.maxStreams, forKey: .maxStreams)
+        try c.encode(self.downloads, forKey: .downloads)
+        try c.encode(self.requests, forKey: .requests)
+        try c.encode(self.requestLimit, forKey: .requestLimit)
+        try c.encode(self.apiTokens, forKey: .apiTokens)
+        try c.encode(self.manages, forKey: .manages)
+    }
+    public struct Libraries: Codable, Sendable, Hashable {
+        public var all: Bool
+        public var ids: [String]
+        public init(all: Bool, ids: [String]) {
+            self.all = all
+            self.ids = ids
+        }
+    }
+}
+
+public struct AccessOverride: Codable, Sendable, Hashable {
+    public var libraries: AccessOverride.Libraries?
+    public var maxBitrate: Explicit<Int>
+    public var transcode: Bool?
+    public var maxStreams: Explicit<Int>
+    public var downloads: Bool?
+    public var requests: String?
+    public var requestLimit: Explicit<RequestQuota>
+    public var apiTokens: Bool?
+    public var manages: AccessOverride.Manages?
+    public init(libraries: AccessOverride.Libraries? = nil, maxBitrate: Explicit<Int> = .omitted, transcode: Bool? = nil, maxStreams: Explicit<Int> = .omitted, downloads: Bool? = nil, requests: String? = nil, requestLimit: Explicit<RequestQuota> = .omitted, apiTokens: Bool? = nil, manages: AccessOverride.Manages? = nil) {
+        self.libraries = libraries
+        self.maxBitrate = maxBitrate
+        self.transcode = transcode
+        self.maxStreams = maxStreams
+        self.downloads = downloads
+        self.requests = requests
+        self.requestLimit = requestLimit
+        self.apiTokens = apiTokens
+        self.manages = manages
+    }
+    private enum CodingKeys: String, CodingKey {
+        case libraries = "libraries"
+        case maxBitrate = "maxBitrate"
+        case transcode = "transcode"
+        case maxStreams = "maxStreams"
+        case downloads = "downloads"
+        case requests = "requests"
+        case requestLimit = "requestLimit"
+        case apiTokens = "apiTokens"
+        case manages = "manages"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.libraries = try c.decodeIfPresent(AccessOverride.Libraries.self, forKey: .libraries)
+        self.maxBitrate = try !c.contains(.maxBitrate) ? .omitted : c.decodeNil(forKey: .maxBitrate) ? .null : .value(c.decode(Int.self, forKey: .maxBitrate))
+        self.transcode = try c.decodeIfPresent(Bool.self, forKey: .transcode)
+        self.maxStreams = try !c.contains(.maxStreams) ? .omitted : c.decodeNil(forKey: .maxStreams) ? .null : .value(c.decode(Int.self, forKey: .maxStreams))
+        self.downloads = try c.decodeIfPresent(Bool.self, forKey: .downloads)
+        self.requests = try c.decodeIfPresent(String.self, forKey: .requests)
+        self.requestLimit = try !c.contains(.requestLimit) ? .omitted : c.decodeNil(forKey: .requestLimit) ? .null : .value(c.decode(RequestQuota.self, forKey: .requestLimit))
+        self.apiTokens = try c.decodeIfPresent(Bool.self, forKey: .apiTokens)
+        self.manages = try c.decodeIfPresent(AccessOverride.Manages.self, forKey: .manages)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(self.libraries, forKey: .libraries)
+        switch maxBitrate {
+        case .omitted: break
+        case .null: try c.encodeNil(forKey: .maxBitrate)
+        case .value(let value): try c.encode(value, forKey: .maxBitrate)
+        }
+        try c.encodeIfPresent(self.transcode, forKey: .transcode)
+        switch maxStreams {
+        case .omitted: break
+        case .null: try c.encodeNil(forKey: .maxStreams)
+        case .value(let value): try c.encode(value, forKey: .maxStreams)
+        }
+        try c.encodeIfPresent(self.downloads, forKey: .downloads)
+        try c.encodeIfPresent(self.requests, forKey: .requests)
+        switch requestLimit {
+        case .omitted: break
+        case .null: try c.encodeNil(forKey: .requestLimit)
+        case .value(let value): try c.encode(value, forKey: .requestLimit)
+        }
+        try c.encodeIfPresent(self.apiTokens, forKey: .apiTokens)
+        try c.encodeIfPresent(self.manages, forKey: .manages)
+    }
+    public struct Libraries: Codable, Sendable, Hashable {
+        public var all: Bool
+        public var ids: [String]
+        public init(all: Bool, ids: [String]) {
+            self.all = all
+            self.ids = ids
+        }
+    }
+    public struct Manages: Codable, Sendable, Hashable {
+        public var requests: String?
+        public var connections: String?
+        public var libraries: String?
+        public var metadata: String?
+        public var users: String?
+        public var server: String?
+        public init(requests: String? = nil, connections: String? = nil, libraries: String? = nil, metadata: String? = nil, users: String? = nil, server: String? = nil) {
+            self.requests = requests
+            self.connections = connections
+            self.libraries = libraries
+            self.metadata = metadata
+            self.users = users
+            self.server = server
+        }
+    }
+}
+
 public struct Availability: Codable, Sendable, Hashable {
     public var state: String
     public var action: String?
@@ -2936,11 +3104,11 @@ public struct AdminUser: Codable, Sendable, Hashable {
     }
     public struct Access: Codable, Sendable, Hashable {
         public var groups: [AdminUser.Access.Group]
-        public var override: AdminUser.Access.Override
+        public var override: AccessOverride
         public var overrideSource: String
-        public var fromGroups: AdminUser.Access.FromGroups
-        public var effective: AdminUser.Access.Effective
-        public init(groups: [AdminUser.Access.Group], override: AdminUser.Access.Override, overrideSource: String, fromGroups: AdminUser.Access.FromGroups, effective: AdminUser.Access.Effective) {
+        public var fromGroups: AccessPolicy
+        public var effective: AccessPolicy
+        public init(groups: [AdminUser.Access.Group], override: AccessOverride, overrideSource: String, fromGroups: AccessPolicy, effective: AccessPolicy) {
             self.groups = groups
             self.override = override
             self.overrideSource = overrideSource
@@ -2955,139 +3123,6 @@ public struct AdminUser: Codable, Sendable, Hashable {
                 self.id = id
                 self.name = name
                 self.source = source
-            }
-        }
-        public struct Override: Codable, Sendable, Hashable {
-            public var libraries: AdminUser.Access.Override.Libraries?
-            public var maxBitrate: Explicit<Int>
-            public var transcode: Bool?
-            public var requestLimit: Explicit<RequestQuota>
-            public var maxStreams: Explicit<Int>
-            public var allow: [String]?
-            public var deny: [String]?
-            public init(libraries: AdminUser.Access.Override.Libraries? = nil, maxBitrate: Explicit<Int> = .omitted, transcode: Bool? = nil, requestLimit: Explicit<RequestQuota> = .omitted, maxStreams: Explicit<Int> = .omitted, allow: [String]? = nil, deny: [String]? = nil) {
-                self.libraries = libraries
-                self.maxBitrate = maxBitrate
-                self.transcode = transcode
-                self.requestLimit = requestLimit
-                self.maxStreams = maxStreams
-                self.allow = allow
-                self.deny = deny
-            }
-            private enum CodingKeys: String, CodingKey {
-                case libraries = "libraries"
-                case maxBitrate = "maxBitrate"
-                case transcode = "transcode"
-                case requestLimit = "requestLimit"
-                case maxStreams = "maxStreams"
-                case allow = "allow"
-                case deny = "deny"
-            }
-            public init(from decoder: any Decoder) throws {
-                let c = try decoder.container(keyedBy: CodingKeys.self)
-                self.libraries = try c.decodeIfPresent(AdminUser.Access.Override.Libraries.self, forKey: .libraries)
-                self.maxBitrate = try !c.contains(.maxBitrate) ? .omitted : c.decodeNil(forKey: .maxBitrate) ? .null : .value(c.decode(Int.self, forKey: .maxBitrate))
-                self.transcode = try c.decodeIfPresent(Bool.self, forKey: .transcode)
-                self.requestLimit = try !c.contains(.requestLimit) ? .omitted : c.decodeNil(forKey: .requestLimit) ? .null : .value(c.decode(RequestQuota.self, forKey: .requestLimit))
-                self.maxStreams = try !c.contains(.maxStreams) ? .omitted : c.decodeNil(forKey: .maxStreams) ? .null : .value(c.decode(Int.self, forKey: .maxStreams))
-                self.allow = try c.decodeIfPresent([String].self, forKey: .allow)
-                self.deny = try c.decodeIfPresent([String].self, forKey: .deny)
-            }
-            public func encode(to encoder: any Encoder) throws {
-                var c = encoder.container(keyedBy: CodingKeys.self)
-                try c.encodeIfPresent(self.libraries, forKey: .libraries)
-                switch maxBitrate {
-                case .omitted: break
-                case .null: try c.encodeNil(forKey: .maxBitrate)
-                case .value(let value): try c.encode(value, forKey: .maxBitrate)
-                }
-                try c.encodeIfPresent(self.transcode, forKey: .transcode)
-                switch requestLimit {
-                case .omitted: break
-                case .null: try c.encodeNil(forKey: .requestLimit)
-                case .value(let value): try c.encode(value, forKey: .requestLimit)
-                }
-                switch maxStreams {
-                case .omitted: break
-                case .null: try c.encodeNil(forKey: .maxStreams)
-                case .value(let value): try c.encode(value, forKey: .maxStreams)
-                }
-                try c.encodeIfPresent(self.allow, forKey: .allow)
-                try c.encodeIfPresent(self.deny, forKey: .deny)
-            }
-            public struct Libraries: Codable, Sendable, Hashable {
-                public var all: Bool
-                public var ids: [String]
-                public init(all: Bool, ids: [String]) {
-                    self.all = all
-                    self.ids = ids
-                }
-            }
-        }
-        public struct FromGroups: Codable, Sendable, Hashable {
-            public var libraries: AdminUser.Access.FromGroups.Libraries
-            public var maxBitrate: Int?
-            public var transcode: Bool
-            public var requestLimit: RequestQuota?
-            public var maxStreams: Int?
-            public var permissions: [String]
-            public init(libraries: AdminUser.Access.FromGroups.Libraries, maxBitrate: Int?, transcode: Bool, requestLimit: RequestQuota?, maxStreams: Int?, permissions: [String]) {
-                self.libraries = libraries
-                self.maxBitrate = maxBitrate
-                self.transcode = transcode
-                self.requestLimit = requestLimit
-                self.maxStreams = maxStreams
-                self.permissions = permissions
-            }
-            public func encode(to encoder: any Encoder) throws {
-                var c = encoder.container(keyedBy: CodingKeys.self)
-                try c.encode(self.libraries, forKey: .libraries)
-                try c.encode(self.maxBitrate, forKey: .maxBitrate)
-                try c.encode(self.transcode, forKey: .transcode)
-                try c.encode(self.requestLimit, forKey: .requestLimit)
-                try c.encode(self.maxStreams, forKey: .maxStreams)
-                try c.encode(self.permissions, forKey: .permissions)
-            }
-            public struct Libraries: Codable, Sendable, Hashable {
-                public var all: Bool
-                public var ids: [String]
-                public init(all: Bool, ids: [String]) {
-                    self.all = all
-                    self.ids = ids
-                }
-            }
-        }
-        public struct Effective: Codable, Sendable, Hashable {
-            public var libraries: AdminUser.Access.Effective.Libraries
-            public var maxBitrate: Int?
-            public var transcode: Bool
-            public var requestLimit: RequestQuota?
-            public var maxStreams: Int?
-            public var permissions: [String]
-            public init(libraries: AdminUser.Access.Effective.Libraries, maxBitrate: Int?, transcode: Bool, requestLimit: RequestQuota?, maxStreams: Int?, permissions: [String]) {
-                self.libraries = libraries
-                self.maxBitrate = maxBitrate
-                self.transcode = transcode
-                self.requestLimit = requestLimit
-                self.maxStreams = maxStreams
-                self.permissions = permissions
-            }
-            public func encode(to encoder: any Encoder) throws {
-                var c = encoder.container(keyedBy: CodingKeys.self)
-                try c.encode(self.libraries, forKey: .libraries)
-                try c.encode(self.maxBitrate, forKey: .maxBitrate)
-                try c.encode(self.transcode, forKey: .transcode)
-                try c.encode(self.requestLimit, forKey: .requestLimit)
-                try c.encode(self.maxStreams, forKey: .maxStreams)
-                try c.encode(self.permissions, forKey: .permissions)
-            }
-            public struct Libraries: Codable, Sendable, Hashable {
-                public var all: Bool
-                public var ids: [String]
-                public init(all: Bool, ids: [String]) {
-                    self.all = all
-                    self.ids = ids
-                }
             }
         }
     }
@@ -6920,10 +6955,10 @@ public struct AdminGroupsListOutput: Codable, Sendable, Hashable {
     public var name: String
     public var everyone: Bool
     public var providerGroup: String?
-    public var policy: AdminGroupsListOutput.Policy
+    public var policy: AccessPolicy
     public var members: Int
     public var createdAt: String
-    public init(id: String, name: String, everyone: Bool, providerGroup: String?, policy: AdminGroupsListOutput.Policy, members: Int, createdAt: String) {
+    public init(id: String, name: String, everyone: Bool, providerGroup: String?, policy: AccessPolicy, members: Int, createdAt: String) {
         self.id = id
         self.name = name
         self.everyone = everyone
@@ -6942,46 +6977,13 @@ public struct AdminGroupsListOutput: Codable, Sendable, Hashable {
         try c.encode(self.members, forKey: .members)
         try c.encode(self.createdAt, forKey: .createdAt)
     }
-    public struct Policy: Codable, Sendable, Hashable {
-        public var libraries: AdminGroupsListOutput.Policy.Libraries
-        public var maxBitrate: Int?
-        public var transcode: Bool
-        public var requestLimit: RequestQuota?
-        public var maxStreams: Int?
-        public var permissions: [String]
-        public init(libraries: AdminGroupsListOutput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, requestLimit: RequestQuota?, maxStreams: Int?, permissions: [String]) {
-            self.libraries = libraries
-            self.maxBitrate = maxBitrate
-            self.transcode = transcode
-            self.requestLimit = requestLimit
-            self.maxStreams = maxStreams
-            self.permissions = permissions
-        }
-        public func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(self.libraries, forKey: .libraries)
-            try c.encode(self.maxBitrate, forKey: .maxBitrate)
-            try c.encode(self.transcode, forKey: .transcode)
-            try c.encode(self.requestLimit, forKey: .requestLimit)
-            try c.encode(self.maxStreams, forKey: .maxStreams)
-            try c.encode(self.permissions, forKey: .permissions)
-        }
-        public struct Libraries: Codable, Sendable, Hashable {
-            public var all: Bool
-            public var ids: [String]
-            public init(all: Bool, ids: [String]) {
-                self.all = all
-                self.ids = ids
-            }
-        }
-    }
 }
 
 public struct AdminGroupsCreateInput: Codable, Sendable, Hashable {
     public var name: String
     public var providerGroup: String?
-    public var policy: AdminGroupsCreateInput.Policy
-    public init(name: String, providerGroup: String?, policy: AdminGroupsCreateInput.Policy) {
+    public var policy: AccessPolicy
+    public init(name: String, providerGroup: String?, policy: AccessPolicy) {
         self.name = name
         self.providerGroup = providerGroup
         self.policy = policy
@@ -6991,39 +6993,6 @@ public struct AdminGroupsCreateInput: Codable, Sendable, Hashable {
         try c.encode(self.name, forKey: .name)
         try c.encode(self.providerGroup, forKey: .providerGroup)
         try c.encode(self.policy, forKey: .policy)
-    }
-    public struct Policy: Codable, Sendable, Hashable {
-        public var libraries: AdminGroupsCreateInput.Policy.Libraries
-        public var maxBitrate: Int?
-        public var transcode: Bool
-        public var requestLimit: RequestQuota?
-        public var maxStreams: Int?
-        public var permissions: [String]
-        public init(libraries: AdminGroupsCreateInput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, requestLimit: RequestQuota?, maxStreams: Int?, permissions: [String]) {
-            self.libraries = libraries
-            self.maxBitrate = maxBitrate
-            self.transcode = transcode
-            self.requestLimit = requestLimit
-            self.maxStreams = maxStreams
-            self.permissions = permissions
-        }
-        public func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(self.libraries, forKey: .libraries)
-            try c.encode(self.maxBitrate, forKey: .maxBitrate)
-            try c.encode(self.transcode, forKey: .transcode)
-            try c.encode(self.requestLimit, forKey: .requestLimit)
-            try c.encode(self.maxStreams, forKey: .maxStreams)
-            try c.encode(self.permissions, forKey: .permissions)
-        }
-        public struct Libraries: Codable, Sendable, Hashable {
-            public var all: Bool
-            public var ids: [String]
-            public init(all: Bool, ids: [String]) {
-                self.all = all
-                self.ids = ids
-            }
-        }
     }
 }
 
@@ -7032,10 +7001,10 @@ public struct AdminGroupsCreateOutput: Codable, Sendable, Hashable {
     public var name: String
     public var everyone: Bool
     public var providerGroup: String?
-    public var policy: AdminGroupsCreateOutput.Policy
+    public var policy: AccessPolicy
     public var members: Int
     public var createdAt: String
-    public init(id: String, name: String, everyone: Bool, providerGroup: String?, policy: AdminGroupsCreateOutput.Policy, members: Int, createdAt: String) {
+    public init(id: String, name: String, everyone: Bool, providerGroup: String?, policy: AccessPolicy, members: Int, createdAt: String) {
         self.id = id
         self.name = name
         self.everyone = everyone
@@ -7054,46 +7023,13 @@ public struct AdminGroupsCreateOutput: Codable, Sendable, Hashable {
         try c.encode(self.members, forKey: .members)
         try c.encode(self.createdAt, forKey: .createdAt)
     }
-    public struct Policy: Codable, Sendable, Hashable {
-        public var libraries: AdminGroupsCreateOutput.Policy.Libraries
-        public var maxBitrate: Int?
-        public var transcode: Bool
-        public var requestLimit: RequestQuota?
-        public var maxStreams: Int?
-        public var permissions: [String]
-        public init(libraries: AdminGroupsCreateOutput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, requestLimit: RequestQuota?, maxStreams: Int?, permissions: [String]) {
-            self.libraries = libraries
-            self.maxBitrate = maxBitrate
-            self.transcode = transcode
-            self.requestLimit = requestLimit
-            self.maxStreams = maxStreams
-            self.permissions = permissions
-        }
-        public func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(self.libraries, forKey: .libraries)
-            try c.encode(self.maxBitrate, forKey: .maxBitrate)
-            try c.encode(self.transcode, forKey: .transcode)
-            try c.encode(self.requestLimit, forKey: .requestLimit)
-            try c.encode(self.maxStreams, forKey: .maxStreams)
-            try c.encode(self.permissions, forKey: .permissions)
-        }
-        public struct Libraries: Codable, Sendable, Hashable {
-            public var all: Bool
-            public var ids: [String]
-            public init(all: Bool, ids: [String]) {
-                self.all = all
-                self.ids = ids
-            }
-        }
-    }
 }
 
 public struct AdminGroupsUpdateInput: Codable, Sendable, Hashable {
     public var name: String
     public var providerGroup: String?
-    public var policy: AdminGroupsUpdateInput.Policy
-    public init(name: String, providerGroup: String?, policy: AdminGroupsUpdateInput.Policy) {
+    public var policy: AccessPolicy
+    public init(name: String, providerGroup: String?, policy: AccessPolicy) {
         self.name = name
         self.providerGroup = providerGroup
         self.policy = policy
@@ -7103,39 +7039,6 @@ public struct AdminGroupsUpdateInput: Codable, Sendable, Hashable {
         try c.encode(self.name, forKey: .name)
         try c.encode(self.providerGroup, forKey: .providerGroup)
         try c.encode(self.policy, forKey: .policy)
-    }
-    public struct Policy: Codable, Sendable, Hashable {
-        public var libraries: AdminGroupsUpdateInput.Policy.Libraries
-        public var maxBitrate: Int?
-        public var transcode: Bool
-        public var requestLimit: RequestQuota?
-        public var maxStreams: Int?
-        public var permissions: [String]
-        public init(libraries: AdminGroupsUpdateInput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, requestLimit: RequestQuota?, maxStreams: Int?, permissions: [String]) {
-            self.libraries = libraries
-            self.maxBitrate = maxBitrate
-            self.transcode = transcode
-            self.requestLimit = requestLimit
-            self.maxStreams = maxStreams
-            self.permissions = permissions
-        }
-        public func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(self.libraries, forKey: .libraries)
-            try c.encode(self.maxBitrate, forKey: .maxBitrate)
-            try c.encode(self.transcode, forKey: .transcode)
-            try c.encode(self.requestLimit, forKey: .requestLimit)
-            try c.encode(self.maxStreams, forKey: .maxStreams)
-            try c.encode(self.permissions, forKey: .permissions)
-        }
-        public struct Libraries: Codable, Sendable, Hashable {
-            public var all: Bool
-            public var ids: [String]
-            public init(all: Bool, ids: [String]) {
-                self.all = all
-                self.ids = ids
-            }
-        }
     }
 }
 
@@ -7144,10 +7047,10 @@ public struct AdminGroupsUpdateOutput: Codable, Sendable, Hashable {
     public var name: String
     public var everyone: Bool
     public var providerGroup: String?
-    public var policy: AdminGroupsUpdateOutput.Policy
+    public var policy: AccessPolicy
     public var members: Int
     public var createdAt: String
-    public init(id: String, name: String, everyone: Bool, providerGroup: String?, policy: AdminGroupsUpdateOutput.Policy, members: Int, createdAt: String) {
+    public init(id: String, name: String, everyone: Bool, providerGroup: String?, policy: AccessPolicy, members: Int, createdAt: String) {
         self.id = id
         self.name = name
         self.everyone = everyone
@@ -7165,39 +7068,6 @@ public struct AdminGroupsUpdateOutput: Codable, Sendable, Hashable {
         try c.encode(self.policy, forKey: .policy)
         try c.encode(self.members, forKey: .members)
         try c.encode(self.createdAt, forKey: .createdAt)
-    }
-    public struct Policy: Codable, Sendable, Hashable {
-        public var libraries: AdminGroupsUpdateOutput.Policy.Libraries
-        public var maxBitrate: Int?
-        public var transcode: Bool
-        public var requestLimit: RequestQuota?
-        public var maxStreams: Int?
-        public var permissions: [String]
-        public init(libraries: AdminGroupsUpdateOutput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, requestLimit: RequestQuota?, maxStreams: Int?, permissions: [String]) {
-            self.libraries = libraries
-            self.maxBitrate = maxBitrate
-            self.transcode = transcode
-            self.requestLimit = requestLimit
-            self.maxStreams = maxStreams
-            self.permissions = permissions
-        }
-        public func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(self.libraries, forKey: .libraries)
-            try c.encode(self.maxBitrate, forKey: .maxBitrate)
-            try c.encode(self.transcode, forKey: .transcode)
-            try c.encode(self.requestLimit, forKey: .requestLimit)
-            try c.encode(self.maxStreams, forKey: .maxStreams)
-            try c.encode(self.permissions, forKey: .permissions)
-        }
-        public struct Libraries: Codable, Sendable, Hashable {
-            public var all: Bool
-            public var ids: [String]
-            public init(all: Bool, ids: [String]) {
-                self.all = all
-                self.ids = ids
-            }
-        }
     }
 }
 
@@ -7237,77 +7107,10 @@ public struct AdminUsersSetRoleInput: Codable, Sendable, Hashable {
 
 public struct AdminUsersSetAccessInput: Codable, Sendable, Hashable {
     public var groupIds: [String]
-    public var override: AdminUsersSetAccessInput.Override
-    public init(groupIds: [String], override: AdminUsersSetAccessInput.Override) {
+    public var override: AccessOverride
+    public init(groupIds: [String], override: AccessOverride) {
         self.groupIds = groupIds
         self.override = override
-    }
-    public struct Override: Codable, Sendable, Hashable {
-        public var libraries: AdminUsersSetAccessInput.Override.Libraries?
-        public var maxBitrate: Explicit<Int>
-        public var transcode: Bool?
-        public var requestLimit: Explicit<RequestQuota>
-        public var maxStreams: Explicit<Int>
-        public var allow: [String]?
-        public var deny: [String]?
-        public init(libraries: AdminUsersSetAccessInput.Override.Libraries? = nil, maxBitrate: Explicit<Int> = .omitted, transcode: Bool? = nil, requestLimit: Explicit<RequestQuota> = .omitted, maxStreams: Explicit<Int> = .omitted, allow: [String]? = nil, deny: [String]? = nil) {
-            self.libraries = libraries
-            self.maxBitrate = maxBitrate
-            self.transcode = transcode
-            self.requestLimit = requestLimit
-            self.maxStreams = maxStreams
-            self.allow = allow
-            self.deny = deny
-        }
-        private enum CodingKeys: String, CodingKey {
-            case libraries = "libraries"
-            case maxBitrate = "maxBitrate"
-            case transcode = "transcode"
-            case requestLimit = "requestLimit"
-            case maxStreams = "maxStreams"
-            case allow = "allow"
-            case deny = "deny"
-        }
-        public init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            self.libraries = try c.decodeIfPresent(AdminUsersSetAccessInput.Override.Libraries.self, forKey: .libraries)
-            self.maxBitrate = try !c.contains(.maxBitrate) ? .omitted : c.decodeNil(forKey: .maxBitrate) ? .null : .value(c.decode(Int.self, forKey: .maxBitrate))
-            self.transcode = try c.decodeIfPresent(Bool.self, forKey: .transcode)
-            self.requestLimit = try !c.contains(.requestLimit) ? .omitted : c.decodeNil(forKey: .requestLimit) ? .null : .value(c.decode(RequestQuota.self, forKey: .requestLimit))
-            self.maxStreams = try !c.contains(.maxStreams) ? .omitted : c.decodeNil(forKey: .maxStreams) ? .null : .value(c.decode(Int.self, forKey: .maxStreams))
-            self.allow = try c.decodeIfPresent([String].self, forKey: .allow)
-            self.deny = try c.decodeIfPresent([String].self, forKey: .deny)
-        }
-        public func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encodeIfPresent(self.libraries, forKey: .libraries)
-            switch maxBitrate {
-            case .omitted: break
-            case .null: try c.encodeNil(forKey: .maxBitrate)
-            case .value(let value): try c.encode(value, forKey: .maxBitrate)
-            }
-            try c.encodeIfPresent(self.transcode, forKey: .transcode)
-            switch requestLimit {
-            case .omitted: break
-            case .null: try c.encodeNil(forKey: .requestLimit)
-            case .value(let value): try c.encode(value, forKey: .requestLimit)
-            }
-            switch maxStreams {
-            case .omitted: break
-            case .null: try c.encodeNil(forKey: .maxStreams)
-            case .value(let value): try c.encode(value, forKey: .maxStreams)
-            }
-            try c.encodeIfPresent(self.allow, forKey: .allow)
-            try c.encodeIfPresent(self.deny, forKey: .deny)
-        }
-        public struct Libraries: Codable, Sendable, Hashable {
-            public var all: Bool
-            public var ids: [String]
-            public init(all: Bool, ids: [String]) {
-                self.all = all
-                self.ids = ids
-            }
-        }
     }
 }
 

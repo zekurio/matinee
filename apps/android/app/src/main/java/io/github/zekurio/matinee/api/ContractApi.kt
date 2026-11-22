@@ -1818,7 +1818,7 @@ class AdminGroupsApi internal constructor(private val transport: ApiTransport) {
     suspend fun create(
         name: String,
         providerGroup: String?,
-        policy: AdminGroupsCreateInput.Policy,
+        policy: AccessPolicy,
     ): AdminGroupsCreateOutput =
         transport.call(
             "POST",
@@ -1833,7 +1833,7 @@ class AdminGroupsApi internal constructor(private val transport: ApiTransport) {
         id: String,
         name: String,
         providerGroup: String?,
-        policy: AdminGroupsUpdateInput.Policy,
+        policy: AccessPolicy,
     ): AdminGroupsUpdateOutput =
         transport.call(
             "PUT",
@@ -2061,11 +2061,7 @@ class AdminUsersApi internal constructor(private val transport: ApiTransport) {
         )
 
     /** The account needs the `adminUser.update` permission, and so does an API token. `PUT /admin/users/{id}/access` */
-    suspend fun setAccess(
-        id: String,
-        groupIds: List<String>,
-        override: AdminUsersSetAccessInput.Override,
-    ): AdminUser =
+    suspend fun setAccess(id: String, groupIds: List<String>, override: AccessOverride): AdminUser =
         transport.call(
             "PUT",
             listOf("admin", "users", id, "access"),

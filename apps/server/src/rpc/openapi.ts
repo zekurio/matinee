@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto"
 
 import {
+  AccessLevel,
+  AccessOverride,
+  AccessPolicy,
+  ManagedAccess,
+  RequestMode,
   CatalogRef,
   DeclineReason,
   WaitingDeclineReason,
@@ -329,6 +334,11 @@ const commonSchemas = {
   DeclineReason: output(DeclineReason),
   WaitingDeclineReason: output(WaitingDeclineReason),
   RequestQuota: output(RequestQuota),
+  RequestMode: output(RequestMode),
+  AccessLevel: output(AccessLevel),
+  ManagedAccess: output(ManagedAccess),
+  AccessPolicy: output(AccessPolicy),
+  AccessOverride: output(AccessOverride),
   Availability: output(Availability),
   SeasonAvailability: output(SeasonAvailability),
   ShowScope: output(ShowScope),

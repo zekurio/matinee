@@ -48,6 +48,78 @@ data class RequestQuota(
     val days: Int,
 )
 
+object RequestMode {
+    const val OFF = "off"
+    const val ASK = "ask"
+    const val ADD = "add"
+    val all = listOf(OFF, ASK, ADD)
+}
+
+object AccessLevel {
+    const val NONE = "none"
+    const val VIEW = "view"
+    const val MANAGE = "manage"
+    val all = listOf(NONE, VIEW, MANAGE)
+}
+
+@Serializable
+data class ManagedAccess(
+    val requests: String,
+    val connections: String,
+    val libraries: String,
+    val metadata: String,
+    val users: String,
+    val server: String,
+)
+
+@Serializable
+data class AccessPolicy(
+    val libraries: AccessPolicy.Libraries,
+    val maxBitrate: Int?,
+    val transcode: Boolean,
+    val maxStreams: Int?,
+    val downloads: Boolean,
+    val requests: String,
+    val requestLimit: RequestQuota?,
+    val apiTokens: Boolean,
+    val manages: ManagedAccess,
+) {
+    @Serializable
+    data class Libraries(
+        val all: Boolean,
+        val ids: List<String>,
+    )
+}
+
+@Serializable
+data class AccessOverride(
+    val libraries: AccessOverride.Libraries? = null,
+    val maxBitrate: Explicit<Int>? = null,
+    val transcode: Boolean? = null,
+    val maxStreams: Explicit<Int>? = null,
+    val downloads: Boolean? = null,
+    val requests: String? = null,
+    val requestLimit: Explicit<RequestQuota>? = null,
+    val apiTokens: Boolean? = null,
+    val manages: AccessOverride.Manages? = null,
+) {
+    @Serializable
+    data class Libraries(
+        val all: Boolean,
+        val ids: List<String>,
+    )
+
+    @Serializable
+    data class Manages(
+        val requests: String? = null,
+        val connections: String? = null,
+        val libraries: String? = null,
+        val metadata: String? = null,
+        val users: String? = null,
+        val server: String? = null,
+    )
+}
+
 @Serializable
 data class Availability(
     val state: String,
@@ -1484,10 +1556,10 @@ data class AdminUser(
     @Serializable
     data class Access(
         val groups: List<AdminUser.Access.Group>,
-        val override: AdminUser.Access.Override,
+        val override: AccessOverride,
         val overrideSource: String,
-        val fromGroups: AdminUser.Access.FromGroups,
-        val effective: AdminUser.Access.Effective,
+        val fromGroups: AccessPolicy,
+        val effective: AccessPolicy,
     ) {
         @Serializable
         data class Group(
@@ -1495,55 +1567,6 @@ data class AdminUser(
             val name: String,
             val source: String,
         )
-
-        @Serializable
-        data class Override(
-            val libraries: AdminUser.Access.Override.Libraries? = null,
-            val maxBitrate: Explicit<Int>? = null,
-            val transcode: Boolean? = null,
-            val requestLimit: Explicit<RequestQuota>? = null,
-            val maxStreams: Explicit<Int>? = null,
-            val allow: List<String>? = null,
-            val deny: List<String>? = null,
-        ) {
-            @Serializable
-            data class Libraries(
-                val all: Boolean,
-                val ids: List<String>,
-            )
-        }
-
-        @Serializable
-        data class FromGroups(
-            val libraries: AdminUser.Access.FromGroups.Libraries,
-            val maxBitrate: Int?,
-            val transcode: Boolean,
-            val requestLimit: RequestQuota?,
-            val maxStreams: Int?,
-            val permissions: List<String>,
-        ) {
-            @Serializable
-            data class Libraries(
-                val all: Boolean,
-                val ids: List<String>,
-            )
-        }
-
-        @Serializable
-        data class Effective(
-            val libraries: AdminUser.Access.Effective.Libraries,
-            val maxBitrate: Int?,
-            val transcode: Boolean,
-            val requestLimit: RequestQuota?,
-            val maxStreams: Int?,
-            val permissions: List<String>,
-        ) {
-            @Serializable
-            data class Libraries(
-                val all: Boolean,
-                val ids: List<String>,
-            )
-        }
     }
 }
 
@@ -3451,49 +3474,17 @@ data class AdminGroupsListOutput(
     val name: String,
     val everyone: Boolean,
     val providerGroup: String?,
-    val policy: AdminGroupsListOutput.Policy,
+    val policy: AccessPolicy,
     val members: Int,
     val createdAt: String,
-) {
-    @Serializable
-    data class Policy(
-        val libraries: AdminGroupsListOutput.Policy.Libraries,
-        val maxBitrate: Int?,
-        val transcode: Boolean,
-        val requestLimit: RequestQuota?,
-        val maxStreams: Int?,
-        val permissions: List<String>,
-    ) {
-        @Serializable
-        data class Libraries(
-            val all: Boolean,
-            val ids: List<String>,
-        )
-    }
-}
+)
 
 @Serializable
 data class AdminGroupsCreateInput(
     val name: String,
     val providerGroup: String?,
-    val policy: AdminGroupsCreateInput.Policy,
-) {
-    @Serializable
-    data class Policy(
-        val libraries: AdminGroupsCreateInput.Policy.Libraries,
-        val maxBitrate: Int?,
-        val transcode: Boolean,
-        val requestLimit: RequestQuota?,
-        val maxStreams: Int?,
-        val permissions: List<String>,
-    ) {
-        @Serializable
-        data class Libraries(
-            val all: Boolean,
-            val ids: List<String>,
-        )
-    }
-}
+    val policy: AccessPolicy,
+)
 
 @Serializable
 data class AdminGroupsCreateOutput(
@@ -3501,49 +3492,17 @@ data class AdminGroupsCreateOutput(
     val name: String,
     val everyone: Boolean,
     val providerGroup: String?,
-    val policy: AdminGroupsCreateOutput.Policy,
+    val policy: AccessPolicy,
     val members: Int,
     val createdAt: String,
-) {
-    @Serializable
-    data class Policy(
-        val libraries: AdminGroupsCreateOutput.Policy.Libraries,
-        val maxBitrate: Int?,
-        val transcode: Boolean,
-        val requestLimit: RequestQuota?,
-        val maxStreams: Int?,
-        val permissions: List<String>,
-    ) {
-        @Serializable
-        data class Libraries(
-            val all: Boolean,
-            val ids: List<String>,
-        )
-    }
-}
+)
 
 @Serializable
 data class AdminGroupsUpdateInput(
     val name: String,
     val providerGroup: String?,
-    val policy: AdminGroupsUpdateInput.Policy,
-) {
-    @Serializable
-    data class Policy(
-        val libraries: AdminGroupsUpdateInput.Policy.Libraries,
-        val maxBitrate: Int?,
-        val transcode: Boolean,
-        val requestLimit: RequestQuota?,
-        val maxStreams: Int?,
-        val permissions: List<String>,
-    ) {
-        @Serializable
-        data class Libraries(
-            val all: Boolean,
-            val ids: List<String>,
-        )
-    }
-}
+    val policy: AccessPolicy,
+)
 
 @Serializable
 data class AdminGroupsUpdateOutput(
@@ -3551,26 +3510,10 @@ data class AdminGroupsUpdateOutput(
     val name: String,
     val everyone: Boolean,
     val providerGroup: String?,
-    val policy: AdminGroupsUpdateOutput.Policy,
+    val policy: AccessPolicy,
     val members: Int,
     val createdAt: String,
-) {
-    @Serializable
-    data class Policy(
-        val libraries: AdminGroupsUpdateOutput.Policy.Libraries,
-        val maxBitrate: Int?,
-        val transcode: Boolean,
-        val requestLimit: RequestQuota?,
-        val maxStreams: Int?,
-        val permissions: List<String>,
-    ) {
-        @Serializable
-        data class Libraries(
-            val all: Boolean,
-            val ids: List<String>,
-        )
-    }
-}
+)
 
 @Serializable
 data class AdminGroupsProviderGroupsOutput(
@@ -3598,25 +3541,8 @@ data class AdminUsersSetRoleInput(
 @Serializable
 data class AdminUsersSetAccessInput(
     val groupIds: List<String>,
-    val override: AdminUsersSetAccessInput.Override,
-) {
-    @Serializable
-    data class Override(
-        val libraries: AdminUsersSetAccessInput.Override.Libraries? = null,
-        val maxBitrate: Explicit<Int>? = null,
-        val transcode: Boolean? = null,
-        val requestLimit: Explicit<RequestQuota>? = null,
-        val maxStreams: Explicit<Int>? = null,
-        val allow: List<String>? = null,
-        val deny: List<String>? = null,
-    ) {
-        @Serializable
-        data class Libraries(
-            val all: Boolean,
-            val ids: List<String>,
-        )
-    }
-}
+    val override: AccessOverride,
+)
 
 @Serializable
 data class AdminUsersSignOutOutput(

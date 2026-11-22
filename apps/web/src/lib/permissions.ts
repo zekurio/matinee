@@ -49,39 +49,10 @@ export function withPermissions(
   )
 }
 
-/**
- * Asking for titles as one choice, the way a form offers it: not at all,
- * with an approval, or added right away. It stands for `request.create`
- * and `request.autoApprove`.
- */
-export type RequestsChoice = "off" | "ask" | "add"
-export const REQUESTS_CHOICES: readonly RequestsChoice[] = ["off", "ask", "add"]
-
-/** The two permissions a request choice stands for. */
-export const REQUEST_PERMISSIONS: readonly Permission[] = [
-  "request.create",
-  "request.autoApprove",
-]
-
-/** The permissions the access forms give a control of their own. */
-export const POLICY_PERMISSIONS: readonly Permission[] = [
-  "media.download",
-  "request.create",
-  "request.autoApprove",
-]
-
-export function requestsOf(permissions: readonly Permission[]): RequestsChoice {
-  if (!holdsPermission(permissions, "request.create")) return "off"
-  return holdsPermission(permissions, "request.autoApprove") ? "add" : "ask"
-}
-
-export function withRequests(
+/** Whether the account holds every one of `permissions`. */
+export function canAll(
+  user: Pick<User, "permissions">,
   permissions: readonly Permission[],
-  choice: RequestsChoice,
-): Permission[] {
-  return withPermissions(
-    withPermissions(permissions, ["request.create"], choice !== "off"),
-    ["request.autoApprove"],
-    choice === "add",
-  )
+): boolean {
+  return permissions.every((permission) => can(user, permission))
 }

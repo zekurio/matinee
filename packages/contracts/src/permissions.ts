@@ -7,13 +7,15 @@ import { t } from "./schema"
  * in `contract-routes.ts`, and a procedure that names none takes `all`.
  *
  * An account holds `BASE_PERMISSIONS` whatever its groups say, the ones
- * its access groups grant, see `access.ts`, and `all` when it is an
- * admin. An API token holds what its owner picked, and never widens the
+ * its capabilities grant, see `permissionsOf` in `access.ts`, and `all`
+ * when it is an admin. Groups and accounts never list permissions; only
+ * an API token does. It holds what its owner picked, and never widens the
  * account: a request made with one needs the permission from both. The
  * `admin` resources name what the same procedure does to other accounts.
  *
  * Sorted by resource. Add a permission where its resource sits, and to
- * `BASE_PERMISSIONS` when every account has it.
+ * `BASE_PERMISSIONS` when every account has it, or else to the capability
+ * that grants it: `AREA_PERMISSIONS` or `permissionsOf` in `access.ts`.
  */
 export const PERMISSIONS = [
   "all",
@@ -40,8 +42,8 @@ export const PERMISSIONS = [
   "adminUser.delete",
 
   /**
-   * The account's API tokens. Groups grant `create`; an account always
-   * sees, changes, and revokes the ones it has.
+   * The account's API tokens. The `apiTokens` capability grants `create`;
+   * an account always sees, changes, and revokes the ones it has.
    */
   "apiToken.create",
   "apiToken.read",
@@ -215,16 +217,6 @@ export const BASE_PERMISSIONS: readonly Permission[] = [
   "watchState.read",
   "watchState.update",
 ]
-
-/**
- * What an access group can grant its members, and an account's override
- * allow or deny: everything but `all`, which is the admin role's, and
- * what every account has anyway.
- */
-export const GRANTABLE_PERMISSIONS: readonly Permission[] = PERMISSIONS.filter(
-  (permission) =>
-    permission !== "all" && !BASE_PERMISSIONS.includes(permission),
-)
 
 /**
  * Whether an account that was granted `granted` holds `permission`. The

@@ -709,10 +709,10 @@ public struct AdminGroupsApi: Sendable {
     public func list() async throws -> [AdminGroupsListOutput] {
         return try await transport.call(method: "GET", path: ["admin", "groups"], query: [], body: nil)
     }
-    public func create(name: String, providerGroup: String?, policy: AdminGroupsCreateInput.Policy) async throws -> AdminGroupsCreateOutput {
+    public func create(name: String, providerGroup: String?, policy: AccessPolicy) async throws -> AdminGroupsCreateOutput {
         return try await transport.call(method: "POST", path: ["admin", "groups"], query: [], body: try transport.json(AdminGroupsCreateInput(name: name, providerGroup: providerGroup, policy: policy)))
     }
-    public func update(id: String, name: String, providerGroup: String?, policy: AdminGroupsUpdateInput.Policy) async throws -> AdminGroupsUpdateOutput {
+    public func update(id: String, name: String, providerGroup: String?, policy: AccessPolicy) async throws -> AdminGroupsUpdateOutput {
         return try await transport.call(method: "PUT", path: ["admin", "groups", wireText(id)!], query: [], body: try transport.json(AdminGroupsUpdateInput(name: name, providerGroup: providerGroup, policy: policy)))
     }
     public func remove(id: String) async throws {
@@ -809,7 +809,7 @@ public struct AdminUsersApi: Sendable {
     public func setRole(id: String, role: String) async throws -> AdminUser {
         return try await transport.call(method: "PUT", path: ["admin", "users", wireText(id)!, "role"], query: [], body: try transport.json(AdminUsersSetRoleInput(role: role)))
     }
-    public func setAccess(id: String, groupIds: [String], override: AdminUsersSetAccessInput.Override) async throws -> AdminUser {
+    public func setAccess(id: String, groupIds: [String], override: AccessOverride) async throws -> AdminUser {
         return try await transport.call(method: "PUT", path: ["admin", "users", wireText(id)!, "access"], query: [], body: try transport.json(AdminUsersSetAccessInput(groupIds: groupIds, override: override)))
     }
     public func remove(id: String) async throws {

@@ -34,7 +34,6 @@ export default {
     one: "{count} Gerät gleichzeitig",
     other: "{count} Geräte gleichzeitig",
   }),
-  "access.streams.hint": "Wie viele Geräte gleichzeitig abspielen dürfen.",
   "access.requests": "Anfragen",
   "access.requests.off": "Aus",
   "access.requests.ask": "Freigabe nötig",
@@ -62,13 +61,8 @@ export default {
   "access.permissions": "Berechtigungen",
   "access.permissions.search": "Berechtigungen durchsuchen",
   "access.permissions.noMatch": "Keine Berechtigung passt.",
-  "access.permissions.count": plural({
-    one: "{count} weitere Berechtigung",
-    other: "{count} weitere Berechtigungen",
-  }),
   "access.permissions.all": "Jede Berechtigung",
-  "access.permissions.groupHint":
-    "Teile der Serververwaltung, die Mitglieder übernehmen, etwa Anfragen freigeben oder Mediatheken scannen. Ein Konto hat jede Berechtigung, die eine seiner Gruppen vergibt.",
+  "access.permissions.allHint": "Admins dürfen alles.",
   "access.permissions.ownOnly":
     "Du kannst nur Berechtigungen vergeben oder entziehen, die du selbst hast.",
   "access.permission.account": "Profil, Bild und Einstellungen des Kontos.",
@@ -117,13 +111,51 @@ export default {
   "access.permission.trickplaySettings": "Trickplay-Einstellungen.",
   "access.permission.watchState":
     "Fortschritt, Gesehen-Markierungen, Weiterschauen und Als Nächstes.",
+  "access.section.watching": "Schauen",
+  "access.section.requests": "Anfragen",
+  "access.section.api": "API",
+  "access.section.server": "Server verwalten",
+  "access.section.serverHint":
+    "Teile der Serververwaltung, die Mitglieder übernehmen. Ansehen lässt sie hineinschauen, Verwalten auch ändern.",
+  "access.apiTokens": "API-Tokens",
+  "access.apiTokens.on": "Darf API-Tokens erstellen",
+  "access.apiTokens.hint":
+    "Tokens für Skripte und Dienste, die die API als das Konto nutzen.",
+  "access.area.requests": "Anfragenliste",
+  "access.area.requests.hint":
+    "Die Anfragen aller: freigeben, ablehnen, erneut versuchen.",
+  "access.area.connections": "Verbindungen",
+  "access.area.connections.hint":
+    "Radarr, Sonarr und die Regeln, die Anfragen an sie schicken.",
+  "access.area.libraries": "Mediatheken",
+  "access.area.libraries.hint":
+    "Mediatheken hinzufügen, ändern, scannen und löschen.",
+  "access.area.metadata": "Metadaten",
+  "access.area.metadata.hint":
+    "Zuordnungen korrigieren, Metadaten aktualisieren, Bilder setzen.",
+  "access.area.users": "Benutzer und Gruppen",
+  "access.area.users.hint":
+    "Konten, Zugriffsgruppen, Einladungen und wer gerade schaut.",
+  "access.area.server": "Servereinstellungen",
+  "access.area.server.hint":
+    "Transkodierung, Trickplay, Netzwerk, Branding und die Jobs.",
+  "access.level.none": "Kein Zugriff",
+  "access.level.view": "Ansehen",
+  "access.level.manage": "Verwalten",
+  "access.level.on": "An",
+  "access.level.off": "Aus",
+  "access.manages.count": plural({
+    one: "Verwaltet {count} Teil des Servers",
+    other: "Verwaltet {count} Teile des Servers",
+  }),
+  "access.manages.area": "{area}: {level}",
   "access.done": "Fertig",
   "access.retry": "Erneut versuchen",
 
   "access.groups.title": "Zugriffsgruppen",
   "access.groups.create": "Neue Gruppe",
   "access.groups.intro":
-    "Ein Konto bekommt das Meiste, was seine Gruppen erlauben, und jede Berechtigung, die eine von ihnen vergibt. Einstellungen unter Benutzer gehen vor. Admins haben keine Grenzen und jede Berechtigung.",
+    "Ein Konto bekommt das Meiste, was seine Gruppen erlauben. Einstellungen unter Benutzer gehen vor. Admins haben keine Grenzen und dürfen alles.",
   "access.groups.loadFailed":
     "Die Gruppen konnten nicht geladen werden. {error}",
   "access.groups.onlyEveryone":

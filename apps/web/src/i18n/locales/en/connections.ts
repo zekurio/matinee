@@ -27,6 +27,7 @@ export default defineMessages("connections", {
   "connections.deleted": "Deleted {name}",
 
   // Adding or editing a connection.
+  "connections.dialog.testFirst": "Test the connection to choose its defaults.",
   "connections.dialog.addTitle": "Add connection",
   "connections.dialog.editTitle": "Edit {name}",
   "connections.dialog.source": "Kind",

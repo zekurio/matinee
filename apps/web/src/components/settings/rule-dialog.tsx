@@ -13,13 +13,7 @@ import {
   AutocompleteItem,
   AutocompleteList,
 } from "@matinee/ui/components/autocomplete"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
+import { Dialog } from "@matinee/ui/components/dialog"
 import {
   Field,
   FieldDescription,
@@ -31,7 +25,7 @@ import { toast } from "@matinee/ui/components/sonner"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { XIcon } from "lucide-react"
-import { type ReactNode, useEffect, useId, useState } from "react"
+import { useEffect, useId, useState } from "react"
 
 import { ToggleChips } from "@/components/filters/filter-panel"
 import { tr } from "@/i18n"
@@ -46,6 +40,16 @@ import {
   sendValues,
   textOf,
 } from "./connection-fields"
+import {
+  FormColumn,
+  FormColumns,
+  FormDialogBody,
+  FormDialogContent,
+  FormDialogFooter,
+  FormDialogForm,
+  FormDialogHeader,
+  FormSection,
+} from "./form-dialog"
 
 type RuleValues = {
   users: string[]
@@ -94,10 +98,7 @@ export function RuleDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-xl"
-      >
+      <FormDialogContent width="lg">
         <RuleForm
           connection={connection}
           kind={kind}
@@ -106,17 +107,8 @@ export function RuleDialog({
           rule={rule}
           onDone={() => onOpenChange(false)}
         />
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
-  )
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-4">
-      <h3 className="text-sm font-semibold">{title}</h3>
-      {children}
-    </section>
   )
 }
 
@@ -179,126 +171,128 @@ function RuleForm({
 
   return (
     <form.AppForm>
-      <form
-        className="flex flex-col gap-7"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-lg leading-7 font-semibold">
-            {rule
+      <FormDialogForm onSubmit={() => void form.handleSubmit()}>
+        <FormDialogHeader
+          title={
+            rule
               ? tr("connections.rules.dialog.editTitle")
-              : tr("connections.rules.dialog.addTitle")}
-          </DialogTitle>
-        </DialogHeader>
+              : tr("connections.rules.dialog.addTitle")
+          }
+        />
 
-        <Section title={tr("connections.rules.conditions")}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel id={`${id}-users`}>
-                {tr("connections.rules.users")}
-              </FieldLabel>
-              <ToggleChips
-                labelId={`${id}-users`}
-                limit={12}
-                find={{
-                  placeholder: tr("connections.rules.users.find"),
-                  empty: tr("connections.field.findEmpty"),
-                }}
-                choices={(choices?.users ?? []).map((user) => ({
-                  value: user.id,
-                  label: user.name,
-                }))}
-                value={values.users}
-                onChange={(next) => form.setFieldValue("users", next)}
-              />
-            </Field>
-            {choices?.tmdb !== false && (
-              <Field>
-                <FieldLabel id={`${id}-genres`}>
-                  {tr("connections.rules.genres")}
-                </FieldLabel>
-                <ToggleChips
-                  labelId={`${id}-genres`}
-                  choices={(choices?.genres ?? []).map((genre) => ({
-                    value: String(genre.id),
-                    label: genre.name,
-                  }))}
-                  value={values.genres}
-                  onChange={(next) => form.setFieldValue("genres", next)}
-                />
-              </Field>
-            )}
-            <Field>
-              <FieldLabel id={`${id}-languages`}>
-                {tr("connections.rules.languages")}
-              </FieldLabel>
-              <ToggleChips
-                labelId={`${id}-languages`}
-                limit={12}
-                find={{
-                  placeholder: tr("connections.rules.languages.find"),
-                  empty: tr("connections.field.findEmpty"),
-                }}
-                choices={(choices?.languages ?? []).map((language) => ({
-                  value: language.id,
-                  label: language.name,
-                }))}
-                value={values.languages}
-                onChange={(next) => form.setFieldValue("languages", next)}
-              />
-            </Field>
-            {choices?.tmdb !== false ? (
-              <KeywordField
-                value={values.keywords}
-                onChange={(next) => form.setFieldValue("keywords", next)}
-              />
-            ) : (
-              <FieldDescription>
-                {tr("connections.rules.noTmdb")}
-              </FieldDescription>
-            )}
-          </FieldGroup>
-        </Section>
+        <FormDialogBody>
+          <FormColumns>
+            <FormColumn>
+              <FormSection title={tr("connections.rules.conditions")}>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel id={`${id}-users`}>
+                      {tr("connections.rules.users")}
+                    </FieldLabel>
+                    <ToggleChips
+                      labelId={`${id}-users`}
+                      limit={12}
+                      find={{
+                        placeholder: tr("connections.rules.users.find"),
+                        empty: tr("connections.field.findEmpty"),
+                      }}
+                      choices={(choices?.users ?? []).map((user) => ({
+                        value: user.id,
+                        label: user.name,
+                      }))}
+                      value={values.users}
+                      onChange={(next) => form.setFieldValue("users", next)}
+                    />
+                  </Field>
+                  {choices?.tmdb !== false && (
+                    <Field>
+                      <FieldLabel id={`${id}-genres`}>
+                        {tr("connections.rules.genres")}
+                      </FieldLabel>
+                      <ToggleChips
+                        labelId={`${id}-genres`}
+                        choices={(choices?.genres ?? []).map((genre) => ({
+                          value: String(genre.id),
+                          label: genre.name,
+                        }))}
+                        value={values.genres}
+                        onChange={(next) => form.setFieldValue("genres", next)}
+                      />
+                    </Field>
+                  )}
+                  <Field>
+                    <FieldLabel id={`${id}-languages`}>
+                      {tr("connections.rules.languages")}
+                    </FieldLabel>
+                    <ToggleChips
+                      labelId={`${id}-languages`}
+                      limit={12}
+                      find={{
+                        placeholder: tr("connections.rules.languages.find"),
+                        empty: tr("connections.field.findEmpty"),
+                      }}
+                      choices={(choices?.languages ?? []).map((language) => ({
+                        value: language.id,
+                        label: language.name,
+                      }))}
+                      value={values.languages}
+                      onChange={(next) => form.setFieldValue("languages", next)}
+                    />
+                  </Field>
+                  {choices?.tmdb !== false ? (
+                    <KeywordField
+                      value={values.keywords}
+                      onChange={(next) => form.setFieldValue("keywords", next)}
+                    />
+                  ) : (
+                    <FieldDescription>
+                      {tr("connections.rules.noTmdb")}
+                    </FieldDescription>
+                  )}
+                </FieldGroup>
+              </FormSection>
+            </FormColumn>
 
-        <Section title={tr("connections.rules.settings")}>
-          <FieldGroup>
-            {fields.map((field) => (
-              <DescribedInput
-                key={field.key}
-                field={field}
-                value={values.settings[field.key]}
-                unset={tr("connections.rules.keep")}
-                onChange={(next) =>
-                  form.setFieldValue("settings", (current) => ({
-                    ...current,
-                    [field.key]: next,
-                  }))
-                }
-                footer={
-                  field === folderField && folder ? (
-                    <LandsIn
-                      kind={kind}
-                      folder={folder}
-                      libraries={libraries.data}
-                      picked={
-                        values.folderLibrary ??
-                        connection.folderLibraries[folder]
+            <FormColumn>
+              <FormSection title={tr("connections.rules.settings")}>
+                <FieldGroup>
+                  {fields.map((field) => (
+                    <DescribedInput
+                      key={field.key}
+                      field={field}
+                      value={values.settings[field.key]}
+                      unset={tr("connections.rules.keep")}
+                      onChange={(next) =>
+                        form.setFieldValue("settings", (current) => ({
+                          ...current,
+                          [field.key]: next,
+                        }))
                       }
-                      onPick={(library) =>
-                        form.setFieldValue("folderLibrary", library)
+                      footer={
+                        field === folderField && folder ? (
+                          <LandsIn
+                            kind={kind}
+                            folder={folder}
+                            libraries={libraries.data}
+                            picked={
+                              values.folderLibrary ??
+                              connection.folderLibraries[folder]
+                            }
+                            onPick={(library) =>
+                              form.setFieldValue("folderLibrary", library)
+                            }
+                          />
+                        ) : undefined
                       }
                     />
-                  ) : undefined
-                }
-              />
-            ))}
-          </FieldGroup>
-        </Section>
+                  ))}
+                </FieldGroup>
+              </FormSection>
+            </FormColumn>
+          </FormColumns>
+        </FormDialogBody>
 
-        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
+        <FormDialogFooter>
           <form.SubmitButton
             disabled={conditions === 0 || Object.keys(settings).length === 0}
             pending={save.isPending}
@@ -307,8 +301,8 @@ function RuleForm({
               ? tr("connections.rules.dialog.save")
               : tr("connections.rules.dialog.create")}
           </form.SubmitButton>
-        </DialogFooter>
-      </form>
+        </FormDialogFooter>
+      </FormDialogForm>
     </form.AppForm>
   )
 }

@@ -27,6 +27,8 @@ export default {
   "connections.delete.confirm": "Löschen",
   "connections.deleted": "{name} gelöscht",
 
+  "connections.dialog.testFirst":
+    "Teste die Verbindung, um ihre Standardwerte zu wählen.",
   "connections.dialog.addTitle": "Verbindung hinzufügen",
   "connections.dialog.editTitle": "{name} bearbeiten",
   "connections.dialog.source": "Art",
