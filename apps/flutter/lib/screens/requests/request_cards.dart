@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,7 +57,7 @@ typedef RequestCardLayout = ({double poster, double height});
 /// the year, the name, who asked on a [queue] card, the badge, the problem
 /// line, and the actions, with the gaps between. Every card of a list has
 /// the same rows, so it's as tall as the next, and the poster as tall as
-/// the rows, so no band is left empty between them.
+/// the rows, at 2:3, so no band is left empty between them.
 RequestCardLayout requestCardLayout(TextScaler scaler, {required bool queue}) {
   double line(double height) => scaler.scale(height);
   final rows =
@@ -102,14 +101,13 @@ void _open(
   );
 }
 
-/// One request: the poster, sharp, beside the request's rows, over the
-/// same poster blurred and darkened, so the card takes its colours from
-/// the title. The picture is dark in either scheme, so the card is drawn
-/// in the theme's dark half. The year and the name open the title; with
-/// [wholeYear], a year line that's cut shows all of it instead. Then [who]
-/// on a [queue] card, [badge], [problem], and [actions] on the bottom edge, each row in
-/// its place whether it's there or not. [onMore] puts the request's menu
-/// in the top corner.
+/// One request: the poster, sharp, beside the request's rows, on the kit's
+/// plain card surface, so it follows the theme's light and dark. The year
+/// and the name open the title; with [wholeYear], a year line that's cut
+/// shows all of it instead. Then [who] on a [queue] card, [badge],
+/// [problem], and [actions] on the bottom edge, each row in its place
+/// whether it's there or not. [onMore] puts the request's menu in the top
+/// corner.
 class RequestCard extends StatelessWidget {
   const RequestCard({
     super.key,
@@ -143,222 +141,171 @@ class RequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return MatineeTheme.alwaysDark(
-      context,
-      Builder(
-        builder: (context) {
-          final colors = MatineeTheme.of(context);
-          final scaler = MediaQuery.textScalerOf(context);
-          final layout = requestCardLayout(scaler, queue: queue);
-          double line(double height) => scaler.scale(height);
-          final poster = title.poster;
-          final year = [
-            if (title.year case final year?) '$year',
-            ?scopeText(scope, l),
-          ].join(' · ');
-          final onMore = this.onMore;
-          // Clear of the menu's button in the corner.
-          final clear = EdgeInsetsDirectional.only(
-            end: onMore == null ? 0 : 28,
-          );
-          void open() => _open(context, title, library, availability);
-          final yearText = Text(
-            year,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: KitText.xs.style(color: colors.mutedForeground),
-          );
-          final nameText = Text(
-            title.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: KitText.base.style(
-              color: colors.foreground,
-              weight: FontWeight.w600,
-              leading: 20,
-            ),
-          );
-          Widget pressable(
-            String label,
-            VoidCallback onPressed,
-            Widget child,
-          ) => PressIndication(
-            onPressed: onPressed,
-            label: label,
-            shape: const BorderRadius.all(Radius.circular(4)),
-            builder: (context, _) => ExcludeSemantics(
-              child: Padding(padding: clear, child: child),
-            ),
-          );
-          return ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(KitRadius.xl)),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: ExcludeSemantics(
-                    child: Tone(
-                      toneKey: refKey(title.ref),
-                      child: Stack(
-                        fit: StackFit.expand,
+    final colors = MatineeTheme.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    final layout = requestCardLayout(scaler, queue: queue);
+    double line(double height) => scaler.scale(height);
+    final poster = title.poster;
+    final year = [
+      if (title.year case final year?) '$year',
+      ?scopeText(scope, l),
+    ].join(' · ');
+    final onMore = this.onMore;
+    // Clear of the menu's button in the corner.
+    final clear = EdgeInsetsDirectional.only(end: onMore == null ? 0 : 28);
+    void open() => _open(context, title, library, availability);
+    final yearText = Text(
+      year,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: KitText.xs.style(color: colors.mutedForeground),
+    );
+    final nameText = Text(
+      title.name,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: KitText.base.style(
+        color: colors.foreground,
+        weight: FontWeight.w600,
+        leading: 20,
+      ),
+    );
+    Widget pressable(String label, VoidCallback onPressed, Widget child) =>
+        PressIndication(
+          onPressed: onPressed,
+          label: label,
+          shape: const BorderRadius.all(Radius.circular(4)),
+          builder: (context, _) => ExcludeSemantics(
+            child: Padding(padding: clear, child: child),
+          ),
+        );
+    return ClipRRect(
+      borderRadius: const BorderRadius.all(Radius.circular(KitRadius.xl)),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: const BorderRadius.all(Radius.circular(KitRadius.xl)),
+          border: Border.all(color: colors.border),
+        ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(_padding),
+              child: SizedBox(
+                height: layout.height,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: _gap,
+                  children: [
+                    SizedBox(
+                      width: layout.poster,
+                      height: layout.height,
+                      child: ExcludeSemantics(
+                        child: PressIndication(
+                          onPressed: open,
+                          shape: const BorderRadius.all(
+                            Radius.circular(KitRadius.md),
+                          ),
+                          builder: (context, _) => ArtFrame(
+                            toneKey: refKey(title.ref),
+                            aspectRatio: CardMetrics.poster,
+                            children: [
+                              if (poster != null) Picture([ArtSource(poster)]),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (poster != null)
-                            ImageFiltered(
-                              imageFilter: ImageFilter.blur(
-                                sigmaX: 24,
-                                sigmaY: 24,
-                                tileMode: TileMode.decal,
-                              ),
-                              child: Transform.scale(
-                                scale: 1.5,
-                                child: Picture([ArtSource(poster)]),
-                              ),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final cut =
+                                  wholeYear &&
+                                  _cut(
+                                    context,
+                                    yearText,
+                                    constraints.maxWidth - clear.end,
+                                  );
+                              if (!cut) {
+                                return pressable(
+                                  [title.name, year].join(', '),
+                                  open,
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      yearText,
+                                      const SizedBox(height: _afterYear),
+                                      nameText,
+                                    ],
+                                  ),
+                                );
+                              }
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  pressable(
+                                    year,
+                                    () => unawaited(
+                                      _showWhole(context, title.name, [year]),
+                                    ),
+                                    yearText,
+                                  ),
+                                  const SizedBox(height: _afterYear),
+                                  pressable(title.name, open, nameText),
+                                ],
+                              );
+                            },
+                          ),
+                          if (queue) ...[
+                            const SizedBox(height: _rowGap),
+                            SizedBox(height: _whoHeight(scaler), child: who),
+                          ],
+                          const SizedBox(height: _rowGap),
+                          SizedBox(
+                            height: _badge,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: badge,
                             ),
-                          ColoredBox(
-                            color: colors.background.withValues(alpha: .65),
+                          ),
+                          const SizedBox(height: _rowGap),
+                          SizedBox(
+                            height: line(KitText.px13.lineHeight),
+                            child: problem,
+                          ),
+                          const Spacer(),
+                          SizedBox(
+                            height: ButtonSize.sm.height,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: actions,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.all(
-                          Radius.circular(KitRadius.xl),
-                        ),
-                        border: Border.all(color: colors.border),
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(_padding),
-                  child: SizedBox(
-                    height: layout.height,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: _gap,
-                      children: [
-                        SizedBox(
-                          width: layout.poster,
-                          height: layout.height,
-                          child: ExcludeSemantics(
-                            child: PressIndication(
-                              onPressed: open,
-                              shape: const BorderRadius.all(
-                                Radius.circular(KitRadius.md),
-                              ),
-                              builder: (context, _) => ArtFrame(
-                                toneKey: refKey(title.ref),
-                                aspectRatio: CardMetrics.poster,
-                                children: [
-                                  if (poster != null)
-                                    Picture([ArtSource(poster)]),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final cut =
-                                      wholeYear &&
-                                      _cut(
-                                        context,
-                                        yearText,
-                                        constraints.maxWidth - clear.end,
-                                      );
-                                  if (!cut) {
-                                    return pressable(
-                                      [title.name, year].join(', '),
-                                      open,
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          yearText,
-                                          const SizedBox(height: _afterYear),
-                                          nameText,
-                                        ],
-                                      ),
-                                    );
-                                  }
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      pressable(
-                                        year,
-                                        () => unawaited(
-                                          _showWhole(context, title.name, [
-                                            year,
-                                          ]),
-                                        ),
-                                        yearText,
-                                      ),
-                                      const SizedBox(height: _afterYear),
-                                      pressable(title.name, open, nameText),
-                                    ],
-                                  );
-                                },
-                              ),
-                              if (queue) ...[
-                                const SizedBox(height: _rowGap),
-                                SizedBox(
-                                  height: _whoHeight(scaler),
-                                  child: who,
-                                ),
-                              ],
-                              const SizedBox(height: _rowGap),
-                              SizedBox(
-                                height: _badge,
-                                child: Align(
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: badge,
-                                ),
-                              ),
-                              const SizedBox(height: _rowGap),
-                              SizedBox(
-                                height: line(KitText.px13.lineHeight),
-                                child: problem,
-                              ),
-                              const Spacer(),
-                              SizedBox(
-                                height: ButtonSize.sm.height,
-                                child: Align(
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: actions,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (onMore != null)
-                  PositionedDirectional(
-                    top: 6,
-                    end: 6,
-                    child: MatineeButton(
-                      look: ButtonLook.ghost,
-                      size: ButtonSize.iconSm,
-                      leading: Lucide.ellipsis,
-                      label: l.webRequestsMore(title.name),
-                      onPressed: onMore,
-                    ),
-                  ),
-              ],
+              ),
             ),
-          );
-        },
+            if (onMore != null)
+              PositionedDirectional(
+                top: 6,
+                end: 6,
+                child: MatineeButton(
+                  look: ButtonLook.ghost,
+                  size: ButtonSize.iconSm,
+                  leading: Lucide.ellipsis,
+                  label: l.webRequestsMore(title.name),
+                  onPressed: onMore,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -467,11 +414,6 @@ class RequestStateBadge extends StatelessWidget {
   }
 }
 
-/// [build] under the theme's dark half, where a card draws, so what it
-/// builds for the card takes the card's colours.
-Widget _dark(BuildContext context, WidgetBuilder build) =>
-    MatineeTheme.alwaysDark(context, Builder(builder: build));
-
 /// A line under the badge, muted unless [color] says otherwise, cut to
 /// one.
 class _Line extends StatelessWidget {
@@ -498,12 +440,12 @@ class _Line extends StatelessWidget {
 
 /// One request of the queue, in the state the server gave it: who asked,
 /// the state's badge, the error or the decline's answer when there's one,
-/// and the state's actions. Its menu has the rest: when they asked, where
-/// it goes and how, how far along it is or when it arrived, the
-/// request's whole problem, "Goes to", the title's page, the request in
-/// its connection, and what the connection reported. [onAnswered] runs
-/// when an answer takes a request out of Done, which pages of its own
-/// hold.
+/// and the state's actions. Its menu has the rest: when
+/// they asked, where it goes and how, how far along it is or when it
+/// arrived, the request's whole problem, "Goes to", the title's page, the
+/// request in its connection, and what the connection reported.
+/// [onAnswered] runs when an answer takes a request out of Done, which
+/// pages of its own hold.
 class QueueCard extends ConsumerWidget {
   const QueueCard({super.key, required this.item, this.onAnswered});
 
@@ -511,32 +453,28 @@ class QueueCard extends ConsumerWidget {
   final ValueChanged<AdminRequestItem>? onAnswered;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => _dark(
-    context,
-    (context) => RequestCard(
-      title: item.title,
-      library: item.library.id,
-      scope: item.scope,
-      availability: item.availability,
-      queue: true,
-      badge: RequestStateBadge(
-        state: item.state,
-        progress: item.state == RequestState.onTheWay
-            ? item.availability.progress
-            : null,
-        urgent: true,
-      ),
-      who: _Askers(item: item),
-      problem: _problem(context),
-      actions: _QueueActions(item: item, onAnswered: onAnswered),
-      onMore: () => unawaited(
-        showRequestMenu(context, ref, item, onAnswered: onAnswered),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) => RequestCard(
+    title: item.title,
+    library: item.library.id,
+    scope: item.scope,
+    availability: item.availability,
+    queue: true,
+    badge: RequestStateBadge(
+      state: item.state,
+      progress: item.state == RequestState.onTheWay
+          ? item.availability.progress
+          : null,
+      urgent: true,
     ),
+    who: _Askers(item: item),
+    problem: _problem(context),
+    actions: _QueueActions(item: item, onAnswered: onAnswered),
+    onMore: () =>
+        unawaited(showRequestMenu(context, ref, item, onAnswered: onAnswered)),
   );
 
-  /// What went wrong, the one line under the badge: the error when it
-  /// needs attention, or why it was declined and the note.
+  /// What went wrong, under the badge: the error when it needs attention,
+  /// or why it was declined and the note.
   Widget? _problem(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
@@ -736,10 +674,7 @@ class _Askers extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: colors.background,
-                            width: 1.5,
-                          ),
+                          border: Border.all(color: colors.surface, width: 1.5),
                         ),
                         child: Avatar(
                           avatarId: face.avatarId,
@@ -984,8 +919,7 @@ class OwnRequestCard extends ConsumerWidget {
   final bool live;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      _dark(context, (context) => _card(context, ref));
+  Widget build(BuildContext context, WidgetRef ref) => _card(context, ref);
 
   Widget _card(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
