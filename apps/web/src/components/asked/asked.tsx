@@ -2,7 +2,6 @@ import type { Availability, RequestItem } from "@matinee/contracts"
 import type { t } from "@matinee/contracts/schema"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { ChevronRightIcon } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -26,13 +25,13 @@ import { orpc } from "@/lib/rpc"
 
 export type AskedItem = t.infer<typeof RequestItem>
 
-/** What the viewer asked for or follows, newest first. */
-export function mineOptions(filter: "inProgress" | "all", limit = 24) {
-  return orpc.requests.mine.queryOptions({ input: { filter, limit } })
+/** What the viewer asked for or follows, in progress first. */
+function mineOptions(limit = 24) {
+  return orpc.requests.mine.queryOptions({ input: { filter: "all", limit } })
 }
 
 /** The live state of the titles in a list of requests, one stream for all. */
-export function useAskedLive(items: AskedItem[]) {
+function useAskedLive(items: AskedItem[]) {
   return useLiveAvailability(
     items.map((item) => ({ ref: item.title.ref, libraryId: item.library.id })),
   )
@@ -40,19 +39,15 @@ export function useAskedLive(items: AskedItem[]) {
 
 /**
  * One title the viewer asked for, as its state stands: the catalog card
- * with its state while it isn't here; once it is, the library's card, with
- * the accent dot while `fresh`. A show that's partly here and still waits
+ * with its state while it isn't here; once it is, the library's card. A show that's partly here and still waits
  * for a season is the library's poster with that season's state.
  */
-export function AskedCard({
+function AskedCard({
   item,
   live,
-  fresh,
 }: {
   item: AskedItem
   live: LiveEntry[] | undefined
-  /** Arrived lately: a dot until watched. */
-  fresh: boolean
 }) {
   const entry = liveEntry(live, item.title.ref)
   const availability = entry?.availability ?? item.availability
@@ -76,7 +71,7 @@ export function AskedCard({
     )
   }
   if (here && hereAtFirst) {
-    return <ArrivedCard title={item.title} titleId={here} fresh={fresh} />
+    return <ArrivedCard title={item.title} titleId={here} fresh={false} />
   }
   return <CatalogCard title={item.title} availability={availability} />
 }
@@ -136,53 +131,12 @@ function ShowSeasonCard({
   )
 }
 
-/** "Asked for", linking to the full list, as a rail's heading. */
-function AskedHeading({ username }: { username: string }) {
-  return (
-    <Link
-      to="/profiles/$username/asked"
-      params={{ username }}
-      className="focus-visible:ring-ring group/heading inline-flex max-w-full items-center gap-1 rounded-sm outline-none focus-visible:ring-2"
-    >
-      <span className="truncate">{tr("ask.mine.title")}</span>
-      <ChevronRightIcon
-        aria-hidden
-        className="text-muted-foreground group-hover/heading:text-foreground size-5 shrink-0 transition-colors motion-reduce:transition-none"
-      />
-    </Link>
-  )
-}
-
-/**
- * Home's "Asked for": what the viewer asked for that is on its way, and
- * what came or was answered in the last three days. Nothing when there's
- * none of either, so Home stays about what's here.
- */
-export function AskedRail({ username }: { username: string }) {
-  const mine = useQuery(mineOptions("inProgress"))
-  const items = mine.data?.items ?? []
-  const live = useAskedLive(items)
-  if (items.length === 0) return null
-  return (
-    <Rail
-      title={tr("ask.mine.title")}
-      heading={<AskedHeading username={username} />}
-    >
-      {items.map((item) => (
-        <RailItem key={item.id} artwork="poster">
-          <AskedCard item={item} live={live} fresh />
-        </RailItem>
-      ))}
-    </Rail>
-  )
-}
-
 /**
  * The profile's "Asked for", only on the viewer's own: the latest of
  * everything they asked for, with "See all" to the full list.
  */
 export function ProfileAskedRail({ username }: { username: string }) {
-  const mine = useQuery(mineOptions("all"))
+  const mine = useQuery(mineOptions())
   const items = mine.data?.items ?? []
   const live = useAskedLive(items)
   if (items.length === 0) return null
@@ -201,7 +155,7 @@ export function ProfileAskedRail({ username }: { username: string }) {
     >
       {items.map((item) => (
         <RailItem key={item.id} artwork="poster">
-          <AskedCard item={item} live={live} fresh={false} />
+          <AskedCard item={item} live={live} />
         </RailItem>
       ))}
     </Rail>
