@@ -420,18 +420,18 @@ class _SkipButton extends StatelessWidget {
     label: label,
     builder: (context, focused) => TvControl(
       focused: focused,
-      builder: (context, content) => SizedBox.square(
+      builder: (context, look) => SizedBox.square(
         dimension: _play,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            KitIcon(icon, size: 38, color: content),
+            KitIcon(icon, size: 38, color: look.content),
             Padding(
               padding: const EdgeInsets.only(top: 3),
               child: Text(
                 '$seconds',
                 textAlign: TextAlign.center,
-                style: TvType.iconNumber.style(color: content),
+                style: TvType.iconNumber.style(color: look.content),
               ),
             ),
           ],
@@ -469,7 +469,7 @@ class _MenuButton extends StatelessWidget {
       label: label,
       builder: (context, focused) => TvControl(
         focused: focused,
-        builder: (context, content) => ConstrainedBox(
+        builder: (context, look) => ConstrainedBox(
           constraints: const BoxConstraints(
             minHeight: _small,
             maxHeight: _small,
@@ -489,7 +489,7 @@ class _MenuButton extends StatelessWidget {
                     clipBehavior: Clip.none,
                     alignment: Alignment.bottomCenter,
                     children: [
-                      KitIcon(icon, size: 20, color: content),
+                      KitIcon(icon, size: 20, color: look.content),
                       if (on)
                         Positioned(
                           bottom: -7,
@@ -513,7 +513,7 @@ class _MenuButton extends StatelessWidget {
                       child: Text(
                         label,
                         maxLines: 1,
-                        style: TvType.label.style(color: content),
+                        style: TvType.label.style(color: look.content),
                       ),
                     ),
                 ],

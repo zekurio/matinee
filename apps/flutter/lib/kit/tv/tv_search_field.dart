@@ -134,7 +134,7 @@ class _TvSearchFieldState extends State<TvSearchField> {
                   focused: lit,
                   scale: TvFocus.rowScale,
                   rest: widget.rest,
-                  builder: (context, content) => SizedBox(
+                  builder: (context, look) => SizedBox(
                     height: widget.height,
                     child: Padding(
                       padding: const EdgeInsetsDirectional.only(
@@ -147,7 +147,7 @@ class _TvSearchFieldState extends State<TvSearchField> {
                           KitIcon(
                             Lucide.search,
                             size: 22,
-                            color: lit ? content : colors.mutedForeground,
+                            color: look.tone(colors.mutedForeground),
                           ),
                           Expanded(
                             child: Stack(
@@ -161,9 +161,12 @@ class _TvSearchFieldState extends State<TvSearchField> {
                                     style: style.copyWith(
                                       // Muted, not faint: it has to read
                                       // over a page's backdrop.
-                                      color: lit
-                                          ? content.withValues(alpha: .55)
-                                          : colors.mutedForeground,
+                                      color: look.tone(
+                                        colors.mutedForeground,
+                                        colors.background.withValues(
+                                          alpha: .55,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 Focus(
@@ -173,7 +176,7 @@ class _TvSearchFieldState extends State<TvSearchField> {
                                   child: EditableText(
                                     controller: widget.controller,
                                     focusNode: _inner,
-                                    style: style.copyWith(color: content),
+                                    style: style.copyWith(color: look.content),
                                     cursorColor: colors.accent,
                                     backgroundCursorColor: colors.textFaint,
                                     textInputAction: TextInputAction.search,

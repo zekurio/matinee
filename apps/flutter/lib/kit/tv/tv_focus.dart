@@ -234,9 +234,110 @@ class _TvFocusableState extends State<TvFocusable> {
   }
 }
 
+/// Where a control's focus look stands as it animates. [t] runs from 0 at
+/// rest to 1 focused; [fill] and [content] are the control's fill and its
+/// content color at that point. Everything else inside the control takes
+/// its color from [tone], so it moves with the same [t] rather than
+/// switching on focus.
+///
+/// While focus comes in, the resting end is the look the control had the
+/// frame before focus arrived, so a resting look that changes with the same
+/// move, like a row [selected] because it took focus, doesn't show on the
+/// way in. While focus goes out, it is the resting look now.
+class TvLook {
+  const TvLook._(
+    this._dark, {
+    required this.t,
+    required this.fill,
+    required this.content,
+    required this.selected,
+  });
+
+  final double t;
+  final Color fill;
+  final Color content;
+
+  /// Whether the resting end of the look marks the control in force, as
+  /// the `selected` it was given, held while focus comes in as [content]
+  /// is.
+  final bool selected;
+
+  final Color _dark;
+
+  /// [rest] at rest, [focused] with focus (the dark content color unless
+  /// given), and between them on the way.
+  Color tone(Color rest, [Color? focused]) =>
+      Color.lerp(rest, focused ?? _dark, t)!;
+}
+
+/// The animation under every control's focus look: [t] runs to 1 with focus
+/// and back to 0 without, with [TvMotion]'s timing, and [builder] gets the
+/// [TvLook] between [rest] and [content] at rest and the focused fill and
+/// content. Use [TvControl] unless the fill isn't a plain clipped box, as
+/// the drawer's.
+class TvFocusLook extends StatefulWidget {
+  const TvFocusLook({
+    super.key,
+    required this.focused,
+    required this.rest,
+    required this.content,
+    required this.builder,
+    this.selected = false,
+  });
+
+  final bool focused;
+  final Color rest;
+  final Color content;
+  final bool selected;
+  final Widget Function(BuildContext context, TvLook look) builder;
+
+  @override
+  State<TvFocusLook> createState() => _TvFocusLookState();
+}
+
+typedef _Resting = ({Color rest, Color content, bool selected});
+
+class _TvFocusLookState extends State<TvFocusLook> {
+  late _Resting _before = _resting(widget);
+
+  static _Resting _resting(TvFocusLook widget) =>
+      (rest: widget.rest, content: widget.content, selected: widget.selected);
+
+  @override
+  void didUpdateWidget(TvFocusLook old) {
+    super.didUpdateWidget(old);
+    // Focus came in: hold the look from before it, which the same move may
+    // already have changed in this build.
+    if (widget.focused && !old.focused) _before = _resting(old);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final focused = widget.focused;
+    final resting = focused ? _before : _resting(widget);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: focused ? 1 : 0),
+      duration: focused ? TvMotion.enter : TvMotion.exit,
+      curve: focused ? TvMotion.easing : TvMotion.exitEasing,
+      builder: (context, t, _) => widget.builder(
+        context,
+        TvLook._(
+          colors.background,
+          t: t,
+          fill: Color.lerp(resting.rest, colors.foreground, t)!,
+          content: Color.lerp(resting.content, colors.background, t)!,
+          selected: resting.selected,
+        ),
+      ),
+    );
+  }
+}
+
 /// The focus look for a control: focused, it grows by [scale] and fills
 /// with the text color, its content dark; otherwise it shows [rest], its
-/// content [content]. [builder] gets the content's color as it changes.
+/// content [content], and [selected] says whether that resting look marks
+/// it in force. [builder] gets the [TvLook] as it changes.
 class TvControl extends StatelessWidget {
   const TvControl({
     super.key,
@@ -245,6 +346,7 @@ class TvControl extends StatelessWidget {
     this.radius = KitRadius.pill,
     this.rest,
     this.content,
+    this.selected = false,
     this.scale = TvFocus.controlScale,
   });
 
@@ -252,26 +354,23 @@ class TvControl extends StatelessWidget {
   final BorderRadius radius;
   final Color? rest;
   final Color? content;
+  final bool selected;
   final double scale;
-  final Widget Function(BuildContext context, Color content) builder;
+  final Widget Function(BuildContext context, TvLook look) builder;
 
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    final rest = this.rest ?? TvFocus.rest(colors);
-    final content = this.content ?? colors.foreground;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(end: focused ? 1 : 0),
-      duration: focused ? TvMotion.enter : TvMotion.exit,
-      curve: focused ? TvMotion.easing : TvMotion.exitEasing,
-      builder: (context, t, _) => Transform.scale(
-        scale: 1 + (scale - 1) * t,
+    return TvFocusLook(
+      focused: focused,
+      rest: rest ?? TvFocus.rest(colors),
+      content: content ?? colors.foreground,
+      selected: selected,
+      builder: (context, look) => Transform.scale(
+        scale: 1 + (scale - 1) * look.t,
         child: ClipRRect(
           borderRadius: radius,
-          child: ColoredBox(
-            color: Color.lerp(rest, colors.foreground, t)!,
-            child: builder(context, Color.lerp(content, colors.background, t)!),
-          ),
+          child: ColoredBox(color: look.fill, child: builder(context, look)),
         ),
       ),
     );

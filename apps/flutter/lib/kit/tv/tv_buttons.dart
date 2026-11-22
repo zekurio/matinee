@@ -52,7 +52,8 @@ class TvButton extends StatelessWidget {
         focused: focused,
         rest: rest ?? (active ? colors.accentSoft : null),
         content: active ? colors.accent : null,
-        builder: (context, content) => ConstrainedBox(
+        selected: active,
+        builder: (context, look) => ConstrainedBox(
           constraints: BoxConstraints(
             minHeight: TvButtons.height,
             maxHeight: TvButtons.height,
@@ -69,13 +70,13 @@ class TvButton extends StatelessWidget {
               spacing: 10,
               children: [
                 if (icon case final name?)
-                  KitIcon(name, size: TvButtons.iconSize, color: content),
+                  KitIcon(name, size: TvButtons.iconSize, color: look.content),
                 Flexible(
                   child: Text(
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TvType.facts.style(color: content),
+                    style: TvType.facts.style(color: look.content),
                   ),
                 ),
                 if (detail case final text?)
@@ -83,11 +84,15 @@ class TvButton extends StatelessWidget {
                     text,
                     maxLines: 1,
                     style: TvType.facts.style(
-                      color: content.withValues(alpha: .65),
+                      color: look.content.withValues(alpha: .65),
                     ),
                   ),
                 if (trailingIcon case final name?)
-                  KitIcon(name, size: 16, color: content.withValues(alpha: .7)),
+                  KitIcon(
+                    name,
+                    size: 16,
+                    color: look.content.withValues(alpha: .7),
+                  ),
               ],
             ),
           ),
@@ -124,7 +129,7 @@ class TvIconButton extends StatelessWidget {
     builder: (context, focused) => TvControl(
       focused: focused,
       content: tint,
-      builder: (context, content) => ConstrainedBox(
+      builder: (context, look) => ConstrainedBox(
         constraints: const BoxConstraints(
           minHeight: TvButtons.height,
           maxHeight: TvButtons.height,
@@ -140,7 +145,7 @@ class TvIconButton extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                KitIcon(icon, size: TvButtons.iconSize, color: content),
+                KitIcon(icon, size: TvButtons.iconSize, color: look.content),
                 if (focused)
                   Padding(
                     padding: const EdgeInsetsDirectional.only(
@@ -150,7 +155,7 @@ class TvIconButton extends StatelessWidget {
                     child: Text(
                       label,
                       maxLines: 1,
-                      style: TvType.facts.style(color: content),
+                      style: TvType.facts.style(color: look.content),
                     ),
                   ),
               ],
@@ -196,10 +201,14 @@ class TvRoundButton extends StatelessWidget {
     label: label,
     builder: (context, focused) => TvControl(
       focused: focused || lit,
-      builder: (context, content) => SizedBox.square(
+      builder: (context, look) => SizedBox.square(
         dimension: size,
         child: Center(
-          child: KitIcon(icon, size: iconSize ?? size * .42, color: content),
+          child: KitIcon(
+            icon,
+            size: iconSize ?? size * .42,
+            color: look.content,
+          ),
         ),
       ),
     ),
@@ -235,22 +244,16 @@ class TvChip extends StatelessWidget {
         focused: focused,
         rest: selected ? colors.accentSoft : null,
         content: selected ? colors.accent : null,
-        builder: (context, content) => Padding(
+        selected: selected,
+        builder: (context, look) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
           child: Text(
             label,
             maxLines: 1,
-            style: TvType.label.style(color: content),
+            style: TvType.label.style(color: look.content),
           ),
         ),
       ),
     );
   }
-}
-
-/// The color a control's content takes beside its [TvControl] fill, for
-/// content drawn outside the control's builder.
-Color tvContent(BuildContext context, bool focused) {
-  final colors = MatineeTheme.of(context);
-  return focused ? colors.background : colors.foreground;
 }
