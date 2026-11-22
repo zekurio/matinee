@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/platform/player.g.dart' as wire;
 import 'package:matinee/player/player_events.dart';
 import 'package:matinee/player/player_state.dart';
+import 'package:matinee/player/player_system.dart';
 
 PlaybackState _state({
   PlaybackPhase phase = PlaybackPhase.ready,
@@ -257,5 +258,39 @@ void main() {
         const Duration(seconds: 40),
       );
     });
+  });
+
+  test('the system hears of a change, not of every tick', () {
+    MediaStateMessage at(int ms, {bool playing = true}) => mediaState(
+      playing: playing,
+      phase: PlaybackPhase.ready,
+      position: ms / 1000,
+      duration: 600,
+      rate: 1,
+    );
+    expect(mediaStateMoved(null, at(0), Duration.zero), isTrue);
+    // Playing on as the system works it out.
+    expect(
+      mediaStateMoved(at(0), at(5000), const Duration(seconds: 5)),
+      isFalse,
+    );
+    // A seek.
+    expect(
+      mediaStateMoved(at(0), at(60000), const Duration(seconds: 5)),
+      isTrue,
+    );
+    expect(
+      mediaStateMoved(at(0), at(0, playing: false), Duration.zero),
+      isTrue,
+    );
+    // Paused, the position stays where it was.
+    expect(
+      mediaStateMoved(
+        at(1000, playing: false),
+        at(1000, playing: false),
+        const Duration(minutes: 1),
+      ),
+      isFalse,
+    );
   });
 }
