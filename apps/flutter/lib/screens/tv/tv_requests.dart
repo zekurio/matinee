@@ -772,9 +772,11 @@ class _CardText extends StatelessWidget {
 /// [TvGrid.row].
 abstract final class _Rows {
   static const header = 'header';
+  static const filter = 'filter';
   static const addAll = 'add-all';
   static const empty = 'empty';
   static const search = 'search';
+  static const clear = 'clear';
 }
 
 /// The requests overview on a TV, from the Recent requests row's See all
@@ -782,12 +784,13 @@ abstract final class _Rows {
 /// in the order the shared code gives them: waiting, needs attention, on
 /// the way, then done, read on a page at a time as focus moves down. Anyone
 /// else, whatever the path, gets their own as the server orders them, in
-/// progress first. Each card carries its state; the header offers Add all
-/// while more than one waits, and the line under it names the focused
-/// card. Select opens what
+/// progress first. Each card carries its state; the header offers a Filter
+/// of states and kinds, and Add all while more than one waiting is in view,
+/// and the line under it names the focused card. Select opens what
 /// the card's state allows. Focus starts on the first card, Down from the
 /// header lands there, and a card that leaves hands focus to its
-/// neighbour. An empty overview says so and offers Search.
+/// neighbour. An empty overview says so and offers Search; one a filter
+/// empties says so and offers Clear filters.
 class TvRequestsScreen extends ConsumerStatefulWidget {
   const TvRequestsScreen({super.key, this.queue = false});
 
@@ -805,10 +808,35 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
   /// reads the older pages after it.
   var _older = false;
 
+  /// What the list is kept to; a change starts it over.
+  final _filter = ValueNotifier(RequestFilter.none);
+
+  @override
+  void initState() {
+    super.initState();
+    _filter.addListener(_filtersChanged);
+  }
+
   @override
   void dispose() {
+    _filter
+      ..removeListener(_filtersChanged)
+      ..dispose();
     _memory.dispose();
     super.dispose();
+  }
+
+  /// Another filter: the cards are no longer the ones focus last saw, so
+  /// the list starts at its top and focus comes back to the header.
+  void _filtersChanged() {
+    _memory
+      ..lastRow = null
+      ..lastItem = null;
+    _memory.rowItems.remove(TvGrid.row);
+    setState(() {
+      _older = false;
+      _focused = null;
+    });
   }
 
   void _focus(FocusedItem item) {
@@ -816,17 +844,108 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     setState(() => _focused = item);
   }
 
+  /// The filter's panel: the five states, any number of them, and the
+  /// kind, each a chip that applies at once. Done goes back to the list,
+  /// which has already restarted under the filter.
+  Future<void> _showFilters() async {
+    final l = AppLocalizations.of(context);
+    await showTvPanel<void>(
+      context,
+      title: l.webFiltersTitle,
+      builder: (panel) => [
+        ValueListenableBuilder<RequestFilter>(
+          valueListenable: _filter,
+          builder: (context, value, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TvListHeading(l.webRequestsFilterState),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: TvListItems.inset,
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final state in RequestState.all)
+                      TvChip(
+                        label: requestStateWord(state, l),
+                        selected: value.states.contains(state),
+                        onPressed: () => _filter.value = value.withStates(
+                          value.states.contains(state)
+                              ? value.states.where((each) => each != state)
+                              : [...value.states, state],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              TvListHeading(l.webRequestsFilterKind),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: TvListItems.inset,
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final (kind, label) in [
+                      (null, l.webFiltersAny),
+                      (TitleKind.movie, l.browseKindMovie),
+                      (TitleKind.show, l.browseKindShow),
+                    ])
+                      TvChip(
+                        label: label,
+                        selected: value.kind == kind,
+                        onPressed: () => _filter.value = value.withKind(kind),
+                      ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  TvListItems.inset,
+                  24,
+                  TvListItems.inset,
+                  8,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 8,
+                  children: [
+                    if (!value.isEmpty)
+                      TvButton(
+                        label: l.browseClearFilters,
+                        icon: Lucide.x,
+                        onPressed: () => _filter.value = RequestFilter.none,
+                      ),
+                    TvButton(
+                      label: l.webRequestsFilterShow,
+                      icon: Lucide.check,
+                      onPressed: () => Navigator.of(panel).pop(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final filter = _filter.value;
     final queue = widget.queue && ref.watch(runsQueueProvider);
-    final body = queue ? _queueBody(l) : _mineBody(l);
+    final body = queue ? _queueBody(l, filter) : _mineBody(l, filter);
     final cards = body.cards;
     // Down from the header, before any card had focus, lands on the first.
     if (cards.isNotEmpty) _memory.startAt(TvGrid.row, cards.first.id);
     _memory.restore(context, () {
       if (cards.isNotEmpty) return (TvGrid.row, cards.first.id);
-      return body.empty ? (_Rows.empty, _Rows.search) : null;
+      return body.empty ? (_Rows.empty, body.emptyKey) : null;
     });
     final waiting = body.waiting;
     final grid = TvPosterGrid(
@@ -836,10 +955,25 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
       cellWidth: TvInfoCards.rowWidth + 20,
       cellAspect: double.infinity,
       cellExtra: TvInfoCards.height,
+      // Another filter starts the list at its top under a new set of cards.
+      scrollKey: filter,
       header: TvGridHeader(
         title: queue ? l.webRequestsTitle : l.webAskMineTitle,
         detail: null,
         controls: [
+          TvMemoryRow(
+            memory: _memory,
+            row: _Rows.header,
+            child: TvButton(
+              label: filter.count > 0
+                  ? l.browseFiltersOn(filter.count)
+                  : l.webFiltersTitle,
+              icon: Lucide.listFilter,
+              active: filter.count > 0,
+              focusNode: _memory.node(_Rows.header, _Rows.filter),
+              onPressed: _showFilters,
+            ),
+          ),
           // Like Add, it asks nothing.
           if (waiting.length > 1)
             TvMemoryRow(
@@ -879,16 +1013,34 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
   }
 
   /// Everyone's requests: the live queue in its order, then Done past what
-  /// the live queue holds of it, a page at a time.
-  _Body _queueBody(AppLocalizations l) {
+  /// the live queue holds of it, a page at a time. With no filter on, the
+  /// queue the whole app follows; under one, its own stream, which the
+  /// server keeps to the filter.
+  _Body _queueBody(AppLocalizations l, RequestFilter filter) {
     final state = ref.watch(requestsProvider);
-    final queue = state.queue;
+    final RequestQueue? queue;
+    final bool failed;
+    final Object? failure;
+    final VoidCallback retry;
+    if (filter.isEmpty) {
+      queue = state.queue;
+      failed = state.queueFailed;
+      failure = null;
+      retry = () => ref.read(requestsProvider.notifier).retryQueue();
+    } else {
+      final live = ref.watch(filteredQueueProvider(filter));
+      queue = live.value;
+      failed = live.hasError;
+      failure = live.error;
+      retry = () => ref.invalidate(filteredQueueProvider(filter));
+    }
     if (queue == null) {
-      if (state.queueFailed) {
+      if (failed) {
         return _Body.notice(
           TvNotice(
             headline: l.requestsLoadFailed,
-            onRetry: () => ref.read(requestsProvider.notifier).retryQueue(),
+            message: failure == null ? null : describeFailure(l, failure),
+            onRetry: retry,
             retryLabel: l.commonRetry,
           ),
         );
@@ -897,8 +1049,9 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     }
     final held = state.held;
     final liveIsAll = queue.nextCursor == null;
-    final pages = liveIsAll ? null : ref.watch(doneRequestsProvider);
-    final notifier = liveIsAll ? null : ref.read(doneRequestsProvider.notifier);
+    final doneProvider = doneRequestsProvider(filter);
+    final pages = liveIsAll ? null : ref.watch(doneProvider);
+    final notifier = liveIsAll ? null : ref.read(doneProvider.notifier);
     final done = doneInOrder(
       queue.done,
       liveIsAll: liveIsAll,
@@ -912,11 +1065,19 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     ];
     if (entries.isEmpty && !done.more) {
       return _Body.empty(
-        TvNotice(
-          headline: l.webRequestsEmptyNone,
-          message: l.webRequestsEmptyNoneHint,
-        ),
+        filter.isEmpty
+            ? TvNotice(
+                headline: l.webRequestsEmptyNone,
+                message: l.webRequestsEmptyNoneHint,
+              )
+            : TvNotice(
+                headline: l.webRequestsFilterNone,
+                message: l.webRequestsFilterNoneHint,
+              ),
         memory: _memory,
+        onClear: filter.isEmpty
+            ? null
+            : () => _filter.value = RequestFilter.none,
       );
     }
     final error = pages?.error;
@@ -948,9 +1109,13 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
   }
 
   /// The viewer's own, in the server's order, in progress first: the live
-  /// first page, then the pages after it as focus nears its end.
-  _Body _mineBody(AppLocalizations l) {
-    final first = ref.watch(myLiveRequestsProvider);
+  /// first page, then the pages after it as focus nears its end. A filter
+  /// replaces the live stream with one the server keeps to it.
+  _Body _mineBody(AppLocalizations l, RequestFilter filter) {
+    final firstProvider = filter.isEmpty
+        ? myLiveRequestsProvider
+        : myFilteredRequestsProvider(filter);
+    final first = ref.watch(firstProvider);
     final held = ref.watch(requestsProvider.select((state) => state.held));
     final page = first.value;
     if (page == null) {
@@ -960,7 +1125,7 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
         TvNotice(
           headline: l.askedLoadFailed,
           message: describeFailure(l, error),
-          onRetry: () => ref.invalidate(myLiveRequestsProvider),
+          onRetry: () => ref.invalidate(firstProvider),
           retryLabel: l.commonRetry,
         ),
       );
@@ -968,7 +1133,7 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     final after = page.nextCursor;
     final olderProvider = after == null || !_older
         ? null
-        : olderRequestsProvider(after);
+        : olderRequestsProvider((after: after, filter: filter));
     final older = olderProvider == null ? null : ref.watch(olderProvider);
     final seen = {for (final item in page.items) item.id};
     final items = [
@@ -988,8 +1153,19 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
 
     if (items.isEmpty && !more) {
       return _Body.empty(
-        TvNotice(headline: l.webAskMineEmpty, message: l.webAskMineEmptyHint),
+        filter.isEmpty
+            ? TvNotice(
+                headline: l.webAskMineEmpty,
+                message: l.webAskMineEmptyHint,
+              )
+            : TvNotice(
+                headline: l.webRequestsFilterNone,
+                message: l.webRequestsFilterNoneHint,
+              ),
         memory: _memory,
+        onClear: filter.isEmpty
+            ? null
+            : () => _filter.value = RequestFilter.none,
       );
     }
     return _Body.cards(
@@ -1045,6 +1221,7 @@ class _Body {
     this.followed,
     this.waiting = const [],
   }) : empty = false,
+       emptyKey = _Rows.search,
        more = done || error != null ? null : onMore,
        footer = done
            ? null
@@ -1061,23 +1238,30 @@ class _Body {
   const _Body.notice(Widget this.footer)
     : cards = const [],
       empty = false,
+      emptyKey = _Rows.search,
       more = null,
       followed = null,
       waiting = const [];
 
-  /// Nothing to show: [notice], and Search, which focus can rest on.
-  _Body.empty(TvNotice notice, {required TvFocusMemory memory})
-    : cards = const [],
-      empty = true,
-      more = null,
-      followed = null,
-      waiting = const [],
-      footer = _Empty(notice: notice, memory: memory);
+  /// Nothing to show: [notice], and Search, or with [onClear] Clear
+  /// filters, either of which focus can rest on.
+  _Body.empty(
+    TvNotice notice, {
+    required TvFocusMemory memory,
+    VoidCallback? onClear,
+  }) : cards = const [],
+       empty = true,
+       emptyKey = onClear == null ? _Rows.search : _Rows.clear,
+       more = null,
+       followed = null,
+       waiting = const [],
+       footer = _Empty(notice: notice, memory: memory, onClear: onClear);
 
   const _Body.loading()
     : cards = const [],
-      footer = const TvLoading(top: 76),
       empty = false,
+      emptyKey = _Rows.search,
+      footer = const TvLoading(top: 76),
       more = null,
       followed = null,
       waiting = const [];
@@ -1090,20 +1274,25 @@ class _Body {
   /// What Add all adds.
   final List<AdminRequestItem> waiting;
 
-  /// It said it has nothing, and offers Search.
+  /// It said it has nothing; [emptyKey] is what gets focus there.
   final bool empty;
+  final String emptyKey;
 }
 
-/// An empty overview: why, and Search, where requests start.
+/// An empty overview: why, with Search where requests start, or with
+/// [onClear], Clear filters when a filter keeps them all out.
 class _Empty extends StatelessWidget {
-  const _Empty({required this.notice, required this.memory});
+  const _Empty({required this.notice, required this.memory, this.onClear});
 
   final TvNotice notice;
   final TvFocusMemory memory;
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final onClear = this.onClear;
+    final clear = onClear != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1114,10 +1303,13 @@ class _Empty extends StatelessWidget {
             memory: memory,
             row: _Rows.empty,
             child: TvButton(
-              label: l.searchTitle,
-              icon: Lucide.search,
-              focusNode: memory.node(_Rows.empty, _Rows.search),
-              onPressed: () => context.go(Routes.search),
+              label: clear ? l.browseClearFilters : l.searchTitle,
+              icon: clear ? Lucide.listFilter : Lucide.search,
+              focusNode: memory.node(
+                _Rows.empty,
+                clear ? _Rows.clear : _Rows.search,
+              ),
+              onPressed: clear ? onClear : () => context.go(Routes.search),
             ),
           ),
         ),
