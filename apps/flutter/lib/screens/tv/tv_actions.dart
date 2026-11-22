@@ -478,8 +478,8 @@ class _DayField extends StatelessWidget {
         radius: TvListItems.radius,
         rest: colors.foreground.withValues(alpha: .07),
         scale: TvFocus.rowScale,
-        builder: (context, content) {
-          final arrow = focused ? content : const Color(0x00000000);
+        builder: (context, look) {
+          final arrow = look.tone(colors.background.withValues(alpha: 0));
           return SizedBox(
             height: TvListItems.height,
             child: Padding(
@@ -498,7 +498,7 @@ class _DayField extends StatelessWidget {
                       child: Text(
                         value,
                         textAlign: TextAlign.center,
-                        style: TvType.facts.style(color: content),
+                        style: TvType.facts.style(color: look.content),
                       ),
                     ),
                   ),
