@@ -439,18 +439,24 @@ class _Bar extends StatelessWidget {
 /// state's line, and the state's actions. Its menu has those and the rest:
 /// "Goes to", the title's page, the request in its connection, and what
 /// the connection reported. [onAnswered] runs when an answer takes a
-/// request out of Done, which pages of its own hold.
+/// request out of Done, which pages of its own hold. [compact], for a row
+/// that stretches every card to its tallest, keeps each line to one and a
+/// declined request's answers to its menu.
 class QueueCard extends ConsumerWidget {
   const QueueCard({
     super.key,
     required this.item,
     required this.state,
     this.onAnswered,
+    this.compact = false,
   });
 
   final AdminRequestItem item;
   final RequestState state;
   final ValueChanged<AdminRequestItem>? onAnswered;
+  final bool compact;
+
+  int get _lines => compact ? 1 : 2;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => _dark(
@@ -470,7 +476,9 @@ class QueueCard extends ConsumerWidget {
         ..._queueLines(context, ref),
       ],
       who: _Askers(item: item),
-      actions: _QueueActions(item: item, state: state, onAnswered: onAnswered),
+      actions: compact && state == RequestState.declined
+          ? null
+          : _QueueActions(item: item, state: state, onAnswered: onAnswered),
       onMore: () => unawaited(
         showRequestMenu(context, ref, item, state, onAnswered: onAnswered),
       ),
@@ -533,13 +541,13 @@ class QueueCard extends ConsumerWidget {
               },
               if (reason != null && !gaveUp) adminReasonText(reason, l),
             ].join(' · '),
-            lines: 2,
+            lines: _lines,
           ),
           if (note != null && note.isNotEmpty)
             _Line(
               note,
               color: colors.foreground.withValues(alpha: .7),
-              lines: 2,
+              lines: _lines,
               italic: true,
             ),
         ];
@@ -984,10 +992,18 @@ Future<void> _showDiagnostics(BuildContext context, AdminRequestItem item) {
 /// admin's answers are. With [live], the title's state is the one the
 /// screen's live stream last said.
 class OwnRequestCard extends ConsumerWidget {
-  const OwnRequestCard({super.key, required this.item, this.live = false});
+  const OwnRequestCard({
+    super.key,
+    required this.item,
+    this.live = false,
+    this.compact = false,
+  });
 
   final RequestItem item;
   final bool live;
+
+  /// For a row that stretches every card to its tallest: each line one.
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) =>
@@ -1089,12 +1105,12 @@ class OwnRequestCard extends ConsumerWidget {
         if (reason == null) return const [];
         final note = reason.note?.trim();
         return [
-          _Line(declineText(reason, l), lines: 2),
+          _Line(declineText(reason, l), lines: compact ? 1 : 2),
           if (note != null && note.isNotEmpty)
             _Line(
               note,
               color: colors.foreground.withValues(alpha: .7),
-              lines: 2,
+              lines: compact ? 1 : 2,
               italic: true,
             ),
         ];

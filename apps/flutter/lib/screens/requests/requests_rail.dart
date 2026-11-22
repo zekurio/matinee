@@ -63,7 +63,8 @@ class _QueueRequests extends ConsumerWidget {
       onSeeAll: () => context.push(Routes.requestQueue),
       error: failed && queue == null ? const _QueueDown() : null,
       onRetry: () => ref.read(requestsProvider.notifier).retryQueue(),
-      card: (entry) => QueueCard(item: entry.item, state: entry.state),
+      card: (entry) =>
+          QueueCard(item: entry.item, state: entry.state, compact: true),
     );
   }
 }
@@ -87,7 +88,7 @@ class _OwnRequests extends ConsumerWidget {
       onSeeAll: () => context.push(Routes.requests()),
       error: mine.hasError && !mine.hasValue ? mine.error : null,
       onRetry: () => ref.invalidate(myLiveRequestsProvider),
-      card: (item) => OwnRequestCard(item: item),
+      card: (item) => OwnRequestCard(item: item, compact: true),
     );
   }
 }
