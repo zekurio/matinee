@@ -112,11 +112,10 @@ MatineeApi _libraryApi() {
   return MatineeApi(base: Uri.parse('https://media.test'), client: client);
 }
 
-/// The Shows or Movies tab on a 400-wide page, with the server answering as
-/// it does for the walk.
+/// The Media tab on a 400-wide page, with the server answering as it does
+/// for the walk.
 Future<ProviderContainer> _pumpLibrary(
-  WidgetTester tester,
-  String kind, {
+  WidgetTester tester, {
   double textScale = 1,
   Size size = const Size(400, 800),
   AuthState auth = const SignedIn('https://media.test', _user),
@@ -148,10 +147,7 @@ Future<ProviderContainer> _pumpLibrary(
             matineeDark,
             Align(
               alignment: Alignment.topLeft,
-              child: SizedBox(
-                width: size.width,
-                child: KindScreen(kind: kind),
-              ),
+              child: SizedBox(width: size.width, child: const MediaScreen()),
             ),
           ),
         ),
@@ -177,12 +173,12 @@ Finder _offlineMark(String label) => find.byWidgetPredicate(
 );
 
 void main() {
-  testWidgets('Home keeps the logo, settings, and search, then the avatar', (
+  testWidgets('Home keeps the logo, search, and the avatar, and no Settings', (
     tester,
   ) async {
     await _pump(tester, 0, auth: const SignedIn('https://media.test', _user));
     expect(find.byType(Logo), findsOneWidget);
-    expect(_button('Settings'), findsOneWidget);
+    expect(_button('Settings'), findsNothing);
     expect(_button('Search'), findsOneWidget);
     expect(_button('Profile'), findsOneWidget);
     expect(find.byType(TabHeader), findsNothing);
@@ -194,36 +190,28 @@ void main() {
     expect(tester.getSize(find.byType(Avatar)), const Size(30, 30));
   });
 
-  testWidgets('Shows and Movies leave the header to the library tab', (
-    tester,
-  ) async {
-    for (final index in [1, 2]) {
-      await _pump(
-        tester,
-        index,
-        auth: const SignedIn('https://media.test', _user),
-      );
-      expect(find.byType(TabHeader), findsNothing, reason: 'tab $index');
-      expect(find.byType(PressIndication), findsNothing, reason: 'tab $index');
-      expect(find.byType(Logo), findsNothing, reason: 'tab $index');
-    }
+  testWidgets('Media leaves the header to the tab', (tester) async {
+    await _pump(tester, 1, auth: const SignedIn('https://media.test', _user));
+    expect(find.byType(TabHeader), findsNothing);
+    expect(find.byType(PressIndication), findsNothing);
+    expect(find.byType(Logo), findsNothing);
   });
 
-  testWidgets('Shows puts filter, sort and search in its header, not its row', (
+  testWidgets('Media puts filter, sort and search in its header', (
     tester,
   ) async {
-    await _pumpLibrary(tester, TitleKind.show);
+    await _pumpLibrary(tester);
     expect(find.byType(TabHeader), findsOneWidget);
-    expect(find.text('Shows'), findsOneWidget);
+    expect(find.text('Media'), findsOneWidget);
     expect(_button('Filters'), findsOneWidget);
     expect(_buttonStarting('Sort: '), findsOneWidget);
     expect(_button('Search'), findsOneWidget);
     expect(_button('Profile'), findsOneWidget);
     expect(find.byType(ListBarButton), findsNothing);
-    expect(find.text('0 titles'), findsOneWidget);
+    expect(find.text('0 titles'), findsNothing);
 
-    // Filter, then Sort, Search, and the avatar at the edge, all above the
-    // count line.
+    // Filter, then Sort, Search, and the avatar at the edge, all in the
+    // header.
     final filter = tester.getCenter(_button('Filters')).dx;
     final sort = tester.getCenter(_buttonStarting('Sort: ')).dx;
     final search = tester.getCenter(_button('Search')).dx;
@@ -232,19 +220,14 @@ void main() {
     expect(sort, lessThan(search));
     expect(search, lessThan(avatar));
     expect(avatar, lessThan(400));
-    expect(
-      tester.getCenter(_button('Search')).dy,
-      lessThan(tester.getTopLeft(find.text('0 titles')).dy),
-    );
   });
 
   testWidgets('the header filter badge counts the filters on', (tester) async {
-    final container = await _pumpLibrary(tester, TitleKind.show);
+    final container = await _pumpLibrary(tester);
     expect(find.text('2'), findsNothing);
     container
         .read(
-          tabChoicesProvider((kind: TitleKind.show, genre: null, studio: null))
-              .notifier,
+          tabChoicesProvider((kind: null, genre: null, studio: null)).notifier,
         )
         .filters(const ListFilters(genres: ['Drama', 'Comedy']));
     await tester.pumpAndSettle();
@@ -252,16 +235,15 @@ void main() {
     expect(_button('Filters, 2 on'), findsOneWidget);
   });
 
-  testWidgets('the library header keeps its four actions at the largest text', (
+  testWidgets('the Media header keeps its four actions at the largest text', (
     tester,
   ) async {
-    await _pumpLibrary(tester, TitleKind.show, textScale: 3);
+    await _pumpLibrary(tester, textScale: 3);
     for (final label in ['Filters', 'Search', 'Profile']) {
       expect(tester.getSize(_button(label)), const Size(44, 44));
     }
     expect(tester.getSize(_buttonStarting('Sort: ')), const Size(44, 44));
     expect(tester.getSize(find.byType(TabHeader)).height, ShellHeader.height);
-    expect(find.text('0 titles'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -270,10 +252,10 @@ void main() {
     ('a tablet upright', Size(800, 1280)),
     ('a tablet on its side', Size(1280, 800)),
   ]) {
-    testWidgets('the library header fits $name at the largest text', (
+    testWidgets('the Media header fits $name at the largest text', (
       tester,
     ) async {
-      await _pumpLibrary(tester, TitleKind.show, textScale: 3, size: size);
+      await _pumpLibrary(tester, textScale: 3, size: size);
       expect(tester.getSize(find.byType(TabHeader)).height, ShellHeader.height);
       for (final label in ['Filters', 'Search', 'Profile']) {
         expect(tester.getSize(_button(label)), const Size(44, 44));
@@ -287,27 +269,38 @@ void main() {
     });
   }
 
-  testWidgets('Downloads ends with the avatar and says offline when it is', (
+  testWidgets('Explore has its name, search, and the avatar', (tester) async {
+    await _pump(tester, 3, auth: const SignedIn('https://media.test', _user));
+    expect(find.text('Explore'), findsOneWidget);
+    expect(_button('Search'), findsOneWidget);
+    expect(_button('Profile'), findsOneWidget);
+    expect(_button('Settings'), findsNothing);
+    expect(find.byType(TabHeader), findsOneWidget);
+  });
+
+  testWidgets('Downloads ends with the avatar, and Search offline', (
     tester,
   ) async {
-    await _pump(tester, 3);
+    await _pump(tester, 2);
     expect(find.text('Downloads'), findsOneWidget);
     expect(find.byType(PressIndication), findsNothing);
     expect(_offlineMark('Offline'), findsNothing);
 
-    await _pump(tester, 3, auth: const SignedIn('https://media.test', _user));
+    await _pump(tester, 2, auth: const SignedIn('https://media.test', _user));
     expect(find.text('Downloads'), findsOneWidget);
     expect(_button('Profile'), findsOneWidget);
     expect(_button('Settings'), findsNothing);
+    expect(_button('Search'), findsNothing);
     expect(
       tester.getCenter(_button('Profile')).dx,
       greaterThan(tester.getCenter(find.text('Downloads')).dx),
     );
 
-    await _pump(tester, 3, auth: const Offline('https://media.test', _user));
+    await _pump(tester, 2, auth: const Offline('https://media.test', _user));
     expect(find.text('Downloads'), findsOneWidget);
     expect(_button('Profile'), findsOneWidget);
-    expect(_offlineMark('Offline'), findsOneWidget);
+    expect(_button('Search'), findsOneWidget);
+    expect(_offlineMark('Offline'), findsNothing);
   });
 
   testWidgets('the avatar opens the profile over the tab', (tester) async {
@@ -359,7 +352,7 @@ void main() {
   });
 
   testWidgets('tab titles use the wordmark-sized heading', (tester) async {
-    await _pump(tester, 3);
+    await _pump(tester, 2);
     final style = tester.widget<Text>(find.text('Downloads')).style!;
     expect(style.fontSize, KitText.px26.size);
     expect(style.fontWeight, FontWeight.w700);
@@ -368,7 +361,7 @@ void main() {
   testWidgets('the longest title and its action fit at the largest size', (
     tester,
   ) async {
-    await _pump(tester, 3, textScale: 3);
+    await _pump(tester, 2, textScale: 3);
     final band = tester.getRect(find.byType(ShellTopBar));
     final title = tester.getRect(find.text('Downloads'));
     expect(title.top, greaterThanOrEqualTo(band.top));
@@ -377,7 +370,7 @@ void main() {
   });
 
   testWidgets('every header is the same height', (tester) async {
-    for (final index in [0, 3]) {
+    for (final index in [0, 2, 3]) {
       await _pump(tester, index);
       expect(
         tester.getSize(find.byType(ShellTopBar)).height,

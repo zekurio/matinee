@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/material.dart' show MaterialApp;
+import 'package:flutter/material.dart' show MaterialApp, TextField;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -193,8 +193,22 @@ Future<void> _openFilter(WidgetTester tester) async {
 
 Future<void> _tapChip(WidgetTester tester, String label) async {
   await tester.tap(find.text(label).last);
-  await tester.pump(const Duration(milliseconds: 100));
-  await tester.pump(const Duration(milliseconds: 100));
+  await tester.pumpAndSettle();
+}
+
+/// Opens the states' field, whose list is under it while it has focus, and
+/// picks one.
+Future<void> _tapState(WidgetTester tester, String label) async {
+  await tester.tap(find.byType(TextField).last);
+  await tester.pumpAndSettle();
+  await _tapChip(tester, label);
+}
+
+/// Opens the Type row's sheet and picks a kind.
+Future<void> _tapKind(WidgetTester tester, String label) async {
+  await tester.tap(find.text('Any').last);
+  await tester.pumpAndSettle();
+  await _tapChip(tester, label);
 }
 
 /// What the queue's streams asked for, each a filter.
@@ -213,8 +227,8 @@ void main() {
       {'limit': 20},
     ]);
     await _openFilter(tester);
-    await _tapChip(tester, 'Shows');
-    await _tapChip(tester, 'Declined');
+    await _tapKind(tester, 'Shows');
+    await _tapState(tester, 'Declined');
     await _tapChip(tester, 'Waiting');
     expect(_queueAsks(sent).skip(1), [
       {'limit': 20, 'states': <Object>[], 'kind': 'show'},
@@ -242,7 +256,7 @@ void main() {
     await _pumpOverview(tester, _server(sent));
     expect(find.text('Add all 3'), findsOneWidget);
     await _openFilter(tester);
-    await _tapChip(tester, 'Shows');
+    await _tapKind(tester, 'Shows');
     await _tapChip(tester, 'Show requests');
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Add all 3'), findsNothing);
@@ -268,7 +282,7 @@ void main() {
     final sent = <_Sent>[];
     await _pumpOverview(tester, _server(sent));
     await _openFilter(tester);
-    await _tapChip(tester, 'Movies');
+    await _tapKind(tester, 'Movies');
     await _tapChip(tester, 'Show requests');
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.textContaining('Add all'), findsNothing);
@@ -285,8 +299,8 @@ void main() {
     ];
     expect(find.text('Nothing requested yet'), findsOneWidget);
     await _openFilter(tester);
-    await _tapChip(tester, 'Waiting');
-    await _tapChip(tester, 'Movies');
+    await _tapState(tester, 'Waiting');
+    await _tapKind(tester, 'Movies');
     await _tapChip(tester, 'Show requests');
     await tester.pump(const Duration(milliseconds: 500));
     expect(asks().last, {

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../api/matinee_api.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/cards.dart' show NamedKinds;
 
 /// The words a list of titles says about its filters and cards.
 
@@ -31,24 +32,39 @@ String countText(BuildContext context, int count) =>
 
 /// What a card says under its name: the year, with the score or the
 /// runtime before it while the list is ordered by that, as the web's cards.
+/// Under a [NamedKinds] grid that holds both movies and shows, the kind
+/// comes after it.
 CardDetail? cardDetail(BuildContext context, TitleSummary title, String sort) {
   final l = AppLocalizations.of(context);
   final year = title.year?.toString();
   final score = title.rating;
+  CardDetail? detail;
   if (sort == TitleSort.score && score != null) {
-    return scoreDetail(l, scoreText(context, score), year);
+    detail = scoreDetail(l, scoreText(context, score), year);
+  } else {
+    final runtime = sort == TitleSort.runtime
+        ? runtimeText(l, title.runtimeMinutes)
+        : null;
+    if (runtime != null) {
+      detail = CardDetail(
+        year == null
+            ? l.webFiltersCardRuntimeOnly(runtime)
+            : l.webFiltersCardRuntime(runtime, year),
+      );
+    } else if (year != null) {
+      detail = CardDetail(year);
+    }
   }
-  final runtime = sort == TitleSort.runtime
-      ? runtimeText(l, title.runtimeMinutes)
-      : null;
-  if (runtime != null) {
-    return CardDetail(
-      year == null
-          ? l.webFiltersCardRuntimeOnly(runtime)
-          : l.webFiltersCardRuntime(runtime, year),
-    );
-  }
-  return year == null ? null : CardDetail(year);
+  if (!NamedKinds.of(context)) return detail;
+  final word = title.kind == TitleKind.show
+      ? l.webRequestsKindShow
+      : l.webRequestsKindMovie;
+  final text = detail?.text;
+  return CardDetail(
+    text == null ? word : l.requestsYearKind(text, word),
+    icon: detail?.icon,
+    label: [detail?.label ?? text, word].nonNulls.join(', '),
+  );
 }
 
 /// "7.8 · 2021" after the star, which the web draws as a character the app's

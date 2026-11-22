@@ -28,33 +28,6 @@ class ChoiceChip extends StatelessWidget {
   );
 }
 
-class ToggleChip extends StatelessWidget {
-  const ToggleChip({
-    super.key,
-    required this.label,
-    required this.checked,
-    required this.onChanged,
-    this.count,
-  });
-
-  final String label;
-  final bool checked;
-  final ValueChanged<bool>? onChanged;
-  final String? count;
-
-  @override
-  Widget build(BuildContext context) {
-    final change = onChanged;
-    return _Chip(
-      label: label,
-      active: checked,
-      onPressed: change == null ? null : () => change(!checked),
-      count: count,
-      exclusive: false,
-    );
-  }
-}
-
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.label,

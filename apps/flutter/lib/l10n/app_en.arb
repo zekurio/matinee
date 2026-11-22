@@ -592,6 +592,10 @@
   "@browseFindLanguage": {
     "description": "strings.xml"
   },
+  "browseFindGenre": "Find a genre",
+  "@browseFindGenre": {
+    "description": "The field in the genres filter that finds one by name."
+  },
   "browseGenre": "Genre",
   "@browseGenre": {
     "description": "strings.xml: Genres and studios"
@@ -630,11 +634,11 @@
   },
   "browseLibrary": "Library",
   "@browseLibrary": {
-    "description": "Names the menu that narrows Shows or Movies to one library."
+    "description": "Names the filter that narrows Media to one library."
   },
   "browseLibraryAll": "All libraries",
   "@browseLibraryAll": {
-    "description": "The library menu's choice for every library at once."
+    "description": "The library filter's choice for every library at once."
   },
   "browseNextUp": "Next up",
   "@browseNextUp": {
@@ -643,6 +647,10 @@
   "browseNoFilterMatch": "Nothing here matches these filters",
   "@browseNoFilterMatch": {
     "description": "strings.xml"
+  },
+  "browseNoGenreMatch": "No genre by that name",
+  "@browseNoGenreMatch": {
+    "description": "The field that finds a genre in the filters when nothing matches what's typed."
   },
   "browseRecentlyAdded": "Recently added in {p1}",
   "@browseRecentlyAdded": {
@@ -1434,13 +1442,17 @@
   "@libraryNoneMovies": {
     "description": "strings.xml"
   },
+  "libraryNoneMedia": "No movies or shows found",
+  "@libraryNoneMedia": {
+    "description": "Media, when no title is in any library."
+  },
   "libraryNoneShows": "No shows found",
   "@libraryNoneShows": {
     "description": "strings.xml"
   },
   "libraryOffline": "Your shows and movies come back once the server can be reached.",
   "@libraryOffline": {
-    "description": "Shows, Movies, or a genre's or studio's page while the server can't be reached."
+    "description": "Media, or a genre's or studio's page, while the server can't be reached."
   },
   "librarySearchMovies": "Search movies",
   "@librarySearchMovies": {
@@ -1871,6 +1883,15 @@
   "mediaWatchedDateTitle": "When did you watch it?",
   "@mediaWatchedDateTitle": {
     "description": "strings.xml"
+  },
+  "multiSelectRemove": "Remove {p1}",
+  "@multiSelectRemove": {
+    "description": "A chosen value's remove button in the filter fields, as the web's combobox has it.",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
   },
   "peopleCreditActor": "{count, plural, one{Actor} other{Cast}}",
   "@peopleCreditActor": {
@@ -2774,6 +2795,10 @@
   "@searchField": {
     "description": "strings.xml"
   },
+  "searchEmptyHint": "Type above to search your library, people, genres, and studios.",
+  "@searchEmptyHint": {
+    "description": "Under Search's empty field, where Discover used to be; the Explore tab has the rows now."
+  },
   "searchNoMatch": "Nothing matches “{p1}”",
   "@searchNoMatch": {
     "description": "strings.xml",
@@ -2786,6 +2811,14 @@
   "searchNoMatchHint": "Check the spelling, or try part of the name.",
   "@searchNoMatchHint": {
     "description": "strings.xml"
+  },
+  "searchOfflineHint": "Type to find a movie or show you downloaded.",
+  "@searchOfflineHint": {
+    "description": "Search's empty field while offline: it looks through the downloads."
+  },
+  "searchOfflineScope": "Searching your downloads",
+  "@searchOfflineScope": {
+    "description": "Over Search's offline results, so the person knows what's searched."
   },
   "searchSearching": "Searching…",
   "@searchSearching": {
@@ -3282,17 +3315,17 @@
   "@tabHome": {
     "description": "strings.xml: The bottom bar"
   },
-  "tabMovies": "Movies",
-  "@tabMovies": {
-    "description": "The touch screens' shell"
+  "tabExplore": "Explore",
+  "@tabExplore": {
+    "description": "The touch screens' shell: the tab that shows Discover's rows, requests, and catalog browse."
+  },
+  "tabMedia": "Media",
+  "@tabMedia": {
+    "description": "The touch screens' shell: the tab with every movie and show, as the web's shell.media."
   },
   "tabProfile": "Profile",
   "@tabProfile": {
     "description": "strings.xml"
-  },
-  "tabShows": "Shows",
-  "@tabShows": {
-    "description": "The touch screens' shell"
   },
   "titleCast": "Cast",
   "@titleCast": {

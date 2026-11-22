@@ -11,22 +11,20 @@ import '../../l10n/app_localizations.dart';
 import '../../media/avatar.dart';
 import '../../router.dart';
 
-/// The band at the top of every tab, laid out as YouTube's: the logo at the
-/// start, then settings and search as bare icons, and the account's picture at
-/// the end. It stays put while the page scrolls. Search opens Explore, which an
-/// admin's waiting requests head. Offline, where search can't work, the header
-/// says so in its place.
-class ShellHeader extends ConsumerWidget {
+/// The band at the top of Home: the logo at the start, search as a bare icon,
+/// and the account's picture at the end. It stays put while the page scrolls.
+/// Search opens Search, which offline looks through the downloads. Settings
+/// is reached from the profile, not here.
+class ShellHeader extends StatelessWidget {
   const ShellHeader({super.key});
 
-  /// Under the status bar.
-  static const height = 56.0;
+  /// Under the status bar: the band's 56 for its row, and 8 above it so
+  /// the row sits a little lower, within a thumb's reach.
+  static const height = 64.0;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final words = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
-    final offline = ref.watch(authStateProvider) is Offline;
     return _HeaderBand(
       child: Row(
         children: [
@@ -36,25 +34,10 @@ class ShellHeader extends ConsumerWidget {
           ),
           const Spacer(),
           HeaderButton(
-            icon: Lucide.settings,
-            label: words.shellSettings,
-            onPressed: () => context.push(Routes.settings),
+            icon: Lucide.search,
+            label: words.searchTitle,
+            onPressed: () => context.push(Routes.search),
           ),
-          if (offline)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: KitIcon(
-                Lucide.cloudOff,
-                color: colors.mutedForeground,
-                label: words.downloadsOffline,
-              ),
-            )
-          else
-            HeaderButton(
-              icon: Lucide.search,
-              label: words.searchTitle,
-              onPressed: () => context.push(Routes.search),
-            ),
           const HeaderAvatar(),
         ],
       ),
@@ -64,23 +47,15 @@ class ShellHeader extends ConsumerWidget {
 
 /// A tab's band, as tall as [ShellHeader]'s and under the status bar in the
 /// same way: the tab's name at the start, and only the actions that belong to
-/// it at the end, before the account's picture. Offline, [offline] puts the
-/// cloud icon in the actions' place.
+/// it at the end, before the account's picture.
 class TabHeader extends StatelessWidget {
-  const TabHeader({
-    super.key,
-    required this.title,
-    this.actions = const [],
-    this.offline = false,
-  });
+  const TabHeader({super.key, required this.title, this.actions = const []});
 
   final String title;
   final List<Widget> actions;
-  final bool offline;
 
   @override
   Widget build(BuildContext context) {
-    final words = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     return _HeaderBand(
       child: Row(
@@ -104,17 +79,7 @@ class TabHeader extends StatelessWidget {
               ),
             ),
           ),
-          if (offline)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: KitIcon(
-                Lucide.cloudOff,
-                color: colors.mutedForeground,
-                label: words.downloadsOffline,
-              ),
-            )
-          else
-            ...actions,
+          ...actions,
           const HeaderAvatar(),
         ],
       ),
@@ -171,8 +136,10 @@ class _HeaderBand extends StatelessWidget {
           height: ShellHeader.height,
           child: Padding(
             // A button's 44 holds its 22 icon 11 in, so the last icon ends
-            // 16 from the edge, where the logo starts on the other side.
-            padding: const EdgeInsets.only(left: 16, right: 5),
+            // 16 from the edge, where the logo starts on the other side. The
+            // row sits 8 under the status bar, as the web's phone headers do,
+            // so its actions are easier to reach.
+            padding: const EdgeInsets.only(left: 16, top: 8, right: 5),
             child: child,
           ),
         ),

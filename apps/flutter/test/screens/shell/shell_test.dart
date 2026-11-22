@@ -24,7 +24,16 @@ void main() {
     expect(shell.branches, hasLength(4));
     expect(
       [for (final branch in shell.branches) branch.defaultRoute?.path],
-      [Routes.home, Routes.shows, Routes.movies, Routes.downloads],
+      [Routes.home, Routes.media, Routes.downloads, Routes.explore],
+    );
+    // Shows and Movies still open Media, on their kind.
+    final media = shell.branches[1];
+    expect(
+      [
+        for (final route in media.routes)
+          if (route is GoRoute) route.path,
+      ],
+      [Routes.media, Routes.shows, Routes.movies],
     );
     expect([
       for (final route in routes)
