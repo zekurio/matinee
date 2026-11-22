@@ -7,33 +7,29 @@ import type {
   TitleKind,
 } from "@matinee/contracts"
 import {
-  Autocomplete,
-  AutocompleteContent,
-  AutocompleteInput,
-  AutocompleteItem,
-  AutocompleteList,
-} from "@matinee/ui/components/autocomplete"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  useComboboxAnchor,
+} from "@matinee/ui/components/combobox"
+import { Dialog } from "@matinee/ui/components/dialog"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@matinee/ui/components/field"
-import { Input } from "@matinee/ui/components/input"
 import { toast } from "@matinee/ui/components/sonner"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { XIcon } from "lucide-react"
-import { type ReactNode, useEffect, useId, useState } from "react"
+import { useEffect, useId, useState } from "react"
 
-import { ToggleChips } from "@/components/filters/filter-panel"
+import { MultiSelect } from "@/components/multi-select"
 import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -46,6 +42,16 @@ import {
   sendValues,
   textOf,
 } from "./connection-fields"
+import {
+  FormColumn,
+  FormColumns,
+  FormDialogBody,
+  FormDialogContent,
+  FormDialogFooter,
+  FormDialogForm,
+  FormDialogHeader,
+  FormSection,
+} from "./form-dialog"
 
 type RuleValues = {
   users: string[]
@@ -94,10 +100,7 @@ export function RuleDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-xl"
-      >
+      <FormDialogContent width="lg">
         <RuleForm
           connection={connection}
           kind={kind}
@@ -106,17 +109,8 @@ export function RuleDialog({
           rule={rule}
           onDone={() => onOpenChange(false)}
         />
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
-  )
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-4">
-      <h3 className="text-sm font-semibold">{title}</h3>
-      {children}
-    </section>
   )
 }
 
@@ -176,129 +170,138 @@ function RuleForm({
   const folderField = fields.find((field) => field.folder)
   const folderValue = folderField ? values.settings[folderField.key] : undefined
   const folder = textOf(folderValue)
+  // A saved value the choices don't hold: still loading, or gone since.
+  const unknown = () =>
+    choices
+      ? tr("connections.rules.unknownChoice")
+      : tr("connections.rules.loadingChoice")
 
   return (
     <form.AppForm>
-      <form
-        className="flex flex-col gap-7"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-lg leading-7 font-semibold">
-            {rule
+      <FormDialogForm onSubmit={() => void form.handleSubmit()}>
+        <FormDialogHeader
+          title={
+            rule
               ? tr("connections.rules.dialog.editTitle")
-              : tr("connections.rules.dialog.addTitle")}
-          </DialogTitle>
-        </DialogHeader>
+              : tr("connections.rules.dialog.addTitle")
+          }
+        />
 
-        <Section title={tr("connections.rules.conditions")}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel id={`${id}-users`}>
-                {tr("connections.rules.users")}
-              </FieldLabel>
-              <ToggleChips
-                labelId={`${id}-users`}
-                limit={12}
-                find={{
-                  placeholder: tr("connections.rules.users.find"),
-                  empty: tr("connections.field.findEmpty"),
-                }}
-                choices={(choices?.users ?? []).map((user) => ({
-                  value: user.id,
-                  label: user.name,
-                }))}
-                value={values.users}
-                onChange={(next) => form.setFieldValue("users", next)}
-              />
-            </Field>
-            {choices?.tmdb !== false && (
-              <Field>
-                <FieldLabel id={`${id}-genres`}>
-                  {tr("connections.rules.genres")}
-                </FieldLabel>
-                <ToggleChips
-                  labelId={`${id}-genres`}
-                  choices={(choices?.genres ?? []).map((genre) => ({
-                    value: String(genre.id),
-                    label: genre.name,
-                  }))}
-                  value={values.genres}
-                  onChange={(next) => form.setFieldValue("genres", next)}
-                />
-              </Field>
-            )}
-            <Field>
-              <FieldLabel id={`${id}-languages`}>
-                {tr("connections.rules.languages")}
-              </FieldLabel>
-              <ToggleChips
-                labelId={`${id}-languages`}
-                limit={12}
-                find={{
-                  placeholder: tr("connections.rules.languages.find"),
-                  empty: tr("connections.field.findEmpty"),
-                }}
-                choices={(choices?.languages ?? []).map((language) => ({
-                  value: language.id,
-                  label: language.name,
-                }))}
-                value={values.languages}
-                onChange={(next) => form.setFieldValue("languages", next)}
-              />
-            </Field>
-            {choices?.tmdb !== false ? (
-              <KeywordField
-                value={values.keywords}
-                onChange={(next) => form.setFieldValue("keywords", next)}
-              />
-            ) : (
-              <FieldDescription>
-                {tr("connections.rules.noTmdb")}
-              </FieldDescription>
-            )}
-          </FieldGroup>
-        </Section>
+        <FormDialogBody>
+          <FormColumns>
+            <FormColumn>
+              <FormSection
+                title={tr("connections.rules.conditions")}
+                description={tr("connections.rules.conditions.description")}
+              >
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor={`${id}-users`}>
+                      {tr("connections.rules.users")}
+                    </FieldLabel>
+                    <MultiSelect
+                      id={`${id}-users`}
+                      placeholder={tr("connections.rules.users.find")}
+                      empty={tr("connections.field.findEmpty")}
+                      unknown={unknown}
+                      choices={(choices?.users ?? []).map((user) => ({
+                        value: user.id,
+                        label: user.name,
+                      }))}
+                      value={values.users}
+                      onChange={(next) => form.setFieldValue("users", next)}
+                    />
+                  </Field>
+                  {choices?.tmdb !== false && (
+                    <Field>
+                      <FieldLabel htmlFor={`${id}-genres`}>
+                        {tr("connections.rules.genres")}
+                      </FieldLabel>
+                      <MultiSelect
+                        id={`${id}-genres`}
+                        placeholder={tr("connections.rules.genres.find")}
+                        empty={tr("connections.field.findEmpty")}
+                        unknown={unknown}
+                        choices={(choices?.genres ?? []).map((genre) => ({
+                          value: String(genre.id),
+                          label: genre.name,
+                        }))}
+                        value={values.genres}
+                        onChange={(next) => form.setFieldValue("genres", next)}
+                      />
+                    </Field>
+                  )}
+                  <Field>
+                    <FieldLabel htmlFor={`${id}-languages`}>
+                      {tr("connections.rules.languages")}
+                    </FieldLabel>
+                    <MultiSelect
+                      id={`${id}-languages`}
+                      placeholder={tr("connections.rules.languages.find")}
+                      empty={tr("connections.field.findEmpty")}
+                      unknown={unknown}
+                      choices={(choices?.languages ?? []).map((language) => ({
+                        value: language.id,
+                        label: language.name,
+                      }))}
+                      value={values.languages}
+                      onChange={(next) => form.setFieldValue("languages", next)}
+                    />
+                  </Field>
+                  {choices?.tmdb !== false ? (
+                    <KeywordField
+                      value={values.keywords}
+                      onChange={(next) => form.setFieldValue("keywords", next)}
+                    />
+                  ) : (
+                    <FieldDescription>
+                      {tr("connections.rules.noTmdb")}
+                    </FieldDescription>
+                  )}
+                </FieldGroup>
+              </FormSection>
+            </FormColumn>
 
-        <Section title={tr("connections.rules.settings")}>
-          <FieldGroup>
-            {fields.map((field) => (
-              <DescribedInput
-                key={field.key}
-                field={field}
-                value={values.settings[field.key]}
-                unset={tr("connections.rules.keep")}
-                onChange={(next) =>
-                  form.setFieldValue("settings", (current) => ({
-                    ...current,
-                    [field.key]: next,
-                  }))
-                }
-                footer={
-                  field === folderField && folder ? (
-                    <LandsIn
-                      kind={kind}
-                      folder={folder}
-                      libraries={libraries.data}
-                      picked={
-                        values.folderLibrary ??
-                        connection.folderLibraries[folder]
+            <FormColumn>
+              <FormSection title={tr("connections.rules.settings")}>
+                <FieldGroup>
+                  {fields.map((field) => (
+                    <DescribedInput
+                      key={field.key}
+                      field={field}
+                      value={values.settings[field.key]}
+                      unset={tr("connections.rules.keep")}
+                      onChange={(next) =>
+                        form.setFieldValue("settings", (current) => ({
+                          ...current,
+                          [field.key]: next,
+                        }))
                       }
-                      onPick={(library) =>
-                        form.setFieldValue("folderLibrary", library)
+                      footer={
+                        field === folderField && folder ? (
+                          <LandsIn
+                            kind={kind}
+                            folder={folder}
+                            libraries={libraries.data}
+                            picked={
+                              values.folderLibrary ??
+                              connection.folderLibraries[folder]
+                            }
+                            onPick={(library) =>
+                              form.setFieldValue("folderLibrary", library)
+                            }
+                          />
+                        ) : undefined
                       }
                     />
-                  ) : undefined
-                }
-              />
-            ))}
-          </FieldGroup>
-        </Section>
+                  ))}
+                </FieldGroup>
+              </FormSection>
+            </FormColumn>
+          </FormColumns>
+        </FormDialogBody>
 
-        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
+        <FormDialogFooter>
           <form.SubmitButton
             disabled={conditions === 0 || Object.keys(settings).length === 0}
             pending={save.isPending}
@@ -307,15 +310,15 @@ function RuleForm({
               ? tr("connections.rules.dialog.save")
               : tr("connections.rules.dialog.create")}
           </form.SubmitButton>
-        </DialogFooter>
-      </form>
+        </FormDialogFooter>
+      </FormDialogForm>
     </form.AppForm>
   )
 }
 
 /**
- * TMDB's keywords, found by name as it's typed, each chosen one a chip
- * that takes it off again.
+ * TMDB's keywords, found by name as it's typed. The server does the
+ * finding, so the list shows what it sent as it is.
  */
 function KeywordField({
   value,
@@ -325,6 +328,7 @@ function KeywordField({
   onChange: (value: FulfilmentKeyword[]) => void
 }) {
   const id = useId()
+  const anchor = useComboboxAnchor()
   const [query, setQuery] = useState("")
   const [search, setSearch] = useState("")
   // Asks once typing pauses, not for every letter.
@@ -339,76 +343,54 @@ function KeywordField({
     enabled: search.length > 1,
     retry: false,
   })
-  const items = (found.data ?? []).filter(
-    (keyword) => !value.some((chosen) => chosen.id === keyword.id),
-  )
+  const asked = search.length > 1 && query.trim() === search
   return (
     <Field>
       <FieldLabel htmlFor={id}>{tr("connections.rules.keywords")}</FieldLabel>
-      {value.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {value.map((keyword) => (
-            <span
-              key={keyword.id}
-              className="bg-secondary text-secondary-foreground text-13px inline-flex h-7 items-center gap-1 rounded-full pr-1 pl-2.5"
-            >
-              {keyword.name}
-              <button
-                type="button"
-                aria-label={tr("connections.rules.keywords.remove", {
-                  name: keyword.name,
-                })}
-                className="hover:bg-foreground/10 grid size-5 place-items-center rounded-full"
-                onClick={() =>
-                  onChange(value.filter((chosen) => chosen.id !== keyword.id))
-                }
-              >
-                <XIcon aria-hidden className="size-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-      <Autocomplete
-        items={items}
-        value={query}
-        itemToStringValue={(item: FulfilmentKeyword) => item.name}
-        onValueChange={(next, details) => {
-          // Picking one adds it; the field empties for the next.
-          if (details.reason === "item-press") return
-          setQuery(next)
-        }}
+      <Combobox
+        multiple
+        items={found.data ?? []}
+        filter={null}
+        value={value}
+        itemToStringLabel={(keyword: FulfilmentKeyword) => keyword.name}
+        isItemEqualToValue={(item, other) => item.id === other.id}
+        onValueChange={onChange}
+        inputValue={query}
+        onInputValueChange={setQuery}
       >
-        <AutocompleteInput
-          id={id}
-          placeholder={tr("connections.rules.keywords.find")}
-          autoComplete="off"
-          spellCheck={false}
-          maxLength={100}
-          render={<Input />}
-        />
-        {items.length > 0 && (
-          <AutocompleteContent sideOffset={4} className="data-empty:hidden">
-            <AutocompleteList>
-              {(item: FulfilmentKeyword) => (
-                <AutocompleteItem
-                  key={item.id}
-                  value={item}
-                  onClick={() => {
-                    onChange([...value, item])
-                    setQuery("")
-                  }}
-                >
-                  <span className="min-w-0 flex-1 truncate">{item.name}</span>
-                </AutocompleteItem>
-              )}
-            </AutocompleteList>
-          </AutocompleteContent>
-        )}
-      </Autocomplete>
-      {found.isError && (
-        <FieldDescription>{errorMessage(found.error)}</FieldDescription>
-      )}
+        <ComboboxChips ref={anchor}>
+          {value.map((keyword) => (
+            <ComboboxChip key={keyword.id} label={keyword.name} />
+          ))}
+          <ComboboxChipsInput
+            id={id}
+            placeholder={
+              value.length ? undefined : tr("connections.rules.keywords.find")
+            }
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={100}
+          />
+        </ComboboxChips>
+        <ComboboxContent anchor={anchor}>
+          <ComboboxEmpty>
+            {!asked
+              ? tr("connections.rules.keywords.type")
+              : found.isFetching
+                ? tr("connections.rules.keywords.searching")
+                : found.isError
+                  ? errorMessage(found.error)
+                  : tr("connections.field.findEmpty")}
+          </ComboboxEmpty>
+          <ComboboxList>
+            {(keyword: FulfilmentKeyword) => (
+              <ComboboxItem key={keyword.id} value={keyword}>
+                <span className="min-w-0 flex-1 truncate">{keyword.name}</span>
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
     </Field>
   )
 }

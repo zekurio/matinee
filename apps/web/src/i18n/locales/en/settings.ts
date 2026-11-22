@@ -24,6 +24,11 @@ export default defineMessages("settings", {
   "settings.section.playback.description": "Languages, quality, and codecs",
   "settings.section.playback.keywords":
     "Audio language, Subtitles, Captions, Forced subtitles, Language, Quality, Video codec, Audio codec, HEVC, AV1, Opus, Passthrough, Dolby, Surround, Specials, Season 0",
+  "settings.section.apiTokens.label": "API tokens",
+  "settings.section.apiTokens.description":
+    "Tokens for scripts and services, and what each may do",
+  "settings.section.apiTokens.keywords":
+    "API, Token, Key, API key, Bearer, Scripts, Automation, Home Assistant, Permissions, Revoke, Rotate",
   "settings.section.libraries.label": "Libraries",
   "settings.section.libraries.description": "Folders Matinee scans for video",
   "settings.section.libraries.keywords":

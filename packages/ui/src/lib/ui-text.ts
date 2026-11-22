@@ -19,6 +19,8 @@ export type UiText = {
   readonly colorArea: (label: string) => string
   readonly colorHue: (label: string) => string
   readonly colorHex: (label: string) => string
+  /** A chosen value's remove button, as on the combobox's chips. */
+  readonly remove: (label: string) => string
   readonly previousMonth: string
   readonly nextMonth: string
   /** A calendar day, given its date written out. */
@@ -37,6 +39,7 @@ let current: UiText = {
   colorArea: (label) => `${label} saturation and brightness`,
   colorHue: (label) => `${label} hue`,
   colorHex: (label) => `${label} hex value`,
+  remove: (label) => `Remove ${label}`,
   previousMonth: "Go to the previous month",
   nextMonth: "Go to the next month",
   today: (date) => `Today, ${date}`,

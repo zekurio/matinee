@@ -112,7 +112,7 @@ export function PosterActionButton({
   if (!action) return null
   const tip =
     action === "request" && !override
-      ? requestTip(availability, can(user, "adminRequest.update"))
+      ? requestTip(availability, can(user, "adminRequest.decline"))
       : null
   const id = availability.requestId
   const Icon = icons[action]

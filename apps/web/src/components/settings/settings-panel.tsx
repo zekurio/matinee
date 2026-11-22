@@ -219,11 +219,16 @@ export function SettingRows({ children }: { children: ReactNode }) {
 }
 
 /**
- * A setting: its name, then the control, without a line explaining it, as
- * the apps' settings read.
+ * A setting: its name, then the control. A settings panel's row has no
+ * line explaining it, as the apps' settings read.
  * - `inline`: control on the right, for switches.
  * - `split`: control on the right once there's room, below it on phones.
+ * - `side`: as `split`, for a narrow column such as a form dialog's: the
+ *   control moves beside the name sooner, at a set width.
  * - `stack`: control below at full width, for long values like URLs.
+ *
+ * In a form dialog, a `hint` under the name says what the row covers,
+ * beside the control. A `footer` goes under the whole row.
  *
  * The control gets the ids to name itself by through `children` as a
  * function, so a switch or input is labelled and described by the row.
@@ -231,19 +236,28 @@ export function SettingRows({ children }: { children: ReactNode }) {
 export function SettingRow({
   title,
   layout = "inline",
+  hint,
   footer,
   children,
 }: {
   title: string
-  layout?: "inline" | "split" | "stack"
+  layout?: "inline" | "split" | "side" | "stack"
+  /** A line under the name on what the setting does. */
+  hint?: ReactNode
   /** Content under the row that belongs to it, such as a warning. */
   footer?: ReactNode
-  children: (ids: { controlId: string; labelId: string }) => ReactNode
+  children: (ids: {
+    controlId: string
+    labelId: string
+    /** The hint's id, for the control's `aria-describedby`. */
+    hintId: string | undefined
+  }) => ReactNode
 }) {
   const id = useId()
   const ids = {
     controlId: `${id}-control`,
     labelId: `${id}-label`,
+    hintId: hint ? `${id}-hint` : undefined,
   }
   return (
     <div className="@container flex flex-col gap-2.5 px-4 py-2.5">
@@ -253,6 +267,8 @@ export function SettingRow({
           layout === "inline" && "items-center justify-between",
           layout === "split" &&
             "flex-col @lg:flex-row @lg:items-center @lg:justify-between",
+          layout === "side" &&
+            "flex-col @sm:flex-row @sm:items-center @sm:justify-between",
           layout === "stack" && "flex-col",
         )}
       >
@@ -264,11 +280,20 @@ export function SettingRow({
           >
             {title}
           </label>
+          {hint && (
+            <p
+              id={ids.hintId}
+              className="text-muted-foreground text-13px mt-0.5 leading-5"
+            >
+              {hint}
+            </p>
+          )}
         </div>
         <div
           className={cn(
             "flex shrink-0 items-center gap-2",
             layout === "split" && "@lg:w-72",
+            layout === "side" && "@sm:w-52",
           )}
         >
           {children(ids)}

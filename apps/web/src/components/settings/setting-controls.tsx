@@ -32,6 +32,8 @@ export function typeOnly<T>(value?: T): T | undefined {
 
 type SwitchRowProps = {
   title: string
+  /** Under the name, beside the switch. */
+  hint?: ReactNode
   footer?: ReactNode
   checked: boolean
   disabled?: boolean
@@ -40,17 +42,19 @@ type SwitchRowProps = {
 
 export function SwitchRow({
   title,
+  hint,
   footer,
   checked,
   disabled,
   onChange,
 }: SwitchRowProps) {
   return (
-    <SettingRow title={title} footer={footer}>
+    <SettingRow title={title} hint={hint} footer={footer}>
       {(ids) => (
         <Switch
           id={ids.controlId}
           aria-labelledby={ids.labelId}
+          aria-describedby={ids.hintId}
           checked={checked}
           disabled={disabled}
           onCheckedChange={onChange}
@@ -68,6 +72,10 @@ export function SwitchField(row: Omit<SwitchRowProps, "checked" | "onChange">) {
 
 type SelectRowProps<T extends string> = {
   title: string
+  /** `side` in a form dialog's columns. */
+  layout?: "split" | "side"
+  /** Under the name, beside the select. */
+  hint?: ReactNode
   footer?: ReactNode
   value: T
   options: readonly T[]
@@ -78,6 +86,8 @@ type SelectRowProps<T extends string> = {
 
 export function SelectRow<T extends string>({
   title,
+  layout = "split",
+  hint,
   footer,
   value,
   options,
@@ -86,7 +96,7 @@ export function SelectRow<T extends string>({
   onChange,
 }: SelectRowProps<T>) {
   return (
-    <SettingRow title={title} layout="split" footer={footer}>
+    <SettingRow title={title} layout={layout} hint={hint} footer={footer}>
       {(ids) => (
         <Select
           items={options.map((option) => ({
@@ -97,7 +107,11 @@ export function SelectRow<T extends string>({
           disabled={disabled}
           onValueChange={(next) => next && onChange(next)}
         >
-          <SelectTrigger id={ids.controlId} className="w-full">
+          <SelectTrigger
+            id={ids.controlId}
+            aria-describedby={ids.hintId}
+            className="w-full"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

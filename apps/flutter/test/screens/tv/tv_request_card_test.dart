@@ -122,7 +122,11 @@ Future<void> _pumpCards(WidgetTester tester, List<Widget> cards) async {
             client: MockClient((_) async => http.Response('{}', 500)),
           ),
         ),
-        runsQueueProvider.overrideWithValue(false),
+        // Every answer's button shows, and the hub reads no queue to keep
+        // the test off the network.
+        canProvider.overrideWith(
+          (ref, permission) => permission != Permission.adminRequestRead,
+        ),
       ],
       child: MaterialApp(
         locale: const Locale('en'),

@@ -29,11 +29,35 @@ export function canAny(
 
 /**
  * Whether the account runs the request queue: reading everyone's
- * requests and answering them. The queue's screen is all answers, so it
- * takes both.
+ * requests and answering them, which takes approving or declining. A
+ * token that only retries failed sends reads the queue but doesn't run
+ * it.
  */
 export function runsQueue(user: Pick<User, "permissions">): boolean {
-  return can(user, "adminRequest.read") && can(user, "adminRequest.update")
+  return (
+    can(user, "adminRequest.read") &&
+    (can(user, "adminRequest.approve") || can(user, "adminRequest.decline"))
+  )
+}
+
+/** What the account may do with a request in the queue. */
+export type QueueActions = {
+  approve: boolean
+  decline: boolean
+  retry: boolean
+  /** Taking one out of the queue, which approving or declining allows. */
+  remove: boolean
+}
+
+export function queueActions(user: Pick<User, "permissions">): QueueActions {
+  const approve = can(user, "adminRequest.approve")
+  const decline = can(user, "adminRequest.decline")
+  return {
+    approve,
+    decline,
+    retry: can(user, "adminRequest.retry"),
+    remove: approve || decline,
+  }
 }
 
 /** `permissions` with `changed` all held or all gone, in the contract's order. */
@@ -49,39 +73,10 @@ export function withPermissions(
   )
 }
 
-/**
- * Asking for titles as one choice, the way a form offers it: not at all,
- * with an approval, or added right away. It stands for `request.create`
- * and `request.autoApprove`.
- */
-export type RequestsChoice = "off" | "ask" | "add"
-export const REQUESTS_CHOICES: readonly RequestsChoice[] = ["off", "ask", "add"]
-
-/** The two permissions a request choice stands for. */
-export const REQUEST_PERMISSIONS: readonly Permission[] = [
-  "request.create",
-  "request.autoApprove",
-]
-
-/** The permissions the access forms give a control of their own. */
-export const POLICY_PERMISSIONS: readonly Permission[] = [
-  "media.download",
-  "request.create",
-  "request.autoApprove",
-]
-
-export function requestsOf(permissions: readonly Permission[]): RequestsChoice {
-  if (!holdsPermission(permissions, "request.create")) return "off"
-  return holdsPermission(permissions, "request.autoApprove") ? "add" : "ask"
-}
-
-export function withRequests(
+/** Whether the account holds every one of `permissions`. */
+export function canAll(
+  user: Pick<User, "permissions">,
   permissions: readonly Permission[],
-  choice: RequestsChoice,
-): Permission[] {
-  return withPermissions(
-    withPermissions(permissions, ["request.create"], choice !== "off"),
-    ["request.autoApprove"],
-    choice === "add",
-  )
+): boolean {
+  return permissions.every((permission) => can(user, permission))
 }

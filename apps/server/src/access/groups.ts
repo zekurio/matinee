@@ -5,8 +5,13 @@ import {
   AccessOverride,
   type AccessPolicy,
   type AccessSource,
+  type Capabilities,
+  ManagedAccess,
+  MANAGES_NOTHING,
   type Permission,
+  permissionsOf,
   type ProviderGroup,
+  RequestMode,
   sortPermissions,
   type UserAccess,
   type UserRole,
@@ -28,7 +33,6 @@ import { db } from "../db"
 import {
   type Access,
   EVERYTHING,
-  grantable,
   mostGenerous,
   toAccess,
   withOverride,
@@ -73,6 +77,24 @@ export function forgetGroups(): void {
   snapshot = null
 }
 
+/**
+ * A group's capabilities as its row stores them. A value an older or
+ * newer version wrote that this one doesn't know counts for nothing.
+ */
+function capabilitiesOf(
+  row: Pick<AccessGroupRow, "downloads" | "requests" | "apiTokens" | "manages">,
+): Capabilities {
+  return {
+    downloads: row.downloads,
+    requests: RequestMode.safeParse(row.requests).data ?? "off",
+    apiTokens: row.apiTokens,
+    manages: {
+      ...MANAGES_NOTHING,
+      ...ManagedAccess.partial().safeParse(row.manages).data,
+    },
+  }
+}
+
 /** With `tx`, the groups it reads are share-locked; see `readAccess`. */
 async function read(tx?: Tx): Promise<Snapshot> {
   const from = tx ?? db
@@ -99,9 +121,9 @@ async function read(tx?: Tx): Promise<Snapshot> {
         },
         maxBitrate: row.maxBitrate,
         transcode: row.transcode,
-        requestLimit: RequestLimit.parse(row.requestLimit),
         maxStreams: row.maxStreams,
-        permissions: grantable(row.permissions),
+        requestLimit: RequestLimit.parse(row.requestLimit),
+        ...capabilitiesOf(row),
       },
     })
   }
@@ -125,17 +147,11 @@ type Account = {
   accessOverride: AccessOverride | null
 }
 
-/** The override as stored, holding only permissions an override can. */
+/** The override as stored, or none when it doesn't parse. */
 export function overrideOf(account: {
   accessOverride: AccessOverride | null
 }): AccessOverride {
-  const { allow, deny, ...limits } =
-    AccessOverride.safeParse(account.accessOverride).data ?? {}
-  return {
-    ...limits,
-    ...(allow && { allow: grantable(allow) }),
-    ...(deny && { deny: grantable(deny) }),
-  }
+  return AccessOverride.safeParse(account.accessOverride).data ?? {}
 }
 
 /** What the account's groups give it, before its override. */
@@ -165,7 +181,7 @@ export async function everyoneAccess(): Promise<Access> {
 
 /** What the account may open and how the server streams to it. */
 export async function accessOf(account: Account): Promise<Access> {
-  return toAccess(policyOf(account, await load()))
+  return accessIn(await load(), account)
 }
 
 /**
@@ -188,7 +204,7 @@ export function readAccess(tx: Tx): Promise<AccessState> {
 
 /** `accessOf`, from what `readAccess` read. */
 export function accessIn(state: AccessState, account: Account): Access {
-  return toAccess(policyOf(account, state))
+  return toAccess(policyOf(account, state), account.role === "admin")
 }
 
 /** `groupPermissions`, from what `readAccess` read. */
@@ -197,7 +213,10 @@ export function groupPermissionsIn(
   ids: readonly string[],
 ): Permission[] {
   return sortPermissions(
-    ids.flatMap((id) => state.groups.get(id)?.policy.permissions ?? []),
+    ids.flatMap((id) => {
+      const group = state.groups.get(id)
+      return group ? permissionsOf(group.policy) : []
+    }),
   )
 }
 
@@ -374,9 +393,12 @@ function policyColumns(policy: AccessPolicy) {
     allLibraries: policy.libraries.all,
     maxBitrate: policy.maxBitrate,
     transcode: policy.transcode,
-    requestLimit: policy.requestLimit,
     maxStreams: policy.maxStreams,
-    permissions: grantable(policy.permissions),
+    downloads: policy.downloads,
+    requests: policy.requests,
+    requestLimit: policy.requestLimit,
+    apiTokens: policy.apiTokens,
+    manages: policy.manages,
   }
 }
 
@@ -414,6 +436,24 @@ export type GroupBefore = {
   providerGroup: string | null
 }
 
+function beforeOf(
+  current: Pick<
+    AccessGroupRow,
+    | "everyone"
+    | "providerGroup"
+    | "downloads"
+    | "requests"
+    | "apiTokens"
+    | "manages"
+  >,
+): GroupBefore {
+  return {
+    everyone: current.everyone,
+    providerGroup: current.providerGroup,
+    permissions: permissionsOf(capabilitiesOf(current)),
+  }
+}
+
 /**
  * Save a group. The built-in one keeps its name and follows no provider
  * group. `allow` sees the group as it is with its row locked and throws
@@ -429,14 +469,17 @@ export async function updateGroup(
     const [current] = await tx
       .select({
         everyone: accessGroup.everyone,
-        permissions: accessGroup.permissions,
         providerGroup: accessGroup.providerGroup,
+        downloads: accessGroup.downloads,
+        requests: accessGroup.requests,
+        apiTokens: accessGroup.apiTokens,
+        manages: accessGroup.manages,
       })
       .from(accessGroup)
       .where(eq(accessGroup.id, id))
       .for("update")
     if (!current) return false
-    allow?.({ ...current, permissions: grantable(current.permissions) })
+    allow?.(beforeOf(current))
     if (!current.everyone && (await nameTaken(tx, input.name, id))) {
       throw new GroupError(NAME_TAKEN)
     }
@@ -467,8 +510,11 @@ export async function removeGroup(
     const [current] = await tx
       .select({
         everyone: accessGroup.everyone,
-        permissions: accessGroup.permissions,
         providerGroup: accessGroup.providerGroup,
+        downloads: accessGroup.downloads,
+        requests: accessGroup.requests,
+        apiTokens: accessGroup.apiTokens,
+        manages: accessGroup.manages,
       })
       .from(accessGroup)
       .where(eq(accessGroup.id, id))
@@ -479,7 +525,7 @@ export async function removeGroup(
         "Every account is in this group, so it can't be deleted. Take its libraries away instead.",
       )
     }
-    allow?.({ ...current, permissions: grantable(current.permissions) })
+    allow?.(beforeOf(current))
     await tx.delete(accessGroup).where(eq(accessGroup.id, id))
     return true
   })
