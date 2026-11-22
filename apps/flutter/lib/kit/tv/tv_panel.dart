@@ -205,9 +205,11 @@ class _TvSidePanelState extends State<TvSidePanel> {
                         ),
                         child: Semantics(
                           header: true,
+                          // Three lines, so a long name with what's done
+                          // to it, as "… anfragen", reads whole.
                           child: Text(
                             title,
-                            maxLines: 2,
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                             style: TvType.headline.style(
                               color: colors.foreground,
