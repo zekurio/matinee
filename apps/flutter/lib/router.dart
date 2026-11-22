@@ -38,9 +38,13 @@ import 'screens/title/episode_screen.dart';
 import 'screens/title/season_screen.dart';
 import 'screens/title/title_screen.dart';
 import 'screens/tv/tv_browse.dart';
+import 'screens/tv/tv_catalog.dart';
+import 'screens/tv/tv_catalog_browse.dart';
 import 'screens/tv/tv_detail.dart';
+import 'screens/tv/tv_discover.dart';
 import 'screens/tv/tv_home.dart';
 import 'screens/tv/tv_profile.dart';
+import 'screens/tv/tv_requests.dart';
 import 'screens/tv/tv_settings.dart';
 import 'screens/tv/tv_shell.dart';
 
@@ -78,6 +82,9 @@ abstract final class Routes {
   /// requests first.
   static const search = '/search';
   static const favorites = '/favorites';
+
+  /// Discover on a TV, from its drawer: the phone has it under Search.
+  static const discover = '/discover';
   static const recent = '/recent';
   static const settings = '/settings';
   static String settingsPage(String page) => '/settings/$page';
@@ -532,8 +539,9 @@ bool get _hasPlayerLab => kDebugMode && _hasPlayer;
 /// The TV's pages, under its drawer: the phone's paths, TV screens. The pages
 /// from the drawer sit over Home, so Back goes there; the rest open over
 /// whatever opened them. There's no downloads page, no admin page, no image
-/// editor or identify, no requests, and no single library's grid: the drawer's
-/// Movies and Shows take every library at once.
+/// editor or identify, and no single library's grid: the drawer's Movies and
+/// Shows take every library at once. Discover has a page of its own from the
+/// drawer, where the phone has it under Search.
 List<RouteBase> _tvRoutes() => [
   GoRoute(
     path: '/play/:id',
@@ -563,6 +571,10 @@ List<RouteBase> _tvRoutes() => [
           _tv(
             Routes.favorites.substring(1),
             (state) => const TvFavoritesScreen(),
+          ),
+          _tv(
+            Routes.discover.substring(1),
+            (state) => const TvDiscoverScreen(),
           ),
           _tv(
             Routes.movies.substring(1),
@@ -610,6 +622,27 @@ List<RouteBase> _tvRoutes() => [
         (state) => TvPersonScreen(
           name: state.pathParameters['name']!,
           tmdbId: state.uri.queryParameters['tmdb'],
+        ),
+      ),
+      _tv('/requests', (state) => const TvRequestsScreen()),
+      _tv(Routes.requestQueue, (state) => const TvRequestsScreen(queue: true)),
+      _tv(
+        '/catalog/:kind/:provider/:providerId',
+        (state) => TvCatalogScreen(
+          catalogKey: (
+            kind: state.pathParameters['kind']!,
+            provider: state.pathParameters['provider']!,
+            providerId: state.pathParameters['providerId']!,
+            libraryId: state.uri.queryParameters['library'],
+          ),
+        ),
+      ),
+      _tv(
+        '/catalog-browse/:kind',
+        (state) => TvCatalogBrowseScreen(
+          kind: state.pathParameters['kind']!,
+          filters: state.uri.queryParameters['filters'],
+          sort: state.uri.queryParameters['sort'],
         ),
       ),
       _tv(

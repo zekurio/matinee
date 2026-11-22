@@ -40,18 +40,18 @@ String railName(DiscoverRail rail, AppLocalizations l) => switch (rail.id) {
 
 /// Whether the row holds the viewer's recommendations, whose cards offer
 /// "Not interested".
-bool _recommended(DiscoverRail rail) =>
+bool recommendedRail(DiscoverRail rail) =>
     rail.id == DiscoverRailId.forYou ||
     rail.id == DiscoverRailId.becauseWatched;
 
 /// The rows' cards, without the recommendations this sitting hid.
-List<CatalogBrowseTitle> _shown(
+List<CatalogBrowseTitle> railShown(
   DiscoverRail rail,
   DiscoverRow row,
   Set<String> hidden,
 ) => [
   for (final item in row.items)
-    if (!_recommended(rail) || !hidden.contains(refKey(item.ref))) item,
+    if (!recommendedRail(rail) || !hidden.contains(refKey(item.ref))) item,
 ].take(_railCards).toList();
 
 /// Under the empty search field: the Recent requests row the server names
@@ -93,7 +93,7 @@ class Explore extends ConsumerWidget {
     } else if (rails.isNotEmpty &&
         rails.every(
           (rail) => switch (rows[railKey(rail)]!.value) {
-            final row? => _shown(rail, row, hidden).isEmpty,
+            final row? => railShown(rail, row, hidden).isEmpty,
             null => false,
           },
         )) {
@@ -153,7 +153,7 @@ class Explore extends ConsumerWidget {
     final followed = FollowedTitles([
       for (final rail in rails)
         if (rows[railKey(rail)]!.value case final row?)
-          for (final item in _shown(rail, row, hidden))
+          for (final item in railShown(rail, row, hidden))
             if (item.title == null) CatalogInput(ref: item.ref),
     ]);
     return FollowTitles(
@@ -233,7 +233,7 @@ class _DiscoverRow extends ConsumerWidget {
     final size = railCardSize(context, RailArt.poster);
     final Widget child;
     if (row.value case final value?) {
-      final items = _shown(
+      final items = railShown(
         rail,
         value,
         ref.watch(hiddenRecommendationsProvider),
@@ -270,7 +270,7 @@ class _DiscoverRow extends ConsumerWidget {
               detail: value.detail == null
                   ? null
                   : browseDetail(context, value.detail, item),
-              recommended: _recommended(rail),
+              recommended: recommendedRail(rail),
             );
           },
         ),

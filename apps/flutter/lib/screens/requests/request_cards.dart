@@ -420,6 +420,75 @@ class RequestStateBadge extends StatelessWidget {
   }
 }
 
+/// A request state badge's colours: its [fill] and [edge], either of which
+/// may be none, its mark's, and its words'.
+typedef RequestStateLook = ({Color? fill, Color? edge, Color mark, Color ink});
+
+/// The colours of [state]'s badge, a [RequestState]. With [urgent], for
+/// whoever runs the queue, waiting stands out in the accent and needs
+/// attention in the danger colour; on an asker's own card both are plain.
+/// On its way is a plain pill; done is quiet, an outline in muted words.
+/// The TV's badge takes the same.
+RequestStateLook requestStateLook(
+  String state,
+  KitColors colors, {
+  bool urgent = false,
+}) {
+  final quiet = colors.foreground.withValues(alpha: .7);
+  final RequestStateLook plain = (
+    fill: colors.secondary,
+    edge: null,
+    mark: colors.foreground,
+    ink: colors.foreground,
+  );
+  return switch (state) {
+    RequestState.needsAttention when urgent => (
+      fill: colors.danger.withValues(alpha: .2),
+      edge: colors.danger.withValues(alpha: .55),
+      mark: colors.danger,
+      ink: colors.foreground,
+    ),
+    RequestState.needsAttention || RequestState.onTheWay => plain,
+    RequestState.here || RequestState.declined => (
+      fill: null,
+      edge: colors.foreground.withValues(alpha: .2),
+      mark: quiet,
+      ink: quiet,
+    ),
+    // Waiting, and a state this app doesn't know yet.
+    _ when urgent => (
+      fill: colors.accentSoft,
+      edge: colors.accent.withValues(alpha: .5),
+      mark: colors.accent,
+      ink: colors.foreground,
+    ),
+    _ => plain,
+  };
+}
+
+/// [state]'s word on its badge, with the share that's in for one on its
+/// way when the server says.
+String requestStateText(String state, AppLocalizations l, {double? progress}) =>
+    switch (state) {
+      RequestState.needsAttention => l.webRequestsStateNeedsAttention,
+      RequestState.onTheWay when progress != null =>
+        l.webRequestsStateOnTheWayPercent(formatPercent(progress, l)),
+      RequestState.onTheWay => l.webRequestsStateOnTheWay,
+      RequestState.here => l.webRequestsStateHere,
+      RequestState.declined => l.webRequestsStateDeclined,
+      _ => l.webRequestsStateWaiting,
+    };
+
+/// [state]'s mark on its badge, or null for on its way, which shows a
+/// ring of how much is in.
+String? requestStateIcon(String state) => switch (state) {
+  RequestState.needsAttention => Lucide.triangleAlert,
+  RequestState.onTheWay => null,
+  RequestState.here => Lucide.check,
+  RequestState.declined => Lucide.circleSlash,
+  _ => Lucide.clock,
+};
+
 /// A line under the badge, muted unless [color] says otherwise, cut to
 /// two.
 class _Line extends StatelessWidget {
