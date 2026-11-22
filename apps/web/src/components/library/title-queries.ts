@@ -29,7 +29,6 @@ export function titleFilterOptionsQuery(scope: TitleScope) {
 
 /** What a list of titles asks the server for. */
 export type TitleListInput = {
-  query?: string
   filters: TitleFilters
   order: TitleOrder
 }
@@ -50,7 +49,6 @@ export function libraryTitlesOptions(libraryId: string, list: TitleListInput) {
   return orpc.titles.list.infiniteOptions({
     input: (offset: number) => ({
       libraryId,
-      query: list.query?.trim() || undefined,
       filters: list.filters,
       sort: list.order.sort,
       order: list.order.order,
@@ -70,7 +68,6 @@ export function browsedTitlesOptions(
 ) {
   return orpc.titles.browse.infiniteOptions({
     input: (offset: number) => ({
-      query: list.query?.trim() || undefined,
       kind: list.kind,
       libraryId: list.libraryId,
       filters: list.filters,
@@ -87,12 +84,9 @@ export function browsedTitlesOptions(
  * What a route preloads: the list as the URL asks for it, when it can be
  * asked for before the filters' choices arrive.
  */
-export function preloadInput(
-  search: TitleListSearch & { q?: string },
-): TitleListInput | null {
+export function preloadInput(search: TitleListSearch): TitleListInput | null {
   if (asksFilters(search)) return null
   return {
-    query: search.q,
     filters: NO_TITLE_FILTERS,
     order: orderFrom(search),
   }

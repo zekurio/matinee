@@ -24,7 +24,6 @@ import {
   type ListControlsProps,
   PhoneControls,
 } from "@/components/library/list-controls"
-import { useSearchText } from "@/components/library/list-params"
 import {
   activeTitleFilters,
   TitleFilterPanel,
@@ -68,7 +67,6 @@ export function BrowsePage({
   useDocumentTitle(name)
   const Icon = icons[by]
   const groupLabel = tr(`browse.${by}`)
-  const text = useSearchText(search.q, update)
   const kind = search.kind
   const scope = by === "genre" ? { genre: name } : { studio: name }
   const list = useTitleFilters(search, update, { ...scope, kind })
@@ -86,7 +84,6 @@ export function BrowsePage({
       : { ...shown, studios: [name, ...shown.studios] }
   const titles = useInfiniteQuery({
     ...browsedTitlesOptions({
-      query: text.query,
       kind,
       filters,
       order: list.order,
@@ -99,9 +96,6 @@ export function BrowsePage({
   const options = list.options
   const chips = options ? activeTitleFilters(shown, options, list.change) : []
   const controls: ListControlsProps = {
-    search: text.search,
-    setSearch: text.setSearch,
-    label: tr("browse.search", { name }),
     sorts: list.sorts,
     sort: list.sort,
     setSort: list.setSort,
@@ -124,11 +118,7 @@ export function BrowsePage({
     <div>
       <PageHeader
         title={name}
-        description={
-          counts
-            ? `${groupLabel} · ${tr("browse.titleCount", { count: counts.movie + counts.show })}`
-            : groupLabel
-        }
+        description={groupLabel}
         actions={<HeaderControls {...controls} />}
         chips={<FilterChips inline active={chips} clear={list.clear} />}
         phoneActions={<PhoneControls {...controls} />}
@@ -177,15 +167,6 @@ export function BrowsePage({
             />
           )}
         </>
-      ) : text.query ? (
-        <EmptyList
-          title={tr("browse.noMatch", { query: text.query })}
-          scanning={false}
-          clear={{
-            label: tr("browse.clearSearch"),
-            onClick: () => text.setSearch(""),
-          }}
-        />
       ) : chips.length > 0 ? (
         <EmptyList
           title={tr("browse.noFilterMatch")}

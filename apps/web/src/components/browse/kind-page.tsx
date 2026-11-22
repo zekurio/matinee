@@ -26,7 +26,6 @@ import {
   type ListControlsProps,
   PhoneControls,
 } from "@/components/library/list-controls"
-import { useSearchText } from "@/components/library/list-params"
 import {
   activeTitleFilters,
   TitleFilterPanel,
@@ -112,7 +111,6 @@ export function KindPage({
     (library) => library.kind === libraryKind[kind],
   )
   const libraryId = pickedLibrary(search, libraries.data, kind)
-  const text = useSearchText(search.q, update)
   const list = useTitleFilters(
     search,
     update,
@@ -121,7 +119,6 @@ export function KindPage({
   const [panelOpen, setPanelOpen] = useState(false)
   const titles = useInfiniteQuery({
     ...browsedTitlesOptions({
-      query: text.query,
       kind,
       libraryId,
       filters: list.filters,
@@ -131,7 +128,6 @@ export function KindPage({
   })
 
   const rows = titles.data?.pages.flatMap((page) => page.items) ?? []
-  const total = titles.data?.pages[0]?.total
   const options = list.options
   const chips = options
     ? activeTitleFilters(list.filters, options, list.change)
@@ -139,12 +135,7 @@ export function KindPage({
   const filtered = chips.length > 0
   const words = libraryKind[kind]
   const picker = ofKind.length > 1
-  const count =
-    total === undefined ? undefined : tr("browse.titleCount", { count: total })
   const controls: ListControlsProps = {
-    search: text.search,
-    setSearch: text.setSearch,
-    label: tr(`library.search.${words}`),
     sorts: list.sorts,
     sort: list.sort,
     setSort: list.setSort,
@@ -168,24 +159,12 @@ export function KindPage({
       <PageHeader
         title={title}
         description={
-          picker ? (
-            <>
-              <LibraryMenu
-                libraries={ofKind}
-                value={libraryId}
-                onChange={(next) => update({ library: next })}
-              />
-              {count && (
-                <>
-                  <span aria-hidden className="mx-1.5">
-                    ·
-                  </span>
-                  {count}
-                </>
-              )}
-            </>
-          ) : (
-            count
+          picker && (
+            <LibraryMenu
+              libraries={ofKind}
+              value={libraryId}
+              onChange={(next) => update({ library: next })}
+            />
           )
         }
         actions={<HeaderControls {...controls} />}
@@ -203,22 +182,15 @@ export function KindPage({
       ) : rows.length === 0 ? (
         <EmptyList
           title={
-            text.query
-              ? tr(`library.noMatch.${words}`, { query: text.query })
-              : filtered
-                ? tr(`library.noFilterMatch.${words}`)
-                : tr(`library.none.${words}`)
+            filtered
+              ? tr(`library.noFilterMatch.${words}`)
+              : tr(`library.none.${words}`)
           }
           scanning={ofKind.some((library) => library.scanning)}
           clear={
-            text.query
-              ? {
-                  label: tr("library.clearSearch"),
-                  onClick: () => text.setSearch(""),
-                }
-              : filtered
-                ? { label: tr("library.clearFilters"), onClick: list.clear }
-                : undefined
+            filtered
+              ? { label: tr("library.clearFilters"), onClick: list.clear }
+              : undefined
           }
         />
       ) : (
