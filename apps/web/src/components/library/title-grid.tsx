@@ -14,14 +14,17 @@ import {
   ShowMore,
 } from "./library-states"
 import {
-  FilterChips,
   HeaderControls,
   type ListControlsProps,
   PhoneControls,
 } from "./list-controls"
 import { libraryRoute, useSearchText } from "./list-params"
-import { activeTitleFilters, TitleFilterPanel } from "./title-filter-panel"
-import { cardDetail, type TitleListSearch } from "./title-filter-params"
+import { TitleFilterPanel } from "./title-filter-panel"
+import {
+  cardDetail,
+  titleFilterCount,
+  type TitleListSearch,
+} from "./title-filter-params"
 import { libraryTitlesOptions, useTitleFilters } from "./title-queries"
 
 export function TitleGrid({ library }: { library: Library }) {
@@ -51,9 +54,6 @@ export function TitleGrid({ library }: { library: Library }) {
   const rows = titles.data?.pages.flatMap((page) => page.items) ?? []
   const kind = library.kind
   const options = list.options
-  const chips = options
-    ? activeTitleFilters(list.filters, options, list.change)
-    : []
   const controls: ListControlsProps = {
     search,
     setSearch,
@@ -75,7 +75,7 @@ export function TitleGrid({ library }: { library: Library }) {
         )
       : undefined,
   }
-  const filtered = chips.length > 0
+  const filtered = titleFilterCount(list.filters) > 0
 
   return (
     <div>
@@ -83,10 +83,8 @@ export function TitleGrid({ library }: { library: Library }) {
         title={library.name}
         description={libraryStatus(library)}
         actions={<HeaderControls {...controls} />}
-        chips={<FilterChips inline active={chips} clear={list.clear} />}
         phoneActions={<PhoneControls {...controls} />}
       />
-      <FilterChips active={chips} clear={list.clear} />
 
       {titles.isPending ? (
         <PosterGridSkeleton />

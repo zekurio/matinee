@@ -21,17 +21,16 @@ import {
   ShowMore,
 } from "@/components/library/library-states"
 import {
-  FilterChips,
   HeaderControls,
   type ListControlsProps,
   PhoneControls,
 } from "@/components/library/list-controls"
 import { useSearchText } from "@/components/library/list-params"
+import { TitleFilterPanel } from "@/components/library/title-filter-panel"
 import {
-  activeTitleFilters,
-  TitleFilterPanel,
-} from "@/components/library/title-filter-panel"
-import { cardDetail } from "@/components/library/title-filter-params"
+  cardDetail,
+  titleFilterCount,
+} from "@/components/library/title-filter-params"
 import {
   browsedTitlesOptions,
   preloadInput,
@@ -133,10 +132,7 @@ export function KindPage({
   const rows = titles.data?.pages.flatMap((page) => page.items) ?? []
   const total = titles.data?.pages[0]?.total
   const options = list.options
-  const chips = options
-    ? activeTitleFilters(list.filters, options, list.change)
-    : []
-  const filtered = chips.length > 0
+  const filtered = titleFilterCount(list.filters) > 0
   const words = libraryKind[kind]
   const picker = ofKind.length > 1
   const count =
@@ -189,10 +185,8 @@ export function KindPage({
           )
         }
         actions={<HeaderControls {...controls} />}
-        chips={<FilterChips inline active={chips} clear={list.clear} />}
         phoneActions={<PhoneControls {...controls} />}
       />
-      <FilterChips active={chips} clear={list.clear} />
 
       {titles.isPending ? (
         <PosterGridSkeleton />

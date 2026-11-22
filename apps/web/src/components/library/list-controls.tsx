@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@matinee/ui/components/select"
-import { cn } from "@matinee/ui/lib/utils"
 import {
   ArrowUpDownIcon,
   ListFilterIcon,
@@ -30,8 +29,6 @@ import {
 } from "react"
 import { flushSync } from "react-dom"
 
-import { chipClass, chipRow } from "@/components/chips"
-import { belowHeader } from "@/components/page-header"
 import { usePhone } from "@/components/sheet-menu"
 import { tr } from "@/i18n"
 
@@ -95,61 +92,11 @@ export function PhoneControls(props: ListControlsProps) {
   )
 }
 
-/** A filter in use, as its chip names it. */
-export type ActiveFilter = { key: string; label: string; remove: () => void }
-
-/**
- * Chips for the filters in use, each taking its own off, and "Clear all"
- * once there are two. Nothing when none is on. From `sm` up they sit in
- * the header's row, as its `chips`, so the list below doesn't move when
- * one goes on; phones have no room there and get them as a row below.
- */
-export function FilterChips({
-  active,
-  clear,
-  inline = false,
-}: {
-  active: ActiveFilter[]
-  clear: () => void
-  /** In the header's row: one line that scrolls sideways, no gap below. */
-  inline?: boolean
-}) {
-  if (active.length === 0) return null
-  return (
-    <div
-      role="group"
-      aria-label={tr("library.filters")}
-      className={
-        inline
-          ? "flex min-w-0 [scrollbar-width:none] items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden"
-          : cn(chipRow, belowHeader, "sm:hidden")
-      }
-    >
-      {active.map((filter) => (
-        <button
-          key={filter.key}
-          type="button"
-          onClick={filter.remove}
-          aria-label={tr("library.removeFilter", { name: filter.label })}
-          className={chipClass(true, "gap-1.5 pr-2.5")}
-        >
-          {filter.label}
-          <XIcon aria-hidden className="size-3.5" />
-        </button>
-      ))}
-      {active.length > 1 && (
-        <button type="button" onClick={clear} className={chipClass(false)}>
-          {tr("library.clearAll")}
-        </button>
-      )}
-    </div>
-  )
-}
-
 /**
  * The button that opens a list's filters, with how many are on: "Filter"
- * and a count from `sm` up, an icon with a dot on phones (`compact`).
- * Give it as a trigger's `render`, with {@link FilterButtonFace} inside.
+ * and a count from `sm` up, and on phones (`compact`) an icon with the
+ * count at its corner. Give it as a trigger's `render`, with
+ * {@link FilterButtonFace} inside.
  */
 export function FilterButton({
   compact = false,
@@ -193,8 +140,10 @@ export function FilterButtonFace({
         (compact ? (
           <span
             aria-hidden
-            className="bg-primary absolute top-2 right-2 size-2 rounded-full"
-          />
+            className="bg-primary text-primary-foreground text-10px absolute top-0.5 right-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 leading-4 font-semibold tabular-nums"
+          >
+            {active}
+          </span>
         ) : (
           <span className="bg-foreground text-background rounded-full px-1.5 text-xs leading-5 tabular-nums">
             {active}

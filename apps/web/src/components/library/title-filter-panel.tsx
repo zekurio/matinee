@@ -16,9 +16,7 @@ import {
   ToggleChips,
 } from "@/components/filters/filter-panel"
 import {
-  RUNTIME_CHIP,
   runtimeWords,
-  SCORE_CHIP,
   scoreWords,
   yearWords,
 } from "@/components/filters/ranges"
@@ -26,7 +24,6 @@ import { tr } from "@/i18n"
 import { formatRegion, formatRuntime, formatScore } from "@/lib/format"
 import { languageName } from "@/lib/languages"
 
-import type { ActiveFilter } from "./list-controls"
 import { titleFilterCount } from "./title-filter-params"
 
 /*
@@ -40,95 +37,6 @@ type Change = (patch: Partial<TitleFilters>) => void
 
 /** How many studios show before the field that finds the rest. */
 const STUDIOS_SHOWN = 10
-
-/**
- * The filters in use as chips, each taking its own off. A range is one
- * chip; so is each genre and studio.
- */
-export function activeTitleFilters(
-  filters: TitleFilters,
-  options: TitleFilterOptions,
-  change: Change,
-): ActiveFilter[] {
-  const active: ActiveFilter[] = []
-  if (filters.watched !== null) {
-    active.push({
-      key: "watched",
-      label: tr(`filters.watch.${filters.watched}`),
-      remove: () => change({ watched: null }),
-    })
-  }
-  for (const name of filters.genres) {
-    active.push({
-      key: `genre:${name}`,
-      label: name,
-      remove: () =>
-        change({ genres: filters.genres.filter((other) => other !== name) }),
-    })
-  }
-  for (const name of filters.studios) {
-    active.push({
-      key: `studio:${name}`,
-      label: name,
-      remove: () =>
-        change({ studios: filters.studios.filter((other) => other !== name) }),
-    })
-  }
-  if (filters.yearFrom !== null || filters.yearTo !== null) {
-    active.push({
-      key: "years",
-      label: yearWords([filters.yearFrom, filters.yearTo]),
-      remove: () => change({ yearFrom: null, yearTo: null }),
-    })
-  }
-  if (filters.scoreMin !== null || filters.scoreMax !== null) {
-    active.push({
-      key: "score",
-      label: scoreWords([filters.scoreMin, filters.scoreMax], SCORE_CHIP),
-      remove: () => change({ scoreMin: null, scoreMax: null }),
-    })
-  }
-  // With one kind of title, "Rated up to"; with both, which kind.
-  const both = options.ratings.length > 1
-  if (filters.movieRating) {
-    const { rating } = filters.movieRating
-    active.push({
-      key: "movieRating",
-      label: both
-        ? tr("filters.chip.movieRating", { rating })
-        : tr("filters.chip.rating", { rating }),
-      remove: () => change({ movieRating: null }),
-    })
-  }
-  if (filters.showRating) {
-    const { rating } = filters.showRating
-    active.push({
-      key: "showRating",
-      label: both
-        ? tr("filters.chip.showRating", { rating })
-        : tr("filters.chip.rating", { rating }),
-      remove: () => change({ showRating: null }),
-    })
-  }
-  if (filters.language !== null) {
-    active.push({
-      key: "language",
-      label: languageName(filters.language),
-      remove: () => change({ language: null }),
-    })
-  }
-  if (filters.runtimeMin !== null || filters.runtimeMax !== null) {
-    active.push({
-      key: "runtime",
-      label: runtimeWords(
-        [filters.runtimeMin, filters.runtimeMax],
-        RUNTIME_CHIP,
-      ),
-      remove: () => change({ runtimeMin: null, runtimeMax: null }),
-    })
-  }
-  return active
-}
 
 /** The Filter button and what it opens, with a list of titles' fields. */
 export function TitleFilterPanel({
