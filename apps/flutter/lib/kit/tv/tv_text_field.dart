@@ -117,8 +117,8 @@ class _TvTextFieldState extends State<TvTextField> {
       radius: TvListItems.radius,
       rest: colors.foreground.withValues(alpha: .07),
       scale: TvFocus.rowScale,
-      builder: (context, content) {
-        final style = TvType.title.style(color: content);
+      builder: (context, look) {
+        final style = TvType.title.style(color: look.content);
         return DecoratedBox(
           position: DecorationPosition.foreground,
           decoration: BoxDecoration(
@@ -147,9 +147,10 @@ class _TvTextFieldState extends State<TvTextField> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: style.copyWith(
-                                color: focused
-                                    ? content.withValues(alpha: .55)
-                                    : colors.mutedForeground,
+                                color: look.tone(
+                                  colors.mutedForeground,
+                                  colors.background.withValues(alpha: .55),
+                                ),
                               ),
                             ),
                           ),

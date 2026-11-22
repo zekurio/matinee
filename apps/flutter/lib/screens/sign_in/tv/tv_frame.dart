@@ -277,7 +277,7 @@ class TvAuthAction extends StatelessWidget {
         rest: quiet ? const Color(0x00000000) : null,
         // A row's growth, so it stays in line with the logo above it.
         scale: TvFocus.rowScale,
-        builder: (context, content) => SizedBox(
+        builder: (context, look) => SizedBox(
           height: TvButtons.height,
           child: Padding(
             padding: const EdgeInsetsDirectional.only(start: 16, end: 20),
@@ -285,15 +285,16 @@ class TvAuthAction extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               spacing: 10,
               children: [
-                KitIcon(icon, size: TvButtons.iconSize, color: content),
-                Text(label, style: TvType.facts.style(color: content)),
+                KitIcon(icon, size: TvButtons.iconSize, color: look.content),
+                Text(label, style: TvType.facts.style(color: look.content)),
                 if (detail case final text?)
                   Text(
                     text,
                     style: TvType.facts.style(
-                      color: focused
-                          ? colors.background.withValues(alpha: .7)
-                          : colors.mutedForeground,
+                      color: look.tone(
+                        colors.mutedForeground,
+                        colors.background.withValues(alpha: .7),
+                      ),
                     ),
                   ),
               ],
