@@ -9,7 +9,7 @@ plugins {
 // Every part of Matinee has the version in the repository's root
 // package.json, which `just tag` sets, so pubspec.yaml has none. The
 // version code packs it as major, minor, patch, two digits for each of the
-// last two, the same code the Kotlin app used, so this APK updates it.
+// last two, and every APK of a release has it (see gradle.properties).
 val matineeVersion: String =
     providers
         .fileContents(rootProject.layout.projectDirectory.file("../../../package.json"))
@@ -53,7 +53,7 @@ dependencies {
     implementation("androidx.media3:media3-ui:$media3Version")
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-    // Reads the QR code a TV shows to sign it in, as the Kotlin app did.
+    // Reads the QR code a TV shows to sign it in.
     implementation("androidx.camera:camera-camera2:1.6.2")
     implementation("androidx.camera:camera-lifecycle:1.6.2")
     implementation("com.google.zxing:core:3.5.4")
@@ -77,7 +77,7 @@ android {
 
     defaultConfig {
         applicationId = "io.github.zekurio.matinee"
-        // Android 8.0, as the Kotlin app had it.
+        // Android 8.0.
         minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = matineeVersionCode
