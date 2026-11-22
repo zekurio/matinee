@@ -1251,11 +1251,13 @@ public struct FulfilmentLanding: Codable, Sendable, Hashable {
     public var from: String
     public var folder: String
     public var library: FulfilmentLibrary?
-    public init(kind: String, from: String, folder: String, library: FulfilmentLibrary?) {
+    public var hidden: Bool
+    public init(kind: String, from: String, folder: String, library: FulfilmentLibrary?, hidden: Bool) {
         self.kind = kind
         self.from = from
         self.folder = folder
         self.library = library
+        self.hidden = hidden
     }
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -1263,6 +1265,7 @@ public struct FulfilmentLanding: Codable, Sendable, Hashable {
         try c.encode(self.from, forKey: .from)
         try c.encode(self.folder, forKey: .folder)
         try c.encode(self.library, forKey: .library)
+        try c.encode(self.hidden, forKey: .hidden)
     }
 }
 
@@ -1277,7 +1280,8 @@ public struct FulfilmentConnection: Codable, Sendable, Hashable {
     public var folderLibraries: [String: String]
     public var apiKey: FulfilmentConnection.ApiKey
     public var landings: [FulfilmentLanding]
-    public init(id: String, name: String, slug: String, source: String, settings: [String: JSONValue], options: [String: JSONValue], defaultFor: [String], folderLibraries: [String: String], apiKey: FulfilmentConnection.ApiKey, landings: [FulfilmentLanding]) {
+    public var editable: Bool
+    public init(id: String, name: String, slug: String, source: String, settings: [String: JSONValue], options: [String: JSONValue], defaultFor: [String], folderLibraries: [String: String], apiKey: FulfilmentConnection.ApiKey, landings: [FulfilmentLanding], editable: Bool) {
         self.id = id
         self.name = name
         self.slug = slug
@@ -1288,6 +1292,7 @@ public struct FulfilmentConnection: Codable, Sendable, Hashable {
         self.folderLibraries = folderLibraries
         self.apiKey = apiKey
         self.landings = landings
+        self.editable = editable
     }
     public struct ApiKey: Codable, Sendable, Hashable {
         public var source: String?
@@ -6792,12 +6797,15 @@ public struct AdminFulfilmentOptionsInput: Codable, Sendable, Hashable {
 
 public struct AdminFulfilmentLandingOutput: Codable, Sendable, Hashable {
     public var library: FulfilmentLibrary?
-    public init(library: FulfilmentLibrary?) {
+    public var hidden: Bool
+    public init(library: FulfilmentLibrary?, hidden: Bool) {
         self.library = library
+        self.hidden = hidden
     }
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(self.library, forKey: .library)
+        try c.encode(self.hidden, forKey: .hidden)
     }
 }
 

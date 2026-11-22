@@ -1,7 +1,8 @@
 import { t } from "@matinee/contracts/schema"
 import { library, libraryFolder } from "@matinee/db"
-import { asc, eq, isNotNull } from "drizzle-orm"
+import { and, asc, eq, isNotNull } from "drizzle-orm"
 
+import { visibleLibraries } from "../../../access/visible"
 import { db } from "../../../db"
 import { field, filled } from "../arr/shared"
 import type { FulfilmentSource } from "../types"
@@ -39,9 +40,7 @@ export const manual = {
     }
   },
   folder: (value) => sending.parse(value).folder,
-  async options() {
-    // ACCESS: `fulfilment.read` shows every library's folders, whatever
-    // libraries the account's groups open.
+  async options(_connection, viewer) {
     const rows = await db
       .select({
         path: libraryFolder.path,
@@ -50,7 +49,7 @@ export const manual = {
       })
       .from(libraryFolder)
       .innerJoin(library, eq(library.id, libraryFolder.libraryId))
-      .where(isNotNull(library.metadataProvider))
+      .where(and(isNotNull(library.metadataProvider), visibleLibraries(viewer)))
       .orderBy(asc(library.name), asc(libraryFolder.path))
     const choices = (kind: "movies" | "shows") =>
       rows

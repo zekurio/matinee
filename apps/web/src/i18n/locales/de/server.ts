@@ -18,6 +18,12 @@ export default {
     "Prüfe die Einstellungen der Verbindung.",
   "server.fulfilment.folderLost":
     "{folder} liegt in keiner Mediathek, die Matinee für diese Art Titel durchsucht. Wähle die Mediathek, in der es landet, oder speichere in einen anderen Ordner.",
+  "server.fulfilment.hiddenLibrary":
+    "Diese Verbindung schickt Titel in eine Mediathek, die du nicht sehen kannst, deshalb kannst du sie nicht ändern.",
+  "server.fulfilment.defaultFilmsHidden":
+    "Der Standard für Filme schickt Titel in eine Mediathek, die du nicht sehen kannst, deshalb kannst du ihn nicht ersetzen.",
+  "server.fulfilment.defaultShowsHidden":
+    "Der Standard für Serien schickt Titel in eine Mediathek, die du nicht sehen kannst, deshalb kannst du ihn nicht ersetzen.",
   "server.fulfilment.filmFolder": "Wähle den Ordner, in dem Filme landen.",
   "server.fulfilment.showFolder": "Wähle den Ordner, in dem Serien landen.",
   "server.fulfilment.noRules":

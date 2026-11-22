@@ -638,6 +638,7 @@ data class FulfilmentLanding(
     val from: String,
     val folder: String,
     val library: FulfilmentLibrary?,
+    val hidden: Boolean,
 )
 
 @Serializable
@@ -652,6 +653,7 @@ data class FulfilmentConnection(
     val folderLibraries: Map<String, String>,
     val apiKey: FulfilmentConnection.ApiKey,
     val landings: List<FulfilmentLanding>,
+    val editable: Boolean,
 ) {
     @Serializable
     data class ApiKey(
@@ -3414,6 +3416,7 @@ data class AdminFulfilmentOptionsInput(
 @Serializable
 data class AdminFulfilmentLandingOutput(
     val library: FulfilmentLibrary?,
+    val hidden: Boolean,
 )
 
 @Serializable

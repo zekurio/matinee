@@ -64,10 +64,10 @@ export const PERMISSIONS = [
   "folder.read",
 
   /**
-   * Connections that fetch requested titles, and their rules. They decide
-   * where titles land across the whole server, so these show every
-   * library's name and folders, whatever libraries the account's groups
-   * open.
+   * Connections that fetch requested titles, and their rules. The holder
+   * sees every connection but no library its groups don't open: a folder
+   * that lands in one shows as hidden, and a connection that sends to one
+   * can be looked at and tested but not changed or deleted.
    */
   "fulfilment.create",
   "fulfilment.read",

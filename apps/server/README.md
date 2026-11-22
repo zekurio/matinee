@@ -295,9 +295,12 @@ tokens use the same list, see [API tokens](#api-tokens).
 - Saving Settings → Authentication takes `all`, since the provider and its
   role claim decide who signs in as an admin. `library.create` opens any
   folder the server can read as a library, so grant it as you would the
-  admin role. The `fulfilment` permissions decide where requested titles
-  land across the server, so they show every library's name and folders,
-  whatever libraries the holder's groups open.
+  admin role. The `fulfilment` permissions show every connection, but
+  never a library the holder's groups don't open: a folder that lands in
+  one reads as a library they can't see, and the by-hand source offers
+  only the folders of libraries they see. A connection that sends titles
+  to such a library can be looked at and tested, not changed or deleted,
+  and a save that would send to one is refused.
 - The web app shows a section of Settings, or the request queue, to
   whoever holds its permission. The Android, iOS, and TV apps still show
   their admin screens to admins only.

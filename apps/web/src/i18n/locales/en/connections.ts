@@ -69,6 +69,9 @@ export default defineMessages("connections", {
   "connections.landsIn": "Lands in {library}",
   "connections.lost": "Can't tell where {folder} is. Choose where it lands.",
   "connections.landsInPick": "Lands in",
+  // The folder belongs to a library the account's groups don't open.
+  "connections.landsHidden":
+    "{folder} is in a library you can't see, so this can't be saved with it. Choose another folder.",
 
   // A connection's card.
   "connections.card.default.movie": "Default for films",
@@ -76,6 +79,9 @@ export default defineMessages("connections", {
   "connections.card.kind.movie": "Films",
   "connections.card.kind.show": "Shows",
   "connections.card.nowhere": "no library",
+  "connections.card.hidden": "A library you can't see",
+  "connections.card.readOnly":
+    "It sends titles to a library you can't see, so you can look at it and test it but not change it.",
   "connections.card.unknownSource": "Unknown source",
 
   // A connection's override rules.

@@ -84,8 +84,16 @@ export const FulfilmentLanding = t.object({
   kind: TitleKind,
   from: t.enum(["default", "anime", "rule"]),
   folder: t.string(),
-  /** Null when no library holds the folder and none was picked. */
+  /**
+   * Null when no library holds the folder and none was picked, or when
+   * the library is one the account can't see.
+   */
   library: FulfilmentLibrary.nullable(),
+  /**
+   * The folder lands in a library the account can't see. `library` is
+   * then null, which otherwise means it lands in none.
+   */
+  hidden: t.boolean(),
 })
 export type FulfilmentLanding = t.infer<typeof FulfilmentLanding>
 
@@ -98,11 +106,20 @@ export const FulfilmentConnection = t.object({
   options: FulfilmentValues,
   /** The kinds of title requests go through it for. */
   defaultFor: t.array(TitleKind),
-  /** The library each folder no library holds lands in, by folder. */
+  /**
+   * The library each folder no library holds lands in, by folder. A pick
+   * of a library the account can't see is left out.
+   */
   folderLibraries: t.record(t.string(), t.uuid()),
   apiKey: t.object({ source: SecretSource, environment: t.boolean() }),
   /** Every folder its settings and rules send to, and where that lands. */
   landings: t.array(FulfilmentLanding),
+  /**
+   * The account may change it, its rules, or delete it. False when one of
+   * its landings is hidden: it sends titles to a library the account
+   * can't see, so it can only look at it and test it.
+   */
+  editable: t.boolean(),
 })
 export type FulfilmentConnection = t.infer<typeof FulfilmentConnection>
 
@@ -248,7 +265,17 @@ export const adminFulfilmentContract = {
   /** The library of a kind a folder lands in, by the folders Matinee scans. */
   landing: get("/admin/fulfilment/landing", "fulfilment.read")
     .input(t.object({ kind: TitleKind, folder: t.string().min(1).max(4096) }))
-    .output(t.object({ library: FulfilmentLibrary.nullable() })),
+    .output(
+      t.object({
+        /** Null when no library holds it, or `hidden` is true. */
+        library: FulfilmentLibrary.nullable(),
+        /**
+         * It lands in a library the account can't see, so a connection
+         * that sends there can't be saved by it.
+         */
+        hidden: t.boolean(),
+      }),
+    ),
   rules: get(
     "/admin/fulfilment/connections/{connectionId}/rules",
     "fulfilment.read",

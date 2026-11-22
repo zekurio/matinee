@@ -14,6 +14,7 @@ import {
 import { ORPCError } from "@orpc/server"
 import { asc, eq, isNotNull } from "drizzle-orm"
 
+import { type Seer, seesLibrary } from "../../access/visible"
 import { db } from "../../db"
 import { log } from "../../log"
 import { sources } from "./sources"
@@ -155,7 +156,15 @@ export function defaultFor(row: ConnectionRow): Kind[] {
   ]
 }
 
-export function redactConnection(row: ConnectionRow, routing: Routing) {
+/**
+ * A connection as a viewer may read it: no secrets, and no library the
+ * viewer can't see, neither where a folder lands nor among its picks.
+ */
+export function redactConnection(
+  row: ConnectionRow,
+  routing: Routing,
+  viewer: Seer,
+) {
   const source = getSource(row.source)
   const settings = source.settings.parse(row.settings)
   for (const field of source.fields())
@@ -166,6 +175,7 @@ export function redactConnection(row: ConnectionRow, routing: Routing) {
     : environment
       ? "environment"
       : null
+  const landings = shownLandings(routing, row.id, viewer)
   return {
     id: row.id,
     name: row.name,
@@ -174,12 +184,17 @@ export function redactConnection(row: ConnectionRow, routing: Routing) {
     settings,
     options: row.options,
     defaultFor: defaultFor(row),
-    folderLibraries: row.folderLibraries,
+    folderLibraries: Object.fromEntries(
+      Object.entries(row.folderLibraries).filter(([, library]) =>
+        seesLibrary(viewer, library),
+      ),
+    ),
     apiKey: {
       source: secretSource,
       environment,
     },
-    landings: routing.landings(row.id),
+    landings,
+    editable: !landings.some((each) => each.hidden),
   }
 }
 
@@ -206,8 +221,8 @@ const libraryKind = (kind: Kind): Library["kind"] =>
  * that can take requests: those with a metadata provider.
  */
 async function scannedFolders(tx: Reader = db) {
-  // ACCESS: routing, and the `fulfilment` permissions, which show every
-  // library's folders whatever the account's groups open.
+  // ACCESS: routing, which sends to every library whoever asked. What a
+  // procedure returns from it goes through `shown` or `shownLandings`.
   const rows = await tx
     .select({ path: libraryFolder.path, library })
     .from(libraryFolder)
@@ -234,10 +249,19 @@ function foundIn(folders: Folders, folder: string, kind: Kind) {
   )
 }
 
+/**
+ * A library as a viewer may read it: by name when it sees it, else
+ * hidden, which says no more than that the viewer can't see it.
+ */
+function shown(found: Pick<Library, "id" | "name"> | null, viewer: Seer) {
+  if (!found) return { library: null, hidden: false }
+  if (!seesLibrary(viewer, found.id)) return { library: null, hidden: true }
+  return { library: { id: found.id, name: found.name }, hidden: false }
+}
+
 /** Where a folder lands by the folders Matinee scans, for the settings. */
-export async function landing(kind: Kind, folder: string) {
-  const found = foundIn(await scannedFolders(), folder, kind)
-  return { library: found ? { id: found.id, name: found.name } : null }
+export async function landing(kind: Kind, folder: string, viewer: Seer) {
+  return shown(foundIn(await scannedFolders(), folder, kind), viewer)
 }
 
 /** How many of a rule's conditions a title meets, or 0 when one fails. */
@@ -466,17 +490,17 @@ export class Routing {
     return found
   }
 
-  /** Every folder a connection sends to, and the library it lands in. */
-  landings(connectionId: string): FulfilmentLanding[] {
+  /**
+   * Every folder a connection sends to, and the library it lands in,
+   * whoever can see it. `shownLandings` is what a viewer reads.
+   */
+  landings(connectionId: string) {
     const entry = this.entries.find((each) => each.row.id === connectionId)
     if (!entry) return []
-    return this.folderList(entry).map((each) => {
-      const library = this.landsIn(entry, each.folder, each.kind)
-      return {
-        ...each,
-        library: library ? { id: library.id, name: library.name } : null,
-      }
-    })
+    return this.folderList(entry).map((each) => ({
+      ...each,
+      library: this.landsIn(entry, each.folder, each.kind),
+    }))
   }
 
   /**
@@ -493,6 +517,15 @@ export class Routing {
           found.set(library.id, entry.row.name)
       }
     return found
+  }
+
+  /** The connections marked the default for a kind, whatever their source takes. */
+  defaultsFor(kind: Kind): string[] {
+    return this.entries
+      .filter((entry) =>
+        kind === "movie" ? entry.row.defaultMovies : entry.row.defaultShows,
+      )
+      .map((entry) => entry.row.id)
   }
 
   /** The library a connection's options send a kind to, for the language to read in. */
@@ -515,8 +548,9 @@ export async function loadRouting(tx: Reader = db): Promise<Routing> {
       .from(fulfilmentRule)
       .orderBy(asc(fulfilmentRule.position), asc(fulfilmentRule.createdAt)),
     scannedFolders(tx),
-    // ACCESS: routing reads every library a folder can be picked for;
-    // callers filter what a viewer can see.
+    // ACCESS: routing reads every library a folder can be picked for, so
+    // it sends to the same place whoever asked. What a procedure returns
+    // goes through `shownLandings`, and a write through `checkLandings`.
     tx.select().from(library).where(isNotNull(library.metadataProvider)),
   ])
   const entries = connections.flatMap((row): Entry[] => {
@@ -540,17 +574,78 @@ export async function loadRouting(tx: Reader = db): Promise<Routing> {
   return new Routing(entries, folders, libraries)
 }
 
+/** A connection's landings as a viewer reads them. */
+export function shownLandings(
+  routing: Routing,
+  connectionId: string,
+  viewer: Seer,
+): FulfilmentLanding[] {
+  return routing
+    .landings(connectionId)
+    .map((each) => ({ ...each, ...shown(each.library, viewer) }))
+}
+
 /**
- * Checks that every folder a connection's options or a rule sends to
- * lands in a library of its kind, found or picked, and that it has a
- * folder for each kind it's the default for. `routing` was loaded with
- * the connection as it would be saved.
+ * Refuses a change by a viewer to a connection that sends titles to a
+ * library it can't see. The message names no library, so it says
+ * nothing of which ones exist.
+ */
+export function requireEditable(
+  routing: Routing,
+  connectionId: string,
+  viewer: Seer,
+) {
+  if (sendsHidden(routing, connectionId, viewer))
+    throw new ORPCError("FORBIDDEN", {
+      message:
+        "This connection sends titles to a library you can't see, so you can't change it.",
+    })
+}
+
+/**
+ * Refuses a save that makes a connection the default for a kind when
+ * the connection that holds that default now is one the viewer can't
+ * change, since taking the default away changes that connection and
+ * where its requests land. `routing` was loaded before the save.
+ */
+export function requireReplaceableDefault(
+  routing: Routing,
+  kind: Kind,
+  connectionId: string | undefined,
+  viewer: Seer,
+) {
+  const hidden = routing
+    .defaultsFor(kind)
+    .some((id) => id !== connectionId && sendsHidden(routing, id, viewer))
+  if (hidden)
+    throw new ORPCError("FORBIDDEN", {
+      message:
+        kind === "movie"
+          ? "The default for films sends titles to a library you can't see, so you can't replace it."
+          : "The default for shows sends titles to a library you can't see, so you can't replace it.",
+    })
+}
+
+function sendsHidden(routing: Routing, connectionId: string, viewer: Seer) {
+  return routing
+    .landings(connectionId)
+    .some((each) => each.library && !seesLibrary(viewer, each.library.id))
+}
+
+/**
+ * Checks that the viewer sees every library the connection sends to,
+ * that every folder its options or a rule sends to lands in a library of
+ * its kind, found or picked, and that it has a folder for each kind it's
+ * the default for. `routing` was loaded with the connection as it would
+ * be saved.
  */
 export function checkLandings(
   routing: Routing,
   connectionId: string,
   kinds: Kind[],
+  viewer: Seer,
 ) {
+  requireEditable(routing, connectionId, viewer)
   const landings = routing.landings(connectionId)
   const lost = landings.find((each) => !each.library)
   if (lost)

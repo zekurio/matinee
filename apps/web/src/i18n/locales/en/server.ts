@@ -23,6 +23,12 @@ export default defineMessages("server", {
   "server.fulfilment.settingsInvalid": "Check the connection's settings.",
   "server.fulfilment.folderLost":
     "{folder} isn't in any library Matinee scans for this kind of title. Choose the library it lands in, or save it to another folder.",
+  "server.fulfilment.hiddenLibrary":
+    "This connection sends titles to a library you can't see, so you can't change it.",
+  "server.fulfilment.defaultFilmsHidden":
+    "The default for films sends titles to a library you can't see, so you can't replace it.",
+  "server.fulfilment.defaultShowsHidden":
+    "The default for shows sends titles to a library you can't see, so you can't replace it.",
   "server.fulfilment.filmFolder": "Choose the folder films are saved to.",
   "server.fulfilment.showFolder": "Choose the folder shows are saved to.",
   "server.fulfilment.noRules": "This connection doesn't take override rules.",
