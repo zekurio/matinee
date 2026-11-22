@@ -310,62 +310,16 @@ class RequestStateBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final progress = this.progress;
-    final quiet = colors.foreground.withValues(alpha: .7);
-    final (Color?, Color?, Color, Color) plain = (
-      colors.secondary,
-      null,
-      colors.foreground,
-      colors.foreground,
+    final (:fill, :edge, :mark, :ink) = requestStateLook(
+      state,
+      colors,
+      urgent: urgent,
     );
-    final (Color?, Color?, Color, Color) finished = (
-      null,
-      colors.foreground.withValues(alpha: .2),
-      quiet,
-      quiet,
-    );
-    final (fill, edge, mark, ink) = switch (state) {
-      RequestState.needsAttention when urgent => (
-        colors.danger.withValues(alpha: .2),
-        colors.danger.withValues(alpha: .55),
-        colors.danger,
-        colors.foreground,
-      ),
-      RequestState.needsAttention || RequestState.onTheWay => plain,
-      RequestState.here || RequestState.declined => finished,
-      // Waiting, and a state this app doesn't know yet.
-      _ when urgent => (
-        colors.accentSoft,
-        colors.accent.withValues(alpha: .5),
-        colors.accent,
-        colors.foreground,
-      ),
-      _ => plain,
-    };
-    final text = switch (state) {
-      RequestState.needsAttention => l.webRequestsStateNeedsAttention,
-      RequestState.onTheWay when progress != null =>
-        l.webRequestsStateOnTheWayPercent(formatPercent(progress, l)),
-      RequestState.onTheWay => l.webRequestsStateOnTheWay,
-      RequestState.here => l.webRequestsStateHere,
-      RequestState.declined => l.webRequestsStateDeclined,
-      _ => l.webRequestsStateWaiting,
-    };
-    final Widget glyph = switch (state) {
-      RequestState.needsAttention => KitIcon(
-        Lucide.triangleAlert,
-        size: 12,
-        color: mark,
-      ),
-      RequestState.onTheWay => ProgressRing(progress, size: 14),
-      RequestState.here => KitIcon(Lucide.check, size: 12, color: mark),
-      RequestState.declined => KitIcon(
-        Lucide.circleSlash,
-        size: 12,
-        color: mark,
-      ),
-      _ => KitIcon(Lucide.clock, size: 12, color: mark),
-    };
+    final text = requestStateText(state, l, progress: progress);
+    final icon = requestStateIcon(state);
+    final Widget glyph = icon == null
+        ? ProgressRing(progress, size: 14)
+        : KitIcon(icon, size: 12, color: mark);
     return Container(
       height: 24,
       padding: const EdgeInsets.symmetric(horizontal: 9),
@@ -392,6 +346,75 @@ class RequestStateBadge extends StatelessWidget {
     );
   }
 }
+
+/// A request state badge's colours: its [fill] and [edge], either of which
+/// may be none, its mark's, and its words'.
+typedef RequestStateLook = ({Color? fill, Color? edge, Color mark, Color ink});
+
+/// The colours of [state]'s badge, a [RequestState]. With [urgent], for
+/// whoever runs the queue, waiting stands out in the accent and needs
+/// attention in the danger colour; on an asker's own card both are plain.
+/// On its way is a plain pill; done is quiet, an outline in muted words.
+/// The TV's badge takes the same.
+RequestStateLook requestStateLook(
+  String state,
+  KitColors colors, {
+  bool urgent = false,
+}) {
+  final quiet = colors.foreground.withValues(alpha: .7);
+  final RequestStateLook plain = (
+    fill: colors.secondary,
+    edge: null,
+    mark: colors.foreground,
+    ink: colors.foreground,
+  );
+  return switch (state) {
+    RequestState.needsAttention when urgent => (
+      fill: colors.danger.withValues(alpha: .2),
+      edge: colors.danger.withValues(alpha: .55),
+      mark: colors.danger,
+      ink: colors.foreground,
+    ),
+    RequestState.needsAttention || RequestState.onTheWay => plain,
+    RequestState.here || RequestState.declined => (
+      fill: null,
+      edge: colors.foreground.withValues(alpha: .2),
+      mark: quiet,
+      ink: quiet,
+    ),
+    // Waiting, and a state this app doesn't know yet.
+    _ when urgent => (
+      fill: colors.accentSoft,
+      edge: colors.accent.withValues(alpha: .5),
+      mark: colors.accent,
+      ink: colors.foreground,
+    ),
+    _ => plain,
+  };
+}
+
+/// [state]'s word on its badge, with the share that's in for one on its
+/// way when the server says.
+String requestStateText(String state, AppLocalizations l, {double? progress}) =>
+    switch (state) {
+      RequestState.needsAttention => l.webRequestsStateNeedsAttention,
+      RequestState.onTheWay when progress != null =>
+        l.webRequestsStateOnTheWayPercent(formatPercent(progress, l)),
+      RequestState.onTheWay => l.webRequestsStateOnTheWay,
+      RequestState.here => l.webRequestsStateHere,
+      RequestState.declined => l.webRequestsStateDeclined,
+      _ => l.webRequestsStateWaiting,
+    };
+
+/// [state]'s mark on its badge, or null for on its way, which shows a
+/// ring of how much is in.
+String? requestStateIcon(String state) => switch (state) {
+  RequestState.needsAttention => Lucide.triangleAlert,
+  RequestState.onTheWay => null,
+  RequestState.here => Lucide.check,
+  RequestState.declined => Lucide.circleSlash,
+  _ => Lucide.clock,
+};
 
 /// [build] under the theme's dark half, where a card draws, so what it
 /// builds for the card takes the card's colours.
@@ -536,23 +559,9 @@ class QueueCard extends ConsumerWidget {
       case RequestState.onTheWay:
         return _progressLines(context);
       case RequestState.declined:
-        final gaveUp = item.reason == DeclineReason.notFound;
-        final at = relativeTime(item.declinedAt, l);
-        final reason = item.reason;
         final note = item.note?.trim();
         return [
-          _Line(
-            [
-              switch ((gaveUp, at)) {
-                (true, final at?) => l.webRequestsDoneGaveUp(at),
-                (false, final at?) => l.webRequestsDoneDeclined(at),
-                (true, null) => l.webRequestsDoneGaveUpUndated,
-                (false, null) => l.webRequestsDoneDeclinedUndated,
-              },
-              if (reason != null && !gaveUp) adminReasonText(reason, l),
-            ].join(' · '),
-            lines: _lines,
-          ),
+          _Line(queueDeclinedText(item, l), lines: _lines),
           if (note != null && note.isNotEmpty)
             _Line(
               note,
@@ -562,15 +571,7 @@ class QueueCard extends ConsumerWidget {
             ),
         ];
       case RequestState.here:
-        final arrived = relativeTime(item.arrivedAt, l);
-        return [
-          _Line(
-            [
-              if (arrived != null) l.webRequestsDoneArrived(arrived),
-              item.library.name,
-            ].join(' · '),
-          ),
-        ];
+        return [_Line(queueArrivedText(item, l))];
       default:
         return const [];
     }
@@ -580,29 +581,8 @@ class QueueCard extends ConsumerWidget {
   /// long is left, or what it waits on, and where it goes.
   List<Widget> _progressLines(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final availability = item.availability;
-    final progress = availability.progress;
-    final eta = availability.etaSeconds;
-    final String? status;
-    if (availability.state == AvailabilityState.release) {
-      final day = parseDay(availability.releaseDate);
-      status = day == null
-          ? l.webRequestsProgressNotOut
-          : l.webRequestsProgressRelease(formatShortDay(day, l));
-    } else if (progress != null) {
-      // The badge has the share.
-      status = eta == null
-          ? null
-          : l.webRequestsProgressLeft(formatSpan(eta, l));
-    } else if (availability.stillLooking) {
-      status = l.webRequestsProgressLooking;
-    } else if (item.fulfilmentState == FulfilmentState.queued) {
-      status = l.webRequestsProgressQueued;
-    } else if (item.connection?.reportsProgress == false) {
-      status = l.webRequestsProgressByHand;
-    } else {
-      status = l.webRequestsProgressSent;
-    }
+    final progress = item.availability.progress;
+    final status = queueProgressText(item, l);
     return [
       if (progress != null)
         Padding(
@@ -1086,18 +1066,7 @@ class OwnRequestCard extends ConsumerWidget {
     switch (item.state) {
       case RequestState.onTheWay:
         final progress = availability.progress;
-        final eta = availability.etaSeconds;
-        final String? words;
-        if (availability.state == AvailabilityState.release) {
-          final word = stateWord(availability);
-          words = word == null ? null : stateText(word, l);
-        } else if (eta != null) {
-          words = l.webRequestsProgressLeft(formatSpan(eta, l));
-        } else if (availability.stillLooking) {
-          words = l.webRequestsProgressLooking;
-        } else {
-          words = null;
-        }
+        final words = ownProgressText(availability, l);
         return [
           if (progress != null)
             Padding(

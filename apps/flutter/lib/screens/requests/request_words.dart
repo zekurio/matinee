@@ -688,3 +688,92 @@ String? scopeText(ShowScope? scope, AppLocalizations l) {
   }
   return scope.future ? l.webRequestsScopeAndFuture(seasons) : seasons;
 }
+
+// A request card's lines, which the phone's cards and the TV's share.
+
+/// "3 waiting · 1 needs attention · 2 on the way · 28 done": how many of
+/// [queue] are in each state that has any, without the ids in [held].
+String queueSummary(
+  RequestQueue queue,
+  AppLocalizations l, {
+  Set<String> held = const {},
+}) {
+  int left(List<AdminRequestItem> list) =>
+      list.where((item) => !held.contains(item.id)).length;
+  return [
+    if (left(queue.waiting) case final n when n > 0)
+      l.webRequestsSummaryWaiting(formatCount(n, l)),
+    if (left(queue.needsAttention) case final n when n > 0)
+      l.webRequestsSummaryNeedsAttention(n),
+    if (left(queue.onTheWay) case final n when n > 0)
+      l.webRequestsSummaryOnTheWay(n),
+    if (queue.counts.done > 0)
+      l.webRequestsSummaryDone(formatCount(queue.counts.done, l)),
+  ].join(' · ');
+}
+
+/// How far along a request of the queue on its way is, past the share its
+/// badge has: when it's out, how long is left, or what it waits on. Null
+/// while the share is known and the time left isn't.
+String? queueProgressText(AdminRequestItem item, AppLocalizations l) {
+  final availability = item.availability;
+  final eta = availability.etaSeconds;
+  if (availability.state == AvailabilityState.release) {
+    final day = parseDay(availability.releaseDate);
+    return day == null
+        ? l.webRequestsProgressNotOut
+        : l.webRequestsProgressRelease(formatShortDay(day, l));
+  } else if (availability.progress != null) {
+    return eta == null ? null : l.webRequestsProgressLeft(formatSpan(eta, l));
+  } else if (availability.stillLooking) {
+    return l.webRequestsProgressLooking;
+  } else if (item.fulfilmentState == FulfilmentState.queued) {
+    return l.webRequestsProgressQueued;
+  } else if (item.connection?.reportsProgress == false) {
+    return l.webRequestsProgressByHand;
+  }
+  return l.webRequestsProgressSent;
+}
+
+/// "Declined 4 hours ago · Already have it", or "Gave up 2 days ago", for
+/// a declined request of the queue; the admin's note goes under it.
+String queueDeclinedText(AdminRequestItem item, AppLocalizations l) {
+  final gaveUp = item.reason == DeclineReason.notFound;
+  final at = relativeTime(item.declinedAt, l);
+  final reason = item.reason;
+  return [
+    switch ((gaveUp, at)) {
+      (true, final at?) => l.webRequestsDoneGaveUp(at),
+      (false, final at?) => l.webRequestsDoneDeclined(at),
+      (true, null) => l.webRequestsDoneGaveUpUndated,
+      (false, null) => l.webRequestsDoneDeclinedUndated,
+    },
+    if (reason != null && !gaveUp) adminReasonText(reason, l),
+  ].join(' · ');
+}
+
+/// "Arrived 37 minutes ago · Films", for a request of the queue that's
+/// here.
+String queueArrivedText(AdminRequestItem item, AppLocalizations l) {
+  final arrived = relativeTime(item.arrivedAt, l);
+  return [
+    if (arrived != null) l.webRequestsDoneArrived(arrived),
+    item.library.name,
+  ].join(' · ');
+}
+
+/// How far along one of the viewer's own requests on its way is, past the
+/// share its badge has: when it's out, how long is left, or that a copy is
+/// still being looked for.
+String? ownProgressText(Availability availability, AppLocalizations l) {
+  final eta = availability.etaSeconds;
+  if (availability.state == AvailabilityState.release) {
+    final word = stateWord(availability);
+    return word == null ? null : stateText(word, l);
+  } else if (eta != null) {
+    return l.webRequestsProgressLeft(formatSpan(eta, l));
+  } else if (availability.stillLooking) {
+    return l.webRequestsProgressLooking;
+  }
+  return null;
+}

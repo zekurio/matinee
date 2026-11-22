@@ -212,18 +212,7 @@ class _QueueList extends ConsumerWidget {
       for (final item in queue.waiting)
         if (!held.contains(item.id)) item,
     ];
-    int left(List<AdminRequestItem> list) =>
-        list.where((item) => !held.contains(item.id)).length;
-    final counts = [
-      if (waiting.isNotEmpty)
-        l.webRequestsSummaryWaiting(formatCount(waiting.length, l)),
-      if (left(queue.needsAttention) case final n when n > 0)
-        l.webRequestsSummaryNeedsAttention(n),
-      if (left(queue.onTheWay) case final n when n > 0)
-        l.webRequestsSummaryOnTheWay(n),
-      if (queue.counts.done > 0)
-        l.webRequestsSummaryDone(formatCount(queue.counts.done, l)),
-    ];
+    final counts = queueSummary(queue, l, held: held);
     final notifier = pages == null
         ? null
         : ref.read(doneRequestsProvider.notifier);
@@ -255,7 +244,7 @@ class _QueueList extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    counts.join(' · '),
+                    counts,
                     style: KitText.sm.style(color: colors.mutedForeground),
                   ),
                 ),
