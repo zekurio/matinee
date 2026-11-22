@@ -86,9 +86,15 @@ class TabHeader extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: KitText.xl
-                    .style(color: colors.foreground, weight: FontWeight.w600)
-                    .copyWith(letterSpacing: KitText.xl.size * -.025),
+                // The wordmark's lowercase letters are about 12.5 logical
+                // pixels tall; at px26 the title's are the same. The band is
+                // fixed, so even the largest text setting keeps its one line
+                // inside, and the action at the end.
+                textScaler: MediaQuery.textScalerOf(context)
+                    .clamp(maxScaleFactor: 1.6),
+                style: KitText.px26
+                    .style(color: colors.foreground, weight: FontWeight.w700)
+                    .copyWith(letterSpacing: KitText.px26.size * -.025),
               ),
             ),
           ),

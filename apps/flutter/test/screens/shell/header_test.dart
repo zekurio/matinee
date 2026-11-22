@@ -29,6 +29,7 @@ Future<void> _pump(
   WidgetTester tester,
   int index, {
   AuthState auth = const NoServer(),
+  double textScale = 1,
 }) async {
   tester.view.physicalSize = const Size(400, 800);
   tester.view.devicePixelRatio = 1;
@@ -40,6 +41,11 @@ Future<void> _pump(
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         home: Material(
           child: MatineeTheme.wrap(
             matineeDark,
@@ -105,6 +111,28 @@ void main() {
     expect(_button('Settings'), findsOneWidget);
     expect(_button('Search'), findsNothing);
     expect(find.byType(Logo), findsNothing);
+  });
+
+  testWidgets('tab titles use the wordmark-sized heading', (tester) async {
+    await _pump(tester, 1);
+    final style = tester.widget<Text>(find.text('Shows')).style!;
+    expect(style.fontSize, KitText.px26.size);
+    expect(style.fontWeight, FontWeight.w700);
+  });
+
+  testWidgets('the longest title and its action fit at the largest size', (
+    tester,
+  ) async {
+    await _pump(tester, 3, textScale: 3);
+    final band = tester.getRect(find.byType(ShellTopBar));
+    final title = tester.getRect(find.text('Downloads'));
+    expect(title.top, greaterThanOrEqualTo(band.top));
+    expect(title.bottom, lessThanOrEqualTo(band.bottom));
+    expect(find.text('Downloads'), findsOneWidget);
+
+    await _pump(tester, 1, textScale: 3);
+    expect(tester.getSize(_button('Search')), const Size(44, 44));
+    expect(tester.getRect(find.text('Shows')).bottom, lessThanOrEqualTo(56));
   });
 
   testWidgets('every header is the same height', (tester) async {
