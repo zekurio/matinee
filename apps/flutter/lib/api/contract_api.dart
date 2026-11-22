@@ -274,6 +274,17 @@ final class RequestsApi {
   }
 
   /// The account needs the `request.read` permission, and so does an API token.
+  /// `GET /requests/mine/live`
+  Stream<RequestPage> mineLive({String? cursor, int? limit}) {
+    return _transport.events(
+      'GET',
+      ['requests', 'mine', 'live'],
+      RequestPage.fromJson,
+      query: {'cursor': ?cursor, 'limit': ?limit?.toString()},
+    );
+  }
+
+  /// The account needs the `request.read` permission, and so does an API token.
   /// `GET /requests/mine`
   Future<RequestPage> mine({String? cursor, int? limit, String? filter}) {
     return _transport.call(

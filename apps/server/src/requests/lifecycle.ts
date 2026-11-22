@@ -310,6 +310,7 @@ async function items(viewer: Viewer, rows: Row[]) {
     await withCachedDetails(
       viewer,
       rows.map((row) => ({
+        requestId: row.id,
         ref: {
           kind: row.kind,
           provider: row.provider,
@@ -456,6 +457,14 @@ function inProgress() {
   )
 }
 
+/** The requests the viewer asked for or follows, among the libraries they see. */
+function followedBy(viewer: Viewer) {
+  return and(
+    inLibraries(viewer, request.libraryId),
+    eq(requestFollower.userId, viewer.id),
+  )
+}
+
 export async function mine(
   viewer: Viewer,
   input: { cursor?: string; limit: number; filter: "inProgress" | "all" },
@@ -466,8 +475,7 @@ export async function mine(
     .innerJoin(requestFollower, eq(requestFollower.requestId, request.id))
     .where(
       and(
-        inLibraries(viewer, request.libraryId),
-        eq(requestFollower.userId, viewer.id),
+        followedBy(viewer),
         cursorBefore(input.cursor, request.createdAt),
         input.filter === "inProgress" ? inProgress() : undefined,
       ),
@@ -896,7 +904,13 @@ export async function moderate(
             throw cause
           })
       }
-      if (operation === "approve" && row.status !== "asked") continue
+      if (operation === "approve" && row.status !== "asked") {
+        if (ids.length === 1 && row.status === "declined")
+          throw new ORPCError("CONFLICT", {
+            message: "This request changed. Reload the list and try again.",
+          })
+        continue
+      }
       if (
         operation === "retry" &&
         (row.status !== "approved" || row.fulfilmentState !== "failed")
