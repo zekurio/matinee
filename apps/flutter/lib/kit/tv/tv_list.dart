@@ -5,12 +5,11 @@ import '../theme.dart';
 import 'tv_focus.dart';
 import 'tv_metrics.dart';
 
-/// A row to pick on a TV, in a list or a side panel: a large target that
-/// fills with the text color while it has focus, as the Kotlin app's
-/// `TvListItem`. [quiet] rows have no resting fill; [selected] marks the
-/// one in force; [checked] puts a check at its end. [trailing] sits before
-/// the check in the row's content color, as [TvListValue] or
-/// [TvListSwitch].
+/// A row to pick on a TV, in a list or a side panel: a large target that fills
+/// with the text color while it has focus. [quiet] rows have no resting fill;
+/// [selected] marks the one in force; [checked] puts a check at its end.
+/// [trailing] sits before the check in the row's content color, as
+/// [TvListValue] or [TvListSwitch].
 class TvListItem extends StatelessWidget {
   const TvListItem({
     super.key,
@@ -30,7 +29,6 @@ class TvListItem extends StatelessWidget {
     this.minHeight = TvListItems.height,
     this.subtitleLines = 2,
     this.titleLines = 1,
-    this.onLongPress,
     this.onFocusChange,
   });
 
@@ -40,7 +38,6 @@ class TvListItem extends StatelessWidget {
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onPressed;
-  final VoidCallback? onLongPress;
   final bool quiet;
   final bool selected;
   final bool destructive;
@@ -76,7 +73,6 @@ class TvListItem extends StatelessWidget {
       autofocus: autofocus,
       enabled: enabled,
       onPressed: onPressed,
-      onLongPress: onLongPress,
       onFocusChange: onFocusChange,
       label: subtitle == null ? title : '$title, $subtitle',
       checked: checked ? true : null,

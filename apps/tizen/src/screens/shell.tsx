@@ -146,28 +146,28 @@ function Drawer(props: {
   const entries: DrawerEntry[] = [
     {
       key: "search",
-      label: tr("search_title"),
+      label: tr("searchTitle"),
       icon: Search,
       route: { page: "search" },
     },
     {
       key: "home",
-      label: tr("tab_home"),
+      label: tr("tabHome"),
       icon: House,
       route: { page: "home" },
     },
     {
       key: "favorites",
-      label: tr("favorites_title"),
+      label: tr("favoritesTitle"),
       icon: Heart,
       route: { page: "favorites" },
     },
     // Only the kinds the server has.
     ...(kinds && kinds.movie > 0
-      ? [kind("movie", tr("browse_kind_movie"), Film)]
+      ? [kind("movie", tr("browseKindMovie"), Film)]
       : []),
     ...(kinds && kinds.show > 0
-      ? [kind("show", tr("browse_kind_show"), Tv)]
+      ? [kind("show", tr("browseKindShow"), Tv)]
       : []),
   ]
   const profile: DrawerEntry = {
@@ -178,7 +178,7 @@ function Drawer(props: {
   }
   const settings: DrawerEntry = {
     key: "settings",
-    label: tr("shell_settings"),
+    label: tr("shellSettings"),
     icon: Settings,
     route: { page: "settings" },
   }

@@ -4,13 +4,12 @@ import 'package:flutter/widgets.dart';
 
 import 'cards.dart';
 
-/// Cards in rows across the page, as a sliver: [columns] says how many fit
-/// the width the grid has (the screens pick it by width class), and each
-/// card is as tall as its art at [aspectRatio] and its two lines of text
-/// need. With [fitRows], for cards with more under them on some rows than
-/// on others, each row is as tall as its tallest card instead, as a
-/// Compose grid sizes its rows. The gutter is the page's, the gaps the
-/// web's grid's.
+/// Cards in rows across the page, as a sliver: [columns] says how many fit the
+/// width the grid has (the screens pick it by width class), and each card is as
+/// tall as its art at [aspectRatio] and its two lines of text need. With
+/// [fitRows], for cards with more under them on some rows than on others, each
+/// row is as tall as its tallest card instead. The gutter is the page's, the
+/// gaps the web's grid's.
 class CardGrid extends StatelessWidget {
   const CardGrid({
     super.key,

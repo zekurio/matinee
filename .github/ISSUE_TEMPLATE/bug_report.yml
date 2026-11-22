@@ -103,7 +103,7 @@ body:
       label: Logs
       description: |
         The lines around the error only. On NixOS, `journalctl -u matinee`. For the
-        Android app, `just android logcat`. Remove tokens, cookies, and private paths.
+        Android app, the log at the end of Settings → About. Remove tokens, cookies, and private paths.
       render: shell
 
   - type: upload

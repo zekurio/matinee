@@ -101,7 +101,7 @@ export function ActionsPanel() {
     actions.close()
   }
   const mark = (ask: WatchedAsk, when: WatchedWhen) => {
-    void toasts.showing(tr("media_mark_watched_failed"), () => ask.mark(when))
+    void toasts.showing(tr("mediaMarkWatchedFailed"), () => ask.mark(when))
     close()
   }
   const failing = (failure: string, work: () => Promise<void>) => () =>
@@ -119,7 +119,7 @@ export function ActionsPanel() {
         return [
           {
             icon: Play,
-            label: tr(resume ? "title_resume" : "title_play"),
+            label: tr(resume ? "titleResume" : "titlePlay"),
             leaves: true,
             run: () => nav.play(item.id),
           },
@@ -127,7 +127,7 @@ export function ActionsPanel() {
             ? [
                 {
                   icon: RotateCcw,
-                  label: tr("actions_play_from_start"),
+                  label: tr("actionsPlayFromStart"),
                   leaves: true,
                   run: () => nav.play(item.id, 0),
                 },
@@ -135,12 +135,10 @@ export function ActionsPanel() {
             : []),
           {
             icon: Check,
-            label: tr(
-              isWatched ? "media_mark_unwatched" : "media_mark_watched",
-            ),
+            label: tr(isWatched ? "mediaMarkUnwatched" : "mediaMarkWatched"),
             // Unwatched at once; watched asks when first.
             run: isWatched
-              ? failing(tr("media_mark_unwatched_failed"), () =>
+              ? failing(tr("mediaMarkUnwatchedFailed"), () =>
                   viewer.setItemWatched(item, false),
                 )
               : () =>
@@ -152,10 +150,8 @@ export function ActionsPanel() {
           {
             icon: Heart,
             filled: favorite,
-            label: tr(
-              favorite ? "media_remove_favorite" : "media_add_favorite",
-            ),
-            run: failing(tr("media_favorite_failed"), () =>
+            label: tr(favorite ? "mediaRemoveFavorite" : "mediaAddFavorite"),
+            run: failing(tr("mediaFavoriteFailed"), () =>
               viewer.setItemFavorite(item, !favorite),
             ),
           },
@@ -163,13 +159,13 @@ export function ActionsPanel() {
             ? [
                 {
                   icon: Info,
-                  label: tr("actions_episode_details"),
+                  label: tr("actionsEpisodeDetails"),
                   leaves: true,
                   run: () => nav.episode(item.id),
                 },
                 {
                   icon: Tv,
-                  label: tr("actions_go_to_show", title.name),
+                  label: tr("actionsGoToShow", title.name),
                   leaves: true,
                   run: () => nav.titleUp(title.id),
                 },
@@ -178,7 +174,7 @@ export function ActionsPanel() {
               ? [
                   {
                     icon: Info,
-                    label: tr("media_hero_details"),
+                    label: tr("mediaHeroDetails"),
                     leaves: true,
                     run: () => nav.titleUp(title.id),
                   },
@@ -194,12 +190,12 @@ export function ActionsPanel() {
         return [
           {
             icon: Play,
-            label: tr("title_play"),
+            label: tr("titlePlay"),
             leaves: true,
-            run: failing(tr("media_play_failed", title.name), async () => {
+            run: failing(tr("mediaPlayFailed", title.name), async () => {
               const { next } = await session.api.titles.get({ id: title.id })
               if (next) nav.play(next.id)
-              else toasts.show(tr("media_no_files", title.name))
+              else toasts.show(tr("mediaNoFiles", title.name))
             }),
           },
           {
@@ -207,14 +203,14 @@ export function ActionsPanel() {
             label: tr(
               show
                 ? isWatched
-                  ? "media_mark_all_unwatched"
-                  : "media_mark_all_watched"
+                  ? "mediaMarkAllUnwatched"
+                  : "mediaMarkAllWatched"
                 : isWatched
-                  ? "media_mark_unwatched"
-                  : "media_mark_watched",
+                  ? "mediaMarkUnwatched"
+                  : "mediaMarkWatched",
             ),
             run: isWatched
-              ? failing(tr("media_mark_unwatched_failed"), () =>
+              ? failing(tr("mediaMarkUnwatchedFailed"), () =>
                   viewer.setWatched(title, false),
                 )
               : () =>
@@ -225,16 +221,14 @@ export function ActionsPanel() {
           {
             icon: Heart,
             filled: favorite,
-            label: tr(
-              favorite ? "media_remove_favorite" : "media_add_favorite",
-            ),
-            run: failing(tr("media_favorite_failed"), () =>
+            label: tr(favorite ? "mediaRemoveFavorite" : "mediaAddFavorite"),
+            run: failing(tr("mediaFavoriteFailed"), () =>
               viewer.setFavorite(title, !favorite),
             ),
           },
           {
             icon: Info,
-            label: tr(show ? "media_hero_episodes" : "media_hero_details"),
+            label: tr(show ? "mediaHeroEpisodes" : "mediaHeroDetails"),
             leaves: true,
             run: () => nav.titleUp(title.id),
           },
@@ -254,22 +248,18 @@ export function ActionsPanel() {
                   label: tr(
                     season.itemCount > 0 &&
                       season.watchedCount >= season.itemCount
-                      ? "media_mark_unwatched"
-                      : "media_mark_watched",
+                      ? "mediaMarkUnwatched"
+                      : "mediaMarkWatched",
                   ),
                   run:
                     season.itemCount > 0 &&
                     season.watchedCount >= season.itemCount
-                      ? failing(tr("media_mark_unwatched_failed"), () =>
+                      ? failing(tr("mediaMarkUnwatchedFailed"), () =>
                           viewer.setWatched(title, false, number),
                         )
                       : () =>
                           actions.askWatched(
-                            tr(
-                              "title_season_of",
-                              title.name,
-                              seasonName(number),
-                            ),
+                            tr("titleSeasonOf", title.name, seasonName(number)),
                             (when) =>
                               viewer.setWatched(title, true, number, when),
                           ),
@@ -278,16 +268,16 @@ export function ActionsPanel() {
                   icon: Heart,
                   filled: favorite,
                   label: tr(
-                    favorite ? "media_remove_favorite" : "media_add_favorite",
+                    favorite ? "mediaRemoveFavorite" : "mediaAddFavorite",
                   ),
-                  run: failing(tr("media_favorite_failed"), () =>
+                  run: failing(tr("mediaFavoriteFailed"), () =>
                     viewer.setSeasonFavorite(title, season, !favorite),
                   ),
                 },
               ]),
           {
             icon: List,
-            label: tr("media_hero_episodes"),
+            label: tr("mediaHeroEpisodes"),
             leaves: true,
             run: () => nav.season(title.id, number),
           },
@@ -298,10 +288,8 @@ export function ActionsPanel() {
 
   const heading = (): [string | null, string | null] => {
     if (!view) return [null, null]
-    if (view.kind === "watched")
-      return [tr("media_mark_watched"), view.ask.name]
-    if (view.kind === "day")
-      return [tr("media_watched_date_title"), view.ask.name]
+    if (view.kind === "watched") return [tr("mediaMarkWatched"), view.ask.name]
+    if (view.kind === "day") return [tr("mediaWatchedDateTitle"), view.ask.name]
     const menu = view.target
     if (menu.kind === "title") {
       return [
@@ -360,21 +348,21 @@ export function ActionsPanel() {
         <>
           <ListItem
             fid="now"
-            title={tr("media_watched_at_now")}
+            title={tr("mediaWatchedAtNow")}
             icon={Clock}
             quiet
             onPress={() => mark(view.ask, undefined)}
           />
           <ListItem
             fid="released"
-            title={tr("media_watched_at_released")}
+            title={tr("mediaWatchedAtReleased")}
             icon={Calendar}
             quiet
             onPress={() => mark(view.ask, "released")}
           />
           <ListItem
             fid="other"
-            title={tr("media_watched_at_other")}
+            title={tr("mediaWatchedAtOther")}
             icon={CalendarClock}
             quiet
             onPress={() => {
@@ -384,7 +372,7 @@ export function ActionsPanel() {
           />
           <ListItem
             fid="unknown"
-            title={tr("media_watched_at_unknown")}
+            title={tr("mediaWatchedAtUnknown")}
             icon={CalendarOff}
             quiet
             onPress={() => mark(view.ask, "unknown")}
@@ -413,7 +401,7 @@ export function ActionsPanel() {
           <div style={{ paddingTop: "12rem" }}>
             <ListItem
               fid="mark"
-              title={tr("media_mark_watched")}
+              title={tr("mediaMarkWatched")}
               icon={Check}
               quiet
               onPress={() =>

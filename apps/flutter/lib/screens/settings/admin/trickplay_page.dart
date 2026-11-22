@@ -9,11 +9,10 @@ import '../settings_rows.dart';
 import 'admin_data.dart';
 import 'admin_parts.dart';
 
-/// The seek bar's preview images, as the Kotlin app's `TrickplaySettings`
-/// and the web's trickplay panel: whether the server makes them, how often
-/// and how wide, and how it decodes. The fields save together from the
-/// save bar; new settings make new images in the background. The choices
-/// are the contract's, as the server's client has them.
+/// The seek bar's preview images, as the web's trickplay panel: whether the
+/// server makes them, how often and how wide, and how it decodes. The fields
+/// save together from the save bar; new settings make new images in the
+/// background. The choices are the contract's, as the server's client has them.
 class TrickplayPage extends ConsumerWidget {
   const TrickplayPage({super.key});
 

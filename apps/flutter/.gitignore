@@ -50,5 +50,3 @@ app.*.map.json
 # Written by `flutter pub get` from the ARB files.
 /lib/l10n/app_localizations*.dart
 
-# Written by failed golden tests.
-test/**/failures/

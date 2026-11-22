@@ -139,7 +139,7 @@ final freeBytesProvider = FutureProvider<int?>((ref) async {
   }
 });
 
-/// What the account may stream and save, the Kotlin app's `viewer.options`.
+/// What the account may stream and save.
 final playbackOptionsProvider = serverQuery((api) => api.playback.options());
 
 /// The account may download. False until the server said so, so nothing
@@ -173,10 +173,10 @@ String downloadName(MediaItem item, AppLocalizations l) {
       : names.title;
 }
 
-/// The downloads, the Kotlin app's `Downloads`: the platform fetches each
-/// file and keeps the list; this follows it and tells it what to do. Each
-/// download belongs to the server it came from, and only the server in use
-/// shows its own ([shownDownloadsProvider]).
+/// The downloads: the platform fetches each file and keeps the list; this
+/// follows it and tells it what to do. Each download belongs to the server it
+/// came from, and only the server in use shows its own
+/// ([shownDownloadsProvider]).
 class Downloads extends Notifier<DownloadsList> {
   late DownloadsPlatform _platform;
 

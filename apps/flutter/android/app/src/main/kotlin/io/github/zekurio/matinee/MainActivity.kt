@@ -153,8 +153,7 @@ private class Device(private val activity: MainActivity) : DeviceApi {
     override fun facts(): DeviceFacts {
         val packages = activity.packageManager
         return DeviceFacts(
-            // Leanback is what Android TV and Google TV devices declare, and
-            // what the Kotlin app checked, so the same devices get the TV app.
+            // Leanback is what Android TV and Google TV devices declare.
             television = packages.hasSystemFeature(PackageManager.FEATURE_LEANBACK),
             name = Settings.Global.getString(activity.contentResolver, Settings.Global.DEVICE_NAME)
                 ?.takeIf { it.isNotBlank() }
@@ -167,10 +166,9 @@ private class Device(private val activity: MainActivity) : DeviceApi {
     }
 
     /**
-     * Android 17 keeps apps off the local network without
-     * ACCESS_LOCAL_NETWORK, and it held the Kotlin app to that at target SDK
-     * 36 too, so every Android 17 device is asked. The name is spelled out
-     * because the build's compile SDK may predate the constant.
+     * Android 17 keeps apps off the local network without ACCESS_LOCAL_NETWORK,
+     * even at target SDK 36, so every Android 17 device is asked. The name is
+     * spelled out because the build's compile SDK may predate the constant.
      */
     private fun missing(): Boolean =
         Build.VERSION.SDK_INT >= 37 &&
@@ -197,8 +195,8 @@ private class Device(private val activity: MainActivity) : DeviceApi {
     }
 
     /**
-     * Discovery probes go to each active interface's broadcast address, as
-     * the Kotlin app sent them; Dart can't tell an interface's netmask.
+     * Discovery probes go to each active interface's broadcast address; Dart
+     * can't tell an interface's netmask.
      */
     override fun broadcastAddresses(): List<String> {
         val found = mutableSetOf<String>()
@@ -256,10 +254,9 @@ private class Device(private val activity: MainActivity) : DeviceApi {
     }
 
     /**
-     * The names Java's locale data gives, as the Kotlin app's
-     * `languageName` and `countryName` asked them. A language the data
-     * doesn't know comes back as its tag, and a region as its code, so
-     * those are left out for Dart to fall back on.
+     * The names Java's locale data gives. A language the data doesn't know
+     * comes back as its tag, and a region as its code, so those are left out
+     * for Dart to fall back on.
      */
     override fun displayNames(codes: List<String>, kind: DisplayNameKind, language: String): Map<String, String> {
         val inLocale = Locale.forLanguageTag(language)

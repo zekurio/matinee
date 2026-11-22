@@ -79,21 +79,6 @@ extension PlaybackPreferencesExtensions on PlaybackPreferences {
   int get skipForward => skipForwardSeconds ?? defaultSkipSeconds;
 }
 
-/// The codecs the server always encodes, used when playback.options fails.
-const fallbackPlaybackOptions = PlaybackOptions(
-  qualities: [],
-  maxBitrate: null,
-  downloads: false,
-  downloadVideoPresets: [],
-  skipSteps: [],
-  videoCodecs: [TranscodeVideoCodec.h264],
-  audioCodecs: [TranscodeAudioCodec.aac],
-  audioLanguages: [],
-  subtitleLanguages: [],
-);
-
-typedef OfflinePlay = PlaybackOfflineInputPlay;
-
 const playbackUnplayable = 'UNPLAYABLE';
 const playbackRestricted = 'PLAYBACK_RESTRICTED';
 const playbackBusy = 'TOO_MANY_STREAMS';

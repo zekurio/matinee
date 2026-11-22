@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:matinee/api/matinee_api.dart';
@@ -11,10 +10,8 @@ import 'package:matinee/player/playback_device.dart';
 import 'package:matinee/player/playback_report.dart';
 import 'package:matinee/player/playback_session.dart';
 import 'package:matinee/player/player.dart';
-import 'package:matinee/player/player_system.dart';
 
 const itemId = '25a476af-d3df-40d1-9400-4029b6176607';
-const nextId = 'ba0aab09-d3f4-495f-be62-b67b18d07272';
 const sittingId = '110c6827-a589-4282-b61b-dfa7396b35db';
 
 const audioOne = AudioTrack(
@@ -57,7 +54,6 @@ const quality = PlaybackQualityPreset(
   height: 720,
   bitrate: 4000000,
 );
-const intro = MediaSegment(kind: MediaSegmentKind.intro, start: 10, end: 30);
 
 MediaItem item(String id) => MediaItem(
   id: id,
@@ -102,11 +98,6 @@ PlaybackStart plan({
   SubtitleTrack? subtitle,
   String? subtitleMode,
   String? subtitleUrl,
-  String quality = PlaybackQuality.original,
-  bool original = true,
-  bool hasNext = false,
-  double? upNextAt,
-  List<MediaSegment> segments = const [],
 }) => PlaybackStart(
   item: item(id),
   method: method,
@@ -124,7 +115,7 @@ PlaybackStart plan({
   subtitleUrl: subtitleUrl,
   audioTracks: const [audioOne, audioTwo],
   subtitleTracks: const [captions],
-  quality: quality,
+  quality: PlaybackQuality.original,
   qualities: const [
     PlaybackQualityPreset(
       id: PlaybackQuality.value720p4,
@@ -133,12 +124,12 @@ PlaybackStart plan({
       bitrate: 4000000,
     ),
   ],
-  original: original,
+  original: true,
   reasons: const [],
   previous: null,
-  next: hasNext ? item(nextId) : null,
-  upNextAt: upNextAt,
-  segments: segments,
+  next: null,
+  upNextAt: null,
+  segments: const [],
 );
 
 class FakePlaybackApi {
@@ -163,8 +154,6 @@ class FakePlaybackApi {
   final reports = <PlaybackReportInput>[];
   final picks = <PlaybackPickTracksInput>[];
   final subtitleRequests = <Uri>[];
-  int trickplayRequests = 0;
-  TrickplayStatus trickplay = const TrickplayStatusUnavailable();
 
   final options = const PlaybackOptions(
     qualities: [
@@ -205,9 +194,9 @@ class FakePlaybackApi {
     final path = request.url.path;
     if (path == '/api/v1/playback/options') return _json(options.toJson());
     if (path.endsWith('/trickplay')) {
-      trickplayRequests++;
+      const status = TrickplayStatusUnavailable();
       return http.Response(
-        'event: message\ndata: ${jsonEncode(trickplay.toJson())}\n\n'
+        'event: message\ndata: ${jsonEncode(status.toJson())}\n\n'
         'event: done\n\n',
         200,
         headers: {'Content-Type': 'text/event-stream'},
@@ -281,11 +270,9 @@ typedef OpenedSource = ({
 });
 
 class FakePlayer implements Player {
-  final fits = <VideoFit>[];
   final _updates = StreamController<PlaybackState>.broadcast();
   final opens = <OpenedSource>[];
   final trackChanges = <SourceTracks>[];
-  final rates = <double>[];
   final seeks = <Duration>[];
   bool disposed = false;
   int pauses = 0;
@@ -303,9 +290,6 @@ class FakePlayer implements Player {
 
   @override
   Stream<wire.DiagnosticsMessage> get diagnostics => _diagnostics.stream;
-
-  /// What the engine would say for the report.
-  void diagnose(wire.DiagnosticsMessage message) => _diagnostics.add(message);
 
   void emit(
     PlaybackPhase phase,
@@ -405,13 +389,14 @@ class FakePlayer implements Player {
   Future<void> dispose() async {
     disposed = true;
     await _updates.close();
+    await _diagnostics.close();
   }
 
   @override
   Future<void> setVideoViewport(Rect? bounds) async {}
 
   @override
-  Future<void> setRate(double rate) async => rates.add(rate);
+  Future<void> setRate(double rate) async {}
 
   @override
   Future<void> selectAudioTrack(String? id) => throw UnimplementedError();
@@ -423,55 +408,5 @@ class FakePlayer implements Player {
   Future<void> setSubtitleUrl(String? url) => throw UnimplementedError();
 
   @override
-  Future<void> setVideoFit(VideoFit fit) async => fits.add(fit);
-}
-
-class FakePictureInPicture implements PictureInPicture {
-  FakePictureInPicture({this.has = true});
-
-  final bool has;
-  final autos = <bool>[];
-  int enters = 0;
-  final _active = ValueNotifier(false);
-
-  @override
-  ValueListenable<bool> get active => _active;
-
-  /// The system moved the app into the small window or out of it.
-  set small(bool value) => _active.value = value;
-
-  @override
-  Future<bool> available() async => has;
-
-  @override
-  Future<bool> enter() async {
-    enters++;
-    return has;
-  }
-
-  @override
-  Future<void> setAuto(bool enabled) async => autos.add(enabled);
-}
-
-class FakeMediaControls implements MediaControls {
-  final shown = <MediaInfoMessage>[];
-  final states = <MediaStateMessage>[];
-  int hides = 0;
-  final _commands = StreamController<MediaCommandMessage>.broadcast();
-
-  /// A press on the notification, a headset, or the small window.
-  void press(MediaCommandKind kind, {int? positionMs}) =>
-      _commands.add(MediaCommandMessage(kind: kind, positionMs: positionMs));
-
-  @override
-  Stream<MediaCommandMessage> get commands => _commands.stream;
-
-  @override
-  Future<void> show(MediaInfoMessage info) async => shown.add(info);
-
-  @override
-  Future<void> update(MediaStateMessage state) async => states.add(state);
-
-  @override
-  Future<void> hide() async => hides++;
+  Future<void> setVideoFit(VideoFit fit) async {}
 }

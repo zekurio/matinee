@@ -16,9 +16,8 @@ export '../platform/player_system.g.dart'
         MediaPhaseMessage,
         MediaStateMessage;
 
-/// Picture in picture, as the Kotlin player has it: on while a video
-/// plays, so leaving the app keeps it on screen, and a button that shrinks
-/// it at once.
+/// Picture in picture: on while a video plays, so leaving the app keeps it on
+/// screen, and a button that shrinks it at once.
 abstract class PictureInPicture {
   /// Whether the device has it; low-memory ones don't.
   Future<bool> available();

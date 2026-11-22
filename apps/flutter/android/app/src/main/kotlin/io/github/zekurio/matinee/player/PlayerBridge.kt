@@ -96,8 +96,8 @@ internal class PlayerBridge(private val activity: Activity, private val messenge
     fun enterForeground() { foreground = true }
 
     /**
-     * Play pressed on the system's controls while the app is away: the
-     * sound plays on, as in the Kotlin app, until the app stops again.
+     * Play pressed on the system's controls while the app is away: the sound
+     * plays on until the app stops again.
      */
     fun allowPlayInBackground() { foreground = true }
 

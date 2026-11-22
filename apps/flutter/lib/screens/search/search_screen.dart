@@ -20,12 +20,11 @@ import '../requests/requests_data.dart' show catalogSearchProvider;
 import '../requests/requests_hub.dart';
 import 'search_data.dart';
 
-/// Search across the library, as the Kotlin app's (search/Search.kt): the
-/// field at the top with Back in its magnifier's place, and under it, once
-/// something's typed and typing pauses, the titles by library in the order
-/// the server ranked them, then cast and crew, genres, and studios, then
-/// the catalog's "Not here yet", which loads on its own. The last answer
-/// stays while the next is out, with "Searching…" under it. Under the
+/// Search across the library: the field at the top with Back in its magnifier's
+/// place, and under it, once something's typed and typing pauses, the titles by
+/// library in the order the server ranked them, then cast and crew, genres, and
+/// studios, then the catalog's "Not here yet", which loads on its own. The last
+/// answer stays while the next is out, with "Searching…" under it. Under the
 /// empty field is Explore.
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -430,9 +429,8 @@ class _GroupHeading extends StatelessWidget {
   }
 }
 
-/// Someone in the cast or crew of what matched, as the cast's round photo
-/// on a title's page and the Kotlin app's search have them, opening their
-/// page.
+/// Someone in the cast or crew of what matched, as the cast's round photo on a
+/// title's page has them, opening their page.
 class _Person extends StatelessWidget {
   const _Person({required this.person});
 

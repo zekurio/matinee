@@ -52,8 +52,8 @@ List<String> encodeVideoChoices(
       codec,
 ];
 
-/// What each engine can read after [prefs] narrowed it, as the Kotlin
-/// app's `playbackProfile`. The server uses this to make the playback plan.
+/// What each engine can read after [prefs] narrowed it. The server uses this to
+/// make the playback plan.
 PlaybackDevice playbackDevice(
   PlayerEngine engine,
   wire.CodecCapabilitiesMessage? codecs,

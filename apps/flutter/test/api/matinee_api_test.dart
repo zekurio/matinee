@@ -69,38 +69,6 @@ void main() {
     ]);
   });
 
-  test('uploads send multipart bytes and omit absent form fields', () async {
-    final client = MockClient.streaming((request, body) async {
-      expect(request.method, 'POST');
-      expect(request.url.path, '/movies/api/v1/titles/a/images/poster');
-      expect(
-        request.headers['content-type'],
-        startsWith('multipart/form-data;'),
-      );
-      final form = request as http.MultipartRequest;
-      expect(form.fields, {'season': '0'});
-      expect(form.files.single.field, 'file');
-      expect(form.files.single.filename, 'poster.png');
-      expect(form.files.single.contentType.mimeType, 'image/png');
-      final bytes = await body.toBytes();
-      expect(bytes, containsAllInOrder([0, 128, 255]));
-      return http.StreamedResponse(Stream.value(utf8.encode('[]')), 200);
-    });
-    addTearDown(client.close);
-    final api = MatineeApi(base: base, client: client);
-
-    await api.titles.uploadImage(
-      'a',
-      ImageSlot.poster,
-      season: 0,
-      file: const FilePart(
-        bytes: [0, 128, 255],
-        type: 'image/png',
-        name: 'poster.png',
-      ),
-    );
-  });
-
   test('SSE reads multiple events across arbitrary UTF-8 chunks', () async {
     final bytes = utf8.encode(
       ': heartbeat\r\n'

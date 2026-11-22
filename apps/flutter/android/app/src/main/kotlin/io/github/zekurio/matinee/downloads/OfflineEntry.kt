@@ -4,9 +4,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /*
- * A download as this side keeps it, the Kotlin app's `OfflineItem` without
- * the item: Dart keeps what the server sent about the file in [OfflineEntry.meta]
- * and reads it back as it was, so nothing here needs the API's models.
+ * A download as this side keeps it, without the item: Dart keeps what the
+ * server sent about the file in [OfflineEntry.meta] and reads it back as it
+ * was, so nothing here needs the API's models.
  */
 
 object DownloadState {

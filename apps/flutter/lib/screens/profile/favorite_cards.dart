@@ -9,9 +9,9 @@ import '../../media/artwork.dart';
 import '../../media/cards.dart';
 import '../../media/format.dart';
 
-/// A favorite of any kind as a poster, so a row that mixes them lines up,
-/// as the Kotlin app's `FavoriteCard`: a movie or show by its year, a
-/// season on its own poster, an episode on its show's.
+/// A favorite of any kind as a poster, so a row that mixes them lines up: a
+/// movie or show by its year, a season on its own poster, an episode on its
+/// show's.
 class FavoriteCard extends StatelessWidget {
   const FavoriteCard({super.key, required this.favorite});
 
@@ -40,9 +40,9 @@ String favoriteKey(Favorite favorite) => switch (favorite) {
   FavoriteEpisode(:final item) => 'episode/${item.id}',
 };
 
-/// A season as its poster, or its show's: the show's name over the
-/// season's, opening the season's page. Watched once every file is. A long
-/// press opens its menu, as the Kotlin app's `SeasonPosterCard`.
+/// A season as its poster, or its show's: the show's name over the season's,
+/// opening the season's page. Watched once every file is. A long press opens
+/// its menu.
 class SeasonPosterCard extends StatelessWidget {
   const SeasonPosterCard({
     super.key,

@@ -9,14 +9,15 @@ import 'package:pigeon/pigeon.dart';
     kotlinOut:
         'android/app/src/main/kotlin/io/github/zekurio/matinee/display/Display.g.kt',
     kotlinOptions: KotlinOptions(package: 'io.github.zekurio.matinee.display'),
+    swiftOut: 'ios/Runner/Pigeon/Display.g.swift',
+    swiftOptions: SwiftOptions(includeErrorClass: false),
     copyrightHeader: 'pigeons/header.txt',
   ),
 )
 @HostApi()
 abstract class DisplayApi {
-  /// The refresh rates of the display's modes at its current resolution,
-  /// in Hz, as the Kotlin app's `MatchDisplayMode` filtered them. Empty
-  /// when the display doesn't say.
+  /// The refresh rates of the display's modes at its current resolution, in Hz.
+  /// Empty when the display doesn't say.
   List<double> refreshRates();
 
   /// Asks for the mode at [rate] and the current resolution, through the

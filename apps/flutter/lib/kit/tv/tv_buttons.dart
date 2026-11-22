@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 
 import '../icon.dart';
 import '../theme.dart';
-import '../tokens.dart';
 import 'tv_focus.dart';
 import 'tv_metrics.dart';
 
@@ -26,12 +25,10 @@ class TvButton extends StatelessWidget {
     this.minWidth = 0,
     this.focusNode,
     this.autofocus = false,
-    this.onLongPress,
   });
 
   final String label;
   final VoidCallback? onPressed;
-  final VoidCallback? onLongPress;
   final String? icon;
   final String? detail;
   final String? trailingIcon;
@@ -50,7 +47,6 @@ class TvButton extends StatelessWidget {
       autofocus: autofocus,
       enabled: enabled,
       onPressed: onPressed,
-      onLongPress: onLongPress,
       label: detail == null ? label : '$label, $detail',
       builder: (context, focused) => TvControl(
         focused: focused,
@@ -180,9 +176,7 @@ class TvRoundButton extends StatelessWidget {
     this.iconSize,
     this.lit = false,
     this.focusNode,
-    this.autofocus = false,
     this.onFocusChange,
-    this.onKey,
   });
 
   final String icon;
@@ -192,17 +186,13 @@ class TvRoundButton extends StatelessWidget {
   final double? iconSize;
   final bool lit;
   final FocusNode? focusNode;
-  final bool autofocus;
   final ValueChanged<bool>? onFocusChange;
-  final KeyEventResult Function(KeyEvent event)? onKey;
 
   @override
   Widget build(BuildContext context) => TvFocusable(
     focusNode: focusNode,
-    autofocus: autofocus,
     onPressed: onPressed,
     onFocusChange: onFocusChange,
-    onKey: onKey,
     label: label,
     builder: (context, focused) => TvControl(
       focused: focused || lit,
@@ -260,10 +250,7 @@ class TvChip extends StatelessWidget {
 
 /// The color a control's content takes beside its [TvControl] fill, for
 /// content drawn outside the control's builder.
-Color tvContent(BuildContext context, bool focused, [Color? rest]) {
+Color tvContent(BuildContext context, bool focused) {
   final colors = MatineeTheme.of(context);
-  return focused ? colors.background : rest ?? colors.foreground;
+  return focused ? colors.background : colors.foreground;
 }
-
-/// A shape every TV list row and panel row shares.
-const tvRowShape = KitRadius.panel;

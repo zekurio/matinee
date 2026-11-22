@@ -52,7 +52,7 @@ export function featuredInfo(slide: FeaturedTitle): FocusedItem {
     facts: facts(
       title.year === null ? null : String(title.year),
       title.kind === "show" && count > 1
-        ? plural("media_episode_count", count)
+        ? plural("mediaEpisodeCount", count)
         : null,
       timeLeft(item),
     ),
@@ -71,7 +71,7 @@ export function itemInfo(item: MediaItem): FocusedItem {
   return {
     name: label.showName,
     logo: item.title?.images.logo ?? null,
-    subtitle: code ? tr("media_code_title", code, label.title) : null,
+    subtitle: code ? tr("mediaCodeTitle", code, label.title) : null,
     facts: facts(label.year, formatRuntime(runtimeMinutes(item)), left),
     contentRating: item.title?.contentRating ?? null,
     rating: item.title?.rating ?? null,
@@ -100,7 +100,7 @@ export function shelfCard(entry: ShelfEntry): ShelfCard {
   if (!added) {
     return {
       poster: art(title.images.poster),
-      detail: plural("media_episode_count", count),
+      detail: plural("mediaEpisodeCount", count),
       open: openTitle,
     }
   }
@@ -110,11 +110,11 @@ export function shelfCard(entry: ShelfEntry): ShelfCard {
     const name = itemLabel(added.item).title
     return {
       poster,
-      detail: code ? tr("media_code_title", code, name) : name,
+      detail: code ? tr("mediaCodeTitle", code, name) : name,
       open: (nav) => nav.episode(added.item.id),
     }
   }
-  const fresh = plural("media_new_episodes", added.count)
+  const fresh = plural("mediaNewEpisodes", added.count)
   const season = added.season
   return {
     poster,
@@ -161,7 +161,7 @@ export function titleInfo(
     facts: facts(
       title.year === null ? null : String(title.year),
       options.kind
-        ? tr(title.kind === "movie" ? "tv_kind_movie" : "tv_kind_show")
+        ? tr(title.kind === "movie" ? "tvKindMovie" : "tvKindShow")
         : null,
       options.genres
         ? title.genres.slice(0, 2).join(", ")
@@ -179,10 +179,10 @@ export function titleInfo(
 /** A season of a show: the show's name with the season's, how many episodes it has, and its overview, or the show's. */
 export function seasonInfo(title: TitleSummary, season: Season): FocusedItem {
   return {
-    name: tr("title_season_of", title.name, seasonName(season.number)),
+    name: tr("titleSeasonOf", title.name, seasonName(season.number)),
     logo: null,
     subtitle: null,
-    facts: [plural("media_episode_count", season.itemCount)],
+    facts: [plural("mediaEpisodeCount", season.itemCount)],
     contentRating: title.contentRating,
     rating: title.rating,
     overview: season.overview ?? title.overview,

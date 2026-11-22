@@ -56,9 +56,9 @@ class ToggleChip extends StatelessWidget {
   }
 }
 
-/// A filter that's on, as the Kotlin app's chip with a trailing X: filled
-/// like a chosen chip, and pressing it takes the filter off. [removeLabel]
-/// is what a screen reader says, as "Remove filter Drama".
+/// A filter that's on, a chip with a trailing X: filled like a chosen chip, and
+/// pressing it takes the filter off. [removeLabel] is what a screen reader
+/// says, as "Remove filter Drama".
 class RemovableChip extends StatelessWidget {
   const RemovableChip({
     super.key,

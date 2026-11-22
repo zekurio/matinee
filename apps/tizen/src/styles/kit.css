@@ -1,8 +1,7 @@
 /*
- * The TV app's look, after the Android TV app's `ui/tv`: its type, its
- * margins, and its two focus looks. Lengths are in the design's units,
- * 960 to the screen's width, so a number here is the one in the Compose
- * code. `rem` is that unit: see the font size on `html`.
+ * The TV app's look: its type, its margins, and its two focus looks.
+ * Lengths are in the design's units, 960 to the screen's width. `rem` is
+ * that unit: see the font size on `html`.
  *
  * Written for Chromium 56 and up, so without `gap`, `inset`,
  * `aspect-ratio`, grid, or `:focus-visible`.

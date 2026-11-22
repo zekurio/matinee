@@ -9,7 +9,7 @@ import '../core/session.dart';
 import '../media/artwork.dart';
 
 /// Where the frame at [seconds] sits in [images]: its tile and its place in
-/// that tile's grid, as the Kotlin app's `TrickplayFrame` cuts it.
+/// that tile's grid.
 ({int tile, int column, int row}) trickplayCell(
   Trickplay images,
   double seconds,

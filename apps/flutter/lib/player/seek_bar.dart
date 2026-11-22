@@ -6,9 +6,8 @@ import 'package:flutter/widgets.dart';
 import '../kit/kit.dart';
 import 'player_motion.dart';
 
-/// The time played and the full length over the seek track, as the Kotlin
-/// player's `SeekBar` lays them out: the times on their own row, the track
-/// the full width under them, with nothing beside it.
+/// The time played and the full length over the seek track: the times on their
+/// own row, the track the full width under them, with nothing beside it.
 class SeekBar extends StatelessWidget {
   const SeekBar({
     super.key,
@@ -30,7 +29,7 @@ class SeekBar extends StatelessWidget {
   /// bar while scrubbing; null without frames.
   final Widget Function(double seconds)? preview;
 
-  /// How wide the preview above the bar is, as the Kotlin player's.
+  /// How wide the preview above the bar is.
   static const previewWidth = 176.0;
 
   /// Where the bar shows: the scrubbed time while scrubbing.
@@ -127,9 +126,9 @@ class SeekBar extends StatelessWidget {
   }
 }
 
-/// A time beside the seek bar, with tabular figures and as wide as the
-/// longest time [duration] can show, so neither it nor what sits beside it
-/// moves as it counts (the Kotlin player's `SteadyText`).
+/// A time beside the seek bar, with tabular figures and as wide as the longest
+/// time [duration] can show, so neither it nor what sits beside it moves as it
+/// counts.
 class SeekClock extends StatelessWidget {
   const SeekClock({
     super.key,

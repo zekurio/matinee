@@ -43,9 +43,8 @@ Widget _centered(Widget child) => Center(
   ),
 );
 
-/// What the person marked, a row for each kind, as the Kotlin app's
-/// Favorites: shows, seasons, episodes, and movies, each newest first, and
-/// only the kinds that have any.
+/// What the person marked, a row for each kind: shows, seasons, episodes, and
+/// movies, each newest first, and only the kinds that have any.
 class FavoritesScreen extends ConsumerWidget {
   const FavoritesScreen({super.key});
 

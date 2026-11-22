@@ -61,11 +61,10 @@ abstract final class _Rows {
       'recommended-${rail.id}-${rail.seed?.ref.providerId ?? ''}';
 }
 
-/// Home on a TV, as Wholphin's and the Kotlin app's `TvHomeScreen`: the
-/// focused card's backdrop behind the page, its name, facts, and overview
-/// in a header at the top, and Home's rows under it, the phone's rows in
-/// the phone's order from the same reads. The focused row scrolls to the
-/// same place under the header.
+/// Home on a TV, as Wholphin's: the focused card's backdrop behind the page,
+/// its name, facts, and overview in a header at the top, and Home's rows under
+/// it, the phone's rows in the phone's order from the same reads. The focused
+/// row scrolls to the same place under the header.
 class TvHomeScreen extends ConsumerStatefulWidget {
   const TvHomeScreen({super.key});
 
@@ -591,7 +590,6 @@ class _HeaderBody extends StatelessWidget {
             ),
             if (item.subtitle case final text?)
               Padding(
-                key: const Key('hero/subtitle'),
                 padding: const EdgeInsets.only(top: _subtitleGap),
                 child: Text(
                   text,

@@ -6,8 +6,7 @@ import '../../api/matinee_api.dart';
 import '../../l10n/app_localizations.dart';
 import '../../query/server_data.dart';
 
-/// What the profile reads and says, apart from its layout, as the Kotlin
-/// app's `ProfileData.kt` and `StatsData.kt`.
+/// What the profile reads and says, apart from its layout.
 
 /// The profile: who, their favorites, and what they watched last.
 final profileProvider = serverQueryFamily(

@@ -13,12 +13,11 @@ import '../../media/blurhash.dart';
 import '../../router.dart';
 import 'home_layout.dart';
 
-/// The featured titles at the top of a phone's Home, as the Kotlin app's
-/// `HomeCarousel`: a row of cards that swipes one at a time, each the
-/// title's backdrop under a dark shade with its genres and its name in
-/// white. A tap opens the title. It moves to the next card every five
-/// seconds, and back to the first after the last; not while a finger is on
-/// it, with animations off, with a screen reader on, or while Home is out
+/// The featured titles at the top of a phone's Home: a row of cards that swipes
+/// one at a time, each the title's backdrop under a dark shade with its genres
+/// and its name in white. A tap opens the title. It moves to the next card
+/// every five seconds, and back to the first after the last; not while a finger
+/// is on it, with animations off, with a screen reader on, or while Home is out
 /// of sight.
 class FeaturedCarouselView extends StatefulWidget {
   const FeaturedCarouselView({super.key, required this.slides});

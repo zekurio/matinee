@@ -150,17 +150,11 @@ final class FakeBackend {
   /// Hosts that answer, and any other doesn't exist.
   final hosts = <String>{};
 
-  /// Hosts that serve a web page, not Matinee.
-  final foreign = <String>{};
-
   /// Hosts that speak http only: https gets no answer.
   final httpOnly = <String>{};
 
   /// Which token is whose, by token.
   final tokens = <String, String>{};
-
-  /// The branding's accents each host sends, by host; none by default.
-  final accents = <String, Map<String, Object?>>{};
 
   /// Hosts from before clients named themselves: naming the session gets
   /// a 404 there.
@@ -174,7 +168,6 @@ final class FakeBackend {
 
   /// What each device-code poll answers, in turn.
   final devicePolls = <http.Response>[];
-  final backdropTiles = <LoginBackdropTile>[];
 
   Future<http.Response> handle(http.Request request) async {
     requests.add(request);
@@ -184,9 +177,6 @@ final class FakeBackend {
     if (httpOnly.contains(host) && request.url.scheme == 'https') {
       throw const SocketException('Connection refused');
     }
-    if (foreign.contains(host)) {
-      return http.Response('<html>Welcome to my blog</html>', 200);
-    }
     if (!hosts.contains(host)) {
       throw const SocketException(
         'Failed host lookup',
@@ -195,10 +185,8 @@ final class FakeBackend {
     }
     final path = request.url.path;
     switch (path) {
-      case '/api/v1/auth/login-backdrop':
-        return jsonResponse(LoginBackdropTiles(tiles: backdropTiles).toJson());
       case '/api/v1/auth/config':
-        return jsonResponse({...configJson, 'themeAccents': ?accents[host]});
+        return jsonResponse(configJson);
       case '/api/v1/auth/session':
         final gate = holdSession;
         if (gate != null) {

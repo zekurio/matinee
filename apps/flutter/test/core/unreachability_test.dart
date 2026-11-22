@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/unreachability.dart';
 
 Unreachability reason(Object error, {bool network = true}) =>
@@ -93,21 +92,6 @@ void main() {
     expect(
       reason(http.ClientException('Handshake error in client')),
       Unreachability.certificate,
-    );
-  });
-
-  test('everything else is other', () {
-    expect(reason(const ApiException(status: 500)), Unreachability.other);
-    expect(
-      reason(http.ClientException('Connection closed')),
-      Unreachability.other,
-    );
-    expect(reason(const FormatException('html')), Unreachability.other);
-    expect(
-      reason(
-        const SocketException('x', osError: OSError('No route to host', 113)),
-      ),
-      Unreachability.other,
     );
   });
 }

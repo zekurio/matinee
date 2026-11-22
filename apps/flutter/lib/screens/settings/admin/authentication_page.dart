@@ -15,11 +15,10 @@ import '../settings_rows.dart';
 import 'admin_data.dart';
 import 'admin_parts.dart';
 
-/// How people sign in, as the Kotlin app's `AuthenticationSettings` and
-/// the web's authentication panel: passkeys, and the OpenID Connect
-/// provider for single sign-on. The fields save together from the save
-/// bar. An empty field falls back to what the server's environment sets,
-/// which shows as its placeholder. The server checks every value and says
+/// How people sign in, as the web's authentication panel: passkeys, and the
+/// OpenID Connect provider for single sign-on. The fields save together from
+/// the save bar. An empty field falls back to what the server's environment
+/// sets, which shows as its placeholder. The server checks every value and says
 /// at the field what's wrong with one.
 class AuthenticationPage extends ConsumerWidget {
   const AuthenticationPage({super.key});

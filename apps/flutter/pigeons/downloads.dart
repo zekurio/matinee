@@ -13,6 +13,8 @@ import 'package:pigeon/pigeon.dart';
     kotlinOptions: KotlinOptions(
       package: 'io.github.zekurio.matinee.downloads',
     ),
+    swiftOut: 'ios/Runner/Pigeon/Downloads.g.swift',
+    swiftOptions: SwiftOptions(includeErrorClass: false),
     copyrightHeader: 'pigeons/header.txt',
   ),
 )

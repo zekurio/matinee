@@ -3,10 +3,9 @@ import '../../query/server_data.dart';
 
 export '../../media/metadata_items.dart' show libraryMetadataProvider;
 
-/// What the identify and image pages read, as the Kotlin app's loads in
-/// `MetadataScreens.kt`, with the library's provider from
-/// `lib/media/metadata_items.dart`. For admins only; the server turns
-/// anyone else away.
+/// What the identify and image pages read, with the library's provider from
+/// `lib/media/metadata_items.dart`. For admins only; the server turns anyone
+/// else away.
 
 /// A search of the library's provider, for identify.
 typedef MatchSearch = ({String titleId, String query, int? year});

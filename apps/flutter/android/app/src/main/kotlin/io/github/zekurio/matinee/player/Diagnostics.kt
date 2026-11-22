@@ -21,10 +21,10 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecDecoderException
 import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 
 /*
- * What the playback report reads of the device and Media3, as the Kotlin
- * app's DiagnosticsProbe.kt. It reads codes, never messages: an error's
- * message, and every cause's, can hold the file's address with its token.
- * Dart checks every string again before the report keeps it.
+ * What the playback report reads of the device and Media3. It reads codes,
+ * never messages: an error's message, and every cause's, can hold the file's
+ * address with its token. Dart checks every string again before the report
+ * keeps it.
  */
 
 /** How many of an error's causes the report names. */

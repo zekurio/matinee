@@ -1,7 +1,7 @@
 import '../../kit/kit.dart';
 
-/// How the account page and linking a device name what a session or a
-/// code belongs to, as the Kotlin app's `platformLabel` and `platformIcon`.
+/// How the account page and linking a device name what a session or a code
+/// belongs to.
 
 /// The contract's `DevicePlatform` by name, the same in every language, as
 /// the web's `platformLabel`.

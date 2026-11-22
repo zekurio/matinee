@@ -36,11 +36,10 @@ String parentFolder(String path) {
   return cut <= 0 ? '/' : trimmed.substring(0, cut);
 }
 
-/// The library's name, kind, metadata, and folders, as a page of its own,
-/// the Kotlin app's `LibraryEditorScreen`: a new library, or with [id] one
-/// to change. Folders are picked on the next page, which hands the folder
-/// back; the draft stays here meanwhile. The server checks what's saved
-/// and its word shows at the field it's about.
+/// The library's name, kind, metadata, and folders, as a page of its own: a new
+/// library, or with [id] one to change. Folders are picked on the next page,
+/// which hands the folder back; the draft stays here meanwhile. The server
+/// checks what's saved and its word shows at the field it's about.
 class LibraryEditorScreen extends ConsumerWidget {
   const LibraryEditorScreen({super.key, this.id});
 
@@ -388,11 +387,10 @@ class _LibraryEditorState extends ConsumerState<_LibraryEditor> {
   }
 }
 
-/// The server's folders, one level at a time, as a page over the editor,
-/// the Kotlin app's `FolderPickerScreen`: it opens at the request's start,
-/// with the folders the library has marked. A row opens its folder or
-/// adds it at once; the bar at the bottom adds the one that's open.
-/// Adding goes back to the editor with the folder.
+/// The server's folders, one level at a time, as a page over the editor: it
+/// opens at the request's start, with the folders the library has marked. A row
+/// opens its folder or adds it at once; the bar at the bottom adds the one
+/// that's open. Adding goes back to the editor with the folder.
 class FolderPickerScreen extends ConsumerStatefulWidget {
   const FolderPickerScreen({super.key, required this.request});
 

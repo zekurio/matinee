@@ -22,20 +22,20 @@ height, with a gap of 30% of its width.
 | `app-icon.svg`           | 1024px full-bleed app icon. Platforms round the corners     |
 | `app-icon-dark.svg`      | iOS dark appearance, mark on transparency                   |
 | `app-icon-tinted.svg`    | iOS tinted appearance, gray mark on transparency            |
-| `ios/AppIcon.appiconset` | Xcode asset catalog, one 1024 image per appearance          |
 | `android/res`            | Adaptive and themed icon, used directly by the Gradle build |
 | `android/play-store.png` | 512px Play Console icon                                     |
-| `tvos/icon-*.svg`        | Apple TV icon: back, middle, and front layers, 400×240      |
-| `tvos/top-shelf*.svg`    | Apple TV Top Shelf images, 1920×720 and wide 2320×720       |
 | `wordmark.py`            | Draws the wordmark and writes the logo files                |
-| `tvos.py`                | Draws the Apple TV artwork in `tvos/`                       |
-| `render.sh`              | Runs both scripts, then renders every PNG and the web icons |
+| `render.sh`              | Runs it, then renders every PNG and the web icons           |
 
-`wordmark.py` also writes `apps/web/src/components/logo.gen.ts` and the
-Android drawables `logo.xml` and `logo_dark.xml`. The web app serves
-copies as `favicon.svg` and `apple-touch-icon.png`, and `brand.tsx` draws
-the mark inline. The Samsung TV app's `apps/tizen/public/icon.png` is the
-app icon at 512 px.
+`wordmark.py` also writes `apps/web/src/components/logo.gen.ts`, and
+`pnpm logo:dart` copies `logo-light.svg` and `logo-dark.svg` into the
+Flutter app, whose Android build takes its launcher icon from
+`android/res`. `render.sh` renders the three app icon SVGs into the
+Flutter app's iOS asset catalog,
+`apps/flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset`. The web
+app serves copies as `favicon.svg` and `apple-touch-icon.png`, and
+`brand.tsx` draws the mark inline. The Samsung TV app's
+`apps/tizen/public/icon.png` is the app icon at 512 px.
 
 ## Colors
 
@@ -52,7 +52,6 @@ The mark is on a 24-unit grid. The sun is a radius-10 circle centered at
 12,13, cut by gaps at y 15.1 to 16.2 and 17.8 to 19.2, and it ends at 20.7. Its
 bounding box is 2.22,3 to 21.78,20.7, and every placement centers that box.
 
-- iOS uses 30 px per unit on the 1024 canvas, so the mark is 587 px wide.
 - Android uses 2.2 dp per unit on the 108 dp canvas. The farthest point is
   24 dp from center, inside the 33 dp safe zone.
 
@@ -63,10 +62,9 @@ Font, weight, tracking, and logo spacing are constants at the top of
 checks the hash, and caches it in `~/.cache/matinee-brand`.
 
 If you edit the mark, keep the path and color stops the same in the SVGs,
-the Android drawables including `logo_mark.xml` and `logo_mark_dark.xml`,
-`brand.tsx`, and `SUNSET` in `wordmark.py`, and split it again in
-`tvos.py`, which checks that it still can. Then run `just brand` and
-commit the output. It needs `resvg`, `oxipng`, and Python with fontTools
-and uharfbuzz, and pulls missing ones through Nix.
+the Android drawables in `android/res`, `brand.tsx`, and `SUNSET` in
+`wordmark.py`. Then run `just brand` and commit the output. It needs
+`resvg`, `oxipng`, and Python with fontTools and uharfbuzz, and pulls
+missing ones through Nix.
 
 Android only gets the adaptive icon, which needs API 26.

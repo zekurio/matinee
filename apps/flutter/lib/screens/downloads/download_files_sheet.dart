@@ -42,10 +42,9 @@ Future<void> showDownloadFilesSheet(BuildContext context, FileSet files) {
   );
 }
 
-/// Downloads a whole show or season, the Kotlin app's
-/// `DownloadFilesSheet`: the files are resolved in batches, a version is
-/// picked for all of them, and the plans the server returned are queued
-/// without asking again.
+/// Downloads a whole show or season: the files are resolved in batches, a
+/// version is picked for all of them, and the plans the server returned are
+/// queued without asking again.
 class DownloadFilesSheet extends ConsumerStatefulWidget {
   const DownloadFilesSheet({super.key, required this.files});
 

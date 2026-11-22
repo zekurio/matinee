@@ -9,13 +9,12 @@ import 'download_settings.dart';
 import 'downloads.dart';
 import 'pending_progress.dart';
 
-/// Keeps the platform's downloads in step with the session, the Kotlin
-/// app's `MatineeApp` for downloads: each saved server's sign-in goes to
-/// the platform, so its downloads go on with the app closed; whether to
-/// wait for Wi-Fi follows the setting; what was waiting or running starts
-/// again; a server removed takes its downloads along; and once signed in
-/// with the server answering, what was watched offline is sent there.
-/// `main` puts it around the app; tests leave it out.
+/// Keeps the platform's downloads in step with the session: each saved server's
+/// sign-in goes to the platform, so its downloads go on with the app closed;
+/// whether to wait for Wi-Fi follows the setting; what was waiting or running
+/// starts again; a server removed takes its downloads along; and once signed in
+/// with the server answering, what was watched offline is sent there. `main`
+/// puts it around the app; tests leave it out.
 class DownloadsLifecycle extends ConsumerStatefulWidget {
   const DownloadsLifecycle({required this.child, super.key});
 

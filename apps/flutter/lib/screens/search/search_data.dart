@@ -2,8 +2,8 @@ import '../../api/matinee_api.dart';
 import '../../l10n/app_localizations.dart';
 import '../../query/server_data.dart';
 
-/// What search asks the server, as the Kotlin app's `SearchData.kt`: the
-/// library's matches for the text in the field, once typing pauses.
+/// What search asks the server: the library's matches for the text in the
+/// field, once typing pauses.
 
 /// How many matches one search asks for.
 const searchLimit = 40;

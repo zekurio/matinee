@@ -22,17 +22,14 @@ class Sheet extends StatelessWidget {
   final String? description;
   final Widget? footer;
 
-  /// As wide as a sheet gets on a tablet, as Material 3's sheets in the
-  /// Kotlin app are; narrower screens get it edge to edge.
+  /// As wide as a sheet gets on a tablet, as Material 3's sheets are; narrower
+  /// screens get it edge to edge.
   static const widest = 640.0;
 
   static Future<T?> show<T>(
     BuildContext context, {
     required WidgetBuilder builder,
     required String dismissLabel,
-    bool dismissible = true,
-    bool draggable = true,
-    double maxWidth = Sheet.widest,
   }) {
     // Over the whole app, the tab bar too, wherever it's opened from.
     final navigator = Navigator.of(context, rootNavigator: true);
@@ -45,11 +42,11 @@ class Sheet extends StatelessWidget {
           to: navigator.context,
         ),
         barrierLabel: dismissLabel,
-        isDismissible: dismissible,
-        enableDrag: draggable,
+        isDismissible: true,
+        enableDrag: true,
         backdrop: colors.background.withValues(alpha: .6),
         reducedMotion: MediaQuery.disableAnimationsOf(context),
-        maxWidth: maxWidth,
+        maxWidth: widest,
       ),
     );
   }

@@ -75,9 +75,8 @@ class DisplayApi {
   final String pigeonVar_messageChannelSuffix;
 
 
-  /// The refresh rates of the display's modes at its current resolution,
-  /// in Hz, as the Kotlin app's `MatchDisplayMode` filtered them. Empty
-  /// when the display doesn't say.
+  /// The refresh rates of the display's modes at its current resolution, in Hz.
+  /// Empty when the display doesn't say.
   Future<List<double>> refreshRates() async {
     final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.DisplayApi.refreshRates$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(

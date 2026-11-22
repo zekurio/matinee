@@ -2,7 +2,7 @@ name: release
 
 # A v* tag on main is a release: the server package goes to the binary
 # cache and the signed APKs to a draft GitHub release, to publish by hand. `just tag <version>` makes
-# the tag. See Releasing in README.md for the secrets this needs.
+# the tag. See Release in AGENTS.md for the secrets this needs.
 on:
   push:
     tags:
@@ -94,12 +94,11 @@ jobs:
         run: node tools/release/keystore.mjs
 
       # No Gradle cache: a release builds from the tagged sources alone.
-      - name: build and test
-        working-directory: apps/android
-        run: nix develop ../..#android -c ./gradlew --no-build-cache testDebugUnitTest assembleRelease
+      - name: test the android side
+        run: nix develop .#flutter -c just flutter android-test
 
-      - name: check the signatures and name the apks
-        run: nix develop .#android -c node tools/release/apk.mjs "$RUNNER_TEMP/release"
+      - name: build the apks, check their signatures, and name them
+        run: nix develop .#flutter -c node tools/release/apk.mjs "$RUNNER_TEMP/release"
 
       - name: remove the keystore
         if: always()

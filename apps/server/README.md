@@ -301,9 +301,8 @@ tokens use the same list, see [API tokens](#api-tokens).
   only the folders of libraries they see. A connection that sends titles
   to such a library can be looked at and tested, not changed or deleted,
   and a save that would send to one is refused.
-- The web app shows a section of Settings, or the request queue, to
-  whoever holds its permission. The Android, iOS, and TV apps still show
-  their admin screens to admins only.
+- The web and Flutter apps show a section of Settings, or the request
+  queue, to whoever holds its permission. The Samsung TV app has neither.
 
 Settings → Branding sets the accent for light and dark mode, and can put a
 wall of artwork behind the login form. Anyone can open the login page, so

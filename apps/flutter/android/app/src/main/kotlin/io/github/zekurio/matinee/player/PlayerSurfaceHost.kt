@@ -20,7 +20,7 @@ import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
 import kotlin.math.roundToInt
 
-/** The size the Kotlin phone player draws a cue at, in sp, before Settings' size. */
+/** The size a cue is drawn at on a phone, in sp, before Settings' size. */
 private const val SUBTITLE_SIZE = 20.0
 
 @UnstableApi
@@ -100,9 +100,9 @@ internal class PlayerSurfaceHost(
     }
 
     /**
-     * The look Settings gives subtitles, for the cues Media3 draws, as the
-     * Kotlin player's `SubtitleLine`: 20sp times the size, in the app's own
-     * colors and edge, or Android's caption style whole, its typeface too.
+     * The look Settings gives subtitles, for the cues Media3 draws: 20sp times
+     * the size, in the app's own colors and edge, or Android's caption style
+     * whole, its typeface too.
      */
     fun setSubtitleLook(request: OpenMessage) {
         val view = subtitles ?: return

@@ -9,7 +9,6 @@ class PageDots extends StatelessWidget {
     super.key,
     required this.count,
     required this.current,
-    this.tint,
     this.onSelected,
     this.labelForPage,
   }) : assert(count >= 0),
@@ -18,14 +17,13 @@ class PageDots extends StatelessWidget {
 
   final int count;
   final int current;
-  final Color? tint;
   final ValueChanged<int>? onSelected;
   final String Function(int)? labelForPage;
 
   @override
   Widget build(BuildContext context) {
     if (count < 2) return const SizedBox.shrink();
-    final color = tint ?? MatineeTheme.of(context).foreground;
+    final color = MatineeTheme.of(context).foreground;
     final motion = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 150);

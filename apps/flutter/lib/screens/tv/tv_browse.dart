@@ -44,8 +44,7 @@ const _controls = tvGridControls;
 /// The row key a grid page gives its controls in its focus memory.
 const tvGridControls = 'controls';
 
-/// A grid page's heading and the count beside it, and its controls under
-/// them, as the Kotlin app's `GridHeader`.
+/// A grid page's heading and the count beside it, and its controls under them.
 class TvGridHeader extends StatelessWidget {
   const TvGridHeader({
     super.key,
@@ -105,10 +104,9 @@ class TvGridHeader extends StatelessWidget {
   }
 }
 
-/// A page of titles as a poster grid under [header], with the line that
-/// names the focused one, loading more as the end nears: the Kotlin app's
-/// `TvTitleGrid`. One grid whatever the state, so the header stays put and
-/// keeps focus while a new sort or filter loads.
+/// A page of titles as a poster grid under [header], with the line that names
+/// the focused one, loading more as the end nears. One grid whatever the state,
+/// so the header stays put and keeps focus while a new sort or filter loads.
 class TvTitleGrid extends ConsumerWidget {
   const TvTitleGrid({
     super.key,
@@ -187,9 +185,9 @@ List<(String, String)> _sorts(AppLocalizations l) => [
   (TitleSort.year, l.librarySortYear),
 ];
 
-/// Every movie, or every show, in every library: the drawer's Movies and
-/// Shows, as the Kotlin app's `TvKindScreen`. A sort, a genre, and a search
-/// narrow it, each from the controls over the grid.
+/// Every movie, or every show, in every library: the drawer's Movies and Shows.
+/// A sort, a genre, and a search narrow it, each from the controls over the
+/// grid.
 class TvKindScreen extends ConsumerStatefulWidget {
   const TvKindScreen({super.key, required this.kind});
 
@@ -364,8 +362,7 @@ class _TvKindScreenState extends ConsumerState<TvKindScreen> {
   }
 }
 
-/// A genre's or a studio's titles from every library, with a choice of
-/// kind: the Kotlin app's `TvBrowseScreen`.
+/// A genre's or a studio's titles from every library, with a choice of kind.
 class TvBrowseScreen extends ConsumerStatefulWidget {
   const TvBrowseScreen({super.key, this.genre, this.studio});
 
@@ -457,8 +454,7 @@ class _TvBrowseScreenState extends ConsumerState<TvBrowseScreen> {
 const _rowPivot = 8 + TvCards.titleHeight + TvCards.titleGap;
 const _posterHeight = TvCards.posterWidth * 1.5;
 
-/// Everything the person marked a favorite, a row of each kind, as the
-/// Kotlin app's `TvFavoritesScreen`.
+/// Everything the person marked a favorite, a row of each kind.
 class TvFavoritesScreen extends ConsumerStatefulWidget {
   const TvFavoritesScreen({super.key});
 
@@ -786,9 +782,8 @@ abstract final class _Search {
   static String library(String id) => 'lib-$id';
 }
 
-/// Search on a TV, as the Kotlin app's `TvSearchScreen`: the field at the
-/// top, and the matches under it, a row for each library's titles, then
-/// the people, genres, and studios.
+/// Search on a TV: the field at the top, and the matches under it, a row for
+/// each library's titles, then the people, genres, and studios.
 class TvSearchScreen extends ConsumerStatefulWidget {
   const TvSearchScreen({super.key});
 

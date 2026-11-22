@@ -72,12 +72,11 @@ class EmptyState extends StatelessWidget {
       _Message(icon: icon, title: title, message: message, actions: [?action]);
 }
 
-/// How a page or a section says something didn't load, as the Kotlin app's
-/// `ErrorState`: a plain icon, a heading that starts "Couldn't", the reason
-/// in a line or two, and Try again; Back to Home beside it where a page
-/// has nothing else to show. While the server can't be reached
-/// ([disconnected]) it's only the cloud and the buttons, no words, so being
-/// offline reads the same everywhere. Words come in as parameters.
+/// How a page or a section says something didn't load: a plain icon, a heading
+/// that starts "Couldn't", the reason in a line or two, and Try again; Back to
+/// Home beside it where a page has nothing else to show. While the server can't
+/// be reached ([disconnected]) it's only the cloud and the buttons, no words,
+/// so being offline reads the same everywhere. Words come in as parameters.
 class ErrorState extends StatelessWidget {
   const ErrorState({
     super.key,
@@ -85,7 +84,6 @@ class ErrorState extends StatelessWidget {
     this.message,
     required this.retryLabel,
     this.onRetry,
-    this.retrying = false,
     this.homeLabel,
     this.onHome,
     this.disconnected = false,
@@ -98,7 +96,6 @@ class ErrorState extends StatelessWidget {
   final String? message;
   final String retryLabel;
   final VoidCallback? onRetry;
-  final bool retrying;
   final String? homeLabel;
   final VoidCallback? onHome;
   final bool disconnected;
@@ -113,7 +110,7 @@ class ErrorState extends StatelessWidget {
       if (retry != null)
         MatineeButton(
           look: ButtonLook.outline,
-          onPressed: retrying ? null : retry,
+          onPressed: retry,
           child: Text(retryLabel),
         ),
       if (home != null)

@@ -10,11 +10,10 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 
 /**
- * Hands the player's media session to the system, which shows its controls
- * in the notification shade, on the lock screen, and to headsets, as the
- * Kotlin app's service does. Media3 posts the notification and keeps it in
- * step. The player owns the session; this service only holds it while it
- * plays.
+ * Hands the player's media session to the system, which shows its controls in
+ * the notification shade, on the lock screen, and to headsets. Media3 posts the
+ * notification and keeps it in step. The player owns the session; this service
+ * only holds it while it plays.
  */
 class PlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = current

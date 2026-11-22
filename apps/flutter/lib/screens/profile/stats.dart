@@ -14,10 +14,10 @@ import '../../router.dart';
 import '../settings/settings_rows.dart';
 import 'profile_data.dart';
 
-/* A profile's statistics, as the Kotlin app's Stats.kt and the web's
-   watch-stats: the range chips, watch time per day, week, or month, the
-   headline figures, the most watched titles, the genres, where the person
-   stands, and when in the week they watch. */
+/* A profile's statistics, as the web's watch-stats: the range chips, watch
+   time per day, week, or month, the headline figures, the most watched
+   titles, the genres, where the person stands, and when in the week they
+   watch. */
 
 /// The ranges as chips, scrolling sideways past the page's edge.
 class RangeChips extends StatelessWidget {

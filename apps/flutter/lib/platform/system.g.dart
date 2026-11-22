@@ -197,9 +197,8 @@ class SystemApi {
   final String pigeonVar_messageChannelSuffix;
 
 
-  /// Opens the system's photo picker for one image, as the Kotlin app's
-  /// `PickVisualMedia`, and answers with it, or null when the person backs
-  /// out. Reads at most [maxBytes] plus one.
+  /// Opens the system's photo picker for one image, and answers with it, or
+  /// null when the person backs out. Reads at most [maxBytes] plus one.
   Future<PickedImage?> pickImage(int maxBytes) async {
     final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.SystemApi.pickImage$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
@@ -219,8 +218,7 @@ class SystemApi {
   }
 
   /// This process's latest lines in logcat, at most [maxLines], in its
-  /// threadtime format, as the Kotlin app's `readAppLog` read them. An app
-  /// reads its own lines without READ_LOGS.
+  /// threadtime format. An app reads its own lines without READ_LOGS.
   Future<List<String>> readLog(int maxLines) async {
     final pigeonVar_channelName = 'dev.flutter.pigeon.matinee.SystemApi.readLog$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(

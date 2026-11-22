@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
 /*
- * The arithmetic of swipes on the video, from the Kotlin app's Swipe.kt,
- * whose numbers are Findroid's, so a swipe goes as far there as here.
+ * The arithmetic of swipes on the video, with Findroid's numbers, so a swipe
+ * goes as far there as here.
  */
 
 /// The part of the video's height a swipe crosses to go from nothing to full.

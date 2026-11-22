@@ -23,12 +23,11 @@ import com.google.common.util.concurrent.ListenableFuture
 import io.github.zekurio.matinee.PlaybackService
 
 /**
- * The system's handle on the player, as the Kotlin app's media session:
- * its controls in the notification shade, on the lock screen, and on
- * headsets, with play and pause, seeking, and the server's skip steps.
- * Dart says what plays and where it is, and gets each press back to do its
- * own way, so both engines show the same controls. Tapping the
- * notification brings the app back.
+ * The system's handle on the player, its media session: its controls in the
+ * notification shade, on the lock screen, and on headsets, with play and pause,
+ * seeking, and the server's skip steps. Dart says what plays and where it is,
+ * and gets each press back to do its own way, so both engines show the same
+ * controls. Tapping the notification brings the app back.
  */
 @OptIn(UnstableApi::class)
 internal class MediaControls(

@@ -20,10 +20,9 @@ typedef _Act = Future<void> Function(BuildContext context);
 
 typedef _Entry = ({String icon, String label, _Act run});
 
-/// Opens [target]'s actions in the TV's panel at the right edge, as the
-/// Kotlin app's `TvActionsPanel`: the phone's menu without the downloads
-/// and the admin's metadata items. Focus goes back to the card that opened
-/// it, or to the page an entry opened.
+/// Opens [target]'s actions in the TV's panel at the right edge: the phone's
+/// menu without the downloads and the admin's metadata items. Focus goes back
+/// to the card that opened it, or to the page an entry opened.
 Future<void> showTvActions(BuildContext context, ActionTarget target) async {
   final l = AppLocalizations.of(context);
   final (title, description, entries) = switch (target) {

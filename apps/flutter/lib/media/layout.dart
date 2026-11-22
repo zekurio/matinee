@@ -8,10 +8,9 @@ import '../kit/kit.dart';
 /// What a rail holds, which sets how wide its cards are.
 enum RailArt { wide, poster, person }
 
-/// How wide a card is in a rail, as the Kotlin app's `railItemWidth`: on a
-/// phone a share of the window, so the next card peeks in, and stills no
-/// taller than a third of the window, so two rails fit under the carousel;
-/// from a tablet's width up, the web's fixed sizes.
+/// How wide a card is in a rail: on a phone a share of the window, so the next
+/// card peeks in, and stills no taller than a third of the window, so two rails
+/// fit under the carousel; from a tablet's width up, the web's fixed sizes.
 double railItemWidth(RailArt art, Size window) {
   if (!WidthClass.of(window.width).isCompact) {
     return switch (art) {
@@ -58,10 +57,9 @@ double railAspect(RailArt art) => switch (art) {
   );
 }
 
-/// How many posters a grid [width] wide (inside the gutters) puts in a row,
-/// by the window's width class: two on a phone, four on a tablet in
-/// portrait, six across a tablet on its side. Near the Kotlin app's
-/// 150-wide adaptive columns on the usual screens.
+/// How many posters a grid [width] wide (inside the gutters) puts in a row, by
+/// the window's width class: two on a phone, four on a tablet in portrait, six
+/// across a tablet on its side.
 int posterColumns(double width) =>
     switch (WidthClass.of(width + 2 * CardMetrics.gutter)) {
       WidthClass.compact => 2,

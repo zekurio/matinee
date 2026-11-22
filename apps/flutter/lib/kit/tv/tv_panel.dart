@@ -12,12 +12,11 @@ import 'tv_metrics.dart';
 /// How many side panels are open, so the clock can step aside.
 final tvOpenPanels = ValueNotifier<int>(0);
 
-/// Opens a panel at the screen's right edge over a dimmed page, as the
-/// Kotlin app's `TvSidePanel`: focus stays in it, Back closes it, and focus
-/// goes back to what opened it. [builder] gives its rows; the one that
-/// should take focus first sets `autofocus`, or the first row takes it.
-/// [loading] shows a spinner in place of the rows while it's true. Returns
-/// what the panel was closed with.
+/// Opens a panel at the screen's right edge over a dimmed page: focus stays in
+/// it, Back closes it, and focus goes back to what opened it. [builder] gives
+/// its rows; the one that should take focus first sets `autofocus`, or the
+/// first row takes it. [loading] shows a spinner in place of the rows while
+/// it's true. Returns what the panel was closed with.
 Future<T?> showTvPanel<T>(
   BuildContext context, {
   required List<Widget> Function(BuildContext context) builder,
@@ -306,11 +305,10 @@ class _TvSidePanelState extends State<TvSidePanel> {
 
 /// A choice in a [showTvPicker] panel.
 class TvOption<T> {
-  const TvOption(this.value, this.label, {this.detail});
+  const TvOption(this.value, this.label);
 
   final T value;
   final String label;
-  final String? detail;
 }
 
 /// A panel to pick one of [options], [current] checked and focused first.
@@ -334,9 +332,6 @@ Future<T?> showTvPicker<T>(
           quiet: true,
           checked: option.value == current,
           autofocus: option.value == current,
-          trailing: option.detail == null
-              ? null
-              : TvListValue(option.detail!, chevron: false),
           onPressed: () => Navigator.of(context).pop(option),
         ),
     ],

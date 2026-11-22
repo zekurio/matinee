@@ -12,10 +12,9 @@ import 'request_words.dart';
 import 'requests_hub.dart';
 import 'requests_rail.dart' show requestRowCards;
 
-/// What Explore, the catalog's pages, and the requests page read, as the
-/// Kotlin app's loaders in `ui/requests`. Each read that holds a request's
-/// state fetches again when an ask, a cancel, or an answer moves
-/// [requestsVersionProvider], including while its page is covered.
+/// What Explore, the catalog's pages, and the requests page read. Each read
+/// that holds a request's state fetches again when an ask, a cancel, or an
+/// answer moves [requestsVersionProvider], including while its page is covered.
 
 /// A catalog title as a route names it, and the library it's opened for.
 typedef CatalogKey = ({
@@ -164,8 +163,7 @@ final class CursorPages<T> {
   final Object? error;
 }
 
-/// A list paged by cursor, the first page at once, the next on [more],
-/// as the Kotlin app's `AskedPages` and `DonePages`.
+/// A list paged by cursor, the first page at once, the next on [more].
 abstract class CursorList<T> extends Notifier<CursorPages<T>> {
   MatineeApi? _api;
   int _generation = 0;
@@ -294,9 +292,8 @@ final myLiveRequestsProvider = serverStream(
   (api) => api.requests.mineLive(limit: requestRowCards),
 );
 
-/// The profile's "My requests": the latest of everything the viewer asked
-/// for, as the Kotlin app's `ProfileAskedRail` loads it. Fetched again
-/// when an ask, a cancel, or an answer changes it.
+/// The profile's "My requests": the latest of everything the viewer asked for.
+/// Fetched again when an ask, a cancel, or an answer changes it.
 final profileAskedProvider = FutureProvider.autoDispose<RequestPage>((ref) {
   ref.watch(requestsVersionProvider);
   return serverApi(ref).requests.mine(limit: 24, filter: MineFilter.all);
@@ -410,7 +407,7 @@ final class BrowsePagesState {
   );
 }
 
-/// A catalog browse, a page at a time, as the Kotlin app's `BrowsePages`.
+/// A catalog browse, a page at a time.
 final class CatalogBrowsePages extends Notifier<BrowsePagesState> {
   CatalogBrowsePages(this.key);
 

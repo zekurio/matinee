@@ -15,10 +15,9 @@ import '../../query/reconnecting.dart';
 import '../../query/server_data.dart';
 import 'request_words.dart';
 
-/// What the request screens share while signed in, as the Kotlin app's
-/// `RequestsHub`: the last word the server streamed about each title on
-/// screen, asking and taking an ask back with the toast's Undo, and for an
-/// admin, the live queue.
+/// What the request screens share while signed in: the last word the server
+/// streamed about each title on screen, asking and taking an ask back with the
+/// toast's Undo, and for an admin, the live queue.
 ///
 /// How the screens stay current: each one follows its titles through
 /// `requests.live` ([FollowTitles]) while it's built, and lets go when it
@@ -352,14 +351,8 @@ final class RequestsHub extends Notifier<RequestsState> {
     }
   }
 
-  /// Takes an ask back at once, from the ask's own Undo or the poster's
-  /// Cancel request.
-  Future<void> cancel(
-    AppLocalizations l,
-    String id,
-    String name, {
-    VoidCallback? onDone,
-  }) async {
+  /// Takes an ask back, from Undo or the poster's Cancel request.
+  Future<void> cancel(AppLocalizations l, String id, String name) async {
     final api = _api;
     if (api == null) return;
     try {
@@ -370,7 +363,6 @@ final class RequestsHub extends Notifier<RequestsState> {
     }
     if (!ref.mounted) return;
     bump();
-    onDone?.call();
   }
 
   /// A person takes back their own request [id], from a card in Explore's

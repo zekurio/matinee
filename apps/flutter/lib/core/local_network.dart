@@ -5,10 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../platform/device.g.dart';
 
-/// Android 17 keeps apps off the local network without
-/// ACCESS_LOCAL_NETWORK, and it held the Kotlin app to that at target SDK
-/// 36 too, so every Android 17 device is asked. Check again before each
-/// use, since the user can revoke it in Settings.
+/// Android 17 keeps apps off the local network without ACCESS_LOCAL_NETWORK,
+/// even at target SDK 36, so every Android 17 device is asked. Check again
+/// before each use, since the user can revoke it in Settings.
 abstract interface class LocalNetworkAccess {
   /// Whether it has to be asked for before reaching a server or collecting
   /// discovery replies on the LAN.

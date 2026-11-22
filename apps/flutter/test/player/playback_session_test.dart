@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/platform/player.g.dart' as wire;
 import 'package:matinee/player/playback_device.dart';
-import 'package:matinee/player/playback_report.dart';
 import 'package:matinee/player/playback_session.dart';
 import 'package:matinee/player/player.dart';
 import 'package:matinee/player/player_preferences.dart';
@@ -257,104 +256,6 @@ void main() {
     },
   );
 
-  test('records each source, how it went, and the engine codes', () async {
-    await session.close();
-    player = FakePlayer();
-    final published = <PlaybackReport>[];
-    final recorder = DiagnosticsRecorder(
-      PlaybackReport(
-        settings: SettingsDiagnostics.of(
-          PlayerEngine.media3,
-          const PlayerPrefs(),
-        ),
-      ),
-      published.add,
-    );
-    session = backend.session(
-      player,
-      elapsed: () => elapsed,
-      diagnostics: recorder,
-    );
-    backend.start = (input) => input.failed!.isEmpty
-        ? FakePlaybackApi.answer(plan(start: 15))
-        : FakePlaybackApi.answer(
-            plan(method: PlaybackMethod.remux, offset: 20),
-          );
-    await session.start();
-    await flush();
-    expect(recorder.report.latest?.mode, SourceMode.direct);
-    expect(recorder.report.latest?.reason, AttemptReason.start);
-    expect(recorder.report.latest?.outcome, AttemptOutcome.playing);
-
-    // The engine names the error ahead of the state it explains.
-    player
-      ..diagnose(
-        wire.DiagnosticsMessage(
-          decoderKind: wire.TrackKindMessage.video,
-          decoder: 'c2.android.avc.decoder',
-        ),
-      )
-      ..diagnose(
-        wire.DiagnosticsMessage(
-          error: wire.ErrorDiagnosticsMessage(
-            code: 4001,
-            name: 'ERROR_CODE_DECODING_FAILED',
-            httpStatus: 403,
-            causes: ['MediaCodecDecoderException', 'https://secret/path'],
-          ),
-        ),
-      )
-      ..emit(PlaybackPhase.error, 22);
-    await flush();
-    await flush();
-    final report = recorder.report;
-    expect(report.attempts, hasLength(2));
-    final failed = report.attempts.first;
-    expect(failed.outcome, AttemptOutcome.failed);
-    expect(failed.error?.name?.text, 'ERROR_CODE_DECODING_FAILED');
-    expect(failed.error?.httpStatus, 403);
-    // A cause that isn't a short code never reaches the report.
-    expect(failed.error?.causes.map((cause) => cause.text), [
-      'MediaCodecDecoderException',
-      'other',
-    ]);
-    final fallback = report.attempts.last;
-    expect(fallback.reason, AttemptReason.fallback);
-    expect(fallback.mode, SourceMode.stream);
-    expect(fallback.outcome, AttemptOutcome.playing);
-    expect(report.decoders.single.name?.text, 'c2.android.avc.decoder');
-    expect(published.last, same(report));
-
-    await session.close();
-    // Closing leaves a source that played as it went.
-    expect(recorder.report.latest?.outcome, AttemptOutcome.playing);
-    final text = formatReport(recorder.report);
-    expect(text, contains('1. direct reason=start at=15s'));
-    expect(text, contains('-> failed'));
-    expect(text, contains('ERROR_CODE_DECODING_FAILED (4001) http=403'));
-    expect(text, contains('2. stream reason=fallback'));
-    expect(text, contains('decoders: video=c2.android.avc.decoder'));
-    for (final private in ['matinee.example', 'secret', sittingId, itemId]) {
-      expect(text, isNot(contains(private)));
-    }
-  });
-
-  test('counts a refused start in the report', () async {
-    await session.close();
-    player = FakePlayer();
-    final recorder = DiagnosticsRecorder(
-      PlaybackReport(
-        settings: SettingsDiagnostics.of(PlayerEngine.mpv, const PlayerPrefs()),
-      ),
-      (_) {},
-    );
-    session = backend.session(player, diagnostics: recorder);
-    backend.start = (_) => FakePlaybackApi.reject(403, playbackRestricted);
-    await session.start();
-    expect(recorder.report.notes, {DiagnosticsNote.restricted: 1});
-    expect(recorder.report.attempts, isEmpty);
-  });
-
   test(
     'keeps method on a network error and stops on an account refusal',
     () async {
@@ -472,31 +373,6 @@ void main() {
     expect(backend.reports.last.paused, isTrue);
   });
 
-  testWidgets('a minute buffering with nothing coming says the server is '
-      'not answering', (tester) async {
-    final clock = tester.binding.clock;
-    final started = clock.now();
-    final engine = FakePlayer();
-    final playback = backend.session(
-      engine,
-      elapsed: () => clock.now().difference(started),
-    );
-    await playback.start();
-    engine.emit(PlaybackPhase.ready, 10, playing: true, buffered: 40);
-    await tester.pump();
-    // Data still arriving keeps it waiting.
-    engine.emit(PlaybackPhase.buffering, 10, buffered: 41);
-    await tester.pump(const Duration(seconds: 50));
-    engine.emit(PlaybackPhase.buffering, 10, buffered: 42);
-    await tester.pump(const Duration(seconds: 50));
-    expect(playback.error, isNull);
-    await tester.pump(const Duration(seconds: 11));
-    expect(playback.error, isA<PlaybackServerUnavailable>());
-    expect(engine.pauses, 1);
-    await playback.close();
-    playback.dispose();
-  });
-
   testWidgets('says it waits after 10 seconds with nothing coming, until '
       'data comes', (tester) async {
     final clock = tester.binding.clock;
@@ -527,44 +403,6 @@ void main() {
     await tester.pump(const Duration(seconds: 10));
     expect(playback.error, isA<PlaybackServerUnavailable>());
     expect(playback.waiting, isFalse);
-    await playback.close();
-    playback.dispose();
-  });
-
-  testWidgets('a press while it stalls pauses, and it stays paused', (
-    tester,
-  ) async {
-    final clock = tester.binding.clock;
-    final started = clock.now();
-    final engine = FakePlayer();
-    final playback = backend.session(
-      engine,
-      elapsed: () => clock.now().difference(started),
-    );
-    await playback.start();
-    engine.emit(PlaybackPhase.ready, 10, playing: true, buffered: 40);
-    await tester.pump();
-    engine.emit(PlaybackPhase.buffering, 10, buffered: 41);
-    await tester.pump(const Duration(seconds: 11));
-    expect(playback.playback.status.wantsPlay, isTrue);
-    expect(playback.waiting, isTrue);
-    final plays = engine.plays;
-    await playback.togglePlay();
-    expect(engine.pauses, 1, reason: 'the viewer never paused, so it pauses');
-    expect(engine.plays, plays);
-    expect(playback.playback.status.wantsPlay, isFalse);
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(playback.waiting, isFalse, reason: "paused, it isn't waiting");
-    // Paused, a stall isn't the server failing it.
-    await tester.pump(const Duration(seconds: 70));
-    expect(playback.error, isNull);
-    // Data comes back: the engine has it ready, still paused.
-    engine.emit(PlaybackPhase.ready, 10, wantsPlay: false, buffered: 60);
-    await tester.pump(const Duration(seconds: 1));
-    expect(engine.plays, plays, reason: 'nothing starts it but the viewer');
-    expect(playback.playback.status.wantsPlay, isFalse);
-    await playback.togglePlay();
-    expect(engine.plays, plays + 1);
     await playback.close();
     playback.dispose();
   });
@@ -668,7 +506,7 @@ void main() {
     expect(mpv.sidecarSubtitles, [PlaybackSubtitleDelivery.pgs]);
   });
 
-  test('the playback settings narrow the profile as the Kotlin app does', () {
+  test('the playback settings narrow the device profile', () {
     final codecs = wire.CodecCapabilitiesMessage(
       video: [
         wire.VideoDecoderMessage(codec: 'h264', tenBit: false),

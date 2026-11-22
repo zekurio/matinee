@@ -15,11 +15,10 @@ import 'pending_marks.dart';
 import 'title_data.dart';
 import 'title_parts.dart';
 
-/// A movie's or a show's page, as the Kotlin app's `TitleScreen` and the
-/// web's title page: the backdrop under the heading and its facts, the
-/// overview and crew, a movie's file with a picker when it has several,
-/// Play and the buttons beside it, a show's episode up next and seasons,
-/// the cast, and the related titles.
+/// A movie's or a show's page, as the web's title page: the backdrop under the
+/// heading and its facts, the overview and crew, a movie's file with a picker
+/// when it has several, Play and the buttons beside it, a show's episode up
+/// next and seasons, the cast, and the related titles.
 class TitleScreen extends ConsumerStatefulWidget {
   const TitleScreen({super.key, required this.id});
 
@@ -160,7 +159,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> with PendingMarks {
 }
 
 /// A one-season show's episodes as a row of stills, starting at the one up
-/// next; nothing while they load or when they fail, as the Kotlin app.
+/// next; nothing while they load or when they fail.
 class _OnlySeason extends ConsumerWidget {
   const _OnlySeason({
     required this.title,

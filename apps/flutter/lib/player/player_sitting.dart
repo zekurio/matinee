@@ -14,11 +14,10 @@ enum PlaybackNotice {
 
 /// What the player's controls drive: a file the server plans
 /// (`PlaybackSession`), or a download playing from the device
-/// (`OfflinePlaybackSession`). The controls, the gestures, the lock, the
-/// keys, picture in picture, and the system's media controls are the same
-/// for both, as in the Kotlin app, where one `PlayerController` plays
-/// either; what only the server has, the quality, trickplay frames, and
-/// skip segments, a download leaves empty.
+/// (`OfflinePlaybackSession`). The controls, the gestures, the lock, the keys,
+/// picture in picture, and the system's media controls are the same for both;
+/// what only the server has, the quality, trickplay frames, and skip segments,
+/// a download leaves empty.
 abstract interface class PlayerSitting implements Listenable {
   Player get player;
 
