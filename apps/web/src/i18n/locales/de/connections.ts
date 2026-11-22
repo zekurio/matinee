@@ -99,21 +99,27 @@ export default {
   "connections.rules.dialog.create": "Regel hinzufügen",
   "connections.rules.dialog.save": "Speichern",
   "connections.rules.conditions": "Bedingungen",
+  "connections.rules.conditions.description":
+    "Eine Regel gilt für eine Anfrage, die alle hier ausgefüllten Bedingungen erfüllt. Eine Bedingung mit mehreren Werten ist erfüllt, sobald einer davon passt.",
   "connections.rules.settings": "Einstellungen",
   "connections.rules.users": "Benutzer",
   "connections.rules.users.find": "Benutzer suchen",
   "connections.rules.genres": "Genres",
+  "connections.rules.genres.find": "Genre suchen",
   "connections.rules.languages": "Sprachen",
   "connections.rules.languages.find": "Sprache suchen",
   "connections.rules.keywords": "Schlagwörter",
   "connections.rules.keywords.find": "Schlagwörter bei TMDB suchen",
-  "connections.rules.keywords.remove": "{name} entfernen",
+  "connections.rules.keywords.type":
+    "Zum Suchen mindestens zwei Buchstaben eingeben.",
+  "connections.rules.keywords.searching": "Wird gesucht…",
   "connections.rules.noTmdb":
     "Genres und Schlagwörter kommen von TMDB, das nicht eingerichtet ist.",
   "connections.rules.keep": "Wie die Verbindung",
   "connections.rules.summaryPending":
     "Details erscheinen, sobald sie geladen sind.",
   "connections.rules.unknownChoice": "unbekannt",
+  "connections.rules.loadingChoice": "Wird geladen…",
 
   "connections.libraries.title": "Was jede Mediathek befüllt",
   "connections.libraries.filledBy": "Befüllt über {connections}",

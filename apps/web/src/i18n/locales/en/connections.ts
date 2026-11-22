@@ -101,15 +101,20 @@ export default defineMessages("connections", {
   "connections.rules.dialog.create": "Add rule",
   "connections.rules.dialog.save": "Save",
   "connections.rules.conditions": "Conditions",
+  "connections.rules.conditions.description":
+    "A rule applies to a request that meets every condition filled in here. A condition with several values is met by any one of them.",
   "connections.rules.settings": "Settings",
   "connections.rules.users": "Users",
   "connections.rules.users.find": "Find a user",
   "connections.rules.genres": "Genres",
+  "connections.rules.genres.find": "Find a genre",
   "connections.rules.languages": "Languages",
   "connections.rules.languages.find": "Find a language",
   "connections.rules.keywords": "Keywords",
   "connections.rules.keywords.find": "Search TMDB's keywords",
-  "connections.rules.keywords.remove": "Remove {name}",
+  // The keyword list, before there's enough typed to search with.
+  "connections.rules.keywords.type": "Type two letters or more to search.",
+  "connections.rules.keywords.searching": "Searching…",
   "connections.rules.noTmdb":
     "Genres and keywords come from TMDB, which isn't set up.",
   // A rule setting left unset keeps the connection's value.
@@ -118,6 +123,8 @@ export default defineMessages("connections", {
   "connections.rules.summaryPending": "Details appear once they load.",
   // A user, genre, or language a rule names that is no longer there.
   "connections.rules.unknownChoice": "unknown",
+  // A saved user, genre, or language, until the names load.
+  "connections.rules.loadingChoice": "Loading…",
 
   // Which connection fills each library.
   "connections.libraries.title": "What fills each library",

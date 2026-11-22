@@ -7,12 +7,16 @@ import type {
   TitleKind,
 } from "@matinee/contracts"
 import {
-  Autocomplete,
-  AutocompleteContent,
-  AutocompleteInput,
-  AutocompleteItem,
-  AutocompleteList,
-} from "@matinee/ui/components/autocomplete"
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  useComboboxAnchor,
+} from "@matinee/ui/components/combobox"
 import { Dialog } from "@matinee/ui/components/dialog"
 import {
   Field,
@@ -20,14 +24,12 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@matinee/ui/components/field"
-import { Input } from "@matinee/ui/components/input"
 import { toast } from "@matinee/ui/components/sonner"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { XIcon } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 
-import { ToggleChips } from "@/components/filters/filter-panel"
+import { MultiSelect } from "@/components/multi-select"
 import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -168,6 +170,11 @@ function RuleForm({
   const folderField = fields.find((field) => field.folder)
   const folderValue = folderField ? values.settings[folderField.key] : undefined
   const folder = textOf(folderValue)
+  // A saved value the choices don't hold: still loading, or gone since.
+  const unknown = () =>
+    choices
+      ? tr("connections.rules.unknownChoice")
+      : tr("connections.rules.loadingChoice")
 
   return (
     <form.AppForm>
@@ -183,19 +190,20 @@ function RuleForm({
         <FormDialogBody>
           <FormColumns>
             <FormColumn>
-              <FormSection title={tr("connections.rules.conditions")}>
+              <FormSection
+                title={tr("connections.rules.conditions")}
+                description={tr("connections.rules.conditions.description")}
+              >
                 <FieldGroup>
                   <Field>
-                    <FieldLabel id={`${id}-users`}>
+                    <FieldLabel htmlFor={`${id}-users`}>
                       {tr("connections.rules.users")}
                     </FieldLabel>
-                    <ToggleChips
-                      labelId={`${id}-users`}
-                      limit={12}
-                      find={{
-                        placeholder: tr("connections.rules.users.find"),
-                        empty: tr("connections.field.findEmpty"),
-                      }}
+                    <MultiSelect
+                      id={`${id}-users`}
+                      placeholder={tr("connections.rules.users.find")}
+                      empty={tr("connections.field.findEmpty")}
+                      unknown={unknown}
                       choices={(choices?.users ?? []).map((user) => ({
                         value: user.id,
                         label: user.name,
@@ -206,11 +214,14 @@ function RuleForm({
                   </Field>
                   {choices?.tmdb !== false && (
                     <Field>
-                      <FieldLabel id={`${id}-genres`}>
+                      <FieldLabel htmlFor={`${id}-genres`}>
                         {tr("connections.rules.genres")}
                       </FieldLabel>
-                      <ToggleChips
-                        labelId={`${id}-genres`}
+                      <MultiSelect
+                        id={`${id}-genres`}
+                        placeholder={tr("connections.rules.genres.find")}
+                        empty={tr("connections.field.findEmpty")}
+                        unknown={unknown}
                         choices={(choices?.genres ?? []).map((genre) => ({
                           value: String(genre.id),
                           label: genre.name,
@@ -221,16 +232,14 @@ function RuleForm({
                     </Field>
                   )}
                   <Field>
-                    <FieldLabel id={`${id}-languages`}>
+                    <FieldLabel htmlFor={`${id}-languages`}>
                       {tr("connections.rules.languages")}
                     </FieldLabel>
-                    <ToggleChips
-                      labelId={`${id}-languages`}
-                      limit={12}
-                      find={{
-                        placeholder: tr("connections.rules.languages.find"),
-                        empty: tr("connections.field.findEmpty"),
-                      }}
+                    <MultiSelect
+                      id={`${id}-languages`}
+                      placeholder={tr("connections.rules.languages.find")}
+                      empty={tr("connections.field.findEmpty")}
+                      unknown={unknown}
                       choices={(choices?.languages ?? []).map((language) => ({
                         value: language.id,
                         label: language.name,
@@ -308,8 +317,8 @@ function RuleForm({
 }
 
 /**
- * TMDB's keywords, found by name as it's typed, each chosen one a chip
- * that takes it off again.
+ * TMDB's keywords, found by name as it's typed. The server does the
+ * finding, so the list shows what it sent as it is.
  */
 function KeywordField({
   value,
@@ -319,6 +328,7 @@ function KeywordField({
   onChange: (value: FulfilmentKeyword[]) => void
 }) {
   const id = useId()
+  const anchor = useComboboxAnchor()
   const [query, setQuery] = useState("")
   const [search, setSearch] = useState("")
   // Asks once typing pauses, not for every letter.
@@ -333,76 +343,54 @@ function KeywordField({
     enabled: search.length > 1,
     retry: false,
   })
-  const items = (found.data ?? []).filter(
-    (keyword) => !value.some((chosen) => chosen.id === keyword.id),
-  )
+  const asked = search.length > 1 && query.trim() === search
   return (
     <Field>
       <FieldLabel htmlFor={id}>{tr("connections.rules.keywords")}</FieldLabel>
-      {value.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {value.map((keyword) => (
-            <span
-              key={keyword.id}
-              className="bg-secondary text-secondary-foreground text-13px inline-flex h-7 items-center gap-1 rounded-full pr-1 pl-2.5"
-            >
-              {keyword.name}
-              <button
-                type="button"
-                aria-label={tr("connections.rules.keywords.remove", {
-                  name: keyword.name,
-                })}
-                className="hover:bg-foreground/10 grid size-5 place-items-center rounded-full"
-                onClick={() =>
-                  onChange(value.filter((chosen) => chosen.id !== keyword.id))
-                }
-              >
-                <XIcon aria-hidden className="size-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-      <Autocomplete
-        items={items}
-        value={query}
-        itemToStringValue={(item: FulfilmentKeyword) => item.name}
-        onValueChange={(next, details) => {
-          // Picking one adds it; the field empties for the next.
-          if (details.reason === "item-press") return
-          setQuery(next)
-        }}
+      <Combobox
+        multiple
+        items={found.data ?? []}
+        filter={null}
+        value={value}
+        itemToStringLabel={(keyword: FulfilmentKeyword) => keyword.name}
+        isItemEqualToValue={(item, other) => item.id === other.id}
+        onValueChange={onChange}
+        inputValue={query}
+        onInputValueChange={setQuery}
       >
-        <AutocompleteInput
-          id={id}
-          placeholder={tr("connections.rules.keywords.find")}
-          autoComplete="off"
-          spellCheck={false}
-          maxLength={100}
-          render={<Input />}
-        />
-        {items.length > 0 && (
-          <AutocompleteContent sideOffset={4} className="data-empty:hidden">
-            <AutocompleteList>
-              {(item: FulfilmentKeyword) => (
-                <AutocompleteItem
-                  key={item.id}
-                  value={item}
-                  onClick={() => {
-                    onChange([...value, item])
-                    setQuery("")
-                  }}
-                >
-                  <span className="min-w-0 flex-1 truncate">{item.name}</span>
-                </AutocompleteItem>
-              )}
-            </AutocompleteList>
-          </AutocompleteContent>
-        )}
-      </Autocomplete>
-      {found.isError && (
-        <FieldDescription>{errorMessage(found.error)}</FieldDescription>
-      )}
+        <ComboboxChips ref={anchor}>
+          {value.map((keyword) => (
+            <ComboboxChip key={keyword.id} label={keyword.name} />
+          ))}
+          <ComboboxChipsInput
+            id={id}
+            placeholder={
+              value.length ? undefined : tr("connections.rules.keywords.find")
+            }
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={100}
+          />
+        </ComboboxChips>
+        <ComboboxContent anchor={anchor}>
+          <ComboboxEmpty>
+            {!asked
+              ? tr("connections.rules.keywords.type")
+              : found.isFetching
+                ? tr("connections.rules.keywords.searching")
+                : found.isError
+                  ? errorMessage(found.error)
+                  : tr("connections.field.findEmpty")}
+          </ComboboxEmpty>
+          <ComboboxList>
+            {(keyword: FulfilmentKeyword) => (
+              <ComboboxItem key={keyword.id} value={keyword}>
+                <span className="min-w-0 flex-1 truncate">{keyword.name}</span>
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
     </Field>
   )
 }
