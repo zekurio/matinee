@@ -138,7 +138,14 @@ Future<void> _pumpOverview(WidgetTester tester, http.Client client) async {
             client: client,
           ),
         ),
-        runsQueueProvider.overrideWithValue(true),
+        canProvider.overrideWith(
+          (ref, permission) => const [
+            Permission.adminRequestRead,
+            Permission.adminRequestApprove,
+            Permission.adminRequestDecline,
+            Permission.adminRequestRetry,
+          ].contains(permission),
+        ),
       ],
       child: MaterialApp(
         locale: const Locale('en'),

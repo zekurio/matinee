@@ -40,6 +40,26 @@ export function runsQueue(user: Pick<User, "permissions">): boolean {
   )
 }
 
+/** What the account may do with a request in the queue. */
+export type QueueActions = {
+  approve: boolean
+  decline: boolean
+  retry: boolean
+  /** Taking one out of the queue, which approving or declining allows. */
+  remove: boolean
+}
+
+export function queueActions(user: Pick<User, "permissions">): QueueActions {
+  const approve = can(user, "adminRequest.approve")
+  const decline = can(user, "adminRequest.decline")
+  return {
+    approve,
+    decline,
+    retry: can(user, "adminRequest.retry"),
+    remove: approve || decline,
+  }
+}
+
 /** `permissions` with `changed` all held or all gone, in the contract's order. */
 export function withPermissions(
   permissions: readonly Permission[],

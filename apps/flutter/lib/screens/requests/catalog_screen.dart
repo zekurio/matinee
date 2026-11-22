@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/link_opener.dart';
+import '../../core/permissions.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/artwork.dart';
@@ -225,8 +226,10 @@ class _CatalogPageState extends ConsumerState<_CatalogPage> {
         spacing: 10,
         children: [
           if (answering != null) ...[
-            sized(AddButton(item: answering, page: true), 200),
-            DeclineButton(item: answering, page: true),
+            if (ref.watch(canProvider(Permission.adminRequestApprove)))
+              sized(AddButton(item: answering, page: true), 200),
+            if (ref.watch(canProvider(Permission.adminRequestDecline)))
+              DeclineButton(item: answering, page: true),
           ] else if (action)
             sized(
               RequestButton(

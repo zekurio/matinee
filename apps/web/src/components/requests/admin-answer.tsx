@@ -113,6 +113,8 @@ export function AdminAnswer({
   const canApprove = can(user, "adminRequest.approve")
   const canDecline = can(user, "adminRequest.decline")
   const { library } = useGoesTo(item)
+  // Nothing to offer, so the row leaves no empty space.
+  if (!canApprove && !canDecline) return null
   const fill = look === "fill"
   const choice = !fill && choosesLibrary(item)
   const page = look === "page"
