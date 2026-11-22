@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart' show MaterialApp;
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +12,7 @@ import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/permissions.dart';
 import 'package:matinee/core/session.dart' show apiProvider;
 import 'package:matinee/kit/kit.dart';
+import 'package:matinee/kit/tv/tv.dart';
 import 'package:matinee/l10n/app_localizations.dart';
 import 'package:matinee/screens/tv/tv_requests.dart';
 
@@ -143,7 +145,7 @@ Future<void> _pumpOverview(WidgetTester tester, http.Client client) async {
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         theme: MatineeTheme.data(matineeDark),
-        home: const TvRequestsScreen(queue: true),
+        home: const TvFocusRules(child: TvRequestsScreen(queue: true)),
       ),
     ),
   );
@@ -216,5 +218,23 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('No requests match these filters'), findsNothing);
     expect(find.text('Title s1'), findsWidgets);
+  });
+
+  testWidgets('Down from the filter button reaches the first card', (
+    tester,
+  ) async {
+    final sent = <_Sent>[];
+    await _pumpOverview(tester, _server(sent));
+    await _openFilter(tester);
+    await tester.tap(find.text('Show requests'));
+    for (var frame = 0; frame < 10; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'header/filter');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    // The bug it pins: two header controls shared one row node, so the
+    // D-pad found no card below the filter.
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'grid/s1');
   });
 }

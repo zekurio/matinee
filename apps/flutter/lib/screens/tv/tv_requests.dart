@@ -934,6 +934,12 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
         ),
       ],
     );
+    if (!mounted) return;
+    // Back or Done goes to the Filter button, wherever the list restarted.
+    final filter = _memory.node(_Rows.header, _Rows.filter);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && filter.context != null) filter.requestFocus();
+    });
   }
 
   @override
@@ -943,8 +949,15 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     final queue = widget.queue && ref.watch(runsQueueProvider);
     final body = queue ? _queueBody(l, filter) : _mineBody(l, filter);
     final cards = body.cards;
-    // Down from the header, before any card had focus, lands on the first.
-    if (cards.isNotEmpty) _memory.startAt(TvGrid.row, cards.first.id);
+    // Down from the header lands on the card the grid had, or on the first
+    // once a filter leaves that card out, so the new list is still reachable
+    // from the header.
+    if (cards.isNotEmpty) {
+      final remembered = _memory.rowItems[TvGrid.row];
+      if (remembered == null || !cards.any((card) => card.id == remembered)) {
+        _memory.rowItems[TvGrid.row] = cards.first.id;
+      }
+    }
     _memory.restore(context, () {
       if (cards.isNotEmpty) return (TvGrid.row, cards.first.id);
       return body.empty ? (_Rows.empty, body.emptyKey) : null;
@@ -963,35 +976,37 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
         title: queue ? l.webRequestsTitle : l.webAskMineTitle,
         detail: null,
         controls: [
+          // One row for both, since a row node can hold only one Focus.
           TvMemoryRow(
             memory: _memory,
             row: _Rows.header,
-            child: TvButton(
-              label: filter.count > 0
-                  ? l.browseFiltersOn(filter.count)
-                  : l.webFiltersTitle,
-              icon: Lucide.listFilter,
-              active: filter.count > 0,
-              focusNode: _memory.node(_Rows.header, _Rows.filter),
-              onPressed: _showFilters,
+            child: Row(
+              spacing: 14,
+              children: [
+                TvButton(
+                  label: filter.count > 0
+                      ? l.browseFiltersOn(filter.count)
+                      : l.webFiltersTitle,
+                  icon: Lucide.listFilter,
+                  active: filter.count > 0,
+                  focusNode: _memory.node(_Rows.header, _Rows.filter),
+                  onPressed: _showFilters,
+                ),
+                // Like Add, it asks nothing.
+                if (waiting.length > 1)
+                  TvButton(
+                    label: l.webRequestsAddAll(waiting.length),
+                    icon: Lucide.listChecks,
+                    focusNode: _memory.node(_Rows.header, _Rows.addAll),
+                    onPressed: () => unawaited(
+                      ref
+                          .read(requestsProvider.notifier)
+                          .answerAll(l, waiting, undo: false),
+                    ),
+                  ),
+              ],
             ),
           ),
-          // Like Add, it asks nothing.
-          if (waiting.length > 1)
-            TvMemoryRow(
-              memory: _memory,
-              row: _Rows.header,
-              child: TvButton(
-                label: l.webRequestsAddAll(waiting.length),
-                icon: Lucide.listChecks,
-                focusNode: _memory.node(_Rows.header, _Rows.addAll),
-                onPressed: () => unawaited(
-                  ref
-                      .read(requestsProvider.notifier)
-                      .answerAll(l, waiting, undo: false),
-                ),
-              ),
-            ),
         ],
       ),
       // The last card to leave takes its name off the line with it.
