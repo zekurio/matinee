@@ -439,7 +439,7 @@ class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
     Curve? curve,
     Duration? duration,
   }) {
-    final target = redirect(
+    final target = _redirect(
       FocusManager.instance.primaryFocus,
       node,
       _direction,
@@ -450,8 +450,7 @@ class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
   }
 
   /// Where a move from [from] to [to] lands, or null when it shouldn't.
-  @visibleForTesting
-  static FocusNode? redirect(
+  static FocusNode? _redirect(
     FocusNode? from,
     FocusNode to,
     TraversalDirection? direction,

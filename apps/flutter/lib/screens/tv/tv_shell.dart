@@ -605,17 +605,13 @@ class _Scrim extends StatelessWidget {
 class TvClock extends StatefulWidget {
   const TvClock({super.key});
 
-  /// The time it reads, which tests hold still.
-  @visibleForTesting
-  static DateTime Function() now = DateTime.now;
-
   @override
   State<TvClock> createState() => _TvClockState();
 }
 
 class _TvClockState extends State<TvClock> {
   Timer? _tick;
-  DateTime _now = TvClock.now();
+  DateTime _now = DateTime.now();
 
   @override
   void initState() {
@@ -631,7 +627,7 @@ class _TvClockState extends State<TvClock> {
     );
     _tick = Timer(wait, () {
       if (!mounted) return;
-      setState(() => _now = TvClock.now());
+      setState(() => _now = DateTime.now());
       _schedule();
     });
   }

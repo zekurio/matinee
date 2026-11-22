@@ -22,17 +22,6 @@ abstract interface class ArtworkCache {
   Future<void> write(Uri url, Uint8List bytes);
 }
 
-/// Keeps nothing, for tests.
-final class NoArtworkCache implements ArtworkCache {
-  const NoArtworkCache();
-
-  @override
-  Future<Uint8List?> read(Uri url) async => null;
-
-  @override
-  Future<void> write(Uri url, Uint8List bytes) async {}
-}
-
 /// Artwork in files under the app's cache folder, which Android may clear
 /// when it needs room, named by a hash of the URL. Past [maxBytes] the
 /// oldest go, checked every [_pruneEvery] writes.
