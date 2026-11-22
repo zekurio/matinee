@@ -6,6 +6,10 @@ import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
+/// What reads on [ButtonLook.inverse]'s white: the dark theme's background,
+/// so a white button reads whichever scheme shows around it.
+const _inverseInk = Color(0xFF0E0E10);
+
 enum ButtonLook {
   primary,
   outline,
@@ -156,14 +160,14 @@ class MatineeButton extends StatelessWidget {
           ButtonLook.inverse => (
             Color.lerp(
               white,
-              colors.background,
+              _inverseInk,
               pressed
                   ? .14
                   : hot
                   ? .07
                   : 0,
             )!,
-            colors.background,
+            _inverseInk,
             null,
           ),
         };
