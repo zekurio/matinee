@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/rendering.dart' show RenderParagraph;
@@ -242,6 +243,26 @@ void main() {
       expect(focusedKey(), 'rail-forYou/movie:tmdb:p1');
       await up(tester, 2);
       expect(focusedKey(), 'requests/r1', reason: 'the card it left');
+    });
+
+    testWidgets('focus starts on the first row even when a later one '
+        'loads first', (tester) async {
+      final requests = _discover(requests: null);
+      final gate = requests.rowGates['popularFilms'] = Completer<void>();
+      await _open(tester, requests);
+      GoRouter.of(tester.element(find.byType(TvShell))).go(Routes.discover);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(find.text('Paterson'), findsWidgets, reason: 'the later row');
+      expect(
+        focusedKey(),
+        isNot(startsWith('rail-forYou')),
+        reason: 'not in a row the first will push down',
+      );
+      gate.complete();
+      await settle(tester);
+      expect(focusedKey(), 'rail-popularFilms/movie:tmdb:d2');
     });
 
     group("the header's Requests chip", () {

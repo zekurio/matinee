@@ -259,6 +259,9 @@ final class RequestsBackend {
   /// Each Discover row's first page, by the row's id.
   final rows = <String, JsonMap>{};
 
+  /// Discover rows that answer only once their gate completes, by id.
+  final rowGates = <String, Completer<void>>{};
+
   /// Paths that answer with an error, the server's message as the value.
   final failing = <String, String>{};
 
@@ -353,6 +356,7 @@ final class RequestsBackend {
     if (path == '/api/v1/discover/row') {
       // SAFETY: the client sends the input as a JSON object.
       final id = (input as Map<String, Object?>)['id'];
+      await rowGates[id]?.future;
       final row = rows[id];
       if (row == null) return _json({'message': 'no row'}, 500);
       return _json(row, 200);

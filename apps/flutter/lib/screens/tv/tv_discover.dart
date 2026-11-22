@@ -199,7 +199,22 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
       if (discover.isLoading && value == null) return null;
       if (!requests.settled) return null;
       if (message != null) return null;
-      for (final row in [?_memory.lastRow, ...order]) {
+      if (_firsts[_memory.lastRow] case final first?) {
+        return (_memory.lastRow!, first);
+      }
+      // The first row with a card, once every row above it has loaded:
+      // focus taken in a later one would sit under a row that then
+      // arrives above it.
+      if (_firsts[_Rows.requests] case final first?) {
+        return (_Rows.requests, first);
+      }
+      for (final rail in rails) {
+        final key = _Rows.rail(rail);
+        if (_firsts[key] case final first?) return (key, first);
+        final load = loads[railKey(rail)]!;
+        if (load.isLoading && !load.hasValue) return null;
+      }
+      for (final row in order) {
         if (_firsts[row] case final first?) return (row, first);
       }
       return null;
