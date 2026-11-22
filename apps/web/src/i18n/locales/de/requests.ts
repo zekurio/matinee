@@ -27,10 +27,6 @@ export default {
   "requests.filter.none": "Keine Anfrage passt zu diesen Filtern",
   "requests.filter.noneHint": "Nimm einen Filter heraus, um mehr zu sehen.",
 
-  "requests.list.waiting": "Wartend",
-  "requests.list.needsAttention": "Braucht Aufmerksamkeit",
-  "requests.list.onTheWay": "Unterwegs",
-  "requests.list.done": "Erledigt",
   "requests.addAll": plural({
     one: "{count} hinzufügen",
     other: "Alle {count} hinzufügen",
@@ -133,9 +129,7 @@ export default {
     "Das ist fehlgeschlagen. Details stehen im Server-Log.",
 
   "requests.done.arrived": "{when} angekommen",
-  "requests.done.declined": "{when} abgelehnt",
   "requests.done.declinedUndated": "Abgelehnt",
-  "requests.done.gaveUp": "{when} aufgegeben",
   "requests.done.gaveUpUndated": "Aufgegeben",
 
   "requests.empty.setup.title": "Noch befüllt nichts deine Mediatheken",
@@ -145,10 +139,6 @@ export default {
   "requests.empty.none": "Noch keine Anfragen",
   "requests.empty.noneHint":
     "Wenn jemand einen Film oder eine Serie anfragt, erscheint das hier.",
-  "requests.empty.waiting": "Nichts wartet",
-  "requests.empty.needsAttention": "Nichts braucht Aufmerksamkeit",
-  "requests.empty.onTheWay": "Nichts ist unterwegs",
-  "requests.empty.done": "Noch nichts erledigt",
   "requests.loadFailed": "Anfragen konnten nicht geladen werden. {error}",
   "requests.reload": "Erneut versuchen",
 

@@ -296,9 +296,8 @@ final class RequestFilter {
 typedef OlderKey = ({String after, RequestFilter filter});
 
 /// The viewer's requests past the first page `requests.mineLive` sends,
-/// from the key's cursor on, under its filter: what `requests.mine` lists
-/// with `filter: "all"`, in progress first, then finished, each newest
-/// first.
+/// from the key's cursor on, under its filter: what `requests.mine` lists,
+/// in progress first, then finished, each newest first.
 final class OlderRequests extends CursorList<RequestItem> {
   OlderRequests(this.key);
 
@@ -317,7 +316,6 @@ final class OlderRequests extends CursorList<RequestItem> {
       limit: 40,
       states: key.filter.states,
       kind: key.filter.kind,
-      filter: 'all',
     );
     return (page.items, page.nextCursor);
   }
@@ -353,7 +351,7 @@ final myFilteredRequestsProvider = serverStreamFamily(
 /// Fetched again when an ask, a cancel, or an answer changes it.
 final profileAskedProvider = FutureProvider.autoDispose<RequestPage>((ref) {
   ref.watch(requestsVersionProvider);
-  return serverApi(ref).requests.mine(limit: 24, filter: 'all');
+  return serverApi(ref).requests.mine(limit: 24);
 }, retry: (_, _) => null);
 
 /// The queue under a filter, live as the hub's is, for the overview. With

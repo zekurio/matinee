@@ -116,7 +116,6 @@ export const AdminRequestItem = RequestItem.extend({
       createdAt: t.date(),
     }),
   ),
-  destinationDescription: t.string(),
   /**
    * Where a waiting request could go instead, the one it goes to now
    * selected, for "Goes to" before Add: libraries of its kind that take
@@ -131,19 +130,16 @@ export type AdminRequestItem = t.infer<typeof AdminRequestItem>
 
 /**
  * The admin's queue, each list one state, kept to the filter it was asked
- * with: a state left out has an empty list and a zero count.
+ * with: a state left out has an empty list. `doneCount` counts every
+ * done request under the filter, not just this page, so a client can tell
+ * when done changed.
  */
 export const RequestQueue = t.object({
   waiting: t.array(AdminRequestItem),
   needsAttention: t.array(AdminRequestItem),
   onTheWay: t.array(AdminRequestItem),
   done: t.array(AdminRequestItem),
-  counts: t.object({
-    waiting: t.number().int(),
-    needsAttention: t.number().int(),
-    onTheWay: t.number().int(),
-    done: t.number().int(),
-  }),
+  doneCount: t.number().int(),
   nextCursor: t.string().nullable(),
 })
 export type RequestQueue = t.infer<typeof RequestQueue>
@@ -180,17 +176,9 @@ export const requestsContract = {
   mineLive: post("/requests/mine/live", "request.read")
     .input(RequestListInput)
     .output(eventIterator(RequestPage)),
-  /**
-   * In progress first, then finished, each newest first. "inProgress"
-   * keeps to those in flight and those that settled in the last three
-   * days.
-   */
+  /** In progress first, then finished, each newest first. */
   mine: post("/requests/mine", "request.read")
-    .input(
-      RequestListInput.extend({
-        filter: t.enum(["inProgress", "all"]).$default("inProgress"),
-      }),
-    )
+    .input(RequestListInput)
     .output(RequestPage),
 }
 

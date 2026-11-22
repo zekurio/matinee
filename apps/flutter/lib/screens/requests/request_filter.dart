@@ -27,7 +27,7 @@ class RequestFilterButton extends StatelessWidget {
         return ListBarButton(
           icon: Lucide.listFilter,
           label: active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle,
-          active: active > 0,
+          count: active,
           onPressed: () => _showRequestFilters(context, filter),
         );
       },
