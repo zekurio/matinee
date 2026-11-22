@@ -1,5 +1,0 @@
-*.bat text eol=crlf
-*.jar binary
-*.ttf binary
-# `pnpm api:android` writes these from the contract.
-app/src/main/java/io/github/zekurio/matinee/api/Contract*.kt linguist-generated=true
