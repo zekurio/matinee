@@ -15,6 +15,7 @@ import {
   ExternalLinkIcon,
   InfoIcon,
   PlayIcon,
+  RotateCcwIcon,
   RotateCwIcon,
   Trash2Icon,
 } from "lucide-react"
@@ -141,7 +142,13 @@ export function QueueCard({
           </>
         }
         who={<Askers item={item} />}
-        menu={<CardMenu item={item} onRemove={onRemove} />}
+        menu={
+          <CardMenu
+            item={item}
+            onRemove={onRemove}
+            onAllowAgain={() => onReopen("allowAgain")}
+          />
+        }
         actions={
           <>
             {state === "waiting" && (
@@ -183,31 +190,20 @@ export function QueueCard({
               </KeyTip>
             )}
             {state === "declined" && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={tr("requests.allowAgainNamed", {
-                    name: item.title.name,
-                  })}
-                  className={cn(cardButton, "hover:bg-foreground/10")}
-                  onClick={() => onReopen("allowAgain")}
-                >
-                  {tr("requests.allowAgain")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  aria-label={tr("requests.addAfterAllNamed", {
-                    name: item.title.name,
-                  })}
-                  className={cardButton}
-                  onClick={() => onReopen("addAfterAll")}
-                >
-                  <CheckIcon />
-                  {tr("requests.addAfterAll")}
-                </Button>
-              </>
+              // "Allow requests again" is in the menu, where the other
+              // states' removal is: both don't fit a card's line.
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label={tr("requests.addAfterAllNamed", {
+                  name: item.title.name,
+                })}
+                className={cardButton}
+                onClick={() => onReopen("addAfterAll")}
+              >
+                <CheckIcon />
+                {tr("requests.addAfterAll")}
+              </Button>
             )}
           </>
         }
@@ -219,9 +215,11 @@ export function QueueCard({
 function CardMenu({
   item,
   onRemove,
+  onAllowAgain,
 }: {
   item: AdminRequestItem
   onRemove: () => void
+  onAllowAgain: () => void
 }) {
   const navigate = useNavigate()
   return (
@@ -238,7 +236,11 @@ function CardMenu({
       >
         <EllipsisIcon />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
+      <DropdownMenuContent
+        align="end"
+        sideOffset={6}
+        className="w-max max-w-[calc(100vw-2rem)] min-w-48"
+      >
         <DropdownMenuItem onClick={() => void navigate(titleLink(item))}>
           {item.availability.libraryTitleId ? <PlayIcon /> : <InfoIcon />}
           {tr("requests.openTitle")}
@@ -255,16 +257,19 @@ function CardMenu({
             })}
           </DropdownMenuItem>
         )}
-        {/* A declined request's removal is "Allow requests again", on
-            the card. */}
-        {item.state !== "declined" && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={onRemove}>
-              <Trash2Icon />
-              {tr("requests.remove")}
-            </DropdownMenuItem>
-          </>
+        <DropdownMenuSeparator />
+        {/* A declined request's removal lifts the decline, so it can be
+            asked for again. */}
+        {item.state === "declined" ? (
+          <DropdownMenuItem onClick={onAllowAgain}>
+            <RotateCcwIcon />
+            {tr("requests.allowAgain")}
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem variant="destructive" onClick={onRemove}>
+            <Trash2Icon />
+            {tr("requests.remove")}
+          </DropdownMenuItem>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

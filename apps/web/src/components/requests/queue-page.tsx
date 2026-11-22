@@ -24,7 +24,7 @@ import {
   RefreshCwIcon,
   TriangleAlertIcon,
 } from "lucide-react"
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react"
 
 import { ShowMore } from "@/components/library/library-states"
 import { PageHeader, useDocumentTitle } from "@/components/page-header"
@@ -410,18 +410,23 @@ export function QueuePage() {
         tabIndex={-1}
         className="text-muted-foreground mb-5 min-h-5 text-sm outline-none md:mb-6"
       >
+        {/* Each count stays whole with the dot after it, so a narrow
+            screen or a long language breaks the line between counts. */}
         {summary.map((part, index) => (
-          <span key={part.key}>
-            {index > 0 && <span aria-hidden> · </span>}
-            <span
-              className={cn(
-                part.key === "needsAttention" && "text-warning font-medium",
-                part.key === "waiting" && "text-foreground font-medium",
-              )}
-            >
-              {part.text}
+          <Fragment key={part.key}>
+            {index > 0 && " "}
+            <span className="whitespace-nowrap">
+              <span
+                className={cn(
+                  part.key === "needsAttention" && "text-warning font-medium",
+                  part.key === "waiting" && "text-foreground font-medium",
+                )}
+              >
+                {part.text}
+              </span>
+              {index < summary.length - 1 && <span aria-hidden> ·</span>}
             </span>
-          </span>
+          </Fragment>
         ))}
       </p>
 

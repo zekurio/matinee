@@ -69,7 +69,6 @@ export default {
   "requests.giveUp": "Aufgeben",
   "requests.giveUpNamed": "{name} aufgeben",
   "requests.allowAgain": "Anfragen wieder zulassen",
-  "requests.allowAgainNamed": "Anfragen für {name} wieder zulassen",
   "requests.addAfterAll": "Doch hinzufügen",
   "requests.addAfterAllNamed": "{name} doch hinzufügen",
   "requests.more": "Mehr für {name}",

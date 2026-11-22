@@ -92,7 +92,6 @@ export default defineMessages("requests", {
   // Done, on a declined request: let anyone request it afresh, or
   // accept it as it was and send it.
   "requests.allowAgain": "Allow requests again",
-  "requests.allowAgainNamed": "Allow requests for {name} again",
   "requests.addAfterAll": "Add after all",
   "requests.addAfterAllNamed": "Add {name} after all",
   "requests.more": "More for {name}",
