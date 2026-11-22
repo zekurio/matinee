@@ -180,14 +180,14 @@ class _Entry extends StatelessWidget {
       // A tap picks the page from the rail, without opening the drawer.
       focusOnTap: false,
       onPressed: () => onPick(entry),
-      builder: (context, focused) => TweenAnimationBuilder<double>(
-        tween: Tween(end: focused ? 1 : 0),
-        duration: focused ? TvMotion.enter : TvMotion.exit,
-        curve: focused ? TvMotion.easing : TvMotion.exitEasing,
-        builder: (context, t, _) {
-          final content = Color.lerp(tint, colors.background, t)!;
+      builder: (context, focused) => TvFocusLook(
+        focused: focused,
+        rest: rest,
+        content: tint,
+        selected: selected,
+        builder: (context, look) {
           return Transform.scale(
-            scale: 1 + (TvFocus.rowScale - 1) * t,
+            scale: 1 + (TvFocus.rowScale - 1) * look.t,
             child: SizedBox(
               height: _rowHeight,
               child: Stack(
@@ -201,7 +201,7 @@ class _Entry extends StatelessWidget {
                     width: open ? null : _railIcon,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Color.lerp(rest, colors.foreground, t),
+                        color: look.fill,
                         borderRadius: KitRadius.pill,
                       ),
                     ),
@@ -217,7 +217,7 @@ class _Entry extends StatelessWidget {
                               KitIcon(
                                 entry.icon ?? Lucide.house,
                                 size: 24,
-                                color: content,
+                                color: look.content,
                               ),
                         ),
                       ),
@@ -242,13 +242,13 @@ class _Entry extends StatelessWidget {
                                 softWrap: false,
                                 overflow: TextOverflow.clip,
                                 style: TvType.facts.style(
-                                  color: focused
-                                      ? colors.background
-                                      : selected
-                                      ? colors.accent
-                                      : colors.foreground.withValues(
-                                          alpha: .85,
-                                        ),
+                                  color: look.tone(
+                                    look.selected
+                                        ? colors.accent
+                                        : colors.foreground.withValues(
+                                            alpha: .85,
+                                          ),
+                                  ),
                                 ),
                               ),
                             ),

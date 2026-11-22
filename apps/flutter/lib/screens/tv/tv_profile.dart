@@ -389,7 +389,7 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
                 rest: place.self
                     ? MatineeTheme.of(context).accentSoft
                     : const Color(0x00000000),
-                builder: (context, content) => SizedBox(
+                builder: (context, look) => SizedBox(
                   height: TvListItems.height,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -398,7 +398,7 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
                     child: _Place(
                       place: place,
                       value: metricValue(board.metric, place.value, l),
-                      inverted: focused,
+                      look: look,
                       lit: false,
                     ),
                   ),
@@ -655,10 +655,11 @@ class _BoardCard extends StatelessWidget {
         focused: focused,
         radius: const BorderRadius.all(Radius.circular(16)),
         rest: colors.foreground.withValues(alpha: .07),
-        builder: (context, content) {
-          final dim = focused
-              ? content.withValues(alpha: .7)
-              : colors.mutedForeground;
+        builder: (context, look) {
+          final dim = look.tone(
+            colors.mutedForeground,
+            colors.background.withValues(alpha: .7),
+          );
           return SizedBox(
             width: _boardWidth,
             child: Padding(
@@ -696,7 +697,7 @@ class _BoardCard extends StatelessWidget {
                             child: _Place(
                               place: place,
                               value: metricValue(metric, place.value, l),
-                              inverted: focused,
+                              look: look,
                               small: true,
                             ),
                           ),
@@ -715,20 +716,20 @@ class _BoardCard extends StatelessWidget {
 
 /// A place: the rank, the podium's in the accent, the person, and the
 /// value, the person's own lit unless [lit] is false, for a row that
-/// lights it itself. [inverted] is for a place drawn on a focused control,
-/// its text dark.
+/// lights it itself. [look] is the focus look of the control it's drawn on,
+/// which its colors follow.
 class _Place extends StatelessWidget {
   const _Place({
     required this.place,
     required this.value,
-    required this.inverted,
+    required this.look,
     this.small = false,
     this.lit = true,
   });
 
   final LeaderboardEntry place;
   final String value;
-  final bool inverted;
+  final TvLook look;
   final bool small;
   final bool lit;
 
@@ -738,7 +739,7 @@ class _Place extends StatelessWidget {
     final colors = MatineeTheme.of(context);
     final user = place.user;
     final name = user.name;
-    final content = tvContent(context, inverted);
+    final content = look.content;
     final podium = switch (place.rank) {
       1 => colors.accent,
       2 => colors.accent.withValues(alpha: .6),
@@ -747,9 +748,10 @@ class _Place extends StatelessWidget {
     };
     final fill = !place.self || !lit
         ? const Color(0x00000000)
-        : inverted
-        ? colors.background.withValues(alpha: .08)
-        : colors.accentSoft;
+        : look.tone(
+            colors.accentSoft,
+            colors.background.withValues(alpha: .08),
+          );
     final text = small ? TvType.label : TvType.facts;
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -775,9 +777,9 @@ class _Place extends StatelessWidget {
                     style: TvType.caption.style(
                       color: place.rank == 1
                           ? const Color(0xFF000000)
-                          : place.rank <= 3 || inverted
+                          : place.rank <= 3
                           ? content
-                          : colors.mutedForeground,
+                          : look.tone(colors.mutedForeground),
                     ),
                   ),
                 ),

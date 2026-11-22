@@ -75,8 +75,9 @@ class TvListItem extends StatelessWidget {
         radius: TvListItems.radius,
         rest: rest,
         content: tint,
+        selected: selected,
         scale: TvFocus.rowScale,
-        builder: (context, content) => ConstrainedBox(
+        builder: (context, look) => ConstrainedBox(
           constraints: BoxConstraints(minHeight: minHeight),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -84,7 +85,7 @@ class TvListItem extends StatelessWidget {
               vertical: 10,
             ),
             child: DefaultTextStyle(
-              style: TvType.label.style(color: content),
+              style: TvType.label.style(color: look.content),
               child: Row(
                 spacing: 16,
                 children: [
@@ -94,9 +95,9 @@ class TvListItem extends StatelessWidget {
                     KitIcon(
                       name,
                       size: 24,
-                      color: focused || destructive || selected
-                          ? content
-                          : colors.foreground.withValues(alpha: .7),
+                      color: destructive || look.selected
+                          ? look.content
+                          : look.tone(colors.foreground.withValues(alpha: .7)),
                     ),
                   Expanded(
                     child: Column(
@@ -107,7 +108,7 @@ class TvListItem extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TvType.facts.style(color: content),
+                          style: TvType.facts.style(color: look.content),
                         ),
                         if (subtitle case final text?)
                           Text(
@@ -115,9 +116,10 @@ class TvListItem extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TvType.caption.style(
-                              color: focused
-                                  ? colors.background.withValues(alpha: .7)
-                                  : colors.mutedForeground,
+                              color: look.tone(
+                                colors.mutedForeground,
+                                colors.background.withValues(alpha: .7),
+                              ),
                             ),
                           ),
                       ],
@@ -128,7 +130,7 @@ class TvListItem extends StatelessWidget {
                     KitIcon(
                       Lucide.check,
                       size: 22,
-                      color: focused ? content : colors.accent,
+                      color: look.tone(colors.accent),
                     ),
                 ],
               ),
