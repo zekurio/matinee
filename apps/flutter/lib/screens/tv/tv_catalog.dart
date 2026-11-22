@@ -644,24 +644,27 @@ class _CatalogPageState extends ConsumerState<_CatalogPage> {
         ? waiting
         : null;
     if (answering != null) {
+      final canApprove = ref.watch(canProvider(Permission.adminRequestApprove));
+      final canDecline = ref.watch(canProvider(Permission.adminRequestDecline));
       final choice = choosesLibrary(answering);
       final goes = ref.watch(
         requestsProvider.select((state) => state.goesTo(answering).name),
       );
       return [
-        (
-          _Rows.add,
-          TvButton(
-            label: choice ? l.webRequestsAddTo(goes) : l.webRequestsAdd,
-            icon: Lucide.check,
-            minWidth: 180,
-            focusNode: _memory.node(_Rows.actions, _Rows.add),
-            onPressed: () => unawaited(
-              hub.answer(l, answering, const AddAnswer(), undo: false),
+        if (canApprove)
+          (
+            _Rows.add,
+            TvButton(
+              label: choice ? l.webRequestsAddTo(goes) : l.webRequestsAdd,
+              icon: Lucide.check,
+              minWidth: 180,
+              focusNode: _memory.node(_Rows.actions, _Rows.add),
+              onPressed: () => unawaited(
+                hub.answer(l, answering, const AddAnswer(), undo: false),
+              ),
             ),
           ),
-        ),
-        if (choice)
+        if (canApprove && choice)
           (
             _Rows.goesTo,
             TvButton(
@@ -672,15 +675,16 @@ class _CatalogPageState extends ConsumerState<_CatalogPage> {
               onPressed: () => unawaited(showTvGoesTo(context, answering)),
             ),
           ),
-        (
-          _Rows.decline,
-          TvButton(
-            label: l.webRequestsDecline,
-            icon: Lucide.x,
-            focusNode: _memory.node(_Rows.actions, _Rows.decline),
-            onPressed: () => unawaited(showTvDecline(context, answering)),
+        if (canDecline)
+          (
+            _Rows.decline,
+            TvButton(
+              label: l.webRequestsDecline,
+              icon: Lucide.x,
+              focusNode: _memory.node(_Rows.actions, _Rows.decline),
+              onPressed: () => unawaited(showTvDecline(context, answering)),
+            ),
           ),
-        ),
       ];
     }
     final more =
@@ -951,7 +955,7 @@ class _StateLine extends ConsumerWidget {
         ?dimmedText(
           availability,
           l,
-          admin: ref.watch(canProvider(Permission.adminRequestUpdate)),
+          admin: ref.watch(canProvider(Permission.adminRequestDecline)),
         )
       else
         ?declinedText(availability, l),

@@ -1,4 +1,5 @@
 import {
+  type AccessGroup,
   type CreatedInvite,
   DEFAULT_INVITE_EXPIRY_DAYS,
   type Invite,
@@ -7,20 +8,12 @@ import {
   InviteLabel,
 } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
-import { FieldGroup, FieldLegend, FieldSet } from "@matinee/ui/components/field"
+import { Dialog } from "@matinee/ui/components/dialog"
+import { FieldGroup } from "@matinee/ui/components/field"
 import { Input } from "@matinee/ui/components/input"
 import { List, ListItem } from "@matinee/ui/components/list"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { toast } from "@matinee/ui/components/sonner"
-import { Switch } from "@matinee/ui/components/switch"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   CheckIcon,
@@ -41,7 +34,23 @@ import { useActionFeedback } from "@/lib/use-action-feedback"
 import { createSettingsInvitesStore } from "@/stores/settings-invites"
 
 import { formatList } from "./access-facts"
-import { RowIcon, SettingNote, SettingsSubsection } from "./settings-panel"
+import {
+  FormColumn,
+  FormColumns,
+  FormDialogBody,
+  FormDialogContent,
+  FormDialogFooter,
+  FormDialogForm,
+  FormDialogHeader,
+  FormSection,
+} from "./form-dialog"
+import { SwitchRow } from "./setting-controls"
+import {
+  RowIcon,
+  SettingNote,
+  SettingRows,
+  SettingsSubsection,
+} from "./settings-panel"
 
 /**
  * Invite links under the users list: making one for a person to create an
@@ -65,6 +74,15 @@ export function Invites({
   const { creating, created, start, setCreating, setCreated } = useStore(store)
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: orpc.admin.invites.key() })
+  // Everyone holds every account already, so it isn't offered. Without
+  // other groups the form is a single column. Loaded with the panel, so the
+  // dialog opens at its width.
+  const groups = useQuery({
+    ...orpc.admin.groups.list.queryOptions(),
+    select: (list) => list.filter((group) => !group.everyone),
+    enabled: passkeysOn && mayCreate,
+  })
+  const joinable = groups.data ?? []
 
   // No question first: a revoked link is quick to make again.
   const revoke = useMutation({
@@ -122,21 +140,19 @@ export function Invites({
         onOpenChange={setCreating}
         disablePointerDismissal={created !== null}
       >
-        <DialogContent
-          showCloseButton={false}
-          className="gap-5 p-6 sm:max-w-md"
-        >
+        <FormDialogContent width={created || joinable.length > 0 ? "md" : "sm"}>
           {created ? (
             <CreatedLink invite={created} onDone={() => setCreating(false)} />
           ) : (
             <InviteForm
+              groups={joinable}
               onCreated={(invite) => {
                 setCreated(invite)
                 void refresh()
               }}
             />
           )}
-        </DialogContent>
+        </FormDialogContent>
       </Dialog>
     </SettingsSubsection>
   )
@@ -206,19 +222,17 @@ function InviteRow({
 }
 
 function InviteForm({
+  groups,
   onCreated,
 }: {
+  /** The groups an invite can put the account in. */
+  groups: AccessGroup[]
   onCreated: (invite: CreatedInvite) => void
 }) {
   const create = useMutation({
     mutationFn: (input: InviteInput) => client.admin.invites.create(input),
     onSuccess: onCreated,
     onError: (error) => toast.error(errorMessage(error)),
-  })
-  // Everyone holds every account already, so it isn't offered.
-  const groups = useQuery({
-    ...orpc.admin.groups.list.queryOptions(),
-    select: (list) => list.filter((group) => !group.everyone),
   })
   const noGroups: string[] = []
   const form = useAppForm({
@@ -242,55 +256,57 @@ function InviteForm({
     label: tr("format.daysLong", { count: days }),
   }))
 
+  const fields = (
+    <FieldGroup>
+      <form.AppField name="label" validators={{ onChange: InviteLabel }}>
+        {(field) => (
+          <field.TextField
+            label={tr("users.invites.dialog.note")}
+            description={tr("users.invites.dialog.noteHint")}
+            maxLength={64}
+            autoComplete="off"
+          />
+        )}
+      </form.AppField>
+      <form.AppField name="expiresInDays">
+        {() => (
+          <SelectField
+            id="invite-expiry"
+            label={tr("users.invites.dialog.expiry")}
+            items={expiries}
+          />
+        )}
+      </form.AppField>
+    </FieldGroup>
+  )
+
   return (
     <form.AppForm>
-      <form
-        className="flex flex-col gap-6"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle>{tr("users.invites.create")}</DialogTitle>
-          <DialogDescription>
-            {tr("users.invites.dialog.description")}
-          </DialogDescription>
-        </DialogHeader>
-        <FieldGroup>
-          <form.AppField name="label" validators={{ onChange: InviteLabel }}>
-            {(field) => (
-              <field.TextField
-                label={tr("users.invites.dialog.note")}
-                description={tr("users.invites.dialog.noteHint")}
-                maxLength={64}
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="expiresInDays">
-            {() => (
-              <SelectField
-                id="invite-expiry"
-                label={tr("users.invites.dialog.expiry")}
-                items={expiries}
-              />
-            )}
-          </form.AppField>
-          {groups.data && groups.data.length > 0 && (
-            <form.Field name="groupIds">
-              {(field) => (
-                <FieldSet>
-                  <FieldLegend variant="label">
-                    {tr("users.invites.dialog.groups")}
-                  </FieldLegend>
-                  <ul className="-mt-1 flex flex-col gap-2.5">
-                    {groups.data.map((group) => (
-                      <li key={group.id}>
-                        <label className="flex min-w-0 items-center gap-3 text-sm">
-                          <Switch
+      <FormDialogForm onSubmit={() => void form.handleSubmit()}>
+        <FormDialogHeader
+          title={tr("users.invites.create")}
+          description={tr("users.invites.dialog.description")}
+        />
+        <FormDialogBody>
+          {groups.length === 0 ? (
+            fields
+          ) : (
+            <FormColumns>
+              <FormColumn>{fields}</FormColumn>
+              <FormColumn>
+                <FormSection
+                  title={tr("users.invites.dialog.groups")}
+                  description={tr("users.invites.dialog.groupsHint")}
+                >
+                  <form.Field name="groupIds">
+                    {(field) => (
+                      <SettingRows>
+                        {groups.map((group) => (
+                          <SwitchRow
+                            key={group.id}
+                            title={group.name}
                             checked={field.state.value.includes(group.id)}
-                            onCheckedChange={(on) =>
+                            onChange={(on) =>
                               field.handleChange(
                                 on
                                   ? [...field.state.value, group.id]
@@ -300,25 +316,21 @@ function InviteForm({
                               )
                             }
                           />
-                          <span className="truncate">{group.name}</span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="text-muted-foreground -mt-1 text-sm">
-                    {tr("users.invites.dialog.groupsHint")}
-                  </p>
-                </FieldSet>
-              )}
-            </form.Field>
+                        ))}
+                      </SettingRows>
+                    )}
+                  </form.Field>
+                </FormSection>
+              </FormColumn>
+            </FormColumns>
           )}
-        </FieldGroup>
-        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
+        </FormDialogBody>
+        <FormDialogFooter>
           <form.SubmitButton pending={create.isPending}>
             {tr("users.invites.dialog.submit")}
           </form.SubmitButton>
-        </DialogFooter>
-      </form>
+        </FormDialogFooter>
+      </FormDialogForm>
     </form.AppForm>
   )
 }
@@ -333,39 +345,39 @@ function CreatedLink({
   const { feedback, run } = useActionFeedback({ successDuration: 1500 })
   const copied = feedback.state === "success"
   return (
-    <div className="flex flex-col gap-6">
-      <DialogHeader>
-        <DialogTitle>{tr("users.invites.link.title")}</DialogTitle>
-        <DialogDescription>
-          {tr("users.invites.link.description", {
-            date: formatDateTime(invite.expiresAt),
-          })}
-        </DialogDescription>
-      </DialogHeader>
-      <div className="flex gap-2">
-        <Input
-          readOnly
-          value={invite.url}
-          aria-label={tr("users.invites.link.label")}
-          className="text-13px font-mono"
-          onFocus={(event) => event.currentTarget.select()}
-        />
-        <Button
-          variant="outline"
-          className="shrink-0"
-          onClick={() =>
-            void run(() => navigator.clipboard.writeText(invite.url))
-          }
-        >
-          {copied ? <CheckIcon /> : <CopyIcon />}
-          {copied
-            ? tr("users.invites.link.copied")
-            : tr("users.invites.link.copy")}
-        </Button>
-      </div>
-      <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <FormDialogHeader
+        title={tr("users.invites.link.title")}
+        description={tr("users.invites.link.description", {
+          date: formatDateTime(invite.expiresAt),
+        })}
+      />
+      <FormDialogBody>
+        <div className="flex gap-2">
+          <Input
+            readOnly
+            value={invite.url}
+            aria-label={tr("users.invites.link.label")}
+            className="text-13px font-mono"
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <Button
+            variant="outline"
+            className="shrink-0"
+            onClick={() =>
+              void run(() => navigator.clipboard.writeText(invite.url))
+            }
+          >
+            {copied ? <CheckIcon /> : <CopyIcon />}
+            {copied
+              ? tr("users.invites.link.copied")
+              : tr("users.invites.link.copy")}
+          </Button>
+        </div>
+      </FormDialogBody>
+      <FormDialogFooter cancel={false}>
         <Button onClick={onDone}>{tr("users.invites.link.done")}</Button>
-      </DialogFooter>
+      </FormDialogFooter>
     </div>
   )
 }

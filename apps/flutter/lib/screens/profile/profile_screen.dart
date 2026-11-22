@@ -111,7 +111,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (loaded == null) {
       return [
         header,
-        if (runsQueue(user)) const _Requests(),
+        if (can(user, Permission.adminRequestRead)) const _Requests(),
         if (profile.hasError && !profile.isLoading)
           FailureState(
             title: l.profileLoadFailed,
@@ -132,7 +132,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final asked = ref.watch(profileAskedProvider).value?.items ?? const [];
     return [
       header,
-      if (runsQueue(user)) const _Requests(),
+      if (can(user, Permission.adminRequestRead)) const _Requests(),
       _Favorites(favorites: loaded.favorites ?? const []),
       if (asked.isNotEmpty) AskedRail(items: asked, fresh: false),
       _statistics(context, user),
@@ -438,13 +438,15 @@ class _RecentRail extends StatelessWidget {
   }
 }
 
-/// An admin's way to the requests, with how many need them.
+/// The way to the requests, with how many need an answer for whoever
+/// answers them.
 class _Requests extends ConsumerWidget {
   const _Requests();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    final answers = ref.watch(runsQueueProvider);
     final needsYou = ref.watch(
       requestsProvider.select((state) => state.needsYou),
     );
@@ -454,7 +456,7 @@ class _Requests extends ConsumerWidget {
           LinkRow(
             icon: Lucide.inbox,
             title: l.webRequestsTitle,
-            value: needsYou > 0 ? formatCount(needsYou, l) : null,
+            value: answers && needsYou > 0 ? formatCount(needsYou, l) : null,
             onPressed: () => context.push(Routes.requestQueue),
           ),
         ],

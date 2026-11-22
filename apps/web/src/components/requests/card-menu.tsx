@@ -24,6 +24,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatDateTime, formatRelative } from "@/lib/format"
+import type { QueueActions } from "@/lib/permissions"
 import { useRequestActionsStore } from "@/stores/request-actions"
 
 import { choosesLibrary, useGoesTo } from "./goes-to"
@@ -44,6 +45,7 @@ export function CardMenu({
   onAdd,
   onRemove,
   onAllowAgain,
+  may,
 }: {
   item: AdminRequestItem
   /** Adds it, once a library is chosen under "Add to". */
@@ -51,13 +53,16 @@ export function CardMenu({
   /** On the requests page: removal, or lifting a decline. */
   onRemove?: () => void
   onAllowAgain?: () => void
+  /** What the viewer may do with it. */
+  may: QueueActions
 }) {
   const navigate = useNavigate()
   const move = useRequestActionsStore((state) => state.move)
   const { first, rest } = askers(item)
   const everyone = first ? [first, ...rest] : []
   const waiting = item.state === "waiting"
-  const choosing = waiting && onAdd && choosesLibrary(item)
+  const choosing =
+    waiting && may.approve && onAdd !== undefined && choosesLibrary(item)
   // A waiting request isn't routed yet: what fills it is its library's.
   const goesTo = useGoesTo(item)
   const where = [
@@ -207,7 +212,7 @@ export function CardMenu({
         )}
         {/* A declined request's removal lifts the decline, so it can be
             asked for again. */}
-        {item.state === "declined" && onAllowAgain && (
+        {item.state === "declined" && may.decline && onAllowAgain && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onAllowAgain}>
@@ -216,7 +221,7 @@ export function CardMenu({
             </DropdownMenuItem>
           </>
         )}
-        {item.state !== "declined" && onRemove && (
+        {item.state !== "declined" && may.remove && onRemove && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={onRemove}>

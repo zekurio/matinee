@@ -346,6 +346,13 @@ Future<void> openTvQueued(
   final container = ProviderScope.containerOf(context, listen: false);
   final hub = container.read(requestsProvider.notifier);
   final requests = container.read(requestsProvider);
+  final canApprove = container.read(
+    canProvider(Permission.adminRequestApprove),
+  );
+  final canDecline = container.read(
+    canProvider(Permission.adminRequestDecline),
+  );
+  final canRetry = container.read(canProvider(Permission.adminRequestRetry));
   final router = GoRouter.of(context);
   final host = _host(context);
   Widget row(_Pick pick, String icon, String title, {String? value}) => Builder(
@@ -387,26 +394,30 @@ Future<void> openTvQueued(
     builder: (panel) => [
       ...switch (state) {
         RequestState.waiting => [
-          row(_Pick.add, Lucide.check, l.webRequestsAdd),
-          if (choosesLibrary(item))
+          if (canApprove) row(_Pick.add, Lucide.check, l.webRequestsAdd),
+          if (canApprove && choosesLibrary(item))
             row(
               _Pick.goesTo,
               Lucide.libraryBig,
               l.webRequestsGoesToTitle,
               value: goes.name,
             ),
-          row(_Pick.decline, Lucide.x, l.webRequestsDecline),
+          if (canDecline) row(_Pick.decline, Lucide.x, l.webRequestsDecline),
         ],
         RequestState.needsAttention => [
-          row(_Pick.retry, Lucide.rotateCw, l.webRequestsRetry),
-          row(_Pick.giveUp, Lucide.circleSlash, l.webRequestsGiveUp),
+          if (canRetry) row(_Pick.retry, Lucide.rotateCw, l.webRequestsRetry),
+          if (canDecline)
+            row(_Pick.giveUp, Lucide.circleSlash, l.webRequestsGiveUp),
         ],
         RequestState.onTheWay => [
-          row(_Pick.giveUp, Lucide.circleSlash, l.webRequestsGiveUp),
+          if (canDecline)
+            row(_Pick.giveUp, Lucide.circleSlash, l.webRequestsGiveUp),
         ],
         RequestState.declined => [
-          row(_Pick.addAfterAll, Lucide.check, l.webRequestsAddAfterAll),
-          row(_Pick.allowAgain, Lucide.lockOpen, l.webRequestsAllowAgain),
+          if (canApprove)
+            row(_Pick.addAfterAll, Lucide.check, l.webRequestsAddAfterAll),
+          if (canDecline)
+            row(_Pick.allowAgain, Lucide.lockOpen, l.webRequestsAllowAgain),
         ],
         // Here, and a state this app doesn't know yet.
         _ => const <Widget>[],
@@ -946,7 +957,8 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final filter = _filter.value;
-    final queue = widget.queue && ref.watch(runsQueueProvider);
+    final queue =
+        widget.queue && ref.watch(canProvider(Permission.adminRequestRead));
     final body = queue ? _queueBody(l, filter) : _mineBody(l, filter);
     final cards = body.cards;
     // Down from the header lands on the card the grid had, or on the first
@@ -993,7 +1005,8 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
                   onPressed: _showFilters,
                 ),
                 // Like Add, it asks nothing.
-                if (waiting.length > 1)
+                if (waiting.length > 1 &&
+                    ref.watch(canProvider(Permission.adminRequestApprove)))
                   TvButton(
                     label: l.webRequestsAddAll(waiting.length),
                     icon: Lucide.listChecks,

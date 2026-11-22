@@ -1,4 +1,4 @@
-import type { Permission } from "@matinee/contracts"
+import { type Permission, permissionsOf } from "@matinee/contracts"
 
 import {
   createGroup,
@@ -8,7 +8,6 @@ import {
   removeGroup,
   updateGroup,
 } from "../access/groups"
-import { grantable } from "../access/policy"
 import { log } from "../log"
 import { authed, badRequest, notFound, requireOwn } from "./base"
 
@@ -30,15 +29,15 @@ function changed(
   ]
 }
 
-// Whoever saves a group holds every permission they add to it or take
-// from it, see `requireOwn`. Following another provider group swaps the
+// Whoever saves a group holds every permission its capabilities add or
+// take away, see `requireOwn`. Following another provider group swaps the
 // members the provider picks, which moves everything the group grants.
 // Its libraries and limits are theirs to set with `group.update` alone.
 export const adminGroups = {
   list: authed.admin.groups.list.handler(() => listGroups()),
 
   create: authed.admin.groups.create.handler(async ({ context, input }) => {
-    requireOwn(context.user, grantable(input.policy.permissions))
+    requireOwn(context.user, permissionsOf(input.policy))
     const created = await createGroup(input).catch(groupFailure)
     log.info(`${context.user.username} created the group ${created.name}`)
     return created
@@ -46,7 +45,7 @@ export const adminGroups = {
 
   update: authed.admin.groups.update.handler(async ({ context, input }) => {
     const { id, ...group } = input
-    const granted = grantable(group.policy.permissions)
+    const granted = permissionsOf(group.policy)
     const updated = await updateGroup(id, group, (before) => {
       const remapped =
         !before.everyone &&

@@ -15,8 +15,8 @@ import { withPermissions } from "@/lib/permissions"
 /**
  * Permissions by resource, as their names spell it: `library.scan` is
  * `scan` under `library`. They show as the API names them, since a token
- * is written against that API and a group grants the same names, with a
- * line under each resource saying what it covers.
+ * is written against that API, with a line under each resource saying
+ * what it covers.
  */
 function groupByResource(permissions: readonly Permission[]) {
   const groups = new Map<PermissionResource, Permission[]>()
@@ -32,15 +32,15 @@ function groupByResource(permissions: readonly Permission[]) {
 }
 
 /**
- * Permissions to pick, by resource, with a box per resource that takes
- * all of its permissions. `value` may hold permissions that aren't
- * offered; they stay as they are.
+ * An API token's permissions to pick, by resource in columns, with a box
+ * per resource that takes all of its permissions, or those the search
+ * shows. `value` may hold permissions that aren't offered; they stay as
+ * they are.
  */
 export function PermissionPicker({
   legend,
   offered,
   all,
-  mayChange,
   value,
   error,
   onChange,
@@ -53,8 +53,6 @@ export function PermissionPicker({
    * stands alone and the list hides.
    */
   all?: { label: string; hint: string }
-  /** False for a permission whose box is locked as it is. */
-  mayChange?: (permission: Permission) => boolean
   value: readonly Permission[]
   error?: string | undefined
   onChange: (value: Permission[]) => void
@@ -76,7 +74,6 @@ export function PermissionPicker({
       ),
     }))
     .filter((group) => group.shown.length > 0)
-  const open = (permission: Permission) => mayChange?.(permission) ?? true
 
   return (
     <FieldSet>
@@ -107,27 +104,27 @@ export function PermissionPicker({
             value={search}
             placeholder={tr("access.permissions.search")}
             aria-label={tr("access.permissions.search")}
+            className="md:max-w-md"
             onChange={(event) => setSearch(event.target.value)}
           />
-          <ul className="-mx-1 flex max-h-72 flex-col gap-3.5 overflow-y-auto px-1 py-0.5">
-            {groups.length === 0 && (
-              <li className="text-muted-foreground text-13px">
-                {tr("access.permissions.noMatch")}
-              </li>
-            )}
-            {groups.map(({ resource, permissions, shown }) => {
-              const changeable = permissions.filter(open)
-              return (
-                <li key={resource} className="flex flex-col gap-1.5">
+          {groups.length === 0 && (
+            <p className="text-muted-foreground text-13px">
+              {tr("access.permissions.noMatch")}
+            </p>
+          )}
+          {/* Columns by the dialog's width rather than the screen's. */}
+          <div className="@container">
+            <ul className="grid gap-x-8 gap-y-4 py-0.5 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
+              {groups.map(({ resource, shown }) => (
+                <li key={resource} className="flex min-w-0 flex-col gap-1.5">
                   <label className="flex items-start gap-2.5">
                     <Checkbox
                       className="mt-0.5"
-                      checked={permissions.every((permission) =>
+                      checked={shown.every((permission) =>
                         value.includes(permission),
                       )}
-                      disabled={changeable.length === 0}
                       onCheckedChange={(on) =>
-                        onChange(withPermissions(value, changeable, on))
+                        onChange(withPermissions(value, shown, on))
                       }
                     />
                     <span className="min-w-0">
@@ -145,7 +142,6 @@ export function PermissionPicker({
                         <label className="text-13px flex items-center gap-2">
                           <Checkbox
                             checked={value.includes(permission)}
-                            disabled={!open(permission)}
                             onCheckedChange={(on) =>
                               onChange(withPermissions(value, [permission], on))
                             }
@@ -156,9 +152,9 @@ export function PermissionPicker({
                     ))}
                   </ul>
                 </li>
-              )
-            })}
-          </ul>
+              ))}
+            </ul>
+          </div>
         </>
       )}
       {error && (

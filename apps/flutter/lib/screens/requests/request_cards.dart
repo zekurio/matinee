@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/link_opener.dart';
+import '../../core/permissions.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/server_text.dart';
@@ -634,36 +635,42 @@ class _QueueActions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final hub = ref.read(requestsProvider.notifier);
+    final canApprove = ref.watch(canProvider(Permission.adminRequestApprove));
+    final canDecline = ref.watch(canProvider(Permission.adminRequestDecline));
+    final canRetry = ref.watch(canProvider(Permission.adminRequestRetry));
     final List<Widget> buttons = switch (item.state) {
       RequestState.waiting => [
-        AddButton(item: item, small: true),
-        DeclineButton(item: item, small: true),
+        if (canApprove) AddButton(item: item, small: true),
+        if (canDecline) DeclineButton(item: item, small: true),
       ],
       RequestState.needsAttention => [
-        _SmallButton(
-          look: ButtonLook.secondary,
-          icon: Lucide.rotateCw,
-          text: l.webRequestsRetry,
-          label: l.webRequestsRetryNamed(item.title.name),
-          onPressed: () => unawaited(hub.retry(l, item)),
-        ),
-        _SmallButton(
-          text: l.webRequestsGiveUp,
-          onPressed: () =>
-              unawaited(showDeclineSheet(context, item, giveUp: true)),
-        ),
+        if (canRetry)
+          _SmallButton(
+            look: ButtonLook.secondary,
+            icon: Lucide.rotateCw,
+            text: l.webRequestsRetry,
+            label: l.webRequestsRetryNamed(item.title.name),
+            onPressed: () => unawaited(hub.retry(l, item)),
+          ),
+        if (canDecline)
+          _SmallButton(
+            text: l.webRequestsGiveUp,
+            onPressed: () =>
+                unawaited(showDeclineSheet(context, item, giveUp: true)),
+          ),
       ],
       RequestState.declined => [
-        _SmallButton(
-          look: ButtonLook.secondary,
-          icon: Lucide.check,
-          text: l.webRequestsAddAfterAll,
-          label: l.webRequestsAddAfterAllNamed(item.title.name),
-          onPressed: () {
-            onAnswered?.call(item);
-            unawaited(hub.answer(l, item, const AddAfterAllAnswer()));
-          },
-        ),
+        if (canApprove)
+          _SmallButton(
+            look: ButtonLook.secondary,
+            icon: Lucide.check,
+            text: l.webRequestsAddAfterAll,
+            label: l.webRequestsAddAfterAllNamed(item.title.name),
+            onPressed: () {
+              onAnswered?.call(item);
+              unawaited(hub.answer(l, item, const AddAfterAllAnswer()));
+            },
+          ),
       ],
       // Giving up on one on its way is rare and in its menu.
       _ => const [],
@@ -800,6 +807,9 @@ Future<void> showRequestMenu(
 }) {
   final l = AppLocalizations.of(context);
   final hub = ref.read(requestsProvider.notifier);
+  final canApprove = ref.read(canProvider(Permission.adminRequestApprove));
+  final canDecline = ref.read(canProvider(Permission.adminRequestDecline));
+  final canRetry = ref.read(canProvider(Permission.adminRequestRetry));
   return Sheet.show<void>(
     context,
     dismissLabel: l.commonCancel,
@@ -828,57 +838,64 @@ Future<void> showRequestMenu(
             _Whole(_menuWhole(item, l)),
             ...switch (item.state) {
               RequestState.waiting => [
-                if (choosesLibrary(item))
+                if (canApprove && choosesLibrary(item))
                   SheetItem(
                     icon: Lucide.libraryBig,
                     label: l.webRequestsGoesToTitle,
                     onPressed: () =>
                         then(() => unawaited(showGoesToSheet(context, item))),
                   ),
-                SheetItem(
-                  icon: Lucide.check,
-                  label: l.webRequestsAdd,
-                  onPressed: () => then(
-                    () => unawaited(hub.answer(l, item, const AddAnswer())),
+                if (canApprove)
+                  SheetItem(
+                    icon: Lucide.check,
+                    label: l.webRequestsAdd,
+                    onPressed: () => then(
+                      () => unawaited(hub.answer(l, item, const AddAnswer())),
+                    ),
                   ),
-                ),
-                SheetItem(
-                  icon: Lucide.x,
-                  label: l.webRequestsDecline,
-                  onPressed: () =>
-                      then(() => unawaited(showDeclineSheet(context, item))),
-                ),
+                if (canDecline)
+                  SheetItem(
+                    icon: Lucide.x,
+                    label: l.webRequestsDecline,
+                    onPressed: () =>
+                        then(() => unawaited(showDeclineSheet(context, item))),
+                  ),
               ],
               RequestState.needsAttention => [
-                SheetItem(
-                  icon: Lucide.rotateCw,
-                  label: l.webRequestsRetry,
-                  onPressed: () => then(() => unawaited(hub.retry(l, item))),
-                ),
-                SheetItem(
-                  icon: Lucide.circleSlash,
-                  label: l.webRequestsGiveUp,
-                  onPressed: giveUp,
-                ),
+                if (canRetry)
+                  SheetItem(
+                    icon: Lucide.rotateCw,
+                    label: l.webRequestsRetry,
+                    onPressed: () => then(() => unawaited(hub.retry(l, item))),
+                  ),
+                if (canDecline)
+                  SheetItem(
+                    icon: Lucide.circleSlash,
+                    label: l.webRequestsGiveUp,
+                    onPressed: giveUp,
+                  ),
               ],
               RequestState.onTheWay => [
-                SheetItem(
-                  icon: Lucide.circleSlash,
-                  label: l.webRequestsGiveUp,
-                  onPressed: giveUp,
-                ),
+                if (canDecline)
+                  SheetItem(
+                    icon: Lucide.circleSlash,
+                    label: l.webRequestsGiveUp,
+                    onPressed: giveUp,
+                  ),
               ],
               RequestState.declined => [
-                SheetItem(
-                  icon: Lucide.check,
-                  label: l.webRequestsAddAfterAll,
-                  onPressed: () => reopen(const AddAfterAllAnswer()),
-                ),
-                SheetItem(
-                  icon: Lucide.lockOpen,
-                  label: l.webRequestsAllowAgain,
-                  onPressed: () => reopen(const AllowAgainAnswer()),
-                ),
+                if (canApprove)
+                  SheetItem(
+                    icon: Lucide.check,
+                    label: l.webRequestsAddAfterAll,
+                    onPressed: () => reopen(const AddAfterAllAnswer()),
+                  ),
+                if (canDecline)
+                  SheetItem(
+                    icon: Lucide.lockOpen,
+                    label: l.webRequestsAllowAgain,
+                    onPressed: () => reopen(const AllowAgainAnswer()),
+                  ),
               ],
               _ => const <Widget>[],
             },

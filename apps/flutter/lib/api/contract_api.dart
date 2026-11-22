@@ -1956,7 +1956,7 @@ final class AdminRequestsApi {
     );
   }
 
-  /// The account needs the `adminRequest.update` permission, and so does an API token.
+  /// The account needs the `adminRequest.approve` permission, and so does an API token.
   /// `POST /admin/requests/approve`
   Future<void> approve({required String id, String? libraryId}) {
     final input = AdminRequestsApproveInput(id: id, libraryId: libraryId);
@@ -1968,7 +1968,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
-  /// The account needs the `adminRequest.update` permission, and so does an API token.
+  /// The account needs the `adminRequest.approve` permission, and so does an API token.
   /// `POST /admin/requests/approve-all`
   Future<void> approveAll({required List<String> ids}) {
     final input = AdminRequestsApproveAllInput(ids: ids);
@@ -1980,7 +1980,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
-  /// The account needs the `adminRequest.update` permission, and so does an API token.
+  /// The account needs the `adminRequest.decline` permission, and so does an API token.
   /// `POST /admin/requests/decline`
   Future<void> decline({
     required String id,
@@ -1996,7 +1996,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
-  /// The account needs the `adminRequest.update` permission, and so does an API token.
+  /// The account needs the `adminRequest.decline` permission, and so does an API token.
   /// `POST /admin/requests/give-up`
   Future<void> giveUp({required String id, required String? note}) {
     final input = AdminRequestsGiveUpInput(id: id, note: note);
@@ -2008,7 +2008,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
-  /// The account needs the `adminRequest.update` permission, and so does an API token.
+  /// The account needs the `adminRequest.decline` permission, and so does an API token.
   /// `POST /admin/requests/allow-again`
   Future<void> allowAgain(RequestId requestId) {
     final body = JsonBody(requestId.toJson());
@@ -2019,7 +2019,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
-  /// The account needs the `adminRequest.update` permission, and so does an API token.
+  /// The account needs the `adminRequest.approve` permission, and so does an API token.
   /// `POST /admin/requests/add-after-all`
   Future<void> addAfterAll(RequestId requestId) {
     final body = JsonBody(requestId.toJson());
@@ -2030,7 +2030,7 @@ final class AdminRequestsApi {
     ], body: body);
   }
 
-  /// The account needs the `adminRequest.update` permission, and so does an API token.
+  /// The account needs the `adminRequest.retry` permission, and so does an API token.
   /// `POST /admin/requests/retry`
   Future<void> retry(RequestId requestId) {
     final body = JsonBody(requestId.toJson());
@@ -2363,7 +2363,7 @@ final class AdminGroupsApi {
   Future<AdminGroupsCreateOutput> create({
     required String name,
     required String? providerGroup,
-    required AdminGroupsCreateInputPolicy policy,
+    required AccessPolicy policy,
   }) {
     final input = AdminGroupsCreateInput(
       name: name,
@@ -2385,7 +2385,7 @@ final class AdminGroupsApi {
     String id, {
     required String name,
     required String? providerGroup,
-    required AdminGroupsUpdateInputPolicy policy,
+    required AccessPolicy policy,
   }) {
     final input = AdminGroupsUpdateInput(
       name: name,
@@ -2678,7 +2678,7 @@ final class AdminUsersApi {
   Future<AdminUser> setAccess(
     String id, {
     required List<String> groupIds,
-    required AdminUsersSetAccessInputOverride override,
+    required AccessOverride override,
   }) {
     final input = AdminUsersSetAccessInput(
       groupIds: groupIds,

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show setEquals;
+import 'package:flutter/foundation.dart' show mapEquals, setEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show NumberFormat;
@@ -30,52 +30,35 @@ const _streamChoices = [1, 2, 3, 4, 5, 10];
 /// What "Limited" starts at, as on the web.
 const _defaultQuota = RequestQuota(titles: 5, days: 7);
 
-/// The permissions among [permissions] the form has no control for.
-List<String> _others(List<String>? permissions) => [
-  for (final permission in permissions ?? const <String>[])
-    if (!policyPermissions.contains(permission)) permission,
-];
+/// The levels of a part of running the server there is nothing to look
+/// at in alone.
+const _switchLevels = [AccessLevel.none, AccessLevel.manage];
 
-/// The request permissions among [permissions].
-List<String> _requestOnes(List<String>? permissions) => [
-  for (final permission in permissions ?? const <String>[])
-    if (requestPermissions.contains(permission)) permission,
-];
+/// The parts of running the server an account can be handed, with the
+/// levels each offers, least first: the contract's `MANAGED_AREAS` and
+/// `areaLevels`.
+const _areas = {
+  'requests': AccessLevel.all,
+  'connections': AccessLevel.all,
+  'libraries': _switchLevels,
+  'metadata': _switchLevels,
+  'users': AccessLevel.all,
+  'server': AccessLevel.all,
+};
 
-/// The request choice an override's allow and deny lists spell, or null
-/// when they leave it to the groups.
-RequestsChoice? _requestsChoice(AdminUserAccessOverride override) {
-  final allow = override.allow ?? const [];
-  final deny = override.deny ?? const [];
-  if (deny.contains(Permission.requestCreate)) return RequestsChoice.off;
-  if (!allow.contains(Permission.requestCreate)) return null;
-  return allow.contains(Permission.requestAutoApprove)
-      ? RequestsChoice.add
-      : RequestsChoice.ask;
-}
-
-/// What a request choice allows and denies.
-({List<String> allow, List<String> deny}) _requestsLists(
-  RequestsChoice? choice,
-) => switch (choice) {
-  null => (allow: const [], deny: const []),
-  RequestsChoice.off => (
-    allow: const [],
-    deny: const [Permission.requestCreate, Permission.requestAutoApprove],
-  ),
-  RequestsChoice.ask => (
-    allow: const [Permission.requestCreate],
-    deny: const [Permission.requestAutoApprove],
-  ),
-  RequestsChoice.add => (allow: requestPermissions, deny: const []),
+/// How far [manages] goes in [area].
+String _levelIn(ManagedAccess manages, String area) => switch (area) {
+  'requests' => manages.requests,
+  'connections' => manages.connections,
+  'libraries' => manages.libraries,
+  'metadata' => manages.metadata,
+  'users' => manages.users,
+  _ => manages.server,
 };
 
 /// One account's access as the form holds it: the groups an admin or an
 /// invite put it in, and what's set on it over them, each field null
 /// while the groups decide it. A limit's [Explicit] holds null for none.
-/// Downloads and requests are permissions the override allows or denies,
-/// as the web's access dialog has them; the override's other permissions
-/// have no control here and save as they were.
 @immutable
 final class _Draft {
   const _Draft({
@@ -87,11 +70,13 @@ final class _Draft {
     required this.requests,
     required this.requestLimit,
     required this.maxStreams,
-    this.requestsTouched = false,
+    required this.apiTokens,
+    required this.manages,
   });
 
   factory _Draft.of(AdminUserAccess access) {
     final override = access.override;
+    final manages = override.manages;
     return _Draft(
       groupIds: {
         for (final group in access.groups)
@@ -106,14 +91,19 @@ final class _Draft {
       },
       maxBitrate: override.maxBitrate,
       transcode: override.transcode,
-      downloads: (override.allow ?? const []).contains(Permission.mediaDownload)
-          ? true
-          : (override.deny ?? const []).contains(Permission.mediaDownload)
-          ? false
-          : null,
-      requests: _requestsChoice(override),
+      downloads: override.downloads,
+      requests: override.requests,
       requestLimit: override.requestLimit,
       maxStreams: override.maxStreams,
+      apiTokens: override.apiTokens,
+      manages: {
+        'requests': ?manages?.requests,
+        'connections': ?manages?.connections,
+        'libraries': ?manages?.libraries,
+        'metadata': ?manages?.metadata,
+        'users': ?manages?.users,
+        'server': ?manages?.server,
+      },
     );
   }
 
@@ -121,21 +111,16 @@ final class _Draft {
   final ({bool all, Set<String> ids})? libraries;
   final Explicit<int>? maxBitrate;
   final bool? transcode;
-
-  /// `media.download`, allowed or denied over the groups.
   final bool? downloads;
 
-  /// `request.create` and `request.autoApprove` as one choice.
-  final RequestsChoice? requests;
+  /// A [RequestMode].
+  final String? requests;
   final Explicit<RequestQuota>? requestLimit;
   final Explicit<int>? maxStreams;
+  final bool? apiTokens;
 
-  /// Whether the request choice was changed, even back to how it opened.
-  /// It shows three of the mixes its two permissions make, so one never
-  /// touched keeps what the override allows and denies of them: an
-  /// override may deny adding without an approval and leave asking to the
-  /// groups.
-  final bool requestsTouched;
+  /// The level set for each area that isn't left to the groups.
+  final Map<String, String> manages;
 
   _Draft copy({
     Set<String>? groupIds,
@@ -143,9 +128,11 @@ final class _Draft {
     Explicit<int>? Function()? maxBitrate,
     bool? Function()? transcode,
     bool? Function()? downloads,
-    RequestsChoice? Function()? requests,
+    String? Function()? requests,
     Explicit<RequestQuota>? Function()? requestLimit,
     Explicit<int>? Function()? maxStreams,
+    bool? Function()? apiTokens,
+    Map<String, String>? manages,
   }) => _Draft(
     groupIds: groupIds ?? this.groupIds,
     libraries: libraries == null ? this.libraries : libraries(),
@@ -155,40 +142,37 @@ final class _Draft {
     requests: requests == null ? this.requests : requests(),
     requestLimit: requestLimit == null ? this.requestLimit : requestLimit(),
     maxStreams: maxStreams == null ? this.maxStreams : maxStreams(),
-    requestsTouched: requestsTouched || requests != null,
+    apiTokens: apiTokens == null ? this.apiTokens : apiTokens(),
+    manages: manages ?? this.manages,
   );
 
-  /// The override to save over [saved], the one the form opened on.
-  AdminUsersSetAccessInputOverride own(AdminUserAccessOverride saved) {
-    final requests = requestsTouched
-        ? _requestsLists(this.requests)
-        : (allow: _requestOnes(saved.allow), deny: _requestOnes(saved.deny));
-    final allow = sortPermissions([
-      ..._others(saved.allow),
-      ...requests.allow,
-      if (downloads == true) Permission.mediaDownload,
-    ]);
-    final deny = sortPermissions([
-      ..._others(saved.deny),
-      ...requests.deny,
-      if (downloads == false) Permission.mediaDownload,
-    ]);
-    return AdminUsersSetAccessInputOverride(
-      libraries: switch (libraries) {
-        final libraries? => AdminUsersSetAccessInputOverrideLibraries(
-          all: libraries.all,
-          ids: libraries.all ? const [] : libraries.ids.toList(),
-        ),
-        null => null,
-      },
-      maxBitrate: maxBitrate,
-      transcode: transcode,
-      requestLimit: requestLimit,
-      maxStreams: maxStreams,
-      allow: allow.isEmpty ? null : allow,
-      deny: deny.isEmpty ? null : deny,
-    );
-  }
+  /// The override to save: each field the form doesn't leave to the groups.
+  AccessOverride own() => AccessOverride(
+    libraries: switch (libraries) {
+      final libraries? => AccessOverrideLibraries(
+        all: libraries.all,
+        ids: libraries.all ? const [] : libraries.ids.toList(),
+      ),
+      null => null,
+    },
+    maxBitrate: maxBitrate,
+    transcode: transcode,
+    maxStreams: maxStreams,
+    downloads: downloads,
+    requests: requests,
+    requestLimit: requestLimit,
+    apiTokens: apiTokens,
+    manages: manages.isEmpty
+        ? null
+        : AccessOverrideManages(
+            requests: manages['requests'],
+            connections: manages['connections'],
+            libraries: manages['libraries'],
+            metadata: manages['metadata'],
+            users: manages['users'],
+            server: manages['server'],
+          ),
+  );
 
   static bool _sameLimit<T extends Object>(Explicit<T>? a, Explicit<T>? b) =>
       (a == null) == (b == null) && a?.value == b?.value;
@@ -212,7 +196,9 @@ final class _Draft {
       downloads == other.downloads &&
       requests == other.requests &&
       _sameQuota(requestLimit, other.requestLimit) &&
-      _sameLimit(maxStreams, other.maxStreams);
+      _sameLimit(maxStreams, other.maxStreams) &&
+      apiTokens == other.apiTokens &&
+      mapEquals(manages, other.manages);
 
   @override
   int get hashCode => Object.hash(groupIds.length, transcode, requests);
@@ -303,7 +289,7 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
       await api.admin.users.setAccess(
         widget.user.id,
         groupIds: _draft.groupIds.toList(),
-        override: _draft.own(widget.user.access.override),
+        override: _draft.own(),
       );
     } on Object catch (error) {
       if (mounted) {
@@ -354,8 +340,7 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
         if (group.source == AccessSource.provider) group.id,
     };
     final effective = access.effective;
-    final groupRequests = requestsOf(from.permissions);
-    final more = words.permissions(effective.permissions);
+    final more = words.manages(effective.manages, admin: user.isAdmin);
     final synced = DateTime.tryParse(user.claimsSyncedAt ?? '');
 
     final bitrates = {
@@ -403,12 +388,7 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                     ),
                     ValueRow(
                       title: l.adminAccessDownloads,
-                      value: words.allowed(
-                        holdsPermission(
-                          effective.permissions,
-                          Permission.mediaDownload,
-                        ),
-                      ),
+                      value: words.allowed(effective.downloads),
                     ),
                     ValueRow(
                       title: l.adminAccessStreams,
@@ -417,13 +397,17 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                     ValueRow(
                       title: l.adminAccessRequests,
                       value: words.requests(
-                        requestsOf(effective.permissions),
+                        effective.requests,
                         effective.requestLimit,
                       ),
                     ),
+                    ValueRow(
+                      title: l.webAccessApiTokens,
+                      value: words.allowed(effective.apiTokens),
+                    ),
                     if (more != null)
                       ValueRow(
-                        title: l.adminAccessPermissions,
+                        title: l.webAccessSectionServer,
                         value: more.label,
                       ),
                   ],
@@ -582,14 +566,7 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                     ),
                     PickerRow<String>(
                       title: l.adminAccessDownloads,
-                      options: _switchOptions(
-                        words,
-                        inherited,
-                        holdsPermission(
-                          from.permissions,
-                          Permission.mediaDownload,
-                        ),
-                      ),
+                      options: _switchOptions(words, inherited, from.downloads),
                       current: _switchKey(draft.downloads),
                       onPicked: (choice) =>
                           _edit(draft.copy(downloads: () => _switchOf(choice))),
@@ -609,19 +586,25 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                       onPicked: (choice) =>
                           _edit(draft.copy(maxStreams: () => _limitOf(choice))),
                     ),
-                    PickerRow<RequestsChoice?>(
+                    PickerRow<String>(
                       title: l.adminAccessRequests,
                       options: [
-                        (null, inherited(words.requestMode(groupRequests))),
-                        for (final mode in RequestsChoice.values)
+                        (
+                          _fromGroups,
+                          inherited(words.requestMode(from.requests)),
+                        ),
+                        for (final mode in RequestMode.all)
                           (mode, words.requestMode(mode)),
                       ],
-                      current: draft.requests,
-                      onPicked: (choice) =>
-                          _edit(draft.copy(requests: () => choice)),
+                      current: draft.requests ?? _fromGroups,
+                      onPicked: (choice) => _edit(
+                        draft.copy(
+                          requests: () => choice == _fromGroups ? null : choice,
+                        ),
+                      ),
                     ),
-                    if ((draft.requests ?? groupRequests) !=
-                        RequestsChoice.off) ...[
+                    if ((draft.requests ?? from.requests) !=
+                        RequestMode.off) ...[
                       PickerRow<String>(
                         title: l.adminAccessRequestLimit,
                         options: [
@@ -658,6 +641,13 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                           ),
                         ),
                     ],
+                    PickerRow<String>(
+                      title: l.webAccessApiTokens,
+                      options: _switchOptions(words, inherited, from.apiTokens),
+                      current: _switchKey(draft.apiTokens),
+                      onPicked: (choice) =>
+                          _edit(draft.copy(apiTokens: () => _switchOf(choice))),
+                    ),
                   ],
                 ),
                 if (draft.libraries?.all ?? false)
@@ -665,6 +655,44 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                 if (_error('maxBitrate') ?? _error('maxStreams')
                     case final error?)
                   Note(error, danger: true),
+              ],
+            ),
+          ),
+          SettingsSection(
+            title: l.webAccessSectionServer,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 8,
+              children: [
+                Note(l.webAccessSectionServerHint),
+                Panel(
+                  rows: [
+                    for (final MapEntry(key: area, value: levels)
+                        in _areas.entries)
+                      PickerRow<String>(
+                        title: words.area(area),
+                        description: words.areaHint(area),
+                        options: [
+                          (
+                            _fromGroups,
+                            inherited(
+                              words.level(area, _levelIn(from.manages, area)),
+                            ),
+                          ),
+                          for (final level in levels)
+                            (level, words.level(area, level)),
+                        ],
+                        current: draft.manages[area] ?? _fromGroups,
+                        onPicked: (choice) => _edit(
+                          draft.copy(
+                            manages: choice == _fromGroups
+                                ? ({...draft.manages}..remove(area))
+                                : {...draft.manages, area: choice},
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -742,10 +770,11 @@ final class _Words {
   String allowed(bool on) =>
       on ? l.adminAccessAllowed : l.adminAccessNotAllowed;
 
-  String requestMode(RequestsChoice mode) => switch (mode) {
-    RequestsChoice.off => l.adminAccessRequestsOff,
-    RequestsChoice.add => l.adminAccessRequestsAdd,
-    RequestsChoice.ask => l.adminAccessRequestsAsk,
+  /// A [RequestMode].
+  String requestMode(String mode) => switch (mode) {
+    RequestMode.off => l.adminAccessRequestsOff,
+    RequestMode.add => l.adminAccessRequestsAdd,
+    _ => l.adminAccessRequestsAsk,
   };
 
   String quota(RequestQuota? quota) => quota == null
@@ -755,23 +784,63 @@ final class _Words {
           l.adminAccessRequestLimitPeriod(quota.days),
         );
 
-  String requests(RequestsChoice mode, RequestQuota? limit) =>
-      mode == RequestsChoice.off || limit == null
+  String requests(String mode, RequestQuota? limit) =>
+      mode == RequestMode.off || limit == null
       ? requestMode(mode)
       : l.adminAccessRequestsLimited(requestMode(mode), quota(limit));
 
-  /// "Every permission" for an admin, or how many [permissions] grants
-  /// besides downloading and requesting, which have rows of their own,
-  /// with their names. Null for none.
-  ({String label, String? names})? permissions(List<String> permissions) {
-    if (permissions.contains(Permission.all)) {
-      return (label: l.adminAccessPermissionsAll, names: null);
+  /// A part of running the server, like "Request queue".
+  String area(String area) => switch (area) {
+    'requests' => l.webAccessAreaRequests,
+    'connections' => l.webAccessAreaConnections,
+    'libraries' => l.webAccessAreaLibraries,
+    'metadata' => l.webAccessAreaMetadata,
+    'users' => l.webAccessAreaUsers,
+    _ => l.webAccessAreaServer,
+  };
+
+  /// What [area] covers, in a line.
+  String areaHint(String area) => switch (area) {
+    'requests' => l.webAccessAreaRequestsHint,
+    'connections' => l.webAccessAreaConnectionsHint,
+    'libraries' => l.webAccessAreaLibrariesHint,
+    'metadata' => l.webAccessAreaMetadataHint,
+    'users' => l.webAccessAreaUsersHint,
+    _ => l.webAccessAreaServerHint,
+  };
+
+  /// A level of [area]. An area that is all or nothing says "On" for
+  /// `manage`, as a switch would.
+  String level(String area, String level) {
+    if (_areas[area]?.length == 2) {
+      return level == AccessLevel.none
+          ? l.webAccessLevelOff
+          : l.webAccessLevelOn;
     }
-    final more = _others(permissions);
-    if (more.isEmpty) return null;
+    return switch (level) {
+      AccessLevel.none => l.webAccessLevelNone,
+      AccessLevel.view => l.webAccessLevelView,
+      _ => l.webAccessLevelManage,
+    };
+  }
+
+  /// "Every permission" for an admin, or how many parts of running the
+  /// server [manages] hands on, with each one's level. Null for none.
+  ({String label, String? names})? manages(
+    ManagedAccess manages, {
+    required bool admin,
+  }) {
+    if (admin) return (label: l.adminAccessPermissionsAll, names: null);
+    final held = [
+      for (final name in _areas.keys)
+        if (_levelIn(manages, name) case final given
+            when given != AccessLevel.none)
+          l.webAccessManagesArea(area(name), level(name, given)),
+    ];
+    if (held.isEmpty) return null;
     return (
-      label: l.adminAccessPermissionsCount(more.length),
-      names: more.join(', '),
+      label: l.webAccessManagesCount(held.length),
+      names: held.join(', '),
     );
   }
 }

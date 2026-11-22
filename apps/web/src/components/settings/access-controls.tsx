@@ -1,6 +1,12 @@
 import {
   BITRATE_LIMITS,
+  type Capabilities,
   type Library,
+  type ManagedArea,
+  MANAGES_NOTHING,
+  type Permission,
+  permissionsOf,
+  type RequestMode,
   type RequestQuota,
 } from "@matinee/contracts"
 import { Input } from "@matinee/ui/components/input"
@@ -9,7 +15,6 @@ import { useId } from "react"
 
 import { libraryIcons } from "@/components/app-shell"
 import { tr } from "@/i18n"
-import { REQUESTS_CHOICES, type RequestsChoice } from "@/lib/permissions"
 
 import { bitrateLimitLabel, streamLimitLabel } from "./access-facts"
 
@@ -118,11 +123,37 @@ export function LibraryPicker({
   )
 }
 
-/** Who may ask for titles the server doesn't have, and whether an admin approves. */
-export const REQUEST_CHOICES = REQUESTS_CHOICES
-
-export function requestsLabel(value: RequestsChoice): string {
+export function requestsLabel(value: RequestMode): string {
   return tr(`access.requests.${value}`)
+}
+
+/** What a policy's capabilities stand for, one at a time. */
+export type Capability = "downloads" | "requests" | "apiTokens" | ManagedArea
+
+/**
+ * Every permission `capability` can grant. Whoever edits it needs them
+ * all, since the server refuses a change to one they don't hold.
+ */
+export function capabilityPermissions(capability: Capability): Permission[] {
+  const none: Capabilities = {
+    downloads: false,
+    requests: "off",
+    apiTokens: false,
+    manages: MANAGES_NOTHING,
+  }
+  switch (capability) {
+    case "downloads":
+      return permissionsOf({ ...none, downloads: true })
+    case "requests":
+      return permissionsOf({ ...none, requests: "add" })
+    case "apiTokens":
+      return permissionsOf({ ...none, apiTokens: true })
+    default:
+      return permissionsOf({
+        ...none,
+        manages: { ...MANAGES_NOTHING, [capability]: "manage" },
+      })
+  }
 }
 
 /** A request limit as its select holds it: none, or a number per days. */
