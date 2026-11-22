@@ -355,20 +355,21 @@ Future<void> openTvQueued(
   final picked = await showTvPanel<_Pick>(
     context,
     title: item.title.name,
-    // What went wrong rarely fits on the card, so it reads here, under
-    // where the request goes. A declined one's line says when and why,
-    // with the note, and needs the room more than where it would have gone.
-    description: state == RequestState.declined
-        ? queueLine(requests, item, l).text
-        : [
-            [
-              requestStateText(state, l, progress: _progressOf(item)),
-              goes.name,
-              goes.connection ?? l.webRequestsNoConnection,
-            ].join(' · '),
-            if (state == RequestState.needsAttention)
-              queueLine(requests, item, l).text,
-          ].join('\n'),
+    // What went wrong, or why it was declined, rarely fits on the card,
+    // so it reads here first, where it can wrap; the badge on the card has
+    // already said which state it's in.
+    description: switch (state) {
+      RequestState.declined => queueLine(requests, item, l).text,
+      RequestState.needsAttention => [
+        queueLine(requests, item, l).text,
+        [goes.name, goes.connection ?? l.webRequestsNoConnection].join(' · '),
+      ].join('\n'),
+      _ => [
+        requestStateText(state, l, progress: _progressOf(item)),
+        goes.name,
+        goes.connection ?? l.webRequestsNoConnection,
+      ].join(' · '),
+    },
     builder: (panel) => [
       ...switch (state) {
         RequestState.waiting => [
@@ -888,7 +889,8 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
             ),
         ],
       ),
-      line: TvFocusLine(_focused),
+      // The last card to leave takes its name off the line with it.
+      line: TvFocusLine(body.cards.isEmpty ? null : _focused),
       lineHeight: tvFocusLineHeight,
       onNearEnd: body.more,
       footer: body.footer,
