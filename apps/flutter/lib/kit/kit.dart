@@ -8,6 +8,7 @@ export 'chips.dart';
 export 'dialog.dart';
 export 'icon.dart';
 export 'logo.dart';
+export 'material_you.dart';
 export 'menu.dart';
 export 'page_dots.dart';
 export 'page_frame.dart';

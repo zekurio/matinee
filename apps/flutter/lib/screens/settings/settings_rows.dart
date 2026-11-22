@@ -309,12 +309,16 @@ class SwitchRow extends StatelessWidget {
     required this.checked,
     required this.onChanged,
     this.icon,
+    this.description,
   });
 
   final String title;
   final bool checked;
   final ValueChanged<bool>? onChanged;
   final String? icon;
+
+  /// What the switch is for, under its title.
+  final String? description;
 
   @override
   Widget build(BuildContext context) {
@@ -328,7 +332,9 @@ class SwitchRow extends StatelessWidget {
         child: Row(
           children: [
             if (icon != null) _RowIcon(icon),
-            Expanded(child: _RowText(title: title)),
+            Expanded(
+              child: _RowText(title: title, description: description),
+            ),
             const SizedBox(width: 12),
             Switch(checked: checked, onChanged: change),
           ],

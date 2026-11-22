@@ -547,9 +547,25 @@
   "@appName": {
     "description": "strings.xml. The app's name, never translated."
   },
+  "appearanceMaterialYou": "Material You",
+  "@appearanceMaterialYou": {
+    "description": "Appearance: the switch that colors the app from the wallpaper, on Android 12 and later"
+  },
+  "appearanceMaterialYouHint": "Colors from your wallpaper",
+  "@appearanceMaterialYouHint": {
+    "description": "Appearance: what Material You does, under its switch"
+  },
+  "appearanceMaterialYouReplaces": "Matinee's theme and the server's accent color don't apply while this is on.",
+  "@appearanceMaterialYouReplaces": {
+    "description": "Appearance: under the Material You switch while it's on"
+  },
   "appearancePreset": "Theme",
   "@appearancePreset": {
     "description": "Appearance: the section picking the color preset"
+  },
+  "appearancePresetLocked": "Turn Material You off to pick a theme.",
+  "@appearancePresetLocked": {
+    "description": "Appearance: under the theme row while Material You is on"
   },
   "appearancePresetMatinee": "Matinee",
   "@appearancePresetMatinee": {
@@ -558,6 +574,10 @@
   "askedLoadFailed": "Couldn't load your requests",
   "@askedLoadFailed": {
     "description": "strings_loading.xml"
+  },
+  "brandingPresets": "Suggested accents",
+  "@brandingPresets": {
+    "description": "Branding: the label above the suggested accent color swatches"
   },
   "browseClearAll": "Clear all",
   "@browseClearAll": {

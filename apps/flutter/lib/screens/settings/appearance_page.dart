@@ -1,14 +1,16 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/device.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import 'settings_rows.dart';
 import 'settings_screen.dart';
 
 /// Settings, Appearance, as the web's: the color scheme as three miniatures of
-/// the app, then the theme preset, each a miniature in its light and dark
-/// colors. Both are this device's, kept by `themeStoreProvider`.
+/// the app, the theme preset as a row, and, on Android 12 and later, the
+/// choice to take the wallpaper's colors instead. All are this device's, kept
+/// by `themeStoreProvider`.
 class AppearancePage extends ConsumerWidget {
   const AppearancePage({super.key});
 
@@ -19,6 +21,12 @@ class AppearancePage extends ConsumerWidget {
         ref.watch(themeStoreProvider).value ?? defaultThemePreferences;
     final store = ref.read(themeStoreProvider.notifier);
     final preset = saved.preset;
+    final wallpaper = ref.watch(materialYouProvider).value;
+    // Material You is Android's, and a TV keeps Matinee's own theme.
+    final hasMaterialYou = wallpaper != null && !ref.watch(deviceProvider).isTv;
+    final onWallpaper = hasMaterialYou && saved.materialYou;
+    final light = onWallpaper ? wallpaper.light : preset.light;
+    final dark = onWallpaper ? wallpaper.dark : preset.dark;
     return SettingsScaffold(
       title: l.settingsPageAppearance,
       sections: [
@@ -41,11 +49,11 @@ class AppearancePage extends ConsumerWidget {
                     onPressed: () => store.setAppearance(appearance),
                     picture: switch (appearance) {
                       ThemeAppearance.system => _Split(
-                        light: preset.light,
-                        dark: preset.dark,
+                        light: light,
+                        dark: dark,
                       ),
-                      ThemeAppearance.light => _Miniature(preset.light),
-                      ThemeAppearance.dark => _Miniature(preset.dark),
+                      ThemeAppearance.light => _Miniature(light),
+                      ThemeAppearance.dark => _Miniature(dark),
                     },
                   ),
                 ),
@@ -54,26 +62,121 @@ class AppearancePage extends ConsumerWidget {
         ),
         SettingsSection(
           title: l.appearancePreset,
-          child: Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 8,
             children: [
-              for (final option in ThemePreset.values)
-                SizedBox(
-                  width: 140,
-                  child: _Choice(
-                    label: switch (option) {
-                      ThemePreset.matinee => l.appearancePresetMatinee,
-                    },
-                    selected: option == preset,
-                    onPressed: () => store.setPreset(option),
-                    picture: _Split(light: option.light, dark: option.dark),
-                  ),
-                ),
+              Panel(
+                rows: [
+                  for (final option in ThemePreset.values)
+                    _PresetRow(
+                      label: switch (option) {
+                        ThemePreset.matinee => l.appearancePresetMatinee,
+                      },
+                      light: option.light,
+                      dark: option.dark,
+                      selected: option == preset,
+                      enabled: !onWallpaper,
+                      onPressed: () => store.setPreset(option),
+                    ),
+                ],
+              ),
+              if (onWallpaper) _Note(l.appearancePresetLocked),
             ],
           ),
         ),
+        if (hasMaterialYou)
+          SettingsSection(
+            title: l.appearanceMaterialYou,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 8,
+              children: [
+                Panel(
+                  rows: [
+                    SwitchRow(
+                      icon: Lucide.palette,
+                      title: l.appearanceMaterialYou,
+                      description: l.appearanceMaterialYouHint,
+                      checked: saved.materialYou,
+                      onChanged: store.setMaterialYou,
+                    ),
+                  ],
+                ),
+                if (onWallpaper) _Note(l.appearanceMaterialYouReplaces),
+              ],
+            ),
+          ),
       ],
+    );
+  }
+}
+
+/// A section's line of context, muted, as the admin pages' notes.
+class _Note extends StatelessWidget {
+  const _Note(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: KitText.sm.style(color: MatineeTheme.of(context).mutedForeground),
+  );
+}
+
+/// A preset as a settings row: its light and dark miniature, its name, and a
+/// check when it's the one picked. It dims while Material You gives the app
+/// its colors instead.
+class _PresetRow extends StatelessWidget {
+  const _PresetRow({
+    required this.label,
+    required this.light,
+    required this.dark,
+    required this.selected,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final String label;
+  final KitColors light;
+  final KitColors dark;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    return PressIndication(
+      onPressed: enabled ? onPressed : null,
+      label: label,
+      checked: selected,
+      builder: (context, state) => Opacity(
+        opacity: enabled ? 1 : .5,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            spacing: 14,
+            children: [
+              SizedBox(
+                width: 64,
+                child: ExcludeSemantics(
+                  child: _Split(light: light, dark: dark),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  label,
+                  style: KitText.base.style(color: colors.foreground),
+                ),
+              ),
+              if (selected)
+                KitIcon(Lucide.check, size: 18, color: colors.accent),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

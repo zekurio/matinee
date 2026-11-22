@@ -7,6 +7,7 @@ import 'core/device.dart';
 import 'core/server_accents.dart';
 import 'core/toasts.dart';
 import 'kit/accent.dart';
+import 'kit/material_you.dart';
 import 'kit/theme.dart';
 import 'kit/theme_store.dart';
 import 'kit/toast.dart';
@@ -25,57 +26,68 @@ class MatineeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences =
         ref.watch(themeStoreProvider).value ?? defaultThemePreferences;
+    final device = ref.watch(deviceProvider);
+    // The wallpaper's colors instead of Matinee's, where Material You is on:
+    // the server's accents and the preset stay out of the way then.
+    final wallpaper = preferences.materialYou && !device.isTv
+        ? ref.watch(materialYouProvider).value
+        : null;
     // The server's accents, or the Branding page's before they're saved,
     // over the preset's own, as the web paints them.
-    final accents =
-        ref.watch(accentPreviewProvider) ?? ref.watch(serverAccentsProvider);
-    final light = accented(preferences.preset.light, accents?.light);
-    final dark = accented(preferences.preset.dark, accents?.dark);
-    return MaterialApp.router(
-      routerConfig: ref.watch(routerProvider),
-      onNavigationNotification: ref.watch(backClaimProvider).onNotification,
-      theme: MatineeTheme.data(light, dark: dark),
-      darkTheme: MatineeTheme.data(dark),
-      themeMode: switch (preferences.appearance) {
-        ThemeAppearance.system => ThemeMode.system,
-        ThemeAppearance.light => ThemeMode.light,
-        ThemeAppearance.dark => ThemeMode.dark,
-      },
-      onGenerateTitle: (context) => AppLocalizations.of(context).appName,
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      builder: (context, child) => DefaultTextStyle(
-        style: KitText.sm.style(color: MatineeTheme.of(context).foreground),
-        // Toasts sit above the tab bar, over whatever page is open.
-        child: Stack(
-          children: [
-            child!,
-            if (ref.watch(deviceProvider).isTv)
-              // Clear of the drawer's rail and the overscan.
-              Positioned(
-                left: TvPage.start,
-                right: TvPage.end,
-                bottom: Overscan.vertical + 16,
-                child: Center(
-                  child: ToastHost(state: ref.watch(toastProvider), tv: true),
+    final accents = wallpaper == null
+        ? ref.watch(accentPreviewProvider) ?? ref.watch(serverAccentsProvider)
+        : null;
+    final light =
+        wallpaper?.light ?? accented(preferences.preset.light, accents?.light);
+    final dark =
+        wallpaper?.dark ?? accented(preferences.preset.dark, accents?.dark);
+    return MaterialYouWatcher(
+      child: MaterialApp.router(
+        routerConfig: ref.watch(routerProvider),
+        onNavigationNotification: ref.watch(backClaimProvider).onNotification,
+        theme: MatineeTheme.data(light, dark: dark),
+        darkTheme: MatineeTheme.data(dark),
+        themeMode: switch (preferences.appearance) {
+          ThemeAppearance.system => ThemeMode.system,
+          ThemeAppearance.light => ThemeMode.light,
+          ThemeAppearance.dark => ThemeMode.dark,
+        },
+        onGenerateTitle: (context) => AppLocalizations.of(context).appName,
+        debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => DefaultTextStyle(
+          style: KitText.sm.style(color: MatineeTheme.of(context).foreground),
+          // Toasts sit above the tab bar, over whatever page is open.
+          child: Stack(
+            children: [
+              child!,
+              if (device.isTv)
+                // Clear of the drawer's rail and the overscan.
+                Positioned(
+                  left: TvPage.start,
+                  right: TvPage.end,
+                  bottom: Overscan.vertical + 16,
+                  child: Center(
+                    child: ToastHost(state: ref.watch(toastProvider), tv: true),
+                  ),
+                )
+              else
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 64,
+                  child: Center(
+                    child: ToastHost(state: ref.watch(toastProvider)),
+                  ),
                 ),
-              )
-            else
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 64,
-                child: Center(
-                  child: ToastHost(state: ref.watch(toastProvider)),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
