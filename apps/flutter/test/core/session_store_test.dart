@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
@@ -71,6 +73,37 @@ void main() {
       'https://a.example/',
       'https://b.example/',
     ]);
+  });
+
+  group('a saved user', () {
+    test('from before permissions reads with none', () {
+      final old = {...userJson('ada')}..remove('permissions');
+      final user = decodeUser(jsonEncode(old));
+
+      expect(user?.username, 'ada');
+      expect(user?.permissions, isEmpty);
+    });
+
+    test('keeps the permissions it was saved with', () {
+      final user = decodeUser(
+        jsonEncode({
+          ...userJson('ada'),
+          'permissions': ['all'],
+        }),
+      );
+
+      expect(user?.permissions, ['all']);
+    });
+
+    test('that lacks anything else still reads as none', () {
+      final broken = {...userJson('ada')}
+        ..remove('permissions')
+        ..remove('username');
+
+      expect(decodeUser(jsonEncode(broken)), isNull);
+      expect(decodeUser('{broken'), isNull);
+      expect(decodeUser('"ada"'), isNull);
+    });
   });
 
   test('a list that isn\'t JSON reads as none', () async {

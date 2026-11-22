@@ -19,9 +19,22 @@ import '../media/fixtures.dart' show titleJson;
 import '../media/harness.dart';
 import 'requests_backend.dart';
 
+/// An account that isn't an admin but was granted the request queue.
+final _runsQueue = SignedIn(
+  '$server',
+  User.fromJson({
+    ...userJson('grace'),
+    'permissions': ['adminRequest.read', 'adminRequest.update'],
+  }),
+);
+
 final _admin = SignedIn(
   '$server',
-  User.fromJson({...userJson('ada'), 'role': 'admin'}),
+  User.fromJson({
+    ...userJson('ada'),
+    'role': 'admin',
+    'permissions': ['all'],
+  }),
 );
 
 /// [screen] with the app's toasts over it, as the app shows them.
@@ -209,6 +222,40 @@ void main() {
       await tester.tap(find.text('Requests'));
       await tester.pumpAndSettle();
       expect(find.text('/requests/waiting'), findsOneWidget);
+    });
+
+    testWidgets('whoever runs the queue gets the way to it, admin or not', (
+      tester,
+    ) async {
+      final backend = _explore()..queue = _queue();
+      await pumpScreen(
+        tester,
+        const SearchScreen(),
+        client: backend.client,
+        auth: _runsQueue,
+      );
+      expect(find.text('Requests'), findsOneWidget);
+      expect(backend.asked, contains('/api/v1/admin/requests/live'));
+    });
+
+    testWidgets('reading the queue without answering it isn\'t enough', (
+      tester,
+    ) async {
+      final backend = _explore()..queue = _queue();
+      await pumpScreen(
+        tester,
+        const SearchScreen(),
+        client: backend.client,
+        auth: SignedIn(
+          '$server',
+          User.fromJson({
+            ...userJson('grace'),
+            'permissions': ['adminRequest.read'],
+          }),
+        ),
+      );
+      expect(find.text('Requests'), findsNothing);
+      expect(backend.asked, isNot(contains('/api/v1/admin/requests/live')));
     });
 
     testWidgets('Discover off leaves the page empty', (tester) async {

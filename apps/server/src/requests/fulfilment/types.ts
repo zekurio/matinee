@@ -9,6 +9,8 @@ import type {
 } from "@matinee/contracts"
 import type { t } from "@matinee/contracts/schema"
 
+import type { Seer } from "../../access/visible"
+
 /**
  * What a source throws when its server can't be reached. Dispatch tries
  * again on exactly this message, so sources use the constant.
@@ -105,9 +107,13 @@ export interface FulfilmentSource {
   parseOptions(value: FulfilmentValues): FulfilmentValues
   /**
    * The fields of its options with the choices its server offers, what a
-   * new connection starts from, and the fields a rule can change.
+   * new connection starts from, and the fields a rule can change. A choice
+   * that names a Matinee library offers only those `viewer` sees.
    */
-  options(connection: FulfilmentConnection): Promise<{
+  options(
+    connection: FulfilmentConnection,
+    viewer: Seer,
+  ): Promise<{
     fields: DescribedField[]
     values: FulfilmentValues
     rule: DescribedField[]

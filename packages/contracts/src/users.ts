@@ -1,3 +1,4 @@
+import { Permission } from "./permissions"
 import { LibraryPreferences, PlaybackPreferences } from "./preferences"
 import { t } from "./schema"
 
@@ -31,6 +32,13 @@ export const User = t.object({
   username: t.string(),
   displayName: t.string().nullable(),
   role: UserRole,
+  /**
+   * What the account was granted beyond `BASE_PERMISSIONS`: `all` for an
+   * admin, else what its groups and its override leave. Ask
+   * `holdsPermission` rather than reading the list, since it leaves out
+   * what every account has.
+   */
+  permissions: t.array(Permission),
   /** Load it through `avatarPath()`. Null shows the initial instead. */
   avatarId: t.string().nullable(),
   avatarSource: AvatarSource,

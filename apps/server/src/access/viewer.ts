@@ -1,6 +1,18 @@
+import {
+  grantsPermissions,
+  holdsPermission,
+  type Permission,
+  type User,
+} from "@matinee/contracts"
+import type { UserRow } from "@matinee/db"
 import type { Context } from "hono"
 
-import { readSession, type SessionUser } from "../auth/session"
+import {
+  publicUser,
+  readCaller,
+  readSession,
+  type SessionUser,
+} from "../auth/session"
 import { connectionOf } from "../network/connection"
 import { networkRules } from "../network/settings"
 import { partyShare } from "../party/state"
@@ -17,10 +29,49 @@ export async function viewerOf(user: SessionUser): Promise<Viewer> {
   return { ...user, access: await accessOf(user) }
 }
 
-/** The viewer of a plain HTTP route, or null when nobody is signed in. */
-export async function readViewer(c: Context): Promise<Viewer | null> {
-  const user = await readSession(c)
-  if (!user) return null
+/**
+ * Whether the viewer may do what `permission` covers: the account holds
+ * it, and so does the API token the request came with, if it came with
+ * one. Every check of a permission goes through here, so a token never
+ * does what its account can't, nor what it wasn't given.
+ */
+export function can(viewer: Viewer, permission: Permission): boolean {
+  if (!holdsPermission(viewer.access.permissions, permission)) return false
+  const { credential } = viewer
+  return (
+    credential.kind === "session" ||
+    grantsPermissions(credential.permissions, [permission])
+  )
+}
+
+/** The account as its own clients get it, with what it was granted. */
+export async function userOf(row: UserRow): Promise<User> {
+  return publicUser(row, (await accessOf(row)).permissions)
+}
+
+/**
+ * The viewer of a plain HTTP route, or null when nobody is signed in. An
+ * API token counts only with `permission`, as for `readSession`. The
+ * route still asks `can` when not every account holds the permission.
+ */
+export async function readViewer(
+  c: Context,
+  permission?: Permission,
+): Promise<Viewer | null> {
+  const user = await readSession(c, permission)
+  return user ? requestViewer(c, user) : null
+}
+
+/**
+ * The viewer `readCaller` names, for `authed` in rpc/base.ts, which checks
+ * what the account and its token may do.
+ */
+export async function readCallerViewer(c: Context): Promise<Viewer | null> {
+  const user = await readCaller(c)
+  return user ? requestViewer(c, user) : null
+}
+
+async function requestViewer(c: Context, user: SessionUser): Promise<Viewer> {
   const viewer = await viewerOf(user)
   // In a watch party, a remote member's limit is also their share of
   // the upload. It goes on the viewer, so the answer to how a file plays

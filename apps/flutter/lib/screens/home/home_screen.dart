@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/permissions.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
@@ -317,7 +318,8 @@ class _NoLibraries extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final admin = switch (ref.watch(authStateProvider)) {
-      SignedIn(:final user) => user.isAdmin,
+      // Whoever may add one is shown how.
+      SignedIn(:final user) => can(user, Permission.libraryCreate),
       _ => false,
     };
     return Padding(

@@ -16,6 +16,14 @@
         <item quantity="one">Signed %2$s out of %1$d session</item>
         <item quantity="other">Signed %2$s out of %1$d sessions</item>
     </plurals>
+    <plurals name="web_users_revokedTokens">
+        <item quantity="one">Revoked %1$d API token of %2$s</item>
+        <item quantity="other">Revoked %1$d API tokens of %2$s</item>
+    </plurals>
+    <string name="web_users_revokeTokens_ownTitle">Revoke your API tokens?</string>
+    <string name="web_users_revokeTokens_title">Revoke %1$s\'s API tokens?</string>
+    <string name="web_users_revokeTokens_description">Every service using one stops working with Matinee. Sessions stay signed in.</string>
+    <string name="web_users_revokeTokens_confirm">Revoke tokens</string>
     <string name="web_users_signOut_ownTitle">Sign out your other sessions?</string>
     <string name="web_users_signOut_title">Sign %1$s out everywhere?</string>
     <string name="web_users_signOut_ownDescription">Every other device has to sign in again.</string>
@@ -36,6 +44,7 @@
     <string name="web_users_menu_makeAdmin">Make admin</string>
     <string name="web_users_menu_signOutOthers">Sign out other sessions</string>
     <string name="web_users_menu_signOut">Sign out everywhere</string>
+    <string name="web_users_menu_revokeTokens">Revoke API tokens</string>
     <string name="web_users_menu_deleteOwn">Delete my account</string>
     <string name="web_users_menu_delete">Delete user</string>
     <string name="web_users_lastAdmin">Make someone else an admin first.</string>
@@ -46,6 +55,10 @@
     <string name="web_users_ownAccess">Own limits</string>
     <string name="web_users_ownAccessHint">Has settings of its own over its groups</string>
     <string name="web_users_ownAccessFromProvider">Set at sign-in by the policy claim from %1$s</string>
+    <plurals name="web_users_apiTokens">
+        <item quantity="one">%1$d API token</item>
+        <item quantity="other">%1$d API tokens</item>
+    </plurals>
     <plurals name="web_users_passkeys">
         <item quantity="one">%1$d passkey</item>
         <item quantity="other">%1$d passkeys</item>

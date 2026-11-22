@@ -11,7 +11,6 @@ import '../../router.dart';
 import '../sign_in/server_switcher.dart';
 import 'about_page.dart';
 import 'account_page.dart';
-import 'admin/admin_parts.dart';
 import 'admin/admin_settings.dart';
 import 'appearance_page.dart';
 import 'downloads_page.dart';
@@ -147,8 +146,10 @@ class SettingsScreen extends ConsumerWidget {
               if (page.available) row(page),
           ],
         ),
-        // The server's settings, for an account it says is an admin.
-        if (canAdminister(auth)) const AdminSection(),
+        // The server's settings, those the account's permissions open.
+        if (AdminCategory.openTo(auth) case final categories
+            when categories.isNotEmpty)
+          AdminSection(categories: categories),
         SettingsSection(
           title: l.settingsServer,
           child: Panel(

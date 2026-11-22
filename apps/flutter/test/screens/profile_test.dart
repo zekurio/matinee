@@ -252,7 +252,11 @@ void main() {
   });
 
   testWidgets("an admin's profile opens the requests", (tester) async {
-    final admin = User.fromJson({...userJson('ada'), 'role': 'admin'});
+    final admin = User.fromJson({
+      ...userJson('ada'),
+      'role': 'admin',
+      'permissions': ['all'],
+    });
     await pumpScreen(
       tester,
       const ProfileScreen(),

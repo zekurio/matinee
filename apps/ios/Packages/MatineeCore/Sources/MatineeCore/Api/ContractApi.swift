@@ -192,6 +192,7 @@ public struct AccountApi: Sendable {
     public var library: AccountLibraryApi { .init(transport: transport) }
     public var passkeys: AccountPasskeysApi { .init(transport: transport) }
     public var oidc: AccountOidcApi { .init(transport: transport) }
+    public var apiTokens: AccountApiTokensApi { .init(transport: transport) }
     public var sessions: AccountSessionsApi { .init(transport: transport) }
 }
 public struct AccountProfileApi: Sendable {
@@ -255,6 +256,28 @@ public struct AccountOidcApi: Sendable {
     }
     public func unlink() async throws {
         try await transport.send(method: "DELETE", path: ["account", "oidc"], query: [], body: nil)
+    }
+}
+public struct AccountApiTokensApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func list() async throws -> [ApiToken] {
+        return try await transport.call(method: "GET", path: ["account", "api-tokens"], query: [], body: nil)
+    }
+    public func create(apiTokenInput: ApiTokenInput) async throws -> CreatedApiToken {
+        return try await transport.call(method: "POST", path: ["account", "api-tokens"], query: [], body: try transport.json(apiTokenInput))
+    }
+    public func me() async throws -> ApiToken {
+        return try await transport.call(method: "GET", path: ["account", "api-tokens", "me"], query: [], body: nil)
+    }
+    public func update(id: String, name: String? = nil, permissions: [String]? = nil) async throws -> ApiToken {
+        return try await transport.call(method: "PATCH", path: ["account", "api-tokens", wireText(id)!], query: [], body: try transport.json(AccountApiTokensUpdateInput(name: name, permissions: permissions)))
+    }
+    public func revoke(id: String) async throws {
+        try await transport.send(method: "DELETE", path: ["account", "api-tokens", wireText(id)!], query: [], body: nil)
+    }
+    public func rotate(id: String) async throws -> CreatedApiToken {
+        return try await transport.call(method: "POST", path: ["account", "api-tokens", wireText(id)!, "rotate"], query: [], body: nil)
     }
 }
 public struct AccountSessionsApi: Sendable {
@@ -797,5 +820,8 @@ public struct AdminUsersApi: Sendable {
     }
     public func signOut(id: String) async throws -> AdminUsersSignOutOutput {
         return try await transport.call(method: "POST", path: ["admin", "users", wireText(id)!, "sign-out"], query: [], body: nil)
+    }
+    public func revokeApiTokens(id: String) async throws -> AdminUsersRevokeApiTokensOutput {
+        return try await transport.call(method: "POST", path: ["admin", "users", wireText(id)!, "api-tokens", "revoke"], query: [], body: nil)
     }
 }

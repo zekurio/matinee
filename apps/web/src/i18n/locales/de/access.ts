@@ -59,13 +59,71 @@ export default {
   "access.requestLimit.daysField": "Tage",
   "access.requestLimit.titlesEvery": "Titel alle",
   "access.requestLimit.days": "Tage",
+  "access.permissions": "Berechtigungen",
+  "access.permissions.search": "Berechtigungen durchsuchen",
+  "access.permissions.noMatch": "Keine Berechtigung passt.",
+  "access.permissions.count": plural({
+    one: "{count} weitere Berechtigung",
+    other: "{count} weitere Berechtigungen",
+  }),
+  "access.permissions.all": "Jede Berechtigung",
+  "access.permissions.groupHint":
+    "Teile der Serververwaltung, die Mitglieder übernehmen, etwa Anfragen freigeben oder Mediatheken scannen. Ein Konto hat jede Berechtigung, die eine seiner Gruppen vergibt.",
+  "access.permissions.ownOnly":
+    "Du kannst nur Berechtigungen vergeben oder entziehen, die du selbst hast.",
+  "access.permission.account": "Profil, Bild und Einstellungen des Kontos.",
+  "access.permission.adminApiToken": "API-Tokens anderer Konten widerrufen.",
+  "access.permission.adminRequest":
+    "Die Anfragen aller: die Warteschlange, Freigeben, Ablehnen und erneut Versuchen.",
+  "access.permission.adminSession": "Andere Konten abmelden.",
+  "access.permission.adminUser":
+    "Andere Konten: die Liste, ihre Gruppen und ihr Zugriff, und sie löschen.",
+  "access.permission.apiToken": "Die API-Tokens des Kontos.",
+  "access.permission.authSettings":
+    "Einstellungen für Passkeys und Single Sign-on.",
+  "access.permission.branding": "Name und Anmeldeseite des Servers.",
+  "access.permission.catalog":
+    "Entdecken und der Katalog der Titel, die man anfragen kann.",
+  "access.permission.favorite": "Favoriten.",
+  "access.permission.folder":
+    "Die Ordner des Servers durchsuchen, wie beim Anlegen einer Mediathek.",
+  "access.permission.fulfilment":
+    "Verbindungen, die angefragte Titel holen, und ihre Regeln.",
+  "access.permission.group": "Zugriffsgruppen.",
+  "access.permission.invite": "Einladungslinks.",
+  "access.permission.job": "Warteschlangen und geplante Aufgaben.",
+  "access.permission.library":
+    "Mediatheken und ihre Ordner. Ein Scan aktualisiert auch die Metadaten.",
+  "access.permission.media":
+    "Dateien: ihre Details, sie abspielen und herunterladen.",
+  "access.permission.networkSettings": "Netzwerkeinstellungen.",
+  "access.permission.oidcAccount": "Die Single-Sign-on-Verknüpfung des Kontos.",
+  "access.permission.party": "Watch-Partys.",
+  "access.permission.passkey": "Die Passkeys des Kontos.",
+  "access.permission.profile": "Die Profile anderer.",
+  "access.permission.recommendation": "Empfehlungen.",
+  "access.permission.request":
+    "Die eigenen Anfragen des Kontos. Mit autoApprove werden sie ohne Freigabe hinzugefügt.",
+  "access.permission.serverSetup": "Die Einrichtung des Servers abschließen.",
+  "access.permission.serverStats":
+    "Die Wiedergabezeit aller, und wer gerade schaut.",
+  "access.permission.session":
+    "Die Sitzungen des Kontos, und die Anmeldung eines Geräts bestätigen.",
+  "access.permission.stats":
+    "Die eigenen Statistiken des Kontos und die Bestenliste.",
+  "access.permission.title":
+    "Titel, Personen, Suche und Bilder. Ändern korrigiert Zuordnungen und Bilder.",
+  "access.permission.transcodingSettings": "Einstellungen der Transkodierung.",
+  "access.permission.trickplaySettings": "Trickplay-Einstellungen.",
+  "access.permission.watchState":
+    "Fortschritt, Gesehen-Markierungen, Weiterschauen und Als Nächstes.",
   "access.done": "Fertig",
   "access.retry": "Erneut versuchen",
 
   "access.groups.title": "Zugriffsgruppen",
   "access.groups.create": "Neue Gruppe",
   "access.groups.intro":
-    "Ein Konto bekommt das Meiste, was seine Gruppen erlauben. Einstellungen unter Benutzer gehen vor. Admins haben keine Grenzen.",
+    "Ein Konto bekommt das Meiste, was seine Gruppen erlauben, und jede Berechtigung, die eine von ihnen vergibt. Einstellungen unter Benutzer gehen vor. Admins haben keine Grenzen und jede Berechtigung.",
   "access.groups.loadFailed":
     "Die Gruppen konnten nicht geladen werden. {error}",
   "access.groups.onlyEveryone":

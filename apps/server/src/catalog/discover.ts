@@ -8,7 +8,7 @@ import {
 import type { t } from "@matinee/contracts/schema"
 import { library } from "@matinee/db"
 
-import type { Viewer } from "../access/viewer"
+import { can, type Viewer } from "../access/viewer"
 import { db } from "../db"
 import { env } from "../env"
 import { queueArtwork, saveArtwork } from "../media/artwork"
@@ -79,10 +79,22 @@ export async function rails(
     return { enabled: false, requests: null, rails: [], browse: [] }
   return {
     enabled: true,
-    requests: viewer.role === "admin" ? "queue" : "mine",
+    requests: requestsRow(viewer),
     rails: [...(await discoverRails(viewer, kinds)), ...catalogRails(kinds)],
     browse: kinds,
   }
+}
+
+/**
+ * Which requests head Discover: the waiting ones for whoever runs the
+ * queue, reading it and answering from the cards, as the web's
+ * `runsQueue` has it; the viewer's own for anyone who may read those;
+ * none otherwise.
+ */
+function requestsRow(viewer: Viewer) {
+  if (can(viewer, "adminRequest.read") && can(viewer, "adminRequest.update"))
+    return "queue"
+  return can(viewer, "request.read") ? "mine" : null
 }
 
 /**

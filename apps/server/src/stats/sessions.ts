@@ -67,7 +67,7 @@ export type SessionOwner = {
   item: MediaItemRow
   /** What the signed-in client called itself; see `SessionUser`. */
   client: string | null
-  /** The sign-in the request came with. */
+  /** The sign-in the request came with: its session, or its API token. */
   authSessionId: string
 }
 

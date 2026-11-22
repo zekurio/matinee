@@ -22,7 +22,7 @@ import { episode, mediaItem, type MediaItemRow, title } from "@matinee/db"
 import { and, eq } from "drizzle-orm"
 
 import { downloadVideoAllowed } from "../access/media"
-import type { Viewer } from "../access/viewer"
+import { can, type Viewer } from "../access/viewer"
 import { itemFor } from "../access/visible"
 import { db } from "../db"
 import { env } from "../env"
@@ -1053,7 +1053,7 @@ export async function accessDownload(
   id: string,
   viewer: Viewer,
 ): Promise<DownloadAccess> {
-  if (!viewer.access.downloads) return { kind: "forbidden" }
+  if (!can(viewer, "media.download")) return { kind: "forbidden" }
   if (!ID.test(id)) return { kind: "gone" }
   const active = await openDownload(id)
   if (!active || active.record.userId !== viewer.id) return { kind: "gone" }

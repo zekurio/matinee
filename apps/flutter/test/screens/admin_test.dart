@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
+import 'package:matinee/core/permissions.dart';
 import 'package:matinee/core/server_accents.dart';
 import 'package:matinee/core/session.dart';
+import 'package:matinee/core/toasts.dart';
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/l10n/app_localizations_de.dart';
 import 'package:matinee/l10n/app_localizations_en.dart';
@@ -20,12 +22,23 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import '../core/fakes.dart';
 import '../media/harness.dart';
 import 'admin_backend.dart';
+import 'metadata_test.dart' show RecordedToasts;
 
 final _admin = SignedIn(
   '$server',
-  User.fromJson({...userJson('ada'), 'role': 'admin'}),
+  User.fromJson({
+    ...userJson('ada'),
+    'role': 'admin',
+    'permissions': ['all'],
+  }),
 );
 final _plain = SignedIn('$server', User.fromJson(userJson('grace')));
+
+/// An account that isn't an admin, granted [permissions].
+SignedIn _granted(List<String> permissions) => SignedIn(
+  '$server',
+  User.fromJson({...userJson('grace'), 'permissions': permissions}),
+);
 
 List<Override> _signedInAs(AuthState auth) => [
   if (auth case SignedIn(:final user))
@@ -48,6 +61,7 @@ Future<AdminBackend> _pump(
   AuthState? auth,
   Size size = const Size(412, 915),
   KitColors colors = matineeDark,
+  List<Override> overrides = const [],
 }) async {
   final server = backend ?? AdminBackend();
   await pumpScreen(
@@ -55,12 +69,17 @@ Future<AdminBackend> _pump(
     screen ?? SettingsPageScreen(pageKey: page),
     client: server.client,
     auth: auth ?? _admin,
-    overrides: _signedInAs(auth ?? _admin),
+    overrides: [..._signedInAs(auth ?? _admin), ...overrides],
     size: size,
     colors: colors,
   );
   return server;
 }
+
+/// An invite link's revoke button.
+final _revokeInvite = find.byWidgetPredicate(
+  (widget) => widget is RoundIconButton && widget.icon == Lucide.trash,
+);
 
 /// Scrolls the page until [finder] is on screen, then taps it.
 Future<void> _tap(WidgetTester tester, Finder finder) async {
@@ -117,6 +136,125 @@ void main() {
       expect(find.text('Offline mode'), findsOneWidget);
       expect(find.text('grace'), findsNothing);
       expect(backend.sent, isEmpty);
+    });
+  });
+
+  group('who sees what, by permission', () {
+    testWidgets('a page shows for the permissions it needs', (tester) async {
+      await _pump(
+        tester,
+        '',
+        auth: _granted([
+          Permission.adminUserRead,
+          Permission.jobRead,
+          Permission.jobUpdate,
+          // Reading alone isn't enough for a page that saves.
+          Permission.transcodingSettingsRead,
+          Permission.libraryScan,
+        ]),
+      );
+      await tester.scrollUntilVisible(
+        find.text('Administration'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      for (final name in ['Libraries', 'Users', 'Jobs']) {
+        expect(find.text(name), findsOneWidget, reason: name);
+      }
+      for (final name in [
+        'Authentication',
+        'Transcoding',
+        'Trickplay',
+        'Branding',
+      ]) {
+        expect(find.text(name), findsNothing, reason: name);
+      }
+    });
+
+    testWidgets('a page it lacks a permission for opens Settings', (
+      tester,
+    ) async {
+      final backend = await _pump(
+        tester,
+        'transcoding',
+        auth: _granted([Permission.transcodingSettingsRead]),
+      );
+      expect(find.text('Offline mode'), findsOneWidget);
+      expect(backend.sent, isEmpty);
+    });
+
+    testWidgets('the admin role alone opens nothing', (tester) async {
+      // The server sends `all` with the role; the app reads the list.
+      await _pump(
+        tester,
+        '',
+        auth: SignedIn(
+          '$server',
+          User.fromJson({...userJson('ada'), 'role': 'admin'}),
+        ),
+      );
+      expect(find.text('Administration'), findsNothing);
+    });
+
+    testWidgets('a library offers only what the account may do', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        'libraries',
+        auth: _granted([Permission.libraryScan]),
+      );
+      expect(find.text('Add library'), findsNothing);
+      await tester.tap(find.text('Movies'));
+      await tester.pumpAndSettle();
+      expect(find.text('Scan now'), findsOneWidget);
+      expect(find.text('Edit'), findsNothing);
+      expect(find.text('Remove'), findsNothing);
+    });
+
+    testWidgets('Users offers only what the account may do', (tester) async {
+      final backend = AdminBackend();
+      backend.users = [
+        adminUserJson('ada', role: 'admin', sessions: 2),
+        adminUserJson('grace'),
+        adminUserJson('linus', apiTokens: 2),
+      ];
+      await _pump(
+        tester,
+        'users',
+        backend: backend,
+        auth: _granted([Permission.adminUserRead, Permission.adminUserDelete]),
+      );
+      // No invite.read, so no invites.
+      expect(find.text('Invite links'), findsNothing);
+      // An admin's account is out of reach.
+      await tester.tap(find.text('ada'));
+      await tester.pumpAndSettle();
+      expect(find.byType(Sheet), findsNothing);
+      await tester.tap(find.text('linus'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete user'), findsOneWidget);
+      expect(find.text('Make admin'), findsNothing);
+      expect(find.text('Edit access'), findsNothing);
+      expect(find.text('Revoke API tokens'), findsNothing);
+      expect(backend.sent, isEmpty);
+    });
+
+    testWidgets('invites may be read without making or revoking one', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        'users',
+        auth: _granted([Permission.adminUserRead, Permission.inviteRead]),
+      );
+      await tester.scrollUntilVisible(
+        find.text('For Linus'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Invite someone'), findsNothing);
+      expect(_revokeInvite, findsNothing);
     });
   });
 
@@ -297,6 +435,113 @@ void main() {
       expect(cut, isEmpty);
     });
 
+    testWidgets('downloads save as a permission, keeping the others', (
+      tester,
+    ) async {
+      final backend = AdminBackend();
+      backend.users = [
+        adminUserJson('ada', role: 'admin'),
+        adminUserJson(
+          'grace',
+          // Set elsewhere: a permission this page has no control for, and
+          // a request mix it can't show.
+          override: {
+            'allow': [Permission.libraryScan],
+            'deny': [Permission.requestAutoApprove],
+          },
+        ),
+      ];
+      await _pump(
+        tester,
+        '',
+        backend: backend,
+        screen: const UserAccessPage(userId: 'id-grace'),
+      );
+      await tester.scrollUntilVisible(
+        find.text('Set on this account'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Downloads').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Not allowed').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+      final body = backend.sent.single.body! as JsonMap;
+      final override = body['override']! as JsonMap;
+      expect(override['allow'], [Permission.libraryScan]);
+      expect(override['deny'], [
+        Permission.mediaDownload,
+        Permission.requestAutoApprove,
+      ]);
+      expect(override.containsKey('downloads'), isFalse);
+    });
+
+    testWidgets('requests save as their two permissions', (tester) async {
+      final backend = await _pump(
+        tester,
+        '',
+        screen: const UserAccessPage(userId: 'id-grace'),
+      );
+      await tester.scrollUntilVisible(
+        find.text('Set on this account'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Requests').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add right away').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+      final override =
+          (backend.sent.single.body! as JsonMap)['override']! as JsonMap;
+      expect(override['allow'], [
+        Permission.requestCreate,
+        Permission.requestAutoApprove,
+      ]);
+      expect(override.containsKey('deny'), isFalse);
+    });
+
+    testWidgets('what an account gets counts its other permissions', (
+      tester,
+    ) async {
+      final backend = AdminBackend();
+      backend.users = [
+        adminUserJson('ada', role: 'admin'),
+        adminUserJson(
+          'grace',
+          effective: {
+            'libraries': {'all': true, 'ids': <String>[]},
+            'maxBitrate': null,
+            'transcode': true,
+            'requestLimit': null,
+            'maxStreams': null,
+            'permissions': [
+              Permission.adminRequestRead,
+              Permission.libraryScan,
+              Permission.requestCreate,
+            ],
+          },
+        ),
+      ];
+      await _pump(
+        tester,
+        '',
+        backend: backend,
+        screen: const UserAccessPage(userId: 'id-grace'),
+      );
+      expect(find.text('2 more permissions'), findsOneWidget);
+      expect(find.text('adminRequest.read, library.scan'), findsOneWidget);
+      // Without media.download.
+      expect(find.text('Not allowed'), findsOneWidget);
+    });
+
     testWidgets('admin_access_phone_dark', (tester) async {
       await _pump(tester, '', screen: const UserAccessPage(userId: 'id-grace'));
       await expectLater(
@@ -318,6 +563,8 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('For Linus'), findsOneWidget);
+      expect(_revokeInvite, findsOneWidget);
+      expect(find.text('Invite someone'), findsOneWidget);
     });
 
     testWidgets('an account never seen says when it joined', (tester) async {
@@ -331,6 +578,46 @@ void main() {
         find.text('Signed out · Joined Jan 1, 2026 · 1 passkey'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('says how many API tokens an account made, and revokes them', (
+      tester,
+    ) async {
+      final backend = AdminBackend();
+      backend.users = [
+        adminUserJson('ada', role: 'admin', sessions: 2),
+        adminUserJson('grace', apiTokens: 3),
+      ];
+      final toasts = RecordedToasts();
+      await _pump(
+        tester,
+        'users',
+        backend: backend,
+        overrides: [toastProvider.overrideWithValue(toasts)],
+      );
+      expect(find.textContaining('3 API tokens'), findsOneWidget);
+      await tester.tap(find.text('grace'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Revoke API tokens'));
+      await tester.pumpAndSettle();
+      expect(find.text("Revoke grace's API tokens?"), findsOneWidget);
+      expect(backend.sent, isEmpty);
+      await tester.tap(find.text('Revoke tokens'));
+      await tester.pumpAndSettle();
+      expect(
+        backend.sent.single.path,
+        '/admin/users/id-grace/api-tokens/revoke',
+      );
+      expect(toasts.shown.single.$1, 'Revoked 3 API tokens of grace');
+      expect(find.textContaining('API token'), findsNothing);
+    });
+
+    testWidgets('an account without tokens offers no revoking', (tester) async {
+      await _pump(tester, 'users');
+      await tester.tap(find.text('grace'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete user'), findsOneWidget);
+      expect(find.text('Revoke API tokens'), findsNothing);
     });
 
     testWidgets('deleting an account asks first', (tester) async {

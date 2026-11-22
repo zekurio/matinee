@@ -1,8 +1,9 @@
 import {
   type AccessGroup,
   type AccessOverride,
-  type AccessPolicy,
   type AdminUser,
+  holdsPermission,
+  type Permission,
   type UserAccess,
   UserAccessInput,
 } from "@matinee/contracts"
@@ -25,6 +26,12 @@ import type { ReactNode } from "react"
 import { tr } from "@/i18n"
 import { firstError, useAppForm } from "@/lib/form"
 import { formatDateTime, formatRelative } from "@/lib/format"
+import {
+  POLICY_PERMISSIONS,
+  REQUEST_PERMISSIONS,
+  type RequestsChoice as Requests,
+  requestsOf,
+} from "@/lib/permissions"
 import { client, orpc } from "@/lib/rpc"
 import { ShownError } from "@/lib/shown-error"
 import { useActionFeedback } from "@/lib/use-action-feedback"
@@ -69,7 +76,7 @@ const LIBRARY_CHOICES: readonly LibraryChoice[] = [FROM_GROUPS, "all", "some"]
 type SwitchChoice = typeof FROM_GROUPS | "on" | "off"
 const SWITCH_CHOICES: readonly SwitchChoice[] = [FROM_GROUPS, "on", "off"]
 
-type RequestsChoice = typeof FROM_GROUPS | AccessPolicy["requests"]
+type RequestsChoice = typeof FROM_GROUPS | Requests
 const REQUESTS_CHOICES: readonly RequestsChoice[] = [
   FROM_GROUPS,
   ...REQUEST_CHOICES,
@@ -91,10 +98,45 @@ type AccessValues = {
   libraryIds: string[]
   maxBitrate: string
   transcode: SwitchChoice
-  requests: AccessOverride["requests"]
+  /**
+   * `request.create` and `request.autoApprove` as one choice, allowed or
+   * denied over the groups. Undefined follows them.
+   */
+  requests: Requests | undefined
   requestLimit: AccessOverride["requestLimit"]
+  /** `media.download`, allowed or denied over the groups. */
   downloads: SwitchChoice
   maxStreams: string
+  /**
+   * What else the override allows and denies. The dialog has no control
+   * for these, so a save keeps them as they are.
+   */
+  allow: Permission[]
+  deny: Permission[]
+}
+
+const others = (permissions: readonly Permission[] | undefined) =>
+  (permissions ?? []).filter(
+    (permission) => !POLICY_PERMISSIONS.includes(permission),
+  )
+
+/** The request choice an override's allow and deny lists spell. */
+function requestsChoice(override: AccessOverride): Requests | undefined {
+  const allow = override.allow ?? []
+  const deny = override.deny ?? []
+  if (deny.includes("request.create")) return "off"
+  if (!allow.includes("request.create")) return undefined
+  return allow.includes("request.autoApprove") ? "add" : "ask"
+}
+
+/** What a request choice allows and denies. */
+function requestsLists(choice: Requests | undefined) {
+  if (choice === undefined) return { allow: [], deny: [] }
+  const allow: Permission[] = []
+  const deny: Permission[] = []
+  ;(choice === "off" ? deny : allow).push("request.create")
+  ;(choice === "add" ? allow : deny).push("request.autoApprove")
+  return { allow, deny }
 }
 
 function switchChoice(value: boolean | undefined): SwitchChoice {
@@ -104,6 +146,11 @@ function switchChoice(value: boolean | undefined): SwitchChoice {
 
 function valuesOf(access: UserAccess): AccessValues {
   const { override } = access
+  const downloads = override.allow?.includes("media.download")
+    ? true
+    : override.deny?.includes("media.download")
+      ? false
+      : undefined
   return {
     groupIds: access.groups
       .filter((group) => group.source === "manual")
@@ -119,9 +166,11 @@ function valuesOf(access: UserAccess): AccessValues {
         ? FROM_GROUPS
         : limitValue(override.maxBitrate),
     transcode: switchChoice(override.transcode),
-    requests: override.requests,
+    requests: requestsChoice(override),
     requestLimit: override.requestLimit,
-    downloads: switchChoice(override.downloads),
+    downloads: switchChoice(downloads),
+    allow: others(override.allow),
+    deny: others(override.deny),
     maxStreams:
       override.maxStreams === undefined
         ? FROM_GROUPS
@@ -129,8 +178,32 @@ function valuesOf(access: UserAccess): AccessValues {
   }
 }
 
-function overrideOf(value: AccessValues): AccessOverride {
+/** The request permissions among `permissions`. */
+const requestOnes = (permissions: readonly Permission[] | undefined) =>
+  (permissions ?? []).filter((permission) =>
+    REQUEST_PERMISSIONS.includes(permission),
+  )
+
+/**
+ * The override to save. The request choice shows three mixes of its two
+ * permissions, so one never touched keeps what `saved` allows and denies
+ * of them: an override may deny adding without an approval and leave
+ * asking to the groups. Once changed, even back to how it opened, the
+ * choice is what it shows.
+ */
+function overrideOf(
+  value: AccessValues,
+  saved: AccessOverride,
+  requestsChanged: boolean,
+): AccessOverride {
   const all = value.libraries === "all"
+  const requests = !requestsChanged
+    ? { allow: requestOnes(saved.allow), deny: requestOnes(saved.deny) }
+    : requestsLists(value.requests)
+  const allow: Permission[] = [...value.allow, ...requests.allow]
+  const deny: Permission[] = [...value.deny, ...requests.deny]
+  if (value.downloads === "on") allow.push("media.download")
+  if (value.downloads === "off") deny.push("media.download")
   return {
     ...(value.libraries !== FROM_GROUPS && {
       libraries: { all, ids: all ? [] : value.libraryIds },
@@ -141,10 +214,8 @@ function overrideOf(value: AccessValues): AccessOverride {
     ...(value.transcode !== FROM_GROUPS && {
       transcode: value.transcode === "on",
     }),
-    ...(value.downloads !== FROM_GROUPS && {
-      downloads: value.downloads === "on",
-    }),
-    ...(value.requests !== undefined && { requests: value.requests }),
+    ...(allow.length > 0 && { allow }),
+    ...(deny.length > 0 && { deny }),
     ...(value.requestLimit !== undefined && {
       requestLimit: value.requestLimit,
     }),
@@ -259,7 +330,11 @@ function AccessEditor({
       const parsed = UserAccessInput.safeParse({
         id: user.id,
         groupIds: value.groupIds,
-        override: overrideOf(value),
+        override: overrideOf(
+          value,
+          user.access.override,
+          formApi.getFieldMeta("requests")?.isDirty ?? false,
+        ),
       })
       if (!parsed.success) {
         throw new ShownError(
@@ -298,6 +373,7 @@ function AccessEditor({
   // above that isn't saved yet could give something else, so then it's
   // left unsaid.
   const { fromGroups } = user.access
+  const groupRequests = requestsOf(fromGroups.permissions)
   const groupsSaved =
     values.groupIds.toSorted().join() === initial.groupIds.toSorted().join()
   const inherited = (value: string) =>
@@ -316,7 +392,7 @@ function AccessEditor({
 
   return (
     <form
-      className="flex flex-col gap-6"
+      className="flex min-w-0 flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault()
         submit()
@@ -451,7 +527,9 @@ function AccessEditor({
               <SelectField
                 title={tr("access.downloads")}
                 options={SWITCH_CHOICES}
-                labelOf={switchLabel(fromGroups.downloads)}
+                labelOf={switchLabel(
+                  holdsPermission(fromGroups.permissions, "media.download"),
+                )}
               />
             )}
           </form.AppField>
@@ -475,7 +553,7 @@ function AccessEditor({
                 value={field.state.value ?? FROM_GROUPS}
                 labelOf={(choice) =>
                   choice === FROM_GROUPS
-                    ? inherited(requestsLabel(fromGroups.requests))
+                    ? inherited(requestsLabel(groupRequests))
                     : requestsLabel(choice)
                 }
                 onChange={(choice) =>
@@ -486,7 +564,7 @@ function AccessEditor({
               />
             )}
           </form.Field>
-          {(values.requests ?? fromGroups.requests) !== "off" && (
+          {(values.requests ?? groupRequests) !== "off" && (
             <form.Field name="requestLimit">
               {(field) => (
                 <SelectRow

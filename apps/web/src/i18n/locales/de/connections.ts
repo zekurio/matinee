@@ -69,12 +69,17 @@ export default {
   "connections.landsIn": "Landet in {library}",
   "connections.lost": "Unklar, wo {folder} liegt. Wähle, wo es landet.",
   "connections.landsInPick": "Landet in",
+  "connections.landsHidden":
+    "{folder} liegt in einer Mediathek, die du nicht sehen kannst, deshalb lässt sich das damit nicht speichern. Wähle einen anderen Ordner.",
 
   "connections.card.default.movie": "Standard für Filme",
   "connections.card.default.show": "Standard für Serien",
   "connections.card.kind.movie": "Filme",
   "connections.card.kind.show": "Serien",
   "connections.card.nowhere": "keine Mediathek",
+  "connections.card.hidden": "Eine Mediathek, die du nicht sehen kannst",
+  "connections.card.readOnly":
+    "Sie schickt Titel in eine Mediathek, die du nicht sehen kannst. Du kannst sie ansehen und testen, aber nicht ändern.",
   "connections.card.unknownSource": "Unbekannte Quelle",
 
   "connections.rules.title": "Überschreibungsregeln",

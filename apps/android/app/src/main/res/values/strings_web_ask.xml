@@ -2,6 +2,7 @@
 <!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/ask.ts. Don't edit. -->
 <resources>
     <string name="web_ask_ask">Request</string>
+    <string name="web_ask_askNamed">Request %1$s</string>
     <string name="web_ask_more">Request more</string>
     <string name="web_ask_cancel">Cancel request</string>
     <string name="web_ask_dialog_title">Request %1$s</string>

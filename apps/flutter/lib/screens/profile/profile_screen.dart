@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/device.dart';
+import '../../core/permissions.dart';
 import '../../core/session.dart';
 import '../../downloads/downloads.dart';
 import '../../kit/kit.dart';
@@ -117,7 +118,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (loaded == null) {
       return [
         header,
-        if (user.isAdmin) const _Requests(),
+        if (runsQueue(user)) const _Requests(),
         if (profile.hasError && !profile.isLoading)
           FailureState(
             title: l.profileLoadFailed,
@@ -138,7 +139,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final asked = ref.watch(profileAskedProvider).value?.items ?? const [];
     return [
       header,
-      if (user.isAdmin) const _Requests(),
+      if (runsQueue(user)) const _Requests(),
       _Favorites(favorites: loaded.favorites ?? const []),
       if (asked.isNotEmpty) AskedRail(items: asked, fresh: false),
       _statistics(context, user),

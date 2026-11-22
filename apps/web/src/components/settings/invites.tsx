@@ -48,7 +48,17 @@ import { RowIcon, SettingNote, SettingsSubsection } from "./settings-panel"
  * account with a passkey while sign-up is closed, and revoking those that
  * still work. Without passkeys nobody could use one, so none can be made.
  */
-export function Invites({ passkeysOn }: { passkeysOn: boolean }) {
+export function Invites({
+  passkeysOn,
+  mayCreate,
+  mayRevoke,
+}: {
+  passkeysOn: boolean
+  /** The account holds `invite.create`. */
+  mayCreate: boolean
+  /** The account holds `invite.delete`. */
+  mayRevoke: boolean
+}) {
   const queryClient = useQueryClient()
   const invites = useQuery(orpc.admin.invites.list.queryOptions())
   const [store] = useState(createSettingsInvitesStore)
@@ -73,7 +83,7 @@ export function Invites({ passkeysOn }: { passkeysOn: boolean }) {
       id="invites"
       title={tr("users.invites.title")}
       action={
-        passkeysOn ? (
+        passkeysOn && mayCreate ? (
           <Button variant="outline" onClick={start}>
             <UserPlusIcon />
             {tr("users.invites.create")}
@@ -101,7 +111,7 @@ export function Invites({ passkeysOn }: { passkeysOn: boolean }) {
               key={invite.id}
               invite={invite}
               revoking={revoke.isPending && revoke.variables.id === invite.id}
-              onRevoke={() => revoke.mutate(invite)}
+              onRevoke={mayRevoke ? () => revoke.mutate(invite) : null}
             />
           ))}
         </List>
@@ -139,7 +149,8 @@ function InviteRow({
 }: {
   invite: Invite
   revoking: boolean
-  onRevoke: () => void
+  /** Null for an account that may not revoke links. */
+  onRevoke: (() => void) | null
 }) {
   const details = [
     tr("users.invites.made", { date: formatDate(invite.createdAt) }),
@@ -174,20 +185,22 @@ function InviteRow({
           {details.join(" · ")}
         </p>
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="text-muted-foreground hover:text-destructive shrink-0"
-        aria-label={
-          invite.label
-            ? tr("users.invites.revokeNamed", { note: invite.label })
-            : tr("users.invites.revoke")
-        }
-        disabled={revoking}
-        onClick={onRevoke}
-      >
-        <Trash2Icon />
-      </Button>
+      {onRevoke && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-destructive shrink-0"
+          aria-label={
+            invite.label
+              ? tr("users.invites.revokeNamed", { note: invite.label })
+              : tr("users.invites.revoke")
+          }
+          disabled={revoking}
+          onClick={onRevoke}
+        >
+          <Trash2Icon />
+        </Button>
+      )}
     </ListItem>
   )
 }

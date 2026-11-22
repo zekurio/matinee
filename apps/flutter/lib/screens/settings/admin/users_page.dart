@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../api/matinee_api.dart';
 import '../../../core/failure_text.dart';
 import '../../../core/field_errors.dart';
+import '../../../core/permissions.dart';
 import '../../../core/session.dart';
 import '../../../core/toasts.dart';
 import '../../../kit/kit.dart';
@@ -21,7 +22,29 @@ import 'admin_data.dart';
 import 'admin_parts.dart';
 
 /// What an admin is about to do to an account, waiting for a yes.
-enum _UserAction { role, signOut, delete }
+enum _UserAction { role, signOut, revokeTokens, delete }
+
+/// What the account in use may do to others, as the web's users panel
+/// reads it from its permissions. The server also keeps anyone from
+/// changing an account that may do more than they may.
+typedef _May = ({
+  bool access,
+  bool role,
+  bool signOut,
+  bool revokeTokens,
+  bool delete,
+});
+
+_May _mayOf(WidgetRef ref) => (
+  access:
+      ref.watch(canProvider(Permission.adminUserUpdate)) &&
+      ref.watch(canProvider(Permission.groupRead)),
+  // Making an admin hands over every permission, so it takes them all.
+  role: ref.watch(canProvider(Permission.all)),
+  signOut: ref.watch(canProvider(Permission.adminSessionDelete)),
+  revokeTokens: ref.watch(canProvider(Permission.adminApiTokenDelete)),
+  delete: ref.watch(canProvider(Permission.adminUserDelete)),
+);
 
 /// How the server lets people sign in now, for whether an account can.
 typedef _SignIn = ({bool passkeys, String? oidc});
@@ -31,11 +54,13 @@ _SignIn _signInOf(AuthConfig? config) =>
 
 /// Everyone's accounts, as the Kotlin app's `UsersSettings` over the web's
 /// users panel: who they are, how they sign in, when they were last here,
-/// and the groups they're in. A tap offers their access, the admin role,
-/// signing out everywhere, and deleting the account, each but the first
-/// asked first; the server keeps one admin who can sign in, so the page
-/// says so rather than ask. Under them, the invite links: making one,
-/// and revoking one that still works.
+/// the API tokens they made, and the groups they're in. A tap offers
+/// their access, the admin role, signing out everywhere, revoking their
+/// API tokens, and deleting the account, each but the first asked first,
+/// and each only as the account in use's permissions allow; the server
+/// keeps one admin who can sign in, so the page says so rather than ask.
+/// Under them, for an account that may read them, the invite links:
+/// making one, and revoking one that still works.
 class UsersPage extends ConsumerWidget {
   const UsersPage({super.key});
 
@@ -45,6 +70,8 @@ class UsersPage extends ConsumerWidget {
     final users = ref.watch(adminUsersProvider);
     final signIn = _signInOf(ref.watch(authConfigProvider).value);
     final me = selfId(ref.watch(authStateProvider));
+    final may = _mayOf(ref);
+    final invites = ref.watch(canProvider(Permission.inviteRead));
     return AdminPage(
       title: l.settingsAdminUsers,
       child: adminBody(
@@ -71,19 +98,30 @@ class UsersPage extends ConsumerWidget {
                       user: user,
                       self: user.id == me,
                       signIn: signIn,
-                      onPressed: () => unawaited(
-                        _act(
-                          context,
-                          ref,
-                          user,
-                          self: user.id == me,
-                          lastAdmin: lastAdmin(user),
-                        ),
-                      ),
+                      onPressed:
+                          _items(
+                            context,
+                            ref,
+                            user,
+                            may,
+                            self: user.id == me,
+                            lastAdmin: lastAdmin(user),
+                          ).isEmpty
+                          ? null
+                          : () => unawaited(
+                              _act(
+                                context,
+                                ref,
+                                user,
+                                may,
+                                self: user.id == me,
+                                lastAdmin: lastAdmin(user),
+                              ),
+                            ),
                     ),
                 ],
               ),
-              _Invites(passkeys: signIn.passkeys),
+              if (invites) _Invites(passkeys: signIn.passkeys),
             ],
           );
         },
@@ -91,31 +129,34 @@ class UsersPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _act(
+  /// What [may] lets the account in use do to [user], as its sheet's
+  /// items.
+  List<(String, String, VoidCallback, bool)> _items(
     BuildContext context,
     WidgetRef ref,
-    AdminUser user, {
+    AdminUser user,
+    _May may, {
     required bool self,
     required bool lastAdmin,
-  }) async {
+  }) {
+    // Only an admin changes an admin's account, their own aside: the
+    // server's peer check is the role, not a permission.
+    if (user.isAdmin && !may.role && !self) return const [];
     final l = AppLocalizations.of(context);
     void blocked() =>
         unawaited(ref.read(toastProvider).show(l.webUsersLastAdmin));
     void ask(_UserAction action) =>
         unawaited(_confirm(context, ref, user, action, self: self));
-    await pickFrom(
-      context,
-      title: user.name,
-      description: '@${user.username}',
-      items: [
-        // An admin's access is everything, so there's nothing to set.
-        if (!user.isAdmin)
-          (
-            Lucide.listFilter,
-            l.webUsersMenuAccess,
-            () => unawaited(context.push(Routes.userAccess(user.id))),
-            false,
-          ),
+    return [
+      // An admin's access is everything, so there's nothing to set.
+      if (may.access && !user.isAdmin)
+        (
+          Lucide.listFilter,
+          l.webUsersMenuAccess,
+          () => unawaited(context.push(Routes.userAccess(user.id))),
+          false,
+        ),
+      if (may.role)
         (
           Lucide.shield,
           !user.isAdmin
@@ -126,22 +167,43 @@ class UsersPage extends ConsumerWidget {
           () => lastAdmin ? blocked() : ask(_UserAction.role),
           false,
         ),
-        if (user.sessions > (self ? 1 : 0))
-          (
-            Lucide.logOut,
-            self ? l.webUsersMenuSignOutOthers : l.webUsersMenuSignOut,
-            () => ask(_UserAction.signOut),
-            false,
-          ),
+      if (may.signOut && user.sessions > (self ? 1 : 0))
+        (
+          Lucide.logOut,
+          self ? l.webUsersMenuSignOutOthers : l.webUsersMenuSignOut,
+          () => ask(_UserAction.signOut),
+          false,
+        ),
+      if (may.revokeTokens && user.apiTokens > 0)
+        (
+          Lucide.keySquare,
+          l.webUsersMenuRevokeTokens,
+          () => ask(_UserAction.revokeTokens),
+          false,
+        ),
+      if (may.delete)
         (
           Lucide.trash,
           self ? l.webUsersMenuDeleteOwn : l.webUsersMenuDelete,
           () => lastAdmin ? blocked() : ask(_UserAction.delete),
           true,
         ),
-      ],
-    );
+    ];
   }
+
+  Future<void> _act(
+    BuildContext context,
+    WidgetRef ref,
+    AdminUser user,
+    _May may, {
+    required bool self,
+    required bool lastAdmin,
+  }) => pickFrom(
+    context,
+    title: user.name,
+    description: '@${user.username}',
+    items: _items(context, ref, user, may, self: self, lastAdmin: lastAdmin),
+  );
 
   Future<void> _confirm(
     BuildContext context,
@@ -181,6 +243,13 @@ class UsersPage extends ConsumerWidget {
         l.webUsersSignOutTitle(user.name),
         l.webUsersSignOutDescription,
         l.webUsersSignOutConfirm,
+      ),
+      _UserAction.revokeTokens => (
+        self
+            ? l.webUsersRevokeTokensOwnTitle
+            : l.webUsersRevokeTokensTitle(user.name),
+        l.webUsersRevokeTokensDescription,
+        l.webUsersRevokeTokensConfirm,
       ),
       _UserAction.delete when self => (
         l.webUsersDeleteOwnTitle,
@@ -237,6 +306,15 @@ class UsersPage extends ConsumerWidget {
               kind: ToastKind.success,
             ),
           );
+        case _UserAction.revokeTokens:
+          final revoked = (await api.admin.users.revokeApiTokens(user.id))
+              .revoked;
+          unawaited(
+            toasts.show(
+              l.webUsersRevokedTokens(revoked, user.name),
+              kind: ToastKind.success,
+            ),
+          );
         case _UserAction.delete:
           await api.admin.users.remove(user.id);
           // The account gone, its session goes with it.
@@ -266,10 +344,19 @@ class _UserRow extends StatelessWidget {
   final AdminUser user;
   final bool self;
   final _SignIn signIn;
-  final VoidCallback onPressed;
 
-  /// Where the account stands, then how it signs in.
-  List<String> _facts(AppLocalizations l) {
+  /// Null when the account in use may do nothing to this one.
+  final VoidCallback? onPressed;
+
+  /// Where the account stands, then how it signs in, then its API tokens:
+  /// a service can still call the API with a token of an account nobody
+  /// signs in to.
+  List<String> _facts(AppLocalizations l) => [
+    ..._signInFacts(l),
+    if (user.apiTokens > 0) l.webUsersApiTokens(user.apiTokens),
+  ];
+
+  List<String> _signInFacts(AppLocalizations l) {
     if (user.passkeys == 0 && !user.oidcLinked) return [l.webUsersNoSignIn];
     final seen = DateTime.tryParse(user.lastSeenAt ?? '');
     return [
@@ -381,6 +468,8 @@ class _UserRow extends StatelessWidget {
 
 /// The invite links: one makes an account with a passkey while sign-up
 /// is closed, so without passkeys none can be made.
+///
+/// Making one takes `invite.create`, and revoking one `invite.delete`.
 class _Invites extends ConsumerWidget {
   const _Invites({required this.passkeys});
 
@@ -428,6 +517,8 @@ class _Invites extends ConsumerWidget {
     final invites = ref.watch(adminInvitesProvider);
     final list = invites.value;
     final error = invites.error;
+    final create = passkeys && ref.watch(canProvider(Permission.inviteCreate));
+    final revoke = ref.watch(canProvider(Permission.inviteDelete));
     return SettingsSection(
       title: l.webUsersInvitesTitle,
       child: Column(
@@ -440,18 +531,20 @@ class _Invites extends ConsumerWidget {
           else if (list == null)
             const SkeletonBox(height: 64, radius: KitRadius.xl)
           else if (list.isEmpty)
-            if (passkeys) Note(l.webUsersInvitesEmpty) else const SizedBox()
+            if (create) Note(l.webUsersInvitesEmpty) else const SizedBox()
           else
             Panel(
               rows: [
                 for (final invite in list)
                   _InviteRow(
                     invite: invite,
-                    onRevoke: () => unawaited(_revoke(context, ref, invite)),
+                    onRevoke: revoke
+                        ? () => unawaited(_revoke(context, ref, invite))
+                        : null,
                   ),
               ],
             ),
-          if (passkeys)
+          if (create)
             MatineeButton(
               look: ButtonLook.outline,
               leading: Lucide.plus,
@@ -474,7 +567,9 @@ class _InviteRow extends StatelessWidget {
   const _InviteRow({required this.invite, required this.onRevoke});
 
   final Invite invite;
-  final VoidCallback onRevoke;
+
+  /// Null for an account that may not revoke links.
+  final VoidCallback? onRevoke;
 
   @override
   Widget build(BuildContext context) {
@@ -516,15 +611,16 @@ class _InviteRow extends StatelessWidget {
               ],
             ),
           ),
-          RoundIconButton(
-            icon: Lucide.trash,
-            label: label == null
-                ? l.webUsersInvitesRevoke
-                : l.webUsersInvitesRevokeNamed(label),
-            background: const Color(0x00000000),
-            color: colors.mutedForeground,
-            onPressed: onRevoke,
-          ),
+          if (onRevoke case final revoke?)
+            RoundIconButton(
+              icon: Lucide.trash,
+              label: label == null
+                  ? l.webUsersInvitesRevoke
+                  : l.webUsersInvitesRevokeNamed(label),
+              background: const Color(0x00000000),
+              color: colors.mutedForeground,
+              onPressed: revoke,
+            ),
         ],
       ),
     );
@@ -628,10 +724,15 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
         ),
       );
     }
-    final groups = (ref.watch(adminGroupsProvider).value ?? const [])
-        // Everyone holds every account already, so it isn't offered.
-        .where((group) => !group.everyone)
-        .toList();
+    // The groups to start in need `group.read`; without it there are none
+    // to offer.
+    final groups =
+        (ref.watch(canProvider(Permission.groupRead))
+                ? ref.watch(adminGroupsProvider).value ?? const []
+                : const <AdminGroupsListOutput>[])
+            // Everyone holds every account already, so it isn't offered.
+            .where((group) => !group.everyone)
+            .toList();
     final failure = _failure;
     return Dialog(
       title: l.webUsersInvitesCreate,

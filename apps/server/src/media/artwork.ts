@@ -583,7 +583,7 @@ artworkRoutes.get("/:id", async (c) => {
   const size =
     ARTWORK_SIZES.find((name) => name === c.req.query("size")) ?? "small"
   const valid = /^[0-9a-f]{32}$/.test(id)
-  const user = await readSession(c)
+  const user = await readSession(c, "title.read")
   if (!user) {
     // The login page loads its backdrop before anyone signs in.
     if (!valid || !(await showsOnLoginBackdrop(id, size))) {
