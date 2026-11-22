@@ -331,6 +331,13 @@ final class AdminBackend {
       case ('DELETE', ['admin', 'invites', final id]):
         invites = [...invites.where((i) => i['id'] != id)];
         return _json(null, 200);
+      case ('POST', ['admin', 'users', final id, 'api-tokens', 'revoke']):
+        final user = users.firstWhere((u) => u['id'] == id);
+        users = [
+          for (final user in users)
+            user['id'] == id ? {...user, 'apiTokens': 0} : user,
+        ];
+        return _json({'revoked': user['apiTokens']}, 200);
       case ('DELETE', ['admin', 'users', final id]):
         users = [...users.where((u) => u['id'] != id)];
         return _json(null, 200);
