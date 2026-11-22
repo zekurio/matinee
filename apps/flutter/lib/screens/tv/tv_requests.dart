@@ -10,14 +10,20 @@ import '../../core/permissions.dart';
 import '../../kit/kit.dart';
 import '../../kit/tv/tv.dart';
 import '../../l10n/app_localizations.dart';
-import '../../l10n/server_text.dart';
 import '../../media/artwork.dart';
 import '../../media/avatar.dart';
 import '../../media/format.dart' show seasonName;
 import '../../router.dart';
 import '../requests/catalog_cards.dart';
 import '../requests/request_cards.dart'
-    show requestStateIcon, requestStateLook, requestStateText;
+    show
+        queueError,
+        queueNote,
+        queueProgress,
+        queueReason,
+        requestStateIcon,
+        requestStateLook,
+        requestStateText;
 import '../requests/request_words.dart';
 import '../requests/requests_data.dart';
 import '../requests/requests_hub.dart';
@@ -454,26 +460,21 @@ double? _progressOf(AdminRequestItem item) =>
 ) {
   switch (item.state) {
     case RequestState.needsAttention:
-      return (
-        text: item.error?.serverWords(l) ?? l.webRequestsAttentionUnknown,
-        problem: true,
-      );
+      return (text: queueError(item, l), problem: true);
     case RequestState.onTheWay:
       return (
-        text: [?queueProgressText(item, l), item.library.name].join(' · '),
+        text: queueProgress(item, l) ?? item.library.name,
         problem: false,
       );
     case RequestState.declined:
-      final note = item.note?.trim();
+      final note = queueNote(item);
+      return (text: [queueReason(item, l), ?note].join(' · '), problem: false);
+    case RequestState.here:
+      final arrived = relativeTime(item.arrivedAt, l);
       return (
-        text: [
-          queueDeclinedText(item, l),
-          if (note != null && note.isNotEmpty) '“$note”',
-        ].join(' '),
+        text: arrived == null ? '' : l.webRequestsDoneArrived(arrived),
         problem: false,
       );
-    case RequestState.here:
-      return (text: queueArrivedText(item, l), problem: false);
     default:
       // Waiting: where it goes, and what fills it.
       final goes = requests.goesTo(item);
@@ -507,7 +508,6 @@ String? mineLine(
   Availability availability,
   AppLocalizations l,
 ) => switch (item.state) {
-  RequestState.onTheWay => ownProgressText(availability, l),
   RequestState.here => switch (relativeTime(item.arrivedAt, l)) {
     final arrived? => l.webRequestsDoneArrived(arrived),
     null => null,
@@ -635,7 +635,13 @@ class TvRequestCard extends ConsumerWidget {
       title: title,
       width: width,
       focusNode: focusNode,
-      label: [title.name, ...heading, badge, line.text, ...asked].join(', '),
+      label: [
+        title.name,
+        ...heading,
+        badge,
+        if (line.text.isNotEmpty) line.text,
+        ...asked,
+      ].join(', '),
       onPressed: () =>
           unawaited(openTvQueued(context, item, onAnswered: onAnswered)),
       onFocused: onFocus == null
@@ -648,7 +654,7 @@ class TvRequestCard extends ConsumerWidget {
             ),
       heading: heading.join(' · '),
       badge: TvRequestBadge(state: state, progress: progress, urgent: true),
-      line: line.text,
+      line: line.text.isEmpty ? null : line.text,
       lineColor: line.problem ? colors.danger : null,
       who: asked.isEmpty
           ? null
@@ -681,8 +687,10 @@ class TvRequestCard extends ConsumerWidget {
     ];
     final badge = requestStateText(state, l, progress: progress);
     final line = mineLine(item, availability, l);
-    final when = relativeTime(item.createdAt, l);
-    final asked = when == null ? null : l.webRequestsAskedWhen(when);
+    // When it was asked, as the phone's card says, until it's finished.
+    final finished =
+        state == RequestState.here || state == RequestState.declined;
+    final asked = finished ? null : relativeTime(item.createdAt, l);
     final onFocus = this.onFocus;
     return _Card(
       title: title,

@@ -63,7 +63,8 @@ class _QueueRequests extends ConsumerWidget {
       onSeeAll: () => context.push(Routes.requestQueue),
       error: failed && queue == null ? const _QueueDown() : null,
       onRetry: () => ref.read(requestsProvider.notifier).retryQueue(),
-      card: (item) => QueueCard(item: item, compact: true),
+      queue: true,
+      card: (item) => QueueCard(item: item),
     );
   }
 }
@@ -87,7 +88,8 @@ class _OwnRequests extends ConsumerWidget {
       onSeeAll: () => context.push(Routes.requests()),
       error: mine.hasError && !mine.hasValue ? mine.error : null,
       onRetry: () => ref.invalidate(myLiveRequestsProvider),
-      card: (item) => OwnRequestCard(item: item, compact: true),
+      queue: false,
+      card: (item) => OwnRequestCard(item: item),
     );
   }
 }
@@ -104,6 +106,7 @@ class _RequestsRow<T> extends ConsumerWidget {
     required this.onSeeAll,
     required this.error,
     required this.onRetry,
+    required this.queue,
     required this.card,
   });
 
@@ -112,6 +115,9 @@ class _RequestsRow<T> extends ConsumerWidget {
   final VoidCallback onSeeAll;
   final Object? error;
   final VoidCallback onRetry;
+
+  /// Whether these are the queue's cards, which size their own way.
+  final bool queue;
   final Widget Function(T item) card;
 
   @override
@@ -119,6 +125,8 @@ class _RequestsRow<T> extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final title = l.webRequestsRecent;
     final width = requestCardWidth(MediaQuery.sizeOf(context));
+    final scaler = MediaQuery.textScalerOf(context);
+    final height = requestCardHeight(width, scaler, queue: queue);
     final held = ref.watch(requestsProvider.select((state) => state.held));
     final error = this.error;
     final items = this.items;
@@ -126,7 +134,7 @@ class _RequestsRow<T> extends ConsumerWidget {
     if (error != null) {
       child = RailFailed(title: title, error: error, onRetry: onRetry);
     } else if (items == null) {
-      child = _RowSkeleton(title: title, width: width);
+      child = _RowSkeleton(title: title, width: width, height: height);
     } else {
       final shown = [
         for (final item in items)
@@ -138,7 +146,7 @@ class _RequestsRow<T> extends ConsumerWidget {
         onSeeAll: onSeeAll,
         seeAllLabel: l.commonSeeAll,
         itemWidth: width,
-        itemHeight: null,
+        itemHeight: height,
         itemCount: shown.length,
         itemBuilder: (context, index) => KeyedSubtree(
           key: ValueKey(id(shown[index])),
@@ -152,10 +160,17 @@ class _RequestsRow<T> extends ConsumerWidget {
 
 /// The row while its list loads: the heading over three blank cards.
 class _RowSkeleton extends StatelessWidget {
-  const _RowSkeleton({required this.title, required this.width});
+  const _RowSkeleton({
+    required this.title,
+    required this.width,
+    required this.height,
+  });
 
   final String title;
   final double width;
+
+  /// A card's, as the row's cards will be.
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -188,6 +203,7 @@ class _RowSkeleton extends StatelessWidget {
                   for (var i = 0; i < 3; i++)
                     Container(
                       width: width,
+                      height: height,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         borderRadius: const BorderRadius.all(
@@ -195,15 +211,15 @@ class _RowSkeleton extends StatelessWidget {
                         ),
                         border: Border.all(color: colors.border),
                       ),
-                      child: const Row(
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         spacing: 12,
                         children: [
                           SkeletonBox(
-                            width: requestPosterWidth,
-                            height: requestPosterWidth * 1.5,
+                            width: (height - 24) / 1.5,
+                            height: height - 24,
                           ),
-                          Expanded(
+                          const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               spacing: 8,

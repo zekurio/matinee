@@ -42,8 +42,8 @@ const _nearEnd = 8;
 const _gap = 16.0;
 
 /// Cards in rows: one column on a phone, two on a tablet upright, three
-/// on its side, each row as tall as its tallest card, so the actions line
-/// up along the foot.
+/// on its side. Every card of a list is as tall as the next, its poster
+/// setting it.
 class _CardRows extends StatelessWidget {
   const _CardRows({required this.itemCount, required this.itemBuilder});
 
@@ -60,19 +60,17 @@ class _CardRows extends StatelessWidget {
           itemCount: (itemCount + count - 1) ~/ count,
           itemBuilder: (context, row) => Padding(
             padding: EdgeInsets.only(top: row == 0 ? 0 : _gap),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: _gap,
-                children: [
-                  for (var column = 0; column < count; column++)
-                    Expanded(
-                      child: row * count + column < itemCount
-                          ? itemBuilder(context, row * count + column)
-                          : const SizedBox.shrink(),
-                    ),
-                ],
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: _gap,
+              children: [
+                for (var column = 0; column < count; column++)
+                  Expanded(
+                    child: row * count + column < itemCount
+                        ? itemBuilder(context, row * count + column)
+                        : const SizedBox.shrink(),
+                  ),
+              ],
             ),
           ),
         );
@@ -183,8 +181,8 @@ final class _QueueDown implements Exception {
   const _QueueDown();
 }
 
-/// The queue as one list: a line of what's in it, Add all while more than
-/// one waits, then the cards in the server's order of its lists, each in
+/// The queue as one list: Add all while more than one waits, then the
+/// cards in the server's order of its lists, each in
 /// the state the server gave it, Done read on past what the live queue
 /// holds as its end shows.
 class _QueueList extends ConsumerWidget {
@@ -196,7 +194,6 @@ class _QueueList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
     // The live queue holds the newest of Done; the rest comes a page at a
     // time, only when there is more.
     final liveIsAll = queue.nextCursor == null;
@@ -212,7 +209,6 @@ class _QueueList extends ConsumerWidget {
       for (final item in queue.waiting)
         if (!held.contains(item.id)) item,
     ];
-    final counts = queueSummary(queue, l, held: held);
     final notifier = pages == null
         ? null
         : ref.read(doneRequestsProvider.notifier);
@@ -231,24 +227,22 @@ class _QueueList extends ConsumerWidget {
     }
     return CustomScrollView(
       slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(
-            CardMetrics.gutter,
-            0,
-            CardMetrics.gutter,
-            16,
-          ),
-          sliver: SliverToBoxAdapter(
-            child: Row(
-              spacing: 12,
-              children: [
-                Expanded(
-                  child: Text(
-                    counts,
-                    style: KitText.sm.style(color: colors.mutedForeground),
-                  ),
-                ),
-                if (waiting.length > 1)
+        // The page's controls, at the end of the row above the cards:
+        // Add all while more than one waits.
+        if (waiting.length > 1)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              CardMetrics.gutter,
+              0,
+              CardMetrics.gutter,
+              16,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
                   MatineeButton(
                     look: ButtonLook.outline,
                     size: ButtonSize.sm,
@@ -258,10 +252,10 @@ class _QueueList extends ConsumerWidget {
                     ),
                     child: Text(l.webRequestsAddAll(waiting.length)),
                   ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
         _CardRows(
           itemCount: entries.length,
           itemBuilder: (context, index) {
