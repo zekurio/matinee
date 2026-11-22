@@ -181,8 +181,10 @@ class TvStepRow extends StatelessWidget {
         radius: TvListItems.radius,
         rest: colors.foreground.withValues(alpha: .07),
         scale: TvFocus.rowScale,
-        builder: (context, content) {
-          final arrow = focused ? content : const Color(0x00000000);
+        builder: (context, look) {
+          final content = look.content;
+          // The arrows fade in with the fill rather than appear at once.
+          final arrow = look.tone(const Color(0x00000000));
           return SizedBox(
             height: TvListItems.height,
             child: Padding(
