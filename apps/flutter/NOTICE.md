@@ -22,3 +22,19 @@ are Matinee's own.
 The Android build uses the GPL-3.0 libmpv AAR from
 [edde746/mpv-build at `6dbda06021b128b7adc30161bf7870977e575135`](https://github.com/edde746/mpv-build/tree/6dbda06021b128b7adc30161bf7870977e575135).
 The AAR includes notices for its bundled libraries.
+
+# iOS player notices
+
+The following files adapt code from the same Plezy revision. All paths
+below are relative to `ios/Runner/`, in Matinee and in Plezy.
+
+| Matinee file                | Plezy source                                                                                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Player/VideoHost.swift`    | `MpvPlayer/MpvPlayerCore.swift` and `MpvPlayer/MpvPipController.swift`, the sample buffer layer under the Flutter view, its frame, and picture in picture from that layer      |
+| `Player/MpvEngine.swift`    | `shared/apple/MpvPlayer/MpvPlayerCoreBase.swift` (from the repository root), the avfoundation output and its options, the event loop, and the audio flush after a speed change |
+| `Player/PlayerSystem.swift` | `AppDelegate.swift`, the hidden volume slider and the brightness kept and restored per screen                                                                                  |
+
+The rest of `ios/Runner/` is Matinee's own.
+
+The iOS build links the `MPVKit` Swift package from the same mpv-build
+revision, libmpv and FFmpeg built for iOS under GPL-3.0.
