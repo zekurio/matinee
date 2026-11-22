@@ -31,11 +31,12 @@ import { art } from "@/lib/media"
 import { scopeLabel, titleLink } from "./request-queue"
 
 /*
- * The one card every list of requests draws: the poster, sharp, beside
- * the request's details, on the same surface as every other card in the
- * app, so it follows the theme's light and dark. The picture stays a
- * picture: it never spreads behind the words, where they would have to
- * fight whatever colours it brought.
+ * The one card every list of requests draws: the request's details on
+ * the left and the poster, sharp, on the right, over the title's
+ * backdrop. The backdrop fades into the card's own surface from the
+ * top left corner down to the bottom right, so the words always sit on
+ * the theme's colour, light or dark, and the picture only colours the
+ * card. A request without a backdrop is the plain card.
  */
 
 /**
@@ -46,7 +47,7 @@ import { scopeLabel, titleLink } from "./request-queue"
  * when something went wrong, the problem. A row keeps its place on every
  * card, so the badges line up across a grid. The actions sit on the
  * poster's bottom edge, and the space between is the only give. `menu`
- * sits beside the name and holds the rest.
+ * sits beside the name, by the poster, and holds the rest.
  */
 export function RequestCard({
   item,
@@ -59,7 +60,10 @@ export function RequestCard({
   className,
   ...props
 }: Omit<ComponentProps<"article">, "children"> & {
-  item: Pick<AdminRequestItem, "title" | "library" | "scope" | "availability">
+  item: Pick<
+    AdminRequestItem,
+    "title" | "backdrop" | "library" | "scope" | "availability"
+  >
   /** `rail` in Discover's row; `wide` in the requests pages' grids. */
   size?: "rail" | "wide"
   /** A {@link RequestStateBadge}. */
@@ -77,6 +81,7 @@ export function RequestCard({
   const id = useId()
   const { title } = item
   const poster = art(title.poster)
+  const backdrop = art(item.backdrop)
   const facts = [
     title.year === null ? null : String(title.year),
     scopeLabel(item.scope),
@@ -92,29 +97,24 @@ export function RequestCard({
       aria-labelledby={`${id}-name`}
       {...props}
       className={cn(
-        "bg-card text-foreground flex h-full min-w-0 gap-3 overflow-hidden rounded-xl border p-3 outline-none",
+        "bg-card text-foreground relative isolate flex h-full min-w-0 gap-3 overflow-hidden rounded-xl border p-3 outline-none",
         wide && "sm:gap-4 sm:p-4",
         className,
       )}
     >
-      <Link
-        {...link}
-        tabIndex={-1}
-        aria-hidden
-        className={cn(
-          "bg-muted relative block aspect-[2/3] shrink-0 self-start overflow-hidden rounded-md shadow-sm ring-1 ring-border",
-          admin ? posterWidth.admin : posterWidth.own,
-        )}
-      >
-        {poster && <Picture sources={[poster]} sizes="112px" />}
-      </Link>
+      {backdrop && (
+        <div aria-hidden className="absolute inset-0 -z-10">
+          <Picture sources={[backdrop]} sizes="384px" />
+          <div className="from-card/50 to-card absolute inset-0 bg-linear-135 to-75%" />
+        </div>
+      )}
       {/* Sized as if empty, so the poster alone sets the row's height,
           and the column stretches to it. */}
       <div className="@container/card flex min-w-0 flex-1 flex-col [contain:size]">
         <div className="flex min-w-0 flex-col items-start gap-1">
           <div className="flex w-full min-w-0 items-start gap-2">
             <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <Facts text={facts} />
+              <Facts text={facts} onPicture={backdrop !== null} />
               <Link
                 {...link}
                 tabIndex={wide ? -1 : undefined}
@@ -123,7 +123,7 @@ export function RequestCard({
               >
                 <span
                   id={`${id}-name`}
-                  className="text-15px truncate font-semibold"
+                  className="text-15px truncate font-bold"
                 >
                   {title.name}
                 </span>
@@ -138,11 +138,22 @@ export function RequestCard({
           {problem && <div className="flex w-full min-w-0">{problem}</div>}
         </div>
         {actions && (
-          <div className="mt-auto flex w-full min-w-0 items-center justify-end gap-1.5 pt-1.5">
+          <div className="mt-auto flex w-full min-w-0 items-center gap-1.5 pt-1.5">
             {actions}
           </div>
         )}
       </div>
+      <Link
+        {...link}
+        tabIndex={-1}
+        aria-hidden
+        className={cn(
+          "bg-muted ring-border relative block aspect-[2/3] shrink-0 self-start overflow-hidden rounded-md shadow-md ring-1 transition-transform duration-300 hover:scale-[1.03] motion-reduce:transition-none",
+          admin ? posterWidth.admin : posterWidth.own,
+        )}
+      >
+        {poster && <Picture sources={[poster]} sizes="124px" />}
+      </Link>
     </article>
   )
 }
@@ -162,7 +173,7 @@ const posterWidth = {
  * The year and a show's seasons, one line. Seasons can run long; when the
  * line is cut, it opens the whole of it in a popover.
  */
-function Facts({ text }: { text: string }) {
+function Facts({ text, onPicture }: { text: string; onPicture: boolean }) {
   const [element, setElement] = useState<HTMLElement | null>(null)
   const [cut, setCut] = useState(false)
   useEffect(() => {
@@ -176,7 +187,12 @@ function Facts({ text }: { text: string }) {
   const line = (
     <span
       ref={setElement}
-      className="text-muted-foreground block h-4 min-w-0 truncate text-xs leading-4"
+      className={cn(
+        "block h-4 min-w-0 truncate text-xs leading-4 font-medium",
+        // Over the backdrop's lightest corner, the muted colour fades
+        // into it.
+        onPicture ? "text-foreground/85" : "text-muted-foreground",
+      )}
     >
       {text}
     </span>
@@ -299,19 +315,19 @@ export function RequestCardSkeleton({
         wide && "sm:gap-4 sm:p-4",
       )}
     >
+      <div className="flex min-w-0 flex-1 flex-col gap-1 [contain:size]">
+        <Skeleton className="h-3 w-1/4" />
+        <Skeleton className="h-4 w-4/5" />
+        {admin && <Skeleton className="h-6 w-2/5 rounded-full" />}
+        <Skeleton className="h-6 w-1/3 rounded-full" />
+        <Skeleton className="mt-auto h-8 w-1/2" />
+      </div>
       <Skeleton
         className={cn(
           "aspect-[2/3] shrink-0 rounded-md",
           admin ? posterWidth.admin : posterWidth.own,
         )}
       />
-      <div className="flex min-w-0 flex-1 flex-col gap-1 [contain:size]">
-        <Skeleton className="h-3 w-1/4" />
-        <Skeleton className="h-4 w-4/5" />
-        {admin && <Skeleton className="h-6 w-2/5 rounded-full" />}
-        <Skeleton className="h-6 w-1/3 rounded-full" />
-        <Skeleton className="mt-auto h-8 w-1/2 self-end" />
-      </div>
     </div>
   )
 }

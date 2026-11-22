@@ -49,7 +49,7 @@ export function OwnRequest({
                 names: [item.title.name],
               })
             }
-            className="hover:bg-foreground/10 text-foreground/85 hover:text-foreground -mr-1 px-2 [@media(pointer:coarse)]:h-10"
+            className="hover:bg-foreground/10 text-foreground/85 hover:text-foreground -ml-1 px-2 [@media(pointer:coarse)]:h-10"
           >
             {/* Where the card is too narrow for both, the time keeps
                 its words and Cancel drops its mark. */}

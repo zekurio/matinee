@@ -39,7 +39,12 @@ import { inLibraries, visibleTitles } from "../access/visible"
 import { details, routedDetails } from "../catalog"
 import { detailProvider } from "../catalog/cache"
 import { db } from "../db"
-import { placeholders, toArtwork } from "../media/artwork"
+import {
+  placeholders,
+  queueArtwork,
+  saveArtwork,
+  toArtwork,
+} from "../media/artwork"
 import { events } from "../realtime/events"
 import { availability, ExternalIds } from "./availability"
 import { withCachedDetails } from "./cached-details"
@@ -309,25 +314,32 @@ async function items(viewer: Viewer, rows: Row[]) {
         rows.map((row) => row.libraryId),
       ),
     )
-  const art = await placeholders(
-    rows.flatMap((row) => (row.posterId ? [row.posterId] : [])),
-  )
-  const states = await availability(
+  const details = await withCachedDetails(
     viewer,
-    await withCachedDetails(
-      viewer,
-      rows.map((row) => ({
-        requestId: row.id,
-        ref: {
-          kind: row.kind,
-          provider: row.provider,
-          providerId: row.providerId,
-        },
-        libraryId: row.libraryId,
-        externalIds: ExternalIds.parse(row.externalIds),
-      })),
-    ),
+    rows.map((row) => ({
+      requestId: row.id,
+      ref: {
+        kind: row.kind,
+        provider: row.provider,
+        providerId: row.providerId,
+      },
+      libraryId: row.libraryId,
+      externalIds: ExternalIds.parse(row.externalIds),
+    })),
   )
+  // The backdrop comes from the title's cached details, as its title page
+  // shows it, so it's public catalog art like the poster.
+  const backdrops = await saveArtwork(
+    details.map((detail) => detail.backdrop),
+    db,
+    { catalog: true },
+  )
+  const art = await placeholders([
+    ...rows.flatMap((row) => (row.posterId ? [row.posterId] : [])),
+    ...backdrops.values(),
+  ])
+  queueArtwork([...backdrops.values()], "low")
+  const states = await availability(viewer, details)
   return rows.map((row, index) => {
     const state = states[index]
     const seasons = scopes.filter((scope) => scope.requestId === row.id)
@@ -344,6 +356,10 @@ async function items(viewer: Viewer, rows: Row[]) {
         poster: toArtwork(row.posterId, art),
         availability: state.availability,
       },
+      backdrop: toArtwork(
+        backdrops.get(details[index]?.backdrop ?? "") ?? null,
+        art,
+      ),
       library: { id: destination.id, name: destination.name },
       scope:
         row.kind === "show"
@@ -708,6 +724,7 @@ export async function queue(
           .map((f) => ({
             id: f.follower.userId,
             name: f.name ?? f.username,
+            username: f.username,
             avatarId: f.avatarId,
             createdAt: f.follower.createdAt,
           })),

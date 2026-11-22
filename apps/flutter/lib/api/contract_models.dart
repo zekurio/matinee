@@ -1220,6 +1220,7 @@ final class RequestItem {
   const RequestItem({
     required this.id,
     required this.title,
+    required this.backdrop,
     required this.library,
     required this.scope,
     required this.createdAt,
@@ -1234,6 +1235,7 @@ final class RequestItem {
     return RequestItem(
       id: fields['id'] as String,
       title: CatalogTitleSummary.fromJson(fields['title']),
+      backdrop: readNullable(fields['backdrop'], Artwork.fromJson),
       library: RequestDestination.fromJson(fields['library']),
       scope: readNullable(fields['scope'], ShowScope.fromJson),
       createdAt: fields['createdAt'] as String,
@@ -1246,6 +1248,7 @@ final class RequestItem {
 
   final String id;
   final CatalogTitleSummary title;
+  final Artwork? backdrop;
   final RequestDestination library;
   final ShowScope? scope;
   final String createdAt;
@@ -1257,6 +1260,7 @@ final class RequestItem {
   JsonMap toJson() => {
     'id': id,
     'title': title.toJson(),
+    'backdrop': backdrop?.toJson(),
     'library': library.toJson(),
     'scope': scope?.toJson(),
     'createdAt': createdAt,
@@ -1308,6 +1312,7 @@ final class AdminRequestItem {
   const AdminRequestItem({
     required this.id,
     required this.title,
+    required this.backdrop,
     required this.library,
     required this.scope,
     required this.createdAt,
@@ -1333,6 +1338,7 @@ final class AdminRequestItem {
     return AdminRequestItem(
       id: fields['id'] as String,
       title: CatalogTitleSummary.fromJson(fields['title']),
+      backdrop: readNullable(fields['backdrop'], Artwork.fromJson),
       library: RequestDestination.fromJson(fields['library']),
       scope: readNullable(fields['scope'], ShowScope.fromJson),
       createdAt: fields['createdAt'] as String,
@@ -1368,6 +1374,7 @@ final class AdminRequestItem {
 
   final String id;
   final CatalogTitleSummary title;
+  final Artwork? backdrop;
   final RequestDestination library;
   final ShowScope? scope;
   final String createdAt;
@@ -1390,6 +1397,7 @@ final class AdminRequestItem {
   JsonMap toJson() => {
     'id': id,
     'title': title.toJson(),
+    'backdrop': backdrop?.toJson(),
     'library': library.toJson(),
     'scope': scope?.toJson(),
     'createdAt': createdAt,
@@ -1446,6 +1454,7 @@ final class AdminRequestItemFollower {
   const AdminRequestItemFollower({
     required this.id,
     required this.name,
+    required this.username,
     required this.avatarId,
     required this.createdAt,
   });
@@ -1455,6 +1464,7 @@ final class AdminRequestItemFollower {
     return AdminRequestItemFollower(
       id: fields['id'] as String,
       name: fields['name'] as String,
+      username: fields['username'] as String,
       avatarId: fields['avatarId'] as String?,
       createdAt: fields['createdAt'] as String,
     );
@@ -1462,12 +1472,14 @@ final class AdminRequestItemFollower {
 
   final String id;
   final String name;
+  final String username;
   final String? avatarId;
   final String createdAt;
 
   JsonMap toJson() => {
     'id': id,
     'name': name,
+    'username': username,
     'avatarId': avatarId,
     'createdAt': createdAt,
   };

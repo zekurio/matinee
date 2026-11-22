@@ -41,6 +41,7 @@ Map<String, Object?> _waiting(String id, String kind) => {
     'poster': null,
     'availability': _availability(),
   },
+  'backdrop': null,
   'library': {'id': 'lib', 'name': 'Lib'},
   'scope': null,
   'createdAt': '2026-11-01T00:00:00.000Z',
@@ -59,6 +60,7 @@ Map<String, Object?> _waiting(String id, String kind) => {
     {
       'id': 'u1',
       'name': 'Ben',
+      'username': 'ben',
       'avatarId': null,
       'createdAt': '2026-11-01T00:00:00.000Z',
     },
