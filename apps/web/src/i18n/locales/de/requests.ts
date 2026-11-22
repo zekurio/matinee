@@ -18,18 +18,14 @@ export default {
   "requests.state.onTheWayPercent": "Unterwegs · {percent}",
   "requests.state.here": "Da",
   "requests.state.declined": "Abgelehnt",
-  "requests.askedWhen": "Zuerst angefragt: {when}",
+  "requests.cancel": "Zurückziehen",
+  "requests.cancelNamed": "Anfrage für {name} zurückziehen",
 
-  "requests.summary.waiting": "{count} wartend",
-  "requests.summary.needsAttention": plural({
-    one: "{count} braucht Aufmerksamkeit",
-    other: "{count} brauchen Aufmerksamkeit",
-  }),
-  "requests.summary.onTheWay": plural({
-    one: "{count} unterwegs",
-    other: "{count} unterwegs",
-  }),
-  "requests.summary.done": "{count} erledigt",
+  "requests.filter.state": "Status",
+  "requests.filter.kind": "Typ",
+  "requests.filter.show": "Anfragen zeigen",
+  "requests.filter.none": "Keine Anfrage passt zu diesen Filtern",
+  "requests.filter.noneHint": "Nimm einen Filter heraus, um mehr zu sehen.",
 
   "requests.list.waiting": "Wartend",
   "requests.list.needsAttention": "Braucht Aufmerksamkeit",
@@ -43,7 +39,10 @@ export default {
   "requests.kind.movie": "Film",
   "requests.kind.show": "Serie",
   "requests.othersCount": "+{count}",
-  "requests.alsoRequested": "auch {names}",
+  "requests.askedBy": "Angefragt von",
+  "requests.menu.addTo": "Hinzufügen zu",
+  "requests.menu.library": "Mediathek",
+  "requests.menu.connection": "Von {connection}",
   "requests.badge.requested": "{name} hat das {when} angefragt",
   "requests.badge.requestedMany": "{names} haben das angefragt",
   "requests.badge.waiting": "Jemand hat das angefragt",
@@ -55,7 +54,6 @@ export default {
   "requests.scope.specialsAnd": "Specials und {seasons}",
   "requests.scope.andFuture": "{seasons} + neue",
   "requests.scope.futureOnly": "Neue Staffeln",
-  "requests.goesTo.label": "Kommt in",
   "requests.goesTo.change": "Ändern, wohin {name} kommt, jetzt {library}",
   "requests.goesTo.title": "Kommt in",
   "requests.noConnection": "Keine Verbindung",
@@ -129,7 +127,6 @@ export default {
   "requests.progress.release": "Ab {date}",
   "requests.progress.notOut": "Noch nicht erschienen",
   "requests.progress.left": "noch {time}",
-  "requests.progress.label": "Fortschritt für {name}",
 
   "requests.attention.unknown": "Ohne Grund fehlgeschlagen",
   "requests.attention.failedUnknown":

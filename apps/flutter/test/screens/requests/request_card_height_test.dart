@@ -108,17 +108,27 @@ RequestItem _own(
   String state, {
   String? action,
   Map<String, Object?>? reason,
+  bool show = false,
 }) => RequestItem.fromJson({
-  'id': 'own-$state',
+  'id': 'own-$state${show ? '-show' : ''}',
   'title': {
-    'ref': {'kind': 'movie', 'provider': 'tmdb', 'providerId': state},
+    'ref': {
+      'kind': show ? 'show' : 'movie',
+      'provider': 'tmdb',
+      'providerId': state,
+    },
     'name': _long,
     'year': 2024,
     'poster': null,
     'availability': _availability('asked'),
   },
   'library': {'id': 'films', 'name': 'Films'},
-  'scope': null,
+  'scope': show
+      ? {
+          'seasons': [1, 2, 3, 5, 7, 8, 9, 11, 12, 14],
+          'future': true,
+        }
+      : null,
   'createdAt': '2026-11-01T00:00:00.000Z',
   'arrivedAt': '2026-11-20T00:00:00.000Z',
   'availability': {
@@ -132,6 +142,7 @@ RequestItem _own(
 
 final _owns = [
   _own('waiting', action: 'cancel'),
+  _own('waiting', action: 'cancel', show: true),
   _own('onTheWay', action: 'cancel'),
   _own('here'),
   _own(
@@ -187,9 +198,23 @@ Future<void> _pump(
   await tester.pump();
 }
 
+/// Where each card's badge sits from the card's top: one place for all.
+Set<double> _badgeTops(WidgetTester tester, Iterable<String> ids) => {
+  for (final id in ids)
+    tester
+            .getTopLeft(
+              find.descendant(
+                of: find.byKey(ValueKey(id)),
+                matching: find.byType(RequestStateBadge),
+              ),
+            )
+            .dy -
+        tester.getTopLeft(find.byKey(ValueKey(id))).dy,
+};
+
 void main() {
   // The bug it pins: a card's text making it taller than its poster, or
-  // one card of a list taller than the next.
+  // one card of a list taller than the next, whichever rows it fills.
   for (final (width, locale) in [
     (380.0, 'en'), // A phone.
     (380.0, 'de'),
@@ -207,9 +232,11 @@ void main() {
         for (final item in _cards)
           tester.getSize(find.byKey(ValueKey(item.id))).height,
       };
-      expect(heights, {
-        requestCardHeight(width, TextScaler.noScaling, queue: true),
-      });
+      expect(heights, {requestCardHeight(TextScaler.noScaling, queue: true)});
+      expect(
+        _badgeTops(tester, [for (final item in _cards) item.id]),
+        hasLength(1),
+      );
       expect(tester.takeException(), isNull);
     });
 
@@ -224,10 +251,56 @@ void main() {
         for (final item in _owns)
           tester.getSize(find.byKey(ValueKey(item.id))).height,
       };
-      expect(heights, {
-        requestCardHeight(width, TextScaler.noScaling, queue: false),
-      });
+      expect(heights, {requestCardHeight(TextScaler.noScaling, queue: false)});
+      expect(
+        _badgeTops(tester, [for (final item in _owns) item.id]),
+        hasLength(1),
+      );
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('a cut seasons line on an own card opens in full', (
+    tester,
+  ) async {
+    final item = _own('waiting', action: 'cancel', show: true);
+    await _pump(tester, 336, 'en', [
+      (ValueKey(item.id), OwnRequestCard(item: item)),
+    ]);
+    final line = find.textContaining('Seasons');
+    expect(line, findsOneWidget);
+    await tester.tap(line);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Seasons'), findsNWidgets(2));
+  });
+
+  // The bug it pins: one line cut every error and note to a few words.
+  testWidgets('a long error and a long decline note take two lines', (
+    tester,
+  ) async {
+    const error =
+        'Radarr answered 503 Service Unavailable at http://radarr.local:7878 '
+        'after three tries over the last hour';
+    const note =
+        'We keep this one on the shelf at home, ask me for the disc whenever '
+        'you want to watch it and I will bring it round.';
+    final failed = _item('needsAttention', error: error);
+    final declined = _own(
+      'declined',
+      reason: {'kind': 'declined', 'code': 'notForServer', 'note': note},
+    );
+    await _pump(tester, 336, 'en', [
+      (ValueKey(failed.id), QueueCard(item: failed)),
+      (ValueKey(declined.id), OwnRequestCard(item: declined)),
+    ]);
+    for (final text in ['Radarr answered 503', 'We keep this one']) {
+      final line = find.textContaining(text);
+      expect(line, findsOneWidget);
+      expect(
+        tester.getSize(line).height,
+        closeTo(2 * KitText.px13.lineHeight, .01),
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
 }

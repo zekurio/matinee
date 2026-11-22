@@ -688,3 +688,13 @@ String? scopeText(ShowScope? scope, AppLocalizations l) {
   }
   return scope.future ? l.webRequestsScopeAndFuture(seasons) : seasons;
 }
+
+/// A [RequestState]'s word, as its badge and the filter's chip say it.
+String requestStateWord(String state, AppLocalizations l) => switch (state) {
+  RequestState.needsAttention => l.webRequestsStateNeedsAttention,
+  RequestState.onTheWay => l.webRequestsStateOnTheWay,
+  RequestState.here => l.webRequestsStateHere,
+  RequestState.declined => l.webRequestsStateDeclined,
+  // Waiting, and a state this app doesn't know yet.
+  _ => l.webRequestsStateWaiting,
+};

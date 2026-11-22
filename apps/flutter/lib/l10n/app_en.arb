@@ -8766,31 +8766,6 @@
   "@webValidationApiTokenPermissions": {
     "description": "validation.apiTokenPermissions"
   },
-  "webRequestsAlsoRequested": "also {p1}",
-  "@webRequestsAlsoRequested": {
-    "description": "requests.alsoRequested",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webDiscoverTitle": "Discover",
-  "@webDiscoverTitle": {
-    "description": "discover.title"
-  },
-  "webFiltersLowest": "Lowest",
-  "@webFiltersLowest": {
-    "description": "filters.lowest"
-  },
-  "webFiltersHighest": "Highest",
-  "@webFiltersHighest": {
-    "description": "filters.highest"
-  },
-  "webRequestsDeclineCancel": "Cancel",
-  "@webRequestsDeclineCancel": {
-    "description": "requests.decline.cancel"
-  },
   "webRequestsRecent": "Recent requests",
   "@webRequestsRecent": {
     "description": "requests.recent"
@@ -8840,5 +8815,41 @@
   "webRequestsEmptyNoneHint": "When someone requests a film or show, it shows up here.",
   "@webRequestsEmptyNoneHint": {
     "description": "requests.empty.noneHint"
+  },
+  "webRequestsFilterState": "State",
+  "@webRequestsFilterState": {
+    "description": "requests.filter.state"
+  },
+  "webRequestsFilterKind": "Type",
+  "@webRequestsFilterKind": {
+    "description": "requests.filter.kind"
+  },
+  "webRequestsFilterShow": "Show requests",
+  "@webRequestsFilterShow": {
+    "description": "requests.filter.show"
+  },
+  "webRequestsFilterNone": "No requests match these filters",
+  "@webRequestsFilterNone": {
+    "description": "requests.filter.none"
+  },
+  "webRequestsFilterNoneHint": "Take a filter off to see more.",
+  "@webRequestsFilterNoneHint": {
+    "description": "requests.filter.noneHint"
+  },
+  "webDiscoverTitle": "Discover",
+  "@webDiscoverTitle": {
+    "description": "discover.title"
+  },
+  "webFiltersLowest": "Lowest",
+  "@webFiltersLowest": {
+    "description": "filters.lowest"
+  },
+  "webFiltersHighest": "Highest",
+  "@webFiltersHighest": {
+    "description": "filters.highest"
+  },
+  "webRequestsDeclineCancel": "Cancel",
+  "@webRequestsDeclineCancel": {
+    "description": "requests.decline.cancel"
   }
 }

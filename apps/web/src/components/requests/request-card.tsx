@@ -1,5 +1,10 @@
 import type { AdminRequestItem, RequestState } from "@matinee/contracts"
 import { Badge } from "@matinee/ui/components/badge"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@matinee/ui/components/popover"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
@@ -9,10 +14,16 @@ import {
   ClockIcon,
   TriangleAlertIcon,
 } from "lucide-react"
-import { type ComponentProps, type ReactNode, useId } from "react"
+import {
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+} from "react"
 
 import { ProgressRing } from "@/components/catalog/catalog-card"
-import { Picture, tone } from "@/components/picture"
+import { Picture } from "@/components/picture"
 import { tr } from "@/i18n"
 import { formatPercent } from "@/lib/format"
 import { art } from "@/lib/media"
@@ -20,27 +31,29 @@ import { art } from "@/lib/media"
 import { scopeLabel, titleLink } from "./request-queue"
 
 /*
- * The one card every list of requests draws, as Seerr draws its request
- * cards: the poster, sharp, beside the request's details, over the same
- * poster blurred and darkened, so the card takes its colors from the
- * title. Discover's row and the requests pages share it; the pages give
- * it more room. The picture is dark whatever the theme, so the card is a
- * forced `.dark` subtree: the theme's own tokens resolve dark inside it,
- * and its text, badges, and buttons read the same in both.
+ * The one card every list of requests draws: the poster, sharp, beside
+ * the request's details, on the same surface as every other card in the
+ * app, so it follows the theme's light and dark. The picture stays a
+ * picture: it never spreads behind the words, where they would have to
+ * fight whatever colours it brought.
  */
 
 /**
- * One request: the year and kind, the name, and what a show's request
- * covers, all opening the title; then the state's badge and its own
- * line, who asked, and the actions the state has. `menu` sits beside the
- * name.
+ * One request, in one fixed anatomy whatever its state or page, exactly
+ * as tall as its poster. From the top, one line each and the same small
+ * gap between them: the year, and for a show the seasons asked for; the
+ * name; on the admin's cards, who asked; the state's badge; and, only
+ * when something went wrong, the problem. A row keeps its place on every
+ * card, so the badges line up across a grid. The actions sit on the
+ * poster's bottom edge, and the space between is the only give. `menu`
+ * sits beside the name and holds the rest.
  */
 export function RequestCard({
   item,
   size = "rail",
   state,
-  line,
   who,
+  problem,
   actions,
   menu,
   className,
@@ -51,9 +64,13 @@ export function RequestCard({
   size?: "rail" | "wide"
   /** A {@link RequestStateBadge}. */
   state: ReactNode
-  /** The state's own line under the badge: progress, a problem, an outcome. */
-  line?: ReactNode
+  /**
+   * Who asked, on the admin's cards. Its row is kept even when empty, so
+   * passing it at all is what makes a card the admin's.
+   */
   who?: ReactNode
+  /** What went wrong, up to two lines under the badge. */
+  problem?: ReactNode
   actions?: ReactNode
   menu?: ReactNode
 }) {
@@ -62,95 +79,118 @@ export function RequestCard({
   const poster = art(title.poster)
   const facts = [
     title.year === null ? null : String(title.year),
-    tr(`requests.kind.${title.ref.kind}`),
+    scopeLabel(item.scope),
   ]
     .filter(Boolean)
     .join(" · ")
-  const scope = scopeLabel(item.scope)
   const link = titleLink(item)
   const wide = size === "wide"
+  const admin = who !== undefined
 
   return (
     <article
       aria-labelledby={`${id}-name`}
       {...props}
       className={cn(
-        "dark text-foreground relative isolate flex h-full min-w-0 gap-3 overflow-hidden rounded-xl border p-3 outline-none",
+        "bg-card text-foreground flex h-full min-w-0 gap-3 overflow-hidden rounded-xl border p-3 outline-none",
         wide && "sm:gap-4 sm:p-4",
-        tone(title.ref.providerId),
         className,
       )}
     >
-      <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0 scale-150 blur-2xl">
-          {poster && <Picture sources={[poster]} sizes="96px" />}
-        </div>
-        <div className="bg-background/65 absolute inset-0" />
-      </div>
       <Link
         {...link}
         tabIndex={-1}
         aria-hidden
         className={cn(
-          "bg-muted relative block aspect-[2/3] shrink-0 self-start overflow-hidden rounded-md shadow-lg ring-1 shadow-black/40 ring-white/10",
-          wide ? "w-20 sm:w-28" : "w-24 sm:w-26",
+          "bg-muted relative block aspect-[2/3] shrink-0 self-start overflow-hidden rounded-md shadow-sm ring-1 ring-border",
+          admin ? posterWidth.admin : posterWidth.own,
         )}
       >
         {poster && <Picture sources={[poster]} sizes="112px" />}
       </Link>
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <div className="flex min-w-0 items-start gap-2">
-          <Link
-            {...link}
-            tabIndex={wide ? -1 : undefined}
-            className="focus-visible:ring-ring -m-1 flex min-w-0 flex-1 flex-col rounded-sm p-1 outline-none focus-visible:ring-2"
-          >
-            <span className="text-muted-foreground truncate text-xs leading-4">
-              {facts}
-            </span>
-            <span
-              id={`${id}-name`}
-              className={cn(
-                "line-clamp-2 font-semibold text-balance",
-                wide ? "text-15px" : "text-base leading-5",
-              )}
-            >
-              {title.name}
-            </span>
-            {scope && (
-              <span className="text-muted-foreground mt-0.5 truncate text-xs leading-4">
-                {scope}
-              </span>
-            )}
-          </Link>
-          {menu && <div className="-mt-1 -mr-1 shrink-0">{menu}</div>}
-        </div>
-        <div className="flex min-w-0 flex-col gap-1.5">
-          {state}
-          {line}
-        </div>
-        {wide ? (
-          // The pages have room for who asked beside the actions.
-          <div className="mt-auto flex min-w-0 flex-wrap items-end justify-between gap-x-3 gap-y-2 pt-1">
-            <div className="min-w-0">{who}</div>
-            {actions && (
-              <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5">
-                {actions}
-              </div>
-            )}
+      {/* Sized as if empty, so the poster alone sets the row's height,
+          and the column stretches to it. */}
+      <div className="@container/card flex min-w-0 flex-1 flex-col [contain:size]">
+        <div className="flex min-w-0 flex-col items-start gap-1">
+          <div className="flex w-full min-w-0 items-start gap-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <Facts text={facts} />
+              <Link
+                {...link}
+                tabIndex={wide ? -1 : undefined}
+                title={title.name}
+                className="focus-visible:ring-ring -mx-1 flex min-w-0 rounded-sm px-1 outline-none focus-visible:ring-2"
+              >
+                <span
+                  id={`${id}-name`}
+                  className="text-15px truncate font-semibold"
+                >
+                  {title.name}
+                </span>
+              </Link>
+            </div>
+            {menu && <div className="-mt-1 -mr-1 shrink-0">{menu}</div>}
           </div>
-        ) : (
-          <>
-            {who}
-            {actions && (
-              <div className="mt-auto flex min-w-0 flex-col pt-1">
-                {actions}
-              </div>
-            )}
-          </>
+          {admin && (
+            <div className="flex h-6 w-full min-w-0 items-center">{who}</div>
+          )}
+          {state}
+          {problem && <div className="flex w-full min-w-0">{problem}</div>}
+        </div>
+        {actions && (
+          <div className="mt-auto flex w-full min-w-0 items-center justify-end gap-1.5 pt-1.5">
+            {actions}
+          </div>
         )}
       </div>
     </article>
+  )
+}
+
+/**
+ * The poster's width, which sets the card's height. The admin's cards
+ * have a row more than a person's own, who asked, and their fullest
+ * pairs it with a badge, a two-line problem, and two buttons. This is
+ * the width that fits that with a little to spare.
+ */
+const posterWidth = {
+  admin: "w-31",
+  own: "w-20",
+} as const
+
+/**
+ * The year and a show's seasons, one line. Seasons can run long; when the
+ * line is cut, it opens the whole of it in a popover.
+ */
+function Facts({ text }: { text: string }) {
+  const [element, setElement] = useState<HTMLElement | null>(null)
+  const [cut, setCut] = useState(false)
+  useEffect(() => {
+    if (!element) return
+    const measure = () => setCut(element.scrollWidth > element.clientWidth + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [element])
+  const line = (
+    <span
+      ref={setElement}
+      className="text-muted-foreground block h-4 min-w-0 truncate text-xs leading-4"
+    >
+      {text}
+    </span>
+  )
+  if (!cut) return line
+  return (
+    <Popover>
+      <PopoverTrigger className="focus-visible:ring-ring hover:bg-foreground/[0.06] data-popup-open:bg-foreground/[0.06] -mx-1 flex min-w-0 rounded-sm px-1 text-left outline-none focus-visible:ring-2">
+        {line}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto max-w-80 text-sm">
+        {text}
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -246,29 +286,31 @@ export const requestGrid =
 /** The cards on their way, in the size of the card they stand in for. */
 export function RequestCardSkeleton({
   size = "rail",
+  admin = false,
 }: {
   size?: "rail" | "wide"
+  admin?: boolean
 }) {
   const wide = size === "wide"
   return (
     <div
       className={cn(
-        "bg-card flex h-[11.5rem] gap-3 rounded-xl border p-3",
-        wide && "sm:h-[13.5rem] sm:gap-4 sm:p-4",
+        "bg-card flex gap-3 rounded-xl border p-3",
+        wide && "sm:gap-4 sm:p-4",
       )}
     >
       <Skeleton
         className={cn(
           "aspect-[2/3] shrink-0 rounded-md",
-          wide ? "w-20 sm:w-28" : "w-24 sm:w-26",
+          admin ? posterWidth.admin : posterWidth.own,
         )}
       />
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <Skeleton className="h-3 w-1/3" />
+      <div className="flex min-w-0 flex-1 flex-col gap-1 [contain:size]">
+        <Skeleton className="h-3 w-1/4" />
         <Skeleton className="h-4 w-4/5" />
-        <Skeleton className="h-4 w-2/5" />
-        <Skeleton className="mt-1 h-6 w-3/5 rounded-full" />
-        <Skeleton className="mt-auto h-8 w-full" />
+        {admin && <Skeleton className="h-6 w-2/5 rounded-full" />}
+        <Skeleton className="h-6 w-1/3 rounded-full" />
+        <Skeleton className="mt-auto h-8 w-1/2 self-end" />
       </div>
     </div>
   )

@@ -140,7 +140,12 @@ export function AdminAnswer({
         choice && "rounded-r-none",
       )}
     >
-      <CheckIcon aria-hidden strokeWidth={page ? 2 : 2.5} />
+      <CheckIcon
+        aria-hidden
+        strokeWidth={page ? 2 : 2.5}
+        // On a card too narrow for both words, the words stay.
+        className={cn(fill && "@max-[12rem]/card:hidden")}
+      />
       <span className="truncate">
         {choice ? tr("requests.addTo", { library }) : tr("requests.add")}
       </span>

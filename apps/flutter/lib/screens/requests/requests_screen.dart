@@ -13,6 +13,7 @@ import '../../media/layout.dart';
 import '../../query/failure_view.dart';
 import 'follow_window.dart';
 import 'request_cards.dart';
+import 'request_filter.dart';
 import 'request_words.dart';
 import 'requests_data.dart';
 import 'requests_hub.dart';
@@ -22,7 +23,9 @@ import 'requests_hub.dart';
 /// requests, live from the stream the whole app follows, waiting first,
 /// then needs attention, on the way, and done, a page of Done at a time.
 /// Anyone else, and the queue's runner from Home's row, gets their own
-/// requests in the server's order, in progress first, then finished.
+/// requests in the server's order, in progress first, then finished. Each
+/// has a Filter of states and kinds, which the server keeps to; it lasts
+/// as long as the page.
 class RequestsScreen extends ConsumerWidget {
   const RequestsScreen({super.key, this.queue = false});
 
@@ -142,17 +145,53 @@ Widget _bottom(BuildContext context) => SliverToBoxAdapter(
 
 // The overview.
 
-class _QueuePage extends ConsumerWidget {
+class _QueuePage extends ConsumerStatefulWidget {
   const _QueuePage();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_QueuePage> createState() => _QueuePageState();
+}
+
+class _QueuePageState extends ConsumerState<_QueuePage> {
+  final _filter = ValueNotifier(RequestFilter.none);
+
+  @override
+  void initState() {
+    super.initState();
+    _filter.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _filter.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final queue = ref.watch(requestsProvider.select((state) => state.queue));
-    final failed = ref.watch(
-      requestsProvider.select((state) => state.queueFailed),
-    );
+    final filter = _filter.value;
     final held = ref.watch(requestsProvider.select((state) => state.held));
+    // With no filter on, the queue the whole app follows; under one, its
+    // own stream, which the server keeps to the filter.
+    final RequestQueue? queue;
+    final bool failed;
+    final VoidCallback retry;
+    if (filter.isEmpty) {
+      queue = ref.watch(requestsProvider.select((state) => state.queue));
+      failed = ref.watch(requestsProvider.select((state) => state.queueFailed));
+      retry = () => ref.read(requestsProvider.notifier).retryQueue();
+    } else {
+      final live = ref.watch(filteredQueueProvider(filter));
+      queue = live.value;
+      failed = live.hasError;
+      retry = () => ref.invalidate(filteredQueueProvider(filter));
+    }
+    // Add all acts on the waiting ones the filter shows.
+    final waiting = [
+      for (final item in queue?.waiting ?? const <AdminRequestItem>[])
+        if (!held.contains(item.id)) item,
+    ];
     final Widget body;
     if (queue == null) {
       body = failed
@@ -160,17 +199,40 @@ class _QueuePage extends ConsumerWidget {
               child: FailureState(
                 title: l.requestsLoadFailed,
                 error: const _QueueDown(),
-                onRetry: () => ref.read(requestsProvider.notifier).retryQueue(),
+                onRetry: retry,
               ),
             )
           : Center(child: LoadingState(label: l.loadingInProgress));
     } else {
-      body = _QueueList(queue: queue, held: held);
+      body = _QueueList(
+        key: ValueKey(filter),
+        queue: queue,
+        held: held,
+        filter: _filter,
+      );
     }
     return PageFrame(
       title: l.webRequestsTitle,
       onBack: () => context.pop(),
       backLabel: l.commonBack,
+      actions: [
+        RequestFilterButton(filter: _filter),
+        if (waiting.length > 1)
+          // The bar's end is set for icons; a button with words keeps
+          // the gutter the back button has at the start.
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 4, end: 12),
+            child: MatineeButton(
+              look: ButtonLook.outline,
+              size: ButtonSize.sm,
+              leading: Lucide.listChecks,
+              onPressed: () => unawaited(
+                ref.read(requestsProvider.notifier).answerAll(l, waiting),
+              ),
+              child: Text(l.webRequestsAddAll(waiting.length)),
+            ),
+          ),
+      ],
       child: body,
     );
   }
@@ -181,15 +243,20 @@ final class _QueueDown implements Exception {
   const _QueueDown();
 }
 
-/// The queue as one list: Add all while more than one waits, then the
-/// cards in the server's order of its lists, each in
-/// the state the server gave it, Done read on past what the live queue
-/// holds as its end shows.
+/// The queue as one list, under the page's filter: the cards in the
+/// server's order of its lists, each in the state the server gave it, Done
+/// read on past what the live queue holds as its end shows.
 class _QueueList extends ConsumerWidget {
-  const _QueueList({required this.queue, required this.held});
+  const _QueueList({
+    super.key,
+    required this.queue,
+    required this.held,
+    required this.filter,
+  });
 
   final RequestQueue queue;
   final Set<String> held;
+  final ValueNotifier<RequestFilter> filter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -197,7 +264,8 @@ class _QueueList extends ConsumerWidget {
     // The live queue holds the newest of Done; the rest comes a page at a
     // time, only when there is more.
     final liveIsAll = queue.nextCursor == null;
-    final pages = liveIsAll ? null : ref.watch(doneRequestsProvider);
+    final provider = doneRequestsProvider(filter.value);
+    final pages = liveIsAll ? null : ref.watch(provider);
     final done = doneInOrder(
       queue.done,
       liveIsAll: liveIsAll,
@@ -205,57 +273,24 @@ class _QueueList extends ConsumerWidget {
       pagedDone: pages?.done ?? true,
     );
     final entries = queueInOrder(queue, held: held, done: done.items);
-    final waiting = [
-      for (final item in queue.waiting)
-        if (!held.contains(item.id)) item,
-    ];
-    final notifier = pages == null
-        ? null
-        : ref.read(doneRequestsProvider.notifier);
+    final notifier = pages == null ? null : ref.read(provider.notifier);
     // Nothing to build that would ask for Done's next page.
     if (entries.isEmpty && done.more && notifier != null) {
       _askNearEnd(context, 0, 0, notifier.more);
     }
     if (entries.isEmpty && !done.more) {
       return _Middle(
-        child: EmptyState(
-          icon: Lucide.inbox,
-          title: l.webRequestsEmptyNone,
-          message: l.webRequestsEmptyNoneHint,
-        ),
+        child: filter.value.isEmpty
+            ? EmptyState(
+                icon: Lucide.inbox,
+                title: l.webRequestsEmptyNone,
+                message: l.webRequestsEmptyNoneHint,
+              )
+            : NoRequestsMatch(filter: filter),
       );
     }
     return CustomScrollView(
       slivers: [
-        // The page's controls, at the end of the row above the cards:
-        // Add all while more than one waits.
-        if (waiting.length > 1)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              CardMetrics.gutter,
-              0,
-              CardMetrics.gutter,
-              16,
-            ),
-            sliver: SliverToBoxAdapter(
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  MatineeButton(
-                    look: ButtonLook.outline,
-                    size: ButtonSize.sm,
-                    leading: Lucide.listChecks,
-                    onPressed: () => unawaited(
-                      ref.read(requestsProvider.notifier).answerAll(l, waiting),
-                    ),
-                    child: Text(l.webRequestsAddAll(waiting.length)),
-                  ),
-                ],
-              ),
-            ),
-          ),
         _CardRows(
           itemCount: entries.length,
           itemBuilder: (context, index) {
@@ -302,16 +337,30 @@ class _MinePageState extends ConsumerState<_MinePage> {
   /// pages after it.
   var _older = false;
 
+  /// What the list is kept to; a change starts it over.
+  final _filter = ValueNotifier(RequestFilter.none);
+
+  @override
+  void initState() {
+    super.initState();
+    _filter.addListener(() => setState(() => _older = false));
+  }
+
   @override
   void dispose() {
     _shown.dispose();
+    _filter.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final first = ref.watch(myLiveRequestsProvider);
+    final filter = _filter.value;
+    final firstProvider = filter.isEmpty
+        ? myLiveRequestsProvider
+        : myFilteredRequestsProvider(filter);
+    final first = ref.watch(firstProvider);
     final held = ref.watch(requestsProvider.select((state) => state.held));
     final page = first.value;
     final Widget body;
@@ -322,7 +371,7 @@ class _MinePageState extends ConsumerState<_MinePage> {
               child: FailureState(
                 title: l.askedLoadFailed,
                 error: error,
-                onRetry: () => ref.invalidate(myLiveRequestsProvider),
+                onRetry: () => ref.invalidate(firstProvider),
               ),
             )
           : Center(child: LoadingState(label: l.loadingInProgress));
@@ -332,7 +381,7 @@ class _MinePageState extends ConsumerState<_MinePage> {
       final after = page.nextCursor;
       final olderProvider = after == null || !_older
           ? null
-          : olderRequestsProvider(after);
+          : olderRequestsProvider((after: after, filter: filter));
       final older = olderProvider == null ? null : ref.watch(olderProvider);
       final seen = {for (final item in page.items) item.id};
       final items = [
@@ -353,11 +402,13 @@ class _MinePageState extends ConsumerState<_MinePage> {
       if (items.isEmpty && more) _askNearEnd(context, 0, 0, readMore);
       if (items.isEmpty && !more) {
         body = _Middle(
-          child: EmptyState(
-            icon: Lucide.clock,
-            title: l.webAskMineEmpty,
-            message: l.webAskMineEmptyHint,
-          ),
+          child: filter.isEmpty
+              ? EmptyState(
+                  icon: Lucide.clock,
+                  title: l.webAskMineEmpty,
+                  message: l.webAskMineEmptyHint,
+                )
+              : NoRequestsMatch(filter: _filter),
         );
       } else {
         body = ListenableBuilder(
@@ -370,6 +421,7 @@ class _MinePageState extends ConsumerState<_MinePage> {
             child: child!,
           ),
           child: CustomScrollView(
+            key: ValueKey(filter),
             slivers: [
               _CardRows(
                 itemCount: items.length,
@@ -405,6 +457,7 @@ class _MinePageState extends ConsumerState<_MinePage> {
       title: l.webAskMineTitle,
       onBack: () => context.pop(),
       backLabel: l.commonBack,
+      actions: [RequestFilterButton(filter: _filter)],
       child: body,
     );
   }

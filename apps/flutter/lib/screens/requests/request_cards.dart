@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,17 +19,22 @@ import 'request_words.dart';
 import 'requests_hub.dart';
 
 /// The request cards that Explore's Recent requests row, the requests
-/// overview, and My requests share, as Seerr draws them and the web's
-/// `request-card.tsx` does: the poster beside the request, the poster
-/// setting the card's height. The text beside it is one line a row (the
-/// year, kind, and seasons, the name, the state's badge ([RequestStateBadge]),
-/// the state's one detail), with who asked and the state's actions in the
-/// last row, on the poster's bottom edge. What doesn't fit ends in "…", and
-/// the card's menu, or a tap on the cut line, has all of it.
+/// overview, and My requests share, as Seerr draws them: the poster beside
+/// the same rows on every card, each in its place whether a card has it or
+/// not. The year (a show's with the seasons asked for), the name, who asked
+/// (an admin's cards only), the state's badge ([RequestStateBadge]), and,
+/// only when something went wrong, the problem: the error, or why it was
+/// declined and the note, on up to two lines. The actions sit on the
+/// poster's bottom edge. The poster sets the card's height. What doesn't
+/// fit ends in "…", and the card's menu, or a tap on the cut problem, has
+/// all of it.
 
 /// How many askers' faces a card shows; the count after the first name
 /// says the rest.
 const _faces = 3;
+
+/// The box a face sits in, its ring included.
+const _face = 20.0;
 
 /// A card's padding, and the gap between the poster and the text.
 const _padding = 12.0;
@@ -39,60 +43,50 @@ const _gap = 12.0;
 /// The poster's height to its width, 2:3.
 const _posterHeight = 1.5;
 
-/// The text column a queue card needs to put who asked beside its actions
-/// in one row; narrower, who asked takes a row of its own above them.
-const _sharedRow = 400.0;
-
-/// The space around a card's rows, each of the kit's sizes.
-const _afterHeading = 2.0;
-const _afterName = 8.0;
+/// The gap under the year, which belongs with the name, and the one
+/// between every other row.
+const _afterYear = 2.0;
+const _rowGap = 6.0;
 const _badge = 24.0;
-const _afterBadge = 6.0;
-const _afterDetail = 4.0;
-const _beforeLast = 8.0;
 
-/// A request card's layout at a width: the poster's width, the text
-/// column's height, which is the poster's, and whether who asked sits on
-/// a row of its own above the actions.
-typedef RequestCardLayout = ({double poster, double height, bool stacked});
+/// The lines the problem row keeps, filled or not, so a card is as tall
+/// with one as without and every badge stays at its height.
+const _problemLines = 2;
 
-/// The layout of a card [width] wide, its rows at the text size [scaler]
-/// gives. A [queue] card, whose actions are an admin's answers, puts who
-/// asked on a row of its own when the two don't fit side by side; a
-/// person's own card has only a time and Cancel there, which always do.
-/// The poster is as tall as the fullest card's rows, so every card of a
-/// list is as tall as the next.
-RequestCardLayout requestCardLayout(
-  double width,
-  TextScaler scaler, {
-  required bool queue,
-}) {
+/// A request card's layout: the poster's width, and the text column's
+/// height, which is the poster's.
+typedef RequestCardLayout = ({double poster, double height});
+
+/// The layout of a card whose rows are at the text size [scaler] gives:
+/// the year, the name, who asked on a [queue] card, the badge, the two
+/// lines the problem may take, and the actions, with the gaps between.
+/// Every card of a list has the same rows, so it's as tall as the next,
+/// and the poster as tall as the rows, at 2:3, so no band is left empty
+/// between them.
+RequestCardLayout requestCardLayout(TextScaler scaler, {required bool queue}) {
   double line(double height) => scaler.scale(height);
   final rows =
       line(KitText.xs.lineHeight) +
-      _afterHeading +
+      _afterYear +
       line(20) +
-      _afterName +
+      (queue ? _rowGap + _whoHeight(scaler) : 0) +
+      _rowGap +
       _badge +
-      _afterBadge +
-      line(KitText.px13.lineHeight) +
-      _beforeLast +
-      math.max(ButtonSize.sm.height, line(KitText.px13.lineHeight));
-  final shared = (poster: rows / _posterHeight, height: rows, stacked: false);
-  if (!queue) return shared;
-  final text = width - 2 * _padding - _gap - shared.poster;
-  if (text >= scaler.scale(_sharedRow)) return shared;
-  final stacked =
-      rows + _afterDetail + math.max(20, line(KitText.px13.lineHeight));
-  return (poster: stacked / _posterHeight, height: stacked, stacked: true);
+      _rowGap +
+      _problemLines * line(KitText.px13.lineHeight) +
+      _rowGap +
+      ButtonSize.sm.height;
+  return (poster: rows / _posterHeight, height: rows);
 }
 
-/// A card's whole height at [width], for a row that sizes its cards ahead.
-double requestCardHeight(
-  double width,
-  TextScaler scaler, {
-  required bool queue,
-}) => requestCardLayout(width, scaler, queue: queue).height + 2 * _padding;
+/// The row of who asked: the faces, or the line beside them if the text
+/// is larger.
+double _whoHeight(TextScaler scaler) =>
+    math.max(_face, scaler.scale(KitText.px13.lineHeight));
+
+/// A card's whole height, for a row that sizes its cards ahead.
+double requestCardHeight(TextScaler scaler, {required bool queue}) =>
+    requestCardLayout(scaler, queue: queue).height + 2 * _padding;
 
 /// A title's page from a request: the library's once it's here, the
 /// catalog's while it isn't.
@@ -112,14 +106,13 @@ void _open(
   );
 }
 
-/// One request: the poster, sharp, beside the request's details, over the
-/// same poster blurred and darkened, so the card takes its colours from
-/// the title. The picture is dark in either scheme, so the card is drawn
-/// in the theme's dark half. The year, kind, and seasons and the name open
-/// the title; then [badge] and [detail], one line each, and [who] and
-/// [actions] in the last row, or [who] on a row of its own above
-/// [actions] where a [queue] card is too narrow for both. [onMore] puts
-/// the request's menu in the top corner.
+/// One request: the poster, sharp, beside the request's rows, on the kit's
+/// plain card surface, so it follows the theme's light and dark. The year
+/// and the name open the title; with [wholeYear], a year line that's cut
+/// shows all of it instead. Then [who] on a [queue] card, [badge],
+/// [problem], and [actions] on the bottom edge, each row in its place
+/// whether it's there or not. [onMore] puts the request's menu in the top
+/// corner.
 class RequestCard extends StatelessWidget {
   const RequestCard({
     super.key,
@@ -129,10 +122,11 @@ class RequestCard extends StatelessWidget {
     required this.availability,
     required this.badge,
     required this.queue,
-    this.detail,
     this.who,
+    this.problem,
     this.actions,
     this.onMore,
+    this.wholeYear = false,
   });
 
   final CatalogTitleSummary title;
@@ -143,200 +137,181 @@ class RequestCard extends StatelessWidget {
   final Availability availability;
   final Widget badge;
   final bool queue;
-  final Widget? detail;
   final Widget? who;
+  final Widget? problem;
   final Widget? actions;
   final VoidCallback? onMore;
+  final bool wholeYear;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return MatineeTheme.alwaysDark(
-      context,
-      LayoutBuilder(
-        builder: (context, constraints) {
-          final colors = MatineeTheme.of(context);
-          final layout = requestCardLayout(
-            constraints.maxWidth,
-            MediaQuery.textScalerOf(context),
-            queue: queue,
-          );
-          final poster = title.poster;
-          final heading = [
-            yearKind(title.year, title.ref.kind, l),
-            ?scopeText(scope, l),
-          ].join(' · ');
-          final onMore = this.onMore;
-          // Clear of the menu's button in the corner.
-          final clear = EdgeInsetsDirectional.only(
-            end: onMore == null ? 0 : 28,
-          );
-          void open() => _open(context, title, library, availability);
-          final who = this.who;
-          final actions = this.actions;
-          final Widget last;
-          if (layout.stacked && actions != null) {
-            last = Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: actions,
-            );
-          } else {
-            last = Row(
-              spacing: 8,
-              children: [
-                Expanded(child: who ?? const SizedBox.shrink()),
-                ?actions,
-              ],
-            );
-          }
-          return ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(KitRadius.xl)),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: ExcludeSemantics(
-                    child: Tone(
-                      toneKey: refKey(title.ref),
-                      child: Stack(
-                        fit: StackFit.expand,
+    final colors = MatineeTheme.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    final layout = requestCardLayout(scaler, queue: queue);
+    double line(double height) => scaler.scale(height);
+    final poster = title.poster;
+    final year = [
+      if (title.year case final year?) '$year',
+      ?scopeText(scope, l),
+    ].join(' · ');
+    final onMore = this.onMore;
+    // Clear of the menu's button in the corner.
+    final clear = EdgeInsetsDirectional.only(end: onMore == null ? 0 : 28);
+    void open() => _open(context, title, library, availability);
+    final yearText = Text(
+      year,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: KitText.xs.style(color: colors.mutedForeground),
+    );
+    final nameText = Text(
+      title.name,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: KitText.base.style(
+        color: colors.foreground,
+        weight: FontWeight.w600,
+        leading: 20,
+      ),
+    );
+    Widget pressable(String label, VoidCallback onPressed, Widget child) =>
+        PressIndication(
+          onPressed: onPressed,
+          label: label,
+          shape: const BorderRadius.all(Radius.circular(4)),
+          builder: (context, _) => ExcludeSemantics(
+            child: Padding(padding: clear, child: child),
+          ),
+        );
+    return ClipRRect(
+      borderRadius: const BorderRadius.all(Radius.circular(KitRadius.xl)),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: const BorderRadius.all(Radius.circular(KitRadius.xl)),
+          border: Border.all(color: colors.border),
+        ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(_padding),
+              child: SizedBox(
+                height: layout.height,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: _gap,
+                  children: [
+                    SizedBox(
+                      width: layout.poster,
+                      height: layout.height,
+                      child: ExcludeSemantics(
+                        child: PressIndication(
+                          onPressed: open,
+                          shape: const BorderRadius.all(
+                            Radius.circular(KitRadius.md),
+                          ),
+                          builder: (context, _) => ArtFrame(
+                            toneKey: refKey(title.ref),
+                            aspectRatio: CardMetrics.poster,
+                            children: [
+                              if (poster != null) Picture([ArtSource(poster)]),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (poster != null)
-                            ImageFiltered(
-                              imageFilter: ImageFilter.blur(
-                                sigmaX: 24,
-                                sigmaY: 24,
-                                tileMode: TileMode.decal,
-                              ),
-                              child: Transform.scale(
-                                scale: 1.5,
-                                child: Picture([ArtSource(poster)]),
-                              ),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final cut =
+                                  wholeYear &&
+                                  _cut(
+                                    context,
+                                    yearText,
+                                    constraints.maxWidth - clear.end,
+                                  );
+                              if (!cut) {
+                                return pressable(
+                                  [title.name, year].join(', '),
+                                  open,
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      yearText,
+                                      const SizedBox(height: _afterYear),
+                                      nameText,
+                                    ],
+                                  ),
+                                );
+                              }
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  pressable(
+                                    year,
+                                    () => unawaited(
+                                      _showWhole(context, title.name, [year]),
+                                    ),
+                                    yearText,
+                                  ),
+                                  const SizedBox(height: _afterYear),
+                                  pressable(title.name, open, nameText),
+                                ],
+                              );
+                            },
+                          ),
+                          if (queue) ...[
+                            const SizedBox(height: _rowGap),
+                            SizedBox(height: _whoHeight(scaler), child: who),
+                          ],
+                          const SizedBox(height: _rowGap),
+                          SizedBox(
+                            height: _badge,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: badge,
                             ),
-                          ColoredBox(
-                            color: colors.background.withValues(alpha: .65),
+                          ),
+                          const SizedBox(height: _rowGap),
+                          SizedBox(
+                            height:
+                                _problemLines * line(KitText.px13.lineHeight),
+                            child: problem,
+                          ),
+                          const Spacer(),
+                          SizedBox(
+                            height: ButtonSize.sm.height,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: actions,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.all(
-                          Radius.circular(KitRadius.xl),
-                        ),
-                        border: Border.all(color: colors.border),
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(_padding),
-                  child: SizedBox(
-                    height: layout.height,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: _gap,
-                      children: [
-                        SizedBox(
-                          width: layout.poster,
-                          height: layout.height,
-                          child: ExcludeSemantics(
-                            child: PressIndication(
-                              onPressed: open,
-                              shape: const BorderRadius.all(
-                                Radius.circular(KitRadius.md),
-                              ),
-                              builder: (context, _) => ArtFrame(
-                                toneKey: refKey(title.ref),
-                                aspectRatio: CardMetrics.poster,
-                                children: [
-                                  if (poster != null)
-                                    Picture([ArtSource(poster)]),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              PressIndication(
-                                onPressed: open,
-                                label: '${title.name}, $heading',
-                                shape: const BorderRadius.all(
-                                  Radius.circular(4),
-                                ),
-                                builder: (context, _) => ExcludeSemantics(
-                                  child: Padding(
-                                    padding: clear,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          heading,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: KitText.xs.style(
-                                            color: colors.mutedForeground,
-                                          ),
-                                        ),
-                                        const SizedBox(height: _afterHeading),
-                                        Text(
-                                          title.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: KitText.base.style(
-                                            color: colors.foreground,
-                                            weight: FontWeight.w600,
-                                            leading: 20,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: _afterName),
-                              Align(
-                                alignment: AlignmentDirectional.centerStart,
-                                child: badge,
-                              ),
-                              const SizedBox(height: _afterBadge),
-                              ?detail,
-                              if (layout.stacked && actions != null) ...[
-                                const SizedBox(height: _afterDetail),
-                                ?who,
-                              ],
-                              const Spacer(),
-                              last,
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (onMore != null)
-                  PositionedDirectional(
-                    top: 6,
-                    end: 6,
-                    child: MatineeButton(
-                      look: ButtonLook.ghost,
-                      size: ButtonSize.iconSm,
-                      leading: Lucide.ellipsis,
-                      label: l.webRequestsMore(title.name),
-                      onPressed: onMore,
-                    ),
-                  ),
-              ],
+              ),
             ),
-          );
-        },
+            if (onMore != null)
+              PositionedDirectional(
+                top: 6,
+                end: 6,
+                child: MatineeButton(
+                  look: ButtonLook.ghost,
+                  size: ButtonSize.iconSm,
+                  leading: Lucide.ellipsis,
+                  label: l.webRequestsMore(title.name),
+                  onPressed: onMore,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -368,16 +343,56 @@ class RequestStateBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final (:fill, :edge, :mark, :ink) = requestStateLook(
-      state,
-      colors,
-      urgent: urgent,
+    final progress = this.progress;
+    final quiet = colors.foreground.withValues(alpha: .7);
+    final (Color?, Color?, Color, Color) plain = (
+      colors.secondary,
+      null,
+      colors.foreground,
+      colors.foreground,
     );
-    final text = requestStateText(state, l, progress: progress);
-    final icon = requestStateIcon(state);
-    final Widget glyph = icon == null
-        ? ProgressRing(progress, size: 14)
-        : KitIcon(icon, size: 12, color: mark);
+    final (Color?, Color?, Color, Color) finished = (
+      null,
+      colors.foreground.withValues(alpha: .2),
+      quiet,
+      quiet,
+    );
+    final (fill, edge, mark, ink) = switch (state) {
+      RequestState.needsAttention when urgent => (
+        colors.danger.withValues(alpha: .2),
+        colors.danger.withValues(alpha: .55),
+        colors.danger,
+        colors.foreground,
+      ),
+      RequestState.needsAttention || RequestState.onTheWay => plain,
+      RequestState.here || RequestState.declined => finished,
+      // Waiting, and a state this app doesn't know yet.
+      _ when urgent => (
+        colors.accentSoft,
+        colors.accent.withValues(alpha: .5),
+        colors.accent,
+        colors.foreground,
+      ),
+      _ => plain,
+    };
+    final text = state == RequestState.onTheWay && progress != null
+        ? l.webRequestsStateOnTheWayPercent(formatPercent(progress, l))
+        : requestStateWord(state, l);
+    final Widget glyph = switch (state) {
+      RequestState.needsAttention => KitIcon(
+        Lucide.triangleAlert,
+        size: 12,
+        color: mark,
+      ),
+      RequestState.onTheWay => ProgressRing(progress, size: 14),
+      RequestState.here => KitIcon(Lucide.check, size: 12, color: mark),
+      RequestState.declined => KitIcon(
+        Lucide.circleSlash,
+        size: 12,
+        color: mark,
+      ),
+      _ => KitIcon(Lucide.clock, size: 12, color: mark),
+    };
     return Container(
       height: 24,
       padding: const EdgeInsets.symmetric(horizontal: 9),
@@ -474,13 +489,8 @@ String? requestStateIcon(String state) => switch (state) {
   _ => Lucide.clock,
 };
 
-/// [build] under the theme's dark half, where a card draws, so what it
-/// builds for the card takes the card's colours.
-Widget _dark(BuildContext context, WidgetBuilder build) =>
-    MatineeTheme.alwaysDark(context, Builder(builder: build));
-
 /// A line under the badge, muted unless [color] says otherwise, cut to
-/// one.
+/// two.
 class _Line extends StatelessWidget {
   const _Line(String this.text, {this.color}) : spans = null;
 
@@ -493,7 +503,7 @@ class _Line extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text.rich(
     TextSpan(text: text, children: spans),
-    maxLines: 1,
+    maxLines: _problemLines,
     overflow: TextOverflow.ellipsis,
     style: KitText.px13.style(
       color: color ?? MatineeTheme.of(context).mutedForeground,
@@ -503,12 +513,14 @@ class _Line extends StatelessWidget {
 
 // An admin's cards.
 
-/// One request of the queue, in the state the server gave it: one line of
-/// detail for its state, who asked, and the state's actions. Its menu has
-/// those and the rest: the request's whole detail line and everyone who
-/// asked, "Goes to", the title's page, the request in its connection, and
-/// what the connection reported. [onAnswered] runs when an answer takes a
-/// request out of Done, which pages of its own hold.
+/// One request of the queue, in the state the server gave it: who asked,
+/// the state's badge, the error or the decline's answer when there's one,
+/// on up to two lines, and the state's actions. Its menu has the rest: when
+/// they asked, where it goes and how, how far along it is or when it
+/// arrived, the request's whole problem, "Goes to", the title's page, the
+/// request in its connection, and what the connection reported.
+/// [onAnswered] runs when an answer takes a request out of Done, which
+/// pages of its own hold.
 class QueueCard extends ConsumerWidget {
   const QueueCard({super.key, required this.item, this.onAnswered});
 
@@ -516,73 +528,34 @@ class QueueCard extends ConsumerWidget {
   final ValueChanged<AdminRequestItem>? onAnswered;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => _dark(
-    context,
-    (context) => RequestCard(
-      title: item.title,
-      library: item.library.id,
-      scope: item.scope,
-      availability: item.availability,
-      queue: true,
-      badge: RequestStateBadge(
-        state: item.state,
-        progress: item.state == RequestState.onTheWay
-            ? item.availability.progress
-            : null,
-        urgent: true,
-      ),
-      detail: _queueDetail(context, ref),
-      who: _Askers(item: item),
-      // On its way and here have none on the card; who asked takes the
-      // last row.
-      actions: switch (item.state) {
-        RequestState.waiting ||
-        RequestState.needsAttention ||
-        RequestState.declined => _QueueActions(
-          item: item,
-          onAnswered: onAnswered,
-        ),
-        _ => null,
-      },
-      onMore: () => unawaited(
-        showRequestMenu(context, ref, item, onAnswered: onAnswered),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) => RequestCard(
+    title: item.title,
+    library: item.library.id,
+    scope: item.scope,
+    availability: item.availability,
+    queue: true,
+    badge: RequestStateBadge(
+      state: item.state,
+      progress: item.state == RequestState.onTheWay
+          ? item.availability.progress
+          : null,
+      urgent: true,
     ),
+    who: _Askers(item: item),
+    problem: _problem(context),
+    actions: _QueueActions(item: item, onAnswered: onAnswered),
+    onMore: () =>
+        unawaited(showRequestMenu(context, ref, item, onAnswered: onAnswered)),
   );
 
-  /// The state's one line: where it goes and how while it waits, the
-  /// error when it needs attention, how far along it is on its way, when
-  /// it arrived, or why it was declined and the note.
-  Widget? _queueDetail(BuildContext context, WidgetRef ref) {
+  /// What went wrong, under the badge: the error when it needs attention,
+  /// or why it was declined and the note.
+  Widget? _problem(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     switch (item.state) {
-      case RequestState.waiting:
-        // Its own library, or the one chosen under "Goes to", and what
-        // fills it.
-        final goes = ref.watch(
-          requestsProvider.select((state) => state.goesTo(item)),
-        );
-        final connection = goes.connection;
-        return _Line.rich([
-          TextSpan(text: '${goes.name} · '),
-          if (connection != null)
-            TextSpan(text: connection)
-          else
-            TextSpan(
-              text: l.webRequestsNoConnection,
-              style: TextStyle(color: colors.danger),
-            ),
-        ]);
       case RequestState.needsAttention:
         return _Line(queueError(item, l), color: colors.danger);
-      case RequestState.onTheWay:
-        return _Line(queueProgress(item, l) ?? item.library.name);
-      case RequestState.here:
-        final arrived = relativeTime(item.arrivedAt, l);
-        return arrived == null
-            ? null
-            : _Line(l.webRequestsDoneArrived(arrived));
       case RequestState.declined:
         final note = queueNote(item);
         return _Line.rich([
@@ -736,9 +709,8 @@ class _SmallButton extends StatelessWidget {
   );
 }
 
-/// The first few who asked, the first one's name and how many others, and
-/// when the first asked, on one line. A request that's here or declined
-/// doesn't say when.
+/// The first few who asked, and the first one's name and how many others,
+/// on one line.
 class _Askers extends StatelessWidget {
   const _Askers({required this.item});
 
@@ -751,34 +723,22 @@ class _Askers extends StatelessWidget {
     final people = askers(item);
     final first = people.firstOrNull;
     if (first == null) return const SizedBox.shrink();
-    final others = [for (final each in people.skip(1)) each.name];
+    final others = people.length - 1;
     final faces = people.take(_faces).toList();
-    final finished =
-        item.state == RequestState.here || item.state == RequestState.declined;
-    final when = finished ? null : relativeTime(first.createdAt, l);
-    final names = [
-      if (others.isEmpty)
-        first.name
-      else
-        '${first.name} ${l.webRequestsOthersCount(formatCount(others.length, l))}',
-      ?when,
-    ].join(' · ');
     return Semantics(
       container: true,
-      label: [
-        if (others.isEmpty)
-          first.name
-        else
-          '${first.name}, ${l.webRequestsAlsoRequested(formatList(others, l))}',
-        ?when,
-      ].join(', '),
+      label: others == 0
+          ? first.name
+          : l.webRequestsBadgeRequestedMany(
+              formatList([for (final each in people) each.name], l),
+            ),
       child: ExcludeSemantics(
         child: Row(
           spacing: 8,
           children: [
             SizedBox(
-              width: 20 + (faces.length - 1) * 14,
-              height: 20,
+              width: _face + (faces.length - 1) * 14,
+              height: _face,
               child: Stack(
                 children: [
                   // Painted last to first, so the first asker, the one the
@@ -789,10 +749,7 @@ class _Askers extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: colors.background,
-                            width: 1.5,
-                          ),
+                          border: Border.all(color: colors.surface, width: 1.5),
                         ),
                         child: Avatar(
                           avatarId: face.avatarId,
@@ -806,7 +763,9 @@ class _Askers extends StatelessWidget {
             ),
             Expanded(
               child: Text(
-                names,
+                others == 0
+                    ? first.name
+                    : '${first.name} ${l.webRequestsOthersCount(formatCount(others, l))}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: KitText.px13.style(color: colors.mutedForeground),
@@ -959,21 +918,23 @@ Future<void> showRequestMenu(
   );
 }
 
-/// What a queue card cuts, whole, for its menu: the seasons a show's
-/// request covers, the error or the decline's reason and note, and
-/// everyone who asked.
-List<String> _menuWhole(AdminRequestItem item, AppLocalizations l) {
-  final names = [for (final each in askers(item)) each.name];
-  return [
-    ?scopeText(item.scope, l),
-    if (item.state == RequestState.needsAttention) queueError(item, l),
-    if (item.state == RequestState.declined) ...[
-      queueReason(item, l),
-      ?queueNote(item),
+/// What a queue card leaves out or cuts, whole, for its menu: who asked
+/// (and when, for one) and the seasons, then the state's own words: how
+/// far along it is, when it arrived, the error, or the decline's reason
+/// and note.
+List<String> _menuWhole(AdminRequestItem item, AppLocalizations l) => [
+  requestedText(item, l),
+  ...switch (item.state) {
+    RequestState.needsAttention => [queueError(item, l)],
+    RequestState.onTheWay => [?queueProgress(item, l)],
+    RequestState.here => [
+      if (relativeTime(item.arrivedAt, l) case final arrived?)
+        l.webRequestsDoneArrived(arrived),
     ],
-    if (names.isNotEmpty) l.webRequestsBadgeRequestedMany(formatList(names, l)),
-  ];
-}
+    RequestState.declined => [queueReason(item, l), ?queueNote(item)],
+    _ => const <String>[],
+  },
+];
 
 /// What the connection reported about a request, label and value as the
 /// server words them, for an admin finding out why it's stuck.
@@ -1022,11 +983,10 @@ Future<void> _showDiagnostics(BuildContext context, AdminRequestItem item) {
 // A person's own cards.
 
 /// One of the viewer's own requests, as the server says it stands: its
-/// state's badge, one line for a request that arrived (when) or was
-/// declined (why, and the note, all of it a tap away), how long ago they
-/// asked while it's still going, and Cancel while the server allows it.
-/// Cancel is held for Undo, as an admin's answers are. With [live], the
-/// title's state is the one the screen's live stream last said.
+/// state's badge, why it was declined and the note when it was (all of it
+/// a tap away), and Cancel while the server allows it. Cancel is held for
+/// Undo, as an admin's answers are. With [live], the title's state is the
+/// one the screen's live stream last said.
 class OwnRequestCard extends ConsumerWidget {
   const OwnRequestCard({super.key, required this.item, this.live = false});
 
@@ -1034,12 +994,10 @@ class OwnRequestCard extends ConsumerWidget {
   final bool live;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      _dark(context, (context) => _card(context, ref));
+  Widget build(BuildContext context, WidgetRef ref) => _card(context, ref);
 
   Widget _card(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
     // Once it's here, every season it asked for is: no season to name.
     final season = item.state == RequestState.here ? null : item.season;
     final title = live
@@ -1050,9 +1008,6 @@ class OwnRequestCard extends ConsumerWidget {
           )
         : item.availability;
     final availability = season?.asTitle() ?? title;
-    final finished =
-        item.state == RequestState.here || item.state == RequestState.declined;
-    final when = finished ? null : relativeTime(item.createdAt, l);
     final cancels =
         title.action == AvailabilityAction.cancel ||
         availability.action == AvailabilityAction.cancel;
@@ -1062,21 +1017,14 @@ class OwnRequestCard extends ConsumerWidget {
       scope: item.scope,
       availability: title,
       queue: false,
+      wholeYear: true,
       badge: RequestStateBadge(
         state: item.state,
         progress: item.state == RequestState.onTheWay
             ? availability.progress
             : null,
       ),
-      detail: _ownDetail(context, availability),
-      who: when == null
-          ? null
-          : Text(
-              when,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KitText.px13.style(color: colors.mutedForeground),
-            ),
+      problem: _problem(context, availability),
       actions: cancels
           ? MatineeButton(
               look: ButtonLook.secondary,
@@ -1099,63 +1047,70 @@ class OwnRequestCard extends ConsumerWidget {
     );
   }
 
-  /// When it arrived, or why it was declined and the note an admin left;
-  /// a tap on that opens all of it. The other states need none.
-  Widget? _ownDetail(BuildContext context, Availability availability) {
+  /// Why it was declined and the note an admin left, the one thing that
+  /// can go wrong that's the asker's to read; a tap on it opens all of it.
+  Widget? _problem(BuildContext context, Availability availability) {
+    if (item.state != RequestState.declined) return null;
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    switch (item.state) {
-      case RequestState.here:
-        final arrived = relativeTime(item.arrivedAt, l);
-        return arrived == null
-            ? null
-            : _Line(l.webRequestsDoneArrived(arrived));
-      case RequestState.declined:
-        final reason = availability.reason;
-        if (reason == null) return null;
-        final why = declineText(reason, l);
-        final note = reason.note?.trim();
-        final hasNote = note != null && note.isNotEmpty;
-        return PressIndication(
-          onPressed: () => unawaited(
-            _showAnswer(context, item.title.name, why, hasNote ? note : null),
-          ),
-          label: [why, if (hasNote) note].join(' '),
-          shape: const BorderRadius.all(Radius.circular(4)),
-          builder: (context, _) => ExcludeSemantics(
-            child: _Line.rich([
-              TextSpan(text: why),
-              if (hasNote)
-                TextSpan(
-                  text: ' $note',
-                  style: TextStyle(
-                    color: colors.foreground.withValues(alpha: .7),
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-            ]),
-          ),
-        );
-      default:
-        return null;
-    }
+    final reason = availability.reason;
+    if (reason == null) return null;
+    final why = declineText(reason, l);
+    final note = reason.note?.trim();
+    final hasNote = note != null && note.isNotEmpty;
+    return PressIndication(
+      onPressed: () => unawaited(
+        _showWhole(context, item.title.name, [why, if (hasNote) note]),
+      ),
+      label: [why, if (hasNote) note].join(' '),
+      shape: const BorderRadius.all(Radius.circular(4)),
+      builder: (context, _) => ExcludeSemantics(
+        child: _Line.rich([
+          TextSpan(text: why),
+          if (hasNote)
+            TextSpan(
+              text: ' $note',
+              style: TextStyle(
+                color: colors.foreground.withValues(alpha: .7),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+        ]),
+      ),
+    );
   }
 }
 
-/// A declined request's whole answer, which its card cuts to a line: the
-/// reason, and the note an admin left.
-Future<void> _showAnswer(
+/// Text a card cuts to a line, all of it, under the title's [name]: a
+/// declined request's reason and note, or the seasons it asked for.
+Future<void> _showWhole(
   BuildContext context,
   String name,
-  String why,
-  String? note,
+  List<String> paragraphs,
 ) {
   final l = AppLocalizations.of(context);
   return Sheet.show<void>(
     context,
     dismissLabel: l.diagnosticsClose,
-    builder: (sheet) => Sheet(title: name, child: _Whole([why, ?note])),
+    builder: (sheet) => Sheet(title: name, child: _Whole(paragraphs)),
   );
+}
+
+/// Whether [text], one line, is cut at [width].
+bool _cut(BuildContext context, Text text, double width) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text.data,
+      style: DefaultTextStyle.of(context).style.merge(text.style),
+    ),
+    maxLines: 1,
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    locale: Localizations.maybeLocaleOf(context),
+  )..layout(maxWidth: math.max(0, width));
+  final cut = painter.didExceedMaxLines;
+  painter.dispose();
+  return cut;
 }
 
 /// Text a card cuts, whole, as a sheet shows it: each paragraph in turn.
