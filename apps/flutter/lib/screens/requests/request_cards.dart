@@ -284,18 +284,27 @@ class _Heading extends StatelessWidget {
   }
 }
 
-/// The one badge a request card carries: a mark and a word for its
-/// [state], with how much is in while it's on its way when the server
-/// says. What waits on an admin, or needs one, stands out in the accent
-/// and the danger colour; what's on its way is a plain pill; what's done
-/// is quiet, an outline in muted words.
+/// The one badge a request card carries: a mark and a word for the
+/// [state] the server gave the request, with how much is in while it's on
+/// its way when the server says. With [urgent], for whoever runs the
+/// queue, what's theirs to answer stands out, waiting in the accent and
+/// needs attention in the danger colour; on an asker's own card both read
+/// plain. What's on its way is a plain pill; what's done is quiet, an
+/// outline in muted words.
 class RequestStateBadge extends StatelessWidget {
-  const RequestStateBadge({super.key, required this.state, this.progress});
+  const RequestStateBadge({
+    super.key,
+    required this.state,
+    this.progress,
+    this.urgent = false,
+  });
 
-  final RequestState state;
+  /// A [RequestState].
+  final String state;
 
   /// The share that's in, for one on its way.
   final double? progress;
+  final bool urgent;
 
   @override
   Widget build(BuildContext context) {
@@ -303,43 +312,46 @@ class RequestStateBadge extends StatelessWidget {
     final colors = MatineeTheme.of(context);
     final progress = this.progress;
     final quiet = colors.foreground.withValues(alpha: .7);
+    final (Color?, Color?, Color, Color) plain = (
+      colors.secondary,
+      null,
+      colors.foreground,
+      colors.foreground,
+    );
+    final (Color?, Color?, Color, Color) finished = (
+      null,
+      colors.foreground.withValues(alpha: .2),
+      quiet,
+      quiet,
+    );
     final (fill, edge, mark, ink) = switch (state) {
-      RequestState.waiting => (
-        colors.accentSoft,
-        colors.accent.withValues(alpha: .5),
-        colors.accent,
-        colors.foreground,
-      ),
-      RequestState.needsAttention => (
+      RequestState.needsAttention when urgent => (
         colors.danger.withValues(alpha: .2),
         colors.danger.withValues(alpha: .55),
         colors.danger,
         colors.foreground,
       ),
-      RequestState.onTheWay => (
-        colors.secondary,
-        null,
-        colors.foreground,
+      RequestState.needsAttention || RequestState.onTheWay => plain,
+      RequestState.here || RequestState.declined => finished,
+      // Waiting, and a state this app doesn't know yet.
+      _ when urgent => (
+        colors.accentSoft,
+        colors.accent.withValues(alpha: .5),
+        colors.accent,
         colors.foreground,
       ),
-      RequestState.here || RequestState.declined => (
-        null,
-        colors.foreground.withValues(alpha: .2),
-        quiet,
-        quiet,
-      ),
+      _ => plain,
     };
     final text = switch (state) {
-      RequestState.waiting => l.requestStateWaiting,
-      RequestState.needsAttention => l.requestStateNeedsAttention,
+      RequestState.needsAttention => l.webRequestsStateNeedsAttention,
       RequestState.onTheWay when progress != null =>
-        l.requestStateOnTheWayPercent(formatPercent(progress, l)),
-      RequestState.onTheWay => l.requestStateOnTheWay,
-      RequestState.here => l.requestStateHere,
-      RequestState.declined => l.requestStateDeclined,
+        l.webRequestsStateOnTheWayPercent(formatPercent(progress, l)),
+      RequestState.onTheWay => l.webRequestsStateOnTheWay,
+      RequestState.here => l.webRequestsStateHere,
+      RequestState.declined => l.webRequestsStateDeclined,
+      _ => l.webRequestsStateWaiting,
     };
     final Widget glyph = switch (state) {
-      RequestState.waiting => KitIcon(Lucide.clock, size: 12, color: mark),
       RequestState.needsAttention => KitIcon(
         Lucide.triangleAlert,
         size: 12,
@@ -352,6 +364,7 @@ class RequestStateBadge extends StatelessWidget {
         size: 12,
         color: mark,
       ),
+      _ => KitIcon(Lucide.clock, size: 12, color: mark),
     };
     return Container(
       height: 24,
@@ -435,24 +448,22 @@ class _Bar extends StatelessWidget {
 
 // An admin's cards.
 
-/// One request of the queue, in any [state]: who asked and when, the
-/// state's line, and the state's actions. Its menu has those and the rest:
-/// "Goes to", the title's page, the request in its connection, and what
-/// the connection reported. [onAnswered] runs when an answer takes a
-/// request out of Done, which pages of its own hold. [compact], for a row
-/// that stretches every card to its tallest, keeps each line to one and a
-/// declined request's answers to its menu.
+/// One request of the queue, in the state the server gave it: who asked
+/// and when, the state's line, and the state's actions. Its menu has those
+/// and the rest: "Goes to", the title's page, the request in its
+/// connection, and what the connection reported. [onAnswered] runs when an
+/// answer takes a request out of Done, which pages of its own hold.
+/// [compact], for a row that stretches every card to its tallest, keeps
+/// each line to one.
 class QueueCard extends ConsumerWidget {
   const QueueCard({
     super.key,
     required this.item,
-    required this.state,
     this.onAnswered,
     this.compact = false,
   });
 
   final AdminRequestItem item;
-  final RequestState state;
   final ValueChanged<AdminRequestItem>? onAnswered;
   final bool compact;
 
@@ -468,19 +479,18 @@ class QueueCard extends ConsumerWidget {
       availability: item.availability,
       state: [
         RequestStateBadge(
-          state: state,
-          progress: state == RequestState.onTheWay
+          state: item.state,
+          progress: item.state == RequestState.onTheWay
               ? item.availability.progress
               : null,
+          urgent: true,
         ),
         ..._queueLines(context, ref),
       ],
       who: _Askers(item: item),
-      actions: compact && state == RequestState.declined
-          ? null
-          : _QueueActions(item: item, state: state, onAnswered: onAnswered),
+      actions: _QueueActions(item: item, onAnswered: onAnswered),
       onMore: () => unawaited(
-        showRequestMenu(context, ref, item, state, onAnswered: onAnswered),
+        showRequestMenu(context, ref, item, onAnswered: onAnswered),
       ),
     ),
   );
@@ -488,7 +498,7 @@ class QueueCard extends ConsumerWidget {
   List<Widget> _queueLines(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    switch (state) {
+    switch (item.state) {
       case RequestState.waiting:
         // Where it goes: its own library, or the one chosen under "Goes
         // to", and what fills it.
@@ -561,6 +571,8 @@ class QueueCard extends ConsumerWidget {
             ].join(' · '),
           ),
         ];
+      default:
+        return const [];
     }
   }
 
@@ -603,29 +615,20 @@ class QueueCard extends ConsumerWidget {
 }
 
 /// A queue card's actions, the state's own: Add and Decline while it
-/// waits, Retry and Give up when it needs attention, Add after all and
-/// Allow again once declined. Each is held for Undo by the hub.
+/// waits, Retry and Give up when it needs attention, Add after all once
+/// declined, with Allow requests again in its menu, as the web has both
+/// for a card's one line. Each is held for Undo by the hub.
 class _QueueActions extends ConsumerWidget {
-  const _QueueActions({
-    required this.item,
-    required this.state,
-    this.onAnswered,
-  });
+  const _QueueActions({required this.item, this.onAnswered});
 
   final AdminRequestItem item;
-  final RequestState state;
   final ValueChanged<AdminRequestItem>? onAnswered;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final hub = ref.read(requestsProvider.notifier);
-    void reopen(QueueAnswer answer) {
-      onAnswered?.call(item);
-      unawaited(hub.answer(l, item, answer));
-    }
-
-    final List<Widget> buttons = switch (state) {
+    final List<Widget> buttons = switch (item.state) {
       RequestState.waiting => [
         AddButton(item: item, small: true),
         DeclineButton(item: item, small: true),
@@ -649,15 +652,15 @@ class _QueueActions extends ConsumerWidget {
           look: ButtonLook.secondary,
           icon: Lucide.check,
           text: l.webRequestsAddAfterAll,
-          onPressed: () => reopen(const AddAfterAllAnswer()),
-        ),
-        _SmallButton(
-          text: l.webRequestsAllowAgain,
-          onPressed: () => reopen(const AllowAgainAnswer()),
+          label: l.webRequestsAddAfterAllNamed(item.title.name),
+          onPressed: () {
+            onAnswered?.call(item);
+            unawaited(hub.answer(l, item, const AddAfterAllAnswer()));
+          },
         ),
       ],
       // Giving up on one on its way is rare and in its menu.
-      RequestState.onTheWay || RequestState.here => const [],
+      _ => const [],
     };
     if (buttons.isEmpty) return const SizedBox.shrink();
     return Wrap(spacing: 8, runSpacing: 8, children: buttons);
@@ -816,8 +819,7 @@ String _whereText(
 Future<void> showRequestMenu(
   BuildContext context,
   WidgetRef ref,
-  AdminRequestItem item,
-  RequestState state, {
+  AdminRequestItem item, {
   ValueChanged<AdminRequestItem>? onAnswered,
 }) {
   final l = AppLocalizations.of(context);
@@ -847,7 +849,7 @@ Future<void> showRequestMenu(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ...switch (state) {
+            ...switch (item.state) {
               RequestState.waiting => [
                 if (choosesLibrary(item))
                   SheetItem(
@@ -901,7 +903,7 @@ Future<void> showRequestMenu(
                   onPressed: () => reopen(const AllowAgainAnswer()),
                 ),
               ],
-              RequestState.here => const <Widget>[],
+              _ => const <Widget>[],
             },
             SheetItem(
               icon: Lucide.info,
@@ -1012,7 +1014,8 @@ class OwnRequestCard extends ConsumerWidget {
   Widget _card(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final season = item.season;
+    // Once it's here, every season it asked for is: no season to name.
+    final season = item.state == RequestState.here ? null : item.season;
     final title = live
         ? ref.watch(
             requestsProvider.select(
@@ -1021,7 +1024,6 @@ class OwnRequestCard extends ConsumerWidget {
           )
         : item.availability;
     final availability = season?.asTitle() ?? title;
-    final state = ownState(availability);
     final when = relativeTime(item.createdAt, l);
     final cancels =
         title.action == AvailabilityAction.cancel ||
@@ -1037,19 +1039,18 @@ class OwnRequestCard extends ConsumerWidget {
             seasonName(season.number, l),
             style: KitText.xs.style(color: colors.mutedForeground),
           ),
-        if (state != null)
-          RequestStateBadge(
-            state: state,
-            progress: state == RequestState.onTheWay
-                ? availability.progress
-                : null,
-          ),
+        RequestStateBadge(
+          state: item.state,
+          progress: item.state == RequestState.onTheWay
+              ? availability.progress
+              : null,
+        ),
         ..._ownLines(context, availability),
       ],
       who: when == null
           ? const SizedBox.shrink()
           : Text(
-              l.discoverRequestAskedWhen(when),
+              l.webRequestsAskedWhen(when),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: KitText.px13.style(color: colors.mutedForeground),
@@ -1082,25 +1083,33 @@ class OwnRequestCard extends ConsumerWidget {
   List<Widget> _ownLines(BuildContext context, Availability availability) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    switch (availability.state) {
-      case AvailabilityState.release:
-        final word = stateWord(availability);
-        return [if (word != null) _Line(stateText(word, l))];
-      case AvailabilityState.coming:
+    switch (item.state) {
+      case RequestState.onTheWay:
         final progress = availability.progress;
         final eta = availability.etaSeconds;
+        final String? words;
+        if (availability.state == AvailabilityState.release) {
+          final word = stateWord(availability);
+          words = word == null ? null : stateText(word, l);
+        } else if (eta != null) {
+          words = l.webRequestsProgressLeft(formatSpan(eta, l));
+        } else if (availability.stillLooking) {
+          words = l.webRequestsProgressLooking;
+        } else {
+          words = null;
+        }
         return [
           if (progress != null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: _Bar(progress),
             ),
-          if (eta != null) _Line(l.webRequestsProgressLeft(formatSpan(eta, l))),
+          if (words != null) _Line(words),
         ];
-      case AvailabilityState.here:
+      case RequestState.here:
         final arrived = relativeTime(item.arrivedAt, l);
         return [if (arrived != null) _Line(l.webRequestsDoneArrived(arrived))];
-      case AvailabilityState.unavailable:
+      case RequestState.declined:
         final reason = availability.reason;
         if (reason == null) return const [];
         final note = reason.note?.trim();
