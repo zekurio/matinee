@@ -96,6 +96,9 @@ abstract final class KitRadius {
   static const lg = 10.0;
   static const xl = 14.0;
 
+  /// A big card: a tablet's featured title, which takes a corner to match.
+  static const xxl = 20.0;
+
   static const control = BorderRadius.all(Radius.circular(lg));
   static const panel = BorderRadius.all(Radius.circular(xl));
   static const pill = BorderRadius.all(Radius.circular(999));

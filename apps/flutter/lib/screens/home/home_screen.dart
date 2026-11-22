@@ -16,13 +16,14 @@ import '../../router.dart';
 import 'featured_carousel.dart';
 import 'home_data.dart';
 import 'home_layout.dart';
+import 'home_showcase.dart';
 import 'offline_home.dart';
 
-/// The Home tab: the featured titles on top as cards, then Continue watching,
-/// Next up, the recommendation rows, and each library's newest titles. A row
-/// that's loading or has nothing is left out, and so is one that failed; Home
-/// is an error only when nothing on it could show. [links] are debug tools
-/// that have no screen yet.
+/// The Home tab: the featured titles on top, as cards on a phone and one big
+/// card on a tablet, then Continue watching, Next up, the recommendation rows,
+/// and each library's newest titles. A row that's loading or has nothing is
+/// left out, and so is one that failed; Home is an error only when nothing on
+/// it could show. [links] are debug tools that have no screen yet.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, this.links = const []});
 
@@ -174,11 +175,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// failed.
   Widget _top(AsyncValue<List<FeaturedTitle>> featured) {
     final slides = featured.value;
+    final showcase = ShowcaseLayout.shows(MediaQuery.sizeOf(context));
     if (slides == null) {
       if (featured.hasError) return const SizedBox.shrink();
-      return const Padding(
-        padding: EdgeInsets.only(top: 8),
-        child: FeaturedCarouselSkeleton(),
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: showcase
+            ? const HomeShowcaseSkeleton()
+            : const FeaturedCarouselSkeleton(),
       );
     }
     if (slides.isEmpty) return const SizedBox.shrink();
@@ -186,7 +190,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final key = ValueKey(Object.hashAll([for (final s in slides) s.title.id]));
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: FeaturedCarouselView(key: key, slides: slides),
+      child: showcase
+          ? HomeShowcase(key: key, slides: slides)
+          : FeaturedCarouselView(key: key, slides: slides),
     );
   }
 

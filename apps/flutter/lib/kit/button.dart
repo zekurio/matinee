@@ -15,6 +15,10 @@ enum ButtonLook {
   link,
   frosted,
   glass,
+
+  /// White on dark art, as the large streaming apps' Play: the one strong
+  /// button over a picture.
+  inverse,
 }
 
 /// The web's sizes: height, side padding, the padding on a side that has an
@@ -148,6 +152,19 @@ class MatineeButton extends StatelessWidget {
             white.withValues(alpha: hot ? .26 : .18),
             white,
             white.withValues(alpha: .15),
+          ),
+          ButtonLook.inverse => (
+            Color.lerp(
+              white,
+              colors.background,
+              pressed
+                  ? .14
+                  : hot
+                  ? .07
+                  : 0,
+            )!,
+            colors.background,
+            null,
           ),
         };
         final style = size.text.style(
