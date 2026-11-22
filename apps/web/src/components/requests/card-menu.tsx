@@ -31,8 +31,9 @@ import { askers, titleLink } from "./request-queue"
 
 /*
  * The "…" on an admin's request card, which holds what the card leaves
- * out: who asked and when each did, where it goes, and for a waiting
- * request, adding it to another library than its own. The card's Add
+ * out: who asked and when each did, each opening their profile, the
+ * library it goes to, which opens it, and for a waiting request, adding
+ * it to another library than its own. The card's Add
  * keeps to the one it goes to now.
  */
 
@@ -60,6 +61,7 @@ export function CardMenu({
   const choosing = waiting && onAdd && choosesLibrary(item)
   // A waiting request isn't routed yet: what fills it is its library's.
   const goesTo = useGoesTo(item)
+  const libraryId = waiting ? goesTo.id : item.library.id
   const where = [
     waiting ? goesTo.library : item.library.name,
     (waiting ? goesTo.connection : item.connection?.name) ??
@@ -110,14 +112,18 @@ export function CardMenu({
               {everyone.map((asker) => (
                 <DropdownMenuItem
                   key={asker.id}
-                  closeOnClick={false}
-                  className={fact}
+                  onClick={() =>
+                    void navigate({
+                      to: "/profiles/$username",
+                      params: { username: asker.username },
+                    })
+                  }
                 >
                   <UserAvatar
                     user={{
                       avatarId: asker.avatarId,
                       displayName: asker.name,
-                      username: asker.name,
+                      username: asker.username,
                     }}
                     className="text-11px size-5 shrink-0"
                   />
@@ -171,7 +177,15 @@ export function CardMenu({
                 ? tr("requests.goesTo.title")
                 : tr("requests.menu.library")}
             </DropdownMenuLabel>
-            <DropdownMenuItem closeOnClick={false} className={fact}>
+            <DropdownMenuItem
+              onClick={() =>
+                void navigate({
+                  to: "/libraries/$libraryId",
+                  params: { libraryId },
+                })
+              }
+              className="items-start whitespace-normal"
+            >
               <LibraryBigIcon />
               <span className="min-w-0">{where}</span>
             </DropdownMenuItem>

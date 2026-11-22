@@ -160,6 +160,7 @@ export async function ask(
         name: detail.name,
         year: detail.year,
         posterId: detail.poster?.id,
+        backdropId: detail.backdrop?.id,
         externalIds: metadata.value.externalIds,
         // Kept as they were for a request already there, which may have
         // been sent with them.
@@ -180,6 +181,12 @@ export async function ask(
       )
       .for("update")
     if (!row) unavailable()
+    // A request from before requests kept a backdrop gets one when asked again.
+    if (!row.backdropId && detail.backdrop)
+      await tx
+        .update(request)
+        .set({ backdropId: detail.backdrop.id })
+        .where(eq(request.id, row.id))
     const [self] = await tx
       .select()
       .from(requestFollower)
@@ -307,7 +314,9 @@ async function items(viewer: Viewer, rows: Row[]) {
       ),
     )
   const art = await placeholders(
-    rows.flatMap((row) => (row.posterId ? [row.posterId] : [])),
+    rows.flatMap((row) =>
+      [row.posterId, row.backdropId].filter((id) => id !== null),
+    ),
   )
   const states = await availability(
     viewer,
@@ -341,6 +350,7 @@ async function items(viewer: Viewer, rows: Row[]) {
         poster: toArtwork(row.posterId, art),
         availability: state.availability,
       },
+      backdrop: toArtwork(row.backdropId, art),
       library: { id: destination.id, name: destination.name },
       scope:
         row.kind === "show"
@@ -705,6 +715,7 @@ export async function queue(
           .map((f) => ({
             id: f.follower.userId,
             name: f.name ?? f.username,
+            username: f.username,
             avatarId: f.avatarId,
             createdAt: f.follower.createdAt,
           })),

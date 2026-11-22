@@ -1,5 +1,6 @@
 import { eventIterator } from "@orpc/contract"
 
+import { Artwork } from "./artwork"
 import {
   CatalogRef,
   CatalogDestination,
@@ -49,6 +50,12 @@ export const AdminRequestDestination = CatalogDestination.extend({
 export const RequestItem = t.object({
   id: t.uuid(),
   title: CatalogTitleSummary,
+  /**
+   * The title's backdrop as it was when it was first asked for, for the
+   * card to lie under its words. Null when it had none, or for a request
+   * made before requests kept it.
+   */
+  backdrop: Artwork.nullable(),
   library: RequestDestination,
   scope: ShowScope.nullable(),
   createdAt: t.date(),
@@ -111,6 +118,8 @@ export const AdminRequestItem = RequestItem.extend({
     t.object({
       id: t.uuid(),
       name: t.string(),
+      /** For a link to their profile. */
+      username: t.string(),
       /** Load it through `avatarPath()`. Null shows the initial instead. */
       avatarId: t.string().nullable(),
       createdAt: t.date(),
