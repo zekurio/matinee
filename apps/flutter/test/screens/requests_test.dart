@@ -21,7 +21,7 @@ import 'requests_backend.dart';
 
 final _admin = SignedIn(
   '$server',
-  User.fromJson({...userJson('ada'), 'role': 'admin'}),
+  User.fromJson({...userJson('ada'), 'role': 'admin', 'permissions': ['all']}),
 );
 
 /// [screen] with the app's toasts over it, as the app shows them.

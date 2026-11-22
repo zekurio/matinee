@@ -7,6 +7,7 @@ import 'package:intl/intl.dart' show NumberFormat;
 
 import '../../../api/matinee_api.dart';
 import '../../../core/field_errors.dart';
+import '../../../core/permissions.dart';
 import '../../../core/session.dart';
 import '../../../kit/kit.dart';
 import '../../../l10n/app_localizations.dart';
@@ -29,9 +30,52 @@ const _streamChoices = [1, 2, 3, 4, 5, 10];
 /// What "Limited" starts at, as on the web.
 const _defaultQuota = RequestQuota(titles: 5, days: 7);
 
+/// The permissions among [permissions] the form has no control for.
+List<String> _others(List<String>? permissions) => [
+  for (final permission in permissions ?? const <String>[])
+    if (!policyPermissions.contains(permission)) permission,
+];
+
+/// The request permissions among [permissions].
+List<String> _requestOnes(List<String>? permissions) => [
+  for (final permission in permissions ?? const <String>[])
+    if (requestPermissions.contains(permission)) permission,
+];
+
+/// The request choice an override's allow and deny lists spell, or null
+/// when they leave it to the groups.
+RequestsChoice? _requestsChoice(AdminUserAccessOverride override) {
+  final allow = override.allow ?? const [];
+  final deny = override.deny ?? const [];
+  if (deny.contains(Permission.requestCreate)) return RequestsChoice.off;
+  if (!allow.contains(Permission.requestCreate)) return null;
+  return allow.contains(Permission.requestAutoApprove)
+      ? RequestsChoice.add
+      : RequestsChoice.ask;
+}
+
+/// What a request choice allows and denies.
+({List<String> allow, List<String> deny}) _requestsLists(
+  RequestsChoice? choice,
+) => switch (choice) {
+  null => (allow: const [], deny: const []),
+  RequestsChoice.off => (
+    allow: const [],
+    deny: const [Permission.requestCreate, Permission.requestAutoApprove],
+  ),
+  RequestsChoice.ask => (
+    allow: const [Permission.requestCreate],
+    deny: const [Permission.requestAutoApprove],
+  ),
+  RequestsChoice.add => (allow: requestPermissions, deny: const []),
+};
+
 /// One account's access as the form holds it: the groups an admin or an
 /// invite put it in, and what's set on it over them, each field null
 /// while the groups decide it. A limit's [Explicit] holds null for none.
+/// Downloads and requests are permissions the override allows or denies,
+/// as the web's access dialog has them; the override's other permissions
+/// have no control here and save as they were.
 @immutable
 final class _Draft {
   const _Draft({
@@ -43,6 +87,7 @@ final class _Draft {
     required this.requests,
     required this.requestLimit,
     required this.maxStreams,
+    this.requestsTouched = false,
   });
 
   factory _Draft.of(AdminUserAccess access) {
@@ -61,8 +106,12 @@ final class _Draft {
       },
       maxBitrate: override.maxBitrate,
       transcode: override.transcode,
-      downloads: override.downloads,
-      requests: override.requests,
+      downloads: (override.allow ?? const []).contains(Permission.mediaDownload)
+          ? true
+          : (override.deny ?? const []).contains(Permission.mediaDownload)
+          ? false
+          : null,
+      requests: _requestsChoice(override),
       requestLimit: override.requestLimit,
       maxStreams: override.maxStreams,
     );
@@ -72,10 +121,21 @@ final class _Draft {
   final ({bool all, Set<String> ids})? libraries;
   final Explicit<int>? maxBitrate;
   final bool? transcode;
+
+  /// `media.download`, allowed or denied over the groups.
   final bool? downloads;
-  final String? requests;
+
+  /// `request.create` and `request.autoApprove` as one choice.
+  final RequestsChoice? requests;
   final Explicit<RequestQuota>? requestLimit;
   final Explicit<int>? maxStreams;
+
+  /// Whether the request choice was changed, even back to how it opened.
+  /// It shows three of the mixes its two permissions make, so one never
+  /// touched keeps what the override allows and denies of them: an
+  /// override may deny adding without an approval and leave asking to the
+  /// groups.
+  final bool requestsTouched;
 
   _Draft copy({
     Set<String>? groupIds,
@@ -83,7 +143,7 @@ final class _Draft {
     Explicit<int>? Function()? maxBitrate,
     bool? Function()? transcode,
     bool? Function()? downloads,
-    String? Function()? requests,
+    RequestsChoice? Function()? requests,
     Explicit<RequestQuota>? Function()? requestLimit,
     Explicit<int>? Function()? maxStreams,
   }) => _Draft(
@@ -95,23 +155,40 @@ final class _Draft {
     requests: requests == null ? this.requests : requests(),
     requestLimit: requestLimit == null ? this.requestLimit : requestLimit(),
     maxStreams: maxStreams == null ? this.maxStreams : maxStreams(),
+    requestsTouched: requestsTouched || requests != null,
   );
 
-  AdminUsersSetAccessInputOverride get own => AdminUsersSetAccessInputOverride(
-    libraries: switch (libraries) {
-      final libraries? => AdminUsersSetAccessInputOverrideLibraries(
-        all: libraries.all,
-        ids: libraries.all ? const [] : libraries.ids.toList(),
-      ),
-      null => null,
-    },
-    maxBitrate: maxBitrate,
-    transcode: transcode,
-    downloads: downloads,
-    requests: requests,
-    requestLimit: requestLimit,
-    maxStreams: maxStreams,
-  );
+  /// The override to save over [saved], the one the form opened on.
+  AdminUsersSetAccessInputOverride own(AdminUserAccessOverride saved) {
+    final requests = requestsTouched
+        ? _requestsLists(this.requests)
+        : (allow: _requestOnes(saved.allow), deny: _requestOnes(saved.deny));
+    final allow = sortPermissions([
+      ..._others(saved.allow),
+      ...requests.allow,
+      if (downloads == true) Permission.mediaDownload,
+    ]);
+    final deny = sortPermissions([
+      ..._others(saved.deny),
+      ...requests.deny,
+      if (downloads == false) Permission.mediaDownload,
+    ]);
+    return AdminUsersSetAccessInputOverride(
+      libraries: switch (libraries) {
+        final libraries? => AdminUsersSetAccessInputOverrideLibraries(
+          all: libraries.all,
+          ids: libraries.all ? const [] : libraries.ids.toList(),
+        ),
+        null => null,
+      },
+      maxBitrate: maxBitrate,
+      transcode: transcode,
+      requestLimit: requestLimit,
+      maxStreams: maxStreams,
+      allow: allow.isEmpty ? null : allow,
+      deny: deny.isEmpty ? null : deny,
+    );
+  }
 
   static bool _sameLimit<T extends Object>(Explicit<T>? a, Explicit<T>? b) =>
       (a == null) == (b == null) && a?.value == b?.value;
@@ -219,7 +296,7 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
       await api.admin.users.setAccess(
         widget.user.id,
         groupIds: _draft.groupIds.toList(),
-        override: _draft.own,
+        override: _draft.own(widget.user.access.override),
       );
     } on Object catch (error) {
       if (mounted) {
@@ -270,6 +347,8 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
         if (group.source == AccessSource.provider) group.id,
     };
     final effective = access.effective;
+    final groupRequests = requestsOf(from.permissions);
+    final more = words.permissions(effective.permissions);
     final synced = DateTime.tryParse(user.claimsSyncedAt ?? '');
 
     final bitrates = {
@@ -317,7 +396,12 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                     ),
                     ValueRow(
                       title: l.adminAccessDownloads,
-                      value: words.allowed(effective.downloads),
+                      value: words.allowed(
+                        holdsPermission(
+                          effective.permissions,
+                          Permission.mediaDownload,
+                        ),
+                      ),
                     ),
                     ValueRow(
                       title: l.adminAccessStreams,
@@ -326,12 +410,18 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                     ValueRow(
                       title: l.adminAccessRequests,
                       value: words.requests(
-                        effective.requests,
+                        requestsOf(effective.permissions),
                         effective.requestLimit,
                       ),
                     ),
+                    if (more != null)
+                      ValueRow(
+                        title: l.adminAccessPermissions,
+                        value: more.label,
+                      ),
                   ],
                 ),
+                if (more?.names case final names?) Note(names),
                 if (dirty) Note(l.adminAccessGetsAfterSave),
                 if (user.oidcLinked)
                   Note(
@@ -485,7 +575,14 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                     ),
                     PickerRow<String>(
                       title: l.adminAccessDownloads,
-                      options: _switchOptions(words, inherited, from.downloads),
+                      options: _switchOptions(
+                        words,
+                        inherited,
+                        holdsPermission(
+                          from.permissions,
+                          Permission.mediaDownload,
+                        ),
+                      ),
                       current: _switchKey(draft.downloads),
                       onPicked: (choice) =>
                           _edit(draft.copy(downloads: () => _switchOf(choice))),
@@ -505,24 +602,19 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                       onPicked: (choice) =>
                           _edit(draft.copy(maxStreams: () => _limitOf(choice))),
                     ),
-                    PickerRow<String>(
+                    PickerRow<RequestsChoice?>(
                       title: l.adminAccessRequests,
                       options: [
-                        (
-                          _fromGroups,
-                          inherited(words.requestMode(from.requests)),
-                        ),
-                        for (final mode in const ['off', 'ask', 'add'])
+                        (null, inherited(words.requestMode(groupRequests))),
+                        for (final mode in RequestsChoice.values)
                           (mode, words.requestMode(mode)),
                       ],
-                      current: draft.requests ?? _fromGroups,
-                      onPicked: (choice) => _edit(
-                        draft.copy(
-                          requests: () => choice == _fromGroups ? null : choice,
-                        ),
-                      ),
+                      current: draft.requests,
+                      onPicked: (choice) =>
+                          _edit(draft.copy(requests: () => choice)),
                     ),
-                    if ((draft.requests ?? from.requests) != 'off') ...[
+                    if ((draft.requests ?? groupRequests) !=
+                        RequestsChoice.off) ...[
                       PickerRow<String>(
                         title: l.adminAccessRequestLimit,
                         options: [
@@ -643,10 +735,10 @@ final class _Words {
   String allowed(bool on) =>
       on ? l.adminAccessAllowed : l.adminAccessNotAllowed;
 
-  String requestMode(String mode) => switch (mode) {
-    'off' => l.adminAccessRequestsOff,
-    'add' => l.adminAccessRequestsAdd,
-    _ => l.adminAccessRequestsAsk,
+  String requestMode(RequestsChoice mode) => switch (mode) {
+    RequestsChoice.off => l.adminAccessRequestsOff,
+    RequestsChoice.add => l.adminAccessRequestsAdd,
+    RequestsChoice.ask => l.adminAccessRequestsAsk,
   };
 
   String quota(RequestQuota? quota) => quota == null
@@ -656,10 +748,25 @@ final class _Words {
           l.adminAccessRequestLimitPeriod(quota.days),
         );
 
-  String requests(String mode, RequestQuota? limit) =>
-      mode == 'off' || limit == null
+  String requests(RequestsChoice mode, RequestQuota? limit) =>
+      mode == RequestsChoice.off || limit == null
       ? requestMode(mode)
       : l.adminAccessRequestsLimited(requestMode(mode), quota(limit));
+
+  /// "Every permission" for an admin, or how many [permissions] grants
+  /// besides downloading and requesting, which have rows of their own,
+  /// with their names. Null for none.
+  ({String label, String? names})? permissions(List<String> permissions) {
+    if (permissions.contains(Permission.all)) {
+      return (label: l.adminAccessPermissionsAll, names: null);
+    }
+    final more = _others(permissions);
+    if (more.isEmpty) return null;
+    return (
+      label: l.adminAccessPermissionsCount(more.length),
+      names: more.join(', '),
+    );
+  }
 }
 
 /// A group the account can be put in, with what's to know about it under

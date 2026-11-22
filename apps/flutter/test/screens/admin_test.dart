@@ -23,7 +23,7 @@ import 'admin_backend.dart';
 
 final _admin = SignedIn(
   '$server',
-  User.fromJson({...userJson('ada'), 'role': 'admin'}),
+  User.fromJson({...userJson('ada'), 'role': 'admin', 'permissions': ['all']}),
 );
 final _plain = SignedIn('$server', User.fromJson(userJson('grace')));
 

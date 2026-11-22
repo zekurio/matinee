@@ -14,30 +14,32 @@ JsonMap adminUserJson(
   int passkeys = 1,
   bool oidcLinked = false,
   int sessions = 1,
+  int apiTokens = 0,
   List<JsonMap> groups = const [],
+  List<String>? permissions,
+  JsonMap override = const {'libraries': null, 'transcode': null},
+  JsonMap fromGroups = _policy,
+  JsonMap effective = _policy,
 }) => {
   ...userJson(name),
   'role': role,
+  'permissions': permissions ?? (role == 'admin' ? ['all'] : <String>[]),
   'createdAt': '2026-01-01T00:00:00.000Z',
   'lastSeenAt': _at(const Duration(hours: -5, minutes: -10)),
   'passkeys': passkeys,
   'oidcLinked': oidcLinked,
   'sessions': sessions,
+  'apiTokens': apiTokens,
   'claimsSyncedAt': null,
   'access': {
     'groups': [
       {'id': 'everyone', 'name': 'Everyone', 'source': 'everyone'},
       ...groups,
     ],
-    'override': {
-      'libraries': null,
-      'transcode': null,
-      'downloads': null,
-      'requests': null,
-    },
+    'override': override,
     'overrideSource': 'admin',
-    'fromGroups': _policy,
-    'effective': _policy,
+    'fromGroups': fromGroups,
+    'effective': effective,
   },
 };
 
@@ -45,10 +47,9 @@ const _policy = <String, Object?>{
   'libraries': {'all': true, 'ids': <String>[]},
   'maxBitrate': null,
   'transcode': true,
-  'downloads': true,
-  'requests': 'ask',
   'requestLimit': null,
   'maxStreams': null,
+  'permissions': ['media.download', 'request.create'],
 };
 
 /// A time [offset] from now, so what the pages say about it holds on any

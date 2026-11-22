@@ -527,6 +527,7 @@ User userOf(AdminUser user) => User(
   username: user.username,
   displayName: user.displayName,
   role: user.role,
+  permissions: user.permissions,
   avatarId: user.avatarId,
   avatarSource: user.avatarSource,
   playback: user.playback,

@@ -332,6 +332,23 @@
   "@adminAccessOverrideHint": {
     "description": "admin settings"
   },
+  "adminAccessPermissions": "Permissions",
+  "@adminAccessPermissions": {
+    "description": "admin settings"
+  },
+  "adminAccessPermissionsAll": "Every permission",
+  "@adminAccessPermissionsAll": {
+    "description": "admin settings"
+  },
+  "adminAccessPermissionsCount": "{count, plural, one{{count} more permission} other{{count} more permissions}}",
+  "@adminAccessPermissionsCount": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "adminAccessRequestLimit": "Limit",
   "@adminAccessRequestLimit": {
     "description": "admin settings"
