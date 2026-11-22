@@ -223,6 +223,11 @@ abstract final class AccessSource {
   static const provider = 'provider';
 }
 
+/// Whether [user] may set an account's access: the page lists the groups
+/// to put it in, so it takes reading them too, as the web's users panel.
+bool mayAccess(User user) =>
+    can(user, Permission.adminUserUpdate) && can(user, Permission.groupRead);
+
 /// One account's access, as the web's access dialog: what it gets, the
 /// groups an admin puts it in, and what's set on the account over them.
 /// The fields save together from the save bar, and the server checks
@@ -242,6 +247,7 @@ class UserAccessPage extends ConsumerWidget {
     }
     if (user == null) {
       return AdminGate(
+        allows: mayAccess,
         child: AdminPage(
           title: l.adminAccessGoneTitle,
           child: users.hasValue
@@ -264,6 +270,7 @@ class UserAccessPage extends ConsumerWidget {
     // A save brings the account back as the server has it, and the form
     // starts again from there.
     return AdminGate(
+      allows: mayAccess,
       child: _AccessForm(
         key: ValueKey(user.access.toJson().toString()),
         user: user,

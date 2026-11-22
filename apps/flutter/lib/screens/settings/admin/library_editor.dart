@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../api/matinee_api.dart';
 import '../../../core/failure_text.dart';
 import '../../../core/field_errors.dart';
+import '../../../core/permissions.dart';
 import '../../../core/session.dart';
 import '../../../kit/kit.dart';
 import '../../../l10n/app_localizations.dart';
@@ -61,8 +62,16 @@ class LibraryEditorScreen extends ConsumerWidget {
     // The draft starts from the library and the providers, so it waits for
     // both, and a library that's gone is an error.
     final failed = libraries.error ?? (id == null ? null : providers.error);
+    // The form browses the server's folders to pick from.
+    bool allows(User user) =>
+        can(
+          user,
+          id == null ? Permission.libraryCreate : Permission.libraryUpdate,
+        ) &&
+        can(user, Permission.folderRead);
     if (id != null && existing == null || providers.isLoading) {
       return AdminGate(
+        allows: allows,
         child: AdminPage(
           title: title,
           child: failed != null || (list != null && existing == null)
@@ -82,6 +91,7 @@ class LibraryEditorScreen extends ConsumerWidget {
       );
     }
     return AdminGate(
+      allows: allows,
       child: _LibraryEditor(
         title: title,
         existing: existing,
@@ -413,6 +423,7 @@ class _FolderPickerState extends ConsumerState<FolderPickerScreen> {
     // Back always leaves.
     final up = current?.parent;
     return AdminGate(
+      allows: (user) => can(user, Permission.folderRead),
       child: PopScope(
         canPop: up == null,
         onPopInvokedWithResult: (didPop, result) {

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/permissions.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/artwork.dart';
@@ -114,7 +115,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               child: _text.isEmpty
                   ? Explore(
                       leading: [
-                        if (ref.watch(isAdminProvider))
+                        if (ref.watch(runsQueueProvider))
                           const SliverToBoxAdapter(child: RequestsLink()),
                       ],
                     )

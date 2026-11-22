@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/matinee_api.dart';
+import '../../../core/permissions.dart';
 import '../../../core/session.dart';
 import '../../../core/toasts.dart';
 import '../../../kit/kit.dart';
@@ -21,7 +22,8 @@ const _busyPoll = Duration(seconds: 2);
 /// libraries panel: each with its titles and what the server is doing to
 /// it. A tap opens its actions: scan it, fetch its metadata again, edit
 /// it, or remove it, which asks first. Add library opens the same editor
-/// empty. While a scan or a fetch runs, the page asks again every two
+/// empty. Each action shows only for an account whose permissions allow
+/// it, as on the web. While a scan or a fetch runs, the page asks again every two
 /// seconds, and back from the editor it shows what was saved.
 class LibrariesPage extends ConsumerStatefulWidget {
   const LibrariesPage({super.key});
@@ -48,7 +50,10 @@ class _LibrariesPageState extends ConsumerState<LibrariesPage> {
     });
   }
 
-  Future<void> _act(Library library) async {
+  Future<void> _act(
+    Library library,
+    ({bool scan, bool edit, bool remove}) may,
+  ) async {
     final l = AppLocalizations.of(context);
     final api = ref.read(apiProvider);
     if (api == null) return;
@@ -57,13 +62,14 @@ class _LibrariesPageState extends ConsumerState<LibrariesPage> {
       title: library.name,
       description: library.paths.join(', '),
       items: [
-        (
-          Lucide.refreshCw,
-          l.webLibrariesScanNow,
-          () => unawaited(_run(() => api.libraries.scan(library.id))),
-          false,
-        ),
-        if (library.metadataProvider != null)
+        if (may.scan)
+          (
+            Lucide.refreshCw,
+            l.webLibrariesScanNow,
+            () => unawaited(_run(() => api.libraries.scan(library.id))),
+            false,
+          ),
+        if (may.scan && library.metadataProvider != null)
           (
             Lucide.image,
             l.webLibrariesRefreshMetadata,
@@ -75,18 +81,20 @@ class _LibrariesPageState extends ConsumerState<LibrariesPage> {
             ),
             false,
           ),
-        (
-          Lucide.settings,
-          l.webLibrariesEdit,
-          () => unawaited(_edit(library.id)),
-          false,
-        ),
-        (
-          Lucide.trash,
-          l.webLibrariesRemove,
-          () => unawaited(_remove(library)),
-          true,
-        ),
+        if (may.edit)
+          (
+            Lucide.settings,
+            l.webLibrariesEdit,
+            () => unawaited(_edit(library.id)),
+            false,
+          ),
+        if (may.remove)
+          (
+            Lucide.trash,
+            l.webLibrariesRemove,
+            () => unawaited(_remove(library)),
+            true,
+          ),
       ],
     );
   }
@@ -141,6 +149,19 @@ class _LibrariesPageState extends ConsumerState<LibrariesPage> {
     final libraries = ref.watch(adminLibrariesProvider);
     final providers = ref.watch(metadataProvidersProvider).value ?? const [];
     _keepUp(libraries.value?.any(libraryBusy) ?? false);
+    // What the account may do, as the web's panel reads it. Adding and
+    // editing browse the server's folders.
+    final add =
+        ref.watch(canProvider(Permission.libraryCreate)) &&
+        ref.watch(canProvider(Permission.folderRead));
+    final may = (
+      scan: ref.watch(canProvider(Permission.libraryScan)),
+      edit:
+          ref.watch(canProvider(Permission.libraryUpdate)) &&
+          ref.watch(canProvider(Permission.folderRead)),
+      remove: ref.watch(canProvider(Permission.libraryDelete)),
+    );
+    final acts = may.scan || may.edit || may.remove;
     return AdminPage(
       title: l.settingsAdminLibraries,
       child: adminBody(
@@ -165,15 +186,18 @@ class _LibrariesPageState extends ConsumerState<LibrariesPage> {
                         LibraryRow(
                           library: library,
                           provider: _providerName(providers, library),
-                          onPressed: () => unawaited(_act(library)),
+                          onPressed: acts
+                              ? () => unawaited(_act(library, may))
+                              : null,
                         ),
                     ],
                   ),
-                MatineeButton(
-                  leading: Lucide.folderPlus,
-                  onPressed: () => unawaited(_edit()),
-                  child: Text(l.webLibrariesAdd),
-                ),
+                if (add)
+                  MatineeButton(
+                    leading: Lucide.folderPlus,
+                    onPressed: () => unawaited(_edit()),
+                    child: Text(l.webLibrariesAdd),
+                  ),
               ],
             ),
           ],
@@ -228,7 +252,9 @@ class LibraryRow extends StatelessWidget {
 
   final Library library;
   final String? provider;
-  final VoidCallback onPressed;
+
+  /// Null for an account that may do nothing to it.
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
