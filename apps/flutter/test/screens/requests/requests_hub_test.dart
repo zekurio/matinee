@@ -52,7 +52,7 @@ void main() {
 
   ProviderContainer hub(
     http.Client client, {
-    required bool runsQueue,
+    required bool readsQueue,
     ToastState? toasts,
   }) {
     final container = ProviderContainer(
@@ -63,7 +63,10 @@ void main() {
             client: client,
           ),
         ),
-        runsQueueProvider.overrideWithValue(runsQueue),
+        canProvider.overrideWith(
+          (ref, permission) =>
+              permission == Permission.adminRequestRead && readsQueue,
+        ),
         if (toasts != null) toastProvider.overrideWithValue(toasts),
       ],
     );
@@ -83,7 +86,7 @@ void main() {
           sent.add(request.url.path);
           return http.Response('null', 200);
         }),
-        runsQueue: false,
+        readsQueue: false,
         toasts: toasts,
       );
       await c.read(requestsProvider.notifier).withdraw(l, 'r1', 'Dune');
@@ -100,7 +103,7 @@ void main() {
           await answered.future;
           return http.Response('null', 200);
         }),
-        runsQueue: false,
+        readsQueue: false,
         toasts: _Toasts(),
       );
       final done = c.read(requestsProvider.notifier).withdraw(l, 'r1', 'Dune');
@@ -125,7 +128,7 @@ void main() {
         sent.add(request.url.path);
         return http.Response('null', 200);
       }),
-      runsQueue: false,
+      readsQueue: false,
       toasts: toasts,
     );
     final done = c
@@ -156,7 +159,7 @@ void main() {
         }
         return http.StreamedResponse(second.stream, 200);
       }),
-      runsQueue: true,
+      readsQueue: true,
     );
     await pumpEventQueue();
     expect(c.read(requestsProvider).queueFailed, isTrue);

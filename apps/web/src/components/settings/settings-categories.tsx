@@ -4,6 +4,7 @@ import {
   GalleryHorizontalEndIcon,
   InboxIcon,
   KeyRoundIcon,
+  KeySquareIcon,
   LibraryBigIcon,
   ListChecksIcon,
   type LucideIcon,
@@ -23,6 +24,7 @@ import type { SettingsSectionId } from "@/lib/settings"
 
 import { AccessPanel } from "./access-panel"
 import { AccountPanel } from "./account-panel"
+import { ApiTokensPanel } from "./api-tokens"
 import { AppearancePanel } from "./appearance-panel"
 import { AuthPanel } from "./auth-panel"
 import { BrandingPanel } from "./branding-panel"
@@ -83,6 +85,14 @@ const SECTIONS: SectionEntry[] = [
     group: "account",
     icon: TvMinimalPlayIcon,
     Panel: PlaybackPanel,
+  },
+  {
+    // Every account, as one that may no longer make tokens still revokes
+    // the ones it has.
+    id: "apiTokens",
+    group: "account",
+    icon: KeySquareIcon,
+    Panel: ApiTokensPanel,
   },
   {
     id: "libraries",

@@ -7,13 +7,7 @@ import {
   type MetadataProviderId,
 } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
+import { Dialog } from "@matinee/ui/components/dialog"
 import {
   Field,
   FieldDescription,
@@ -40,6 +34,15 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { FolderPicker } from "./folder-browser"
 import { SelectField } from "./select-field"
+import {
+  FormColumn,
+  FormColumns,
+  FormDialogBody,
+  FormDialogContent,
+  FormDialogFooter,
+  FormDialogForm,
+  FormDialogHeader,
+} from "./settings/form-dialog"
 
 // Languages every provider has a fair amount of data in, with the tag
 // their name comes from: the region only where it matters.
@@ -107,9 +110,9 @@ export function LibraryDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="gap-5 p-6 sm:max-w-lg">
+      <FormDialogContent width="lg">
         <LibraryForm library={library} onDone={() => onOpenChange(false)} />
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
   )
 }
@@ -204,180 +207,191 @@ function LibraryForm({
 
   return (
     <form.AppForm>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault()
-          void form.handleSubmit()
-        }}
-        className="flex flex-col gap-6"
-      >
-        <DialogHeader>
-          <DialogTitle className="text-lg leading-7 font-semibold">
-            {library
+      <FormDialogForm onSubmit={() => void form.handleSubmit()}>
+        <FormDialogHeader
+          title={
+            library
               ? tr("libraries.dialog.editTitle")
-              : tr("libraries.dialog.addTitle")}
-          </DialogTitle>
-        </DialogHeader>
+              : tr("libraries.dialog.addTitle")
+          }
+        />
 
-        <FieldGroup>
-          <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-            <form.AppField name="name">
-              {(field) => (
-                <field.TextField
-                  id="library-name"
-                  label={tr("libraries.dialog.name")}
-                  placeholder={tr("libraries.dialog.namePlaceholder")}
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="kind">
-              {() => (
-                <SelectField
-                  id="library-type"
-                  label={tr("libraries.dialog.type")}
-                  items={kinds}
-                />
-              )}
-            </form.AppField>
-          </div>
+        <FormDialogBody>
+          <FormColumns>
+            <FormColumn>
+              <FieldGroup>
+                <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+                  <form.AppField name="name">
+                    {(field) => (
+                      <field.TextField
+                        id="library-name"
+                        label={tr("libraries.dialog.name")}
+                        placeholder={tr("libraries.dialog.namePlaceholder")}
+                      />
+                    )}
+                  </form.AppField>
+                  <form.AppField name="kind">
+                    {() => (
+                      <SelectField
+                        id="library-type"
+                        label={tr("libraries.dialog.type")}
+                        items={kinds}
+                      />
+                    )}
+                  </form.AppField>
+                </div>
 
-          <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-            <form.Field name="provider">
-              {(field) => (
-                <Field>
-                  <FieldLabel htmlFor="library-provider">
-                    {tr("libraries.dialog.metadata")}
-                  </FieldLabel>
-                  <Select
-                    items={providerItems}
-                    value={provider}
-                    onValueChange={(value) =>
-                      value && field.handleChange(value)
-                    }
-                  >
-                    <SelectTrigger id="library-provider" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">
-                        {tr("libraries.dialog.noProvider")}
-                      </SelectItem>
-                      {providers.data?.map((p) => (
-                        <SelectItem
-                          key={p.id}
-                          value={p.id}
-                          disabled={!p.configured}
+                <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+                  <form.Field name="provider">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor="library-provider">
+                          {tr("libraries.dialog.metadata")}
+                        </FieldLabel>
+                        <Select
+                          items={providerItems}
+                          value={provider}
+                          onValueChange={(value) =>
+                            value && field.handleChange(value)
+                          }
                         >
-                          {p.name}
-                          {!p.configured && (
-                            <span className="text-muted-foreground">
-                              {tr("libraries.dialog.needsKey")}
+                          <SelectTrigger
+                            id="library-provider"
+                            className="w-full"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              {tr("libraries.dialog.noProvider")}
+                            </SelectItem>
+                            {providers.data?.map((p) => (
+                              <SelectItem
+                                key={p.id}
+                                value={p.id}
+                                disabled={!p.configured}
+                              >
+                                {p.name}
+                                {!p.configured && (
+                                  <span className="text-muted-foreground">
+                                    {tr("libraries.dialog.needsKey")}
+                                  </span>
+                                )}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    )}
+                  </form.Field>
+                  <form.AppField name="language">
+                    {() => (
+                      <SelectField
+                        id="library-language"
+                        label={tr("libraries.dialog.language")}
+                        items={languageItems}
+                        disabled={provider === "none"}
+                      />
+                    )}
+                  </form.AppField>
+                  <FieldDescription className="-mt-2 sm:col-span-2">
+                    {provider === "none"
+                      ? tr("libraries.dialog.noProviderHint")
+                      : providerInfo &&
+                        translateKnown(providerInfo.description)}
+                  </FieldDescription>
+                </div>
+              </FieldGroup>
+            </FormColumn>
+
+            <FormColumn>
+              <form.Field name="paths">
+                {(field) => {
+                  const paths = field.state.value
+                  const last = paths.at(-1)
+                  return (
+                    <>
+                      <Field>
+                        <div className="flex items-baseline justify-between">
+                          <FieldLabel>
+                            {tr("libraries.dialog.folders")}
+                          </FieldLabel>
+                          {paths.length > 0 && (
+                            <span className="text-muted-foreground text-xs tabular-nums">
+                              {tr("libraries.dialog.selected", {
+                                count: paths.length,
+                              })}
                             </span>
                           )}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
-            </form.Field>
-            <form.AppField name="language">
-              {() => (
-                <SelectField
-                  id="library-language"
-                  label={tr("libraries.dialog.language")}
-                  items={languageItems}
-                  disabled={provider === "none"}
-                />
-              )}
-            </form.AppField>
-            <FieldDescription className="-mt-2 sm:col-span-2">
-              {provider === "none"
-                ? tr("libraries.dialog.noProviderHint")
-                : providerInfo && translateKnown(providerInfo.description)}
-            </FieldDescription>
-          </div>
+                        </div>
+                        {paths.length > 0 ? (
+                          <ul className="flex flex-col gap-1">
+                            {paths.map((path) => (
+                              <li
+                                key={path}
+                                className="bg-muted/60 flex h-9 items-center gap-2.5 rounded-md pr-1 pl-2.5"
+                              >
+                                <FolderIcon className="text-muted-foreground size-4 shrink-0" />
+                                <span
+                                  className="text-13px min-w-0 flex-1 truncate font-mono"
+                                  title={path}
+                                >
+                                  {path}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={tr(
+                                    "libraries.dialog.removeFolder",
+                                    {
+                                      path,
+                                    },
+                                  )}
+                                  onClick={() =>
+                                    field.handleChange(
+                                      paths.filter((p) => p !== path),
+                                    )
+                                  }
+                                >
+                                  <XIcon />
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">
+                            {tr("libraries.dialog.noFolders")}
+                          </p>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="self-start"
+                          onClick={() => setPicking(true)}
+                        >
+                          <FolderPlusIcon />
+                          {tr("libraries.dialog.addFolder")}
+                        </Button>
+                      </Field>
 
-          <form.Field name="paths">
-            {(field) => {
-              const paths = field.state.value
-              const last = paths.at(-1)
-              return (
-                <>
-                  <Field>
-                    <div className="flex items-baseline justify-between">
-                      <FieldLabel>{tr("libraries.dialog.folders")}</FieldLabel>
-                      {paths.length > 0 && (
-                        <span className="text-muted-foreground text-xs tabular-nums">
-                          {tr("libraries.dialog.selected", {
-                            count: paths.length,
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    {paths.length > 0 ? (
-                      <ul className="flex flex-col gap-1">
-                        {paths.map((path) => (
-                          <li
-                            key={path}
-                            className="bg-muted/60 flex h-9 items-center gap-2.5 rounded-md pr-1 pl-2.5"
-                          >
-                            <FolderIcon className="text-muted-foreground size-4 shrink-0" />
-                            <span
-                              className="text-13px min-w-0 flex-1 truncate font-mono"
-                              title={path}
-                            >
-                              {path}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={tr("libraries.dialog.removeFolder", {
-                                path,
-                              })}
-                              onClick={() =>
-                                field.handleChange(
-                                  paths.filter((p) => p !== path),
-                                )
-                              }
-                            >
-                              <XIcon />
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-muted-foreground text-sm">
-                        {tr("libraries.dialog.noFolders")}
-                      </p>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="self-start"
-                      onClick={() => setPicking(true)}
-                    >
-                      <FolderPlusIcon />
-                      {tr("libraries.dialog.addFolder")}
-                    </Button>
-                  </Field>
+                      <FolderPicker
+                        open={picking}
+                        onOpenChange={setPicking}
+                        // Beside the folder added last, when there is one.
+                        initialPath={last ? parentFolder(last) : startFolder}
+                        picked={paths}
+                        onPick={(path) => field.handleChange([...paths, path])}
+                      />
+                    </>
+                  )
+                }}
+              </form.Field>
+            </FormColumn>
+          </FormColumns>
+        </FormDialogBody>
 
-                  <FolderPicker
-                    open={picking}
-                    onOpenChange={setPicking}
-                    // Beside the folder added last, when there is one.
-                    initialPath={last ? parentFolder(last) : startFolder}
-                    picked={paths}
-                    onPick={(path) => field.handleChange([...paths, path])}
-                  />
-                </>
-              )
-            }}
-          </form.Field>
-        </FieldGroup>
-
-        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
+        <FormDialogFooter>
           <form.Subscribe
             selector={(state) =>
               !state.values.name.trim() || state.values.paths.length === 0
@@ -391,8 +405,8 @@ function LibraryForm({
               </form.SubmitButton>
             )}
           </form.Subscribe>
-        </DialogFooter>
-      </form>
+        </FormDialogFooter>
+      </FormDialogForm>
     </form.AppForm>
   )
 }

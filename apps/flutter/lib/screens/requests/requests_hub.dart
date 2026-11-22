@@ -200,9 +200,9 @@ final class RequestsHub extends Notifier<RequestsState> {
   RequestsState build() {
     // Another server or account starts over.
     final api = _api = ref.watch(apiProvider);
-    // Whoever runs the queue follows it: reading everyone's requests and
-    // answering them, as the web's `runsQueue`.
-    if (api != null && ref.watch(runsQueueProvider)) {
+    // Whoever may read the queue follows it, whether or not they can
+    // answer it, as the web's `adminRequest.read` gate.
+    if (api != null && ref.watch(canProvider(Permission.adminRequestRead))) {
       _followQueue(api);
       ref.onDispose(() => unawaited(_queue?.cancel()));
     }
@@ -226,7 +226,9 @@ final class RequestsHub extends Notifier<RequestsState> {
   /// Opens the queue again now, rather than after the wait.
   void retryQueue() {
     final api = _api;
-    if (api == null || !ref.read(runsQueueProvider)) return;
+    if (api == null || !ref.read(canProvider(Permission.adminRequestRead))) {
+      return;
+    }
     state = state.copyWith(queueFailed: false);
     _followQueue(api);
   }

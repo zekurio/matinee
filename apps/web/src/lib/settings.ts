@@ -23,6 +23,7 @@ const SECTIONS = [
   { id: "account", path: "account" },
   { id: "appearance", path: "appearance" },
   { id: "playback", path: "playback" },
+  { id: "apiTokens", path: "api-tokens" },
   { id: "libraries", path: "admin/libraries" },
   { id: "users", path: "admin/users" },
   { id: "access", path: "admin/access" },

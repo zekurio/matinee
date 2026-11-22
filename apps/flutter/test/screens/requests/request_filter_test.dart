@@ -158,7 +158,16 @@ Future<void> _pumpOverview(
             client: client,
           ),
         ),
-        runsQueueProvider.overrideWithValue(queue),
+        canProvider.overrideWith(
+          (ref, permission) =>
+              queue &&
+              const [
+                Permission.adminRequestRead,
+                Permission.adminRequestApprove,
+                Permission.adminRequestDecline,
+                Permission.adminRequestRetry,
+              ].contains(permission),
+        ),
         toastProvider.overrideWithValue(_Toasts()),
       ],
       child: MaterialApp(
