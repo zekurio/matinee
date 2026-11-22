@@ -94,8 +94,14 @@ final class HomeHeroLayout {
   /// The room beside the words on a wide hero, and on a phone.
   double get pagePadding => alignsLeft ? 40 : 24;
 
-  /// From the hero's bottom to the words' bottom, over the dots.
-  double get contentBottom => alignsLeft ? 80 : 56;
+  /// From the hero's bottom to the words' bottom, over the dots and the
+  /// fade into the page.
+  double get contentBottom => alignsLeft ? 104 : 80;
+
+  /// How far up from its bottom the hero fades into the page. It starts a
+  /// little above the words' bottom, where it is still faint, so the art
+  /// is all but solid page by the dots and the words stay on the picture.
+  double get fadeHeight => contentBottom + 24;
 }
 
 /// Home is one error page only when nothing on it could show: the

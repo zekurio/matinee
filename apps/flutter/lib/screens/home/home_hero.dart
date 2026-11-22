@@ -211,6 +211,7 @@ class _HomeHeroState extends State<HomeHero> {
         count: _count,
         slides: widget.slides,
         alignsLeft: layout.alignsLeft,
+        fadeHeight: layout.fadeHeight,
         pageBackground: pageColors.background,
       );
 
@@ -247,6 +248,7 @@ class _HeroBackdrop extends StatelessWidget {
     required this.count,
     required this.slides,
     required this.alignsLeft,
+    required this.fadeHeight,
     required this.pageBackground,
   });
 
@@ -261,6 +263,9 @@ class _HeroBackdrop extends StatelessWidget {
   final int count;
   final List<FeaturedTitle> slides;
   final bool alignsLeft;
+
+  /// How far up from its bottom the art fades into [pageBackground].
+  final double fadeHeight;
 
   /// The page's colour behind the hero, which the art fades into.
   final Color pageBackground;
@@ -286,6 +291,9 @@ class _HeroBackdrop extends StatelessWidget {
         final drift = reduceMotion || viewport.isEmpty
             ? 0.0
             : _driftFor(viewport.aspectRatio);
+        final fade = viewport.height > 0
+            ? math.min(1.0, fadeHeight / viewport.height)
+            : 1.0;
         return Stack(
           fit: StackFit.expand,
           children: [
@@ -304,26 +312,21 @@ class _HeroBackdrop extends StatelessWidget {
                 drift: drift,
                 child: _HeroArt(slide: slides[HeroPaging.slide(index, count)]),
               ),
-            // The art fades into the page's own background at the bottom,
-            // so the next row starts on solid colour without an edge.
+            // The words stay light over a soft dark shade from their side.
+            _TextShade(alignsLeft: alignsLeft, dark: background, fade: fade),
+            // Then the art fades into the page's own background at the
+            // bottom, so the next row starts on solid colour.
             DecoratedBox(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [.5, .85, .94, 1],
-                  colors: [
-                    pageBackground.withValues(alpha: 0),
-                    pageBackground.withValues(alpha: .9),
-                    pageBackground,
-                    pageBackground,
-                  ],
+                gradient: easedShade(
+                  pageBackground,
+                  alpha: 1,
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  to: fade,
                 ),
               ),
             ),
-            // The words stay light over a soft dark shade from their side,
-            // ending before the faded bottom so the art meets the page.
-            _TextShade(alignsLeft: alignsLeft, dark: background),
             // The status bar and the header row, no more: the hero art
             // should not read as a dark band of its own.
             Align(
@@ -333,13 +336,11 @@ class _HeroBackdrop extends StatelessWidget {
                 width: double.infinity,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    gradient: easedShade(
+                      background,
+                      alpha: .65,
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        background.withValues(alpha: .65),
-                        background.withValues(alpha: 0),
-                      ],
                     ),
                   ),
                 ),
@@ -352,42 +353,90 @@ class _HeroBackdrop extends StatelessWidget {
   }
 }
 
-/// A dark shade behind the words only, from the side they lead on, faded
-/// out before the bottom so the art can meet the page there. White words
-/// and the Play pill sit over it; the page-coloured dots sit below it.
+/// A shade of [color] from [alpha] where [begin] starts to none at the
+/// [to] stop, along smootherstep: it leaves and arrives flat, so neither
+/// end shows the line a straight two-stop gradient draws. Before [from] it
+/// holds [alpha]; past [to] it is clear.
+@visibleForTesting
+LinearGradient easedShade(
+  Color color, {
+  required double alpha,
+  required Alignment begin,
+  required Alignment end,
+  double from = 0,
+  double to = 1,
+}) {
+  const steps = 24;
+  return LinearGradient(
+    begin: begin,
+    end: end,
+    stops: [for (var i = 0; i <= steps; i++) from + (to - from) * i / steps],
+    colors: [
+      for (var i = 0; i <= steps; i++)
+        color.withValues(alpha: alpha * (1 - _smootherstep(i / steps))),
+    ],
+  );
+}
+
+double _smootherstep(double t) => t * t * t * (t * (t * 6 - 15) + 10);
+
+/// A dark shade behind the words, from the side they lead on. White words
+/// and the Play pill sit over it.
 class _TextShade extends StatelessWidget {
-  const _TextShade({required this.alignsLeft, required this.dark});
+  const _TextShade({
+    required this.alignsLeft,
+    required this.dark,
+    required this.fade,
+  });
 
   final bool alignsLeft;
   final Color dark;
 
+  /// The share of the hero, from its bottom, that fades into the page.
+  final double fade;
+
+  /// Down to this share of the hero, the shade comes in under the header,
+  /// where the top shade does the work.
+  static const _comesIn = .22;
+
   @override
   Widget build(BuildContext context) {
+    // It goes out over the fade into the page, as the art does, so on a
+    // light page the picture fades to the page rather than a dark band.
+    const steps = 16;
+    final goesOut = 1 - fade;
     return ShaderMask(
       blendMode: BlendMode.dstIn,
-      shaderCallback: (rect) => const LinearGradient(
+      shaderCallback: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        stops: [0, .22, .5, .9, .96, 1],
-        colors: [
-          Color(0x00FFFFFF),
-          Color(0xFFFFFFFF),
-          Color(0xFFFFFFFF),
-          Color(0xFFFFFFFF),
-          Color(0x00FFFFFF),
-          Color(0x00FFFFFF),
+        stops: [
+          for (var i = 0; i <= steps; i++) _comesIn * i / steps,
+          for (var i = 0; i <= steps; i++) goesOut + fade * i / steps,
         ],
-      ).createShader(rect),
+        colors: [
+          for (var i = 0; i <= steps; i++)
+            Color.fromRGBO(255, 255, 255, _smootherstep(i / steps)),
+          for (var i = 0; i <= steps; i++)
+            Color.fromRGBO(255, 255, 255, 1 - _smootherstep(i / steps)),
+        ],
+      ).createShader,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: alignsLeft ? Alignment.centerLeft : Alignment.bottomCenter,
-            end: alignsLeft ? Alignment.centerRight : Alignment.topCenter,
-            stops: alignsLeft ? const [0, .65] : const [0, 1],
-            colors: alignsLeft
-                ? [dark.withValues(alpha: .82), dark.withValues(alpha: 0)]
-                : [dark.withValues(alpha: .62), dark.withValues(alpha: 0)],
-          ),
+          gradient: alignsLeft
+              ? easedShade(
+                  dark,
+                  alpha: .82,
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  to: .7,
+                )
+              : easedShade(
+                  dark,
+                  alpha: .66,
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
         ),
       ),
     );

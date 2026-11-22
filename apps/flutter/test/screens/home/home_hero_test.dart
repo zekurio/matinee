@@ -29,7 +29,7 @@ void main() {
       expect(layout.alignsLeft, isTrue);
       expect(layout.logoHeight, 120);
       expect(layout.pagePadding, 40);
-      expect(layout.contentBottom, 80);
+      expect(layout.contentBottom, 104);
     });
 
     test('a phone upright stops at 500 or two thirds of its page', () {
@@ -60,7 +60,7 @@ void main() {
       expect(layout.logoHeight, 80);
       // Wide enough for the words to lead on the left.
       expect(layout.alignsLeft, isTrue);
-      expect(layout.contentBottom, 80);
+      expect(layout.contentBottom, 104);
     });
 
     test('a phone keeps its words clear of the controls at the bottom', () {
@@ -70,6 +70,16 @@ void main() {
         greaterThan(HomeHeroLayout.controlsBottom),
       );
       expect(portrait.pagePadding, 24);
+    });
+
+    test('the fade into the page starts just above the words', () {
+      for (final layout in [
+        HomeHeroLayout(width: 400, height: 800),
+        HomeHeroLayout(width: 1280, height: 720),
+      ]) {
+        expect(layout.fadeHeight, greaterThan(layout.contentBottom));
+        expect(layout.fadeHeight, lessThan(layout.heroHeight / 3));
+      }
     });
   });
 
