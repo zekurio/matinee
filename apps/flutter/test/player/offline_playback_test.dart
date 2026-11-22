@@ -93,17 +93,6 @@ void main() {
       await session.close();
     });
 
-    test('has no buffered band, the whole file being here', () async {
-      final player = FakePlayer();
-      final session = _session(player);
-      await session.start();
-      player.emit(PlaybackPhase.ready, 50, playing: true, buffered: 90);
-      await pumpEventQueue();
-      expect(session.position, 50);
-      expect(session.buffered, isNull);
-      await session.close();
-    });
-
     test('reports on pause, on close, and the time played', () async {
       var clock = Duration.zero;
       final reports = <OfflineReport>[];

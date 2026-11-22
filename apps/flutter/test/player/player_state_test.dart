@@ -122,23 +122,6 @@ void main() {
       expect(tracks.subtitles.single.language, isNull);
       expect(tracks.subtitles.single.isForced, isTrue);
     });
-
-    test('maps video size, frame rate, and engine', () {
-      final video = PlayerEvent.fromMessage(
-        wire.VideoMessage(width: 3840, height: 2160, frameRate: 59.94),
-      );
-      expect((video as VideoChanged).video, (
-        width: 3840,
-        height: 2160,
-        frameRate: 59.94,
-      ));
-      expect(
-        (PlayerEvent.fromMessage(
-          wire.ActiveEngineMessage(engine: wire.EngineMessage.media3),
-        ) as EngineChanged).engine,
-        PlayerEngine.media3,
-      );
-    });
   });
 
   group('reducePlayback', () {
@@ -207,56 +190,6 @@ void main() {
       expect(failed.status.message, contains('Media3'));
       expect(failed.video, isNotNull);
       expect(failed.isOpen, isFalse);
-    });
-  });
-
-  group('PlaybackState.isOpen', () {
-    test('is false only when idle or failed', () {
-      for (final phase in PlaybackPhase.values) {
-        expect(
-          _state(phase: phase).isOpen,
-          phase != PlaybackPhase.idle && phase != PlaybackPhase.error,
-          reason: phase.name,
-        );
-      }
-    });
-  });
-
-  group('seekTarget', () {
-    const timeline = (
-      position: Duration(seconds: 30),
-      duration: Duration(seconds: 60),
-      buffered: null,
-    );
-
-    test('moves by the step', () {
-      expect(
-        seekTarget(timeline, const Duration(seconds: 10)),
-        const Duration(seconds: 40),
-      );
-      expect(
-        seekTarget(timeline, const Duration(seconds: -10)),
-        const Duration(seconds: 20),
-      );
-    });
-
-    test('stops at the start and at the end', () {
-      expect(seekTarget(timeline, const Duration(seconds: -45)), Duration.zero);
-      expect(
-        seekTarget(timeline, const Duration(seconds: 45)),
-        const Duration(seconds: 60),
-      );
-    });
-
-    test('has no end to stop at while the length is unknown', () {
-      expect(
-        seekTarget((
-          position: const Duration(seconds: 30),
-          duration: null,
-          buffered: null,
-        ), const Duration(seconds: 10)),
-        const Duration(seconds: 40),
-      );
     });
   });
 

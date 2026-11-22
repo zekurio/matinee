@@ -15,32 +15,26 @@ JsonMap titleJson(
   String kind = 'movie',
   String? name,
   int? year = 2016,
-  String? poster,
   String? backdrop,
-  List<String> genres = const [],
-  bool watched = false,
-  String? overview,
-  double? rating,
-  String? contentRating,
 }) => {
   'id': id,
   'libraryId': 'lib-$kind',
   'kind': kind,
   'name': name ?? 'Title $id',
   'year': year,
-  'overview': overview,
+  'overview': null,
   'images': {
-    'poster': poster == null ? null : artJson(poster),
+    'poster': null,
     'backdrop': backdrop == null ? null : artJson(backdrop),
     'logo': null,
   },
-  'genres': genres,
-  'rating': rating,
-  'contentRating': contentRating,
+  'genres': <String>[],
+  'rating': null,
+  'contentRating': null,
   'runtimeMinutes': null,
   'originalLanguage': null,
   'favorite': false,
-  'watched': watched,
+  'watched': false,
 };
 
 JsonMap itemJson(
@@ -102,38 +96,3 @@ JsonMap itemJson(
     'favorite': false,
   };
 }
-
-JsonMap libraryJson(String id, {String name = 'Movies', int items = 3}) => {
-  'id': id,
-  'name': name,
-  'kind': 'movies',
-  'paths': ['/media/$id'],
-  'itemCount': items,
-  'titleCount': items,
-  'metadataProvider': null,
-  'metadataLanguage': 'en',
-  'lastScannedAt': null,
-  'scanning': false,
-  'refreshing': false,
-  'backdrop': null,
-};
-
-JsonMap shelfJson(JsonMap title, {JsonMap? added, int count = 1}) => {
-  'title': title,
-  'item': itemJson('shelf-${title['id']}', title: title),
-  'count': count,
-  'addedAt': '2026-01-01T00:00:00.000Z',
-  'added': added,
-};
-
-JsonMap featuredJson(JsonMap title, {JsonMap? item, int count = 1}) => {
-  'title': title,
-  'item': item ?? itemJson('f-${title['id']}', title: title),
-  'count': count,
-};
-
-JsonMap refJson(String id) => {
-  'kind': 'movie',
-  'provider': 'tmdb',
-  'providerId': id,
-};
