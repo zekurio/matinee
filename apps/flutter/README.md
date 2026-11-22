@@ -255,6 +255,12 @@ These differ from what someone might expect, on purpose.
   goes at once.
 - On a TV, signing out asks first with focus on Cancel, since signing in
   again needs a phone.
+- The phone holds a request's Cancel and an admin's answers for the
+  toast's Undo. A TV's toast can't take focus, so the TV sends them at
+  once (`undo: false`), and asks first for Cancel, Decline, and Give up.
+- A TV row's heading can't take focus, so a row that leads somewhere ends
+  in a See all card. Discover's header keeps a Requests chip, so the
+  requests page can be reached while the Requests row has no cards.
 - The TV's code screen shows only the title, one sentence with the link
   address, the code, and the QR code. Change server sits small at the
   bottom left.
