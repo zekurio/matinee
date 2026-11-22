@@ -170,8 +170,8 @@ class _RightHalf extends CustomClipper<Rect> {
   bool shouldReclip(_RightHalf oldClipper) => false;
 }
 
-/// Home in [colors]: the banner fading into the page, its title and
-/// button, and a row of posters.
+/// Home in [colors]: the art fading into the page, its title, and a row of
+/// posters.
 class _Miniature extends StatelessWidget {
   const _Miniature(this.colors);
 

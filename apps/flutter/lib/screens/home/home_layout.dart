@@ -1,19 +1,17 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/width_class.dart';
 
 /// The rules Home lays itself out and moves by. Lengths are logical pixels.
 
-/// How wide Home's box is before it opens with the banner rather than the
-/// cards: a tablet's.
-const bannerFromWidth = 600.0;
-
-bool opensWithBanner(double width) => width >= bannerFromWidth;
-
-/// The phone's featured cards: one to a row from margin to margin, with a
-/// gutter between, so the next card sits just off the screen.
+/// Home's featured cards: one to a row from margin to margin on a phone, and
+/// on a tablet one wide card centred with the cards before and after it
+/// peeking in at the edges. Findroid shows two or three cards at a tablet's
+/// width; Home shows one on purpose, like the large streaming apps.
 abstract final class FeaturedCarousel {
   /// How long a card stays before the carousel moves on.
   static const advance = Duration(seconds: 5);
@@ -32,9 +30,22 @@ abstract final class FeaturedCarousel {
   /// The poster's inset from the card's edges, when that's all the title has.
   static const posterInset = 12.0;
 
-  /// A card's width in a row [rowWidth] wide between [gutter]s.
-  static double cardWidth(double rowWidth, double gutter) =>
-      math.max(rowWidth - 2 * gutter, 0);
+  /// How much of the cards before and after a tablet's show at the edges.
+  static const peek = 32.0;
+
+  /// Whether the cards before and after show at the edges: a tablet's do. The
+  /// window's shorter side decides, so a phone on its side keeps the phone's
+  /// card rather than taking a tablet's.
+  static bool showsNeighbours(Size window) =>
+      !WidthClass.of(math.min(window.width, window.height)).isCompact;
+
+  /// A card's width in [window] between [gutter]s. A phone's card runs from
+  /// margin to margin; a tablet's leaves [peek] of the cards either side
+  /// showing, and a gutter between each and its neighbour.
+  static double cardWidth(Size window, double gutter) {
+    final margins = showsNeighbours(window) ? 2 * (peek + gutter) : 2 * gutter;
+    return math.max(window.width - margins, 0);
+  }
 
   /// 16:9, but no more than 40% of a window [windowHeight] tall.
   static double cardHeight(double cardWidth, double windowHeight) =>
@@ -43,110 +54,6 @@ abstract final class FeaturedCarousel {
   /// How much of the card a poster takes, with its inset, at [height].
   static double posterRoom(double height) =>
       (height - posterInset * 2) * 2 / 3 + posterInset;
-}
-
-/// The banner's slides, as its repeating pages.
-abstract final class HeroPaging {
-  /// How many times over the pages repeat, so it can keep going forward.
-  static const loops = 1000;
-
-  /// How long a slide stays: the web's 8 seconds.
-  static const advance = Duration(seconds: 8);
-
-  static int pages(int count) => count > 1 ? count * loops : count;
-
-  /// The middle of the repeats, so it can go either way.
-  static int initialPage(int count) => count > 1 ? count * (loops ~/ 2) : 0;
-
-  /// The slide [page] shows.
-  static int slide(int page, int count) =>
-      count > 0 ? ((page % count) + count) % count : 0;
-
-  /// The page nearest [from] that shows slide [showing], for a dot's tap.
-  static int page(int showing, int from, int count) =>
-      from - slide(from, count) + showing;
-}
-
-enum HeroSize {
-  /// A tablet's: buttons well up from the bottom, the dots under them.
-  medium,
-
-  /// A desktop's, from 1024 wide: the buttons near the bottom, the dots
-  /// level with them.
-  large,
-
-  /// Under 540 tall: everything low, no genres.
-  short,
-}
-
-/// Where the banner puts things in a box [width] by [windowHeight], after
-/// the web's breakpoints. [rowsBelow]: Continue watching or Next up follow
-/// it (or may, while they load), which on a desktop-sized box keeps it
-/// short enough for them to start on the first screen.
-final class HeroLayout {
-  HeroLayout(this.width, this.windowHeight, {required this.rowsBelow});
-
-  final double width;
-  final double windowHeight;
-  final bool rowsBelow;
-
-  late final HeroSize size = width >= 1024
-      ? HeroSize.large
-      : windowHeight <= 540
-      ? HeroSize.short
-      : HeroSize.medium;
-
-  late final double height = switch (size) {
-    HeroSize.large when rowsBelow => math.max(
-      360,
-      math.min(windowHeight * .64, width * .4),
-    ),
-    HeroSize.short => windowHeight,
-    _ => math.max(math.min(windowHeight * .68, 720), 480),
-  };
-
-  /// From the bottom to the buttons' bottom edge.
-  double get buttonsBottom => switch (size) {
-    HeroSize.large => 32,
-    HeroSize.short => 48,
-    HeroSize.medium => 112,
-  };
-
-  /// Between the buttons and the slide's text above them.
-  double get textGap => size == HeroSize.short ? 16 : 24;
-
-  /// From the bottom to the dots, where they aren't level with the buttons.
-  double get dotsBottom => size == HeroSize.short ? 12 : 48;
-
-  bool get dotsBesideButtons => size == HeroSize.large;
-
-  bool get showsOverview => switch (size) {
-    HeroSize.large => windowHeight > 880,
-    HeroSize.short => false,
-    HeroSize.medium => windowHeight > 700,
-  };
-
-  bool get showsGenres => size != HeroSize.short;
-
-  /// `clamp(2.25rem, 7vh, 3rem)` on a tablet, `clamp(3rem, 5.5vh, 4.5rem)`
-  /// on a desktop.
-  double get titleSize => size == HeroSize.large
-      ? (windowHeight * .055).clamp(48, 72)
-      : (windowHeight * .07).clamp(36, 48);
-}
-
-/// Whether Continue watching or Next up follow the banner: either has
-/// titles, or still loads, as the web's fold assumes they'll come.
-bool rowsFollowBanner(
-  AsyncValue<List<MediaItem>> resume,
-  AsyncValue<List<MediaItem>> nextUp,
-) {
-  bool coming(AsyncValue<List<MediaItem>> load) => switch (load) {
-    AsyncData(:final value) => value.isNotEmpty,
-    AsyncError() => false,
-    _ => true,
-  };
-  return coming(resume) || coming(nextUp);
 }
 
 /// Home is one error page only when nothing on it could show: the
@@ -173,9 +80,3 @@ String? cardLine(FeaturedTitle slide) {
   final genres = shownGenres(slide);
   return genres.isEmpty ? null : genres.join(' · ');
 }
-
-/// The year, and a show's episode count when it has more than one.
-List<String> heroFacts(FeaturedTitle slide, String Function(int) episodes) => [
-  if (slide.title.year case final year?) '$year',
-  if (slide.title.isShow && slide.count > 1) episodes(slide.count),
-];

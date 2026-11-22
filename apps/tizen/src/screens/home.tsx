@@ -129,7 +129,7 @@ function RowNotice(props: {
   )
 }
 
-/** The featured titles, the phone's banner, as a row of posters; the header shows the one focused. */
+/** The featured titles, Home's cards, as a row of posters; the header shows the one focused. */
 function FeaturedRow(props: {
   slides: readonly FeaturedTitle[]
   onFocus: OnFocus

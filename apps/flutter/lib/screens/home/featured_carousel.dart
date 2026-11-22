@@ -13,12 +13,13 @@ import '../../media/blurhash.dart';
 import '../../router.dart';
 import 'home_layout.dart';
 
-/// The featured titles at the top of a phone's Home: a row of cards that swipes
-/// one at a time, each the title's backdrop under a dark shade with its genres
-/// and its name in white. A tap opens the title. It moves to the next card
-/// every five seconds, and back to the first after the last; not while a finger
-/// is on it, with animations off, with a screen reader on, or while Home is out
-/// of sight.
+/// The featured titles at the top of Home: a row of cards that swipes one at a
+/// time, each the title's backdrop under a dark shade with its genres and its
+/// name in white. A tap opens the title. A phone shows one card from margin to
+/// margin; a tablet shows one wide card centred, with its neighbours peeking
+/// in at the edges. It moves to the next card every five seconds, and back to
+/// the first after the last; not while a finger is on it, with animations off,
+/// with a screen reader on, or while Home is out of sight.
 class FeaturedCarouselView extends StatefulWidget {
   const FeaturedCarouselView({super.key, required this.slides});
 
@@ -101,7 +102,10 @@ class _FeaturedCarouselViewState extends State<FeaturedCarouselView> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final row = constraints.maxWidth;
-        final width = FeaturedCarousel.cardWidth(row, CardMetrics.gutter);
+        final width = FeaturedCarousel.cardWidth(
+          Size(row, window.height),
+          CardMetrics.gutter,
+        );
         final base = FeaturedCarousel.cardHeight(width, window.height);
         final nameStyle = _nameStyle(width);
         final lines = scaler.scale(10) >= 15 ? 3 : 2;
@@ -403,8 +407,8 @@ class _FeaturedCard extends StatelessWidget {
   }
 }
 
-/// The carousel's place while the featured titles load: its card as it'll
-/// sit, and the next one's edge.
+/// The carousel's place while the featured titles load: its cards as they'll
+/// sit, the neighbours peeking in on a tablet.
 class FeaturedCarouselSkeleton extends StatelessWidget {
   const FeaturedCarouselSkeleton({super.key});
 
@@ -416,32 +420,27 @@ class FeaturedCarouselSkeleton extends StatelessWidget {
       container: true,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final width = FeaturedCarousel.cardWidth(
-            constraints.maxWidth,
-            CardMetrics.gutter,
-          );
+          final size = Size(constraints.maxWidth, window.height);
+          final neighbours = FeaturedCarousel.showsNeighbours(size);
+          final width = FeaturedCarousel.cardWidth(size, CardMetrics.gutter);
           final height = FeaturedCarousel.cardHeight(width, window.height);
           return SizedBox(
             height: height,
             child: OverflowBox(
-              alignment: AlignmentDirectional.centerStart,
+              alignment: AlignmentDirectional.center,
               maxWidth: double.infinity,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.only(
-                  start: CardMetrics.gutter,
-                ),
-                child: Row(
-                  spacing: CardMetrics.gutter,
-                  children: [
-                    for (var i = 0; i < 2; i++)
-                      SkeletonBox(
-                        width: width,
-                        height: height,
-                        radius: KitRadius.xl,
-                        color: MatineeTheme.of(context).surface,
-                      ),
-                  ],
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: CardMetrics.gutter,
+                children: [
+                  for (var i = 0; i < (neighbours ? 3 : 1); i++)
+                    SkeletonBox(
+                      width: width,
+                      height: height,
+                      radius: KitRadius.xl,
+                      color: MatineeTheme.of(context).surface,
+                    ),
+                ],
               ),
             ),
           );
