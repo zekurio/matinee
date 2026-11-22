@@ -218,8 +218,10 @@ class _QueuePageState extends ConsumerState<_QueuePage> {
       actions: [
         RequestFilterButton(filter: _filter),
         if (waiting.length > 1)
+          // The bar's end is set for icons; a button with words keeps
+          // the gutter the back button has at the start.
           Padding(
-            padding: const EdgeInsetsDirectional.only(start: 4),
+            padding: const EdgeInsetsDirectional.only(start: 4, end: 12),
             child: MatineeButton(
               look: ButtonLook.outline,
               size: ButtonSize.sm,
