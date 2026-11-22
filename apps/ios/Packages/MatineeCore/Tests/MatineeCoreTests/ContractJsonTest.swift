@@ -13,7 +13,7 @@ private func object<T: Encodable>(_ value: T) throws -> JSONValue {
 @Test func unionsReadByTheirTag() throws {
   #expect(try decode(DeviceSignIn.self, "{\"status\":\"pending\"}") == .pending(.init()))
   let user =
-    #"{"id":"u","username":"ana","displayName":null,"role":"user","avatarId":null,"avatarSource":"none","playback":null,"library":{"showSpecials":false},"sharing":{"favorites":false,"stats":false}}"#
+    #"{"id":"u","username":"ana","displayName":null,"role":"user","permissions":[],"avatarId":null,"avatarSource":"none","playback":null,"library":{"showSpecials":false},"sharing":{"favorites":false,"stats":false}}"#
   let result = try decode(
     DeviceSignIn.self, "{\"status\":\"approved\",\"token\":\"t\",\"user\":\(user)}")
   guard case .approved(let approved) = result else {

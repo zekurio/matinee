@@ -15,6 +15,7 @@ import { LibraryView } from "@/components/stats/library-view"
 import { RangePicker } from "@/components/stats/range-picker"
 import { ActivityView, PlaybackView } from "@/components/stats/server-views"
 import { tr } from "@/i18n"
+import { can } from "@/lib/permissions"
 
 const STATS_VIEWS = ["activity", "playback", "library", "leaderboard"] as const
 const StatsView = t.enum(STATS_VIEWS)
@@ -38,7 +39,7 @@ function StatsPage() {
   const { user } = Route.useRouteContext()
   const { view: wanted, range = "30d" } = Route.useSearch()
   const navigate = Route.useNavigate()
-  const admin = user.role === "admin"
+  const admin = can(user, "serverStats.read")
   const options = STATS_VIEWS.filter(
     (view) => admin || !ADMIN_VIEWS.has(view),
   ).map((view) => ({ value: view, label: tr(`stats.view.${view}`) }))

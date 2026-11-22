@@ -2,17 +2,17 @@ import { follow } from "../realtime/follow"
 import { leaderboard } from "../stats/leaderboard"
 import { libraryStats } from "../stats/library"
 import { liveActivity, serverStats } from "../stats/queries"
-import { admin, authed } from "./base"
+import { authed } from "./base"
 
 // Sessions drop out of "watching now" when they stop reporting, which no
 // event announces, so the stream looks again this often.
 const LIVE_REFRESH_MS = 15_000
 
 export const stats = {
-  server: admin.stats.server.handler(({ context, input }) =>
+  server: authed.stats.server.handler(({ context, input }) =>
     serverStats(input, context.user),
   ),
-  live: admin.stats.live.handler(({ context, signal }) =>
+  live: authed.stats.live.handler(({ context, signal }) =>
     follow({
       topics: ["playback"],
       load: () => liveActivity(context.user),

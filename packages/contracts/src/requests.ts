@@ -114,7 +114,7 @@ export type RequestQueue = t.infer<typeof RequestQueue>
 
 export const requestsContract = {
   /** Full snapshots on reconnect. Re-evaluate visibility for every viewer and update. */
-  live: post("/requests/live")
+  live: post("/requests/live", "request.read")
     .input(t.object({ titles: t.array(CatalogInput).max(100) }))
     .output(
       eventIterator(
@@ -127,14 +127,16 @@ export const requestsContract = {
         ),
       ),
     ),
-  ask: post("/requests/ask")
+  ask: post("/requests/ask", "request.create")
     .input(CatalogInput.extend({ scope: ShowScope.optional() }))
     .output(RequestItem),
-  addSeasons: post("/requests/add-seasons")
+  addSeasons: post("/requests/add-seasons", "request.create")
     .input(RequestId.extend({ scope: ShowScope }))
     .output(RequestItem),
-  cancel: post("/requests/cancel").input(RequestId).output(t.void()),
-  mine: get("/requests/mine")
+  cancel: post("/requests/cancel", "request.delete")
+    .input(RequestId)
+    .output(t.void()),
+  mine: get("/requests/mine", "request.read")
     .input(
       RequestPageInput.extend({
         filter: t.enum(["inProgress", "all"]).$default("inProgress"),
@@ -148,8 +150,10 @@ export const adminRequestsContract = {
    * Current work lists plus a cursor-paged done list: arrived and
    * declined requests, latest first. The cursor applies to done.
    */
-  queue: get("/admin/requests").input(RequestPageInput).output(RequestQueue),
-  live: get("/admin/requests/live")
+  queue: get("/admin/requests", "adminRequest.read")
+    .input(RequestPageInput)
+    .output(RequestQueue),
+  live: get("/admin/requests/live", "adminRequest.read")
     .input(RequestPageInput)
     .output(eventIterator(RequestQueue)),
   /**
@@ -158,18 +162,18 @@ export const adminRequestsContract = {
    * Only a waiting request moves, and not into a library that already
    * has a request for the title.
    */
-  approve: post("/admin/requests/approve")
+  approve: post("/admin/requests/approve", "adminRequest.update")
     .input(RequestId.extend({ libraryId: t.uuid().optional() }))
     .output(t.void()),
   /** Explicit ids from the rendered waiting list, not unseen concurrent asks. */
-  approveAll: post("/admin/requests/approve-all")
+  approveAll: post("/admin/requests/approve-all", "adminRequest.update")
     .input(t.object({ ids: t.array(t.uuid()).min(1).max(500) }))
     .output(t.void()),
   /**
    * Declines a waiting request. A declined title can't be requested by
    * anyone until an admin allows requests for it again.
    */
-  decline: post("/admin/requests/decline")
+  decline: post("/admin/requests/decline", "adminRequest.update")
     .input(
       RequestId.extend({
         reason: WaitingDeclineReason,
@@ -186,7 +190,7 @@ export const adminRequestsContract = {
    * "Can't find a copy". Whatever the connection holds for it is left
    * alone, and if the file turns up anyway the request counts as arrived.
    */
-  giveUp: post("/admin/requests/give-up")
+  giveUp: post("/admin/requests/give-up", "adminRequest.update")
     .input(
       RequestId.extend({
         note: t
@@ -201,15 +205,17 @@ export const adminRequestsContract = {
    * Lifts a decline by removing the declined request, so anyone may
    * request the title afresh. Nobody is told.
    */
-  allowAgain: post("/admin/requests/allow-again")
+  allowAgain: post("/admin/requests/allow-again", "adminRequest.update")
     .input(RequestId)
     .output(t.void()),
   /**
    * Accepts a declined request as it stands, with its requesters and
    * seasons, and sends it.
    */
-  addAfterAll: post("/admin/requests/add-after-all")
+  addAfterAll: post("/admin/requests/add-after-all", "adminRequest.update")
     .input(RequestId)
     .output(t.void()),
-  retry: post("/admin/requests/retry").input(RequestId).output(t.void()),
+  retry: post("/admin/requests/retry", "adminRequest.update")
+    .input(RequestId)
+    .output(t.void()),
 }

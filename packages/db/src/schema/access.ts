@@ -1,4 +1,4 @@
-import type { AccessSource, RequestLimit } from "@matinee/contracts"
+import type { AccessSource, Permission, RequestLimit } from "@matinee/contracts"
 import { sql } from "drizzle-orm"
 import {
   jsonb,
@@ -18,9 +18,9 @@ import { library } from "./library"
 import { user } from "./users"
 
 /**
- * What its members may open and how the server streams to them; see
- * `access.ts` in the contracts. An account gets the most generous of its
- * groups.
+ * What its members may open, how the server streams to them, and what
+ * they may do; see `access.ts` in the contracts. An account gets the most
+ * generous of its groups.
  */
 export const accessGroup = pgTable(
   "access_group",
@@ -39,9 +39,16 @@ export const accessGroup = pgTable(
     /** Bits per second. Null for no limit. */
     maxBitrate: integer(),
     transcode: boolean().notNull().default(true),
-    downloads: boolean().notNull().default(true),
-    /** Whether members may ask for titles, and whether an ask needs approval. */
-    requests: text().$type<"off" | "ask" | "add">().notNull().default("off"),
+    /**
+     * What members may do beyond what every account may, from
+     * `GRANTABLE_PERMISSIONS`: downloading, asking for titles, and
+     * whatever part of running the server the group hands on.
+     */
+    permissions: text()
+      .array()
+      .$type<Permission[]>()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     /** Titles per days. Null for no limit. Readers parse the JSON. */
     requestLimit: jsonb().$type<RequestLimit>(),
     /** Null for no limit. */

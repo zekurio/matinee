@@ -26,7 +26,7 @@ import { atIssuer } from "../auth/users"
 import { db } from "../db"
 import { env } from "../env"
 import { log } from "../log"
-import { admin, badRequest } from "./base"
+import { authed, badRequest } from "./base"
 
 /** Accounts that can only sign in through the provider. */
 async function ssoOnlyUsers(): Promise<number> {
@@ -205,11 +205,11 @@ function lockoutMessage(change: {
 }
 
 export const adminAuth = {
-  get: admin.admin.auth.get.handler(async () =>
+  get: authed.admin.auth.get.handler(async () =>
     describe(await oidcState(), await passkeySettings()),
   ),
 
-  update: admin.admin.auth.update.handler(async ({ context, input }) => {
+  update: authed.admin.auth.update.handler(async ({ context, input }) => {
     const before = await oidcState()
     const passkeysBefore = (await passkeySettings()).enabled
     const next = await previewOidc(input.oidc)

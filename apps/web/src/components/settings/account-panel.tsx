@@ -61,6 +61,7 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
 import { useAuthErrorToast } from "@/lib/use-auth-error-toast"
 import { createSettingsPasskeysStore } from "@/stores/settings-passkeys"
 
+import { ApiTokens } from "./api-tokens"
 import { SharingRows } from "./profile-sharing"
 import { Sessions } from "./sessions"
 import { RowIcon, SettingsSections, SettingsSubsection } from "./settings-panel"
@@ -84,6 +85,7 @@ export function AccountPanel() {
       {config.data?.passkeys ? <Passkeys oidcEnabled={oidc !== null} /> : null}
       {oidc ? <LinkedAccount displayName={oidc.displayName} /> : null}
       <Sessions />
+      <ApiTokens />
     </SettingsSections>
   )
 }

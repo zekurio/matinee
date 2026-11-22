@@ -16,6 +16,14 @@
         <item quantity="one">%2$s wurde aus %1$d Sitzung abgemeldet</item>
         <item quantity="other">%2$s wurde aus %1$d Sitzungen abgemeldet</item>
     </plurals>
+    <plurals name="web_users_revokedTokens">
+        <item quantity="one">%1$d API-Token von %2$s widerrufen</item>
+        <item quantity="other">%1$d API-Tokens von %2$s widerrufen</item>
+    </plurals>
+    <string name="web_users_revokeTokens_ownTitle">Deine API-Tokens widerrufen?</string>
+    <string name="web_users_revokeTokens_title">API-Tokens von %1$s widerrufen?</string>
+    <string name="web_users_revokeTokens_description">Jeder Dienst, der eines nutzt, funktioniert nicht mehr mit Matinee. Sitzungen bleiben angemeldet.</string>
+    <string name="web_users_revokeTokens_confirm">Tokens widerrufen</string>
     <string name="web_users_signOut_ownTitle">Deine anderen Sitzungen abmelden?</string>
     <string name="web_users_signOut_title">%1$s überall abmelden?</string>
     <string name="web_users_signOut_ownDescription">Alle anderen Geräte müssen sich neu anmelden.</string>
@@ -36,6 +44,7 @@
     <string name="web_users_menu_makeAdmin">Zum Admin machen</string>
     <string name="web_users_menu_signOutOthers">Andere Sitzungen abmelden</string>
     <string name="web_users_menu_signOut">Überall abmelden</string>
+    <string name="web_users_menu_revokeTokens">API-Tokens widerrufen</string>
     <string name="web_users_menu_deleteOwn">Mein Konto löschen</string>
     <string name="web_users_menu_delete">Benutzer löschen</string>
     <string name="web_users_lastAdmin">Mach zuerst jemand anderen zum Admin.</string>
@@ -46,6 +55,10 @@
     <string name="web_users_ownAccess">Eigene Grenzen</string>
     <string name="web_users_ownAccessHint">Hat eigene Einstellungen über seinen Gruppen</string>
     <string name="web_users_ownAccessFromProvider">Bei der Anmeldung durch den Richtlinien-Claim von %1$s gesetzt</string>
+    <plurals name="web_users_apiTokens">
+        <item quantity="one">%1$d API-Token</item>
+        <item quantity="other">%1$d API-Tokens</item>
+    </plurals>
     <plurals name="web_users_passkeys">
         <item quantity="one">%1$d Passkey</item>
         <item quantity="other">%1$d Passkeys</item>

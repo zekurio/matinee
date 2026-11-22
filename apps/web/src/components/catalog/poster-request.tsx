@@ -11,6 +11,7 @@ import { type LucideIcon, PlusIcon, XIcon } from "lucide-react"
 import { type ReactNode, useId } from "react"
 
 import { tr } from "@/i18n"
+import { can } from "@/lib/permissions"
 
 import { useCancel } from "./use-ask"
 import {
@@ -111,7 +112,7 @@ export function PosterActionButton({
   if (!action) return null
   const tip =
     action === "request" && !override
-      ? requestTip(availability, user.role === "admin")
+      ? requestTip(availability, can(user, "adminRequest.update"))
       : null
   const id = availability.requestId
   const Icon = icons[action]

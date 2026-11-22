@@ -1,4 +1,4 @@
-import type { User } from "@matinee/contracts"
+import type { Permission, User } from "@matinee/contracts"
 import {
   FilmIcon,
   GalleryHorizontalEndIcon,
@@ -18,6 +18,7 @@ import {
 import { type ComponentType, useMemo } from "react"
 
 import { tr } from "@/i18n"
+import { can, canAny } from "@/lib/permissions"
 import type { SettingsSectionId } from "@/lib/settings"
 
 import { AccessPanel } from "./access-panel"
@@ -51,7 +52,23 @@ export interface SettingsCategory {
 const SETTINGS_GROUPS: readonly SettingsGroup[] = ["account", "admin"]
 
 /** A section's place in the nav; its text comes from the catalog. */
-type SectionEntry = Pick<SettingsCategory, "id" | "group" | "icon" | "Panel">
+type SectionEntry = Pick<
+  SettingsCategory,
+  "id" | "group" | "icon" | "Panel"
+> & {
+  /**
+   * The permissions that open the section: an account with any of them
+   * sees it. Its panel checks each action itself, so holding one is
+   * enough to use it. None for a section every account has.
+   */
+  needs?: readonly Permission[]
+  /**
+   * The permissions a section needs every one of: those its panel calls
+   * with. The panel is one form or list with no read-only form, so an
+   * account short of one would see controls that always fail.
+   */
+  needsAll?: readonly Permission[]
+}
 
 const SECTIONS: SectionEntry[] = [
   { id: "account", group: "account", icon: UserIcon, Panel: AccountPanel },
@@ -70,40 +87,80 @@ const SECTIONS: SectionEntry[] = [
   {
     id: "libraries",
     group: "admin",
+    needs: [
+      "library.create",
+      "library.update",
+      "library.delete",
+      "library.scan",
+    ],
     icon: LibraryBigIcon,
     Panel: LibrariesPanel,
   },
-  { id: "users", group: "admin", icon: UsersIcon, Panel: UsersPanel },
-  { id: "access", group: "admin", icon: ShieldCheckIcon, Panel: AccessPanel },
+  {
+    id: "users",
+    group: "admin",
+    needs: ["adminUser.read"],
+    icon: UsersIcon,
+    Panel: UsersPanel,
+  },
+  {
+    id: "access",
+    group: "admin",
+    needs: ["group.read"],
+    icon: ShieldCheckIcon,
+    Panel: AccessPanel,
+  },
   {
     id: "requests",
     group: "admin",
+    needsAll: [
+      "fulfilment.read",
+      "fulfilment.create",
+      "fulfilment.update",
+      "fulfilment.delete",
+    ],
     icon: InboxIcon,
     Panel: RequestsPanel,
   },
   {
     id: "authentication",
     group: "admin",
+    needs: ["all"],
     icon: KeyRoundIcon,
     Panel: AuthPanel,
   },
   {
     id: "transcoding",
     group: "admin",
+    needsAll: ["transcodingSettings.read", "transcodingSettings.update"],
     icon: FilmIcon,
     Panel: TranscodingPanel,
   },
   {
     id: "trickplay",
     group: "admin",
+    needsAll: ["trickplaySettings.read", "trickplaySettings.update"],
     icon: GalleryHorizontalEndIcon,
     Panel: TrickplayPanel,
   },
-  { id: "network", group: "admin", icon: NetworkIcon, Panel: NetworkPanel },
-  { id: "jobs", group: "admin", icon: ListChecksIcon, Panel: JobsPanel },
+  {
+    id: "network",
+    group: "admin",
+    needsAll: ["networkSettings.read", "networkSettings.update"],
+    icon: NetworkIcon,
+    Panel: NetworkPanel,
+  },
+  {
+    id: "jobs",
+    group: "admin",
+    needsAll: ["job.read", "job.update"],
+    icon: ListChecksIcon,
+    Panel: JobsPanel,
+  },
   {
     id: "branding",
     group: "admin",
+    needsAll: ["branding.read", "branding.update"],
     icon: PaintbrushIcon,
     Panel: BrandingPanel,
   },
@@ -113,7 +170,10 @@ const SECTIONS: SectionEntry[] = [
 function describe(section: SectionEntry): SettingsCategory {
   const keywords = tr(`settings.section.${section.id}.keywords`)
   return {
-    ...section,
+    id: section.id,
+    group: section.group,
+    icon: section.icon,
+    Panel: section.Panel,
     label: tr(`settings.section.${section.id}.label`),
     description: tr(`settings.section.${section.id}.description`),
     keywords: keywords.split(",").map((word) => word.trim()),
@@ -122,13 +182,17 @@ function describe(section: SectionEntry): SettingsCategory {
 
 /** Sections this user can open, in nav order. */
 export function useSettingsCategories(user: User): SettingsCategory[] {
-  const isAdmin = user.role === "admin"
+  const { permissions } = user
   return useMemo(
     () =>
-      SECTIONS.filter((section) => section.group !== "admin" || isAdmin).map(
-        describe,
-      ),
-    [isAdmin],
+      SECTIONS.filter(
+        (section) =>
+          (!section.needs || canAny({ permissions }, section.needs)) &&
+          (section.needsAll ?? []).every((permission) =>
+            can({ permissions }, permission),
+          ),
+      ).map(describe),
+    [permissions],
   )
 }
 

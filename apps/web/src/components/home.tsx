@@ -15,6 +15,7 @@ import { Rail, RailItem } from "@/components/rail"
 import { RecommendationRails } from "@/components/recommendations"
 import { tr } from "@/i18n"
 import { homeQueries } from "@/lib/home-queries"
+import { can } from "@/lib/permissions"
 import { orpc } from "@/lib/rpc"
 
 /**
@@ -43,7 +44,7 @@ export function Home() {
             name: user.displayName ?? user.username,
           })}
         />
-        <NoLibraries admin={user.role === "admin"} />
+        <NoLibraries admin={can(user, "library.create")} />
       </>
     )
   }

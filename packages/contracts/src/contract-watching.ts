@@ -53,7 +53,7 @@ export const playbackContract = oc.tag("Playback").router({
    * and with `PLAYBACK_BUSY` while the account plays on as many devices
    * as it may.
    */
-  start: post("/playback/start")
+  start: post("/playback/start", "media.play")
     .input(PlaybackStartInput)
     .output(PlaybackStart),
   /**
@@ -61,7 +61,9 @@ export const playbackContract = oc.tag("Playback").router({
    * from the keyframe near the point. Cheaper than `start`, since the
    * tracks and the method stay as they are.
    */
-  seek: post("/playback/seek").input(PlaybackSeekInput).output(PlaybackSeek),
+  seek: post("/playback/seek", "media.play")
+    .input(PlaybackSeekInput)
+    .output(PlaybackSeek),
   /**
    * Players call this every ten seconds while playing, every thirty while
    * paused, and at once on play, pause, seek, and close. A session drops
@@ -74,7 +76,7 @@ export const playbackContract = oc.tag("Playback").router({
    * spent playing in the session so far, without pauses and buffering;
    * the server never counts more than the time since the session began.
    */
-  report: post("/media/{itemId}/progress")
+  report: post("/media/{itemId}/progress", "watchState.update")
     .input(
       t.object({
         itemId: t.uuid(),
@@ -98,21 +100,21 @@ export const playbackContract = oc.tag("Playback").router({
    * gone, and ones that end in the future, are left out. Where the person
    * got to still goes through `report`.
    */
-  offline: post("/playback/offline")
+  offline: post("/playback/offline", "watchState.update")
     .input(t.object({ plays: t.array(OfflinePlay).min(1).max(200) }))
     .output(t.void()),
   /**
    * What a player's playback settings can offer here: the codecs this
    * server encodes to, and the languages the libraries' tracks are in.
    */
-  options: get("/playback/options").output(PlaybackOptions),
+  options: get("/playback/options", "media.play").output(PlaybackOptions),
   /**
    * The tracks a file starts with from the viewer's earlier picks, which a
    * player reads before it picks by the preferences' languages. See
    * `TrackPicks`. A file the background probe hasn't reached yet, or the
    * file a match comes from, is probed first, like `media.subtitles`.
    */
-  tracks: get("/media/{itemId}/tracks")
+  tracks: get("/media/{itemId}/tracks", "media.play")
     .input(t.object({ itemId: t.uuid() }))
     .output(TrackPicks),
   /**
@@ -127,10 +129,10 @@ export const playbackContract = oc.tag("Playback").router({
    * encoders and whether a GPU helps. Again on each change. Null until the
    * session reports or starts a stream, and for another user's session.
    */
-  stream: get("/playback/sessions/{sessionId}/stream")
+  stream: get("/playback/sessions/{sessionId}/stream", "media.play")
     .input(t.object({ sessionId: t.uuid() }))
     .output(eventIterator(SessionStream.nullable())),
-  pickTracks: put("/media/{itemId}/tracks")
+  pickTracks: put("/media/{itemId}/tracks", "media.play")
     .input(
       t.object({
         itemId: t.uuid(),
@@ -147,7 +149,7 @@ export const playbackContract = oc.tag("Playback").router({
    * Unwatched takes back the plays marking added; what the player
    * recorded stays.
    */
-  setWatched: put("/media/{itemId}/watched")
+  setWatched: put("/media/{itemId}/watched", "watchState.update")
     .input(
       t.object({
         itemId: t.uuid(),
@@ -161,7 +163,7 @@ export const playbackContract = oc.tag("Playback").router({
    * one. `season` narrows to one season as in `titles.items`; null picks
    * the files without one.
    */
-  setTitleWatched: put("/titles/{titleId}/watched")
+  setTitleWatched: put("/titles/{titleId}/watched", "watchState.update")
     .input(
       t.object({
         titleId: t.uuid(),
@@ -175,14 +177,14 @@ export const playbackContract = oc.tag("Playback").router({
 
 export const homeContract = oc.tag("Home").router({
   /** Files the user started and didn't finish, most recent first. */
-  continueWatching: get("/home/continue-watching")
+  continueWatching: get("/home/continue-watching", "watchState.read")
     .input(t.object({ limit: t.number().int().min(1).max(50).$default(12) }))
     .output(t.array(MediaItem)),
   /**
    * For each show the user is watching, the episode after the last one
    * finished, ordered by lastWatchedAt, most recent first.
    */
-  nextUp: get("/home/next-up")
+  nextUp: get("/home/next-up", "watchState.read")
     .input(t.object({ limit: t.number().int().min(1).max(50).$default(12) }))
     .output(t.array(NextUpEntry)),
   /**
@@ -191,14 +193,14 @@ export const homeContract = oc.tag("Home").router({
    * started, except a show whose next episode arrived after they last
    * watched it.
    */
-  featured: get("/home/featured")
+  featured: get("/home/featured", "title.read")
     .input(t.object({ limit: t.number().int().min(1).max(12).$default(6) }))
     .output(t.array(FeaturedTitle)),
 })
 
 export const favoritesContract = oc.tag("Favorites").router({
   /** Mark a title as a favorite or not. Either is fine to repeat. */
-  set: put("/titles/{titleId}/favorite")
+  set: put("/titles/{titleId}/favorite", "favorite.update")
     .input(t.object({ titleId: t.uuid(), favorite: t.boolean() }))
     .output(t.void()),
   /**
@@ -206,7 +208,7 @@ export const favoritesContract = oc.tag("Favorites").router({
    * repeat. The season is in the body, as a number; the files without a
    * season number aren't a season to mark.
    */
-  setSeason: put("/titles/{titleId}/season-favorite")
+  setSeason: put("/titles/{titleId}/season-favorite", "favorite.update")
     .input(
       t.object({
         titleId: t.uuid(),
@@ -219,7 +221,7 @@ export const favoritesContract = oc.tag("Favorites").router({
    * Mark a file, such as an episode, as a favorite or not. Either is fine
    * to repeat. Mark a movie through its title with `set`.
    */
-  setItem: put("/media/{itemId}/favorite")
+  setItem: put("/media/{itemId}/favorite", "favorite.update")
     .input(t.object({ itemId: t.uuid(), favorite: t.boolean() }))
     .output(t.void()),
 })
@@ -230,11 +232,11 @@ export const favoritesContract = oc.tag("Favorites").router({
  * `ProfileSharing`.
  */
 export const profilesContract = oc.tag("Profiles").router({
-  get: get("/profiles/{username}")
+  get: get("/profiles/{username}", "profile.read")
     .input(t.object({ username: ProfileName }))
     .output(Profile),
   /** Null when the owner doesn't share statistics. */
-  stats: get("/profiles/{username}/stats")
+  stats: get("/profiles/{username}/stats", "profile.read")
     .input(StatsInput.extend({ username: ProfileName }))
     .output(WatchStats.nullable()),
   /**
@@ -242,7 +244,7 @@ export const profilesContract = oc.tag("Profiles").router({
    * profile's `recent` lists a dozen of. Null when the owner doesn't share
    * statistics.
    */
-  recent: get("/profiles/{username}/recent")
+  recent: get("/profiles/{username}/recent", "profile.read")
     .input(
       t.object({
         username: ProfileName,
@@ -255,7 +257,7 @@ export const profilesContract = oc.tag("Profiles").router({
    * each, as the profile's `favorites` mixes the latest of. Null when the
    * owner doesn't share favorites.
    */
-  favorites: get("/profiles/{username}/favorites")
+  favorites: get("/profiles/{username}/favorites", "profile.read")
     .input(
       t.object({
         username: ProfileName,
@@ -268,16 +270,24 @@ export const profilesContract = oc.tag("Profiles").router({
 /** What everyone watched, how the server played it, and the libraries. */
 export const statsContract = oc.tag("Statistics").router({
   /** Everyone's watching and how it played. Admins only. */
-  server: get("/stats").input(StatsInput).output(ServerStats),
+  server: get("/stats", "serverStats.read")
+    .input(StatsInput)
+    .output(ServerStats),
   /**
    * Who is watching right now, as a stream: the current state first, then
    * again whenever it changes. Over REST it's server-sent events. The
    * server ends the stream every few minutes; reconnect to keep following.
    * Admins only.
    */
-  live: get("/stats/live").output(eventIterator(LiveActivity)),
+  live: get("/stats/live", "serverStats.read").output(
+    eventIterator(LiveActivity),
+  ),
   /** What the libraries hold, and how they grew over the range. */
-  library: get("/stats/library").input(StatsInput).output(LibraryStats),
+  library: get("/stats/library", "stats.read")
+    .input(StatsInput)
+    .output(LibraryStats),
   /** People who share their statistics, ranked, and the signed-in user. */
-  leaderboard: get("/stats/leaderboard").input(StatsInput).output(Leaderboard),
+  leaderboard: get("/stats/leaderboard", "stats.read")
+    .input(StatsInput)
+    .output(Leaderboard),
 })

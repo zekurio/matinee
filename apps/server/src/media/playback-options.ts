@@ -9,7 +9,7 @@ import { mediaItem, subtitleFile } from "@matinee/db"
 import { type SQL, sql } from "drizzle-orm"
 
 import { allowedQualities } from "../access/media"
-import type { Viewer } from "../access/viewer"
+import { can, type Viewer } from "../access/viewer"
 import { type Seer, visibleItems } from "../access/visible"
 import { db } from "../db"
 import { encodableAudioCodecs } from "../transcode/audio"
@@ -79,14 +79,13 @@ export async function playbackOptions(
       db.execute(streamLanguages(viewer, "subtitles")),
       db.execute(sidecarLanguages(viewer)),
     ])
+  const downloads = can(viewer, "media.download")
   return {
     qualities: allowedQualities(viewer.access, PLAYBACK_QUALITIES),
     maxBitrate: viewer.access.maxBitrate,
-    downloads: viewer.access.downloads,
+    downloads,
     downloadVideoPresets:
-      viewer.access.downloads && viewer.access.transcode
-        ? [...DOWNLOAD_VIDEO_PRESETS]
-        : [],
+      downloads && viewer.access.transcode ? [...DOWNLOAD_VIDEO_PRESETS] : [],
     skipSteps: [...SKIP_STEPS],
     videoCodecs: viewer.access.transcode
       ? encodableVideoCodecs(settings, capabilities)

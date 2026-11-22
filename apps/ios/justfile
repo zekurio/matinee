@@ -25,9 +25,11 @@ tv_xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme MatineeTV -deriv
 default:
     @just --list --unsorted
 
-# Generate with XcodeGen from the flake's Nixpkgs, or XCODEGEN on PATH.
+# Generate with XcodeGen from Nixpkgs, or XCODEGEN on PATH. The Nixpkgs is
+# the one flake.lock names, whose XcodeGen is in the binary cache. The
+# newest one's may not be, and then Nix builds Swift's toolchain or fails.
 generate:
-    {{ env("XCODEGEN", "nix run --inputs-from ../.. nixpkgs#xcodegen --") }} generate --quiet
+    {{ env("XCODEGEN", "nix run --inputs-from . nixpkgs#xcodegen --") }} generate --quiet
 
 # Build for any simulator without booting one; extra xcodebuild flags follow
 build *args: generate
@@ -65,7 +67,7 @@ test: boundary
     cd Packages/MatineeCore && swift test
     scripts/lucide.py --kit --check
     scripts/lucide.py --check
-    {{ env("NODE", "nix shell --inputs-from ../.. nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
+    {{ env("NODE", "nix shell --inputs-from . nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
 
 # Fail on a stock SwiftUI control in either app's screens, and on a phone component, a phone text size, or a phone overlay in the Apple TV app's
 boundary:
@@ -79,7 +81,7 @@ api:
 icons:
     scripts/lucide.py --kit
     scripts/lucide.py
-    {{ env("NODE", "nix shell --inputs-from ../.. nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs
+    {{ env("NODE", "nix shell --inputs-from . nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs
 
 # Build the Apple TV app for any tvOS simulator without booting one; extra xcodebuild flags follow
 tv-build *args: generate

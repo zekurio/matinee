@@ -1,6 +1,6 @@
 import type { Availability, RequestLimit } from "@matinee/contracts"
 
-import type { Viewer } from "../access/viewer"
+import { can, type Viewer } from "../access/viewer"
 
 const DAY = 86400000
 
@@ -81,7 +81,7 @@ export function requestAction(
   }
   const disabledReason = !input.destination
     ? "noDestination"
-    : viewer.access.requests === "off"
+    : !can(viewer, "request.create")
       ? "off"
       : input.limit?.left === 0 && !input.existingTitle
         ? "limit"
@@ -89,7 +89,7 @@ export function requestAction(
   return {
     action: disabledReason
       ? null
-      : viewer.access.requests === "add" || input.approvedTitle
+      : can(viewer, "request.autoApprove") || input.approvedTitle
         ? "add"
         : "ask",
     disabledReason,

@@ -3,7 +3,7 @@ import { credit, library, mediaItem, title, type TitleRow } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
 import { and, asc, count, eq } from "drizzle-orm"
 
-import { libraryFor, titleFor } from "../access/visible"
+import { libraryFor, type Seer, titleFor } from "../access/visible"
 import type { SessionUser } from "../auth/session"
 import { db } from "../db"
 import { log } from "../log"
@@ -24,13 +24,17 @@ import { refreshTitleNow, sourceFor } from "../metadata/refresh"
 import { providerList } from "../metadata/sources"
 import { youTubeUrl } from "../metadata/trailers"
 import { ProviderError } from "../metadata/types"
-import { admin, authed, badRequest, notFound } from "./base"
+import { authed, badRequest, notFound } from "./base"
 import { tagCounts, titleOrder, titleWhere } from "./browse"
 import { filterOptions, ratingLimits } from "./title-filters"
 
-export async function loadRow(id: string): Promise<TitleRow> {
-  // ACCESS: This loader is used only by admin metadata and image procedures.
-  const [row] = await db.select().from(title).where(eq(title.id, id))
+/**
+ * The title for the procedures that fix its match and its images, if the
+ * viewer sees its library. Whoever holds `title.update` through a group
+ * changes only what they can open.
+ */
+export async function loadRow(viewer: Seer, id: string): Promise<TitleRow> {
+  const row = await titleFor(viewer, id)
   if (!row) throw notFound("This title isn't in any library.")
   return row
 }
@@ -121,9 +125,9 @@ export function providerFailure(name: string, cause: unknown): never {
   throw cause
 }
 
-export async function withLibrary(id: string) {
-  const row = await loadRow(id)
-  // ACCESS: The library belongs to the title loaded by the admin-only loader.
+export async function withLibrary(viewer: Seer, id: string) {
+  const row = await loadRow(viewer, id)
+  // ACCESS: The library belongs to the title loaded for the viewer above.
   const [lib] = await db
     .select()
     .from(library)
@@ -250,8 +254,8 @@ export const titles = {
     return publicItems(rows, context.user.id)
   }),
 
-  findMatches: admin.titles.findMatches.handler(async ({ input }) => {
-    const { row, lib } = await withLibrary(input.id)
+  findMatches: authed.titles.findMatches.handler(async ({ context, input }) => {
+    const { row, lib } = await withLibrary(context.user, input.id)
     const source = requireSource(lib)
     const candidates = await source
       .search({
@@ -278,22 +282,22 @@ export const titles = {
     }))
   }),
 
-  identify: admin.titles.identify.handler(async ({ context, input }) => {
-    const { row, lib } = await withLibrary(input.id)
+  identify: authed.titles.identify.handler(async ({ context, input }) => {
+    const { row, lib } = await withLibrary(context.user, input.id)
     const source = requireSource(lib)
     await refreshTitleNow(row, lib, { providerId: input.providerId }).catch(
       (cause: unknown) => providerFailure(source.name, cause),
     )
-    return toTitle(await loadRow(input.id), context.user)
+    return toTitle(await loadRow(context.user, input.id), context.user)
   }),
 
-  refresh: admin.titles.refresh.handler(async ({ context, input }) => {
-    const { row, lib } = await withLibrary(input.id)
+  refresh: authed.titles.refresh.handler(async ({ context, input }) => {
+    const { row, lib } = await withLibrary(context.user, input.id)
     const source = requireSource(lib)
     await refreshTitleNow(row, lib).catch((cause: unknown) =>
       providerFailure(source.name, cause),
     )
-    return toTitle(await loadRow(input.id), context.user)
+    return toTitle(await loadRow(context.user, input.id), context.user)
   }),
 }
 

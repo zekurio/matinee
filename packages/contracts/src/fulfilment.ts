@@ -84,8 +84,16 @@ export const FulfilmentLanding = t.object({
   kind: TitleKind,
   from: t.enum(["default", "anime", "rule"]),
   folder: t.string(),
-  /** Null when no library holds the folder and none was picked. */
+  /**
+   * Null when no library holds the folder and none was picked, or when
+   * the library is one the account can't see.
+   */
   library: FulfilmentLibrary.nullable(),
+  /**
+   * The folder lands in a library the account can't see. `library` is
+   * then null, which otherwise means it lands in none.
+   */
+  hidden: t.boolean(),
 })
 export type FulfilmentLanding = t.infer<typeof FulfilmentLanding>
 
@@ -98,11 +106,20 @@ export const FulfilmentConnection = t.object({
   options: FulfilmentValues,
   /** The kinds of title requests go through it for. */
   defaultFor: t.array(TitleKind),
-  /** The library each folder no library holds lands in, by folder. */
+  /**
+   * The library each folder no library holds lands in, by folder. A pick
+   * of a library the account can't see is left out.
+   */
   folderLibraries: t.record(t.string(), t.uuid()),
   apiKey: t.object({ source: SecretSource, environment: t.boolean() }),
   /** Every folder its settings and rules send to, and where that lands. */
   landings: t.array(FulfilmentLanding),
+  /**
+   * The account may change it, its rules, or delete it. False when one of
+   * its landings is hidden: it sends titles to a library the account
+   * can't see, so it can only look at it and test it.
+   */
+  editable: t.boolean(),
 })
 export type FulfilmentConnection = t.infer<typeof FulfilmentConnection>
 
@@ -223,55 +240,74 @@ export const FulfilmentRuleChoices = t.object({
 export type FulfilmentRuleChoices = t.infer<typeof FulfilmentRuleChoices>
 
 export const adminFulfilmentContract = {
-  sources: get("/admin/fulfilment/sources").output(
+  sources: get("/admin/fulfilment/sources", "fulfilment.read").output(
     t.array(FulfilmentSourceDescription),
   ),
-  connections: get("/admin/fulfilment/connections").output(
+  connections: get("/admin/fulfilment/connections", "fulfilment.read").output(
     t.array(FulfilmentConnection),
   ),
-  create: post("/admin/fulfilment/connections")
+  create: post("/admin/fulfilment/connections", "fulfilment.create")
     .input(FulfilmentConnectionInput)
     .output(FulfilmentConnection),
-  update: put("/admin/fulfilment/connections/{id}")
+  update: put("/admin/fulfilment/connections/{id}", "fulfilment.update")
     .input(FulfilmentConnectionInput.extend({ id: t.uuid() }))
     .output(FulfilmentConnection),
-  remove: del("/admin/fulfilment/connections/{id}")
+  remove: del("/admin/fulfilment/connections/{id}", "fulfilment.delete")
     .input(t.object({ id: t.uuid() }))
     .output(t.void()),
-  test: post("/admin/fulfilment/test")
+  test: post("/admin/fulfilment/test", "fulfilment.update")
     .input(t.object({ id: t.uuid() }))
     .output(t.void()),
   // A read, but its settings are a record, which a query string can't carry.
-  options: post("/admin/fulfilment/options")
+  options: post("/admin/fulfilment/options", "fulfilment.update")
     .input(FulfilmentOptionsInput)
     .output(FulfilmentOptions),
   /** The library of a kind a folder lands in, by the folders Matinee scans. */
-  landing: get("/admin/fulfilment/landing")
+  landing: get("/admin/fulfilment/landing", "fulfilment.read")
     .input(t.object({ kind: TitleKind, folder: t.string().min(1).max(4096) }))
-    .output(t.object({ library: FulfilmentLibrary.nullable() })),
-  rules: get("/admin/fulfilment/connections/{connectionId}/rules")
+    .output(
+      t.object({
+        /** Null when no library holds it, or `hidden` is true. */
+        library: FulfilmentLibrary.nullable(),
+        /**
+         * It lands in a library the account can't see, so a connection
+         * that sends there can't be saved by it.
+         */
+        hidden: t.boolean(),
+      }),
+    ),
+  rules: get(
+    "/admin/fulfilment/connections/{connectionId}/rules",
+    "fulfilment.read",
+  )
     .input(t.object({ connectionId: t.uuid() }))
     .output(t.array(FulfilmentRule)),
-  createRule: post("/admin/fulfilment/connections/{connectionId}/rules")
+  createRule: post(
+    "/admin/fulfilment/connections/{connectionId}/rules",
+    "fulfilment.create",
+  )
     .input(FulfilmentRuleInput)
     .output(FulfilmentRule),
-  updateRule: put("/admin/fulfilment/rules/{id}")
+  updateRule: put("/admin/fulfilment/rules/{id}", "fulfilment.update")
     .input(FulfilmentRuleInput.extend({ id: t.uuid() }))
     .output(FulfilmentRule),
-  removeRule: del("/admin/fulfilment/rules/{id}")
+  removeRule: del("/admin/fulfilment/rules/{id}", "fulfilment.delete")
     .input(t.object({ id: t.uuid() }))
     .output(t.void()),
   /** Puts a connection's rules in this order, the first winning a tie. */
-  reorderRules: put("/admin/fulfilment/connections/{connectionId}/rules/order")
+  reorderRules: put(
+    "/admin/fulfilment/connections/{connectionId}/rules/order",
+    "fulfilment.update",
+  )
     .input(
       t.object({ connectionId: t.uuid(), ids: t.array(t.uuid()).max(500) }),
     )
     .output(t.array(FulfilmentRule)),
-  ruleChoices: get("/admin/fulfilment/rule-choices")
+  ruleChoices: get("/admin/fulfilment/rule-choices", "fulfilment.read")
     .input(t.object({ kind: TitleKind }))
     .output(FulfilmentRuleChoices),
   /** TMDB's keywords whose names match a search. */
-  keywords: get("/admin/fulfilment/keywords")
+  keywords: get("/admin/fulfilment/keywords", "fulfilment.read")
     .input(
       t.object({
         query: t.string().trim().min(1).max(100, "Use at most 100 characters."),
