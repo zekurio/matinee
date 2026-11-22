@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -58,24 +60,24 @@ class ShellHeader extends ConsumerWidget {
 
 /// A tab's band, as tall as [ShellHeader]'s and under the status bar in the
 /// same way: the tab's name at the start, and only the actions that belong to
-/// it at the end. Offline, [offline] puts the cloud icon in an action's place.
+/// it at the end. Offline, [offline] puts the cloud icon in the actions'
+/// place.
 class TabHeader extends StatelessWidget {
   const TabHeader({
     super.key,
     required this.title,
-    this.action,
+    this.actions = const [],
     this.offline = false,
   });
 
   final String title;
-  final HeaderAction? action;
+  final List<Widget> actions;
   final bool offline;
 
   @override
   Widget build(BuildContext context) {
     final words = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final action = this.action;
     return _HeaderBand(
       child: Row(
         children: [
@@ -89,7 +91,7 @@ class TabHeader extends StatelessWidget {
                 // The wordmark's lowercase letters are about 12.5 logical
                 // pixels tall; at px26 the title's are the same. The band is
                 // fixed, so even the largest text setting keeps its one line
-                // inside, and the action at the end.
+                // inside, and the actions at the end.
                 textScaler: MediaQuery.textScalerOf(context)
                     .clamp(maxScaleFactor: 1.6),
                 style: KitText.px26
@@ -107,32 +109,12 @@ class TabHeader extends StatelessWidget {
                 label: words.downloadsOffline,
               ),
             )
-          else if (action case final action?)
-            HeaderButton(
-              icon: action.icon,
-              label: action.label(words),
-              onPressed: () => context.push(action.route),
-            ),
+          else
+            ...actions,
         ],
       ),
     );
   }
-}
-
-/// What a tab header offers at its end, and where it goes.
-enum HeaderAction {
-  search(Lucide.search, Routes.search),
-  settings(Lucide.settings, Routes.settings);
-
-  const HeaderAction(this.icon, this.route);
-
-  final String icon;
-  final String route;
-
-  String label(AppLocalizations words) => switch (this) {
-    search => words.searchTitle,
-    settings => words.shellSettings,
-  };
 }
 
 /// The background, status bar inset, height, and edge insets both headers
@@ -163,18 +145,26 @@ class _HeaderBand extends StatelessWidget {
   }
 }
 
-/// An icon with nothing around it, 44 square to tap. Pressing dims it.
+/// An icon with nothing around it, 44 square to tap. Pressing dims it; with
+/// [count] above zero, a filled accent badge at the icon's top-end corner
+/// says how many things, as the filter button does.
 class HeaderButton extends StatelessWidget {
   const HeaderButton({
     super.key,
     required this.icon,
     required this.label,
     required this.onPressed,
+    this.count = 0,
+    this.focusNode,
   });
 
   final String icon;
   final String label;
   final VoidCallback onPressed;
+
+  /// The badge's number, and no badge at zero.
+  final int count;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -182,16 +172,68 @@ class HeaderButton extends StatelessWidget {
     return PressIndication(
       onPressed: onPressed,
       label: label,
+      focusNode: focusNode,
       shape: KitRadius.pill,
       builder: (context, state) => SizedBox.square(
         dimension: 44,
         child: Center(
-          child: KitIcon(
-            icon,
-            size: 22,
-            color: state == PressState.pressed
-                ? colors.mutedForeground
-                : colors.foreground,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              KitIcon(
+                icon,
+                size: 22,
+                color: state == PressState.pressed
+                    ? colors.mutedForeground
+                    : colors.foreground,
+              ),
+              if (count > 0)
+                PositionedDirectional(
+                  top: -6,
+                  end: -8,
+                  child: _CountBadge(count),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// How many filters are on, at an icon's corner: a filled accent circle
+/// with the number in its foreground, grown with the text so it stays
+/// legible at the largest size.
+class _CountBadge extends StatelessWidget {
+  const _CountBadge(this.count);
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final size = math.max(
+      16.0,
+      MediaQuery.textScalerOf(context)
+          .clamp(maxScaleFactor: 1.6)
+          .scale(KitText.px11.lineHeight),
+    );
+    return ExcludeSemantics(
+      child: Container(
+        height: size,
+        constraints: BoxConstraints(minWidth: size),
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: colors.accent,
+          borderRadius: KitRadius.pill,
+        ),
+        child: Text(
+          '$count',
+          maxLines: 1,
+          style: KitText.px11.style(
+            color: colors.accentForeground,
+            weight: FontWeight.w600,
           ),
         ),
       ),

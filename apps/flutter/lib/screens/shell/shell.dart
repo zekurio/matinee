@@ -6,6 +6,7 @@ import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/avatar.dart';
+import '../../router.dart';
 import 'header.dart';
 
 /// A tap on the tab that's already open: [path] is the tab's first page,
@@ -26,7 +27,9 @@ final class _TabReselects extends Notifier<TabReselect?> {
 }
 
 /// The header above the tabs: Home keeps the logo with settings and search,
-/// and each other tab gets its own name and only the actions it has.
+/// and each other tab gets its own name and only the actions it has. Shows and
+/// Movies build theirs in the tab itself, where the list's filter and sort
+/// live, so the shell leaves no band for them.
 class ShellTopBar extends ConsumerWidget {
   const ShellTopBar({super.key, required this.index});
 
@@ -38,13 +41,21 @@ class ShellTopBar extends ConsumerWidget {
     final words = AppLocalizations.of(context);
     return switch (index) {
       0 => const ShellHeader(),
-      1 => TabHeader(title: words.tabShows, action: HeaderAction.search),
-      2 => TabHeader(title: words.tabMovies, action: HeaderAction.search),
+      1 || 2 => const SizedBox.shrink(),
       3 => TabHeader(
         title: words.downloadsTitle,
         offline: ref.watch(authStateProvider) is Offline,
       ),
-      _ => TabHeader(title: words.tabProfile, action: HeaderAction.settings),
+      _ => TabHeader(
+        title: words.tabProfile,
+        actions: [
+          HeaderButton(
+            icon: Lucide.settings,
+            label: words.shellSettings,
+            onPressed: () => context.push(Routes.settings),
+          ),
+        ],
+      ),
     };
   }
 }
@@ -153,7 +164,9 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
             Expanded(
               child: MediaQuery.removePadding(
                 context: context,
-                removeTop: true,
+                // A library tab's header is inside the tab, which keeps the
+                // status bar's inset to clear it, as [ShellTopBar] does.
+                removeTop: !_libraryTabs.contains(widget.shell.currentIndex),
                 removeBottom: true,
                 child: widget.shell,
               ),

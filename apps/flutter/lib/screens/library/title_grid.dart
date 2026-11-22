@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
+import '../shell/header.dart' show HeaderButton;
 import 'filter_sheet.dart';
 import 'list_choices.dart';
 import 'list_words.dart';
@@ -262,13 +263,16 @@ class ListBarButton extends StatelessWidget {
   }
 }
 
-/// The Filter button, once the server says what the filters offer.
+/// The Filter button, once the server says what the filters offer. [header]
+/// makes it a tab header's button, 44 square with its count badge, instead of
+/// a list heading's, 48 and only tinted.
 class FilterButton extends ConsumerWidget {
   const FilterButton({
     super.key,
     required this.list,
     required this.scope,
     required this.kind,
+    this.header = false,
   });
 
   final ListKey list;
@@ -276,6 +280,7 @@ class FilterButton extends ConsumerWidget {
 
   /// Every title's kind when they're all one.
   final String? kind;
+  final bool header;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -284,23 +289,35 @@ class FilterButton extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     final active = ref.watch(choicesProvider(list)).filters.count;
+    final label = active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle;
+    void open() =>
+        showTitleFilters(context, list: list, scope: scope, kind: kind);
+    if (header) {
+      return HeaderButton(
+        icon: Lucide.listFilter,
+        label: label,
+        count: active,
+        onPressed: open,
+      );
+    }
     return ListBarButton(
       icon: Lucide.listFilter,
-      label: active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle,
+      label: label,
       active: active > 0,
-      onPressed: () =>
-          showTitleFilters(context, list: list, scope: scope, kind: kind),
+      onPressed: open,
     );
   }
 }
 
 /// The sort, in a menu: each sort the list has values for, both ways.
+/// [header] makes its trigger a tab header's button, as [FilterButton]'s.
 class SortButton extends ConsumerWidget {
   const SortButton({
     super.key,
     required this.list,
     required this.current,
     required this.offered,
+    this.header = false,
   });
 
   final ListKey list;
@@ -308,20 +325,29 @@ class SortButton extends ConsumerWidget {
 
   /// The sorts the server has something to order by, once it says.
   final List<String>? offered;
+  final bool header;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    final label = l.browseSortCurrent(current.label(l));
     final offered = this.offered;
     return Menu(
       // The last of the heading's buttons, at its end.
       side: MenuSide.end,
-      trigger: (context, toggle, open, focusNode) => ListBarButton(
-        icon: Lucide.arrowUpDown,
-        label: l.browseSortCurrent(current.label(l)),
-        focusNode: focusNode,
-        onPressed: toggle,
-      ),
+      trigger: (context, toggle, open, focusNode) => header
+          ? HeaderButton(
+              icon: Lucide.arrowUpDown,
+              label: label,
+              focusNode: focusNode,
+              onPressed: toggle,
+            )
+          : ListBarButton(
+              icon: Lucide.arrowUpDown,
+              label: label,
+              focusNode: focusNode,
+              onPressed: toggle,
+            ),
       children: [
         for (final order in titleOrders)
           if (offered == null || offered.contains(order.sort))
