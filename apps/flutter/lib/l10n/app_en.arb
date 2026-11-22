@@ -579,6 +579,10 @@
   "@brandingPresets": {
     "description": "Branding: the label above the suggested accent color swatches"
   },
+  "saveBarSave": "Save",
+  "@saveBarSave": {
+    "description": "The save bar under a settings page: its button that saves the unsaved edits. Kept short so the bar fits on one row on a phone"
+  },
   "browseClearAll": "Clear all",
   "@browseClearAll": {
     "description": "strings.xml"
@@ -4344,10 +4348,6 @@
   },
   "webCommonSaveBarRetry": "Try again",
   "@webCommonSaveBarRetry": {
-    "description": "strings_web_common.xml"
-  },
-  "webCommonSaveBarSave": "Save changes",
-  "@webCommonSaveBarSave": {
     "description": "strings_web_common.xml"
   },
   "webCommonSaveBarSaved": "Changes saved",

@@ -8,6 +8,11 @@ import 'package:matinee/l10n/app_localizations.dart';
 import 'package:matinee/l10n/app_localizations_en.dart';
 import 'package:matinee/screens/settings/admin/admin_parts.dart';
 
+/// What the bar reads out without showing it.
+Finder _said(String label) => find.byWidgetPredicate(
+  (widget) => widget is Semantics && widget.properties.label == label,
+);
+
 void main() {
   final l = AppLocalizationsEn();
 
@@ -43,21 +48,21 @@ void main() {
 
     await pump(tester);
     expect(find.byType(SaveBar), findsOneWidget);
-    expect(find.text(l.webCommonSaveBarUnsaved), findsOneWidget);
+    expect(_said(l.webCommonSaveBarUnsaved), findsOneWidget);
   });
 
   testWidgets('a save spins, then reports Saved and goes', (tester) async {
     final save = Completer<void>();
     await pump(tester, onSave: () => save.future);
-    await tester.tap(find.text(l.webCommonSaveBarSave));
+    await tester.tap(find.text(l.saveBarSave));
     await tester.pump();
-    expect(find.text(l.webCommonSaveBarSaving), findsOneWidget);
+    expect(_said(l.webCommonSaveBarSaving), findsOneWidget);
     expect(find.byType(Spinner), findsOneWidget);
 
     save.complete();
     await tester.pump();
     await tester.pump();
-    expect(find.text(l.webCommonSaveBarSaved), findsOneWidget);
+    expect(_said(l.webCommonSaveBarSaved), findsOneWidget);
     expect(find.text(l.webCommonSaveBarDone), findsOneWidget);
 
     await tester.pump(savedFor);
@@ -69,12 +74,14 @@ void main() {
     tester,
   ) async {
     await pump(tester, onSave: () async => throw Exception('refused'));
-    await tester.tap(find.text(l.webCommonSaveBarSave));
+    await tester.tap(find.text(l.saveBarSave));
     await tester.pump();
     await tester.pump();
 
-    expect(find.text(l.webCommonSaveBarFailed), findsOneWidget);
-    expect(find.text(l.errorConnectionLost), findsOneWidget);
+    expect(
+      find.text('${l.webCommonSaveBarFailed}. ${l.errorConnectionLost}'),
+      findsOneWidget,
+    );
     expect(find.text(l.webCommonSaveBarRetry), findsOneWidget);
     expect(find.byType(SaveBar), findsOneWidget);
   });

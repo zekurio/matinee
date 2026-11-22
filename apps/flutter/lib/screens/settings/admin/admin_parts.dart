@@ -254,7 +254,7 @@ class _SaveBarPageState extends State<SaveBarPage> {
                         SaveBarStatus.saving => l.webCommonSaveBarSaving,
                         SaveBarStatus.saved => l.webCommonSaveBarDone,
                         SaveBarStatus.failed => l.webCommonSaveBarRetry,
-                        SaveBarStatus.unsaved => l.webCommonSaveBarSave,
+                        SaveBarStatus.unsaved => l.saveBarSave,
                       },
                       onReset: widget.dirty && !saving
                           ? () {
