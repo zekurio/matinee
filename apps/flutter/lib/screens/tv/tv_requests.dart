@@ -670,8 +670,9 @@ class TvRequestCard extends ConsumerWidget {
 }
 
 /// A request card's frame, its lines from the top: [heading], the name,
-/// [who], [badge], and [problem], each one line, so a card with all five
-/// fills the poster's height and every line keeps its place.
+/// [who], [badge], and [problem], the problem on up to three lines, its
+/// room kept whether it's there or not, so every card is one height and
+/// every line keeps its place.
 class _Card extends StatelessWidget {
   const _Card({
     required this.title,
@@ -728,24 +729,35 @@ class _Card extends StatelessWidget {
         ),
         ?who,
         badge,
-        if (problem != null && problem.isNotEmpty)
-          _CardText(problem, color: problemColor),
+        // The problem's room stays whether it has one, so no card is
+        // taller than the next.
+        SizedBox(
+          height: TvInfoCards.problemLines * TvType.caption.lineHeight,
+          child: problem == null || problem.isEmpty
+              ? null
+              : _CardText(
+                  problem,
+                  color: problemColor,
+                  maxLines: TvInfoCards.problemLines,
+                ),
+        ),
       ],
     );
   }
 }
 
-/// One line of a request card, muted unless [color] says otherwise.
+/// [maxLines] of a request card, muted unless [color] says otherwise.
 class _CardText extends StatelessWidget {
-  const _CardText(this.text, {this.color});
+  const _CardText(this.text, {this.color, this.maxLines = 1});
 
   final String text;
   final Color? color;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) => Text(
     text,
-    maxLines: 1,
+    maxLines: maxLines,
     overflow: TextOverflow.ellipsis,
     style: TvType.caption.style(
       color: color ?? MatineeTheme.of(context).mutedForeground,

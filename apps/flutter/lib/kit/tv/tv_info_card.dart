@@ -9,11 +9,16 @@ import 'tv_metrics.dart';
 
 /// Sizes of a [TvInfoCard] and what's on it.
 abstract final class TvInfoCards {
-  /// Its poster's width, 2:3.
-  static const posterWidth = 92.0;
+  /// How many lines a card's problem may take, filled or not, so every
+  /// card keeps its height whether something went wrong or not.
+  static const problemLines = 3;
 
-  /// Its poster's height, which the lines beside it fit into.
-  static const posterHeight = posterWidth * 1.5;
+  /// Its poster's height, which the lines beside it fill, the problem's
+  /// three included.
+  static const posterHeight = 178.0;
+
+  /// Its poster's width, 2:3.
+  static const posterWidth = posterHeight / 1.5;
 
   /// The room around the poster and the lines.
   static const padding = 14.0;
