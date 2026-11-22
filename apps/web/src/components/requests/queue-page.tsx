@@ -8,35 +8,32 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@matinee/ui/components/empty"
-import { Skeleton } from "@matinee/ui/components/skeleton"
 import { toast } from "@matinee/ui/components/sonner"
-import { cn } from "@matinee/ui/lib/utils"
 import {
   keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
 } from "@tanstack/react-query"
-import { useNavigate, useRouteContext } from "@tanstack/react-router"
+import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import {
   CableIcon,
   CheckCheckIcon,
+  FilterIcon,
   InboxIcon,
   RefreshCwIcon,
   TriangleAlertIcon,
 } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 
-import { chipClass, chipRow } from "@/components/chips"
 import { ShowMore } from "@/components/library/library-states"
 import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { ConfirmDialog } from "@/components/settings/user-dialogs"
 import { tr } from "@/i18n"
-import { formatCount } from "@/lib/format"
-import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc, queryClient } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import {
+  isHidden,
   useHiddenRequests,
   useRequestActionsStore,
   useSendHeldOnLeave,
@@ -44,18 +41,28 @@ import {
 
 import type { Answer } from "./decline-popover"
 import { KeyTip } from "./key-tip"
+import { QueueCard, type Reopen } from "./queue-card"
+import { RequestCardSkeleton, requestGrid } from "./request-card"
+import {
+  filterCount,
+  type RequestFilter,
+  RequestFilterPanel,
+  requestFilter,
+  searchFor,
+} from "./request-filter"
 import {
   addAction,
   askers,
+  filterInput,
   formatNames,
-  type QueueList,
-  QUEUE_LISTS,
   titleLink,
   useRequestQueue,
+  workItems,
 } from "./request-queue"
-import { RequestRow } from "./request-row"
 
-/** Rows of Done a page of it brings. */
+const route = getRouteApi("/_authed/_shell/requests")
+
+/** Cards of done a page of it brings. */
 const DONE_PAGE = 40
 
 /** A key press the queue shouldn't take: typing, or inside a popup. */
@@ -77,23 +84,25 @@ function ignoredKey(event: KeyboardEvent): boolean {
   )
 }
 
-export function QueuePage({
-  list,
-  onList,
-}: {
-  list: QueueList
-  onList: (list: QueueList) => void
-}) {
+/**
+ * Everyone's requests in one list, as the server orders its lists:
+ * waiting, needs attention, on the way, then done, which loads more as
+ * it's read. The Filter panel keeps it to some states or one kind, which
+ * the server does, so done pages the same. Each card shows its state and
+ * what that state lets an admin do, and the keys act on the focused card
+ * by its own state.
+ */
+export function QueuePage() {
   useDocumentTitle(tr("requests.title"))
-  const { user } = useRouteContext({ from: "/_authed/_shell" })
-  const canApprove = can(user, "adminRequest.approve")
-  const canDecline = can(user, "adminRequest.decline")
-  const canRetry = can(user, "adminRequest.retry")
-  const queue = useRequestQueue()
+  const navigate = useNavigate()
+  const filter = requestFilter(route.useSearch())
+  const setFilter = (next: RequestFilter) =>
+    void navigate({ to: ".", search: searchFor(next), replace: true })
+  const filtered = filterCount(filter) > 0
+  const queue = useRequestQueue(true, filter)
   const connections = useQuery(orpc.admin.fulfilment.connections.queryOptions())
   const hidden = useHiddenRequests()
   const hold = useRequestActionsStore((state) => state.hold)
-  const navigate = useNavigate()
   const openSettings = useOpenSettings()
 
   // Held actions go out as the page is left, not when their toast ends.
@@ -104,11 +113,11 @@ export function QueuePage({
       input: (cursor: string | undefined) => ({
         limit: DONE_PAGE,
         cursor,
+        ...filterInput(filter),
       }),
       initialPageParam: undefined,
       getNextPageParam: (last) => last.nextCursor ?? undefined,
       placeholderData: keepPreviousData,
-      enabled: list === "done",
     }),
   )
 
@@ -116,7 +125,7 @@ export function QueuePage({
   // and its latest row, so when either changes, as when a title arrives,
   // the pages already open load again.
   const doneMark = queue.data
-    ? `${queue.data.counts.done} ${queue.data.done[0]?.id ?? ""}`
+    ? `${queue.data.doneCount} ${queue.data.done[0]?.id ?? ""}`
     : null
   const seenDoneMark = useRef(doneMark)
   useEffect(() => {
@@ -130,16 +139,18 @@ export function QueuePage({
     }
   }, [doneMark])
 
-  const rows: AdminRequestItem[] =
-    list === "done"
-      ? (done.data?.pages.flatMap((page) => page.done) ?? [])
-      : (queue.data?.[list] ?? [])
-  const visible = rows.filter((item) => !hidden.has(item.id))
-  const waiting = (queue.data?.waiting ?? []).filter(
-    (item) => !hidden.has(item.id),
-  )
+  // Until its pages come, done is what the stream carries of it.
+  const doneItems =
+    done.data?.pages.flatMap((page) => page.done) ?? queue.data?.done ?? []
+  const work = queue.data ? workItems(queue.data) : []
+  // An id once: a request that moved on between the stream and a page
+  // shows where the stream has it.
+  const seen = new Set(work.map((item) => item.id))
+  const rows = [...work, ...doneItems.filter((item) => !seen.has(item.id))]
+  const visible = rows.filter((item) => !isHidden(hidden, item))
+  const waiting = visible.filter((item) => item.state === "waiting")
 
-  // The row J and K are on. Kept by id, with its place for when it goes.
+  // The card J and K are on. Kept by id, with its place for when it goes.
   const [active, setActive] = useState<{ id: string | null; index: number }>({
     id: null,
     index: 0,
@@ -150,64 +161,59 @@ export function QueuePage({
   const activeItem = visible[activeIndex]
   const [declining, setDeclining] = useState<string | null>(null)
   const [removing, setRemoving] = useState<AdminRequestItem | null>(null)
-  const rowRefs = useRef(new Map<string, HTMLElement>())
+  const cardRefs = useRef(new Map<string, HTMLElement>())
   const listRef = useRef<HTMLUListElement>(null)
-  const chipsRef = useRef<HTMLDivElement>(null)
-  // Where focus goes once a decline closes its popover: the row that takes
-  // the declined one's place. Null while no decline was sent, so a popover
-  // closed without one hands focus back to its button.
+  // Where focus waits once no card is left to take it.
+  const topRef = useRef<HTMLDivElement>(null)
+  // Where focus goes once a decline closes its popover: the card that
+  // takes the declined one's place. Null while no decline was sent, so a
+  // popover closed without one hands focus back to its button.
   const afterDecline = useRef<HTMLElement | null>(null)
 
-  const focusRow = (index: number) => {
+  const focusCard = (index: number) => {
     const item = visible[index]
     if (!item) return
     setActive({ id: item.id, index })
-    rowRefs.current.get(item.id)?.focus()
+    cardRefs.current.get(item.id)?.focus()
   }
-  /** The row after `index` once it collapses, or before it at the end. */
+  /** The card after `index` once it goes, or before it at the end. */
   const neighbour = (index: number) => visible[index + 1] ?? visible[index - 1]
   /**
-   * Moves J and K on from a row that's leaving, and returns what focus
-   * should go to: the next row, or with none left, the list's chip.
+   * Moves J and K on from a card that's leaving, and returns what focus
+   * should go to: the next card, or with none left, the list's place.
    */
   const moveOn = (index: number): HTMLElement | null => {
     const next = neighbour(index)
     if (next) {
       setActive({ id: next.id, index })
-      return rowRefs.current.get(next.id) ?? null
+      return cardRefs.current.get(next.id) ?? null
     }
-    return (
-      chipsRef.current?.querySelector<HTMLElement>("[aria-pressed=true]") ??
-      null
-    )
+    return topRef.current
   }
 
   const add = (item: AdminRequestItem, index: number) => {
-    if (!canApprove) return
     hold(addAction([item]))
     moveOn(index)?.focus()
   }
   const answer = (item: AdminRequestItem, index: number, why: Answer) => {
-    if (!canDecline) return
     const next = moveOn(index)
     afterDecline.current = next
     setDeclining(null)
     hold({ ...why, ids: [item.id], names: [item.title.name] })
   }
-  const reopen = (
-    item: AdminRequestItem,
-    index: number,
-    kind: "allowAgain" | "addAfterAll",
-  ) => {
-    if (kind === "allowAgain" ? !canDecline : !canApprove) return
+  const reopen = (item: AdminRequestItem, index: number, kind: Reopen) => {
     hold({ kind, ids: [item.id], names: [item.title.name] })
     moveOn(index)?.focus()
   }
   const addAll = () => {
-    if (!canApprove || waiting.length === 0) return
+    if (waiting.length === 0) return
     hold(addAction(waiting))
-    // The button goes with the rows, so focus waits on the list's chip.
-    chipsRef.current?.querySelector<HTMLElement>("[aria-pressed=true]")?.focus()
+    // The cards go, so focus moves to the first one after them.
+    const next = visible.find((item) => item.state !== "waiting")
+    if (next) {
+      setActive({ id: next.id, index: 0 })
+      cardRefs.current.get(next.id)?.focus()
+    } else topRef.current?.focus()
   }
   const undo = () => {
     const action = useRequestActionsStore.getState().undo()
@@ -215,7 +221,7 @@ export function QueuePage({
     if (!id) return
     setActive({ id, index: activeIndex })
     // Back in the list on the next frame, once it's no longer inert.
-    requestAnimationFrame(() => rowRefs.current.get(id)?.focus())
+    requestAnimationFrame(() => cardRefs.current.get(id)?.focus())
   }
 
   const retry = useMutation({
@@ -244,7 +250,8 @@ export function QueuePage({
       }),
   })
 
-  // The queue's keys, for the whole page while it's open.
+  // The page's keys, for as long as it's open. Each acts on the card J
+  // and K are on, as its state allows.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (ignoredKey(event)) return
@@ -257,43 +264,46 @@ export function QueuePage({
         undo()
         return
       }
-      if (!activeItem) return
-      if (key === "j" || (inList && key === "ArrowDown")) {
-        event.preventDefault()
-        focusRow(
-          inList ? Math.min(activeIndex + 1, visible.length - 1) : activeIndex,
-        )
-      } else if (key === "k" || (inList && key === "ArrowUp")) {
-        event.preventDefault()
-        focusRow(inList ? Math.max(activeIndex - 1, 0) : activeIndex)
-      } else if (key === "a" && event.shiftKey && list === "waiting") {
-        if (!canApprove) return
+      if (key === "a" && event.shiftKey) {
+        if (waiting.length < 2) return
         event.preventDefault()
         addAll()
-      } else if (key === "a" && list === "waiting") {
-        if (!canApprove) return
+        return
+      }
+      if (!activeItem) return
+      const state = activeItem.state
+      const next =
+        key === "j" || (inList && (key === "ArrowDown" || key === "ArrowRight"))
+      const previous =
+        key === "k" || (inList && (key === "ArrowUp" || key === "ArrowLeft"))
+      if (next) {
+        event.preventDefault()
+        focusCard(
+          inList ? Math.min(activeIndex + 1, visible.length - 1) : activeIndex,
+        )
+      } else if (previous) {
+        event.preventDefault()
+        focusCard(inList ? Math.max(activeIndex - 1, 0) : activeIndex)
+      } else if (key === "a" && state === "waiting") {
         event.preventDefault()
         add(activeItem, activeIndex)
-      } else if (key === "d" && list === "waiting") {
-        if (!canDecline) return
+      } else if (key === "d" && state === "waiting") {
         event.preventDefault()
         afterDecline.current = null
         setDeclining(activeItem.id)
       } else if (
         key === "g" &&
-        (list === "needsAttention" || list === "onTheWay")
+        (state === "needsAttention" || state === "onTheWay")
       ) {
-        if (!canDecline) return
         event.preventDefault()
         afterDecline.current = null
         setDeclining(activeItem.id)
-      } else if (key === "r" && list === "needsAttention") {
-        if (!canRetry) return
+      } else if (key === "r" && state === "needsAttention") {
         event.preventDefault()
         retry.mutate(activeItem)
       } else if (
         key === "Enter" &&
-        event.target === rowRefs.current.get(activeItem.id)
+        event.target === cardRefs.current.get(activeItem.id)
       ) {
         event.preventDefault()
         void navigate(titleLink(activeItem))
@@ -303,16 +313,12 @@ export function QueuePage({
     return () => document.removeEventListener("keydown", onKey)
   })
 
-  const counts = queue.data?.counts
-  const countOf = (entry: QueueList) => {
-    if (!counts || entry === "done") return null
-    if (entry === "waiting") return waiting.length
-    return counts[entry]
-  }
   const noConnection = connections.data?.length === 0
 
+  // Add all acts on the waiting ones the filter shows, and goes when the
+  // filter shows none.
   const addAllButton = (size: "sm" | "default") =>
-    canApprove && list === "waiting" && waiting.length > 1 ? (
+    waiting.length > 1 ? (
       <KeyTip label={tr("requests.keys.addAll")} keys="Shift A">
         <Button
           variant="outline"
@@ -326,15 +332,9 @@ export function QueuePage({
       </KeyTip>
     ) : null
 
-  // Done keeps room for a declined row's buttons in every row, so its
-  // columns line up.
-  const reserveReopen =
-    list === "done" && visible.some((item) => item.status === "declined")
-
   let body: ReactNode
-  const loading = list === "done" ? done.isPending : queue.isPending
-  const error = list === "done" ? done.error : queue.data ? null : queue.error
-  if (loading && !error) {
+  const error = queue.data ? null : queue.error
+  if (queue.isPending && !error) {
     body = <QueueSkeleton />
   } else if (error) {
     body = (
@@ -342,18 +342,26 @@ export function QueuePage({
         <p className="text-muted-foreground text-sm">
           {tr("requests.loadFailed", { error: errorMessage(error) })}
         </p>
-        <Button
-          variant="outline"
-          onClick={() =>
-            void (list === "done" ? done.refetch() : queue.refetch())
-          }
-        >
+        <Button variant="outline" onClick={() => void queue.refetch()}>
           <RefreshCwIcon />
           {tr("requests.reload")}
         </Button>
       </div>
     )
-  } else if (visible.length === 0 && noConnection && list !== "done") {
+  } else if (visible.length === 0 && filtered) {
+    body = (
+      <QueueEmpty
+        icon={<FilterIcon />}
+        title={tr("requests.filter.none")}
+        description={tr("requests.filter.noneHint")}
+        action={
+          <Button variant="outline" onClick={() => setFilter({ states: [] })}>
+            {tr("library.clearFilters")}
+          </Button>
+        }
+      />
+    )
+  } else if (visible.length === 0 && noConnection) {
     body = (
       <QueueEmpty
         icon={<CableIcon />}
@@ -368,120 +376,78 @@ export function QueuePage({
     )
   } else if (visible.length === 0) {
     body = (
-      <QueueEmpty icon={<InboxIcon />} title={tr(`requests.empty.${list}`)} />
+      <QueueEmpty
+        icon={<InboxIcon />}
+        title={tr("requests.empty.none")}
+        description={tr("requests.empty.noneHint")}
+      />
     )
   } else {
     body = (
-      <div className="bg-foreground/[0.02] overflow-hidden rounded-xl border">
-        <ul
-          ref={listRef}
-          aria-label={tr(`requests.list.${list}`)}
-          className="-mb-px flex flex-col"
-        >
-          {rows.map((item) => {
-            const index = visible.indexOf(item)
-            return (
-              <RequestRow
-                key={item.id}
-                item={item}
-                list={list}
-                collapsed={index < 0}
-                focusable={index === activeIndex}
-                reserveReopen={reserveReopen}
-                canApprove={canApprove}
-                canDecline={canDecline}
-                canRetry={canRetry}
-                canRemove={canApprove || canDecline}
-                rowRef={(element) => {
-                  if (element) rowRefs.current.set(item.id, element)
-                  else rowRefs.current.delete(item.id)
-                }}
-                declineOpen={declining === item.id}
-                onDeclineOpenChange={(open) => {
-                  if (open) afterDecline.current = null
-                  setDeclining(open ? item.id : null)
-                }}
-                // After a decline, focus moves on once the popover is gone,
-                // not as it starts to close: the popover would pick the
-                // row's first button, as the row isn't in the tab order yet.
-                declineFinalFocus={() => afterDecline.current === null}
-                onDeclineClosed={() => {
-                  afterDecline.current?.focus()
-                  afterDecline.current = null
-                }}
-                onFocusRow={() => setActive({ id: item.id, index })}
-                onAdd={() => add(item, index)}
-                onAnswer={(why) => answer(item, index, why)}
-                onRetry={() => retry.mutate(item)}
-                onReopen={(kind) => reopen(item, index, kind)}
-                onRemove={() => setRemoving(item)}
-              />
-            )
-          })}
-        </ul>
-      </div>
+      <ul
+        ref={listRef}
+        aria-label={tr("requests.title")}
+        className={requestGrid}
+      >
+        {rows.map((item) => {
+          const index = visible.indexOf(item)
+          return (
+            <QueueCard
+              key={item.id}
+              item={item}
+              collapsed={index < 0}
+              focusable={index === activeIndex}
+              cardRef={(element) => {
+                if (element) cardRefs.current.set(item.id, element)
+                else cardRefs.current.delete(item.id)
+              }}
+              declineOpen={declining === item.id}
+              onDeclineOpenChange={(open) => {
+                if (open) afterDecline.current = null
+                setDeclining(open ? item.id : null)
+              }}
+              // After a decline, focus moves on once the popover is gone,
+              // not as it starts to close: the popover would pick the
+              // card's first button, as the card isn't in the tab order yet.
+              declineFinalFocus={() => afterDecline.current === null}
+              onDeclineClosed={() => {
+                afterDecline.current?.focus()
+                afterDecline.current = null
+              }}
+              onFocusCard={() => setActive({ id: item.id, index })}
+              onAdd={() => add(item, index)}
+              onAnswer={(why) => answer(item, index, why)}
+              onRetry={() => retry.mutate(item)}
+              onReopen={(kind) => reopen(item, index, kind)}
+              onRemove={() => setRemoving(item)}
+            />
+          )
+        })}
+      </ul>
     )
   }
 
   return (
     <div className="flex flex-col pb-6">
-      {/* As the statistics page has it: the lists and the page's actions
-          beside the title. Phones keep the header as the page's bar, so
-          the lists go under it. */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-x-8 gap-y-4 max-sm:contents">
-        <PageHeader
-          title={tr("requests.title")}
-          phoneActions={addAllButton("sm")}
-          className="mb-0 md:mb-0"
-        />
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-3 max-sm:mb-4">
-          <div
-            ref={chipsRef}
-            role="group"
-            aria-label={tr("requests.lists")}
-            className={chipRow}
-          >
-            {QUEUE_LISTS.map((entry) => {
-              const selected = entry === list
-              const count = countOf(entry)
-              return (
-                <button
-                  key={entry}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => {
-                    setActive({ id: null, index: 0 })
-                    onList(entry)
-                  }}
-                  className={chipClass(selected, "gap-1.5")}
-                >
-                  {tr(`requests.list.${entry}`)}
-                  {count !== null && count > 0 && (
-                    <span
-                      className={cn(
-                        "tabular-nums",
-                        selected
-                          ? "text-background/70"
-                          : entry === "needsAttention"
-                            ? "text-warning"
-                            : "text-muted-foreground",
-                      )}
-                    >
-                      {formatCount(count)}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-          <div className="flex items-center gap-1 max-sm:hidden">
+      <PageHeader
+        title={tr("requests.title")}
+        actions={
+          <div className="flex items-center gap-2">
+            <RequestFilterPanel filter={filter} onChange={setFilter} />
             {addAllButton("default")}
           </div>
-        </div>
-      </div>
+        }
+        phoneActions={
+          <>
+            <RequestFilterPanel filter={filter} onChange={setFilter} compact />
+            {addAllButton("sm")}
+          </>
+        }
+        className="mb-5 md:mb-6"
+      />
 
-      {noConnection && visible.length > 0 && list !== "done" && (
-        <p className="text-muted-foreground text-13px mb-3 flex items-center gap-1.5">
+      {noConnection && visible.length > 0 && (
+        <p className="text-muted-foreground text-13px mb-4 flex items-center gap-1.5">
           <TriangleAlertIcon
             aria-hidden
             className="text-warning size-3.5 shrink-0"
@@ -497,9 +463,11 @@ export function QueuePage({
         </p>
       )}
 
-      {body}
+      <div ref={topRef} tabIndex={-1} className="outline-none">
+        {body}
+      </div>
 
-      {list === "done" && done.hasNextPage && (
+      {visible.length > 0 && done.hasNextPage && (
         <ShowMore
           fetching={done.isFetchingNextPage}
           failed={done.isFetchNextPageError}
@@ -558,15 +526,9 @@ function QueueEmpty({
 
 function QueueSkeleton() {
   return (
-    <div className="divide-y overflow-hidden rounded-xl border">
-      {[0, 1, 2, 3, 4].map((index) => (
-        <div key={index} className="flex items-center gap-4 px-4 py-1.5">
-          <Skeleton className="aspect-[2/3] w-8 rounded-[4px]" />
-          <div className="flex flex-1 flex-col gap-1.5">
-            <Skeleton className="h-3.5 w-48 max-w-full" />
-            <Skeleton className="h-3 w-24 max-w-full" />
-          </div>
-        </div>
+    <div className={requestGrid}>
+      {[0, 1, 2, 3].map((index) => (
+        <RequestCardSkeleton key={index} size="wide" admin />
       ))}
     </div>
   )

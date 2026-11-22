@@ -19,7 +19,7 @@ import {
   type ListControlsProps,
   PhoneControls,
 } from "./list-controls"
-import { libraryRoute, useSearchText } from "./list-params"
+import { libraryRoute } from "./list-params"
 import { activeTitleFilters, TitleFilterPanel } from "./title-filter-panel"
 import { cardDetail, type TitleListSearch } from "./title-filter-params"
 import { libraryTitlesOptions, useTitleFilters } from "./title-queries"
@@ -27,18 +27,16 @@ import { libraryTitlesOptions, useTitleFilters } from "./title-queries"
 export function TitleGrid({ library }: { library: Library }) {
   const current = libraryRoute.useSearch()
   const navigate = libraryRoute.useNavigate()
-  const update = (patch: Partial<TitleListSearch> & { q?: string }) =>
+  const update = (patch: Partial<TitleListSearch>) =>
     void navigate({
       search: (prev) => ({ ...prev, ...patch }),
       replace: true,
     })
-  const { search, setSearch, query } = useSearchText(current.q, update)
   const list = useTitleFilters(current, update, { libraryId: library.id })
   const [panelOpen, setPanelOpen] = useState(false)
   const busy = library.scanning || library.refreshing
   const titles = useInfiniteQuery({
     ...libraryTitlesOptions(library.id, {
-      query,
       filters: list.filters,
       order: list.order,
     }),
@@ -55,9 +53,6 @@ export function TitleGrid({ library }: { library: Library }) {
     ? activeTitleFilters(list.filters, options, list.change)
     : []
   const controls: ListControlsProps = {
-    search,
-    setSearch,
-    label: tr(`library.search.${kind}`),
     sorts: list.sorts,
     sort: list.sort,
     setSort: list.setSort,
@@ -93,25 +88,15 @@ export function TitleGrid({ library }: { library: Library }) {
       ) : rows.length === 0 ? (
         <EmptyList
           title={
-            query
-              ? tr(`library.noMatch.${kind}`, { query })
-              : filtered
-                ? tr(`library.noFilterMatch.${kind}`)
-                : tr(`library.none.${kind}`)
+            filtered
+              ? tr(`library.noFilterMatch.${kind}`)
+              : tr(`library.none.${kind}`)
           }
           scanning={library.scanning}
           clear={
-            query
-              ? {
-                  label: tr("library.clearSearch"),
-                  onClick: () => setSearch(""),
-                }
-              : filtered
-                ? {
-                    label: tr("library.clearFilters"),
-                    onClick: list.clear,
-                  }
-                : undefined
+            filtered
+              ? { label: tr("library.clearFilters"), onClick: list.clear }
+              : undefined
           }
         />
       ) : (

@@ -235,26 +235,34 @@ class TvFocusLine extends StatelessWidget {
     final item = this.item;
     if (item == null) return const SizedBox(height: tvFocusLineHeight);
     final colors = MatineeTheme.of(context);
+    // The name takes what it needs, up to half the line, and the facts
+    // the rest, so a request's problem reads as far as it can; long ones
+    // end in an ellipsis rather than push the name off the line.
     return SizedBox(
       height: tvFocusLineHeight,
-      child: Row(
-        spacing: 16,
-        children: [
-          Flexible(
-            child: Text(
-              item.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TvType.title.style(color: colors.foreground),
+      child: LayoutBuilder(
+        builder: (context, constraints) => Row(
+          spacing: 16,
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth * .5),
+              child: Text(
+                item.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TvType.title.style(color: colors.foreground),
+              ),
             ),
-          ),
-          TvFacts(
-            facts: item.facts,
-            contentRating: item.contentRating,
-            rating: item.rating,
-            alpha: .8,
-          ),
-        ],
+            Flexible(
+              child: TvFacts(
+                facts: item.facts,
+                contentRating: item.contentRating,
+                rating: item.rating,
+                alpha: .8,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -322,7 +330,8 @@ class _TvTitleLogoState extends ConsumerState<TvTitleLogo> {
 }
 
 /// A movie or show as its 2:3 poster, its name on the tone until the
-/// picture loads. [onLongPress] opens its actions.
+/// picture loads. [onLongPress] opens its actions. [corner] sits at the
+/// top right, where a watched title's mark does, as a request's state.
 class TvPosterCard extends StatelessWidget {
   const TvPosterCard({
     super.key,
@@ -334,6 +343,8 @@ class TvPosterCard extends StatelessWidget {
     this.onLongPress,
     this.onFocused,
     this.width = TvCards.posterWidth,
+    this.corner,
+    this.label,
   });
 
   final String name;
@@ -344,6 +355,10 @@ class TvPosterCard extends StatelessWidget {
   final FocusNode? focusNode;
   final bool watched;
   final double? width;
+  final Widget? corner;
+
+  /// What a screen reader says, when it's more than [name].
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -354,7 +369,7 @@ class TvPosterCard extends StatelessWidget {
       aspect: 2 / 3,
       width: width,
       focusNode: focusNode,
-      label: name,
+      label: label ?? name,
       onPressed: onPressed,
       onLongPress: onLongPress,
       onFocusChange: onFocused == null
@@ -385,7 +400,9 @@ class TvPosterCard extends StatelessWidget {
             child: TvWatchedMark(
               label: AppLocalizations.of(context).mediaWatched,
             ),
-          ),
+          )
+        else if (corner case final widget?)
+          PositionedDirectional(top: 8, end: 8, child: widget),
       ],
     );
   }
@@ -512,6 +529,7 @@ class TvCaptionedPoster extends StatelessWidget {
     this.onFocused,
     this.width = TvCards.posterWidth,
     this.toneKey,
+    this.corner,
   });
 
   final String name;
@@ -525,6 +543,9 @@ class TvCaptionedPoster extends StatelessWidget {
   final VoidCallback? onFocused;
   final double? width;
   final String? toneKey;
+
+  /// In place of [badge], as a request's state.
+  final Widget? corner;
 
   @override
   Widget build(BuildContext context) {
@@ -546,8 +567,9 @@ class TvCaptionedPoster extends StatelessWidget {
                 focusNode: focusNode,
                 watched: watched,
                 width: width,
+                corner: corner,
               ),
-              if (badge != null && !watched)
+              if (badge != null && !watched && corner == null)
                 PositionedDirectional(
                   top: 8,
                   end: 8,

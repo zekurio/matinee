@@ -38,17 +38,21 @@ import 'screens/title/episode_screen.dart';
 import 'screens/title/season_screen.dart';
 import 'screens/title/title_screen.dart';
 import 'screens/tv/tv_browse.dart';
+import 'screens/tv/tv_catalog.dart';
+import 'screens/tv/tv_catalog_browse.dart';
 import 'screens/tv/tv_detail.dart';
+import 'screens/tv/tv_discover.dart';
 import 'screens/tv/tv_home.dart';
 import 'screens/tv/tv_profile.dart';
+import 'screens/tv/tv_requests.dart';
 import 'screens/tv/tv_settings.dart';
 import 'screens/tv/tv_shell.dart';
 
 /// Every place in the app, as the paths go_router opens. Screens navigate with
 /// these, `context.push(Routes.title(id))`, never with a path typed out, so a
-/// route's shape changes in one place. Shows and Movies are tabs, and the
-/// requests are one page, which an admin reaches from the waiting requests at
-/// the top of Explore.
+/// route's shape changes in one place. Shows and Movies are tabs, and an
+/// admin's requests are one overview, which Explore's Recent requests row
+/// at the top opens.
 abstract final class Routes {
   // Before the app: the session's state picks one (see [authRedirect]).
   /// Typing or picking a server's address.
@@ -74,10 +78,13 @@ abstract final class Routes {
   static const downloads = '/downloads';
   static const profile = '/profile';
 
-  /// Search, with Explore under the field: the catalog's rows, an
-  /// admin's waiting requests first.
+  /// Search, with Explore under the field: the catalog's rows, the recent
+  /// requests first.
   static const search = '/search';
   static const favorites = '/favorites';
+
+  /// Discover on a TV, from its drawer: the phone has it under Search.
+  static const discover = '/discover';
   static const recent = '/recent';
   static const settings = '/settings';
   static String settingsPage(String page) => '/settings/$page';
@@ -87,10 +94,12 @@ abstract final class Routes {
   static String license(String package) =>
       '/licenses/${Uri.encodeComponent(package)}';
 
-  /// Yours, and for an admin the ones waiting on them; [list] picks one
-  /// of an admin's lists.
-  static String requests([String? list]) =>
-      list == null ? '/requests' : '/requests/$list';
+  /// The viewer's own requests.
+  static String requests() => '/requests';
+
+  /// Everyone's requests in one list, for whoever runs the queue; anyone
+  /// else gets their own.
+  static const requestQueue = '/requests/queue';
 
   static String browse({String? genre, String? studio}) => Uri(
     path: '/browse',
@@ -432,10 +441,9 @@ List<RouteBase> _handsetRoutes() => [
     builder: (context, state) => const RequestsScreen(),
   ),
   GoRoute(
-    path: '/requests/:list',
+    path: Routes.requestQueue,
     parentNavigatorKey: _rootKey,
-    builder: (context, state) =>
-        RequestsScreen(list: state.pathParameters['list']),
+    builder: (context, state) => const RequestsScreen(queue: true),
   ),
   GoRoute(
     path: '/catalog/:kind/:provider/:providerId',
@@ -531,8 +539,9 @@ bool get _hasPlayerLab => kDebugMode && _hasPlayer;
 /// The TV's pages, under its drawer: the phone's paths, TV screens. The pages
 /// from the drawer sit over Home, so Back goes there; the rest open over
 /// whatever opened them. There's no downloads page, no admin page, no image
-/// editor or identify, no requests, and no single library's grid: the drawer's
-/// Movies and Shows take every library at once.
+/// editor or identify, and no single library's grid: the drawer's Movies and
+/// Shows take every library at once. Discover has a page of its own from the
+/// drawer, where the phone has it under Search.
 List<RouteBase> _tvRoutes() => [
   GoRoute(
     path: '/play/:id',
@@ -562,6 +571,10 @@ List<RouteBase> _tvRoutes() => [
           _tv(
             Routes.favorites.substring(1),
             (state) => const TvFavoritesScreen(),
+          ),
+          _tv(
+            Routes.discover.substring(1),
+            (state) => const TvDiscoverScreen(),
           ),
           _tv(
             Routes.movies.substring(1),
@@ -609,6 +622,27 @@ List<RouteBase> _tvRoutes() => [
         (state) => TvPersonScreen(
           name: state.pathParameters['name']!,
           tmdbId: state.uri.queryParameters['tmdb'],
+        ),
+      ),
+      _tv('/requests', (state) => const TvRequestsScreen()),
+      _tv(Routes.requestQueue, (state) => const TvRequestsScreen(queue: true)),
+      _tv(
+        '/catalog/:kind/:provider/:providerId',
+        (state) => TvCatalogScreen(
+          catalogKey: (
+            kind: state.pathParameters['kind']!,
+            provider: state.pathParameters['provider']!,
+            providerId: state.pathParameters['providerId']!,
+            libraryId: state.uri.queryParameters['library'],
+          ),
+        ),
+      ),
+      _tv(
+        '/catalog-browse/:kind',
+        (state) => TvCatalogBrowseScreen(
+          kind: state.pathParameters['kind']!,
+          filters: state.uri.queryParameters['filters'],
+          sort: state.uri.queryParameters['sort'],
         ),
       ),
       _tv(

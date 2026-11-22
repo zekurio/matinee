@@ -71,6 +71,11 @@ class SectionTitle extends StatelessWidget {
 /// in either text direction, or as near as the row scrolls: a card near
 /// the end shows with the end of the row, and a row shorter than the
 /// screen stays put.
+///
+/// With [itemHeight] null, the cards' heights follow their content and the
+/// row takes the tallest, each card stretched to it. That builds every
+/// card at once, so keep such a row short, as Explore's Requests row of
+/// 20 at most is.
 class Rail extends StatefulWidget {
   const Rail({
     super.key,
@@ -83,11 +88,11 @@ class Rail extends StatefulWidget {
     this.seeAllLabel,
     this.empty,
     this.initialIndex = 0,
-  });
+  }) : assert(itemHeight != null || initialIndex == 0);
 
   final String title;
   final double itemWidth;
-  final double itemHeight;
+  final double? itemHeight;
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
   final VoidCallback? onSeeAll;
@@ -152,6 +157,24 @@ class _RailState extends State<Rail> {
               empty,
               style: KitText.sm.style(
                 color: MatineeTheme.of(context).mutedForeground,
+              ),
+            ),
+          )
+        else if (widget.itemHeight == null)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: CardMetrics.gap,
+                children: [
+                  for (var index = 0; index < itemCount; index++)
+                    SizedBox(
+                      width: widget.itemWidth,
+                      child: widget.itemBuilder(context, index),
+                    ),
+                ],
               ),
             ),
           )

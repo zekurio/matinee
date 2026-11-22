@@ -37,7 +37,6 @@ const _posterHeight = TvCards.posterWidth * 1.5;
 /// A row of posters under its heading, as tall as its posters, so the rows
 /// under one still loading stay put when it comes.
 const _shelfHeight = _posterHeight + 4;
-const _noticeHeight = 96.0;
 
 const _logoWidth = 360.0;
 const _logoHeight = 70.0;
@@ -236,7 +235,7 @@ class _TvHomeScreenState extends ConsumerState<TvHomeScreen> {
         if (libs == null && libraries.hasError)
           (
             'libraries-failed',
-            _RowNotice(
+            TvRowNotice(
               headline: l.homeLoadFailed,
               message: describeFailure(l, libraries.error!),
               onRetry: () => ref.invalidate(librariesProvider),
@@ -334,12 +333,12 @@ class _TvHomeScreenState extends ConsumerState<TvHomeScreen> {
       final l = AppLocalizations.of(context);
       return (
         key,
-        _RowNotice(
+        TvRowNotice(
           title: title,
           headline: failed,
           message: describeFailure(l, load.error!),
           onRetry: retry,
-          retryNode: _memory.node(key, _RowNotice.retryKey),
+          retryNode: _memory.node(key, TvRowNotice.retryKey),
         ),
       );
     }
@@ -482,16 +481,16 @@ class _ShelfRow extends ConsumerWidget {
     if (entries == null || entries.isEmpty) {
       firsts.remove(key);
       if (entries == null && load.hasError) {
-        return _RowNotice(
+        return TvRowNotice(
           title: title,
           headline: l.homeShelfFailed,
           message: describeFailure(l, load.error!),
           onRetry: () => ref.invalidate(shelfProvider(library.id)),
-          retryNode: memory.node(key, _RowNotice.retryKey),
+          retryNode: memory.node(key, TvRowNotice.retryKey),
           height: _shelfHeight,
         );
       }
-      return _RowNotice(
+      return TvRowNotice(
         title: title,
         headline: entries == null ? null : l.browseEmptyShelf,
         height: _shelfHeight,
@@ -632,20 +631,26 @@ class _HeaderBody extends StatelessWidget {
 }
 
 /// A row that has no cards to show: its heading and why, with a way to try
-/// again where there is one. Without [headline], a row still loading.
-class _RowNotice extends StatelessWidget {
-  const _RowNotice({
+/// again where there is one. Without [headline], a row still loading. Give
+/// Try again [retryNode], the row's [retryKey] in the page's memory, so
+/// the row's first card takes focus when it loads.
+class TvRowNotice extends StatelessWidget {
+  const TvRowNotice({
+    super.key,
     this.title,
     this.headline,
     this.message,
     this.onRetry,
     this.retryNode,
-    this.height = _noticeHeight,
+    this.height = TvRowNotice.roomHeight,
   });
 
   /// The key of the Try again button's node in its row's memory, so the
   /// row's first card takes focus when it loads.
   static const retryKey = 'retry';
+
+  /// The room it takes under its heading, unless a row's cards need more.
+  static const roomHeight = 96.0;
 
   final String? title;
   final String? headline;

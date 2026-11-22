@@ -22,8 +22,13 @@ import '../home/home_data.dart';
 import '../library/list_choices.dart';
 import '../library/title_pages.dart';
 import '../profile/profile_data.dart';
+import '../requests/request_words.dart' show askable, refKey;
+import '../requests/requests_data.dart' show catalogSearchProvider;
+import '../requests/requests_hub.dart' show FollowTitles, FollowedTitles;
 import '../search/search_data.dart';
 import 'tv_actions.dart';
+import 'tv_catalog.dart' show TvCatalogPoster;
+import 'tv_home.dart' show TvRowNotice;
 import 'tv_media.dart';
 import 'tv_shell.dart';
 
@@ -34,11 +39,16 @@ final tvKindGenresProvider = serverQueryFamily(
 );
 
 /// The row key a grid page gives its controls in its focus memory.
-const _controls = 'controls';
+const _controls = tvGridControls;
 
-/// A grid page's heading and the count beside it, and its controls under them.
-class _GridHeader extends StatelessWidget {
-  const _GridHeader({
+/// The row key a grid page gives its controls in its focus memory.
+const tvGridControls = 'controls';
+
+/// A grid page's heading and the count beside it, and its controls, if any,
+/// under them.
+class TvGridHeader extends StatelessWidget {
+  const TvGridHeader({
+    super.key,
     required this.title,
     required this.detail,
     required this.controls,
@@ -60,35 +70,51 @@ class _GridHeader extends StatelessWidget {
             padding: const EdgeInsetsDirectional.only(
               end: TvPage.end + TvGrid.clockRoom,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              spacing: 16,
-              children: [
-                Flexible(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TvType.headline.style(color: colors.foreground),
+            // The title takes what it needs, up to most of the row, and the
+            // detail gets the rest rather than half.
+            child: LayoutBuilder(
+              builder: (context, constraints) => Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                spacing: 16,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth * .6,
+                    ),
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TvType.headline.style(color: colors.foreground),
+                    ),
                   ),
-                ),
-                if (detail case final text?)
-                  Text(
-                    text,
-                    maxLines: 1,
-                    style: TvType.facts.style(color: colors.mutedForeground),
-                  ),
-              ],
+                  if (detail case final text?)
+                    Flexible(
+                      child: Text(
+                        text,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TvType.facts.style(
+                          color: colors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsetsDirectional.only(top: 16, end: TvPage.end),
-            child: SizedBox(
-              height: TvButtons.height,
-              child: Row(spacing: 14, children: controls),
+          if (controls.isNotEmpty)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
+                top: 16,
+                end: TvPage.end,
+              ),
+              child: SizedBox(
+                height: TvButtons.height,
+                child: Row(spacing: 14, children: controls),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -312,7 +338,7 @@ class _TvKindScreenState extends ConsumerState<TvKindScreen> {
         focused: _focused,
         onFocus: (title) => setState(() => _focused = titleInfo(title, l)),
         scrollKey: '$_sort-$_genre-$_settled',
-        header: _GridHeader(
+        header: TvGridHeader(
           title: shows ? l.browseKindShow : l.browseKindMovie,
           detail: pages.total == null ? null : l.browseTitleCount(pages.total!),
           controls: [
@@ -412,7 +438,7 @@ class _TvBrowseScreenState extends ConsumerState<TvBrowseScreen> {
               _focused = titleInfo(title, l, kind: _kind == null, genres: true),
         ),
         scrollKey: _kind,
-        header: _GridHeader(
+        header: TvGridHeader(
           title: genre ?? studio ?? '',
           detail: [
             genre != null ? l.browseGenre : l.browseStudio,
@@ -769,6 +795,7 @@ abstract final class _Search {
   static const people = 'people';
   static const genres = 'genres';
   static const studios = 'studios';
+  static const catalog = 'catalog';
   static String library(String id) => 'lib-$id';
 }
 
@@ -847,6 +874,22 @@ class _TvSearchScreenState extends ConsumerState<TvSearchScreen> {
     };
     _firstResult = null;
 
+    // The catalog's "Not here yet", which loads on its own: the titles the
+    // viewer may ask for, none while requests are off.
+    final catalog = text.isEmpty
+        ? null
+        : ref.watch(catalogSearchProvider(text));
+    final page = catalog?.value;
+    final catalogFailed =
+        catalog != null &&
+        page == null &&
+        catalog.hasError &&
+        !catalog.isLoading;
+    final notHere = page == null
+        ? null
+        : askable(page.items, (item) => item.availability);
+    final catalogPending = catalog != null && notHere == null && !catalogFailed;
+
     Widget body;
     if (text.isEmpty) {
       body = const SizedBox.shrink();
@@ -854,10 +897,17 @@ class _TvSearchScreenState extends ConsumerState<TvSearchScreen> {
       body = _Hint(headline: l.searchFailed);
     } else if (found == null) {
       body = const TvLoading(top: 48);
-    } else if (found.isEmpty) {
-      body = _Hint(
-        headline: l.searchNoMatch(text),
-        detail: l.searchNoMatchHint,
+    } else if (found.isEmpty && !catalogPending && (notHere?.isEmpty ?? true)) {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Hint(headline: l.searchNoMatch(text), detail: l.searchNoMatchHint),
+          if (catalogFailed)
+            Padding(
+              padding: const EdgeInsets.only(top: 28),
+              child: _catalogRow(l, text, catalog, notHere),
+            ),
+        ],
       );
     } else {
       final groups = found.titlesByLibrary.entries.toList();
@@ -867,6 +917,8 @@ class _TvSearchScreenState extends ConsumerState<TvSearchScreen> {
           _Search.library(firstGroup.key),
           firstGroup.value.first.id,
         );
+      } else if (notHere?.firstOrNull case final first?) {
+        _firstResult = _memory.node(_Search.catalog, refKey(first.ref));
       }
       body = TvPinnedList(
         pivot: _rowPivot,
@@ -943,10 +995,19 @@ class _TvSearchScreenState extends ConsumerState<TvSearchScreen> {
             found.studios,
             (facet) => Routes.browse(studio: facet.name),
           ),
+          if (catalog != null && (notHere?.isNotEmpty ?? true))
+            _catalogRow(l, text, catalog, notHere),
         ],
       );
     }
     final focused = text.isEmpty ? null : _focused;
+    body = FollowTitles(
+      titles: FollowedTitles([
+        for (final item in notHere ?? const <CatalogTitleSummary>[])
+          CatalogInput(ref: item.ref),
+      ]),
+      child: body,
+    );
     return TvBackdrop(
       sources: focused?.backdrop ?? const [],
       child: Column(
@@ -1002,6 +1063,47 @@ class _TvSearchScreenState extends ConsumerState<TvSearchScreen> {
           Expanded(child: body),
         ],
       ),
+    );
+  }
+
+  /// "Not here yet", last: the catalog's titles, a spinner while they
+  /// load, or why they didn't, with Try again. Its cards open the
+  /// catalog's page.
+  Widget _catalogRow(
+    AppLocalizations l,
+    String text,
+    AsyncValue<CatalogPage>? catalog,
+    List<CatalogTitleSummary>? items,
+  ) {
+    final heading = l.webCatalogNotHere;
+    if (items == null) {
+      if (catalog != null && catalog.hasError && !catalog.isLoading) {
+        return TvRowNotice(
+          title: heading,
+          headline: l.catalogSearchFailed,
+          message: describeFailure(l, catalog.error!),
+          onRetry: () => ref.invalidate(catalogSearchProvider(text)),
+          retryNode: _memory.node(_Search.catalog, TvRowNotice.retryKey),
+          height: _posterHeight,
+        );
+      }
+      return TvRowNotice(title: heading, height: _posterHeight);
+    }
+    return TvRow(
+      title: '$heading  ·  ${l.browseTitleCount(items.length)}',
+      row: _Search.catalog,
+      memory: _memory,
+      height: _posterHeight,
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return TvCatalogPoster.summary(
+          item,
+          key: ValueKey(refKey(item.ref)),
+          focusNode: _memory.node(_Search.catalog, refKey(item.ref)),
+          onFocus: _focus,
+        );
+      },
     );
   }
 

@@ -1,4 +1,4 @@
-import type { WaitingDeclineReason } from "@matinee/contracts"
+import type { RequestState, WaitingDeclineReason } from "@matinee/contracts"
 import { toast } from "@matinee/ui/components/sonner"
 import { useEffect } from "react"
 import { create } from "zustand"
@@ -64,6 +64,8 @@ type RequestActionsState = {
   move: (id: string, libraryId: string | null) => void
   /** Ids of actions sent, hidden until the next queue leaves them out. */
   settled: Map<string, ReturnType<typeof setTimeout> | undefined>
+  /** What was sent for each id in `settled`. */
+  kinds: Map<string, QueueAction["kind"]>
   /** Collapse the rows now, and send the action once Undo's time is up. */
   hold: (action: QueueAction) => void
   /** Take back the latest held action, or the one with `key`. */
@@ -186,7 +188,9 @@ export const useRequestActionsStore = create<RequestActionsState>()((
         setTimeout(() => {
           const next = new Map(get().settled)
           next.delete(id)
-          set({ settled: next })
+          const kinds = new Map(get().kinds)
+          kinds.delete(id)
+          set({ settled: next, kinds })
         }, SETTLE_MS),
       )
     }
@@ -198,11 +202,13 @@ export const useRequestActionsStore = create<RequestActionsState>()((
     if (!entry) return
     toast.dismiss(entry.toastId)
     const pending = new Map(get().settled)
+    const kinds = new Map(get().kinds)
     for (const id of entry.action.ids) {
       clearTimeout(pending.get(id))
       pending.set(id, undefined)
+      kinds.set(id, entry.action.kind)
     }
-    set({ settled: pending })
+    set({ settled: pending, kinds })
     send(entry.action)
       .then(() => {
         settle(entry.action.ids)
@@ -229,11 +235,13 @@ export const useRequestActionsStore = create<RequestActionsState>()((
       .catch((cause: unknown) => {
         // The rows come back, since nothing changed.
         const next = new Map(get().settled)
+        const kinds = new Map(get().kinds)
         for (const id of entry.action.ids) {
           clearTimeout(next.get(id))
           next.delete(id)
+          kinds.delete(id)
         }
-        set({ settled: next })
+        set({ settled: next, kinds })
         toast.error(failedMessage(entry.action), {
           description: errorMessage(cause),
         })
@@ -250,6 +258,7 @@ export const useRequestActionsStore = create<RequestActionsState>()((
       set({ moves })
     },
     settled: new Map(),
+    kinds: new Map(),
     hold: (action) => {
       const key = nextKey++
       const toastId = toast.success(heldMessage(action), {
@@ -282,13 +291,47 @@ export const useRequestActionsStore = create<RequestActionsState>()((
   }
 })
 
-/** Ids the queue shouldn't show: held for Undo, or sent and not gone yet. */
-export function useHiddenRequests(): Set<string> {
+/**
+ * The states each action takes a request out of. Once the server moves
+ * it on, as an added one to on its way, it shows again in its new state
+ * without waiting for the hold on its id to end.
+ */
+const LEAVES = new Map<QueueAction["kind"], readonly RequestState[]>([
+  ["add", ["waiting"]],
+  ["decline", ["waiting"]],
+  ["giveUp", ["needsAttention", "onTheWay"]],
+  ["allowAgain", ["declined"]],
+  ["addAfterAll", ["declined"]],
+  ["cancel", ["waiting", "needsAttention", "onTheWay", "here", "declined"]],
+])
+
+/** The requests acted on, by id, with what was done: held, or sent and not gone yet. */
+export type HiddenRequests = ReadonlyMap<string, QueueAction["kind"]>
+
+export function useHiddenRequests(): HiddenRequests {
   const held = useRequestActionsStore((state) => state.held)
   const settled = useRequestActionsStore((state) => state.settled)
-  const ids = new Set(settled.keys())
-  for (const entry of held) for (const id of entry.action.ids) ids.add(id)
+  const kinds = useRequestActionsStore((state) => state.kinds)
+  const ids = new Map<string, QueueAction["kind"]>()
+  for (const id of settled.keys()) {
+    const kind = kinds.get(id)
+    if (kind) ids.set(id, kind)
+  }
+  for (const entry of held)
+    for (const id of entry.action.ids) ids.set(id, entry.action.kind)
   return ids
+}
+
+/**
+ * Whether a list should leave `item` out: an action on it is held or on
+ * its way, and the server still has it where the action takes it from.
+ */
+export function isHidden(
+  hidden: HiddenRequests,
+  item: { id: string; state: RequestState },
+): boolean {
+  const kind = hidden.get(item.id)
+  return kind !== undefined && (LEAVES.get(kind)?.includes(item.state) ?? true)
 }
 
 /**
