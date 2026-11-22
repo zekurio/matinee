@@ -49,6 +49,9 @@ final class DeviceBridge: DeviceApi {
     return Array(found)
   }
 
+  /// Marks the fresh start done, in Application Support.
+  static let freshStartMarker = ".matinee-fresh-start"
+
   /// This app installs over the SwiftUI app, which had the same bundle id,
   /// and existing installs start fresh, once: its settings, its sign-ins in
   /// the Keychain, its downloads and their background session. Flutter's
@@ -56,7 +59,7 @@ final class DeviceBridge: DeviceApi {
   func freshStart() throws -> Bool {
     let files = FileManager.default
     let support = files.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    let marker = support.appendingPathComponent(".matinee-fresh-start")
+    let marker = support.appendingPathComponent(Self.freshStartMarker)
     if files.fileExists(atPath: marker.path) { return false }
     let defaults = UserDefaults.standard
     for key in defaults.dictionaryRepresentation().keys

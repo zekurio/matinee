@@ -15,6 +15,11 @@ import UIKit
   private var scanner: ScannerBridge?
   private var system: SystemBridge?
 
+  override init() {
+    AppDelegate.discardSwiftScenes()
+    super.init()
+  }
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -23,6 +28,21 @@ import UIKit
     // picture can open; the player activates the session when it plays.
     try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, policy: .longFormVideo)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// The SwiftUI app this one installs over left its scene session saved,
+  /// and UIKit restores a session as it was made: with SwiftUI's scene
+  /// delegate and no storyboard, so no window and no Flutter, only black.
+  /// An iPhone can't destroy its one session, so the saved state goes before
+  /// UIKit reads it, which happens after the delegate is made. Until
+  /// `DeviceBridge.freshStart` has run, any saved state is the SwiftUI app's.
+  private static func discardSwiftScenes() {
+    let files = FileManager.default
+    let support = files.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    if files.fileExists(atPath: support.appendingPathComponent(DeviceBridge.freshStartMarker).path) { return }
+    let library = files.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+    let bundle = Bundle.main.bundleIdentifier ?? "io.github.zekurio.matinee"
+    try? files.removeItem(at: library.appendingPathComponent("Saved Application State/\(bundle).savedState"))
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
