@@ -301,58 +301,12 @@ class RequestStateBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final progress = this.progress;
-    final quiet = colors.foreground.withValues(alpha: .7);
-    final (fill, edge, mark, ink) = switch (state) {
-      RequestState.waiting => (
-        colors.accentSoft,
-        colors.accent.withValues(alpha: .5),
-        colors.accent,
-        colors.foreground,
-      ),
-      RequestState.needsAttention => (
-        colors.danger.withValues(alpha: .2),
-        colors.danger.withValues(alpha: .55),
-        colors.danger,
-        colors.foreground,
-      ),
-      RequestState.onTheWay => (
-        colors.secondary,
-        null,
-        colors.foreground,
-        colors.foreground,
-      ),
-      RequestState.here || RequestState.declined => (
-        null,
-        colors.foreground.withValues(alpha: .2),
-        quiet,
-        quiet,
-      ),
-    };
-    final text = switch (state) {
-      RequestState.waiting => l.requestStateWaiting,
-      RequestState.needsAttention => l.requestStateNeedsAttention,
-      RequestState.onTheWay when progress != null =>
-        l.requestStateOnTheWayPercent(formatPercent(progress, l)),
-      RequestState.onTheWay => l.requestStateOnTheWay,
-      RequestState.here => l.requestStateHere,
-      RequestState.declined => l.requestStateDeclined,
-    };
-    final Widget glyph = switch (state) {
-      RequestState.waiting => KitIcon(Lucide.clock, size: 12, color: mark),
-      RequestState.needsAttention => KitIcon(
-        Lucide.triangleAlert,
-        size: 12,
-        color: mark,
-      ),
-      RequestState.onTheWay => ProgressRing(progress, size: 14),
-      RequestState.here => KitIcon(Lucide.check, size: 12, color: mark),
-      RequestState.declined => KitIcon(
-        Lucide.circleSlash,
-        size: 12,
-        color: mark,
-      ),
-    };
+    final (:fill, :edge, :mark, :ink) = requestStateLook(state, colors);
+    final text = requestStateText(state, l, progress: progress);
+    final icon = requestStateIcon(state);
+    final Widget glyph = icon == null
+        ? ProgressRing(progress, size: 14)
+        : KitIcon(icon, size: 12, color: mark);
     return Container(
       height: 24,
       padding: const EdgeInsets.symmetric(horizontal: 9),
@@ -379,6 +333,70 @@ class RequestStateBadge extends StatelessWidget {
     );
   }
 }
+
+/// A request state badge's colours: its [fill] and [edge], either of which
+/// may be none, its mark's, and its words'.
+typedef RequestStateLook = ({Color? fill, Color? edge, Color mark, Color ink});
+
+/// What waits on an admin, or needs one, stands out in the accent and the
+/// danger colour; what's on its way is a plain pill; what's done is quiet,
+/// an outline in muted words. The TV's badge takes the same.
+RequestStateLook requestStateLook(RequestState state, KitColors colors) {
+  final quiet = colors.foreground.withValues(alpha: .7);
+  return switch (state) {
+    RequestState.waiting => (
+      fill: colors.accentSoft,
+      edge: colors.accent.withValues(alpha: .5),
+      mark: colors.accent,
+      ink: colors.foreground,
+    ),
+    RequestState.needsAttention => (
+      fill: colors.danger.withValues(alpha: .2),
+      edge: colors.danger.withValues(alpha: .55),
+      mark: colors.danger,
+      ink: colors.foreground,
+    ),
+    RequestState.onTheWay => (
+      fill: colors.secondary,
+      edge: null,
+      mark: colors.foreground,
+      ink: colors.foreground,
+    ),
+    RequestState.here || RequestState.declined => (
+      fill: null,
+      edge: colors.foreground.withValues(alpha: .2),
+      mark: quiet,
+      ink: quiet,
+    ),
+  };
+}
+
+/// A request state badge's word, with the share that's in for one on its
+/// way when the server says.
+String requestStateText(
+  RequestState state,
+  AppLocalizations l, {
+  double? progress,
+}) => switch (state) {
+  RequestState.waiting => l.requestStateWaiting,
+  RequestState.needsAttention => l.requestStateNeedsAttention,
+  RequestState.onTheWay when progress != null => l.requestStateOnTheWayPercent(
+    formatPercent(progress, l),
+  ),
+  RequestState.onTheWay => l.requestStateOnTheWay,
+  RequestState.here => l.requestStateHere,
+  RequestState.declined => l.requestStateDeclined,
+};
+
+/// A request state badge's mark, or null for on its way, which shows a
+/// ring of how much is in.
+String? requestStateIcon(RequestState state) => switch (state) {
+  RequestState.waiting => Lucide.clock,
+  RequestState.needsAttention => Lucide.triangleAlert,
+  RequestState.onTheWay => null,
+  RequestState.here => Lucide.check,
+  RequestState.declined => Lucide.circleSlash,
+};
 
 /// [build] under the theme's dark half, where a card draws, so what it
 /// builds for the card takes the card's colours.

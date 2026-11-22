@@ -625,10 +625,7 @@ List<RouteBase> _tvRoutes() => [
         ),
       ),
       _tv('/requests', (state) => const TvRequestsScreen()),
-      _tv(
-        '/requests/:list',
-        (state) => TvRequestsScreen(list: state.pathParameters['list']),
-      ),
+      _tv(Routes.requestQueue, (state) => const TvRequestsScreen(queue: true)),
       _tv(
         '/catalog/:kind/:provider/:providerId',
         (state) => TvCatalogScreen(

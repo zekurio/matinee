@@ -17,15 +17,15 @@ import '../requests/request_sheet.dart' show hiddenRecommendationsProvider;
 import '../requests/request_words.dart';
 import '../requests/requests_data.dart';
 import '../requests/requests_hub.dart';
-import '../requests/requests_rail.dart' show DiscoverRequests, requestRowCards;
+import '../requests/requests_rail.dart' show DiscoverRequests;
 import 'tv_catalog.dart';
 import 'tv_home.dart' show TvPageMessage, TvRowNotice;
 import 'tv_media.dart';
 import 'tv_requests.dart';
 import 'tv_shell.dart' show TvBackdrop;
 
-/// Discover on a TV, from the drawer: rows as Home has them, the Requests
-/// row first, then the server's rows in its order, each loading on its own.
+/// Discover on a TV, from the drawer: rows as Home has them, Recent requests
+/// first, then the server's rows in its order, each loading on its own.
 
 /// The rows of the page in its focus memory.
 abstract final class _Rows {
@@ -34,14 +34,13 @@ abstract final class _Rows {
   static const empty = 'empty';
   static const seeAll = 'see-all';
   static const search = 'search';
-
-  /// The header's Requests chip, in a row of its own.
-  static const header = 'header';
-  static const requestsChip = 'requests';
   static String rail(DiscoverRail rail) => 'rail-${railKey(rail)}';
 }
 
 const _posterHeight = TvCards.posterWidth * 1.5;
+
+/// Recent requests' See all card, as tall as the request cards beside it.
+const _seeAllWidth = 140.0;
 
 /// Above the focused card in the rows: the list's top padding, a row's
 /// heading, and the gap under it.
@@ -50,14 +49,16 @@ const _rowPivot = 12 + TvCards.titleHeight + TvCards.titleGap;
 /// Fetch again on return after this long.
 const _refreshAfter = Duration(minutes: 5);
 
-/// Discover's page: its name, a Requests chip for whoever has the row,
-/// up from the first row, and the focused card's name over its backdrop,
-/// and under them the Requests row, an admin's waiting requests or the
-/// viewer's own, whichever the server names, then the server's rows. A row
-/// that failed says so with Try again; several say it once. Recommended
-/// titles offer "Not interested" on a long press, and each row that's the
-/// start of a browse ends in a See all card that opens it with the row's
-/// filters and sort. Focus starts on the first card of the first row.
+/// Discover's page: its name and the focused card's name over its
+/// backdrop, and under them Recent requests, the latest of everyone's for
+/// whoever runs the queue or the viewer's own, whichever the server names,
+/// each card with its state, then the server's rows. Recent requests ends
+/// in a See all card that opens the overview, and shows whenever it has a
+/// card. A row that failed says so with Try again; several say it once.
+/// Recommended titles offer "Not interested" on a long press, and each row
+/// that's the start of a browse ends in a See all card that opens it with
+/// the row's filters and sort. Focus starts on the first card of the first
+/// row; the header has nothing to focus, so Up from there stays.
 class TvDiscoverScreen extends ConsumerStatefulWidget {
   const TvDiscoverScreen({super.key});
 
@@ -269,42 +270,6 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
                       ],
                     ),
                   ),
-                  // A way to the requests page whether or not the row
-                  // has cards, for whoever the server gives the row.
-                  if (which != null)
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(
-                        start: TvPage.start,
-                        end: TvPage.end,
-                        top: 16,
-                      ),
-                      child: SizedBox(
-                        height: TvButtons.height,
-                        child: Row(
-                          children: [
-                            // It names no card, so the line is empty.
-                            Focus(
-                              canRequestFocus: false,
-                              skipTraversal: true,
-                              onFocusChange: (focused) {
-                                if (focused) _focus(null);
-                              },
-                              child: TvButton(
-                                label: l.webRequestsTitle,
-                                icon: Lucide.inbox,
-                                rest: TvFocus.restOnPicture(colors),
-                                focusNode: _memory.node(
-                                  _Rows.header,
-                                  _Rows.requestsChip,
-                                ),
-                                onPressed: () =>
-                                    context.push(_requestsRoute(which)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   Padding(
                     padding: const EdgeInsetsDirectional.only(
                       start: TvPage.start,
@@ -332,21 +297,23 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
     );
   }
 
-  /// The requests page for [which], as `discover.rails` names it: the
-  /// waiting queue, or the viewer's own.
-  String _requestsRoute(String? which) => which == DiscoverRequests.queue
-      ? Routes.requests(QueueList.waiting)
-      : Routes.requests();
+  /// The overview for [which], as `discover.rails` names it: everyone's
+  /// requests, or the viewer's own.
+  String _requestsRoute(String? which) =>
+      which == DiscoverRequests.queue ? Routes.requestQueue : Routes.requests();
 
-  /// The Requests row for [which], as `discover.rails` names it, and
+  /// Recent requests for [which], as `discover.rails` names it, and
   /// whether it's said what it has: nothing while its list loads, or once
-  /// no card is left. What's held for an answer is out of it.
+  /// no card is left. For whoever runs the queue, the latest of it in every
+  /// state, in the order the shared code gives; for anyone else, what
+  /// `requests.mineLive` sends, in its order. What's held for an answer is
+  /// out of it.
   ({(String, Widget)? row, bool settled}) _requestsRow(
     AppLocalizations l,
     String? which,
   ) {
     final held = ref.watch(requestsProvider.select((state) => state.held));
-    final List<TvRequestPoster>? items;
+    final List<(String, TvRequestCard Function(FocusNode))>? items;
     final Object? error;
     final VoidCallback retry;
     switch (which) {
@@ -360,8 +327,15 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
         items = queue == null
             ? null
             : [
-                for (final item in queue.waiting)
-                  if (!held.contains(item.id)) TvRequestPoster.queued(item),
+                for (final entry in queueInOrder(queue, held: held))
+                  (
+                    entry.item.id,
+                    (node) => TvRequestCard.queued(
+                      entry,
+                      focusNode: node,
+                      onFocus: _focus,
+                    ),
+                  ),
               ];
         error = down && queue == null ? const _QueueDown() : null;
         retry = () => ref.read(requestsProvider.notifier).retryQueue();
@@ -371,7 +345,15 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
             ? null
             : [
                 for (final item in mine.value!.items)
-                  if (!held.contains(item.id)) TvRequestPoster.mine(item),
+                  if (!held.contains(item.id))
+                    (
+                      item.id,
+                      (node) => TvRequestCard.mine(
+                        item,
+                        focusNode: node,
+                        onFocus: _focus,
+                      ),
+                    ),
               ];
         error = mine.hasError && !mine.hasValue ? mine.error : null;
         retry = () => ref.invalidate(myLiveRequestsProvider);
@@ -379,7 +361,7 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
         _firsts.remove(_Rows.requests);
         return (row: null, settled: true);
     }
-    final title = l.webRequestsTitle;
+    final title = l.requestsRecent;
     final route = _requestsRoute(which);
     if (error != null) {
       _firsts.remove(_Rows.requests);
@@ -392,19 +374,19 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
             message: error is _QueueDown ? null : describeFailure(l, error),
             onRetry: retry,
             retryNode: _memory.node(_Rows.requests, TvRowNotice.retryKey),
-            height: _posterHeight,
+            height: TvInfoCards.height,
           ),
         ),
         settled: true,
       );
     }
     if (items == null) return (row: null, settled: false);
-    final shown = items.take(requestRowCards).toList();
+    final shown = items.take(recentRequests).toList();
     if (shown.isEmpty) {
       _firsts.remove(_Rows.requests);
       return (row: null, settled: true);
     }
-    _firsts[_Rows.requests] = shown.first.id;
+    _firsts[_Rows.requests] = shown.first.$1;
     return (
       row: (
         _Rows.requests,
@@ -412,25 +394,24 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
           title: title,
           row: _Rows.requests,
           memory: _memory,
-          height: _posterHeight,
+          height: TvInfoCards.height,
           itemCount: shown.length + 1,
           itemBuilder: (context, index) {
             if (index == shown.length) {
               return TvSeeAllCard(
                 label: l.commonSeeAll,
                 detail: title,
+                width: _seeAllWidth,
+                aspect: _seeAllWidth / TvInfoCards.height,
                 focusNode: _memory.node(_Rows.requests, _Rows.seeAll),
                 onFocused: () => _focus(null),
                 onPressed: () => context.push(route),
               );
             }
-            final card = shown[index];
+            final (id, card) = shown[index];
             return KeyedSubtree(
-              key: ValueKey(card.id),
-              child: card.focused(
-                _memory.node(_Rows.requests, card.id),
-                _focus,
-              ),
+              key: ValueKey(id),
+              child: card(_memory.node(_Rows.requests, id)),
             );
           },
         ),

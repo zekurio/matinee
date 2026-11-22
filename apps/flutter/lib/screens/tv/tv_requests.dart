@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,21 +11,22 @@ import '../../kit/kit.dart';
 import '../../kit/tv/tv.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/server_text.dart';
+import '../../media/artwork.dart';
+import '../../media/avatar.dart';
 import '../../media/format.dart' show seasonName;
 import '../../router.dart';
 import '../requests/catalog_cards.dart';
-import '../requests/discover.dart' show QueueList;
+import '../requests/request_cards.dart'
+    show requestStateIcon, requestStateLook, requestStateText;
 import '../requests/request_words.dart';
 import '../requests/requests_data.dart';
 import '../requests/requests_hub.dart';
-import '../requests/requests_screen.dart'
-    show outcomeText, progressText, queueEmptyLabel, queueListLabel, whereText;
 import 'tv_browse.dart' show TvGridHeader;
 import 'tv_media.dart';
 
 /// Requests on a TV: the questions the TV asks where the phone offers Undo,
-/// since a TV's toast can't take focus, what Select on a request offers, and
-/// the requests page.
+/// since a TV's toast can't take focus, what Select on a request offers, the
+/// request card with its state, and the overview.
 
 // ---------------------------------------------------------------------------
 // The questions.
@@ -233,7 +233,6 @@ Future<void> showTvDiagnostics(BuildContext context, AdminRequestItem item) {
     ],
   );
 }
-
 // ---------------------------------------------------------------------------
 // What Select on a request offers.
 
@@ -250,9 +249,9 @@ String requestRoute(
       : catalogRoute(title.ref, library: library);
 }
 
-/// Whether the viewer may still take [item] back.
-bool cancels(RequestItem item) =>
-    item.availability.action == AvailabilityAction.cancel ||
+/// Whether the viewer may still take [item] back, as the server says.
+bool cancels(RequestItem item, Availability now) =>
+    now.action == AvailabilityAction.cancel ||
     item.season?.action == AvailabilityAction.cancel;
 
 /// What a card's panel goes on from once it closes: the root navigator's
@@ -262,11 +261,15 @@ BuildContext _host(BuildContext context) =>
     Navigator.of(context, rootNavigator: true).overlay!.context;
 
 /// One of the viewer's own requests: with nothing to take back, its title
-/// at once; else a panel with Cancel request, which asks first, and Open
-/// title. A cancel leaves the lists at once.
-Future<void> openTvMine(BuildContext context, RequestItem item) async {
-  final route = requestRoute(item.title, item.library.id, item.availability);
-  if (!cancels(item)) {
+/// at once; else a panel with Open title and Cancel request, which asks
+/// first. A cancel leaves the lists at once.
+Future<void> openTvMine(
+  BuildContext context,
+  RequestItem item,
+  Availability now,
+) async {
+  final route = requestRoute(item.title, item.library.id, now);
+  if (!cancels(item, now)) {
     unawaited(context.push(route));
     return;
   }
@@ -322,20 +325,20 @@ enum _Pick {
   diagnostics,
 }
 
-/// A request in [list] of an admin's queue: what the list allows, its
+/// A request of an admin's queue in [state]: what that state allows, its
 /// title's page, and what the connection reports. Add and the answers to a
 /// declined request go at once; Decline and Give up ask first. [onAnswered]
-/// runs once an answer is given, as an answered row leaving Done.
+/// runs once an answer is given, as an answered one leaving Done's pages.
 Future<void> openTvQueued(
   BuildContext context,
   AdminRequestItem item,
-  String list, {
+  RequestState state, {
   VoidCallback? onAnswered,
 }) async {
   final l = AppLocalizations.of(context);
   final container = ProviderScope.containerOf(context, listen: false);
   final hub = container.read(requestsProvider.notifier);
-  final state = container.read(requestsProvider);
+  final requests = container.read(requestsProvider);
   final router = GoRouter.of(context);
   final host = _host(context);
   Widget row(_Pick pick, String icon, String title, {String? value}) => Builder(
@@ -347,30 +350,41 @@ Future<void> openTvQueued(
       onPressed: () => Navigator.of(panel).pop(pick),
     ),
   );
+  final goes = requests.goesTo(item);
   final picked = await showTvPanel<_Pick>(
     context,
     title: item.title.name,
-    description: whereText(state, item, l),
+    description: [
+      requestStateText(state, l, progress: _progressOf(item, state)),
+      goes.name,
+      goes.connection ?? l.webRequestsNoConnection,
+    ].join(' · '),
     builder: (panel) => [
-      if (list == QueueList.waiting) ...[
-        row(_Pick.add, Lucide.check, l.webRequestsAdd),
-        if (choosesLibrary(item))
-          row(
-            _Pick.goesTo,
-            Lucide.libraryBig,
-            l.webRequestsGoesToTitle,
-            value: state.goesTo(item).name,
-          ),
-        row(_Pick.decline, Lucide.x, l.webRequestsDecline),
-      ] else if (list == QueueList.needsAttention) ...[
-        row(_Pick.retry, Lucide.rotateCw, l.webRequestsRetry),
-        row(_Pick.giveUp, Lucide.circleSlash, l.webRequestsGiveUp),
-      ] else if (list == QueueList.onTheWay)
-        row(_Pick.giveUp, Lucide.circleSlash, l.webRequestsGiveUp)
-      else if (item.status == RequestStatus.declined) ...[
-        row(_Pick.addAfterAll, Lucide.check, l.webRequestsAddAfterAll),
-        row(_Pick.allowAgain, Lucide.lockOpen, l.webRequestsAllowAgain),
-      ],
+      ...switch (state) {
+        RequestState.waiting => [
+          row(_Pick.add, Lucide.check, l.webRequestsAdd),
+          if (choosesLibrary(item))
+            row(
+              _Pick.goesTo,
+              Lucide.libraryBig,
+              l.webRequestsGoesToTitle,
+              value: goes.name,
+            ),
+          row(_Pick.decline, Lucide.x, l.webRequestsDecline),
+        ],
+        RequestState.needsAttention => [
+          row(_Pick.retry, Lucide.rotateCw, l.webRequestsRetry),
+          row(_Pick.giveUp, Lucide.circleSlash, l.webRequestsGiveUp),
+        ],
+        RequestState.onTheWay => [
+          row(_Pick.giveUp, Lucide.circleSlash, l.webRequestsGiveUp),
+        ],
+        RequestState.declined => [
+          row(_Pick.addAfterAll, Lucide.check, l.webRequestsAddAfterAll),
+          row(_Pick.allowAgain, Lucide.lockOpen, l.webRequestsAllowAgain),
+        ],
+        RequestState.here => const <Widget>[],
+      },
       row(_Pick.open, Lucide.info, l.webRequestsOpenTitle),
       if (item.diagnostics.isNotEmpty)
         row(_Pick.diagnostics, Lucide.activity, l.webRequestsDiagnostics),
@@ -412,29 +426,130 @@ Future<void> openTvQueued(
 }
 
 // ---------------------------------------------------------------------------
-// The words a request's row and card say.
+// The words a request's card says.
 
-/// Where one of the viewer's requests stands, in the server's words: the
-/// season it waits on, its state, and how long it has left.
-String mineStateText(RequestItem item, Availability now, AppLocalizations l) {
-  final season = item.season;
-  final availability = season?.asTitle() ?? now;
-  final String? state;
-  if (availability.state == AvailabilityState.here) {
-    state = l.webCatalogBadgeHere;
-  } else if (availability.state == AvailabilityState.asked) {
-    state = l.discoverRequestWaiting;
-  } else {
-    final word = stateWord(availability, percent: true);
-    state = word == null ? null : stateText(word, l);
-  }
+/// The share that's in, for a request on its way whose server knows it.
+double? _progressOf(AdminRequestItem item, RequestState state) =>
+    state == RequestState.onTheWay ? item.availability.progress : null;
+
+/// How far along a request on its way is, in the server's words, past the
+/// share its badge has: the time left, when it's out, or what it waits on.
+String? _progressText(AdminRequestItem item, AppLocalizations l) {
+  final availability = item.availability;
   final eta = availability.etaSeconds;
+  if (availability.state == AvailabilityState.release) {
+    final day = parseDay(availability.releaseDate);
+    return day == null
+        ? l.webRequestsProgressNotOut
+        : l.webRequestsProgressRelease(formatShortDay(day, l));
+  } else if (availability.progress != null) {
+    return eta == null ? null : l.webRequestsProgressLeft(formatSpan(eta, l));
+  } else if (availability.stillLooking) {
+    return l.webRequestsProgressLooking;
+  } else if (item.fulfilmentState == FulfilmentState.queued) {
+    return l.webRequestsProgressQueued;
+  } else if (item.connection?.reportsProgress == false) {
+    return l.webRequestsProgressByHand;
+  }
+  return l.webRequestsProgressSent;
+}
+
+/// What a queue card says under its badge, and whether it's a problem:
+/// where a waiting one goes, why one needs attention, how far one on its
+/// way is, or what became of a done one, with the admin's note.
+({String text, bool problem}) queueLine(
+  RequestsState requests,
+  AdminRequestItem item,
+  RequestState state,
+  AppLocalizations l,
+) {
+  switch (state) {
+    case RequestState.waiting:
+      final goes = requests.goesTo(item);
+      final connection = goes.connection;
+      return (
+        text: [goes.name, connection ?? l.webRequestsNoConnection].join(' · '),
+        problem: connection == null,
+      );
+    case RequestState.needsAttention:
+      return (
+        text: item.error?.serverWords(l) ?? l.webRequestsAttentionUnknown,
+        problem: true,
+      );
+    case RequestState.onTheWay:
+      return (
+        text: [?_progressText(item, l), item.library.name].join(' · '),
+        problem: false,
+      );
+    case RequestState.declined:
+      final gaveUp = item.reason == DeclineReason.notFound;
+      final at = relativeTime(item.declinedAt, l);
+      final reason = item.reason;
+      final note = item.note?.trim();
+      return (
+        text: [
+          [
+            switch ((gaveUp, at)) {
+              (true, final at?) => l.webRequestsDoneGaveUp(at),
+              (false, final at?) => l.webRequestsDoneDeclined(at),
+              (true, null) => l.webRequestsDoneGaveUpUndated,
+              (false, null) => l.webRequestsDoneDeclinedUndated,
+            },
+            if (reason != null && !gaveUp) adminReasonText(reason, l),
+          ].join(' · '),
+          if (note != null && note.isNotEmpty) '“$note”',
+        ].join(' '),
+        problem: false,
+      );
+    case RequestState.here:
+      final arrived = relativeTime(item.arrivedAt, l);
+      return (
+        text: [
+          if (arrived != null) l.webRequestsDoneArrived(arrived),
+          item.library.name,
+        ].join(' · '),
+        problem: false,
+      );
+  }
+}
+
+/// Who asked for [item], the first and how many more, and when the first
+/// did: nothing when nobody's left asking.
+List<String> askedText(AdminRequestItem item, AppLocalizations l) {
+  final people = askers(item);
+  final first = people.firstOrNull;
+  if (first == null) return const [];
   return [
-    if (season != null) seasonName(season.number, l),
-    ?state,
-    if (availability.state == AvailabilityState.coming && eta != null)
-      l.webRequestsProgressLeft(formatSpan(eta, l)),
-  ].join(' · ');
+    people.length > 1
+        ? '${first.name} ${l.webRequestsOthersCount(formatCount(people.length - 1, l))}'
+        : first.name,
+    ?relativeTime(first.createdAt, l),
+  ];
+}
+
+/// What one of the viewer's own requests says under its badge: when it's
+/// out, how long is left, when it arrived, or why it was declined, with
+/// the admin's note.
+String? mineLine(
+  RequestItem item,
+  Availability availability,
+  AppLocalizations l,
+) {
+  switch (availability.state) {
+    case AvailabilityState.release:
+      final word = stateWord(availability);
+      return word == null ? null : stateText(word, l);
+    case AvailabilityState.coming:
+      final eta = availability.etaSeconds;
+      return eta == null ? null : l.webRequestsProgressLeft(formatSpan(eta, l));
+    case AvailabilityState.here:
+      final arrived = relativeTime(item.arrivedAt, l);
+      return arrived == null ? null : l.webRequestsDoneArrived(arrived);
+    case AvailabilityState.unavailable:
+      return declinedText(availability, l);
+    default:
+      return null;
+  }
 }
 
 /// Why a declined request isn't coming, and the note the admin left.
@@ -450,75 +565,298 @@ String? declinedText(Availability availability, AppLocalizations l) {
   ].join(' ');
 }
 
-/// Who asked for [item], the first and how many more, and when the first
-/// did: nothing when nobody's left asking.
-List<String> askedText(AdminRequestItem item, AppLocalizations l) {
-  final people = askers(item);
-  final first = people.firstOrNull;
-  if (first == null) return const [];
-  return [
-    people.length > 1
-        ? '${first.name} ${l.webRequestsOthersCount('${people.length - 1}')}'
-        : first.name,
-    ?relativeTime(first.createdAt, l),
-  ];
-}
+// ---------------------------------------------------------------------------
+// A request's card.
 
-/// What a row of [list] says of [item] under its name: who asked and where
-/// it goes, why it needs attention, how far along it is, or what became
-/// of it.
-String queueStatusText(
-  RequestsState state,
-  AdminRequestItem item,
-  String list,
-  AppLocalizations l,
-) {
-  switch (list) {
-    case QueueList.waiting:
-      final goes = state.goesTo(item);
-      return [
-        ...askedText(item, l),
-        goes.name,
-        if (goes.connection == null) l.webRequestsNoConnection,
-      ].join(' · ');
-    case QueueList.needsAttention:
-      return item.error?.serverWords(l) ?? l.webRequestsAttentionUnknown;
-    case QueueList.onTheWay:
-      return [progressText(item, l), item.library.name].join(' · ');
-    default:
-      final note = item.status == RequestStatus.declined ? item.note : null;
-      return [
-        outcomeText(item, l) ?? '',
-        if (note != null) '“$note”',
-      ].join(' ');
+/// A request's state as its badge, at a TV's size, in the phone's words
+/// and colours.
+class TvRequestBadge extends StatelessWidget {
+  const TvRequestBadge({super.key, required this.state, this.progress});
+
+  final RequestState state;
+  final double? progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final (:fill, :edge, :mark, :ink) = requestStateLook(
+      state,
+      MatineeTheme.of(context),
+    );
+    final icon = requestStateIcon(state);
+    return TvBadge(
+      text: requestStateText(state, l, progress: progress),
+      icon: icon,
+      glyph: icon == null
+          ? ProgressRing(progress, size: TvBadge.iconSize + 2)
+          : null,
+      mark: mark,
+      ink: ink,
+      fill: fill,
+      edge: edge,
+    );
   }
 }
 
-// ---------------------------------------------------------------------------
-// The requests page.
+/// A request as a wide card, in Discover's Recent requests row and the
+/// requests overview, as Seerr has them: the poster beside the year and
+/// kind, the name, the state's badge, the state's own line, and who asked.
+/// One of the queue's in its [RequestState], or one of the viewer's own.
+/// Focus tells [onFocus] its name and the rest for the page's focus line;
+/// Select opens what can be done about it.
+class TvRequestCard extends ConsumerWidget {
+  const TvRequestCard.queued(
+    QueuedRequest this.queued, {
+    super.key,
+    this.onAnswered,
+    this.width = TvInfoCards.rowWidth,
+    this.focusNode,
+    this.onFocus,
+  }) : mine = null;
 
-/// The rows of the requests page in its focus memory, beside the grid's
-/// own [TvGrid.row].
-abstract final class _Rows {
-  static const tabs = 'tabs';
-  static const addAll = 'add-all';
+  const TvRequestCard.mine(
+    RequestItem this.mine, {
+    super.key,
+    this.width = TvInfoCards.rowWidth,
+    this.focusNode,
+    this.onFocus,
+  }) : queued = null,
+       onAnswered = null;
+
+  final QueuedRequest? queued;
+  final RequestItem? mine;
+
+  /// Runs once an answer is given, as one leaving Done's pages.
+  final VoidCallback? onAnswered;
+
+  /// A row's card width; null fills a grid's cell.
+  final double? width;
+  final FocusNode? focusNode;
+  final ValueChanged<FocusedItem>? onFocus;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (queued case (:final item, :final state)) {
+      return _queued(context, ref, item, state);
+    }
+    return _mine(context, ref, mine!);
+  }
+
+  Widget _queued(
+    BuildContext context,
+    WidgetRef ref,
+    AdminRequestItem item,
+    RequestState state,
+  ) {
+    final l = AppLocalizations.of(context);
+    final colors = MatineeTheme.of(context);
+    final title = item.title;
+    final requests = ref.watch(requestsProvider);
+    final line = queueLine(requests, item, state, l);
+    final asked = askedText(item, l);
+    final first = askers(item).firstOrNull;
+    final heading = [
+      yearKind(title.year, title.ref.kind, l),
+      ?scopeText(item.scope, l),
+    ];
+    final progress = _progressOf(item, state);
+    final badge = requestStateText(state, l, progress: progress);
+    final onFocus = this.onFocus;
+    return _Card(
+      title: title,
+      width: width,
+      focusNode: focusNode,
+      label: [title.name, ...heading, badge, line.text, ...asked].join(', '),
+      onPressed: () =>
+          unawaited(openTvQueued(context, item, state, onAnswered: onAnswered)),
+      onFocused: onFocus == null
+          ? null
+          : () => onFocus(
+              FocusedItem(
+                name: title.name,
+                facts: [...heading, badge, ...asked],
+              ),
+            ),
+      heading: heading.join(' · '),
+      badge: TvRequestBadge(state: state, progress: progress),
+      line: line.text,
+      lineColor: line.problem ? colors.danger : null,
+      who: asked.isEmpty
+          ? null
+          : Row(
+              spacing: 8,
+              children: [
+                if (first != null)
+                  Avatar(avatarId: first.avatarId, name: first.name, size: 22),
+                Flexible(child: _CardText(asked.join(' · '))),
+              ],
+            ),
+    );
+  }
+
+  Widget _mine(BuildContext context, WidgetRef ref, RequestItem item) {
+    final l = AppLocalizations.of(context);
+    final title = item.title;
+    final now = liveAvailability(ref, title.ref, item.availability);
+    final season = item.season;
+    final availability = season?.asTitle() ?? now;
+    final state = ownState(availability);
+    final progress = state == RequestState.onTheWay
+        ? availability.progress
+        : null;
+    final heading = [
+      yearKind(title.year, title.ref.kind, l),
+      ?scopeText(item.scope, l),
+      if (season != null) seasonName(season.number, l),
+    ];
+    final badge = state == null
+        ? null
+        : requestStateText(state, l, progress: progress);
+    final line = mineLine(item, availability, l);
+    final when = relativeTime(item.createdAt, l);
+    final asked = when == null ? null : l.discoverRequestAskedWhen(when);
+    final onFocus = this.onFocus;
+    return _Card(
+      title: title,
+      width: width,
+      focusNode: focusNode,
+      label: [title.name, ...heading, ?badge, ?line, ?asked].join(', '),
+      onPressed: () => unawaited(openTvMine(context, item, now)),
+      onFocused: onFocus == null
+          ? null
+          : () => onFocus(
+              FocusedItem(name: title.name, facts: [...heading, ?badge, ?line]),
+            ),
+      heading: heading.join(' · '),
+      badge: state == null
+          ? null
+          : TvRequestBadge(state: state, progress: progress),
+      line: line,
+      who: asked == null ? null : _CardText(asked),
+    );
+  }
 }
 
-/// The requests page on a TV, from the Requests row's See all card or
-/// Discover's Requests chip. Without a list, what the viewer asked for,
-/// "In progress" or "All", newest first. With one of [QueueList]'s, for
-/// whoever runs the queue, the four lists, the first three live from the
-/// queue the whole app follows and Done a page at a time. Each list is a
-/// grid of the Requests row's cards under the tabs, which stay put; the
-/// line over it names the focused one with what its list says of it, and
-/// Select offers what can be done about it. Up from the first row and Left
-/// from the first column go to the tab shown, and Down from the tabs comes
-/// back to the card left. Focus starts on the first request, else the
-/// list's tab.
-class TvRequestsScreen extends ConsumerStatefulWidget {
-  const TvRequestsScreen({super.key, this.list});
+/// A request card's frame: [heading], the name, [badge], [line], and
+/// [who] at the foot.
+class _Card extends StatelessWidget {
+  const _Card({
+    required this.title,
+    required this.width,
+    required this.focusNode,
+    required this.label,
+    required this.onPressed,
+    required this.onFocused,
+    required this.heading,
+    required this.badge,
+    required this.line,
+    required this.who,
+    this.lineColor,
+  });
 
-  final String? list;
+  final CatalogTitleSummary title;
+  final double? width;
+  final FocusNode? focusNode;
+  final String label;
+  final VoidCallback onPressed;
+  final VoidCallback? onFocused;
+  final String heading;
+  final Widget? badge;
+  final String? line;
+  final Color? lineColor;
+  final Widget? who;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final poster = title.poster;
+    final badge = this.badge;
+    final line = this.line;
+    final who = this.who;
+    return TvInfoCard(
+      toneKey: refKey(title.ref),
+      width: width,
+      focusNode: focusNode,
+      label: label,
+      onPressed: onPressed,
+      onFocused: onFocused,
+      poster: poster == null ? null : Picture([ArtSource(poster)]),
+      // The smallest size, stretched, reads as the poster's colours
+      // without a blur for the TV to draw.
+      backdrop: poster == null
+          ? null
+          : Picture([ArtSource(poster, largest: ArtworkSize.thumb)]),
+      children: [
+        _CardText(heading),
+        Text(
+          title.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TvType.facts
+              .style(color: colors.foreground)
+              .copyWith(
+                fontWeight: FontWeight.w700,
+                fontVariations: const [FontVariation('wght', 700)],
+              ),
+        ),
+        if (badge != null)
+          Padding(padding: const EdgeInsets.only(top: 8), child: badge),
+        if (line != null && line.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: _CardText(line, color: lineColor),
+          ),
+        if (who != null) ...[const Spacer(), who],
+      ],
+    );
+  }
+}
+
+/// One line of a request card, muted unless [color] says otherwise.
+class _CardText extends StatelessWidget {
+  const _CardText(this.text, {this.color});
+
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: TvType.caption.style(
+      color: color ?? MatineeTheme.of(context).mutedForeground,
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The overview.
+
+/// The rows of the overview in its focus memory, beside the grid's own
+/// [TvGrid.row].
+abstract final class _Rows {
+  static const header = 'header';
+  static const addAll = 'add-all';
+  static const empty = 'empty';
+  static const search = 'search';
+}
+
+/// The requests overview on a TV, from the Recent requests row's See all
+/// card. With [queue], for whoever runs it, everyone's requests in one grid,
+/// in the order the shared code gives them: waiting, needs attention, on
+/// the way, then done, read on a page at a time as focus moves down. Anyone
+/// else, whatever the path, gets their own: in progress first, then the
+/// rest. Each card carries its state; the header says how many are in each
+/// state that has any, in plain words, and offers Add all while more than
+/// one waits; the line under it names the focused card. Select opens what
+/// the card's state allows. Focus starts on the first card, Down from the
+/// header lands there, and a card that leaves hands focus to its
+/// neighbour. An empty overview says so and offers Search.
+class TvRequestsScreen extends ConsumerStatefulWidget {
+  const TvRequestsScreen({super.key, this.queue = false});
+
+  final bool queue;
 
   @override
   ConsumerState<TvRequestsScreen> createState() => _TvRequestsScreenState();
@@ -526,14 +864,12 @@ class TvRequestsScreen extends ConsumerStatefulWidget {
 
 class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
   final _memory = TvFocusMemory();
-  late String _tab = _start();
   FocusedItem? _focused;
 
-  String _start() {
-    final list = widget.list;
-    if (list == null) return MineFilter.inProgress;
-    return QueueList.all.contains(list) ? list : QueueList.waiting;
-  }
+  /// The pages of the viewer's own last loaded, shown while a change reads
+  /// them again, so the grid doesn't blink to a spinner.
+  CursorPages<RequestItem>? _lastGoing;
+  CursorPages<RequestItem>? _lastAll;
 
   @override
   void dispose() {
@@ -541,113 +877,51 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     super.dispose();
   }
 
-  void _show(String tab) {
-    if (tab == _tab) return;
-    // A card of the last list isn't one to come back to.
-    _memory.rowItems.remove(TvGrid.row);
-    setState(() {
-      _tab = tab;
-      _focused = null;
-    });
-  }
-
   void _focus(FocusedItem item) {
     if (identical(item, _focused)) return;
     setState(() => _focused = item);
   }
 
-  /// [card], at [index] in the grid: Up from the first row and Left from
-  /// the first column go to the tab shown, rather than past the grid.
-  Widget _edges(int index, Widget card) => Focus(
-    canRequestFocus: false,
-    skipTraversal: true,
-    onKeyEvent: (node, event) {
-      if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-        return KeyEventResult.ignored;
-      }
-      final key = event.logicalKey;
-      final edge =
-          (key == LogicalKeyboardKey.arrowUp && index < TvGrid.columns) ||
-          (key == LogicalKeyboardKey.arrowLeft && index % TvGrid.columns == 0);
-      if (!edge) return KeyEventResult.ignored;
-      _memory.node(_Rows.tabs, _tab).requestFocus();
-      return KeyEventResult.handled;
-    },
-    child: card,
-  );
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    // Anyone who doesn't run the queue gets their own requests, whatever
-    // the path, as the phone's page.
-    final queue = widget.list != null && ref.watch(runsQueueProvider);
-    final tabs = queue
-        ? QueueList.all
-        : const [MineFilter.inProgress, MineFilter.all];
-    if (!tabs.contains(_tab)) _tab = tabs.first;
+    final queue = widget.queue && ref.watch(runsQueueProvider);
     final body = queue ? _queueBody(l) : _mineBody(l);
     final cards = body.cards;
-    // Up from the grid lands on the tab it shows.
-    _memory.startAt(_Rows.tabs, _tab);
-    // Down from the tabs, before any card had focus, lands on the first.
+    // Down from the header, before any card had focus, lands on the first.
     if (cards.isNotEmpty) _memory.startAt(TvGrid.row, cards.first.id);
     _memory.restore(context, () {
       if (cards.isNotEmpty) return (TvGrid.row, cards.first.id);
-      return body.settled ? (_Rows.tabs, _tab) : null;
+      return body.empty ? (_Rows.empty, _Rows.search) : null;
     });
-    final counts = queue ? _counts() : const <String, int>{};
-    // Add for all of them, as the phone's queue has over its rows. Like
-    // Add, it asks nothing.
-    final all = queue && _tab == QueueList.waiting && cards.length > 1;
+    final waiting = body.waiting;
     final grid = TvPosterGrid(
       memory: _memory,
       itemCount: cards.length,
-      cellAspect: 2 / 3,
-      pinHeader: true,
-      scrollKey: _tab,
+      // Cells as wide as the page holds two of, each a card's height.
+      cellWidth: TvInfoCards.rowWidth + 20,
+      cellAspect: double.infinity,
+      cellExtra: TvInfoCards.height,
       header: TvGridHeader(
         title: queue ? l.webRequestsTitle : l.webAskMineTitle,
-        detail: null,
+        detail: body.counts,
         controls: [
-          TvMemoryRow(
-            memory: _memory,
-            row: _Rows.tabs,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 12,
-              children: [
-                for (final tab in tabs)
-                  TvChip(
-                    label: switch (tab) {
-                      MineFilter.inProgress => l.webAskMineInProgress,
-                      MineFilter.all => l.webAskMineAll,
-                      // Done only grows, so it says no count.
-                      _ => switch (counts[tab]) {
-                        final count? when count > 0 =>
-                          '${queueListLabel(tab, l)} · ${formatCount(count, l)}',
-                        _ => queueListLabel(tab, l),
-                      },
-                    },
-                    selected: tab == _tab,
-                    focusNode: _memory.node(_Rows.tabs, tab),
-                    onPressed: () => _show(tab),
-                  ),
-                // In the tabs' row, so Right from the last tab reaches it.
-                if (all)
-                  TvButton(
-                    label: l.webRequestsAddAll(cards.length),
-                    icon: Lucide.listChecks,
-                    focusNode: _memory.node(_Rows.tabs, _Rows.addAll),
-                    onPressed: () => unawaited(
-                      ref.read(requestsProvider.notifier).answerAll(l, [
-                        for (final card in cards) ?card.queued,
-                      ], undo: false),
-                    ),
-                  ),
-              ],
+          // Like Add, it asks nothing.
+          if (waiting.length > 1)
+            TvMemoryRow(
+              memory: _memory,
+              row: _Rows.header,
+              child: TvButton(
+                label: l.webRequestsAddAll(waiting.length),
+                icon: Lucide.listChecks,
+                focusNode: _memory.node(_Rows.header, _Rows.addAll),
+                onPressed: () => unawaited(
+                  ref
+                      .read(requestsProvider.notifier)
+                      .answerAll(l, waiting, undo: false),
+                ),
+              ),
             ),
-          ),
         ],
       ),
       line: TvFocusLine(_focused),
@@ -658,85 +932,22 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
         final card = cards[index];
         return KeyedSubtree(
           key: ValueKey(card.id),
-          child: _edges(
-            index,
-            card.focused(_memory.node(TvGrid.row, card.id), _focus),
-          ),
+          child: card.build(_memory.node(TvGrid.row, card.id), _focus),
         );
       },
     );
-    // Wrapped whatever the state, so the grid keeps its place as a list
-    // loads.
+    // Wrapped whatever the state, so the grid keeps its place as it loads.
     return FollowTitles(
       titles: body.followed ?? FollowedTitles(const []),
       child: grid,
     );
   }
 
-  Map<String, int> _counts() {
-    final state = ref.watch(requestsProvider);
-    final queue = state.queue;
-    if (queue == null) return const {};
-    return {
-      QueueList.waiting: queue.waiting
-          .where((item) => !state.held.contains(item.id))
-          .length,
-      QueueList.needsAttention: queue.counts.needsAttention,
-      QueueList.onTheWay: queue.counts.onTheWay,
-    };
-  }
-
-  /// The viewer's requests, a page at a time.
-  _Body _mineBody(AppLocalizations l) {
-    final provider = myRequestsProvider(_tab);
-    final pages = ref.watch(provider);
-    final notifier = ref.read(provider.notifier);
-    final held = ref.watch(requestsProvider.select((state) => state.held));
-    final items = [
-      for (final item in pages.items)
-        if (!held.contains(item.id)) item,
-    ];
-    final error = pages.error;
-    if (error != null && items.isEmpty) {
-      return _Body.notice(
-        TvNotice(
-          headline: l.askedLoadFailed,
-          message: describeFailure(l, error),
-          onRetry: notifier.retry,
-          retryLabel: l.commonRetry,
-        ),
-      );
-    }
-    if (!pages.loaded) return const _Body.loading();
-    if (items.isEmpty) {
-      return _Body.notice(
-        TvNotice(
-          headline: _tab == MineFilter.inProgress
-              ? l.webAskMineEmptyInProgress
-              : l.webAskMineEmpty,
-          message: _tab == MineFilter.inProgress ? null : l.webAskMineEmptyHint,
-        ),
-      );
-    }
-    return _Body.cards(
-      l,
-      [for (final item in items) TvRequestPoster.mine(item, width: null)],
-      done: pages.done,
-      error: error,
-      onMore: notifier.more,
-      onRetry: notifier.retry,
-      followed: FollowedTitles([
-        for (final item in items)
-          CatalogInput(ref: item.title.ref, libraryId: item.library.id),
-      ]),
-    );
-  }
-
-  /// One of the queue's lists: the first three live, Done a page at a time.
+  /// Everyone's requests: the live queue in its order, then Done past what
+  /// the live queue holds of it, a page at a time.
   _Body _queueBody(AppLocalizations l) {
     final state = ref.watch(requestsProvider);
     final queue = state.queue;
-    if (_tab == QueueList.done) return _doneBody(l);
     if (queue == null) {
       if (state.queueFailed) {
         return _Body.notice(
@@ -749,87 +960,163 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
       }
       return const _Body.loading();
     }
-    final rows = switch (_tab) {
-      QueueList.waiting => queue.waiting,
-      QueueList.needsAttention => queue.needsAttention,
-      _ => queue.onTheWay,
-    };
-    return _queueCards(l, [
-      for (final item in rows)
-        if (!state.held.contains(item.id)) item,
-    ], done: true);
-  }
-
-  _Body _doneBody(AppLocalizations l) {
-    final pages = ref.watch(doneRequestsProvider);
-    final notifier = ref.read(doneRequestsProvider.notifier);
-    final held = ref.watch(requestsProvider.select((state) => state.held));
-    final error = pages.error;
-    if (!pages.loaded) {
-      if (error != null) {
-        return _Body.notice(
-          TvNotice(
-            headline: l.requestsLoadFailed,
-            message: describeFailure(l, error),
-            onRetry: notifier.retry,
-            retryLabel: l.commonRetry,
-          ),
-        );
-      }
-      return const _Body.loading();
+    final held = state.held;
+    final liveIsAll = queue.nextCursor == null;
+    final pages = liveIsAll ? null : ref.watch(doneRequestsProvider);
+    final notifier = liveIsAll ? null : ref.read(doneRequestsProvider.notifier);
+    final done = doneInOrder(
+      queue.done,
+      liveIsAll: liveIsAll,
+      paged: pages?.items ?? const [],
+      pagedDone: pages?.done ?? true,
+    );
+    final entries = queueInOrder(queue, held: held, done: done.items);
+    final waiting = [
+      for (final entry in entries)
+        if (entry.state == RequestState.waiting) entry.item,
+    ];
+    int left(List<AdminRequestItem> list) =>
+        list.where((item) => !held.contains(item.id)).length;
+    final counts = [
+      if (waiting.isNotEmpty) l.requestsCountWaiting(waiting.length),
+      if (left(queue.needsAttention) case final n when n > 0)
+        l.requestsCountNeedsAttention(n),
+      if (left(queue.onTheWay) case final n when n > 0)
+        l.requestsCountOnTheWay(n),
+      if (queue.counts.done > 0) l.requestsCountDone(queue.counts.done),
+    ];
+    if (entries.isEmpty && !done.more) {
+      return _Body.empty(
+        TvNotice(
+          headline: l.requestsOverviewEmpty,
+          message: l.requestsOverviewEmptyHint,
+        ),
+        memory: _memory,
+      );
     }
-    return _queueCards(
+    final error = pages?.error;
+    return _Body.cards(
       l,
       [
-        for (final item in pages.items)
-          if (!held.contains(item.id)) item,
+        for (final entry in entries)
+          _CardOf(
+            entry.item.id,
+            (node, onFocus) => TvRequestCard.queued(
+              entry,
+              width: null,
+              focusNode: node,
+              onFocus: onFocus,
+              // Done's pages keep what they read, so an answered one
+              // leaves them here.
+              onAnswered: notifier == null
+                  ? null
+                  : () => notifier.drop(entry.item.id),
+            ),
+          ),
       ],
-      done: pages.done,
+      done: !done.more,
       error: error,
-      onMore: notifier.more,
-      onRetry: notifier.retry,
-      // Done is read page by page, so an answered one leaves it here.
-      onAnswered: (item) => notifier.drop(item.id),
+      onMore: notifier?.more,
+      onRetry: notifier?.retry,
+      counts: counts.join(' · '),
+      waiting: waiting,
     );
   }
 
-  _Body _queueCards(
-    AppLocalizations l,
-    List<AdminRequestItem> items, {
-    required bool done,
-    Object? error,
-    VoidCallback? onMore,
-    VoidCallback? onRetry,
-    ValueChanged<AdminRequestItem>? onAnswered,
-  }) {
-    final list = _tab;
-    if (items.isEmpty) {
-      return _Body.notice(TvNotice(headline: queueEmptyLabel(list, l)));
+  /// The viewer's own: what's still going, from the server's list of those
+  /// in progress, then everything else, newest first, from the whole list.
+  _Body _mineBody(AppLocalizations l) {
+    final goingProvider = myRequestsProvider(MineFilter.inProgress);
+    final allProvider = myRequestsProvider(MineFilter.all);
+    var going = ref.watch(goingProvider);
+    var all = ref.watch(allProvider);
+    if (going.loaded) {
+      _lastGoing = going;
+    } else if (going.error == null) {
+      going = _lastGoing ?? going;
+    }
+    if (all.loaded) {
+      _lastAll = all;
+    } else if (all.error == null) {
+      all = _lastAll ?? all;
+    }
+    final held = ref.watch(requestsProvider.select((state) => state.held));
+    if (!going.loaded) {
+      final error = going.error;
+      if (error == null) return const _Body.loading();
+      return _Body.notice(
+        TvNotice(
+          headline: l.askedLoadFailed,
+          message: describeFailure(l, error),
+          onRetry: () => ref.read(goingProvider.notifier).retry(),
+          retryLabel: l.commonRetry,
+        ),
+      );
+    }
+    final still = [
+      for (final item in going.items)
+        if (!held.contains(item.id) &&
+            !(ownState(item.season?.asTitle() ?? item.availability)?.finished ??
+                false))
+          item,
+    ];
+    final first = {for (final item in still) item.id};
+    final items = [
+      ...still,
+      if (going.done)
+        for (final item in all.items)
+          if (!held.contains(item.id) && !first.contains(item.id)) item,
+    ];
+    final (pages, notifier) = going.done
+        ? (all, ref.read(allProvider.notifier))
+        : (going, ref.read(goingProvider.notifier));
+    if (items.isEmpty && pages.done) {
+      return _Body.empty(
+        TvNotice(headline: l.webAskMineEmpty, message: l.webAskMineEmptyHint),
+        memory: _memory,
+      );
     }
     return _Body.cards(
       l,
       [
         for (final item in items)
-          TvRequestPoster.queued(
-            item,
-            list: list,
-            width: null,
-            onAnswered: onAnswered == null ? null : () => onAnswered(item),
+          _CardOf(
+            item.id,
+            (node, onFocus) => TvRequestCard.mine(
+              item,
+              width: null,
+              focusNode: node,
+              onFocus: onFocus,
+            ),
           ),
       ],
-      done: done,
-      error: error,
-      onMore: onMore,
-      onRetry: onRetry,
+      done: pages.done,
+      error: pages.error,
+      onMore: notifier.more,
+      onRetry: notifier.retry,
+      followed: FollowedTitles([
+        for (final item in items)
+          CatalogInput(ref: item.title.ref, libraryId: item.library.id),
+      ]),
     );
   }
 }
 
-/// What a list shows: its cards, with what goes under them and asks for
-/// more, or a notice in their place; [settled] once it's said what it has.
+/// A card of the overview: its request's id, and the card with its focus
+/// node, telling the page what it is.
+class _CardOf {
+  const _CardOf(this.id, this.build);
+
+  final String id;
+  final Widget Function(FocusNode node, ValueChanged<FocusedItem> onFocus)
+  build;
+}
+
+/// What the overview shows: its cards, with what goes under them and asks
+/// for more, or a notice in their place.
 class _Body {
-  /// [cards] of a list, with a spinner under them while a page comes, or
-  /// why one didn't, with Try again.
+  /// [cards], with a spinner under them while a page comes, or why one
+  /// didn't, with Try again.
   _Body.cards(
     AppLocalizations l,
     this.cards, {
@@ -838,7 +1125,9 @@ class _Body {
     VoidCallback? onMore,
     VoidCallback? onRetry,
     this.followed,
-  }) : settled = true,
+    this.counts,
+    this.waiting = const [],
+  }) : empty = false,
        more = done || error != null ? null : onMore,
        footer = done
            ? null
@@ -854,143 +1143,74 @@ class _Body {
 
   const _Body.notice(Widget this.footer)
     : cards = const [],
-      settled = true,
+      empty = false,
       more = null,
-      followed = null;
+      followed = null,
+      counts = null,
+      waiting = const [];
+
+  /// Nothing to show: [notice], and Search, which focus can rest on.
+  _Body.empty(TvNotice notice, {required TvFocusMemory memory})
+    : cards = const [],
+      empty = true,
+      more = null,
+      followed = null,
+      counts = null,
+      waiting = const [],
+      footer = _Empty(notice: notice, memory: memory);
 
   const _Body.loading()
     : cards = const [],
       footer = const TvLoading(top: 76),
-      settled = false,
+      empty = false,
       more = null,
-      followed = null;
+      followed = null,
+      counts = null,
+      waiting = const [];
 
-  final List<TvRequestPoster> cards;
+  final List<_CardOf> cards;
   final Widget? footer;
   final VoidCallback? more;
   final FollowedTitles? followed;
-  final bool settled;
+
+  /// The header's line of how many are in each state.
+  final String? counts;
+
+  /// What Add all adds.
+  final List<AdminRequestItem> waiting;
+
+  /// It said it has nothing, and offers Search.
+  final bool empty;
 }
 
-// ---------------------------------------------------------------------------
-// A request's card.
+/// An empty overview: why, and Search, where requests start.
+class _Empty extends StatelessWidget {
+  const _Empty({required this.notice, required this.memory});
 
-/// A request as a poster with its state in the corner, in Discover's
-/// Requests row and the requests page's grid: one of the queue's in
-/// [list], or one of the viewer's own. Focus tells [onFocus] its name and
-/// what its list says of it; Select offers what can be done about it.
-class TvRequestPoster extends ConsumerWidget {
-  const TvRequestPoster.queued(
-    AdminRequestItem this.queued, {
-    super.key,
-    this.list = QueueList.waiting,
-    this.onAnswered,
-    this.width = TvCards.posterWidth,
-    this.focusNode,
-    this.onFocus,
-  }) : mine = null;
-
-  const TvRequestPoster.mine(
-    RequestItem this.mine, {
-    super.key,
-    this.width = TvCards.posterWidth,
-    this.focusNode,
-    this.onFocus,
-  }) : queued = null,
-       list = QueueList.waiting,
-       onAnswered = null;
-
-  const TvRequestPoster._({
-    super.key,
-    required this.queued,
-    required this.mine,
-    required this.list,
-    required this.onAnswered,
-    required this.width,
-    required this.focusNode,
-    required this.onFocus,
-  });
-
-  final AdminRequestItem? queued;
-  final RequestItem? mine;
-
-  /// The queue's list [queued] is in.
-  final String list;
-
-  /// Runs once an answer is given, as one leaving Done.
-  final VoidCallback? onAnswered;
-
-  /// A row's card width; null fills a grid's cell.
-  final double? width;
-  final FocusNode? focusNode;
-  final ValueChanged<FocusedItem>? onFocus;
-
-  /// The request's id.
-  String get id => queued?.id ?? mine!.id;
-
-  /// This card with [node], telling [onFocus] what it is.
-  TvRequestPoster focused(FocusNode node, ValueChanged<FocusedItem> onFocus) =>
-      TvRequestPoster._(
-        key: key,
-        queued: queued,
-        mine: mine,
-        list: list,
-        onAnswered: onAnswered,
-        width: width,
-        focusNode: node,
-        onFocus: onFocus,
-      );
+  final TvNotice notice;
+  final TvFocusMemory memory;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final onFocus = this.onFocus;
-    if (queued case final item?) {
-      final title = item.title;
-      final state = ref.watch(requestsProvider);
-      final facts = [
-        yearKind(title.year, title.ref.kind, l),
-        ?scopeText(item.scope, l),
-        queueStatusText(state, item, list, l),
-        // Waiting's status starts with who asked; the rest say it after.
-        if (list != QueueList.waiting) ...askedText(item, l),
-      ].where((fact) => fact.isNotEmpty).toList();
-      return TvPosterCard(
-        name: title.name,
-        poster: title.poster,
-        width: width,
-        focusNode: focusNode,
-        label: [title.name, ...facts].join(', '),
-        corner: CatalogBadge(availability: item.availability, size: 28),
-        onPressed: () => unawaited(
-          openTvQueued(context, item, list, onAnswered: onAnswered),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        notice,
+        Padding(
+          padding: const EdgeInsets.only(top: 24),
+          child: TvMemoryRow(
+            memory: memory,
+            row: _Rows.empty,
+            child: TvButton(
+              label: l.searchTitle,
+              icon: Lucide.search,
+              focusNode: memory.node(_Rows.empty, _Rows.search),
+              onPressed: () => context.go(Routes.search),
+            ),
+          ),
         ),
-        onFocused: onFocus == null
-            ? null
-            : () => onFocus(FocusedItem(name: title.name, facts: facts)),
-      );
-    }
-    final item = mine!;
-    final title = item.title;
-    final now = liveAvailability(ref, title.ref, item.availability);
-    final shown = item.season?.asTitle() ?? now;
-    final facts = [
-      yearKind(title.year, title.ref.kind, l),
-      ?scopeText(item.scope, l),
-      mineStateText(item, now, l),
-      ?declinedText(now, l),
-    ].where((fact) => fact.isNotEmpty).toList();
-    return TvPosterCard(
-      name: title.name,
-      poster: title.poster,
-      width: width,
-      focusNode: focusNode,
-      label: [title.name, ...facts].join(', '),
-      corner: CatalogBadge(availability: shown, size: 28),
-      onPressed: () => unawaited(openTvMine(context, item)),
-      onFocused: onFocus == null
-          ? null
-          : () => onFocus(FocusedItem(name: title.name, facts: facts)),
+      ],
     );
   }
 }

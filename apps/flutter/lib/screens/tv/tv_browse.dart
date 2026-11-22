@@ -44,7 +44,8 @@ const _controls = tvGridControls;
 /// The row key a grid page gives its controls in its focus memory.
 const tvGridControls = 'controls';
 
-/// A grid page's heading and the count beside it, and its controls under them.
+/// A grid page's heading and the count beside it, and its controls, if any,
+/// under them.
 class TvGridHeader extends StatelessWidget {
   const TvGridHeader({
     super.key,
@@ -83,21 +84,28 @@ class TvGridHeader extends StatelessWidget {
                   ),
                 ),
                 if (detail case final text?)
-                  Text(
-                    text,
-                    maxLines: 1,
-                    style: TvType.facts.style(color: colors.mutedForeground),
+                  Flexible(
+                    child: Text(
+                      text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TvType.facts.style(color: colors.mutedForeground),
+                    ),
                   ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsetsDirectional.only(top: 16, end: TvPage.end),
-            child: SizedBox(
-              height: TvButtons.height,
-              child: Row(spacing: 14, children: controls),
+          if (controls.isNotEmpty)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
+                top: 16,
+                end: TvPage.end,
+              ),
+              child: SizedBox(
+                height: TvButtons.height,
+                child: Row(spacing: 14, children: controls),
+              ),
             ),
-          ),
         ],
       ),
     );
