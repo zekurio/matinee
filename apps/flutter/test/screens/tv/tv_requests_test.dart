@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -598,6 +599,25 @@ void main() {
       expect(find.text('Request Severance'), findsNothing, reason: 'closed');
       await _toastsRunOut(tester);
     });
+  });
+
+  testWidgets("the show's panel says each row whole in German", (tester) async {
+    tester.platformDispatcher.localesTestValue = const [Locale('de')];
+    addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+    final requests = _discover()
+      ..details['sv'] = detailJson(
+        'sv',
+        'Severance',
+        kind: 'show',
+        seasons: [seasonJson(1, selected: true), seasonJson(2)],
+      );
+    await _open(tester, requests, path: Routes.catalog('show', 'tmdb', 'sv'));
+    await select(tester);
+    final future = find.text('Neue Staffeln, sobald sie laufen');
+    expect(future, findsOneWidget);
+    final text = tester.renderObject<RenderParagraph>(future);
+    expect(text.didExceedMaxLines, isFalse, reason: 'cut at ${text.size}');
+    expect(requests.sentPaths, isEmpty, reason: 'only opened');
   });
 
   group('search', () {

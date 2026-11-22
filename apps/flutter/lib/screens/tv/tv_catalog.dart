@@ -346,6 +346,8 @@ class _AskBodyState extends ConsumerState<_AskBody> {
         if (widget.first)
           TvListItem(
             title: l.webAskChooserFuture,
+            // "Neue Staffeln, sobald sie laufen" beside the switch.
+            titleLines: 2,
             quiet: true,
             trailing: TvListSwitch(checked: _future),
             onPressed: () => setState(() => _future = !_future),

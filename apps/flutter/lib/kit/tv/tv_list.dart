@@ -29,6 +29,7 @@ class TvListItem extends StatelessWidget {
     this.focusNode,
     this.minHeight = TvListItems.height,
     this.subtitleLines = 2,
+    this.titleLines = 1,
     this.onLongPress,
     this.onFocusChange,
   });
@@ -49,6 +50,10 @@ class TvListItem extends StatelessWidget {
   final FocusNode? focusNode;
   final double minHeight;
   final int subtitleLines;
+
+  /// How many lines [title] may wrap to, for a row whose words run long
+  /// beside a switch, as in German.
+  final int titleLines;
   final ValueChanged<bool>? onFocusChange;
 
   @override
@@ -111,7 +116,7 @@ class TvListItem extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          maxLines: 1,
+                          maxLines: titleLines,
                           overflow: TextOverflow.ellipsis,
                           style: TvType.facts.style(color: content),
                         ),
