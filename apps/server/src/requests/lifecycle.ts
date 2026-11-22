@@ -2,6 +2,7 @@ import type {
   CatalogRef,
   RemoteRef,
   RequestState,
+  TitleKind,
   ShowScope,
   WaitingDeclineReason,
 } from "@matinee/contracts"
@@ -545,6 +546,49 @@ function inFlight() {
   return and(ne(request.status, "declined"), sql`not (${arrived()})`)
 }
 
+/** The requests in `state`, by `stateOf`'s rule, the one each card shows. */
+function inState(state: RequestState) {
+  const here = sql`(${arrived()})`
+  const approved = eq(request.status, "approved")
+  switch (state) {
+    case "declined":
+      return eq(request.status, "declined")
+    case "here":
+      return and(ne(request.status, "declined"), here)
+    case "waiting":
+      return and(eq(request.status, "asked"), not(here))
+    case "needsAttention":
+      return and(approved, eq(request.fulfilmentState, "failed"), not(here))
+    case "onTheWay":
+      return and(
+        approved,
+        // Not failed, which in SQL a null never is.
+        or(
+          isNull(request.fulfilmentState),
+          ne(request.fulfilmentState, "failed"),
+        ),
+        not(here),
+      )
+  }
+}
+
+type ListFilter = { states: readonly RequestState[]; kind?: TitleKind }
+
+/** Whether `filter` keeps `state`: an empty list keeps every one. */
+function keeps(filter: ListFilter, state: RequestState) {
+  return !filter.states.length || filter.states.includes(state)
+}
+
+/** The requests `filter` keeps, or nothing when it keeps them all. */
+function kept(filter: ListFilter) {
+  return and(
+    filter.kind ? eq(request.kind, filter.kind) : undefined,
+    filter.states.length
+      ? or(...filter.states.map((state) => inState(state)))
+      : undefined,
+  )
+}
+
 /**
  * The rows after `cursor` in `mine`'s order: in flight first, then
  * finished, each newest first. A cursor from before that order counts
@@ -569,7 +613,11 @@ function followedBy(viewer: Viewer) {
 
 export async function mine(
   viewer: Viewer,
-  input: { cursor?: string; limit: number; filter: "inProgress" | "all" },
+  input: ListFilter & {
+    cursor?: string
+    limit: number
+    filter: "inProgress" | "all"
+  },
 ) {
   const open = sql`(${inFlight()})`
   const rows = await db
@@ -581,6 +629,7 @@ export async function mine(
         followedBy(viewer),
         mineAfter(input.cursor, open),
         input.filter === "inProgress" ? inProgress() : undefined,
+        kept(input),
       ),
     )
     .orderBy(desc(open), desc(request.createdAt), desc(request.id))
@@ -594,54 +643,55 @@ export async function mine(
 
 export async function queue(
   viewer: Viewer,
-  input: { cursor?: string; limit: number },
+  input: ListFilter & { cursor?: string; limit: number },
 ) {
-  const visible = inLibraries(viewer, request.libraryId)
-  // The lists are the states, by the rule a person's own list has: one
-  // that got here, a show once its last season did, is done whatever
-  // else it says.
-  const here = sql`(${arrived()})`
-  const declined = eq(request.status, "declined")
-  const approved = eq(request.status, "approved")
-  const waiting = and(visible, eq(request.status, "asked"), not(here))
-  const attention = and(
-    visible,
-    approved,
-    eq(request.fulfilmentState, "failed"),
-    not(here),
+  const visible = and(
+    inLibraries(viewer, request.libraryId),
+    input.kind ? eq(request.kind, input.kind) : undefined,
   )
-  const onWay = and(
-    visible,
-    approved,
-    // Not failed, which in SQL a null never is.
-    or(isNull(request.fulfilmentState), ne(request.fulfilmentState, "failed")),
-    not(here),
+  // The lists are the states, by the rule a person's own list has, and
+  // done is the two that end one. A state the filter leaves out is empty.
+  const open = (["waiting", "needsAttention", "onTheWay"] as const).map(
+    (state) => (keeps(input, state) ? and(visible, inState(state)) : null),
   )
-  const done = and(visible, or(here, declined))
+  const ends = (["here", "declined"] as const).filter((state) =>
+    keeps(input, state),
+  )
+  const done = ends.length
+    ? and(visible, or(...ends.map((state) => inState(state))))
+    : null
   // Done, latest first by when it got here or was declined.
+  const declined = eq(request.status, "declined")
   const finishedAt =
     sql<Date>`case when ${declined} then ${request.declinedAt} else ${arrivalTime()} end`.mapWith(
       request.declinedAt,
     )
   const lists = await Promise.all(
-    [waiting, attention, onWay].map((filter) =>
-      db
-        .select()
-        .from(request)
-        .where(filter)
-        .orderBy(desc(request.createdAt), desc(request.id))
-        .limit(10000),
+    open.map(async (filter) =>
+      filter
+        ? await db
+            .select()
+            .from(request)
+            .where(filter)
+            .orderBy(desc(request.createdAt), desc(request.id))
+            .limit(10000)
+        : [],
     ),
   )
-  const finished = await db
-    .select({ request, at: finishedAt })
-    .from(request)
-    .where(and(done, cursorBefore(input.cursor, finishedAt)))
-    .orderBy(desc(finishedAt), desc(request.id))
-    .limit(input.limit + 1)
+  const finished = done
+    ? await db
+        .select({ request, at: finishedAt })
+        .from(request)
+        .where(and(done, cursorBefore(input.cursor, finishedAt)))
+        .orderBy(desc(finishedAt), desc(request.id))
+        .limit(input.limit + 1)
+    : []
   const totals = await Promise.all(
-    [waiting, attention, onWay, done].map((filter) =>
-      db.select({ value: count() }).from(request).where(filter),
+    [...open, done].map(async (filter) =>
+      filter
+        ? ((await db.select({ value: count() }).from(request).where(filter))[0]
+            ?.value ?? 0)
+        : 0,
     ),
   )
   // Each card's state is the list it's in, by the same rule.
@@ -745,10 +795,10 @@ export async function queue(
       finished.slice(0, input.limit).map((row) => row.request),
     ),
     counts: {
-      waiting: totals[0]?.[0]?.value ?? 0,
-      needsAttention: totals[1]?.[0]?.value ?? 0,
-      onTheWay: totals[2]?.[0]?.value ?? 0,
-      done: totals[3]?.[0]?.value ?? 0,
+      waiting: totals[0] ?? 0,
+      needsAttention: totals[1] ?? 0,
+      onTheWay: totals[2] ?? 0,
+      done: totals[3] ?? 0,
     },
     nextCursor:
       finished.length > input.limit && lastDone

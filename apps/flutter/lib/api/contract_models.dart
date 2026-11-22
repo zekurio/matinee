@@ -10236,6 +10236,78 @@ final class RequestsAddSeasonsInput {
   JsonMap toJson() => {'id': id, 'scope': scope.toJson()};
 }
 
+final class RequestsMineLiveInput {
+  const RequestsMineLiveInput({
+    this.cursor,
+    this.limit,
+    this.states,
+    this.kind,
+  });
+
+  factory RequestsMineLiveInput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return RequestsMineLiveInput(
+      cursor: fields['cursor'] as String?,
+      limit: fields['limit'] as int?,
+      states: readNullable(
+        fields['states'],
+        (value) => readList(value, (value) => value as String),
+      ),
+      kind: fields['kind'] as String?,
+    );
+  }
+
+  final String? cursor;
+  final int? limit;
+  final List<String>? states;
+  final String? kind;
+
+  JsonMap toJson() => {
+    'cursor': ?cursor,
+    'limit': ?limit,
+    'states': ?states,
+    'kind': ?kind,
+  };
+}
+
+final class RequestsMineInput {
+  const RequestsMineInput({
+    this.cursor,
+    this.limit,
+    this.states,
+    this.kind,
+    this.filter,
+  });
+
+  factory RequestsMineInput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return RequestsMineInput(
+      cursor: fields['cursor'] as String?,
+      limit: fields['limit'] as int?,
+      states: readNullable(
+        fields['states'],
+        (value) => readList(value, (value) => value as String),
+      ),
+      kind: fields['kind'] as String?,
+      filter: fields['filter'] as String?,
+    );
+  }
+
+  final String? cursor;
+  final int? limit;
+  final List<String>? states;
+  final String? kind;
+  final String? filter;
+
+  JsonMap toJson() => {
+    'cursor': ?cursor,
+    'limit': ?limit,
+    'states': ?states,
+    'kind': ?kind,
+    'filter': ?filter,
+  };
+}
+
 final class AuthSessionOutput {
   const AuthSessionOutput({required this.user});
 
@@ -11102,6 +11174,74 @@ final class FavoritesSetItemInput {
   final bool favorite;
 
   JsonMap toJson() => {'favorite': favorite};
+}
+
+final class AdminRequestsQueueInput {
+  const AdminRequestsQueueInput({
+    this.cursor,
+    this.limit,
+    this.states,
+    this.kind,
+  });
+
+  factory AdminRequestsQueueInput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return AdminRequestsQueueInput(
+      cursor: fields['cursor'] as String?,
+      limit: fields['limit'] as int?,
+      states: readNullable(
+        fields['states'],
+        (value) => readList(value, (value) => value as String),
+      ),
+      kind: fields['kind'] as String?,
+    );
+  }
+
+  final String? cursor;
+  final int? limit;
+  final List<String>? states;
+  final String? kind;
+
+  JsonMap toJson() => {
+    'cursor': ?cursor,
+    'limit': ?limit,
+    'states': ?states,
+    'kind': ?kind,
+  };
+}
+
+final class AdminRequestsLiveInput {
+  const AdminRequestsLiveInput({
+    this.cursor,
+    this.limit,
+    this.states,
+    this.kind,
+  });
+
+  factory AdminRequestsLiveInput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return AdminRequestsLiveInput(
+      cursor: fields['cursor'] as String?,
+      limit: fields['limit'] as int?,
+      states: readNullable(
+        fields['states'],
+        (value) => readList(value, (value) => value as String),
+      ),
+      kind: fields['kind'] as String?,
+    );
+  }
+
+  final String? cursor;
+  final int? limit;
+  final List<String>? states;
+  final String? kind;
+
+  JsonMap toJson() => {
+    'cursor': ?cursor,
+    'limit': ?limit,
+    'states': ?states,
+    'kind': ?kind,
+  };
 }
 
 final class AdminRequestsApproveInput {
