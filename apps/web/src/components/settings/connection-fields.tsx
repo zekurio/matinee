@@ -280,6 +280,16 @@ export function LandsIn({
     retry: false,
   })
   if (!folder || !landing.isSuccess) return null
+  if (landing.data.hidden)
+    return (
+      <p className="text-13px flex items-start gap-1.5 pt-1 leading-5">
+        <TriangleAlertIcon
+          aria-hidden
+          className="text-warning mt-0.5 size-3.5 shrink-0"
+        />
+        <span>{tr("connections.landsHidden", { folder })}</span>
+      </p>
+    )
   if (landing.data.library)
     return (
       <FieldDescription>

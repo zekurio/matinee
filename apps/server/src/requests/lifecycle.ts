@@ -30,7 +30,7 @@ import {
 } from "drizzle-orm"
 
 import type { Access } from "../access/policy"
-import type { Viewer } from "../access/viewer"
+import { can, type Viewer } from "../access/viewer"
 import { inLibraries, visibleTitles } from "../access/visible"
 import { details, routedDetails } from "../catalog"
 import { detailProvider } from "../catalog/cache"
@@ -206,7 +206,7 @@ export async function ask(
       })
     const changed = await mergeScope(tx, row, scope)
     const approved =
-      viewer.access.requests === "add" || row.status === "approved"
+      can(viewer, "request.autoApprove") || row.status === "approved"
     const status = approved ? "approved" : "asked"
     // One whose connection was deleted takes the one it would go to now.
     const replanned = !row.connectionId && plan
@@ -250,7 +250,10 @@ export async function addSeasons(
   })
 }
 
-/** Takes the viewer's ask back, and the request with it once nobody asks. An admin removes it outright. */
+/**
+ * Takes the viewer's ask back, and the request with it once nobody asks.
+ * Whoever runs the queue removes it outright.
+ */
 export async function cancel(viewer: Viewer, id: string) {
   await db.transaction(async (tx) => {
     const row = await visibleRequest(viewer, id, tx)
@@ -259,7 +262,7 @@ export async function cancel(viewer: Viewer, id: string) {
       eq(requestFollower.userId, viewer.id),
     )
     const [self] = await tx.select().from(requestFollower).where(identity)
-    if (viewer.role === "admin") {
+    if (can(viewer, "adminRequest.update")) {
       await tx.delete(request).where(eq(request.id, id))
       return
     }
@@ -747,7 +750,7 @@ async function moveTarget(viewer: Viewer, id: string, libraryId: string) {
     const [own] = await db
       .select({ name: library.name })
       .from(library)
-      // ACCESS: the library of a request the admin can see.
+      // ACCESS: the library of a request in the queue the caller may run.
       .where(eq(library.id, row.libraryId))
     throw new ORPCError("CONFLICT", {
       message: `${own?.name ?? ""} already has this show, so its new seasons go there too.`,

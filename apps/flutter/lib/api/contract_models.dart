@@ -2056,6 +2056,7 @@ final class FulfilmentLanding {
     required this.from,
     required this.folder,
     required this.library,
+    required this.hidden,
   });
 
   factory FulfilmentLanding.fromJson(Object? json) {
@@ -2065,6 +2066,7 @@ final class FulfilmentLanding {
       from: fields['from'] as String,
       folder: fields['folder'] as String,
       library: readNullable(fields['library'], FulfilmentLibrary.fromJson),
+      hidden: fields['hidden'] as bool,
     );
   }
 
@@ -2072,12 +2074,14 @@ final class FulfilmentLanding {
   final String from;
   final String folder;
   final FulfilmentLibrary? library;
+  final bool hidden;
 
   JsonMap toJson() => {
     'kind': kind,
     'from': from,
     'folder': folder,
     'library': library?.toJson(),
+    'hidden': hidden,
   };
 }
 
@@ -2093,6 +2097,7 @@ final class FulfilmentConnection {
     required this.folderLibraries,
     required this.apiKey,
     required this.landings,
+    required this.editable,
   });
 
   factory FulfilmentConnection.fromJson(Object? json) {
@@ -2111,6 +2116,7 @@ final class FulfilmentConnection {
       ),
       apiKey: FulfilmentConnectionApiKey.fromJson(fields['apiKey']),
       landings: readList(fields['landings'], FulfilmentLanding.fromJson),
+      editable: fields['editable'] as bool,
     );
   }
 
@@ -2124,6 +2130,7 @@ final class FulfilmentConnection {
   final Map<String, String> folderLibraries;
   final FulfilmentConnectionApiKey apiKey;
   final List<FulfilmentLanding> landings;
+  final bool editable;
 
   JsonMap toJson() => {
     'id': id,
@@ -2136,6 +2143,7 @@ final class FulfilmentConnection {
     'folderLibraries': folderLibraries,
     'apiKey': apiKey.toJson(),
     'landings': landings.map((item) => item.toJson()).toList(),
+    'editable': editable,
   };
 }
 
@@ -4691,6 +4699,7 @@ final class AdminUser {
     required this.username,
     required this.displayName,
     required this.role,
+    required this.permissions,
     required this.avatarId,
     required this.avatarSource,
     required this.playback,
@@ -4701,6 +4710,7 @@ final class AdminUser {
     required this.passkeys,
     required this.oidcLinked,
     required this.sessions,
+    required this.apiTokens,
     required this.claimsSyncedAt,
     required this.access,
   });
@@ -4712,6 +4722,7 @@ final class AdminUser {
       username: fields['username'] as String,
       displayName: fields['displayName'] as String?,
       role: fields['role'] as String,
+      permissions: readList(fields['permissions'], (value) => value as String),
       avatarId: fields['avatarId'] as String?,
       avatarSource: fields['avatarSource'] as String,
       playback: readNullable(fields['playback'], PlaybackPreferences.fromJson),
@@ -4722,6 +4733,7 @@ final class AdminUser {
       passkeys: fields['passkeys'] as int,
       oidcLinked: fields['oidcLinked'] as bool,
       sessions: fields['sessions'] as int,
+      apiTokens: fields['apiTokens'] as int,
       claimsSyncedAt: fields['claimsSyncedAt'] as String?,
       access: AdminUserAccess.fromJson(fields['access']),
     );
@@ -4731,6 +4743,7 @@ final class AdminUser {
   final String username;
   final String? displayName;
   final String role;
+  final List<String> permissions;
   final String? avatarId;
   final String avatarSource;
   final PlaybackPreferences? playback;
@@ -4741,6 +4754,7 @@ final class AdminUser {
   final int passkeys;
   final bool oidcLinked;
   final int sessions;
+  final int apiTokens;
   final String? claimsSyncedAt;
   final AdminUserAccess access;
 
@@ -4749,6 +4763,7 @@ final class AdminUser {
     'username': username,
     'displayName': displayName,
     'role': role,
+    'permissions': permissions,
     'avatarId': avatarId,
     'avatarSource': avatarSource,
     'playback': playback?.toJson(),
@@ -4759,6 +4774,7 @@ final class AdminUser {
     'passkeys': passkeys,
     'oidcLinked': oidcLinked,
     'sessions': sessions,
+    'apiTokens': apiTokens,
     'claimsSyncedAt': claimsSyncedAt,
     'access': access.toJson(),
   };
@@ -4827,10 +4843,10 @@ final class AdminUserAccessOverride {
     this.libraries,
     this.maxBitrate,
     this.transcode,
-    this.downloads,
-    this.requests,
     this.requestLimit,
     this.maxStreams,
+    this.allow,
+    this.deny,
   });
 
   factory AdminUserAccessOverride.fromJson(Object? json) {
@@ -4842,29 +4858,35 @@ final class AdminUserAccessOverride {
       ),
       maxBitrate: readExplicit(fields, 'maxBitrate', (value) => value as int),
       transcode: fields['transcode'] as bool?,
-      downloads: fields['downloads'] as bool?,
-      requests: fields['requests'] as String?,
       requestLimit: readExplicit(fields, 'requestLimit', RequestQuota.fromJson),
       maxStreams: readExplicit(fields, 'maxStreams', (value) => value as int),
+      allow: readNullable(
+        fields['allow'],
+        (value) => readList(value, (value) => value as String),
+      ),
+      deny: readNullable(
+        fields['deny'],
+        (value) => readList(value, (value) => value as String),
+      ),
     );
   }
 
   final AdminUserAccessOverrideLibraries? libraries;
   final Explicit<int>? maxBitrate;
   final bool? transcode;
-  final bool? downloads;
-  final String? requests;
   final Explicit<RequestQuota>? requestLimit;
   final Explicit<int>? maxStreams;
+  final List<String>? allow;
+  final List<String>? deny;
 
   JsonMap toJson() => {
     'libraries': ?libraries?.toJson(),
     if (maxBitrate case final field?) 'maxBitrate': field.value,
     'transcode': ?transcode,
-    'downloads': ?downloads,
-    'requests': ?requests,
     if (requestLimit case final field?) 'requestLimit': field.value?.toJson(),
     if (maxStreams case final field?) 'maxStreams': field.value,
+    'allow': ?allow,
+    'deny': ?deny,
   };
 }
 
@@ -4893,10 +4915,9 @@ final class AdminUserAccessFromGroups {
     required this.libraries,
     required this.maxBitrate,
     required this.transcode,
-    required this.downloads,
-    required this.requests,
     required this.requestLimit,
     required this.maxStreams,
+    required this.permissions,
   });
 
   factory AdminUserAccessFromGroups.fromJson(Object? json) {
@@ -4907,29 +4928,26 @@ final class AdminUserAccessFromGroups {
       ),
       maxBitrate: fields['maxBitrate'] as int?,
       transcode: fields['transcode'] as bool,
-      downloads: fields['downloads'] as bool,
-      requests: fields['requests'] as String,
       requestLimit: readNullable(fields['requestLimit'], RequestQuota.fromJson),
       maxStreams: fields['maxStreams'] as int?,
+      permissions: readList(fields['permissions'], (value) => value as String),
     );
   }
 
   final AdminUserAccessFromGroupsLibraries libraries;
   final int? maxBitrate;
   final bool transcode;
-  final bool downloads;
-  final String requests;
   final RequestQuota? requestLimit;
   final int? maxStreams;
+  final List<String> permissions;
 
   JsonMap toJson() => {
     'libraries': libraries.toJson(),
     'maxBitrate': maxBitrate,
     'transcode': transcode,
-    'downloads': downloads,
-    'requests': requests,
     'requestLimit': requestLimit?.toJson(),
     'maxStreams': maxStreams,
+    'permissions': permissions,
   };
 }
 
@@ -4958,10 +4976,9 @@ final class AdminUserAccessEffective {
     required this.libraries,
     required this.maxBitrate,
     required this.transcode,
-    required this.downloads,
-    required this.requests,
     required this.requestLimit,
     required this.maxStreams,
+    required this.permissions,
   });
 
   factory AdminUserAccessEffective.fromJson(Object? json) {
@@ -4972,29 +4989,26 @@ final class AdminUserAccessEffective {
       ),
       maxBitrate: fields['maxBitrate'] as int?,
       transcode: fields['transcode'] as bool,
-      downloads: fields['downloads'] as bool,
-      requests: fields['requests'] as String,
       requestLimit: readNullable(fields['requestLimit'], RequestQuota.fromJson),
       maxStreams: fields['maxStreams'] as int?,
+      permissions: readList(fields['permissions'], (value) => value as String),
     );
   }
 
   final AdminUserAccessEffectiveLibraries libraries;
   final int? maxBitrate;
   final bool transcode;
-  final bool downloads;
-  final String requests;
   final RequestQuota? requestLimit;
   final int? maxStreams;
+  final List<String> permissions;
 
   JsonMap toJson() => {
     'libraries': libraries.toJson(),
     'maxBitrate': maxBitrate,
     'transcode': transcode,
-    'downloads': downloads,
-    'requests': requests,
     'requestLimit': requestLimit?.toJson(),
     'maxStreams': maxStreams,
+    'permissions': permissions,
   };
 }
 
@@ -5018,12 +5032,48 @@ final class AdminUserAccessEffectiveLibraries {
   JsonMap toJson() => {'all': all, 'ids': ids};
 }
 
+final class ApiToken {
+  const ApiToken({
+    required this.id,
+    required this.name,
+    required this.permissions,
+    required this.createdAt,
+    required this.lastUsedAt,
+  });
+
+  factory ApiToken.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return ApiToken(
+      id: fields['id'] as String,
+      name: fields['name'] as String,
+      permissions: readList(fields['permissions'], (value) => value as String),
+      createdAt: fields['createdAt'] as String,
+      lastUsedAt: fields['lastUsedAt'] as String?,
+    );
+  }
+
+  final String id;
+  final String name;
+  final List<String> permissions;
+  final String createdAt;
+  final String? lastUsedAt;
+
+  JsonMap toJson() => {
+    'id': id,
+    'name': name,
+    'permissions': permissions,
+    'createdAt': createdAt,
+    'lastUsedAt': lastUsedAt,
+  };
+}
+
 final class User {
   const User({
     required this.id,
     required this.username,
     required this.displayName,
     required this.role,
+    required this.permissions,
     required this.avatarId,
     required this.avatarSource,
     required this.playback,
@@ -5038,6 +5088,7 @@ final class User {
       username: fields['username'] as String,
       displayName: fields['displayName'] as String?,
       role: fields['role'] as String,
+      permissions: readList(fields['permissions'], (value) => value as String),
       avatarId: fields['avatarId'] as String?,
       avatarSource: fields['avatarSource'] as String,
       playback: readNullable(fields['playback'], PlaybackPreferences.fromJson),
@@ -5050,6 +5101,7 @@ final class User {
   final String username;
   final String? displayName;
   final String role;
+  final List<String> permissions;
   final String? avatarId;
   final String avatarSource;
   final PlaybackPreferences? playback;
@@ -5061,6 +5113,7 @@ final class User {
     'username': username,
     'displayName': displayName,
     'role': role,
+    'permissions': permissions,
     'avatarId': avatarId,
     'avatarSource': avatarSource,
     'playback': playback?.toJson(),
@@ -5084,6 +5137,23 @@ final class AppSession {
   final User user;
 
   JsonMap toJson() => {'token': token, 'user': user.toJson()};
+}
+
+final class CreatedApiToken {
+  const CreatedApiToken({required this.token, required this.apiToken});
+
+  factory CreatedApiToken.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return CreatedApiToken(
+      token: fields['token'] as String,
+      apiToken: ApiToken.fromJson(fields['apiToken']),
+    );
+  }
+
+  final String token;
+  final ApiToken apiToken;
+
+  JsonMap toJson() => {'token': token, 'apiToken': apiToken.toJson()};
 }
 
 final class AudioStream {
@@ -9759,6 +9829,45 @@ final class AuthSettingsInput {
   JsonMap toJson() => {'passkeys': passkeys.toJson(), 'oidc': oidc.toJson()};
 }
 
+final class ApiTokenInput {
+  const ApiTokenInput({required this.name, required this.permissions});
+
+  factory ApiTokenInput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return ApiTokenInput(
+      name: fields['name'] as String,
+      permissions: readList(fields['permissions'], (value) => value as String),
+    );
+  }
+
+  final String name;
+  final List<String> permissions;
+
+  JsonMap toJson() => {'name': name, 'permissions': permissions};
+}
+
+final class ApiTokenUpdate {
+  const ApiTokenUpdate({required this.id, this.name, this.permissions});
+
+  factory ApiTokenUpdate.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return ApiTokenUpdate(
+      id: fields['id'] as String,
+      name: fields['name'] as String?,
+      permissions: readNullable(
+        fields['permissions'],
+        (value) => readList(value, (value) => value as String),
+      ),
+    );
+  }
+
+  final String id;
+  final String? name;
+  final List<String>? permissions;
+
+  JsonMap toJson() => {'id': id, 'name': ?name, 'permissions': ?permissions};
+}
+
 final class AppDevice {
   const AppDevice({this.name, required this.platform});
 
@@ -10374,6 +10483,26 @@ final class AccountPasskeysRenameInput {
   final String? name;
 
   JsonMap toJson() => {'name': name};
+}
+
+final class AccountApiTokensUpdateInput {
+  const AccountApiTokensUpdateInput({this.name, this.permissions});
+
+  factory AccountApiTokensUpdateInput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return AccountApiTokensUpdateInput(
+      name: fields['name'] as String?,
+      permissions: readNullable(
+        fields['permissions'],
+        (value) => readList(value, (value) => value as String),
+      ),
+    );
+  }
+
+  final String? name;
+  final List<String>? permissions;
+
+  JsonMap toJson() => {'name': ?name, 'permissions': ?permissions};
 }
 
 final class AccountSessionsRevokeOthersOutput {
@@ -11128,18 +11257,23 @@ final class AdminFulfilmentOptionsInput {
 }
 
 final class AdminFulfilmentLandingOutput {
-  const AdminFulfilmentLandingOutput({required this.library});
+  const AdminFulfilmentLandingOutput({
+    required this.library,
+    required this.hidden,
+  });
 
   factory AdminFulfilmentLandingOutput.fromJson(Object? json) {
     final fields = json as JsonMap;
     return AdminFulfilmentLandingOutput(
       library: readNullable(fields['library'], FulfilmentLibrary.fromJson),
+      hidden: fields['hidden'] as bool,
     );
   }
 
   final FulfilmentLibrary? library;
+  final bool hidden;
 
-  JsonMap toJson() => {'library': library?.toJson()};
+  JsonMap toJson() => {'library': library?.toJson(), 'hidden': hidden};
 }
 
 final class AdminFulfilmentCreateRuleInput {
@@ -11319,10 +11453,9 @@ final class AdminGroupsListOutputPolicy {
     required this.libraries,
     required this.maxBitrate,
     required this.transcode,
-    required this.downloads,
-    required this.requests,
     required this.requestLimit,
     required this.maxStreams,
+    required this.permissions,
   });
 
   factory AdminGroupsListOutputPolicy.fromJson(Object? json) {
@@ -11333,29 +11466,26 @@ final class AdminGroupsListOutputPolicy {
       ),
       maxBitrate: fields['maxBitrate'] as int?,
       transcode: fields['transcode'] as bool,
-      downloads: fields['downloads'] as bool,
-      requests: fields['requests'] as String,
       requestLimit: readNullable(fields['requestLimit'], RequestQuota.fromJson),
       maxStreams: fields['maxStreams'] as int?,
+      permissions: readList(fields['permissions'], (value) => value as String),
     );
   }
 
   final AdminGroupsListOutputPolicyLibraries libraries;
   final int? maxBitrate;
   final bool transcode;
-  final bool downloads;
-  final String requests;
   final RequestQuota? requestLimit;
   final int? maxStreams;
+  final List<String> permissions;
 
   JsonMap toJson() => {
     'libraries': libraries.toJson(),
     'maxBitrate': maxBitrate,
     'transcode': transcode,
-    'downloads': downloads,
-    'requests': requests,
     'requestLimit': requestLimit?.toJson(),
     'maxStreams': maxStreams,
+    'permissions': permissions,
   };
 }
 
@@ -11411,10 +11541,9 @@ final class AdminGroupsCreateInputPolicy {
     required this.libraries,
     required this.maxBitrate,
     required this.transcode,
-    required this.downloads,
-    required this.requests,
     required this.requestLimit,
     required this.maxStreams,
+    required this.permissions,
   });
 
   factory AdminGroupsCreateInputPolicy.fromJson(Object? json) {
@@ -11425,29 +11554,26 @@ final class AdminGroupsCreateInputPolicy {
       ),
       maxBitrate: fields['maxBitrate'] as int?,
       transcode: fields['transcode'] as bool,
-      downloads: fields['downloads'] as bool,
-      requests: fields['requests'] as String,
       requestLimit: readNullable(fields['requestLimit'], RequestQuota.fromJson),
       maxStreams: fields['maxStreams'] as int?,
+      permissions: readList(fields['permissions'], (value) => value as String),
     );
   }
 
   final AdminGroupsCreateInputPolicyLibraries libraries;
   final int? maxBitrate;
   final bool transcode;
-  final bool downloads;
-  final String requests;
   final RequestQuota? requestLimit;
   final int? maxStreams;
+  final List<String> permissions;
 
   JsonMap toJson() => {
     'libraries': libraries.toJson(),
     'maxBitrate': maxBitrate,
     'transcode': transcode,
-    'downloads': downloads,
-    'requests': requests,
     'requestLimit': requestLimit?.toJson(),
     'maxStreams': maxStreams,
+    'permissions': permissions,
   };
 }
 
@@ -11519,10 +11645,9 @@ final class AdminGroupsCreateOutputPolicy {
     required this.libraries,
     required this.maxBitrate,
     required this.transcode,
-    required this.downloads,
-    required this.requests,
     required this.requestLimit,
     required this.maxStreams,
+    required this.permissions,
   });
 
   factory AdminGroupsCreateOutputPolicy.fromJson(Object? json) {
@@ -11533,29 +11658,26 @@ final class AdminGroupsCreateOutputPolicy {
       ),
       maxBitrate: fields['maxBitrate'] as int?,
       transcode: fields['transcode'] as bool,
-      downloads: fields['downloads'] as bool,
-      requests: fields['requests'] as String,
       requestLimit: readNullable(fields['requestLimit'], RequestQuota.fromJson),
       maxStreams: fields['maxStreams'] as int?,
+      permissions: readList(fields['permissions'], (value) => value as String),
     );
   }
 
   final AdminGroupsCreateOutputPolicyLibraries libraries;
   final int? maxBitrate;
   final bool transcode;
-  final bool downloads;
-  final String requests;
   final RequestQuota? requestLimit;
   final int? maxStreams;
+  final List<String> permissions;
 
   JsonMap toJson() => {
     'libraries': libraries.toJson(),
     'maxBitrate': maxBitrate,
     'transcode': transcode,
-    'downloads': downloads,
-    'requests': requests,
     'requestLimit': requestLimit?.toJson(),
     'maxStreams': maxStreams,
+    'permissions': permissions,
   };
 }
 
@@ -11611,10 +11733,9 @@ final class AdminGroupsUpdateInputPolicy {
     required this.libraries,
     required this.maxBitrate,
     required this.transcode,
-    required this.downloads,
-    required this.requests,
     required this.requestLimit,
     required this.maxStreams,
+    required this.permissions,
   });
 
   factory AdminGroupsUpdateInputPolicy.fromJson(Object? json) {
@@ -11625,29 +11746,26 @@ final class AdminGroupsUpdateInputPolicy {
       ),
       maxBitrate: fields['maxBitrate'] as int?,
       transcode: fields['transcode'] as bool,
-      downloads: fields['downloads'] as bool,
-      requests: fields['requests'] as String,
       requestLimit: readNullable(fields['requestLimit'], RequestQuota.fromJson),
       maxStreams: fields['maxStreams'] as int?,
+      permissions: readList(fields['permissions'], (value) => value as String),
     );
   }
 
   final AdminGroupsUpdateInputPolicyLibraries libraries;
   final int? maxBitrate;
   final bool transcode;
-  final bool downloads;
-  final String requests;
   final RequestQuota? requestLimit;
   final int? maxStreams;
+  final List<String> permissions;
 
   JsonMap toJson() => {
     'libraries': libraries.toJson(),
     'maxBitrate': maxBitrate,
     'transcode': transcode,
-    'downloads': downloads,
-    'requests': requests,
     'requestLimit': requestLimit?.toJson(),
     'maxStreams': maxStreams,
+    'permissions': permissions,
   };
 }
 
@@ -11719,10 +11837,9 @@ final class AdminGroupsUpdateOutputPolicy {
     required this.libraries,
     required this.maxBitrate,
     required this.transcode,
-    required this.downloads,
-    required this.requests,
     required this.requestLimit,
     required this.maxStreams,
+    required this.permissions,
   });
 
   factory AdminGroupsUpdateOutputPolicy.fromJson(Object? json) {
@@ -11733,29 +11850,26 @@ final class AdminGroupsUpdateOutputPolicy {
       ),
       maxBitrate: fields['maxBitrate'] as int?,
       transcode: fields['transcode'] as bool,
-      downloads: fields['downloads'] as bool,
-      requests: fields['requests'] as String,
       requestLimit: readNullable(fields['requestLimit'], RequestQuota.fromJson),
       maxStreams: fields['maxStreams'] as int?,
+      permissions: readList(fields['permissions'], (value) => value as String),
     );
   }
 
   final AdminGroupsUpdateOutputPolicyLibraries libraries;
   final int? maxBitrate;
   final bool transcode;
-  final bool downloads;
-  final String requests;
   final RequestQuota? requestLimit;
   final int? maxStreams;
+  final List<String> permissions;
 
   JsonMap toJson() => {
     'libraries': libraries.toJson(),
     'maxBitrate': maxBitrate,
     'transcode': transcode,
-    'downloads': downloads,
-    'requests': requests,
     'requestLimit': requestLimit?.toJson(),
     'maxStreams': maxStreams,
+    'permissions': permissions,
   };
 }
 
@@ -11882,10 +11996,10 @@ final class AdminUsersSetAccessInputOverride {
     this.libraries,
     this.maxBitrate,
     this.transcode,
-    this.downloads,
-    this.requests,
     this.requestLimit,
     this.maxStreams,
+    this.allow,
+    this.deny,
   });
 
   factory AdminUsersSetAccessInputOverride.fromJson(Object? json) {
@@ -11897,29 +12011,35 @@ final class AdminUsersSetAccessInputOverride {
       ),
       maxBitrate: readExplicit(fields, 'maxBitrate', (value) => value as int),
       transcode: fields['transcode'] as bool?,
-      downloads: fields['downloads'] as bool?,
-      requests: fields['requests'] as String?,
       requestLimit: readExplicit(fields, 'requestLimit', RequestQuota.fromJson),
       maxStreams: readExplicit(fields, 'maxStreams', (value) => value as int),
+      allow: readNullable(
+        fields['allow'],
+        (value) => readList(value, (value) => value as String),
+      ),
+      deny: readNullable(
+        fields['deny'],
+        (value) => readList(value, (value) => value as String),
+      ),
     );
   }
 
   final AdminUsersSetAccessInputOverrideLibraries? libraries;
   final Explicit<int>? maxBitrate;
   final bool? transcode;
-  final bool? downloads;
-  final String? requests;
   final Explicit<RequestQuota>? requestLimit;
   final Explicit<int>? maxStreams;
+  final List<String>? allow;
+  final List<String>? deny;
 
   JsonMap toJson() => {
     'libraries': ?libraries?.toJson(),
     if (maxBitrate case final field?) 'maxBitrate': field.value,
     'transcode': ?transcode,
-    'downloads': ?downloads,
-    'requests': ?requests,
     if (requestLimit case final field?) 'requestLimit': field.value?.toJson(),
     if (maxStreams case final field?) 'maxStreams': field.value,
+    'allow': ?allow,
+    'deny': ?deny,
   };
 }
 
@@ -11954,4 +12074,17 @@ final class AdminUsersSignOutOutput {
   final int ended;
 
   JsonMap toJson() => {'ended': ended};
+}
+
+final class AdminUsersRevokeApiTokensOutput {
+  const AdminUsersRevokeApiTokensOutput({required this.revoked});
+
+  factory AdminUsersRevokeApiTokensOutput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return AdminUsersRevokeApiTokensOutput(revoked: fields['revoked'] as int);
+  }
+
+  final int revoked;
+
+  JsonMap toJson() => {'revoked': revoked};
 }

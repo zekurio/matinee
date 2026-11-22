@@ -15,6 +15,9 @@ export default defineMessages("validation", {
   // sessions.ts: the name a client gives itself.
   "validation.clientName": "Enter a name.",
 
+  // api-tokens.ts: a token needs at least one permission.
+  "validation.apiTokenPermissions": "Choose what the token may do.",
+
   // titles.ts: uploading a title's, season's, or episode's image. The
   // empty file and image type messages are the avatar ones below.
   "validation.imageSize": "Pick an image under 25 MB.",

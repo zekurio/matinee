@@ -87,6 +87,59 @@ export default defineMessages("account", {
   // {time} is relative, like "3 days ago".
   "account.sessions.active": "Active {time}",
 
+  // API tokens, for services that call the API as the account.
+  "account.apiTokens.title": "API tokens",
+  "account.apiTokens.description":
+    "A service or an app sends one as Authorization: Bearer to call the API as you, within what your account may do. Tokens don't expire. Revoke one when it's no longer needed.",
+  "account.apiTokens.empty": "No API tokens yet.",
+  // In place of the empty list, when no group lets the account make one.
+  "account.apiTokens.notAllowed": "Your account may not create API tokens.",
+  "account.apiTokens.loadFailed": "Couldn't load your API tokens. {reason}",
+  "account.apiTokens.create": "Create token",
+  "account.apiTokens.createTitle": "Create an API token",
+  "account.apiTokens.createDescription":
+    "Name it after what will use it, and give it only what that needs.",
+  "account.apiTokens.name": "Name",
+  "account.apiTokens.namePlaceholder": "Home automation",
+  // What a token may do. The permissions themselves show as the API
+  // names them, like library.scan.
+  "account.apiTokens.permissions": "What it may do",
+  "account.apiTokens.allPermissions": "All permissions",
+  "account.apiTokens.allPermissionsHint":
+    "Everything you can do in Matinee, including changing this account and its tokens.",
+  // On a token in the list.
+  "account.apiTokens.permissionCount": plural({
+    one: "{count} permission",
+    other: "{count} permissions",
+  }),
+  "account.apiTokens.editNamed": "Change {name}",
+  "account.apiTokens.editTitle": "Change {name}",
+  "account.apiTokens.editDescription":
+    "The token keeps its secret. Changes apply from its next request.",
+  "account.apiTokens.save": "Save",
+  "account.apiTokens.saved": "Saved {name}",
+  "account.apiTokens.saveFailed": "Couldn't save the API token",
+  "account.apiTokens.createFailed": "Couldn't create the API token",
+  "account.apiTokens.secretTitle": "Copy the token for {name}",
+  "account.apiTokens.secretDescription":
+    "This is the only time Matinee shows it. Keep it where the service keeps secrets.",
+  "account.apiTokens.secretLabel": "API token",
+  "account.apiTokens.copy": "Copy",
+  "account.apiTokens.copied": "Copied",
+  "account.apiTokens.done": "Done",
+  "account.apiTokens.neverUsed": "Never used",
+  "account.apiTokens.usedNow": "Used just now",
+  // {time} is relative, like "3 days ago".
+  "account.apiTokens.used": "Used {time}",
+  "account.apiTokens.created": "Created {date}",
+  "account.apiTokens.revoke": "Revoke",
+  "account.apiTokens.revokeNamed": "Revoke {name}",
+  "account.apiTokens.revokeTitle": "Revoke {name}?",
+  "account.apiTokens.revokeDescription":
+    "The service using it stops working with Matinee until you give it a new token.",
+  "account.apiTokens.revoked": "Revoked {name}",
+  "account.apiTokens.revokeFailed": "Couldn't revoke the API token",
+
   // Devices, in lib/devices.ts. {platform} is a name like Android or iOS.
   "account.device.app": "{platform} app",
   "account.device.browser": "Browser",

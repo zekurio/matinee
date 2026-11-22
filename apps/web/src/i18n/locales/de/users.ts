@@ -25,6 +25,15 @@ export default {
   "users.signOut.description": "Alle Geräte müssen sich neu anmelden.",
   "users.signOut.ownConfirm": "Andere abmelden",
   "users.signOut.confirm": "Überall abmelden",
+  "users.revokedTokens": plural({
+    one: "{count} API-Token von {name} widerrufen",
+    other: "{count} API-Tokens von {name} widerrufen",
+  }),
+  "users.revokeTokens.ownTitle": "Deine API-Tokens widerrufen?",
+  "users.revokeTokens.title": "API-Tokens von {name} widerrufen?",
+  "users.revokeTokens.description":
+    "Jeder Dienst, der eines nutzt, funktioniert nicht mehr mit Matinee. Sitzungen bleiben angemeldet.",
+  "users.revokeTokens.confirm": "Tokens widerrufen",
   "users.delete.ownTitle": "Dein Konto löschen?",
   "users.delete.title": "{name} löschen?",
   "users.delete.ownDescription":
@@ -42,6 +51,7 @@ export default {
   "users.menu.makeAdmin": "Zum Admin machen",
   "users.menu.signOutOthers": "Andere Sitzungen abmelden",
   "users.menu.signOut": "Überall abmelden",
+  "users.menu.revokeTokens": "API-Tokens widerrufen",
   "users.menu.deleteOwn": "Mein Konto löschen",
   "users.menu.delete": "Benutzer löschen",
   "users.lastAdmin": "Mach zuerst jemand anderen zum Admin.",
@@ -53,6 +63,10 @@ export default {
   "users.ownAccessHint": "Hat eigene Einstellungen über seinen Gruppen",
   "users.ownAccessFromProvider":
     "Bei der Anmeldung durch den Richtlinien-Claim von {provider} gesetzt",
+  "users.apiTokens": plural({
+    one: "{count} API-Token",
+    other: "{count} API-Tokens",
+  }),
   "users.passkeys": plural({
     one: "{count} Passkey",
     other: "{count} Passkeys",

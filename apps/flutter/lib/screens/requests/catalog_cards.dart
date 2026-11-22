@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/permissions.dart';
 import '../../core/toasts.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
@@ -607,7 +608,11 @@ class RequestButton extends ConsumerWidget {
         (blocked ? PosterAction.request : null);
     if (act == null) return const SizedBox.shrink();
     final why = blocked
-        ? dimmedText(availability, l, admin: ref.watch(isAdminProvider))
+        ? dimmedText(
+            availability,
+            l,
+            admin: ref.watch(canProvider(Permission.adminRequestUpdate)),
+          )
         : null;
     final words = act == PosterAction.request && label != null
         ? label!
@@ -652,12 +657,12 @@ class RequestButton extends ConsumerWidget {
   }
 }
 
-/// For an admin, the waiting request behind a title's or a season's
+/// For whoever runs the queue, the waiting request behind a title's or a season's
 /// "Requested", from the queue the whole app streams. Null for anyone else
 /// and while nothing waits; still there while an answer waits out its
 /// Undo, so check [RequestsState.held] before offering Add and Decline.
 AdminRequestItem? waitingRequest(WidgetRef ref, Availability availability) {
-  if (!ref.watch(isAdminProvider)) return null;
+  if (!ref.watch(runsQueueProvider)) return null;
   final id = availability.requestId;
   if (id == null || availability.state != AvailabilityState.asked) return null;
   final queue = ref.watch(requestsProvider.select((state) => state.queue));

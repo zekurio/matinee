@@ -1,4 +1,4 @@
-import type { AdminUser } from "@matinee/contracts"
+import type { AdminUser, Permission } from "@matinee/contracts"
 import { Badge } from "@matinee/ui/components/badge"
 import { Button } from "@matinee/ui/components/button"
 import {
@@ -21,6 +21,7 @@ import { useNavigate, useRouter } from "@tanstack/react-router"
 import {
   EllipsisIcon,
   KeyRoundIcon,
+  KeySquareIcon,
   LogInIcon,
   LogOutIcon,
   RefreshCwIcon,
@@ -36,6 +37,7 @@ import { useStore } from "zustand"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatDate, formatRelative } from "@/lib/format"
+import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createUsersPanelStore, type UserAction } from "@/stores/users-panel"
 
@@ -63,6 +65,9 @@ export function UsersPanel() {
   const session = useQuery(orpc.auth.session.queryOptions())
   const config = useQuery(orpc.auth.config.queryOptions())
   const me = session.data?.user ?? null
+  // The menu offers only what the account may do. The server also keeps
+  // anyone from changing an account that may do more than they may.
+  const may = (permission: Permission) => me !== null && can(me, permission)
   const oidcName = config.data?.oidc?.displayName ?? null
   const [store] = useState(createUsersPanelStore)
   const confirming = useStore(store, (state) => state.confirming)
@@ -137,10 +142,30 @@ export function UsersPanel() {
     onError: (error) => toast.error(errorMessage(error)),
   })
 
+  const revokeTokens = useMutation({
+    mutationFn: (user: AdminUser) =>
+      client.admin.users.revokeApiTokens({ id: user.id }),
+    onSuccess: async ({ revoked }, user) => {
+      closeConfirm()
+      toast.success(
+        tr("users.revokedTokens", { count: revoked, name: displayName(user) }),
+      )
+      await refresh()
+      // Your own tokens are listed in your account too.
+      if (user.id === me?.id) {
+        await queryClient.invalidateQueries({
+          queryKey: orpc.account.apiTokens.key(),
+        })
+      }
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  })
+
   const ask = (action: UserAction, user: AdminUser) => {
     setRole.reset()
     remove.reset()
     signOut.reset()
+    revokeTokens.reset()
     openConfirm(action, user)
   }
 
@@ -159,7 +184,12 @@ export function UsersPanel() {
 
   // Kept while the dialog closes, so its words stay put as it fades.
   const mutation = confirming
-    ? { role: setRole, "sign-out": signOut, delete: remove }[confirming.action]
+    ? {
+        role: setRole,
+        "sign-out": signOut,
+        "revoke-tokens": revokeTokens,
+        delete: remove,
+      }[confirming.action]
     : null
   const copy = confirming
     ? confirmCopy(
@@ -194,6 +224,7 @@ export function UsersPanel() {
                 oidcName={oidcName}
                 passkeysOn={passkeysOn}
                 lastAdmin={isLastAdmin(user)}
+                may={may}
                 onConfirm={(action) => ask(action, user)}
                 onAccess={() => openAccess(user)}
               />
@@ -202,7 +233,13 @@ export function UsersPanel() {
         )}
       </SettingsSubsection>
 
-      <Invites passkeysOn={passkeysOn} />
+      {may("invite.read") && (
+        <Invites
+          passkeysOn={passkeysOn}
+          mayCreate={may("invite.create")}
+          mayRevoke={may("invite.delete")}
+        />
+      )}
 
       <UserAccessDialog
         userId={accessUserId}
@@ -233,6 +270,7 @@ function UserItem({
   oidcName,
   passkeysOn,
   lastAdmin,
+  may,
   onConfirm,
   onAccess,
 }: {
@@ -241,6 +279,7 @@ function UserItem({
   oidcName: string | null
   passkeysOn: boolean
   lastAdmin: boolean
+  may: (permission: Permission) => boolean
   onConfirm: (action: UserAction) => void
   onAccess: () => void
 }) {
@@ -249,6 +288,17 @@ function UserItem({
     ? tr("users.menu.signOutOthers")
     : tr("users.menu.signOut")
   const lastAdminNote = tr("users.lastAdmin")
+  // The access dialog lists the groups to put the account in.
+  const mayAccess = may("adminUser.update") && may("group.read")
+  // Making an admin hands over every permission, so it takes them all.
+  const mayRole = may("all")
+  const maySignOut = may("adminSession.delete")
+  const mayRevoke = may("adminApiToken.delete")
+  const mayDelete = may("adminUser.delete")
+  // Only an admin changes an admin's account, their own aside.
+  const reachable = user.role !== "admin" || mayRole || self
+  const anything =
+    reachable && (mayAccess || mayRole || maySignOut || mayRevoke || mayDelete)
 
   return (
     <ListItem className="gap-3 py-2.5 pr-2">
@@ -282,58 +332,83 @@ function UserItem({
         />
         <UserGroups user={user} oidcName={oidcName} />
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-foreground shrink-0"
-              aria-label={tr("users.actions", { name })}
-            />
-          }
-        >
-          <EllipsisIcon />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={6} className="min-w-56">
-          {/* An admin's access is everything, so there's nothing to set. */}
-          <BlockableItem
-            blocked={user.role === "admin" ? tr("users.adminAccess") : null}
-            onClick={onAccess}
+      {anything && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground shrink-0"
+                aria-label={tr("users.actions", { name })}
+              />
+            }
           >
-            <SlidersHorizontalIcon />
-            {tr("users.menu.access")}
-          </BlockableItem>
-          <DropdownMenuSeparator />
-          <BlockableItem
-            blocked={user.role === "admin" && lastAdmin ? lastAdminNote : null}
-            onClick={() => onConfirm("role")}
-          >
-            {user.role === "admin" ? <ShieldOffIcon /> : <ShieldIcon />}
-            {user.role === "admin"
-              ? self
-                ? tr("users.menu.stepDown")
-                : tr("users.menu.removeAdmin")
-              : tr("users.menu.makeAdmin")}
-          </BlockableItem>
-          <DropdownMenuItem
-            disabled={user.sessions <= (self ? 1 : 0)}
-            onClick={() => onConfirm("sign-out")}
-          >
-            <LogOutIcon />
-            {signOutLabel}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <BlockableItem
-            variant="destructive"
-            blocked={lastAdmin ? lastAdminNote : null}
-            onClick={() => onConfirm("delete")}
-          >
-            <Trash2Icon />
-            {self ? tr("users.menu.deleteOwn") : tr("users.menu.delete")}
-          </BlockableItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <EllipsisIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={6} className="min-w-56">
+            {/* An admin's access is everything, so there's nothing to set. */}
+            {mayAccess && (
+              <BlockableItem
+                blocked={user.role === "admin" ? tr("users.adminAccess") : null}
+                onClick={onAccess}
+              >
+                <SlidersHorizontalIcon />
+                {tr("users.menu.access")}
+              </BlockableItem>
+            )}
+            {mayAccess && (mayRole || maySignOut || mayRevoke) && (
+              <DropdownMenuSeparator />
+            )}
+            {mayRole && (
+              <BlockableItem
+                blocked={
+                  user.role === "admin" && lastAdmin ? lastAdminNote : null
+                }
+                onClick={() => onConfirm("role")}
+              >
+                {user.role === "admin" ? <ShieldOffIcon /> : <ShieldIcon />}
+                {user.role === "admin"
+                  ? self
+                    ? tr("users.menu.stepDown")
+                    : tr("users.menu.removeAdmin")
+                  : tr("users.menu.makeAdmin")}
+              </BlockableItem>
+            )}
+            {maySignOut && (
+              <DropdownMenuItem
+                disabled={user.sessions <= (self ? 1 : 0)}
+                onClick={() => onConfirm("sign-out")}
+              >
+                <LogOutIcon />
+                {signOutLabel}
+              </DropdownMenuItem>
+            )}
+            {mayRevoke && (
+              <DropdownMenuItem
+                disabled={user.apiTokens === 0}
+                onClick={() => onConfirm("revoke-tokens")}
+              >
+                <KeySquareIcon />
+                {tr("users.menu.revokeTokens")}
+              </DropdownMenuItem>
+            )}
+            {mayDelete && (mayAccess || mayRole || maySignOut || mayRevoke) && (
+              <DropdownMenuSeparator />
+            )}
+            {mayDelete && (
+              <BlockableItem
+                variant="destructive"
+                blocked={lastAdmin ? lastAdminNote : null}
+                onClick={() => onConfirm("delete")}
+              >
+                <Trash2Icon />
+                {self ? tr("users.menu.deleteOwn") : tr("users.menu.delete")}
+              </BlockableItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </ListItem>
   )
 }
@@ -381,6 +456,13 @@ function UserDetails({
   oidcName: string | null
   passkeysOn: boolean
 }) {
+  // A service can still call the API with a token of an account nobody
+  // signs in to.
+  const tokens = user.apiTokens > 0 && (
+    <Fact icon={<KeySquareIcon />}>
+      {tr("users.apiTokens", { count: user.apiTokens })}
+    </Fact>
+  )
   let facts: ReactNode
   if (hasSignInMethod(user)) {
     const { label, tone } = activity(user, self)
@@ -397,13 +479,17 @@ function UserDetails({
         {user.oidcLinked && (
           <Fact icon={<LogInIcon />}>{oidcName ?? tr("users.oidcOff")}</Fact>
         )}
+        {tokens}
       </>
     )
   } else {
     facts = (
-      <Fact icon={<TriangleAlertIcon className="text-warning" />}>
-        {tr("users.noSignIn")}
-      </Fact>
+      <>
+        <Fact icon={<TriangleAlertIcon className="text-warning" />}>
+          {tr("users.noSignIn")}
+        </Fact>
+        {tokens}
+      </>
     )
   }
 

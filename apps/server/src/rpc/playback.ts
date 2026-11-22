@@ -104,7 +104,7 @@ export const playback = {
           userId: context.user.id,
           item,
           client: context.user.clientName,
-          authSessionId: context.user.sessionId,
+          authSessionId: context.user.credential.id,
         },
         {
           positionSeconds: input.positionSeconds,
@@ -188,7 +188,7 @@ export const playback = {
           userId: context.user.id,
           item,
           client: context.user.clientName,
-          authSessionId: context.user.sessionId,
+          authSessionId: context.user.credential.id,
         },
         {
           startedAt: play.startedAt,

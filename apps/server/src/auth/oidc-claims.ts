@@ -2,6 +2,7 @@ import {
   RequestLimit,
   AccessOverride,
   BitrateLimit,
+  type Permission,
   StreamLimit,
   type OidcSettings,
   UserRole,
@@ -21,6 +22,11 @@ const ClaimList = t.array(t.unknown())
 const ClaimObject = t.record(t.string(), t.unknown())
 const RoleName = t.string().transform((value) => value.trim().toLowerCase())
 
+/*
+ * The policy claim keeps the two fields it had before permissions,
+ * `downloads` and `requests`, so a provider set up for them goes on
+ * working. They become what the override allows and denies.
+ */
 const PolicyClaim = t
   .object({
     libraries: t
@@ -34,6 +40,26 @@ const PolicyClaim = t
     maxStreams: StreamLimit.optional(),
   })
   .strict()
+
+/** What the claim's `downloads` and `requests` allow and deny. */
+function claimPermissions(claim: {
+  downloads?: boolean
+  requests?: "off" | "ask" | "add"
+}): Pick<AccessOverride, "allow" | "deny"> {
+  const allow: Permission[] = []
+  const deny: Permission[] = []
+  if (claim.downloads !== undefined) {
+    ;(claim.downloads ? allow : deny).push("media.download")
+  }
+  if (claim.requests !== undefined) {
+    ;(claim.requests === "off" ? deny : allow).push("request.create")
+    ;(claim.requests === "add" ? allow : deny).push("request.autoApprove")
+  }
+  return {
+    ...(allow.length > 0 && { allow }),
+    ...(deny.length > 0 && { deny }),
+  }
+}
 
 /** An exact claim name wins over a dotted path through nested claims. */
 export function claimValue(claims: Claims, key: string) {
@@ -104,7 +130,8 @@ export async function claimAccess(
     )
     return undefined
   }
-  const { libraries, ...limits } = parsed.data
+  const { libraries, downloads, requests, ...rest } = parsed.data
+  const limits = { ...rest, ...claimPermissions({ downloads, requests }) }
   if (libraries === undefined) return AccessOverride.parse(limits)
   if (libraries === "all")
     return AccessOverride.parse({

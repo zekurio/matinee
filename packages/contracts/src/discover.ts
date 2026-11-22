@@ -230,9 +230,11 @@ export const DiscoverRail = t.object({
 export const DiscoverRails = t.object({
   enabled: t.boolean(),
   /**
-   * The list to follow even while empty. Admins get the waiting list
-   * from admin.requests.live; other viewers get their in-progress
-   * requests from requests.mineLive. Null when Discover is disabled.
+   * The list to follow even while empty. A viewer with
+   * `adminRequest.read` and `adminRequest.update` gets the waiting list
+   * from admin.requests.live; one with `request.read` gets their
+   * in-progress requests from requests.mineLive. Null when Discover is
+   * disabled or the viewer holds neither.
    */
   requests: t.enum(["queue", "mine"]).nullable(),
   rails: t.array(DiscoverRail),
@@ -248,9 +250,9 @@ export const DiscoverRow = t.object({
 })
 
 export const discoverContract = {
-  rails: get("/discover/rails").output(DiscoverRails),
+  rails: get("/discover/rails", "catalog.read").output(DiscoverRails),
   /** A row's cards, by its `id` and `seed`. */
-  row: post("/discover/row")
+  row: post("/discover/row", "catalog.read")
     .input(
       t.object({
         id: DiscoverRailId,
@@ -259,11 +261,11 @@ export const discoverContract = {
     )
     .output(DiscoverRow),
   /** What browsing a kind offers. */
-  browseOptions: get("/discover/browse/options")
+  browseOptions: get("/discover/browse/options", "catalog.read")
     .input(t.object({ kind: TitleKind }))
     .output(CatalogBrowseOptions),
   /** A page of the catalog of one kind, filtered and sorted. */
-  browse: post("/discover/browse")
+  browse: post("/discover/browse", "catalog.read")
     .input(CatalogBrowseInput)
     .output(CatalogBrowsePage),
 }

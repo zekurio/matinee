@@ -11,6 +11,7 @@ import { List, ListItem } from "@matinee/ui/components/list"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { toast } from "@matinee/ui/components/sonner"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useRouteContext } from "@tanstack/react-router"
 import {
   EllipsisIcon,
   GlobeIcon,
@@ -25,6 +26,7 @@ import { useState } from "react"
 import { useStore } from "zustand"
 
 import { tr } from "@/i18n"
+import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createSettingsAccessStore } from "@/stores/settings-access"
 
@@ -44,6 +46,7 @@ import { ConfirmDialog } from "./user-dialogs"
  */
 export function AccessPanel() {
   const queryClient = useQueryClient()
+  const { user } = useRouteContext({ from: "/_authed" })
   const groups = useQuery(orpc.admin.groups.list.queryOptions())
   const libraries = useQuery(orpc.libraries.list.queryOptions())
   const [store] = useState(createSettingsAccessStore)
@@ -80,10 +83,12 @@ export function AccessPanel() {
         id="groups"
         title={tr("access.groups.title")}
         action={
-          <Button variant="outline" onClick={() => edit()}>
-            <PlusIcon />
-            {tr("access.groups.create")}
-          </Button>
+          can(user, "group.create") && (
+            <Button variant="outline" onClick={() => edit()}>
+              <PlusIcon />
+              {tr("access.groups.create")}
+            </Button>
+          )
         }
       >
         <SettingNote>{tr("access.groups.intro")}</SettingNote>
@@ -108,11 +113,15 @@ export function AccessPanel() {
                 key={group.id}
                 group={group}
                 libraries={libraries.data}
-                onEdit={() => edit(group)}
-                onDelete={() => {
-                  remove.reset()
-                  askDelete(group)
-                }}
+                onEdit={can(user, "group.update") ? () => edit(group) : null}
+                onDelete={
+                  can(user, "group.delete")
+                    ? () => {
+                        remove.reset()
+                        askDelete(group)
+                      }
+                    : null
+                }
               />
             ))}
           </List>
@@ -162,10 +171,12 @@ function GroupRow({
 }: {
   group: AccessGroup
   libraries: readonly Library[] | undefined
-  onEdit: () => void
-  onDelete: () => void
+  /** Null when the account may not; so is the menu without either. */
+  onEdit: (() => void) | null
+  onDelete: (() => void) | null
 }) {
   const name = groupName(group)
+  const mayDelete = onDelete !== null && !group.everyone
   return (
     <ListItem className="gap-3 py-2.5 pr-2">
       <div className="self-start">
@@ -193,35 +204,39 @@ function GroupRow({
           className="mt-0.5"
         />
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-foreground data-popup-open:text-foreground shrink-0"
-              aria-label={tr("access.group.actions", { name })}
-            />
-          }
-        >
-          <EllipsisIcon />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
-          <DropdownMenuItem onClick={onEdit}>
-            <PencilIcon />
-            {tr("access.group.edit")}
-          </DropdownMenuItem>
-          {!group.everyone && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                <Trash2Icon />
-                {tr("access.group.delete")}
+      {(onEdit || mayDelete) && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground data-popup-open:text-foreground shrink-0"
+                aria-label={tr("access.group.actions", { name })}
+              />
+            }
+          >
+            <EllipsisIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
+            {onEdit && (
+              <DropdownMenuItem onClick={onEdit}>
+                <PencilIcon />
+                {tr("access.group.edit")}
               </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            )}
+            {mayDelete && (
+              <>
+                {onEdit && <DropdownMenuSeparator />}
+                <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                  <Trash2Icon />
+                  {tr("access.group.delete")}
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </ListItem>
   )
 }

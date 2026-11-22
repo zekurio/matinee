@@ -50,6 +50,7 @@ const resources = {
   inbox: "inbox",
   info: "info",
   keyRound: "key-round",
+  keySquare: "key-square",
   link: "link",
   list: "list",
   listChecks: "list-checks",

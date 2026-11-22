@@ -23,6 +23,12 @@ export default defineMessages("server", {
   "server.fulfilment.settingsInvalid": "Check the connection's settings.",
   "server.fulfilment.folderLost":
     "{folder} isn't in any library Matinee scans for this kind of title. Choose the library it lands in, or save it to another folder.",
+  "server.fulfilment.hiddenLibrary":
+    "This connection sends titles to a library you can't see, so you can't change it.",
+  "server.fulfilment.defaultFilmsHidden":
+    "The default for films sends titles to a library you can't see, so you can't replace it.",
+  "server.fulfilment.defaultShowsHidden":
+    "The default for shows sends titles to a library you can't see, so you can't replace it.",
   "server.fulfilment.filmFolder": "Choose the folder films are saved to.",
   "server.fulfilment.showFolder": "Choose the folder shows are saved to.",
   "server.fulfilment.noRules": "This connection doesn't take override rules.",
@@ -129,6 +135,16 @@ export default defineMessages("server", {
   // rpc/base.ts: every procedure.
   "server.rpc.signInFirst": "Sign in first.",
   "server.rpc.adminsOnly": "Only admins can do this.",
+  // {permission} like library.scan, as the API names it.
+  "server.rpc.accountPermission":
+    "Your account doesn't have the {permission} permission.",
+  "server.rpc.tokenPermission":
+    "This API token doesn't have the {permission} permission.",
+  "server.rpc.wholeAccount":
+    "Adding a way to sign in takes a session, or an API token with all permissions.",
+  // {permissions} like "group.update, invite.create".
+  "server.rpc.ownPermissions":
+    "You can only grant or take away permissions you have yourself. You don't have {permissions}.",
   "server.rpc.passkeysOff": "Passkeys are turned off on this server.",
 
   // rpc/errors.ts: input that fails its schema, when its own message is no
@@ -229,12 +245,17 @@ export default defineMessages("server", {
   "server.account.noLinkedAccount": "No account is linked.",
   "server.account.currentSession": "Sign out to end the session you're using.",
   "server.account.sessionGone": "That session already ended.",
+  "server.account.apiTokenGone": "That API token was already revoked.",
+  "server.account.apiTokenGrant":
+    "An API token can't grant permissions it doesn't have.",
+  "server.account.noApiToken": "This request didn't come with an API token.",
 
   // rpc/admin-users.ts.
   "server.adminUsers.gone": "That user no longer exists. Reload the list.",
+  "server.adminUsers.above":
+    "{name} is an admin, and only an admin changes an admin's account.",
   "server.adminInvites.gone": "That invite no longer exists. Reload the list.",
   // access/media.ts and rpc/playback-start.ts: an account's limits.
-  "server.access.downloadsOff": "Downloads are turned off for your account.",
   "server.access.downloadVideoOff":
     "The server may not convert video for your account. Download the file as it is or keep its video.",
   "server.access.overLimitSeek":

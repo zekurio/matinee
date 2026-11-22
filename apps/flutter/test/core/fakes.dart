@@ -113,6 +113,7 @@ Map<String, Object?> userJson(String name) => {
   'username': name,
   'displayName': null,
   'role': 'user',
+  'permissions': <String>[],
   'avatarId': null,
   'avatarSource': 'none',
   'playback': null,
