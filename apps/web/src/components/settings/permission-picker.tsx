@@ -112,46 +112,49 @@ export function PermissionPicker({
               {tr("access.permissions.noMatch")}
             </p>
           )}
-          <ul className="grid gap-x-8 gap-y-4 py-0.5 sm:grid-cols-2 lg:grid-cols-3">
-            {groups.map(({ resource, shown }) => (
-              <li key={resource} className="flex min-w-0 flex-col gap-1.5">
-                <label className="flex items-start gap-2.5">
-                  <Checkbox
-                    className="mt-0.5"
-                    checked={shown.every((permission) =>
-                      value.includes(permission),
-                    )}
-                    onCheckedChange={(on) =>
-                      onChange(withPermissions(value, shown, on))
-                    }
-                  />
-                  <span className="min-w-0">
-                    <code className="block text-sm leading-5 font-medium">
-                      {resource}
-                    </code>
-                    <span className="text-muted-foreground text-13px block leading-5">
-                      {tr(`access.permission.${resource}`)}
+          {/* Columns by the dialog's width rather than the screen's. */}
+          <div className="@container">
+            <ul className="grid gap-x-8 gap-y-4 py-0.5 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
+              {groups.map(({ resource, shown }) => (
+                <li key={resource} className="flex min-w-0 flex-col gap-1.5">
+                  <label className="flex items-start gap-2.5">
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={shown.every((permission) =>
+                        value.includes(permission),
+                      )}
+                      onCheckedChange={(on) =>
+                        onChange(withPermissions(value, shown, on))
+                      }
+                    />
+                    <span className="min-w-0">
+                      <code className="block text-sm leading-5 font-medium">
+                        {resource}
+                      </code>
+                      <span className="text-muted-foreground text-13px block leading-5">
+                        {tr(`access.permission.${resource}`)}
+                      </span>
                     </span>
-                  </span>
-                </label>
-                <ul className="flex flex-wrap gap-x-4 gap-y-1.5 pl-7">
-                  {shown.map((permission) => (
-                    <li key={permission}>
-                      <label className="text-13px flex items-center gap-2">
-                        <Checkbox
-                          checked={value.includes(permission)}
-                          onCheckedChange={(on) =>
-                            onChange(withPermissions(value, [permission], on))
-                          }
-                        />
-                        <code>{permission}</code>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
+                  </label>
+                  <ul className="flex flex-wrap gap-x-4 gap-y-1.5 pl-7">
+                    {shown.map((permission) => (
+                      <li key={permission}>
+                        <label className="text-13px flex items-center gap-2">
+                          <Checkbox
+                            checked={value.includes(permission)}
+                            onCheckedChange={(on) =>
+                              onChange(withPermissions(value, [permission], on))
+                            }
+                          />
+                          <code>{permission}</code>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </div>
         </>
       )}
       {error && (

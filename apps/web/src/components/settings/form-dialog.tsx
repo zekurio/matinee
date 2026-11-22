@@ -16,7 +16,9 @@ import type { FormEvent, ReactNode } from "react"
  */
 
 const WIDTHS = {
-  /** One or two columns, as a token or an invite. */
+  /** One column, for a short form. */
+  sm: "sm:max-w-md",
+  /** Two narrow columns, or a secret to copy. */
   md: "sm:max-w-3xl",
   /** Two columns. */
   lg: "sm:max-w-5xl",

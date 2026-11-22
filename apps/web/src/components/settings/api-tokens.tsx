@@ -163,7 +163,7 @@ function ApiTokens() {
         // The secret shows only here, so a stray click mustn't lose it.
         disablePointerDismissal={created !== null}
       >
-        <FormDialogContent width={created ? "md" : "lg"}>
+        <FormDialogContent width={created ? "md" : "xl"}>
           {created ? (
             <CreatedSecret
               created={created}
@@ -181,7 +181,7 @@ function ApiTokens() {
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={(open) => !open && closeEdit()}>
-        <FormDialogContent width="lg">
+        <FormDialogContent width="xl">
           {editing && (
             <EditForm
               // A form per token, so one opened after another starts from it.
