@@ -19,7 +19,7 @@ export default {
   "access.bitrate.hint":
     "Eine Datei über dem Limit wird als Transkodierung darunter gestreamt. Downloads sind nicht begrenzt.",
   "access.transcode": "Videokodierung",
-  "access.transcode.on": "Kodiert Video",
+  "access.transcode.on": "Mit Videokodierung",
   "access.transcode.off": "Keine Videokodierung",
   "access.transcode.hint":
     "Der Server darf Video kodieren, damit es ins Limit oder zu einem Gerät passt. Aus spielt eine Datei so, wie sie ist, oder mit kopiertem Video, und eine, die kodiert werden müsste, spielt nicht.",
@@ -58,7 +58,6 @@ export default {
   "access.requestLimit.daysField": "Tage",
   "access.requestLimit.titlesEvery": "Titel alle",
   "access.requestLimit.days": "Tage",
-  "access.permissions": "Berechtigungen",
   "access.permissions.search": "Berechtigungen durchsuchen",
   "access.permissions.noMatch": "Keine Berechtigung passt.",
   "access.permissions.all": "Jede Berechtigung",
@@ -155,7 +154,7 @@ export default {
   "access.groups.title": "Zugriffsgruppen",
   "access.groups.create": "Neue Gruppe",
   "access.groups.intro":
-    "Ein Konto bekommt das Meiste, was seine Gruppen erlauben. Einstellungen unter Benutzer gehen vor. Admins haben keine Grenzen und dürfen alles.",
+    "Für ein Konto gilt jeweils das Großzügigste, was eine seiner Gruppen erlaubt. Einstellungen unter Benutzer gehen vor. Admins haben keine Grenzen und dürfen alles.",
   "access.groups.loadFailed":
     "Die Gruppen konnten nicht geladen werden. {error}",
   "access.groups.onlyEveryone":
@@ -181,7 +180,7 @@ export default {
   "access.group.newTitle": "Neue Gruppe",
   "access.group.editTitle": "{name} bearbeiten",
   "access.group.description":
-    "Mitglieder bekommen das Meiste, was ihre Gruppen erlauben.",
+    "Für Mitglieder gilt jeweils das Großzügigste, was eine ihrer Gruppen erlaubt.",
   "access.group.everyoneDescription":
     "Jedes Konto ist in dieser Gruppe. Nimm ihr die Mediatheken weg, damit Zugriff nur noch über andere Gruppen geht. Ihre Grenzen gelten dann nur für Konten, denen keine Gruppe etwas öffnet.",
   "access.group.name": "Name",
@@ -196,7 +195,6 @@ export default {
     one: "{count} Konto",
     other: "{count} Konten",
   }),
-  "access.group.allows": "Mitglieder bekommen",
   "access.group.checkFields": "Prüfe die Felder.",
   "access.group.save": "Speichern",
   "access.group.create": "Gruppe anlegen",

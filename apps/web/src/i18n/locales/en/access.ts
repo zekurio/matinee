@@ -109,7 +109,6 @@ export default defineMessages("access", {
 
   // Permissions: what an API token may do. They show as the API names
   // them, like library.scan, under each resource's line.
-  "access.permissions": "Permissions",
   "access.permissions.search": "Search permissions",
   "access.permissions.noMatch": "No permission matches.",
   "access.permissions.all": "Every permission",
@@ -210,7 +209,6 @@ export default defineMessages("access", {
     one: "{count} account",
     other: "{count} accounts",
   }),
-  "access.group.allows": "Members get",
   "access.group.checkFields": "Check the fields.",
   "access.group.save": "Save",
   "access.group.create": "Create group",
