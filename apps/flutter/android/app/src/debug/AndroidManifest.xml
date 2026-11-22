@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The INTERNET permission is required for development. Specifically,
+         the Flutter tool needs it to communicate with the running application
+         to allow setting breakpoints, to provide hot reload, etc.
+    -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <application>
+        <!-- On an emulator Impeller picks OpenGL ES, and the emulator's
+             software GPU (lavapipe, what -gpu auto picks without a display)
+             crashes on it, so debug builds render with Vulkan. An emulator
+             on the host's GPU crashes on Vulkan instead, decoding images
+             into memory gfxstream maps; build for it with
+             MATINEE_IMPELLER_BACKEND=opengles (build.gradle.kts). Only
+             debug builds read this, and phones pick Vulkan on their own. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.ImpellerBackend"
+            android:value="${impellerBackend}" />
+    </application>
+</manifest>

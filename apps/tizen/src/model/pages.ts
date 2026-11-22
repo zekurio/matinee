@@ -11,8 +11,8 @@ const PAGE = 60
 const LARGEST_PAGE = 200
 
 /**
- * A list of titles that loads a page at a time, as the Android app's
- * TitlePages: the next one comes as focus nears the end.
+ * A list of titles that loads a page at a time: the next one comes as
+ * focus nears the end.
  */
 export class TitlePages extends Observable {
   items: TitleSummary[] = []

@@ -18,6 +18,6 @@ dev:
 package:
     {{ pnpm }} package
 
-# Take the strings shared with the Android app from its resources again
+# Take the strings shared with the Flutter app from its ARB files again
 strings:
     {{ pnpm }} strings

@@ -45,7 +45,7 @@ import {
 import { GRID, PosterGrid } from "./grid"
 import { Message } from "./parts"
 
-/* The signed-in person's pages on a TV, as the Android TV app's `ui/tv/profile`. */
+/* The signed-in person's pages on a TV. */
 
 /** "November 2026", the month the person joined. */
 function joinedMonth(joined: Date): string | null {
@@ -66,7 +66,7 @@ function WatchedCard(props: { item: MediaItem; onFocus?: () => void }) {
       toneKey={label.showName}
       art={landscape(item)}
       caption={label.showName}
-      detail={code ? tr("media_code_title", code, label.title) : label.year}
+      detail={code ? tr("mediaCodeTitle", code, label.title) : label.year}
       progress={progressRatio(item)}
       watched={viewer.isItemWatched(item)}
       onPress={() => nav.item(item)}
@@ -137,7 +137,7 @@ function WatchTimeChart(props: { stats: WatchStats }) {
       fid="watchTime"
       class="chart profile-inset"
       role="group"
-      label={tr("stats_watch_time")}
+      label={tr("statsWatchTime")}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onKeyDown={(event) => {
@@ -151,8 +151,8 @@ function WatchTimeChart(props: { stats: WatchStats }) {
     >
       <div class="t-facts muted one-line">
         {shown
-          ? `${bucketName(shown.start, stats.unit)}  ·  ${plural("stats_play_count", shown.plays)}`
-          : `${tr("stats_watch_time")}  ·  ${rangeName(stats.range)}`}
+          ? `${bucketName(shown.start, stats.unit)}  ·  ${plural("statsPlayCount", shown.plays)}`
+          : `${tr("statsWatchTime")}  ·  ${rangeName(stats.range)}`}
       </div>
       <div class="t-display one-line">
         {formatWatchTime(shown?.watchSeconds ?? stats.totals.watchSeconds)}
@@ -238,7 +238,7 @@ function ViewingTimes(props: { stats: WatchStats }) {
       fid="viewingTimes"
       class="chart profile-inset"
       role="group"
-      label={tr("stats_heatmap_title")}
+      label={tr("statsHeatmapTitle")}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onKeyDown={(event) => {
@@ -253,20 +253,20 @@ function ViewingTimes(props: { stats: WatchStats }) {
         setDay(toDay)
       }}
     >
-      <div class="t-title one-line">{tr("stats_heatmap_title")}</div>
+      <div class="t-title one-line">{tr("statsHeatmapTitle")}</div>
       <div
         class={cx("t-facts one-line", !focused && "muted")}
         style={{ margin: "4rem 0 16rem" }}
       >
         {focused
           ? `${tr(
-              "tv_stats_heatmap_cell",
+              "tvStatsHeatmapCell",
               weekdayName(day),
               hourName(hour),
               hourName((hour + 1) % 24),
             )}  ·  ${formatWatchTime(seconds.get(day * 24 + hour) ?? 0)}`
           : tr(
-              "stats_heatmap_peak",
+              "statsHeatmapPeak",
               weekdayName(peak.weekday),
               hourName(peak.hour),
             )}
@@ -344,7 +344,7 @@ function Place(props: {
         size={props.small ? 28 : 36}
       />
       <span class="place-name one-line">
-        {place.self ? tr("stats_name_you", name) : name}
+        {place.self ? tr("statsNameYou", name) : name}
       </span>
       <span>{props.value}</span>
     </div>
@@ -373,7 +373,7 @@ function Standing(props: {
     ...standings.map((standing) => standing.places.length),
   )
   return (
-    <Row title={tr("stats_standing_title")} name="standing">
+    <Row title={tr("statsStandingTitle")} name="standing">
       {standings.map((standing) => (
         <Tap
           key={standing.board.metric}
@@ -446,10 +446,10 @@ function BoardPanel(props: {
 function Totals(props: { stats: WatchStats }) {
   const { totals } = props.stats
   const figures: [number, string][] = [
-    [totals.plays, tr("stats_plays")],
-    [totals.movies, tr("stats_movies_finished")],
-    [totals.episodes, tr("stats_episodes_finished")],
-    [totals.shows, tr("stats_shows_watched")],
+    [totals.plays, tr("statsPlays")],
+    [totals.movies, tr("statsMoviesFinished")],
+    [totals.episodes, tr("statsEpisodesFinished")],
+    [totals.shows, tr("statsShowsWatched")],
   ]
   return (
     <div class="profile-inset totals">
@@ -505,8 +505,8 @@ export function ProfilePage() {
   const joined = loaded ? joinedMonth(loaded.user.createdAt) : null
   const facts = [
     user.displayName ? `@${user.username}` : null,
-    joined ? tr("profile_joined", joined) : null,
-    user.role === "admin" ? tr("profile_admin") : null,
+    joined ? tr("profileJoined", joined) : null,
+    user.role === "admin" ? tr("profileAdmin") : null,
   ].filter(Boolean)
   const recent = loaded?.recent ?? []
   // The first card they watched, rather than Sign out, once the profile shows whether there is one.
@@ -544,7 +544,7 @@ export function ProfilePage() {
             <div class="profile-actions" data-fg="actions" data-fk="row">
               <Button
                 fid="signOut"
-                label={tr("shell_sign_out")}
+                label={tr("shellSignOut")}
                 icon={LogOut}
                 onPress={() => session.signOut()}
               />
@@ -553,12 +553,12 @@ export function ProfilePage() {
           {profile.state.kind === "loading" && <LoadingRow />}
           {profile.state.kind === "failed" && (
             <Notice
-              title={tr("profile_load_failed")}
+              title={tr("profileLoadFailed")}
               detail={profile.state.message}
             />
           )}
           {recent.length > 0 && (
-            <Row title={tr("profile_recent")} name="recent">
+            <Row title={tr("profileRecent")} name="recent">
               {recent.map((entry) => (
                 <WatchedCard key={entry.item.id} item={entry.item} />
               ))}
@@ -567,12 +567,12 @@ export function ProfilePage() {
                   fid="seeAll"
                   toneKey="seeAll"
                   aspect="landscape"
-                  label={tr("tv_profile_see_all")}
+                  label={tr("tvProfileSeeAll")}
                   onPress={() => nav.push({ page: "recent" })}
                 >
                   <div class="see-all t-label">
                     <Icon icon={Clock} size={28} />
-                    {tr("tv_profile_see_all")}
+                    {tr("tvProfileSeeAll")}
                   </div>
                 </ArtCard>
               </div>
@@ -580,7 +580,7 @@ export function ProfilePage() {
           )}
           <div>
             <div class="t-headline profile-inset">
-              {tr("profile_statistics")}
+              {tr("profileStatistics")}
             </div>
             {/* The ranges as pills, the one picked marked; Select picks another. */}
             {!neverWatched && (
@@ -603,17 +603,17 @@ export function ProfilePage() {
             <LoadingRow />
           ) : neverWatched ? (
             <Notice
-              title={tr("profile_self_empty")}
-              detail={tr("profile_self_empty_hint")}
+              title={tr("profileSelfEmpty")}
+              detail={tr("profileSelfEmptyHint")}
             />
           ) : shown.totals.plays === 0 ? (
-            <Notice title={tr("profile_nothing_watched", rangePhrase(range))} />
+            <Notice title={tr("profileNothingWatched", rangePhrase(range))} />
           ) : (
             <>
               <WatchTimeChart stats={shown} />
               <Totals stats={shown} />
               {shown.titles.length > 0 && (
-                <Row title={tr("stats_top")} name="top">
+                <Row title={tr("statsTop")} name="top">
                   {shown.titles.map((entry) => (
                     <div key={entry.title.id} class="card-poster">
                       <PosterCard
@@ -633,7 +633,7 @@ export function ProfilePage() {
                 </Row>
               )}
               {shown.genres.length > 0 && (
-                <Row title={tr("stats_genres")} name="genres" buttons>
+                <Row title={tr("statsGenres")} name="genres" buttons>
                   {shown.genres.map((genre) => (
                     <Button
                       key={genre.name}
@@ -687,11 +687,11 @@ export function RecentPage() {
   )
   useRefreshOnResume([recent])
   const { state } = recent
-  const heading = <div class="t-headline grid-head">{tr("profile_recent")}</div>
+  const heading = <div class="t-headline grid-head">{tr("profileRecent")}</div>
   if (state.kind === "failed") {
     return (
       <Message
-        title={tr("profile_recent_load_failed")}
+        title={tr("profileRecentLoadFailed")}
         message={state.message}
         retry={() => recent.reload()}
       />
@@ -715,7 +715,7 @@ export function RecentPage() {
         <div style={{ paddingTop: "33rem" }}>
           {heading}
           <div class="t-title muted grid-head" style={{ marginTop: "24rem" }}>
-            {tr("profile_recent_empty")}
+            {tr("profileRecentEmpty")}
           </div>
         </div>
       ) : (

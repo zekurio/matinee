@@ -1,0 +1,70 @@
+# Tasks for the Flutter app. Run `just` in this folder for the list, or
+# `just flutter <recipe>` from the repository root. Flutter runs in the
+# flake's Flutter shell, entered for each command unless you're in it, and
+# adb is whichever is on the PATH, or the shell's.
+
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+in_shell := env("MATINEE_FLUTTER_SHELL", "")
+flutter := if in_shell != "" { "flutter" } else { "nix develop ../..#flutter -c flutter" }
+adb := `command -v adb >/dev/null && echo adb || echo nix develop ../..#flutter -c adb`
+
+app := "io.github.zekurio.matinee"
+debug_apk := "build/app/outputs/flutter-apk/app-debug.apk"
+
+[private]
+default:
+    @just --list --unsorted
+
+# Build a debug APK
+build *args:
+    {{ flutter }} build apk --debug {{ args }}
+
+# Build the debug app and install it on the device adb sees, or ANDROID_SERIAL
+install *args: (build args)
+    {{ adb }} install -r {{ debug_apk }}
+
+# Install the debug app and open it
+run: install
+    {{ adb }} shell am start -n {{ app }}.debug/{{ app }}.MainActivity
+
+# Analyze the Dart code
+analyze:
+    {{ flutter }} analyze
+
+# Run the Dart tests
+test *args:
+    {{ flutter }} test {{ args }}
+
+# Let the device or emulator reach the dev server on its localhost
+reverse port="5173":
+    {{ adb }} reverse tcp:{{ port }} tcp:{{ port }}
+
+# Follow the log of the running debug app
+logcat:
+    {{ adb }} logcat --pid="$({{ adb }} shell pidof -s {{ app }}.debug)"
+
+# Generate the API client again after a contract change
+api:
+    cd ../.. && pnpm api:dart
+
+# Format the Dart code, except what generators write
+format:
+    {{ flutter }} pub get >/dev/null
+    git ls-files --cached --others --exclude-standard 'lib/*.dart' 'test/*.dart' | grep -Ev '(\.g\.dart|/contract_[a-z]+\.dart)$' | xargs -r {{ if in_shell != "" { "dart" } else { "nix develop ../..#flutter -c dart" } }} format
+
+# What CI runs: the analyzer, the format check, and the tests
+check:
+    {{ flutter }} pub get >/dev/null
+    {{ flutter }} analyze
+    git ls-files --cached --others --exclude-standard 'lib/*.dart' 'test/*.dart' | grep -Ev '(\.g\.dart|/contract_[a-z]+\.dart)$' | xargs -r {{ if in_shell != "" { "dart" } else { "nix develop ../..#flutter -c dart" } }} format --output=none --set-exit-if-changed
+    {{ flutter }} test
+
+# Generate the platform channels again after a change in pigeons/
+pigeon:
+    for input in pigeons/*.dart; do {{ if in_shell != "" { "dart" } else { "nix develop ../..#flutter -c dart" } }} run pigeon --input "$input"; done
+
+# Run the JVM unit tests of the Android side, like the downloads worker
+android-test:
+    {{ flutter }} build apk --debug --config-only >/dev/null
+    cd android && {{ if in_shell != "" { "" } else { "nix develop ../../..#flutter -c" } }} ./gradlew --project-cache-dir="${XDG_CACHE_HOME:-$HOME/.cache}/matinee/gradle-project" :app:testDebugUnitTest --console=plain

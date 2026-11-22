@@ -1,8 +1,8 @@
 # Matinee for Samsung TVs
 
-A web app for Samsung TVs on Tizen, with the Android TV app's screens
-ported to Preact. It's in English and German, the same words as the
-Android app.
+A web app for Samsung TVs on Tizen, with the Flutter app's TV screens
+in Preact. It's in English and German, with the same words as the
+Flutter app.
 
 **Nobody has run it on a TV yet.** It was built and checked without one,
 in Chromium 63 (the engine of Tizen 5.0) and in current Chromium with a
@@ -99,7 +99,7 @@ tizen install -n Matinee.wgt -s <tv-address>:26101 -- apps/tizen/dist/signed
 | -------------------- | --------------------------------------------------------- |
 | `just tizen package` | Builds `dist/app/` and packs it into `dist/Matinee.wgt`   |
 | `just tizen dev`     | Runs the app in a browser on `:5174`                      |
-| `just tizen strings` | Takes the shared strings from the Android app's resources |
+| `just tizen strings` | Takes the shared strings from the Flutter app's ARB files |
 
 Inside `apps/tizen`, drop the `tizen`. By hand, `pnpm --filter
 @matinee/tizen package`.
@@ -131,9 +131,6 @@ but every screen up to it works.
 
 ## How it works
 
-`src/` is laid out like the Android TV app, whose files the comments
-name.
-
 - `platform/tizen.ts` types the parts of `tizen` and `webapis` the app
   uses, and asks for the remote's media keys. In a browser they're
   missing, and everything that uses them checks.
@@ -142,9 +139,9 @@ name.
   with `data-f*` attributes, and remembers the last focus per row and
   page. `scroll.ts` scrolls whatever holds the focus so it shows, and
   nothing scrolls otherwise.
-- `kit/` ports `ui/tv`'s buttons, cards, list rows, fields, and the
-  right-edge panel. Sizes are the Compose dp values in `rem`, where 1 rem
-  is a 960th of the screen's width.
+- `kit/` has the buttons, cards, list rows, fields, and the right-edge
+  panel. Sizes are in `rem`, where 1 rem is a 960th of the screen's
+  width.
 - `screens/` has the pages: connecting and signing in, the drawer, Home,
   title, season, and episode pages, Movies and Shows, genres and
   studios, people, search, favorites, the profile with its statistics,
@@ -153,8 +150,8 @@ name.
   Without a scheme an address tries https, then http. Sign-in is the
   device grant, with the code and a QR code, as on Android TV. See
   [Signing in apps](../server/README.md#signing-in-apps).
-- `i18n/android.gen.ts` holds the Android strings the app names, made by
-  `scripts/strings.mjs`. Strings of its own start with `tizen_` and live
+- `i18n/shared.gen.ts` holds the Flutter app's messages the app names,
+  made by `scripts/strings.mjs` from `apps/flutter/lib/l10n`. Strings of its own start with `tizen_` and live
   in `i18n/own.ts`. `pnpm verify` fails while the generated file is
   stale.
 
@@ -187,8 +184,7 @@ follows Samsung's reference and what Litefin learned across model years:
   Until a source has played on the TV, a retry also sends it as a header
   through `CUSTOM_MESSAGE`.
 
-`player/controller.ts` is the Android `PlayerController`. It asks the
-server again when a source fails, seeks copied streams with
+`player/controller.ts` asks the server again when a source fails, seeks copied streams with
 `playback.seek`, reports progress, and loads trickplay. The app draws
 WebVTT itself. The server burns picture subtitles in, since AVPlay draws
 none the app can style.
@@ -199,7 +195,8 @@ none the app can style.
   address.
 - Speeds other than 1×. AVPlay's others are silent trick modes.
 - Requests, downloads, watch parties, and the admin pages.
-- Matching the TV's refresh rate to the video, which Android TV does.
+- Matching the TV's refresh rate to the video, which the Flutter app
+  does on Android TV.
 
 ## What to check on a TV
 

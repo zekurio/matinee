@@ -16,8 +16,8 @@ import { language, locale, plural, tr } from "@/i18n"
 
 /*
  * How the app words what the server sends: episode numbers, seasons,
- * lengths, and dates, in the TV's language. As the Android app's Format.kt
- * and TitleData.kt, so every TV reads the same.
+ * lengths, and dates, in the TV's language, as the Flutter app's
+ * lib/media/format.dart words them, so every TV reads the same.
  */
 
 /** Names from the server, with episode numbers worded in the app's language. */
@@ -39,7 +39,7 @@ export function itemLabel(item: MediaItem): ItemLabel {
     label.title ??
     (label.episodeNumber === null
       ? null
-      : tr("media_episode", label.episodeNumber))
+      : tr("mediaEpisode", label.episodeNumber))
   return {
     showName: label.showName || item.fileTitle,
     year: label.year,
@@ -53,21 +53,21 @@ export function itemLabel(item: MediaItem): ItemLabel {
 export function episodeCode(item: MediaItem): string | null {
   if (item.seasonNumber === null || item.episodeNumber === null) return null
   return item.seasonNumber === 0
-    ? tr("media_special", item.episodeNumber)
-    : tr("media_episode_code", item.seasonNumber, item.episodeNumber)
+    ? tr("mediaSpecial", item.episodeNumber)
+    : tr("mediaEpisodeCode", item.seasonNumber, item.episodeNumber)
 }
 
 /** "Episode 4", or "Special 4" in season 0. */
 export function episodeNumber(item: MediaItem): string | null {
   if (item.episodeNumber === null) return null
   return item.seasonNumber === 0
-    ? tr("media_special", item.episodeNumber)
-    : tr("media_episode", item.episodeNumber)
+    ? tr("mediaSpecial", item.episodeNumber)
+    : tr("mediaEpisode", item.episodeNumber)
 }
 
 export function seasonName(number: number | null): string {
-  if (number === null) return tr("media_other_files")
-  return number === 0 ? tr("media_specials") : tr("media_season", number)
+  if (number === null) return tr("mediaOtherFiles")
+  return number === 0 ? tr("mediaSpecials") : tr("mediaSeason", number)
 }
 
 /** Share of the file watched, 0 to 1, or null when unknown. */
@@ -92,7 +92,7 @@ export function timeLeft(item: MediaItem): string | null {
     1,
     Math.round((item.durationSeconds - progress.positionSeconds) / 60),
   )
-  return tr("media_time_left", minutes)
+  return tr("mediaTimeLeft", minutes)
 }
 
 export function formatRuntime(
@@ -101,10 +101,10 @@ export function formatRuntime(
   if (!minutes || minutes <= 0) return null
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
-  if (hours === 0) return tr("format_minutes", rest)
+  if (hours === 0) return tr("formatMinutes", rest)
   return rest === 0
-    ? tr("format_hours", hours)
-    : tr("format_hours_minutes", hours, rest)
+    ? tr("formatHours", hours)
+    : tr("formatHoursMinutes", hours, rest)
 }
 
 /** A file's length in minutes: the provider's for an episode, else the file's. */
@@ -161,22 +161,21 @@ export function formatRating(rating: number): string {
 
 /** A bit rate as the web writes it: 8 Mbps, 2.5 Mbps, or 800 kbps. */
 export function formatBitrate(bits: number): string {
-  if (bits < 1_000_000)
-    return tr("player_bitrate_kbps", Math.round(bits / 1000))
+  if (bits < 1_000_000) return tr("playerBitrateKbps", Math.round(bits / 1000))
   const tenths = Math.round(bits / 100_000)
   const number =
     tenths % 10 === 0
       ? String(tenths / 10)
       : (tenths / 10).toLocaleString(locale, { maximumFractionDigits: 1 })
-  return tr("player_bitrate_mbps_exact", number)
+  return tr("playerBitrateMbpsExact", number)
 }
 
 /** "1080p, 20 Mbps" for an encode. */
 export function qualityLabel(quality: PlaybackQualityPreset): string {
   return tr(
-    "playback_quality_preset",
+    "playbackQualityPreset",
     quality.height,
-    tr("player_bitrate_mbps", Math.round(quality.bitrate / 1_000_000)),
+    tr("playerBitrateMbps", Math.round(quality.bitrate / 1_000_000)),
   )
 }
 
@@ -328,7 +327,7 @@ export function titleFacts(title: Title): string[] {
   return [
     title.year === null ? null : String(title.year),
     show
-      ? plural("media_episode_count", title.itemCount)
+      ? plural("mediaEpisodeCount", title.itemCount)
       : formatRuntime(title.runtimeMinutes),
     show ? titleStatusName(title.status) : null,
   ].filter((fact): fact is string => Boolean(fact))
@@ -338,11 +337,11 @@ export function titleFacts(title: Title): string[] {
 export function titleStatusName(status: TitleStatus | null): string | null {
   switch (status) {
     case "continuing":
-      return tr("web_metadata_status_continuing")
+      return tr("webMetadataStatusContinuing")
     case "ended":
-      return tr("web_metadata_status_ended")
+      return tr("webMetadataStatusEnded")
     case "unreleased":
-      return tr("web_metadata_status_unreleased")
+      return tr("webMetadataStatusUnreleased")
     default:
       return null
   }
@@ -352,13 +351,13 @@ export function titleStatusName(status: TitleStatus | null): string | null {
 export function creditKind(kind: CreditKind, count: number): string {
   switch (kind) {
     case "creator":
-      return plural("people_credit_creator", count)
+      return plural("peopleCreditCreator", count)
     case "director":
-      return plural("people_credit_director", count)
+      return plural("peopleCreditDirector", count)
     case "writer":
-      return plural("people_credit_writer", count)
+      return plural("peopleCreditWriter", count)
     case "actor":
-      return plural("people_credit_actor", count)
+      return plural("peopleCreditActor", count)
   }
 }
 

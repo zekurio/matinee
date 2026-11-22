@@ -136,6 +136,10 @@ export const requestsContract = {
   cancel: post("/requests/cancel", "request.delete")
     .input(RequestId)
     .output(t.void()),
+  /** In-progress requests the viewer asked for or follows, as `mine` lists them. */
+  mineLive: get("/requests/mine/live", "request.read")
+    .input(RequestPageInput)
+    .output(eventIterator(RequestPage)),
   mine: get("/requests/mine", "request.read")
     .input(
       RequestPageInput.extend({

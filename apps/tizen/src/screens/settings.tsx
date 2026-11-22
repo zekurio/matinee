@@ -63,12 +63,12 @@ import { ServerPanel } from "./auth"
 type Category = { key: string; icon: IconNode; title: StringKey }
 
 const CATEGORIES: readonly Category[] = [
-  { key: "playback", icon: TvMinimalPlay, title: "settings_page_playback" },
-  { key: "subtitles", icon: Captions, title: "settings_subtitles_title" },
-  { key: "languages", icon: AudioLines, title: "playback_languages_title" },
-  { key: "devices", icon: Monitor, title: "tv_settings_devices" },
-  { key: "account", icon: UserRound, title: "tv_settings_account" },
-  { key: "about", icon: Info, title: "about_title" },
+  { key: "playback", icon: TvMinimalPlay, title: "settingsPagePlayback" },
+  { key: "subtitles", icon: Captions, title: "settingsSubtitlesTitle" },
+  { key: "languages", icon: AudioLines, title: "playbackLanguagesTitle" },
+  { key: "devices", icon: Monitor, title: "tvSettingsDevices" },
+  { key: "account", icon: UserRound, title: "tvSettingsAccount" },
+  { key: "about", icon: Info, title: "aboutTitle" },
 ]
 
 /** A row's panel: a choice among options, opened from the row named `from`. */
@@ -95,7 +95,7 @@ function PickRow(props: {
 }) {
   const value =
     props.options.find((option) => option.key === props.current)?.label ??
-    tr("settings_unknown_value")
+    tr("settingsUnknownValue")
   return (
     <ListItem
       fid={props.fid}
@@ -167,7 +167,7 @@ function usePlaybackPreferences(): [
     skipForwardSeconds: 10,
   }
   const save = (next: PlaybackPreferences) =>
-    void toasts.showing(tr("player_error_save_preferences"), async () => {
+    void toasts.showing(tr("playerErrorSavePreferences"), async () => {
       session.updateUser(
         await session.api.account.playback.setPreferences(next),
       )
@@ -182,7 +182,7 @@ function PlaybackRows(props: { open: Open }) {
   const [playback, save] = usePlaybackPreferences()
   // The qualities this account may stream, once `playback.options` answers.
   const qualities: PanelOption[] = [
-    { key: ORIGINAL_QUALITY, label: tr("player_quality_original") },
+    { key: ORIGINAL_QUALITY, label: tr("playerQualityOriginal") },
     ...(options?.qualities ?? []).map((quality) => ({
       key: quality.id,
       label: qualityLabel(quality),
@@ -193,16 +193,16 @@ function PlaybackRows(props: { open: Open }) {
       .toSorted((a, b) => a - b)
       .map((seconds) => ({
         key: String(seconds),
-        label: plural("playback_skip_seconds", seconds),
+        label: plural("playbackSkipSeconds", seconds),
       }))
   // A codec shows only when there's a choice: what the server encodes and this TV decodes.
   const codecs = encodeVideoChoices(options?.videoCodecs ?? ["h264"])
   return (
     <>
-      <ListHeading text={tr("tv_settings_this_tv")} />
+      <ListHeading text={tr("tvSettingsThisTv")} />
       <PickRow
         fid="quality"
-        title={tr("playback_quality_title")}
+        title={tr("playbackQualityTitle")}
         options={qualities}
         // One the account may no longer use shows as the original; it stays
         // saved, so a lifted limit brings it back.
@@ -213,7 +213,7 @@ function PlaybackRows(props: { open: Open }) {
         }
         description={
           options?.maxBitrate
-            ? tr("playback_quality_limit", formatBitrate(options.maxBitrate))
+            ? tr("playbackQualityLimit", formatBitrate(options.maxBitrate))
             : null
         }
         open={props.open}
@@ -221,7 +221,7 @@ function PlaybackRows(props: { open: Open }) {
       />
       <SwitchRow
         fid="autoplay"
-        title={tr("playback_autoplay_title")}
+        title={tr("playbackAutoplayTitle")}
         checked={prefs.autoplayNext}
         onChange={(autoplayNext) => playerPrefs.set({ autoplayNext })}
       />
@@ -232,10 +232,10 @@ function PlaybackRows(props: { open: Open }) {
         checked={prefs.fillScreen}
         onChange={(fillScreen) => playerPrefs.set({ fillScreen })}
       />
-      <ListHeading text={tr("playback_skip_title")} top={28} />
+      <ListHeading text={tr("playbackSkipTitle")} top={28} />
       <PickRow
         fid="skipBack"
-        title={tr("playback_skip_back")}
+        title={tr("playbackSkipBack")}
         options={skips(playback.skipBackSeconds)}
         current={String(playback.skipBackSeconds)}
         open={props.open}
@@ -245,7 +245,7 @@ function PlaybackRows(props: { open: Open }) {
       />
       <PickRow
         fid="skipForward"
-        title={tr("playback_skip_forward")}
+        title={tr("playbackSkipForward")}
         options={skips(playback.skipForwardSeconds)}
         current={String(playback.skipForwardSeconds)}
         open={props.open}
@@ -255,14 +255,14 @@ function PlaybackRows(props: { open: Open }) {
       />
       {codecs.length > 1 && (
         <>
-          <ListHeading text={tr("playback_transcoding_title")} top={28} />
+          <ListHeading text={tr("playbackTranscodingTitle")} top={28} />
           <PickRow
             fid="videoCodec"
-            title={tr("playback_video_codec_title")}
+            title={tr("playbackVideoCodecTitle")}
             options={[
               {
                 key: AUTOMATIC,
-                label: tr("playback_codec_automatic", encodeCodecName("h264")),
+                label: tr("playbackCodecAutomatic", encodeCodecName("h264")),
               },
               ...codecs.map((codec) => ({
                 key: codec,
@@ -275,7 +275,7 @@ function PlaybackRows(props: { open: Open }) {
             open={props.open}
             onPick={(videoCodec) => playerPrefs.set({ videoCodec })}
           />
-          <RowNote text={tr("tv_settings_transcoding_note")} />
+          <RowNote text={tr("tvSettingsTranscodingNote")} />
         </>
       )}
     </>
@@ -283,22 +283,22 @@ function PlaybackRows(props: { open: Open }) {
 }
 
 const COLOR_NAMES = {
-  white: "settings_subtitles_color_white",
-  yellow: "settings_subtitles_color_yellow",
-  cyan: "settings_subtitles_color_cyan",
-  green: "settings_subtitles_color_green",
+  white: "settingsSubtitlesColorWhite",
+  yellow: "settingsSubtitlesColorYellow",
+  cyan: "settingsSubtitlesColorCyan",
+  green: "settingsSubtitlesColorGreen",
 } satisfies Record<(typeof SUBTITLE_COLORS)[number], StringKey>
 
 const BACKGROUND_NAMES = {
-  none: "settings_subtitles_background_none",
-  shaded: "settings_subtitles_background_shaded",
-  black: "settings_subtitles_background_black",
+  none: "settingsSubtitlesBackgroundNone",
+  shaded: "settingsSubtitlesBackgroundShaded",
+  black: "settingsSubtitlesBackgroundBlack",
 } satisfies Record<(typeof SUBTITLE_BACKGROUNDS)[number], StringKey>
 
 const EDGE_NAMES = {
-  shadow: "settings_subtitles_edge_shadow",
-  outline: "settings_subtitles_edge_outline",
-  none: "settings_subtitles_edge_none",
+  shadow: "settingsSubtitlesEdgeShadow",
+  outline: "settingsSubtitlesEdgeOutline",
+  none: "settingsSubtitlesEdgeNone",
 } satisfies Record<(typeof SUBTITLE_EDGES)[number], StringKey>
 
 /** How subtitles look on this TV, over a sample drawn as the player draws them. */
@@ -314,13 +314,13 @@ function SubtitleRows(props: { open: Open }) {
           style={{ fontSize: `${18 * prefs.subtitleScale}rem` }}
         >
           <div class="subtitle-line">
-            <span>{tr("settings_subtitles_preview")}</span>
+            <span>{tr("settingsSubtitlesPreview")}</span>
           </div>
         </div>
       </div>
       <PickRow
         fid="size"
-        title={tr("settings_subtitles_size")}
+        title={tr("settingsSubtitlesSize")}
         options={SUBTITLE_SCALES.map((scale) => ({
           key: String(scale),
           label: percent(scale),
@@ -331,7 +331,7 @@ function SubtitleRows(props: { open: Open }) {
       />
       <PickRow
         fid="color"
-        title={tr("settings_subtitles_color")}
+        title={tr("settingsSubtitlesColor")}
         options={SUBTITLE_COLORS.map((color) => ({
           key: color,
           label: tr(COLOR_NAMES[color]),
@@ -347,7 +347,7 @@ function SubtitleRows(props: { open: Open }) {
       />
       <PickRow
         fid="background"
-        title={tr("settings_subtitles_background")}
+        title={tr("settingsSubtitlesBackground")}
         options={SUBTITLE_BACKGROUNDS.map((background) => ({
           key: background,
           label: tr(BACKGROUND_NAMES[background]),
@@ -365,7 +365,7 @@ function SubtitleRows(props: { open: Open }) {
       />
       <PickRow
         fid="edge"
-        title={tr("settings_subtitles_edge")}
+        title={tr("settingsSubtitlesEdge")}
         options={SUBTITLE_EDGES.map((edge) => ({
           key: edge,
           label: tr(EDGE_NAMES[edge]),
@@ -384,11 +384,11 @@ function SubtitleRows(props: { open: Open }) {
 }
 
 const MODE_NAMES = {
-  default: "playback_subtitles_mode_default",
-  always: "playback_subtitles_mode_always",
-  foreign: "playback_subtitles_mode_foreign",
-  forced: "playback_subtitles_mode_forced",
-  off: "playback_subtitles_mode_off",
+  default: "playbackSubtitlesModeDefault",
+  always: "playbackSubtitlesModeAlways",
+  foreign: "playbackSubtitlesModeForeign",
+  forced: "playbackSubtitlesModeForced",
+  off: "playbackSubtitlesModeOff",
 } satisfies Record<PlaybackPreferences["subtitleMode"], StringKey>
 
 const MODES = ["default", "always", "foreign", "forced", "off"] as const
@@ -407,10 +407,10 @@ function LanguageRows(props: { open: Open }) {
     <>
       <PickRow
         fid="audio"
-        title={tr("playback_audio_title")}
+        title={tr("playbackAudioTitle")}
         options={[
-          { key: NONE, label: tr("playback_audio_file_default") },
-          { key: "original", label: tr("playback_audio_original") },
+          { key: NONE, label: tr("playbackAudioFileDefault") },
+          { key: "original", label: tr("playbackAudioOriginal") },
           ...named(options?.audioLanguages),
         ]}
         current={playback.audioLanguage ?? NONE}
@@ -421,7 +421,7 @@ function LanguageRows(props: { open: Open }) {
       />
       <PickRow
         fid="mode"
-        title={tr("playback_subtitles_title")}
+        title={tr("playbackSubtitlesTitle")}
         options={MODES.map((mode) => ({
           key: mode,
           label: tr(MODE_NAMES[mode]),
@@ -439,12 +439,12 @@ function LanguageRows(props: { open: Open }) {
       {playback.subtitleMode !== "off" && (
         <PickRow
           fid="subtitleLanguage"
-          title={tr("playback_subtitles_language")}
+          title={tr("playbackSubtitlesLanguage")}
           options={[
             {
               key: NONE,
               label: tr(
-                "playback_subtitles_device_language",
+                "playbackSubtitlesDeviceLanguage",
                 languageName(language),
               ),
             },
@@ -459,7 +459,7 @@ function LanguageRows(props: { open: Open }) {
       )}
       <SwitchRow
         fid="remember"
-        title={tr("playback_subtitles_remember")}
+        title={tr("playbackSubtitlesRemember")}
         checked={playback.rememberSubtitles}
         onChange={(rememberSubtitles) =>
           save({ ...playback, rememberSubtitles })
@@ -467,10 +467,10 @@ function LanguageRows(props: { open: Open }) {
       />
       <SwitchRow
         fid="specials"
-        title={tr("playback_specials_title")}
+        title={tr("playbackSpecialsTitle")}
         checked={user.library.showSpecials}
         onChange={(showSpecials) =>
-          void toasts.showing(tr("playback_specials_failed"), async () => {
+          void toasts.showing(tr("playbackSpecialsFailed"), async () => {
             session.updateUser(
               await session.api.account.library.setPreferences({
                 showSpecials,
@@ -481,7 +481,7 @@ function LanguageRows(props: { open: Open }) {
           })
         }
       />
-      <RowNote text={tr("tv_settings_languages_note")} />
+      <RowNote text={tr("tvSettingsLanguagesNote")} />
     </>
   )
 }
@@ -512,10 +512,10 @@ function sessionName(item: AccountSession): string {
     item.browser ??
     (item.platform
       ? tr(
-          "account_device_app",
+          "accountDeviceApp",
           PLATFORM_NAMES.get(item.platform) ?? item.platform,
         )
-      : tr("account_device_browser"))
+      : tr("accountDeviceBrowser"))
   )
 }
 
@@ -540,10 +540,10 @@ function DeviceRows(props: {
   if (state.kind === "failed") {
     return (
       <>
-        <RowNote text={tr("account_sessions_load_failed", state.message)} />
+        <RowNote text={tr("accountSessionsLoadFailed", state.message)} />
         <ListItem
           fid="retry"
-          title={tr("common_retry")}
+          title={tr("commonRetry")}
           icon={RefreshCw}
           quiet
           onPress={() => sessions.reload()}
@@ -561,11 +561,11 @@ function DeviceRows(props: {
           subtitle={[
             item.platform
               ? tr(
-                  "account_device_app",
+                  "accountDeviceApp",
                   PLATFORM_NAMES.get(item.platform) ?? item.platform,
                 )
               : null,
-            tr("account_sessions_signed_in", formatInstant(item.createdAt)),
+            tr("accountSessionsSignedIn", formatInstant(item.createdAt)),
           ]
             .filter(Boolean)
             .join(" · ")}
@@ -582,7 +582,7 @@ function DeviceRows(props: {
                 {tr("tizen_this_tv")}
               </span>
             ) : (
-              <ListValue value={tr("shell_sign_out")} />
+              <ListValue value={tr("shellSignOut")} />
             )
           }
         />
@@ -603,7 +603,7 @@ function AccountRows(props: { onServers: () => void }) {
         subtitle={
           [
             user.displayName ? `@${user.username}` : null,
-            user.role === "admin" ? tr("profile_admin") : null,
+            user.role === "admin" ? tr("profileAdmin") : null,
           ]
             .filter(Boolean)
             .join(" · ") || null
@@ -623,14 +623,14 @@ function AccountRows(props: { onServers: () => void }) {
       <div style={{ height: "16rem" }} />
       <ListItem
         fid="change"
-        title={tr("connect_change_server")}
+        title={tr("connectChangeServer")}
         icon={RefreshCw}
         quiet
         onPress={props.onServers}
       />
       <ListItem
         fid="signOut"
-        title={tr("shell_sign_out")}
+        title={tr("shellSignOut")}
         icon={LogOut}
         quiet
         destructive
@@ -743,7 +743,7 @@ export function SettingsPage(props: { category?: string }) {
     <Page class="page fill settings" start={() => ["categories", selected]}>
       <div class="settings-categories">
         <div class="t-headline" style={{ padding: "0 20rem 28rem" }}>
-          {tr("shell_settings")}
+          {tr("shellSettings")}
         </div>
         <div class="settings-list" data-fg="categories" data-fk="col">
           {CATEGORIES.map((category) => (
@@ -803,15 +803,15 @@ export function SettingsPage(props: { category?: string }) {
         open={signOutOpen}
         title={
           signingOut
-            ? tr("tv_settings_sign_out_device", sessionName(signingOut))
+            ? tr("tvSettingsSignOutDevice", sessionName(signingOut))
             : null
         }
-        description={tr("tv_settings_sign_out_device_description")}
+        description={tr("tvSettingsSignOutDeviceDescription")}
         onBack={() => setSignOutOpen(false)}
       >
         <ListItem
           fid="signOut"
-          title={tr("shell_sign_out")}
+          title={tr("shellSignOut")}
           icon={LogOut}
           quiet
           destructive
@@ -820,7 +820,7 @@ export function SettingsPage(props: { category?: string }) {
             const item = signingOut
             if (!item) return
             void toasts.showing(
-              tr("account_sessions_sign_out_failed"),
+              tr("accountSessionsSignOutFailed"),
               async () => {
                 await session.api.account.sessions.revoke({ id: item.id })
                 setReloads((count) => count + 1)
@@ -830,7 +830,7 @@ export function SettingsPage(props: { category?: string }) {
         />
         <ListItem
           fid="cancel"
-          title={tr("common_cancel")}
+          title={tr("commonCancel")}
           icon={X}
           quiet
           onPress={() => setSignOutOpen(false)}

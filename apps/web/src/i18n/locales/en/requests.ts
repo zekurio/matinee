@@ -116,6 +116,8 @@ export default defineMessages("requests", {
   }),
   "requests.toast.declined": "Declined {name}",
   "requests.toast.undo": "Undo",
+  // A person taking back their own request, from Discover.
+  "requests.toast.cancelled": "Cancelled {name}",
   "requests.toast.addFailed": "Couldn't add",
   "requests.toast.declineFailed": "Couldn't decline {name}",
   "requests.toast.gaveUp": "Gave up on {name}",

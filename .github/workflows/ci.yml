@@ -27,8 +27,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       pnpm: ${{ steps.changes.outputs.pnpm }}
-      android: ${{ steps.changes.outputs.android }}
-      ios: ${{ steps.changes.outputs.ios }}
+      flutter: ${{ steps.changes.outputs.flutter }}
+      flutter_ios: ${{ steps.changes.outputs.flutter_ios }}
       nix: ${{ steps.changes.outputs.nix }}
 
     steps:
@@ -39,44 +39,42 @@ jobs:
 
       - name: find the checks to run
         id: changes
-        run: node tools/ci/changes.mjs pnpm android ios nix
+        run: node tools/ci/changes.mjs pnpm flutter flutter_ios nix
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           PATHS_PNPM: |
             **
             !**.md
-          # The pnpm checks only compare the generated API client, they
-          # don't compile the app.
-          PATHS_ANDROID: |
-            apps/android/**
+          # The generated API client lives in the app, and the analyzer
+          # checks it, so a contract change runs this too.
+          PATHS_FLUTTER: |
+            apps/flutter/**
+            apps/web/src/i18n/locales/en/*.ts
+            apps/web/src/i18n/locales/de/*.ts
             brand/android/**
-            nix/android.nix
+            packages/contracts/**
+            apps/server/scripts/**
+            nix/flutter.nix
             flake.nix
             flake.lock
             package.json
             tools/ci/**
             .github/workflows/ci.yml
             !**/*.md
-          # What the derivation builds from, since the pnpm checks don't
-          # run it.
-          PATHS_IOS: |
-            apps/ios/**
-            brand/ios/**
-            brand/logo*.svg
-            brand/mark.svg
-            apps/android/app/src/main/java/io/github/zekurio/matinee/ui/kit/Icon.kt
-            apps/android/app/src/main/res/values*/**
-            apps/android/app/src/main/res/drawable/lucide_*
-            apps/android/app/src/main/res/font/**
-            packages/ui/src/lib/theme-presets.ts
+          # What the iOS build compiles: the Dart and the Runner, icon
+          # included, and the version it reads from the root package.json.
+          PATHS_FLUTTER_IOS: |
+            apps/flutter/**
+            apps/web/src/i18n/locales/en/*.ts
+            apps/web/src/i18n/locales/de/*.ts
             packages/contracts/**
             apps/server/scripts/**
             package.json
-            flake.nix
-            flake.lock
             tools/ci/**
             .github/workflows/ci.yml
             !**/*.md
+            !apps/flutter/android/**
+            !apps/flutter/test/**
           PATHS_NIX: |
             nix/**
             apps/**
@@ -91,8 +89,7 @@ jobs:
             tools/ci/**
             .github/workflows/ci.yml
             !**/*.md
-            !apps/android/**
-            !apps/ios/**
+            !apps/flutter/**
 
   checks:
     name: ${{ matrix.name }}
@@ -135,11 +132,10 @@ jobs:
       - name: ${{ matrix.name }}
         run: ${{ matrix.command }}
 
-  android:
-    name: android build and test
+  flutter:
+    name: flutter analyze, test, and build
     needs: changes
-    # Pull requests only: main gets the app's changes through them.
-    if: needs.changes.outputs.android == 'true' && github.event_name != 'push'
+    if: needs.changes.outputs.flutter == 'true' && github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -155,19 +151,21 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
-      # Caches Gradle's downloads and build cache. Gradle itself runs in
-      # the flake's Android shell, with its JDK and SDK.
+      # Caches Gradle's downloads and build cache. Flutter runs Gradle in
+      # the flake's Flutter shell, with its JDK and SDK.
       - name: set up gradle cache
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
-      - name: build and test
-        working-directory: apps/android
-        run: nix develop ../..#android -c ./gradlew assembleDebug testDebugUnitTest
+      - name: analyze, format check, and test
+        run: nix shell nixpkgs#just -c just flutter check
 
-  ios:
-    name: ios build and test
+      - name: build debug apk
+        run: nix shell nixpkgs#just -c just flutter build
+
+  flutter-ios:
+    name: flutter ios build
     needs: changes
-    if: needs.changes.outputs.ios == 'true' && github.event_name != 'push'
+    if: needs.changes.outputs.flutter_ios == 'true' && github.event_name != 'push'
     runs-on: macos-26
     timeout-minutes: 45
 
@@ -177,34 +175,32 @@ jobs:
         with:
           persist-credentials: false
 
-      # Use Nix for XcodeGen, just, and Node, as the local recipes do.
-      # The flake's dev shell is Linux-only; use Nixpkgs tools directly.
-      - name: install nix
-        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-
-      # Minimum Xcode 26 / Swift 6.2 for default main-actor isolation.
-      # macos-26 supplies Xcode 26.6 at this path; select its installed default.
       - name: select xcode
         run: |
           sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
 
-      # The kit's icon check reads lucide-react from node_modules.
-      - name: install dependencies
-        run: nix shell nixpkgs#nodejs_24 nixpkgs#pnpm_11 -c pnpm install --frozen-lockfile
+      # The flake's Flutter shell is Linux-only. The same version as its
+      # nixpkgs, from Flutter's own releases.
+      - name: set up flutter
+        uses: subosito/flutter-action@1508160852fb97248640997f7cfb38da241df0ba # v2.9.1
+        with:
+          flutter-version: 3.47.4
+          channel: stable
+          cache: true
 
-      # Includes swift test in Packages/MatineeCore. No simulator is booted.
-      - name: test core and check generated resources
-        run: nix shell nixpkgs#just -c just ios test
+      # Unsigned, for a device: it compiles the Dart, the Runner's Swift,
+      # and links MPVKit, but nothing runs.
+      - name: build unsigned debug app
+        working-directory: apps/flutter
+        run: flutter build ios --debug --no-codesign
 
-      - name: generate project and build unsigned simulator app
-        run: nix shell nixpkgs#just -c just ios build
-
-      - name: build unsigned Apple TV simulator app
-        run: nix shell nixpkgs#just -c just ios tv-build
+      # Flutter warns that the build name and number are missing, since
+      # pubspec.yaml has no version; the Runner's Version phase writes them
+      # into the app afterwards, and this fails if it didn't.
+      - name: check app version
+        working-directory: apps/flutter
+        run: sh ios/version.sh --check ../../package.json build/ios/iphoneos/Runner.app/Info.plist
 
   nix:
     name: nix flake check
@@ -250,7 +246,7 @@ jobs:
   # fails only on a check that failed or was cancelled, `changes` included.
   ci:
     name: ci
-    needs: [changes, checks, android, ios, nix]
+    needs: [changes, checks, flutter, flutter-ios, nix]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

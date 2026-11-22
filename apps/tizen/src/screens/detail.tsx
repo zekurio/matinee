@@ -55,7 +55,7 @@ import type { Viewer } from "@/model/viewer"
 
 import { Loaded, Message } from "./parts"
 
-/* The title, season, and episode pages, as the Android TV app's `ui/tv/detail`. */
+/* The title, season, and episode pages. */
 
 const ACTIONS = "actions"
 const PLAY = "play"
@@ -142,14 +142,14 @@ function FileInfo(props: { item: MediaItem }) {
   // Each language once; a file whose tracks don't say gets their count instead.
   const audioLine = [
     languageList(audio) ??
-      (audio.length > 0 ? plural("media_audio_tracks", audio.length) : null),
+      (audio.length > 0 ? plural("mediaAudioTracks", audio.length) : null),
     main?.layout,
   ]
     .filter(Boolean)
     .join(" · ")
   const subtitleLine =
     languageList(subtitles) ??
-    (subtitles.length > 0 ? plural("media_subtitles", subtitles.length) : null)
+    (subtitles.length > 0 ? plural("mediaSubtitles", subtitles.length) : null)
   const line = (icon: IconNode, label: string, text: string | null) =>
     text && (
       <div class="file-line" aria-label={label}>
@@ -160,9 +160,9 @@ function FileInfo(props: { item: MediaItem }) {
   if (!video && !audioLine && !subtitleLine) return null
   return (
     <div class="file-info">
-      {line(Film, tr("media_info_video"), video)}
-      {line(AudioLines, tr("media_info_audio"), audioLine || null)}
-      {line(Captions, tr("media_info_subtitles"), subtitleLine)}
+      {line(Film, tr("mediaInfoVideo"), video)}
+      {line(AudioLines, tr("mediaInfoAudio"), audioLine || null)}
+      {line(Captions, tr("mediaInfoSubtitles"), subtitleLine)}
     </div>
   )
 }
@@ -180,9 +180,7 @@ function Marks(props: {
       <IconButton
         fid={WATCHED}
         icon={props.watched ? CircleCheck : Check}
-        label={tr(
-          props.watched ? "media_mark_unwatched" : "media_mark_watched",
-        )}
+        label={tr(props.watched ? "mediaMarkUnwatched" : "mediaMarkWatched")}
         tint={props.watched ? "var(--accent)" : undefined}
         onPress={props.onWatched}
       />
@@ -192,7 +190,7 @@ function Marks(props: {
           icon={Heart}
           filled={props.favorite}
           label={tr(
-            props.favorite ? "media_remove_favorite" : "media_add_favorite",
+            props.favorite ? "mediaRemoveFavorite" : "mediaAddFavorite",
           )}
           tint={props.favorite ? "var(--danger)" : undefined}
           onPress={props.onFavorite}
@@ -210,7 +208,7 @@ function PlayButton(props: { item: MediaItem | null | undefined }) {
   return (
     <Button
       fid={PLAY}
-      label={tr(resume ? "title_resume" : "title_play")}
+      label={tr(resume ? "titleResume" : "titlePlay")}
       icon={Play}
       minWidth={180}
       detail={resume && item ? timeLeft(item) : null}
@@ -246,7 +244,7 @@ function EpisodeCard(props: {
       caption={
         detail || number === null || label.untitled
           ? label.title
-          : tr("title_episodes_coded_name", number, label.title)
+          : tr("titleEpisodesCodedName", number, label.title)
       }
       // An episode without a name is called by its number already.
       detail={
@@ -339,7 +337,7 @@ export function TitlePage(props: { id: string }) {
   return (
     <Loaded
       load={loader.state}
-      error={tr("title_load_error")}
+      error={tr("titleLoadError")}
       retry={() => loader.reload()}
     >
       {(title) => <TitleView title={title} />}
@@ -421,7 +419,7 @@ function TitleView(props: { title: Title }) {
           <IconButton
             fid="restart"
             icon={RotateCcw}
-            label={tr("actions_play_from_start")}
+            label={tr("actionsPlayFromStart")}
             onPress={() => nav.play(next.id, 0)}
           />
         )}
@@ -429,7 +427,7 @@ function TitleView(props: { title: Title }) {
           watched={watched}
           onWatched={() => {
             if (watched) {
-              void toasts.showing(tr("media_mark_unwatched_failed"), () =>
+              void toasts.showing(tr("mediaMarkUnwatchedFailed"), () =>
                 viewer.setWatched(title, false),
               )
             } else {
@@ -440,7 +438,7 @@ function TitleView(props: { title: Title }) {
           }}
           favorite={favorite}
           onFavorite={() =>
-            void toasts.showing(tr("media_favorite_failed"), () =>
+            void toasts.showing(tr("mediaFavoriteFailed"), () =>
               viewer.setFavorite(title, !favorite),
             )
           }
@@ -455,7 +453,7 @@ function TitleView(props: { title: Title }) {
         {show && next && showsNextUp(title) && <NextUpRow item={next} />}
         {show && only && (
           <EpisodesRow
-            heading={tr("title_episodes")}
+            heading={tr("titleEpisodes")}
             name="episodes"
             titleId={title.id}
             season={only.number}
@@ -463,7 +461,7 @@ function TitleView(props: { title: Title }) {
           />
         )}
         {show && title.seasons.length > 0 && (
-          <Row title={tr("title_seasons")} name="seasons">
+          <Row title={tr("titleSeasons")} name="seasons">
             {title.seasons.map((season) => {
               const left = season.itemCount - season.watchedCount
               return (
@@ -472,7 +470,7 @@ function TitleView(props: { title: Title }) {
                   fid={String(season.number ?? NO_SEASON)}
                   name={seasonName(season.number)}
                   poster={art(season.poster ?? title.images.poster)}
-                  detail={plural("media_episode_count", season.itemCount)}
+                  detail={plural("mediaEpisodeCount", season.itemCount)}
                   watched={left === 0}
                   badge={String(left)}
                   onPress={() => nav.season(title.id, season.number)}
@@ -483,7 +481,7 @@ function TitleView(props: { title: Title }) {
           </Row>
         )}
         {people.length > 0 && (
-          <Row title={tr("tv_detail_people")} name="people">
+          <Row title={tr("tvDetailPeople")} name="people">
             {people.map((person) => (
               <PersonCard
                 key={`${person.name}-${person.role}`}
@@ -499,7 +497,7 @@ function TitleView(props: { title: Title }) {
           </Row>
         )}
         {(title.genres.length > 0 || title.studios.length > 0) && (
-          <Row title={tr("tv_detail_links")} name="links" buttons>
+          <Row title={tr("tvDetailLinks")} name="links" buttons>
             {title.genres.map((genre) => (
               <Chip
                 key={`genre-${genre}`}
@@ -531,9 +529,7 @@ function NextUpRow(props: { item: MediaItem }) {
   const number = episodeNumber(item)
   return (
     <Row
-      title={tr(
-        item.progress ? "title_next_up_continue" : "title_next_up_next",
-      )}
+      title={tr(item.progress ? "titleNextUpContinue" : "titleNextUpNext")}
       name="nextUp"
     >
       <LandscapeCard
@@ -542,7 +538,7 @@ function NextUpRow(props: { item: MediaItem }) {
         art={landscape(item)}
         caption={
           number !== null && !label.untitled
-            ? tr("title_episodes_coded_name", number, label.title)
+            ? tr("titleEpisodesCodedName", number, label.title)
             : label.title
         }
         detail={
@@ -587,7 +583,7 @@ export function SeasonPage(props: { titleId: string; season: number | null }) {
   return (
     <Loaded
       load={loader.state}
-      error={tr("title_season_show_error")}
+      error={tr("titleSeasonShowError")}
       retry={() => loader.reload()}
     >
       {(title) => {
@@ -600,7 +596,7 @@ export function SeasonPage(props: { titleId: string; season: number | null }) {
             ? title.specials
             : undefined)
         if (!current) {
-          return <Message title={tr("title_season_missing", title.name)} />
+          return <Message title={tr("titleSeasonMissing", title.name)} />
         }
         return (
           <SeasonView
@@ -683,8 +679,8 @@ function SeasonView(props: {
         )}
         <div class="t-facts dim85" style={{ marginTop: "6rem" }}>
           {[
-            plural("media_episode_count", season.itemCount),
-            plural("title_season_watched_count", season.watchedCount),
+            plural("mediaEpisodeCount", season.itemCount),
+            plural("titleSeasonWatchedCount", season.watchedCount),
           ].join("  ·  ")}
         </div>
         <div
@@ -698,7 +694,7 @@ function SeasonView(props: {
             watched={watched}
             onWatched={() => {
               if (watched) {
-                void toasts.showing(tr("media_mark_unwatched_failed"), () =>
+                void toasts.showing(tr("mediaMarkUnwatchedFailed"), () =>
                   setSeasonWatched(viewer, title, season.number, false),
                 )
               } else {
@@ -709,7 +705,7 @@ function SeasonView(props: {
             }}
             favorite={favorite}
             onFavorite={() =>
-              void toasts.showing(tr("media_favorite_failed"), () =>
+              void toasts.showing(tr("mediaFavoriteFailed"), () =>
                 viewer.setSeasonFavorite(title, season, !favorite),
               )
             }
@@ -717,7 +713,7 @@ function SeasonView(props: {
           <IconButton
             fid="show"
             icon={Tv}
-            label={tr("actions_go_to_show", title.name)}
+            label={tr("actionsGoToShow", title.name)}
             onPress={() => nav.titleUp(title.id)}
           />
         </div>
@@ -731,7 +727,7 @@ function SeasonView(props: {
                 const label = itemLabel(about)
                 const number = episodeNumber(about)
                 return number !== null && !label.untitled
-                  ? tr("title_episodes_coded_name", number, label.title)
+                  ? tr("titleEpisodesCodedName", number, label.title)
                   : label.title
               })()}
             </div>
@@ -757,7 +753,7 @@ function SeasonView(props: {
           class="season-row t-body muted"
           style={{ padding: "24rem 32rem 0 80rem" }}
         >
-          {tr("title_episodes_error", items.state.message)}
+          {tr("titleEpisodesError", items.state.message)}
         </div>
       )}
       {list && (
@@ -786,7 +782,7 @@ export function EpisodePage(props: { itemId: string }) {
   return (
     <Loaded
       load={loader.state}
-      error={tr("title_episode_load_error")}
+      error={tr("titleEpisodeLoadError")}
       retry={() => loader.reload()}
     >
       {(item) => <EpisodeView item={item} />}
@@ -818,11 +814,11 @@ function EpisodeView(props: { item: MediaItem }) {
     season === null
       ? null
       : season === 0
-        ? tr("title_episode_specials")
-        : tr("title_episode_season", season),
+        ? tr("titleEpisodeSpecials")
+        : tr("titleEpisodeSeason", season),
     item.episodeNumber === null
       ? null
-      : tr("title_episode_number", item.episodeNumber),
+      : tr("titleEpisodeNumber", item.episodeNumber),
   ]
     .filter(Boolean)
     .join("  ·  ")
@@ -861,7 +857,7 @@ function EpisodeView(props: { item: MediaItem }) {
           <IconButton
             fid="restart"
             icon={RotateCcw}
-            label={tr("actions_play_from_start")}
+            label={tr("actionsPlayFromStart")}
             onPress={() => nav.play(item.id, 0)}
           />
         )}
@@ -869,7 +865,7 @@ function EpisodeView(props: { item: MediaItem }) {
           watched={watched}
           onWatched={() => {
             if (watched) {
-              void toasts.showing(tr("media_mark_unwatched_failed"), () =>
+              void toasts.showing(tr("mediaMarkUnwatchedFailed"), () =>
                 viewer.setItemWatched(item, false),
               )
             } else {
@@ -880,7 +876,7 @@ function EpisodeView(props: { item: MediaItem }) {
           }}
           favorite={favorite}
           onFavorite={() =>
-            void toasts.showing(tr("media_favorite_failed"), () =>
+            void toasts.showing(tr("mediaFavoriteFailed"), () =>
               viewer.setItemFavorite(item, !favorite),
             )
           }
@@ -889,7 +885,7 @@ function EpisodeView(props: { item: MediaItem }) {
           <IconButton
             fid="season"
             icon={List}
-            label={tr("actions_go_to_show", seasonName(season))}
+            label={tr("actionsGoToShow", seasonName(season))}
             onPress={() => nav.seasonUp(title.id, season)}
           />
         )}
@@ -897,7 +893,7 @@ function EpisodeView(props: { item: MediaItem }) {
           <IconButton
             fid="show"
             icon={Tv}
-            label={tr("actions_go_to_show", title.name)}
+            label={tr("actionsGoToShow", title.name)}
             onPress={() => nav.titleUp(title.id)}
           />
         )}
@@ -909,7 +905,7 @@ function EpisodeView(props: { item: MediaItem }) {
       <DetailList header={header}>
         {title && (
           <EpisodesRow
-            heading={tr("title_episode_more_from", seasonName(season))}
+            heading={tr("titleEpisodeMoreFrom", seasonName(season))}
             name="more"
             titleId={title.id}
             season={season}

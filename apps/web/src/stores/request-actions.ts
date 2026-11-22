@@ -10,6 +10,7 @@ import { errorMessage, keepaliveClient, orpc, queryClient } from "@/lib/rpc"
  * Answering from the queue, held for a moment before it's sent: adding
  * and declining a waiting request, giving up on an accepted one, and
  * allowing requests again for a declined one or adding it after all.
+ * A person's own request, taken back from Discover, is held the same way.
  * The server has no way to take these back, so Undo works by never
  * sending it: the row collapses at once, a toast
  * offers Undo, and the call goes out when the toast's time is up, or at
@@ -45,6 +46,8 @@ export type QueueAction =
     }
   | { kind: "giveUp"; ids: [string]; names: [string]; note: string | null }
   | { kind: "allowAgain" | "addAfterAll"; ids: [string]; names: [string] }
+  /** A person taking back their own request, on Discover. */
+  | { kind: "cancel"; ids: [string]; names: [string] }
 
 type Held = {
   key: number
@@ -60,7 +63,7 @@ type RequestActionsState = {
   /** Choose where a waiting request goes; null keeps where it is. */
   move: (id: string, libraryId: string | null) => void
   /** Ids of actions sent, hidden until the next queue leaves them out. */
-  settled: Map<string, ReturnType<typeof setTimeout>>
+  settled: Map<string, ReturnType<typeof setTimeout> | undefined>
   /** Collapse the rows now, and send the action once Undo's time is up. */
   hold: (action: QueueAction) => void
   /** Take back the latest held action, or the one with `key`. */
@@ -82,6 +85,8 @@ function heldMessage(action: QueueAction): string {
       return tr("requests.toast.allowedAgain", { name: first ?? "" })
     case "addAfterAll":
       return tr("requests.toast.addedAfterAll", { name: first ?? "" })
+    case "cancel":
+      return tr("requests.toast.cancelled", { name: first ?? "" })
     case "add":
       break
   }
@@ -106,6 +111,8 @@ function failedMessage(action: QueueAction): string {
       return tr("requests.toast.allowAgainFailed", { name })
     case "addAfterAll":
       return tr("requests.toast.addAfterAllFailed", { name })
+    case "cancel":
+      return tr("ask.toast.cancelFailed", { name })
     case "add":
       return tr("requests.toast.addFailed")
   }
@@ -133,6 +140,9 @@ async function send(action: QueueAction) {
       return
     case "addAfterAll":
       await client.admin.requests.addAfterAll({ id: action.ids[0] })
+      return
+    case "cancel":
+      await client.requests.cancel({ id: action.ids[0] })
       return
     case "add":
       break
@@ -187,13 +197,29 @@ export const useRequestActionsStore = create<RequestActionsState>()((
     const entry = release(key)
     if (!entry) return
     toast.dismiss(entry.toastId)
-    settle(entry.action.ids)
+    const pending = new Map(get().settled)
+    for (const id of entry.action.ids) {
+      clearTimeout(pending.get(id))
+      pending.set(id, undefined)
+    }
+    set({ settled: pending })
     send(entry.action)
       .then(() => {
+        settle(entry.action.ids)
         if (entry.action.kind === "add" && entry.action.moves.size) {
           const moves = new Map(get().moves)
           for (const id of entry.action.moves.keys()) moves.delete(id)
           set({ moves })
+        }
+        if (entry.action.kind === "cancel") {
+          // The lists of what the viewer asked for, and the states the
+          // catalog's cards show, as cancelling anywhere else reloads them.
+          return Promise.all([
+            queryClient.invalidateQueries({ queryKey: orpc.catalog.key() }),
+            queryClient.invalidateQueries({
+              queryKey: orpc.requests.mine.key(),
+            }),
+          ]).then(() => undefined)
         }
         // Done is read page by page rather than followed live.
         return queryClient.invalidateQueries({
