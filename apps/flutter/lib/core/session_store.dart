@@ -310,7 +310,22 @@ T? _tryRead<T>(T Function() read) {
 /// A saved account, as the server list keeps it; null when it can't be read.
 User? decodeUser(String? text) {
   if (text == null) return null;
-  return _tryRead(() => User.fromJson(jsonDecode(text)));
+  return _tryRead(() => _savedUser(jsonDecode(text)));
+}
+
+/// A user saved before accounts had permissions lacks the list. Offline
+/// start, the server list, and the downloads need the user, so it reads
+/// with none, which offers nothing past what every account may, and the
+/// session saves the real ones once the server answers. Dropping it would
+/// leave the server looking signed out while its token stands, as iOS's
+/// `StoredServer.savedUser` has it.
+User _savedUser(Object? json) {
+  try {
+    return User.fromJson(json);
+  } on Object {
+    if (json is! JsonMap || json.containsKey('permissions')) rethrow;
+    return User.fromJson({...json, 'permissions': const <String>[]});
+  }
 }
 
 String encodeUser(User user) => jsonEncode(user.toJson());

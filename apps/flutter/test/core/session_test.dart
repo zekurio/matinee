@@ -694,6 +694,75 @@ void main() {
     });
   });
 
+  group('a user saved before permissions', () {
+    /// [harness]'s saved servers with each user's permissions taken out,
+    /// as an app from before them saved the user.
+    void forgetPermissions(Harness harness) {
+      final servers = [
+        for (final server in jsonDecode(
+          harness.prefs.values['servers']! as String,
+        ) as List<Object?>)
+          if (server case {'user': final String user})
+            {
+              // SAFETY: the store wrote each server as a JSON object.
+              ...server as Map<String, Object?>,
+              'user': jsonEncode(
+                // SAFETY: and its user as one.
+                {...jsonDecode(user) as Map<String, Object?>}
+                  ..remove('permissions'),
+              ),
+            }
+          else
+            server,
+      ];
+      harness.prefs.values['servers'] = jsonEncode(servers);
+    }
+
+    test('still starts offline with the downloads', () async {
+      final first = await signedInOn('a.example');
+      first.session.setOfflineMode(on: true);
+      await first.quit();
+      forgetPermissions(first);
+
+      final again = Harness(prefs: first.prefs, secrets: first.secrets);
+      again.backend
+        ..hosts.add('a.example')
+        ..tokens['token-a'] = 'ada';
+      await again.launch();
+      addTearDown(again.quit);
+
+      final offline = again.auth;
+      expect(offline, isA<Offline>());
+      expect((offline as Offline).user.username, 'ada');
+      expect(offline.user.permissions, isEmpty);
+      expect(again.container.read(savedServersProvider).single.user, isNotNull);
+
+      again.session.setOfflineMode(on: false);
+      await again.until<SignedIn>();
+    });
+
+    test('stays signed in, and the server\'s answer is saved', () async {
+      final first = await signedInOn('a.example');
+      await first.quit();
+      forgetPermissions(first);
+
+      final again = Harness(prefs: first.prefs, secrets: first.secrets);
+      again.backend
+        ..hosts.add('a.example')
+        ..tokens['token-a'] = 'ada';
+      await again.launch();
+      addTearDown(again.quit);
+
+      // While the check is out, the server list still has the account.
+      expect(again.container.read(savedServersProvider).single.user, isNotNull);
+      final signedIn = await again.until<SignedIn>();
+      expect(signedIn.user.username, 'ada');
+      await again.settle();
+      final saved = jsonDecode(again.prefs.values['servers']! as String);
+      expect(saved, [containsPair('user', contains('"permissions":[]'))]);
+    });
+  });
+
   group('naming the client', () {
     test('signing in tells the server what the app calls itself', () async {
       final harness = await signedInOn('a.example');
