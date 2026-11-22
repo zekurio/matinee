@@ -19,6 +19,24 @@ export const FulfilmentState = t.enum(["queued", "sent", "failed"])
 
 export const RequestId = t.object({ id: t.uuid() })
 
+/**
+ * Where a request stands, the one state its card shows, the same for its
+ * askers and in the admin's queue, where it's also the list it's in.
+ * "waiting" until an admin answers it; "needsAttention" once sending it
+ * failed; "onTheWay" once accepted, until it arrives; "here" once a film
+ * arrived or every season a show asked for did, `arrivedAt` saying when;
+ * "declined" when an admin declined it or gave up on it.
+ */
+export const REQUEST_STATES = [
+  "waiting",
+  "needsAttention",
+  "onTheWay",
+  "here",
+  "declined",
+] as const
+export const RequestState = t.enum(REQUEST_STATES)
+export type RequestState = t.infer<typeof RequestState>
+
 export const RequestDestination = t.object({ id: t.uuid(), name: t.string() })
 
 /** A library a waiting request could go to, for the admin's "Goes to". */
@@ -41,6 +59,7 @@ export const RequestItem = t.object({
    * once every season asked for is here.
    */
   season: SeasonAvailability.nullable(),
+  state: RequestState,
 })
 
 export const RequestPage = t.object({
@@ -136,10 +155,19 @@ export const requestsContract = {
   cancel: post("/requests/cancel", "request.delete")
     .input(RequestId)
     .output(t.void()),
-  /** In-progress requests the viewer asked for or follows, as `mine` lists them. */
+  /**
+   * The requests the viewer asked for or follows, as `mine` lists them
+   * with `filter: "all"`: in progress first, then finished, so a
+   * finished one stays for as long as it's among the latest.
+   */
   mineLive: get("/requests/mine/live", "request.read")
     .input(RequestPageInput)
     .output(eventIterator(RequestPage)),
+  /**
+   * In progress first, then finished, each newest first. "inProgress"
+   * keeps to those in flight and those that settled in the last three
+   * days.
+   */
   mine: get("/requests/mine", "request.read")
     .input(
       RequestPageInput.extend({

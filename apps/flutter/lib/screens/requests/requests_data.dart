@@ -248,18 +248,13 @@ abstract class CursorList<T> extends Notifier<CursorPages<T>> {
   }
 }
 
-/// What the viewer asked for: on its way and lately come or answered
-/// (`inProgress`), or all of it.
-abstract final class MineFilter {
-  static const inProgress = 'inProgress';
-  static const all = 'all';
-}
+/// The viewer's requests past the first page `requests.mineLive` sends,
+/// from [after], its cursor, on: what `requests.mine` lists with
+/// `filter: "all"`, in progress first, then finished, each newest first.
+final class OlderRequests extends CursorList<RequestItem> {
+  OlderRequests(this.after);
 
-final class MyRequests extends CursorList<RequestItem> {
-  MyRequests(this.filter);
-
-  /// A [MineFilter].
-  final String filter;
+  final String after;
 
   @override
   void watch() => ref.watch(requestsVersionProvider);
@@ -270,9 +265,9 @@ final class MyRequests extends CursorList<RequestItem> {
     String? cursor,
   ) async {
     final page = await api.requests.mine(
-      cursor: cursor,
+      cursor: cursor ?? after,
       limit: 40,
-      filter: filter,
+      filter: 'all',
     );
     return (page.items, page.nextCursor);
   }
@@ -281,12 +276,13 @@ final class MyRequests extends CursorList<RequestItem> {
   String id(RequestItem item) => item.id;
 }
 
-final myRequestsProvider = NotifierProvider.autoDispose
-    .family<MyRequests, CursorPages<RequestItem>, String>(MyRequests.new);
+final olderRequestsProvider = NotifierProvider.autoDispose
+    .family<OlderRequests, CursorPages<RequestItem>, String>(OlderRequests.new);
 
-/// Explore's Recent requests row for anyone who doesn't run the queue:
-/// their requests as `requests.mineLive` sends them, which sends the whole
-/// first page again on each change, so a reconnect loses nothing.
+/// Explore's Recent requests row for anyone who doesn't run the queue, and
+/// the first page of My requests: their requests as `requests.mineLive`
+/// sends them, which sends the whole first page again on each change, so
+/// a reconnect loses nothing.
 final myLiveRequestsProvider = serverStream(
   (api) => api.requests.mineLive(limit: recentRequests),
 );
@@ -295,7 +291,7 @@ final myLiveRequestsProvider = serverStream(
 /// Fetched again when an ask, a cancel, or an answer changes it.
 final profileAskedProvider = FutureProvider.autoDispose<RequestPage>((ref) {
   ref.watch(requestsVersionProvider);
-  return serverApi(ref).requests.mine(limit: 24, filter: MineFilter.all);
+  return serverApi(ref).requests.mine(limit: 24, filter: 'all');
 }, retry: (_, _) => null);
 
 /// An admin's Done, a page at a time from its own call, newest first, for

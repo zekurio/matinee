@@ -170,59 +170,23 @@ StateWord? stateWord(
   _ => null,
 };
 
-/// Where a request stands, as the one badge on its card says it, on every
-/// request card for everyone.
-enum RequestState {
-  waiting,
-  needsAttention,
-  onTheWay,
-  here,
-  declined;
-
-  /// It arrived or was declined: nothing more will happen to it.
-  bool get finished => this == here || this == declined;
-}
-
-/// A person's own request's state, from the `Availability` the server sent
-/// for it: asked waits, coming and release are on the way, here arrived,
-/// and unavailable was declined. Null for a state a request doesn't have.
-RequestState? ownState(Availability availability) =>
-    switch (availability.state) {
-      AvailabilityState.asked => RequestState.waiting,
-      AvailabilityState.coming ||
-      AvailabilityState.release => RequestState.onTheWay,
-      AvailabilityState.here => RequestState.here,
-      AvailabilityState.unavailable => RequestState.declined,
-      _ => null,
-    };
-
-/// A request of the admin's queue with the state its list gives it.
-typedef QueuedRequest = ({AdminRequestItem item, RequestState state});
-
-/// The queue as one list, in the server's order of its lists: waiting,
-/// needs attention, on the way, then [done] (the queue's own when null),
-/// without the ids in [held]. Which list a request is in is its state;
-/// in Done, a declined one is declined and the rest arrived.
-List<QueuedRequest> queueInOrder(
+/// The queue as one list, the server's lists one after another in its
+/// order: waiting, needs attention, on the way, then [done] (the queue's
+/// own when null), without the ids in [held]. Each card reads its state
+/// from the request itself.
+List<AdminRequestItem> queueInOrder(
   RequestQueue queue, {
   Set<String> held = const {},
   List<AdminRequestItem>? done,
 }) => [
-  for (final (list, state) in [
-    (queue.waiting, RequestState.waiting),
-    (queue.needsAttention, RequestState.needsAttention),
-    (queue.onTheWay, RequestState.onTheWay),
+  for (final list in [
+    queue.waiting,
+    queue.needsAttention,
+    queue.onTheWay,
+    done ?? queue.done,
   ])
     for (final item in list)
-      if (!held.contains(item.id)) (item: item, state: state),
-  for (final item in done ?? queue.done)
-    if (!held.contains(item.id))
-      (
-        item: item,
-        state: item.status == RequestStatus.declined
-            ? RequestState.declined
-            : RequestState.here,
-      ),
+      if (!held.contains(item.id)) item,
 ];
 
 /// Done as the overview lists it: the newest the live queue holds, then

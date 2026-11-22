@@ -16,7 +16,7 @@ import {
   refKey,
   useLiveAvailability,
 } from "@/components/catalog/catalog-data"
-import { declineLine, stateWord } from "@/components/catalog/words"
+import { stateWord } from "@/components/catalog/words"
 import { cardClass, CardText, PosterArt } from "@/components/media-item"
 import { Rail, RailItem } from "@/components/rail"
 import { tr } from "@/i18n"
@@ -133,26 +133,6 @@ function ShowSeasonCard({
         className="pointer-events-none absolute top-1.5 right-1.5"
       />
     </div>
-  )
-}
-
-/** Why a declined title isn't coming, under its card in the full list. */
-export function DeclinedNote({
-  item,
-}: {
-  item: Pick<AskedItem, "availability">
-}) {
-  const { reason } = item.availability
-  if (item.availability.state !== "unavailable" || !reason) return null
-  return (
-    <p className="text-muted-foreground text-13px mt-1 leading-5">
-      <span className="line-clamp-2">{declineLine(reason)}</span>
-      {reason.note && (
-        <span className="text-foreground/70 mt-0.5 line-clamp-2 italic">
-          {reason.note}
-        </span>
-      )}
-    </p>
   )
 }
 

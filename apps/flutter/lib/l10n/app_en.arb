@@ -889,92 +889,6 @@
   "@discoverFailed": {
     "description": "strings_loading.xml"
   },
-  "discoverRequestAskedWhen": "First requested {when}",
-  "@discoverRequestAskedWhen": {
-    "description": "On a person's own request card, in Explore's Recent requests row and on My requests: when it was first requested, as \"2 days ago\".",
-    "placeholders": {
-      "when": {
-        "type": "String"
-      }
-    }
-  },
-  "requestsRecent": "Recent requests",
-  "@requestsRecent": {
-    "description": "The heading of Explore's first row: the latest requests, which opens the requests overview."
-  },
-  "requestStateWaiting": "Waiting",
-  "@requestStateWaiting": {
-    "description": "The state badge on a request card: nobody has answered the request yet."
-  },
-  "requestStateNeedsAttention": "Needs attention",
-  "@requestStateNeedsAttention": {
-    "description": "The state badge on a request card: the request was accepted but sending it failed, so an admin has to look at it."
-  },
-  "requestStateOnTheWay": "On its way",
-  "@requestStateOnTheWay": {
-    "description": "The state badge on a request card: accepted and on its way, without a share known."
-  },
-  "requestStateOnTheWayPercent": "On its way · {percent}",
-  "@requestStateOnTheWayPercent": {
-    "description": "The state badge on a request card: on its way, with the share that's in, as \"64%\".",
-    "placeholders": {
-      "percent": {
-        "type": "String"
-      }
-    }
-  },
-  "requestStateHere": "Here",
-  "@requestStateHere": {
-    "description": "The state badge on a request card: the title arrived in the library."
-  },
-  "requestStateDeclined": "Declined",
-  "@requestStateDeclined": {
-    "description": "The state badge on a request card: an admin declined the request or gave up on it."
-  },
-  "requestsCountWaiting": "{count, plural, one{{count} waiting} other{{count} waiting}}",
-  "@requestsCountWaiting": {
-    "description": "In the line of counts at the top of the requests overview: how many requests wait for an answer.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "requestsCountNeedsAttention": "{count, plural, one{{count} needs attention} other{{count} need attention}}",
-  "@requestsCountNeedsAttention": {
-    "description": "In the line of counts at the top of the requests overview: how many accepted requests failed to send.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "requestsCountOnTheWay": "{count, plural, one{{count} on its way} other{{count} on the way}}",
-  "@requestsCountOnTheWay": {
-    "description": "In the line of counts at the top of the requests overview: how many accepted requests are on their way.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "requestsCountDone": "{count, plural, one{{count} done} other{{count} done}}",
-  "@requestsCountDone": {
-    "description": "In the line of counts at the top of the requests overview: how many requests arrived or were declined.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "requestsOverviewEmpty": "No requests yet",
-  "@requestsOverviewEmpty": {
-    "description": "The requests overview when nobody has requested anything."
-  },
-  "requestsOverviewEmptyHint": "What people request from a title's page shows up here.",
-  "@requestsOverviewEmptyHint": {
-    "description": "Under requestsOverviewEmpty."
-  },
   "downloadsAbout": "About {p1}",
   "@downloadsAbout": {
     "description": "strings.xml",
@@ -8894,5 +8808,100 @@
   "webRequestsDeclineCancel": "Cancel",
   "@webRequestsDeclineCancel": {
     "description": "requests.decline.cancel"
+  },
+  "webRequestsRecent": "Recent requests",
+  "@webRequestsRecent": {
+    "description": "requests.recent"
+  },
+  "webRequestsStateWaiting": "Waiting",
+  "@webRequestsStateWaiting": {
+    "description": "requests.state.waiting"
+  },
+  "webRequestsStateNeedsAttention": "Needs attention",
+  "@webRequestsStateNeedsAttention": {
+    "description": "requests.state.needsAttention"
+  },
+  "webRequestsStateOnTheWay": "On its way",
+  "@webRequestsStateOnTheWay": {
+    "description": "requests.state.onTheWay"
+  },
+  "webRequestsStateOnTheWayPercent": "On its way · {p1}",
+  "@webRequestsStateOnTheWayPercent": {
+    "description": "requests.state.onTheWayPercent",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webRequestsStateHere": "Here",
+  "@webRequestsStateHere": {
+    "description": "requests.state.here"
+  },
+  "webRequestsStateDeclined": "Declined",
+  "@webRequestsStateDeclined": {
+    "description": "requests.state.declined"
+  },
+  "webRequestsAskedWhen": "First requested {p1}",
+  "@webRequestsAskedWhen": {
+    "description": "requests.askedWhen",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webRequestsSummaryWaiting": "{p1} waiting",
+  "@webRequestsSummaryWaiting": {
+    "description": "requests.summary.waiting",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webRequestsSummaryNeedsAttention": "{count, plural, one{{count} needs attention} other{{count} need attention}}",
+  "@webRequestsSummaryNeedsAttention": {
+    "description": "requests.summary.needsAttention",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webRequestsSummaryOnTheWay": "{count, plural, one{{count} on its way} other{{count} on their way}}",
+  "@webRequestsSummaryOnTheWay": {
+    "description": "requests.summary.onTheWay",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webRequestsSummaryDone": "{p1} done",
+  "@webRequestsSummaryDone": {
+    "description": "requests.summary.done",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webRequestsAddAfterAllNamed": "Add {p1} after all",
+  "@webRequestsAddAfterAllNamed": {
+    "description": "requests.addAfterAllNamed",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webRequestsEmptyNone": "No requests yet",
+  "@webRequestsEmptyNone": {
+    "description": "requests.empty.none"
+  },
+  "webRequestsEmptyNoneHint": "When someone requests a film or show, it shows up here.",
+  "@webRequestsEmptyNoneHint": {
+    "description": "requests.empty.noneHint"
   }
 }

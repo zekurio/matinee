@@ -22,7 +22,7 @@ import 'requests_hub.dart';
 /// requests, live from the stream the whole app follows, waiting first,
 /// then needs attention, on the way, and done, a page of Done at a time.
 /// Anyone else, and the queue's runner from Home's row, gets their own
-/// requests, what's still going first.
+/// requests in the server's order, in progress first, then finished.
 class RequestsScreen extends ConsumerWidget {
   const RequestsScreen({super.key, this.queue = false});
 
@@ -184,8 +184,9 @@ final class _QueueDown implements Exception {
 }
 
 /// The queue as one list: a line of what's in it, Add all while more than
-/// one waits, then the cards in the server's order of its lists, Done
-/// read on past what the live queue holds as its end shows.
+/// one waits, then the cards in the server's order of its lists, each in
+/// the state the server gave it, Done read on past what the live queue
+/// holds as its end shows.
 class _QueueList extends ConsumerWidget {
   const _QueueList({required this.queue, required this.held});
 
@@ -208,18 +209,20 @@ class _QueueList extends ConsumerWidget {
     );
     final entries = queueInOrder(queue, held: held, done: done.items);
     final waiting = [
-      for (final entry in entries)
-        if (entry.state == RequestState.waiting) entry.item,
+      for (final item in queue.waiting)
+        if (!held.contains(item.id)) item,
     ];
     int left(List<AdminRequestItem> list) =>
         list.where((item) => !held.contains(item.id)).length;
     final counts = [
-      if (waiting.isNotEmpty) l.requestsCountWaiting(waiting.length),
+      if (waiting.isNotEmpty)
+        l.webRequestsSummaryWaiting(formatCount(waiting.length, l)),
       if (left(queue.needsAttention) case final n when n > 0)
-        l.requestsCountNeedsAttention(n),
+        l.webRequestsSummaryNeedsAttention(n),
       if (left(queue.onTheWay) case final n when n > 0)
-        l.requestsCountOnTheWay(n),
-      if (queue.counts.done > 0) l.requestsCountDone(queue.counts.done),
+        l.webRequestsSummaryOnTheWay(n),
+      if (queue.counts.done > 0)
+        l.webRequestsSummaryDone(formatCount(queue.counts.done, l)),
     ];
     final notifier = pages == null
         ? null
@@ -232,8 +235,8 @@ class _QueueList extends ConsumerWidget {
       return _Middle(
         child: EmptyState(
           icon: Lucide.inbox,
-          title: l.requestsOverviewEmpty,
-          message: l.requestsOverviewEmptyHint,
+          title: l.webRequestsEmptyNone,
+          message: l.webRequestsEmptyNoneHint,
         ),
       );
     }
@@ -276,11 +279,10 @@ class _QueueList extends ConsumerWidget {
             if (done.more && notifier != null) {
               _askNearEnd(context, index, entries.length, notifier.more);
             }
-            final entry = entries[index];
+            final item = entries[index];
             return QueueCard(
-              key: ValueKey(entry.item.id),
-              item: entry.item,
-              state: entry.state,
+              key: ValueKey(item.id),
+              item: item,
               // Done's pages keep what they read, so an answered request
               // leaves them here.
               onAnswered: notifier == null
@@ -313,10 +315,9 @@ class _MinePageState extends ConsumerState<_MinePage> {
   /// a long list holds more than one stream takes.
   final _shown = FollowWindow();
 
-  /// The pages last loaded, shown while an ask, a cancel, or an answer
-  /// reads them again, so the list doesn't blink to a spinner.
-  CursorPages<RequestItem>? _lastGoing;
-  CursorPages<RequestItem>? _lastAll;
+  /// Whether the end of the live page came near, which reads the older
+  /// pages after it.
+  var _older = false;
 
   @override
   void dispose() {
@@ -327,56 +328,46 @@ class _MinePageState extends ConsumerState<_MinePage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final goingProvider = myRequestsProvider(MineFilter.inProgress);
-    final allProvider = myRequestsProvider(MineFilter.all);
-    var going = ref.watch(goingProvider);
-    var all = ref.watch(allProvider);
-    if (going.loaded) {
-      _lastGoing = going;
-    } else if (going.error == null) {
-      going = _lastGoing ?? going;
-    }
-    if (all.loaded) {
-      _lastAll = all;
-    } else if (all.error == null) {
-      all = _lastAll ?? all;
-    }
+    final first = ref.watch(myLiveRequestsProvider);
     final held = ref.watch(requestsProvider.select((state) => state.held));
+    final page = first.value;
     final Widget body;
-    if (!going.loaded) {
-      final error = going.error;
+    if (page == null) {
+      final error = first.error;
       body = error != null
           ? _Middle(
               child: FailureState(
                 title: l.askedLoadFailed,
                 error: error,
-                onRetry: () => ref.read(goingProvider.notifier).retry(),
+                onRetry: () => ref.invalidate(myLiveRequestsProvider),
               ),
             )
           : Center(child: LoadingState(label: l.loadingInProgress));
     } else {
-      // What's still going, from the server's list of those in progress,
-      // which also has what settled lately; then everything else, newest
-      // first, from the whole list.
-      final still = [
-        for (final item in going.items)
-          if (!held.contains(item.id) &&
-              !(ownState(item.season?.asTitle() ?? item.availability)
-                      ?.finished ??
-                  false))
-            item,
-      ];
-      final first = {for (final item in still) item.id};
+      // The server's list in its order: the live first page, then the
+      // pages after it.
+      final after = page.nextCursor;
+      final olderProvider = after == null || !_older
+          ? null
+          : olderRequestsProvider(after);
+      final older = olderProvider == null ? null : ref.watch(olderProvider);
+      final seen = {for (final item in page.items) item.id};
       final items = [
-        ...still,
-        if (going.done)
-          for (final item in all.items)
-            if (!held.contains(item.id) && !first.contains(item.id)) item,
+        for (final item in page.items)
+          if (!held.contains(item.id)) item,
+        for (final item in older?.items ?? const <RequestItem>[])
+          if (!held.contains(item.id) && !seen.contains(item.id)) item,
       ];
-      final (pages, notifier) = going.done
-          ? (all, ref.read(allProvider.notifier))
-          : (going, ref.read(goingProvider.notifier));
-      final more = !pages.done;
+      final more = after != null && !(older?.done ?? false);
+      void readMore() {
+        if (olderProvider == null) {
+          setState(() => _older = true);
+        } else {
+          ref.read(olderProvider.notifier).more();
+        }
+      }
+
+      if (items.isEmpty && more) _askNearEnd(context, 0, 0, readMore);
       if (items.isEmpty && !more) {
         body = _Middle(
           child: EmptyState(
@@ -400,9 +391,7 @@ class _MinePageState extends ConsumerState<_MinePage> {
               _CardRows(
                 itemCount: items.length,
                 itemBuilder: (context, index) {
-                  if (more) {
-                    _askNearEnd(context, index, items.length, notifier.more);
-                  }
+                  if (more) _askNearEnd(context, index, items.length, readMore);
                   final item = items[index];
                   return FollowedCard(
                     key: ValueKey(item.id),
@@ -414,7 +403,14 @@ class _MinePageState extends ConsumerState<_MinePage> {
               ),
               if (more)
                 SliverToBoxAdapter(
-                  child: _More(error: pages.error, onRetry: notifier.retry),
+                  child: _More(
+                    error: older?.error,
+                    onRetry: () {
+                      if (olderProvider != null) {
+                        ref.read(olderProvider.notifier).retry();
+                      }
+                    },
+                  ),
                 ),
               _bottom(context),
             ],

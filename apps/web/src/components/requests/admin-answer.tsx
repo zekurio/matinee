@@ -83,9 +83,11 @@ export function requestedTip(item: AdminRequestItem): BadgeTip {
 
 /**
  * Where the buttons are drawn: `page`, leading a title page's row as
- * Request does there, or `plain`, off a picture.
+ * Request does there; `plain`, off a picture; or `fill`, one line across
+ * a request's card, Add taking the room Decline leaves, where the card's
+ * "Goes to" names and chooses the library instead.
  */
-export type AnswerLook = "page" | "plain"
+export type AnswerLook = "page" | "plain" | "fill"
 
 /**
  * Add, in the main button's place and style, and Decline beside it, as
@@ -108,7 +110,8 @@ export function AdminAnswer({
   const [declining, setDeclining] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const { library } = useGoesTo(item)
-  const choice = choosesLibrary(item)
+  const fill = look === "fill"
+  const choice = !fill && choosesLibrary(item)
   const page = look === "page"
   const size = page ? "lg" : "sm"
 
@@ -133,6 +136,7 @@ export function AdminAnswer({
       className={cn(
         "min-w-0",
         page && "max-sm:h-11 max-sm:flex-1",
+        fill && "flex-1",
         choice && "rounded-r-none",
       )}
     >
@@ -146,7 +150,12 @@ export function AdminAnswer({
   return (
     <div
       ref={root}
-      className={cn("flex min-w-0 gap-2", page && "contents", className)}
+      className={cn(
+        "flex min-w-0 gap-2",
+        page && "contents",
+        fill && "w-full gap-1.5",
+        className,
+      )}
     >
       {choice ? (
         <div className={cn("flex min-w-0", page && "max-sm:flex-1")}>
@@ -190,6 +199,8 @@ export function AdminAnswer({
               page &&
                 "hover:bg-foreground/10 data-popup-open:bg-foreground/10 max-sm:h-11",
               look === "plain" && "hover:bg-muted data-popup-open:bg-muted",
+              fill &&
+                "hover:bg-foreground/10 data-popup-open:bg-foreground/10 shrink-0 px-2",
             )}
           >
             {tr("requests.decline")}

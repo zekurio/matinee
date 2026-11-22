@@ -56,15 +56,14 @@ class _QueueRequests extends ConsumerWidget {
     final failed = ref.watch(
       requestsProvider.select((state) => state.queueFailed),
     );
-    return _RequestsRow<QueuedRequest>(
+    return _RequestsRow<AdminRequestItem>(
       // Held ones are left out by the row.
       items: queue == null ? null : queueInOrder(queue),
-      id: (entry) => entry.item.id,
+      id: (item) => item.id,
       onSeeAll: () => context.push(Routes.requestQueue),
       error: failed && queue == null ? const _QueueDown() : null,
       onRetry: () => ref.read(requestsProvider.notifier).retryQueue(),
-      card: (entry) =>
-          QueueCard(item: entry.item, state: entry.state, compact: true),
+      card: (item) => QueueCard(item: item, compact: true),
     );
   }
 }
@@ -118,7 +117,7 @@ class _RequestsRow<T> extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final title = l.requestsRecent;
+    final title = l.webRequestsRecent;
     final width = requestCardWidth(MediaQuery.sizeOf(context));
     final held = ref.watch(requestsProvider.select((state) => state.held));
     final error = this.error;

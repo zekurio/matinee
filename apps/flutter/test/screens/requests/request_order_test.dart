@@ -18,7 +18,7 @@ const _availability = {
   'disabledReason': null,
 };
 
-AdminRequestItem _item(String id, {String status = 'asked'}) =>
+AdminRequestItem _item(String id, {String state = 'waiting'}) =>
     AdminRequestItem.fromJson({
       'id': id,
       'title': {
@@ -34,7 +34,12 @@ AdminRequestItem _item(String id, {String status = 'asked'}) =>
       'arrivedAt': null,
       'availability': _availability,
       'season': null,
-      'status': status,
+      'status': switch (state) {
+        'waiting' => 'asked',
+        'declined' => 'declined',
+        _ => 'approved',
+      },
+      'state': state,
       'fulfilmentState': null,
       'error': null,
       'reason': null,
@@ -72,32 +77,36 @@ List<String> _ids(Iterable<AdminRequestItem> items) => [
 ];
 
 void main() {
-  // The bug it pins: the overview and Explore's row put a request in the
-  // wrong state, or out of the server's order of its lists, once the
-  // tabs that kept them apart are gone.
-  test("the queue reads in its lists' order, each with its list's state", () {
+  // The bug it pins: the overview and Explore's row out of the server's
+  // order of its lists, or showing a request held for Undo.
+  test("the queue reads in its lists' order, without what's held", () {
     final entries = queueInOrder(
       _queue(
         done: [
-          _item('d1', status: 'declined'),
-          _item('d2', status: 'approved'),
+          _item('d1', state: 'declined'),
+          _item('d2', state: 'here'),
         ],
-        onTheWay: [_item('o1', status: 'approved')],
-        needsAttention: [_item('n1', status: 'approved')],
+        onTheWay: [_item('o1', state: 'onTheWay')],
+        needsAttention: [_item('n1', state: 'needsAttention')],
         waiting: [_item('w1'), _item('w2')],
       ),
       held: {'w2'},
     );
-    expect(
-      [for (final entry in entries) (entry.item.id, entry.state)],
-      [
-        ('w1', RequestState.waiting),
-        ('n1', RequestState.needsAttention),
-        ('o1', RequestState.onTheWay),
-        ('d1', RequestState.declined),
-        ('d2', RequestState.here),
+    expect(_ids(entries), ['w1', 'n1', 'o1', 'd1', 'd2']);
+  });
+
+  test('Done read past the live queue takes its place', () {
+    final entries = queueInOrder(
+      _queue(
+        waiting: [_item('w1')],
+        done: [_item('d1', state: 'here')],
+      ),
+      done: [
+        _item('d1', state: 'here'),
+        _item('d2', state: 'declined'),
       ],
     );
+    expect(_ids(entries), ['w1', 'd1', 'd2']);
   });
 
   group('Done past what the live queue holds', () {
