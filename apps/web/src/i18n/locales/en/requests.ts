@@ -23,8 +23,10 @@ export default defineMessages("requests", {
   "requests.state.onTheWayPercent": "On its way · {percent}",
   "requests.state.here": "Here",
   "requests.state.declined": "Declined",
-  // On a person's own card. {when} is relative, like "2 days ago".
-  "requests.askedWhen": "First requested {when}",
+  // A person's own card: taking the request back, small beside when they
+  // asked.
+  "requests.cancel": "Cancel",
+  "requests.cancelNamed": "Cancel the request for {name}",
 
   // The line at the top of /requests, the states that have any, joined
   // with " · ".
@@ -54,8 +56,9 @@ export default defineMessages("requests", {
   "requests.kind.show": "Show",
   // How many more people requested it, beside the first one's name.
   "requests.othersCount": "+{count}",
-  // {names} is a list, like "Ben and Cara".
-  "requests.alsoRequested": "also {names}",
+  // The popover of everyone who requested it, and when each did.
+  "requests.askedBy": "Requested by",
+  "requests.askedByNamed": "Who requested {name}",
   // For an admin, the tooltip on a title's "Requested" badge. {when} is
   // relative, like "2 hours ago"; {names} a list, like "anna and ben".
   "requests.badge.requested": "{name} requested this {when}",
@@ -71,7 +74,6 @@ export default defineMessages("requests", {
   // New seasons as they air, after the ones requested.
   "requests.scope.andFuture": "{seasons} + new",
   "requests.scope.futureOnly": "New seasons",
-  "requests.goesTo.label": "Goes to",
   // The button that changes where a waiting request goes.
   "requests.goesTo.change": "Change where {name} goes, now {library}",
   "requests.goesTo.title": "Goes to",
@@ -164,7 +166,6 @@ export default defineMessages("requests", {
   "requests.progress.notOut": "Not out yet",
   // {time} like "3 hours".
   "requests.progress.left": "{time} left",
-  "requests.progress.label": "Progress for {name}",
 
   // Needs attention.
   "requests.attention.unknown": "Failed without a reason",
