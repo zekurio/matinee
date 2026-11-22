@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/device.dart';
-import '../../core/permissions.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
@@ -16,9 +15,7 @@ import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
 import '../requests/asked_rail.dart';
-import '../requests/request_words.dart' show formatCount;
 import '../requests/requests_data.dart' show profileAskedProvider;
-import '../requests/requests_hub.dart' show requestsProvider;
 import '../settings/settings_rows.dart';
 import '../shell/offline_note.dart';
 import '../sign_in/server_switcher.dart';
@@ -111,7 +108,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (loaded == null) {
       return [
         header,
-        if (runsQueue(user)) const _Requests(),
         if (profile.hasError && !profile.isLoading)
           FailureState(
             title: l.profileLoadFailed,
@@ -132,7 +128,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final asked = ref.watch(profileAskedProvider).value?.items ?? const [];
     return [
       header,
-      if (runsQueue(user)) const _Requests(),
       _Favorites(favorites: loaded.favorites ?? const []),
       if (asked.isNotEmpty) AskedRail(items: asked, fresh: false),
       _statistics(context, user),
@@ -434,31 +429,6 @@ class _RecentRail extends StatelessWidget {
       itemHeight: size.height,
       itemCount: entries.length,
       itemBuilder: (context, index) => EpisodeCard(item: entries[index].item),
-    );
-  }
-}
-
-/// An admin's way to the requests, with how many need them.
-class _Requests extends ConsumerWidget {
-  const _Requests();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final needsYou = ref.watch(
-      requestsProvider.select((state) => state.needsYou),
-    );
-    return _Narrow(
-      child: Panel(
-        rows: [
-          LinkRow(
-            icon: Lucide.inbox,
-            title: l.webRequestsTitle,
-            value: needsYou > 0 ? formatCount(needsYou, l) : null,
-            onPressed: () => context.push(Routes.requestQueue),
-          ),
-        ],
-      ),
     );
   }
 }
