@@ -4235,24 +4235,12 @@
       }
     }
   },
-  "webAskMineAll": "All",
-  "@webAskMineAll": {
-    "description": "strings_web_ask.xml"
-  },
   "webAskMineEmpty": "Nothing requested yet",
   "@webAskMineEmpty": {
     "description": "strings_web_ask.xml"
   },
   "webAskMineEmptyHint": "Search for a film or show that isn't here and request it from its page.",
   "@webAskMineEmptyHint": {
-    "description": "strings_web_ask.xml"
-  },
-  "webAskMineEmptyInProgress": "Nothing on its way",
-  "@webAskMineEmptyInProgress": {
-    "description": "strings_web_ask.xml"
-  },
-  "webAskMineInProgress": "In progress",
-  "@webAskMineInProgress": {
     "description": "strings_web_ask.xml"
   },
   "webAskMineSeeAll": "See all",
@@ -5988,22 +5976,6 @@
   "@webRequestsDoneGaveUpUndated": {
     "description": "strings_web_requests.xml"
   },
-  "webRequestsEmptyDone": "Nothing done yet",
-  "@webRequestsEmptyDone": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsEmptyNeedsAttention": "Nothing needs attention",
-  "@webRequestsEmptyNeedsAttention": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsEmptyOnTheWay": "Nothing is on the way",
-  "@webRequestsEmptyOnTheWay": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsEmptyWaiting": "Nothing is waiting",
-  "@webRequestsEmptyWaiting": {
-    "description": "strings_web_requests.xml"
-  },
   "webRequestsGiveUp": "Give up",
   "@webRequestsGiveUp": {
     "description": "strings_web_requests.xml"
@@ -6056,22 +6028,6 @@
   },
   "webRequestsKindShow": "Show",
   "@webRequestsKindShow": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsListDone": "Done",
-  "@webRequestsListDone": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsListNeedsAttention": "Needs attention",
-  "@webRequestsListNeedsAttention": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsListOnTheWay": "On the way",
-  "@webRequestsListOnTheWay": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsListWaiting": "Waiting",
-  "@webRequestsListWaiting": {
     "description": "strings_web_requests.xml"
   },
   "webRequestsMore": "More for {p1}",
