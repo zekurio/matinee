@@ -305,10 +305,11 @@ class _TvSidePanelState extends State<TvSidePanel> {
 
 /// A choice in a [showTvPicker] panel.
 class TvOption<T> {
-  const TvOption(this.value, this.label);
+  const TvOption(this.value, this.label, {this.detail});
 
   final T value;
   final String label;
+  final String? detail;
 }
 
 /// A panel to pick one of [options], [current] checked and focused first.
@@ -332,6 +333,9 @@ Future<T?> showTvPicker<T>(
           quiet: true,
           checked: option.value == current,
           autofocus: option.value == current,
+          trailing: option.detail == null
+              ? null
+              : TvListValue(option.detail!, chevron: false),
           onPressed: () => Navigator.of(context).pop(option),
         ),
     ],
