@@ -116,7 +116,7 @@ function RowNotice(props: {
               <div data-fg={props.name} data-fk="row">
                 <Button
                   fid="retry"
-                  label={tr("common_retry")}
+                  label={tr("commonRetry")}
                   icon={RefreshCw}
                   onPress={props.onRetry}
                 />
@@ -136,7 +136,7 @@ function FeaturedRow(props: {
 }) {
   const { nav, viewer, actions } = useApp()
   return (
-    <Row title={tr("tv_home_featured")} name={FEATURED}>
+    <Row title={tr("tvHomeFeatured")} name={FEATURED}>
       {props.slides.map((slide) => (
         <PosterCard
           key={slide.title.id}
@@ -221,7 +221,7 @@ function ShelfRow(props: {
     session.api.media.shelf({ libraryId: library.id, limit: 12 }),
   )
   useRefreshOnResume([shelf])
-  const title = tr("browse_recently_added", library.name)
+  const title = tr("browseRecentlyAdded", library.name)
   const { state } = shelf
   const first = state.kind === "ready" ? state.value[0]?.title.id : undefined
   if (first) props.firsts.set(name, first)
@@ -241,7 +241,7 @@ function ShelfRow(props: {
       <RowNotice
         name={name}
         title={title}
-        headline={tr("home_shelf_failed")}
+        headline={tr("homeShelfFailed")}
         message={state.message}
         onRetry={() => shelf.reload()}
         height={SHELF_HEIGHT}
@@ -253,7 +253,7 @@ function ShelfRow(props: {
       <RowNotice
         name={name}
         title={title}
-        headline={tr("browse_empty_shelf")}
+        headline={tr("browseEmptyShelf")}
         height={SHELF_HEIGHT}
       />
     )
@@ -326,7 +326,7 @@ export function Home() {
   if (nothing && libraries.state.kind === "failed") {
     return (
       <Message
-        title={tr("home_failed")}
+        title={tr("homeFailed")}
         message={libraries.state.message}
         retry={() => {
           for (const loader of [
@@ -369,15 +369,15 @@ export function Home() {
           )}
           <ItemRow
             name={CONTINUE}
-            title={tr("browse_continue_watching")}
-            failed={tr("home_continue_failed")}
+            title={tr("browseContinueWatching")}
+            failed={tr("homeContinueFailed")}
             loader={resume}
             onFocus={setFocusedItem}
           />
           <ItemRow
             name={NEXT_UP}
-            title={tr("browse_next_up")}
-            failed={tr("home_next_up_failed")}
+            title={tr("browseNextUp")}
+            failed={tr("homeNextUpFailed")}
             loader={nextUp}
             onFocus={setFocusedItem}
           />
@@ -392,11 +392,8 @@ export function Home() {
                 name={name}
                 title={
                   rail.id === "becauseWatched"
-                    ? tr(
-                        "web_discover_rail_becauseWatched",
-                        rail.seed?.name ?? "",
-                      )
-                    : tr("web_discover_rail_forYou")
+                    ? tr("webDiscoverRailBecauseWatched", rail.seed?.name ?? "")
+                    : tr("webDiscoverRailForYou")
                 }
               >
                 {rail.items.map((item) => (
@@ -425,7 +422,7 @@ export function Home() {
             <RowNotice
               name="libraries"
               title={null}
-              headline={tr("home_load_failed")}
+              headline={tr("homeLoadFailed")}
               message={libs.message}
               onRetry={() => libraries.reload()}
             />
@@ -435,15 +432,15 @@ export function Home() {
               <div class="t-headline">
                 {tr(
                   user.role === "admin"
-                    ? "browse_home_no_libraries"
-                    : "browse_home_nothing_yet",
+                    ? "browseHomeNoLibraries"
+                    : "browseHomeNothingYet",
                 )}
               </div>
               <div class="t-body muted">
                 {tr(
                   user.role === "admin"
-                    ? "browse_home_no_libraries_admin"
-                    : "browse_home_nothing_yet_description",
+                    ? "browseHomeNoLibrariesAdmin"
+                    : "browseHomeNothingYetDescription",
                 )}
               </div>
             </div>

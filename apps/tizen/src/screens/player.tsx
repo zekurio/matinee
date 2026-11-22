@@ -51,7 +51,7 @@ import { hasAvplay, playbackDevice } from "@/player/device"
 import { AvplayEngine, type Engine, VideoEngine } from "@/player/engine"
 import { playerPrefs } from "@/player/prefs"
 
-/* The player on a TV, as the Android TV app's `ui/player/tv`: the video, drawn for a remote. */
+/* The player on a TV: the video, drawn for a remote. */
 
 /** How long the controls stay once nothing is pressed. */
 const HIDE_AFTER_MS = 3500
@@ -88,14 +88,14 @@ function Failure(props: {
         {props.retry && (
           <Button
             fid="retry"
-            label={tr("common_retry")}
+            label={tr("commonRetry")}
             icon={RefreshCw}
             onPress={props.retry}
           />
         )}
         <Button
           fid="back"
-          label={tr("player_back")}
+          label={tr("playerBack")}
           onPress={() => nav.back()}
         />
       </div>
@@ -104,7 +104,7 @@ function Failure(props: {
 }
 
 function refusalTitle(refusal: "restricted" | "busy"): string {
-  return tr(refusal === "restricted" ? "player_restricted" : "player_busy")
+  return tr(refusal === "restricted" ? "playerRestricted" : "playerBusy")
 }
 
 /** The player's page: it asks the server how the file plays, then plays it. */
@@ -145,7 +145,7 @@ export function PlayerPage(props: { itemId: string; start?: number }) {
     return (
       <div class="fill player-black">
         <Failure
-          title={tr("player_load_failed")}
+          title={tr("playerLoadFailed")}
           message={state.message}
           retry={() => data.reload()}
         />
@@ -157,8 +157,8 @@ export function PlayerPage(props: { itemId: string; start?: number }) {
     return (
       <div class="fill player-black">
         <Failure
-          title={tr("player_error_lost")}
-          message={tr("player_unplayable")}
+          title={tr("playerErrorLost")}
+          message={tr("playerUnplayable")}
           retry={() => data.reload()}
         />
       </div>
@@ -245,7 +245,7 @@ function trackLabel(
   const name = language ? languageName(language) : null
   if (!title || title.trim() === "") return name ?? unnamed
   if (!name || title.toLowerCase().includes(name.toLowerCase())) return title
-  return tr("player_track_with_title", name, title)
+  return tr("playerTrackWithTitle", name, title)
 }
 
 function subtitleLabel(
@@ -256,7 +256,7 @@ function subtitleLabel(
     return trackLabel(
       track.language,
       track.title,
-      tr("player_track_unknown_language"),
+      tr("playerTrackUnknownLanguage"),
     )
   }
   const position =
@@ -264,7 +264,7 @@ function subtitleLabel(
   return trackLabel(
     track.language,
     track.title,
-    tr("player_track_unnamed", position),
+    tr("playerTrackUnnamed", position),
   )
 }
 
@@ -290,14 +290,14 @@ type MenuEntry =
 function menuEntries(menu: Menu, controller: PlayerController): MenuEntry[] {
   if (menu === "audio") {
     return controller.audioTracks.length === 0
-      ? [{ kind: "note", key: "none", text: tr("player_audio_no_tracks") }]
+      ? [{ kind: "note", key: "none", text: tr("playerAudioNoTracks") }]
       : controller.audioTracks.map((track) => ({
           kind: "choice",
           key: `audio-${track.index}`,
           title: trackLabel(
             track.language,
             track.title,
-            tr("player_track_unnamed", track.index),
+            tr("playerTrackUnnamed", track.index),
           ),
           detail: [track.format, track.layout].filter(Boolean).join(" · "),
           selected: track.index === controller.audio?.index,
@@ -309,7 +309,7 @@ function menuEntries(menu: Menu, controller: PlayerController): MenuEntry[] {
       {
         kind: "choice",
         key: "off",
-        title: tr("player_subtitles_off"),
+        title: tr("playerSubtitlesOff"),
         selected: controller.subtitle === null,
         pick: () => controller.pickSubtitle(null),
       },
@@ -318,11 +318,11 @@ function menuEntries(menu: Menu, controller: PlayerController): MenuEntry[] {
         key: `subtitle-${track.id}`,
         title: subtitleLabel(track, controller.subtitles),
         detail: [
-          track.forced ? tr("player_subtitles_forced") : null,
+          track.forced ? tr("playerSubtitlesForced") : null,
           track.sdh ? "SDH" : null,
           track.format,
           track.delivery !== null && controller.burnsIn(track)
-            ? tr("player_subtitles_burned_in")
+            ? tr("playerSubtitlesBurnedIn")
             : null,
         ]
           .filter(Boolean)
@@ -336,7 +336,7 @@ function menuEntries(menu: Menu, controller: PlayerController): MenuEntry[] {
             {
               kind: "note" as const,
               key: "error",
-              text: tr("player_error_subtitles"),
+              text: tr("playerErrorSubtitles"),
             },
           ]
         : []),
@@ -344,14 +344,14 @@ function menuEntries(menu: Menu, controller: PlayerController): MenuEntry[] {
   }
   const fill = playerPrefs.value.fillScreen
   return [
-    { kind: "heading", key: "quality", text: tr("player_quality") },
+    { kind: "heading", key: "quality", text: tr("playerQuality") },
     // A file over the account's bit rate limit plays only as an encode.
     ...(controller.offersOriginal
       ? [
           {
             kind: "choice" as const,
             key: "quality-original",
-            title: tr("player_quality_original"),
+            title: tr("playerQualityOriginal"),
             selected: controller.quality === ORIGINAL_QUALITY,
             pick: () => controller.pickQuality(ORIGINAL_QUALITY),
           },
@@ -367,31 +367,31 @@ function menuEntries(menu: Menu, controller: PlayerController): MenuEntry[] {
     // An engine with one speed has none to pick.
     ...(controller.speeds.length > 1
       ? [
-          { kind: "heading" as const, key: "speed", text: tr("player_speed") },
+          { kind: "heading" as const, key: "speed", text: tr("playerSpeed") },
           ...controller.speeds.map((rate): MenuEntry => ({
             kind: "choice",
             key: `speed-${rate}`,
             title:
               rate === 1
-                ? tr("player_speed_normal")
-                : tr("player_speed_rate", String(rate)),
+                ? tr("playerSpeedNormal")
+                : tr("playerSpeedRate", String(rate)),
             selected: controller.speed === rate,
             pick: () => controller.pickSpeed(rate),
           })),
         ]
       : []),
-    { kind: "heading", key: "picture", text: tr("player_picture") },
+    { kind: "heading", key: "picture", text: tr("playerPicture") },
     {
       kind: "choice",
       key: "picture-fit",
-      title: tr("player_fit"),
+      title: tr("playerFit"),
       selected: !fill,
       pick: () => playerPrefs.set({ fillScreen: false }),
     },
     {
       kind: "choice",
       key: "picture-fill",
-      title: tr("player_fill"),
+      title: tr("playerFill"),
       selected: fill,
       pick: () => playerPrefs.set({ fillScreen: true }),
     },
@@ -399,9 +399,9 @@ function menuEntries(menu: Menu, controller: PlayerController): MenuEntry[] {
 }
 
 const MENU_NAMES = {
-  audio: "player_menu_audio",
-  subtitles: "player_menu_subtitles",
-  settings: "player_menu_settings",
+  audio: "playerMenuAudio",
+  subtitles: "playerMenuSubtitles",
+  settings: "playerMenuSettings",
 } satisfies Record<Menu, StringKey>
 
 /** A menu as the TV's right-edge panel, over the dimmed picture, focus on the current choice. */
@@ -559,17 +559,17 @@ function NoticeNote(props: { notice: Notice | null; onDone: () => void }) {
   if (!notice) return null
   const detail =
     notice.kind === "burnInFailed"
-      ? tr("player_notice_burn_in_failed_detail")
+      ? tr("playerNoticeBurnInFailedDetail")
       : notice.kind === "qualityFailed"
-        ? tr("player_notice_quality_failed_detail")
+        ? tr("playerNoticeQualityFailedDetail")
         : notice.detail
   return (
     <div class="player-notice">
       <div class="t-facts">
         {tr(
           notice.kind === "burnInFailed"
-            ? "player_notice_burn_in_failed"
-            : "player_notice_switch_failed",
+            ? "playerNoticeBurnInFailed"
+            : "playerNoticeSwitchFailed",
         )}
       </div>
       {detail && <div class="t-caption dim85">{detail}</div>}
@@ -580,13 +580,13 @@ function NoticeNote(props: { notice: Notice | null; onDone: () => void }) {
 function skipLabel(kind: MediaSegment["kind"]): string {
   switch (kind) {
     case "recap":
-      return tr("player_skip_recap")
+      return tr("playerSkipRecap")
     case "credits":
-      return tr("player_skip_credits")
+      return tr("playerSkipCredits")
     case "preview":
-      return tr("player_skip_preview")
+      return tr("playerSkipPreview")
     case "intro":
-      return tr("player_skip_intro")
+      return tr("playerSkipIntro")
   }
 }
 
@@ -737,7 +737,7 @@ function Controls(props: {
 
   const action: PictureAction | null = upcoming
     ? {
-        label: tr("player_next_episode"),
+        label: tr("playerNextEpisode"),
         countdown: cancelled
           ? null
           : controller.ended
@@ -949,7 +949,7 @@ function Controls(props: {
             <Tap
               fid="seek"
               class="seek-bar"
-              label={tr("a11y_player_seek")}
+              label={tr("a11yPlayerSeek")}
               onBlur={release}
             >
               <span class="seek-track" />
@@ -981,7 +981,7 @@ function Controls(props: {
             {previous && (
               <RoundButton
                 fid="previous"
-                label={tr("player_previous_episode")}
+                label={tr("playerPreviousEpisode")}
                 size={40}
                 onPress={() => props.onEpisode(previous)}
               >
@@ -990,7 +990,7 @@ function Controls(props: {
             )}
             <RoundButton
               fid="back"
-              label={tr("player_skip_back", back)}
+              label={tr("playerSkipBack", back)}
               size={40}
               onPress={() => controller.skip(-back)}
             >
@@ -998,7 +998,7 @@ function Controls(props: {
             </RoundButton>
             <RoundButton
               fid="play"
-              label={tr(controller.playing ? "player_pause" : "player_play")}
+              label={tr(controller.playing ? "playerPause" : "playerPlay")}
               size={48}
               onPress={() => controller.togglePlay()}
             >
@@ -1006,7 +1006,7 @@ function Controls(props: {
             </RoundButton>
             <RoundButton
               fid="ahead"
-              label={tr("player_skip_forward", ahead)}
+              label={tr("playerSkipForward", ahead)}
               size={40}
               onPress={() => controller.skip(ahead)}
             >
@@ -1015,7 +1015,7 @@ function Controls(props: {
             {following && (
               <RoundButton
                 fid="next"
-                label={tr("player_next_episode")}
+                label={tr("playerNextEpisode")}
                 size={40}
                 onPress={() => props.onEpisode(following)}
               >
@@ -1027,14 +1027,14 @@ function Controls(props: {
             <IconButton
               fid="audio"
               icon={AudioLines}
-              label={tr("player_menu_audio")}
+              label={tr("playerMenuAudio")}
               small
               onPress={() => openMenu("audio")}
             />
             <IconButton
               fid="subtitles"
               icon={Captions}
-              label={tr("player_menu_subtitles")}
+              label={tr("playerMenuSubtitles")}
               small
               onPress={() => openMenu("subtitles")}
             >
@@ -1044,7 +1044,7 @@ function Controls(props: {
             <IconButton
               fid="settings"
               icon={Settings}
-              label={tr("player_menu_settings")}
+              label={tr("playerMenuSettings")}
               small
               onPress={() => openMenu("settings")}
             />
@@ -1058,7 +1058,7 @@ function Controls(props: {
             title={
               controller.refusal
                 ? refusalTitle(controller.refusal)
-                : tr("player_error_lost")
+                : tr("playerErrorLost")
             }
             message={controller.error}
             // The server won't play it for this account, and says why.

@@ -4,7 +4,7 @@ import { Observable } from "@/lib/observable"
 
 /*
  * What a page loads from the server, kept while the page is on the back
- * stack, as the Android app's Loader. `state` is ready from the first
+ * stack. `state` is ready from the first
  * answer on; a fetch after that which fails leaves it, so a refresh that
  * fails doesn't blank what the person saw.
  */

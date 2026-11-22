@@ -1,10 +1,8 @@
-# Shortcuts for the repository. `just` lists them. The Android app's are
-# under `just android`, from apps/android/justfile, the iOS app's under
-# `just ios`, from apps/ios/justfile, and the Samsung TV app's under
-# `just tizen`, from apps/tizen/justfile.
+# Shortcuts for the repository. `just` lists them. The Flutter app's are
+# under `just flutter`, from apps/flutter/justfile, and the Samsung TV
+# app's under `just tizen`, from apps/tizen/justfile.
 
-mod android "apps/android"
-mod ios "apps/ios"
+mod flutter "apps/flutter"
 mod tizen "apps/tizen"
 
 [private]
@@ -15,7 +13,7 @@ default:
 dev:
     pnpm dev
 
-# Format check, lint, typecheck, and the native API client checks, as CI runs
+# Format check, lint, typecheck, and the generated file checks, as CI runs
 verify:
     pnpm verify
 

@@ -1,0 +1,895 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show setEquals;
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' show NumberFormat;
+
+import '../../../api/matinee_api.dart';
+import '../../../core/field_errors.dart';
+import '../../../core/permissions.dart';
+import '../../../core/session.dart';
+import '../../../kit/kit.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../query/server_data.dart';
+import '../settings_rows.dart';
+import 'admin_data.dart';
+import 'admin_parts.dart';
+
+/// The playback qualities' rates, which are the bit rate limits a form
+/// offers, largest first, as the server sends them.
+final _qualitiesProvider = serverQuery((api) => api.playback.options());
+
+/// A choice that leaves a setting to the groups.
+const _fromGroups = 'groups';
+const _noLimit = 'none';
+
+/// How many devices the web's form offers to let play at once.
+const _streamChoices = [1, 2, 3, 4, 5, 10];
+
+/// What "Limited" starts at, as on the web.
+const _defaultQuota = RequestQuota(titles: 5, days: 7);
+
+/// The permissions among [permissions] the form has no control for.
+List<String> _others(List<String>? permissions) => [
+  for (final permission in permissions ?? const <String>[])
+    if (!policyPermissions.contains(permission)) permission,
+];
+
+/// The request permissions among [permissions].
+List<String> _requestOnes(List<String>? permissions) => [
+  for (final permission in permissions ?? const <String>[])
+    if (requestPermissions.contains(permission)) permission,
+];
+
+/// The request choice an override's allow and deny lists spell, or null
+/// when they leave it to the groups.
+RequestsChoice? _requestsChoice(AdminUserAccessOverride override) {
+  final allow = override.allow ?? const [];
+  final deny = override.deny ?? const [];
+  if (deny.contains(Permission.requestCreate)) return RequestsChoice.off;
+  if (!allow.contains(Permission.requestCreate)) return null;
+  return allow.contains(Permission.requestAutoApprove)
+      ? RequestsChoice.add
+      : RequestsChoice.ask;
+}
+
+/// What a request choice allows and denies.
+({List<String> allow, List<String> deny}) _requestsLists(
+  RequestsChoice? choice,
+) => switch (choice) {
+  null => (allow: const [], deny: const []),
+  RequestsChoice.off => (
+    allow: const [],
+    deny: const [Permission.requestCreate, Permission.requestAutoApprove],
+  ),
+  RequestsChoice.ask => (
+    allow: const [Permission.requestCreate],
+    deny: const [Permission.requestAutoApprove],
+  ),
+  RequestsChoice.add => (allow: requestPermissions, deny: const []),
+};
+
+/// One account's access as the form holds it: the groups an admin or an
+/// invite put it in, and what's set on it over them, each field null
+/// while the groups decide it. A limit's [Explicit] holds null for none.
+/// Downloads and requests are permissions the override allows or denies,
+/// as the web's access dialog has them; the override's other permissions
+/// have no control here and save as they were.
+@immutable
+final class _Draft {
+  const _Draft({
+    required this.groupIds,
+    required this.libraries,
+    required this.maxBitrate,
+    required this.transcode,
+    required this.downloads,
+    required this.requests,
+    required this.requestLimit,
+    required this.maxStreams,
+    this.requestsTouched = false,
+  });
+
+  factory _Draft.of(AdminUserAccess access) {
+    final override = access.override;
+    return _Draft(
+      groupIds: {
+        for (final group in access.groups)
+          if (group.source != AccessSource.provider) group.id,
+      },
+      libraries: switch (override.libraries) {
+        final libraries? => (
+          all: libraries.all,
+          ids: libraries.all ? const <String>{} : libraries.ids.toSet(),
+        ),
+        null => null,
+      },
+      maxBitrate: override.maxBitrate,
+      transcode: override.transcode,
+      downloads: (override.allow ?? const []).contains(Permission.mediaDownload)
+          ? true
+          : (override.deny ?? const []).contains(Permission.mediaDownload)
+          ? false
+          : null,
+      requests: _requestsChoice(override),
+      requestLimit: override.requestLimit,
+      maxStreams: override.maxStreams,
+    );
+  }
+
+  final Set<String> groupIds;
+  final ({bool all, Set<String> ids})? libraries;
+  final Explicit<int>? maxBitrate;
+  final bool? transcode;
+
+  /// `media.download`, allowed or denied over the groups.
+  final bool? downloads;
+
+  /// `request.create` and `request.autoApprove` as one choice.
+  final RequestsChoice? requests;
+  final Explicit<RequestQuota>? requestLimit;
+  final Explicit<int>? maxStreams;
+
+  /// Whether the request choice was changed, even back to how it opened.
+  /// It shows three of the mixes its two permissions make, so one never
+  /// touched keeps what the override allows and denies of them: an
+  /// override may deny adding without an approval and leave asking to the
+  /// groups.
+  final bool requestsTouched;
+
+  _Draft copy({
+    Set<String>? groupIds,
+    ({bool all, Set<String> ids})? Function()? libraries,
+    Explicit<int>? Function()? maxBitrate,
+    bool? Function()? transcode,
+    bool? Function()? downloads,
+    RequestsChoice? Function()? requests,
+    Explicit<RequestQuota>? Function()? requestLimit,
+    Explicit<int>? Function()? maxStreams,
+  }) => _Draft(
+    groupIds: groupIds ?? this.groupIds,
+    libraries: libraries == null ? this.libraries : libraries(),
+    maxBitrate: maxBitrate == null ? this.maxBitrate : maxBitrate(),
+    transcode: transcode == null ? this.transcode : transcode(),
+    downloads: downloads == null ? this.downloads : downloads(),
+    requests: requests == null ? this.requests : requests(),
+    requestLimit: requestLimit == null ? this.requestLimit : requestLimit(),
+    maxStreams: maxStreams == null ? this.maxStreams : maxStreams(),
+    requestsTouched: requestsTouched || requests != null,
+  );
+
+  /// The override to save over [saved], the one the form opened on.
+  AdminUsersSetAccessInputOverride own(AdminUserAccessOverride saved) {
+    final requests = requestsTouched
+        ? _requestsLists(this.requests)
+        : (allow: _requestOnes(saved.allow), deny: _requestOnes(saved.deny));
+    final allow = sortPermissions([
+      ..._others(saved.allow),
+      ...requests.allow,
+      if (downloads == true) Permission.mediaDownload,
+    ]);
+    final deny = sortPermissions([
+      ..._others(saved.deny),
+      ...requests.deny,
+      if (downloads == false) Permission.mediaDownload,
+    ]);
+    return AdminUsersSetAccessInputOverride(
+      libraries: switch (libraries) {
+        final libraries? => AdminUsersSetAccessInputOverrideLibraries(
+          all: libraries.all,
+          ids: libraries.all ? const [] : libraries.ids.toList(),
+        ),
+        null => null,
+      },
+      maxBitrate: maxBitrate,
+      transcode: transcode,
+      requestLimit: requestLimit,
+      maxStreams: maxStreams,
+      allow: allow.isEmpty ? null : allow,
+      deny: deny.isEmpty ? null : deny,
+    );
+  }
+
+  static bool _sameLimit<T extends Object>(Explicit<T>? a, Explicit<T>? b) =>
+      (a == null) == (b == null) && a?.value == b?.value;
+
+  static bool _sameQuota(Explicit<RequestQuota>? a, Explicit<RequestQuota>? b) {
+    if ((a == null) != (b == null)) return false;
+    final (x, y) = (a?.value, b?.value);
+    if ((x == null) != (y == null)) return false;
+    return x == null || (x.titles == y!.titles && x.days == y.days);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is _Draft &&
+      setEquals(groupIds, other.groupIds) &&
+      libraries?.all == other.libraries?.all &&
+      (libraries == null) == (other.libraries == null) &&
+      setEquals(libraries?.ids, other.libraries?.ids) &&
+      _sameLimit(maxBitrate, other.maxBitrate) &&
+      transcode == other.transcode &&
+      downloads == other.downloads &&
+      requests == other.requests &&
+      _sameQuota(requestLimit, other.requestLimit) &&
+      _sameLimit(maxStreams, other.maxStreams);
+
+  @override
+  int get hashCode => Object.hash(groupIds.length, transcode, requests);
+}
+
+/// Who put an account in a group, or set its own settings.
+abstract final class AccessSource {
+  static const provider = 'provider';
+}
+
+/// Whether [user] may set an account's access: the page lists the groups
+/// to put it in, so it takes reading them too, as the web's users panel.
+bool mayAccess(User user) =>
+    can(user, Permission.adminUserUpdate) && can(user, Permission.groupRead);
+
+/// One account's access, as the web's access dialog: what it gets, the
+/// groups an admin puts it in, and what's set on the account over them.
+/// The fields save together from the save bar, and the server checks
+/// them; a save shows what the account gets with it.
+class UserAccessPage extends ConsumerWidget {
+  const UserAccessPage({super.key, required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final users = ref.watch(adminUsersProvider);
+    AdminUser? user;
+    for (final entry in users.value ?? const <AdminUser>[]) {
+      if (entry.id == userId) user = entry;
+    }
+    if (user == null) {
+      return AdminGate(
+        allows: mayAccess,
+        child: AdminPage(
+          title: l.adminAccessGoneTitle,
+          child: users.hasValue
+              ? Center(
+                  child: EmptyState(
+                    icon: Lucide.users,
+                    title: l.adminAccessGoneTitle,
+                    message: l.adminAccessGone,
+                  ),
+                )
+              : adminBody(
+                  context,
+                  users,
+                  onRetry: () => ref.invalidate(adminUsersProvider),
+                  loaded: (_) => const SizedBox(),
+                ),
+        ),
+      );
+    }
+    // A save brings the account back as the server has it, and the form
+    // starts again from there.
+    return AdminGate(
+      allows: mayAccess,
+      child: _AccessForm(
+        key: ValueKey(user.access.toJson().toString()),
+        user: user,
+      ),
+    );
+  }
+}
+
+class _AccessForm extends ConsumerStatefulWidget {
+  const _AccessForm({super.key, required this.user});
+
+  final AdminUser user;
+
+  @override
+  ConsumerState<_AccessForm> createState() => _AccessFormState();
+}
+
+class _AccessFormState extends ConsumerState<_AccessForm> {
+  late final _saved = _Draft.of(widget.user.access);
+  late var _draft = _saved;
+  Map<String, String> _errors = const {};
+
+  void _edit(_Draft draft) => setState(() => _draft = draft);
+
+  Future<void> _save() async {
+    final api = ref.read(apiProvider);
+    if (api == null) return;
+    setState(() => _errors = const {});
+    try {
+      await api.admin.users.setAccess(
+        widget.user.id,
+        groupIds: _draft.groupIds.toList(),
+        override: _draft.own(widget.user.access.override),
+      );
+    } on Object catch (error) {
+      if (mounted) {
+        setState(
+          () => _errors = fieldErrors(AppLocalizations.of(context), error),
+        );
+      }
+      rethrow;
+    }
+    if (!mounted) return;
+    // Groups count their members.
+    ref
+      ..invalidate(adminUsersProvider)
+      ..invalidate(adminGroupsProvider);
+  }
+
+  String? _error(String field) {
+    for (final MapEntry(:key, :value) in _errors.entries) {
+      if (key.contains(field)) return value;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final user = widget.user;
+    final access = user.access;
+    final groups = ref.watch(adminGroupsProvider).value ?? const [];
+    final libraries = ref.watch(adminLibrariesProvider).value ?? const [];
+    final qualities =
+        ref.watch(_qualitiesProvider).value?.qualities ?? const [];
+    final provider =
+        ref.watch(authConfigProvider).value?.oidc?.displayName ??
+        l.adminAccessTheProvider;
+    final words = _Words(l, libraries);
+    final from = access.fromGroups;
+    final draft = _draft;
+    final dirty = draft != _saved;
+    // What "From groups" gives, as of the last save; with the groups
+    // changed and not saved, it's left unsaid.
+    final groupsSaved = setEquals(draft.groupIds, _saved.groupIds);
+    String inherited(String value) => groupsSaved
+        ? l.adminAccessFromGroupsValue(value)
+        : l.adminAccessFromGroups;
+    final fromProvider = {
+      for (final group in access.groups)
+        if (group.source == AccessSource.provider) group.id,
+    };
+    final effective = access.effective;
+    final groupRequests = requestsOf(from.permissions);
+    final more = words.permissions(effective.permissions);
+    final synced = DateTime.tryParse(user.claimsSyncedAt ?? '');
+
+    final bitrates = {
+      for (final quality in qualities) quality.bitrate,
+      ?draft.maxBitrate?.value,
+    }.toList()..sort((a, b) => b.compareTo(a));
+    final streams = {..._streamChoices, ?draft.maxStreams?.value}.toList()
+      ..sort();
+    final quota = draft.requestLimit?.value;
+
+    return SaveBarPage(
+      title: l.adminAccessTitle(user.name),
+      dirty: dirty,
+      onReset: () => setState(() {
+        _draft = _saved;
+        _errors = const {};
+      }),
+      onSave: _save,
+      child: AdminSections(
+        bottom: false,
+        sections: [
+          Note(l.adminAccessDescription),
+          SettingsSection(
+            title: l.adminAccessGets(user.name),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 8,
+              children: [
+                Panel(
+                  rows: [
+                    ValueRow(
+                      title: l.adminAccessLibraries,
+                      value: words.libraries(
+                        effective.libraries.all,
+                        effective.libraries.ids,
+                      ),
+                    ),
+                    ValueRow(
+                      title: l.adminAccessBitrate,
+                      value: words.bitrate(effective.maxBitrate),
+                    ),
+                    ValueRow(
+                      title: l.adminAccessTranscode,
+                      value: words.allowed(effective.transcode),
+                    ),
+                    ValueRow(
+                      title: l.adminAccessDownloads,
+                      value: words.allowed(
+                        holdsPermission(
+                          effective.permissions,
+                          Permission.mediaDownload,
+                        ),
+                      ),
+                    ),
+                    ValueRow(
+                      title: l.adminAccessStreams,
+                      value: words.streams(effective.maxStreams),
+                    ),
+                    ValueRow(
+                      title: l.adminAccessRequests,
+                      value: words.requests(
+                        requestsOf(effective.permissions),
+                        effective.requestLimit,
+                      ),
+                    ),
+                    if (more != null)
+                      ValueRow(
+                        title: l.adminAccessPermissions,
+                        value: more.label,
+                      ),
+                  ],
+                ),
+                if (more?.names case final names?) Note(names),
+                if (dirty) Note(l.adminAccessGetsAfterSave),
+                if (user.oidcLinked)
+                  Note(
+                    synced == null
+                        ? l.adminAccessClaimsNever(provider)
+                        : l.adminAccessClaimsSynced(
+                            provider,
+                            relativeTime(l, synced),
+                          ),
+                  ),
+              ],
+            ),
+          ),
+          SettingsSection(
+            title: l.adminAccessGroups,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 8,
+              children: [
+                Panel(
+                  rows: [
+                    for (final group in groups)
+                      if (group.everyone)
+                        _GroupRow(
+                          name: l.adminAccessEveryone,
+                          note: l.adminAccessEveryoneHint,
+                          checked: true,
+                        )
+                      else if (fromProvider.contains(group.id))
+                        _GroupRow(
+                          name: group.name,
+                          note: l.adminAccessGroupFromProvider(provider),
+                          checked: true,
+                        )
+                      else
+                        _GroupRow(
+                          name: group.name,
+                          note: switch (group.providerGroup) {
+                            final name? => l.adminAccessGroupFollows(
+                              provider,
+                              name,
+                            ),
+                            null => null,
+                          },
+                          checked: draft.groupIds.contains(group.id),
+                          onChanged: (on) => _edit(
+                            draft.copy(
+                              groupIds:
+                                  on
+                                        ? {...draft.groupIds, group.id}
+                                        : {...draft.groupIds}
+                                    ..remove(group.id),
+                            ),
+                          ),
+                        ),
+                  ],
+                ),
+                if (groups.length == 1) Note(l.adminAccessNoGroups),
+                if (_error('groupIds') case final error?)
+                  Note(error, danger: true),
+              ],
+            ),
+          ),
+          SettingsSection(
+            title: l.adminAccessOverride,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 8,
+              children: [
+                if (access.overrideSource == AccessSource.provider)
+                  Note(
+                    l.adminAccessOverrideFromProvider(provider, user.name),
+                    danger: true,
+                  )
+                else
+                  Note(l.adminAccessOverrideHint),
+                Panel(
+                  rows: [
+                    PickerRow<String>(
+                      title: l.adminAccessLibraries,
+                      options: [
+                        (
+                          _fromGroups,
+                          inherited(
+                            words.libraries(
+                              from.libraries.all,
+                              from.libraries.ids,
+                            ),
+                          ),
+                        ),
+                        ('all', l.adminAccessLibrariesAll),
+                        ('some', l.adminAccessLibrariesPicked),
+                      ],
+                      current: switch (draft.libraries) {
+                        null => _fromGroups,
+                        (all: true, ids: _) => 'all',
+                        _ => 'some',
+                      },
+                      onPicked: (choice) => _edit(
+                        draft.copy(
+                          libraries: () => switch (choice) {
+                            _fromGroups => null,
+                            'all' => (all: true, ids: const <String>{}),
+                            _ => (
+                              all: false,
+                              ids: draft.libraries?.ids ?? const <String>{},
+                            ),
+                          },
+                        ),
+                      ),
+                    ),
+                    if (draft.libraries case (all: false, :final ids))
+                      for (final library in libraries)
+                        SwitchRow(
+                          icon: library.kind == LibraryKind.shows
+                              ? Lucide.tv
+                              : Lucide.film,
+                          title: library.name,
+                          checked: ids.contains(library.id),
+                          onChanged: (on) => _edit(
+                            draft.copy(
+                              libraries: () => (
+                                all: false,
+                                ids: on ? {...ids, library.id} : {...ids}
+                                  ..remove(library.id),
+                              ),
+                            ),
+                          ),
+                        ),
+                    PickerRow<String>(
+                      title: l.adminAccessBitrate,
+                      options: [
+                        (
+                          _fromGroups,
+                          inherited(words.bitrate(from.maxBitrate)),
+                        ),
+                        (_noLimit, words.bitrate(null)),
+                        for (final rate in bitrates)
+                          ('$rate', words.bitrate(rate)),
+                      ],
+                      current: _limitKey(draft.maxBitrate),
+                      onPicked: (choice) =>
+                          _edit(draft.copy(maxBitrate: () => _limitOf(choice))),
+                    ),
+                    PickerRow<String>(
+                      title: l.adminAccessTranscode,
+                      options: _switchOptions(words, inherited, from.transcode),
+                      current: _switchKey(draft.transcode),
+                      onPicked: (choice) =>
+                          _edit(draft.copy(transcode: () => _switchOf(choice))),
+                    ),
+                    PickerRow<String>(
+                      title: l.adminAccessDownloads,
+                      options: _switchOptions(
+                        words,
+                        inherited,
+                        holdsPermission(
+                          from.permissions,
+                          Permission.mediaDownload,
+                        ),
+                      ),
+                      current: _switchKey(draft.downloads),
+                      onPicked: (choice) =>
+                          _edit(draft.copy(downloads: () => _switchOf(choice))),
+                    ),
+                    PickerRow<String>(
+                      title: l.adminAccessStreams,
+                      options: [
+                        (
+                          _fromGroups,
+                          inherited(words.streams(from.maxStreams)),
+                        ),
+                        (_noLimit, words.streams(null)),
+                        for (final count in streams)
+                          ('$count', words.streams(count)),
+                      ],
+                      current: _limitKey(draft.maxStreams),
+                      onPicked: (choice) =>
+                          _edit(draft.copy(maxStreams: () => _limitOf(choice))),
+                    ),
+                    PickerRow<RequestsChoice?>(
+                      title: l.adminAccessRequests,
+                      options: [
+                        (null, inherited(words.requestMode(groupRequests))),
+                        for (final mode in RequestsChoice.values)
+                          (mode, words.requestMode(mode)),
+                      ],
+                      current: draft.requests,
+                      onPicked: (choice) =>
+                          _edit(draft.copy(requests: () => choice)),
+                    ),
+                    if ((draft.requests ?? groupRequests) !=
+                        RequestsChoice.off) ...[
+                      PickerRow<String>(
+                        title: l.adminAccessRequestLimit,
+                        options: [
+                          (
+                            _fromGroups,
+                            inherited(words.quota(from.requestLimit)),
+                          ),
+                          (_noLimit, l.adminAccessRequestLimitNone),
+                          ('some', l.adminAccessRequestLimitSome),
+                        ],
+                        current: switch (draft.requestLimit) {
+                          null => _fromGroups,
+                          Explicit(value: null) => _noLimit,
+                          _ => 'some',
+                        },
+                        onPicked: (choice) => _edit(
+                          draft.copy(
+                            requestLimit: () => switch (choice) {
+                              _fromGroups => null,
+                              _noLimit => const Explicit(null),
+                              _ => Explicit(
+                                quota ?? from.requestLimit ?? _defaultQuota,
+                              ),
+                            },
+                          ),
+                        ),
+                      ),
+                      if (quota != null)
+                        _QuotaRow(
+                          quota: quota,
+                          error: _error('requestLimit'),
+                          onChanged: (next) => _edit(
+                            draft.copy(requestLimit: () => Explicit(next)),
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
+                if (draft.libraries?.all ?? false)
+                  Note(l.adminAccessLibrariesAllHint),
+                if (_error('maxBitrate') ?? _error('maxStreams')
+                    case final error?)
+                  Note(error, danger: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _limitKey(Explicit<int>? limit) => switch (limit) {
+    null => _fromGroups,
+    Explicit(value: null) => _noLimit,
+    Explicit(:final value) => '$value',
+  };
+
+  static Explicit<int>? _limitOf(String choice) => switch (choice) {
+    _fromGroups => null,
+    _noLimit => const Explicit(null),
+    _ => Explicit(int.parse(choice)),
+  };
+
+  static String _switchKey(bool? value) => switch (value) {
+    null => _fromGroups,
+    true => 'on',
+    false => 'off',
+  };
+
+  static bool? _switchOf(String choice) => switch (choice) {
+    'on' => true,
+    'off' => false,
+    _ => null,
+  };
+
+  static List<(String, String)> _switchOptions(
+    _Words words,
+    String Function(String) inherited,
+    bool given,
+  ) => [
+    (_fromGroups, inherited(words.allowed(given))),
+    ('on', words.allowed(true)),
+    ('off', words.allowed(false)),
+  ];
+}
+
+/// How a policy's settings read.
+final class _Words {
+  const _Words(this.l, this.libraryList);
+
+  final AppLocalizations l;
+  final List<Library> libraryList;
+
+  String libraries(bool all, List<String> ids) {
+    if (all) return l.adminAccessLibrariesAll;
+    if (ids.isEmpty) return l.adminAccessLibrariesNone;
+    if (ids.length == 1) {
+      for (final library in libraryList) {
+        if (library.id == ids.single) return library.name;
+      }
+    }
+    return l.adminAccessLibrariesCount(ids.length);
+  }
+
+  String bitrate(int? rate) {
+    if (rate == null) return l.adminAccessBitrateNone;
+    final mbps = NumberFormat.decimalPatternDigits(
+      locale: l.localeName,
+      decimalDigits: rate % 1000000 == 0 ? 0 : 1,
+    ).format(rate / 1000000);
+    return l.adminAccessBitrateUpTo(mbps);
+  }
+
+  String streams(int? count) => count == null
+      ? l.adminAccessStreamsNone
+      : l.adminAccessStreamsCount(count);
+
+  String allowed(bool on) =>
+      on ? l.adminAccessAllowed : l.adminAccessNotAllowed;
+
+  String requestMode(RequestsChoice mode) => switch (mode) {
+    RequestsChoice.off => l.adminAccessRequestsOff,
+    RequestsChoice.add => l.adminAccessRequestsAdd,
+    RequestsChoice.ask => l.adminAccessRequestsAsk,
+  };
+
+  String quota(RequestQuota? quota) => quota == null
+      ? l.adminAccessRequestLimitNone
+      : l.adminAccessRequestLimitRate(
+          l.adminAccessRequestLimitTitles(quota.titles),
+          l.adminAccessRequestLimitPeriod(quota.days),
+        );
+
+  String requests(RequestsChoice mode, RequestQuota? limit) =>
+      mode == RequestsChoice.off || limit == null
+      ? requestMode(mode)
+      : l.adminAccessRequestsLimited(requestMode(mode), quota(limit));
+
+  /// "Every permission" for an admin, or how many [permissions] grants
+  /// besides downloading and requesting, which have rows of their own,
+  /// with their names. Null for none.
+  ({String label, String? names})? permissions(List<String> permissions) {
+    if (permissions.contains(Permission.all)) {
+      return (label: l.adminAccessPermissionsAll, names: null);
+    }
+    final more = _others(permissions);
+    if (more.isEmpty) return null;
+    return (
+      label: l.adminAccessPermissionsCount(more.length),
+      names: more.join(', '),
+    );
+  }
+}
+
+/// A group the account can be put in, with what's to know about it under
+/// its name. Everyone holds every account, and a group the provider put
+/// it in stays until the provider takes it out, so neither switches.
+class _GroupRow extends StatelessWidget {
+  const _GroupRow({
+    required this.name,
+    required this.checked,
+    this.note,
+    this.onChanged,
+  });
+
+  final String name;
+  final String? note;
+  final bool checked;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final change = onChanged;
+    final note = this.note;
+    return PressIndication(
+      onPressed: change == null ? null : () => change(!checked),
+      label: name,
+      checked: checked,
+      builder: (context, state) => ColoredBox(
+        color: colors.foreground.withValues(
+          alpha: state == PressState.idle ? 0 : .06,
+        ),
+        child: ExcludeSemantics(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              spacing: 12,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: KitText.base.style(color: colors.foreground),
+                      ),
+                      if (note != null)
+                        Text(
+                          note,
+                          style: KitText.sm.style(
+                            color: colors.mutedForeground,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Switch(checked: checked, onChanged: change),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "[5] titles every [7] days", under a request limit that's set. The
+/// server checks the numbers.
+class _QuotaRow extends StatelessWidget {
+  const _QuotaRow({required this.quota, required this.onChanged, this.error});
+
+  final RequestQuota quota;
+  final ValueChanged<RequestQuota> onChanged;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextRow(
+                label: l.adminAccessRequestLimitTitlesField,
+                value: quota.titles == 0 ? '' : '${quota.titles}',
+                keyboardType: TextInputType.number,
+                onChanged: (text) => onChanged(
+                  RequestQuota(
+                    titles: int.tryParse(text.trim()) ?? 0,
+                    days: quota.days,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: TextRow(
+                label: l.adminAccessRequestLimitDaysField,
+                value: quota.days == 0 ? '' : '${quota.days}',
+                keyboardType: TextInputType.number,
+                onChanged: (text) => onChanged(
+                  RequestQuota(
+                    titles: quota.titles,
+                    days: int.tryParse(text.trim()) ?? 0,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Note(error!, danger: true),
+          ),
+      ],
+    );
+  }
+}

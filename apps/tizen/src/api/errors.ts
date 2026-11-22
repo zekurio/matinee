@@ -33,10 +33,10 @@ const VALIDATION_MESSAGE = "Input validation failed"
 export function describeFailure(cause: unknown): string {
   if (!isServerError(cause)) {
     return navigator.onLine === false
-      ? tr("error_unreachable")
-      : tr("error_connection_lost")
+      ? tr("errorUnreachable")
+      : tr("errorConnectionLost")
   }
-  if (cause.status >= 500 || !cause.message) return tr("error_server")
-  if (cause.message === VALIDATION_MESSAGE) return tr("error_server")
+  if (cause.status >= 500 || !cause.message) return tr("errorServer")
+  if (cause.message === VALIDATION_MESSAGE) return tr("errorServer")
   return cause.message
 }
