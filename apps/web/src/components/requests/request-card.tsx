@@ -156,9 +156,9 @@ export function RequestCard({
 
 /**
  * Each state's mark and colour. What needs whoever runs the queue stands
- * out, waiting in the accent while it's theirs to answer and needs
- * attention in the warning colour; what's on its way reads plain, and
- * what's finished quiet, an outline.
+ * out for them, waiting in the accent and needs attention in the warning
+ * colour, and reads plain on an asker's own card; what's on its way
+ * reads plain, and what's finished quiet, an outline.
  */
 function stateLook(
   state: RequestState,
@@ -178,7 +178,9 @@ function stateLook(
       return {
         icon: <TriangleAlertIcon strokeWidth={2.5} />,
         label: tr("requests.state.needsAttention"),
-        className: "bg-warning text-background",
+        className: urgent
+          ? "bg-warning text-background"
+          : "bg-secondary text-secondary-foreground",
       }
     case "onTheWay":
       return {

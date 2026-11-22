@@ -20,12 +20,12 @@ export const FulfilmentState = t.enum(["queued", "sent", "failed"])
 export const RequestId = t.object({ id: t.uuid() })
 
 /**
- * Where a request stands, the one state its card shows. "waiting" until
- * an admin answers it; "needsAttention" once sending it failed, only in
- * the admin's queue, where it's the list it's in; "onTheWay" once
- * accepted, until it arrives; "here" once a film arrived or every
- * season a show asked for did; "declined" when an admin declined it or
- * gave up on it.
+ * Where a request stands, the one state its card shows, the same for its
+ * askers and in the admin's queue, where it's also the list it's in.
+ * "waiting" until an admin answers it; "needsAttention" once sending it
+ * failed; "onTheWay" once accepted, until it arrives; "here" once a film
+ * arrived or every season a show asked for did, `arrivedAt` saying when;
+ * "declined" when an admin declined it or gave up on it.
  */
 export const REQUEST_STATES = [
   "waiting",
