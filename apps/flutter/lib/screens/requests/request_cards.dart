@@ -422,15 +422,9 @@ class RequestStateBadge extends StatelessWidget {
       ),
       _ => plain,
     };
-    final text = switch (state) {
-      RequestState.needsAttention => l.webRequestsStateNeedsAttention,
-      RequestState.onTheWay when progress != null =>
-        l.webRequestsStateOnTheWayPercent(formatPercent(progress, l)),
-      RequestState.onTheWay => l.webRequestsStateOnTheWay,
-      RequestState.here => l.webRequestsStateHere,
-      RequestState.declined => l.webRequestsStateDeclined,
-      _ => l.webRequestsStateWaiting,
-    };
+    final text = state == RequestState.onTheWay && progress != null
+        ? l.webRequestsStateOnTheWayPercent(formatPercent(progress, l))
+        : requestStateWord(state, l);
     final Widget glyph = switch (state) {
       RequestState.needsAttention => KitIcon(
         Lucide.triangleAlert,

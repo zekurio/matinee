@@ -1672,5 +1672,10 @@
   "webRequestsStateDeclined": "Abgelehnt",
   "webRequestsAddAfterAllNamed": "{p1} doch hinzufügen",
   "webRequestsEmptyNone": "Noch keine Anfragen",
-  "webRequestsEmptyNoneHint": "Wenn jemand einen Film oder eine Serie anfragt, erscheint das hier."
+  "webRequestsEmptyNoneHint": "Wenn jemand einen Film oder eine Serie anfragt, erscheint das hier.",
+  "webRequestsFilterState": "Status",
+  "webRequestsFilterKind": "Typ",
+  "webRequestsFilterShow": "Anfragen zeigen",
+  "webRequestsFilterNone": "Keine Anfrage passt zu diesen Filtern",
+  "webRequestsFilterNoneHint": "Nimm einen Filter heraus, um mehr zu sehen."
 }

@@ -8798,5 +8798,25 @@
   "webRequestsEmptyNoneHint": "When someone requests a film or show, it shows up here.",
   "@webRequestsEmptyNoneHint": {
     "description": "requests.empty.noneHint"
+  },
+  "webRequestsFilterState": "State",
+  "@webRequestsFilterState": {
+    "description": "requests.filter.state"
+  },
+  "webRequestsFilterKind": "Type",
+  "@webRequestsFilterKind": {
+    "description": "requests.filter.kind"
+  },
+  "webRequestsFilterShow": "Show requests",
+  "@webRequestsFilterShow": {
+    "description": "requests.filter.show"
+  },
+  "webRequestsFilterNone": "No requests match these filters",
+  "@webRequestsFilterNone": {
+    "description": "requests.filter.none"
+  },
+  "webRequestsFilterNoneHint": "Take a filter off to see more.",
+  "@webRequestsFilterNoneHint": {
+    "description": "requests.filter.noneHint"
   }
 }
