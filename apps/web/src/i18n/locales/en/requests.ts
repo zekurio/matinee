@@ -11,8 +11,35 @@ export default defineMessages("requests", {
   // The account label with the dot on it, for screen readers.
   "requests.labelled": "{label}. Requests need you",
 
-  // The queue at /requests. The lists, as a row of chips with their counts.
-  "requests.lists": "Lists",
+  // Discover's first row, which leads to the requests page: an admin's
+  // latest requests in every state, or a person's own.
+  "requests.recent": "Recent requests",
+
+  // The one state each request's card shows.
+  "requests.state.waiting": "Waiting",
+  "requests.state.needsAttention": "Needs attention",
+  "requests.state.onTheWay": "On its way",
+  // {percent} like "42%".
+  "requests.state.onTheWayPercent": "On its way · {percent}",
+  "requests.state.here": "Here",
+  "requests.state.declined": "Declined",
+  // On a person's own card. {when} is relative, like "2 days ago".
+  "requests.askedWhen": "First requested {when}",
+
+  // The line at the top of /requests, the states that have any, joined
+  // with " · ".
+  "requests.summary.waiting": "{count} waiting",
+  "requests.summary.needsAttention": plural({
+    one: "{count} needs attention",
+    other: "{count} need attention",
+  }),
+  "requests.summary.onTheWay": plural({
+    one: "{count} on its way",
+    other: "{count} on their way",
+  }),
+  "requests.summary.done": "{count} done",
+
+  // The lists the Flutter app still shows as tabs. The web shows one list.
   "requests.list.waiting": "Waiting",
   "requests.list.needsAttention": "Needs attention",
   "requests.list.onTheWay": "On the way",
@@ -157,6 +184,10 @@ export default defineMessages("requests", {
   "requests.empty.setup.description":
     "Add a connection, then choose the libraries it fills.",
   "requests.empty.setup.action": "Set up requests",
+  "requests.empty.none": "No requests yet",
+  "requests.empty.noneHint":
+    "When someone requests a film or show, it shows up here.",
+  // The Flutter app's empty tabs.
   "requests.empty.waiting": "Nothing is waiting",
   "requests.empty.needsAttention": "Nothing needs attention",
   "requests.empty.onTheWay": "Nothing is on the way",

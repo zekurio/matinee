@@ -49,7 +49,6 @@ export default {
   "ask.mine.seeAll": "Alle ansehen",
   "ask.mine.inProgress": "Aktuell",
   "ask.mine.all": "Alle",
-  "ask.mine.filter": "Zeigen",
   "ask.mine.empty": "Noch nichts angefragt",
   "ask.mine.emptyHint":
     "Such nach einem Film oder einer Serie, die es hier nicht gibt, und frag sie auf ihrer Seite an.",

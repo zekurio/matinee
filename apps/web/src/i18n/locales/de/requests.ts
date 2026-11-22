@@ -10,7 +10,27 @@ export default {
   }),
   "requests.labelled": "{label}. Anfragen warten auf dich",
 
-  "requests.lists": "Listen",
+  "requests.recent": "Letzte Anfragen",
+
+  "requests.state.waiting": "Wartet",
+  "requests.state.needsAttention": "Braucht Aufmerksamkeit",
+  "requests.state.onTheWay": "Unterwegs",
+  "requests.state.onTheWayPercent": "Unterwegs · {percent}",
+  "requests.state.here": "Da",
+  "requests.state.declined": "Abgelehnt",
+  "requests.askedWhen": "Zuerst angefragt: {when}",
+
+  "requests.summary.waiting": "{count} wartend",
+  "requests.summary.needsAttention": plural({
+    one: "{count} braucht Aufmerksamkeit",
+    other: "{count} brauchen Aufmerksamkeit",
+  }),
+  "requests.summary.onTheWay": plural({
+    one: "{count} unterwegs",
+    other: "{count} unterwegs",
+  }),
+  "requests.summary.done": "{count} erledigt",
+
   "requests.list.waiting": "Wartend",
   "requests.list.needsAttention": "Braucht Aufmerksamkeit",
   "requests.list.onTheWay": "Unterwegs",
@@ -126,6 +146,9 @@ export default {
   "requests.empty.setup.description":
     "Füge eine Verbindung hinzu und wähle die Mediatheken, die sie befüllt.",
   "requests.empty.setup.action": "Anfragen einrichten",
+  "requests.empty.none": "Noch keine Anfragen",
+  "requests.empty.noneHint":
+    "Wenn jemand einen Film oder eine Serie anfragt, erscheint das hier.",
   "requests.empty.waiting": "Nichts wartet",
   "requests.empty.needsAttention": "Nichts braucht Aufmerksamkeit",
   "requests.empty.onTheWay": "Nichts ist unterwegs",

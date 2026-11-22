@@ -1,63 +1,46 @@
 import type { AdminRequestItem } from "@matinee/contracts"
-import { AvatarGroup } from "@matinee/ui/components/avatar"
 import { Button } from "@matinee/ui/components/button"
-import { cn } from "@matinee/ui/lib/utils"
-import { useQuery } from "@tanstack/react-query"
+import { toast } from "@matinee/ui/components/sonner"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   getRouteApi,
   Link,
   type LinkOptions,
   linkOptions,
 } from "@tanstack/react-router"
-import { ChevronRightIcon, XIcon } from "lucide-react"
+import { ChevronRightIcon, RotateCwIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
-import { type AskedItem, DeclinedNote } from "@/components/asked/asked"
 import { Rail, RailItem } from "@/components/rail"
 import { AdminAnswer } from "@/components/requests/admin-answer"
-import {
-  askers,
-  formatNames,
-  useRequestQueue,
-} from "@/components/requests/request-queue"
-import { UserAvatar } from "@/components/user-avatar"
-import { tr } from "@/i18n"
-import { formatDateTime, formatRelative } from "@/lib/format"
-import { seasonName } from "@/lib/media"
-import { liveQuery, orpc } from "@/lib/rpc"
-import {
-  useHiddenRequests,
-  useRequestActionsStore,
-} from "@/stores/request-actions"
-
-import { RAIL_CARDS } from "./discover-data"
-import { RailFailed } from "./rail-failed"
+import { OwnRequest } from "@/components/requests/own-request"
 import {
   RequestCard,
   RequestCardSkeleton,
-  RequestState,
-  WaitingBadge,
-} from "./request-card"
+  RequestStateBadge,
+  requestProgress,
+} from "@/components/requests/request-card"
+import { Askers, QueueLine } from "@/components/requests/request-lines"
+import { useRequestQueue, workItems } from "@/components/requests/request-queue"
+import { tr } from "@/i18n"
+import { client, errorMessage, liveQuery, orpc } from "@/lib/rpc"
+import { isHidden, useHiddenRequests } from "@/stores/request-actions"
 
-/** How many askers' avatars a card shows; the count after them says the rest. */
-const AVATARS = 3
-
-/**
- * Each avatar's place in the stack, first asker on top: the card names
- * them, so theirs is the face that shows whole, with the others behind.
- */
-const STACK = ["z-3", "z-2", "z-1"]
+import { RAIL_CARDS } from "./discover-data"
+import { RailFailed } from "./rail-failed"
 
 const authed = getRouteApi("/_authed")
 
 /**
- * The first row of Discover when it has requests to show: an admin's
- * waiting ones, or a person's own in progress. Both come from streams or
- * lists of their own, so they stay when the catalog's rows are down or
- * empty.
+ * Discover's first row, "Recent requests": for whoever runs the queue,
+ * the latest in every state, waiting first; for anyone else, their own,
+ * in progress first. Both come from streams of their own, so they stay
+ * when the catalog's rows are down or empty. The heading opens the full
+ * list, and the row only goes when there are no requests at all, since
+ * on a TV it's the way there.
  */
 export function DiscoverRequests({ which }: { which: "queue" | "mine" }) {
-  return which === "queue" ? <WaitingRequests /> : <OwnRequests />
+  return which === "queue" ? <QueueRequests /> : <OwnRequests />
 }
 
 /**
@@ -67,7 +50,7 @@ export function DiscoverRequests({ which }: { which: "queue" | "mine" }) {
  * The frame stays mounted as long as Discover has requests, so an Undo
  * outlives the last card.
  */
-function RequestsRow<Item extends { id: string }>({
+function RequestsRow<Item extends Pick<AdminRequestItem, "id" | "state">>({
   link,
   items,
   retry,
@@ -79,9 +62,9 @@ function RequestsRow<Item extends { id: string }>({
   children: (item: Item) => ReactNode
 }) {
   const hidden = useHiddenRequests()
-  const shown = items?.filter((item) => !hidden.has(item.id))
+  const shown = items?.filter((item) => !isHidden(hidden, item))
   if (shown?.length === 0) return null
-  const title = tr("requests.title")
+  const title = tr("requests.recent")
 
   return (
     <Rail
@@ -119,16 +102,20 @@ function RequestsRow<Item extends { id: string }>({
 }
 
 /**
- * The requests that wait for an admin, from the queue's own stream. A
- * request answered goes at once, and the row with the last one, so
- * nothing here needs a reload. Its heading leads to the queue.
+ * The queue's latest, from its own stream, in the order of its lists:
+ * waiting, needs attention, on the way, then the latest done. A request
+ * answered moves on at once, so nothing here needs a reload. Its heading
+ * leads to the requests page.
  */
-function WaitingRequests() {
+function QueueRequests() {
   const queue = useRequestQueue()
+  const items = queue.data
+    ? [...workItems(queue.data), ...queue.data.done]
+    : undefined
   return (
     <RequestsRow
       link={linkOptions({ to: "/requests" })}
-      items={queue.data?.waiting}
+      items={items}
       retry={
         queue.isError && !queue.data ? () => void queue.refetch() : undefined
       }
@@ -139,8 +126,9 @@ function WaitingRequests() {
 }
 
 /**
- * The viewer's own requests in progress, as My requests lists them, with
- * their states from the same live stream. Its heading leads to that page.
+ * The viewer's own latest requests, as My requests lists them, in
+ * progress first, from the same live stream. Its heading leads to that
+ * page.
  */
 function OwnRequests() {
   const { user } = authed.useRouteContext()
@@ -150,14 +138,13 @@ function OwnRequests() {
     }),
     ...liveQuery,
   })
-  const items = mine.data?.items
   return (
     <RequestsRow
       link={linkOptions({
         to: "/profiles/$username/asked",
         params: { username: user.username },
       })}
-      items={items}
+      items={mine.data?.items}
       retry={mine.isError && !mine.data ? () => void mine.refetch() : undefined}
     >
       {(item) => <OwnRequest item={item} />}
@@ -165,125 +152,56 @@ function OwnRequests() {
   )
 }
 
-/** A waiting request: who asked and when, and Add and Decline. */
-function QueueRequest({ item }: { item: AdminRequestItem }) {
-  return (
-    <RequestCard
-      item={item}
-      state={<WaitingBadge />}
-      who={<Askers item={item} />}
-      actions={
-        <AdminAnswer item={item} look="plain" className="flex-wrap *:min-w-0" />
-      }
-    />
-  )
-}
-
 /**
- * One of the viewer's requests, as the server says it stands: its state,
- * under a declined one its reason, when they asked, and Cancel while the
- * server allows it. Cancel holds the call for Undo as the queue's answers
- * do, rather than going out from the poster's own button.
+ * A request in the queue: its state, the state's line, who asked and
+ * when, and what the row lets an admin do about it: Add and Decline
+ * while it waits, Retry once sending it failed. The rest is on the
+ * requests page.
  */
-function OwnRequest({ item }: { item: AskedItem }) {
-  const hold = useRequestActionsStore((state) => state.hold)
-  const season = item.season
-  const availability = season ?? item.availability
+function QueueRequest({ item }: { item: AdminRequestItem }) {
+  const retry = useMutation({
+    mutationFn: () => client.admin.requests.retry({ id: item.id }),
+    onSuccess: () =>
+      toast.success(tr("requests.retried", { name: item.title.name })),
+    onError: (error) =>
+      toast.error(tr("requests.retryFailed", { name: item.title.name }), {
+        description: errorMessage(error),
+      }),
+  })
   return (
     <RequestCard
       item={item}
       state={
-        <>
-          {season && (
-            <span className="text-muted-foreground text-xs">
-              {seasonName(season.number)}
-            </span>
-          )}
-          <RequestState availability={availability} />
-          <DeclinedNote item={{ availability }} />
-        </>
+        <RequestStateBadge
+          state={item.state}
+          progress={requestProgress(item)}
+          urgent
+        />
       }
-      who={
-        <p
-          className="text-muted-foreground text-13px truncate leading-5"
-          title={formatDateTime(item.createdAt)}
-        >
-          {tr("discover.request.askedWhen", {
-            when: formatRelative(item.createdAt),
-          })}
-        </p>
-      }
+      // Add names where a waiting one goes, and chooses another.
+      line={<QueueLine item={item} goesTo={false} />}
+      who={<Askers item={item} />}
       actions={
-        (item.availability.action === "cancel" ||
-          availability.action === "cancel") && (
+        item.state === "waiting" ? (
+          <AdminAnswer
+            item={item}
+            look="plain"
+            className="flex-wrap *:min-w-0"
+          />
+        ) : item.state === "needsAttention" ? (
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
-            onClick={() =>
-              hold({
-                kind: "cancel",
-                ids: [item.id],
-                names: [item.title.name],
-              })
-            }
-            // Long words, like German's, wrap rather than cut off.
-            className="h-auto min-h-8 w-full py-1.5 leading-tight whitespace-normal"
+            disabled={retry.isPending}
+            aria-label={tr("requests.retryNamed", { name: item.title.name })}
+            onClick={() => retry.mutate()}
+            className="w-full"
           >
-            <XIcon aria-hidden strokeWidth={2.5} />
-            <span className="text-balance">{tr("ask.cancel")}</span>
+            <RotateCwIcon />
+            {tr("requests.retry")}
           </Button>
-        )
+        ) : null
       }
     />
-  )
-}
-
-/** The first few who asked, the first one's name, how many others, and when. */
-function Askers({ item }: { item: AdminRequestItem }) {
-  const { first, rest } = askers(item)
-  if (!first) return null
-  const others = rest.map((entry) => entry.name)
-  return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <AvatarGroup className="shrink-0">
-        {[first, ...rest.slice(0, AVATARS - 1)].map((asker, index) => (
-          <UserAvatar
-            key={asker.id}
-            user={{
-              avatarId: asker.avatarId,
-              displayName: asker.name,
-              username: asker.name,
-            }}
-            className={cn("text-11px size-6", STACK[index])}
-          />
-        ))}
-      </AvatarGroup>
-      <div className="text-13px flex min-w-0 flex-col leading-5">
-        <p className="flex min-w-0 items-baseline gap-1.5">
-          <span className="text-foreground/90 truncate">{first.name}</span>
-          {others.length > 0 && (
-            <span
-              className="text-muted-foreground shrink-0 tabular-nums"
-              title={tr("requests.alsoRequested", {
-                names: formatNames(others),
-              })}
-            >
-              <span aria-hidden>
-                {tr("requests.othersCount", { count: others.length })}
-              </span>
-              <span className="sr-only">
-                {tr("requests.alsoRequested", { names: formatNames(others) })}
-              </span>
-            </span>
-          )}
-        </p>
-        <p
-          className="text-muted-foreground truncate"
-          title={formatDateTime(first.createdAt)}
-        >
-          {formatRelative(first.createdAt)}
-        </p>
-      </div>
-    </div>
   )
 }
