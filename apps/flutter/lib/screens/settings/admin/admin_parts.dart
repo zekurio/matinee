@@ -19,21 +19,25 @@ import '../settings_screen.dart';
  * whose fields save together from a save bar, text rows, notes, and
  * running an action with a toast when it fails. */
 
-/// Whether the account in use may see the admin pages: the server says it's
-/// an admin, and the app is on the server, not offline.
-bool canAdminister(AuthState auth) => auth is SignedIn && auth.user.isAdmin;
+/// Whether the account in use may open an admin page that [allows] it:
+/// the server's permissions say so, and the app is on the server, not
+/// offline.
+bool mayAdminister(AuthState auth, bool Function(User user) allows) =>
+    auth is SignedIn && allows(auth.user);
 
-/// [child] for an admin, else Settings' first page, as a page key the
-/// device doesn't have opens it: an account that isn't an admin, or one
-/// that just stepped down, never sees the server's settings.
+/// [child] for an account [allows] lets in, else Settings' first page, as
+/// a page key the device doesn't have opens it: an account without the
+/// permissions, or one that just lost them, never sees the page.
 class AdminGate extends ConsumerWidget {
-  const AdminGate({super.key, required this.child});
+  const AdminGate({super.key, required this.allows, required this.child});
 
+  /// Whether the account holds what the page calls the server with.
+  final bool Function(User user) allows;
   final Widget child;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) =>
-      canAdminister(ref.watch(authStateProvider))
+      mayAdminister(ref.watch(authStateProvider), allows)
       ? child
       : const SettingsScreen();
 }
@@ -527,6 +531,7 @@ User userOf(AdminUser user) => User(
   username: user.username,
   displayName: user.displayName,
   role: user.role,
+  permissions: user.permissions,
   avatarId: user.avatarId,
   avatarSource: user.avatarSource,
   playback: user.playback,

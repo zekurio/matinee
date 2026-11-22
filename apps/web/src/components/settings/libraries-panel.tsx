@@ -29,6 +29,7 @@ import { Skeleton } from "@matinee/ui/components/skeleton"
 import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useRouteContext } from "@tanstack/react-router"
 import {
   CloudDownloadIcon,
   EllipsisIcon,
@@ -43,6 +44,7 @@ import { useStore } from "zustand"
 import { libraryIcons } from "@/components/app-shell"
 import { LibraryDialog } from "@/components/library-dialog"
 import { tr } from "@/i18n"
+import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createSettingsLibrariesStore } from "@/stores/settings-libraries"
 
@@ -51,6 +53,7 @@ import { RowIcon, SettingsSections, SettingsSubsection } from "./settings-panel"
 export function LibrariesPanel() {
   const [store] = useState(createSettingsLibrariesStore)
   const { library, open, edit, close } = useStore(store)
+  const { user } = useRouteContext({ from: "/_authed" })
   const libraries = useQuery(
     orpc.libraries.list.queryOptions({
       refetchInterval: (q) =>
@@ -59,7 +62,8 @@ export function LibrariesPanel() {
           : false,
     }),
   )
-  const addButton = (
+  // The form browses the server's folders to pick from.
+  const addButton = can(user, "library.create") && can(user, "folder.read") && (
     <Button onClick={() => edit()}>
       <PlusIcon />
       {tr("libraries.add")}
@@ -127,6 +131,10 @@ function LibraryRow({
   onEdit: () => void
 }) {
   const queryClient = useQueryClient()
+  const { user } = useRouteContext({ from: "/_authed" })
+  const mayScan = can(user, "library.scan")
+  const mayEdit = can(user, "library.update") && can(user, "folder.read")
+  const mayRemove = can(user, "library.delete")
   const [confirming, setConfirming] = useState(false)
   const Icon = libraryIcons[library.kind]
   const providers = useQuery(orpc.metadata.providers.queryOptions())
@@ -203,14 +211,16 @@ function LibraryRow({
           <EllipsisIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
-          <DropdownMenuItem
-            disabled={library.scanning || scan.isPending}
-            onClick={() => scan.mutate()}
-          >
-            <RefreshCwIcon />
-            {tr("libraries.scanNow")}
-          </DropdownMenuItem>
-          {provider && (
+          {mayScan && (
+            <DropdownMenuItem
+              disabled={library.scanning || scan.isPending}
+              onClick={() => scan.mutate()}
+            >
+              <RefreshCwIcon />
+              {tr("libraries.scanNow")}
+            </DropdownMenuItem>
+          )}
+          {mayScan && provider && (
             <DropdownMenuItem
               disabled={library.refreshing || refetchMetadata.isPending}
               onClick={() => refetchMetadata.mutate()}
@@ -219,18 +229,22 @@ function LibraryRow({
               {tr("libraries.refreshMetadata")}
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onClick={onEdit}>
-            <PencilIcon />
-            {tr("libraries.edit")}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => setConfirming(true)}
-          >
-            <Trash2Icon />
-            {tr("libraries.remove")}
-          </DropdownMenuItem>
+          {mayEdit && (
+            <DropdownMenuItem onClick={onEdit}>
+              <PencilIcon />
+              {tr("libraries.edit")}
+            </DropdownMenuItem>
+          )}
+          {mayRemove && (mayScan || mayEdit) && <DropdownMenuSeparator />}
+          {mayRemove && (
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setConfirming(true)}
+            >
+              <Trash2Icon />
+              {tr("libraries.remove")}
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

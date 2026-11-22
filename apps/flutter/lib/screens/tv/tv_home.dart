@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/failure_text.dart';
+import '../../core/permissions.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../kit/tv/tv.dart';
@@ -733,7 +734,8 @@ class _NoLibraries extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final admin = switch (ref.watch(authStateProvider)) {
-      SignedIn(:final user) => user.isAdmin,
+      // Whoever may add one is shown how.
+      SignedIn(:final user) => can(user, Permission.libraryCreate),
       _ => false,
     };
     return Padding(

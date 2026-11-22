@@ -9,6 +9,7 @@ import { fulfilmentConnection, fulfilmentRule, user } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
 import { and, asc, eq, inArray, ne } from "drizzle-orm"
 
+import { type Seer, seesLibrary } from "../access/visible"
 import { languagesIn } from "../catalog/browse"
 import { genreProvider, keywordProvider } from "../catalog/cache"
 import { db } from "../db"
@@ -24,11 +25,13 @@ import {
   landing,
   loadRouting,
   redactConnection,
+  requireEditable,
+  requireReplaceableDefault,
   resolveConnection,
 } from "../requests/fulfilment/connections"
 import { sourceList } from "../requests/fulfilment/sources"
 import type { FulfilmentSource } from "../requests/fulfilment/types"
-import { admin } from "./base"
+import { authed } from "./base"
 import { providerFailure } from "./titles"
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
@@ -78,13 +81,17 @@ function defaults(source: FulfilmentSource, kinds: CatalogRef["kind"][]) {
 
 /**
  * Saves a connection, checks that every folder it sends to lands in a
- * library, and makes it the only default for the kinds it's the default
- * for. All in one transaction, so a refused save changes nothing.
+ * library the viewer sees, and makes it the only default for the kinds
+ * it's the default for. All in one transaction, so a refused save
+ * changes nothing. A connection that sends to a library the viewer can't
+ * see is refused before and after the change, and so is taking the
+ * default from one.
  *
  * An update that keeps its key, saved or from the environment, keeps its
  * source and destination too; moving it needs the key typed again.
  */
 async function saveConnection(
+  viewer: Seer,
   input: FulfilmentConnectionInput,
   saved?: ConnectionRow,
 ) {
@@ -108,14 +115,29 @@ async function saveConnection(
     "Choose each of the connection's options.",
   )
   const flags = defaults(source, input.defaultFor)
-  const folderLibraries = Object.fromEntries(
-    Object.entries(input.folderLibraries).map(([folder, library]) => [
-      bare(folder),
-      library,
-    ]),
-  )
+  // The viewer was never shown picks of libraries it can't see, so it
+  // can't mean to drop them.
+  const folderLibraries = {
+    ...Object.fromEntries(
+      Object.entries(saved?.folderLibraries ?? {}).filter(
+        ([, library]) => !seesLibrary(viewer, library),
+      ),
+    ),
+    ...Object.fromEntries(
+      Object.entries(input.folderLibraries).map(([folder, library]) => [
+        bare(folder),
+        library,
+      ]),
+    ),
+  }
   const result = await db
     .transaction(async (tx) => {
+      const before = await loadRouting(tx)
+      if (id) requireEditable(before, id, viewer)
+      if (flags.defaultMovies)
+        requireReplaceableDefault(before, "movie", id, viewer)
+      if (flags.defaultShows)
+        requireReplaceableDefault(before, "show", id, viewer)
       const others = id ? ne(fulfilmentConnection.id, id) : undefined
       if (flags.defaultMovies)
         await tx
@@ -148,8 +170,8 @@ async function saveConnection(
             .returning()
       if (!row) throw new Error("Connection save failed")
       const routing = await loadRouting(tx)
-      checkLandings(routing, row.id, input.defaultFor)
-      return redactConnection(row, routing)
+      checkLandings(routing, row.id, input.defaultFor, viewer)
+      return redactConnection(row, routing, viewer)
     })
     .catch(connectionFailure)
   events.publish("fulfilment", undefined)
@@ -183,9 +205,11 @@ async function rulesOf(
 /**
  * Checks a rule and saves it: it has a condition and a setting, its
  * settings are choices the connection takes, and its folder lands in a
- * library. A pick for that folder is kept on the connection.
+ * library the viewer sees. A pick for that folder is kept on the
+ * connection. A connection that sends to a library the viewer can't see
+ * is refused before and after the change.
  */
-async function saveRule(input: FulfilmentRuleInput, id?: string) {
+async function saveRule(viewer: Seer, input: FulfilmentRuleInput, id?: string) {
   const connection = await connectionById(input.connectionId)
   const source = getSource(connection.source)
   if (!source.rules || !source.parseRule)
@@ -222,10 +246,13 @@ async function saveRule(input: FulfilmentRuleInput, id?: string) {
   }
   const folder = source.ruleFolder?.(settings) ?? null
   const row = await db.transaction(async (tx: Transaction) => {
+    requireEditable(await loadRouting(tx), connection.id, viewer)
     if (folder && input.folderLibraryId !== undefined) {
       const picks = { ...connection.folderLibraries }
+      const before = picks[bare(folder)]
       if (input.folderLibraryId) picks[bare(folder)] = input.folderLibraryId
-      else delete picks[bare(folder)]
+      // The viewer wasn't shown a pick of a library it can't see.
+      else if (before && seesLibrary(viewer, before)) delete picks[bare(folder)]
       await tx
         .update(fulfilmentConnection)
         .set({ folderLibraries: picks })
@@ -268,7 +295,7 @@ async function saveRule(input: FulfilmentRuleInput, id?: string) {
     }
     if (!saved) throw new Error("Rule save failed")
     const routing = await loadRouting(tx)
-    checkLandings(routing, connection.id, [])
+    checkLandings(routing, connection.id, [], viewer)
     return saved
   })
   events.publish("fulfilment", undefined)
@@ -301,7 +328,7 @@ function knownLanguages(language: string) {
 }
 
 export const adminFulfilment = {
-  sources: admin.admin.fulfilment.sources.handler(() =>
+  sources: authed.admin.fulfilment.sources.handler(() =>
     sourceList().map((source) => ({
       id: source.id,
       name: source.name,
@@ -314,76 +341,91 @@ export const adminFulfilment = {
       values: source.defaults,
     })),
   ),
-  connections: admin.admin.fulfilment.connections.handler(async () => {
-    const [rows, routing] = await Promise.all([
-      db
-        .select()
-        .from(fulfilmentConnection)
-        .orderBy(asc(fulfilmentConnection.name)),
-      loadRouting(),
-    ])
-    return rows.map((row) => redactConnection(row, routing))
-  }),
-  create: admin.admin.fulfilment.create.handler(({ input }) =>
-    saveConnection(input),
+  connections: authed.admin.fulfilment.connections.handler(
+    async ({ context }) => {
+      const [rows, routing] = await Promise.all([
+        db
+          .select()
+          .from(fulfilmentConnection)
+          .orderBy(asc(fulfilmentConnection.name)),
+        loadRouting(),
+      ])
+      return rows.map((row) => redactConnection(row, routing, context.user))
+    },
   ),
-  update: admin.admin.fulfilment.update.handler(async ({ input }) =>
-    saveConnection(input, await connectionById(input.id)),
+  create: authed.admin.fulfilment.create.handler(({ input, context }) =>
+    saveConnection(context.user, input),
   ),
-  remove: admin.admin.fulfilment.remove.handler(async ({ input }) => {
-    await db
-      .delete(fulfilmentConnection)
-      .where(eq(fulfilmentConnection.id, input.id))
+  update: authed.admin.fulfilment.update.handler(async ({ input, context }) =>
+    saveConnection(context.user, input, await connectionById(input.id)),
+  ),
+  remove: authed.admin.fulfilment.remove.handler(async ({ input, context }) => {
+    await db.transaction(async (tx) => {
+      requireEditable(await loadRouting(tx), input.id, context.user)
+      await tx
+        .delete(fulfilmentConnection)
+        .where(eq(fulfilmentConnection.id, input.id))
+    })
     events.publish("fulfilment", undefined)
   }),
-  test: admin.admin.fulfilment.test.handler(async ({ input }) => {
+  test: authed.admin.fulfilment.test.handler(async ({ input }) => {
     const row = await connectionById(input.id)
     await getSource(row.source).test(resolveConnection(row))
   }),
-  options: admin.admin.fulfilment.options.handler(async ({ input }) => {
-    const source = getSource(input.source)
-    const saved = input.id ? await connectionById(input.id) : null
-    const settings = parse(
-      () => source.settings.parse(input.settings),
-      "Check the connection's settings.",
-    )
-    // A key typed in the form, else the one the connection would keep,
-    // as long as it goes to the same source and destination.
-    const apiKey =
-      input.apiKey ??
-      (source.apiKey
-        ? await boundKey(
-            { source: input.source, slug: input.slug, settings },
-            saved,
-            true,
-          )
-        : null)
-    return source.options({
-      id: saved?.id ?? "",
-      slug: input.slug,
-      settings,
-      apiKey,
-    })
-  }),
-  landing: admin.admin.fulfilment.landing.handler(({ input }) =>
-    landing(input.kind, input.folder),
+  options: authed.admin.fulfilment.options.handler(
+    async ({ input, context }) => {
+      const source = getSource(input.source)
+      const saved = input.id ? await connectionById(input.id) : null
+      const settings = parse(
+        () => source.settings.parse(input.settings),
+        "Check the connection's settings.",
+      )
+      // A key typed in the form, else the one the connection would keep,
+      // as long as it goes to the same source and destination.
+      const apiKey =
+        input.apiKey ??
+        (source.apiKey
+          ? await boundKey(
+              { source: input.source, slug: input.slug, settings },
+              saved,
+              true,
+            )
+          : null)
+      return source.options(
+        { id: saved?.id ?? "", slug: input.slug, settings, apiKey },
+        context.user,
+      )
+    },
   ),
-  rules: admin.admin.fulfilment.rules.handler(async ({ input }) => {
+  landing: authed.admin.fulfilment.landing.handler(({ input, context }) =>
+    landing(input.kind, input.folder, context.user),
+  ),
+  rules: authed.admin.fulfilment.rules.handler(async ({ input }) => {
     await connectionById(input.connectionId)
     return rulesOf(input.connectionId)
   }),
-  createRule: admin.admin.fulfilment.createRule.handler(({ input }) =>
-    saveRule(input),
+  createRule: authed.admin.fulfilment.createRule.handler(({ input, context }) =>
+    saveRule(context.user, input),
   ),
-  updateRule: admin.admin.fulfilment.updateRule.handler(({ input }) =>
-    saveRule(input, input.id),
+  updateRule: authed.admin.fulfilment.updateRule.handler(({ input, context }) =>
+    saveRule(context.user, input, input.id),
   ),
-  removeRule: admin.admin.fulfilment.removeRule.handler(async ({ input }) => {
-    await db.delete(fulfilmentRule).where(eq(fulfilmentRule.id, input.id))
-    events.publish("fulfilment", undefined)
-  }),
-  reorderRules: admin.admin.fulfilment.reorderRules.handler(
-    async ({ input }) => {
+  removeRule: authed.admin.fulfilment.removeRule.handler(
+    async ({ input, context }) => {
+      await db.transaction(async (tx) => {
+        const [rule] = await tx
+          .select({ connectionId: fulfilmentRule.connectionId })
+          .from(fulfilmentRule)
+          .where(eq(fulfilmentRule.id, input.id))
+        if (!rule) return
+        requireEditable(await loadRouting(tx), rule.connectionId, context.user)
+        await tx.delete(fulfilmentRule).where(eq(fulfilmentRule.id, input.id))
+      })
+      events.publish("fulfilment", undefined)
+    },
+  ),
+  reorderRules: authed.admin.fulfilment.reorderRules.handler(
+    async ({ input, context }) => {
       const current = await rulesOf(input.connectionId)
       if (
         current.length !== input.ids.length ||
@@ -393,6 +435,7 @@ export const adminFulfilment = {
           message: "The rules changed. Reload them and try again.",
         })
       await db.transaction(async (tx) => {
+        requireEditable(await loadRouting(tx), input.connectionId, context.user)
         for (const [position, id] of input.ids.entries())
           await tx
             .update(fulfilmentRule)
@@ -403,44 +446,46 @@ export const adminFulfilment = {
       return rulesOf(input.connectionId)
     },
   ),
-  ruleChoices: admin.admin.fulfilment.ruleChoices.handler(async ({ input }) => {
-    const language = await languageFor(input.kind)
-    const tmdb = metadata.tmdb.configured()
-    const [genres, languages, users] = await Promise.all([
-      tmdb
-        ? genreProvider(input.kind, language)
-            .then((result) => result.value)
-            .catch((cause: unknown) =>
-              providerFailure(metadata.tmdb.name, cause),
-            )
-        : [],
-      tmdb
-        ? languagesIn(language)
-            .then((result) => result.languages)
-            .catch((cause: unknown) =>
-              providerFailure(metadata.tmdb.name, cause),
-            )
-        : knownLanguages(language),
-      db
-        .select({
-          id: user.id,
-          username: user.username,
-          displayName: user.displayName,
-        })
-        .from(user)
-        .orderBy(asc(user.username)),
-    ])
-    return {
-      tmdb,
-      genres: genres.map((genre) => ({ id: genre.id, name: genre.name })),
-      languages,
-      users: users.map((row) => ({
-        id: row.id,
-        name: row.displayName ?? row.username,
-      })),
-    }
-  }),
-  keywords: admin.admin.fulfilment.keywords.handler(async ({ input }) => {
+  ruleChoices: authed.admin.fulfilment.ruleChoices.handler(
+    async ({ input }) => {
+      const language = await languageFor(input.kind)
+      const tmdb = metadata.tmdb.configured()
+      const [genres, languages, users] = await Promise.all([
+        tmdb
+          ? genreProvider(input.kind, language)
+              .then((result) => result.value)
+              .catch((cause: unknown) =>
+                providerFailure(metadata.tmdb.name, cause),
+              )
+          : [],
+        tmdb
+          ? languagesIn(language)
+              .then((result) => result.languages)
+              .catch((cause: unknown) =>
+                providerFailure(metadata.tmdb.name, cause),
+              )
+          : knownLanguages(language),
+        db
+          .select({
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName,
+          })
+          .from(user)
+          .orderBy(asc(user.username)),
+      ])
+      return {
+        tmdb,
+        genres: genres.map((genre) => ({ id: genre.id, name: genre.name })),
+        languages,
+        users: users.map((row) => ({
+          id: row.id,
+          name: row.displayName ?? row.username,
+        })),
+      }
+    },
+  ),
+  keywords: authed.admin.fulfilment.keywords.handler(async ({ input }) => {
     if (!metadata.tmdb.configured())
       throw new ORPCError("BAD_REQUEST", {
         message: "Keywords come from TMDB. Set MATINEE_TMDB_API_KEY first.",

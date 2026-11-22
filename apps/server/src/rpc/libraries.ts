@@ -24,7 +24,7 @@ import {
 } from "drizzle-orm"
 
 import { forgetGroups } from "../access/groups"
-import type { Viewer } from "../access/viewer"
+import { can, type Viewer } from "../access/viewer"
 import {
   itemFor,
   libraryFor,
@@ -43,7 +43,7 @@ import { trickplayStatus } from "../media/trickplay"
 import { isRefreshing, queueRefresh } from "../metadata/refresh"
 import { sources } from "../metadata/sources"
 import { follow } from "../realtime/follow"
-import { admin, authed, badRequest, notFound } from "./base"
+import { authed, badRequest, notFound } from "./base"
 
 /**
  * A backdrop for each of the libraries, from one of their titles. Ordering
@@ -70,7 +70,8 @@ async function libraryBackdrops(ids: string[]): Promise<Map<string, string>> {
 
 async function toLibraries(
   rows: LibraryRow[],
-  isAdmin: boolean,
+  // Where its folders are is for whoever may change them.
+  withPaths: boolean,
 ): Promise<Library[]> {
   if (rows.length === 0) return []
   const ids = rows.map((row) => row.id)
@@ -98,7 +99,7 @@ async function toLibraries(
     id: row.id,
     name: row.name,
     kind: row.kind,
-    paths: isAdmin
+    paths: withPaths
       ? folders.filter((f) => f.libraryId === row.id).map((f) => f.path)
       : [],
     itemCount: items.find((c) => c.libraryId === row.id)?.n ?? 0,
@@ -114,7 +115,10 @@ async function toLibraries(
 
 async function loadLibrary(viewer: Viewer, id: string): Promise<Library> {
   const row = await libraryFor(viewer, id)
-  const [result] = await toLibraries(row ? [row] : [], viewer.role === "admin")
+  const [result] = await toLibraries(
+    row ? [row] : [],
+    can(viewer, "library.update"),
+  )
   if (!result) throw notFound("Library not found.")
   return result
 }
@@ -176,7 +180,7 @@ export const libraries = {
         .from(library)
         .where(visibleLibraries(context.user))
         .orderBy(asc(library.name)),
-      context.user.role === "admin",
+      can(context.user, "library.update"),
     ),
   ),
 
@@ -184,7 +188,7 @@ export const libraries = {
     loadLibrary(context.user, input.id),
   ),
 
-  create: admin.libraries.create.handler(async ({ context, input }) => {
+  create: authed.libraries.create.handler(async ({ input }) => {
     await checkFolders(input.paths)
     const [row] = await db
       .insert(library)
@@ -199,10 +203,13 @@ export const libraries = {
     await writeFolders(row.id, input)
     scanLibrary(row.id, { regroup: true })
     void watchLibraries()
-    return loadLibrary(context.user, row.id)
+    // Its maker gets it back, whether or not a group of theirs opens it.
+    const [created] = await toLibraries([row], true)
+    if (!created) throw new Error("Could not load the library.")
+    return created
   }),
 
-  update: admin.libraries.update.handler(async ({ context, input }) => {
+  update: authed.libraries.update.handler(async ({ context, input }) => {
     const metadataProvider = checkProvider(input)
     const before = await libraryFor(context.user, input.id)
     if (!before) throw notFound("Library not found.")
@@ -237,7 +244,11 @@ export const libraries = {
     return loadLibrary(context.user, input.id)
   }),
 
-  remove: admin.libraries.remove.handler(async ({ input }) => {
+  remove: authed.libraries.remove.handler(async ({ context, input }) => {
+    // Only a library its account sees is one's to delete.
+    if (!(await libraryFor(context.user, input.id))) {
+      throw notFound("Library not found.")
+    }
     const deleted = await db
       .delete(library)
       .where(eq(library.id, input.id))
@@ -248,12 +259,12 @@ export const libraries = {
     void watchLibraries()
   }),
 
-  scan: admin.libraries.scan.handler(async ({ context, input }) => {
+  scan: authed.libraries.scan.handler(async ({ context, input }) => {
     await loadLibrary(context.user, input.id)
     scanLibrary(input.id)
   }),
 
-  refreshMetadata: admin.libraries.refreshMetadata.handler(
+  refreshMetadata: authed.libraries.refreshMetadata.handler(
     async ({ context, input }) => {
       const lib = await loadLibrary(context.user, input.id)
       if (!lib.metadataProvider) {
@@ -377,7 +388,7 @@ export const media = {
 }
 
 export const adminRoutes = {
-  browse: admin.admin.browse.handler(async ({ input }) => {
+  browse: authed.admin.browse.handler(async ({ input }) => {
     const path = resolve(input.path || "/")
     const entries = await readdir(path, { withFileTypes: true }).catch(() => {
       throw badRequest(`Can't read ${path}.`)

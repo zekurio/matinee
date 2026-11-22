@@ -25,9 +25,11 @@ tv_xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme MatineeTV -deriv
 default:
     @just --list --unsorted
 
-# Generate with XcodeGen from Nixpkgs, or XCODEGEN on PATH.
+# Generate with XcodeGen from Nixpkgs, or XCODEGEN on PATH. The Nixpkgs is
+# the one flake.lock names, whose XcodeGen is in the binary cache. The
+# newest one's may not be, and then Nix builds Swift's toolchain or fails.
 generate:
-    {{ env("XCODEGEN", "nix run nixpkgs#xcodegen --") }} generate --quiet
+    {{ env("XCODEGEN", "nix run --inputs-from . nixpkgs#xcodegen --") }} generate --quiet
 
 # Build for any simulator without booting one; extra xcodebuild flags follow
 build *args: generate

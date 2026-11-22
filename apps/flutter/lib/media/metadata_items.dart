@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../api/matinee_api.dart';
+import '../core/permissions.dart';
 import '../core/session.dart';
 import '../core/toasts.dart';
 import '../kit/kit.dart';
@@ -19,9 +20,11 @@ import 'actions.dart';
 /// key, and the image editor. Fix match and refresh show once the provider
 /// is known, which the first menu asks for.
 
-/// Whether the account signed in may change a title's metadata: the
-/// server lets admins only, and needs to be reachable.
-bool mayEditMetadata(AuthState auth) => auth is SignedIn && auth.user.isAdmin;
+/// Whether the account signed in may change a title's metadata: fixing a
+/// match, refreshing, and images take `title.update`, and the server
+/// needs to be reachable.
+bool mayEditMetadata(AuthState auth) =>
+    auth is SignedIn && can(auth.user, Permission.titleUpdate);
 
 /// The metadata provider of a library, or null when it has none. For
 /// admins only; the server turns anyone else away.

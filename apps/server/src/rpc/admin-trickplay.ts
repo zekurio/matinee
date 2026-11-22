@@ -12,7 +12,7 @@ import {
 import { saveTrickplay, trickplaySettings } from "../media/trickplay-settings"
 import { currentTranscoding } from "../transcode/capabilities"
 import { usableHardware } from "../transcode/video/encoders"
-import { admin } from "./base"
+import { authed } from "./base"
 
 async function describe(
   settings: TrickplaySettings,
@@ -33,11 +33,11 @@ async function describe(
 }
 
 export const adminTrickplay = {
-  get: admin.admin.trickplay.get.handler(async () =>
+  get: authed.admin.trickplay.get.handler(async () =>
     describe(await trickplaySettings()),
   ),
 
-  update: admin.admin.trickplay.update.handler(async ({ context, input }) => {
+  update: authed.admin.trickplay.update.handler(async ({ context, input }) => {
     const settings = await saveTrickplay(input)
     log.info(`Trickplay settings saved by ${context.user.username}`)
     if (settings.enabled) {

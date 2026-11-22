@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/failure_text.dart';
+import '../../core/permissions.dart';
 import '../../core/session.dart';
 import '../../core/toasts.dart';
 import '../../kit/kit.dart';
@@ -188,15 +189,6 @@ final class AddAfterAllAnswer extends QueueAnswer {
 /// so "Goes to" offers a choice.
 bool choosesLibrary(AdminRequestItem item) => item.destinations.length > 1;
 
-/// Whether the signed-in account is an admin, the one the server lets
-/// answer requests.
-final isAdminProvider = Provider<bool>(
-  (ref) => switch (ref.watch(authStateProvider)) {
-    SignedIn(:final user) => user.isAdmin,
-    _ => false,
-  },
-);
-
 final class RequestsHub extends Notifier<RequestsState> {
   MatineeApi? _api;
   StreamSubscription<RequestQueue>? _queue;
@@ -205,8 +197,9 @@ final class RequestsHub extends Notifier<RequestsState> {
   RequestsState build() {
     // Another server or account starts over.
     final api = _api = ref.watch(apiProvider);
-    final admin = ref.watch(isAdminProvider);
-    if (api != null && admin) {
+    // Whoever runs the queue follows it: reading everyone's requests and
+    // answering them, as the web's `runsQueue`.
+    if (api != null && ref.watch(runsQueueProvider)) {
       _followQueue(api);
       ref.onDispose(() => unawaited(_queue?.cancel()));
     }
@@ -225,10 +218,10 @@ final class RequestsHub extends Notifier<RequestsState> {
     );
   }
 
-  /// Opens the admin's queue again now, rather than after the wait.
+  /// Opens the queue again now, rather than after the wait.
   void retryQueue() {
     final api = _api;
-    if (api == null || !ref.read(isAdminProvider)) return;
+    if (api == null || !ref.read(runsQueueProvider)) return;
     state = state.copyWith(queueFailed: false);
     _followQueue(api);
   }

@@ -332,6 +332,23 @@
   "@adminAccessOverrideHint": {
     "description": "admin settings"
   },
+  "adminAccessPermissions": "Permissions",
+  "@adminAccessPermissions": {
+    "description": "admin settings"
+  },
+  "adminAccessPermissionsAll": "Every permission",
+  "@adminAccessPermissionsAll": {
+    "description": "admin settings"
+  },
+  "adminAccessPermissionsCount": "{count, plural, one{{count} more permission} other{{count} more permissions}}",
+  "@adminAccessPermissionsCount": {
+    "description": "admin settings",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "adminAccessRequestLimit": "Limit",
   "@adminAccessRequestLimit": {
     "description": "admin settings"
@@ -7101,10 +7118,6 @@
   "@webServerAccessDownloadVideoOff": {
     "description": "strings_web_server.xml"
   },
-  "webServerAccessDownloadsOff": "Downloads are turned off for your account.",
-  "@webServerAccessDownloadsOff": {
-    "description": "strings_web_server.xml"
-  },
   "webServerAccessNeedsEncoding": "This device needs the video converted, but the server may not convert video for your account. Try another device or ask whoever runs the server.",
   "@webServerAccessNeedsEncoding": {
     "description": "strings_web_server.xml"
@@ -9740,6 +9753,120 @@
         "type": "String"
       }
     }
+  },
+  "webServerFulfilmentHiddenLibrary": "This connection sends titles to a library you can't see, so you can't change it.",
+  "@webServerFulfilmentHiddenLibrary": {
+    "description": "server.fulfilment.hiddenLibrary"
+  },
+  "webServerFulfilmentDefaultFilmsHidden": "The default for films sends titles to a library you can't see, so you can't replace it.",
+  "@webServerFulfilmentDefaultFilmsHidden": {
+    "description": "server.fulfilment.defaultFilmsHidden"
+  },
+  "webServerFulfilmentDefaultShowsHidden": "The default for shows sends titles to a library you can't see, so you can't replace it.",
+  "@webServerFulfilmentDefaultShowsHidden": {
+    "description": "server.fulfilment.defaultShowsHidden"
+  },
+  "webServerRpcAccountPermission": "Your account doesn't have the {p1} permission.",
+  "@webServerRpcAccountPermission": {
+    "description": "server.rpc.accountPermission",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webServerRpcTokenPermission": "This API token doesn't have the {p1} permission.",
+  "@webServerRpcTokenPermission": {
+    "description": "server.rpc.tokenPermission",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webServerRpcWholeAccount": "Adding a way to sign in takes a session, or an API token with all permissions.",
+  "@webServerRpcWholeAccount": {
+    "description": "server.rpc.wholeAccount"
+  },
+  "webServerRpcOwnPermissions": "You can only grant or take away permissions you have yourself. You don't have {p1}.",
+  "@webServerRpcOwnPermissions": {
+    "description": "server.rpc.ownPermissions",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webServerAccountApiTokenGone": "That API token was already revoked.",
+  "@webServerAccountApiTokenGone": {
+    "description": "server.account.apiTokenGone"
+  },
+  "webServerAccountApiTokenGrant": "An API token can't grant permissions it doesn't have.",
+  "@webServerAccountApiTokenGrant": {
+    "description": "server.account.apiTokenGrant"
+  },
+  "webServerAccountNoApiToken": "This request didn't come with an API token.",
+  "@webServerAccountNoApiToken": {
+    "description": "server.account.noApiToken"
+  },
+  "webServerAdminUsersAbove": "{p1} is an admin, and only an admin changes an admin's account.",
+  "@webServerAdminUsersAbove": {
+    "description": "server.adminUsers.above",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webUsersRevokedTokens": "{count, plural, one{Revoked {count} API token of {p2}} other{Revoked {count} API tokens of {p2}}}",
+  "@webUsersRevokedTokens": {
+    "description": "users.revokedTokens",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "webUsersRevokeTokensOwnTitle": "Revoke your API tokens?",
+  "@webUsersRevokeTokensOwnTitle": {
+    "description": "users.revokeTokens.ownTitle"
+  },
+  "webUsersRevokeTokensTitle": "Revoke {p1}'s API tokens?",
+  "@webUsersRevokeTokensTitle": {
+    "description": "users.revokeTokens.title",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webUsersRevokeTokensDescription": "Every service using one stops working with Matinee. Sessions stay signed in.",
+  "@webUsersRevokeTokensDescription": {
+    "description": "users.revokeTokens.description"
+  },
+  "webUsersRevokeTokensConfirm": "Revoke tokens",
+  "@webUsersRevokeTokensConfirm": {
+    "description": "users.revokeTokens.confirm"
+  },
+  "webUsersMenuRevokeTokens": "Revoke API tokens",
+  "@webUsersMenuRevokeTokens": {
+    "description": "users.menu.revokeTokens"
+  },
+  "webUsersApiTokens": "{count, plural, one{{count} API token} other{{count} API tokens}}",
+  "@webUsersApiTokens": {
+    "description": "users.apiTokens",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webValidationApiTokenPermissions": "Choose what the token may do.",
+  "@webValidationApiTokenPermissions": {
+    "description": "validation.apiTokenPermissions"
   },
   "webDiscoverRequestWaiting": "Waiting",
   "@webDiscoverRequestWaiting": {

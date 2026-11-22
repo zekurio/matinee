@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/link_opener.dart';
+import '../../core/permissions.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/server_text.dart';
@@ -28,7 +29,8 @@ import 'requests_hub.dart';
 /// why a declined title isn't coming. With one of [QueueList]'s, for an
 /// admin, the requests to answer and follow, as its `RequestsScreen`:
 /// Waiting, Needs attention, On the way, and Done, live from the stream
-/// the whole app follows. Anyone else gets their own requests.
+/// the whole app follows, for whoever runs the queue: reads everyone's
+/// requests and answers them. Anyone else gets their own requests.
 class RequestsScreen extends ConsumerWidget {
   const RequestsScreen({super.key, this.list});
 
@@ -36,9 +38,8 @@ class RequestsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final admin = ref.watch(isAdminProvider);
     final list = this.list;
-    if (admin && list != null) {
+    if (ref.watch(runsQueueProvider) && list != null) {
       return _QueuePage(
         start: QueueList.all.contains(list) ? list : QueueList.waiting,
       );

@@ -278,7 +278,7 @@ private final class PreferencesStub: URLProtocol, @unchecked Sendable {
       Self.lastBody = String(decoding: body, as: UTF8.self)
     }
     let user = """
-      {"id":"u","username":"viewer","displayName":null,"role":"user","avatarId":null,"avatarSource":"none",
+      {"id":"u","username":"viewer","displayName":null,"role":"user","permissions":[],"avatarId":null,"avatarSource":"none",
        "playback":null,"library":{"showSpecials":true},"sharing":{"favorites":false,"stats":false}}
       """
     let status = ok ? 200 : 403
