@@ -203,4 +203,95 @@ void main() {
     expect(_focused(), 'actions/play');
     expect(tester.getRect(card0).top, 450);
   });
+
+  // The TV profile lost its Sign out button, the one thing in reach above
+  // Recently watched: Down to the statistics scrolled the header away, and
+  // Up to the first card left it there for good, since that card already
+  // sat clear of the edge.
+  group('a page whose header takes no focus', () {
+    Future<ScrollController> page(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(960, 540);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final memory = TvFocusMemory();
+      addTearDown(memory.dispose);
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      TvRow row(String row) => TvRow(
+        title: 'Row $row',
+        row: row,
+        memory: memory,
+        height: 126,
+        itemCount: 3,
+        itemBuilder: (context, index) => TvArtCard(
+          toneKey: '$row/$index',
+          aspect: 16 / 9,
+          width: 224,
+          focusNode: memory.node(row, '$index'),
+          label: '$row/$index',
+          onPressed: () {},
+          children: const [],
+        ),
+      );
+      await tester.pumpWidget(
+        WidgetsApp(
+          color: const Color(0xFF000000),
+          builder: (context, _) => MatineeTheme.wrap(
+            matineeDark,
+            TvFocusRules(
+              child: Builder(
+                builder: (context) {
+                  memory.restore(context, () => ('0', '0'));
+                  return TvFollowFocus(
+                    controller: scroll,
+                    rule: TvFollowFocus.clear(start: 56, end: 56),
+                    sectionTop: 32,
+                    child: TvRowsScroll(
+                      controller: scroll,
+                      top: 35,
+                      gap: 32,
+                      cacheExtent: 2400,
+                      rows: [
+                        // The avatar, the name, the facts.
+                        const SizedBox(height: 200),
+                        row('0'),
+                        row('1'),
+                        row('2'),
+                        row('3'),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(_focused(), '0/0');
+      expect(scroll.offset, 0);
+      return scroll;
+    }
+
+    testWidgets('Up to its first row shows the header again', (tester) async {
+      final scroll = await page(tester);
+      await _press(tester, LogicalKeyboardKey.arrowDown);
+      expect(_focused(), '1/0');
+      expect(scroll.offset, greaterThan(0), reason: 'the header went');
+      await _press(tester, LogicalKeyboardKey.arrowUp);
+      expect(_focused(), '0/0');
+      expect(scroll.offset, 0);
+    });
+
+    testWidgets('Up on its first row, scrolled away, shows the header', (
+      tester,
+    ) async {
+      final scroll = await page(tester);
+      scroll.jumpTo(200);
+      await tester.pumpAndSettle();
+      await _press(tester, LogicalKeyboardKey.arrowUp);
+      expect(_focused(), '0/0');
+      expect(scroll.offset, 0);
+    });
+  });
 }
