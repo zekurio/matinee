@@ -69,7 +69,7 @@ export function RequestCard({
    * passing it at all is what makes a card the admin's.
    */
   who?: ReactNode
-  /** What went wrong, one line under the badge. */
+  /** What went wrong, up to two lines under the badge. */
   problem?: ReactNode
   actions?: ReactNode
   menu?: ReactNode
@@ -148,11 +148,13 @@ export function RequestCard({
 }
 
 /**
- * The poster's width, which sets the card's height: the admin's cards
- * have a row more, who asked, than a person's own.
+ * The poster's width, which sets the card's height. The admin's cards
+ * have a row more than a person's own, who asked, and their fullest
+ * pairs it with a badge, a two-line problem, and two buttons. This is
+ * the width that fits that with a little to spare.
  */
 const posterWidth = {
-  admin: "w-28",
+  admin: "w-31",
   own: "w-20",
 } as const
 

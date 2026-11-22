@@ -24,11 +24,11 @@ import { askers } from "./request-queue"
  * Everything else about a request is in the admin's "…" menu.
  */
 
-const lineIcon = "size-3.5 shrink-0"
+const lineIcon = "mt-0.5 size-3.5 shrink-0"
 
 /**
- * The problem line under the badge, cut to one line, as a button that
- * opens the whole of it, so a long error or note can still be read, by
+ * The problem under the badge, cut to two lines, as a button that opens
+ * the whole of it, so a long error or note can still be read, by
  * pointer, touch, or keyboard.
  */
 function Problem({
@@ -48,7 +48,7 @@ function Problem({
     <Popover>
       <PopoverTrigger
         className={cn(
-          "text-foreground/85 text-13px flex max-w-full min-w-0 items-center gap-1.5 text-left",
+          "text-foreground/85 text-13px flex max-w-full min-w-0 items-start gap-1.5 text-left",
           "hover:text-foreground focus-visible:ring-ring data-popup-open:text-foreground relative -mx-1 rounded-md px-1 outline-none focus-visible:ring-2",
           "hover:bg-foreground/[0.06] data-popup-open:bg-foreground/[0.06]",
           // A finger's worth to press on phones, without a taller line.
@@ -56,7 +56,7 @@ function Problem({
         )}
       >
         {icon}
-        <span className="truncate">{text}</span>
+        <span className="line-clamp-2 min-w-0 flex-1 break-words">{text}</span>
       </PopoverTrigger>
       <PopoverContent
         align="start"
