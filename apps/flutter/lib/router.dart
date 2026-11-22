@@ -71,7 +71,7 @@ abstract final class Routes {
   /// hand.
   static const auth = {connect, signIn, unreachable, connecting};
 
-  // The tabs.
+  // The tabs, and the profile that each of their headers opens over them.
   static const home = '/';
   static const shows = '/shows';
   static const movies = '/movies';
@@ -332,15 +332,12 @@ List<RouteBase> _handsetRoutes() => [
           ),
         ],
       ),
-      StatefulShellBranch(
-        routes: [
-          GoRoute(
-            path: Routes.profile,
-            builder: (context, state) => const ProfileScreen(),
-          ),
-        ],
-      ),
     ],
+  ),
+  GoRoute(
+    path: Routes.profile,
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const ProfileScreen(),
   ),
   GoRoute(
     path: Routes.favorites,

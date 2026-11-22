@@ -26,10 +26,11 @@ import 'favorite_cards.dart';
 import 'profile_data.dart';
 import 'stats.dart';
 
-/// The profile tab: who's signed in, their favorites, their statistics, and
-/// what they watched last, then the account: switching server or account, and
-/// signing out, here with the account they act on. Offline it's the person and
-/// the account rows, since the rest is the server's.
+/// The profile page, which each tab header's avatar opens over the tabs: who's
+/// signed in, their favorites, their statistics, and what they watched last,
+/// then the account: switching server or account, and signing out, here with
+/// the account they act on. Offline it's the person and the account rows, since
+/// the rest is the server's.
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -53,6 +54,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  /// Back to the tab the avatar was on. A deep link has no page under the
+  /// profile, so that goes Home instead.
+  void _back(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(Routes.home);
+    }
+  }
+
   /// Back on the tab, favorites, requests, and what was watched may have
   /// moved on.
   void _returned(String username) {
@@ -73,14 +84,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (user == null) return ColoredBox(color: colors.background);
     ref.listen(mediaChangesProvider, (_, _) => _returned(user.username));
     final offline = auth is Offline;
+    final l = AppLocalizations.of(context);
     final sections = offline
         ? [
             _Header(user: user),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: OfflineNote(
-                message: AppLocalizations.of(context).profileOffline,
-              ),
+              child: OfflineNote(message: l.profileOffline),
             ),
             const _Account(),
           ]
@@ -88,8 +98,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return ReturnWatcher(
       path: Routes.profile,
       onReturn: () => _returned(user.username),
-      child: ColoredBox(
-        color: colors.background,
+      child: PageFrame(
+        title: l.tabProfile,
+        backLabel: l.commonBack,
+        onBack: () => _back(context),
+        actions: [
+          PageBarButton(
+            icon: Lucide.settings,
+            label: l.shellSettings,
+            onPressed: () => context.push(Routes.settings),
+          ),
+        ],
         child: ListView.separated(
           padding: EdgeInsets.only(
             top: 8,

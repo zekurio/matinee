@@ -2578,7 +2578,7 @@
   },
   "profileOffline": "Your favorites, requests, and stats come back once the server can be reached.",
   "@profileOffline": {
-    "description": "The Profile tab while the server can't be reached."
+    "description": "The profile page while the server can't be reached."
   },
   "profileRecent": "Recently watched",
   "@profileRecent": {

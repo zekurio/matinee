@@ -5,8 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
-import '../../media/avatar.dart';
-import '../../router.dart';
 import 'header.dart';
 
 /// A tap on the tab that's already open: [path] is the tab's first page,
@@ -27,13 +25,14 @@ final class _TabReselects extends Notifier<TabReselect?> {
 }
 
 /// The header above the tabs: Home keeps the logo with settings and search,
-/// and each other tab gets its own name and only the actions it has. Shows and
-/// Movies build theirs in the tab itself, where the list's filter and sort
+/// and each other tab gets its own name and only the actions it has. Every one
+/// ends with the account's avatar, which opens the profile over the tabs. Shows
+/// and Movies build theirs in the tab itself, where the list's filter and sort
 /// live, so the shell leaves no band for them.
 class ShellTopBar extends ConsumerWidget {
   const ShellTopBar({super.key, required this.index});
 
-  /// The shell's branch index: Home, Shows, Movies, Downloads, or Profile.
+  /// The shell's branch index: Home, Shows, Movies, or Downloads.
   final int index;
 
   @override
@@ -42,28 +41,18 @@ class ShellTopBar extends ConsumerWidget {
     return switch (index) {
       0 => const ShellHeader(),
       1 || 2 => const SizedBox.shrink(),
-      3 => TabHeader(
+      _ => TabHeader(
         title: words.downloadsTitle,
         offline: ref.watch(authStateProvider) is Offline,
-      ),
-      _ => TabHeader(
-        title: words.tabProfile,
-        actions: [
-          HeaderButton(
-            icon: Lucide.settings,
-            label: words.shellSettings,
-            onPressed: () => context.push(Routes.settings),
-          ),
-        ],
       ),
     };
   }
 }
 
 /// The signed-in touch screens' frame, the same on a phone and a tablet:
-/// the header on top, and the tabs along the bottom, Home, Shows, Movies,
-/// Downloads, and the profile, each keeping its own stack. Both stay while
-/// a tab's pages scroll; a page opened from a tab covers them.
+/// the header on top, and the tabs along the bottom, Home, Shows, Movies, and
+/// Downloads, each keeping its own stack. Both stay while a tab's pages
+/// scroll; a page opened from a tab covers them.
 class HandsetShell extends ConsumerStatefulWidget {
   const HandsetShell({super.key, required this.shell});
 
@@ -108,14 +97,10 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
   @override
   Widget build(BuildContext context) {
     final words = AppLocalizations.of(context);
-    final user = switch (ref.watch(authStateProvider)) {
-      SignedIn(:final user) || Offline(:final user) => user,
-      _ => null,
-    };
-    final avatar = user?.avatarId;
     // Offline only what works without the server stays: Home from the
-    // downloads, the downloads, and the profile, which leads to Settings. There
-    // are no libraries to list without it.
+    // downloads, and the downloads. The profile still opens from the header's
+    // avatar, and leads to Settings. There are no libraries to list without
+    // it.
     final offline = ref.watch(authStateProvider) is Offline;
     ref.listen(authStateProvider, (_, auth) {
       if (auth is Offline && _libraryTabs.contains(widget.shell.currentIndex)) {
@@ -129,24 +114,6 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
         TabBarItem(id: 2, icon: Lucide.film, label: words.tabMovies),
       ],
       TabBarItem(id: 3, icon: Lucide.download, label: words.downloadsTitle),
-      TabBarItem(
-        id: 4,
-        icon: Lucide.userRound,
-        label: words.tabProfile,
-        picture: avatar == null
-            ? null
-            : Avatar(
-                avatarId: avatar,
-                name: user?.username ?? '',
-                size: 22,
-                // Offline, or when it can't load, the tab's own icon.
-                fallback: KitIcon(
-                  Lucide.userRound,
-                  size: 22,
-                  color: MatineeTheme.of(context).mutedForeground,
-                ),
-              ),
-      ),
     ];
     // Home is under every other tab: back on another tab's first page goes to
     // Home, and only Home's leaves the app.
