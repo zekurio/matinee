@@ -126,7 +126,7 @@ class _RequestsRow<T> extends ConsumerWidget {
     final title = l.webRequestsRecent;
     final width = requestCardWidth(MediaQuery.sizeOf(context));
     final scaler = MediaQuery.textScalerOf(context);
-    final height = requestCardHeight(width, scaler, queue: queue);
+    final height = requestCardHeight(scaler, queue: queue);
     final held = ref.watch(requestsProvider.select((state) => state.held));
     final error = this.error;
     final items = this.items;

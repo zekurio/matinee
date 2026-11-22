@@ -1663,7 +1663,6 @@
   "webUsersMenuRevokeTokens": "API-Tokens widerrufen",
   "webUsersApiTokens": "{count, plural, one{{count} API-Token} other{{count} API-Tokens}}",
   "webValidationApiTokenPermissions": "Wähle, was das Token darf.",
-  "webRequestsAlsoRequested": "auch {p1}",
   "webRequestsRecent": "Letzte Anfragen",
   "webRequestsStateWaiting": "Wartet",
   "webRequestsStateNeedsAttention": "Braucht Aufmerksamkeit",

@@ -8749,15 +8749,6 @@
   "@webValidationApiTokenPermissions": {
     "description": "validation.apiTokenPermissions"
   },
-  "webRequestsAlsoRequested": "also {p1}",
-  "@webRequestsAlsoRequested": {
-    "description": "requests.alsoRequested",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webRequestsRecent": "Recent requests",
   "@webRequestsRecent": {
     "description": "requests.recent"
