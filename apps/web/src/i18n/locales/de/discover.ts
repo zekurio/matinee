@@ -10,9 +10,6 @@ export default {
   "discover.rail.forYou": "Empfehlungen für dich",
   "discover.rail.becauseWatched": "Weil du {name} geschaut hast",
 
-  "discover.request.waiting": "Wartet",
-  "discover.request.askedWhen": "Zuerst angefragt: {when}",
-
   "discover.reason.watched": "Weil du {name} geschaut hast",
   "discover.reason.person": "Mit {name}",
   "discover.reason.taste": "Passend zu dem, was du schaust",

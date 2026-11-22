@@ -11,13 +11,32 @@ import {
   ShowScope,
   WaitingDeclineReason,
 } from "./catalog"
-import { get, post } from "./contract-routes"
+import { post } from "./contract-routes"
 import { t } from "./schema"
+import { TitleKind } from "./titles"
 export const RequestStatus = t.enum(["asked", "approved", "declined"])
 
 export const FulfilmentState = t.enum(["queued", "sent", "failed"])
 
 export const RequestId = t.object({ id: t.uuid() })
+
+/**
+ * Where a request stands, the one state its card shows, the same for its
+ * askers and in the admin's queue, where it's also the list it's in.
+ * "waiting" until an admin answers it; "needsAttention" once sending it
+ * failed; "onTheWay" once accepted, until it arrives; "here" once a film
+ * arrived or every season a show asked for did, `arrivedAt` saying when;
+ * "declined" when an admin declined it or gave up on it.
+ */
+export const REQUEST_STATES = [
+  "waiting",
+  "needsAttention",
+  "onTheWay",
+  "here",
+  "declined",
+] as const
+export const RequestState = t.enum(REQUEST_STATES)
+export type RequestState = t.infer<typeof RequestState>
 
 export const RequestDestination = t.object({ id: t.uuid(), name: t.string() })
 
@@ -41,6 +60,7 @@ export const RequestItem = t.object({
    * once every season asked for is here.
    */
   season: SeasonAvailability.nullable(),
+  state: RequestState,
 })
 
 export const RequestPage = t.object({
@@ -51,6 +71,18 @@ export const RequestPage = t.object({
 export const RequestPageInput = t.object({
   cursor: t.string().max(512).optional(),
   limit: t.number().int().min(1).max(100).$default(40),
+})
+
+/**
+ * A page of a list of requests, kept to the ones in any of `states`, the
+ * state each card shows, and of `kind`. An empty `states` keeps every
+ * state, and no `kind` both kinds. A cursor holds only under the filter
+ * it came with. The lists that take it are POSTs, since a query string
+ * carries no list.
+ */
+export const RequestListInput = RequestPageInput.extend({
+  states: t.array(RequestState).max(REQUEST_STATES.length).$default([]),
+  kind: TitleKind.optional(),
 })
 
 export const AdminRequestItem = RequestItem.extend({
@@ -97,6 +129,10 @@ export const AdminRequestItem = RequestItem.extend({
 })
 export type AdminRequestItem = t.infer<typeof AdminRequestItem>
 
+/**
+ * The admin's queue, each list one state, kept to the filter it was asked
+ * with: a state left out has an empty list and a zero count.
+ */
 export const RequestQueue = t.object({
   waiting: t.array(AdminRequestItem),
   needsAttention: t.array(AdminRequestItem),
@@ -136,13 +172,22 @@ export const requestsContract = {
   cancel: post("/requests/cancel", "request.delete")
     .input(RequestId)
     .output(t.void()),
-  /** In-progress requests the viewer asked for or follows, as `mine` lists them. */
-  mineLive: get("/requests/mine/live", "request.read")
-    .input(RequestPageInput)
+  /**
+   * The requests the viewer asked for or follows, as `mine` lists them
+   * with `filter: "all"`: in progress first, then finished, so a
+   * finished one stays for as long as it's among the latest.
+   */
+  mineLive: post("/requests/mine/live", "request.read")
+    .input(RequestListInput)
     .output(eventIterator(RequestPage)),
-  mine: get("/requests/mine", "request.read")
+  /**
+   * In progress first, then finished, each newest first. "inProgress"
+   * keeps to those in flight and those that settled in the last three
+   * days.
+   */
+  mine: post("/requests/mine", "request.read")
     .input(
-      RequestPageInput.extend({
+      RequestListInput.extend({
         filter: t.enum(["inProgress", "all"]).$default("inProgress"),
       }),
     )
@@ -154,11 +199,11 @@ export const adminRequestsContract = {
    * Current work lists plus a cursor-paged done list: arrived and
    * declined requests, latest first. The cursor applies to done.
    */
-  queue: get("/admin/requests", "adminRequest.read")
-    .input(RequestPageInput)
+  queue: post("/admin/requests", "adminRequest.read")
+    .input(RequestListInput)
     .output(RequestQueue),
-  live: get("/admin/requests/live", "adminRequest.read")
-    .input(RequestPageInput)
+  live: post("/admin/requests/live", "adminRequest.read")
+    .input(RequestListInput)
     .output(eventIterator(RequestQueue)),
   /**
    * With `libraryId`, the request moves to that library first, taking the

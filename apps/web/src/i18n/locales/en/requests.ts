@@ -11,8 +11,33 @@ export default defineMessages("requests", {
   // The account label with the dot on it, for screen readers.
   "requests.labelled": "{label}. Requests need you",
 
-  // The queue at /requests. The lists, as a row of chips with their counts.
-  "requests.lists": "Lists",
+  // Discover's first row, which leads to the requests page: an admin's
+  // latest requests in every state, or a person's own.
+  "requests.recent": "Recent requests",
+
+  // The one state each request's card shows.
+  "requests.state.waiting": "Waiting",
+  "requests.state.needsAttention": "Needs attention",
+  "requests.state.onTheWay": "On its way",
+  // {percent} like "42%".
+  "requests.state.onTheWayPercent": "On its way · {percent}",
+  "requests.state.here": "Here",
+  "requests.state.declined": "Declined",
+  // A person's own card: taking the request back, small beside when they
+  // asked.
+  "requests.cancel": "Cancel",
+  "requests.cancelNamed": "Cancel the request for {name}",
+
+  // The Filter panel on /requests and My requests. The states use the
+  // badges' words.
+  "requests.filter.state": "State",
+  "requests.filter.kind": "Type",
+  // The phone drawer's button that closes it on the list.
+  "requests.filter.show": "Show requests",
+  "requests.filter.none": "No requests match these filters",
+  "requests.filter.noneHint": "Take a filter off to see more.",
+
+  // The lists the Flutter app still shows as tabs. The web shows one list.
   "requests.list.waiting": "Waiting",
   "requests.list.needsAttention": "Needs attention",
   "requests.list.onTheWay": "On the way",
@@ -27,8 +52,13 @@ export default defineMessages("requests", {
   "requests.kind.show": "Show",
   // How many more people requested it, beside the first one's name.
   "requests.othersCount": "+{count}",
-  // {names} is a list, like "Ben and Cara".
-  "requests.alsoRequested": "also {names}",
+  // The "…" menu on an admin's card: everyone who requested it, each
+  // with when; where a waiting request can be added instead; the library
+  // it's in; and what the connection says, {connection} like "Radarr".
+  "requests.askedBy": "Requested by",
+  "requests.menu.addTo": "Add to",
+  "requests.menu.library": "Library",
+  "requests.menu.connection": "From {connection}",
   // For an admin, the tooltip on a title's "Requested" badge. {when} is
   // relative, like "2 hours ago"; {names} a list, like "anna and ben".
   "requests.badge.requested": "{name} requested this {when}",
@@ -44,7 +74,6 @@ export default defineMessages("requests", {
   // New seasons as they air, after the ones requested.
   "requests.scope.andFuture": "{seasons} + new",
   "requests.scope.futureOnly": "New seasons",
-  "requests.goesTo.label": "Goes to",
   // The button that changes where a waiting request goes.
   "requests.goesTo.change": "Change where {name} goes, now {library}",
   "requests.goesTo.title": "Goes to",
@@ -65,7 +94,6 @@ export default defineMessages("requests", {
   // Done, on a declined request: let anyone request it afresh, or
   // accept it as it was and send it.
   "requests.allowAgain": "Allow requests again",
-  "requests.allowAgainNamed": "Allow requests for {name} again",
   "requests.addAfterAll": "Add after all",
   "requests.addAfterAllNamed": "Add {name} after all",
   "requests.more": "More for {name}",
@@ -138,7 +166,6 @@ export default defineMessages("requests", {
   "requests.progress.notOut": "Not out yet",
   // {time} like "3 hours".
   "requests.progress.left": "{time} left",
-  "requests.progress.label": "Progress for {name}",
 
   // Needs attention.
   "requests.attention.unknown": "Failed without a reason",
@@ -157,6 +184,10 @@ export default defineMessages("requests", {
   "requests.empty.setup.description":
     "Add a connection, then choose the libraries it fills.",
   "requests.empty.setup.action": "Set up requests",
+  "requests.empty.none": "No requests yet",
+  "requests.empty.noneHint":
+    "When someone requests a film or show, it shows up here.",
+  // The Flutter app's empty tabs.
   "requests.empty.waiting": "Nothing is waiting",
   "requests.empty.needsAttention": "Nothing needs attention",
   "requests.empty.onTheWay": "Nothing is on the way",
