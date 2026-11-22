@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/app.dart';
+import 'package:matinee/media/artwork.dart' show Picture;
 import 'package:matinee/screens/home/home_data.dart';
 import 'package:matinee/screens/tv/tv_browse.dart';
 import 'package:matinee/screens/tv/tv_detail.dart';
@@ -118,6 +119,25 @@ void main() {
     expect(find.byType(TvHomeScreen), findsOneWidget);
     expect(focusedKey(), 'featured/m2', reason: 'on the page, not the drawer');
     expect(find.text('Favorites'), findsNothing, reason: 'the drawer closed');
+  });
+
+  testWidgets("a page tapped on the rail that shows no picture clears Home's", (
+    tester,
+  ) async {
+    await pumpTv(tester, HomeBackend());
+    Finder picture() => find.descendant(
+      of: find.byType(TvBackdropLayer),
+      matching: find.byType(Picture),
+    );
+    expect(picture(), findsOneWidget, reason: "Home's focused title");
+    // A tap on the rail, which opens the page without the drawer.
+    await tester.tap(find.byKey(const ValueKey(TvDrawerKeys.favorites)));
+    await tester.pumpAndSettle();
+    expect(find.byType(TvFavoritesScreen), findsOneWidget);
+    expect(picture(), findsNothing, reason: 'Favorites asks for none');
+    await back(tester);
+    expect(find.byType(TvHomeScreen), findsOneWidget);
+    expect(picture(), findsOneWidget, reason: "back to Home's");
   });
 
   testWidgets('a card opens its page, and Back returns to the card', (

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -456,8 +457,25 @@ class _TvBackdropState extends State<TvBackdrop> {
 /// for none shows the plain background from its first frame.
 class TvBackdropState extends ChangeNotifier {
   final _requests = <Route<Object?>, List<PictureSource>>{};
+  var _disposed = false;
 
-  void open(Route<Object?> page) => _requests.putIfAbsent(page, () => const []);
+  /// [page] is built. It's built after the layer, and a page that asks for
+  /// nothing never changes what it asked for, so the layer hears of it
+  /// once the frame is done, rather than keep the last page's picture
+  /// until something else rebuilds it.
+  void open(Route<Object?> page) {
+    if (_requests.containsKey(page)) return;
+    _requests[page] = const [];
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!_disposed) notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 
   void set(Route<Object?> page, List<PictureSource> sources) {
     if (_sameSources(_requests[page], sources)) return;
