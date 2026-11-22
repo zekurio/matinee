@@ -76,7 +76,9 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
     super.dispose();
   }
 
-  void _focus(FocusedItem item) {
+  /// What the line over the rows names: [item], or nothing for a See all
+  /// card, whose row's heading is just under it.
+  void _focus(FocusedItem? item) {
     if (identical(item, _focused)) return;
     setState(() => _focused = item);
   }
@@ -359,7 +361,7 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
                 label: l.commonSeeAll,
                 detail: title,
                 focusNode: _memory.node(_Rows.requests, _Rows.seeAll),
-                onFocused: () => _focus(FocusedItem(name: title)),
+                onFocused: () => _focus(null),
                 onPressed: () => context.push(route),
               );
             }
@@ -427,7 +429,7 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
             label: l.commonSeeAll,
             detail: title,
             focusNode: _memory.node(key, _Rows.seeAll),
-            onFocused: () => _focus(FocusedItem(name: title)),
+            onFocused: () => _focus(null),
             onPressed: () => context.push(
               Routes.catalogBrowse(
                 browse!.kinds.firstOrNull ?? TitleKind.movie,

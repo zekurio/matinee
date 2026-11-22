@@ -14,6 +14,7 @@ import 'package:matinee/screens/tv/tv_browse.dart';
 import 'package:matinee/screens/tv/tv_catalog.dart';
 import 'package:matinee/screens/tv/tv_catalog_browse.dart';
 import 'package:matinee/screens/tv/tv_discover.dart';
+import 'package:matinee/screens/tv/tv_media.dart' show TvFocusLine;
 import 'package:matinee/screens/tv/tv_shell.dart';
 
 import '../home_backend.dart';
@@ -269,6 +270,14 @@ void main() {
       await right(tester, 2);
       expect(focusedKey(), 'rail-popularFilms/see-all');
       expect(focusedLabel(), contains('See all'));
+      expect(
+        find.descendant(
+          of: find.byType(TvFocusLine),
+          matching: find.byType(Text),
+        ),
+        findsNothing,
+        reason: "the line over the rows doesn't repeat the row's heading",
+      );
       await select(tester);
       expect(find.byType(TvCatalogBrowseScreen), findsOneWidget);
       expect(requests.sentPaths, isEmpty, reason: 'browsing changes nothing');
