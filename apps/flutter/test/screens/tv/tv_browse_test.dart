@@ -246,6 +246,30 @@ void main() {
       expect(focusedLabel(), 'Recently added', reason: 'the button, renamed');
     });
 
+    for (final (page, path) in [
+      ('Movies', Routes.movies),
+      ('Shows', Routes.shows),
+    ]) {
+      testWidgets("$page: the focus line is empty while the header's "
+          'controls have focus', (tester) async {
+        await _open(tester, path);
+        final line = find.descendant(
+          of: find.byType(TvFocusLine),
+          matching: find.text('Movie 0'),
+        );
+        expect(line, findsOneWidget, reason: 'it names the first card');
+        await up(tester);
+        expect(focusedLabel(), 'Name', reason: 'on the sort');
+        expect(line, findsNothing, reason: 'the sort names no card');
+        await right(tester);
+        expect(focusedLabel(), 'Any genre');
+        expect(line, findsNothing);
+        await down(tester);
+        expect(focusedKey(), 'grid/t0');
+        expect(line, findsOneWidget, reason: 'back on the card');
+      });
+    }
+
     testWidgets('Left from the first column opens the drawer', (tester) async {
       await _open(tester, Routes.movies);
       await down(tester);

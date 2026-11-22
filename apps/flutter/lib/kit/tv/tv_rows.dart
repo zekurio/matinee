@@ -295,8 +295,8 @@ class _TvPinnedListState extends State<TvPinnedList> {
 /// first row, as the Kotlin app's `TvPosterGrid`: [columns] across, it
 /// scrolls by whole rows, keeping the focused card in full view. Focus
 /// coming into it lands on the card it left. [line] names the focused card
-/// between the header and the grid, and has the top to itself while the
-/// header is away. [onNearEnd] asks for more as the last rows near.
+/// between the header and the grid, empty while the header has focus, and
+/// has the top to itself while the header is away. [onNearEnd] asks for more as the last rows near.
 /// [scrollKey] changing, as a new sort, scrolls back to the top. [cellAspect]
 /// is a cell's width over its height, and [cellExtra] what a caption adds.
 /// With [cellWidth], as many columns as fit cells that wide, which then
@@ -445,7 +445,12 @@ class _TvPosterGridState extends State<TvPosterGrid> {
               end: shown ? TvPage.end : TvPage.end + TvGrid.clockRoom,
               top: line != null && shown ? TvGrid.lineGap : TvGrid.top,
             ),
-            child: SizedBox(height: widget.lineHeight, child: line),
+            // The header's controls name no card, so the line is empty
+            // while one has focus.
+            child: SizedBox(
+              height: widget.lineHeight,
+              child: _focusRow < 0 ? null : line,
+            ),
           ),
         Expanded(
           child: Padding(

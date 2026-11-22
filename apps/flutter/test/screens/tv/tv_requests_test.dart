@@ -298,6 +298,20 @@ void main() {
       });
       expect(browse['sort'], 'scoreHigh', reason: "the row's");
       expect(focusedKey(), 'grid/movie:tmdb:b0');
+      final line = find.descendant(
+        of: find.byType(TvFocusLine),
+        matching: find.byType(Text),
+      );
+      expect(line, findsWidgets, reason: 'it names the first card');
+      await up(tester);
+      expect(focusedKey(), 'controls/sort');
+      expect(line, findsNothing, reason: 'the sort names no card');
+      await right(tester);
+      expect(focusedKey(), 'controls/filters');
+      expect(line, findsNothing, reason: 'nor do the filters');
+      await down(tester);
+      expect(focusedKey(), 'grid/movie:tmdb:b0');
+      expect(line, findsWidgets, reason: 'back on the card');
       expect(await back(tester), isTrue);
       expect(focusedKey(), 'rail-popularFilms/see-all', reason: 'came back');
     });
