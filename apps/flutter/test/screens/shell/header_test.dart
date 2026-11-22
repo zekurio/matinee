@@ -119,6 +119,7 @@ Future<ProviderContainer> _pumpLibrary(
   double textScale = 1,
   Size size = const Size(400, 800),
   AuthState auth = const SignedIn('https://media.test', _user),
+  String? initialKind,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -147,7 +148,10 @@ Future<ProviderContainer> _pumpLibrary(
             matineeDark,
             Align(
               alignment: Alignment.topLeft,
-              child: SizedBox(width: size.width, child: const MediaScreen()),
+              child: SizedBox(
+                width: size.width,
+                child: MediaScreen(initialKind: initialKind),
+              ),
             ),
           ),
         ),
@@ -220,6 +224,16 @@ void main() {
     expect(sort, lessThan(search));
     expect(search, lessThan(avatar));
     expect(avatar, lessThan(400));
+  });
+
+  testWidgets('a Shows link starts Media on shows', (tester) async {
+    final container = await _pumpLibrary(tester, initialKind: TitleKind.show);
+    expect(
+      container
+          .read(choicesProvider((kind: null, genre: null, studio: null)))
+          .kind,
+      TitleKind.show,
+    );
   });
 
   testWidgets('the header filter badge counts the filters on', (tester) async {

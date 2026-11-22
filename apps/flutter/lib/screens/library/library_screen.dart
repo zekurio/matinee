@@ -48,18 +48,33 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
   TitleListRequest? _request;
   FilterScope? _scope;
 
+  /// A link's kind until the choices take it, so the first frame asks for
+  /// that kind rather than every title.
+  String? _presetKind;
+
   ListKey get _list => (kind: null, genre: null, studio: null);
 
   @override
   void initState() {
     super.initState();
-    _preset();
+    _schedulePreset();
   }
 
   @override
   void didUpdateWidget(MediaScreen old) {
     super.didUpdateWidget(old);
-    if (old.initialKind != widget.initialKind) _preset();
+    if (old.initialKind != widget.initialKind) _schedulePreset();
+  }
+
+  /// A link to one kind starts the list on it, after the frame: a provider
+  /// can't change while the tree is building.
+  void _schedulePreset() {
+    final kind = widget.initialKind;
+    _presetKind = kind;
+    if (kind == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _preset();
+    });
   }
 
   /// A link to one kind starts the list on it, letting go of a library of
@@ -67,6 +82,10 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
   void _preset() {
     final kind = widget.initialKind;
     if (kind == null) return;
+    if (ref.read(choicesProvider(_list)).kind == kind) {
+      if (mounted) setState(() => _presetKind = null);
+      return;
+    }
     final notifier = ref.read(choicesProvider(_list).notifier);
     notifier.kind(kind);
     final picked = ref.read(choicesProvider(_list)).libraryId;
@@ -77,6 +96,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     if (library != null && library.kind != _libraryKind(kind)) {
       notifier.library(null);
     }
+    if (mounted) setState(() => _presetKind = null);
   }
 
   @override
@@ -143,11 +163,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     });
     final list = _list;
     final choices = ref.watch(choicesProvider(list));
+    final type = _presetKind ?? choices.kind;
     final libraries = ref.watch(librariesProvider).value;
     final ofType = [
       for (final library in libraries ?? const <Library>[])
-        if (choices.kind == null || library.kind == _libraryKind(choices.kind!))
-          library,
+        if (type == null || library.kind == _libraryKind(type)) library,
     ];
     // A library that's gone, or another kind's, is every library. Until
     // the libraries come, the one picked, so the list isn't asked twice.
@@ -157,12 +177,12 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         ? picked
         : null;
     final FilterScope scope = libraryId == null
-        ? (libraryId: null, kind: choices.kind, genre: null, studio: null)
+        ? (libraryId: null, kind: type, genre: null, studio: null)
         : (libraryId: libraryId, kind: null, genre: null, studio: null);
     final options = ref.watch(filterOptionsProvider(scope)).value;
     final order = choices.effectiveOrder(options?.sorts);
     final request = TitleListRequest(
-      kind: choices.kind,
+      kind: type,
       libraryId: libraryId,
       sort: order.sort,
       order: order.order,
