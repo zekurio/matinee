@@ -17,6 +17,7 @@ web="$brand/../apps/web/public"
 ios="$brand/ios/AppIcon.appiconset"
 tv="$brand/../apps/ios/MatineeTV/Resources/TVAppIcon.xcassets/App Icon & Top Shelf Image.brandassets"
 tizen="$brand/../apps/tizen/public"
+flutter="$brand/../apps/flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset"
 
 python3 "$brand/wordmark.py"
 python3 "$brand/tvos.py"
@@ -59,3 +60,8 @@ tv top-shelf-wide 4640 1440 "Top Shelf Image Wide.imageset/top-shelf-wide@2x.png
 find "$tv" -name '*.png' -print0 | xargs -0 oxipng --quiet --opt 4 --strip safe \
   "$ios"/*.png "$brand/android/play-store.png" "$web/apple-touch-icon.png" \
   "$tizen/icon.png" "$brand/social-preview.png"
+
+# Xcode's asset compiler doesn't follow a symlink out of the project, so the
+# Flutter app keeps a copy.
+rm -rf "$flutter"
+cp -R "$ios" "$flutter"

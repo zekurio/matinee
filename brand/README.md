@@ -35,7 +35,8 @@ height, with a gap of 30% of its width.
 Android drawables `logo.xml` and `logo_dark.xml`. The web app serves
 copies as `favicon.svg` and `apple-touch-icon.png`, and `brand.tsx` draws
 the mark inline. The Samsung TV app's `apps/tizen/public/icon.png` is the
-app icon at 512 px.
+app icon at 512 px. The Flutter app's iOS asset catalog keeps a copy of
+`ios/AppIcon.appiconset`, which `render.sh` writes too.
 
 ## Colors
 
