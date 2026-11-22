@@ -856,7 +856,10 @@ arrives. The deliberate differences from the phone:
   has no browser to open it in.
 - A show's season panel gives every season a row, so each one's state can
   be read. Only the ones that can be asked for have a box, and focus
-  starts on the first of those.
+  starts on the first of those. Request starts with the server's pick,
+  as the web's dialog does. A season's card, which on the web asks for
+  that season at once, opens the panel with only that season ticked,
+  headed with its name, so a stray Select asks nothing.
 - The browse filters' ranges are step rows that Left and Right move. Each
   asks again 700 ms after the last step, in place of the phone's sliders,
   and the language picker has no find field.
