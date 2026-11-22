@@ -40,6 +40,7 @@ Map<String, Object?> _availability(String state) => {
 Map<String, Object?> _follower(String name) => {
   'id': name,
   'name': name,
+  'username': name,
   'avatarId': null,
   'createdAt': '2026-11-01T00:00:00.000Z',
 };
@@ -58,6 +59,7 @@ AdminRequestItem _item(
     'poster': null,
     'availability': _availability('asked'),
   },
+  'backdrop': null,
   'library': {'id': 'shows', 'name': 'Shows'},
   'scope': {
     'seasons': [1, 2, 3, 5, 7, 8, 9, 11, 12, 14],
@@ -95,6 +97,7 @@ RequestItem _own(String state, {Map<String, Object?>? reason}) =>
         'poster': null,
         'availability': _availability('asked'),
       },
+      'backdrop': null,
       'library': {'id': 'films', 'name': 'Films'},
       'scope': null,
       'createdAt': '2026-11-01T00:00:00.000Z',
