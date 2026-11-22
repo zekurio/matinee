@@ -1,4 +1,4 @@
-import type { AdminRequestItem, RequestQueue } from "@matinee/contracts"
+import type { AdminRequestItem } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import {
   Empty,
@@ -9,22 +9,22 @@ import {
   EmptyTitle,
 } from "@matinee/ui/components/empty"
 import { toast } from "@matinee/ui/components/sonner"
-import { cn } from "@matinee/ui/lib/utils"
 import {
   keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
 } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
+import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import {
   CableIcon,
   CheckCheckIcon,
+  FilterIcon,
   InboxIcon,
   RefreshCwIcon,
   TriangleAlertIcon,
 } from "lucide-react"
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 
 import { ShowMore } from "@/components/library/library-states"
 import { PageHeader, useDocumentTitle } from "@/components/page-header"
@@ -44,13 +44,23 @@ import { KeyTip } from "./key-tip"
 import { QueueCard, type Reopen } from "./queue-card"
 import { RequestCardSkeleton, requestGrid } from "./request-card"
 import {
+  filterCount,
+  type RequestFilter,
+  RequestFilterPanel,
+  requestFilter,
+  searchFor,
+} from "./request-filter"
+import {
   addAction,
   askers,
+  filterInput,
   formatNames,
   titleLink,
   useRequestQueue,
   workItems,
 } from "./request-queue"
+
+const route = getRouteApi("/_authed/_shell/requests")
 
 /** Cards of done a page of it brings. */
 const DONE_PAGE = 40
@@ -77,16 +87,22 @@ function ignoredKey(event: KeyboardEvent): boolean {
 /**
  * Everyone's requests in one list, as the server orders its lists:
  * waiting, needs attention, on the way, then done, which loads more as
- * it's read. Each card shows its state and what that state lets an admin
- * do, and the keys act on the focused card by its own state.
+ * it's read. The Filter panel keeps it to some states or one kind, which
+ * the server does, so done pages the same. Each card shows its state and
+ * what that state lets an admin do, and the keys act on the focused card
+ * by its own state.
  */
 export function QueuePage() {
   useDocumentTitle(tr("requests.title"))
-  const queue = useRequestQueue()
+  const navigate = useNavigate()
+  const filter = requestFilter(route.useSearch())
+  const setFilter = (next: RequestFilter) =>
+    void navigate({ to: ".", search: searchFor(next), replace: true })
+  const filtered = filterCount(filter) > 0
+  const queue = useRequestQueue(true, filter)
   const connections = useQuery(orpc.admin.fulfilment.connections.queryOptions())
   const hidden = useHiddenRequests()
   const hold = useRequestActionsStore((state) => state.hold)
-  const navigate = useNavigate()
   const openSettings = useOpenSettings()
 
   // Held actions go out as the page is left, not when their toast ends.
@@ -97,6 +113,7 @@ export function QueuePage() {
       input: (cursor: string | undefined) => ({
         limit: DONE_PAGE,
         cursor,
+        ...filterInput(filter),
       }),
       initialPageParam: undefined,
       getNextPageParam: (last) => last.nextCursor ?? undefined,
@@ -147,7 +164,7 @@ export function QueuePage() {
   const cardRefs = useRef(new Map<string, HTMLElement>())
   const listRef = useRef<HTMLUListElement>(null)
   // Where focus waits once no card is left to take it.
-  const summaryRef = useRef<HTMLParagraphElement>(null)
+  const topRef = useRef<HTMLDivElement>(null)
   // Where focus goes once a decline closes its popover: the card that
   // takes the declined one's place. Null while no decline was sent, so a
   // popover closed without one hands focus back to its button.
@@ -163,7 +180,7 @@ export function QueuePage() {
   const neighbour = (index: number) => visible[index + 1] ?? visible[index - 1]
   /**
    * Moves J and K on from a card that's leaving, and returns what focus
-   * should go to: the next card, or with none left, the summary.
+   * should go to: the next card, or with none left, the list's place.
    */
   const moveOn = (index: number): HTMLElement | null => {
     const next = neighbour(index)
@@ -171,7 +188,7 @@ export function QueuePage() {
       setActive({ id: next.id, index })
       return cardRefs.current.get(next.id) ?? null
     }
-    return summaryRef.current
+    return topRef.current
   }
 
   const add = (item: AdminRequestItem, index: number) => {
@@ -196,7 +213,7 @@ export function QueuePage() {
     if (next) {
       setActive({ id: next.id, index: 0 })
       cardRefs.current.get(next.id)?.focus()
-    } else summaryRef.current?.focus()
+    } else topRef.current?.focus()
   }
   const undo = () => {
     const action = useRequestActionsStore.getState().undo()
@@ -297,8 +314,9 @@ export function QueuePage() {
   })
 
   const noConnection = connections.data?.length === 0
-  const summary = summaryParts(queue.data?.counts, waiting.length)
 
+  // Add all acts on the waiting ones the filter shows, and goes when the
+  // filter shows none.
   const addAllButton = (size: "sm" | "default") =>
     waiting.length > 1 ? (
       <KeyTip label={tr("requests.keys.addAll")} keys="Shift A">
@@ -329,6 +347,19 @@ export function QueuePage() {
           {tr("requests.reload")}
         </Button>
       </div>
+    )
+  } else if (visible.length === 0 && filtered) {
+    body = (
+      <QueueEmpty
+        icon={<FilterIcon />}
+        title={tr("requests.filter.none")}
+        description={tr("requests.filter.noneHint")}
+        action={
+          <Button variant="outline" onClick={() => setFilter({ states: [] })}>
+            {tr("library.clearFilters")}
+          </Button>
+        }
+      />
     )
   } else if (visible.length === 0 && noConnection) {
     body = (
@@ -400,35 +431,20 @@ export function QueuePage() {
     <div className="flex flex-col pb-6">
       <PageHeader
         title={tr("requests.title")}
-        actions={addAllButton("default")}
-        phoneActions={addAllButton("sm")}
-        className="mb-2 md:mb-2"
+        actions={
+          <div className="flex items-center gap-2">
+            <RequestFilterPanel filter={filter} onChange={setFilter} />
+            {addAllButton("default")}
+          </div>
+        }
+        phoneActions={
+          <>
+            <RequestFilterPanel filter={filter} onChange={setFilter} compact />
+            {addAllButton("sm")}
+          </>
+        }
+        className="mb-5 md:mb-6"
       />
-      {/* What the list holds, in words: only the states that have any. */}
-      <p
-        ref={summaryRef}
-        tabIndex={-1}
-        className="text-muted-foreground mb-5 min-h-5 text-sm outline-none md:mb-6"
-      >
-        {/* Each count stays whole with the dot after it, so a narrow
-            screen or a long language breaks the line between counts. */}
-        {summary.map((part, index) => (
-          <Fragment key={part.key}>
-            {index > 0 && " "}
-            <span className="whitespace-nowrap">
-              <span
-                className={cn(
-                  part.key === "needsAttention" && "text-warning font-medium",
-                  part.key === "waiting" && "text-foreground font-medium",
-                )}
-              >
-                {part.text}
-              </span>
-              {index < summary.length - 1 && <span aria-hidden> ·</span>}
-            </span>
-          </Fragment>
-        ))}
-      </p>
 
       {noConnection && visible.length > 0 && (
         <p className="text-muted-foreground text-13px mb-4 flex items-center gap-1.5">
@@ -447,7 +463,9 @@ export function QueuePage() {
         </p>
       )}
 
-      {body}
+      <div ref={topRef} tabIndex={-1} className="outline-none">
+        {body}
+      </div>
 
       {visible.length > 0 && done.hasNextPage && (
         <ShowMore
@@ -478,29 +496,6 @@ export function QueuePage() {
       />
     </div>
   )
-}
-
-/**
- * "3 waiting · 1 needs attention": the counts that aren't zero, waiting
- * less what's held for Undo.
- */
-function summaryParts(
-  counts: RequestQueue["counts"] | undefined,
-  waiting: number,
-): { key: string; text: string }[] {
-  if (!counts) return []
-  const parts = [
-    { key: "waiting", count: waiting },
-    { key: "needsAttention", count: counts.needsAttention },
-    { key: "onTheWay", count: counts.onTheWay },
-    { key: "done", count: counts.done },
-  ] as const
-  return parts
-    .filter((part) => part.count > 0)
-    .map((part) => ({
-      key: part.key,
-      text: tr(`requests.summary.${part.key}`, { count: part.count }),
-    }))
 }
 
 /** Nothing to list, as a library with nothing in it says so. */

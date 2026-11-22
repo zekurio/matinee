@@ -28,18 +28,14 @@ export default defineMessages("requests", {
   "requests.cancel": "Cancel",
   "requests.cancelNamed": "Cancel the request for {name}",
 
-  // The line at the top of /requests, the states that have any, joined
-  // with " · ".
-  "requests.summary.waiting": "{count} waiting",
-  "requests.summary.needsAttention": plural({
-    one: "{count} needs attention",
-    other: "{count} need attention",
-  }),
-  "requests.summary.onTheWay": plural({
-    one: "{count} on its way",
-    other: "{count} on their way",
-  }),
-  "requests.summary.done": "{count} done",
+  // The Filter panel on /requests and My requests. The states use the
+  // badges' words.
+  "requests.filter.state": "State",
+  "requests.filter.kind": "Type",
+  // The phone drawer's button that closes it on the list.
+  "requests.filter.show": "Show requests",
+  "requests.filter.none": "No requests match these filters",
+  "requests.filter.noneHint": "Take a filter off to see more.",
 
   // The lists the Flutter app still shows as tabs. The web shows one list.
   "requests.list.waiting": "Waiting",

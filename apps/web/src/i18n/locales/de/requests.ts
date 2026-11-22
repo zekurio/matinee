@@ -21,16 +21,11 @@ export default {
   "requests.cancel": "Zurückziehen",
   "requests.cancelNamed": "Anfrage für {name} zurückziehen",
 
-  "requests.summary.waiting": "{count} wartend",
-  "requests.summary.needsAttention": plural({
-    one: "{count} braucht Aufmerksamkeit",
-    other: "{count} brauchen Aufmerksamkeit",
-  }),
-  "requests.summary.onTheWay": plural({
-    one: "{count} unterwegs",
-    other: "{count} unterwegs",
-  }),
-  "requests.summary.done": "{count} erledigt",
+  "requests.filter.state": "Status",
+  "requests.filter.kind": "Typ",
+  "requests.filter.show": "Anfragen zeigen",
+  "requests.filter.none": "Keine Anfrage passt zu diesen Filtern",
+  "requests.filter.noneHint": "Nimm einen Filter heraus, um mehr zu sehen.",
 
   "requests.list.waiting": "Wartend",
   "requests.list.needsAttention": "Braucht Aufmerksamkeit",
