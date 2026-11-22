@@ -242,7 +242,11 @@ Future<void> showTvAsk(
   final l = AppLocalizations.of(context);
   return showTvPanel<void>(
     context,
-    title: l.webAskDialogTitle(name),
+    // From a season's card, the heading names the season, so it's plain
+    // the panel starts on it alone rather than on the show's whole ask.
+    title: l.webAskDialogTitle(
+      only == null ? name : l.titleSeasonOf(name, seasonName(only, l)),
+    ),
     builder: (panel) => [
       _AskBody(
         title: title,

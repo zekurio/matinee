@@ -652,6 +652,75 @@ void main() {
     expect(requests.sentPaths, isEmpty, reason: 'only opened');
   });
 
+  group('the season panel', () {
+    RequestsBackend show() => _discover()
+      ..details['ah'] = detailJson(
+        'ah',
+        'American Horror Story',
+        kind: 'show',
+        seasons: [
+          for (var number = 1; number <= 13; number++)
+            seasonJson(number, selected: true),
+          seasonJson(0),
+        ],
+      );
+
+    List<bool> ticks(WidgetTester tester) => tester
+        .widgetList<TvCheckBox>(find.byType(TvCheckBox))
+        .map((box) => box.checked)
+        .toList();
+
+    testWidgets('Request opens it at once, with the same start each time, '
+        "the web's: the server's pick", (tester) async {
+      final requests = show();
+      await _open(tester, requests, path: Routes.catalog('show', 'tmdb', 'ah'));
+      // Along the seasons to their end and back up first, as on the TV.
+      await down(tester);
+      await right(tester, 13);
+      await up(tester);
+      expect(focusedLabel(), 'Request');
+      final starts = <List<bool>>[];
+      for (var open = 0; open < 2; open++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.select);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(
+          find.text('Request American Horror Story'),
+          findsOneWidget,
+          reason: 'open $open: shown within two frames',
+        );
+        await tester.pumpAndSettle();
+        starts.add(ticks(tester));
+        expect(find.text('Request 13 seasons'), findsOneWidget);
+        expect(focusedLabel(), contains('Season 1'));
+        await back(tester);
+        expect(focusedLabel(), 'Request');
+      }
+      expect(starts[0], [for (var i = 0; i < 14; i++) i < 13]);
+      expect(starts[1], starts[0]);
+      expect(requests.sentPaths, isEmpty);
+    });
+
+    testWidgets("a season's card opens it for that season, and says so", (
+      tester,
+    ) async {
+      final requests = show();
+      await _open(tester, requests, path: Routes.catalog('show', 'tmdb', 'ah'));
+      await down(tester);
+      await right(tester, 4);
+      expect(focusedLabel(), contains('Season 5'));
+      await select(tester);
+      expect(
+        find.text('Request American Horror Story: Season 5'),
+        findsOneWidget,
+        reason: "the heading names the season, not the show's whole ask",
+      );
+      expect(ticks(tester), [for (var i = 1; i <= 14; i++) i == 5]);
+      expect(find.text('Request season 5'), findsOneWidget);
+      expect(requests.sentPaths, isEmpty);
+    });
+  });
+
   group('search', () {
     HomeBackend home() => HomeBackend()
       ..answers['/api/v1/search'] = {
