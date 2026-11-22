@@ -5864,27 +5864,9 @@
       }
     }
   },
-  "webRequestsDoneDeclined": "Declined {p1}",
-  "@webRequestsDoneDeclined": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webRequestsDoneDeclinedUndated": "Declined",
   "@webRequestsDoneDeclinedUndated": {
     "description": "strings_web_requests.xml"
-  },
-  "webRequestsDoneGaveUp": "Given up {p1}",
-  "@webRequestsDoneGaveUp": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
   },
   "webRequestsDoneGaveUpUndated": "Given up",
   "@webRequestsDoneGaveUpUndated": {
@@ -8808,15 +8790,6 @@
   "webRequestsStateDeclined": "Declined",
   "@webRequestsStateDeclined": {
     "description": "requests.state.declined"
-  },
-  "webRequestsAskedWhen": "First requested {p1}",
-  "@webRequestsAskedWhen": {
-    "description": "requests.askedWhen",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
   },
   "webRequestsAddAfterAllNamed": "Add {p1} after all",
   "@webRequestsAddAfterAllNamed": {

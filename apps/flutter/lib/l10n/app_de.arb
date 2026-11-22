@@ -1095,9 +1095,7 @@
   "webRequestsDeclineTitle": "{p1} ablehnen",
   "webRequestsDiagnostics": "Was die Verbindung meldet",
   "webRequestsDoneArrived": "{p1} angekommen",
-  "webRequestsDoneDeclined": "{p1} abgelehnt",
   "webRequestsDoneDeclinedUndated": "Abgelehnt",
-  "webRequestsDoneGaveUp": "{p1} aufgegeben",
   "webRequestsDoneGaveUpUndated": "Aufgegeben",
   "webRequestsGiveUp": "Aufgeben",
   "webRequestsGiveUpKeeps": "{p1} behält, was es hat. Taucht die Datei doch auf, kommt sie wie gewohnt an.",
@@ -1673,7 +1671,6 @@
   "webRequestsStateOnTheWayPercent": "Unterwegs · {p1}",
   "webRequestsStateHere": "Da",
   "webRequestsStateDeclined": "Abgelehnt",
-  "webRequestsAskedWhen": "Zuerst angefragt: {p1}",
   "webRequestsAddAfterAllNamed": "{p1} doch hinzufügen",
   "webRequestsEmptyNone": "Noch keine Anfragen",
   "webRequestsEmptyNoneHint": "Wenn jemand einen Film oder eine Serie anfragt, erscheint das hier."

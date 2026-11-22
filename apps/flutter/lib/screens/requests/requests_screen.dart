@@ -42,8 +42,8 @@ const _nearEnd = 8;
 const _gap = 16.0;
 
 /// Cards in rows: one column on a phone, two on a tablet upright, three
-/// on its side, each row as tall as its tallest card, so the actions line
-/// up along the foot.
+/// on its side. Every card of a list is as tall as the next, its poster
+/// setting it.
 class _CardRows extends StatelessWidget {
   const _CardRows({required this.itemCount, required this.itemBuilder});
 
@@ -60,19 +60,17 @@ class _CardRows extends StatelessWidget {
           itemCount: (itemCount + count - 1) ~/ count,
           itemBuilder: (context, row) => Padding(
             padding: EdgeInsets.only(top: row == 0 ? 0 : _gap),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: _gap,
-                children: [
-                  for (var column = 0; column < count; column++)
-                    Expanded(
-                      child: row * count + column < itemCount
-                          ? itemBuilder(context, row * count + column)
-                          : const SizedBox.shrink(),
-                    ),
-                ],
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: _gap,
+              children: [
+                for (var column = 0; column < count; column++)
+                  Expanded(
+                    child: row * count + column < itemCount
+                        ? itemBuilder(context, row * count + column)
+                        : const SizedBox.shrink(),
+                  ),
+              ],
             ),
           ),
         );
