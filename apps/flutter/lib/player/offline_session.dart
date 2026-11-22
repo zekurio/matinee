@@ -31,11 +31,10 @@ final class SavedSubtitle {
   final String path;
 }
 
-/// One sitting with a download, the Kotlin app's `PlayerController` for an
-/// `Opening.Local`: the file plays from the device with no server to ask,
-/// so the tracks are picked here (`download_tracks.dart`), a text subtitle
-/// is drawn from the WebVTT saved beside it, and where the person got to
-/// goes to [onReport] for the server or for later. The controls are the
+/// One sitting with a download: the file plays from the device with no server
+/// to ask, so the tracks are picked here (`download_tracks.dart`), a text
+/// subtitle is drawn from the WebVTT saved beside it, and where the person got
+/// to goes to [onReport] for the server or for later. The controls are the
 /// stream's (`PlaybackControls`), through [PlayerSitting].
 class OfflinePlaybackSession extends ChangeNotifier
     with NoServerExtras
@@ -316,10 +315,9 @@ class OfflinePlaybackSession extends ChangeNotifier
     notifyListeners();
   }
 
-  /// A download has nothing to fall back to, so it says the file didn't
-  /// play. Frames that stopped arriving get one seek in place first, which
-  /// the engine makes itself for a file on the device (`Media3Engine`), as
-  /// the Kotlin app's `frozen()`.
+  /// A download has nothing to fall back to, so it says the file didn't play.
+  /// Frames that stopped arriving get one seek in place first, which the engine
+  /// makes itself for a file on the device (`Media3Engine`).
   void _failed() {
     diagnostics?.failed(_engineError ?? ErrorDiagnostics.unknown);
     _engineError = null;

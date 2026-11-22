@@ -36,8 +36,7 @@ abstract final class _Rows {
   static const viewingTimes = 'viewingTimes';
 }
 
-/// A section on its way: a spinner centred in a row 96 high, as the
-/// Kotlin app's `LoadingRow`.
+/// A section on its way: a spinner centred in a row 96 high.
 class _LoadingRow extends StatelessWidget {
   const _LoadingRow();
 
@@ -61,12 +60,12 @@ const _placeHeight = 40.0;
 /// The page keeps a focused row this far from its top and bottom edges.
 const _edge = 56.0;
 
-/// The signed-in person on a TV, from the drawer's top entry, as the
-/// Kotlin app's `TvProfileScreen`: who they are, Sign out, what they
-/// watched last as a row of cards, then their statistics for a range: watch
-/// time over the range as bars, the other totals as large figures, their
-/// most watched titles, their genres, where they stand on the leaderboard,
-/// and when in the week they watch. A board opens whole in the panel.
+/// The signed-in person on a TV, from the drawer's top entry: who they are,
+/// Sign out, what they watched last as a row of cards, then their statistics
+/// for a range: watch time over the range as bars, the other totals as large
+/// figures, their most watched titles, their genres, where they stand on the
+/// leaderboard, and when in the week they watch. A board opens whole in the
+/// panel.
 class TvProfileScreen extends ConsumerStatefulWidget {
   const TvProfileScreen({super.key});
 
@@ -822,10 +821,9 @@ class _Place extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Recently watched.
 
-/// Everything the person watched last, a file per title, newest first, as
-/// a grid of cards behind the profile's row, as the Kotlin app's
-/// `TvRecentScreen`. The heading steps aside while focus is below the
-/// first row.
+/// Everything the person watched last, a file per title, newest first, as a
+/// grid of cards behind the profile's row. The heading steps aside while focus
+/// is below the first row.
 class TvRecentScreen extends ConsumerStatefulWidget {
   const TvRecentScreen({super.key});
 
@@ -928,8 +926,8 @@ class _TvRecentScreenState extends ConsumerState<TvRecentScreen> {
         ),
       );
     } else {
-      // As many cards a row as fit at a row's width, stretched to run to
-      // the overscan, where the Kotlin app's fixed cells leave a strip.
+      // As many cards a row as fit at a row's width, stretched to run to the
+      // overscan, so no strip is left at the end.
       page = TvPosterGrid(
         memory: _memory,
         itemCount: entries.length,

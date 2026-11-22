@@ -21,13 +21,12 @@ import 'request_words.dart';
 import 'requests_data.dart';
 import 'requests_hub.dart';
 
-/// A title the server doesn't have, on a page built like a library title's
-/// so it reads as the same page, as the Kotlin app's `CatalogScreen`: the
-/// backdrop, the poster beside the name and facts, carrying the state, the
-/// overview, the crew, then where a library title has Play, the request
-/// and Trailer, a show's seasons, each with its own state, the cast, and
-/// the related titles. When the title arrives while the page is open, the
-/// library title's page takes its place.
+/// A title the server doesn't have, on a page built like a library title's so
+/// it reads as the same page: the backdrop, the poster beside the name and
+/// facts, carrying the state, the overview, the crew, then where a library
+/// title has Play, the request and Trailer, a show's seasons, each with its own
+/// state, the cast, and the related titles. When the title arrives while the
+/// page is open, the library title's page takes its place.
 class CatalogScreen extends ConsumerWidget {
   const CatalogScreen({super.key, required this.catalogKey});
 

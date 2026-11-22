@@ -21,7 +21,7 @@ export function Message(props: {
         <div data-fg="message" data-fk="row">
           <Button
             fid="retry"
-            label={tr("common_retry")}
+            label={tr("commonRetry")}
             icon={RefreshCw}
             onPress={props.retry}
           />

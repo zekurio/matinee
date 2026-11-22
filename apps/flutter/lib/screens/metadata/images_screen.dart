@@ -49,8 +49,8 @@ final class _Reset extends _Change {
 }
 
 /// Pick the images of a title, season, or episode from what the library's
-/// provider has, or upload them, as the Kotlin app's `ImagesScreen`. What
-/// an admin picks stays when the metadata is fetched again.
+/// provider has, or upload them. What an admin picks stays when the metadata is
+/// fetched again.
 class ImagesScreen extends StatelessWidget {
   const ImagesScreen({super.key, required this.target});
 

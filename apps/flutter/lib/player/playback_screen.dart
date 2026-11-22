@@ -289,9 +289,8 @@ class _PlaybackHostState extends State<PlaybackHost> {
 
   @override
   void dispose() {
-    // What was watched moved on: the pages under the player fetch again
-    // once the server has the last position, as the Kotlin app's
-    // `viewer.changed()` on leaving the player.
+    // What was watched moved on: the pages under the player fetch again once
+    // the server has the last position.
     unawaited(_session.close().whenComplete(_changes.changed));
     _session.dispose();
     super.dispose();
@@ -301,11 +300,10 @@ class _PlaybackHostState extends State<PlaybackHost> {
   Widget build(BuildContext context) => widget.builder(_session);
 }
 
-/// The touch controls, laid out in `player_controls.dart` as the Kotlin
-/// phone player's, over a stream or a download alike ([PlayerSitting]):
-/// the gestures and their notes, the lock, the buttons settings keep,
-/// picture in picture, the system's media controls, and the keys. A menu
-/// stays open in the side panel while the video continues.
+/// The touch controls, laid out in `player_controls.dart`, over a stream or a
+/// download alike ([PlayerSitting]): the gestures and their notes, the lock,
+/// the buttons settings keep, picture in picture, the system's media controls,
+/// and the keys. A menu stays open in the side panel while the video continues.
 class PlaybackControls extends ConsumerStatefulWidget {
   const PlaybackControls({
     super.key,
@@ -325,9 +323,8 @@ class PlaybackControls extends ConsumerStatefulWidget {
 class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
   static const _hideAfter = Duration(milliseconds: 3500);
 
-  /// How long the skip button shows by itself once its segment starts, as
-  /// in Jellyfin and the Kotlin player; after that it comes with the
-  /// controls.
+  /// How long the skip button shows by itself once its segment starts, as in
+  /// Jellyfin; after that it comes with the controls.
   static const skipShown = Duration(seconds: 8);
   Timer? _hide;
   bool _visible = true;
@@ -478,7 +475,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     _syncMedia();
   }
 
-  /// What the system's controls show, as the Kotlin player's session.
+  /// What the system's controls show.
   void _syncMedia() {
     if (_leaving) return;
     _media.sync(
@@ -488,11 +485,10 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     );
   }
 
-  /// A remote's, a keyboard's, or a headset's keys, as the Kotlin player
-  /// takes them: media keys play, pause, skip, and change episodes; the
-  /// arrows skip and Select or Up and Down bring up the controls while
-  /// they're hidden. Locked, media keys still work, and the keys that would
-  /// bring up the controls show the unlock button instead.
+  /// A remote's, a keyboard's, or a headset's keys: media keys play, pause,
+  /// skip, and change episodes; the arrows skip and Select or Up and Down bring
+  /// up the controls while they're hidden. Locked, media keys still work, and
+  /// the keys that would bring up the controls show the unlock button instead.
   KeyEventResult _key(FocusNode _, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final previous = _session.previousEpisode;
@@ -651,7 +647,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
       _fitNotes++;
     });
     unawaited(_applyFit());
-    // Kept for the next video, as the Kotlin app's fillScreen.
+    // Kept for the next video.
     unawaited(
       ref
           .read(playerPrefsProvider.notifier)

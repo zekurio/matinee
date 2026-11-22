@@ -8,7 +8,7 @@ import { Observable } from "@/lib/observable"
  * over what the server sent with each page, so a mark made on one page
  * shows on every other at once. `version` moves when something changed
  * that the marks can't say, like a whole show marked watched or a video
- * played, and pages fetch again then. As the Android app's ViewerState.
+ * played, and pages fetch again then.
  */
 
 /** When a file was watched, as the contract's `WatchedAt`; undefined is now. */

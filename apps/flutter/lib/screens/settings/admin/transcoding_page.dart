@@ -15,13 +15,12 @@ import '../settings_rows.dart';
 import 'admin_data.dart';
 import 'admin_parts.dart';
 
-/// How the server transcodes video, as the Kotlin app's
-/// `TranscodingSettings` and the web's transcoding panel: what its ffmpeg
-/// and GPUs can do, the acceleration and its decoders, what encodes
-/// produce, tone mapping, deinterlacing, audio, and throttling. The
-/// fields save together from the save bar. The server checks every value
-/// and says at the field what's wrong with one; the page only needs a
-/// number to be a number before it can send it.
+/// How the server transcodes video, as the web's transcoding panel: what its
+/// ffmpeg and GPUs can do, the acceleration and its decoders, what encodes
+/// produce, tone mapping, deinterlacing, audio, and throttling. The fields save
+/// together from the save bar. The server checks every value and says at the
+/// field what's wrong with one; the page only needs a number to be a number
+/// before it can send it.
 class TranscodingPage extends ConsumerWidget {
   const TranscodingPage({super.key});
 

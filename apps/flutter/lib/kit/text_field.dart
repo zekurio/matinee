@@ -11,14 +11,12 @@ class MatineeTextField extends StatefulWidget {
   const MatineeTextField({
     super.key,
     this.controller,
-    this.focusNode,
     this.placeholder,
     this.label,
     this.error,
     this.leading,
     this.trailing,
     this.enabled = true,
-    this.autofocus = false,
     this.obscureText = false,
     this.autocorrect = true,
     this.keyboardType,
@@ -31,14 +29,12 @@ class MatineeTextField extends StatefulWidget {
   });
 
   final TextEditingController? controller;
-  final FocusNode? focusNode;
   final String? placeholder;
   final String? label;
   final String? error;
   final String? leading;
   final Widget? trailing;
   final bool enabled;
-  final bool autofocus;
   final bool obscureText;
 
   /// Off for what isn't words, which the keyboard shouldn't change: an
@@ -131,9 +127,7 @@ class _MatineeTextFieldState extends State<MatineeTextField> {
                               type: material.MaterialType.transparency,
                               child: material.TextField(
                                 controller: widget.controller,
-                                focusNode: widget.focusNode,
                                 enabled: widget.enabled,
-                                autofocus: widget.autofocus,
                                 obscureText: widget.obscureText,
                                 autocorrect: widget.autocorrect,
                                 enableSuggestions: widget.autocorrect,

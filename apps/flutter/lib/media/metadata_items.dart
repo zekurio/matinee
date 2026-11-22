@@ -14,11 +14,10 @@ import '../query/server_data.dart';
 import '../router.dart';
 import 'actions.dart';
 
-/// An admin's metadata items in a card's or a page's menu, after the rest,
-/// as the Kotlin app's `MetadataItems`: fix match and refresh for a movie or
-/// show that's matchable and whose library has a provider with its API
-/// key, and the image editor. Fix match and refresh show once the provider
-/// is known, which the first menu asks for.
+/// An admin's metadata items in a card's or a page's menu, after the rest: fix
+/// match and refresh for a movie or show that's matchable and whose library has
+/// a provider with its API key, and the image editor. Fix match and refresh
+/// show once the provider is known, which the first menu asks for.
 
 /// Whether the account signed in may change a title's metadata: fixing a
 /// match, refreshing, and images take `title.update`, and the server

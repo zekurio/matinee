@@ -1,14 +1,20 @@
-import { KotlinClient, METHODS, camel, endpoint, pascal } from "./kotlin-client"
+import {
+  METHODS,
+  SchemaWalker,
+  camel,
+  endpoint,
+  pascal,
+} from "./openapi-walker"
 import type {
   Declaration,
   Document,
   Endpoint,
   Scope,
   Typed,
-} from "./kotlin-client"
+} from "./openapi-walker"
 
-// The Kotlin and Swift clients use the same schema walker. Dart flattens
-// nested type names and writes the JSON conversions its models need.
+// Dart flattens the walker's nested type names and writes the JSON
+// conversions its models need.
 type Argument = Endpoint["arguments"][number]
 type Model = Extract<Declaration, { kind: "class" }>
 
@@ -768,7 +774,7 @@ const header = [
 
 export function dartClient(document: Document): Map<string, string> {
   const components = new Map(Object.entries(document.components?.schemas ?? {}))
-  const client = new KotlinClient(components)
+  const client = new SchemaWalker(components)
   for (const name of components.keys()) client.component(name)
 
   const root: Group = { name: "Contract", operations: [], children: new Map() }

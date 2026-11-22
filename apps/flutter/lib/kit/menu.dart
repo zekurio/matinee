@@ -180,7 +180,6 @@ class MenuItem extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.selected,
-    this.destructive = false,
     this.autofocus = false,
   });
 
@@ -188,13 +187,12 @@ class MenuItem extends StatelessWidget {
   final VoidCallback? onPressed;
   final String? icon;
   final bool? selected;
-  final bool destructive;
   final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    final color = destructive ? colors.danger : colors.foreground;
+    final color = colors.foreground;
     // One node, so TalkBack says the tick on the button it lands on.
     return MergeSemantics(
       child: Semantics(
@@ -219,9 +217,7 @@ class MenuItem extends StatelessWidget {
                       WidgetState.pressed,
                     }.contains,
                   )
-                  ? color.withValues(
-                      alpha: destructive && colors.isDark ? .2 : .1,
-                    )
+                  ? color.withValues(alpha: .1)
                   : const Color(0x00000000),
             ),
             shape: const WidgetStatePropertyAll(

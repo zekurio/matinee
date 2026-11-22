@@ -99,14 +99,6 @@ enum PlayerMenu { audio, subtitles, speed, quality }
 /// The speeds the speed menu offers, from half to double.
 const playerSpeeds = [.5, .75, 1.0, 1.25, 1.5, 2.0];
 
-/// The name a [PlayerMenu] goes by, over its entries.
-String playerMenuName(AppLocalizations l, PlayerMenu menu) => switch (menu) {
-  PlayerMenu.audio => l.playerMenuAudio,
-  PlayerMenu.subtitles => l.playerMenuSubtitles,
-  PlayerMenu.speed => l.playerSpeed,
-  PlayerMenu.quality => l.playerQuality,
-};
-
 /// Whether [sitting] offers the quality menu: only a stream does, and only
 /// with a choice.
 bool offersQuality(PlayerSitting sitting) =>
@@ -201,11 +193,10 @@ List<PanelEntry> playerMenuEntries(
   }
 }
 
-/// The next episode's countdown, as the Kotlin player's `UpNextState`:
-/// once the file ends, the next episode starts at once if the credits
-/// already counted down to it, or after [seconds] of its own, unless the
-/// countdown stopped or autoplay is off, when it waits for Play. [onTick]
-/// redraws each second; [onPlay] moves on.
+/// The next episode's countdown: once the file ends, the next episode starts at
+/// once if the credits already counted down to it, or after [seconds] of its
+/// own, unless the countdown stopped or autoplay is off, when it waits for
+/// Play. [onTick] redraws each second; [onPlay] moves on.
 class UpNextCountdown {
   UpNextCountdown({
     required bool autoplay,
@@ -312,10 +303,9 @@ class PlayerSpeed {
   }
 }
 
-/// The video in the system's controls: the notification shade, the lock
-/// screen, a headset, and a TV's own remote and assistant, as the Kotlin
-/// player's media session. [sync] says what plays and where; presses come
-/// back to [sitting].
+/// The video in the system's controls: the notification shade, the lock screen,
+/// a headset, and a TV's own remote and assistant. [sync] says what plays and
+/// where; presses come back to [sitting].
 class PlayerMediaSession {
   PlayerMediaSession(this._sitting, this._controls, {required this.headers}) {
     _commands = _controls.commands.listen(_command);
@@ -466,7 +456,6 @@ class PlayerSpinner extends StatelessWidget {
               child: waiting
                   ? Text(
                       AppLocalizations.of(context).playerWaiting,
-                      key: const Key('player/waiting'),
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       style: style.copyWith(shadows: onPicture),

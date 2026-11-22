@@ -22,17 +22,6 @@ abstract interface class ArtworkCache {
   Future<void> write(Uri url, Uint8List bytes);
 }
 
-/// Keeps nothing, for tests.
-final class NoArtworkCache implements ArtworkCache {
-  const NoArtworkCache();
-
-  @override
-  Future<Uint8List?> read(Uri url) async => null;
-
-  @override
-  Future<void> write(Uri url, Uint8List bytes) async {}
-}
-
 /// Artwork in files under the app's cache folder, which Android may clear
 /// when it needs room, named by a hash of the URL. Past [maxBytes] the
 /// oldest go, checked every [_pruneEvery] writes.
@@ -247,12 +236,8 @@ ArtworkSize artworkSizeFor(
   return largest;
 }
 
-/// Artwork for a poster, when there's any.
-ArtSource? posterSource(Artwork? art) => art == null ? null : ArtSource(art);
-
-/// Wide pictures for a file, best first: the episode's still, then a frame
-/// from the file, then the show's backdrop; for a movie, its backdrop
-/// first. The Kotlin app's `landscape`.
+/// Wide pictures for a file, best first: the episode's still, then a frame from
+/// the file, then the show's backdrop; for a movie, its backdrop first.
 List<PictureSource> landscapeSources(MediaItem item) {
   final still = item.episode?.still;
   final backdrop = item.title?.images.backdrop;

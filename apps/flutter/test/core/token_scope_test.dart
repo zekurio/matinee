@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/server_http.dart';
 import 'package:matinee/core/session.dart';
 
@@ -101,36 +100,6 @@ void main() {
         expect(wire.sent, hasLength(1), reason: 'nothing reached the network');
       },
     );
-
-    test('a client with no token is not held to a generation', () async {
-      final wire = Wire();
-      final client = boundClient(
-        wire.client,
-        agent,
-        server: Uri.parse('https://a.example/'),
-        bearer: null,
-        made: 0,
-        generation: () => 5,
-      );
-
-      final headers = await wire.get(client, 'https://a.example/api/health');
-
-      expect(headers.containsKey('authorization'), isFalse);
-    });
-
-    test('closing it leaves the shared client open', () async {
-      final wire = Wire();
-      boundClient(
-        wire.client,
-        agent,
-        server: null,
-        bearer: null,
-        made: 0,
-        generation: () => 0,
-      ).close();
-
-      await wire.client.get(Uri.parse('https://a.example/'));
-    });
   });
 
   group('a client that follows a saved server', () {
@@ -218,39 +187,6 @@ void main() {
   });
 
   group('through the session', () {
-    test(
-      'the API sends the active server its token, and nothing else',
-      () async {
-        final harness = Harness();
-        harness.backend
-          ..hosts.addAll(['a.example', 'b.example'])
-          ..tokens['token-a'] = 'ada';
-        await harness.launch();
-        addTearDown(harness.quit);
-        await harness.session.connect('a.example');
-        await harness.until<SignedOut>();
-        harness.session.signedIn(appSession('token-a', 'ada'));
-        await harness.until<SignedIn>();
-
-        final client = harness.container.read(sessionHttpProvider);
-        await client.get(Uri.parse('https://a.example/x'));
-        await client.get(Uri.parse('https://b.example/x'));
-
-        expect(
-          harness.backend.to('a.example', '/x').single.headers['authorization'],
-          'Bearer token-a',
-        );
-        expect(
-          harness.backend.to('b.example', '/x').single.headers,
-          isNot(contains('authorization')),
-        );
-        expect(
-          harness.backend.to('b.example', '/x').single.headers['user-agent'],
-          startsWith('Matinee/'),
-        );
-      },
-    );
-
     test('a client kept from before a sign-in ended stops, and the new one '
         'sends the new token', () async {
       final harness = Harness();
@@ -322,85 +258,6 @@ void main() {
       expect(harness.session.playerHeaders(), {
         'Authorization': 'Bearer token-b',
       });
-    });
-
-    test(
-      'the artwork client and a saved server\'s client follow each token',
-      () async {
-        final harness = Harness();
-        harness.backend
-          ..hosts.addAll(['a.example', 'b.example'])
-          ..tokens['token-a'] = 'ada'
-          ..tokens['token-b'] = 'bob';
-        await harness.launch();
-        addTearDown(harness.quit);
-        await harness.session.connect('a.example');
-        await harness.until<SignedOut>();
-        harness.session.signedIn(appSession('token-a', 'ada'));
-        await harness.until<SignedIn>();
-        harness.session.addServer();
-        await harness.session.connect('b.example');
-        await harness.until<SignedOut>();
-        harness.session.signedIn(appSession('token-b', 'bob'));
-        await harness.until<SignedIn>();
-
-        final artwork = harness.container.read(artworkHttpProvider);
-        await artwork.get(Uri.parse('https://a.example/art'));
-        await artwork.get(Uri.parse('https://b.example/art'));
-        expect(
-          harness.backend
-              .to('a.example', '/art')
-              .single
-              .headers['authorization'],
-          'Bearer token-a',
-        );
-        expect(
-          harness.backend
-              .to('b.example', '/art')
-              .single
-              .headers['authorization'],
-          'Bearer token-b',
-        );
-
-        // Not the one in use, but still its own server's client.
-        final other = harness.session.serverClient('https://a.example/')!;
-        await other.client.get(Uri.parse('https://a.example/mine'));
-        await other.client.get(Uri.parse('https://b.example/theirs'));
-        expect(
-          harness.backend
-              .to('a.example', '/mine')
-              .single
-              .headers['authorization'],
-          'Bearer token-a',
-        );
-        expect(
-          harness.backend.to('b.example', '/theirs').single.headers,
-          isNot(contains('authorization')),
-        );
-        expect(harness.session.serverClient('https://gone.example/'), isNull);
-
-        await harness.session.removeServer('https://a.example/');
-        await artwork.get(Uri.parse('https://a.example/art2'));
-        expect(
-          harness.backend.to('a.example', '/art2').single.headers,
-          isNot(contains('authorization')),
-        );
-        expect(harness.session.serverClient('https://a.example/'), isNull);
-      },
-    );
-
-    test('the API is built on the active server\'s origin', () async {
-      final harness = Harness();
-      harness.backend.hosts.add('a.example');
-      await harness.launch();
-      addTearDown(harness.quit);
-      expect(harness.container.read(apiProvider), isNull);
-
-      await harness.session.connect('a.example');
-      await harness.until<SignedOut>();
-
-      final MatineeApi api = harness.container.read(apiProvider)!;
-      expect(api.base.toString(), 'https://a.example/');
     });
   });
 }

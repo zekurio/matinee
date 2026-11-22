@@ -78,9 +78,9 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
       _ => null,
     };
     final avatar = user?.avatarId;
-    // Offline only what works without the server stays, as in the Kotlin
-    // app: Home from the downloads, the downloads, and the profile, which
-    // leads to Settings. There are no libraries to list without it.
+    // Offline only what works without the server stays: Home from the
+    // downloads, the downloads, and the profile, which leads to Settings. There
+    // are no libraries to list without it.
     final offline = ref.watch(authStateProvider) is Offline;
     ref.listen(authStateProvider, (_, auth) {
       if (auth is Offline && _libraryTabs.contains(widget.shell.currentIndex)) {
@@ -113,8 +113,8 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
               ),
       ),
     ];
-    // Home is under every other tab, as in the Kotlin app: back on another
-    // tab's first page goes to Home, and only Home's leaves the app.
+    // Home is under every other tab: back on another tab's first page goes to
+    // Home, and only Home's leaves the app.
     final home = widget.shell.currentIndex == 0;
     return PopScope(
       canPop: home,

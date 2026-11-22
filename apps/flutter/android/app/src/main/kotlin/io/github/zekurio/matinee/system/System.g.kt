@@ -273,15 +273,13 @@ private open class SystemPigeonCodec : StandardMessageCodec() {
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface SystemApi {
   /**
-   * Opens the system's photo picker for one image, as the Kotlin app's
-   * `PickVisualMedia`, and answers with it, or null when the person backs
-   * out. Reads at most [maxBytes] plus one.
+   * Opens the system's photo picker for one image, and answers with it, or
+   * null when the person backs out. Reads at most [maxBytes] plus one.
    */
   suspend fun pickImage(maxBytes: Long): PickedImage?
   /**
    * This process's latest lines in logcat, at most [maxLines], in its
-   * threadtime format, as the Kotlin app's `readAppLog` read them. An app
-   * reads its own lines without READ_LOGS.
+   * threadtime format. An app reads its own lines without READ_LOGS.
    */
   suspend fun readLog(maxLines: Long): List<String>
   /**

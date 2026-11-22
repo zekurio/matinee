@@ -62,8 +62,6 @@ class KitColors {
   Color get inputHover => borderEmphasis;
   Color get hairline => foreground.withValues(alpha: .1);
   Color get accentSoft => accent.withValues(alpha: isDark ? .22 : .12);
-  Color get accentBorder => accent.withValues(alpha: isDark ? .55 : .4);
-  Color get accentGlow => accent.withValues(alpha: isDark ? .38 : .28);
   bool get isDark => background.computeLuminance() < .179;
 
   KitColors lerp(KitColors other, double t) => KitColors(
@@ -97,7 +95,6 @@ abstract final class KitRadius {
   static const md = 8.0;
   static const lg = 10.0;
   static const xl = 14.0;
-  static const xxl = 18.0;
 
   static const control = BorderRadius.all(Radius.circular(lg));
   static const panel = BorderRadius.all(Radius.circular(xl));
@@ -105,8 +102,6 @@ abstract final class KitRadius {
 }
 
 enum KitText {
-  px9(9, 12),
-  px10(10, 14),
   px11(11, 16),
   xs(12, 16),
   px13(13, 20),
@@ -119,14 +114,7 @@ enum KitText {
   xxl(24, 32),
   px26(26, 32),
   px28(28, 32),
-  xxxl(30, 36),
-  px32(32, 40),
-  px36(36, 40),
-  px48(48, 48),
-  px60(60, 60),
-  px72(72, 72),
-  px96(96, 96),
-  px128(128, 128);
+  xxxl(30, 36);
 
   const KitText(this.size, this.lineHeight);
 

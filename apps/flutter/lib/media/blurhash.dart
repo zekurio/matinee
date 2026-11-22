@@ -4,9 +4,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-/// A BlurHash (https://blurha.sh) as a small picture: the blurred stand-in
-/// the server sends with each artwork, so a card shows its colors while
-/// the picture loads, as the web and the Kotlin app do (its `BlurHash`).
+/// A BlurHash (https://blurha.sh) as a small picture: the blurred stand-in the
+/// server sends with each artwork, so a card shows its colors while the picture
+/// loads, as the web does.
 @immutable
 final class BlurHashImage extends ImageProvider<BlurHashImage> {
   const BlurHashImage(this.hash, {this.size = 32});

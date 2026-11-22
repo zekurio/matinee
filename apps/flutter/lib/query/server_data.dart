@@ -30,9 +30,9 @@ import 'reconnecting.dart';
 /// - goes away once no screen watches it (auto-dispose), so a page opened
 ///   again fetches fresh;
 /// - never retries by itself, unlike Riverpod's default: a failure stays on
-///   screen with Try again, as the Kotlin app has it.
+///   screen with Try again.
 ///
-/// A live stream ([serverStream], [serverStreamFamily]) is followed through
+/// A live stream ([serverStreamFamily]) is followed through
 /// [reconnecting]: it opens again when it ends or drops, and its last value
 /// stays while it's down.
 final class NotConnected implements Exception {
@@ -49,8 +49,7 @@ MatineeApi serverApi(Ref ref) =>
 /// Riverpod 3 retries a failed provider by default; these show the failure.
 Duration? _noRetry(int count, Object error) => null;
 
-/// [read], with an answer that didn't parse logged, as the Kotlin app's
-/// `Load` logged it, for the app log.
+/// [read], with an answer that didn't parse logged, for the app log.
 Future<T> _logged<T>(Future<T> read) async {
   try {
     return await read;
@@ -81,13 +80,6 @@ FutureProviderFamily<T, A> serverQueryFamily<T, A>(
   (ref, arg) => _logged(read(serverApi(ref), arg)),
   retry: _noRetry,
 );
-
-/// A live stream from the server, opened again whenever it ends or drops.
-StreamProvider<T> serverStream<T>(Stream<T> Function(MatineeApi api) open) =>
-    StreamProvider.autoDispose<T>((ref) {
-      final api = serverApi(ref);
-      return reconnecting(() => open(api));
-    }, retry: _noRetry);
 
 /// A read the server has no live stream for, asked again [every] so long
 /// after each answer for as long as a screen watches it, as the web polls

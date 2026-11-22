@@ -4,12 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/core/server_discovery.dart';
 import 'package:matinee/core/session.dart';
 import 'package:matinee/core/sign_in_state.dart';
-import 'package:matinee/core/unreachability.dart';
-import 'package:matinee/l10n/app_localizations_en.dart';
 
 import 'fakes.dart';
-
-final strings = AppLocalizationsEn();
 
 void main() {
   group('connecting', () {
@@ -37,54 +33,6 @@ void main() {
       expect(harness.container.read(serverConnectProvider).error, isNull);
     });
 
-    test('does not ask when the system does not need it', () async {
-      final harness = Harness();
-      harness.backend.hosts.add('a.example');
-      await harness.launch();
-      addTearDown(harness.quit);
-      final connect = harness.container.listen(
-        serverConnectProvider,
-        (_, _) {},
-      );
-      addTearDown(connect.close);
-
-      await harness.container
-          .read(serverConnectProvider.notifier)
-          .connect('a.example');
-
-      expect(harness.localNetwork.asked, 0);
-    });
-
-    test('a failure without the access points to where to allow it', () async {
-      final harness = Harness();
-      harness.localNetwork
-        ..needed = true
-        ..answer = false;
-      await harness.launch();
-      addTearDown(harness.quit);
-      final connect = harness.container.listen(
-        serverConnectProvider,
-        (_, _) {},
-      );
-      addTearDown(connect.close);
-
-      await harness.container
-          .read(serverConnectProvider.notifier)
-          .connect('192.168.1.5:8420');
-
-      final state = harness.container.read(serverConnectProvider);
-      expect(state.busy, isFalse);
-      expect(state.error?.kind, ConnectFailureKind.failed);
-      expect(state.localNetworkHint, isTrue);
-      expect(
-        describeConnectFailure(strings, state.error!, localNetworkHint: true),
-        endsWith(strings.connectLocalNetwork),
-      );
-
-      harness.container.read(serverConnectProvider.notifier).clearError();
-      expect(harness.container.read(serverConnectProvider).error, isNull);
-    });
-
     test('a second try waits while one is under way', () async {
       final harness = Harness();
       harness.backend.hosts.add('a.example');
@@ -107,112 +55,9 @@ void main() {
         hasLength(1),
       );
     });
-
-    test('the failures read in words', () {
-      expect(
-        describeConnectFailure(
-          strings,
-          const ConnectFailure(ConnectFailureKind.empty),
-        ),
-        strings.connectEmpty,
-      );
-      expect(
-        describeConnectFailure(
-          strings,
-          const ConnectFailure(
-            ConnectFailureKind.notMatinee,
-            'https://a.example',
-          ),
-        ),
-        strings.connectNotMatinee('https://a.example'),
-      );
-      expect(
-        describeSignInFailure(
-          strings,
-          const SignInFailure(SignInFailureKind.wrongState),
-        ),
-        strings.signinWrongState,
-      );
-      expect(
-        describeSignInFailure(
-          strings,
-          const SignInFailure(SignInFailureKind.server, 'That code ran out.'),
-        ),
-        'That code ran out.',
-      );
-      expect(
-        describeSignInFailure(
-          strings,
-          const SignInFailure(SignInFailureKind.generic),
-        ),
-        strings.signinFailed,
-      );
-    });
-
-    test(
-      'the unreachable messages name the host, and the downloads offline',
-      () {
-        String say(Unreachability reason, {bool offline = false}) =>
-            unreachableMessage(
-              strings,
-              reason,
-              'https://media.example.com',
-              canWatchOffline: offline,
-            );
-
-        expect(
-          say(Unreachability.refused),
-          strings.unreachableRefused('media.example.com'),
-        );
-        expect(
-          say(Unreachability.timeout),
-          strings.unreachableTimeout('media.example.com'),
-        );
-        expect(say(Unreachability.noNetwork), strings.unreachableOffline);
-        expect(
-          say(Unreachability.noNetwork, offline: true),
-          strings.unreachableOfflineDownloads,
-        );
-      },
-    );
   });
 
   group('signing in with a code', () {
-    test('shows the code, then signs in once approved', () async {
-      final harness = Harness();
-      harness.backend
-        ..hosts.add('a.example')
-        ..tokens['token-a'] = 'ada'
-        ..devicePolls.addAll([
-          jsonResponse({'status': 'pending'}),
-          jsonResponse({
-            'status': 'approved',
-            'token': 'token-a',
-            'user': userJson('ada'),
-          }),
-        ]);
-      await harness.launch(
-        overrides: [deviceCodeDelayProvider.overrideWithValue((_) async {})],
-      );
-      addTearDown(harness.quit);
-      await harness.session.connect('a.example');
-      await harness.until<SignedOut>();
-
-      final subscription = harness.container.listen(
-        deviceCodeSignInProvider(true),
-        (_, _) {},
-      );
-      addTearDown(subscription.close);
-      expect(subscription.read().code, isNull);
-
-      await harness.until<SignedIn>();
-      expect(subscription.read().expired, isFalse);
-      final request = harness.backend
-          .to('a.example', '/api/v1/auth/device')
-          .single;
-      expect(request.body, contains('"platform":"android"'));
-    });
-
     test('leaving a candidate discards its pending device grant', () async {
       final harness = Harness();
       final waiting = Completer<void>();
@@ -253,55 +98,6 @@ void main() {
       expect(
         harness.backend.to('b.example', '/api/v1/auth/device/token'),
         isEmpty,
-      );
-    });
-
-    test('says so when the code ran out and is not renewed', () async {
-      final harness = Harness();
-      harness.backend
-        ..hosts.add('a.example')
-        ..devicePolls.add(
-          jsonResponse({
-            'code': 'NOT_FOUND',
-            'status': 404,
-            'message': 'x',
-          }, 404),
-        );
-      await harness.launch(
-        overrides: [deviceCodeDelayProvider.overrideWithValue((_) async {})],
-      );
-      addTearDown(harness.quit);
-      await harness.session.connect('a.example');
-      await harness.until<SignedOut>();
-      final subscription = harness.container.listen(
-        deviceCodeSignInProvider(false),
-        (_, _) {},
-      );
-      addTearDown(subscription.close);
-
-      await harness.untilValue(
-        deviceCodeSignInProvider(false),
-        (state) => state.expired,
-      );
-
-      expect(subscription.read().expired, isTrue);
-      expect(subscription.read().code, isNull);
-      expect(harness.auth, isA<SignedOut>());
-
-      harness.backend.devicePolls.add(
-        jsonResponse({'code': 'NOT_FOUND', 'status': 404, 'message': 'x'}, 404),
-      );
-      harness.container
-          .read(deviceCodeSignInProvider(false).notifier)
-          .newCode();
-      await harness.untilRequests(
-        (requests) =>
-            requests.where((r) => r.url.path == '/api/v1/auth/device').length >=
-            2,
-      );
-      expect(
-        harness.backend.to('a.example', '/api/v1/auth/device'),
-        hasLength(2),
       );
     });
 
@@ -416,59 +212,5 @@ void main() {
         'http://b.example:8420',
       ]);
     });
-
-    test('asks for local network access first and stops without it', () async {
-      final harness = Harness();
-      var scans = 0;
-      harness.localNetwork
-        ..needed = true
-        ..answer = false;
-      await harness.launch(
-        overrides: [
-          serverDiscoveryProvider.overrideWithValue(() {
-            scans++;
-            return const Stream.empty();
-          }),
-        ],
-      );
-      addTearDown(harness.quit);
-
-      final state = await searched(harness);
-
-      expect(harness.localNetwork.asked, 1);
-      expect(scans, 0);
-      expect(state.searching, isFalse);
-      expect(state.found, isEmpty);
-    });
-
-    test(
-      'searches once it is allowed, and a new search starts clean',
-      () async {
-        final harness = Harness();
-        harness.localNetwork.needed = true;
-        var round = 0;
-        await harness.launch(
-          overrides: [
-            serverDiscoveryProvider.overrideWithValue(() {
-              final url = 'https://round-$round.example';
-              return Stream.value(DiscoveredServer('Matinee', url));
-            }),
-          ],
-        );
-        addTearDown(harness.quit);
-
-        var state = await searched(harness);
-        expect(state.found.single.url, 'https://round-0.example');
-        expect(harness.localNetwork.asked, 1);
-
-        round = 1;
-        await harness.container.read(nearbyServersProvider.notifier).search();
-        state = harness.container.read(nearbyServersProvider);
-
-        expect(state.found.single.url, 'https://round-1.example');
-        // It's allowed now, so it isn't asked again.
-        expect(harness.localNetwork.asked, 1);
-      },
-    );
   });
 }

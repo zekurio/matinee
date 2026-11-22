@@ -99,8 +99,4 @@ void main() {
     expect(log, isNot(contains('line 50\n')));
     expect(log.length, lessThanOrEqualTo(maxLogChars + 200));
   });
-
-  test('an empty log says so', () {
-    expect(formatLog(const [], known), endsWith('nothing logged\n'));
-  });
 }

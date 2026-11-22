@@ -10,9 +10,9 @@ import '../../player/subtitle_look.dart';
 import 'settings_rows.dart';
 import 'settings_screen.dart';
 
-/// Settings, Subtitles: how subtitles look on this device, with a sample,
-/// as the Kotlin app's subtitles page. The system's caption style leaves
-/// only the way to its settings; otherwise the app's own choices show.
+/// Settings, Subtitles: how subtitles look on this device, with a sample. The
+/// system's caption style leaves only the way to its settings; otherwise the
+/// app's own choices show.
 class SubtitlesPage extends ConsumerWidget {
   const SubtitlesPage({super.key});
 
@@ -133,7 +133,7 @@ class _Preview extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: MatineeTheme.of(context).border),
-        // Compose's default, corner to corner.
+        // Corner to corner.
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

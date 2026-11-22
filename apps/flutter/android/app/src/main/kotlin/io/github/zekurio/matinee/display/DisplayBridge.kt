@@ -8,12 +8,11 @@ import android.view.Display
 private const val TAG = "MatineeDisplayMode"
 
 /**
- * The screen's modes for the TV player, as the Kotlin app's
- * `MatchDisplayMode` asked them: Dart picks the rate that plays the
- * video's frame rate evenly, and this asks the window for that mode,
- * keeping the resolution it has. Media3 and mpv set the frame rate on
- * their surfaces too, but that only switches when the display can do it
- * without a pause, which a TV going from 60 to 24 Hz mostly can't.
+ * The screen's modes for the TV player: Dart picks the rate that plays the
+ * video's frame rate evenly, and this asks the window for that mode, keeping
+ * the resolution it has. Media3 and mpv set the frame rate on their surfaces
+ * too, but that only switches when the display can do it without a pause, which
+ * a TV going from 60 to 24 Hz mostly can't.
  */
 class DisplayBridge(private val activity: Activity) : DisplayApi {
     private fun display(): Display? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

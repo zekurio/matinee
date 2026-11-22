@@ -85,20 +85,18 @@ const _edgeSide = 24.0;
 /// switches between fitting and filling the screen.
 const pinchFill = 1.15;
 
-/// Touches on the video, as the Kotlin phone player has them, which has
-/// them from Findroid: a tap shows and hides the controls, a double tap on
-/// either half skips, up or down on the left half sets the brightness and
-/// on the right half the volume, sideways seeks to where the finger lifts,
-/// a finger held still plays at [holdSpeed] until it lifts, and two
-/// fingers spread to fill the screen or pinch to show the video whole.
-/// Which swipe it is goes by the way the finger first moves. A touch that
-/// starts where the system takes its own gestures, as at the edges for
+/// Touches on the video, as Findroid has them: a tap shows and hides the
+/// controls, a double tap on either half skips, up or down on the left half
+/// sets the brightness and on the right half the volume, sideways seeks to
+/// where the finger lifts, a finger held still plays at [holdSpeed] until it
+/// lifts, and two fingers spread to fill the screen or pinch to show the video
+/// whole. Which swipe it is goes by the way the finger first moves. A touch
+/// that starts where the system takes its own gestures, as at the edges for
 /// back, only taps. A second finger hands the touch to the pinch without
-/// seeking.
-/// Passes touches that start on the controls' middle buttons on to the
-/// [VideoGestures] under them, so a swipe across the buttons seeks as it
-/// does anywhere on the video. The buttons keep the taps: a relayed touch
-/// only ever becomes a sideways seek.
+/// seeking. Passes touches that start on the controls' middle buttons on to the
+/// [VideoGestures] under them, so a swipe across the buttons seeks as it does
+/// anywhere on the video. The buttons keep the taps: a relayed touch only ever
+/// becomes a sideways seek.
 final class GestureRelay {
   void Function(PointerEvent event)? _target;
 

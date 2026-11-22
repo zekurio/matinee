@@ -108,10 +108,10 @@ String _detailsRoute(MediaItem item) {
 
 bool _offline(WidgetRef ref) => ref.watch(authStateProvider) is Offline;
 
-/// The downloads, the Kotlin app's `DownloadsScreen`, in two lists: what's
-/// still coming, file by file, with how far each is and a button to pause
-/// it or go on; then what's on the device, movies and shows, newest first.
-/// A movie plays with a tap; a show opens its own page of episodes.
+/// The downloads, in two lists: what's still coming, file by file, with how far
+/// each is and a button to pause it or go on; then what's on the device, movies
+/// and shows, newest first. A movie plays with a tap; a show opens its own page
+/// of episodes.
 class DownloadsScreen extends ConsumerStatefulWidget {
   const DownloadsScreen({super.key});
 
@@ -344,9 +344,9 @@ class _Empty extends ConsumerWidget {
   }
 }
 
-/// A downloaded show's episodes by season, the Kotlin app's
-/// `DownloadsShowScreen`: each plays with a tap, and the ones still coming
-/// show how far they are. Its menu, and each season's, removes them.
+/// A downloaded show's episodes by season: each plays with a tap, and the ones
+/// still coming show how far they are. Its menu, and each season's, removes
+/// them.
 class DownloadsShowScreen extends ConsumerWidget {
   const DownloadsShowScreen({super.key, required this.titleId});
 

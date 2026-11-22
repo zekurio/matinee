@@ -544,10 +544,9 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
     notifyListeners();
   }
 
-  /// How long the engine may buffer with neither the picture nor what it
-  /// has loaded moving before the server counts as not answering, as the
-  /// Kotlin app's read timeout does: mpv waits on a quiet connection for
-  /// good.
+  /// How long the engine may buffer with neither the picture nor what it has
+  /// loaded moving before the server counts as not answering: mpv waits on a
+  /// quiet connection for good.
   static const stallLimit = Duration(seconds: 60);
 
   /// How long such a stall goes before the spinner says it waits.

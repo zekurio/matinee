@@ -86,11 +86,10 @@ fun downloadFailure(e: IOException): DownloadFailure = when (e) {
 class StartOver : IOException("start over")
 
 /**
- * Fetches one download: its picture and subtitles, then the file as it is
- * with byte ranges, or a device version's init segment and segments in
- * order. Every step is written down, so a later run picks up from there.
- * The Kotlin app's `DownloadWorker` apart from WorkManager, so the JVM
- * tests run it.
+ * Fetches one download: its picture and subtitles, then the file as it is with
+ * byte ranges, or a device version's init segment and segments in order. Every
+ * step is written down, so a later run picks up from there. It's apart from
+ * WorkManager, so the JVM tests run it.
  */
 class DownloadFetcher(
     private val store: DownloadStore,

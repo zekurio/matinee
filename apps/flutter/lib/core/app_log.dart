@@ -5,10 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../platform/system.g.dart';
 import 'session.dart';
 
-// The app's own log, for sending along when something breaks, as the
-// Kotlin app's `AppLog.kt`. It's what this process wrote to logcat (the
-// app's Dart side, the players, the system on its behalf), read only when
-// the person asks, and never sent anywhere.
+// The app's own log, for sending along when something breaks. It's what this
+// process wrote to logcat (the app's Dart side, the players, the system on its
+// behalf), read only when the person asks, and never sent anywhere.
 //
 // Logcat holds free text, so this can't keep to known codes. Each message
 // goes through [scrubLogMessage] instead, which takes out what could name
@@ -22,9 +21,8 @@ const maxLogLines = 500;
 /// The most characters a log keeps, so it fits on the clipboard and in a share.
 const maxLogChars = 60000;
 
-/// Writes a warning to logcat, where the app log reads it, as the Kotlin
-/// app's `Log.w`: [tag], [message], and what went wrong, with the first
-/// lines of its stack.
+/// Writes a warning to logcat, where the app log reads it: [tag], [message],
+/// and what went wrong, with the first lines of its stack.
 void logWarning(
   String tag,
   String message, [

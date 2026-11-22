@@ -23,8 +23,7 @@ import 'tv_home.dart' show TvPageMessage;
 import 'tv_media.dart';
 import 'tv_shell.dart';
 
-/// The rows and buttons of the detail pages, by their keys in the focus
-/// memory, as the Kotlin app's `DetailRows` names them.
+/// The rows and buttons of the detail pages, by their keys in the focus memory.
 abstract final class _Rows {
   static const actions = 'actions';
   static const play = 'play';
@@ -417,11 +416,11 @@ Widget? _linksRow(BuildContext context, Title title, TvFocusMemory memory) {
 // ---------------------------------------------------------------------------
 // The title page.
 
-/// A movie's or show's page on a TV, as the Kotlin app's `TvTitleScreen`:
-/// its name or logo, facts, genres, and overview over its backdrop, with
-/// Play and its marks under them, focus on Play. Below, for a show, the
-/// episode up next, the episodes of a show with one season, and its
-/// seasons; then the cast and crew, and its genres and studios.
+/// A movie's or show's page on a TV: its name or logo, facts, genres, and
+/// overview over its backdrop, with Play and its marks under them, focus on
+/// Play. Below, for a show, the episode up next, the episodes of a show with
+/// one season, and its seasons; then the cast and crew, and its genres and
+/// studios.
 class TvTitleScreen extends ConsumerStatefulWidget {
   const TvTitleScreen({super.key, required this.id});
 
@@ -688,12 +687,11 @@ const _retry = 'retry';
 /// Room for what the focused episode is about, above the row.
 const _aboutHeight = 100.0;
 
-/// A season's page on a TV, as the Kotlin app's `TvSeasonScreen`: the
-/// show's name, the season, or tabs for every season of a show with more
-/// than one, how many episodes it has and are watched, and Play with the
-/// marks. Below, its episodes in a row, with what the focused one is
-/// about above them. Focus starts on the episode Play would start.
-/// [season] null is the files without a season number.
+/// A season's page on a TV: the show's name, the season, or tabs for every
+/// season of a show with more than one, how many episodes it has and are
+/// watched, and Play with the marks. Below, its episodes in a row, with what
+/// the focused one is about above them. Focus starts on the episode Play would
+/// start. [season] null is the files without a season number.
 class TvSeasonScreen extends ConsumerStatefulWidget {
   const TvSeasonScreen({
     super.key,
@@ -1063,10 +1061,10 @@ class _EpisodeAbout extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // The episode page.
 
-/// An episode's page on a TV, or a loose file's, as the Kotlin app's
-/// `TvEpisodeScreen`: over its still, or its show's art, the show, season
-/// and number, name, facts, overview, and file, with Play and its marks and
-/// the ways to its season and show. Below, the rest of its season.
+/// An episode's page on a TV, or a loose file's: over its still, or its show's
+/// art, the show, season and number, name, facts, overview, and file, with Play
+/// and its marks and the ways to its season and show. Below, the rest of its
+/// season.
 class TvEpisodeScreen extends ConsumerStatefulWidget {
   const TvEpisodeScreen({super.key, required this.id});
 
@@ -1261,11 +1259,10 @@ const _personColumns = 6;
 /// Under a poster in the person's grid: the gap, the name, and the role.
 const _captionHeight = 12 + 20 + 20.0;
 
-/// Someone in the cast or crew on a TV, and everything they're in, as the
-/// Kotlin app's `TvPersonScreen`: their photo, name, job, and how many
-/// titles they're in, then those titles as a grid of posters, each with
-/// their role in it. The header steps aside while focus is below the first
-/// row. The focused title's backdrop goes behind the page.
+/// Someone in the cast or crew on a TV, and everything they're in: their photo,
+/// name, job, and how many titles they're in, then those titles as a grid of
+/// posters, each with their role in it. The header steps aside while focus is
+/// below the first row. The focused title's backdrop goes behind the page.
 class TvPersonScreen extends ConsumerStatefulWidget {
   const TvPersonScreen({super.key, required this.name, this.tmdbId});
 

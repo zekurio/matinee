@@ -11,7 +11,7 @@ A feature needs an issue where we agreed on it. -->
 ## Change
 
 <!-- How this fixes it. If it touches several parts (contract, server, web,
-Android), say why each one is needed for this fix. -->
+Flutter app), say why each one is needed for this fix. -->
 
 ## Verification
 
@@ -24,7 +24,7 @@ or gestures. Say what you couldn't test. -->
 - [ ] `pnpm verify` passes
 - [ ] Tried the affected flows in a browser or on a device
 - [ ] New user-facing text is in `locales/en/` and translated
-- [ ] Ran `pnpm api:android` after a contract change
+- [ ] Ran `pnpm api:dart` after a contract change
 - [ ] Generated a new migration after a schema change, without editing old ones
 
 <!-- If a coding agent wrote some of this, name the agent and model here. -->

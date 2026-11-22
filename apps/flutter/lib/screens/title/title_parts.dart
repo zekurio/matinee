@@ -22,8 +22,7 @@ import '../requests/request_sheet.dart' show showRequestSheet;
 import '../requests/show_gaps.dart';
 import 'title_data.dart';
 
-/// The pieces the title, season, and episode pages share, as the Kotlin
-/// app's `TitleParts.kt`.
+/// The pieces the title, season, and episode pages share.
 
 /// Whether the window is wide enough for a poster beside the heading.
 bool isWide(BuildContext context) =>
@@ -42,9 +41,8 @@ double headingTop(BuildContext context) => backdropHeight(context) - 150;
 double phoneHeadingTop(BuildContext context) =>
     math.max(160, MediaQuery.sizeOf(context).height * .3);
 
-/// Goes to [route] as the page above in the person's way here: back to it
-/// when it's the page before this one, else opened over this one, as the
-/// Kotlin app's `titleUp` and `seasonUp`.
+/// Goes to [route] as the page above in the person's way here: back to it when
+/// it's the page before this one, else opened over this one.
 void goUp(BuildContext context, String route) {
   final matches = GoRouter.of(context)
       .routerDelegate
@@ -63,9 +61,8 @@ void goUp(BuildContext context, String route) {
   unawaited(context.push(route));
 }
 
-/// The page's own buttons over the backdrop, as the Kotlin app's
-/// `ItemTopBar`: Back, Home, and the page above this one when there is
-/// one, each on a veil of the page's color.
+/// The page's own buttons over the backdrop: Back, Home, and the page above
+/// this one when there is one, each on a veil of the page's color.
 class ItemTopBar extends StatelessWidget {
   const ItemTopBar({super.key, this.parent, this.onParent});
 
@@ -710,9 +707,9 @@ class ActionRow extends ConsumerWidget {
       label: [label, ?left].join(', '),
       leading: Lucide.play,
       onPressed: play == null ? null : () => context.push(Routes.play(play.id)),
-      // The label stays whole and what's left over goes to the time, as
-      // the Kotlin app's; only where the label alone doesn't fit, as on a
-      // 360 wide phone with every round button, it shortens too.
+      // The label stays whole and what's left over goes to the time; only where
+      // the label alone doesn't fit, as on a 360 wide phone with every round
+      // button, it shortens too.
       child: LayoutBuilder(
         builder: (context, constraints) {
           final painter = TextPainter(

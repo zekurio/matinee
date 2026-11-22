@@ -19,8 +19,8 @@ String _hex(Color color) =>
 final _defaultLight = _hex(matineeLight.accent);
 final _defaultDark = _hex(matineeDark.accent);
 
-/// Starting points, Matinee's own first, a shade per appearance, as the
-/// web and the Kotlin app offer them.
+/// Starting points, Matinee's own first, a shade per appearance, as the web
+/// offers them.
 List<(String, String)> get _presets => [
   (_defaultLight, _defaultDark),
   ('#0369a1', '#38bdf8'),
@@ -47,10 +47,10 @@ Color? _shown(String text) {
   return Color(0xFF000000 | int.parse(match.group(1)!, radix: 16));
 }
 
-/// The accent the Matinee theme uses for everyone on the server, as the
-/// Kotlin app's `ServerBrandingSettings` and the web's branding panel: a
-/// preset, or a color per appearance, saved from the save bar. The login
-/// screen's artwork is set on the web, so a save keeps it as it was.
+/// The accent the Matinee theme uses for everyone on the server, as the web's
+/// branding panel: a preset, or a color per appearance, saved from the save
+/// bar. The login screen's artwork is set on the web, so a save keeps it as it
+/// was.
 class BrandingPage extends ConsumerWidget {
   const BrandingPage({super.key});
 

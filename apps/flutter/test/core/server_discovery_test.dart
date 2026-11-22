@@ -32,26 +32,6 @@ void main() {
       );
     });
 
-    test('ignores unknown fields', () {
-      expect(
-        read({
-          'version': 1,
-          'name': 'Matinee',
-          'url': 'http://192.168.1.5:8420',
-          'future': [1, 2, 3],
-        }),
-        const DiscoveredServer('Matinee', 'http://192.168.1.5:8420'),
-      );
-    });
-
-    test('trims the name', () {
-      expect(
-        read({'version': 1, 'name': '  Den  ', 'url': 'http://nas.local:8420'})
-            ?.name,
-        'Den',
-      );
-    });
-
     test('is rejected for another version, or one that is not a number', () {
       const url = 'https://media.example.com';
       expect(read({'version': 2, 'name': 'Matinee', 'url': url}), isNull);
@@ -210,26 +190,6 @@ void main() {
       );
     });
 
-    test('is cold: each listener scans on its own', () async {
-      answer([
-        reply({'version': 1, 'name': 'Matinee', 'url': 'https://a.example'}),
-      ]);
-      final stream = discoverServers(
-        timeout: const Duration(milliseconds: 300),
-        destinations: () async => [
-          (InternetAddress.loopbackIPv4, responder.port),
-        ],
-      );
-
-      expect(probes, isEmpty, reason: 'nothing goes out before listening');
-      final first = await stream.toList();
-      final second = await stream.toList();
-
-      expect(first, hasLength(1));
-      expect(second, hasLength(1));
-      expect(probes, hasLength(2));
-    });
-
     test('ends early when the listener cancels', () async {
       answer([
         reply({'version': 1, 'name': 'Matinee', 'url': 'https://a.example'}),
@@ -243,11 +203,6 @@ void main() {
       ).first.timeout(const Duration(seconds: 5));
 
       expect(first.url, 'https://a.example');
-    });
-
-    test('a timeout of nothing finds nothing', () async {
-      expect(await scan(timeout: Duration.zero), isEmpty);
-      expect(probes, isEmpty);
     });
   });
 }

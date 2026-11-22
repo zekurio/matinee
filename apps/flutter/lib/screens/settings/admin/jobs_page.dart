@@ -13,13 +13,12 @@ import '../settings_rows.dart';
 import 'admin_data.dart';
 import 'admin_parts.dart';
 
-/// Background work, as the Kotlin app's `JobsSettings` and the web's jobs
-/// panel: one list of the queues, how busy each is, and the scheduled task
-/// that fills it, then the tasks that fill none and do their upkeep
-/// themselves, and how many jobs each queue runs at once, saved from the
-/// save bar. A queue's sheet pauses it and clears what waits, which asks
-/// first; a task runs now or stops from its row. The page keeps itself
-/// current while it shows.
+/// Background work, as the web's jobs panel: one list of the queues, how busy
+/// each is, and the scheduled task that fills it, then the tasks that fill none
+/// and do their upkeep themselves, and how many jobs each queue runs at once,
+/// saved from the save bar. A queue's sheet pauses it and clears what waits,
+/// which asks first; a task runs now or stops from its row. The page keeps
+/// itself current while it shows.
 class JobsPage extends ConsumerStatefulWidget {
   const JobsPage({super.key});
 
@@ -255,9 +254,9 @@ String scheduleOf(AppLocalizations l, ScheduledTask task) {
   return l.webJobsScheduleEveryAfterStartup(every, span(delay));
 }
 
-/// "Every 5 minutes", in the interval's largest unit, rounded as the web
-/// and the Kotlin app round it, so one of a unit reads "Every minute":
-/// 59.6 seconds is a minute, and 90 seconds is 2 minutes.
+/// "Every 5 minutes", in the interval's largest unit, rounded as the web rounds
+/// it, so one of a unit reads "Every minute": 59.6 seconds is a minute, and 90
+/// seconds is 2 minutes.
 String everyText(AppLocalizations l, double seconds) {
   if (seconds < 59.5) {
     return l.webJobsScheduleEverySeconds(math.max(1, seconds.round()));

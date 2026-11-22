@@ -3,8 +3,7 @@ import '../../l10n/app_localizations.dart';
 import '../../media/format.dart';
 import '../../query/server_data.dart';
 
-/// What the title, season, and episode pages read and decide, as the
-/// Kotlin app's `TitleData.kt`.
+/// What the title, season, and episode pages read and decide.
 
 final titleProvider = serverQueryFamily((api, String id) => api.titles.get(id));
 
@@ -65,10 +64,9 @@ RelatedKey? relatedKey(Title title) {
   );
 }
 
-/// What Play starts in a season: the episode the server names next for the
-/// show when it's in this season; else, since the server names none for a
-/// season, the one in progress, the first unwatched, or the first, as the
-/// Kotlin app and the web pick.
+/// What Play starts in a season: the episode the server names next for the show
+/// when it's in this season; else, since the server names none for a season,
+/// the one in progress, the first unwatched, or the first, as the web picks.
 MediaItem? seasonNext(List<MediaItem>? items, MediaItem? showNext) {
   if (items == null || items.isEmpty) return null;
   if (showNext != null) {
@@ -110,10 +108,9 @@ List<String> titleFacts(Title title, AppLocalizations l) => [
   if (title.isShow) ?titleStatusName(title.status, l),
 ];
 
-/// A show's status in the app's language, with the web's words, as the
-/// Kotlin app's `titleStatusName`: null for none, or for one from a newer
-/// server this build doesn't know, which shows nothing rather than the
-/// server's key.
+/// A show's status in the app's language, with the web's words: null for none,
+/// or for one from a newer server this build doesn't know, which shows nothing
+/// rather than the server's key.
 String? titleStatusName(String? status, AppLocalizations l) => switch (status) {
   TitleStatus.continuing => l.webMetadataStatusContinuing,
   TitleStatus.ended => l.webMetadataStatusEnded,

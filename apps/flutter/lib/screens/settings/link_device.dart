@@ -15,10 +15,10 @@ import '../../l10n/app_localizations.dart';
 import '../../query/server_data.dart';
 import 'devices.dart';
 
-/// Signing in a TV or another app as this account, from Settings, Account,
-/// as the Kotlin app's `LinkDeviceScreen`: the camera reads the QR code the
-/// device shows, or the person types its code, and then approves it, as
-/// the web's /link page does. The device notices on its next poll.
+/// Signing in a TV or another app as this account, from Settings, Account: the
+/// camera reads the QR code the device shows, or the person types its code, and
+/// then approves it, as the web's /link page does. The device notices on its
+/// next poll.
 class LinkDeviceScreen extends StatefulWidget {
   const LinkDeviceScreen({super.key});
 

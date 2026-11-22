@@ -24,8 +24,6 @@ class RoundIconButton extends StatelessWidget {
     this.background,
     this.toggled,
     this.iconShadows,
-    this.focusNode,
-    this.autofocus = false,
   });
 
   /// The smallest box a button takes, so a small circle stays easy to hit.
@@ -48,8 +46,6 @@ class RoundIconButton extends StatelessWidget {
   /// Shadows under the icon, for a bare button over a picture; they fade
   /// with it when it's disabled.
   final List<Shadow>? iconShadows;
-  final FocusNode? focusNode;
-  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -64,8 +60,6 @@ class RoundIconButton extends StatelessWidget {
           value: value,
           toggled: toggled,
           shape: BorderRadius.circular(size / 2),
-          focusNode: focusNode,
-          autofocus: autofocus,
           builder: (context, state) {
             final fill = background ?? colors.secondary;
             // Material's ripple, flattened: a light wash over the fill.

@@ -7,17 +7,14 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../router.dart';
 
-/// The band at the top of every tab, the Kotlin app's Home header laid out
-/// as YouTube's: the logo at the start, then settings and search as bare
-/// icons. Unlike the Kotlin app's it stays put while the page scrolls, and
-/// the account moved to the tabs. Search opens Explore, which an admin's
-/// waiting requests head. Offline, where search can't work, the header
-/// says so in its place.
+/// The band at the top of every tab, laid out as YouTube's: the logo at the
+/// start, then settings and search as bare icons. It stays put while the page
+/// scrolls. Search opens Explore, which an admin's waiting requests head.
+/// Offline, where search can't work, the header says so in its place.
 class ShellHeader extends ConsumerWidget {
   const ShellHeader({super.key});
 
-  /// Under the status bar: the band the Kotlin app's header and Media's
-  /// search field shared.
+  /// Under the status bar.
   static const height = 56.0;
 
   @override

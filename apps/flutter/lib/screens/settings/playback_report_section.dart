@@ -10,11 +10,10 @@ import '../../l10n/app_localizations.dart';
 import '../../player/playback_report.dart';
 import 'settings_rows.dart';
 
-/// The report of the latest playback, in Settings, About, as the Kotlin
-/// app's `PlaybackDiagnosticsSection`: how the last try went, and ways to
-/// read, copy, and clear it. It reads the report kept in memory, so it's
-/// there after the player closes. What it holds and leaves out is in the
-/// report's own first lines.
+/// The report of the latest playback, in Settings, About: how the last try
+/// went, and ways to read, copy, and clear it. It reads the report kept in
+/// memory, so it's there after the player closes. What it holds and leaves out
+/// is in the report's own first lines.
 class PlaybackReportSection extends ConsumerWidget {
   const PlaybackReportSection({super.key});
 

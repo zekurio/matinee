@@ -29,9 +29,9 @@ class Logo extends StatelessWidget {
   }
 }
 
-/// The sunset mark alone, [size] square, as the Kotlin app's `LogoMark`:
-/// the logo's art seen through the mark's 24-unit icon box, which the art
-/// places with the first path's `translate(x y) scale(s)`.
+/// The sunset mark alone, [size] square: the logo's art seen through the mark's
+/// 24-unit icon box, which the art places with the first path's `translate(x y)
+/// scale(s)`.
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key, this.size = 24});
 

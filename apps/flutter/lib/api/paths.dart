@@ -16,8 +16,6 @@ final class Paths {
     );
   }
 
-  Uri health() => route(['api', 'health']);
-
   Uri artwork(String id, {ArtworkSize size = ArtworkSize.small}) =>
       route(['api', 'artwork', id], query: {'size': size.name});
 
@@ -39,24 +37,8 @@ final class Paths {
     query: {if (ass) 'delivery': 'ass'},
   );
 
-  Uri subtitleFonts(String itemId) => route(['api', 'media', itemId, 'fonts']);
-
-  Uri downloadFile(String downloadId, {int from = 0}) => route(
-    ['api', 'downloads', downloadId, 'file.mp4'],
-    query: {if (from > 0) 'from': '$from'},
-  );
-
-  Uri downloadInit(String downloadId) =>
-      route(['api', 'downloads', downloadId, 'init.mp4']);
-
-  Uri downloadSegment(String downloadId, int segment) =>
-      route(['api', 'downloads', downloadId, '$segment.m4s']);
-
   Uri trickplayTile(String itemId, String key, int tile) =>
       route(['api', 'media', itemId, 'trickplay', key, '$tile.jpg']);
-
-  Uri trickplayPlaylist(String itemId) =>
-      route(['api', 'media', itemId, 'trickplay', 'tiles.m3u8']);
 
   /// The page an app opens in the browser to be signed in.
   Uri authorize({
@@ -76,11 +58,6 @@ final class Paths {
       if (deviceName != null && deviceName.trim().isNotEmpty)
         'device_name': deviceName,
     },
-  );
-
-  Uri deviceLink({String? userCode}) => route(
-    ['link'],
-    query: {if (userCode != null && userCode.isNotEmpty) 'code': userCode},
   );
 }
 

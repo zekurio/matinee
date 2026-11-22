@@ -14,7 +14,7 @@ import '../../../query/failure_view.dart';
 import '../settings_rows.dart';
 import '../settings_screen.dart';
 
-/* What the admin pages share, as the Kotlin app's AdminParts.kt: who may
+/* What the admin pages share: who may
  * see them, a page of the server's settings that loads first, the page
  * whose fields save together from a save bar, text rows, notes, and
  * running an action with a toast when it fails. */
@@ -126,9 +126,8 @@ class AdminPage extends StatelessWidget {
 const savedFor = Duration(milliseconds: 1400);
 
 /// A page whose fields wait to be saved together, as the web's panels with
-/// their save bar and the Kotlin app's `SaveBarScaffold`. The bar sits
-/// under the list, never over its last rows, and shows while the page has
-/// unsaved edits ([dirty]), with Reset and Save.
+/// their save bar. The bar sits under the list, never over its last rows, and
+/// shows while the page has unsaved edits ([dirty]), with Reset and Save.
 ///
 /// Until the edits are saved or reset it holds the page open: Back, from
 /// the system or the page's bar, shakes the bar instead of leaving. The
@@ -411,9 +410,9 @@ class InfoRow extends StatelessWidget {
   }
 }
 
-/// Runs an admin's action, one at a time per [busy], and says what went
-/// wrong in a toast, the way the Kotlin app's `Saver` does: the sheet or
-/// dialog it started from has gone by then. True when it went through.
+/// Runs an admin's action, one at a time per [busy], and says what went wrong
+/// in a toast: the sheet or dialog it started from has gone by then. True when
+/// it went through.
 Future<bool> runAction(
   WidgetRef ref,
   AppLocalizations l,

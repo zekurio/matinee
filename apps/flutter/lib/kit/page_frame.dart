@@ -5,10 +5,9 @@ import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
-/// A page opened over the tabs, as the Kotlin app's `TopBar` over its
-/// content: under the status bar a 64 band with Back, the title, and
-/// [actions] at the end, then [child] filling the rest. Without [onBack]
-/// there's no Back, as on a page that's the first of its stack.
+/// A page opened over the tabs: under the status bar a 64 band with Back, the
+/// title, and [actions] at the end, then [child] filling the rest. Without
+/// [onBack] there's no Back, as on a page that's the first of its stack.
 class PageFrame extends StatelessWidget {
   const PageFrame({
     super.key,

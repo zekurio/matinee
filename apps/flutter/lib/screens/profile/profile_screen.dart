@@ -27,12 +27,10 @@ import 'favorite_cards.dart';
 import 'profile_data.dart';
 import 'stats.dart';
 
-/// The profile tab, as the Kotlin app's profile page: who's signed in,
-/// their favorites, their statistics, and what they watched last, then the
-/// account: switching server or account, and signing out. The Kotlin app
-/// keeps those two in Settings; here they're with the account they act on.
-/// Offline it's the person and the account rows, since the rest is the
-/// server's.
+/// The profile tab: who's signed in, their favorites, their statistics, and
+/// what they watched last, then the account: switching server or account, and
+/// signing out, here with the account they act on. Offline it's the person and
+/// the account rows, since the rest is the server's.
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -441,8 +439,7 @@ class _RecentRail extends StatelessWidget {
   }
 }
 
-/// An admin's way to the requests, with how many need them, as the
-/// Kotlin app's inbox beside Settings on the profile.
+/// An admin's way to the requests, with how many need them.
 class _Requests extends ConsumerWidget {
   const _Requests();
 

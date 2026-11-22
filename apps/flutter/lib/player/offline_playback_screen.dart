@@ -22,8 +22,8 @@ import 'player.dart';
 import 'player_controls.dart';
 import 'player_preferences.dart';
 
-/// `/play/:id`: a finished download of the file plays from the device, as
-/// in the Kotlin app, online too; anything else asks the server.
+/// `/play/:id`: a finished download of the file plays from the device, online
+/// too; anything else asks the server.
 class PlayRoute extends ConsumerWidget {
   const PlayRoute({super.key, required this.id, this.startAt});
 
@@ -87,10 +87,9 @@ class _SettledState extends ConsumerState<_Settled> {
       : PlaybackScreen(itemId: widget.id, startAt: widget.startAt);
 }
 
-/// A download playing with no server to ask, the Kotlin app's
-/// `PlayerScreen` with `PlayerData.Local`: the same touch controls, the
-/// tracks the download holds, and where the person got to sent to the
-/// server, or kept for it while it's out of reach (`PendingProgress`).
+/// A download playing with no server to ask: the same touch controls, the
+/// tracks the download holds, and where the person got to sent to the server,
+/// or kept for it while it's out of reach (`PendingProgress`).
 class OfflinePlaybackScreen extends ConsumerStatefulWidget {
   const OfflinePlaybackScreen({required this.itemId, this.startAt, super.key});
 
@@ -220,8 +219,8 @@ class _OfflinePlaybackScreenState extends ConsumerState<OfflinePlaybackScreen> {
         deviceLanguage: device.language,
       );
       final server = download.server;
-      // The system's media controls show the server's artwork while it's
-      // the one in use, as the Kotlin app's do.
+      // The system's media controls show the server's artwork while it's the
+      // one in use.
       final api = ref.read(apiProvider);
       final artwork =
           api != null &&
@@ -277,10 +276,9 @@ class _OfflinePlaybackScreenState extends ConsumerState<OfflinePlaybackScreen> {
   }
 }
 
-/// Where the person got to in a download, to the server when it answers,
-/// as the Kotlin app's `PlayerController.report`: a report that goes
-/// through drops what waited; one that doesn't waits, with the sitting so
-/// far for the statistics. In offline mode it waits at once.
+/// Where the person got to in a download, to the server when it answers: a
+/// report that goes through drops what waited; one that doesn't waits, with the
+/// sitting so far for the statistics. In offline mode it waits at once.
 final class _Reporter {
   _Reporter(
     this._container, {
