@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'api/matinee_api.dart' show ImageTarget, TitleKind;
 import 'core/device.dart';
 import 'core/session.dart';
+import 'kit/route_page.dart';
 import 'kit/tv/tv_metrics.dart';
 import 'player/offline_playback_screen.dart';
 import 'player/player_lab.dart';
@@ -272,6 +273,27 @@ List<RouteBase> _authRoutes({required bool tv}) => [
   ),
 ];
 
+/// A page a phone or tablet opens over another, from [builder]: it slides
+/// in as the theme says, Cupertino's slide with the swipe back from the
+/// edge on iOS, and on Android the theme's transition with predictive Back.
+///
+/// Not left to go_router's `builder`: since 18 it picks the page by finding
+/// `material_ui`'s `MaterialApp`, doesn't see this app's, and gives every
+/// page no transition. A TV's pages are [_tv]'s, which fade.
+final class PushedRoute extends GoRoute {
+  PushedRoute({
+    required super.path,
+    required GoRouterWidgetBuilder builder,
+    super.parentNavigatorKey,
+  }) : super(
+         pageBuilder: (context, state) => kitPage(
+           key: state.pageKey,
+           name: state.name ?? state.path,
+           child: builder(context, state),
+         ),
+       );
+}
+
 /// One of them, which replaces the last without a slide: they are states of
 /// one place, not pages.
 GoRoute _authRoute(String path, Widget screen) => GoRoute(
@@ -333,56 +355,56 @@ List<RouteBase> _handsetRoutes() => [
       ),
     ],
   ),
-  GoRoute(
+  PushedRoute(
     path: Routes.favorites,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const FavoritesScreen(),
   ),
-  GoRoute(
+  PushedRoute(
     path: Routes.recent,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const RecentScreen(),
   ),
-  GoRoute(
+  PushedRoute(
     path: Routes.settings,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const SettingsScreen(),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/settings/:page',
     parentNavigatorKey: _rootKey,
     builder: (context, state) =>
         SettingsPageScreen(pageKey: state.pathParameters['page']!),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/licenses/:package',
     parentNavigatorKey: _rootKey,
     builder: (context, state) =>
         LicenseTextScreen(package: state.pathParameters['package']!),
   ),
-  GoRoute(
+  PushedRoute(
     path: Routes.linkDevice,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const LinkDeviceScreen(),
   ),
-  GoRoute(
+  PushedRoute(
     path: Routes.search,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const SearchScreen(),
   ),
   for (final (path, name) in _pages) _pending(path, name, root: true),
-  GoRoute(
+  PushedRoute(
     path: '/admin/library',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const LibraryEditorScreen(),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/admin/library/:id',
     parentNavigatorKey: _rootKey,
     builder: (context, state) =>
         LibraryEditorScreen(id: state.pathParameters['id']),
   ),
-  GoRoute(
+  PushedRoute(
     path: Routes.folderPicker,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => FolderPickerScreen(
@@ -392,24 +414,24 @@ List<RouteBase> _handsetRoutes() => [
       },
     ),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/admin/users/:id/access',
     parentNavigatorKey: _rootKey,
     builder: (context, state) =>
         UserAccessPage(userId: state.pathParameters['id']!),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/downloads/show/:titleId',
     parentNavigatorKey: _rootKey,
     builder: (context, state) =>
         DownloadsShowScreen(titleId: state.pathParameters['titleId']!),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/title/:id',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => TitleScreen(id: state.pathParameters['id']!),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/title/:id/season/:season',
     parentNavigatorKey: _rootKey,
     builder: (context, state) {
@@ -421,23 +443,23 @@ List<RouteBase> _handsetRoutes() => [
       );
     },
   ),
-  GoRoute(
+  PushedRoute(
     path: '/episode/:id',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => EpisodeScreen(id: state.pathParameters['id']!),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/requests',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const RequestsScreen(),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/requests/:list',
     parentNavigatorKey: _rootKey,
     builder: (context, state) =>
         RequestsScreen(list: state.pathParameters['list']),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/catalog/:kind/:provider/:providerId',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => CatalogScreen(
@@ -449,7 +471,7 @@ List<RouteBase> _handsetRoutes() => [
       ),
     ),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/catalog-browse/:kind',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => CatalogBrowseScreen(
@@ -458,7 +480,7 @@ List<RouteBase> _handsetRoutes() => [
       sort: state.uri.queryParameters['sort'],
     ),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/person/:name',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => PersonScreen(
@@ -466,13 +488,13 @@ List<RouteBase> _handsetRoutes() => [
       tmdbId: state.uri.queryParameters['tmdb'],
     ),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/identify/:titleId',
     parentNavigatorKey: _rootKey,
     builder: (context, state) =>
         IdentifyScreen(titleId: state.pathParameters['titleId']!),
   ),
-  GoRoute(
+  PushedRoute(
     path: '/images/:titleId',
     parentNavigatorKey: _rootKey,
     builder: (context, state) {
@@ -489,7 +511,7 @@ List<RouteBase> _handsetRoutes() => [
       );
     },
   ),
-  GoRoute(
+  PushedRoute(
     path: '/browse',
     parentNavigatorKey: _rootKey,
     builder: (context, state) => BrowseScreen(
@@ -514,7 +536,7 @@ List<RouteBase> _handsetRoutes() => [
       ),
     ),
   if (_hasPlayerLab)
-    GoRoute(
+    PushedRoute(
       path: Routes.playerLab,
       parentNavigatorKey: _rootKey,
       builder: (context, state) => const PlayerLab(),
