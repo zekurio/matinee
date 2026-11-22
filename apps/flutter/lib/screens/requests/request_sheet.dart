@@ -492,6 +492,17 @@ Future<void> showNotInterested(
     ),
   );
   if (picked != true) return;
+  await dismissRecommendation(container, l, item);
+}
+
+/// Leaves [item] out of the viewer's recommendations, as "Not interested"
+/// does on the phone's sheet and the TV's panel: the rows leave it out at
+/// once, and a toast says so, or why it didn't go.
+Future<void> dismissRecommendation(
+  ProviderContainer container,
+  AppLocalizations l,
+  CatalogTitleSummary item,
+) async {
   final api = container.read(apiProvider);
   final toasts = container.read(toastProvider);
   try {

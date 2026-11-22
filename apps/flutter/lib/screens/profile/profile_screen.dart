@@ -6,7 +6,6 @@ import '../../api/matinee_api.dart';
 import '../../core/device.dart';
 import '../../core/permissions.dart';
 import '../../core/session.dart';
-import '../../downloads/downloads.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/actions.dart' show mediaChangesProvider;
@@ -17,11 +16,11 @@ import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
 import '../requests/asked_rail.dart';
-import '../requests/discover.dart' show QueueList;
 import '../requests/request_words.dart' show formatCount;
 import '../requests/requests_data.dart' show profileAskedProvider;
 import '../requests/requests_hub.dart' show requestsProvider;
 import '../settings/settings_rows.dart';
+import '../shell/offline_note.dart';
 import '../sign_in/server_switcher.dart';
 import 'favorite_cards.dart';
 import 'profile_data.dart';
@@ -79,12 +78,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             _Header(user: user),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: _OfflineNote(
-                downloads: ref.watch(
-                  shownDownloadsProvider.select(
-                    (shown) => shown.values.any((entry) => entry.done),
-                  ),
-                ),
+              child: OfflineNote(
+                message: AppLocalizations.of(context).profileOffline,
               ),
             ),
             const _Account(),
@@ -460,7 +455,7 @@ class _Requests extends ConsumerWidget {
             icon: Lucide.inbox,
             title: l.webRequestsTitle,
             value: needsYou > 0 ? formatCount(needsYou, l) : null,
-            onPressed: () => context.push(Routes.requests(QueueList.waiting)),
+            onPressed: () => context.push(Routes.requestQueue),
           ),
         ],
       ),
@@ -498,34 +493,6 @@ class _Account extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// What the tab is offline: the profile waits for the server, and the
-/// downloads, when there are any, still play from their own tab.
-class _OfflineNote extends StatelessWidget {
-  const _OfflineNote({required this.downloads});
-
-  final bool downloads;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return EmptyState(
-      icon: Lucide.cloudOff,
-      title: l.unreachableOfflineTitle,
-      message: [
-        l.profileOffline,
-        if (downloads) l.unreachableOfflineDownloads,
-      ].join(' '),
-      action: downloads
-          ? MatineeButton(
-              look: ButtonLook.outline,
-              onPressed: () => context.go(Routes.downloads),
-              child: Text(l.downloadsTitle),
-            )
-          : null,
     );
   }
 }

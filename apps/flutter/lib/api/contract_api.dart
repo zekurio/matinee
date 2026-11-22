@@ -274,17 +274,48 @@ final class RequestsApi {
   }
 
   /// The account needs the `request.read` permission, and so does an API token.
-  /// `GET /requests/mine`
-  Future<RequestPage> mine({String? cursor, int? limit, String? filter}) {
+  /// `POST /requests/mine/live`
+  Stream<RequestPage> mineLive({
+    String? cursor,
+    int? limit,
+    List<String>? states,
+    String? kind,
+  }) {
+    final input = RequestsMineLiveInput(
+      cursor: cursor,
+      limit: limit,
+      states: states,
+      kind: kind,
+    );
+    final body = JsonBody(input.toJson());
+    return _transport.events(
+      'POST',
+      ['requests', 'mine', 'live'],
+      RequestPage.fromJson,
+      body: body,
+    );
+  }
+
+  /// The account needs the `request.read` permission, and so does an API token.
+  /// `POST /requests/mine`
+  Future<RequestPage> mine({
+    String? cursor,
+    int? limit,
+    List<String>? states,
+    String? kind,
+  }) {
+    final input = RequestsMineInput(
+      cursor: cursor,
+      limit: limit,
+      states: states,
+      kind: kind,
+    );
+    final body = JsonBody(input.toJson());
     return _transport.call(
-      'GET',
+      'POST',
       ['requests', 'mine'],
       RequestPage.fromJson,
-      query: {
-        'cursor': ?cursor,
-        'limit': ?limit?.toString(),
-        'filter': ?filter,
-      },
+      body: body,
     );
   }
 }
@@ -1880,24 +1911,48 @@ final class AdminRequestsApi {
   final ApiTransport _transport;
 
   /// The account needs the `adminRequest.read` permission, and so does an API token.
-  /// `GET /admin/requests`
-  Future<RequestQueue> queue({String? cursor, int? limit}) {
+  /// `POST /admin/requests`
+  Future<RequestQueue> queue({
+    String? cursor,
+    int? limit,
+    List<String>? states,
+    String? kind,
+  }) {
+    final input = AdminRequestsQueueInput(
+      cursor: cursor,
+      limit: limit,
+      states: states,
+      kind: kind,
+    );
+    final body = JsonBody(input.toJson());
     return _transport.call(
-      'GET',
+      'POST',
       ['admin', 'requests'],
       RequestQueue.fromJson,
-      query: {'cursor': ?cursor, 'limit': ?limit?.toString()},
+      body: body,
     );
   }
 
   /// The account needs the `adminRequest.read` permission, and so does an API token.
-  /// `GET /admin/requests/live`
-  Stream<RequestQueue> live({String? cursor, int? limit}) {
+  /// `POST /admin/requests/live`
+  Stream<RequestQueue> live({
+    String? cursor,
+    int? limit,
+    List<String>? states,
+    String? kind,
+  }) {
+    final input = AdminRequestsLiveInput(
+      cursor: cursor,
+      limit: limit,
+      states: states,
+      kind: kind,
+    );
+    final body = JsonBody(input.toJson());
     return _transport.events(
-      'GET',
+      'POST',
       ['admin', 'requests', 'live'],
       RequestQueue.fromJson,
-      query: {'cursor': ?cursor, 'limit': ?limit?.toString()},
+      body: body,
     );
   }
 

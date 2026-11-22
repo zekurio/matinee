@@ -1,12 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../api/matinee_api.dart';
 import '../../query/server_data.dart';
-import '../requests/requests_hub.dart' show requestsVersionProvider;
 
 /// What Home reads: the libraries, Continue watching, Next up, the featured
-/// titles, the recommendation rows, each library's newest titles, and what the
-/// viewer asked for, followed live.
+/// titles, the recommendation rows, and each library's newest titles.
 
 final librariesProvider = serverQuery((api) => api.libraries.list());
 
@@ -32,12 +27,3 @@ final recommendationsProvider = serverQuery(
 final shelfProvider = serverQueryFamily(
   (api, String library) => api.media.shelf(library, limit: 12),
 );
-
-/// What's on its way, and what came or was answered in the last three
-/// days: Home's "My requests".
-/// Fetched again when an ask, a cancel, or an answer changes what's on
-/// its way.
-final askedProvider = FutureProvider.autoDispose<RequestPage>((ref) {
-  ref.watch(requestsVersionProvider);
-  return serverApi(ref).requests.mine(limit: 24, filter: 'inProgress');
-}, retry: (_, _) => null);

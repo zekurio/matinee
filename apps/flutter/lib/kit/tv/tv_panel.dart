@@ -127,6 +127,12 @@ class TvPanelRoute<T> extends PopupRoute<T> {
 }
 
 /// A panel's frame at the right edge: its heading and its rows, which
+/// Between the panel's title and its first row.
+const _listTop = 20.0;
+
+/// A [TvListHeading]'s height with the gap under it.
+const _headingRoom = 40.0;
+
 /// scroll to keep the focused one in view.
 class TvSidePanel extends StatefulWidget {
   const TvSidePanel({
@@ -198,9 +204,11 @@ class _TvSidePanelState extends State<TvSidePanel> {
                         ),
                         child: Semantics(
                           header: true,
+                          // Three lines, so a long name with what's done
+                          // to it, as "… anfragen", reads whole.
                           child: Text(
                             title,
-                            maxLines: 2,
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                             style: TvType.headline.style(
                               color: colors.foreground,
@@ -237,29 +245,50 @@ class _TvSidePanelState extends State<TvSidePanel> {
                       )
                     else
                       Expanded(
-                        child: TvFollowFocus(
-                          controller: _scroll,
-                          rule: TvFollowFocus.clear(start: 20, end: 40),
-                          child: ListView(
+                        // Once scrolled, a row half under the title fades
+                        // out over the room the focused row keeps above
+                        // it, rather than read as a row cut against it.
+                        // At the top nothing fades, the first row least.
+                        child: ListenableBuilder(
+                          listenable: _scroll,
+                          builder: (context, list) => TvFadeTop(
+                            fade:
+                                _scroll.hasClients &&
+                                    _scroll.position.pixels > 0
+                                ? _listTop + _headingRoom - 4
+                                : 0,
+                            child: list!,
+                          ),
+                          child: TvFollowFocus(
                             controller: _scroll,
-                            scrollCacheExtent: const ScrollCacheExtent.pixels(
-                              4000,
+                            // Coming back up, room above the row for a
+                            // heading over it, so a group's first row shows
+                            // with its heading.
+                            rule: TvFollowFocus.clear(
+                              start: _listTop + _headingRoom,
+                              end: 40,
                             ),
-                            padding: const EdgeInsets.fromLTRB(
-                              TvPanels.listPadding,
-                              20,
-                              TvPanels.listPadding,
-                              Overscan.vertical + 16,
-                            ),
-                            children: [
-                              for (final (index, row) in rows.indexed)
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    top: index == 0 ? 0 : 4,
+                            child: ListView(
+                              controller: _scroll,
+                              scrollCacheExtent: const ScrollCacheExtent.pixels(
+                                4000,
+                              ),
+                              padding: const EdgeInsets.fromLTRB(
+                                TvPanels.listPadding,
+                                _listTop,
+                                TvPanels.listPadding,
+                                Overscan.vertical + 16,
+                              ),
+                              children: [
+                                for (final (index, row) in rows.indexed)
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      top: index == 0 ? 0 : 4,
+                                    ),
+                                    child: row,
                                   ),
-                                  child: row,
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -276,10 +305,11 @@ class _TvSidePanelState extends State<TvSidePanel> {
 
 /// A choice in a [showTvPicker] panel.
 class TvOption<T> {
-  const TvOption(this.value, this.label);
+  const TvOption(this.value, this.label, {this.detail});
 
   final T value;
   final String label;
+  final String? detail;
 }
 
 /// A panel to pick one of [options], [current] checked and focused first.
@@ -303,6 +333,9 @@ Future<T?> showTvPicker<T>(
           quiet: true,
           checked: option.value == current,
           autofocus: option.value == current,
+          trailing: option.detail == null
+              ? null
+              : TvListValue(option.detail!, chevron: false),
           onPressed: () => Navigator.of(context).pop(option),
         ),
     ],

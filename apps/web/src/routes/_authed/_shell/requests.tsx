@@ -1,37 +1,17 @@
-import { t } from "@matinee/contracts/schema"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 
 import { QueuePage } from "@/components/requests/queue-page"
-import { QUEUE_LISTS } from "@/components/requests/request-queue"
+import { RequestSearch } from "@/components/requests/request-filter"
 import { runsQueue } from "@/lib/permissions"
 
-/** Waiting is where the queue opens, so the URL leaves it out. */
-const RequestsSearch = t.object({
-  list: t.enum(QUEUE_LISTS).exclude(["waiting"]).optional().catch(undefined),
-})
-
-/** The queue of everyone's requests, for whoever runs it. */
+/**
+ * Everyone's requests in one list, for whoever runs the queue, kept to
+ * the states and kind the URL names.
+ */
 export const Route = createFileRoute("/_authed/_shell/requests")({
-  validateSearch: RequestsSearch,
+  validateSearch: RequestSearch,
   beforeLoad: ({ context }) => {
     if (!runsQueue(context.user)) throw redirect({ to: "/" })
   },
-  component: RequestsRoute,
+  component: QueuePage,
 })
-
-function RequestsRoute() {
-  const { list = "waiting" } = Route.useSearch()
-  const navigate = Route.useNavigate()
-  return (
-    <QueuePage
-      list={list}
-      onList={(next) =>
-        void navigate({
-          search: { list: next === "waiting" ? undefined : next },
-          replace: true,
-          resetScroll: false,
-        })
-      }
-    />
-  )
-}

@@ -290,12 +290,14 @@ class _TvPinnedListState extends State<TvPinnedList> {
 /// A grid of cards under a header that steps away once focus goes past the
 /// first row: [columns] across, it scrolls by whole rows, keeping the focused
 /// card in full view. Focus coming into it lands on the card it left. [line]
-/// names the focused card between the header and the grid, and has the top to
-/// itself while the header is away. [onNearEnd] asks for more as the last rows
-/// near. [scrollKey] changing, as a new sort, scrolls back to the top.
-/// [cellAspect] is a cell's width over its height, and [cellExtra] what a
-/// caption adds. With [cellWidth], as many columns as fit cells that wide,
-/// which then stretch to fill the row, so no strip is left at the end.
+/// names the focused card between the header and the grid, empty while the
+/// header has focus, and has the top to itself while the header is away.
+/// [onNearEnd] asks for more as the last rows near. [scrollKey] changing, as a
+/// new sort, scrolls back to the top. [cellAspect] is a cell's width over its
+/// height, and [cellExtra] what a caption adds. With [cellWidth], as many
+/// columns as fit cells that wide, which then stretch to fill the row, so no
+/// strip is left at the end. With [pinHeader], the header stays however far
+/// the grid scrolls, for one that's the way off every card, as a page's tabs.
 class TvPosterGrid extends StatefulWidget {
   const TvPosterGrid({
     super.key,
@@ -312,6 +314,7 @@ class TvPosterGrid extends StatefulWidget {
     this.onNearEnd,
     this.scrollKey,
     this.footer,
+    this.pinHeader = false,
   });
 
   final TvFocusMemory memory;
@@ -329,6 +332,7 @@ class TvPosterGrid extends StatefulWidget {
   final VoidCallback? onNearEnd;
   final Object? scrollKey;
   final Widget? footer;
+  final bool pinHeader;
 
   @override
   State<TvPosterGrid> createState() => _TvPosterGridState();
@@ -347,6 +351,8 @@ class _TvPosterGridState extends State<TvPosterGrid> {
   void initState() {
     super.initState();
     _scroll.addListener(_nearEnd);
+    // A grid that starts with its cards asks for more as one that gets them.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _nearEnd());
   }
 
   @override
@@ -403,7 +409,7 @@ class _TvPosterGridState extends State<TvPosterGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final shown = _focusRow < 1;
+    final shown = widget.pinHeader || _focusRow < 1;
     final header = widget.header;
     final line = widget.line;
     return Column(
@@ -440,7 +446,12 @@ class _TvPosterGridState extends State<TvPosterGrid> {
               end: shown ? TvPage.end : TvPage.end + TvGrid.clockRoom,
               top: line != null && shown ? TvGrid.lineGap : TvGrid.top,
             ),
-            child: SizedBox(height: widget.lineHeight, child: line),
+            // The header's controls name no card, so the line is empty
+            // while one has focus.
+            child: SizedBox(
+              height: widget.lineHeight,
+              child: _focusRow < 0 ? null : line,
+            ),
           ),
         Expanded(
           child: Padding(

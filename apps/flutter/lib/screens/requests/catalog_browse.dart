@@ -30,14 +30,15 @@ import 'requests_hub.dart';
 /// the rest ask, as on Explore.
 
 /// Whether a browse lists the viewer's recommendations, whose cards offer
-/// "Not interested".
-bool _recommends(CatalogFilters filters) => filters.recommended == true;
+/// "Not interested", on the phone and the TV.
+bool recommends(CatalogFilters filters) => filters.recommended == true;
 
 /// Best match only among recommendations, as the server has it.
-bool _sortFits(String sort, CatalogFilters filters) =>
-    sort != CatalogSort.forYou || _recommends(filters);
+bool sortFits(String sort, CatalogFilters filters) =>
+    sort != CatalogSort.forYou || recommends(filters);
 
-String _sortWord(String sort, AppLocalizations l) => switch (sort) {
+/// An order's name, as the sort offers it.
+String sortWord(String sort, AppLocalizations l) => switch (sort) {
   CatalogSort.forYou => l.webDiscoverBrowseSortForYou,
   CatalogSort.scoreHigh => l.webFiltersSortScoreHigh,
   CatalogSort.scoreLow => l.webFiltersSortScoreLow,
@@ -88,7 +89,7 @@ CardDetail? browseDetail(
 }
 
 /// [filters] with the fields given changed; a getter, so null can be set.
-CatalogFilters _with(
+CatalogFilters withFilters(
   CatalogFilters filters, {
   List<int>? genres,
   ValueGetter<int?>? yearFrom,
@@ -201,22 +202,22 @@ class _CatalogBrowseScreenState extends ConsumerState<CatalogBrowseScreen> {
           ListBarButton(
             icon: Lucide.listFilter,
             label: active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle,
-            active: active > 0,
+            count: active,
             onPressed: () => _showFilters(context, kind, ready, _choices),
           ),
           Menu(
             side: MenuSide.end,
             trigger: (context, toggle, open, focusNode) => ListBarButton(
               icon: Lucide.arrowUpDown,
-              label: l.browseSortCurrent(_sortWord(choices.sort, l)),
+              label: l.browseSortCurrent(sortWord(choices.sort, l)),
               focusNode: focusNode,
               onPressed: toggle,
             ),
             children: [
               for (final sort in ready.sorts)
-                if (_sortFits(sort, choices.filters))
+                if (sortFits(sort, choices.filters))
                   MenuItem(
-                    label: _sortWord(sort, l),
+                    label: sortWord(sort, l),
                     selected: sort == choices.sort,
                     onPressed: () =>
                         _choices.value = (filters: choices.filters, sort: sort),
@@ -232,11 +233,14 @@ class _CatalogBrowseScreenState extends ConsumerState<CatalogBrowseScreen> {
 
 /// Changes the filters, and with them a sort that no longer fits: best
 /// match goes with the recommendations, and back to popular without them.
-void _change(ValueNotifier<BrowseChoices> choices, CatalogFilters filters) {
+void changeChoices(
+  ValueNotifier<BrowseChoices> choices,
+  CatalogFilters filters,
+) {
   final sort = choices.value.sort;
   choices.value = (
     filters: filters,
-    sort: _sortFits(sort, filters) ? sort : CatalogSort.popular,
+    sort: sortFits(sort, filters) ? sort : CatalogSort.popular,
   );
 }
 
@@ -291,7 +295,7 @@ class _BrowseGridState extends ConsumerState<_BrowseGrid> {
       _key = key;
     }
     final pages = ref.watch(browsePagesProvider(key));
-    final recommended = _recommends(choices.filters);
+    final recommended = recommends(choices.filters);
     final hidden = recommended
         ? ref.watch(hiddenRecommendationsProvider)
         : const <String>{};
@@ -300,7 +304,7 @@ class _BrowseGridState extends ConsumerState<_BrowseGrid> {
         if (!hidden.contains(refKey(item.ref))) item,
     ];
     final filtered = filterCount(choices.filters) > 0;
-    void clear() => _change(widget.choices, noFilters);
+    void clear() => changeChoices(widget.choices, noFilters);
     final clearButton = MatineeButton(
       look: ButtonLook.outline,
       onPressed: clear,
@@ -471,7 +475,7 @@ void _showFilters(
               MatineeButton(
                 look: ButtonLook.ghost,
                 leading: Lucide.x,
-                onPressed: () => _change(choices, noFilters),
+                onPressed: () => changeChoices(choices, noFilters),
                 child: Text(l.browseClearFilters),
               ),
             const Spacer(),
@@ -485,7 +489,7 @@ void _showFilters(
           kind: kind,
           options: options,
           choices: value,
-          onChange: (filters) => _change(choices, filters),
+          onChange: (filters) => changeChoices(choices, filters),
         ),
       ),
     ),
@@ -555,7 +559,7 @@ class _FilterPanel extends ConsumerWidget {
                 if (filters.requestable == true) 'requestable',
               ],
               onChanged: (picked) => onChange(
-                _with(
+                withFilters(
                   filters,
                   recommended: () =>
                       picked.contains('recommended') ? true : null,
@@ -576,7 +580,7 @@ class _FilterPanel extends ConsumerWidget {
                 ],
                 value: [for (final id in filters.genres ?? <int>[]) '$id'],
                 onChanged: (picked) => onChange(
-                  _with(
+                  withFilters(
                     filters,
                     genres: [for (final id in picked) ?int.tryParse(id)],
                   ),
@@ -596,7 +600,7 @@ class _FilterPanel extends ConsumerWidget {
               yearWords(l),
             ),
             onCommit: (low, high) => onChange(
-              _with(
+              withFilters(
                 filters,
                 yearFrom: () => low?.round(),
                 yearTo: () => high?.round(),
@@ -617,7 +621,7 @@ class _FilterPanel extends ConsumerWidget {
               panelWords(l),
             ),
             onCommit: (low, high) => onChange(
-              _with(filters, scoreMin: () => low, scoreMax: () => high),
+              withFilters(filters, scoreMin: () => low, scoreMax: () => high),
             ),
           ),
           if (options.votes.isNotEmpty)
@@ -643,7 +647,7 @@ class _FilterPanel extends ConsumerWidget {
                 ],
                 value: filters.votesMin?.toString(),
                 onChanged: (votes) => onChange(
-                  _with(
+                  withFilters(
                     filters,
                     votesMin: () => votes == null ? null : int.tryParse(votes),
                   ),
@@ -664,7 +668,7 @@ class _FilterPanel extends ConsumerWidget {
                 ],
                 value: filters.rating,
                 onChanged: (rating) =>
-                    onChange(_with(filters, rating: () => rating)),
+                    onChange(withFilters(filters, rating: () => rating)),
               ),
             ),
           if (languages.isNotEmpty)
@@ -677,7 +681,8 @@ class _FilterPanel extends ConsumerWidget {
                   context,
                   languages,
                   filters.language,
-                  (picked) => onChange(_with(filters, language: () => picked)),
+                  (picked) =>
+                      onChange(withFilters(filters, language: () => picked)),
                 ),
                 child: Align(
                   alignment: AlignmentDirectional.centerStart,
@@ -705,7 +710,7 @@ class _FilterPanel extends ConsumerWidget {
               panelWords(l),
             ),
             onCommit: (low, high) => onChange(
-              _with(
+              withFilters(
                 filters,
                 runtimeMin: () => low?.round(),
                 runtimeMax: () => high?.round(),
