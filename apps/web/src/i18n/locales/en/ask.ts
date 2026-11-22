@@ -63,8 +63,8 @@ export default defineMessages("ask", {
   "ask.toast.failed": "Couldn't request {name}",
   "ask.toast.cancelFailed": "Couldn't cancel {name}",
 
-  // What the viewer requested: Home's row, the profile's section and its
-  // page. Beside the admin's "Requests", so it says whose. The page no
+  // What the viewer requested: the profile's section and its page.
+  // Beside the admin's "Requests", so it says whose. The page no
   // longer filters; "All", "In progress" and "Nothing on its way" stay
   // until the Flutter app stops using them.
   "ask.mine.title": "My requests",
