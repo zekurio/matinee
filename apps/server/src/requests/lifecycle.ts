@@ -1,6 +1,7 @@
 import type {
   CatalogRef,
   RemoteRef,
+  RequestState,
   ShowScope,
   WaitingDeclineReason,
 } from "@matinee/contracts"
@@ -27,6 +28,7 @@ import {
   or,
   count,
   sql,
+  type SQL,
 } from "drizzle-orm"
 
 import type { Access } from "../access/policy"
@@ -350,8 +352,31 @@ async function items(viewer: Viewer, rows: Row[]) {
       arrivedAt: row.arrivedAt,
       availability: state.availability,
       season: row.kind === "show" ? furthestSeason(state.seasons) : null,
+      state: stateOf(
+        row,
+        scopes.filter((scope) => scope.requestId === row.id),
+      ),
     }
   })
+}
+
+/**
+ * Where a request stands for whoever asked for it, as `inFlight` sorts
+ * it: declined, here once a film arrived or every season asked for
+ * did, waiting while nobody answered, else on its way. The queue says
+ * which of its own lists a request is in instead.
+ */
+function stateOf(
+  row: Row,
+  seasons: readonly { arrivedAt: Date | null }[],
+): RequestState {
+  if (row.status === "declined") return "declined"
+  const open =
+    row.kind === "movie"
+      ? row.arrivedAt === null
+      : seasons.length === 0 || seasons.some((season) => !season.arrivedAt)
+  if (!open) return "here"
+  return row.status === "asked" ? "waiting" : "onTheWay"
 }
 
 // How far along a season that isn't here is, for picking the one a
@@ -388,31 +413,42 @@ async function itemById(viewer: Viewer, id: string) {
   return item
 }
 
-const Cursor = t.object({ at: t.string().datetime(), id: t.uuid() })
-function cursorBefore(
-  cursor: string | undefined,
-  column: typeof request.createdAt | ReturnType<typeof sql>,
-) {
-  if (!cursor) return undefined
-  let decoded: t.infer<typeof Cursor>
+const Cursor = t.object({
+  at: t.string().datetime(),
+  id: t.uuid(),
+  /** In `mine`, whether the last row was in flight, which sort first. */
+  open: t.boolean().optional(),
+})
+function decodeCursor(cursor: string) {
   try {
-    decoded = Cursor.parse(
-      JSON.parse(Buffer.from(cursor, "base64url").toString()),
-    )
+    return Cursor.parse(JSON.parse(Buffer.from(cursor, "base64url").toString()))
   } catch {
     throw new ORPCError("BAD_REQUEST", {
       message: "Reload this list and try again.",
     })
   }
+}
+function cursorBefore(
+  cursor: string | undefined,
+  column: typeof request.createdAt | ReturnType<typeof sql>,
+) {
+  if (!cursor) return undefined
+  const decoded = decodeCursor(cursor)
   return sql`(${column}, ${request.id}) < (${new Date(decoded.at)}, ${decoded.id})`
 }
-function nextCursor(rows: Row[], limit: number, arrival = false) {
+function nextCursor(
+  rows: Row[],
+  limit: number,
+  arrival = false,
+  open?: boolean,
+) {
   const last = rows[limit - 1]
   return rows.length > limit && last
     ? Buffer.from(
         JSON.stringify({
           at: arrival ? (last.arrivedAt ?? last.declinedAt) : last.createdAt,
           id: last.id,
+          open,
         }),
       ).toString("base64url")
     : null
@@ -457,6 +493,51 @@ function inProgress() {
   )
 }
 
+/**
+ * A request not finished yet, as `stateOf` has it: not declined, and a
+ * film that hasn't arrived, or a show with a season asked for that
+ * hasn't, or that waits for its first new one. Waiting ones count.
+ */
+function inFlight() {
+  const open = db
+    .select({ one: sql`1` })
+    .from(requestSeason)
+    .where(
+      and(
+        eq(requestSeason.requestId, request.id),
+        isNull(requestSeason.arrivedAt),
+      ),
+    )
+  const asked = db
+    .select({ one: sql`1` })
+    .from(requestSeason)
+    .where(eq(requestSeason.requestId, request.id))
+  return and(
+    ne(request.status, "declined"),
+    or(
+      and(eq(request.kind, "movie"), isNull(request.arrivedAt)),
+      and(
+        ne(request.kind, "movie"),
+        or(sql`exists ${open}`, sql`not exists ${asked}`),
+      ),
+    ),
+  )
+}
+
+/**
+ * The rows after `cursor` in `mine`'s order: in flight first, then
+ * finished, each newest first. A cursor from before that order counts
+ * as in flight.
+ */
+function mineAfter(cursor: string | undefined, open: SQL) {
+  if (!cursor) return undefined
+  const decoded = decodeCursor(cursor)
+  const older = sql`(${request.createdAt}, ${request.id}) < (${new Date(decoded.at)}, ${decoded.id})`
+  return decoded.open === false
+    ? and(sql`not ${open}`, older)
+    : or(and(open, older), sql`not ${open}`)
+}
+
 /** The requests the viewer asked for or follows, among the libraries they see. */
 function followedBy(viewer: Viewer) {
   return and(
@@ -469,23 +550,29 @@ export async function mine(
   viewer: Viewer,
   input: { cursor?: string; limit: number; filter: "inProgress" | "all" },
 ) {
+  const open = sql`(${inFlight()})`
   const rows = await db
-    .select({ request })
+    .select({ request, open: sql<boolean>`${open}` })
     .from(request)
     .innerJoin(requestFollower, eq(requestFollower.requestId, request.id))
     .where(
       and(
         followedBy(viewer),
-        cursorBefore(input.cursor, request.createdAt),
+        mineAfter(input.cursor, open),
         input.filter === "inProgress" ? inProgress() : undefined,
       ),
     )
-    .orderBy(desc(request.createdAt), desc(request.id))
+    .orderBy(desc(open), desc(request.createdAt), desc(request.id))
     .limit(input.limit + 1)
   const requests = rows.map((row) => row.request)
   return {
     items: await items(viewer, requests.slice(0, input.limit)),
-    nextCursor: nextCursor(requests, input.limit),
+    nextCursor: nextCursor(
+      requests,
+      input.limit,
+      false,
+      rows[input.limit - 1]?.open,
+    ),
   }
 }
 
@@ -494,7 +581,12 @@ export async function queue(
   input: { cursor?: string; limit: number },
 ) {
   const visible = inLibraries(viewer, request.libraryId)
-  const waiting = and(visible, eq(request.status, "asked"))
+  // One whose file came while it waited is done, as here, not waiting.
+  const waiting = and(
+    visible,
+    eq(request.status, "asked"),
+    isNull(request.arrivedAt),
+  )
   const attention = and(
     visible,
     eq(request.status, "approved"),
@@ -536,7 +628,14 @@ export async function queue(
       db.select({ value: count() }).from(request).where(filter),
     ),
   )
-  const decorate = async (rows: Row[]) => {
+  /**
+   * The list a request is in is its state; done holds what arrived and
+   * what was declined.
+   */
+  const decorate = async (
+    rows: Row[],
+    list: Exclude<RequestState, "here" | "declined"> | "done",
+  ) => {
     const cards = await items(viewer, rows)
     if (!rows.length) return []
     const followers = await db
@@ -578,6 +677,7 @@ export async function queue(
       )
       return {
         ...card,
+        state: list === "done" ? doneState(row) : list,
         status: row.status,
         fulfilmentState: row.fulfilmentState,
         error: row.fulfilmentError,
@@ -628,10 +728,10 @@ export async function queue(
     })
   }
   return {
-    waiting: await decorate(lists[0] ?? []),
-    needsAttention: await decorate(lists[1] ?? []),
-    onTheWay: await decorate(lists[2] ?? []),
-    done: await decorate((lists[3] ?? []).slice(0, input.limit)),
+    waiting: await decorate(lists[0] ?? [], "waiting"),
+    needsAttention: await decorate(lists[1] ?? [], "needsAttention"),
+    onTheWay: await decorate(lists[2] ?? [], "onTheWay"),
+    done: await decorate((lists[3] ?? []).slice(0, input.limit), "done"),
     counts: {
       waiting: totals[0]?.[0]?.value ?? 0,
       needsAttention: totals[1]?.[0]?.value ?? 0,
@@ -640,6 +740,11 @@ export async function queue(
     },
     nextCursor: nextCursor(lists[3] ?? [], input.limit, true),
   }
+}
+
+/** A done request arrived, or was declined, given up on included. */
+function doneState(row: Row): RequestState {
+  return row.status === "declined" ? "declined" : "here"
 }
 
 /** Where a person opens a sent request in its connection's own app. */

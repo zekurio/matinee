@@ -898,6 +898,22 @@ abstract final class RequestStatus {
   static const all = <String>[asked, approved, declined];
 }
 
+abstract final class RequestState {
+  static const waiting = 'waiting';
+  static const needsAttention = 'needsAttention';
+  static const onTheWay = 'onTheWay';
+  static const here = 'here';
+  static const declined = 'declined';
+
+  static const all = <String>[
+    waiting,
+    needsAttention,
+    onTheWay,
+    here,
+    declined,
+  ];
+}
+
 abstract final class FulfilmentState {
   static const queued = 'queued';
   static const sent = 'sent';
@@ -977,6 +993,7 @@ final class RequestItem {
     required this.arrivedAt,
     required this.availability,
     required this.season,
+    required this.state,
   });
 
   factory RequestItem.fromJson(Object? json) {
@@ -990,6 +1007,7 @@ final class RequestItem {
       arrivedAt: fields['arrivedAt'] as String?,
       availability: Availability.fromJson(fields['availability']),
       season: readNullable(fields['season'], SeasonAvailability.fromJson),
+      state: fields['state'] as String,
     );
   }
 
@@ -1001,6 +1019,7 @@ final class RequestItem {
   final String? arrivedAt;
   final Availability availability;
   final SeasonAvailability? season;
+  final String state;
 
   JsonMap toJson() => {
     'id': id,
@@ -1011,6 +1030,7 @@ final class RequestItem {
     'arrivedAt': arrivedAt,
     'availability': availability.toJson(),
     'season': season?.toJson(),
+    'state': state,
   };
 }
 
@@ -1061,6 +1081,7 @@ final class AdminRequestItem {
     required this.arrivedAt,
     required this.availability,
     required this.season,
+    required this.state,
     required this.status,
     required this.fulfilmentState,
     required this.error,
@@ -1086,6 +1107,7 @@ final class AdminRequestItem {
       arrivedAt: fields['arrivedAt'] as String?,
       availability: Availability.fromJson(fields['availability']),
       season: readNullable(fields['season'], SeasonAvailability.fromJson),
+      state: fields['state'] as String,
       status: fields['status'] as String,
       fulfilmentState: fields['fulfilmentState'] as String?,
       error: fields['error'] as String?,
@@ -1121,6 +1143,7 @@ final class AdminRequestItem {
   final String? arrivedAt;
   final Availability availability;
   final SeasonAvailability? season;
+  final String state;
   final String status;
   final String? fulfilmentState;
   final String? error;
@@ -1143,6 +1166,7 @@ final class AdminRequestItem {
     'arrivedAt': arrivedAt,
     'availability': availability.toJson(),
     'season': season?.toJson(),
+    'state': state,
     'status': status,
     'fulfilmentState': fulfilmentState,
     'error': error,
