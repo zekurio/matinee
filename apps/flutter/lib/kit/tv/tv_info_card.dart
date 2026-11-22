@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/widgets.dart';
 
 import '../icon.dart';
@@ -35,8 +33,8 @@ abstract final class TvInfoCards {
 }
 
 /// A wide card on a TV: a poster on the left and lines about it on the
-/// right, from the top with an even gap, over [backdrop], darkened so the
-/// lines read on any picture.
+/// right, from the top with an even gap, on the theme's plain card surface
+/// and border so the words stay as easy to read as the theme makes them.
 /// The whole card is one focus target with the picture look, and Select
 /// runs [onPressed]. [width] null fills its cell.
 class TvInfoCard extends StatelessWidget {
@@ -46,7 +44,6 @@ class TvInfoCard extends StatelessWidget {
     required this.poster,
     required this.children,
     required this.onPressed,
-    this.backdrop,
     this.width = TvInfoCards.rowWidth,
     this.focusNode,
     this.label,
@@ -57,9 +54,6 @@ class TvInfoCard extends StatelessWidget {
 
   /// The poster, over [toneKey]'s tone until it loads.
   final Widget? poster;
-
-  /// Behind the whole card, as the same poster drawn soft.
-  final Widget? backdrop;
   final List<Widget> children;
   final VoidCallback onPressed;
   final double? width;
@@ -73,7 +67,6 @@ class TvInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     final poster = this.poster;
-    final backdrop = this.backdrop;
     return SizedBox(
       width: width,
       height: TvInfoCards.height,
@@ -87,75 +80,39 @@ class TvInfoCard extends StatelessWidget {
         builder: (context, focused) => TvPictureFocus(
           focused: focused,
           scale: TvInfoCards.focusScale,
-          child: Tone(
-            toneKey: toneKey,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Blurred, so faces and titles on the poster don't fight
-                // the lines over them; only its colours come through.
-                if (backdrop != null)
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: TvCards.radius,
+              border: Border.all(color: colors.border),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(TvInfoCards.padding),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: TvInfoCards.padding,
+                children: [
                   ExcludeSemantics(
-                    child: RepaintBoundary(
-                      child: ClipRect(
-                        child: ImageFiltered(
-                          imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                          child: backdrop,
-                        ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.all(Radius.circular(6)),
+                      child: SizedBox(
+                        width: TvInfoCards.posterWidth,
+                        height: TvInfoCards.posterHeight,
+                        child: Tone(toneKey: toneKey, child: poster),
                       ),
                     ),
                   ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: AlignmentDirectional.centerStart,
-                      end: AlignmentDirectional.centerEnd,
-                      colors: [
-                        colors.background.withValues(alpha: .55),
-                        colors.background.withValues(alpha: .78),
-                      ],
+                  Expanded(
+                    child: ExcludeSemantics(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: TvInfoCards.gap,
+                        children: children,
+                      ),
                     ),
                   ),
-                ),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: TvCards.radius,
-                    border: Border.all(
-                      color: colors.foreground.withValues(alpha: .1),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(TvInfoCards.padding),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: TvInfoCards.padding,
-                    children: [
-                      ExcludeSemantics(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.all(
-                            Radius.circular(6),
-                          ),
-                          child: SizedBox(
-                            width: TvInfoCards.posterWidth,
-                            height: TvInfoCards.posterHeight,
-                            child: Tone(toneKey: toneKey, child: poster),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: ExcludeSemantics(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            spacing: TvInfoCards.gap,
-                            children: children,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

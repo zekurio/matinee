@@ -713,10 +713,6 @@ class _Card extends StatelessWidget {
       onPressed: onPressed,
       onFocused: onFocused,
       poster: poster == null ? null : Picture([ArtSource(poster)]),
-      // The smallest size is enough behind the card's blur.
-      backdrop: poster == null
-          ? null
-          : Picture([ArtSource(poster, largest: ArtworkSize.thumb)]),
       children: [
         _CardText(heading),
         Text(
