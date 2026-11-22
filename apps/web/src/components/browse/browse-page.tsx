@@ -118,7 +118,11 @@ export function BrowsePage({
     <div>
       <PageHeader
         title={name}
-        description={groupLabel}
+        description={
+          counts
+            ? `${groupLabel} · ${tr("browse.titleCount", { count: counts.movie + counts.show })}`
+            : groupLabel
+        }
         actions={<HeaderControls {...controls} />}
         chips={<FilterChips inline active={chips} clear={list.clear} />}
         phoneActions={<PhoneControls {...controls} />}

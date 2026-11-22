@@ -128,6 +128,7 @@ export function KindPage({
   })
 
   const rows = titles.data?.pages.flatMap((page) => page.items) ?? []
+  const total = titles.data?.pages[0]?.total
   const options = list.options
   const chips = options
     ? activeTitleFilters(list.filters, options, list.change)
@@ -135,6 +136,8 @@ export function KindPage({
   const filtered = chips.length > 0
   const words = libraryKind[kind]
   const picker = ofKind.length > 1
+  const count =
+    total === undefined ? undefined : tr("browse.titleCount", { count: total })
   const controls: ListControlsProps = {
     sorts: list.sorts,
     sort: list.sort,
@@ -159,12 +162,24 @@ export function KindPage({
       <PageHeader
         title={title}
         description={
-          picker && (
-            <LibraryMenu
-              libraries={ofKind}
-              value={libraryId}
-              onChange={(next) => update({ library: next })}
-            />
+          picker ? (
+            <>
+              <LibraryMenu
+                libraries={ofKind}
+                value={libraryId}
+                onChange={(next) => update({ library: next })}
+              />
+              {count && (
+                <>
+                  <span aria-hidden className="mx-1.5">
+                    ·
+                  </span>
+                  {count}
+                </>
+              )}
+            </>
+          ) : (
+            count
           )
         }
         actions={<HeaderControls {...controls} />}
