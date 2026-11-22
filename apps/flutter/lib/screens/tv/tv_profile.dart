@@ -21,11 +21,8 @@ import '../profile/profile_data.dart';
 import 'tv_actions.dart';
 import 'tv_charts.dart';
 import 'tv_media.dart';
-import 'tv_sign_out.dart';
 
 abstract final class _Rows {
-  static const actions = 'actions';
-  static const signOut = 'signOut';
   static const recent = 'recent';
   static const seeAll = 'seeAll';
   static const ranges = 'ranges';
@@ -61,8 +58,8 @@ const _placeHeight = 40.0;
 const _edge = 56.0;
 
 /// The signed-in person on a TV, from the drawer's top entry: who they are,
-/// Sign out, what they watched last as a row of cards, then their statistics
-/// for a range: watch time over the range as bars, the other totals as large
+/// what they watched last as a row of cards, then their statistics for a
+/// range: watch time over the range as bars, the other totals as large
 /// figures, their most watched titles, their genres, where they stand on the
 /// leaderboard, and when in the week they watch. A board opens whole in the
 /// panel.
@@ -116,17 +113,19 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
     ref.listen(mediaChangesProvider, (_, _) => _returned(username));
     final profile = ref.watch(profileProvider(username));
     final loaded = profile.value;
-    // The first card they watched, rather than Sign out, once the profile
-    // shows whether there is one.
+    // The first card they watched, once the profile shows whether there is
+    // one. Without one, the range picked, once the statistics show whether
+    // the ranges stay: someone who never watched anything gets none, and the
+    // page has nothing to focus, so Left still opens the drawer.
     _memory.restore(context, () {
       final now = ref.read(profileProvider(username));
-      if (now.value case final value?) {
-        if (value.recent?.firstOrNull case final first?) {
-          return (_Rows.recent, first.item.id);
-        }
-        return (_Rows.actions, _Rows.signOut);
+      if (now.value?.recent?.firstOrNull case final first?) {
+        return (_Rows.recent, first.item.id);
       }
-      return now.hasError ? (_Rows.actions, _Rows.signOut) : null;
+      if (!now.hasValue && !now.hasError) return null;
+      final stats = ref.read(statsProvider(_statsQuery(username)));
+      if (!stats.hasValue && !stats.hasError) return null;
+      return (_Rows.ranges, _range);
     });
 
     // Into the ranges, the one picked rather than the chip under the card.
@@ -137,23 +136,6 @@ class _TvProfileScreenState extends ConsumerState<TvProfileScreen> {
     ];
     final sections = <Widget>[
       _Header(user: user, joined: loaded?.user.createdAt),
-      TvMemoryRow(
-        memory: _memory,
-        row: _Rows.actions,
-        child: Padding(
-          padding: const EdgeInsetsDirectional.only(start: TvPage.start),
-          child: Row(
-            children: [
-              TvButton(
-                label: l.shellSignOut,
-                icon: Lucide.logOut,
-                focusNode: _memory.node(_Rows.actions, _Rows.signOut),
-                onPressed: () => confirmTvSignOut(context, ref),
-              ),
-            ],
-          ),
-        ),
-      ),
       if (loaded == null && profile.hasError)
         _Notice(
           title: l.profileLoadFailed,

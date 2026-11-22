@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/rendering.dart'
-    show RenderSliverMultiBoxAdaptor, ScrollDirection;
+    show RenderSliverMultiBoxAdaptor, RenderViewport, ScrollDirection;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -905,7 +905,11 @@ typedef TvScrollRule = double Function(
 /// grid by whole rows. [child] is the scroll view. With [sectionTop], a page of
 /// sections, each a child of its list, the list only stops where a section
 /// starts [sectionTop] below its top, the gap between sections, so the one
-/// above has just gone: none is left cut at the top.
+/// above has just gone: none is left cut at the top. On such a page, the
+/// first row focus can reach brings the list back to its top when what's
+/// above it takes no focus, as a profile's header, so long as the row sits
+/// as the rule wants it there; Up from that row brings it back too, so the
+/// header is never out of reach.
 class TvFollowFocus extends StatefulWidget {
   const TvFollowFocus({
     super.key,
@@ -1017,11 +1021,101 @@ class _TvFollowFocusState extends State<TvFollowFocus> {
     );
     if (widget.sectionTop case final top?) {
       to = _sectionStop(target, position, to, start, length, viewport, top);
+      // Nothing above to focus: the top, which shows it, rather than a
+      // stop that leaves it scrolled away for good.
+      if (to > position.minScrollExtent) {
+        final from = _fromTop(node, target, view);
+        if (from != null &&
+            widget.rule(from, from + length, viewport).abs() < .5) {
+          to = position.minScrollExtent;
+        }
+      }
     }
     if ((to - position.pixels).abs() < .5) return;
     unawaited(
       position.animateTo(to, duration: widget.duration, curve: TvMotion.easing),
     );
+  }
+
+  /// Where [target], [node]'s, would start in [view] with the list at its
+  /// top, when nothing above it in the list takes focus, so it's the first
+  /// row there is to reach. Null when something does, or when the rows
+  /// above aren't all built, so what's there is unknown.
+  double? _fromTop(FocusNode node, RenderBox target, RenderBox view) {
+    final controller = widget.controller;
+    if (!controller.hasClients) return null;
+    final position = controller.position;
+    // The page's own scroll, the outermost under the view.
+    RenderViewport? viewport;
+    for (var parent = target.parent; parent != null && parent != view;) {
+      if (parent is RenderViewport) viewport = parent;
+      parent = parent.parent;
+    }
+    if (viewport == null) return null;
+    for (var sliver = viewport.firstChild; sliver != null;) {
+      if (sliver is RenderSliverMultiBoxAdaptor) {
+        final first = sliver.firstChild;
+        final built = first == null
+            ? sliver.constraints.scrollOffset <= 0
+            : sliver.indexOf(first) == 0;
+        if (!built) return null;
+      }
+      sliver = viewport.childAfter(sliver);
+    }
+    final top = target.localToGlobal(Offset.zero, ancestor: view).dy;
+    for (final other in _anchor.traversalDescendants) {
+      if (other == node || other.context == null) continue;
+      final box = other.context!.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) continue;
+      final bottom = box
+          .localToGlobal(Offset(0, box.size.height), ancestor: view)
+          .dy;
+      if (bottom <= top + .5) return null;
+    }
+    return top + position.pixels - position.minScrollExtent;
+  }
+
+  /// Up from the first row there is to reach, with the list away from its
+  /// top: back to the top, where what's above it shows, while the row is
+  /// still in full view there. Focus stays, and Up goes on as before.
+  KeyEventResult _key(FocusNode _, KeyEvent event) {
+    if (widget.sectionTop == null ||
+        widget.axis != Axis.vertical ||
+        event is KeyUpEvent ||
+        event.logicalKey != LogicalKeyboardKey.arrowUp) {
+      return KeyEventResult.ignored;
+    }
+    final node = FocusManager.instance.primaryFocus;
+    final controller = widget.controller;
+    if (node == null || !node.ancestors.contains(_anchor)) {
+      return KeyEventResult.ignored;
+    }
+    if (!controller.hasClients) return KeyEventResult.ignored;
+    final position = controller.position;
+    if (position.pixels <= position.minScrollExtent + .5) {
+      return KeyEventResult.ignored;
+    }
+    final target = node.context?.findRenderObject();
+    final view = context.findRenderObject();
+    if (target is! RenderBox || view is! RenderBox) {
+      return KeyEventResult.ignored;
+    }
+    if (!target.attached || !view.attached || !target.hasSize) {
+      return KeyEventResult.ignored;
+    }
+    final from = _fromTop(node, target, view);
+    if (from != null &&
+        from >= 0 &&
+        from + target.size.height <= view.size.height) {
+      unawaited(
+        position.animateTo(
+          position.minScrollExtent,
+          duration: widget.duration,
+          curve: TvMotion.easing,
+        ),
+      );
+    }
+    return KeyEventResult.ignored;
   }
 
   /// Where the list stops near [to] so its top cuts no section: the top,
@@ -1114,7 +1208,7 @@ class _TvFollowFocusState extends State<TvFollowFocus> {
     state: this,
     child: NotificationListener<ScrollNotification>(
       onNotification: _scrolled,
-      child: Focus(focusNode: _anchor, child: widget.child),
+      child: Focus(focusNode: _anchor, onKeyEvent: _key, child: widget.child),
     ),
   );
 }
