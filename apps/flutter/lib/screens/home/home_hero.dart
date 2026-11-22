@@ -80,10 +80,13 @@ class _HomeHeroState extends State<HomeHero> {
       !TickerMode.valuesOf(context).enabled;
 
   void _hold({bool? touched, bool? hovered, bool? focused, bool? held}) {
+    final wasHeld = _held;
     _touched = touched ?? _touched;
     _hovered = hovered ?? _hovered;
     _focused = focused ?? _focused;
     _held = held ?? _held;
+    // The button shows what a press will do, so it has to follow the hold.
+    if (_held != wasHeld) setState(() {});
     _restart();
   }
 
