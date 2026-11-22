@@ -80,7 +80,6 @@ AdminRequestItem _item(
     _follower('Cara'),
     _follower('Dan'),
   ],
-  'destinationDescription': 'Shows',
   'destinations': <Object>[],
   'remoteUrl': null,
   'diagnostics': <Object>[],
