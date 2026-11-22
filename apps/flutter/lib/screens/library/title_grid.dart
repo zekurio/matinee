@@ -8,7 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
-import '../shell/header.dart' show HeaderButton;
+import '../shell/header.dart' show CountBadge, HeaderButton;
 import 'filter_sheet.dart';
 import 'list_choices.dart';
 import 'list_words.dart';
@@ -219,22 +219,24 @@ class ActiveFilterRow extends StatelessWidget {
   }
 }
 
-/// An icon to press at the end of a list's heading, 48 square, in the
-/// accent while what it stands for is on.
+/// An icon to press at the end of a list's heading, 48 square, with how
+/// many filters are on at the icon's top-end corner when there are any.
 class ListBarButton extends StatelessWidget {
   const ListBarButton({
     super.key,
     required this.icon,
     required this.label,
     required this.onPressed,
-    this.active = false,
+    this.count = 0,
     this.focusNode,
   });
 
   final String icon;
   final String label;
   final VoidCallback? onPressed;
-  final bool active;
+
+  /// How many filters are on: the badge's number, and none at zero.
+  final int count;
   final FocusNode? focusNode;
 
   @override
@@ -248,14 +250,23 @@ class ListBarButton extends StatelessWidget {
       builder: (context, state) => SizedBox.square(
         dimension: 48,
         child: Center(
-          child: KitIcon(
-            icon,
-            size: 22,
-            color: active
-                ? colors.accent
-                : state == PressState.pressed
-                ? colors.mutedForeground
-                : colors.foreground,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              KitIcon(
+                icon,
+                size: 22,
+                color: state == PressState.pressed
+                    ? colors.mutedForeground
+                    : colors.foreground,
+              ),
+              if (count > 0)
+                PositionedDirectional(
+                  top: -6,
+                  end: -8,
+                  child: CountBadge(count),
+                ),
+            ],
           ),
         ),
       ),
@@ -264,8 +275,8 @@ class ListBarButton extends StatelessWidget {
 }
 
 /// The Filter button, once the server says what the filters offer. [header]
-/// makes it a tab header's button, 44 square with its count badge, instead of
-/// a list heading's, 48 and only tinted.
+/// makes it a tab header's button, 44 square, instead of a list heading's,
+/// 48; both carry the count badge.
 class FilterButton extends ConsumerWidget {
   const FilterButton({
     super.key,
@@ -303,7 +314,7 @@ class FilterButton extends ConsumerWidget {
     return ListBarButton(
       icon: Lucide.listFilter,
       label: label,
-      active: active > 0,
+      count: active,
       onPressed: open,
     );
   }

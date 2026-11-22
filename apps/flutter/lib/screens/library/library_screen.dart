@@ -13,6 +13,7 @@ import '../../query/refresh.dart';
 import '../../router.dart';
 import '../home/home_data.dart' show librariesProvider;
 import '../shell/header.dart';
+import '../shell/offline_note.dart';
 import '../shell/shell.dart' show tabReselectProvider;
 import 'filter_sheet.dart' show watchLanguageNames;
 import 'list_choices.dart';
@@ -502,14 +503,10 @@ class _Offline extends StatelessWidget {
   const _Offline();
 
   @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Center(
-      child: EmptyState(
-        icon: Lucide.cloudOff,
-        title: l.unreachableOfflineTitle,
-        message: l.unreachableOffline,
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+      child: OfflineNote(message: AppLocalizations.of(context).libraryOffline),
+    ),
+  );
 }

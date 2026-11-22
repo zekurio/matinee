@@ -53,4 +53,15 @@ void main() {
     expect(device.platform, 'future-console');
     expect(device.toJson(), json);
   });
+
+  // Explore reads the Requests row from this field, and an older server
+  // that sends none must still show Discover, with no row.
+  test("an older server's Discover reads without a Requests row", () {
+    final rails = DiscoverRails.fromJson({
+      'enabled': true,
+      'rails': <Object>[],
+      'browse': ['movie'],
+    });
+    expect(rails.requests, isNull);
+  });
 }

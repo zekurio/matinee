@@ -898,6 +898,22 @@ abstract final class RequestStatus {
   static const all = <String>[asked, approved, declined];
 }
 
+abstract final class RequestState {
+  static const waiting = 'waiting';
+  static const needsAttention = 'needsAttention';
+  static const onTheWay = 'onTheWay';
+  static const here = 'here';
+  static const declined = 'declined';
+
+  static const all = <String>[
+    waiting,
+    needsAttention,
+    onTheWay,
+    here,
+    declined,
+  ];
+}
+
 abstract final class FulfilmentState {
   static const queued = 'queued';
   static const sent = 'sent';
@@ -977,6 +993,7 @@ final class RequestItem {
     required this.arrivedAt,
     required this.availability,
     required this.season,
+    required this.state,
   });
 
   factory RequestItem.fromJson(Object? json) {
@@ -990,6 +1007,7 @@ final class RequestItem {
       arrivedAt: fields['arrivedAt'] as String?,
       availability: Availability.fromJson(fields['availability']),
       season: readNullable(fields['season'], SeasonAvailability.fromJson),
+      state: fields['state'] as String,
     );
   }
 
@@ -1001,6 +1019,7 @@ final class RequestItem {
   final String? arrivedAt;
   final Availability availability;
   final SeasonAvailability? season;
+  final String state;
 
   JsonMap toJson() => {
     'id': id,
@@ -1011,6 +1030,7 @@ final class RequestItem {
     'arrivedAt': arrivedAt,
     'availability': availability.toJson(),
     'season': season?.toJson(),
+    'state': state,
   };
 }
 
@@ -1061,6 +1081,7 @@ final class AdminRequestItem {
     required this.arrivedAt,
     required this.availability,
     required this.season,
+    required this.state,
     required this.status,
     required this.fulfilmentState,
     required this.error,
@@ -1069,7 +1090,6 @@ final class AdminRequestItem {
     required this.declinedAt,
     required this.connection,
     required this.followers,
-    required this.destinationDescription,
     required this.destinations,
     required this.remoteUrl,
     required this.diagnostics,
@@ -1086,6 +1106,7 @@ final class AdminRequestItem {
       arrivedAt: fields['arrivedAt'] as String?,
       availability: Availability.fromJson(fields['availability']),
       season: readNullable(fields['season'], SeasonAvailability.fromJson),
+      state: fields['state'] as String,
       status: fields['status'] as String,
       fulfilmentState: fields['fulfilmentState'] as String?,
       error: fields['error'] as String?,
@@ -1100,7 +1121,6 @@ final class AdminRequestItem {
         fields['followers'],
         AdminRequestItemFollower.fromJson,
       ),
-      destinationDescription: fields['destinationDescription'] as String,
       destinations: readList(
         fields['destinations'],
         AdminRequestDestination.fromJson,
@@ -1121,6 +1141,7 @@ final class AdminRequestItem {
   final String? arrivedAt;
   final Availability availability;
   final SeasonAvailability? season;
+  final String state;
   final String status;
   final String? fulfilmentState;
   final String? error;
@@ -1129,7 +1150,6 @@ final class AdminRequestItem {
   final String? declinedAt;
   final AdminRequestItemConnection? connection;
   final List<AdminRequestItemFollower> followers;
-  final String destinationDescription;
   final List<AdminRequestDestination> destinations;
   final String? remoteUrl;
   final List<AdminRequestItemDiagnostic> diagnostics;
@@ -1143,6 +1163,7 @@ final class AdminRequestItem {
     'arrivedAt': arrivedAt,
     'availability': availability.toJson(),
     'season': season?.toJson(),
+    'state': state,
     'status': status,
     'fulfilmentState': fulfilmentState,
     'error': error,
@@ -1151,7 +1172,6 @@ final class AdminRequestItem {
     'declinedAt': declinedAt,
     'connection': connection?.toJson(),
     'followers': followers.map((item) => item.toJson()).toList(),
-    'destinationDescription': destinationDescription,
     'destinations': destinations.map((item) => item.toJson()).toList(),
     'remoteUrl': remoteUrl,
     'diagnostics': diagnostics.map((item) => item.toJson()).toList(),
@@ -1243,7 +1263,7 @@ final class RequestQueue {
     required this.needsAttention,
     required this.onTheWay,
     required this.done,
-    required this.counts,
+    required this.doneCount,
     required this.nextCursor,
   });
 
@@ -1257,7 +1277,7 @@ final class RequestQueue {
       ),
       onTheWay: readList(fields['onTheWay'], AdminRequestItem.fromJson),
       done: readList(fields['done'], AdminRequestItem.fromJson),
-      counts: RequestQueueCounts.fromJson(fields['counts']),
+      doneCount: fields['doneCount'] as int,
       nextCursor: fields['nextCursor'] as String?,
     );
   }
@@ -1266,7 +1286,7 @@ final class RequestQueue {
   final List<AdminRequestItem> needsAttention;
   final List<AdminRequestItem> onTheWay;
   final List<AdminRequestItem> done;
-  final RequestQueueCounts counts;
+  final int doneCount;
   final String? nextCursor;
 
   JsonMap toJson() => {
@@ -1274,39 +1294,8 @@ final class RequestQueue {
     'needsAttention': needsAttention.map((item) => item.toJson()).toList(),
     'onTheWay': onTheWay.map((item) => item.toJson()).toList(),
     'done': done.map((item) => item.toJson()).toList(),
-    'counts': counts.toJson(),
+    'doneCount': doneCount,
     'nextCursor': nextCursor,
-  };
-}
-
-final class RequestQueueCounts {
-  const RequestQueueCounts({
-    required this.waiting,
-    required this.needsAttention,
-    required this.onTheWay,
-    required this.done,
-  });
-
-  factory RequestQueueCounts.fromJson(Object? json) {
-    final fields = json as JsonMap;
-    return RequestQueueCounts(
-      waiting: fields['waiting'] as int,
-      needsAttention: fields['needsAttention'] as int,
-      onTheWay: fields['onTheWay'] as int,
-      done: fields['done'] as int,
-    );
-  }
-
-  final int waiting;
-  final int needsAttention;
-  final int onTheWay;
-  final int done;
-
-  JsonMap toJson() => {
-    'waiting': waiting,
-    'needsAttention': needsAttention,
-    'onTheWay': onTheWay,
-    'done': done,
   };
 }
 
@@ -10212,6 +10201,69 @@ final class RequestsAddSeasonsInput {
   JsonMap toJson() => {'id': id, 'scope': scope.toJson()};
 }
 
+final class RequestsMineLiveInput {
+  const RequestsMineLiveInput({
+    this.cursor,
+    this.limit,
+    this.states,
+    this.kind,
+  });
+
+  factory RequestsMineLiveInput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return RequestsMineLiveInput(
+      cursor: fields['cursor'] as String?,
+      limit: fields['limit'] as int?,
+      states: readNullable(
+        fields['states'],
+        (value) => readList(value, (value) => value as String),
+      ),
+      kind: fields['kind'] as String?,
+    );
+  }
+
+  final String? cursor;
+  final int? limit;
+  final List<String>? states;
+  final String? kind;
+
+  JsonMap toJson() => {
+    'cursor': ?cursor,
+    'limit': ?limit,
+    'states': ?states,
+    'kind': ?kind,
+  };
+}
+
+final class RequestsMineInput {
+  const RequestsMineInput({this.cursor, this.limit, this.states, this.kind});
+
+  factory RequestsMineInput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return RequestsMineInput(
+      cursor: fields['cursor'] as String?,
+      limit: fields['limit'] as int?,
+      states: readNullable(
+        fields['states'],
+        (value) => readList(value, (value) => value as String),
+      ),
+      kind: fields['kind'] as String?,
+    );
+  }
+
+  final String? cursor;
+  final int? limit;
+  final List<String>? states;
+  final String? kind;
+
+  JsonMap toJson() => {
+    'cursor': ?cursor,
+    'limit': ?limit,
+    'states': ?states,
+    'kind': ?kind,
+  };
+}
+
 final class AuthSessionOutput {
   const AuthSessionOutput({required this.user});
 
@@ -11078,6 +11130,74 @@ final class FavoritesSetItemInput {
   final bool favorite;
 
   JsonMap toJson() => {'favorite': favorite};
+}
+
+final class AdminRequestsQueueInput {
+  const AdminRequestsQueueInput({
+    this.cursor,
+    this.limit,
+    this.states,
+    this.kind,
+  });
+
+  factory AdminRequestsQueueInput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return AdminRequestsQueueInput(
+      cursor: fields['cursor'] as String?,
+      limit: fields['limit'] as int?,
+      states: readNullable(
+        fields['states'],
+        (value) => readList(value, (value) => value as String),
+      ),
+      kind: fields['kind'] as String?,
+    );
+  }
+
+  final String? cursor;
+  final int? limit;
+  final List<String>? states;
+  final String? kind;
+
+  JsonMap toJson() => {
+    'cursor': ?cursor,
+    'limit': ?limit,
+    'states': ?states,
+    'kind': ?kind,
+  };
+}
+
+final class AdminRequestsLiveInput {
+  const AdminRequestsLiveInput({
+    this.cursor,
+    this.limit,
+    this.states,
+    this.kind,
+  });
+
+  factory AdminRequestsLiveInput.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return AdminRequestsLiveInput(
+      cursor: fields['cursor'] as String?,
+      limit: fields['limit'] as int?,
+      states: readNullable(
+        fields['states'],
+        (value) => readList(value, (value) => value as String),
+      ),
+      kind: fields['kind'] as String?,
+    );
+  }
+
+  final String? cursor;
+  final int? limit;
+  final List<String>? states;
+  final String? kind;
+
+  JsonMap toJson() => {
+    'cursor': ?cursor,
+    'limit': ?limit,
+    'states': ?states,
+    'kind': ?kind,
+  };
 }
 
 final class AdminRequestsApproveInput {

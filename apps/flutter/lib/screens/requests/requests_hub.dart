@@ -24,7 +24,7 @@ import 'request_words.dart';
 /// goes. A stream starts with the current state, so reconnecting loses
 /// nothing. What one screen hears, every screen shows, since a title's
 /// state is the same wherever it sits. An admin's queue streams once for
-/// the whole app, for Explore's way to the queue, the queue, and Add and
+/// the whole app, for Explore's Recent requests row, the overview, and Add and
 /// Decline on a title.
 
 /// A title's live answer: the title and each of its seasons.
@@ -36,6 +36,10 @@ typedef LiveEntry = ({
 /// How long the toast offers Undo. The server holds an ask that needs no
 /// approval for ten seconds.
 const undoWindow = Duration(seconds: 6);
+
+/// How many requests Explore's "Recent requests" row shows, and so how much
+/// of Done the admin's live queue carries. The heading opens the rest.
+const recentRequests = 20;
 
 /// Titles one stream follows at most, as the contract takes.
 const mostFollowed = 100;
@@ -49,6 +53,7 @@ final class RequestsState {
     this.held = const {},
     this.moves = const {},
     this.queue,
+    this.queueFailed = false,
   });
 
   /// The last word on each title, by [refKey]: from a stream, or from an
@@ -62,8 +67,9 @@ final class RequestsState {
   /// Titles, by [refKey], with an ask on its way to the server.
   final Set<String> busy;
 
-  /// Requests an admin answered that wait out the Undo before the answer
-  /// goes, by id.
+  /// Requests an admin answered, or a person took back, that wait out the
+  /// Undo before it goes, by id, and for a moment after while the lists
+  /// catch up.
   final Set<String> held;
 
   /// Where an admin chose to send waiting requests instead of where they
@@ -74,6 +80,10 @@ final class RequestsState {
   /// The admin's queue as the server streams it; null for everyone else
   /// and until it answers.
   final RequestQueue? queue;
+
+  /// The queue's stream failed before it said anything. It tries again on
+  /// its own, and [RequestsHub.retryQueue] at once.
+  final bool queueFailed;
 
   /// The library [item] goes to: the one an admin chose under "Goes to",
   /// else the one the server selected, else the one it's in.
@@ -130,6 +140,7 @@ final class RequestsState {
     Set<String>? held,
     Map<String, String>? moves,
     ValueGetter<RequestQueue?>? queue,
+    bool? queueFailed,
   }) => RequestsState(
     live: live ?? this.live,
     version: version ?? this.version,
@@ -137,6 +148,7 @@ final class RequestsState {
     held: held ?? this.held,
     moves: moves ?? this.moves,
     queue: queue == null ? this.queue : queue(),
+    queueFailed: queueFailed ?? this.queueFailed,
   );
 }
 
@@ -182,6 +194,7 @@ bool choosesLibrary(AdminRequestItem item) => item.destinations.length > 1;
 
 final class RequestsHub extends Notifier<RequestsState> {
   MatineeApi? _api;
+  StreamSubscription<RequestQueue>? _queue;
 
   @override
   RequestsState build() {
@@ -190,15 +203,32 @@ final class RequestsHub extends Notifier<RequestsState> {
     // Whoever runs the queue follows it: reading everyone's requests and
     // answering them, as the web's `runsQueue`.
     if (api != null && ref.watch(runsQueueProvider)) {
-      final queue = reconnecting(() => api.admin.requests.live(limit: 1))
-          .listen(
-            (queue) => state = state.copyWith(queue: () => queue),
-            // The queue stays as it was while the stream is down.
-            onError: (Object cause) {},
-          );
-      ref.onDispose(queue.cancel);
+      _followQueue(api);
+      ref.onDispose(() => unawaited(_queue?.cancel()));
     }
     return const RequestsState();
+  }
+
+  void _followQueue(MatineeApi api) {
+    unawaited(_queue?.cancel());
+    _queue = reconnecting(() => api.admin.requests.live(limit: recentRequests))
+        .listen(
+          (queue) =>
+              state = state.copyWith(queue: () => queue, queueFailed: false),
+          // The queue stays as it was while the stream is down; only a queue
+          // never heard says so.
+          onError: (Object cause) {
+            if (state.queue == null) state = state.copyWith(queueFailed: true);
+          },
+        );
+  }
+
+  /// Opens the queue again now, rather than after the wait.
+  void retryQueue() {
+    final api = _api;
+    if (api == null || !ref.read(runsQueueProvider)) return;
+    state = state.copyWith(queueFailed: false);
+    _followQueue(api);
   }
 
   ToastState get _toasts => ref.read(toastProvider);
@@ -341,40 +371,59 @@ final class RequestsHub extends Notifier<RequestsState> {
     bump();
   }
 
+  /// A person takes back their own request [id], from its card in
+  /// Explore's Recent requests row or My requests: the card leaves at once,
+  /// and the cancel goes once the toast's Undo has passed, as an admin's
+  /// answers are held. Without [undo], as on a TV that asked first, it goes
+  /// at once.
+  Future<void> withdraw(
+    AppLocalizations l,
+    String id,
+    String name, {
+    bool undo = true,
+  }) => _held(
+    l,
+    [id],
+    undo: undo,
+    message: l.requestsToastCancelled(name),
+    failed: l.webAskToastCancelFailed(name),
+    send: (api) => api.requests.cancel(RequestId(id: id)),
+  );
+
   /// An admin's answer to one request: Add or Decline a waiting one, Give
   /// up on an accepted one, or Allow requests again or Add after all for a
   /// declined one. The request leaves the lists at once, and the answer
   /// goes once the toast's Undo has passed, as the web's queue holds it.
+  /// Without [undo], as on a TV, whose toast can't take focus for Undo, it
+  /// goes at once.
   Future<void> answer(
     AppLocalizations l,
     AdminRequestItem item,
-    QueueAnswer answer,
-  ) async {
-    final api = _api;
-    if (api == null) return;
+    QueueAnswer answer, {
+    bool undo = true,
+  }) {
     final name = item.title.name;
     // Read now: the choice is the one made before Add was pressed.
     final movedTo = _movedTo(item);
-    _hold([item.id], true);
-    final result = await _toasts.show(
-      switch (answer) {
+    return _held(
+      l,
+      [item.id],
+      undo: undo,
+      message: switch (answer) {
         AddAnswer() => l.webRequestsToastAdded(name),
         DeclineAnswer() => l.webRequestsToastDeclined(name),
         GiveUpAnswer() => l.webRequestsToastGaveUp(name),
         AllowAgainAnswer() => l.webRequestsToastAllowedAgain(name),
         AddAfterAllAnswer() => l.webRequestsToastAddedAfterAll(name),
       },
-      actionLabel: l.webRequestsToastUndo,
-      duration: ToastDuration.indefinite,
-      within: undoWindow,
-    );
-    if (!ref.mounted) return;
-    if (result == ToastResult.action) {
-      _hold([item.id], false);
-      return;
-    }
-    try {
-      await switch (answer) {
+      failed: switch (answer) {
+        AddAnswer() => l.webRequestsToastAddFailed,
+        DeclineAnswer() => l.webRequestsToastDeclineFailed(name),
+        GiveUpAnswer() => l.webRequestsToastGiveUpFailed(name),
+        AllowAgainAnswer() => l.webRequestsToastAllowAgainFailed(name),
+        AddAfterAllAnswer() => l.webRequestsToastAddAfterAllFailed(name),
+      },
+      send: (api) => switch (answer) {
         AddAnswer() => api.admin.requests.approve(
           id: item.id,
           libraryId: movedTo,
@@ -394,33 +443,19 @@ final class RequestsHub extends Notifier<RequestsState> {
         AddAfterAllAnswer() => api.admin.requests.addAfterAll(
           RequestId(id: item.id),
         ),
-      };
-      if (ref.mounted) {
-        if (answer is AddAnswer) _settleMoves([item.id]);
-        bump();
-      }
-    } on Object catch (cause) {
-      _fail(l, switch (answer) {
-        AddAnswer() => l.webRequestsToastAddFailed,
-        DeclineAnswer() => l.webRequestsToastDeclineFailed(name),
-        GiveUpAnswer() => l.webRequestsToastGiveUpFailed(name),
-        AllowAgainAnswer() => l.webRequestsToastAllowAgainFailed(name),
-        AddAfterAllAnswer() => l.webRequestsToastAddAfterAllFailed(name),
-      }, cause);
-    }
-    // The stream has the answer by now, or the row comes back after a
-    // failure.
-    await Future<void>.delayed(const Duration(seconds: 1));
-    if (ref.mounted) _hold([item.id], false);
+      },
+      sent: answer is AddAnswer ? () => _settleMoves([item.id]) : null,
+    );
   }
 
-  /// Add for every request that waits, held for Undo as one.
+  /// Add for every request that waits, held for Undo as one, or sent at
+  /// once without [undo].
   Future<void> answerAll(
     AppLocalizations l,
-    List<AdminRequestItem> items,
-  ) async {
-    final api = _api;
-    if (api == null || items.isEmpty) return;
+    List<AdminRequestItem> items, {
+    bool undo = true,
+  }) {
+    if (items.isEmpty) return Future.value();
     final ids = [for (final item in items) item.id];
     // A move is one approve each, with its library; the rest go together.
     final moved = [
@@ -431,29 +466,66 @@ final class RequestsHub extends Notifier<RequestsState> {
       for (final id in ids)
         if (!moved.any((move) => move.$1 == id)) id,
     ];
-    _hold(ids, true);
-    final result = await _toasts.show(
-      l.webRequestsToastAddedMany(items.length),
-      actionLabel: l.webRequestsToastUndo,
-      duration: ToastDuration.indefinite,
-      within: undoWindow,
-    );
-    if (!ref.mounted) return;
-    if (result != ToastResult.action) {
-      try {
+    return _held(
+      l,
+      ids,
+      undo: undo,
+      message: l.webRequestsToastAddedMany(items.length),
+      failed: l.webRequestsToastAddFailed,
+      send: (api) async {
         for (final (id, library) in moved) {
           await api.admin.requests.approve(id: id, libraryId: library);
         }
         if (rest.isNotEmpty) await api.admin.requests.approveAll(ids: rest);
-        if (ref.mounted) {
-          _settleMoves(ids);
-          bump();
-        }
-        await Future<void>.delayed(const Duration(seconds: 1));
-      } on Object catch (cause) {
-        _fail(l, l.webRequestsToastAddFailed, cause);
+      },
+      sent: () => _settleMoves(ids),
+    );
+  }
+
+  /// Holds [ids] out of the lists while the toast says [message] with
+  /// Undo. Undo puts them back and nothing is sent, since the server has
+  /// no way to take these back; else [send] goes once the Undo has passed,
+  /// [sent] runs once the server took it, and the ids stay out a second
+  /// longer, by when the streams have the change, or bring the rows back
+  /// after a failure, which the toast words with [failed]. Without [undo]
+  /// the toast only says it, and [send] goes at once.
+  Future<void> _held(
+    AppLocalizations l,
+    List<String> ids, {
+    required String message,
+    required String failed,
+    required Future<void> Function(MatineeApi api) send,
+    VoidCallback? sent,
+    bool undo = true,
+  }) async {
+    final api = _api;
+    if (api == null) return;
+    _hold(ids, true);
+    if (undo) {
+      final result = await _toasts.show(
+        message,
+        actionLabel: l.webRequestsToastUndo,
+        duration: ToastDuration.indefinite,
+        within: undoWindow,
+      );
+      if (!ref.mounted) return;
+      if (result == ToastResult.action) {
+        _hold(ids, false);
+        return;
       }
+    } else {
+      unawaited(_toasts.show(message));
     }
+    try {
+      await send(api);
+      if (ref.mounted) {
+        sent?.call();
+        bump();
+      }
+    } on Object catch (cause) {
+      _fail(l, failed, cause);
+    }
+    await Future<void>.delayed(const Duration(seconds: 1));
     if (ref.mounted) _hold(ids, false);
   }
 

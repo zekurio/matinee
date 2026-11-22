@@ -170,6 +170,50 @@ StateWord? stateWord(
   _ => null,
 };
 
+/// The queue as one list, the server's lists one after another in its
+/// order: waiting, needs attention, on the way, then [done] (the queue's
+/// own when null), without the ids in [held]. Each card reads its state
+/// from the request itself.
+List<AdminRequestItem> queueInOrder(
+  RequestQueue queue, {
+  Set<String> held = const {},
+  List<AdminRequestItem>? done,
+}) => [
+  for (final list in [
+    queue.waiting,
+    queue.needsAttention,
+    queue.onTheWay,
+    done ?? queue.done,
+  ])
+    for (final item in list)
+      if (!held.contains(item.id)) item,
+];
+
+/// Done as the overview lists it: the newest the live queue holds, then
+/// what the pages read from the start of Done have after the live list's
+/// last, so a request that left Done since a page was read doesn't come
+/// back from it. [more] says whether a further page is still to be read.
+({List<AdminRequestItem> items, bool more}) doneInOrder(
+  List<AdminRequestItem> live, {
+  required bool liveIsAll,
+  required List<AdminRequestItem> paged,
+  required bool pagedDone,
+}) {
+  if (liveIsAll) return (items: live, more: false);
+  final last = live.lastOrNull;
+  final at = last == null ? -1 : paged.indexWhere((p) => p.id == last.id);
+  if (last != null && at < 0) return (items: live, more: !pagedDone);
+  final seen = {for (final item in live) item.id};
+  return (
+    items: [
+      ...live,
+      for (final item in paged.skip(at + 1))
+        if (!seen.contains(item.id)) item,
+    ],
+    more: !pagedDone,
+  );
+}
+
 /// The glyph in a catalog card's corner.
 enum Glyph { clock, ring, calendar, slash }
 
@@ -644,3 +688,13 @@ String? scopeText(ShowScope? scope, AppLocalizations l) {
   }
   return scope.future ? l.webRequestsScopeAndFuture(seasons) : seasons;
 }
+
+/// A [RequestState]'s word, as its badge and the filter's chip say it.
+String requestStateWord(String state, AppLocalizations l) => switch (state) {
+  RequestState.needsAttention => l.webRequestsStateNeedsAttention,
+  RequestState.onTheWay => l.webRequestsStateOnTheWay,
+  RequestState.here => l.webRequestsStateHere,
+  RequestState.declined => l.webRequestsStateDeclined,
+  // Waiting, and a state this app doesn't know yet.
+  _ => l.webRequestsStateWaiting,
+};

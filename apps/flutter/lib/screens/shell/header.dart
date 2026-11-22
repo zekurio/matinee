@@ -191,7 +191,7 @@ class HeaderButton extends StatelessWidget {
                 PositionedDirectional(
                   top: -6,
                   end: -8,
-                  child: _CountBadge(count),
+                  child: CountBadge(count),
                 ),
             ],
           ),
@@ -201,11 +201,12 @@ class HeaderButton extends StatelessWidget {
   }
 }
 
-/// How many filters are on, at an icon's corner: a filled accent circle
+/// How many filters are on, at an icon's corner, on a header's buttons and
+/// a list heading's: a filled accent circle
 /// with the number in its foreground, grown with the text so it stays
 /// legible at the largest size.
-class _CountBadge extends StatelessWidget {
-  const _CountBadge(this.count);
+class CountBadge extends StatelessWidget {
+  const CountBadge(this.count, {super.key});
 
   final int count;
 

@@ -248,18 +248,60 @@ abstract class CursorList<T> extends Notifier<CursorPages<T>> {
   }
 }
 
-/// What the viewer asked for: on its way and lately come or answered
-/// (`inProgress`), or all of it.
-abstract final class MineFilter {
-  static const inProgress = 'inProgress';
-  static const all = 'all';
+/// What a list of requests is kept to, as `requests.mine` and the queue
+/// take it: any of [states], in the badges' order, and [kind]. No states
+/// keeps every state, and no kind both kinds. The server does the keeping,
+/// by the same rule the badges read.
+@immutable
+final class RequestFilter {
+  const RequestFilter({this.states = const [], this.kind});
+
+  static const none = RequestFilter();
+
+  /// [RequestState]s.
+  final List<String> states;
+
+  /// A [TitleKind], or null for both.
+  final String? kind;
+
+  /// How many filters are on: each state, and the kind.
+  int get count => states.length + (kind == null ? 0 : 1);
+
+  bool get isEmpty => count == 0;
+
+  /// This filter with [states] instead, in the badges' order.
+  RequestFilter withStates(Iterable<String> states) => RequestFilter(
+    states: [
+      for (final state in RequestState.all)
+        if (states.contains(state)) state,
+    ],
+    kind: kind,
+  );
+
+  RequestFilter withKind(String? kind) =>
+      RequestFilter(states: states, kind: kind);
+
+  @override
+  bool operator ==(Object other) =>
+      other is RequestFilter &&
+      other.kind == kind &&
+      listEquals(other.states, states);
+
+  @override
+  int get hashCode => Object.hash(kind, Object.hashAll(states));
 }
 
-final class MyRequests extends CursorList<RequestItem> {
-  MyRequests(this.filter);
+/// A page of the viewer's requests after another's cursor, under the
+/// filter that cursor came with.
+typedef OlderKey = ({String after, RequestFilter filter});
 
-  /// A [MineFilter].
-  final String filter;
+/// The viewer's requests past the first page `requests.mineLive` sends,
+/// from the key's cursor on, under its filter: what `requests.mine` lists,
+/// in progress first, then finished, each newest first.
+final class OlderRequests extends CursorList<RequestItem> {
+  OlderRequests(this.key);
+
+  final OlderKey key;
 
   @override
   void watch() => ref.watch(requestsVersionProvider);
@@ -270,9 +312,10 @@ final class MyRequests extends CursorList<RequestItem> {
     String? cursor,
   ) async {
     final page = await api.requests.mine(
-      cursor: cursor,
+      cursor: cursor ?? key.after,
       limit: 40,
-      filter: filter,
+      states: key.filter.states,
+      kind: key.filter.kind,
     );
     return (page.items, page.nextCursor);
   }
@@ -281,24 +324,65 @@ final class MyRequests extends CursorList<RequestItem> {
   String id(RequestItem item) => item.id;
 }
 
-final myRequestsProvider = NotifierProvider.autoDispose
-    .family<MyRequests, CursorPages<RequestItem>, String>(MyRequests.new);
+final olderRequestsProvider = NotifierProvider.autoDispose
+    .family<OlderRequests, CursorPages<RequestItem>, OlderKey>(
+      OlderRequests.new,
+    );
+
+/// Explore's Recent requests row for anyone who doesn't run the queue, and
+/// the first page of My requests: their requests as `requests.mineLive`
+/// sends them, which sends the whole first page again on each change, so
+/// a reconnect loses nothing.
+final myLiveRequestsProvider = serverStream(
+  (api) => api.requests.mineLive(limit: recentRequests),
+);
+
+/// The first page of My requests under a filter, live as
+/// [myLiveRequestsProvider] is.
+final myFilteredRequestsProvider = serverStreamFamily(
+  (api, RequestFilter filter) => api.requests.mineLive(
+    limit: recentRequests,
+    states: filter.states,
+    kind: filter.kind,
+  ),
+);
 
 /// The profile's "My requests": the latest of everything the viewer asked for.
 /// Fetched again when an ask, a cancel, or an answer changes it.
 final profileAskedProvider = FutureProvider.autoDispose<RequestPage>((ref) {
   ref.watch(requestsVersionProvider);
-  return serverApi(ref).requests.mine(limit: 24, filter: MineFilter.all);
+  return serverApi(ref).requests.mine(limit: 24);
 }, retry: (_, _) => null);
 
-/// An admin's Done, a page at a time from its own call, newest first.
+/// The queue under a filter, live as the hub's is, for the overview. With
+/// no filter on, the overview reads the hub's.
+final filteredQueueProvider = serverStreamFamily(
+  (api, RequestFilter filter) => api.admin.requests.live(
+    limit: recentRequests,
+    states: filter.states,
+    kind: filter.kind,
+  ),
+);
+
+/// An admin's Done under [filter], a page at a time from its own call,
+/// newest first, for the overview past what the live queue holds of it
+/// ([doneInOrder]).
 final class DoneRequests extends CursorList<AdminRequestItem> {
+  DoneRequests(this.filter);
+
+  final RequestFilter filter;
+
   @override
   Future<(List<AdminRequestItem>, String?)> page(
     MatineeApi api,
     String? cursor,
   ) async {
-    final page = await api.admin.requests.queue(cursor: cursor, limit: 20);
+    final page = await api.admin.requests.queue(
+      cursor: cursor,
+      limit: 20,
+      states: filter.states,
+      kind: filter.kind,
+    );
     return (page.done, page.nextCursor);
   }
 
@@ -306,8 +390,8 @@ final class DoneRequests extends CursorList<AdminRequestItem> {
   String id(AdminRequestItem item) => item.id;
 }
 
-final doneRequestsProvider =
-    NotifierProvider.autoDispose<DoneRequests, CursorPages<AdminRequestItem>>(
+final doneRequestsProvider = NotifierProvider.autoDispose
+    .family<DoneRequests, CursorPages<AdminRequestItem>, RequestFilter>(
       DoneRequests.new,
     );
 

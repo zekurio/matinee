@@ -1,6 +1,8 @@
 import type {
   CatalogRef,
   RemoteRef,
+  RequestState,
+  TitleKind,
   ShowScope,
   WaitingDeclineReason,
 } from "@matinee/contracts"
@@ -24,9 +26,11 @@ import {
   desc,
   inArray,
   isNull,
+  not,
   or,
   count,
   sql,
+  type SQL,
 } from "drizzle-orm"
 
 import type { Access } from "../access/policy"
@@ -323,6 +327,7 @@ async function items(viewer: Viewer, rows: Row[]) {
   )
   return rows.map((row, index) => {
     const state = states[index]
+    const seasons = scopes.filter((scope) => scope.requestId === row.id)
     const destination = libraries.find(
       (library) => library.id === row.libraryId,
     )
@@ -347,11 +352,47 @@ async function items(viewer: Viewer, rows: Row[]) {
             }
           : null,
       createdAt: row.createdAt,
-      arrivedAt: row.arrivedAt,
+      arrivedAt: arrivedAt(row, seasons),
       availability: state.availability,
       season: row.kind === "show" ? furthestSeason(state.seasons) : null,
+      state: stateOf(row, seasons),
     }
   })
+}
+
+/**
+ * When a request got here, as `arrived` and `arrivalTime` have it in
+ * SQL: a film when it arrived, a show when the last season it asked for
+ * did. A show still missing a season, or waiting for its first new one,
+ * hasn't.
+ */
+function arrivedAt(
+  row: Row,
+  seasons: readonly { arrivedAt: Date | null }[],
+): Date | null {
+  if (row.kind === "movie") return row.arrivedAt
+  let last: Date | null = null
+  for (const season of seasons) {
+    if (!season.arrivedAt) return null
+    if (!last || season.arrivedAt > last) last = season.arrivedAt
+  }
+  return last
+}
+
+/**
+ * Where a request stands, the same for whoever asked for it and for
+ * whoever runs the queue: declined, here once it arrived, waiting while
+ * nobody answered, needs attention when sending it failed, else on its
+ * way.
+ */
+function stateOf(
+  row: Row,
+  seasons: readonly { arrivedAt: Date | null }[],
+): RequestState {
+  if (row.status === "declined") return "declined"
+  if (arrivedAt(row, seasons)) return "here"
+  if (row.status === "asked") return "waiting"
+  return row.fulfilmentState === "failed" ? "needsAttention" : "onTheWay"
 }
 
 // How far along a season that isn't here is, for picking the one a
@@ -388,54 +429,51 @@ async function itemById(viewer: Viewer, id: string) {
   return item
 }
 
-const Cursor = t.object({ at: t.string().datetime(), id: t.uuid() })
-function cursorBefore(
-  cursor: string | undefined,
-  column: typeof request.createdAt | ReturnType<typeof sql>,
-) {
-  if (!cursor) return undefined
-  let decoded: t.infer<typeof Cursor>
+const Cursor = t.object({
+  at: t.string().datetime(),
+  id: t.uuid(),
+  /** In `mine`, whether the last row was in flight, which sort first. */
+  open: t.boolean().optional(),
+})
+function decodeCursor(cursor: string) {
   try {
-    decoded = Cursor.parse(
-      JSON.parse(Buffer.from(cursor, "base64url").toString()),
-    )
+    return Cursor.parse(JSON.parse(Buffer.from(cursor, "base64url").toString()))
   } catch {
     throw new ORPCError("BAD_REQUEST", {
       message: "Reload this list and try again.",
     })
   }
+}
+function cursorBefore(
+  cursor: string | undefined,
+  column: typeof request.createdAt | ReturnType<typeof sql>,
+) {
+  if (!cursor) return undefined
+  const decoded = decodeCursor(cursor)
   return sql`(${column}, ${request.id}) < (${new Date(decoded.at)}, ${decoded.id})`
 }
-function nextCursor(rows: Row[], limit: number, arrival = false) {
+function encodeCursor(cursor: { at: Date; id: string; open?: boolean }) {
+  return Buffer.from(JSON.stringify(cursor)).toString("base64url")
+}
+function nextCursor(rows: Row[], limit: number, open?: boolean) {
   const last = rows[limit - 1]
   return rows.length > limit && last
-    ? Buffer.from(
-        JSON.stringify({
-          at: arrival ? (last.arrivedAt ?? last.declinedAt) : last.createdAt,
-          id: last.id,
-        }),
-      ).toString("base64url")
+    ? encodeCursor({ at: last.createdAt, id: last.id, open })
     : null
 }
 
-// How long a title that arrived or was declined stays in "in progress".
-const SETTLED_MS = 3 * 86400000
-
 /**
- * A request still in flight, or one that settled in the last three days:
- * a film that arrived or a declined title, so its asker sees how it ended.
- * A show is in flight while a season it asked for hasn't come, or has
- * only just, and also while it waits for its first new season.
+ * A request that got here, as `arrivedAt` has it: a film that arrived,
+ * or a show with seasons asked for that all did.
  */
-function inProgress() {
-  const since = new Date(Date.now() - SETTLED_MS)
-  const seasons = db
+function arrived() {
+  const open = db
     .select({ one: sql`1` })
     .from(requestSeason)
     .where(
       and(
         eq(requestSeason.requestId, request.id),
-        or(isNull(requestSeason.arrivedAt), gt(requestSeason.arrivedAt, since)),
+        isNull(requestSeason.arrivedAt),
       ),
     )
   const asked = db
@@ -443,18 +481,87 @@ function inProgress() {
     .from(requestSeason)
     .where(eq(requestSeason.requestId, request.id))
   return or(
-    and(eq(request.status, "declined"), gt(request.declinedAt, since)),
+    and(eq(request.kind, "movie"), sql`${request.arrivedAt} is not null`),
     and(
-      ne(request.status, "declined"),
-      eq(request.kind, "movie"),
-      or(isNull(request.arrivedAt), gt(request.arrivedAt, since)),
-    ),
-    and(
-      ne(request.status, "declined"),
       ne(request.kind, "movie"),
-      or(sql`exists ${seasons}`, sql`not exists ${asked}`),
+      sql`exists ${asked}`,
+      sql`not exists ${open}`,
     ),
   )
+}
+
+/**
+ * When a request that got here did, as `arrivedAt` has it: a film's
+ * arrival, a show's last season's.
+ */
+function arrivalTime() {
+  const last = db
+    .select({ at: sql`max(${requestSeason.arrivedAt})` })
+    .from(requestSeason)
+    .where(eq(requestSeason.requestId, request.id))
+  return sql`case when ${request.kind} = 'movie' then ${request.arrivedAt} else (${last}) end`
+}
+
+/** A request not finished yet: not declined, and not here. Waiting ones count. */
+function inFlight() {
+  return and(ne(request.status, "declined"), sql`not (${arrived()})`)
+}
+
+/** The requests in `state`, by `stateOf`'s rule, the one each card shows. */
+function inState(state: RequestState) {
+  const here = sql`(${arrived()})`
+  const approved = eq(request.status, "approved")
+  switch (state) {
+    case "declined":
+      return eq(request.status, "declined")
+    case "here":
+      return and(ne(request.status, "declined"), here)
+    case "waiting":
+      return and(eq(request.status, "asked"), not(here))
+    case "needsAttention":
+      return and(approved, eq(request.fulfilmentState, "failed"), not(here))
+    case "onTheWay":
+      return and(
+        approved,
+        // Not failed, which in SQL a null never is.
+        or(
+          isNull(request.fulfilmentState),
+          ne(request.fulfilmentState, "failed"),
+        ),
+        not(here),
+      )
+  }
+}
+
+type ListFilter = { states: readonly RequestState[]; kind?: TitleKind }
+
+/** Whether `filter` keeps `state`: an empty list keeps every one. */
+function keeps(filter: ListFilter, state: RequestState) {
+  return !filter.states.length || filter.states.includes(state)
+}
+
+/** The requests `filter` keeps, or nothing when it keeps them all. */
+function kept(filter: ListFilter) {
+  return and(
+    filter.kind ? eq(request.kind, filter.kind) : undefined,
+    filter.states.length
+      ? or(...filter.states.map((state) => inState(state)))
+      : undefined,
+  )
+}
+
+/**
+ * The rows after `cursor` in `mine`'s order: in flight first, then
+ * finished, each newest first. A cursor from before that order counts
+ * as in flight.
+ */
+function mineAfter(cursor: string | undefined, open: SQL) {
+  if (!cursor) return undefined
+  const decoded = decodeCursor(cursor)
+  const older = sql`(${request.createdAt}, ${request.id}) < (${new Date(decoded.at)}, ${decoded.id})`
+  return decoded.open === false
+    ? and(sql`not ${open}`, older)
+    : or(and(open, older), sql`not ${open}`)
 }
 
 /** The requests the viewer asked for or follows, among the libraries they see. */
@@ -467,75 +574,76 @@ function followedBy(viewer: Viewer) {
 
 export async function mine(
   viewer: Viewer,
-  input: { cursor?: string; limit: number; filter: "inProgress" | "all" },
+  input: ListFilter & {
+    cursor?: string
+    limit: number
+  },
 ) {
+  const open = sql`(${inFlight()})`
   const rows = await db
-    .select({ request })
+    .select({ request, open: sql<boolean>`${open}` })
     .from(request)
     .innerJoin(requestFollower, eq(requestFollower.requestId, request.id))
-    .where(
-      and(
-        followedBy(viewer),
-        cursorBefore(input.cursor, request.createdAt),
-        input.filter === "inProgress" ? inProgress() : undefined,
-      ),
-    )
-    .orderBy(desc(request.createdAt), desc(request.id))
+    .where(and(followedBy(viewer), mineAfter(input.cursor, open), kept(input)))
+    .orderBy(desc(open), desc(request.createdAt), desc(request.id))
     .limit(input.limit + 1)
   const requests = rows.map((row) => row.request)
   return {
     items: await items(viewer, requests.slice(0, input.limit)),
-    nextCursor: nextCursor(requests, input.limit),
+    nextCursor: nextCursor(requests, input.limit, rows[input.limit - 1]?.open),
   }
 }
 
 export async function queue(
   viewer: Viewer,
-  input: { cursor?: string; limit: number },
+  input: ListFilter & { cursor?: string; limit: number },
 ) {
-  const visible = inLibraries(viewer, request.libraryId)
-  const waiting = and(visible, eq(request.status, "asked"))
-  const attention = and(
-    visible,
-    eq(request.status, "approved"),
-    eq(request.fulfilmentState, "failed"),
-    isNull(request.arrivedAt),
+  const visible = and(
+    inLibraries(viewer, request.libraryId),
+    input.kind ? eq(request.kind, input.kind) : undefined,
   )
-  const onWay = and(
-    visible,
-    eq(request.status, "approved"),
-    ne(request.fulfilmentState, "failed"),
-    isNull(request.arrivedAt),
+  // The lists are the states, by the rule a person's own list has, and
+  // done is the two that end one. A state the filter leaves out is empty.
+  const open = (["waiting", "needsAttention", "onTheWay"] as const).map(
+    (state) => (keeps(input, state) ? and(visible, inState(state)) : null),
   )
-  // Arrived or declined, latest first by when that happened.
-  const finishedAt = sql`coalesce(${request.arrivedAt}, ${request.declinedAt})`
-  const done = and(
-    visible,
-    or(sql`${request.arrivedAt} is not null`, eq(request.status, "declined")),
+  const ends = (["here", "declined"] as const).filter((state) =>
+    keeps(input, state),
   )
+  const done = ends.length
+    ? and(visible, or(...ends.map((state) => inState(state))))
+    : null
+  // Done, latest first by when it got here or was declined.
+  const declined = eq(request.status, "declined")
+  const finishedAt =
+    sql<Date>`case when ${declined} then ${request.declinedAt} else ${arrivalTime()} end`.mapWith(
+      request.declinedAt,
+    )
   const lists = await Promise.all(
-    [waiting, attention, onWay, done].map((filter, index) =>
-      db
-        .select()
+    open.map(async (filter) =>
+      filter
+        ? await db
+            .select()
+            .from(request)
+            .where(filter)
+            .orderBy(desc(request.createdAt), desc(request.id))
+            .limit(10000)
+        : [],
+    ),
+  )
+  const finished = done
+    ? await db
+        .select({ request, at: finishedAt })
         .from(request)
-        .where(
-          and(
-            filter,
-            index === 3 ? cursorBefore(input.cursor, finishedAt) : undefined,
-          ),
-        )
-        .orderBy(
-          desc(index === 3 ? finishedAt : request.createdAt),
-          desc(request.id),
-        )
-        .limit(index === 3 ? input.limit + 1 : 10000),
-    ),
-  )
-  const totals = await Promise.all(
-    [waiting, attention, onWay, done].map((filter) =>
-      db.select({ value: count() }).from(request).where(filter),
-    ),
-  )
+        .where(and(done, cursorBefore(input.cursor, finishedAt)))
+        .orderBy(desc(finishedAt), desc(request.id))
+        .limit(input.limit + 1)
+    : []
+  const doneCount = done
+    ? ((await db.select({ value: count() }).from(request).where(done))[0]
+        ?.value ?? 0)
+    : 0
+  // Each card's state is the list it's in, by the same rule.
   const decorate = async (rows: Row[]) => {
     const cards = await items(viewer, rows)
     if (!rows.length) return []
@@ -600,9 +708,6 @@ export async function queue(
             avatarId: f.avatarId,
             createdAt: f.follower.createdAt,
           })),
-        destinationDescription: [card.library.name, connection?.name]
-          .filter(Boolean)
-          .join(" · "),
         // Its own library first if nothing fills that any more, so the
         // chooser still says where it is.
         destinations:
@@ -627,18 +732,19 @@ export async function queue(
       }
     })
   }
+  const lastDone = finished[input.limit - 1]
   return {
     waiting: await decorate(lists[0] ?? []),
     needsAttention: await decorate(lists[1] ?? []),
     onTheWay: await decorate(lists[2] ?? []),
-    done: await decorate((lists[3] ?? []).slice(0, input.limit)),
-    counts: {
-      waiting: totals[0]?.[0]?.value ?? 0,
-      needsAttention: totals[1]?.[0]?.value ?? 0,
-      onTheWay: totals[2]?.[0]?.value ?? 0,
-      done: totals[3]?.[0]?.value ?? 0,
-    },
-    nextCursor: nextCursor(lists[3] ?? [], input.limit, true),
+    done: await decorate(
+      finished.slice(0, input.limit).map((row) => row.request),
+    ),
+    doneCount,
+    nextCursor:
+      finished.length > input.limit && lastDone
+        ? encodeCursor({ at: lastDone.at, id: lastDone.request.id })
+        : null,
   }
 }
 
@@ -965,7 +1071,14 @@ export async function decline(
       })
     if (
       answer.operation === "giveUp" &&
-      (row.status !== "approved" || row.arrivedAt !== null)
+      (row.status !== "approved" ||
+        arrivedAt(
+          row,
+          await tx
+            .select({ arrivedAt: requestSeason.arrivedAt })
+            .from(requestSeason)
+            .where(eq(requestSeason.requestId, row.id)),
+        ) !== null)
     )
       throw new ORPCError("CONFLICT", {
         message:

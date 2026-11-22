@@ -5,10 +5,14 @@ import { linkOptions } from "@tanstack/react-router"
 import { perLocale, tr } from "@/i18n"
 import { liveQuery, orpc } from "@/lib/rpc"
 import {
+  type HiddenRequests,
+  isHidden,
   type QueueAction,
   useHiddenRequests,
   useRequestActionsStore,
 } from "@/stores/request-actions"
+
+import type { RequestFilter } from "./request-filter"
 
 /*
  * The admin's queue as the server streams it, and the words its rows
@@ -16,36 +20,56 @@ import {
  * each change, so a reconnect loses nothing.
  */
 
-export const QUEUE_LISTS = [
-  "waiting",
-  "needsAttention",
-  "onTheWay",
-  "done",
-] as const
-export type QueueList = (typeof QUEUE_LISTS)[number]
+/**
+ * How many of the latest done requests the stream carries: enough for
+ * Discover's row when little else is going on. The requests page reads
+ * the rest of done page by page.
+ */
+export const RECENT_DONE = 20
 
 /**
- * The live queue. Done comes paged from its own query, so the stream
- * carries one row of it, just enough for its count.
+ * A list filter as the server takes it, with nothing for what's off, so
+ * an unfiltered list asks exactly what every other unfiltered one does.
  */
-export function useRequestQueue(enabled = true) {
+export function filterInput(filter: RequestFilter | undefined) {
+  const input: Partial<RequestFilter> = {}
+  if (filter?.states.length) input.states = filter.states
+  if (filter?.kind) input.kind = filter.kind
+  return input
+}
+
+/**
+ * The live queue, which every part of the page that shows it shares:
+ * the avatar's dot, Discover's row, a title page's Add, and the
+ * requests page. The requests page alone passes a `filter`.
+ */
+export function useRequestQueue(enabled = true, filter?: RequestFilter) {
   return useQuery({
     ...orpc.admin.requests.live.experimental_liveOptions({
-      input: { limit: 1 },
+      input: { limit: RECENT_DONE, ...filterInput(filter) },
     }),
     ...liveQuery,
     enabled,
   })
 }
 
+/**
+ * The work lists in the order the server declares them, the one order
+ * every list of requests takes: waiting, needs attention, on the way.
+ * Each item's `state` says which it's in.
+ */
+export function workItems(queue: RequestQueue): AdminRequestItem[] {
+  return [...queue.waiting, ...queue.needsAttention, ...queue.onTheWay]
+}
+
 /** How many requests wait for an admin, less the ones held for Undo. */
 export function needsYou(
   queue: RequestQueue | undefined,
-  hidden: ReadonlySet<string>,
+  hidden: HiddenRequests,
 ): number {
   if (!queue) return 0
-  const waiting = queue.waiting.filter((item) => !hidden.has(item.id)).length
-  return waiting + queue.needsAttention.length
+  const waiting = queue.waiting.filter((item) => !isHidden(hidden, item))
+  return waiting.length + queue.needsAttention.length
 }
 
 /** The count behind the avatar's dot and the menu entry, live. */
