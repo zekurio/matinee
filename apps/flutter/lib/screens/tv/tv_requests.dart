@@ -355,11 +355,20 @@ Future<void> openTvQueued(
   final picked = await showTvPanel<_Pick>(
     context,
     title: item.title.name,
-    description: [
-      requestStateText(state, l, progress: _progressOf(item)),
-      goes.name,
-      goes.connection ?? l.webRequestsNoConnection,
-    ].join(' · '),
+    // What went wrong rarely fits on the card, so it reads here, under
+    // where the request goes. A declined one's line says when and why,
+    // with the note, and needs the room more than where it would have gone.
+    description: state == RequestState.declined
+        ? queueLine(requests, item, l).text
+        : [
+            [
+              requestStateText(state, l, progress: _progressOf(item)),
+              goes.name,
+              goes.connection ?? l.webRequestsNoConnection,
+            ].join(' · '),
+            if (state == RequestState.needsAttention)
+              queueLine(requests, item, l).text,
+          ].join('\n'),
     builder: (panel) => [
       ...switch (state) {
         RequestState.waiting => [
@@ -803,9 +812,9 @@ abstract final class _Rows {
 /// in the order the shared code gives them: waiting, needs attention, on
 /// the way, then done, read on a page at a time as focus moves down. Anyone
 /// else, whatever the path, gets their own as the server orders them, in
-/// progress first. Each card carries its state; the header says how many are in each
-/// state that has any, in plain words, and offers Add all while more than
-/// one waits; the line under it names the focused card. Select opens what
+/// progress first. Each card carries its state; the header offers Add all
+/// while more than one waits, and the line under it names the focused
+/// card. Select opens what
 /// the card's state allows. Focus starts on the first card, Down from the
 /// header lands there, and a card that leaves hands focus to its
 /// neighbour. An empty overview says so and offers Search.
@@ -859,7 +868,7 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
       cellExtra: TvInfoCards.height,
       header: TvGridHeader(
         title: queue ? l.webRequestsTitle : l.webAskMineTitle,
-        detail: body.counts,
+        detail: null,
         controls: [
           // Like Add, it asks nothing.
           if (waiting.length > 1)
@@ -963,7 +972,6 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
       error: error,
       onMore: notifier?.more,
       onRetry: notifier?.retry,
-      counts: queueSummary(queue, l, held: held),
       waiting: waiting,
     );
   }
@@ -1064,7 +1072,6 @@ class _Body {
     VoidCallback? onMore,
     VoidCallback? onRetry,
     this.followed,
-    this.counts,
     this.waiting = const [],
   }) : empty = false,
        more = done || error != null ? null : onMore,
@@ -1085,7 +1092,6 @@ class _Body {
       empty = false,
       more = null,
       followed = null,
-      counts = null,
       waiting = const [];
 
   /// Nothing to show: [notice], and Search, which focus can rest on.
@@ -1094,7 +1100,6 @@ class _Body {
       empty = true,
       more = null,
       followed = null,
-      counts = null,
       waiting = const [],
       footer = _Empty(notice: notice, memory: memory);
 
@@ -1104,16 +1109,12 @@ class _Body {
       empty = false,
       more = null,
       followed = null,
-      counts = null,
       waiting = const [];
 
   final List<_CardOf> cards;
   final Widget? footer;
   final VoidCallback? more;
   final FollowedTitles? followed;
-
-  /// The header's line of how many are in each state.
-  final String? counts;
 
   /// What Add all adds.
   final List<AdminRequestItem> waiting;

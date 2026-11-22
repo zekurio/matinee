@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/widgets.dart';
 
 import '../icon.dart';
@@ -80,15 +82,27 @@ class TvInfoCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (backdrop != null) ExcludeSemantics(child: backdrop),
+                // Blurred, so faces and titles on the poster don't fight
+                // the lines over them; only its colours come through.
+                if (backdrop != null)
+                  ExcludeSemantics(
+                    child: RepaintBoundary(
+                      child: ClipRect(
+                        child: ImageFiltered(
+                          imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                          child: backdrop,
+                        ),
+                      ),
+                    ),
+                  ),
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: AlignmentDirectional.centerStart,
                       end: AlignmentDirectional.centerEnd,
                       colors: [
-                        colors.background.withValues(alpha: .62),
-                        colors.background.withValues(alpha: .82),
+                        colors.background.withValues(alpha: .55),
+                        colors.background.withValues(alpha: .78),
                       ],
                     ),
                   ),

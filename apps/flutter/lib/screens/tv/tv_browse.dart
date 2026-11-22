@@ -70,29 +70,38 @@ class TvGridHeader extends StatelessWidget {
             padding: const EdgeInsetsDirectional.only(
               end: TvPage.end + TvGrid.clockRoom,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              spacing: 16,
-              children: [
-                Flexible(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TvType.headline.style(color: colors.foreground),
-                  ),
-                ),
-                if (detail case final text?)
-                  Flexible(
+            // The title takes what it needs, up to most of the row, and the
+            // detail gets the rest rather than half.
+            child: LayoutBuilder(
+              builder: (context, constraints) => Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                spacing: 16,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth * .6,
+                    ),
                     child: Text(
-                      text,
+                      title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TvType.facts.style(color: colors.mutedForeground),
+                      style: TvType.headline.style(color: colors.foreground),
                     ),
                   ),
-              ],
+                  if (detail case final text?)
+                    Flexible(
+                      child: Text(
+                        text,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TvType.facts.style(
+                          color: colors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           if (controls.isNotEmpty)
