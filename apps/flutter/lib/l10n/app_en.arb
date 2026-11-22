@@ -1464,6 +1464,10 @@
   "@libraryNoneShows": {
     "description": "strings.xml"
   },
+  "libraryOffline": "Your shows and movies come back once the server can be reached.",
+  "@libraryOffline": {
+    "description": "Shows, Movies, or a genre's or studio's page while the server can't be reached."
+  },
   "librarySearchMovies": "Search movies",
   "@librarySearchMovies": {
     "description": "strings.xml: A library"
@@ -2683,6 +2687,15 @@
   "requestsAgoNow": "just now",
   "@requestsAgoNow": {
     "description": "When a request was made, under a minute ago"
+  },
+  "requestsToastCancelled": "Cancelled {name}",
+  "@requestsToastCancelled": {
+    "description": "The toast after a person takes back their own request from Explore's Requests row, with Undo.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "requestsAgoMinutes": "{count, plural, one{{count} minute ago} other{{count} minutes ago}}",
   "@requestsAgoMinutes": {
@@ -4136,24 +4149,12 @@
       }
     }
   },
-  "webAskMineAll": "All",
-  "@webAskMineAll": {
-    "description": "strings_web_ask.xml"
-  },
   "webAskMineEmpty": "Nothing requested yet",
   "@webAskMineEmpty": {
     "description": "strings_web_ask.xml"
   },
   "webAskMineEmptyHint": "Search for a film or show that isn't here and request it from its page.",
   "@webAskMineEmptyHint": {
-    "description": "strings_web_ask.xml"
-  },
-  "webAskMineEmptyInProgress": "Nothing on its way",
-  "@webAskMineEmptyInProgress": {
-    "description": "strings_web_ask.xml"
-  },
-  "webAskMineInProgress": "In progress",
-  "@webAskMineInProgress": {
     "description": "strings_web_ask.xml"
   },
   "webAskMineSeeAll": "See all",
@@ -5863,46 +5864,12 @@
       }
     }
   },
-  "webRequestsDoneDeclined": "Declined {p1}",
-  "@webRequestsDoneDeclined": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webRequestsDoneDeclinedUndated": "Declined",
   "@webRequestsDoneDeclinedUndated": {
     "description": "strings_web_requests.xml"
   },
-  "webRequestsDoneGaveUp": "Given up {p1}",
-  "@webRequestsDoneGaveUp": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webRequestsDoneGaveUpUndated": "Given up",
   "@webRequestsDoneGaveUpUndated": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsEmptyDone": "Nothing done yet",
-  "@webRequestsEmptyDone": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsEmptyNeedsAttention": "Nothing needs attention",
-  "@webRequestsEmptyNeedsAttention": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsEmptyOnTheWay": "Nothing is on the way",
-  "@webRequestsEmptyOnTheWay": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsEmptyWaiting": "Nothing is waiting",
-  "@webRequestsEmptyWaiting": {
     "description": "strings_web_requests.xml"
   },
   "webRequestsGiveUp": "Give up",
@@ -5958,31 +5925,6 @@
   "webRequestsKindShow": "Show",
   "@webRequestsKindShow": {
     "description": "strings_web_requests.xml"
-  },
-  "webRequestsListDone": "Done",
-  "@webRequestsListDone": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsListNeedsAttention": "Needs attention",
-  "@webRequestsListNeedsAttention": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsListOnTheWay": "On the way",
-  "@webRequestsListOnTheWay": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsListWaiting": "Waiting",
-  "@webRequestsListWaiting": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsMenuWaiting": "{count, plural, one{Requests, {count} needs you} other{Requests, {count} need you}}",
-  "@webRequestsMenuWaiting": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "webRequestsMore": "More for {p1}",
   "@webRequestsMore": {
@@ -8806,5 +8748,75 @@
   "webValidationApiTokenPermissions": "Choose what the token may do.",
   "@webValidationApiTokenPermissions": {
     "description": "validation.apiTokenPermissions"
+  },
+  "webRequestsRecent": "Recent requests",
+  "@webRequestsRecent": {
+    "description": "requests.recent"
+  },
+  "webRequestsStateWaiting": "Waiting",
+  "@webRequestsStateWaiting": {
+    "description": "requests.state.waiting"
+  },
+  "webRequestsStateNeedsAttention": "Needs attention",
+  "@webRequestsStateNeedsAttention": {
+    "description": "requests.state.needsAttention"
+  },
+  "webRequestsStateOnTheWay": "On its way",
+  "@webRequestsStateOnTheWay": {
+    "description": "requests.state.onTheWay"
+  },
+  "webRequestsStateOnTheWayPercent": "On its way · {p1}",
+  "@webRequestsStateOnTheWayPercent": {
+    "description": "requests.state.onTheWayPercent",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webRequestsStateHere": "Here",
+  "@webRequestsStateHere": {
+    "description": "requests.state.here"
+  },
+  "webRequestsStateDeclined": "Declined",
+  "@webRequestsStateDeclined": {
+    "description": "requests.state.declined"
+  },
+  "webRequestsAddAfterAllNamed": "Add {p1} after all",
+  "@webRequestsAddAfterAllNamed": {
+    "description": "requests.addAfterAllNamed",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webRequestsEmptyNone": "No requests yet",
+  "@webRequestsEmptyNone": {
+    "description": "requests.empty.none"
+  },
+  "webRequestsEmptyNoneHint": "When someone requests a film or show, it shows up here.",
+  "@webRequestsEmptyNoneHint": {
+    "description": "requests.empty.noneHint"
+  },
+  "webRequestsFilterState": "State",
+  "@webRequestsFilterState": {
+    "description": "requests.filter.state"
+  },
+  "webRequestsFilterKind": "Type",
+  "@webRequestsFilterKind": {
+    "description": "requests.filter.kind"
+  },
+  "webRequestsFilterShow": "Show requests",
+  "@webRequestsFilterShow": {
+    "description": "requests.filter.show"
+  },
+  "webRequestsFilterNone": "No requests match these filters",
+  "@webRequestsFilterNone": {
+    "description": "requests.filter.none"
+  },
+  "webRequestsFilterNoneHint": "Take a filter off to see more.",
+  "@webRequestsFilterNoneHint": {
+    "description": "requests.filter.noneHint"
   }
 }

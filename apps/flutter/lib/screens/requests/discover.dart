@@ -16,6 +16,7 @@ import 'request_sheet.dart';
 import 'request_words.dart';
 import 'requests_data.dart';
 import 'requests_hub.dart';
+import 'requests_rail.dart';
 
 /// Explore, for when there's nothing in mind yet: rows of titles under the
 /// empty field, in the order the server sends them, each loading on its own.
@@ -53,16 +54,12 @@ List<CatalogBrowseTitle> _shown(
     if (!_recommended(rail) || !hidden.contains(refKey(item.ref))) item,
 ].take(_railCards).toList();
 
-/// Under the empty search field: [leading], then Discover's rows when the
-/// server has Discover on, or why there are none. [leading] is what heads
-/// Explore, an admin's way to the requests that wait on them for now; a
-/// row of request cards goes there too, before the rows, once the server
-/// sends them.
+/// Under the empty search field: the Recent requests row the server names
+/// ([RequestsRail]), then Discover's rows when the server has Discover on,
+/// or why there are none. That row stays when the rows fail or
+/// are empty, since it reads streams of its own.
 class Explore extends ConsumerWidget {
-  const Explore({super.key, this.leading = const []});
-
-  /// Slivers before the rows.
-  final List<Widget> leading;
+  const Explore({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -165,7 +162,15 @@ class Explore extends ConsumerWidget {
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         slivers: [
           const SliverToBoxAdapter(child: SizedBox(height: 8)),
-          ...leading,
+          // An older server sends no `requests`, which reads as null: no
+          // row.
+          SliverToBoxAdapter(
+            child: RequestsRail(
+              which: discover.value?.enabled == true
+                  ? discover.value!.requests
+                  : null,
+            ),
+          ),
           ...body,
           SliverToBoxAdapter(
             child: SizedBox(height: MediaQuery.paddingOf(context).bottom + 24),
@@ -334,89 +339,4 @@ class RailFailed extends StatelessWidget {
       ),
     );
   }
-}
-
-/// For an admin, the way to the requests, with how many need them; where
-/// the row of request cards goes once the server sends it.
-class RequestsLink extends ConsumerWidget {
-  const RequestsLink({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
-    final needsYou = ref.watch(
-      requestsProvider.select((state) => state.needsYou),
-    );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        CardMetrics.gutter - 8,
-        0,
-        CardMetrics.gutter - 8,
-        16,
-      ),
-      child: PressIndication(
-        onPressed: () => context.push(Routes.requests(QueueList.waiting)),
-        label: needsYou > 0
-            ? l.webRequestsMenuWaiting(needsYou)
-            : l.webRequestsTitle,
-        shape: KitRadius.control,
-        builder: (context, state) => ExcludeSemantics(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: KitRadius.control,
-              color: colors.foreground.withValues(
-                alpha: state == PressState.idle ? 0 : .06,
-              ),
-            ),
-            child: Row(
-              spacing: 12,
-              children: [
-                KitIcon(Lucide.inbox, color: colors.mutedForeground),
-                Expanded(
-                  child: Text(
-                    l.webRequestsTitle,
-                    style: KitText.base.style(
-                      color: colors.foreground,
-                      weight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                if (needsYou > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.accent,
-                      borderRadius: KitRadius.pill,
-                    ),
-                    child: Text(
-                      formatCount(needsYou, l),
-                      style: KitText.xs.style(
-                        color: colors.accentForeground,
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                KitIcon(Lucide.chevronRight, color: colors.mutedForeground),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The admin's lists, by the names their routes take.
-abstract final class QueueList {
-  static const waiting = 'waiting';
-  static const needsAttention = 'needsAttention';
-  static const onTheWay = 'onTheWay';
-  static const done = 'done';
-
-  static const all = [waiting, needsAttention, onTheWay, done];
 }

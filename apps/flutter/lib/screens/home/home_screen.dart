@@ -13,7 +13,6 @@ import '../../media/layout.dart';
 import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
-import '../requests/asked_rail.dart';
 import 'featured_carousel.dart';
 import 'home_banner.dart';
 import 'home_data.dart';
@@ -22,10 +21,10 @@ import 'offline_home.dart';
 
 /// The Home tab: the featured titles on top, as cards on a phone and the web's
 /// banner on a tablet, then Continue watching, Next up, the recommendation
-/// rows, what the viewer asked for, and each library's newest titles. A row
-/// that's loading or has nothing is left out, and so is one that failed; Home
-/// is an error only when nothing on it could show. [links] are debug tools that
-/// have no screen yet.
+/// rows, and each library's newest titles. A row that's loading or has
+/// nothing is left out, and so is one that failed; Home is an error only
+/// when nothing on it could show. [links] are debug tools that have no
+/// screen yet.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, this.links = const []});
 
@@ -55,8 +54,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ..invalidate(librariesProvider)
         ..invalidate(continueWatchingProvider)
         ..invalidate(nextUpProvider)
-        ..invalidate(shelfProvider)
-        ..invalidate(askedProvider);
+        ..invalidate(shelfProvider);
     }
     if (now.difference(_recommended) >= _recommendationsAfter ||
         ref.read(recommendationsProvider).hasError) {
@@ -74,8 +72,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ..invalidate(nextUpProvider)
       ..invalidate(featuredProvider)
       ..invalidate(recommendationsProvider)
-      ..invalidate(shelfProvider)
-      ..invalidate(askedProvider);
+      ..invalidate(shelfProvider);
   }
 
   /// Something was marked, liked, or hidden from a menu here or on another
@@ -115,7 +112,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final nextUp = ref.watch(nextUpProvider);
     final featured = ref.watch(featuredProvider);
     final recommendations = ref.watch(recommendationsProvider);
-    final asked = ref.watch(askedProvider).value?.items ?? const [];
 
     Widget body;
     if (failedOutright(libraries, [resume, nextUp, featured])) {
@@ -147,7 +143,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   in recommendations.value?.rails ??
                       const <HomeRecommendationRail>[])
                 if (rail.items.isNotEmpty) _RecommendationRail(rail: rail),
-              if (asked.isNotEmpty) AskedRail(items: asked),
               if (libs == null && libraries.isLoading)
                 RailSkeleton(
                   label: l.loadingInProgress,

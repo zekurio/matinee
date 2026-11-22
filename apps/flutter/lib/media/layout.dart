@@ -27,6 +27,12 @@ double railItemWidth(RailArt art, Size window) {
   };
 }
 
+/// How wide a request's card is in Explore's Requests row, the web's
+/// `min(88%, 21rem)`: one and a bit on a phone, 336 from a tablet up.
+double requestCardWidth(Size window) => WidthClass.of(window.width).isCompact
+    ? math.min((window.width - 2 * CardMetrics.gutter) * .88, 336)
+    : 336;
+
 /// The art's width to height in a rail of [art].
 double railAspect(RailArt art) => switch (art) {
   RailArt.wide => CardMetrics.wide,

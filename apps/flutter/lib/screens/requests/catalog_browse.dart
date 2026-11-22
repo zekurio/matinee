@@ -201,7 +201,7 @@ class _CatalogBrowseScreenState extends ConsumerState<CatalogBrowseScreen> {
           ListBarButton(
             icon: Lucide.listFilter,
             label: active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle,
-            active: active > 0,
+            count: active,
             onPressed: () => _showFilters(context, kind, ready, _choices),
           ),
           Menu(

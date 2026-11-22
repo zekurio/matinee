@@ -1090,7 +1090,6 @@ final class AdminRequestItem {
     required this.declinedAt,
     required this.connection,
     required this.followers,
-    required this.destinationDescription,
     required this.destinations,
     required this.remoteUrl,
     required this.diagnostics,
@@ -1122,7 +1121,6 @@ final class AdminRequestItem {
         fields['followers'],
         AdminRequestItemFollower.fromJson,
       ),
-      destinationDescription: fields['destinationDescription'] as String,
       destinations: readList(
         fields['destinations'],
         AdminRequestDestination.fromJson,
@@ -1152,7 +1150,6 @@ final class AdminRequestItem {
   final String? declinedAt;
   final AdminRequestItemConnection? connection;
   final List<AdminRequestItemFollower> followers;
-  final String destinationDescription;
   final List<AdminRequestDestination> destinations;
   final String? remoteUrl;
   final List<AdminRequestItemDiagnostic> diagnostics;
@@ -1175,7 +1172,6 @@ final class AdminRequestItem {
     'declinedAt': declinedAt,
     'connection': connection?.toJson(),
     'followers': followers.map((item) => item.toJson()).toList(),
-    'destinationDescription': destinationDescription,
     'destinations': destinations.map((item) => item.toJson()).toList(),
     'remoteUrl': remoteUrl,
     'diagnostics': diagnostics.map((item) => item.toJson()).toList(),
@@ -1267,7 +1263,7 @@ final class RequestQueue {
     required this.needsAttention,
     required this.onTheWay,
     required this.done,
-    required this.counts,
+    required this.doneCount,
     required this.nextCursor,
   });
 
@@ -1281,7 +1277,7 @@ final class RequestQueue {
       ),
       onTheWay: readList(fields['onTheWay'], AdminRequestItem.fromJson),
       done: readList(fields['done'], AdminRequestItem.fromJson),
-      counts: RequestQueueCounts.fromJson(fields['counts']),
+      doneCount: fields['doneCount'] as int,
       nextCursor: fields['nextCursor'] as String?,
     );
   }
@@ -1290,7 +1286,7 @@ final class RequestQueue {
   final List<AdminRequestItem> needsAttention;
   final List<AdminRequestItem> onTheWay;
   final List<AdminRequestItem> done;
-  final RequestQueueCounts counts;
+  final int doneCount;
   final String? nextCursor;
 
   JsonMap toJson() => {
@@ -1298,39 +1294,8 @@ final class RequestQueue {
     'needsAttention': needsAttention.map((item) => item.toJson()).toList(),
     'onTheWay': onTheWay.map((item) => item.toJson()).toList(),
     'done': done.map((item) => item.toJson()).toList(),
-    'counts': counts.toJson(),
+    'doneCount': doneCount,
     'nextCursor': nextCursor,
-  };
-}
-
-final class RequestQueueCounts {
-  const RequestQueueCounts({
-    required this.waiting,
-    required this.needsAttention,
-    required this.onTheWay,
-    required this.done,
-  });
-
-  factory RequestQueueCounts.fromJson(Object? json) {
-    final fields = json as JsonMap;
-    return RequestQueueCounts(
-      waiting: fields['waiting'] as int,
-      needsAttention: fields['needsAttention'] as int,
-      onTheWay: fields['onTheWay'] as int,
-      done: fields['done'] as int,
-    );
-  }
-
-  final int waiting;
-  final int needsAttention;
-  final int onTheWay;
-  final int done;
-
-  JsonMap toJson() => {
-    'waiting': waiting,
-    'needsAttention': needsAttention,
-    'onTheWay': onTheWay,
-    'done': done,
   };
 }
 
@@ -10271,13 +10236,7 @@ final class RequestsMineLiveInput {
 }
 
 final class RequestsMineInput {
-  const RequestsMineInput({
-    this.cursor,
-    this.limit,
-    this.states,
-    this.kind,
-    this.filter,
-  });
+  const RequestsMineInput({this.cursor, this.limit, this.states, this.kind});
 
   factory RequestsMineInput.fromJson(Object? json) {
     final fields = json as JsonMap;
@@ -10289,7 +10248,6 @@ final class RequestsMineInput {
         (value) => readList(value, (value) => value as String),
       ),
       kind: fields['kind'] as String?,
-      filter: fields['filter'] as String?,
     );
   }
 
@@ -10297,14 +10255,12 @@ final class RequestsMineInput {
   final int? limit;
   final List<String>? states;
   final String? kind;
-  final String? filter;
 
   JsonMap toJson() => {
     'cursor': ?cursor,
     'limit': ?limit,
     'states': ?states,
     'kind': ?kind,
-    'filter': ?filter,
   };
 }
 
