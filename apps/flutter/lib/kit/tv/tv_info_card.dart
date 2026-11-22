@@ -26,6 +26,10 @@ abstract final class TvInfoCards {
   /// The room between one line beside the poster and the next.
   static const gap = 6.0;
 
+  /// The row where an admin's card says who asked; empty on an asker's
+  /// own, so every card puts its badge in the same place.
+  static const whoHeight = 22.0;
+
   /// Its height, wherever it sits: the poster's, and the room around it.
   static const height = posterHeight + 2 * padding;
 

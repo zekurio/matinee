@@ -185,7 +185,7 @@ void main() {
         tester.getSize(find.byKey(ValueKey(index))).height,
     };
     expect(heights, {TvInfoCards.height});
-    expect(_badgeTops(tester, const [0, 1, 2]), hasLength(1));
+    expect(_badgeTops(tester, const [0, 1, 2, 3]), hasLength(1));
     for (final text in [_longError, _longNote]) {
       final lines = find.textContaining(text);
       expect(lines, findsWidgets);

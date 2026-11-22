@@ -727,7 +727,9 @@ class _Card extends StatelessWidget {
                 fontVariations: const [FontVariation('wght', 700)],
               ),
         ),
-        ?who,
+        // Who asked has its room on every card, so the badge sits at one
+        // offset whether a card says who or not.
+        SizedBox(height: TvInfoCards.whoHeight, child: who),
         badge,
         // The problem's room stays whether it has one, so no card is
         // taller than the next.
