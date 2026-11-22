@@ -13,6 +13,7 @@ import type { ReactNode } from "react"
 
 import { Rail, RailItem } from "@/components/rail"
 import { AdminAnswer } from "@/components/requests/admin-answer"
+import { CardMenu } from "@/components/requests/card-menu"
 import { OwnRequest } from "@/components/requests/own-request"
 import {
   RequestCard,
@@ -20,11 +21,19 @@ import {
   RequestStateBadge,
   requestProgress,
 } from "@/components/requests/request-card"
-import { Askers, QueueLine } from "@/components/requests/request-lines"
-import { useRequestQueue, workItems } from "@/components/requests/request-queue"
+import { Askers, QueueProblem } from "@/components/requests/request-lines"
+import {
+  addAction,
+  useRequestQueue,
+  workItems,
+} from "@/components/requests/request-queue"
 import { tr } from "@/i18n"
 import { client, errorMessage, liveQuery, orpc } from "@/lib/rpc"
-import { isHidden, useHiddenRequests } from "@/stores/request-actions"
+import {
+  isHidden,
+  useHiddenRequests,
+  useRequestActionsStore,
+} from "@/stores/request-actions"
 
 import { RAIL_CARDS } from "./discover-data"
 import { RailFailed } from "./rail-failed"
@@ -54,9 +63,12 @@ function RequestsRow<Item extends Pick<AdminRequestItem, "id" | "state">>({
   link,
   items,
   retry,
+  admin = false,
   children,
 }: {
   link: LinkOptions
+  /** The admin's cards, a row taller, for the skeletons. */
+  admin?: boolean
   items: readonly Item[] | undefined
   retry?: () => void
   children: (item: Item) => ReactNode
@@ -93,7 +105,7 @@ function RequestsRow<Item extends Pick<AdminRequestItem, "id" | "state">>({
       ) : (
         Array.from({ length: 3 }, (_, i) => (
           <RailItem key={i} artwork="request">
-            <RequestCardSkeleton />
+            <RequestCardSkeleton admin={admin} />
           </RailItem>
         ))
       )}
@@ -116,6 +128,7 @@ function QueueRequests() {
     <RequestsRow
       link={linkOptions({ to: "/requests" })}
       items={items}
+      admin
       retry={
         queue.isError && !queue.data ? () => void queue.refetch() : undefined
       }
@@ -153,8 +166,8 @@ function OwnRequests() {
 }
 
 /**
- * A request in the queue: its state, its detail line, who asked and
- * when, and what the row lets an admin do about it: Add and Decline
+ * A request in the queue: who asked, its state, its problem if any, the
+ * menu with the rest, and what the row lets an admin do about it: Add and Decline
  * while it waits, Retry once sending it failed. The rest is on the
  * requests page.
  */
@@ -168,8 +181,7 @@ function QueueRequest({ item }: { item: AdminRequestItem }) {
         description: errorMessage(error),
       }),
   })
-  // A finished card's line says when; who asked needs no time of its own.
-  const finished = item.state === "here" || item.state === "declined"
+  const hold = useRequestActionsStore((state) => state.hold)
   return (
     <RequestCard
       item={item}
@@ -180,9 +192,9 @@ function QueueRequest({ item }: { item: AdminRequestItem }) {
           urgent
         />
       }
-      line={<QueueLine item={item} />}
-      who={<Askers item={item} when={!finished} />}
-      whoUp={<Askers item={item} when={!finished} faces />}
+      who={<Askers item={item} />}
+      problem={<QueueProblem item={item} />}
+      menu={<CardMenu item={item} onAdd={() => hold(addAction([item]))} />}
       actions={
         item.state === "waiting" ? (
           <AdminAnswer item={item} look="fill" />

@@ -6,12 +6,12 @@ import { tr } from "@/i18n"
 import { useRequestActionsStore } from "@/stores/request-actions"
 
 import { RequestCard, RequestStateBadge, requestProgress } from "./request-card"
-import { AskedWhen, OwnLine } from "./request-lines"
+import { OwnProblem } from "./request-lines"
 
 /**
  * One of the viewer's requests, as the server says it stands: its
- * state, how it ended once it has, when they asked while it hasn't, and
- * a small Cancel while the server allows it. Cancel holds the call for
+ * state, why it was declined if it was, and a small Cancel while the
+ * server allows it. Cancel holds the call for
  * Undo as the queue's answers do.
  */
 export function OwnRequest({
@@ -25,7 +25,6 @@ export function OwnRequest({
   const availability = item.season ?? item.availability
   const cancellable =
     item.availability.action === "cancel" || availability.action === "cancel"
-  const finished = item.state === "here" || item.state === "declined"
   return (
     <RequestCard
       item={item}
@@ -36,9 +35,7 @@ export function OwnRequest({
           progress={requestProgress(item)}
         />
       }
-      // A finished one says how it ended; one in progress, when it was asked.
-      line={finished ? <OwnLine item={item} /> : null}
-      who={finished ? null : <AskedWhen item={item} />}
+      problem={<OwnProblem item={item} />}
       actions={
         cancellable && (
           <Button

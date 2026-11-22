@@ -1,5 +1,10 @@
 import type { AdminRequestItem, RequestState } from "@matinee/contracts"
 import { Badge } from "@matinee/ui/components/badge"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@matinee/ui/components/popover"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
@@ -9,7 +14,13 @@ import {
   ClockIcon,
   TriangleAlertIcon,
 } from "lucide-react"
-import { type ComponentProps, type ReactNode, useId } from "react"
+import {
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+} from "react"
 
 import { ProgressRing } from "@/components/catalog/catalog-card"
 import { Picture, tone } from "@/components/picture"
@@ -23,29 +34,27 @@ import { scopeLabel, titleLink } from "./request-queue"
  * The one card every list of requests draws, as Seerr draws its request
  * cards: the poster, sharp, beside the request's details, over the same
  * poster blurred and darkened, so the card takes its colors from the
- * title. Discover's row and the requests pages share it; the pages give
- * it more room. The picture is dark whatever the theme, so the card is a
- * forced `.dark` subtree: the theme's own tokens resolve dark inside it,
- * and its text, badges, and buttons read the same in both.
+ * title. The picture is dark whatever the theme, so the card is a forced
+ * `.dark` subtree: the theme's own tokens resolve dark inside it, and its
+ * text, badges, and buttons read the same in both.
  */
 
 /**
- * One request, exactly as tall as its poster: the poster dictates the
- * card's height, so every card in a grid or a row lines up, and nothing
- * in the text beside it can make one taller. What doesn't fit is cut
- * with an ellipsis, and each line that can be cut is readable in full a
- * step away. Top to bottom: the year, kind and seasons, and the name,
- * both opening the title; the state's badge and its one detail line;
- * then who asked and the actions, on the poster's bottom edge. `menu`
- * sits beside the name.
+ * One request, in one fixed anatomy whatever its state or page, exactly
+ * as tall as its poster. From the top, one line each and the same small
+ * gap between them: the year, and for a show the seasons asked for; the
+ * name; on the admin's cards, who asked; the state's badge; and, only
+ * when something went wrong, the problem. A row keeps its place on every
+ * card, so the badges line up across a grid. The actions sit on the
+ * poster's bottom edge, and the space between is the only give. `menu`
+ * sits beside the name and holds the rest.
  */
 export function RequestCard({
   item,
   size = "rail",
   state,
-  line,
   who,
-  whoUp,
+  problem,
   actions,
   menu,
   className,
@@ -56,15 +65,13 @@ export function RequestCard({
   size?: "rail" | "wide"
   /** A {@link RequestStateBadge}. */
   state: ReactNode
-  /** The state's one detail line under the badge. */
-  line?: ReactNode
-  /** Who asked and when, in the last row beside the actions. */
-  who?: ReactNode
   /**
-   * Who asked, small, for the end of the detail line when the card is
-   * too narrow for `who` beside the actions, which then take the row.
+   * Who asked, on the admin's cards. Its row is kept even when empty, so
+   * passing it at all is what makes a card the admin's.
    */
-  whoUp?: ReactNode
+  who?: ReactNode
+  /** What went wrong, one line under the badge. */
+  problem?: ReactNode
   actions?: ReactNode
   menu?: ReactNode
 }) {
@@ -73,15 +80,13 @@ export function RequestCard({
   const poster = art(title.poster)
   const facts = [
     title.year === null ? null : String(title.year),
-    tr(`requests.kind.${title.ref.kind}`),
     scopeLabel(item.scope),
   ]
     .filter(Boolean)
     .join(" · ")
   const link = titleLink(item)
   const wide = size === "wide"
-  const up = whoUp && actions ? whoUp : null
-  const last = who || actions
+  const admin = who !== undefined
 
   return (
     <article
@@ -106,68 +111,43 @@ export function RequestCard({
         aria-hidden
         className={cn(
           "bg-muted relative block aspect-[2/3] shrink-0 self-start overflow-hidden rounded-md shadow-lg ring-1 shadow-black/40 ring-white/10",
-          posterWidth[size],
+          admin ? posterWidth.admin : posterWidth.own,
         )}
       >
         {poster && <Picture sources={[poster]} sizes="112px" />}
       </Link>
       {/* Sized as if empty, so the poster alone sets the row's height,
           and the column stretches to it. */}
-      <div className="@container/card flex min-w-0 flex-1 flex-col justify-between gap-1.5 [contain:size]">
-        <div className="flex min-w-0 items-start gap-2">
-          <Link
-            {...link}
-            tabIndex={wide ? -1 : undefined}
-            // The full name and facts, where either is cut.
-            title={`${title.name}\n${facts}`}
-            className="focus-visible:ring-ring -m-1 flex min-w-0 flex-1 flex-col rounded-sm p-1 outline-none focus-visible:ring-2"
-          >
-            <span className="text-muted-foreground truncate text-xs leading-4">
-              {facts}
-            </span>
-            <span
-              id={`${id}-name`}
-              className="text-15px truncate font-semibold"
-            >
-              {title.name}
-            </span>
-          </Link>
-          {menu && <div className="-mt-1 -mr-1 shrink-0">{menu}</div>}
-        </div>
-        <div className="flex min-w-0 flex-col items-start gap-1.5">
-          {state}
-          {(line || up) && (
-            <div className="flex w-full min-w-0 items-center gap-2">
-              <div className="flex min-w-0 flex-1">{line}</div>
-              {up && (
-                <div className="shrink-0 @min-[24rem]/card:hidden">{up}</div>
-              )}
+      <div className="@container/card flex min-w-0 flex-1 flex-col [contain:size]">
+        <div className="flex min-w-0 flex-col items-start gap-1">
+          <div className="flex w-full min-w-0 items-start gap-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <Facts text={facts} />
+              <Link
+                {...link}
+                tabIndex={wide ? -1 : undefined}
+                title={title.name}
+                className="focus-visible:ring-ring -mx-1 flex min-w-0 rounded-sm px-1 outline-none focus-visible:ring-2"
+              >
+                <span
+                  id={`${id}-name`}
+                  className="text-15px truncate font-semibold"
+                >
+                  {title.name}
+                </span>
+              </Link>
             </div>
+            {menu && <div className="-mt-1 -mr-1 shrink-0">{menu}</div>}
+          </div>
+          {admin && (
+            <div className="flex h-6 w-full min-w-0 items-center">{who}</div>
           )}
+          {state}
+          {problem && <div className="flex w-full min-w-0">{problem}</div>}
         </div>
-        {last && (
-          <div className="flex min-w-0 items-center gap-2">
-            {who && (
-              <div
-                className={cn(
-                  "flex min-w-0 flex-1",
-                  up && "hidden @min-[24rem]/card:flex",
-                )}
-              >
-                {who}
-              </div>
-            )}
-            {actions && (
-              <div
-                className={cn(
-                  "ml-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-1.5",
-                  // Alone in the row, they may take all of it.
-                  up && "flex-1 @min-[24rem]/card:flex-none",
-                )}
-              >
-                {actions}
-              </div>
-            )}
+        {actions && (
+          <div className="mt-auto flex w-full min-w-0 items-center justify-end gap-1.5 pt-1.5">
+            {actions}
           </div>
         )}
       </div>
@@ -175,11 +155,50 @@ export function RequestCard({
   )
 }
 
-/** The poster's width, which sets each size's height. */
+/**
+ * The poster's width, which sets the card's height: the admin's cards
+ * have a row more, who asked, than a person's own.
+ */
 const posterWidth = {
-  rail: "w-24 sm:w-26",
-  wide: "w-24 sm:w-28",
+  admin: "w-28",
+  own: "w-20",
 } as const
+
+/**
+ * The year and a show's seasons, one line. Seasons can run long; when the
+ * line is cut, it opens the whole of it in a popover.
+ */
+function Facts({ text }: { text: string }) {
+  const [element, setElement] = useState<HTMLElement | null>(null)
+  const [cut, setCut] = useState(false)
+  useEffect(() => {
+    if (!element) return
+    const measure = () => setCut(element.scrollWidth > element.clientWidth + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [element])
+  const line = (
+    <span
+      ref={setElement}
+      className="text-muted-foreground block h-4 min-w-0 truncate text-xs leading-4"
+    >
+      {text}
+    </span>
+  )
+  if (!cut) return line
+  return (
+    <Popover>
+      <PopoverTrigger className="focus-visible:ring-ring hover:bg-foreground/[0.06] data-popup-open:bg-foreground/[0.06] -mx-1 flex min-w-0 rounded-sm px-1 text-left outline-none focus-visible:ring-2">
+        {line}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto max-w-80 text-sm">
+        {text}
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 /**
  * Each state's mark and colour. What needs whoever runs the queue stands
@@ -266,18 +285,17 @@ export function requestProgress(
   return (item.season ?? item.availability).progress
 }
 
-/**
- * The grid the requests pages lay their wide cards out in: wide enough
- * that who asked fits beside a card's actions.
- */
+/** The grid the requests pages lay their wide cards out in. */
 export const requestGrid =
-  "grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,34rem),1fr))] sm:gap-4"
+  "grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),1fr))] sm:gap-4"
 
 /** The cards on their way, in the size of the card they stand in for. */
 export function RequestCardSkeleton({
   size = "rail",
+  admin = false,
 }: {
   size?: "rail" | "wide"
+  admin?: boolean
 }) {
   const wide = size === "wide"
   return (
@@ -288,15 +306,17 @@ export function RequestCardSkeleton({
       )}
     >
       <Skeleton
-        className={cn("aspect-[2/3] shrink-0 rounded-md", posterWidth[size])}
+        className={cn(
+          "aspect-[2/3] shrink-0 rounded-md",
+          admin ? posterWidth.admin : posterWidth.own,
+        )}
       />
-      <div className="flex min-w-0 flex-1 flex-col justify-between [contain:size]">
-        <div className="flex flex-col gap-1.5">
-          <Skeleton className="h-3 w-1/3" />
-          <Skeleton className="h-4 w-4/5" />
-        </div>
-        <Skeleton className="h-6 w-2/5 rounded-full" />
-        <Skeleton className="h-8 w-full" />
+      <div className="flex min-w-0 flex-1 flex-col gap-1 [contain:size]">
+        <Skeleton className="h-3 w-1/4" />
+        <Skeleton className="h-4 w-4/5" />
+        {admin && <Skeleton className="h-6 w-2/5 rounded-full" />}
+        <Skeleton className="h-6 w-1/3 rounded-full" />
+        <Skeleton className="mt-auto h-8 w-1/2 self-end" />
       </div>
     </div>
   )
