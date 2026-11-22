@@ -120,7 +120,6 @@ class TvDrawer extends StatelessWidget {
                   spacing: 6,
                   children: [
                     _entry(top, open),
-                    const SizedBox(height: 18),
                     for (final entry in entries) _entry(entry, open),
                     const Spacer(),
                     _entry(bottom, open),
