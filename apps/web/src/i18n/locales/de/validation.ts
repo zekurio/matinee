@@ -8,6 +8,8 @@ export default {
   "validation.searchQuery": "Gib einen Namen für die Suche ein.",
   "validation.clientName": "Gib einen Namen ein.",
 
+  "validation.apiTokenPermissions": "Wähle, was das Token darf.",
+
   "validation.imageSize": "Wähle ein Bild unter 25 MB.",
 
   "validation.metadataLanguage": "Verwende einen Sprachcode wie en oder de-DE.",

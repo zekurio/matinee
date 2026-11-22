@@ -59,7 +59,6 @@ export function encodeAllowed(
   )
 }
 
-export const DOWNLOADS_OFF = "Downloads are turned off for your account."
 export const DOWNLOAD_VIDEO_OFF =
   "The server may not convert video for your account. Download the file as it is or keep its video."
 

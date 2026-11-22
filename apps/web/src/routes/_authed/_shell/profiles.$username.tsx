@@ -53,6 +53,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatMonth } from "@/lib/format"
+import { runsQueue } from "@/lib/permissions"
 import { reloadOnEnter } from "@/lib/route-loading"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
@@ -205,6 +206,7 @@ function ProfileSkeleton() {
  */
 function ProfileHeader({ profile }: { profile: Profile }) {
   const { user } = profile
+  const { user: me } = Route.useRouteContext()
   const openSettings = useOpenSettings()
   const own = usePhoneTab() === "profile"
   return (
@@ -253,7 +255,7 @@ function ProfileHeader({ profile }: { profile: Profile }) {
           />
           {own && (
             <>
-              {user.role === "admin" && <RequestsButton />}
+              {runsQueue(me) && <RequestsButton />}
               <Link
                 to="/stats"
                 aria-label={tr("shell.statistics")}

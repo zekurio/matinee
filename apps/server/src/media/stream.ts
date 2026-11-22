@@ -14,8 +14,9 @@ import { type MediaItemRow } from "@matinee/db"
 import { Hono } from "hono"
 
 import { encodeAllowed } from "../access/media"
-import { readViewer } from "../access/viewer"
+import { can, readViewer } from "../access/viewer"
 import { itemFor } from "../access/visible"
+import type { SessionUser } from "../auth/session"
 import { log } from "../log"
 import {
   addEncodeSeconds,
@@ -74,7 +75,7 @@ function parseRange(header: string, size: number): ByteRange | null {
 export const streamRoutes = new Hono()
 
 streamRoutes.get("/:id/thumbnail", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -103,7 +104,7 @@ const TILE_NAME = /^(\d{1,5})\.jpg$/
 
 /** Trickplay images as an HLS image playlist; see `trickplayPlaylistPath`. */
 streamRoutes.get("/:id/trickplay/tiles.m3u8", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -121,7 +122,7 @@ streamRoutes.get("/:id/trickplay/tiles.m3u8", async (c) => {
 
 /** A tile of trickplay images; see `trickplayTilePath`. */
 streamRoutes.get("/:id/trickplay/:key/:name", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   const key = c.req.param("key")
@@ -190,7 +191,7 @@ const playerStreams = new Map<string, AbortController>()
 
 /** One audio track, the video copied or encoded; see `mediaPlaybackPath`. */
 streamRoutes.get("/:id/play", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -234,7 +235,7 @@ streamRoutes.get("/:id/play", async (c) => {
         userId: viewer.id,
         item,
         client: viewer.clientName,
-        authSessionId: viewer.sessionId,
+        authSessionId: viewer.credential.id,
       }
     : null
   const { plan } = opened
@@ -295,7 +296,7 @@ async function hlsRequest(
 }
 
 function watcherFor(
-  viewer: { id: string; clientName: string | null; sessionId: string },
+  viewer: Pick<SessionUser, "id" | "clientName" | "credential">,
   item: MediaItemRow,
   session: string | undefined,
 ): Watcher {
@@ -307,7 +308,7 @@ function watcherFor(
           userId: viewer.id,
           item,
           client: viewer.clientName,
-          authSessionId: viewer.sessionId,
+          authSessionId: viewer.credential.id,
         }
       : null,
   }
@@ -321,7 +322,7 @@ function fileBody(path: string): ReadableStream<Uint8Array> {
 
 /** An encode as HLS; see `mediaHlsPath`. */
 streamRoutes.get("/:id/hls/main.m3u8", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -354,7 +355,7 @@ const SEGMENT_NAME = /^(?:init\.mp4|(\d{1,6})\.m4s)$/
 
 /** One segment of an encode, or its init segment. */
 streamRoutes.get("/:id/hls/:key/:name", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   const key = c.req.param("key")
@@ -407,7 +408,7 @@ streamRoutes.get("/:id/hls/:key/:name", async (c) => {
 })
 
 streamRoutes.get("/:id/fonts/:index?", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -438,7 +439,7 @@ streamRoutes.get("/:id/fonts/:index?", async (c) => {
 })
 
 streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.play")
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -481,7 +482,11 @@ streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
 })
 
 streamRoutes.on(["GET", "HEAD"], "/:id/stream", async (c) => {
-  const viewer = await readViewer(c)
+  // This route also serves original downloads, so a token that only
+  // downloads reaches it too. Which of the two it is, the check below says.
+  const viewer =
+    (await readViewer(c, "media.play")) ??
+    (await readViewer(c, "media.download"))
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
@@ -491,10 +496,14 @@ streamRoutes.on(["GET", "HEAD"], "/:id/stream", async (c) => {
 
   const info = await stat(item.path).catch(() => null)
   if (!info?.isFile()) return c.body(null, 404)
-  // This route also serves original downloads, which have no bit rate limit.
+  // An original download has no bit rate limit. Playing the file as it is
+  // needs both the right to play and a file within the viewer's limit.
   if (
-    !viewer.access.downloads &&
-    !(await mayStreamOriginal(viewer.access, item, info))
+    !can(viewer, "media.download") &&
+    !(
+      can(viewer, "media.play") &&
+      (await mayStreamOriginal(viewer.access, item, info))
+    )
   )
     return c.body(null, 403)
 

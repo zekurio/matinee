@@ -66,11 +66,75 @@ export default defineMessages("access", {
   "access.done": "Done",
   "access.retry": "Try again",
 
+  // Permissions: what a group grants and an API token may do. They show
+  // as the API names them, like library.scan, under each resource's line.
+  "access.permissions": "Permissions",
+  "access.permissions.search": "Search permissions",
+  "access.permissions.noMatch": "No permission matches.",
+  // A fact on a group or an account, beside its downloads and requests.
+  "access.permissions.count": plural({
+    one: "{count} more permission",
+    other: "{count} more permissions",
+  }),
+  "access.permissions.all": "Every permission",
+  // Under the group editor's list.
+  "access.permissions.groupHint":
+    "Parts of running the server that members take on, like approving requests or scanning libraries. An account has every permission any of its groups grants.",
+  // When the person editing lacks some of them.
+  "access.permissions.ownOnly":
+    "You can only grant or take away permissions you have yourself.",
+  "access.permission.account":
+    "The account's profile, picture, and preferences.",
+  "access.permission.adminApiToken": "Revoking other accounts' API tokens.",
+  "access.permission.adminRequest":
+    "Everyone's requests: the queue, approving, declining, and retrying.",
+  "access.permission.adminSession": "Signing other accounts out.",
+  "access.permission.adminUser":
+    "Other accounts: the list, their groups and access, and deleting them.",
+  "access.permission.apiToken": "The account's API tokens.",
+  "access.permission.authSettings": "Passkey and single sign-on settings.",
+  "access.permission.branding": "The server's name and login page.",
+  "access.permission.catalog":
+    "Discover, and the catalog of titles to ask for.",
+  "access.permission.favorite": "Favorites.",
+  "access.permission.folder":
+    "Browsing the server's folders, as adding a library does.",
+  "access.permission.fulfilment":
+    "Connections that fetch requested titles, and their rules.",
+  "access.permission.group": "Access groups.",
+  "access.permission.invite": "Invite links.",
+  "access.permission.job": "Queues and scheduled tasks.",
+  "access.permission.library":
+    "Libraries and their folders. Scanning also refreshes metadata.",
+  "access.permission.media":
+    "Files: their details, playing them, and downloading them.",
+  "access.permission.networkSettings": "Network settings.",
+  "access.permission.oidcAccount": "The account's single sign-on link.",
+  "access.permission.party": "Watch parties.",
+  "access.permission.passkey": "The account's passkeys.",
+  "access.permission.profile": "Other people's profiles.",
+  "access.permission.recommendation": "Recommendations.",
+  "access.permission.request":
+    "The account's own requests. With autoApprove they're added without an approval.",
+  "access.permission.serverSetup": "Finishing the server's setup.",
+  "access.permission.serverStats":
+    "Everyone's watch time, and who is watching now.",
+  "access.permission.session":
+    "The account's sessions, and approving a device's sign-in.",
+  "access.permission.stats":
+    "The account's own statistics, and the leaderboard.",
+  "access.permission.title":
+    "Titles, people, search, and artwork. Updating fixes matches and images.",
+  "access.permission.transcodingSettings": "Transcoding settings.",
+  "access.permission.trickplaySettings": "Trickplay settings.",
+  "access.permission.watchState":
+    "Progress, watched marks, Continue Watching, and Next Up.",
+
   // Settings → Access: the list of groups.
   "access.groups.title": "Access groups",
   "access.groups.create": "New group",
   "access.groups.intro":
-    "An account gets the most its groups allow. Settings under Users override groups. Admins have no limits.",
+    "An account gets the most its groups allow, and every permission any of them grants. Settings under Users override groups. Admins have no limits and every permission.",
   "access.groups.loadFailed": "Couldn't load the groups. {error}",
   "access.groups.onlyEveryone":
     "Every account is in Everyone. Add groups to give some accounts more.",

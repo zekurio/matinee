@@ -37,7 +37,7 @@ function attachment(fileName: string): string {
 
 /** The download as one file: Matroska, or fragmented MP4; see `downloadFilePath`. */
 downloadRoutes.get("/:id/file.mp4", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.download")
   if (!viewer) return c.body(null, 401)
   const query = FileQuery.safeParse(c.req.query())
   if (!query.success) return c.body(null, 400)
@@ -65,7 +65,7 @@ downloadRoutes.get("/:id/file.mp4", async (c) => {
 
 /** A download's init segment; see `downloadInitPath`. */
 downloadRoutes.get("/:id/init.mp4", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.download")
   if (!viewer) return c.body(null, 401)
   const access = await accessDownload(c.req.param("id"), viewer)
   if (access.kind === "forbidden") return c.body(null, 403)
@@ -87,7 +87,7 @@ const SEGMENT_NAME = /^(\d{1,6})\.m4s$/
 
 /** One segment of a download; see `downloadSegmentPath`. */
 downloadRoutes.get("/:id/:name", async (c) => {
-  const viewer = await readViewer(c)
+  const viewer = await readViewer(c, "media.download")
   if (!viewer) return c.body(null, 401)
   const name = SEGMENT_NAME.exec(c.req.param("name"))
   if (!name) return c.body(null, 404)

@@ -242,9 +242,9 @@ export const DiscoverRow = t.object({
 })
 
 export const discoverContract = {
-  rails: get("/discover/rails").output(DiscoverRails),
+  rails: get("/discover/rails", "catalog.read").output(DiscoverRails),
   /** A row's cards, by its `id` and `seed`. */
-  row: post("/discover/row")
+  row: post("/discover/row", "catalog.read")
     .input(
       t.object({
         id: DiscoverRailId,
@@ -253,11 +253,11 @@ export const discoverContract = {
     )
     .output(DiscoverRow),
   /** What browsing a kind offers. */
-  browseOptions: get("/discover/browse/options")
+  browseOptions: get("/discover/browse/options", "catalog.read")
     .input(t.object({ kind: TitleKind }))
     .output(CatalogBrowseOptions),
   /** A page of the catalog of one kind, filtered and sorted. */
-  browse: post("/discover/browse")
+  browse: post("/discover/browse", "catalog.read")
     .input(CatalogBrowseInput)
     .output(CatalogBrowsePage),
 }

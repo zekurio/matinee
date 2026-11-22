@@ -32,7 +32,7 @@ import {
 import { TITLE_IMAGE_COLUMNS } from "../metadata/choices"
 import { refreshTitleNow, sourceFor } from "../metadata/refresh"
 import type { ImageCandidate, ImageScope } from "../metadata/types"
-import { admin, badRequest, notFound } from "./base"
+import { authed, badRequest, notFound } from "./base"
 import { loadRow, providerFailure, withLibrary } from "./titles"
 
 // Enough to scroll through. Popular titles have hundreds in all languages.
@@ -83,7 +83,9 @@ async function currentImages(
   scope: ImageScope,
 ): Promise<Current[]> {
   if (scope.kind === "title") {
-    const row = await loadRow(titleId)
+    // ACCESS: The title its procedure loaded for the viewer.
+    const [row] = await db.select().from(title).where(eq(title.id, titleId))
+    if (!row) throw notFound("This title isn't in any library.")
     return TITLE_IMAGE_SLOTS.map((slot) => ({
       slot,
       id: row[TITLE_IMAGE_COLUMNS[slot]],
@@ -131,7 +133,7 @@ async function itemImages(
 }
 
 /**
- * Put an image in a slot and mark whether an admin chose it. Without `id`
+ * Put an image in a slot and mark whether someone chose it. Without `id`
  * the image stays as it is. A season or episode the provider doesn't list
  * gets a row for it. Returns the image the slot had.
  */
@@ -143,7 +145,7 @@ async function setSlot(
 ): Promise<string | null> {
   return db.transaction(async (tx) => {
     // A refresh locks the row too, so the two don't overwrite each other.
-    // ACCESS: Only admin image procedures call setSlot, after loading the title.
+    // ACCESS: Only image procedures call setSlot, with the title they loaded for the viewer.
     const [row] = await tx
       .select()
       .from(title)
@@ -259,47 +261,51 @@ function matchedSource(row: TitleRow, lib: LibraryRow) {
 }
 
 export const titleImages = {
-  images: admin.titles.images.handler(async ({ input }) => {
-    const row = await loadRow(input.id)
+  images: authed.titles.images.handler(async ({ context, input }) => {
+    const row = await loadRow(context.user, input.id)
     return itemImages(row.id, scopeOf(row, input))
   }),
 
-  remoteImages: admin.titles.remoteImages.handler(async ({ input }) => {
-    const { row, lib } = await withLibrary(input.id)
-    const scope = slotScope(row, input)
-    const match = matchedSource(row, lib)
-    if (!match) return []
-    const { source, providerId } = match
-    const found = await source
-      .images(
-        providerId,
-        { kind: row.kind, language: lib.metadataLanguage },
-        scope,
+  remoteImages: authed.titles.remoteImages.handler(
+    async ({ context, input }) => {
+      const { row, lib } = await withLibrary(context.user, input.id)
+      const scope = slotScope(row, input)
+      const match = matchedSource(row, lib)
+      if (!match) return []
+      const { source, providerId } = match
+      const found = await source
+        .images(
+          providerId,
+          { kind: row.kind, language: lib.metadataLanguage },
+          scope,
+        )
+        .catch((cause: unknown) => providerFailure(source.name, cause))
+      const shown = rank(
+        unique(found.filter((image) => image.slot === input.slot)),
+        lib.metadataLanguage,
+        input.allLanguages,
+      ).slice(0, MAX_REMOTE_IMAGES)
+      await saveArtwork(shown.flatMap((image) => [image.url, image.preview]))
+      const previews = shown.map((image) =>
+        artworkId(image.preview ?? image.url),
       )
-      .catch((cause: unknown) => providerFailure(source.name, cause))
-    const shown = rank(
-      unique(found.filter((image) => image.slot === input.slot)),
-      lib.metadataLanguage,
-      input.allLanguages,
-    ).slice(0, MAX_REMOTE_IMAGES)
-    await saveArtwork(shown.flatMap((image) => [image.url, image.preview]))
-    const previews = shown.map((image) => artworkId(image.preview ?? image.url))
-    // Choices seen before have a placeholder.
-    const art = await placeholders(previews)
-    return shown.map((image, i): RemoteImage => {
-      const preview = previews[i] ?? artworkId(image.url)
-      return {
-        id: artworkId(image.url),
-        preview: { id: preview, placeholder: art.get(preview) ?? null },
-        width: image.width,
-        height: image.height,
-        language: image.language,
-      }
-    })
-  }),
+      // Choices seen before have a placeholder.
+      const art = await placeholders(previews)
+      return shown.map((image, i): RemoteImage => {
+        const preview = previews[i] ?? artworkId(image.url)
+        return {
+          id: artworkId(image.url),
+          preview: { id: preview, placeholder: art.get(preview) ?? null },
+          width: image.width,
+          height: image.height,
+          language: image.language,
+        }
+      })
+    },
+  ),
 
-  setImage: admin.titles.setImage.handler(async ({ input }) => {
-    const row = await loadRow(input.id)
+  setImage: authed.titles.setImage.handler(async ({ context, input }) => {
+    const row = await loadRow(context.user, input.id)
     const scope = slotScope(row, input)
     if (input.imageId !== null) {
       const [known] = await db
@@ -320,8 +326,8 @@ export const titleImages = {
     return itemImages(row.id, scope)
   }),
 
-  uploadImage: admin.titles.uploadImage.handler(async ({ input }) => {
-    const row = await loadRow(input.id)
+  uploadImage: authed.titles.uploadImage.handler(async ({ context, input }) => {
+    const row = await loadRow(context.user, input.id)
     const scope = slotScope(row, input)
     const id = await saveUpload(new Uint8Array(await input.file.arrayBuffer()))
     if (!id) throw badRequest("Pick a JPEG, PNG, or WebP image.")
@@ -333,8 +339,8 @@ export const titleImages = {
     return itemImages(row.id, scope)
   }),
 
-  resetImage: admin.titles.resetImage.handler(async ({ input }) => {
-    const { row, lib } = await withLibrary(input.id)
+  resetImage: authed.titles.resetImage.handler(async ({ context, input }) => {
+    const { row, lib } = await withLibrary(context.user, input.id)
     const scope = slotScope(row, input)
     const match = matchedSource(row, lib)
     // Without a match there is no provider image to go back to. With one,

@@ -10,6 +10,9 @@
     <string name="web_server_fulfilment_optionsMissing">Choose each of the connection\'s options.</string>
     <string name="web_server_fulfilment_settingsInvalid">Check the connection\'s settings.</string>
     <string name="web_server_fulfilment_folderLost">%1$s isn\'t in any library Matinee scans for this kind of title. Choose the library it lands in, or save it to another folder.</string>
+    <string name="web_server_fulfilment_hiddenLibrary">This connection sends titles to a library you can\'t see, so you can\'t change it.</string>
+    <string name="web_server_fulfilment_defaultFilmsHidden">The default for films sends titles to a library you can\'t see, so you can\'t replace it.</string>
+    <string name="web_server_fulfilment_defaultShowsHidden">The default for shows sends titles to a library you can\'t see, so you can\'t replace it.</string>
     <string name="web_server_fulfilment_filmFolder">Choose the folder films are saved to.</string>
     <string name="web_server_fulfilment_showFolder">Choose the folder shows are saved to.</string>
     <string name="web_server_fulfilment_noRules">This connection doesn\'t take override rules.</string>
@@ -84,6 +87,10 @@
     <string name="web_server_downloads_noDownloadAudio">No audio conversion is available for this device.</string>
     <string name="web_server_rpc_signInFirst">Sign in first.</string>
     <string name="web_server_rpc_adminsOnly">Only admins can do this.</string>
+    <string name="web_server_rpc_accountPermission">Your account doesn\'t have the %1$s permission.</string>
+    <string name="web_server_rpc_tokenPermission">This API token doesn\'t have the %1$s permission.</string>
+    <string name="web_server_rpc_wholeAccount">Adding a way to sign in takes a session, or an API token with all permissions.</string>
+    <string name="web_server_rpc_ownPermissions">You can only grant or take away permissions you have yourself. You don\'t have %1$s.</string>
     <string name="web_server_rpc_passkeysOff">Passkeys are turned off on this server.</string>
     <string name="web_server_rpc_checkInput">Check what you entered and try again.</string>
     <string name="web_server_auth_signUpClosed">Sign-up is closed on this server.</string>
@@ -142,9 +149,12 @@
     <string name="web_server_account_noLinkedAccount">No account is linked.</string>
     <string name="web_server_account_currentSession">Sign out to end the session you\'re using.</string>
     <string name="web_server_account_sessionGone">That session already ended.</string>
+    <string name="web_server_account_apiTokenGone">That API token was already revoked.</string>
+    <string name="web_server_account_apiTokenGrant">An API token can\'t grant permissions it doesn\'t have.</string>
+    <string name="web_server_account_noApiToken">This request didn\'t come with an API token.</string>
     <string name="web_server_adminUsers_gone">That user no longer exists. Reload the list.</string>
+    <string name="web_server_adminUsers_above">%1$s is an admin, and only an admin changes an admin\'s account.</string>
     <string name="web_server_adminInvites_gone">That invite no longer exists. Reload the list.</string>
-    <string name="web_server_access_downloadsOff">Downloads are turned off for your account.</string>
     <string name="web_server_access_downloadVideoOff">The server may not convert video for your account. Download the file as it is or keep its video.</string>
     <string name="web_server_access_overLimitSeek">This file is over the bit rate your account may stream. Pick a lower quality to watch it.</string>
     <string name="web_server_access_overLimitNoEncoding">This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server.</string>

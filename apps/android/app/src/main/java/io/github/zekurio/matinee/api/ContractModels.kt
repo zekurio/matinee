@@ -638,6 +638,7 @@ data class FulfilmentLanding(
     val from: String,
     val folder: String,
     val library: FulfilmentLibrary?,
+    val hidden: Boolean,
 )
 
 @Serializable
@@ -652,6 +653,7 @@ data class FulfilmentConnection(
     val folderLibraries: Map<String, String>,
     val apiKey: FulfilmentConnection.ApiKey,
     val landings: List<FulfilmentLanding>,
+    val editable: Boolean,
 ) {
     @Serializable
     data class ApiKey(
@@ -1464,6 +1466,7 @@ data class AdminUser(
     val username: String,
     val displayName: String?,
     val role: String,
+    val permissions: List<String>,
     val avatarId: String?,
     val avatarSource: String,
     val playback: PlaybackPreferences?,
@@ -1474,6 +1477,7 @@ data class AdminUser(
     val passkeys: Int,
     val oidcLinked: Boolean,
     val sessions: Int,
+    val apiTokens: Int,
     val claimsSyncedAt: String?,
     val access: AdminUser.Access,
 ) {
@@ -1497,10 +1501,10 @@ data class AdminUser(
             val libraries: AdminUser.Access.Override.Libraries? = null,
             val maxBitrate: Explicit<Int>? = null,
             val transcode: Boolean? = null,
-            val downloads: Boolean? = null,
-            val requests: String? = null,
             val requestLimit: Explicit<RequestQuota>? = null,
             val maxStreams: Explicit<Int>? = null,
+            val allow: List<String>? = null,
+            val deny: List<String>? = null,
         ) {
             @Serializable
             data class Libraries(
@@ -1514,10 +1518,9 @@ data class AdminUser(
             val libraries: AdminUser.Access.FromGroups.Libraries,
             val maxBitrate: Int?,
             val transcode: Boolean,
-            val downloads: Boolean,
-            val requests: String,
             val requestLimit: RequestQuota?,
             val maxStreams: Int?,
+            val permissions: List<String>,
         ) {
             @Serializable
             data class Libraries(
@@ -1531,10 +1534,9 @@ data class AdminUser(
             val libraries: AdminUser.Access.Effective.Libraries,
             val maxBitrate: Int?,
             val transcode: Boolean,
-            val downloads: Boolean,
-            val requests: String,
             val requestLimit: RequestQuota?,
             val maxStreams: Int?,
+            val permissions: List<String>,
         ) {
             @Serializable
             data class Libraries(
@@ -1546,11 +1548,21 @@ data class AdminUser(
 }
 
 @Serializable
+data class ApiToken(
+    val id: String,
+    val name: String,
+    val permissions: List<String>,
+    val createdAt: String,
+    val lastUsedAt: String?,
+)
+
+@Serializable
 data class User(
     val id: String,
     val username: String,
     val displayName: String?,
     val role: String,
+    val permissions: List<String>,
     val avatarId: String?,
     val avatarSource: String,
     val playback: PlaybackPreferences?,
@@ -1562,6 +1574,12 @@ data class User(
 data class AppSession(
     val token: String,
     val user: User,
+)
+
+@Serializable
+data class CreatedApiToken(
+    val token: String,
+    val apiToken: ApiToken,
 )
 
 @Serializable
@@ -2958,6 +2976,19 @@ data class AuthSettingsInput(
 )
 
 @Serializable
+data class ApiTokenInput(
+    val name: String,
+    val permissions: List<String>,
+)
+
+@Serializable
+data class ApiTokenUpdate(
+    val id: String,
+    val name: String? = null,
+    val permissions: List<String>? = null,
+)
+
+@Serializable
 data class AppDevice(
     val name: String? = null,
     val platform: String,
@@ -3144,6 +3175,12 @@ data class AccountPasskeysRegisterInput(
 @Serializable
 data class AccountPasskeysRenameInput(
     val name: String?,
+)
+
+@Serializable
+data class AccountApiTokensUpdateInput(
+    val name: String? = null,
+    val permissions: List<String>? = null,
 )
 
 @Serializable
@@ -3379,6 +3416,7 @@ data class AdminFulfilmentOptionsInput(
 @Serializable
 data class AdminFulfilmentLandingOutput(
     val library: FulfilmentLibrary?,
+    val hidden: Boolean,
 )
 
 @Serializable
@@ -3422,10 +3460,9 @@ data class AdminGroupsListOutput(
         val libraries: AdminGroupsListOutput.Policy.Libraries,
         val maxBitrate: Int?,
         val transcode: Boolean,
-        val downloads: Boolean,
-        val requests: String,
         val requestLimit: RequestQuota?,
         val maxStreams: Int?,
+        val permissions: List<String>,
     ) {
         @Serializable
         data class Libraries(
@@ -3446,10 +3483,9 @@ data class AdminGroupsCreateInput(
         val libraries: AdminGroupsCreateInput.Policy.Libraries,
         val maxBitrate: Int?,
         val transcode: Boolean,
-        val downloads: Boolean,
-        val requests: String,
         val requestLimit: RequestQuota?,
         val maxStreams: Int?,
+        val permissions: List<String>,
     ) {
         @Serializable
         data class Libraries(
@@ -3474,10 +3510,9 @@ data class AdminGroupsCreateOutput(
         val libraries: AdminGroupsCreateOutput.Policy.Libraries,
         val maxBitrate: Int?,
         val transcode: Boolean,
-        val downloads: Boolean,
-        val requests: String,
         val requestLimit: RequestQuota?,
         val maxStreams: Int?,
+        val permissions: List<String>,
     ) {
         @Serializable
         data class Libraries(
@@ -3498,10 +3533,9 @@ data class AdminGroupsUpdateInput(
         val libraries: AdminGroupsUpdateInput.Policy.Libraries,
         val maxBitrate: Int?,
         val transcode: Boolean,
-        val downloads: Boolean,
-        val requests: String,
         val requestLimit: RequestQuota?,
         val maxStreams: Int?,
+        val permissions: List<String>,
     ) {
         @Serializable
         data class Libraries(
@@ -3526,10 +3560,9 @@ data class AdminGroupsUpdateOutput(
         val libraries: AdminGroupsUpdateOutput.Policy.Libraries,
         val maxBitrate: Int?,
         val transcode: Boolean,
-        val downloads: Boolean,
-        val requests: String,
         val requestLimit: RequestQuota?,
         val maxStreams: Int?,
+        val permissions: List<String>,
     ) {
         @Serializable
         data class Libraries(
@@ -3572,10 +3605,10 @@ data class AdminUsersSetAccessInput(
         val libraries: AdminUsersSetAccessInput.Override.Libraries? = null,
         val maxBitrate: Explicit<Int>? = null,
         val transcode: Boolean? = null,
-        val downloads: Boolean? = null,
-        val requests: String? = null,
         val requestLimit: Explicit<RequestQuota>? = null,
         val maxStreams: Explicit<Int>? = null,
+        val allow: List<String>? = null,
+        val deny: List<String>? = null,
     ) {
         @Serializable
         data class Libraries(
@@ -3588,4 +3621,9 @@ data class AdminUsersSetAccessInput(
 @Serializable
 data class AdminUsersSignOutOutput(
     val ended: Int,
+)
+
+@Serializable
+data class AdminUsersRevokeApiTokensOutput(
+    val revoked: Int,
 )

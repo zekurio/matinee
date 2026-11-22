@@ -298,6 +298,11 @@ function ConnectionCard({
               ))}
             </span>
           )}
+          {!connection.editable && (
+            <span className="text-muted-foreground text-xs leading-5">
+              {tr("connections.card.readOnly")}
+            </span>
+          )}
           {source?.apiKey && connection.apiKey.source === null && (
             <span className="text-warning text-xs leading-5">
               {trRich("connections.key.none", { variable })}
@@ -327,18 +332,22 @@ function ConnectionCard({
               <RefreshCwIcon />
               {tr("connections.test")}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onEdit}>
-              <PencilIcon />
-              {tr("connections.edit")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => setConfirming(true)}
-            >
-              <Trash2Icon />
-              {tr("connections.delete")}
-            </DropdownMenuItem>
+            {connection.editable && (
+              <>
+                <DropdownMenuItem onClick={onEdit}>
+                  <PencilIcon />
+                  {tr("connections.edit")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setConfirming(true)}
+                >
+                  <Trash2Icon />
+                  {tr("connections.delete")}
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -395,6 +404,7 @@ function LandingLine({
       </span>
       <Destination
         library={landing.library?.name ?? null}
+        hidden={landing.hidden}
         rest={[landing.folder, quality]}
       />
     </>
@@ -404,10 +414,13 @@ function LandingLine({
 /** A library in bold, then what else says how a title gets there. */
 function Destination({
   library,
+  hidden,
   rest,
 }: {
-  /** Null when the folder is in no library. */
+  /** Null when the folder is in no library, or in one the account can't see. */
   library: string | null
+  /** The folder is in a library the account can't see. */
+  hidden: boolean
   rest: (ReactNode | null)[]
 }) {
   const shown = rest.filter((part) => part !== null && part !== "")
@@ -415,6 +428,10 @@ function Destination({
     <span className="min-w-0 break-words">
       {library ? (
         <span className="font-medium">{library}</span>
+      ) : hidden ? (
+        <span className="text-muted-foreground font-medium">
+          {tr("connections.card.hidden")}
+        </span>
       ) : (
         <span className="text-warning">{tr("connections.card.nowhere")}</span>
       )}
@@ -487,18 +504,20 @@ function ConnectionRules({
         <h5 className="text-13px font-medium">
           {tr("connections.rules.title")}
         </h5>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={!fields}
-          onClick={() => {
-            setEditing({})
-            setOpen(true)
-          }}
-        >
-          <PlusIcon />
-          {tr("connections.rules.add")}
-        </Button>
+        {connection.editable && (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!fields}
+            onClick={() => {
+              setEditing({})
+              setOpen(true)
+            }}
+          >
+            <PlusIcon />
+            {tr("connections.rules.add")}
+          </Button>
+        )}
       </div>
       {list.length > 0 && (
         <ol className="flex flex-col divide-y rounded-lg border">
@@ -516,52 +535,54 @@ function ConnectionRules({
                 choices={choices.data}
                 landings={connection.landings}
               />
-              <div className="flex shrink-0 items-center self-center">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={tr("connections.rules.up")}
-                  disabled={index === 0 || reorder.isPending}
-                  onClick={() => move(index, -1)}
-                >
-                  <ArrowUpIcon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={tr("connections.rules.down")}
-                  disabled={index === list.length - 1 || reorder.isPending}
-                  onClick={() => move(index, 1)}
-                >
-                  <ArrowDownIcon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={tr("connections.rules.edit")}
-                  disabled={!fields}
-                  onClick={() => {
-                    setEditing({ rule })
-                    setOpen(true)
-                  }}
-                >
-                  <PencilIcon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={tr("connections.rules.delete")}
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => setRemoving(rule)}
-                >
-                  <Trash2Icon />
-                </Button>
-              </div>
+              {connection.editable && (
+                <div className="flex shrink-0 items-center self-center">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={tr("connections.rules.up")}
+                    disabled={index === 0 || reorder.isPending}
+                    onClick={() => move(index, -1)}
+                  >
+                    <ArrowUpIcon />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={tr("connections.rules.down")}
+                    disabled={index === list.length - 1 || reorder.isPending}
+                    onClick={() => move(index, 1)}
+                  >
+                    <ArrowDownIcon />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={tr("connections.rules.edit")}
+                    disabled={!fields}
+                    onClick={() => {
+                      setEditing({ rule })
+                      setOpen(true)
+                    }}
+                  >
+                    <PencilIcon />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={tr("connections.rules.delete")}
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setRemoving(rule)}
+                  >
+                    <Trash2Icon />
+                  </Button>
+                </div>
+              )}
             </li>
           ))}
         </ol>
       )}
-      {fields && (
+      {fields && connection.editable && (
         <RuleDialog
           connection={connection}
           kind={kind}
@@ -639,15 +660,18 @@ function RuleSummary({
   const known = fields.filter((each) => Object.hasOwn(rule.settings, each.key))
   // A folder and a quality read as what they are; anything else by name.
   const folderField = known.find((each) => each.folder)
+  const landing = folderField?.folder
+    ? landings.find(
+        (each) =>
+          each.folder ===
+            shownValue(undefined, rule.settings, folderField.key)[0] &&
+          each.kind === folderField.folder,
+      )
+    : undefined
   const folder = folderField?.folder
     ? {
-        library:
-          landings.find(
-            (landing) =>
-              landing.folder ===
-                shownValue(undefined, rule.settings, folderField.key)[0] &&
-              landing.kind === folderField.folder,
-          )?.library?.name ?? null,
+        library: landing?.library?.name ?? null,
+        hidden: landing?.hidden ?? false,
       }
     : null
   const settings = known.map((field) => {
@@ -672,7 +696,11 @@ function RuleSummary({
         ))}
       </p>
       {folder ? (
-        <Destination library={folder.library} rest={settings} />
+        <Destination
+          library={folder.library}
+          hidden={folder.hidden}
+          rest={settings}
+        />
       ) : (
         <p className="text-muted-foreground min-w-0 break-words">
           {settings.map((part, index) => (

@@ -89,6 +89,9 @@ export const appRoutes = new Hono()
         })}`,
       )
     }
+    // The page's own form, so only its session approves: `readSession`
+    // takes no API token here. A token approves a device through
+    // `auth.device.approve` instead, with `session.create`.
     const current = await readSession(c)
     if (!current) {
       // Signed out since the page loaded: sign in, then approve again.
