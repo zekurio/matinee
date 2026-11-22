@@ -466,7 +466,6 @@ class PlayerSpinner extends StatelessWidget {
               child: waiting
                   ? Text(
                       AppLocalizations.of(context).playerWaiting,
-                      key: const Key('player/waiting'),
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       style: style.copyWith(shadows: onPicture),

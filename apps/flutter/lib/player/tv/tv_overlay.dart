@@ -497,7 +497,6 @@ class _MenuButton extends StatelessWidget {
                         Positioned(
                           bottom: -7,
                           child: Container(
-                            key: const Key('player/on'),
                             width: 20,
                             height: 4,
                             decoration: BoxDecoration(

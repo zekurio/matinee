@@ -592,7 +592,6 @@ class _HeaderBody extends StatelessWidget {
             ),
             if (item.subtitle case final text?)
               Padding(
-                key: const Key('hero/subtitle'),
                 padding: const EdgeInsets.only(top: _subtitleGap),
                 child: Text(
                   text,
