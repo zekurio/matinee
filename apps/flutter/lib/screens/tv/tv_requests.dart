@@ -590,6 +590,8 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     final cards = body.cards;
     // Up from the grid lands on the tab it shows.
     _memory.startAt(_Rows.tabs, _tab);
+    // Down from the tabs, before any card had focus, lands on the first.
+    if (cards.isNotEmpty) _memory.startAt(TvGrid.row, cards.first.id);
     _memory.restore(context, () {
       if (cards.isNotEmpty) return (TvGrid.row, cards.first.id);
       return body.settled ? (_Rows.tabs, _tab) : null;

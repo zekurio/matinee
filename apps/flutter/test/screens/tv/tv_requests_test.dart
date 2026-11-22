@@ -700,6 +700,34 @@ void main() {
       expect(find.byType(TvLoading), findsNothing, reason: 'the last page');
     });
 
+    testWidgets("Down from a list's tab, before any of its cards had focus, "
+        'lands on its first card, not the one under the tab', (tester) async {
+      final requests = _discover(requests: 'queue')
+        ..queue = queueJson(
+          onTheWay: [
+            for (var i = 0; i < 6; i++)
+              queueItemJson(
+                'o$i',
+                summaryJson('t$i', 'Movie $i'),
+                status: 'approved',
+              ),
+          ],
+        );
+      await _open(
+        tester,
+        requests,
+        path: Routes.requests(QueueList.waiting),
+        admin: true,
+      );
+      expect(focusedKey(), 'tabs/waiting', reason: 'Waiting is empty');
+      await right(tester, 2);
+      expect(focusedKey(), 'tabs/onTheWay');
+      await select(tester);
+      await down(tester);
+      expect(focusedKey(), 'grid/o0');
+      expect(requests.sentPaths, isEmpty);
+    });
+
     testWidgets(
       "the queue's Add all is beside the tabs, and Up from under it still "
       'goes to the tab shown',
