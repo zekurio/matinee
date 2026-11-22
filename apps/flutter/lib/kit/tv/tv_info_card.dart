@@ -11,14 +11,23 @@ import 'tv_metrics.dart';
 
 /// Sizes of a [TvInfoCard] and what's on it.
 abstract final class TvInfoCards {
-  /// Its height, wherever it sits: the poster and four short lines.
-  static const height = 180.0;
+  /// Its poster's width, 2:3.
+  static const posterWidth = 92.0;
+
+  /// Its poster's height, which the lines beside it fit into.
+  static const posterHeight = posterWidth * 1.5;
+
+  /// The room around the poster and the lines.
+  static const padding = 14.0;
+
+  /// The room between one line beside the poster and the next.
+  static const gap = 6.0;
+
+  /// Its height, wherever it sits: the poster's, and the room around it.
+  static const height = posterHeight + 2 * padding;
 
   /// Its width in a row; a grid stretches it to its cell.
   static const rowWidth = 360.0;
-
-  /// Its poster's width, 2:3.
-  static const posterWidth = 92.0;
 
   /// How much it grows with focus, less than a poster, since it's wide
   /// and its neighbours sit close.
@@ -26,7 +35,8 @@ abstract final class TvInfoCards {
 }
 
 /// A wide card on a TV: a poster on the left and lines about it on the
-/// right, over [backdrop], darkened so the lines read on any picture.
+/// right, from the top with an even gap, over [backdrop], darkened so the
+/// lines read on any picture.
 /// The whole card is one focus target with the picture look, and Select
 /// runs [onPressed]. [width] null fills its cell.
 class TvInfoCard extends StatelessWidget {
@@ -116,10 +126,10 @@ class TvInfoCard extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(TvInfoCards.padding),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 14,
+                    spacing: TvInfoCards.padding,
                     children: [
                       ExcludeSemantics(
                         child: ClipRRect(
@@ -128,7 +138,7 @@ class TvInfoCard extends StatelessWidget {
                           ),
                           child: SizedBox(
                             width: TvInfoCards.posterWidth,
-                            height: TvInfoCards.posterWidth * 1.5,
+                            height: TvInfoCards.posterHeight,
                             child: Tone(toneKey: toneKey, child: poster),
                           ),
                         ),
@@ -137,6 +147,7 @@ class TvInfoCard extends StatelessWidget {
                         child: ExcludeSemantics(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: TvInfoCards.gap,
                             children: children,
                           ),
                         ),

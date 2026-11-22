@@ -235,15 +235,17 @@ class TvFocusLine extends StatelessWidget {
     final item = this.item;
     if (item == null) return const SizedBox(height: tvFocusLineHeight);
     final colors = MatineeTheme.of(context);
-    // Long facts, as a declined request's note, end in an ellipsis
-    // rather than push the name off the line.
+    // The name takes what it needs, up to half the line, and the facts
+    // the rest, so a request's problem reads as far as it can; long ones
+    // end in an ellipsis rather than push the name off the line.
     return SizedBox(
       height: tvFocusLineHeight,
       child: LayoutBuilder(
         builder: (context, constraints) => Row(
           spacing: 16,
           children: [
-            Flexible(
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth * .5),
               child: Text(
                 item.name,
                 maxLines: 1,
@@ -251,8 +253,7 @@ class TvFocusLine extends StatelessWidget {
                 style: TvType.title.style(color: colors.foreground),
               ),
             ),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: constraints.maxWidth * .6),
+            Flexible(
               child: TvFacts(
                 facts: item.facts,
                 contentRating: item.contentRating,

@@ -361,20 +361,28 @@ Future<void> openTvQueued(
   final picked = await showTvPanel<_Pick>(
     context,
     title: item.title.name,
-    // What went wrong, or why it was declined, rarely fits on the card,
-    // so it reads here first, where it can wrap; the badge on the card has
-    // already said which state it's in.
+    // What the card leaves out: what went wrong or why it was declined,
+    // first, where it can wrap; how far along one on its way is, or when
+    // one arrived; and where it goes, and what fills it.
     description: switch (state) {
-      RequestState.declined => queueLine(requests, item, l).text,
+      RequestState.declined => queueProblem(item, l) ?? '',
       RequestState.needsAttention => [
-        queueLine(requests, item, l).text,
+        queueProblem(item, l) ?? '',
         [goes.name, goes.connection ?? l.webRequestsNoConnection].join(' · '),
       ].join('\n'),
-      _ => [
-        requestStateText(state, l, progress: _progressOf(item)),
-        goes.name,
-        goes.connection ?? l.webRequestsNoConnection,
+      RequestState.here => [
+        requestStateText(state, l),
+        if (relativeTime(item.arrivedAt, l) case final arrived?)
+          l.webRequestsDoneArrived(arrived),
+        item.library.name,
       ].join(' · '),
+      _ => [
+        [
+          requestStateText(state, l, progress: _progressOf(item)),
+          if (state == RequestState.onTheWay) ?queueProgress(item, l),
+        ].join(' · '),
+        [goes.name, goes.connection ?? l.webRequestsNoConnection].join(' · '),
+      ].join('\n'),
     },
     builder: (panel) => [
       ...switch (state) {
@@ -450,71 +458,42 @@ Future<void> openTvQueued(
 double? _progressOf(AdminRequestItem item) =>
     item.state == RequestState.onTheWay ? item.availability.progress : null;
 
-/// What a queue card says under its badge, and whether it's a problem:
-/// where a waiting one goes, why one needs attention, how far one on its
-/// way is, or what became of a done one, with the admin's note.
-({String text, bool problem}) queueLine(
-  RequestsState requests,
-  AdminRequestItem item,
-  AppLocalizations l,
-) {
-  switch (item.state) {
-    case RequestState.needsAttention:
-      return (text: queueError(item, l), problem: true);
-    case RequestState.onTheWay:
-      return (
-        text: queueProgress(item, l) ?? item.library.name,
-        problem: false,
-      );
-    case RequestState.declined:
-      final note = queueNote(item);
-      return (text: [queueReason(item, l), ?note].join(' · '), problem: false);
-    case RequestState.here:
-      final arrived = relativeTime(item.arrivedAt, l);
-      return (
-        text: arrived == null ? '' : l.webRequestsDoneArrived(arrived),
-        problem: false,
-      );
-    default:
-      // Waiting: where it goes, and what fills it.
-      final goes = requests.goesTo(item);
-      final connection = goes.connection;
-      return (
-        text: [goes.name, connection ?? l.webRequestsNoConnection].join(' · '),
-        problem: connection == null,
-      );
-  }
-}
+/// What went wrong with a request of the queue, for the line under its
+/// badge: the error on one that needs attention, the reason and then the
+/// note on a declined one. Every other state has no line.
+String? queueProblem(AdminRequestItem item, AppLocalizations l) =>
+    switch (item.state) {
+      RequestState.needsAttention => queueError(item, l),
+      RequestState.declined => [
+        queueReason(item, l),
+        ?queueNote(item),
+      ].join(' · '),
+      _ => null,
+    };
 
-/// Who asked for [item], the first and how many more, and when the first
-/// did: nothing when nobody's left asking.
-List<String> askedText(AdminRequestItem item, AppLocalizations l) {
+/// Who asked for [item]: the first, and how many more, as "Theo +2", or
+/// null when nobody's left asking.
+String? askedText(AdminRequestItem item, AppLocalizations l) {
   final people = askers(item);
   final first = people.firstOrNull;
-  if (first == null) return const [];
-  return [
-    people.length > 1
-        ? '${first.name} ${l.webRequestsOthersCount(formatCount(people.length - 1, l))}'
-        : first.name,
-    ?relativeTime(first.createdAt, l),
-  ];
+  if (first == null) return null;
+  return people.length > 1
+      ? '${first.name} ${l.webRequestsOthersCount(formatCount(people.length - 1, l))}'
+      : first.name;
 }
 
-/// What one of the viewer's own requests says under its badge: how far
-/// along it is, when it arrived, or why it was declined, with the admin's
-/// note.
-String? mineLine(
+/// What went wrong with one of the viewer's own requests: why a declined
+/// one isn't coming, with the note. Every other state has no line.
+String? mineProblem(
   RequestItem item,
   Availability availability,
   AppLocalizations l,
-) => switch (item.state) {
-  RequestState.here => switch (relativeTime(item.arrivedAt, l)) {
-    final arrived? => l.webRequestsDoneArrived(arrived),
-    null => null,
-  },
-  RequestState.declined => declinedText(availability, l),
-  _ => null,
-};
+) => item.state == RequestState.declined ? declinedText(availability, l) : null;
+
+/// A request card's first line: the year, and for a show the seasons it
+/// asks for, as "2022 · Seasons 1, 2". Never the kind.
+String cardHeading(int? year, List<String?> seasons) =>
+    [?year?.toString(), for (final part in seasons) ?part].join(' · ');
 
 /// Why a declined request isn't coming, and the note the admin left.
 String? declinedText(Availability availability, AppLocalizations l) {
@@ -573,12 +552,14 @@ class TvRequestBadge extends StatelessWidget {
 }
 
 /// A request as a wide card, in Discover's Recent requests row and the
-/// requests overview, as Seerr has them: the poster beside the year and
-/// kind, the name, the state's badge, the state's own line, and who asked.
-/// One of the queue's, or one of the viewer's own, each in the state the
-/// server gave it.
-/// Focus tells [onFocus] its name and the rest for the page's focus line;
-/// Select opens what can be done about it.
+/// requests overview, as Seerr has them, every card in one order from the
+/// top: the year, with the seasons a show asks for; the name; who asked,
+/// for whoever runs the queue; the state's badge; and a line of what went
+/// wrong, only when something did. Each line keeps its place on every
+/// card. Where it goes, how far along it is, and when anything happened
+/// are in the panel Select opens.
+/// Focus tells [onFocus] the name, and the whole problem when there is
+/// one, for the page's focus line.
 class TvRequestCard extends ConsumerWidget {
   const TvRequestCard.queued(
     AdminRequestItem this.queued, {
@@ -611,23 +592,19 @@ class TvRequestCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (queued case final item?) return _queued(context, ref, item);
+    if (queued case final item?) return _queued(context, item);
     return _mine(context, ref, mine!);
   }
 
-  Widget _queued(BuildContext context, WidgetRef ref, AdminRequestItem item) {
+  Widget _queued(BuildContext context, AdminRequestItem item) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final title = item.title;
-    final requests = ref.watch(requestsProvider);
     final state = item.state;
-    final line = queueLine(requests, item, l);
+    final problem = queueProblem(item, l);
     final asked = askedText(item, l);
     final first = askers(item).firstOrNull;
-    final heading = [
-      yearKind(title.year, title.ref.kind, l),
-      ?scopeText(item.scope, l),
-    ];
+    final heading = cardHeading(title.year, [scopeText(item.scope, l)]);
     final progress = _progressOf(item);
     final badge = requestStateText(state, l, progress: progress);
     final onFocus = this.onFocus;
@@ -635,37 +612,26 @@ class TvRequestCard extends ConsumerWidget {
       title: title,
       width: width,
       focusNode: focusNode,
-      label: [
-        title.name,
-        ...heading,
-        badge,
-        if (line.text.isNotEmpty) line.text,
-        ...asked,
-      ].join(', '),
+      label: [heading, title.name, ?asked, badge, ?problem].join(', '),
       onPressed: () =>
           unawaited(openTvQueued(context, item, onAnswered: onAnswered)),
       onFocused: onFocus == null
           ? null
-          : () => onFocus(
-              FocusedItem(
-                name: title.name,
-                facts: [...heading, badge, ...asked],
-              ),
-            ),
-      heading: heading.join(' · '),
-      badge: TvRequestBadge(state: state, progress: progress, urgent: true),
-      line: line.text.isEmpty ? null : line.text,
-      lineColor: line.problem ? colors.danger : null,
-      who: asked.isEmpty
+          : () => onFocus(FocusedItem(name: title.name, facts: [?problem])),
+      heading: heading,
+      who: asked == null
           ? null
           : Row(
               spacing: 8,
               children: [
                 if (first != null)
                   Avatar(avatarId: first.avatarId, name: first.name, size: 22),
-                Flexible(child: _CardText(asked.join(' · '))),
+                Flexible(child: _CardText(asked)),
               ],
             ),
+      badge: TvRequestBadge(state: state, progress: progress, urgent: true),
+      problem: problem,
+      problemColor: state == RequestState.needsAttention ? colors.danger : null,
     );
   }
 
@@ -680,39 +646,32 @@ class TvRequestCard extends ConsumerWidget {
     final progress = state == RequestState.onTheWay
         ? availability.progress
         : null;
-    final heading = [
-      yearKind(title.year, title.ref.kind, l),
-      ?scopeText(item.scope, l),
+    final heading = cardHeading(title.year, [
+      scopeText(item.scope, l),
       if (season != null) seasonName(season.number, l),
-    ];
+    ]);
     final badge = requestStateText(state, l, progress: progress);
-    final line = mineLine(item, availability, l);
-    // When it was asked, as the phone's card says, until it's finished.
-    final finished =
-        state == RequestState.here || state == RequestState.declined;
-    final asked = finished ? null : relativeTime(item.createdAt, l);
+    final problem = mineProblem(item, availability, l);
     final onFocus = this.onFocus;
     return _Card(
       title: title,
       width: width,
       focusNode: focusNode,
-      label: [title.name, ...heading, badge, ?line, ?asked].join(', '),
+      label: [heading, title.name, badge, ?problem].join(', '),
       onPressed: () => unawaited(openTvMine(context, item, now)),
       onFocused: onFocus == null
           ? null
-          : () => onFocus(
-              FocusedItem(name: title.name, facts: [...heading, badge, ?line]),
-            ),
-      heading: heading.join(' · '),
+          : () => onFocus(FocusedItem(name: title.name, facts: [?problem])),
+      heading: heading,
       badge: TvRequestBadge(state: state, progress: progress),
-      line: line,
-      who: asked == null ? null : _CardText(asked),
+      problem: problem,
     );
   }
 }
 
-/// A request card's frame: [heading], the name, [badge], [line], and
-/// [who] at the foot.
+/// A request card's frame, its lines from the top: [heading], the name,
+/// [who], [badge], and [problem], each one line, so a card with all five
+/// fills the poster's height and every line keeps its place.
 class _Card extends StatelessWidget {
   const _Card({
     required this.title,
@@ -723,9 +682,9 @@ class _Card extends StatelessWidget {
     required this.onFocused,
     required this.heading,
     required this.badge,
-    required this.line,
-    required this.who,
-    this.lineColor,
+    required this.problem,
+    this.who,
+    this.problemColor,
   });
 
   final CatalogTitleSummary title;
@@ -735,18 +694,17 @@ class _Card extends StatelessWidget {
   final VoidCallback onPressed;
   final VoidCallback? onFocused;
   final String heading;
-  final Widget? badge;
-  final String? line;
-  final Color? lineColor;
   final Widget? who;
+  final Widget badge;
+  final String? problem;
+  final Color? problemColor;
 
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     final poster = title.poster;
-    final badge = this.badge;
-    final line = this.line;
     final who = this.who;
+    final problem = this.problem;
     return TvInfoCard(
       toneKey: refKey(title.ref),
       width: width,
@@ -755,8 +713,7 @@ class _Card extends StatelessWidget {
       onPressed: onPressed,
       onFocused: onFocused,
       poster: poster == null ? null : Picture([ArtSource(poster)]),
-      // The smallest size, stretched, reads as the poster's colours
-      // without a blur for the TV to draw.
+      // The smallest size is enough behind the card's blur.
       backdrop: poster == null
           ? null
           : Picture([ArtSource(poster, largest: ArtworkSize.thumb)]),
@@ -764,7 +721,7 @@ class _Card extends StatelessWidget {
         _CardText(heading),
         Text(
           title.name,
-          maxLines: 2,
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TvType.facts
               .style(color: colors.foreground)
@@ -773,14 +730,10 @@ class _Card extends StatelessWidget {
                 fontVariations: const [FontVariation('wght', 700)],
               ),
         ),
-        if (badge != null)
-          Padding(padding: const EdgeInsets.only(top: 8), child: badge),
-        if (line != null && line.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: _CardText(line, color: lineColor),
-          ),
-        if (who != null) ...[const Spacer(), who],
+        ?who,
+        badge,
+        if (problem != null && problem.isNotEmpty)
+          _CardText(problem, color: problemColor),
       ],
     );
   }
