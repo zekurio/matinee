@@ -152,28 +152,29 @@ class _PresetRow extends StatelessWidget {
       onPressed: enabled ? onPressed : null,
       label: label,
       checked: selected,
+      inMutuallyExclusiveGroup: true,
       builder: (context, state) => Opacity(
         opacity: enabled ? 1 : .5,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            spacing: 14,
-            children: [
-              SizedBox(
-                width: 64,
-                child: ExcludeSemantics(
+        child: ExcludeSemantics(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              spacing: 14,
+              children: [
+                SizedBox(
+                  width: 64,
                   child: _Split(light: light, dark: dark),
                 ),
-              ),
-              Expanded(
-                child: Text(
-                  label,
-                  style: KitText.base.style(color: colors.foreground),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: KitText.base.style(color: colors.foreground),
+                  ),
                 ),
-              ),
-              if (selected)
-                KitIcon(Lucide.check, size: 18, color: colors.accent),
-            ],
+                if (selected)
+                  KitIcon(Lucide.check, size: 18, color: colors.accent),
+              ],
+            ),
           ),
         ),
       ),

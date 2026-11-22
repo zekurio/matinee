@@ -70,12 +70,12 @@ class BrandingPage extends ConsumerWidget {
         ),
       );
     }
-    return _BrandingForm(key: ObjectKey(saved), saved: saved);
+    return _BrandingForm(saved: saved);
   }
 }
 
 class _BrandingForm extends ConsumerStatefulWidget {
-  const _BrandingForm({super.key, required this.saved});
+  const _BrandingForm({required this.saved});
 
   final Branding saved;
 
@@ -96,6 +96,23 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
   void initState() {
     super.initState();
     _preview = ref.read(accentPreviewProvider.notifier);
+  }
+
+  /// A refetch while nothing is being edited brings what the server kept.
+  @override
+  void didUpdateWidget(_BrandingForm old) {
+    super.didUpdateWidget(old);
+    final accents = widget.saved.themeAccents;
+    if (accents.light == old.saved.themeAccents.light &&
+        accents.dark == old.saved.themeAccents.dark) {
+      return;
+    }
+    final wasEditing =
+        _draft.light != old.saved.themeAccents.light ||
+        _draft.dark != old.saved.themeAccents.dark;
+    if (wasEditing) return;
+    _light = accents.light ?? _defaultLight;
+    _dark = accents.dark ?? _defaultDark;
   }
 
   @override
@@ -375,26 +392,29 @@ class _AccentRowState extends State<_AccentRow> {
           ),
           SizedBox(
             width: 148,
-            child: MatineeTextField(
-              controller: _controller,
-              placeholder: '#rrggbb',
-              error: widget.error,
-              autocorrect: false,
-              trailing: Padding(
-                padding: const EdgeInsetsDirectional.only(end: 10),
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: shown,
-                    border: Border.all(
-                      color: colors.foreground.withValues(alpha: .15),
+            child: Semantics(
+              label: widget.label,
+              child: MatineeTextField(
+                controller: _controller,
+                placeholder: '#rrggbb',
+                error: widget.error,
+                autocorrect: false,
+                trailing: Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 10),
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: shown,
+                      border: Border.all(
+                        color: colors.foreground.withValues(alpha: .15),
+                      ),
                     ),
                   ),
                 ),
+                onChanged: widget.onChanged,
               ),
-              onChanged: widget.onChanged,
             ),
           ),
         ],
