@@ -327,11 +327,11 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
         items = queue == null
             ? null
             : [
-                for (final entry in queueInOrder(queue, held: held))
+                for (final item in queueInOrder(queue, held: held))
                   (
-                    entry.item.id,
+                    item.id,
                     (node) => TvRequestCard.queued(
-                      entry,
+                      item,
                       focusNode: node,
                       onFocus: _focus,
                     ),
@@ -361,7 +361,7 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
         _firsts.remove(_Rows.requests);
         return (row: null, settled: true);
     }
-    final title = l.requestsRecent;
+    final title = l.webRequestsRecent;
     final route = _requestsRoute(which);
     if (error != null) {
       _firsts.remove(_Rows.requests);

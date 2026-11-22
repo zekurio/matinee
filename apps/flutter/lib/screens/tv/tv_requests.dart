@@ -325,16 +325,17 @@ enum _Pick {
   diagnostics,
 }
 
-/// A request of an admin's queue in [state]: what that state allows, its
-/// title's page, and what the connection reports. Add and the answers to a
-/// declined request go at once; Decline and Give up ask first. [onAnswered]
-/// runs once an answer is given, as an answered one leaving Done's pages.
+/// A request of an admin's queue: what the state the server gave it
+/// allows, its title's page, and what the connection reports. Add and the
+/// answers to a declined request go at once; Decline and Give up ask first.
+/// [onAnswered] runs once an answer is given, as an answered one leaving
+/// Done's pages.
 Future<void> openTvQueued(
   BuildContext context,
-  AdminRequestItem item,
-  RequestState state, {
+  AdminRequestItem item, {
   VoidCallback? onAnswered,
 }) async {
+  final state = item.state;
   final l = AppLocalizations.of(context);
   final container = ProviderScope.containerOf(context, listen: false);
   final hub = container.read(requestsProvider.notifier);
@@ -355,7 +356,7 @@ Future<void> openTvQueued(
     context,
     title: item.title.name,
     description: [
-      requestStateText(state, l, progress: _progressOf(item, state)),
+      requestStateText(state, l, progress: _progressOf(item)),
       goes.name,
       goes.connection ?? l.webRequestsNoConnection,
     ].join(' · '),
@@ -383,7 +384,8 @@ Future<void> openTvQueued(
           row(_Pick.addAfterAll, Lucide.check, l.webRequestsAddAfterAll),
           row(_Pick.allowAgain, Lucide.lockOpen, l.webRequestsAllowAgain),
         ],
-        RequestState.here => const <Widget>[],
+        // Here, and a state this app doesn't know yet.
+        _ => const <Widget>[],
       },
       row(_Pick.open, Lucide.info, l.webRequestsOpenTitle),
       if (item.diagnostics.isNotEmpty)
@@ -429,30 +431,8 @@ Future<void> openTvQueued(
 // The words a request's card says.
 
 /// The share that's in, for a request on its way whose server knows it.
-double? _progressOf(AdminRequestItem item, RequestState state) =>
-    state == RequestState.onTheWay ? item.availability.progress : null;
-
-/// How far along a request on its way is, in the server's words, past the
-/// share its badge has: the time left, when it's out, or what it waits on.
-String? _progressText(AdminRequestItem item, AppLocalizations l) {
-  final availability = item.availability;
-  final eta = availability.etaSeconds;
-  if (availability.state == AvailabilityState.release) {
-    final day = parseDay(availability.releaseDate);
-    return day == null
-        ? l.webRequestsProgressNotOut
-        : l.webRequestsProgressRelease(formatShortDay(day, l));
-  } else if (availability.progress != null) {
-    return eta == null ? null : l.webRequestsProgressLeft(formatSpan(eta, l));
-  } else if (availability.stillLooking) {
-    return l.webRequestsProgressLooking;
-  } else if (item.fulfilmentState == FulfilmentState.queued) {
-    return l.webRequestsProgressQueued;
-  } else if (item.connection?.reportsProgress == false) {
-    return l.webRequestsProgressByHand;
-  }
-  return l.webRequestsProgressSent;
-}
+double? _progressOf(AdminRequestItem item) =>
+    item.state == RequestState.onTheWay ? item.availability.progress : null;
 
 /// What a queue card says under its badge, and whether it's a problem:
 /// where a waiting one goes, why one needs attention, how far one on its
@@ -460,17 +440,9 @@ String? _progressText(AdminRequestItem item, AppLocalizations l) {
 ({String text, bool problem}) queueLine(
   RequestsState requests,
   AdminRequestItem item,
-  RequestState state,
   AppLocalizations l,
 ) {
-  switch (state) {
-    case RequestState.waiting:
-      final goes = requests.goesTo(item);
-      final connection = goes.connection;
-      return (
-        text: [goes.name, connection ?? l.webRequestsNoConnection].join(' · '),
-        problem: connection == null,
-      );
+  switch (item.state) {
     case RequestState.needsAttention:
       return (
         text: item.error?.serverWords(l) ?? l.webRequestsAttentionUnknown,
@@ -478,37 +450,27 @@ String? _progressText(AdminRequestItem item, AppLocalizations l) {
       );
     case RequestState.onTheWay:
       return (
-        text: [?_progressText(item, l), item.library.name].join(' · '),
+        text: [?queueProgressText(item, l), item.library.name].join(' · '),
         problem: false,
       );
     case RequestState.declined:
-      final gaveUp = item.reason == DeclineReason.notFound;
-      final at = relativeTime(item.declinedAt, l);
-      final reason = item.reason;
       final note = item.note?.trim();
       return (
         text: [
-          [
-            switch ((gaveUp, at)) {
-              (true, final at?) => l.webRequestsDoneGaveUp(at),
-              (false, final at?) => l.webRequestsDoneDeclined(at),
-              (true, null) => l.webRequestsDoneGaveUpUndated,
-              (false, null) => l.webRequestsDoneDeclinedUndated,
-            },
-            if (reason != null && !gaveUp) adminReasonText(reason, l),
-          ].join(' · '),
+          queueDeclinedText(item, l),
           if (note != null && note.isNotEmpty) '“$note”',
         ].join(' '),
         problem: false,
       );
     case RequestState.here:
-      final arrived = relativeTime(item.arrivedAt, l);
+      return (text: queueArrivedText(item, l), problem: false);
+    default:
+      // Waiting: where it goes, and what fills it.
+      final goes = requests.goesTo(item);
+      final connection = goes.connection;
       return (
-        text: [
-          if (arrived != null) l.webRequestsDoneArrived(arrived),
-          item.library.name,
-        ].join(' · '),
-        problem: false,
+        text: [goes.name, connection ?? l.webRequestsNoConnection].join(' · '),
+        problem: connection == null,
       );
   }
 }
@@ -527,30 +489,22 @@ List<String> askedText(AdminRequestItem item, AppLocalizations l) {
   ];
 }
 
-/// What one of the viewer's own requests says under its badge: when it's
-/// out, how long is left, when it arrived, or why it was declined, with
-/// the admin's note.
+/// What one of the viewer's own requests says under its badge: how far
+/// along it is, when it arrived, or why it was declined, with the admin's
+/// note.
 String? mineLine(
   RequestItem item,
   Availability availability,
   AppLocalizations l,
-) {
-  switch (availability.state) {
-    case AvailabilityState.release:
-      final word = stateWord(availability);
-      return word == null ? null : stateText(word, l);
-    case AvailabilityState.coming:
-      final eta = availability.etaSeconds;
-      return eta == null ? null : l.webRequestsProgressLeft(formatSpan(eta, l));
-    case AvailabilityState.here:
-      final arrived = relativeTime(item.arrivedAt, l);
-      return arrived == null ? null : l.webRequestsDoneArrived(arrived);
-    case AvailabilityState.unavailable:
-      return declinedText(availability, l);
-    default:
-      return null;
-  }
-}
+) => switch (item.state) {
+  RequestState.onTheWay => ownProgressText(availability, l),
+  RequestState.here => switch (relativeTime(item.arrivedAt, l)) {
+    final arrived? => l.webRequestsDoneArrived(arrived),
+    null => null,
+  },
+  RequestState.declined => declinedText(availability, l),
+  _ => null,
+};
 
 /// Why a declined request isn't coming, and the note the admin left.
 String? declinedText(Availability availability, AppLocalizations l) {
@@ -571,10 +525,19 @@ String? declinedText(Availability availability, AppLocalizations l) {
 /// A request's state as its badge, at a TV's size, in the phone's words
 /// and colours.
 class TvRequestBadge extends StatelessWidget {
-  const TvRequestBadge({super.key, required this.state, this.progress});
+  const TvRequestBadge({
+    super.key,
+    required this.state,
+    this.progress,
+    this.urgent = false,
+  });
 
-  final RequestState state;
+  /// A [RequestState].
+  final String state;
   final double? progress;
+
+  /// For whoever runs the queue: what's theirs to answer stands out.
+  final bool urgent;
 
   @override
   Widget build(BuildContext context) {
@@ -582,6 +545,7 @@ class TvRequestBadge extends StatelessWidget {
     final (:fill, :edge, :mark, :ink) = requestStateLook(
       state,
       MatineeTheme.of(context),
+      urgent: urgent,
     );
     final icon = requestStateIcon(state);
     return TvBadge(
@@ -601,12 +565,13 @@ class TvRequestBadge extends StatelessWidget {
 /// A request as a wide card, in Discover's Recent requests row and the
 /// requests overview, as Seerr has them: the poster beside the year and
 /// kind, the name, the state's badge, the state's own line, and who asked.
-/// One of the queue's in its [RequestState], or one of the viewer's own.
+/// One of the queue's, or one of the viewer's own, each in the state the
+/// server gave it.
 /// Focus tells [onFocus] its name and the rest for the page's focus line;
 /// Select opens what can be done about it.
 class TvRequestCard extends ConsumerWidget {
   const TvRequestCard.queued(
-    QueuedRequest this.queued, {
+    AdminRequestItem this.queued, {
     super.key,
     this.onAnswered,
     this.width = TvInfoCards.rowWidth,
@@ -623,7 +588,7 @@ class TvRequestCard extends ConsumerWidget {
   }) : queued = null,
        onAnswered = null;
 
-  final QueuedRequest? queued;
+  final AdminRequestItem? queued;
   final RequestItem? mine;
 
   /// Runs once an answer is given, as one leaving Done's pages.
@@ -636,30 +601,24 @@ class TvRequestCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (queued case (:final item, :final state)) {
-      return _queued(context, ref, item, state);
-    }
+    if (queued case final item?) return _queued(context, ref, item);
     return _mine(context, ref, mine!);
   }
 
-  Widget _queued(
-    BuildContext context,
-    WidgetRef ref,
-    AdminRequestItem item,
-    RequestState state,
-  ) {
+  Widget _queued(BuildContext context, WidgetRef ref, AdminRequestItem item) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final title = item.title;
     final requests = ref.watch(requestsProvider);
-    final line = queueLine(requests, item, state, l);
+    final state = item.state;
+    final line = queueLine(requests, item, l);
     final asked = askedText(item, l);
     final first = askers(item).firstOrNull;
     final heading = [
       yearKind(title.year, title.ref.kind, l),
       ?scopeText(item.scope, l),
     ];
-    final progress = _progressOf(item, state);
+    final progress = _progressOf(item);
     final badge = requestStateText(state, l, progress: progress);
     final onFocus = this.onFocus;
     return _Card(
@@ -668,7 +627,7 @@ class TvRequestCard extends ConsumerWidget {
       focusNode: focusNode,
       label: [title.name, ...heading, badge, line.text, ...asked].join(', '),
       onPressed: () =>
-          unawaited(openTvQueued(context, item, state, onAnswered: onAnswered)),
+          unawaited(openTvQueued(context, item, onAnswered: onAnswered)),
       onFocused: onFocus == null
           ? null
           : () => onFocus(
@@ -678,7 +637,7 @@ class TvRequestCard extends ConsumerWidget {
               ),
             ),
       heading: heading.join(' · '),
-      badge: TvRequestBadge(state: state, progress: progress),
+      badge: TvRequestBadge(state: state, progress: progress, urgent: true),
       line: line.text,
       lineColor: line.problem ? colors.danger : null,
       who: asked.isEmpty
@@ -698,9 +657,10 @@ class TvRequestCard extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final title = item.title;
     final now = liveAvailability(ref, title.ref, item.availability);
-    final season = item.season;
+    final state = item.state;
+    // Once it's here, every season it asked for is: no season to name.
+    final season = state == RequestState.here ? null : item.season;
     final availability = season?.asTitle() ?? now;
-    final state = ownState(availability);
     final progress = state == RequestState.onTheWay
         ? availability.progress
         : null;
@@ -709,28 +669,24 @@ class TvRequestCard extends ConsumerWidget {
       ?scopeText(item.scope, l),
       if (season != null) seasonName(season.number, l),
     ];
-    final badge = state == null
-        ? null
-        : requestStateText(state, l, progress: progress);
+    final badge = requestStateText(state, l, progress: progress);
     final line = mineLine(item, availability, l);
     final when = relativeTime(item.createdAt, l);
-    final asked = when == null ? null : l.discoverRequestAskedWhen(when);
+    final asked = when == null ? null : l.webRequestsAskedWhen(when);
     final onFocus = this.onFocus;
     return _Card(
       title: title,
       width: width,
       focusNode: focusNode,
-      label: [title.name, ...heading, ?badge, ?line, ?asked].join(', '),
+      label: [title.name, ...heading, badge, ?line, ?asked].join(', '),
       onPressed: () => unawaited(openTvMine(context, item, now)),
       onFocused: onFocus == null
           ? null
           : () => onFocus(
-              FocusedItem(name: title.name, facts: [...heading, ?badge, ?line]),
+              FocusedItem(name: title.name, facts: [...heading, badge, ?line]),
             ),
       heading: heading.join(' · '),
-      badge: state == null
-          ? null
-          : TvRequestBadge(state: state, progress: progress),
+      badge: TvRequestBadge(state: state, progress: progress),
       line: line,
       who: asked == null ? null : _CardText(asked),
     );
@@ -846,8 +802,8 @@ abstract final class _Rows {
 /// card. With [queue], for whoever runs it, everyone's requests in one grid,
 /// in the order the shared code gives them: waiting, needs attention, on
 /// the way, then done, read on a page at a time as focus moves down. Anyone
-/// else, whatever the path, gets their own: in progress first, then the
-/// rest. Each card carries its state; the header says how many are in each
+/// else, whatever the path, gets their own as the server orders them, in
+/// progress first. Each card carries its state; the header says how many are in each
 /// state that has any, in plain words, and offers Add all while more than
 /// one waits; the line under it names the focused card. Select opens what
 /// the card's state allows. Focus starts on the first card, Down from the
@@ -866,10 +822,9 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
   final _memory = TvFocusMemory();
   FocusedItem? _focused;
 
-  /// The pages of the viewer's own last loaded, shown while a change reads
-  /// them again, so the grid doesn't blink to a spinner.
-  CursorPages<RequestItem>? _lastGoing;
-  CursorPages<RequestItem>? _lastAll;
+  /// Whether the end of the viewer's live first page came near, which
+  /// reads the older pages after it.
+  var _older = false;
 
   @override
   void dispose() {
@@ -972,24 +927,14 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     );
     final entries = queueInOrder(queue, held: held, done: done.items);
     final waiting = [
-      for (final entry in entries)
-        if (entry.state == RequestState.waiting) entry.item,
-    ];
-    int left(List<AdminRequestItem> list) =>
-        list.where((item) => !held.contains(item.id)).length;
-    final counts = [
-      if (waiting.isNotEmpty) l.requestsCountWaiting(waiting.length),
-      if (left(queue.needsAttention) case final n when n > 0)
-        l.requestsCountNeedsAttention(n),
-      if (left(queue.onTheWay) case final n when n > 0)
-        l.requestsCountOnTheWay(n),
-      if (queue.counts.done > 0) l.requestsCountDone(queue.counts.done),
+      for (final item in queue.waiting)
+        if (!held.contains(item.id)) item,
     ];
     if (entries.isEmpty && !done.more) {
       return _Body.empty(
         TvNotice(
-          headline: l.requestsOverviewEmpty,
-          message: l.requestsOverviewEmptyHint,
+          headline: l.webRequestsEmptyNone,
+          message: l.webRequestsEmptyNoneHint,
         ),
         memory: _memory,
       );
@@ -998,11 +943,11 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
     return _Body.cards(
       l,
       [
-        for (final entry in entries)
+        for (final item in entries)
           _CardOf(
-            entry.item.id,
+            item.id,
             (node, onFocus) => TvRequestCard.queued(
-              entry,
+              item,
               width: null,
               focusNode: node,
               onFocus: onFocus,
@@ -1010,7 +955,7 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
               // leaves them here.
               onAnswered: notifier == null
                   ? null
-                  : () => notifier.drop(entry.item.id),
+                  : () => notifier.drop(item.id),
             ),
           ),
       ],
@@ -1018,59 +963,51 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
       error: error,
       onMore: notifier?.more,
       onRetry: notifier?.retry,
-      counts: counts.join(' · '),
+      counts: queueSummary(queue, l, held: held),
       waiting: waiting,
     );
   }
 
-  /// The viewer's own: what's still going, from the server's list of those
-  /// in progress, then everything else, newest first, from the whole list.
+  /// The viewer's own, in the server's order, in progress first: the live
+  /// first page, then the pages after it as focus nears its end.
   _Body _mineBody(AppLocalizations l) {
-    final goingProvider = myRequestsProvider(MineFilter.inProgress);
-    final allProvider = myRequestsProvider(MineFilter.all);
-    var going = ref.watch(goingProvider);
-    var all = ref.watch(allProvider);
-    if (going.loaded) {
-      _lastGoing = going;
-    } else if (going.error == null) {
-      going = _lastGoing ?? going;
-    }
-    if (all.loaded) {
-      _lastAll = all;
-    } else if (all.error == null) {
-      all = _lastAll ?? all;
-    }
+    final first = ref.watch(myLiveRequestsProvider);
     final held = ref.watch(requestsProvider.select((state) => state.held));
-    if (!going.loaded) {
-      final error = going.error;
+    final page = first.value;
+    if (page == null) {
+      final error = first.error;
       if (error == null) return const _Body.loading();
       return _Body.notice(
         TvNotice(
           headline: l.askedLoadFailed,
           message: describeFailure(l, error),
-          onRetry: () => ref.read(goingProvider.notifier).retry(),
+          onRetry: () => ref.invalidate(myLiveRequestsProvider),
           retryLabel: l.commonRetry,
         ),
       );
     }
-    final still = [
-      for (final item in going.items)
-        if (!held.contains(item.id) &&
-            !(ownState(item.season?.asTitle() ?? item.availability)?.finished ??
-                false))
-          item,
-    ];
-    final first = {for (final item in still) item.id};
+    final after = page.nextCursor;
+    final olderProvider = after == null || !_older
+        ? null
+        : olderRequestsProvider(after);
+    final older = olderProvider == null ? null : ref.watch(olderProvider);
+    final seen = {for (final item in page.items) item.id};
     final items = [
-      ...still,
-      if (going.done)
-        for (final item in all.items)
-          if (!held.contains(item.id) && !first.contains(item.id)) item,
+      for (final item in page.items)
+        if (!held.contains(item.id)) item,
+      for (final item in older?.items ?? const <RequestItem>[])
+        if (!held.contains(item.id) && !seen.contains(item.id)) item,
     ];
-    final (pages, notifier) = going.done
-        ? (all, ref.read(allProvider.notifier))
-        : (going, ref.read(goingProvider.notifier));
-    if (items.isEmpty && pages.done) {
+    final more = after != null && !(older?.done ?? false);
+    void readMore() {
+      if (olderProvider == null) {
+        setState(() => _older = true);
+      } else {
+        ref.read(olderProvider.notifier).more();
+      }
+    }
+
+    if (items.isEmpty && !more) {
       return _Body.empty(
         TvNotice(headline: l.webAskMineEmpty, message: l.webAskMineEmptyHint),
         memory: _memory,
@@ -1090,10 +1027,12 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
             ),
           ),
       ],
-      done: pages.done,
-      error: pages.error,
-      onMore: notifier.more,
-      onRetry: notifier.retry,
+      done: !more,
+      error: older?.error,
+      onMore: readMore,
+      onRetry: () {
+        if (olderProvider != null) ref.read(olderProvider.notifier).retry();
+      },
       followed: FollowedTitles([
         for (final item in items)
           CatalogInput(ref: item.title.ref, libraryId: item.library.id),
