@@ -33,7 +33,7 @@ const _emptyQueue = {
   'needsAttention': <Object>[],
   'onTheWay': <Object>[],
   'done': <Object>[],
-  'counts': {'waiting': 0, 'needsAttention': 0, 'onTheWay': 0, 'done': 0},
+  'doneCount': 0,
   'nextCursor': null,
 };
 

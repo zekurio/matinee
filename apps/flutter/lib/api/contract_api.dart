@@ -303,14 +303,12 @@ final class RequestsApi {
     int? limit,
     List<String>? states,
     String? kind,
-    String? filter,
   }) {
     final input = RequestsMineInput(
       cursor: cursor,
       limit: limit,
       states: states,
       kind: kind,
-      filter: filter,
     );
     final body = JsonBody(input.toJson());
     return _transport.call(

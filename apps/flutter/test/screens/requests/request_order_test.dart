@@ -47,7 +47,6 @@ AdminRequestItem _item(String id, {String state = 'waiting'}) =>
       'declinedAt': null,
       'connection': null,
       'followers': <Object>[],
-      'destinationDescription': 'Films',
       'destinations': <Object>[],
       'remoteUrl': null,
       'diagnostics': <Object>[],
@@ -63,12 +62,7 @@ RequestQueue _queue({
   needsAttention: needsAttention,
   onTheWay: onTheWay,
   done: done,
-  counts: RequestQueueCounts(
-    waiting: waiting.length,
-    needsAttention: needsAttention.length,
-    onTheWay: onTheWay.length,
-    done: done.length,
-  ),
+  doneCount: done.length,
   nextCursor: null,
 );
 

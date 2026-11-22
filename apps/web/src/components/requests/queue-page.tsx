@@ -125,7 +125,7 @@ export function QueuePage() {
   // and its latest row, so when either changes, as when a title arrives,
   // the pages already open load again.
   const doneMark = queue.data
-    ? `${queue.data.counts.done} ${queue.data.done[0]?.id ?? ""}`
+    ? `${queue.data.doneCount} ${queue.data.done[0]?.id ?? ""}`
     : null
   const seenDoneMark = useRef(doneMark)
   useEffect(() => {

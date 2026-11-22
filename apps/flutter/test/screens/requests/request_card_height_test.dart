@@ -79,7 +79,6 @@ AdminRequestItem _item(
     _follower('Cara', 2),
     _follower('Dan', 1),
   ],
-  'destinationDescription': 'Shows',
   'destinations': <Object>[],
   'remoteUrl': null,
   'diagnostics': <Object>[],

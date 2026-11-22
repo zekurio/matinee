@@ -37,11 +37,6 @@ export default defineMessages("requests", {
   "requests.filter.none": "No requests match these filters",
   "requests.filter.noneHint": "Take a filter off to see more.",
 
-  // The lists the Flutter app still shows as tabs. The web shows one list.
-  "requests.list.waiting": "Waiting",
-  "requests.list.needsAttention": "Needs attention",
-  "requests.list.onTheWay": "On the way",
-  "requests.list.done": "Done",
   "requests.addAll": plural({
     one: "Add {count}",
     other: "Add all {count}",
@@ -174,9 +169,7 @@ export default defineMessages("requests", {
 
   // Done.
   "requests.done.arrived": "Arrived {when}",
-  "requests.done.declined": "Declined {when}",
   "requests.done.declinedUndated": "Declined",
-  "requests.done.gaveUp": "Given up {when}",
   "requests.done.gaveUpUndated": "Given up",
 
   // Empty, loading, and error states.
@@ -187,11 +180,6 @@ export default defineMessages("requests", {
   "requests.empty.none": "No requests yet",
   "requests.empty.noneHint":
     "When someone requests a film or show, it shows up here.",
-  // The Flutter app's empty tabs.
-  "requests.empty.waiting": "Nothing is waiting",
-  "requests.empty.needsAttention": "Nothing needs attention",
-  "requests.empty.onTheWay": "Nothing is on the way",
-  "requests.empty.done": "Nothing done yet",
   "requests.loadFailed": "Couldn't load requests. {error}",
   "requests.reload": "Try again",
 

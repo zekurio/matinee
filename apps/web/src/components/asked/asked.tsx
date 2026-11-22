@@ -27,7 +27,7 @@ export type AskedItem = t.infer<typeof RequestItem>
 
 /** What the viewer asked for or follows, in progress first. */
 function mineOptions(limit = 24) {
-  return orpc.requests.mine.queryOptions({ input: { filter: "all", limit } })
+  return orpc.requests.mine.queryOptions({ input: { limit } })
 }
 
 /** The live state of the titles in a list of requests, one stream for all. */

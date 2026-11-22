@@ -81,7 +81,6 @@ function AskedPage() {
   const older = useInfiniteQuery({
     ...orpc.requests.mine.infiniteOptions({
       input: (cursor: string) => ({
-        filter: "all",
         cursor,
         limit: PAGE,
         ...filterInput(filter),

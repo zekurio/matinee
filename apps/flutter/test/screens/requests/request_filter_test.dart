@@ -77,7 +77,6 @@ Map<String, Object?> _waiting(String id, String kind) => {
       'createdAt': '2026-11-01T00:00:00.000Z',
     },
   ],
-  'destinationDescription': 'Lib',
   'destinations': <Object>[],
   'remoteUrl': null,
   'diagnostics': <Object>[],
@@ -101,12 +100,7 @@ Map<String, Object?> _queue(Map<String, Object?> body) {
     'needsAttention': <Object>[],
     'onTheWay': <Object>[],
     'done': <Object>[],
-    'counts': {
-      'waiting': waiting.length,
-      'needsAttention': 0,
-      'onTheWay': 0,
-      'done': 0,
-    },
+    'doneCount': 0,
     'nextCursor': null,
   };
 }

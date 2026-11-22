@@ -462,45 +462,6 @@ function nextCursor(rows: Row[], limit: number, open?: boolean) {
     : null
 }
 
-// How long a title that arrived or was declined stays in "in progress".
-const SETTLED_MS = 3 * 86400000
-
-/**
- * A request still in flight, or one that settled in the last three days:
- * a film that arrived or a declined title, so its asker sees how it ended.
- * A show is in flight while a season it asked for hasn't come, or has
- * only just, and also while it waits for its first new season.
- */
-function inProgress() {
-  const since = new Date(Date.now() - SETTLED_MS)
-  const seasons = db
-    .select({ one: sql`1` })
-    .from(requestSeason)
-    .where(
-      and(
-        eq(requestSeason.requestId, request.id),
-        or(isNull(requestSeason.arrivedAt), gt(requestSeason.arrivedAt, since)),
-      ),
-    )
-  const asked = db
-    .select({ one: sql`1` })
-    .from(requestSeason)
-    .where(eq(requestSeason.requestId, request.id))
-  return or(
-    and(eq(request.status, "declined"), gt(request.declinedAt, since)),
-    and(
-      ne(request.status, "declined"),
-      eq(request.kind, "movie"),
-      or(isNull(request.arrivedAt), gt(request.arrivedAt, since)),
-    ),
-    and(
-      ne(request.status, "declined"),
-      ne(request.kind, "movie"),
-      or(sql`exists ${seasons}`, sql`not exists ${asked}`),
-    ),
-  )
-}
-
 /**
  * A request that got here, as `arrivedAt` has it: a film that arrived,
  * or a show with seasons asked for that all did.
@@ -616,7 +577,6 @@ export async function mine(
   input: ListFilter & {
     cursor?: string
     limit: number
-    filter: "inProgress" | "all"
   },
 ) {
   const open = sql`(${inFlight()})`
@@ -624,14 +584,7 @@ export async function mine(
     .select({ request, open: sql<boolean>`${open}` })
     .from(request)
     .innerJoin(requestFollower, eq(requestFollower.requestId, request.id))
-    .where(
-      and(
-        followedBy(viewer),
-        mineAfter(input.cursor, open),
-        input.filter === "inProgress" ? inProgress() : undefined,
-        kept(input),
-      ),
-    )
+    .where(and(followedBy(viewer), mineAfter(input.cursor, open), kept(input)))
     .orderBy(desc(open), desc(request.createdAt), desc(request.id))
     .limit(input.limit + 1)
   const requests = rows.map((row) => row.request)
@@ -686,14 +639,10 @@ export async function queue(
         .orderBy(desc(finishedAt), desc(request.id))
         .limit(input.limit + 1)
     : []
-  const totals = await Promise.all(
-    [...open, done].map(async (filter) =>
-      filter
-        ? ((await db.select({ value: count() }).from(request).where(filter))[0]
-            ?.value ?? 0)
-        : 0,
-    ),
-  )
+  const doneCount = done
+    ? ((await db.select({ value: count() }).from(request).where(done))[0]
+        ?.value ?? 0)
+    : 0
   // Each card's state is the list it's in, by the same rule.
   const decorate = async (rows: Row[]) => {
     const cards = await items(viewer, rows)
@@ -759,9 +708,6 @@ export async function queue(
             avatarId: f.avatarId,
             createdAt: f.follower.createdAt,
           })),
-        destinationDescription: [card.library.name, connection?.name]
-          .filter(Boolean)
-          .join(" · "),
         // Its own library first if nothing fills that any more, so the
         // chooser still says where it is.
         destinations:
@@ -794,12 +740,7 @@ export async function queue(
     done: await decorate(
       finished.slice(0, input.limit).map((row) => row.request),
     ),
-    counts: {
-      waiting: totals[0] ?? 0,
-      needsAttention: totals[1] ?? 0,
-      onTheWay: totals[2] ?? 0,
-      done: totals[3] ?? 0,
-    },
+    doneCount,
     nextCursor:
       finished.length > input.limit && lastDone
         ? encodeCursor({ at: lastDone.at, id: lastDone.request.id })
