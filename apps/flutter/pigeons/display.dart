@@ -9,6 +9,8 @@ import 'package:pigeon/pigeon.dart';
     kotlinOut:
         'android/app/src/main/kotlin/io/github/zekurio/matinee/display/Display.g.kt',
     kotlinOptions: KotlinOptions(package: 'io.github.zekurio.matinee.display'),
+    swiftOut: 'ios/Runner/Pigeon/Display.g.swift',
+    swiftOptions: SwiftOptions(includeErrorClass: false),
     copyrightHeader: 'pigeons/header.txt',
   ),
 )
