@@ -111,11 +111,10 @@ export const request = pgTable(
     provider: text().$type<CatalogRef["provider"]>().notNull(),
     providerId: text().notNull(),
     externalIds: jsonb().$type<Record<string, string>>().notNull().default({}),
-    /** Small provider snapshot. Its art uses the same artwork storage as identify candidates. */
+    /** Small provider snapshot. Poster uses the same artwork storage as identify candidates. */
     name: text().notNull(),
     year: integer(),
     posterId: artworkRef(),
-    backdropId: artworkRef(),
     status: text()
       .$type<"asked" | "approved" | "declined">()
       .notNull()

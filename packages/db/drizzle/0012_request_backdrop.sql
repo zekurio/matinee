@@ -1,2 +1,0 @@
-ALTER TABLE "request" ADD COLUMN "backdrop_id" text;--> statement-breakpoint
-ALTER TABLE "request" ADD CONSTRAINT "request_backdrop_id_artwork_id_fk" FOREIGN KEY ("backdrop_id") REFERENCES "public"."artwork"("id") ON DELETE set null ON UPDATE no action;
