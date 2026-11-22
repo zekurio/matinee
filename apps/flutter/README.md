@@ -240,6 +240,22 @@ These differ from what someone might expect, on purpose.
 - The app log scrubs hosts, account names, ids, paths, and tokens from
   every line, and leaves the device only when the person shares it.
 
+## Release
+
+A `v*` tag builds the release in `.github/workflows/release.yml` through
+`tools/release/apk.mjs`: `flutter build apk --release` for the universal
+APK and `--split-per-abi` for arm64-v8a, armeabi-v7a, and x86_64, signed
+with the key `MATINEE_KEYSTORE_PROPERTIES` names. Every APK of a release
+has the version code `major * 10000 + minor * 100 + patch`.
+`force-version-code-ignoring-abi` in `android/gradle.properties` stops
+Flutter from adding 1000 per ABI, so an ABI's APK and the universal one
+update each other. To build them with your own keystore, from the
+repository root:
+
+```sh
+MATINEE_KEYSTORE_PROPERTIES=… nix develop .#flutter -c node tools/release/apk.mjs <folder>
+```
+
 ## License
 
 GPL-3.0, in `LICENSE`, since the app bundles libmpv and a GPL build of
