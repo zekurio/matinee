@@ -6,6 +6,7 @@ import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/avatar.dart';
+import '../home/home_data.dart';
 import 'header.dart';
 
 /// A tap on the tab that's already open: [path] is the tab's first page,
@@ -116,6 +117,17 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
     // Home is under every other tab: back on another tab's first page goes to
     // Home, and only Home's leaves the app.
     final home = widget.shell.currentIndex == 0;
+    // Home opens with a hero, its skeleton, or neither. The header floats
+    // over the first two, so one with no featured titles keeps its band.
+    final featured = ref.watch(featuredProvider);
+    final hero =
+        home && !offline && (featured.value?.isNotEmpty ?? !featured.hasError);
+    final page = MediaQuery.removePadding(
+      context: context,
+      removeTop: true,
+      removeBottom: true,
+      child: widget.shell,
+    );
     return PopScope(
       canPop: home,
       onPopInvokedWithResult: (didPop, _) {
@@ -125,14 +137,31 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
         color: MatineeTheme.of(context).background,
         child: Column(
           children: [
-            const ShellHeader(),
+            if (!hero) const ShellHeader(),
             Expanded(
-              child: MediaQuery.removePadding(
-                context: context,
-                removeTop: true,
-                removeBottom: true,
-                child: widget.shell,
-              ),
+              child: hero
+                  ? Stack(
+                      children: [
+                        // Home's own box starts under the status bar, so
+                        // its hero can run under the header.
+                        Positioned.fill(
+                          child: SafeArea(
+                            top: true,
+                            bottom: false,
+                            left: false,
+                            right: false,
+                            child: page,
+                          ),
+                        ),
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: ShellHeader(floating: true),
+                        ),
+                      ],
+                    )
+                  : page,
             ),
             TabBar(items: items, state: _selected, onSelected: _open),
           ],

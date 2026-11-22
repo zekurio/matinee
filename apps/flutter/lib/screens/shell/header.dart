@@ -11,8 +11,14 @@ import '../../router.dart';
 /// start, then settings and search as bare icons. It stays put while the page
 /// scrolls. Search opens Explore, which an admin's waiting requests head.
 /// Offline, where search can't work, the header says so in its place.
+///
+/// [floating] puts it over Home's hero: no band of its own, its words and
+/// icons white from the dark half of the theme, with a soft shadow and a
+/// scrim so they read over the art. Other tabs keep the band.
 class ShellHeader extends ConsumerWidget {
-  const ShellHeader({super.key});
+  const ShellHeader({super.key, this.floating = false});
+
+  final bool floating;
 
   /// Under the status bar.
   static const height = 56.0;
@@ -20,65 +26,128 @@ class ShellHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final words = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
     final offline = ref.watch(authStateProvider) is Offline;
+    if (floating) {
+      // The hero stays dark in either scheme, so its words come from the
+      // dark half too.
+      return MatineeTheme.alwaysDark(
+        context,
+        _floating(context, words, offline),
+      );
+    }
     return ColoredBox(
-      color: colors.background,
+      color: MatineeTheme.of(context).background,
       child: SafeArea(
         bottom: false,
         child: SizedBox(
           height: height,
-          child: Padding(
-            // A button's 44 holds its 22 icon 11 in, so the last icon ends
-            // 16 from the edge, where the logo starts on the other side.
-            padding: const EdgeInsets.only(left: 16, right: 5),
-            child: Row(
-              children: [
-                Semantics(
-                  header: true,
-                  child: Logo(height: 18, label: words.appName),
+          child: _row(context, words, offline, floating: false),
+        ),
+      ),
+    );
+  }
+
+  /// The band over the hero: the status bar's room left to the page, then
+  /// the icons over a scrim, which also keeps them readable once Home's
+  /// content scrolls under them.
+  Widget _floating(BuildContext context, AppLocalizations words, bool offline) {
+    final top = MediaQuery.paddingOf(context).top;
+    return Stack(
+      children: [
+        Positioned(
+          top: top,
+          left: 0,
+          right: 0,
+          height: height + 24,
+          child: const IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x99000000), Color(0x00000000)],
                 ),
-                const Spacer(),
-                _HeaderButton(
-                  icon: Lucide.settings,
-                  label: words.shellSettings,
-                  onPressed: () => context.push(Routes.settings),
-                ),
-                if (offline)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: KitIcon(
-                      Lucide.cloudOff,
-                      color: colors.mutedForeground,
-                      label: words.downloadsOffline,
-                    ),
-                  )
-                else
-                  _HeaderButton(
-                    icon: Lucide.search,
-                    label: words.searchTitle,
-                    onPressed: () => context.push(Routes.search),
-                  ),
-              ],
+              ),
             ),
           ),
         ),
+        Padding(
+          padding: EdgeInsets.only(top: top),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: height,
+                child: _row(context, words, offline, floating: true),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _row(
+    BuildContext context,
+    AppLocalizations words,
+    bool offline, {
+    required bool floating,
+  }) {
+    final colors = MatineeTheme.of(context);
+    return Padding(
+      // A button's 44 holds its 22 icon 11 in, so the last icon ends
+      // 16 from the edge, where the logo starts on the other side.
+      padding: const EdgeInsets.only(left: 16, right: 5),
+      child: Row(
+        children: [
+          Semantics(
+            header: true,
+            child: Logo(height: 18, label: words.appName),
+          ),
+          const Spacer(),
+          _HeaderButton(
+            icon: Lucide.settings,
+            label: words.shellSettings,
+            onPressed: () => context.push(Routes.settings),
+            floating: floating,
+          ),
+          if (offline)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: KitIcon(
+                Lucide.cloudOff,
+                color: colors.mutedForeground,
+                label: words.downloadsOffline,
+              ),
+            )
+          else
+            _HeaderButton(
+              icon: Lucide.search,
+              label: words.searchTitle,
+              onPressed: () => context.push(Routes.search),
+              floating: floating,
+            ),
+        ],
       ),
     );
   }
 }
 
-/// An icon with nothing around it, 44 square to tap. Pressing dims it.
+/// An icon with nothing around it, 44 square to tap. Pressing dims it. Over
+/// the hero it takes a soft shadow, as the words beside it.
 class _HeaderButton extends StatelessWidget {
   const _HeaderButton({
     required this.icon,
     required this.label,
     required this.onPressed,
+    required this.floating,
   });
 
   final String icon;
   final String label;
   final VoidCallback onPressed;
+  final bool floating;
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +165,15 @@ class _HeaderButton extends StatelessWidget {
             color: state == PressState.pressed
                 ? colors.mutedForeground
                 : colors.foreground,
+            shadows: floating
+                ? const [
+                    Shadow(
+                      color: Color(0x99000000),
+                      offset: Offset(0, 1),
+                      blurRadius: 8,
+                    ),
+                  ]
+                : null,
           ),
         ),
       ),
