@@ -14,7 +14,7 @@ export const packageJson = join(root, "package.json")
 
 /**
  * A version `just tag` takes. Minor and patch stay under 100, to fit the
- * Android version code in apps/android/app/build.gradle.kts.
+ * Android version code, see versionCode.
  */
 export const VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d?)\.(?:0|[1-9]\d?)$/
 export const VERSION_FIELD = /"version": "[^"]*"/
@@ -26,6 +26,16 @@ export function readVersion() {
   return match[1]
 }
 
+/**
+ * The Android version code of [version]: major, minor, patch, two digits
+ * for each of the last two. apps/flutter/android/app/build.gradle.kts
+ * packs it the same way, and every APK of a release has it.
+ */
+export function versionCode(version) {
+  const [major, minor, patch] = version.split(".").map(Number)
+  return major * 10000 + minor * 100 + patch
+}
+
 /** Prints why and exits, as an error annotation on a workflow run. */
 export function fail(message) {
   process.stderr.write(
@@ -34,9 +44,9 @@ export function fail(message) {
   process.exit(1)
 }
 
-/** Runs a command from the repository root, showing its output. */
-export function run(command, args) {
-  execFileSync(command, args, { cwd: root, stdio: "inherit" })
+/** Runs a command from the repository root, or [cwd], showing its output. */
+export function run(command, args, cwd = root) {
+  execFileSync(command, args, { cwd, stdio: "inherit" })
 }
 
 /** Runs a command from the repository root and returns what it printed. */

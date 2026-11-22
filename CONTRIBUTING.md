@@ -52,19 +52,15 @@ and point `DATABASE_URL` at your own Postgres.
 | Command                          | What it does                              |
 | -------------------------------- | ----------------------------------------- |
 | `pnpm db:generate --name <what>` | Writes a migration for a schema change    |
-| `pnpm api:android`               | Regenerates the Android API client        |
-| `pnpm api:ios`                   | Regenerates the Apple apps' API client    |
 | `pnpm api:dart`                  | Regenerates the Flutter app's API client  |
 | `nix build`                      | Builds the server package                 |
 | `nix flake check`                | Builds it and runs the NixOS module tests |
-| `nix develop .#android`          | Shell with a JDK and the Android SDK      |
 | `nix develop .#flutter`          | Shell with Flutter and the Android SDK    |
 | `just`                           | Lists the shortcuts                       |
 
-The native apps build on their own, as their READMEs say:
-[Android](apps/android/README.md#build), [iOS](apps/ios/README.md),
-[Samsung TV](apps/tizen/README.md#build), and the
-[Flutter app](apps/flutter/README.md#build) that will replace the first two.
+The [Flutter app](apps/flutter/README.md#build) and the
+[Samsung TV app](apps/tizen/README.md#build) build on their own, as their
+READMEs say.
 
 [`AGENTS.md`](AGENTS.md) has the conventions: where code goes, the lint
 rules and what they want from you, how translations, queues, and live
@@ -80,34 +76,33 @@ build.
 There are no automated tests for the server or web app yet, so try the
 flows you touched in a browser. Then, depending on what changed:
 
-| You changed                         | Also do                                                                         |
-| ----------------------------------- | ------------------------------------------------------------------------------- |
-| A contract in `packages/contracts`  | `pnpm api:android`, `pnpm api:ios`, and `pnpm api:dart`, and commit the clients |
-| The Drizzle schema in `packages/db` | `pnpm db:generate --name <what>`. Never edit a merged migration                 |
-| Text a user reads                   | Add it to `locales/en/` and translate it in the other languages                 |
-| `pnpm-lock.yaml`                    | Update `pnpmDepsHash` in `nix/package.nix` from `nix build`                     |
-| `nix/`                              | `nix flake check`                                                               |
-| `apps/android`                      | `just android build` and `just android test`                                    |
-| `apps/flutter`                      | `just flutter check` and `just flutter build`                                   |
+| You changed                         | Also do                                                         |
+| ----------------------------------- | --------------------------------------------------------------- |
+| A contract in `packages/contracts`  | `pnpm api:dart`, and commit the client                          |
+| The Drizzle schema in `packages/db` | `pnpm db:generate --name <what>`. Never edit a merged migration |
+| Text a user reads                   | Add it to `locales/en/` and translate it in the other languages |
+| `pnpm-lock.yaml`                    | Update `pnpmDepsHash` in `nix/package.nix` from `nix build`     |
+| `nix/`                              | `nix flake check`                                               |
+| `apps/flutter`                      | `just flutter check` and `just flutter build`                   |
 
 Don't bump the version. `just tag` does that when a release goes out.
 
 ## Pull requests
 
 **One problem per PR.** Include everything that fix needs across the
-contract, server, web, and Android. Put cleanup, refactors, and a second
-fix in their own PRs.
+contract, server, web, and the Flutter app. Put cleanup, refactors, and a
+second fix in their own PRs.
 
 **Use a conventional title.** PRs are squash merged, so the title becomes
 the commit on `main`. Write `type(scope): summary` in plain words, lowercase,
 saying what changes for the user:
 
 - `fix(web): make touch scrubbing on the seek bar precise`
-- `feat(android): add picture-in-picture to the player`
+- `feat(flutter): add picture-in-picture to the player`
 - `perf(server): leave subtitle conversion to the background job`
 
 Types are `feat`, `fix`, `perf`, `refactor`, `docs`, `build`, `ci`, and
-`chore`. Scopes are usually `web`, `server`, `android`, or `nix`. Leave the
+`chore`. Scopes are usually `web`, `server`, `flutter`, or `nix`. Leave the
 scope out when a change spans several.
 
 **Show that it works.** Say how you found the bug, what you checked, and
@@ -123,7 +118,5 @@ gets skimmed, not read.
 ## License
 
 Code you contribute is under the license of the part it lands in: MIT for
-most of the repository, and GPL-3.0 for `apps/android` and `apps/ios`,
-except MatineeCore, which stays MIT. See [LICENSE](LICENSE),
-[apps/android/LICENSE](apps/android/LICENSE), and
-[apps/ios/LICENSE](apps/ios/LICENSE).
+most of the repository, and GPL-3.0 for `apps/flutter`. See
+[LICENSE](LICENSE) and [apps/flutter/LICENSE](apps/flutter/LICENSE).

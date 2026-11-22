@@ -26,7 +26,6 @@
         {
           default = nixpkgs.legacyPackages.${system}.callPackage ./nix/dev-shell.nix { };
         }
-        // import ./nix/android.nix { inherit nixpkgs system; }
         // import ./nix/flutter.nix { inherit nixpkgs system; }
       );
 

@@ -37,7 +37,7 @@ import type { TitlePages } from "@/model/pages"
 
 import { Loaded } from "./parts"
 
-/* The pages that are a grid of posters, as the Android TV app's PosterGrid and `ui/tv/browse`. */
+/* The pages that are a grid of posters. */
 
 /** The key a grid's cards have in the page's focus memory. */
 export const GRID = "grid"
@@ -159,7 +159,7 @@ function GridNotice(props: {
         >
           <Button
             fid="retry"
-            label={tr("common_retry")}
+            label={tr("commonRetry")}
             icon={RefreshCw}
             onPress={props.onRetry}
           />
@@ -189,7 +189,7 @@ function TitleGrid(props: {
   const none = pages.items.length === 0
   const footer = pages.error ? (
     <GridNotice
-      headline={tr(none ? "tv_grid_failed" : "tv_grid_more_failed")}
+      headline={tr(none ? "tvGridFailed" : "tvGridMoreFailed")}
       message={pages.error}
       onRetry={() => pages.more()}
       top={none ? 28 : 8}
@@ -252,9 +252,9 @@ function GridHeader(props: {
 
 /** A library's orders, in the order the sort offers them, each with its name. */
 const SORTS: readonly (readonly [TitleSort, StringKey])[] = [
-  ["name", "library_sort_name"],
-  ["recent", "library_sort_recent"],
-  ["year", "library_sort_year"],
+  ["name", "librarySortName"],
+  ["recent", "librarySortRecent"],
+  ["year", "librarySortYear"],
 ]
 
 /** How long typing has to pause before a grid's search asks the server. */
@@ -336,14 +336,10 @@ export function KindPage(props: { kind: TitleKind }) {
   useEffect(() => setFocusedItem(null), [listKey])
 
   const empty = settled
-    ? tr(shows ? "library_no_match_shows" : "library_no_match_movies", settled)
+    ? tr(shows ? "libraryNoMatchShows" : "libraryNoMatchMovies", settled)
     : genre
-      ? tr(
-          shows
-            ? "library_no_filter_match_shows"
-            : "library_no_filter_match_movies",
-        )
-      : tr(shows ? "library_none_shows" : "library_none_movies")
+      ? tr(shows ? "libraryNoFilterMatchShows" : "libraryNoFilterMatchMovies")
+      : tr(shows ? "libraryNoneShows" : "libraryNoneMovies")
 
   return (
     <Page class="page fill grid-page" start={() => gridStart(pages, "sort")}>
@@ -355,23 +351,23 @@ export function KindPage(props: { kind: TitleKind }) {
         scrollKey={listKey}
         header={
           <GridHeader
-            title={tr(shows ? "browse_kind_show" : "browse_kind_movie")}
+            title={tr(shows ? "browseKindShow" : "browseKindMovie")}
             detail={
               pages.total === null
                 ? null
-                : plural("browse_title_count", pages.total)
+                : plural("browseTitleCount", pages.total)
             }
           >
             <Button
               fid="sort"
-              label={tr(order?.[1] ?? "library_sort_name")}
+              label={tr(order?.[1] ?? "librarySortName")}
               icon={ArrowUpDown}
               trailing={ChevronDown}
               onPress={() => setPanel("sort")}
             />
             <Button
               fid="genre"
-              label={genre || tr("library_any_genre")}
+              label={genre || tr("libraryAnyGenre")}
               icon={ListFilter}
               trailing={ChevronDown}
               active={genre !== ""}
@@ -383,9 +379,9 @@ export function KindPage(props: { kind: TitleKind }) {
                 value={query}
                 onChange={setQuery}
                 placeholder={tr(
-                  shows ? "library_search_shows" : "library_search_movies",
+                  shows ? "librarySearchShows" : "librarySearchMovies",
                 )}
-                clearLabel={tr("library_clear_search")}
+                clearLabel={tr("libraryClearSearch")}
               />
             </div>
           </GridHeader>
@@ -393,7 +389,7 @@ export function KindPage(props: { kind: TitleKind }) {
       />
       <OptionsPanel
         open={panel === "sort"}
-        title={tr("library_sort")}
+        title={tr("librarySort")}
         options={SORTS.map(([value, label]) => ({
           key: value,
           label: tr(label),
@@ -407,9 +403,9 @@ export function KindPage(props: { kind: TitleKind }) {
       />
       <OptionsPanel
         open={panel === "genre"}
-        title={tr("library_genre")}
+        title={tr("libraryGenre")}
         options={[
-          { key: "", label: tr("library_any_genre") },
+          { key: "", label: tr("libraryAnyGenre") },
           ...(genres.value ?? []).map((facet) => ({
             key: facet.name,
             label: facet.name,
@@ -430,9 +426,9 @@ export function KindPage(props: { kind: TitleKind }) {
 
 /** A genre's or a studio's page's choice of kind: movies, shows, or both. */
 const BROWSE_KINDS: readonly (readonly [string, StringKey, IconNode])[] = [
-  ["all", "browse_kind_all", LibraryBig],
-  ["movie", "browse_kind_movie", Film],
-  ["show", "browse_kind_show", Tv],
+  ["all", "browseKindAll", LibraryBig],
+  ["movie", "browseKindMovie", Film],
+  ["show", "browseKindShow", Tv],
 ]
 
 /**
@@ -460,8 +456,8 @@ export function BrowsePage(props: { genre?: string; studio?: string }) {
   useBackdrop(focusedItem?.backdrop ?? [])
   useEffect(() => setFocusedItem(null), [kind])
   const detail = [
-    tr(genre ? "browse_genre" : "browse_studio"),
-    pages.total === null ? null : plural("browse_title_count", pages.total),
+    tr(genre ? "browseGenre" : "browseStudio"),
+    pages.total === null ? null : plural("browseTitleCount", pages.total),
   ]
     .filter(Boolean)
     .join("  ·  ")
@@ -469,7 +465,7 @@ export function BrowsePage(props: { genre?: string; studio?: string }) {
     <Page class="page fill grid-page" start={() => gridStart(pages, kind)}>
       <TitleGrid
         pages={pages}
-        empty={tr(genre ? "browse_genre_empty" : "browse_studio_empty")}
+        empty={tr(genre ? "browseGenreEmpty" : "browseStudioEmpty")}
         focusedItem={focusedItem}
         onFocus={(title) =>
           setFocusedItem(
@@ -504,7 +500,7 @@ export function PersonPage(props: { name: string; tmdbId?: string }) {
   return (
     <Loaded
       load={person.state}
-      error={tr("person_load_failed")}
+      error={tr("personLoadFailed")}
       retry={() => person.reload()}
     >
       {(loaded) => <PersonView person={loaded} />}
@@ -551,7 +547,7 @@ function PersonView(props: { person: Person }) {
               <div class="t-facts dim85" style={{ marginTop: "6rem" }}>
                 {[
                   creditKind(person.kind, 1),
-                  plural("browse_title_count", person.titleCount),
+                  plural("browseTitleCount", person.titleCount),
                 ].join("  ·  ")}
               </div>
             </div>

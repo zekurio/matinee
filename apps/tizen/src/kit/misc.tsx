@@ -45,7 +45,7 @@ export function Facts(props: {
       {facts.length > 0 && <span>{facts.join("  ·  ")}</span>}
       {contentRating && <span class="boxed t-caption">{contentRating}</span>}
       {rating !== null && rating !== undefined && (
-        <span class="rating" aria-label={tr("media_hero_rated")}>
+        <span class="rating" aria-label={tr("mediaHeroRated")}>
           <Icon icon={Star} size={16} filled />
           {formatRating(rating)}
         </span>
