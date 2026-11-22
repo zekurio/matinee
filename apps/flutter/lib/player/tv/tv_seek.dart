@@ -27,10 +27,10 @@ double seekClamp(double seconds, double duration) {
 double seekFraction(double seconds, double duration) =>
     seekable(duration) ? seekClamp(seconds, duration) / duration : 0;
 
-/// Where Left and Right on a remote have taken the seek bar, as the Kotlin
-/// app's `KeySeek`. A press steps by the skip length; a held key glides on
-/// from there, faster the longer it's held, up to a tenth of the video a
-/// second. The player seeks once, when the key comes up.
+/// Where Left and Right on a remote have taken the seek bar. A press steps by
+/// the skip length; a held key glides on from there, faster the longer it's
+/// held, up to a tenth of the video a second. The player seeks once, when the
+/// key comes up.
 class KeySeek {
   double? _target;
 
@@ -90,10 +90,9 @@ const _exactHz = .01;
 /// 23.976 Hz mode exists.
 const _nearHz = .05;
 
-/// The refresh rate among [rates] that plays [fps] evenly, as the Kotlin
-/// app's `matchingRefreshRate`: an exact multiple before a near one, and
-/// the lowest multiple first, so 24 fps takes 24 Hz before 48 or 120. Null
-/// when none fits, or for no frame rate.
+/// The refresh rate among [rates] that plays [fps] evenly: an exact multiple
+/// before a near one, and the lowest multiple first, so 24 fps takes 24 Hz
+/// before 48 or 120. Null when none fits, or for no frame rate.
 double? matchingRefreshRate(List<double> rates, double? fps) {
   if (fps == null || !fps.isFinite || fps <= 0) return null;
   final fits = <({double rate, int multiple, double off})>[];

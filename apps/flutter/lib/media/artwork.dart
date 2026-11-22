@@ -236,9 +236,8 @@ ArtworkSize artworkSizeFor(
   return largest;
 }
 
-/// Wide pictures for a file, best first: the episode's still, then a frame
-/// from the file, then the show's backdrop; for a movie, its backdrop
-/// first. The Kotlin app's `landscape`.
+/// Wide pictures for a file, best first: the episode's still, then a frame from
+/// the file, then the show's backdrop; for a movie, its backdrop first.
 List<PictureSource> landscapeSources(MediaItem item) {
   final still = item.episode?.still;
   final backdrop = item.title?.images.backdrop;

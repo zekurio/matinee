@@ -4,9 +4,9 @@ import 'package:flutter/widgets.dart';
 
 import '../../kit/kit.dart';
 
-/// The rows Settings is built from, as the Kotlin app's `SettingsRows.kt`
-/// and the web's setting controls: sections of panels, each a card of rows
-/// with lines between them. The profile's account rows use them too.
+/// The rows Settings is built from, as the web's setting controls: sections of
+/// panels, each a card of rows with lines between them. The profile's account
+/// rows use them too.
 
 /// How wide Settings' pages get, at the start of a wider screen.
 const settingsWidth = 720.0;

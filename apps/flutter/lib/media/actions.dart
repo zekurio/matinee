@@ -18,13 +18,12 @@ import 'format.dart';
 import 'metadata_items.dart';
 import 'watched_at.dart';
 
-/// What changes the person makes to what they watched and like: the
-/// requests, the watched-when ask, and the menu a long press on a card
-/// opens, the Kotlin app's `Actions`. Home and the title pages share them.
+/// What changes the person makes to what they watched and like: the requests,
+/// the watched-when ask, and the menu a long press on a card opens. Home and
+/// the title pages share them.
 
-/// Counts the changes the server took, to what's watched, a favorite, or
-/// the recommendations. A screen that shows any of it listens and fetches
-/// again, as the Kotlin app's `ViewerState.changed` has them.
+/// Counts the changes the server took, to what's watched, a favorite, or the
+/// recommendations. A screen that shows any of it listens and fetches again.
 final mediaChangesProvider = NotifierProvider<MediaChanges, int>(
   MediaChanges.new,
 );
@@ -191,9 +190,9 @@ Future<void> toggleWatched(
 }
 
 /// Asks before marking a whole show unwatched, which forgets where every
-/// episode stopped: as the TV does, though the Kotlin app and the web don't.
-/// [count] is its episodes where the page has them; one or none needs no
-/// question, so it's null then.
+/// episode stopped: as the TV does, though the web doesn't. [count] is its
+/// episodes where the page has them; one or none needs no question, so it's
+/// null then.
 Future<bool> Function(BuildContext context)? askShowUnwatched(
   String show, {
   int? count,

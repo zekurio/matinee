@@ -7,8 +7,8 @@ enum WidthClass {
   medium,
   expanded;
 
-  /// The class of a window [width] logical pixels wide. The breakpoints
-  /// are Material's, the ones the Kotlin app's carousel used.
+  /// The class of a window [width] logical pixels wide. The breakpoints are
+  /// Material's.
   static WidthClass of(double width) {
     if (width >= 840) return WidthClass.expanded;
     if (width >= 600) return WidthClass.medium;

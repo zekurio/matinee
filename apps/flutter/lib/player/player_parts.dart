@@ -193,11 +193,10 @@ List<PanelEntry> playerMenuEntries(
   }
 }
 
-/// The next episode's countdown, as the Kotlin player's `UpNextState`:
-/// once the file ends, the next episode starts at once if the credits
-/// already counted down to it, or after [seconds] of its own, unless the
-/// countdown stopped or autoplay is off, when it waits for Play. [onTick]
-/// redraws each second; [onPlay] moves on.
+/// The next episode's countdown: once the file ends, the next episode starts at
+/// once if the credits already counted down to it, or after [seconds] of its
+/// own, unless the countdown stopped or autoplay is off, when it waits for
+/// Play. [onTick] redraws each second; [onPlay] moves on.
 class UpNextCountdown {
   UpNextCountdown({
     required bool autoplay,
@@ -304,10 +303,9 @@ class PlayerSpeed {
   }
 }
 
-/// The video in the system's controls: the notification shade, the lock
-/// screen, a headset, and a TV's own remote and assistant, as the Kotlin
-/// player's media session. [sync] says what plays and where; presses come
-/// back to [sitting].
+/// The video in the system's controls: the notification shade, the lock screen,
+/// a headset, and a TV's own remote and assistant. [sync] says what plays and
+/// where; presses come back to [sitting].
 class PlayerMediaSession {
   PlayerMediaSession(this._sitting, this._controls, {required this.headers}) {
     _commands = _controls.commands.listen(_command);

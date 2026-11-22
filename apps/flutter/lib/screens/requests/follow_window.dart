@@ -5,13 +5,12 @@ import 'package:flutter/widgets.dart';
 
 import 'requests_hub.dart' show FollowTitles, mostFollowed;
 
-/// Which cards of a long list are built, by their place in it, and from
-/// that the ones to follow: the blocks of [block] around them, at most
-/// [blocks] of them, as the Kotlin app follows the cards around the screen.
-/// The live stream takes a hundred titles at most ([mostFollowed]) and
+/// Which cards of a long list are built, by their place in it, and from that
+/// the ones to follow: the blocks of [block] around them, at most [blocks] of
+/// them. The live stream takes a hundred titles at most ([mostFollowed]) and
 /// opens again on a change, so a list that can be longer follows a window
-/// rather than the whole list. Wrap each card in [FollowedCard], and
-/// follow [slice] of the list in [FollowTitles].
+/// rather than the whole list. Wrap each card in [FollowedCard], and follow
+/// [slice] of the list in [FollowTitles].
 final class FollowWindow extends ChangeNotifier {
   FollowWindow({this.block = 12, this.blocks = 6});
 

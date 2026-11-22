@@ -18,10 +18,9 @@ import '../../router.dart';
 import '../title/title_data.dart';
 import 'metadata_data.dart';
 
-/// An admin's metadata tools, as the Kotlin app's `MetadataScreens.kt` and
-/// the web's dialogs: fix a title's match, and pick or upload the images of
-/// a title, season, or episode. Pages rather than dialogs, as a phone's
-/// keyboard and a grid of images need the whole screen.
+/// An admin's metadata tools, as the web's dialogs: fix a title's match, and
+/// pick or upload the images of a title, season, or episode. Pages rather than
+/// dialogs, as a phone's keyboard and a grid of images need the whole screen.
 
 /// A metadata page's frame: Back and its [heading], then [content] once
 /// the title has come, or its loading and failure.

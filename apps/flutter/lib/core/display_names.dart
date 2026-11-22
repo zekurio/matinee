@@ -7,10 +7,9 @@ import '../platform/device.g.dart';
 export '../platform/device.g.dart' show DisplayNameKind;
 
 /// The names of languages and countries in the app's language, which Dart
-/// doesn't have and the server leaves to the client, sending only codes:
-/// the library's language filter, the image editor's languages, and the
-/// age ratings' countries. They come from the platform's own lists, as the
-/// Kotlin app's `languageName` and `countryName` read Java's.
+/// doesn't have and the server leaves to the client, sending only codes: the
+/// library's language filter, the image editor's languages, and the age
+/// ratings' countries. They come from the platform's own lists.
 
 /// Where the names come from: the platform, or a test's own.
 abstract interface class DisplayNameSource {
@@ -79,9 +78,8 @@ final displayNamesProvider = FutureProvider.autoDispose
       retry: (count, error) => null,
     );
 
-/// The names a screen shows, read in its build. Until the platform answers,
-/// and for a code it doesn't know, [nameOf] gives the code itself, as the
-/// Kotlin app falls back to it.
+/// The names a screen shows, read in its build. Until the platform answers, and
+/// for a code it doesn't know, [nameOf] gives the code itself.
 final class DisplayNames {
   const DisplayNames(this._names);
 

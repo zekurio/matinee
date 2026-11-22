@@ -106,16 +106,15 @@ final class TitlePagesState {
   }
 }
 
-/// How many titles a page asks for, as the web's and the Kotlin app's.
+/// How many titles a page asks for, as the web's.
 const titlePageSize = 60;
 
 /// The most the contract lets one page hold.
 const _largestPage = 200;
 
-/// A list the server hands out a page at a time, as the Kotlin app's
-/// `TitlePages`. The first page loads at once; [more] asks for the next,
-/// and does nothing while one is coming, after the last, or after a
-/// failure, which waits for [retry].
+/// A list the server hands out a page at a time. The first page loads at once;
+/// [more] asks for the next, and does nothing while one is coming, after the
+/// last, or after a failure, which waits for [retry].
 final class TitlePages extends Notifier<TitlePagesState> {
   TitlePages(this.request);
 

@@ -18,8 +18,7 @@ const _bubbleHeight = 26.0 + 8;
 /// bar's box, and 6 clear of the heading.
 const _bubbleRoom = 6 + _bubbleHeight + 6;
 
-/// How wide the trickplay frame over the seek bar is, as the Kotlin TV
-/// player draws it.
+/// How wide the trickplay frame over the seek bar is.
 const tvTrickplayWidth = 240.0;
 
 /// How wide the player's buttons are, but play's.
@@ -29,8 +28,8 @@ const _small = 40.0;
 /// other buttons.
 const _play = TvButtons.height;
 
-/// The menus the TV player opens at the right edge, as the Kotlin app's:
-/// audio, subtitles, and the rest (quality, speed, and the picture) in one.
+/// The menus the TV player opens at the right edge: audio, subtitles, and the
+/// rest (quality, speed, and the picture) in one.
 enum TvPlayerMenu { audio, subtitles, settings }
 
 /// Where focus goes in the player: the play button, the seek bar, each
@@ -72,12 +71,11 @@ typedef TvSeekKeys = ({
 /// The episodes either side, for the buttons outside the skips.
 typedef TvEpisodeButtons = ({VoidCallback? previous, VoidCallback? next});
 
-/// A single button on the picture, with no card or controls around it, as
-/// the Kotlin app's `TvPictureButton`: [action]'s label, then its
-/// countdown dimmer, like "Next episode · 7". The picture behind it can be
-/// any frame, so it rests dark rather than in the faint white of other
-/// controls, and a shadow keeps its edge on a white frame once focus fills
-/// it white.
+/// A single button on the picture, with no card or controls around it:
+/// [action]'s label, then its countdown dimmer, like "Next episode · 7". The
+/// picture behind it can be any frame, so it rests dark rather than in the
+/// faint white of other controls, and a shadow keeps its edge on a white frame
+/// once focus fills it white.
 class TvPictureButton extends StatelessWidget {
   const TvPictureButton({super.key, required this.action, this.focusNode});
 
@@ -109,13 +107,12 @@ class TvPictureButton extends StatelessWidget {
   }
 }
 
-/// The TV player's controls, kept low and small so the picture stays the
-/// thing to look at, as the Kotlin app's `TvOverlay`: a scrim up from the
-/// bottom, the title at the left, one wide seek bar with the time on
-/// either side, and one row of small round buttons, play and the skips at
-/// the left with an episode's previous and next outside them, the menus at
-/// the right, and [action] beside the menus when there is one. All of it
-/// inside the overscan margins.
+/// The TV player's controls, kept low and small so the picture stays the thing
+/// to look at: a scrim up from the bottom, the title at the left, one wide seek
+/// bar with the time on either side, and one row of small round buttons, play
+/// and the skips at the left with an episode's previous and next outside them,
+/// the menus at the right, and [action] beside the menus when there is one. All
+/// of it inside the overscan margins.
 class TvPlayerOverlay extends StatefulWidget {
   const TvPlayerOverlay({
     super.key,
@@ -529,12 +526,11 @@ class _MenuButton extends StatelessWidget {
   }
 }
 
-/// The seek bar, as the Kotlin app's `TvSeekBar`. Focused, it thickens,
-/// shows its dot, and the time floats above the dot; Left and Right step
-/// by the skip lengths and glide while held, and the player seeks when the
-/// key comes up, with [preview]'s trickplay frame over the time while the
-/// keys move it, when the server made frames. Select plays or pauses, Down
-/// goes to play.
+/// The seek bar. Focused, it thickens, shows its dot, and the time floats above
+/// the dot; Left and Right step by the skip lengths and glide while held, and
+/// the player seeks when the key comes up, with [preview]'s trickplay frame
+/// over the time while the keys move it, when the server made frames. Select
+/// plays or pauses, Down goes to play.
 class TvSeekBar extends StatelessWidget {
   const TvSeekBar({
     super.key,

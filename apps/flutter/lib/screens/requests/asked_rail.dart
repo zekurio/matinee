@@ -10,12 +10,11 @@ import '../../router.dart';
 import 'catalog_cards.dart';
 import 'requests_hub.dart';
 
-/// A row of what the viewer asked for, each card following its title's
-/// state live; the heading opens the whole list. Home's, as the Kotlin
-/// app's `HomeAskedRail`, holds what's on its way and what came or was
-/// answered lately, with the accent dot once one arrives ([fresh]); the
-/// profile's, as its `ProfileAskedRail`, the latest of everything. Leave
-/// it out when there's nothing, so the page stays about what's there.
+/// A row of what the viewer asked for, each card following its title's state
+/// live; the heading opens the whole list. Home's holds what's on its way and
+/// what came or was answered lately, with the accent dot once one arrives
+/// ([fresh]); the profile's, the latest of everything. Leave it out when
+/// there's nothing, so the page stays about what's there.
 class AskedRail extends StatelessWidget {
   const AskedRail({super.key, required this.items, this.fresh = true});
 

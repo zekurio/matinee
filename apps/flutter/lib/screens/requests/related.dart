@@ -11,12 +11,11 @@ import 'request_words.dart';
 import 'requests_data.dart';
 import 'requests_hub.dart';
 
-/// The rows of titles related to a catalog title, or to a library title
-/// the server matched, as the Kotlin app's `Related.kt`: the rest of the
-/// film series it belongs to, and more like it. A title the viewer can
-/// watch is the library's card; the rest are catalog cards that follow the
-/// stream. A row with nothing in it stays out, and rows that didn't load
-/// at all leave no gap, since the page is whole without them.
+/// The rows of titles related to a catalog title, or to a library title the
+/// server matched: the rest of the film series it belongs to, and more like it.
+/// A title the viewer can watch is the library's card; the rest are catalog
+/// cards that follow the stream. A row with nothing in it stays out, and rows
+/// that didn't load at all leave no gap, since the page is whole without them.
 class CatalogRelatedRows extends ConsumerWidget {
   const CatalogRelatedRows({super.key, required this.relatedTo});
 

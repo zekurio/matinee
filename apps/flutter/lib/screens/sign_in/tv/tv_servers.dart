@@ -11,15 +11,14 @@ import '../server_switcher.dart' show serverFacts, serverTitle;
 /// What the server panel does once it has closed.
 typedef _Then = void Function(SessionNotifier session);
 
-/// The saved servers in the TV's panel at the right edge, as the Kotlin
-/// app's `TvServerPanel`, in place of the phone's sheet: the one in use
-/// checked and focused. Select on another switches to it, signed in still
-/// where its session stands. Add server goes to finding or typing one.
-/// Remove a server turns to picking one, then to asking, focused on
-/// Cancel; each step is a panel of its own over the last, so Back goes a
-/// step back, then closes, and focus goes back to the row that opened it.
-/// [returnTo] is where cancelling Add server comes back to, when it's
-/// more than the page's location.
+/// The saved servers in the TV's panel at the right edge, in place of the
+/// phone's sheet: the one in use checked and focused. Select on another
+/// switches to it, signed in still where its session stands. Add server goes to
+/// finding or typing one. Remove a server turns to picking one, then to asking,
+/// focused on Cancel; each step is a panel of its own over the last, so Back
+/// goes a step back, then closes, and focus goes back to the row that opened
+/// it. [returnTo] is where cancelling Add server comes back to, when it's more
+/// than the page's location.
 Future<void> showTvServerPanel(BuildContext context, {String? returnTo}) async {
   final l = AppLocalizations.of(context);
   final session = ProviderScope.containerOf(

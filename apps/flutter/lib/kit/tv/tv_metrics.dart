@@ -2,9 +2,8 @@ import 'package:flutter/widgets.dart';
 
 import '../tokens.dart';
 
-/// Type for TV pages, read from three metres on a 960 by 540 screen, as
-/// the Kotlin app's `TvType`. The phone's [KitText] stays as it is; TV
-/// pages take their styles from here.
+/// Type for TV pages, read from three metres on a 960 by 540 screen. The
+/// phone's [KitText] stays as it is; TV pages take their styles from here.
 enum TvType {
   /// The name a detail page is about: a title, an episode, a person.
   hero(44, 50, FontWeight.w700, -.02),
@@ -179,7 +178,7 @@ abstract final class TvPanels {
   static const textStart = listPadding + TvListItems.inset;
 }
 
-/// The Kotlin app's `Motion`, the web's timings.
+/// The web's timings.
 abstract final class TvMotion {
   /// The web's cubic-bezier(0.22, 1, 0.36, 1).
   static const easing = Cubic(.22, 1, .36, 1);

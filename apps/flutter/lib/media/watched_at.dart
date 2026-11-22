@@ -4,11 +4,10 @@ import '../api/matinee_api.dart';
 import '../kit/kit.dart';
 import '../l10n/app_localizations.dart';
 
-/// When someone watched what they're marking watched, as the web's tick
-/// and the Kotlin app's `WatchedAtSheet` ask, after Trakt: just now, on
-/// the release date, on a day they pick, or some time they don't remember.
-/// [at] is the contract's `watchedAt`: null for now, [WatchedAt.released],
-/// [WatchedAt.unknown], or an ISO time.
+/// When someone watched what they're marking watched, as the web's tick asks,
+/// after Trakt: just now, on the release date, on a day they pick, or some time
+/// they don't remember. [at] is the contract's `watchedAt`: null for now,
+/// [WatchedAt.released], [WatchedAt.unknown], or an ISO time.
 typedef WatchedWhen = ({String? at});
 
 /// Asks when [name] was watched; null when the person closed the sheet or

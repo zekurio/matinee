@@ -1,11 +1,10 @@
 import '../api/matinee_api.dart';
 
 /*
- * Which audio and subtitles a download starts with, and who draws them,
- * the Kotlin app's `DownloadTracks.kt`. A file from the server gets all of
- * that from `playback.start`. A download plays without the server, so it
- * can't ask, and picks here the way the player did before the server
- * decided: the one exception AGENTS.md names.
+ * Which audio and subtitles a download starts with, and who draws them. A file
+ * from the server gets all of that from `playback.start`. A download plays
+ * without the server, so it can't ask, and picks here the way the player did
+ * before the server decided: the one exception AGENTS.md names.
  */
 
 /// `pt-BR` and `pt` are the same language here.

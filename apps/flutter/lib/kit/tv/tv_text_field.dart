@@ -7,13 +7,12 @@ import '../theme.dart';
 import 'tv_focus.dart';
 import 'tv_metrics.dart';
 
-/// A field typed with the TV's keyboard, as the Kotlin app's `TvTextField`:
-/// a list row's size and shape, which fills with the text color while it
-/// has focus, in [TvType.title]. Up and Down move on to what's above and
-/// below, as a one-line field would otherwise keep them for its caret.
-/// Select opens the keyboard again once Back closed it; the keyboard's
-/// action key runs [onSubmitted]. [error] rings it in red and shows under
-/// it.
+/// A field typed with the TV's keyboard: a list row's size and shape, which
+/// fills with the text color while it has focus, in [TvType.title]. Up and Down
+/// move on to what's above and below, as a one-line field would otherwise keep
+/// them for its caret. Select opens the keyboard again once Back closed it; the
+/// keyboard's action key runs [onSubmitted]. [error] rings it in red and shows
+/// under it.
 class TvTextField extends StatefulWidget {
   const TvTextField({
     super.key,
@@ -40,7 +39,7 @@ class TvTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
 
-  /// A list row's height and a little more, as the Kotlin app's.
+  /// A list row's height and a little more.
   static const height = TvListItems.height + 4;
 
   @override

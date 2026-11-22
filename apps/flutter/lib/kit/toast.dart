@@ -254,9 +254,9 @@ class ToastState extends ChangeNotifier {
   }
 }
 
-/// The front of [state]'s queue. On a [tv], as the Kotlin app's TV shell
-/// shows them: the words alone in the TV's body type, on a raised fill,
-/// with nothing to press, since focus stays on the page.
+/// The front of [state]'s queue. On a [tv], the words alone in the TV's body
+/// type, on a raised fill, with nothing to press, since focus stays on the
+/// page.
 class ToastHost extends StatelessWidget {
   const ToastHost({super.key, required this.state, this.tv = false});
 

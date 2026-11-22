@@ -57,8 +57,7 @@ class MatineeApp extends ConsumerWidget {
           children: [
             child!,
             if (ref.watch(deviceProvider).isTv)
-              // Clear of the drawer's rail and the overscan, as the Kotlin
-              // app's TV shell places them.
+              // Clear of the drawer's rail and the overscan.
               Positioned(
                 left: TvPage.start,
                 right: TvPage.end,

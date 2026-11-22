@@ -4,9 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/matinee_api.dart';
 
-/// The rules Home lays itself out and moves by, from the Kotlin app's
-/// `FeaturedCarousel.kt` and `HomeHero.kt`, which hold the same numbers as
-/// the iPhone's. Lengths are logical pixels.
+/// The rules Home lays itself out and moves by. Lengths are logical pixels.
 
 /// How wide Home's box is before it opens with the banner rather than the
 /// cards: a tablet's.

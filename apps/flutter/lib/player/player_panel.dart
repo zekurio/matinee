@@ -41,11 +41,10 @@ class PanelChoice extends PanelEntry {
   final VoidCallback pick;
 }
 
-/// A menu's panel at the side, drawn in the player's own window as the
-/// Kotlin player's `PlayerPanel` is: it slides in from the end over a shade,
-/// [entries] in a column the screen's height. A tap on the shade or Back
-/// closes it, and so does a pick. The entries that were open stay drawn
-/// while it slides away.
+/// A menu's panel at the side, drawn in the player's own window: it slides in
+/// from the end over a shade, [entries] in a column the screen's height. A tap
+/// on the shade or Back closes it, and so does a pick. The entries that were
+/// open stay drawn while it slides away.
 class PlayerPanel extends StatefulWidget {
   const PlayerPanel({
     super.key,

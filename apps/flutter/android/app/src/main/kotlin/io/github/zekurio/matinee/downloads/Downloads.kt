@@ -11,10 +11,10 @@ import androidx.work.workDataOf
 import java.util.concurrent.TimeUnit
 
 /**
- * The downloads of this process, the Kotlin app's `Downloads` without the
- * API: one resumable WorkManager job per file, which WorkManager keeps
- * across the app closing, a network drop, and a reboot. Dart says what to
- * fetch through [DownloadsBridge]; the worker reads the rest from here.
+ * The downloads of this process: one resumable WorkManager job per file, which
+ * WorkManager keeps across the app closing, a network drop, and a reboot. Dart
+ * says what to fetch through [DownloadsBridge]; the worker reads the rest from
+ * here.
  */
 class Downloads private constructor(context: Context) {
     private val app = context.applicationContext
@@ -23,7 +23,7 @@ class Downloads private constructor(context: Context) {
     private val prefs = app.getSharedPreferences("matinee_downloads", Context.MODE_PRIVATE)
     private val work get() = WorkManager.getInstance(app)
 
-    /** Fetch only over unmetered networks. On until Dart says otherwise, as the Kotlin app had it. */
+    /** Fetch only over unmetered networks. On until Dart says otherwise. */
     var unmeteredOnly: Boolean
         get() = prefs.getBoolean(KEY_UNMETERED, true)
         set(value) {

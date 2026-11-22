@@ -12,9 +12,9 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import 'settings_rows.dart';
 
-/// The app's log in About, as the Kotlin app's `AppLogSection`: shown,
-/// copied, or shared, read afresh each time. What it takes out is in the
-/// first row's description and the log's own header.
+/// The app's log in About: shown, copied, or shared, read afresh each time.
+/// What it takes out is in the first row's description and the log's own
+/// header.
 class AppLogSection extends ConsumerStatefulWidget {
   const AppLogSection({super.key});
 

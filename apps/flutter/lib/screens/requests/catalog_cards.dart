@@ -19,10 +19,9 @@ import 'request_words.dart';
 import 'requests_hub.dart';
 
 /// The catalog's cards and the marks and buttons a title the server lacks
-/// carries, as the Kotlin app's `CatalogCards.kt`, `Ask.kt`, and the
-/// buttons of `Admin.kt`: the state as a glass mark in a poster's corner,
-/// the one thing the viewer may do as a button, and the card that turns
-/// into the library's when the title arrives.
+/// carries: the state as a glass mark in a poster's corner, the one thing the
+/// viewer may do as a button, and the card that turns into the library's when
+/// the title arrives.
 
 /// How long the badge takes to go when a title arrives, before the card
 /// becomes the library's.

@@ -46,11 +46,9 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The camera reading QR codes, as the Kotlin app's `CameraScanner` and
- * `Viewfinder` in `LinkDevice.kt`: the back camera's picture into a texture
- * Flutter draws, and every frame read with ZXing. The camera is bound to the
- * activity's lifecycle, so it closes while the app is away and opens again
- * when it's back, as the Kotlin app's did.
+ * The camera reading QR codes: the back camera's picture into a texture Flutter
+ * draws, and every frame read with ZXing. The camera is bound to the activity's
+ * lifecycle, so it closes while the app is away and opens again when it's back.
  */
 class ScannerBridge(
     private val activity: Activity,
@@ -282,9 +280,9 @@ class ScannerBridge(
 }
 
 /**
- * Reads QR codes in camera frames with ZXing, as the Kotlin app's. The first
- * plane of a YUV_420_888 frame is its brightness, all a QR code needs, and a
- * QR code reads the same at any angle, so the frame's rotation doesn't matter.
+ * Reads QR codes in camera frames with ZXing. The first plane of a YUV_420_888
+ * frame is its brightness, all a QR code needs, and a QR code reads the same at
+ * any angle, so the frame's rotation doesn't matter.
  */
 private class QrReader(private val onText: (String) -> Unit) : ImageAnalysis.Analyzer {
     private val reader = MultiFormatReader().apply {

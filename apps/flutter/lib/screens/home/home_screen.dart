@@ -20,12 +20,12 @@ import 'home_data.dart';
 import 'home_layout.dart';
 import 'offline_home.dart';
 
-/// The Home tab, as the Kotlin app's: the featured titles on top, as cards
-/// on a phone and the web's banner on a tablet, then Continue watching,
-/// Next up, the recommendation rows, what the viewer asked for, and each
-/// library's newest titles. A row that's loading or has nothing is left
-/// out, and so is one that failed; Home is an error only when nothing on
-/// it could show. [links] are debug tools that have no screen yet.
+/// The Home tab: the featured titles on top, as cards on a phone and the web's
+/// banner on a tablet, then Continue watching, Next up, the recommendation
+/// rows, what the viewer asked for, and each library's newest titles. A row
+/// that's loading or has nothing is left out, and so is one that failed; Home
+/// is an error only when nothing on it could show. [links] are debug tools that
+/// have no screen yet.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, this.links = const []});
 

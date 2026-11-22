@@ -9,12 +9,12 @@ import 'tokens.dart';
 /// How a save bar's last save went.
 enum SaveBarStatus { unsaved, saving, saved, failed }
 
-/// The bar under a page whose fields save together, as the web's save bar
-/// and the Kotlin app's: what the edits are waiting for, with Reset and
-/// Save. [status] turns Save into a spinner, then "Saved" with a tick, or
-/// Try again with the server's [message] beside it. Each time [attention]
-/// goes up the bar shakes, as when someone tries to leave with unsaved
-/// edits. It keeps clear of the system's bar at the bottom.
+/// The bar under a page whose fields save together, as the web's save bar: what
+/// the edits are waiting for, with Reset and Save. [status] turns Save into a
+/// spinner, then "Saved" with a tick, or Try again with the server's [message]
+/// beside it. Each time [attention] goes up the bar shakes, as when someone
+/// tries to leave with unsaved edits. It keeps clear of the system's bar at the
+/// bottom.
 class SaveBar extends StatefulWidget {
   const SaveBar({
     super.key,

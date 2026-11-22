@@ -65,8 +65,8 @@ internal class Media3Engine(private val context: Context, private val output: Pl
             if (!frozen && freeze.check(SystemClock.elapsedRealtime(), player.isPlaying, surface != null && player.videoSize.width > 0)) {
                 freeze.reset()
                 if (local && !nudged) {
-                    // As the Kotlin app's frozen(): a download gets one seek
-                    // in place, which restarts the decoder, before it fails.
+                    // A download gets one seek in place, which restarts the
+                    // decoder, before it fails.
                     nudged = true
                     player.seekTo(player.currentPosition)
                     main.postDelayed(this, 250L)

@@ -19,9 +19,8 @@ import 'playback_page.dart';
 import 'settings_rows.dart';
 import 'subtitles_page.dart';
 
-/// A category of Settings, as the Kotlin app's `SettingsPage`: each is a
-/// row on the first page and opens a page of its own at
-/// `Routes.settingsPage(key)`. The admin pages are `AdminCategory`.
+/// A category of Settings: each is a row on the first page and opens a page of
+/// its own at `Routes.settingsPage(key)`. The admin pages are `AdminCategory`.
 enum SettingsPage {
   account('account', Lucide.userRound),
   appearance('appearance', Lucide.palette),
@@ -97,9 +96,9 @@ class SettingsScaffold extends StatelessWidget {
   );
 }
 
-/// Settings' first page, as the Kotlin app's: offline mode on top, the
-/// categories, then the server this app is on and its version. Switching
-/// server or account and signing out are on the profile, with the account.
+/// Settings' first page: offline mode on top, the categories, then the server
+/// this app is on and its version. Switching server or account and signing out
+/// are on the profile, with the account.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -118,8 +117,8 @@ class SettingsScreen extends ConsumerWidget {
     return SettingsScaffold(
       title: l.shellSettings,
       sections: [
-        // On top, as the Kotlin app has it: the app leaves the server alone
-        // and shows the downloads. A TV has none, so it's never offline.
+        // On top: the app leaves the server alone and shows the downloads. A TV
+        // has none, so it's never offline.
         if (!device.isTv)
           Panel(
             rows: [

@@ -16,11 +16,10 @@ import 'pending_marks.dart';
 import 'title_data.dart';
 import 'title_parts.dart';
 
-/// An episode's page, or any file's that isn't a movie, as the Kotlin
-/// app's `EpisodeScreen`: on a phone its still is the backdrop with the
-/// heading on it; wider, the show's art is, with the still on it, which
-/// plays. Then what happens in it, Play and the buttons, and the rest of
-/// its season.
+/// An episode's page, or any file's that isn't a movie: on a phone its still is
+/// the backdrop with the heading on it; wider, the show's art is, with the
+/// still on it, which plays. Then what happens in it, Play and the buttons, and
+/// the rest of its season.
 class EpisodeScreen extends ConsumerStatefulWidget {
   const EpisodeScreen({super.key, required this.id});
 

@@ -44,12 +44,11 @@ import 'screens/tv/tv_profile.dart';
 import 'screens/tv/tv_settings.dart';
 import 'screens/tv/tv_shell.dart';
 
-/// Every place in the app, as the paths go_router opens. Screens navigate
-/// with these, `context.push(Routes.title(id))`, never with a path typed
-/// out, so a route's shape changes in one place. They follow the Kotlin
-/// app's (ui/Nav.kt), except that Shows and Movies are tabs in place of
-/// Media and its libraries, and the requests are one page, which an admin
-/// reaches from the waiting requests at the top of Explore.
+/// Every place in the app, as the paths go_router opens. Screens navigate with
+/// these, `context.push(Routes.title(id))`, never with a path typed out, so a
+/// route's shape changes in one place. Shows and Movies are tabs, and the
+/// requests are one page, which an admin reaches from the waiting requests at
+/// the top of Explore.
 abstract final class Routes {
   // Before the app: the session's state picks one (see [authRedirect]).
   /// Typing or picking a server's address.
@@ -158,11 +157,11 @@ abstract final class Routes {
 
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
-/// Where the session's state says the app is: the route that shows it, or
-/// null when the app is in use and wherever the person is stays. Mirrors the
-/// Kotlin app's `MatineeRoot`: no server picks one, signed out signs in, a
-/// server that didn't answer says so, checking shows that, and signed in
-/// or offline is the app. [path] is where the router is now.
+/// Where the session's state says the app is: the route that shows it, or null
+/// when the app is in use and wherever the person is stays. No server picks
+/// one, signed out signs in, a server that didn't answer says so, checking
+/// shows that, and signed in or offline is the app. [path] is where the router
+/// is now.
 ///
 /// Leaving the sign-in routes once signed in, and coming back to them on
 /// sign-out or a switch to another server, needs nothing from the screens:
@@ -282,9 +281,9 @@ GoRoute _authRoute(String path, Widget screen) => GoRoute(
       NoTransitionPage<void>(key: state.pageKey, child: screen),
 );
 
-/// The tabs, each with its own stack, and the pages that open over them.
-/// Pages open over the tabs, on the root navigator, as the Kotlin app has
-/// them: a title page fills the screen without the bars.
+/// The tabs, each with its own stack, and the pages that open over them. Pages
+/// open over the tabs, on the root navigator: a title page fills the screen
+/// without the bars.
 List<RouteBase> _handsetRoutes() => [
   StatefulShellRoute.indexedStack(
     builder: (context, state, shell) => HandsetShell(shell: shell),
@@ -526,12 +525,11 @@ List<RouteBase> _handsetRoutes() => [
 bool get _hasPlayerLab =>
     kDebugMode && defaultTargetPlatform == TargetPlatform.android;
 
-/// The TV's pages, under its drawer, as the Kotlin app's `TvSignedInApp`:
-/// the phone's paths, TV screens. The pages from the drawer sit over Home,
-/// so Back goes there; the rest open over whatever opened them. There's no
-/// downloads page, no admin page, no image editor or identify, no
-/// requests, and no single library's grid: the drawer's Movies and Shows
-/// take every library at once.
+/// The TV's pages, under its drawer: the phone's paths, TV screens. The pages
+/// from the drawer sit over Home, so Back goes there; the rest open over
+/// whatever opened them. There's no downloads page, no admin page, no image
+/// editor or identify, no requests, and no single library's grid: the drawer's
+/// Movies and Shows take every library at once.
 List<RouteBase> _tvRoutes() => [
   GoRoute(
     path: '/play/:id',

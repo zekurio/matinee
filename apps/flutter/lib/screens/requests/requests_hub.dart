@@ -15,10 +15,9 @@ import '../../query/reconnecting.dart';
 import '../../query/server_data.dart';
 import 'request_words.dart';
 
-/// What the request screens share while signed in, as the Kotlin app's
-/// `RequestsHub`: the last word the server streamed about each title on
-/// screen, asking and taking an ask back with the toast's Undo, and for an
-/// admin, the live queue.
+/// What the request screens share while signed in: the last word the server
+/// streamed about each title on screen, asking and taking an ask back with the
+/// toast's Undo, and for an admin, the live queue.
 ///
 /// How the screens stay current: each one follows its titles through
 /// `requests.live` ([FollowTitles]) while it's built, and lets go when it

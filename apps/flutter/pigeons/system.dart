@@ -27,15 +27,13 @@ class PickedImage {
 
 @HostApi()
 abstract class SystemApi {
-  /// Opens the system's photo picker for one image, as the Kotlin app's
-  /// `PickVisualMedia`, and answers with it, or null when the person backs
-  /// out. Reads at most [maxBytes] plus one.
+  /// Opens the system's photo picker for one image, and answers with it, or
+  /// null when the person backs out. Reads at most [maxBytes] plus one.
   @async
   PickedImage? pickImage(int maxBytes);
 
   /// This process's latest lines in logcat, at most [maxLines], in its
-  /// threadtime format, as the Kotlin app's `readAppLog` read them. An app
-  /// reads its own lines without READ_LOGS.
+  /// threadtime format. An app reads its own lines without READ_LOGS.
   @async
   List<String> readLog(int maxLines);
 

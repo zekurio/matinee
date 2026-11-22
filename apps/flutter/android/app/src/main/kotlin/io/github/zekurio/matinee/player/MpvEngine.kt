@@ -64,9 +64,9 @@ internal class MpvEngine(context: Context, private val output: PlaybackOutput) :
     private var attached: OutputSurfaces? = null
 
     /**
-     * The video track is off while the sound plays with the app away, as the
-     * Kotlin app's mpv drops its video output: decoding into the placeholder
-     * stalls playback. The track comes back with a real surface.
+     * The video track is off while the sound plays with the app away: decoding
+     * into the placeholder stalls playback. The track comes back with a real
+     * surface.
      */
     private var videoOff = false
     private var pendingUrl: String? = null

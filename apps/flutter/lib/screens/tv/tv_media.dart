@@ -10,9 +10,8 @@ import '../../media/artwork.dart';
 import '../../media/format.dart';
 import '../search/search_data.dart';
 
-/// What a page's header says about the focused card, and the backdrop
-/// behind it, as the Kotlin app's `FocusedItem`: the facts the phone shows
-/// for the same thing.
+/// What a page's header says about the focused card, and the backdrop behind
+/// it: the facts the phone shows for the same thing.
 @immutable
 class FocusedItem {
   const FocusedItem({

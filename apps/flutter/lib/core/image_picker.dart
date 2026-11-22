@@ -5,9 +5,9 @@ import '../platform/system.g.dart';
 
 export '../platform/system.g.dart' show PickedImage;
 
-/// Picks one image from the device, as the Kotlin app's `PickVisualMedia`:
-/// the system's photo picker, through [SystemApi.pickImage]. Null when the
-/// person backs out, or where the platform has no picker.
+/// Picks one image from the device: the system's photo picker, through
+/// [SystemApi.pickImage]. Null when the person backs out, or where the platform
+/// has no picker.
 typedef ImagePicker = Future<PickedImage?> Function(int maxBytes);
 
 Future<PickedImage?> _pickFromSystem(int maxBytes) async {

@@ -52,15 +52,14 @@ typedef _SignIn = ({bool passkeys, String? oidc});
 _SignIn _signInOf(AuthConfig? config) =>
     (passkeys: config?.passkeys ?? true, oidc: config?.oidc?.displayName);
 
-/// Everyone's accounts, as the Kotlin app's `UsersSettings` over the web's
-/// users panel: who they are, how they sign in, when they were last here,
-/// the API tokens they made, and the groups they're in. A tap offers
-/// their access, the admin role, signing out everywhere, revoking their
-/// API tokens, and deleting the account, each but the first asked first,
-/// and each only as the account in use's permissions allow; the server
-/// keeps one admin who can sign in, so the page says so rather than ask.
-/// Under them, for an account that may read them, the invite links:
-/// making one, and revoking one that still works.
+/// Everyone's accounts, as the web's users panel: who they are, how they sign
+/// in, when they were last here, the API tokens they made, and the groups
+/// they're in. A tap offers their access, the admin role, signing out
+/// everywhere, revoking their API tokens, and deleting the account, each but
+/// the first asked first, and each only as the account in use's permissions
+/// allow; the server keeps one admin who can sign in, so the page says so
+/// rather than ask. Under them, for an account that may read them, the invite
+/// links: making one, and revoking one that still works.
 class UsersPage extends ConsumerWidget {
   const UsersPage({super.key});
 
@@ -364,8 +363,8 @@ class _UserRow extends StatelessWidget {
         l.webUsersActiveNow
       else if (seen == null) ...[
         l.webUsersSignedOut,
-        // When it came, which the web shows on hover, as the Kotlin app
-        // shows it for an account that was never seen.
+        // When it came, which the web shows on hover, for an account that was
+        // never seen.
         ?_joined(l),
       ]
       // The server moves a session's last-seen time at most hourly.

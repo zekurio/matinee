@@ -71,11 +71,11 @@ const ownSubtitleEdges = [
 /// How much bigger than normal subtitles draw.
 const subtitleScales = [0.75, 1.0, 1.25, 1.5, 2.0];
 
-/// What the player keeps on this device, as the Kotlin app's `PlayerPrefs`
-/// and the web's per-browser settings do: the quality videos start in, the
-/// codecs encodes come in, the decoders, the gestures and buttons, and how
-/// subtitles look. Languages and skips follow the account instead. The
-/// engine has its own [playerEngineProvider], which came first.
+/// What the player keeps on this device, as the web's per-browser settings do:
+/// the quality videos start in, the codecs encodes come in, the decoders, the
+/// gestures and buttons, and how subtitles look. Languages and skips follow the
+/// account instead. The engine has its own [playerEngineProvider], which came
+/// first.
 @immutable
 class PlayerPrefs {
   const PlayerPrefs({

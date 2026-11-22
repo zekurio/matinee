@@ -22,8 +22,8 @@ class Sheet extends StatelessWidget {
   final String? description;
   final Widget? footer;
 
-  /// As wide as a sheet gets on a tablet, as Material 3's sheets in the
-  /// Kotlin app are; narrower screens get it edge to edge.
+  /// As wide as a sheet gets on a tablet, as Material 3's sheets are; narrower
+  /// screens get it edge to edge.
   static const widest = 640.0;
 
   static Future<T?> show<T>(

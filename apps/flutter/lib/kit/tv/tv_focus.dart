@@ -11,8 +11,8 @@ import '../theme.dart';
 import '../tokens.dart';
 import 'tv_metrics.dart';
 
-/// How a focused thing on a TV stands out, as the Kotlin app's `Focus.kt`.
-/// There are two looks, and every focusable thing takes one of them:
+/// How a focused thing on a TV stands out. There are two looks, and every
+/// focusable thing takes one of them:
 ///
 /// - A picture (a poster, a still, a person's photo) keeps its picture
 ///   visible, so it grows, lifts, and gets a ring clear of its edge:
@@ -402,13 +402,12 @@ class TvOverlayScopeNode extends FocusScopeNode {
       );
 }
 
-/// Moves focus with the D-pad for every TV screen, the Kotlin app's focus
-/// rules over Flutter's directional search: a move sideways stays in its
-/// row of cards; a move into another row lands on the card that row had
-/// last; and nothing scrolls by itself, since each list scrolls to the
-/// card that takes focus as a TV's lists do ([TvFollowFocus]). A move that
-/// finds nothing returns false, so [TvDirectionalFocusAction] can try the
-/// drawer.
+/// Moves focus with the D-pad for every TV screen, these rules over Flutter's
+/// directional search: a move sideways stays in its row of cards; a move into
+/// another row lands on the card that row had last; and nothing scrolls by
+/// itself, since each list scrolls to the card that takes focus as a TV's lists
+/// do ([TvFollowFocus]). A move that finds nothing returns false, so
+/// [TvDirectionalFocusAction] can try the drawer.
 class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
   TvTraversalPolicy() : super(requestFocusCallback: _request);
 
@@ -525,11 +524,11 @@ class TvMemoryNode extends FocusNode {
   final String key;
 }
 
-/// Where focus was on a page, kept while the page is on the back stack:
-/// the row and card that had it last, and the card each row had last, as
-/// the Kotlin app's `TvFocusMemory`. A row opened again by Up or Down lands
-/// on its own card, and a page coming back focuses the card that opened
-/// what was on top. Keys are the page's own, like an item's id.
+/// Where focus was on a page, kept while the page is on the back stack: the row
+/// and card that had it last, and the card each row had last. A row opened
+/// again by Up or Down lands on its own card, and a page coming back focuses
+/// the card that opened what was on top. Keys are the page's own, like an
+/// item's id.
 ///
 /// Give each card [node] for its row and key, wrap each row in [TvMemoryRow],
 /// and call [restore] from the page's build with where to start the first
@@ -766,14 +765,13 @@ typedef TvScrollRule = double Function(
 );
 
 /// Scrolls [controller] as the rule says whenever something inside [child]
-/// takes focus, in place of Flutter's scroll into view, so a TV's lists
-/// move as the Kotlin app's do: rows only as far as it takes to keep the
-/// card clear of their edges, a page of rows to put the focused one in the
-/// same place each time, a grid by whole rows. [child] is the scroll view.
-/// With [sectionTop], a page of sections, each a child of its list, the
-/// list only stops where a section starts [sectionTop] below its top, the
-/// gap between sections, so the one above has just gone: none is left cut
-/// at the top.
+/// takes focus, in place of Flutter's scroll into view, so a TV's lists move
+/// this way: rows only as far as it takes to keep the card clear of their
+/// edges, a page of rows to put the focused one in the same place each time, a
+/// grid by whole rows. [child] is the scroll view. With [sectionTop], a page of
+/// sections, each a child of its list, the list only stops where a section
+/// starts [sectionTop] below its top, the gap between sections, so the one
+/// above has just gone: none is left cut at the top.
 class TvFollowFocus extends StatefulWidget {
   const TvFollowFocus({
     super.key,

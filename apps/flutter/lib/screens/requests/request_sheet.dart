@@ -14,8 +14,7 @@ import '../../media/format.dart';
 import 'request_words.dart';
 import 'requests_hub.dart';
 
-/// The sheets of asking and answering, as the Kotlin app's
-/// `RequestSheet.kt`, the Decline sheet of `Admin.kt`, and Discover's "Not
+/// The sheets of asking and answering, the Decline sheet, and Discover's "Not
 /// interested".
 
 /// Where a request that needs a decision is made, in a sheet from the

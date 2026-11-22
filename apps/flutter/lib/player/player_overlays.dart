@@ -35,9 +35,8 @@ class SkipSegmentButton extends StatelessWidget {
   );
 }
 
-/// The next episode while the credits roll or once the file ended, as the
-/// Kotlin player's `UpNext` card: Play with its countdown, and Hide or
-/// Cancel beside it.
+/// The next episode while the credits roll or once the file ended: Play with
+/// its countdown, and Hide or Cancel beside it.
 class UpNextCard extends StatelessWidget {
   const UpNextCard({
     super.key,
@@ -346,11 +345,10 @@ class PlayerFailure extends StatelessWidget {
   );
 }
 
-/// The screen while the controls are locked, as the Kotlin phone player's
-/// `LockedScreen`: the unlock button shows in the corner where the lock
-/// button was, for a few seconds, and tapping it unlocks. Once it's gone, a
-/// touch anywhere brings it back, and so does each change of [reveals].
-/// With a screen reader on, it stays.
+/// The screen while the controls are locked: the unlock button shows in the
+/// corner where the lock button was, for a few seconds, and tapping it unlocks.
+/// Once it's gone, a touch anywhere brings it back, and so does each change of
+/// [reveals]. With a screen reader on, it stays.
 class PlayerLocked extends StatefulWidget {
   const PlayerLocked({
     super.key,

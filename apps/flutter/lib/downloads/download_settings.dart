@@ -18,7 +18,7 @@ abstract final class DefaultVersion {
   static const original = 'original';
 }
 
-/// The Kotlin app's download settings, kept on this device.
+/// The download settings, kept on this device.
 final class DownloadSettings {
   const DownloadSettings({
     this.unmeteredOnly = true,

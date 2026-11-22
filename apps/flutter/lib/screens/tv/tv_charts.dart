@@ -8,12 +8,11 @@ import '../../l10n/app_localizations.dart';
 import '../profile/profile_data.dart';
 
 /*
- * The profile's two charts on a TV, as the Kotlin app's `TvCharts`. Each is
- * one focus stop, so the page scrolls to it and passes it with one press.
- * Focused, the arrows move a mark across its bars or squares, and the line
- * above the chart reads out the one marked, as touching it does on the
- * phone. The mark is the text color, as a focused control fills with it;
- * an arrow past the chart's edge leaves it.
+ * The profile's two charts on a TV. Each is one focus stop, so the page scrolls
+ * to it and passes it with one press. Focused, the arrows move a mark across
+ * its bars or squares, and the line above the chart reads out the one marked,
+ * as touching it does on the phone. The mark is the text color, as a focused
+ * control fills with it; an arrow past the chart's edge leaves it.
  */
 
 /// How tall the watch-time bars can grow.

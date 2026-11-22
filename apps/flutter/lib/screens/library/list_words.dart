@@ -7,8 +7,7 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import 'list_choices.dart';
 
-/// The words a list of titles says about its filters and cards, as the
-/// Kotlin app's `TitleFilters.kt` and `FilterSheet.kt` word them.
+/// The words a list of titles says about its filters and cards.
 
 /// A score out of 10 with one decimal, in the app's language.
 String scoreText(BuildContext context, double score) =>
@@ -54,8 +53,8 @@ CardDetail? cardDetail(BuildContext context, TitleSummary title, String sort) {
   return year == null ? null : CardDetail(year);
 }
 
-/// "7.8 · 2021" after the star, which the web and the Kotlin app draw as
-/// a character the app's font lacks, so it's the kit's icon here.
+/// "7.8 · 2021" after the star, which the web draws as a character the app's
+/// font lacks, so it's the kit's icon here.
 CardDetail scoreDetail(AppLocalizations l, String score, String? year) =>
     CardDetail(
       year == null

@@ -9,10 +9,9 @@ import 'player_preferences.dart';
 import 'player_state.dart';
 
 /*
- * A report of the latest playback, for working out why something won't
- * play, as the Kotlin app's PlaybackDiagnostics.kt. It stays in memory
- * until the app closes or the viewer clears it, and leaves the device only
- * when the viewer copies it. Nothing here sends it anywhere.
+ * A report of the latest playback, for working out why something won't play. It
+ * stays in memory until the app closes or the viewer clears it, and leaves the
+ * device only when the viewer copies it. Nothing here sends it anywhere.
  *
  * It holds codes, never text: every string in a report is a [Safe], which
  * only takes a value from a known list or a short code without the

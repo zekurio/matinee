@@ -24,13 +24,12 @@ import 'request_words.dart';
 import 'requests_data.dart';
 import 'requests_hub.dart';
 
-/// The requests page. Without a list, what the viewer asked for, as the
-/// Kotlin app's `AskedScreen`, newest first, "In progress" or "All", with
-/// why a declined title isn't coming. With one of [QueueList]'s, for an
-/// admin, the requests to answer and follow, as its `RequestsScreen`:
-/// Waiting, Needs attention, On the way, and Done, live from the stream
-/// the whole app follows, for whoever runs the queue: reads everyone's
-/// requests and answers them. Anyone else gets their own requests.
+/// The requests page. Without a list, what the viewer asked for, newest first,
+/// "In progress" or "All", with why a declined title isn't coming. With one of
+/// [QueueList]'s, for an admin, the requests to answer and follow: Waiting,
+/// Needs attention, On the way, and Done, live from the stream the whole app
+/// follows, for whoever runs the queue: reads everyone's requests and answers
+/// them. Anyone else gets their own requests.
 class RequestsScreen extends ConsumerWidget {
   const RequestsScreen({super.key, this.list});
 
@@ -201,9 +200,8 @@ class _MinePageState extends ConsumerState<_MinePage> {
   }
 }
 
-/// Why a declined title isn't coming, under its card, and under that the
-/// note an admin left, each with two lines of its own, as the Kotlin
-/// app's `DeclinedNote`.
+/// Why a declined title isn't coming, under its card, and under that the note
+/// an admin left, each with two lines of its own.
 class _DeclinedNote extends ConsumerWidget {
   const _DeclinedNote({required this.item});
 

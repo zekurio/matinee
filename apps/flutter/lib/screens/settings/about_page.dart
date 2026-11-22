@@ -11,8 +11,8 @@ import 'playback_report_section.dart';
 import 'settings_rows.dart';
 import 'settings_screen.dart';
 
-/// Settings, About: what this app and device are, the licenses, then the
-/// latest playback's report and the app's log, in the Kotlin app's order.
+/// Settings, About: what this app and device are, the licenses, then the latest
+/// playback's report and the app's log.
 class AboutPage extends ConsumerWidget {
   const AboutPage({super.key});
 

@@ -97,10 +97,9 @@ String playbackQualityLimitText(AppLocalizations l, int limit) {
   );
 }
 
-/// Settings, Playback: what this device plays and how, as the Kotlin
-/// app's device, gesture, button, transcoding, and passthrough sections.
-/// [playerEngineProvider] keeps the engine and [playerPrefsProvider] the
-/// rest; the player reads both when it opens.
+/// Settings, Playback: what this device plays and how. [playerEngineProvider]
+/// keeps the engine and [playerPrefsProvider] the rest; the player reads both
+/// when it opens.
 class PlaybackPage extends ConsumerWidget {
   const PlaybackPage({super.key});
 

@@ -17,12 +17,11 @@ import 'request_words.dart';
 import 'requests_data.dart';
 import 'requests_hub.dart';
 
-/// Explore, for when there's nothing in mind yet, as the Kotlin app's
-/// `Discover.kt` under its search field: rows of titles under the empty
-/// field, in the order the server sends them, each loading on its own.
+/// Explore, for when there's nothing in mind yet: rows of titles under the
+/// empty field, in the order the server sends them, each loading on its own.
 /// Each row but "Because you watched" is the start of a browse, which its
-/// heading opens with the row's filters and sort. Nothing of it shows when
-/// the server says Discover is off.
+/// heading opens with the row's filters and sort. Nothing of it shows when the
+/// server says Discover is off.
 
 /// How many cards a row shows. Its heading leads to the rest.
 const _railCards = 20;

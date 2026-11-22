@@ -50,11 +50,10 @@ class Device {
 
   bool get isTv => formFactor == FormFactor.tv;
 
-  /// What the app calls itself in the server's sessions list, watching now,
-  /// and client stats, as the Kotlin and Swift apps name themselves. The
-  /// server shows it as it is, so it's a product name, the same in every
-  /// language. A tablet is an Android phone's app, and an iPad an iPhone's,
-  /// as the native apps have it.
+  /// What the app calls itself in the server's sessions list, watching now, and
+  /// client stats. The server shows it as it is, so it's a product name, the
+  /// same in every language. A tablet is an Android phone's app, and an iPad an
+  /// iPhone's.
   String get clientName => switch (platform) {
     DevicePlatform.androidtv => 'Matinee Android TV',
     DevicePlatform.ios => 'Matinee iOS',

@@ -137,12 +137,11 @@ class TvRowTitle extends StatelessWidget {
   );
 }
 
-/// A titled row of cards that scrolls sideways, as the Kotlin app's
-/// `TvRow`. Cards pass out of sight at the drawer's rail on the left and at
-/// the screen's edge on the right, and the focused card always stays clear
-/// of both, with room for its ring. [row] names it in [memory], so it lands
-/// on the card it left when focus comes back; give each card
-/// `memory.node(row, key)`. [height] is a card's, caption and all.
+/// A titled row of cards that scrolls sideways. Cards pass out of sight at the
+/// drawer's rail on the left and at the screen's edge on the right, and the
+/// focused card always stays clear of both, with room for its ring. [row] names
+/// it in [memory], so it lands on the card it left when focus comes back; give
+/// each card `memory.node(row, key)`. [height] is a card's, caption and all.
 class TvRow extends StatefulWidget {
   const TvRow({
     super.key,
@@ -226,11 +225,11 @@ class _TvRowState extends State<TvRow> {
   );
 }
 
-/// A page of rows under a fixed header, as the Kotlin app's `PinnedRows`:
-/// whichever row takes focus scrolls to the same place, the focused card
-/// [pivot] below the list's top with its heading above it, and the list's
-/// top fades over [fade]. [children] are the rows, [gap] apart, and the
-/// last can come up to where the others stop, no further ([TvRowsScroll]).
+/// A page of rows under a fixed header: whichever row takes focus scrolls to
+/// the same place, the focused card [pivot] below the list's top with its
+/// heading above it, and the list's top fades over [fade]. [children] are the
+/// rows, [gap] apart, and the last can come up to where the others stop, no
+/// further ([TvRowsScroll]).
 class TvPinnedList extends StatefulWidget {
   const TvPinnedList({
     super.key,
@@ -289,15 +288,14 @@ class _TvPinnedListState extends State<TvPinnedList> {
 }
 
 /// A grid of cards under a header that steps away once focus goes past the
-/// first row, as the Kotlin app's `TvPosterGrid`: [columns] across, it
-/// scrolls by whole rows, keeping the focused card in full view. Focus
-/// coming into it lands on the card it left. [line] names the focused card
-/// between the header and the grid, and has the top to itself while the
-/// header is away. [onNearEnd] asks for more as the last rows near.
-/// [scrollKey] changing, as a new sort, scrolls back to the top. [cellAspect]
-/// is a cell's width over its height, and [cellExtra] what a caption adds.
-/// With [cellWidth], as many columns as fit cells that wide, which then
-/// stretch to fill the row, so no strip is left at the end.
+/// first row: [columns] across, it scrolls by whole rows, keeping the focused
+/// card in full view. Focus coming into it lands on the card it left. [line]
+/// names the focused card between the header and the grid, and has the top to
+/// itself while the header is away. [onNearEnd] asks for more as the last rows
+/// near. [scrollKey] changing, as a new sort, scrolls back to the top.
+/// [cellAspect] is a cell's width over its height, and [cellExtra] what a
+/// caption adds. With [cellWidth], as many columns as fit cells that wide,
+/// which then stretch to fill the row, so no strip is left at the end.
 class TvPosterGrid extends StatefulWidget {
   const TvPosterGrid({
     super.key,
@@ -612,13 +610,12 @@ class TvLoading extends StatelessWidget {
   );
 }
 
-/// A detail page, as the Kotlin app's `DetailList`: [header] first, with
-/// its buttons, then [rows] below it, reached with Down. While the header
-/// has focus the page sits at its top; once a row has it, each row scrolls
-/// to [pivot] below the top, as Home's do, but stops where the row above
-/// has just gone, a [gap] over its heading, rather than leave it cut at the
-/// top. The top fades over [fade] while scrolled, no further than the gap,
-/// so a row's heading there stays clear.
+/// A detail page: [header] first, with its buttons, then [rows] below it,
+/// reached with Down. While the header has focus the page sits at its top; once
+/// a row has it, each row scrolls to [pivot] below the top, as Home's do, but
+/// stops where the row above has just gone, a [gap] over its heading, rather
+/// than leave it cut at the top. The top fades over [fade] while scrolled, no
+/// further than the gap, so a row's heading there stays clear.
 class TvHeaderList extends StatefulWidget {
   const TvHeaderList({
     super.key,
