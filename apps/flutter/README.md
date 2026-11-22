@@ -837,7 +837,10 @@ arrives. The deliberate differences from the phone:
   Add all, and the answers to a declined request ask nothing.
 - A row heading can't take focus, so a row that opens a browse or a list
   ends in a See all card (`TvSeeAllCard`). The Requests row's opens the
-  requests page, which has no entry of its own.
+  requests page, which has no drawer entry. So the page can still be
+  reached when the row has no cards and hides, Discover's header has a
+  Requests chip, up from the first row, for whoever the server gives the
+  row.
 - A request card opens a panel with what can be done about it, rather
   than buttons on the card. One of the viewer's own with nothing to
   cancel opens its title at once.

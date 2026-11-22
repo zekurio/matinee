@@ -36,6 +36,10 @@ abstract final class _Rows {
   static const empty = 'empty';
   static const seeAll = 'see-all';
   static const search = 'search';
+
+  /// The header's Requests chip, in a row of its own.
+  static const header = 'header';
+  static const requestsChip = 'requests';
   static String rail(DiscoverRail rail) => 'rail-${railKey(rail)}';
 }
 
@@ -48,8 +52,9 @@ const _rowPivot = 12 + TvCards.titleHeight + TvCards.titleGap;
 /// Fetch again on return after this long.
 const _refreshAfter = Duration(minutes: 5);
 
-/// Discover's page: its name and the focused card's over its backdrop, and
-/// under them the Requests row, an admin's waiting requests or the
+/// Discover's page: its name, a Requests chip for whoever has the row,
+/// up from the first row, and the focused card's name over its backdrop,
+/// and under them the Requests row, an admin's waiting requests or the
 /// viewer's own, whichever the server names, then the server's rows. A row
 /// that failed says so with Try again; several say it once. Recommended
 /// titles offer "Not interested" on a long press, and each row that's the
@@ -117,7 +122,8 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
         if (loads[railKey(rail)]!.hasError && !loads[railKey(rail)]!.isLoading)
           rail,
     ];
-    final requests = _requestsRow(l, on ? value!.requests : null);
+    final which = on ? value!.requests : null;
+    final requests = _requestsRow(l, which);
     final rows = <(String, Widget)>[?requests.row];
 
     Widget? message;
@@ -250,6 +256,42 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
                       ],
                     ),
                   ),
+                  // A way to the requests page whether or not the row
+                  // has cards, for whoever the server gives the row.
+                  if (which != null)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: TvPage.start,
+                        end: TvPage.end,
+                        top: 16,
+                      ),
+                      child: SizedBox(
+                        height: TvButtons.height,
+                        child: Row(
+                          children: [
+                            // It names no card, so the line is empty.
+                            Focus(
+                              canRequestFocus: false,
+                              skipTraversal: true,
+                              onFocusChange: (focused) {
+                                if (focused) _focus(null);
+                              },
+                              child: TvButton(
+                                label: l.webRequestsTitle,
+                                icon: Lucide.inbox,
+                                rest: TvFocus.restOnPicture(colors),
+                                focusNode: _memory.node(
+                                  _Rows.header,
+                                  _Rows.requestsChip,
+                                ),
+                                onPressed: () =>
+                                    context.push(_requestsRoute(which)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   Padding(
                     padding: const EdgeInsetsDirectional.only(
                       start: TvPage.start,
@@ -277,6 +319,12 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
     );
   }
 
+  /// The requests page for [which], as `discover.rails` names it: the
+  /// waiting queue, or the viewer's own.
+  String _requestsRoute(String? which) => which == DiscoverRequests.queue
+      ? Routes.requests(QueueList.waiting)
+      : Routes.requests();
+
   /// The Requests row for [which], as `discover.rails` names it, and
   /// whether it's said what it has: nothing while its list loads, or once
   /// no card is left. What's held for an answer is out of it.
@@ -288,7 +336,6 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
     final List<TvRequestPoster>? items;
     final Object? error;
     final VoidCallback retry;
-    final String route;
     switch (which) {
       case DiscoverRequests.queue:
         final queue = ref.watch(
@@ -305,7 +352,6 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
               ];
         error = down && queue == null ? const _QueueDown() : null;
         retry = () => ref.read(requestsProvider.notifier).retryQueue();
-        route = Routes.requests(QueueList.waiting);
       case DiscoverRequests.mine:
         final mine = ref.watch(myLiveRequestsProvider);
         items = mine.value == null
@@ -316,12 +362,12 @@ class _TvDiscoverScreenState extends ConsumerState<TvDiscoverScreen> {
               ];
         error = mine.hasError && !mine.hasValue ? mine.error : null;
         retry = () => ref.invalidate(myLiveRequestsProvider);
-        route = Routes.requests();
       default:
         _firsts.remove(_Rows.requests);
         return (row: null, settled: true);
     }
     final title = l.webRequestsTitle;
+    final route = _requestsRoute(which);
     if (error != null) {
       _firsts.remove(_Rows.requests);
       return (

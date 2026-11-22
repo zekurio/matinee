@@ -230,6 +230,73 @@ void main() {
       expect(focusedKey(), 'requests/r1', reason: 'the card it left');
     });
 
+    group("the header's Requests chip", () {
+      final line = find.descendant(
+        of: find.byType(TvFocusLine),
+        matching: find.byType(Text),
+      );
+
+      testWidgets('is up from the first row, and Down comes back to the card '
+          'left', (tester) async {
+        await _open(tester, _discover(), path: Routes.discover);
+        await right(tester);
+        expect(focusedKey(), 'requests/r2');
+        await up(tester);
+        expect(focusedKey(), 'header/requests');
+        expect(focusedLabel(), 'Requests');
+        expect(line, findsNothing, reason: 'the chip names no card');
+        await down(tester);
+        expect(focusedKey(), 'requests/r2', reason: 'the card it left');
+        await up(tester);
+        await select(tester);
+        expect(find.text('My requests'), findsOneWidget);
+        expect(await back(tester), isTrue);
+        expect(focusedKey(), 'header/requests', reason: 'came back');
+      });
+
+      testWidgets('stays while the row hides for having no cards', (
+        tester,
+      ) async {
+        final requests = _discover()
+          ..mine = {'items': <Object>[], 'nextCursor': null};
+        await _open(tester, requests, path: Routes.discover);
+        expect(focusedKey(), 'rail-popularFilms/movie:tmdb:d2');
+        expect(find.byKey(const ValueKey('requests')), findsNothing);
+        await right(tester);
+        await up(tester);
+        expect(focusedKey(), 'header/requests');
+        await down(tester);
+        expect(focusedKey(), 'rail-popularFilms/movie:tmdb:a1');
+      });
+
+      testWidgets("isn't there when the server gives no Requests row", (
+        tester,
+      ) async {
+        await _open(tester, _discover(requests: null), path: Routes.discover);
+        expect(focusedKey(), 'rail-popularFilms/movie:tmdb:d2');
+        expect(find.text('Requests'), findsNothing);
+        await up(tester);
+        expect(focusedKey(), 'rail-popularFilms/movie:tmdb:d2');
+      });
+
+      testWidgets("opens the queue's waiting list for the queue's row", (
+        tester,
+      ) async {
+        final requests = _discover(requests: 'queue')..queue = queueJson();
+        await _open(
+          tester,
+          requests,
+          path: Routes.discover,
+          permissions: const ['adminRequest.read', 'adminRequest.update'],
+        );
+        await up(tester);
+        expect(focusedKey(), 'header/requests');
+        await select(tester);
+        expect(find.text('Needs attention'), findsOneWidget);
+        expect(requests.sentPaths, isEmpty, reason: 'opening changes nothing');
+      });
+    });
+
     testWidgets('a row that failed offers Try again, and loads again', (
       tester,
     ) async {
