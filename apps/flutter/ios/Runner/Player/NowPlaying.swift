@@ -70,8 +70,8 @@ final class NowPlaying {
     command.isEnabled = true
     let target = command.addTarget { [weak self] event in
       DispatchQueue.main.async {
-        guard let self, info != nil, let message = message(event) else { return }
-        send(message)
+        guard let self, self.info != nil, let message = message(event) else { return }
+        self.send(message)
       }
       return .success
     }
