@@ -17,10 +17,9 @@ import 'pending_marks.dart';
 import 'title_data.dart';
 import 'title_parts.dart';
 
-/// One season of a show, as the Kotlin app's `SeasonScreen`: its poster
-/// and counts over the show's backdrop, Play for the episode up next in
-/// it, its episodes as a list, and the show's other seasons. [season] is
-/// null for the files without a season number.
+/// One season of a show: its poster and counts over the show's backdrop, Play
+/// for the episode up next in it, its episodes as a list, and the show's other
+/// seasons. [season] is null for the files without a season number.
 class SeasonScreen extends ConsumerStatefulWidget {
   const SeasonScreen({super.key, required this.titleId, required this.season});
 

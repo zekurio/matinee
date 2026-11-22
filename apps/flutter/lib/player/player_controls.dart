@@ -6,8 +6,8 @@ import '../kit/kit.dart';
 
 const _clear = Color(0x00000000);
 
-/// A soft shadow under the middle buttons and their numbers, so they read
-/// over a bright picture, as the Kotlin TV overlay's text does.
+/// A soft shadow under the middle buttons and their numbers, so they read over
+/// a bright picture.
 const _onPicture = [
   Shadow(color: Color(0x99000000), offset: Offset(0, 2), blurRadius: 10),
 ];
@@ -25,14 +25,13 @@ class PlayerDim extends StatelessWidget {
       const IgnorePointer(child: ColoredBox(color: color));
 }
 
-/// The controls over the video, laid out as the Kotlin phone player's
-/// `Controls`, which a tablet shares at the same sizes: the title and the
-/// menu buttons up top, play in the middle between the skips and, for an
-/// episode, the previous and next episodes outside them, and at the bottom
-/// [seekBar] the full width, with nothing beside it or under it. The top
-/// and bottom are shaded so they read over bright video, and the middle
-/// buttons carry a shadow; [PlayerDim], under the subtitles, dims the rest
-/// of the picture while they show.
+/// The controls over the video, which a tablet shares at the same sizes: the
+/// title and the menu buttons up top, play in the middle between the skips and,
+/// for an episode, the previous and next episodes outside them, and at the
+/// bottom [seekBar] the full width, with nothing beside it or under it. The top
+/// and bottom are shaded so they read over bright video, and the middle buttons
+/// carry a shadow; [PlayerDim], under the subtitles, dims the rest of the
+/// picture while they show.
 class PlayerControls extends StatelessWidget {
   const PlayerControls({
     super.key,

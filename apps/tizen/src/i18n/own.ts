@@ -1,12 +1,15 @@
 /*
- * The words only a Samsung TV needs, which the Android app has none for.
- * Their keys start with `tizen_`. Everything else comes from Android's
- * strings; see scripts/strings.mjs.
+ * The words only a Samsung TV needs, which the Flutter app has none for.
+ * Their keys start with `tizen_`. Everything else comes from the Flutter
+ * app's ARB files; see scripts/strings.mjs.
  */
 
 export const OWN_STRINGS = {
   en: {
     tizen_this_tv: "This TV",
+    tizen_signin_description:
+      "Scan the QR code with your phone's camera, or in the Matinee app under Settings › Account.",
+    tizen_signin_enter: "Or go to {0} and enter",
     tizen_about_engine: "Web engine",
     tizen_about_player: "Player",
     tizen_about_model: "Model",
@@ -19,6 +22,9 @@ export const OWN_STRINGS = {
   },
   de: {
     tizen_this_tv: "Dieser Fernseher",
+    tizen_signin_description:
+      "Scanne den QR-Code mit der Kamera deines Handys oder in der Matinee-App unter Einstellungen › Konto.",
+    tizen_signin_enter: "Oder öffne {0} und gib ein",
     tizen_about_engine: "Web-Engine",
     tizen_about_player: "Player",
     tizen_about_model: "Modell",

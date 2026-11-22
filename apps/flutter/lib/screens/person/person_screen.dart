@@ -18,9 +18,9 @@ import '../requests/requests_hub.dart';
 import '../title/title_parts.dart';
 import 'person_data.dart';
 
-/// Someone in the cast or crew, as the Kotlin app's `PersonScreen`: who
-/// they are, what they're in across the libraries, then their other titles
-/// at TMDB, each card following its title's state live, to request.
+/// Someone in the cast or crew: who they are, what they're in across the
+/// libraries, then their other titles at TMDB, each card following its title's
+/// state live, to request.
 class PersonScreen extends ConsumerStatefulWidget {
   const PersonScreen({super.key, required this.name, this.tmdbId});
 

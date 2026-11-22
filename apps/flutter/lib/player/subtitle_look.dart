@@ -8,8 +8,8 @@ import 'player_motion.dart';
 import 'player_preferences.dart';
 import 'player_system.dart';
 
-/// How the player draws a line of subtitles, as the Kotlin app's
-/// `SubtitleLook`. mpv draws its own, and takes only [scale] of this.
+/// How the player draws a line of subtitles. mpv draws its own, and takes only
+/// [scale] of this.
 @immutable
 class SubtitleLook {
   const SubtitleLook({
@@ -137,7 +137,7 @@ class SubtitleLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fontSize = size * look.scale;
-    // Kotlin's offsets are in pixels, as Compose's shadows take them.
+    // The edge's offsets are in physical pixels.
     final pixel = 1 / MediaQuery.devicePixelRatioOf(context);
     final base = TextStyle(
       color: look.color,

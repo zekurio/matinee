@@ -4,10 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/session.dart';
 import '../kit/kit.dart';
 
-/// An account's picture in a circle [size] across, as the Kotlin app's
-/// `Avatar`: the server's picture when the account has one, else, and
-/// while no server is in use or the picture can't load, [fallback], or the
-/// name's first letter on the secondary fill.
+/// An account's picture in a circle [size] across: the server's picture when
+/// the account has one, else, and while no server is in use or the picture
+/// can't load, [fallback], or the name's first letter on the secondary fill.
 class Avatar extends ConsumerWidget {
   const Avatar({
     super.key,

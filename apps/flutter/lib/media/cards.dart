@@ -38,18 +38,12 @@ class TitleCard extends StatelessWidget {
     Key? key,
     required TitleSummary title,
     CardDetail? detail,
-    Artwork? poster,
-    String? route,
-    CatalogRef? recommended,
   }) : this(
          key: key,
          title: title,
          detail: detail?.text,
          detailIcon: detail?.icon,
          detailLabel: detail?.label,
-         poster: poster,
-         route: route,
-         recommended: recommended,
        );
 
   final TitleSummary title;
@@ -108,9 +102,8 @@ String? yearLine(BuildContext context, int? year, String kind) {
   return year == null ? word : l.requestsYearKind('$year', word);
 }
 
-/// movie its year, a show its count of episodes, or what's new, opening the
-/// one new episode or the season that got them. The Kotlin app's
-/// `ShelfCard`.
+/// movie its year, a show its count of episodes, or what's new, opening the one
+/// new episode or the season that got them.
 class ShelfCard extends StatelessWidget {
   const ShelfCard({super.key, required this.entry});
 
@@ -154,12 +147,11 @@ class ShelfCard extends StatelessWidget {
   }
 }
 
-/// An episode or movie to start or resume, for Continue watching and Next
-/// up: the episode's picture, the show's name, then the episode and the
-/// time left. It opens the episode's page, or a movie's; Play, where a
-/// mouse or focus shows it, starts the file. On a show's own pages
-/// [showName] is false, and the episode's name leads instead. A long press
-/// opens its menu. The Kotlin app's `EpisodeCard`.
+/// An episode or movie to start or resume, for Continue watching and Next up:
+/// the episode's picture, the show's name, then the episode and the time left.
+/// It opens the episode's page, or a movie's; Play, where a mouse or focus
+/// shows it, starts the file. On a show's own pages [showName] is false, and
+/// the episode's name leads instead. A long press opens its menu.
 class EpisodeCard extends StatelessWidget {
   const EpisodeCard({super.key, required this.item, this.showName = true});
 

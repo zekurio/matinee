@@ -18,13 +18,13 @@ import 'admin_parts.dart';
 /// How often the list asks again while a scan or a fetch runs.
 const _busyPoll = Duration(seconds: 2);
 
-/// The libraries, as the Kotlin app's `LibrariesSettings` and the web's
-/// libraries panel: each with its titles and what the server is doing to
-/// it. A tap opens its actions: scan it, fetch its metadata again, edit
-/// it, or remove it, which asks first. Add library opens the same editor
-/// empty. Each action shows only for an account whose permissions allow
-/// it, as on the web. While a scan or a fetch runs, the page asks again every two
-/// seconds, and back from the editor it shows what was saved.
+/// The libraries, as the web's libraries panel: each with its titles and what
+/// the server is doing to it. A tap opens its actions: scan it, fetch its
+/// metadata again, edit it, or remove it, which asks first. Add library opens
+/// the same editor empty. Each action shows only for an account whose
+/// permissions allow it, as on the web. While a scan or a fetch runs, the page
+/// asks again every two seconds, and back from the editor it shows what was
+/// saved.
 class LibrariesPage extends ConsumerStatefulWidget {
   const LibrariesPage({super.key});
 

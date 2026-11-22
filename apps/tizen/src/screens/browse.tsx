@@ -158,7 +158,7 @@ export function SearchPage() {
             onFocus={() =>
               setFocusedItem(
                 plainInfo(facet.name, [
-                  plural("browse_title_count", facet.titleCount),
+                  plural("browseTitleCount", facet.titleCount),
                 ]),
               )
             }
@@ -175,15 +175,15 @@ export function SearchPage() {
             fid="field"
             value={query}
             onChange={setQuery}
-            placeholder={tr("search_field")}
-            clearLabel={tr("search_clear")}
+            placeholder={tr("searchField")}
+            clearLabel={tr("searchClear")}
             height={56}
             large
           />
         </div>
         {searching && results && (
           <span class="t-caption muted" style={{ marginLeft: "20rem" }}>
-            {tr("search_searching")}
+            {tr("searchSearching")}
           </span>
         )}
       </div>
@@ -193,15 +193,15 @@ export function SearchPage() {
         </div>
       )}
       {text === "" ? null : failed ? (
-        <Hint headline={tr("search_failed")} />
+        <Hint headline={tr("searchFailed")} />
       ) : results === undefined ? (
         <div class="center" style={{ paddingTop: "48rem" }}>
           <Spinner size={32} class="muted" />
         </div>
       ) : nothing ? (
         <Hint
-          headline={tr("search_no_match", text)}
-          detail={tr("search_no_match_hint")}
+          headline={tr("searchNoMatch", text)}
+          detail={tr("searchNoMatchHint")}
         />
       ) : (
         <div class="rows-scroll" data-scroll="pin" data-scroll-pivot="48">
@@ -210,7 +210,7 @@ export function SearchPage() {
               <Row
                 key={libraryId}
                 name={`lib-${libraryId}`}
-                title={`${names.get(libraryId) ?? tr("search_titles_heading")}  ·  ${plural("browse_title_count", titles.length)}`}
+                title={`${names.get(libraryId) ?? tr("searchTitlesHeading")}  ·  ${plural("browseTitleCount", titles.length)}`}
               >
                 {titles.map((title) => (
                   <PosterCard
@@ -229,7 +229,7 @@ export function SearchPage() {
               </Row>
             ))}
             {results.people.length > 0 && (
-              <Row title={tr("search_section_cast")} name="people">
+              <Row title={tr("searchSectionCast")} name="people">
                 {results.people.map((person) => (
                   <PersonCard
                     key={person.name}
@@ -242,7 +242,7 @@ export function SearchPage() {
                       setFocusedItem(
                         plainInfo(person.name, [
                           creditKind(person.kind, 1),
-                          plural("browse_title_count", person.titleCount),
+                          plural("browseTitleCount", person.titleCount),
                         ]),
                       )
                     }
@@ -252,13 +252,13 @@ export function SearchPage() {
             )}
             {facetRow(
               "genres",
-              tr("search_section_genres"),
+              tr("searchSectionGenres"),
               results.genres,
               (facet) => nav.genre(facet.name),
             )}
             {facetRow(
               "studios",
-              tr("search_section_studios"),
+              tr("searchSectionStudios"),
               results.studios,
               (facet) => nav.studio(facet.name),
             )}
@@ -390,7 +390,7 @@ export function FavoritesPage() {
   return (
     <Page class="page fill grid-page" start={start}>
       <div class="favorites-head">
-        <div class="t-headline one-line">{tr("favorites_title")}</div>
+        <div class="t-headline one-line">{tr("favoritesTitle")}</div>
         <div style={{ marginTop: "14rem", paddingRight: "120rem" }}>
           <FocusLine item={focusedItem} />
         </div>
@@ -409,10 +409,10 @@ export function FavoritesPage() {
       </div>
       {loader.state.kind === "failed" ? (
         <Notice
-          headline={tr("favorites_load_failed")}
+          headline={tr("favoritesLoadFailed")}
           detail={loader.state.message}
           icon={RefreshCw}
-          action={tr("common_retry")}
+          action={tr("commonRetry")}
           onAction={() => loader.reload()}
         />
       ) : lists === null ? (
@@ -421,25 +421,25 @@ export function FavoritesPage() {
         </div>
       ) : empty ? (
         <Notice
-          headline={tr("favorites_empty")}
-          detail={tr("tv_favorites_empty_hint")}
+          headline={tr("favoritesEmpty")}
+          detail={tr("tvFavoritesEmptyHint")}
           icon={House}
-          action={tr("tab_home")}
+          action={tr("tabHome")}
           glyph={Heart}
           onAction={() => nav.home()}
         />
       ) : (
         <div class="rows-scroll" data-scroll="pin" data-scroll-pivot="48">
           <div class="rows" style={{ paddingTop: "8rem" }}>
-            {titleRow("shows", tr("favorites_shows"), lists.shows)}
+            {titleRow("shows", tr("favoritesShows"), lists.shows)}
             {lists.seasons.length > 0 && (
-              <Row title={tr("favorites_seasons")} name="seasons">
+              <Row title={tr("favoritesSeasons")} name="seasons">
                 {lists.seasons.map(({ title, season }) => (
                   <PosterCard
                     key={`${title.id}/${season.number}`}
                     fid={`${title.id}/${season.number}`}
                     name={tr(
-                      "title_season_of",
+                      "titleSeasonOf",
                       title.name,
                       seasonName(season.number),
                     )}
@@ -458,7 +458,7 @@ export function FavoritesPage() {
               </Row>
             )}
             {lists.episodes.length > 0 && (
-              <Row title={tr("favorites_episodes")} name="episodes">
+              <Row title={tr("favoritesEpisodes")} name="episodes">
                 {lists.episodes.map((item) => {
                   const label = itemLabel(item)
                   const code = episodeCode(item)
@@ -486,7 +486,7 @@ export function FavoritesPage() {
                 })}
               </Row>
             )}
-            {titleRow("movies", tr("favorites_movies"), lists.movies)}
+            {titleRow("movies", tr("favoritesMovies"), lists.movies)}
           </div>
         </div>
       )}

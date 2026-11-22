@@ -6,10 +6,9 @@ import '../../l10n/app_localizations.dart';
 import 'settings_rows.dart';
 import 'settings_screen.dart';
 
-/// Settings, Appearance, as the Kotlin app's and the web's: the color
-/// scheme as three miniatures of the app, then the theme preset, each a
-/// miniature in its light and dark colors. Both are this device's, kept by
-/// `themeStoreProvider`.
+/// Settings, Appearance, as the web's: the color scheme as three miniatures of
+/// the app, then the theme preset, each a miniature in its light and dark
+/// colors. Both are this device's, kept by `themeStoreProvider`.
 class AppearancePage extends ConsumerWidget {
   const AppearancePage({super.key});
 

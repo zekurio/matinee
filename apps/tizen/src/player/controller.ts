@@ -23,8 +23,7 @@ import { CueTrack } from "./cues"
 import type { Engine, EngineFailure } from "./engine"
 
 /*
- * The player's side of `playback.start`, as the Android app's
- * PlayerController and Playback.kt. The server picks the source, the
+ * The player's side of `playback.start`. The server picks the source, the
  * audio, and the subtitle; the player keeps what the viewer picked and
  * which methods failed, sends all of it with every call, since the server
  * keeps nothing between calls, and loads what comes back.
@@ -113,21 +112,21 @@ export function refusalMessage(cause: unknown): string {
   const data = isRecord(cause.data) ? cause.data : undefined
   switch (textAt(data, "reason")) {
     case "bitrate-original":
-      return tr("player_restricted_original")
+      return tr("playerRestrictedOriginal")
     case "bitrate-transcode":
-      return tr("player_restricted_no_transcode")
+      return tr("playerRestrictedNoTranscode")
     case "bitrate-failed":
-      return tr("player_restricted_failed")
+      return tr("playerRestrictedFailed")
     case "bitrate":
-      return tr("player_restricted_bitrate")
+      return tr("playerRestrictedBitrate")
     case "transcode":
-      return tr("player_restricted_transcode")
+      return tr("playerRestrictedTranscode")
     default:
       break
   }
   if (cause.message) return cause.message
   return tr(
-    cause.code === BUSY ? "player_busy_generic" : "player_restricted_generic",
+    cause.code === BUSY ? "playerBusyGeneric" : "playerRestrictedGeneric",
   )
 }
 
@@ -574,7 +573,7 @@ export class PlayerController extends Observable {
         },
         () => {
           if (mine !== this.asked) return
-          this.error = tr("error_unreachable")
+          this.error = tr("errorUnreachable")
           this.changed()
         },
       )
@@ -659,7 +658,7 @@ export class PlayerController extends Observable {
     const unplayable = isServerError(cause) && cause.code === UNPLAYABLE
     const refusal = refusalOf(cause)
     const message = unplayable
-      ? tr("player_unplayable")
+      ? tr("playerUnplayable")
       : refusal
         ? refusalMessage(cause)
         : session.describe(cause)

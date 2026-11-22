@@ -9,10 +9,9 @@ import 'request_words.dart';
 import 'requests_data.dart';
 import 'requests_hub.dart';
 
-/// What the server lacks of a show in the library, as its provider lists
-/// it: the seasons that aren't here, for the seasons rail, and the ones
-/// only partly here, with the ask for the rest at the end of their
-/// episodes. As the Kotlin app's `ShowGaps.kt`.
+/// What the server lacks of a show in the library, as its provider lists it:
+/// the seasons that aren't here, for the seasons rail, and the ones only partly
+/// here, with the ask for the rest at the end of their episodes.
 
 /// A show's gaps, with each season's state as the server streams it.
 @immutable

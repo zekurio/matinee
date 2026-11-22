@@ -29,8 +29,6 @@ class TabBarItem {
 class TabBarState extends ValueNotifier<Object?> {
   TabBarState([super.value]);
 
-  Object? get selected => value;
-
   void select(Object id) => value = id;
 }
 
@@ -42,20 +40,17 @@ class TabBar extends StatelessWidget {
     required this.items,
     required this.state,
     this.onSelected,
-    this.label,
   });
 
   final List<TabBarItem> items;
   final TabBarState state;
   final ValueChanged<Object>? onSelected;
-  final String? label;
 
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     return Semantics(
       container: true,
-      label: label,
       child: Glass(
         border: Border(top: BorderSide(color: colors.border)),
         tint: colors.background.withValues(alpha: .8),

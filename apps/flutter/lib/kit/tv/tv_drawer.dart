@@ -65,11 +65,11 @@ const _rowHeight = 48.0;
 const _railIcon = _rowHeight;
 const _expanded = 236.0;
 
-/// The TV's navigation, as Wholphin's and the Kotlin app's: a rail of icons
-/// at the left edge that grows into a labelled drawer over the page while
-/// it has focus. The [current] page's entry is marked. Only Left from a
-/// page's edge, or [TvDrawerController.open], comes in; the shell hands
-/// focus back on Right or Back.
+/// The TV's navigation, as Wholphin's: a rail of icons at the left edge that
+/// grows into a labelled drawer over the page while it has focus. The [current]
+/// page's entry is marked. Only Left from a page's edge, or
+/// [TvDrawerController.open], comes in; the shell hands focus back on Right or
+/// Back.
 class TvDrawer extends StatelessWidget {
   const TvDrawer({
     super.key,

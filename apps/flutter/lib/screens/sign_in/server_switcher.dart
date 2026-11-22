@@ -41,14 +41,11 @@ SavedServer? activeServer(List<SavedServer> servers) {
 /// The quiet button under the sign-in and unreachable screens that opens the
 /// server list.
 class ChangeServerButton extends StatelessWidget {
-  const ChangeServerButton({super.key, this.focusNode});
-
-  final FocusNode? focusNode;
+  const ChangeServerButton({super.key});
 
   @override
   Widget build(BuildContext context) => MatineeButton(
     look: ButtonLook.ghost,
-    focusNode: focusNode,
     onPressed: () => showServerSwitcher(context),
     child: Text(
       AppLocalizations.of(context).connectChangeServer,
@@ -63,9 +60,7 @@ class ChangeServerButton extends StatelessWidget {
 /// Under the connect and sign-in screens while adding a server: back to the
 /// one in use, as it was.
 class BackToServer extends ConsumerWidget {
-  const BackToServer({super.key, this.look = ButtonLook.ghost});
-
-  final ButtonLook look;
+  const BackToServer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,7 +68,7 @@ class BackToServer extends ConsumerWidget {
     if (current == null) return const SizedBox.shrink();
     final colors = MatineeTheme.of(context);
     return MatineeButton(
-      look: look,
+      look: ButtonLook.ghost,
       leading: Lucide.arrowLeft,
       onPressed: ref.read(sessionProvider.notifier).cancelAdd,
       child: Text(

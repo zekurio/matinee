@@ -4,7 +4,7 @@ import { SmartphoneIcon, XIcon } from "lucide-react"
 import { tr } from "@/i18n"
 import { useAppBannerStore } from "@/stores/app-banner"
 
-/** Where the signed APKs are, see `apps/android/README.md`. */
+/** The latest release, where the signed APKs are. */
 const APP_DOWNLOAD_URL = "https://github.com/zekurio/matinee/releases/latest"
 
 /** The native app is for Android, so only its browsers hear of it. */

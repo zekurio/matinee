@@ -5,9 +5,8 @@ import 'package:intl/intl.dart';
 import '../api/matinee_api.dart';
 import '../l10n/app_localizations.dart';
 
-/// What a file is called, as the server worked it out (`MediaItem.label`),
-/// with the words for an episode's number in the app's language. The
-/// Kotlin app's `ItemLabel`.
+/// What a file is called, as the server worked it out (`MediaItem.label`), with
+/// the words for an episode's number in the app's language.
 final class ItemNames {
   const ItemNames({
     required this.showName,

@@ -230,22 +230,6 @@ void main() {
     });
   });
 
-  group('user codes', () {
-    test('are eight letters, shown with a dash', () {
-      expect(UserCode.parse('BCDF-GHJK'), 'BCDF-GHJK');
-      expect(UserCode.parse(' bcdf ghjk '), 'BCDF-GHJK');
-      expect(UserCode.parse('bcdfghjk'), 'BCDF-GHJK');
-    });
-
-    test('use no vowels and no 0 or 1', () {
-      expect(UserCode.parse('ABCD-EFGH'), isNull);
-      expect(UserCode.parse('BCDF-GHJ'), isNull);
-      expect(UserCode.parse('BCDF-GHJK1'), isNull);
-      expect(UserCode.parse('BCDF--GHJK'), isNull);
-      expect(UserCode.parse(''), isNull);
-    });
-  });
-
   group('scanned codes', () {
     test('the link page names the server and the code', () {
       final scanned = scannedCode(

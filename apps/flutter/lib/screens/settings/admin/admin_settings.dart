@@ -17,10 +17,9 @@ import 'transcoding_page.dart';
 import 'trickplay_page.dart';
 import 'users_page.dart';
 
-/// The server's settings, as the Kotlin app's admin `SettingsPage`s and
-/// the web's admin sections: each a row in Settings' Administration panel,
-/// opening `Routes.settingsPage(key)`, for an account whose permissions
-/// open it, as the web's `settings-categories.tsx` has them.
+/// The server's settings, as the web's admin sections: each a row in Settings'
+/// Administration panel, opening `Routes.settingsPage(key)`, for an account
+/// whose permissions open it, as the web's `settings-categories.tsx` has them.
 enum AdminCategory {
   libraries(
     'libraries',

@@ -9,6 +9,8 @@ import 'package:pigeon/pigeon.dart';
     kotlinOut:
         'android/app/src/main/kotlin/io/github/zekurio/matinee/scanner/Scanner.g.kt',
     kotlinOptions: KotlinOptions(package: 'io.github.zekurio.matinee.scanner'),
+    swiftOut: 'ios/Runner/Pigeon/Scanner.g.swift',
+    swiftOptions: SwiftOptions(includeErrorClass: false),
     copyrightHeader: 'pigeons/header.txt',
   ),
 )

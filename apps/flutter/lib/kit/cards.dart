@@ -6,7 +6,7 @@ import 'theme.dart';
 import 'tokens.dart';
 import 'tone.dart';
 
-/// The room media pages lay their cards out with, as the Kotlin app's.
+/// The room media pages lay their cards out with.
 abstract final class CardMetrics {
   /// The page's side margin on a phone, which rails and grids start at.
   static const gutter = 16.0;
@@ -270,8 +270,7 @@ class CardText extends StatelessWidget {
   }
 }
 
-/// What a press looks like over a card's art: the foreground washed over
-/// it, as the Kotlin app's `PressIndication`.
+/// What a press looks like over a card's art: the foreground washed over it.
 class _PressWash extends StatelessWidget {
   const _PressWash(this.state);
 

@@ -51,12 +51,11 @@ String? tvDrawerKey(String path) {
   return null;
 }
 
-/// The signed-in app on a TV, as the Kotlin app's `TvSignedInApp`: its own
-/// pages in [pages], under a drawer at the left edge, over the backdrop
-/// the page picks, with the clock at the top right. [stack] is the paths of
-/// the pages open, bottom first. Downloads, offline mode, the admin pages,
-/// the image editor, identify, and linking by camera have no TV page, so
-/// nothing here leads to them.
+/// The signed-in app on a TV: its own pages in [pages], under a drawer at the
+/// left edge, over the backdrop the page picks, with the clock at the top
+/// right. [stack] is the paths of the pages open, bottom first. Downloads,
+/// offline mode, the admin pages, the image editor, identify, and linking by
+/// camera have no TV page, so nothing here leads to them.
 class TvShell extends ConsumerStatefulWidget {
   const TvShell({super.key, required this.pages, required this.stack});
 
@@ -605,17 +604,13 @@ class _Scrim extends StatelessWidget {
 class TvClock extends StatefulWidget {
   const TvClock({super.key});
 
-  /// The time it reads, which tests hold still.
-  @visibleForTesting
-  static DateTime Function() now = DateTime.now;
-
   @override
   State<TvClock> createState() => _TvClockState();
 }
 
 class _TvClockState extends State<TvClock> {
   Timer? _tick;
-  DateTime _now = TvClock.now();
+  DateTime _now = DateTime.now();
 
   @override
   void initState() {
@@ -631,7 +626,7 @@ class _TvClockState extends State<TvClock> {
     );
     _tick = Timer(wait, () {
       if (!mounted) return;
-      setState(() => _now = TvClock.now());
+      setState(() => _now = DateTime.now());
       _schedule();
     });
   }
@@ -657,10 +652,9 @@ class _TvClockState extends State<TvClock> {
   }
 }
 
-/// Goes to [route] as the page above this one, as the Kotlin app's
-/// `titleUp` and `seasonUp`: back to it when it's the page before, else
-/// opened over this one. The phone's `goUp` reads the root's matches; a
-/// TV's pages sit under its shell, so this reads the shell's.
+/// Goes to [route] as the page above this one: back to it when it's the page
+/// before, else opened over this one. The phone's `goUp` reads the root's
+/// matches; a TV's pages sit under its shell, so this reads the shell's.
 void tvGoUp(BuildContext context, String route) {
   final locations = <String>[];
   void walk(List<RouteMatchBase> matches) {

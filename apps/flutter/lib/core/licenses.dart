@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// What the app has to carry about the licenses of what it's built from,
 /// for the licenses page: the project's own license, and every package's,
 /// Dart's and Flutter's from [LicenseRegistry] (the NOTICES file the build
-/// writes), with what that file can't know added here: the native Android
+/// writes), with what that file can't know added here: the native
 /// libraries the build bundles, the font, and the icons.
 
 /// The name the project's own license goes by in the list.
@@ -88,6 +88,19 @@ const androidLicenses = <BundledLicense>[
   ),
 ];
 
+/// The native libraries the iOS build links, from the MPVKit Swift package
+/// in `ios/Runner.xcodeproj`, a GPL build like Android's.
+const iosLicenses = <BundledLicense>[
+  (
+    packages: ['libmpv (MPVKit)'],
+    copyright:
+        'Copyright © mpv contributors. Built by edde746/mpv-build, with '
+        'FFmpeg, libass, and the other libraries it carries notices for, '
+        'under the GNU General Public License, version 3.',
+    asset: _gpl,
+  ),
+];
+
 /// One package and the license texts that cover it.
 @immutable
 final class PackageLicenses {
@@ -115,10 +128,15 @@ Future<String> loadAssetText(String asset) async {
   );
 }
 
-/// The licenses the build bundles that NOTICES doesn't have, [android]'s
-/// native libraries among them on Android.
-Stream<LicenseEntry> bundledLicenses({required bool android}) async* {
-  for (final license in [...commonLicenses, if (android) ...androidLicenses]) {
+/// The licenses the build bundles that NOTICES doesn't have, the native
+/// libraries of the [platform] among them.
+Stream<LicenseEntry> bundledLicenses(TargetPlatform platform) async* {
+  final native = switch (platform) {
+    TargetPlatform.android => androidLicenses,
+    TargetPlatform.iOS => iosLicenses,
+    _ => const <BundledLicense>[],
+  };
+  for (final license in [...commonLicenses, ...native]) {
     final text = await loadAssetText(license.asset);
     final copyright = license.copyright;
     yield LicenseEntryWithLineBreaks(
@@ -134,7 +152,6 @@ final licensesProvider = FutureProvider.autoDispose<List<PackageLicenses>>((
   ref,
 ) async {
   final registry = ref.watch(licenseRegistryProvider);
-  final android = defaultTargetPlatform == TargetPlatform.android;
   final byPackage = <String, List<List<LicenseParagraph>>>{};
   Future<void> take(Stream<LicenseEntry> entries) async {
     await for (final entry in entries) {
@@ -145,7 +162,7 @@ final licensesProvider = FutureProvider.autoDispose<List<PackageLicenses>>((
     }
   }
 
-  await take(bundledLicenses(android: android));
+  await take(bundledLicenses(defaultTargetPlatform));
   await take(registry());
   final names = byPackage.keys.where((name) => name != projectPackage).toList()
     ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));

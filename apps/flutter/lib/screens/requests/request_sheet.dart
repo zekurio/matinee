@@ -14,8 +14,7 @@ import '../../media/format.dart';
 import 'request_words.dart';
 import 'requests_hub.dart';
 
-/// The sheets of asking and answering, as the Kotlin app's
-/// `RequestSheet.kt`, the Decline sheet of `Admin.kt`, and Discover's "Not
+/// The sheets of asking and answering, the Decline sheet, and Discover's "Not
 /// interested".
 
 /// Where a request that needs a decision is made, in a sheet from the
@@ -335,32 +334,25 @@ class _SeasonRow extends StatelessWidget {
 /// Decline, with why: the reason, picked as a sheet's choices are, and a
 /// note for whoever requested it. With [giveUp], the same sheet gives up on
 /// an accepted request, its reason fixed as "Can't find a copy". The answer
-/// goes through the hub, held for Undo; [onAnswered] runs once it's given.
+/// goes through the hub, held for Undo.
 Future<void> showDeclineSheet(
   BuildContext context,
   AdminRequestItem item, {
   bool giveUp = false,
-  VoidCallback? onAnswered,
 }) {
   final l = AppLocalizations.of(context);
   return Sheet.show<void>(
     context,
     dismissLabel: l.commonCancel,
-    builder: (context) =>
-        _DeclineSheet(item: item, giveUp: giveUp, onAnswered: onAnswered),
+    builder: (context) => _DeclineSheet(item: item, giveUp: giveUp),
   );
 }
 
 class _DeclineSheet extends ConsumerStatefulWidget {
-  const _DeclineSheet({
-    required this.item,
-    required this.giveUp,
-    this.onAnswered,
-  });
+  const _DeclineSheet({required this.item, required this.giveUp});
 
   final AdminRequestItem item;
   final bool giveUp;
-  final VoidCallback? onAnswered;
 
   @override
   ConsumerState<_DeclineSheet> createState() => _DeclineSheetState();
@@ -457,7 +449,6 @@ class _DeclineSheetState extends ConsumerState<_DeclineSheet> {
     }
     final hub = ref.read(requestsProvider.notifier);
     Navigator.of(context).pop();
-    widget.onAnswered?.call();
     unawaited(hub.answer(l, widget.item, answer));
   }
 }

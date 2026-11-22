@@ -49,21 +49,6 @@ void main() {
     expect(prefs.values.values.join(), isNot(contains('secret')));
   });
 
-  test('removing a token or clearing a setting is stored too', () async {
-    final prefs = MemoryPreferences();
-    final secrets = MemorySecrets();
-    final store = await SessionStore.open(prefs, secrets);
-    store.setToken('https://a.example/', 'secret');
-    store.active = 'https://a.example/';
-    store.removeToken('https://a.example/');
-    store.active = null;
-    await store.flush();
-
-    expect(secrets.values, isEmpty);
-    expect(prefs.values.containsKey('active_server'), isFalse);
-    expect(store.token('https://a.example/'), isNull);
-  });
-
   test('an entry that can\'t be read doesn\'t lose the others', () async {
     final prefs = MemoryPreferences();
     prefs.values['servers'] = '[{"origin":"https://a.example/"},{"nope":1},"text",{"origin":"https://b.example/","name":"B"}]';

@@ -9,7 +9,7 @@ import type {
 
 import { locale, plural, type StringKey, tr } from "@/i18n"
 
-/* What the statistics say, apart from how they're laid out, as the Android app's StatsData. */
+/* What the statistics say, apart from how they're laid out. */
 
 /** The ranges, shortest first, as `STATS_RANGES` lists them. */
 export const RANGES: readonly StatsRange[] = ["7d", "30d", "90d", "365d", "all"]
@@ -17,20 +17,20 @@ export const RANGES: readonly StatsRange[] = ["7d", "30d", "90d", "365d", "all"]
 /** "45m", "3h 20m", "120h", as the web's formatWatchTime. */
 export function formatWatchTime(seconds: number): string {
   const minutes = Math.round(seconds / 60)
-  if (minutes < 60) return tr("format_minutes_short", minutes)
+  if (minutes < 60) return tr("formatMinutesShort", minutes)
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
   return hours >= 100 || rest === 0
-    ? tr("format_hours_short", hours)
-    : tr("format_hours_minutes_short", hours, rest)
+    ? tr("formatHoursShort", hours)
+    : tr("formatHoursMinutesShort", hours, rest)
 }
 
 const RANGE_NAMES = {
-  "7d": "stats_range_7d",
-  "30d": "stats_range_30d",
-  "90d": "stats_range_90d",
-  "365d": "stats_range_365d",
-  all: "stats_range_all",
+  "7d": "statsRange7d",
+  "30d": "statsRange30d",
+  "90d": "statsRange90d",
+  "365d": "statsRange365d",
+  all: "statsRangeAll",
 } satisfies Record<StatsRange, StringKey>
 
 export function rangeName(range: StatsRange): string {
@@ -38,11 +38,11 @@ export function rangeName(range: StatsRange): string {
 }
 
 const RANGE_PHRASES = {
-  "7d": "stats_period_7d",
-  "30d": "stats_period_30d",
-  "90d": "stats_period_90d",
-  "365d": "stats_period_365d",
-  all: "stats_period_all",
+  "7d": "statsPeriod7d",
+  "30d": "statsPeriod30d",
+  "90d": "statsPeriod90d",
+  "365d": "statsPeriod365d",
+  all: "statsPeriodAll",
 } satisfies Record<StatsRange, StringKey>
 
 /** How a sentence ends for the range: "in the last 30 days". */
@@ -78,7 +78,7 @@ export function bucketName(start: string, unit: StatsUnit): string {
       ? { day: "numeric", month: "short" }
       : { day: "numeric", month: "short", year: "numeric" },
   )
-  return unit === "week" ? tr("stats_bucket_week", day) : day
+  return unit === "week" ? tr("statsBucketWeek", day) : day
 }
 
 const TIDY_STEPS = [1, 2, 5, 10, 15, 20, 30, 45, 60]
@@ -126,24 +126,24 @@ export function metricValue(metric: LeaderboardMetric, value: number): string {
     case "watchTime":
       return formatWatchTime(value)
     case "plays":
-      return plural("stats_play_count", count)
+      return plural("statsPlayCount", count)
     case "currentStreak":
     case "longestStreak":
-      return plural("stats_day_count", count)
+      return plural("statsDayCount", count)
     case "movies":
-      return plural("stats_movie_count", count)
+      return plural("statsMovieCount", count)
     case "episodes":
-      return plural("stats_episode_count", count)
+      return plural("statsEpisodeCount", count)
   }
 }
 
 const METRIC_NAMES = {
-  watchTime: "stats_metric_watchTime",
-  plays: "stats_metric_plays",
-  currentStreak: "stats_metric_currentStreak",
-  longestStreak: "stats_metric_longestStreak",
-  movies: "stats_metric_movies",
-  episodes: "stats_metric_episodes",
+  watchTime: "statsMetricWatchTime",
+  plays: "statsMetricPlays",
+  currentStreak: "statsMetricCurrentStreak",
+  longestStreak: "statsMetricLongestStreak",
+  movies: "statsMetricMovies",
+  episodes: "statsMetricEpisodes",
 } satisfies Record<LeaderboardMetric, StringKey>
 
 export function metricName(metric: LeaderboardMetric): string {

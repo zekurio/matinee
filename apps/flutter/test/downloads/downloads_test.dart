@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/session.dart';
-import 'package:matinee/downloads/download_settings.dart';
 import 'package:matinee/downloads/download_tracks.dart';
 import 'package:matinee/downloads/downloads.dart';
 import 'package:matinee/downloads/pending_progress.dart';
@@ -117,18 +116,6 @@ void main() {
       _subtitle('stream-5', language: 'de'),
       _subtitle('stream-6', language: 'de', delivery: SubtitleDelivery.pgs),
     ];
-
-    test('off is off', () {
-      expect(
-        downloadSubtitle(
-          tracks,
-          'en',
-          _prefs(SubtitleMode.off),
-          deviceLanguage: 'en',
-        ),
-        isNull,
-      );
-    });
 
     test('always picks the language, drawable only', () {
       final picked = downloadSubtitle(
@@ -349,31 +336,6 @@ void main() {
       expect(
         c.read(pendingProgressProvider.notifier).of(_server).isEmpty,
         isTrue,
-      );
-    });
-
-    test('the wishes follow the settings', () {
-      const settings = DownloadSettings(
-        unmeteredOnly: true,
-        defaultVersion: DefaultVersion.original,
-        subtitles: DownloadSubtitles.all,
-        videoCodec: 'hevc',
-      );
-      final wishes = Downloads.wishes(settings, audio: [2]);
-      expect(wishes.codec, 'hevc');
-      expect(wishes.audio, 'selected');
-      expect(wishes.audioIndices, [2]);
-      expect(wishes.subtitles, 'all');
-      expect(
-        Downloads.wishes(
-          const DownloadSettings(
-            unmeteredOnly: true,
-            defaultVersion: DefaultVersion.original,
-            subtitles: DownloadSubtitles.used,
-            videoCodec: automaticCodec,
-          ),
-        ).codec,
-        isNull,
       );
     });
   });

@@ -13,15 +13,14 @@ import '../../media/format.dart';
 import '../../router.dart';
 import 'home_layout.dart';
 
-/// The web's `hero.tsx` at the top of a tablet's Home, as the Kotlin app's
-/// `Hero`: new and well-rated titles over their art, low on the left the
-/// name, the facts, the genres, the overview, and how far the person is,
-/// with Play and Details under them. The slides swipe as pages, the art
-/// crossfading under them while the text slides. It moves on every eight
-/// seconds, always forward; not while a finger or a pointer is on it,
-/// while focus is in it, with animations off, with a screen reader on, or
-/// while Home is out of sight. [box] is Home's own, the space between the
-/// shell's header and its tabs.
+/// The web's `hero.tsx` at the top of a tablet's Home: new and well-rated
+/// titles over their art, low on the left the name, the facts, the genres, the
+/// overview, and how far the person is, with Play and Details under them. The
+/// slides swipe as pages, the art crossfading under them while the text slides.
+/// It moves on every eight seconds, always forward; not while a finger or a
+/// pointer is on it, while focus is in it, with animations off, with a screen
+/// reader on, or while Home is out of sight. [box] is Home's own, the space
+/// between the shell's header and its tabs.
 ///
 /// It's dark in either scheme, as the web's: art under a white wash looks
 /// faded, and light text over a dark shade reads on any picture. In light,
@@ -44,7 +43,7 @@ class HomeBanner extends StatefulWidget {
   State<HomeBanner> createState() => _HomeBannerState();
 }
 
-/// Room over a slide's text, which in the Kotlin app was Home's header.
+/// Room over a slide's text.
 const _topRoom = 24.0;
 
 /// The buttons' height: the kit's large buttons.

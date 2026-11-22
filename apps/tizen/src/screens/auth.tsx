@@ -73,7 +73,7 @@ export function Connecting(props: { server: string }) {
       <LogoMark size={72} />
       <Spinner size={32} class="muted connecting-spinner" />
       <div class="t-body muted">
-        {tr("connect_connecting", hostOf(props.server))}
+        {tr("connectConnecting", hostOf(props.server))}
       </div>
     </div>
   )
@@ -81,7 +81,7 @@ export function Connecting(props: { server: string }) {
 
 /**
  * Typing the server's address with the TV's keyboard. A Samsung TV can't
- * look for servers on its network, as the Android TV app does, so this is
+ * look for servers on its network, as the Flutter app does, so this is
  * the whole of picking one.
  */
 export function Connect(props: { canCancel: boolean }) {
@@ -102,8 +102,8 @@ export function Connect(props: { canCancel: boolean }) {
   const current = session.server
   return (
     <AuthFrame
-      title={tr("connect_title")}
-      description={tr("connect_description")}
+      title={tr("connectTitle")}
+      description={tr("connectDescription")}
       start={() => ["rows", "address"]}
     >
       <div class="auth-rows" data-fg="rows" data-fk="col">
@@ -116,13 +116,13 @@ export function Connect(props: { canCancel: boolean }) {
             setAddress(value)
             setError(null)
           }}
-          placeholder={tr("connect_placeholder")}
+          placeholder={tr("connectPlaceholder")}
           onDone={connect}
         />
         {error && <AuthNote text={error} danger />}
         <ListItem
           fid="connect"
-          title={tr("connect_button")}
+          title={tr("connectButton")}
           icon={LogIn}
           onPress={connect}
           trailing={busy ? <Spinner size={22} /> : undefined}
@@ -130,7 +130,7 @@ export function Connect(props: { canCancel: boolean }) {
         {props.canCancel && current && (
           <ListItem
             fid="back"
-            title={tr("servers_back_to", hostOf(current))}
+            title={tr("serversBackTo", hostOf(current))}
             icon={ArrowLeft}
             quiet
             onPress={() => session.cancelAdd()}
@@ -157,12 +157,12 @@ export function Unreachable(props: {
     <>
       <AuthFrame
         title={tr(
-          props.offline ? "unreachable_offline_title" : "unreachable_title",
+          props.offline ? "unreachableOfflineTitle" : "unreachableTitle",
         )}
         description={
           props.offline
-            ? tr("unreachable_offline")
-            : tr("unreachable_other", host)
+            ? tr("unreachableOffline")
+            : tr("unreachableOther", host)
         }
         start={() => ["rows", "retry"]}
         side={
@@ -174,9 +174,7 @@ export function Unreachable(props: {
         <div class="auth-rows" data-fg="rows" data-fk="col">
           <ListItem
             fid="retry"
-            title={tr(
-              props.retrying ? "tv_unreachable_retrying" : "common_retry",
-            )}
+            title={tr(props.retrying ? "tvUnreachableRetrying" : "commonRetry")}
             icon={RefreshCw}
             // While it tries, Select waits for the answer.
             onPress={() => {
@@ -186,7 +184,7 @@ export function Unreachable(props: {
           />
           <ListItem
             fid="change"
-            title={tr("connect_change_server")}
+            title={tr("connectChangeServer")}
             icon={Server}
             quiet
             onPress={() => setSwitching(true)}
@@ -303,10 +301,10 @@ export function SignIn(props: {
   return (
     <div ref={frame} class="fill">
       <AuthFrame
-        title={tr("tv_signin_title")}
+        title={tr("tvSigninTitle")}
         // A server not set up yet can't approve anyone; its setup runs in a browser.
         description={tr(
-          props.config.setup ? "signin_setup" : "tv_signin_description",
+          props.config.setup ? "signinSetup" : "tizen_signin_description",
         )}
         split={56}
         start={() => ["rows", stuck ? "again" : "way"]}
@@ -315,21 +313,21 @@ export function SignIn(props: {
             {code ? (
               <>
                 <div class="t-facts dim85">
-                  {tr("tv_signin_enter", hostOf(code.verificationUri))}
+                  {tr("tizen_signin_enter", hostOf(code.verificationUri))}
                 </div>
                 <div class="t-code one-line" style={{ marginTop: "8rem" }}>
                   {code.userCode}
                 </div>
                 <div class="auth-waiting t-body muted">
                   <Spinner size={18} />
-                  <span>{tr("signin_code_waiting")}</span>
+                  <span>{tr("signinCodeWaiting")}</span>
                 </div>
               </>
             ) : flow.expired ? (
-              <div class="t-title">{tr("tv_signin_expired")}</div>
+              <div class="t-title">{tr("tvSigninExpired")}</div>
             ) : (
               flow.error === null && (
-                <div class="t-body muted">{tr("signin_code_loading")}</div>
+                <div class="t-body muted">{tr("signinCodeLoading")}</div>
               )
             )}
             {flow.error && (
@@ -341,9 +339,7 @@ export function SignIn(props: {
               {stuck && (
                 <ListItem
                   fid="again"
-                  title={tr(
-                    flow.expired ? "tv_signin_new_code" : "common_retry",
-                  )}
+                  title={tr(flow.expired ? "tvSigninNewCode" : "commonRetry")}
                   icon={RefreshCw}
                   onPress={flow.newCode}
                 />
@@ -351,7 +347,7 @@ export function SignIn(props: {
               {current ? (
                 <ListItem
                   fid="way"
-                  title={tr("servers_back_to", hostOf(current))}
+                  title={tr("serversBackTo", hostOf(current))}
                   subtitle={hostOf(props.server)}
                   icon={ArrowLeft}
                   quiet
@@ -360,7 +356,7 @@ export function SignIn(props: {
               ) : (
                 <ListItem
                   fid="way"
-                  title={tr("connect_change_server")}
+                  title={tr("connectChangeServer")}
                   subtitle={hostOf(props.server)}
                   icon={Server}
                   quiet
@@ -375,15 +371,13 @@ export function SignIn(props: {
           {code ? (
             <QrCode
               text={code.verificationUriComplete}
-              label={tr("signin_code_qr", code.userCode)}
+              label={tr("signinCodeQr", code.userCode)}
               size={QR_SIZE}
             />
           ) : (
             <div class="auth-qr center">
               {flow.expired ? (
-                <span class="t-title muted">
-                  {tr("tv_signin_expired_short")}
-                </span>
+                <span class="t-title muted">{tr("tvSigninExpiredShort")}</span>
               ) : (
                 flow.error === null && <Spinner size={32} />
               )}
@@ -398,8 +392,8 @@ export function SignIn(props: {
 
 function serverFacts(server: SavedServer): string {
   return server.userName
-    ? tr("servers_signed_in_as", server.userName)
-    : tr("servers_signed_out")
+    ? tr("serversSignedInAs", server.userName)
+    : tr("serversSignedOut")
 }
 
 type ServerStep =
@@ -430,14 +424,14 @@ export function ServerPanel(props: { open: boolean; onClose: () => void }) {
     else setStep(step.kind === "remove" ? { kind: "list" } : { kind: "remove" })
   }
   const title = asked
-    ? tr("servers_remove_title", hostOf(asked.origin))
+    ? tr("serversRemoveTitle", hostOf(asked.origin))
     : step.kind === "remove"
-      ? tr("tv_servers_remove")
-      : tr("servers_title")
+      ? tr("tvServersRemove")
+      : tr("serversTitle")
   const description = asked
-    ? tr("servers_remove_body_tv")
+    ? tr("serversRemoveBodyTv")
     : step.kind === "remove"
-      ? tr("tv_servers_remove_description")
+      ? tr("tvServersRemoveDescription")
       : null
   return (
     <SidePanel
@@ -475,7 +469,7 @@ export function ServerPanel(props: { open: boolean; onClose: () => void }) {
           ))}
           <ListItem
             fid="add"
-            title={tr("servers_add")}
+            title={tr("serversAdd")}
             icon={Plus}
             quiet
             onPress={() => {
@@ -486,7 +480,7 @@ export function ServerPanel(props: { open: boolean; onClose: () => void }) {
           {servers.length > 0 && (
             <ListItem
               fid="remove"
-              title={tr("tv_servers_remove")}
+              title={tr("tvServersRemove")}
               icon={Trash}
               quiet
               destructive
@@ -513,7 +507,7 @@ export function ServerPanel(props: { open: boolean; onClose: () => void }) {
         <>
           <ListItem
             fid="confirm"
-            title={tr("common_remove")}
+            title={tr("commonRemove")}
             icon={Trash}
             quiet
             destructive
@@ -524,7 +518,7 @@ export function ServerPanel(props: { open: boolean; onClose: () => void }) {
           />
           <ListItem
             fid="cancel"
-            title={tr("common_cancel")}
+            title={tr("commonCancel")}
             icon={X}
             quiet
             onPress={() => setStep({ kind: "remove" })}

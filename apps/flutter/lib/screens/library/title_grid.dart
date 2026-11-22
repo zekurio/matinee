@@ -13,11 +13,10 @@ import 'list_choices.dart';
 import 'list_words.dart';
 import 'title_pages.dart';
 
-/// Posters in as many columns as the width has room for, two on a phone,
-/// under what [header] builds, loading the next page as the end comes
-/// near: the Kotlin app's `PosterGrid`. While other choices load, the
-/// titles from before stay, dimmed, as the web keeps them, so the page
-/// doesn't jump to blank and back.
+/// Posters in as many columns as the width has room for, two on a phone, under
+/// what [header] builds, loading the next page as the end comes near. While
+/// other choices load, the titles from before stay, dimmed, as the web keeps
+/// them, so the page doesn't jump to blank and back.
 class TitleGrid extends ConsumerStatefulWidget {
   const TitleGrid({
     super.key,

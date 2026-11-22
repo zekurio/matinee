@@ -30,10 +30,9 @@ README with the details.
   transcodes, and serves the web app, so one process is the whole
   install. Hosting it starts there.
 - [The web app](apps/web) is what you get in a browser.
-- [The Android app](apps/android) runs on phones, tablets, and Android
-  TV, and keeps downloads for watching offline.
-- [The Apple apps](apps/ios) are one for iPhone and iPad and one for
-  Apple TV. They've only run on simulators so far.
+- [The Flutter app](apps/flutter) runs on Android phones, tablets, and
+  Android TV, and keeps downloads for watching offline. Its iPhone and
+  iPad side is written, but nobody has run it on a device yet.
 - [The Samsung TV app](apps/tizen) is for Tizen TVs from 2018 on. Nobody
   has tried it on a real TV yet.
 - [Brand](brand) has the logo, the app icons, and the scripts that draw
@@ -43,9 +42,6 @@ To work on Matinee, start with [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT, except the Android, Apple, and Flutter apps in `apps/android`,
-`apps/ios`, and `apps/flutter`. They ship GPL builds of FFmpeg and mpv, so
-they're GPL-3.0. See [LICENSE](LICENSE),
-[apps/android/LICENSE](apps/android/LICENSE),
-[apps/ios/LICENSE](apps/ios/LICENSE), and
+MIT, except the Flutter app in `apps/flutter`. It ships GPL builds of
+FFmpeg and mpv, so it's GPL-3.0. See [LICENSE](LICENSE) and
 [apps/flutter/LICENSE](apps/flutter/LICENSE).

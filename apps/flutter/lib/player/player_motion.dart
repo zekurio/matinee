@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// The Kotlin app's `Motion`, which the player's controls, menus, and notes
-/// move with.
+/// The timings the player's controls, menus, and notes move with.
 abstract final class PlayerMotion {
   /// The web's cubic-bezier(0.22, 1, 0.36, 1): off at once, then a long, soft landing.
   static const easing = Cubic(.22, 1, .36, 1);
@@ -22,9 +21,9 @@ abstract final class PlayerMotion {
   static const color = Duration(milliseconds: 120);
 }
 
-/// Fades [child] in and out as Compose's `AnimatedVisibility` with the
-/// player's fades does, and drops it once it has faded out, so hidden
-/// controls take no touches and a screen reader no longer finds them.
+/// Fades [child] in and out with the player's fades, and drops it once it has
+/// faded out, so hidden controls take no touches and a screen reader no longer
+/// finds them.
 class PlayerFade extends StatefulWidget {
   const PlayerFade({super.key, required this.visible, required this.child});
 

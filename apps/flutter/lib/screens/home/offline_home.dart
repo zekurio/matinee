@@ -122,9 +122,9 @@ List<T> _distinctBy<T>(Iterable<T> items, Object? Function(T) key) {
   ];
 }
 
-/// Sorts the finished downloads into Home's rows, the Kotlin app's
-/// `offlineHomeRows`. [place] is where the person got to in a file, offline
-/// or as the server last said; [watched] whether it's done.
+/// Sorts the finished downloads into Home's rows. [place] is where the person
+/// got to in a file, offline or as the server last said; [watched] whether it's
+/// done.
 ///
 /// Continue watching and Next up start as the server last had them online,
 /// [served], in its order, so they read as they did; of those, what's on
@@ -203,10 +203,9 @@ final homeSnapshotProvider = NotifierProvider<HomeSnapshot, ServedRows>(
   HomeSnapshot.new,
 );
 
-/// Keeps [ServedRows] across restarts, the Kotlin app's `HomeSnapshot`:
-/// online Home saves what the server sent, offline Home reads it, so the
-/// two rows don't change just because the server is out of reach. Each
-/// saved server keeps its own.
+/// Keeps [ServedRows] across restarts: online Home saves what the server sent,
+/// offline Home reads it, so the two rows don't change just because the server
+/// is out of reach. Each saved server keeps its own.
 class HomeSnapshot extends Notifier<ServedRows> {
   static const _resume = 'matinee.home.resume:';
   static const _nextUp = 'matinee.home.nextUp:';
@@ -258,10 +257,9 @@ class HomeSnapshot extends Notifier<ServedRows> {
   }
 }
 
-/// Home in offline mode, the Kotlin app's `OfflineHomeScreen`: the
-/// downloads in Home's rows, each playing from the device with a tap, a
-/// show opening its downloaded episodes. The places the player keeps
-/// offline move the rows on as they change.
+/// Home in offline mode: the downloads in Home's rows, each playing from the
+/// device with a tap, a show opening its downloaded episodes. The places the
+/// player keeps offline move the rows on as they change.
 class OfflineHome extends ConsumerWidget {
   const OfflineHome({super.key});
 

@@ -6,15 +6,13 @@ import '../../l10n/app_localizations.dart';
 import '../../media/format.dart';
 import '../../router.dart';
 
-/// What a card, a poster, and the request sheet show for the `Availability`
-/// the server sent, as the Kotlin app's `RequestView.kt` and
-/// `RequestWords.kt` have it, after the web's catalog/words.ts. The server
-/// decides the state, the action, and every number; these only pick which
-/// words and marks go where, and put them in the app's language.
+/// What a card, a poster, and the request sheet show for the `Availability` the
+/// server sent, after the web's catalog/words.ts. The server decides the state,
+/// the action, and every number; these only pick which words and marks go
+/// where, and put them in the app's language.
 
 /// The contract's `Availability.state`.
 abstract final class AvailabilityState {
-  static const none = 'none';
   static const asked = 'asked';
   static const coming = 'coming';
   static const release = 'release';

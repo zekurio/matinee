@@ -73,8 +73,8 @@ final class DownloadMeta {
   });
 }
 
-/// A file downloaded, or on its way, with what the app needs to show and
-/// play it without the server, the Kotlin app's `OfflineItem`.
+/// A file downloaded, or on its way, with what the app needs to show and play
+/// it without the server.
 final class OfflineItem {
   const OfflineItem({
     required this.id,

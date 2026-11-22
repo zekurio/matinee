@@ -58,15 +58,6 @@ final class SignInFailure {
   final String? serverMessage;
 }
 
-/// A client for one saved server, sending its token, whichever server is in
-/// use.
-final class ServerClient {
-  const ServerClient(this.api, this.client);
-
-  final MatineeApi api;
-  final http.Client client;
-}
-
 /// A server the person connected to, to sign in to, before it's saved.
 final class _Candidate {
   const _Candidate(this.url, this.name, this.api);
@@ -193,23 +184,6 @@ final class SessionNotifier extends Notifier<SessionState> {
     final token? => {'Authorization': 'Bearer $token'},
     null => const {},
   };
-
-  /// A client for the saved server [origin], with its token, for work that
-  /// belongs to that server whichever is in use, like its downloads. Null
-  /// once it's no longer saved.
-  ServerClient? serverClient(String origin) {
-    if (!_store.servers.any((server) => server.origin == origin)) return null;
-    final url = parseOrigin(origin);
-    if (url == null) return null;
-    final client = followingClient(
-      _inner,
-      _device.userAgent,
-      server: url,
-      key: origin,
-      tokenOf: _store.token,
-    );
-    return ServerClient(MatineeApi(base: url, client: client), client);
-  }
 
   void _makeClients() {
     final server = _origin;

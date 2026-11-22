@@ -31,9 +31,8 @@ final tvDisplayMatchProvider = Provider<TvDisplayMatch>(
 );
 
 /// Switches the screen to a refresh rate that plays the video's frame rate
-/// evenly while a player is open, as the Kotlin app's `MatchDisplayMode`.
-/// The frame rate is the server's, from the item's probe; the rates are the
-/// display's at the resolution it has.
+/// evenly while a player is open. The frame rate is the server's, from the
+/// item's probe; the rates are the display's at the resolution it has.
 ///
 /// A player [claim]s it as it opens, [match]es once the server says the
 /// frame rate, and [leave]s as it closes. The next episode's player claims

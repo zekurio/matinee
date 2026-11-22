@@ -11,15 +11,6 @@ export 'permissions.g.dart';
  * only keeps a screen from offering what would be refused. The names come
  * from the contract through permissions.g.dart. */
 
-/// What an access group can grant and an account's override allow or
-/// deny: everything but `all`, which is the admin role's, and what every
-/// account has anyway. The contract's `GRANTABLE_PERMISSIONS`.
-final List<String> grantablePermissions = List.unmodifiable([
-  for (final permission in Permission.values)
-    if (permission != Permission.all && !Permission.base.contains(permission))
-      permission,
-]);
-
 /// Whether an account that was granted [granted] holds [permission]. The
 /// list needn't name what every account has. The contract's
 /// `holdsPermission`.
@@ -69,24 +60,6 @@ List<String> sortPermissions(Iterable<String> permissions) {
     for (final permission in Permission.values)
       if (held.contains(permission)) permission,
   ];
-}
-
-/// [permissions] with [changed] all held or all gone, in the contract's
-/// order.
-List<String> withPermissions(
-  Iterable<String> permissions,
-  Iterable<String> changed, {
-  required bool on,
-}) => sortPermissions(
-  on
-      ? [...permissions, ...changed]
-      : permissions.where((permission) => !changed.contains(permission)),
-);
-
-/// What a permission is about, the part before its dot, like `library`.
-String permissionResource(String permission) {
-  final dot = permission.indexOf('.');
-  return dot < 0 ? permission : permission.substring(0, dot);
 }
 
 /// Asking for titles as one choice, the way a form offers it: not at all,

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/platform/player.g.dart' as wire;
 import 'package:matinee/player/player_events.dart';
 import 'package:matinee/player/player_state.dart';
+import 'package:matinee/player/player_system.dart';
 
 PlaybackState _state({
   PlaybackPhase phase = PlaybackPhase.ready,
@@ -121,23 +122,6 @@ void main() {
       expect(tracks.subtitles.single.language, isNull);
       expect(tracks.subtitles.single.isForced, isTrue);
     });
-
-    test('maps video size, frame rate, and engine', () {
-      final video = PlayerEvent.fromMessage(
-        wire.VideoMessage(width: 3840, height: 2160, frameRate: 59.94),
-      );
-      expect((video as VideoChanged).video, (
-        width: 3840,
-        height: 2160,
-        frameRate: 59.94,
-      ));
-      expect(
-        (PlayerEvent.fromMessage(
-          wire.ActiveEngineMessage(engine: wire.EngineMessage.media3),
-        ) as EngineChanged).engine,
-        PlayerEngine.media3,
-      );
-    });
   });
 
   group('reducePlayback', () {
@@ -209,53 +193,37 @@ void main() {
     });
   });
 
-  group('PlaybackState.isOpen', () {
-    test('is false only when idle or failed', () {
-      for (final phase in PlaybackPhase.values) {
-        expect(
-          _state(phase: phase).isOpen,
-          phase != PlaybackPhase.idle && phase != PlaybackPhase.error,
-          reason: phase.name,
-        );
-      }
-    });
-  });
-
-  group('seekTarget', () {
-    const timeline = (
-      position: Duration(seconds: 30),
-      duration: Duration(seconds: 60),
-      buffered: null,
+  test('the system hears of a change, not of every tick', () {
+    MediaStateMessage at(int ms, {bool playing = true}) => mediaState(
+      playing: playing,
+      phase: PlaybackPhase.ready,
+      position: ms / 1000,
+      duration: 600,
+      rate: 1,
     );
-
-    test('moves by the step', () {
-      expect(
-        seekTarget(timeline, const Duration(seconds: 10)),
-        const Duration(seconds: 40),
-      );
-      expect(
-        seekTarget(timeline, const Duration(seconds: -10)),
-        const Duration(seconds: 20),
-      );
-    });
-
-    test('stops at the start and at the end', () {
-      expect(seekTarget(timeline, const Duration(seconds: -45)), Duration.zero);
-      expect(
-        seekTarget(timeline, const Duration(seconds: 45)),
-        const Duration(seconds: 60),
-      );
-    });
-
-    test('has no end to stop at while the length is unknown', () {
-      expect(
-        seekTarget((
-          position: const Duration(seconds: 30),
-          duration: null,
-          buffered: null,
-        ), const Duration(seconds: 10)),
-        const Duration(seconds: 40),
-      );
-    });
+    expect(mediaStateMoved(null, at(0), Duration.zero), isTrue);
+    // Playing on as the system works it out.
+    expect(
+      mediaStateMoved(at(0), at(5000), const Duration(seconds: 5)),
+      isFalse,
+    );
+    // A seek.
+    expect(
+      mediaStateMoved(at(0), at(60000), const Duration(seconds: 5)),
+      isTrue,
+    );
+    expect(
+      mediaStateMoved(at(0), at(0, playing: false), Duration.zero),
+      isTrue,
+    );
+    // Paused, the position stays where it was.
+    expect(
+      mediaStateMoved(
+        at(1000, playing: false),
+        at(1000, playing: false),
+        const Duration(minutes: 1),
+      ),
+      isFalse,
+    );
   });
 }

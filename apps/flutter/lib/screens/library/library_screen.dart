@@ -27,8 +27,7 @@ String _libraryKind(String kind) =>
     kind == TitleKind.show ? LibraryKind.shows : LibraryKind.movies;
 
 /// The Shows or the Movies tab: every title of [kind] the viewer can see,
-/// across the libraries, in place of the Kotlin app's Media tab and its
-/// library pages. With more than one library of the kind, a menu in the
+/// across the libraries. With more than one library of the kind, a menu in the
 /// subtitle narrows it to one, as on the web.
 class KindScreen extends ConsumerStatefulWidget {
   const KindScreen({super.key, required this.kind});
@@ -203,9 +202,9 @@ class _KindScreenState extends ConsumerState<KindScreen> {
   }
 }
 
-/// A genre's or a studio's titles from every library, opened from a chip
-/// on a title's page, with the filters and sorts the tabs have and a
-/// choice of movies or shows: the Kotlin app's `BrowseScreen`.
+/// A genre's or a studio's titles from every library, opened from a chip on a
+/// title's page, with the filters and sorts the tabs have and a choice of
+/// movies or shows.
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key, this.genre, this.studio});
 

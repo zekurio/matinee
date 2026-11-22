@@ -21,16 +21,13 @@ enum ButtonLook {
 /// icon (`has-data-[icon=inline-start]:pl-*`), the gap, the icon, and the text.
 enum ButtonSize {
   standard(36, 12, 10, 6, 16, KitText.sm, KitRadius.lg),
-  xs(24, 8, 6, 4, 12, KitText.xs, KitRadius.md),
   sm(32, 10, 6, 4, 14, KitText.px13, KitRadius.md),
   lg(40, 16, 12, 8, 16, KitText.sm, KitRadius.lg),
 
   /// The Android kit's default height, for buttons over the player.
   xl(44, 16, 12, 8, 16, KitText.sm, KitRadius.lg),
   icon(36, 0, 0, 0, 16, KitText.sm, 999),
-  iconXs(28, 0, 0, 0, 12, KitText.sm, 999),
-  iconSm(32, 0, 0, 0, 16, KitText.sm, 999),
-  iconLg(40, 0, 0, 0, 16, KitText.sm, 999);
+  iconSm(32, 0, 0, 0, 16, KitText.sm, 999);
 
   const ButtonSize(
     this.height,
@@ -65,7 +62,6 @@ class MatineeButton extends StatelessWidget {
     this.size = ButtonSize.standard,
     this.shape,
     this.dimmed,
-    this.focusNode,
     this.autofocus = false,
   }) : assert(child != null || leading != null || trailing != null),
        assert(child != null || label != null);
@@ -79,7 +75,6 @@ class MatineeButton extends StatelessWidget {
   final ButtonSize size;
   final BorderRadiusGeometry? shape;
   final bool? dimmed;
-  final FocusNode? focusNode;
   final bool autofocus;
 
   @override
@@ -93,7 +88,6 @@ class MatineeButton extends StatelessWidget {
       onPressed: onPressed,
       label: label,
       shape: radius,
-      focusNode: focusNode,
       autofocus: autofocus,
       builder: (context, state) {
         final hot = state != PressState.idle;

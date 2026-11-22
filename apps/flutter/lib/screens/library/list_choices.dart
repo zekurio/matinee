@@ -5,11 +5,10 @@ import '../../api/matinee_api.dart';
 import '../../core/session.dart';
 import '../../l10n/app_localizations.dart';
 
-/// What a list of titles is ordered and filtered by, for Shows, Movies, and
-/// a genre's or a studio's page, as the Kotlin app's `TitleListState`: the
-/// sort and its way, the filters the server takes, and for the tabs the
-/// library, for Browse the kind. The server does the sorting and filtering;
-/// these only say what was picked.
+/// What a list of titles is ordered and filtered by, for Shows, Movies, and a
+/// genre's or a studio's page: the sort and its way, the filters the server
+/// takes, and for the tabs the library, for Browse the kind. The server does
+/// the sorting and filtering; these only say what was picked.
 
 /// A sort and its way, in the order the sort menu offers them, each with
 /// its words.
@@ -266,8 +265,7 @@ final tabChoicesProvider =
       ListChoicesNotifier.new,
     );
 
-/// A genre's or a studio's page's choices, kept while the page is open, as
-/// the Kotlin app keeps them while the page is on the back stack.
+/// A genre's or a studio's page's choices, kept while the page is open.
 final browseChoicesProvider = NotifierProvider.autoDispose
     .family<ListChoicesNotifier, ListChoices, ListKey>(ListChoicesNotifier.new);
 

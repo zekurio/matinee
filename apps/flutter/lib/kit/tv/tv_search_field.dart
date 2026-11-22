@@ -9,12 +9,11 @@ import 'tv_buttons.dart';
 import 'tv_focus.dart';
 import 'tv_metrics.dart';
 
-/// A search field for TV pages, as the Kotlin app's `TvSearchField`. Focus
-/// rests on it like on a button, so moving past it with the D-pad doesn't
-/// pop the keyboard up; Select opens the keyboard into it. The keyboard's
-/// search key hands focus back to the field, and so do Up and Down. With
-/// text in it, a clear button sits at its end. [focusNode] is the field's,
-/// for a [TvFocusMemory]; [height] is the pill's.
+/// A search field for TV pages. Focus rests on it like on a button, so moving
+/// past it with the D-pad doesn't pop the keyboard up; Select opens the
+/// keyboard into it. The keyboard's search key hands focus back to the field,
+/// and so do Up and Down. With text in it, a clear button sits at its end.
+/// [focusNode] is the field's, for a [TvFocusMemory]; [height] is the pill's.
 class TvSearchField extends StatefulWidget {
   const TvSearchField({
     super.key,
@@ -25,7 +24,6 @@ class TvSearchField extends StatefulWidget {
     this.focusNode,
     this.height = TvButtons.height,
     this.textStyle,
-    this.autofocus = false,
     this.rest,
   });
 
@@ -36,7 +34,6 @@ class TvSearchField extends StatefulWidget {
   final FocusNode? focusNode;
   final double height;
   final TextStyle? textStyle;
-  final bool autofocus;
 
   /// The fill without focus, in place of [TvFocus.rest].
   final Color? rest;
@@ -115,9 +112,8 @@ class _TvSearchFieldState extends State<TvSearchField> {
     final colors = MatineeTheme.of(context);
     final style = widget.textStyle ?? TvType.facts.style();
     final empty = widget.controller.text.isEmpty;
-    // Back while typing ends the typing and keeps the page, as the Kotlin
-    // app's field does once its keyboard has gone: a keyboard that takes
-    // no Back of its own, or none at all, would otherwise leave the page
+    // Back while typing ends the typing and keeps the page: a keyboard that
+    // takes no Back of its own, or none at all, would otherwise leave the page
     // and what was typed with it.
     return PopScope(
       canPop: !_editing,
@@ -130,7 +126,6 @@ class _TvSearchFieldState extends State<TvSearchField> {
           Expanded(
             child: TvFocusable(
               focusNode: _outer,
-              autofocus: widget.autofocus,
               label: widget.placeholder,
               onPressed: _edit,
               builder: (context, focused) {

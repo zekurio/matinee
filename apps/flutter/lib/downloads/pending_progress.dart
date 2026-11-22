@@ -50,11 +50,10 @@ final pendingProgressProvider =
       PendingProgress.new,
     );
 
-/// What happened while a server was out of reach, sent once it answers
-/// again, the Kotlin app's `PendingProgress`: where the person got to in
-/// each file, so Continue watching and the watched marks catch up, and each
-/// sitting, for the statistics. Each saved server has its own, by its origin
-/// key, so one server's progress never goes to another.
+/// What happened while a server was out of reach, sent once it answers again:
+/// where the person got to in each file, so Continue watching and the watched
+/// marks catch up, and each sitting, for the statistics. Each saved server has
+/// its own, by its origin key, so one server's progress never goes to another.
 class PendingProgress extends Notifier<Map<String, ServerPending>> {
   static const _plays = 'matinee.pending.plays:';
   static const _reports = 'matinee.pending.reports:';

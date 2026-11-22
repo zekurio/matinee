@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-here="$(cd "$(dirname "$0")" && pwd)"
-# The repository's default dev shell is Linux-only at the pinned revision.
-exec nix shell github:NixOS/nixpkgs/1d060086d60cb76a40cf37109f979d88a5bd6396#nodejs_24 github:NixOS/nixpkgs/1d060086d60cb76a40cf37109f979d88a5bd6396#pnpm_11 github:NixOS/nixpkgs/1d060086d60cb76a40cf37109f979d88a5bd6396#postgresql_17 -c python3 "$here/dev.py" "$@"

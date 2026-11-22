@@ -20,11 +20,10 @@ final noticeProvider = FutureProvider.autoDispose<String>(
   retry: (count, error) => null,
 );
 
-/// The licenses, as the Kotlin app keeps them and the GPL asks: the
-/// project's own, the notices from `NOTICE.md` laid out from its Markdown
-/// (headings, paragraphs, and the table of files as a line each), and the
-/// license of every package and library the app is built from, each
-/// opening its text.
+/// The licenses, as the GPL asks: the project's own, the notices from
+/// `NOTICE.md` laid out from its Markdown (headings, paragraphs, and the table
+/// of files as a line each), and the license of every package and library the
+/// app is built from, each opening its text.
 class LicensesPage extends ConsumerWidget {
   const LicensesPage({super.key});
 

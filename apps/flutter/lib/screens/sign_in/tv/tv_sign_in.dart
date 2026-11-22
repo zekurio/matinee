@@ -21,8 +21,8 @@ import 'tv_servers.dart';
 /// left. A code that runs out waits for a new one to be asked for, so a TV
 /// left here doesn't keep asking the server for codes.
 ///
-/// This is quieter than the Kotlin app's screen on purpose: no line on the
-/// phone app's Settings, and the server row out of the content.
+/// It's quiet on purpose: no line on the phone app's Settings, and the server
+/// row out of the content.
 class TvSignInScreen extends ConsumerWidget {
   const TvSignInScreen({super.key});
 

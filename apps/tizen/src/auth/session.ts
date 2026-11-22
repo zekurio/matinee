@@ -290,7 +290,7 @@ export class Session extends Observable {
    */
   async connect(input: string): Promise<string | null> {
     const candidates = serverCandidates(input)
-    if (candidates.length === 0) return tr("connect_empty")
+    if (candidates.length === 0) return tr("connectEmpty")
     const known = candidates.find((origin) => this.saved(origin))
     if (known) {
       this.switchTo(known)
@@ -318,8 +318,8 @@ export class Session extends Observable {
         return null
       } catch (cause) {
         failure = isServerError(cause)
-          ? tr("connect_not_matinee", hostOf(origin))
-          : tr("connect_failed", hostOf(origin))
+          ? tr("connectNotMatinee", hostOf(origin))
+          : tr("connectFailed", hostOf(origin))
       }
     }
     return failure

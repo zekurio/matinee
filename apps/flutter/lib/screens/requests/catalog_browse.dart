@@ -22,13 +22,12 @@ import 'requests_data.dart';
 import 'requests_hub.dart';
 
 /// All of TMDB's movies or shows, or the viewer's recommendations of them,
-/// narrowed by filters and in the order the viewer picks, as the Kotlin
-/// app's `Browse.kt` and the web's browse pages under Discover: a grid that
-/// loads more as it scrolls, the filters in a sheet as a library's are,
-/// and the sort in the bar's menu. Each Discover row's heading opens one
-/// with the row's filters and sort. What each filter offers comes from the
-/// server. Titles that are here are the library's cards; the rest ask, as
-/// on Explore.
+/// narrowed by filters and in the order the viewer picks, as the web's browse
+/// pages under Discover: a grid that loads more as it scrolls, the filters in a
+/// sheet as a library's are, and the sort in the bar's menu. Each Discover
+/// row's heading opens one with the row's filters and sort. What each filter
+/// offers comes from the server. Titles that are here are the library's cards;
+/// the rest ask, as on Explore.
 
 /// Whether a browse lists the viewer's recommendations, whose cards offer
 /// "Not interested".

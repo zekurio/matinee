@@ -43,8 +43,7 @@ import '../sign_in/server_switcher.dart' show withoutScheme;
 import '../sign_in/tv/tv_servers.dart';
 import 'tv_sign_out.dart';
 
-/// Settings' categories on a TV, as the Kotlin app's `TvSettingsCategory`,
-/// by the keys of `Routes.settingsPage`.
+/// Settings' categories on a TV, by the keys of `Routes.settingsPage`.
 enum TvSettingsCategory {
   playback('playback', Lucide.tvPlay),
   subtitles('subtitles', Lucide.captions),
@@ -75,10 +74,9 @@ enum TvSettingsCategory {
   }
 }
 
-/// The categories' column, its highlight starting where every TV page's
-/// content does, clear of the rail's focus ring; the Kotlin app has it a
-/// list item's inset further left, almost against the cog. Wide enough
-/// for the longest German name, with little room after it.
+/// The categories' column, its highlight starting where every TV page's content
+/// does, clear of the rail's focus ring. Wide enough for the longest German
+/// name, with little room after it.
 const _categoryWidth = 224.0;
 
 /// Between the categories' highlight and the rows' highlight.
@@ -90,12 +88,11 @@ const _rowsTop = Overscan.vertical + 60;
 /// A picker's value for null, which the panel can't return as a pick.
 const _none = '';
 
-/// Settings on a TV, as Google TV's own and the Kotlin app's
-/// `TvSettingsScreen`: the categories on the left, the focused one's rows
-/// on the right. Focusing a category shows its rows; Right or Select goes
-/// into them, Left or Back comes out to the category again. Choices open
-/// in the panel at the right edge, switches flip in place. [initial] picks
-/// the category to start on, by its key.
+/// Settings on a TV, as Google TV's own: the categories on the left, the
+/// focused one's rows on the right. Focusing a category shows its rows; Right
+/// or Select goes into them, Left or Back comes out to the category again.
+/// Choices open in the panel at the right edge, switches flip in place.
+/// [initial] picks the category to start on, by its key.
 class TvSettingsScreen extends ConsumerStatefulWidget {
   const TvSettingsScreen({super.key, this.initial});
 
@@ -456,10 +453,9 @@ PlaybackPreferences _with(
   skipForwardSeconds: skipForward ?? p.skipForwardSeconds,
 );
 
-/// What this TV plays with and how, the account's skip lengths, and what
-/// the server converts to for it, as the Kotlin app's `PlaybackRows`. The
-/// device's rows are [playerPrefsProvider]'s, which the phone's Playback
-/// page sets too.
+/// What this TV plays with and how, the account's skip lengths, and what the
+/// server converts to for it. The device's rows are [playerPrefsProvider]'s,
+/// which the phone's Playback page sets too.
 class _PlaybackRows extends ConsumerWidget {
   const _PlaybackRows();
 
@@ -605,8 +601,8 @@ class _PlaybackRows extends ConsumerWidget {
   }
 }
 
-/// How subtitles look on this TV, over a sample, as the Kotlin app's
-/// `SubtitleRows`: the system's caption style, or the app's own.
+/// How subtitles look on this TV, over a sample: the system's caption style, or
+/// the app's own.
 class _SubtitleRows extends ConsumerWidget {
   const _SubtitleRows();
 
@@ -714,9 +710,8 @@ class _SubtitlePreview extends StatelessWidget {
   );
 }
 
-/// The account's languages, which every device of the account plays by,
-/// and whether shows list their specials, as the Kotlin app's
-/// `LanguageRows`.
+/// The account's languages, which every device of the account plays by, and
+/// whether shows list their specials.
 class _LanguageRows extends ConsumerWidget {
   const _LanguageRows();
 
@@ -835,8 +830,8 @@ class _LanguageRows extends ConsumerWidget {
   }
 }
 
-/// The places the account is signed in; Select on one but this TV asks to
-/// sign it out, as the Kotlin app's `DeviceRows`.
+/// The places the account is signed in; Select on one but this TV asks to sign
+/// it out.
 class _DeviceRows extends ConsumerStatefulWidget {
   const _DeviceRows();
 
@@ -961,8 +956,8 @@ class _DeviceRowsState extends ConsumerState<_DeviceRows> {
   }
 }
 
-/// Who's signed in and to which server, and the ways out: another server,
-/// or signing out, as the Kotlin app's `AccountRows`.
+/// Who's signed in and to which server, and the ways out: another server, or
+/// signing out.
 class _AccountRows extends ConsumerWidget {
   const _AccountRows();
 
@@ -1022,9 +1017,9 @@ extension on String {
   String? get nullIfEmpty => isEmpty ? null : this;
 }
 
-/// The phone's About page on a TV, as the Kotlin app's `AboutRows`: the
-/// app and the TV, the latest playback's report, and the app's log, shown
-/// and copied, since a TV has no app to share them with.
+/// The phone's About page on a TV: the app and the TV, the latest playback's
+/// report, and the app's log, shown and copied, since a TV has no app to share
+/// them with.
 class _AboutRows extends ConsumerStatefulWidget {
   const _AboutRows();
 
@@ -1134,11 +1129,10 @@ class _AboutRowsState extends ConsumerState<_AboutRows> {
   }
 }
 
-/// [text] over the whole page, in monospace, for reading from the couch,
-/// as the Kotlin app's `TvTextViewer`. Up and Down scroll it by most of a
-/// screen, Back closes it and puts focus back on the row that opened it.
-/// [fromEnd] opens it at the bottom, for a log, whose latest lines are
-/// last.
+/// [text] over the whole page, in monospace, for reading from the couch. Up and
+/// Down scroll it by most of a screen, Back closes it and puts focus back on
+/// the row that opened it. [fromEnd] opens it at the bottom, for a log, whose
+/// latest lines are last.
 Future<void> showTvText(
   BuildContext context, {
   required String title,

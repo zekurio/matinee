@@ -80,16 +80,6 @@ void main() {
       expect(Permission.values, containsAll(Permission.base));
     });
 
-    test('what a group can grant leaves out all and the base ones', () {
-      expect(grantablePermissions, isNot(contains(Permission.all)));
-      expect(grantablePermissions, isNot(contains(Permission.titleRead)));
-      expect(grantablePermissions, contains(Permission.mediaDownload));
-      expect(
-        grantablePermissions.length,
-        Permission.values.length - 1 - Permission.base.length,
-      );
-    });
-
     test('sorting puts them in the contract\'s order, once each', () {
       expect(
         sortPermissions(const [
@@ -99,30 +89,6 @@ void main() {
           'not.a.permission',
         ]),
         [Permission.adminUserRead, Permission.mediaDownload],
-      );
-    });
-
-    test('changing some keeps the rest', () {
-      const start = [Permission.libraryScan, Permission.mediaDownload];
-      expect(
-        withPermissions(start, const [Permission.adminUserRead], on: true),
-        [
-          Permission.adminUserRead,
-          Permission.libraryScan,
-          Permission.mediaDownload,
-        ],
-      );
-      expect(
-        withPermissions(start, const [Permission.libraryScan], on: false),
-        [Permission.mediaDownload],
-      );
-    });
-
-    test('a permission\'s resource is what stands before its dot', () {
-      expect(permissionResource(Permission.libraryScan), 'library');
-      expect(
-        permissionResource(Permission.adminApiTokenDelete),
-        'adminApiToken',
       );
     });
   });

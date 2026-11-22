@@ -29,10 +29,9 @@ final accountSessionsProvider = serverQuery(
 /// poll, up to five seconds after.
 const devicePoll = Duration(seconds: 6);
 
-/// Settings, Account, as the Kotlin app's `AccountPage`: signing in another
-/// device, then the places the account is signed in, each but this one
-/// with a way to sign it out. Switching server or account and signing out
-/// here are on the profile, as in the Kotlin app.
+/// Settings, Account: signing in another device, then the places the account is
+/// signed in, each but this one with a way to sign it out. Switching server or
+/// account and signing out are on the profile.
 class AccountPage extends ConsumerStatefulWidget {
   const AccountPage({super.key});
 

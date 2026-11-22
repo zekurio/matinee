@@ -12,11 +12,10 @@ import 'list_choices.dart';
 import 'list_words.dart';
 import 'title_pages.dart';
 
-/// A list's filters in a sheet, as the Kotlin app's `TitleFilterSheet`:
-/// what the server offers for the list, each change applied at once, a
-/// range once its handle is let go, with Clear filters while any is on and
-/// Show titles to close. A phone gets it across the bottom; a tablet the
-/// same sheet, no wider than [Sheet.widest].
+/// A list's filters in a sheet: what the server offers for the list, each
+/// change applied at once, a range once its handle is let go, with Clear
+/// filters while any is on and Show titles to close. A phone gets it across the
+/// bottom; a tablet the same sheet, no wider than [Sheet.widest].
 Future<void> showTitleFilters(
   BuildContext context, {
   required ListKey list,
@@ -344,9 +343,8 @@ class OptionRow extends StatelessWidget {
 /// What an [OptionSheet] gave back: a choice's value, or null for any.
 typedef OptionPick = ({String? value});
 
-/// A long list to pick one from, or none with Any, with a field that finds
-/// one by name, as the Kotlin app's `OptionSheet`. It opens over the
-/// filters' sheet and answers once a row is picked.
+/// A long list to pick one from, or none with Any, with a field that finds one
+/// by name. It opens over the filters' sheet and answers once a row is picked.
 class OptionSheet extends StatefulWidget {
   const OptionSheet({
     super.key,

@@ -4,10 +4,9 @@ import '../../api/matinee_api.dart';
 import '../../query/server_data.dart';
 import '../requests/requests_hub.dart' show requestsVersionProvider;
 
-/// What Home reads, as the Kotlin app's `HomeLoaders`: the libraries,
-/// Continue watching, Next up, the featured titles, the recommendation
-/// rows, each library's newest titles, and what the viewer asked for,
-/// followed live.
+/// What Home reads: the libraries, Continue watching, Next up, the featured
+/// titles, the recommendation rows, each library's newest titles, and what the
+/// viewer asked for, followed live.
 
 final librariesProvider = serverQuery((api) => api.libraries.list());
 

@@ -125,11 +125,10 @@ Future<void> showDownloadSheet(BuildContext context, MediaItem item) {
   );
 }
 
-/// What to download, the Kotlin app's `DownloadSheet`: a version the server
-/// makes for this device, at the size the person picks, or the file as it
-/// is; with the audio tracks and subtitles they pick. The tracks start as
-/// the settings pick them, and each version's size shows before anything
-/// starts, for the audio picked.
+/// What to download: a version the server makes for this device, at the size
+/// the person picks, or the file as it is; with the audio tracks and subtitles
+/// they pick. The tracks start as the settings pick them, and each version's
+/// size shows before anything starts, for the audio picked.
 class DownloadSheet extends ConsumerStatefulWidget {
   const DownloadSheet({super.key, required this.item});
 

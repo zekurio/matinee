@@ -27,11 +27,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * What the player asks of the device around the video, as the Kotlin
- * app's `DeviceLevels` and `rememberPictureInPicture`: the window's own
- * brightness, which a swipe sets and the player puts back, the media
- * volume, picture in picture, and the media session ([MediaControls]).
- * Pigeon calls these on the main thread.
+ * What the player asks of the device around the video: the window's own
+ * brightness, which a swipe sets and the player puts back, the media volume,
+ * picture in picture, and the media session ([MediaControls]). Pigeon calls
+ * these on the main thread.
  */
 internal class PlayerSystem(
     private val activity: Activity,
@@ -236,7 +235,7 @@ internal class PlayerSystem(
         const val ACTION = "io.github.zekurio.matinee.PLAYER_ACTION"
         const val EXTRA_COMMAND = "command"
 
-        /** The Kotlin player's shape for the small window, whatever the video's. */
+        /** The small window's shape, whatever the video's. */
         val ASPECT = Rational(16, 9)
     }
 }

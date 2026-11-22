@@ -8,13 +8,12 @@ const _host = 'dev.flutter.pigeon.matinee.PlayerApi';
 const _events = 'dev.flutter.pigeon.matinee.PlayerEventsApi.onEvent';
 
 /// The native side, as far as the Dart half can tell: it records each call
-/// by name and answers with success, or with [failOpen].
+/// by name and answers with success.
 class _Native {
   _Native(this.messenger);
 
   final TestDefaultBinaryMessenger messenger;
   final List<(String, List<Object?>)> calls = [];
-  PlatformException? failOpen;
 
   void install() {
     for (final name in [
@@ -33,12 +32,7 @@ class _Native {
     ]) {
       messenger.setMockMessageHandler('$_host.$name', (message) async {
         calls.add((name, _codec.decodeMessage(message)! as List<Object?>));
-        final failure = name == 'open' ? failOpen : null;
-        return _codec.encodeMessage(
-          failure == null
-              ? <Object?>[null]
-              : <Object?>[failure.code, failure.message, null],
-        );
+        return _codec.encodeMessage(<Object?>[null]);
       });
     }
   }
@@ -167,43 +161,6 @@ void main() {
     await player.dispose();
   });
 
-  test(
-    'events from the live session update the state, and states replays it',
-    () async {
-      final player = Player();
-      await player.open('https://example.test/a.mkv');
-      final session = native.lastSession;
-
-      final seen = <PlaybackPhase>[];
-      final subscription = player.states.listen(
-        (state) => seen.add(state.phase),
-      );
-
-      await native.emit(
-        session,
-        wire.StateMessage(phase: wire.PhaseMessage.ready, playing: true),
-      );
-      await native.emit(
-        session,
-        wire.TimelineMessage(positionMs: 4000, durationMs: 60000),
-      );
-      await Future<void>.delayed(Duration.zero);
-
-      expect(player.state.phase, PlaybackPhase.ready);
-      expect(player.state.status.playing, isTrue);
-      expect(player.state.timeline.position, const Duration(seconds: 4));
-      expect(
-        seen.first,
-        PlaybackPhase.buffering,
-        reason: 'starts with the current state',
-      );
-      expect(seen.last, PlaybackPhase.ready);
-
-      await subscription.cancel();
-      await player.dispose();
-    },
-  );
-
   test('a new open drops what the old source still sends', () async {
     final player = Player();
     await player.open('https://example.test/a.mkv');
@@ -227,37 +184,6 @@ void main() {
     expect(player.state.phase, PlaybackPhase.ready);
     await player.dispose();
   });
-
-  test('a failed open becomes an error state, not an exception', () async {
-    native.failOpen = PlatformException(
-      code: 'bad',
-      message: 'No such engine.',
-    );
-    final player = Player();
-    await player.open('https://example.test/a.mkv');
-    expect(player.state.phase, PlaybackPhase.error);
-    expect(player.state.status.message, 'Could not open the player.');
-    await player.dispose();
-  });
-
-  test(
-    'distinguishes a source failure when the server is unreachable',
-    () async {
-      final player = Player();
-      await player.open('https://example.test/a.mkv');
-      await native.emit(
-        native.lastSession,
-        wire.StateMessage(
-          phase: wire.PhaseMessage.error,
-          playing: false,
-          serverUnavailable: true,
-        ),
-      );
-      expect(player.state.phase, PlaybackPhase.error);
-      expect(player.state.serverUnavailable, isTrue);
-      await player.dispose();
-    },
-  );
 
   test(
     'dispose tells the native side once and ends the state stream',

@@ -15,19 +15,18 @@ import '../downloads/download_sheet.dart';
 import 'settings_rows.dart';
 import 'settings_screen.dart';
 
-/// Of the server's codecs, those an encoded download may come in: the ones
-/// this device has a decoder for, as the Kotlin app's
-/// `Capabilities.encodeVideoChoices`.
+/// Of the server's codecs, those an encoded download may come in: the ones this
+/// device has a decoder for.
 List<String> downloadCodecChoices(List<String> server, List<String> decoded) =>
     [
       for (final codec in const ['h264', 'hevc', 'av1'])
         if (server.contains(codec) && decoded.contains(codec)) codec,
     ];
 
-/// Settings, Downloads, the Kotlin app's `DownloadsSection`: the space they
-/// take and what's left, whether to wait for Wi-Fi, what the download sheet
-/// starts on, and a way to remove them all. An account that may not
-/// download keeps what's on the device, and nothing more to set.
+/// Settings, Downloads: the space they take and what's left, whether to wait
+/// for Wi-Fi, what the download sheet starts on, and a way to remove them all.
+/// An account that may not download keeps what's on the device, and nothing
+/// more to set.
 class DownloadsPage extends ConsumerWidget {
   const DownloadsPage({super.key});
 

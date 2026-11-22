@@ -30,20 +30,19 @@ import 'tv_display_mode.dart';
 import 'tv_overlay.dart';
 import 'tv_seek.dart';
 
-/// How long the controls stay up while the video plays and nothing moves:
-/// the phone player's time. Neither it nor the kit reads the platform's
-/// recommended timeout, which the Kotlin player asked accessibility for.
+/// How long the controls stay up while the video plays and nothing moves: the
+/// phone player's time. Neither it nor the kit reads the platform's recommended
+/// timeout.
 const _hideAfter = Duration(milliseconds: 3500);
 
-/// How long the skip button shows by itself once its segment starts, as
-/// the Kotlin player's `SKIP_SHOWN_MS`; after that it comes with the
-/// controls.
+/// How long the skip button shows by itself once its segment starts; after that
+/// it comes with the controls.
 const _skipShown = Duration(seconds: 8);
 
-/// The player on a TV, as the Kotlin app's `TvPlayerScreen`: what the
-/// phone's player loads, the same [PlaybackSession] set up the same way
-/// ([createPlaybackSession]) with the video under it, drawn for a remote.
-/// The controls, the menus, and the keys are the TV's own.
+/// The player on a TV: what the phone's player loads, the same
+/// [PlaybackSession] set up the same way ([createPlaybackSession]) with the
+/// video under it, drawn for a remote. The controls, the menus, and the keys
+/// are the TV's own.
 class TvPlaybackScreen extends ConsumerStatefulWidget {
   const TvPlaybackScreen({super.key, required this.itemId, this.startAt});
 
@@ -164,9 +163,8 @@ class _Opening extends StatelessWidget {
   );
 }
 
-/// Why nothing plays, with Try again focused and Back beside it, as the
-/// Kotlin app's `TvPlayerFailure`. Without [onRetry], only Back, since
-/// asking again gets the same answer.
+/// Why nothing plays, with Try again focused and Back beside it. Without
+/// [onRetry], only Back, since asking again gets the same answer.
 class TvPlayerFailure extends StatefulWidget {
   const TvPlayerFailure({
     super.key,
@@ -258,16 +256,16 @@ class _TvPlayerFailureState extends State<TvPlayerFailure> {
   }
 }
 
-/// The menus the TV's buttons open at the right edge, as the Kotlin app's:
-/// audio, subtitles, and settings, which holds the quality, the speed, and
-/// how the picture fills the screen.
+/// The menus the TV's buttons open at the right edge: audio, subtitles, and
+/// settings, which holds the quality, the speed, and how the picture fills the
+/// screen.
 List<PlayerMenu> _menusOf(TvPlayerMenu menu) => switch (menu) {
   TvPlayerMenu.audio => const [PlayerMenu.audio],
   TvPlayerMenu.subtitles => const [PlayerMenu.subtitles],
   TvPlayerMenu.settings => const [PlayerMenu.quality, PlayerMenu.speed],
 };
 
-/// Plays the session for a remote, as the Kotlin app's `TvPlayback`.
+/// Plays the session for a remote.
 ///
 /// With the controls away, Left and Right skip and glide while held,
 /// Select, Up, and Down bring the controls with focus on play, and the
@@ -467,7 +465,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
   void _pickFill(bool fill) {
     setState(() => _fill = fill);
     unawaited(_applyFit());
-    // Kept for the next video, as the Kotlin app's fillScreen.
+    // Kept for the next video.
     unawaited(
       ref
           .read(playerPrefsProvider.notifier)
@@ -625,10 +623,9 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
   bool _onPicture(AppLocalizations l) =>
       _action(l) != null && !_away && !_controls;
 
-  /// Moves focus as the controls come and go, as the Kotlin player's
-  /// effect on them: on play, the seek bar after a held arrow, or the
-  /// button the player offers, as they come; on that button or the screen
-  /// itself, which takes the keys, as they go.
+  /// Moves focus as the controls come and go: on play, the seek bar after a
+  /// held arrow, or the button the player offers, as they come; on that button
+  /// or the screen itself, which takes the keys, as they go.
   void _follow(bool visible, bool onPicture, TvPictureAction? action) {
     final now = (
       visible: visible,
@@ -849,7 +846,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
                   l,
                   notice,
                   detail,
-                  // Clear of the edges a TV loses, as the Kotlin app's.
+                  // Clear of the edges a TV loses.
                   margin: const EdgeInsets.fromLTRB(
                     Overscan.horizontal,
                     Overscan.vertical,
