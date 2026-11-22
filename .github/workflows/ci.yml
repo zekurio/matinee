@@ -61,13 +61,15 @@ jobs:
             tools/ci/**
             .github/workflows/ci.yml
             !**/*.md
-          # What the iOS build compiles: the Dart and the Runner, icon included.
+          # What the iOS build compiles: the Dart and the Runner, icon
+          # included, and the version it reads from the root package.json.
           PATHS_FLUTTER_IOS: |
             apps/flutter/**
             apps/web/src/i18n/locales/en/*.ts
             apps/web/src/i18n/locales/de/*.ts
             packages/contracts/**
             apps/server/scripts/**
+            package.json
             tools/ci/**
             .github/workflows/ci.yml
             !**/*.md
@@ -192,6 +194,13 @@ jobs:
       - name: build unsigned debug app
         working-directory: apps/flutter
         run: flutter build ios --debug --no-codesign
+
+      # Flutter warns that the build name and number are missing, since
+      # pubspec.yaml has no version; the Runner's Version phase writes them
+      # into the app afterwards, and this fails if it didn't.
+      - name: check app version
+        working-directory: apps/flutter
+        run: sh ios/version.sh --check ../../package.json build/ios/iphoneos/Runner.app/Info.plist
 
   nix:
     name: nix flake check
