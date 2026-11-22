@@ -52,9 +52,13 @@ export default defineMessages("requests", {
   "requests.kind.show": "Show",
   // How many more people requested it, beside the first one's name.
   "requests.othersCount": "+{count}",
-  // The popover of everyone who requested it, and when each did.
+  // The "…" menu on an admin's card: everyone who requested it, each
+  // with when; where a waiting request can be added instead; the library
+  // it's in; and what the connection says, {connection} like "Radarr".
   "requests.askedBy": "Requested by",
-  "requests.askedByNamed": "Who requested {name}",
+  "requests.menu.addTo": "Add to",
+  "requests.menu.library": "Library",
+  "requests.menu.connection": "From {connection}",
   // For an admin, the tooltip on a title's "Requested" badge. {when} is
   // relative, like "2 hours ago"; {names} a list, like "anna and ben".
   "requests.badge.requested": "{name} requested this {when}",
