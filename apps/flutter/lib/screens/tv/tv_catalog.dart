@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/failure_text.dart';
+import '../../core/permissions.dart';
 import '../../kit/kit.dart';
 import '../../kit/tv/tv.dart';
 import '../../l10n/app_localizations.dart';
@@ -944,7 +945,11 @@ class _StateLine extends ConsumerWidget {
         l.webRequestsProgressLeft(formatSpan(eta, l)),
       if (waiting != null) requestedText(waiting, l),
       if (blocked)
-        ?dimmedText(availability, l, admin: ref.watch(isAdminProvider))
+        ?dimmedText(
+          availability,
+          l,
+          admin: ref.watch(canProvider(Permission.adminRequestUpdate)),
+        )
       else
         ?declinedText(availability, l),
     ];

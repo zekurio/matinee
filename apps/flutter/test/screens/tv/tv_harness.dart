@@ -48,7 +48,8 @@ void loadTvFont() {
 
 /// The signed-in app on a TV at [size], talking to [backend], or to
 /// [client] where a test answers more than Home, with the drawer's Movies
-/// and Shows. Ada signs in, as an admin with [admin].
+/// and Shows. Ada signs in, as an admin with [admin], else granted
+/// [permissions].
 Future<void> pumpTv(
   WidgetTester tester,
   HomeBackend backend, {
@@ -56,6 +57,7 @@ Future<void> pumpTv(
   String? location,
   http.Client? client,
   bool admin = false,
+  List<String> permissions = const [],
 }) async {
   backend.answers.putIfAbsent(
     '/api/v1/titles/browse',
@@ -71,7 +73,11 @@ Future<void> pumpTv(
   tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-  final user = User.fromJson({...userJson('ada'), if (admin) 'role': 'admin'});
+  final user = User.fromJson({
+    ...userJson('ada'),
+    if (admin) 'role': 'admin',
+    'permissions': admin ? ['all'] : permissions,
+  });
   await tester.pumpWidget(
     ProviderScope(
       overrides: [

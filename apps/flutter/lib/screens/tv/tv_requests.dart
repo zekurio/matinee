@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/failure_text.dart';
+import '../../core/permissions.dart';
 import '../../kit/kit.dart';
 import '../../kit/tv/tv.dart';
 import '../../l10n/app_localizations.dart';
@@ -541,8 +542,9 @@ class _TvRequestsScreenState extends ConsumerState<TvRequestsScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    // Anyone but an admin gets their own requests, whatever the path.
-    final queue = widget.list != null && ref.watch(isAdminProvider);
+    // Anyone who doesn't run the queue gets their own requests, whatever
+    // the path, as the phone's page.
+    final queue = widget.list != null && ref.watch(runsQueueProvider);
     final tabs = queue
         ? QueueList.all
         : const [MineFilter.inProgress, MineFilter.all];

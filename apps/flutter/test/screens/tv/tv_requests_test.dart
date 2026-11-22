@@ -107,6 +107,7 @@ Future<HomeBackend> _open(
   RequestsBackend requests, {
   String? path,
   bool admin = false,
+  List<String> permissions = const [],
   HomeBackend? home,
 }) async {
   final backend = home ?? HomeBackend();
@@ -114,7 +115,13 @@ Future<HomeBackend> _open(
     '/api/v1/requests/mine',
     () => backend.answers['/api/v1/requests/mine'],
   );
-  await pumpTv(tester, backend, client: _both(backend, requests), admin: admin);
+  await pumpTv(
+    tester,
+    backend,
+    client: _both(backend, requests),
+    admin: admin,
+    permissions: permissions,
+  );
   if (path != null) {
     GoRouter.of(tester.element(find.byType(TvShell))).go(path);
     await settle(tester);
@@ -466,6 +473,31 @@ void main() {
       expect(focusedKey(), 'list/q3');
     });
   });
+
+  for (final (who, admin, permissions) in [
+    ('runs the queue', false, ['adminRequest.read', 'adminRequest.update']),
+    ('only reads it', false, ['adminRequest.read']),
+  ]) {
+    testWidgets(
+      'an account that $who gets '
+      '${who == 'runs the queue' ? "the queue's lists" : 'its own requests'}',
+      (tester) async {
+        final requests = _discover(requests: 'queue')..queue = queueJson();
+        await _open(
+          tester,
+          requests,
+          path: Routes.requests(QueueList.waiting),
+          admin: admin,
+          permissions: permissions,
+        );
+        final queue = who == 'runs the queue';
+        expect(
+          find.text('Needs attention'),
+          queue ? findsOneWidget : findsNothing,
+        );
+      },
+    );
+  }
 
   group('My requests', () {
     testWidgets('open on the first row, and a declined one says why', (
