@@ -244,11 +244,20 @@ class _TvSidePanelState extends State<TvSidePanel> {
                       )
                     else
                       Expanded(
-                        // A row scrolled half under the title fades out
-                        // over the list's own padding, rather than end in
-                        // a cut against it.
-                        child: TvFadeTop(
-                          fade: _listTop,
+                        // Once scrolled, a row half under the title fades
+                        // out over the room the focused row keeps above
+                        // it, rather than read as a row cut against it.
+                        // At the top nothing fades, the first row least.
+                        child: ListenableBuilder(
+                          listenable: _scroll,
+                          builder: (context, list) => TvFadeTop(
+                            fade:
+                                _scroll.hasClients &&
+                                    _scroll.position.pixels > 0
+                                ? _listTop + _headingRoom - 4
+                                : 0,
+                            child: list!,
+                          ),
                           child: TvFollowFocus(
                             controller: _scroll,
                             // Coming back up, room above the row for a
