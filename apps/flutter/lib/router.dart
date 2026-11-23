@@ -17,7 +17,6 @@ import 'screens/home/home_screen.dart';
 import 'screens/library/library_screen.dart';
 import 'screens/metadata/identify_screen.dart';
 import 'screens/metadata/images_screen.dart';
-import 'screens/pending.dart';
 import 'screens/person/person_screen.dart';
 import 'screens/profile/lists_screens.dart';
 import 'screens/profile/profile_screen.dart';
@@ -217,7 +216,7 @@ class AddServerReturn extends Notifier<String?> {
 }
 
 /// The router for this device. Touch screens get the tabs and the pages
-/// over them; a TV gets its own tree (to come with the TV screens). Both
+/// over them; a TV gets its own tree, with its rail and its pages. Both
 /// follow the session: [authRedirect] decides where the app is, and
 /// listens to [authStateProvider] through the router's refresh listenable.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -423,7 +422,6 @@ List<RouteBase> _handsetRoutes() => [
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const SearchScreen(),
   ),
-  for (final (path, name) in _pages) _pending(path, name, root: true),
   PushedRoute(
     path: '/admin/library',
     parentNavigatorKey: _rootKey,
@@ -749,18 +747,3 @@ List<String> _tvStack(GoRouter router) {
   walk(router.routerDelegate.currentConfiguration.matches);
   return paths;
 }
-
-/// The pages over the tabs, by path pattern, until each has its screen.
-const _pages = <(String, String)>[];
-
-GoRoute _pending(
-  String path,
-  String name, {
-  bool root = false,
-  List<(String, String)> links = const [],
-}) => GoRoute(
-  path: path,
-  parentNavigatorKey: root ? _rootKey : null,
-  builder: (context, state) =>
-      PendingScreen(name: name, location: state.uri, links: links),
-);
