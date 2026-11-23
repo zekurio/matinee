@@ -61,36 +61,46 @@ void main() {
     );
   });
 
-  test('the card grows where its words need more than its share', () {
+  test('a short card keeps its share sideways and grows upright', () {
     const none = TextScaler.noScaling;
-    // The usual tablets keep the share at ordinary text.
+    // The usual tablets keep the share at ordinary text, with the whole
+    // overview.
     for (final size in const [Size(1280, 800), Size(800, 1280)]) {
       expect(
         ShowcaseLayout.height(size, gutter, none),
         ShowcaseLayout.baseHeight(size, gutter),
         reason: '$size',
       );
-    }
-    // A small one's share is less than the words and buttons take.
-    for (final size in const [Size(600, 960), Size(960, 600)]) {
-      final base = ShowcaseLayout.baseHeight(size, gutter);
-      final height = ShowcaseLayout.height(size, gutter, none);
-      expect(height, greaterThan(base), reason: '$size');
       expect(
-        height,
-        ShowcaseLayout.padding +
-            ShowcaseLayout.wordsRoom(base, none) +
-            ShowcaseLayout.wordsBottom,
+        ShowcaseLayout.overviewLines(size, gutter, none),
+        3,
         reason: '$size',
       );
     }
-    // Large text grows it anywhere.
+    // A small one held sideways keeps its share, so the row under it still
+    // starts on screen, and shows less of the overview.
+    const sideways = Size(960, 600);
     expect(
-      ShowcaseLayout.height(
-        const Size(1280, 800),
-        gutter,
-        const TextScaler.linear(2),
-      ),
+      ShowcaseLayout.height(sideways, gutter, none),
+      ShowcaseLayout.baseHeight(sideways, gutter),
+    );
+    expect(ShowcaseLayout.overviewLines(sideways, gutter, none), lessThan(3));
+    // Upright it has the room, so it grows for the whole overview.
+    const upright = Size(600, 960);
+    final base = ShowcaseLayout.baseHeight(upright, gutter);
+    final height = ShowcaseLayout.height(upright, gutter, none);
+    expect(height, greaterThan(base));
+    expect(
+      height,
+      ShowcaseLayout.padding +
+          ShowcaseLayout.wordsRoom(base, none) +
+          ShowcaseLayout.wordsBottom,
+    );
+    expect(ShowcaseLayout.overviewLines(upright, gutter, none), 3);
+    // Large text grows it anywhere, for the words besides the overview.
+    const large = TextScaler.linear(2);
+    expect(
+      ShowcaseLayout.height(const Size(1280, 800), gutter, large),
       greaterThan(464),
     );
   });

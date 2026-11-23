@@ -199,6 +199,11 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
           ),
           logoHeight: ShowcaseLayout.logoHeight(base),
           nameSize: ShowcaseLayout.titleSize(base),
+          overviewLines: ShowcaseLayout.overviewLines(
+            window,
+            gutter,
+            MediaQuery.textScalerOf(context),
+          ),
         ),
       ),
     );
@@ -260,6 +265,7 @@ class _Card extends StatelessWidget {
     required this.wordsWidth,
     required this.logoHeight,
     required this.nameSize,
+    required this.overviewLines,
   });
 
   final List<FeaturedTitle> slides;
@@ -269,6 +275,7 @@ class _Card extends StatelessWidget {
   final double wordsWidth;
   final double logoHeight;
   final double nameSize;
+  final int overviewLines;
 
   /// How much of a title's art shows: the one coming fades in over the one
   /// leaving, which stays whole underneath, so nothing dips through the
@@ -340,6 +347,7 @@ class _Card extends StatelessWidget {
                             width: wordsWidth,
                             nameSize: nameSize,
                             logoHeight: logoHeight,
+                            overviewLines: overviewLines,
                           ),
                         ),
                       ),
@@ -445,6 +453,7 @@ class _SlideWords extends StatelessWidget {
     required this.width,
     required this.nameSize,
     required this.logoHeight,
+    required this.overviewLines,
   });
 
   final FeaturedTitle slide;
@@ -453,6 +462,9 @@ class _SlideWords extends StatelessWidget {
   final double width;
   final double nameSize;
   final double logoHeight;
+
+  /// How many lines the overview gets, none on a short card.
+  final int overviewLines;
 
   @override
   Widget build(BuildContext context) {
@@ -493,11 +505,11 @@ class _SlideWords extends StatelessWidget {
               style: KitText.sm.style(color: foreground.withValues(alpha: .8)),
             ),
           ],
-          if (overview != null) ...[
-            const SizedBox(height: 10),
+          if (overview != null && overviewLines > 0) ...[
+            const SizedBox(height: ShowcaseLayout.overviewGap),
             Text(
               overview,
-              maxLines: 3,
+              maxLines: overviewLines,
               overflow: TextOverflow.ellipsis,
               style: KitText.sm.style(
                 color: foreground.withValues(alpha: .72),

@@ -386,6 +386,42 @@ void main() {
     }
   });
 
+  testWidgets('a short card shows less of the overview, a tall one all', (
+    tester,
+  ) async {
+    const overview =
+        'A crew answers a distress call and brings something back.';
+    final slide = FeaturedTitle.fromJson({
+      'title': {...titleJson('Eden', name: 'Eden'), 'overview': overview},
+      'item': itemJson('item-Eden'),
+      'count': 1,
+    });
+    for (final window in const [
+      Size(1280, 800),
+      Size(800, 1280),
+      Size(600, 960),
+      Size(960, 600),
+    ]) {
+      await _pump(tester, HomeShowcase(slides: [slide]), window: window);
+      final lines = ShowcaseLayout.overviewLines(
+        window,
+        CardMetrics.gutter,
+        TextScaler.noScaling,
+      );
+      final text = find.text(overview);
+      if (lines == 0) {
+        expect(text, findsNothing, reason: '$window');
+      } else {
+        expect(tester.widget<Text>(text).maxLines, lines, reason: '$window');
+      }
+      expect(
+        lines,
+        window == const Size(960, 600) ? lessThan(3) : 3,
+        reason: '$window',
+      );
+    }
+  });
+
   // What the card's share of the window is for. The tabs are counted at
   // Material 3's 80, the tallest they get.
   testWidgets('a 1280 x 800 tablet keeps the first row\'s heading in view', (

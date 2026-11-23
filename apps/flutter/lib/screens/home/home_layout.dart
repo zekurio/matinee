@@ -92,13 +92,35 @@ abstract final class ShowcaseLayout {
     return math.min(card * 9 / 16, window.height * portraitCap);
   }
 
-  /// The card's height at [scaler]'s text size: [baseHeight], or what its
-  /// words and buttons need when that's more, on a small tablet or with
-  /// large text, so the card grows rather than cutting anything off. The
-  /// card's place while it loads takes the same, so the page doesn't jump.
+  /// The card's height at [scaler]'s text size. It starts at [baseHeight]
+  /// and grows for three lines of overview, in portrait up to
+  /// [portraitCap] of the window, which leaves the rows plenty of room. In
+  /// landscape it keeps its share, so the row under it still starts on
+  /// screen, and a short card shows fewer lines of overview, or none (see
+  /// [overviewLines]). It grows past either only when large text needs it
+  /// to show the rest of its words. The card's place while it loads takes
+  /// the same, so the page doesn't jump.
   static double height(Size window, double gutter, TextScaler scaler) {
     final base = baseHeight(window, gutter);
-    return math.max(base, padding + wordsRoom(base, scaler) + wordsBottom);
+    double needs(int overview) =>
+        padding + wordsRoom(base, scaler, overview: overview) + wordsBottom;
+    final most = window.width > window.height
+        ? base
+        : math.max(base, window.height * portraitCap);
+    return math.max(math.max(base, math.min(needs(3), most)), needs(0));
+  }
+
+  /// How many of the overview's three lines fit the card at [height].
+  static int overviewLines(Size window, double gutter, TextScaler scaler) {
+    final base = baseHeight(window, gutter);
+    final room =
+        height(window, gutter, scaler) -
+        padding -
+        wordsRoom(base, scaler, overview: 0) -
+        wordsBottom;
+    final line =
+        scaler.scale(KitText.sm.size) * overviewLeading / KitText.sm.size;
+    return ((room - overviewGap) / line).floor().clamp(0, 3);
   }
 
   /// How far above the card's bottom its words end: over the buttons, the
@@ -106,8 +128,13 @@ abstract final class ShowcaseLayout {
   static final wordsBottom = padding + ButtonSize.lg.height + buttonGap;
 
   /// The tallest the words can be in a card [baseHeight] tall at [scaler]'s
-  /// text size: every line a title may show, and the logo's room.
-  static double wordsRoom(double baseHeight, TextScaler scaler) {
+  /// text size, with [overview] lines of overview: every line a title may
+  /// show, and the logo's room.
+  static double wordsRoom(
+    double baseHeight,
+    TextScaler scaler, {
+    int overview = 3,
+  }) {
     double lines(int count, double size, double lineHeight) =>
         count * scaler.scale(size) * lineHeight / size;
     final name = titleSize(baseHeight);
@@ -118,11 +145,15 @@ abstract final class ShowcaseLayout {
         6 +
         8 +
         lines(1, KitText.sm.size, KitText.sm.lineHeight) +
-        10 +
-        lines(3, KitText.sm.size, overviewLeading) +
+        (overview > 0
+            ? overviewGap + lines(overview, KitText.sm.size, overviewLeading)
+            : 0) +
         16 +
         lines(1, KitText.xs.size, KitText.xs.lineHeight);
   }
+
+  /// The gap over the overview.
+  static const overviewGap = 10.0;
 
   /// The overview's line height, roomier than the text size's own.
   static const overviewLeading = 24.0;
