@@ -27,6 +27,7 @@ import 'screens/requests/explore_screen.dart';
 import 'screens/requests/requests_screen.dart';
 import 'screens/search/search_screen.dart';
 import 'screens/settings/admin/access_groups_page.dart';
+import 'screens/settings/admin/connection_editor.dart';
 import 'screens/settings/admin/library_editor.dart';
 import 'screens/settings/admin/user_access_page.dart';
 import 'screens/settings/licenses_page.dart';
@@ -176,6 +177,10 @@ abstract final class Routes {
   /// The server's folders, for the library editor to add one; it takes a
   /// `FolderPickerRequest` as the push's extra and pops the folder.
   static const folderPicker = '/admin/folders';
+
+  /// A fulfilment connection, to add with no id or to change with one.
+  static String connectionEditor([String? id]) =>
+      id == null ? '/admin/connection' : '/admin/connection/$id';
 
   /// What an account may see and do, set by an admin.
   static String userAccess(String id) => '/admin/users/$id/access';
@@ -486,6 +491,17 @@ List<RouteBase> _handsetRoutes() => [
         _ => const FolderPickerRequest(),
       },
     ),
+  ),
+  PushedRoute(
+    path: '/admin/connection',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const ConnectionEditorScreen(),
+  ),
+  PushedRoute(
+    path: '/admin/connection/:id',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        ConnectionEditorScreen(id: state.pathParameters['id']),
   ),
   PushedRoute(
     path: '/admin/users/:id/access',

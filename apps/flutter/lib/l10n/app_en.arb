@@ -9775,5 +9775,289 @@
   "webStatsGrowthNothing": "Nothing arrived",
   "@webStatsGrowthNothing": {
     "description": "stats.growth.nothing"
+  },
+  "webConnectionsTitle": "Connections",
+  "@webConnectionsTitle": {
+    "description": "connections.title"
+  },
+  "webConnectionsAdd": "Add connection",
+  "@webConnectionsAdd": {
+    "description": "connections.add"
+  },
+  "webConnectionsEmptyTitle": "No connections yet",
+  "@webConnectionsEmptyTitle": {
+    "description": "connections.empty.title"
+  },
+  "webConnectionsEmptyDescription": "Add Radarr, Sonarr, or By hand, and make it the default for films or shows.",
+  "@webConnectionsEmptyDescription": {
+    "description": "connections.empty.description"
+  },
+  "webConnectionsConnected": "Connected",
+  "@webConnectionsConnected": {
+    "description": "connections.connected"
+  },
+  "webConnectionsTestFailedDetail": "Test failed. {p1}",
+  "@webConnectionsTestFailedDetail": {
+    "description": "connections.testFailed.detail",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsActions": "Actions for {p1}",
+  "@webConnectionsActions": {
+    "description": "connections.actions",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsTest": "Test again",
+  "@webConnectionsTest": {
+    "description": "connections.test"
+  },
+  "webConnectionsEdit": "Edit",
+  "@webConnectionsEdit": {
+    "description": "connections.edit"
+  },
+  "webConnectionsDelete": "Delete connection",
+  "@webConnectionsDelete": {
+    "description": "connections.delete"
+  },
+  "webConnectionsDeleteTitle": "Delete {p1}?",
+  "@webConnectionsDeleteTitle": {
+    "description": "connections.delete.title",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsDeleteDescriptionDefault": "It's a default, so requests of its kind wait until another connection is.",
+  "@webConnectionsDeleteDescriptionDefault": {
+    "description": "connections.delete.descriptionDefault"
+  },
+  "webConnectionsDeleteDescriptionUnused": "Requests already sent through it stay where they are.",
+  "@webConnectionsDeleteDescriptionUnused": {
+    "description": "connections.delete.descriptionUnused"
+  },
+  "webConnectionsDeleteConfirm": "Delete",
+  "@webConnectionsDeleteConfirm": {
+    "description": "connections.delete.confirm"
+  },
+  "webConnectionsDeleted": "Deleted {p1}",
+  "@webConnectionsDeleted": {
+    "description": "connections.deleted",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsDialogTestFirst": "Test the connection to choose its defaults.",
+  "@webConnectionsDialogTestFirst": {
+    "description": "connections.dialog.testFirst"
+  },
+  "webConnectionsDialogAddTitle": "Add connection",
+  "@webConnectionsDialogAddTitle": {
+    "description": "connections.dialog.addTitle"
+  },
+  "webConnectionsDialogEditTitle": "Edit {p1}",
+  "@webConnectionsDialogEditTitle": {
+    "description": "connections.dialog.editTitle",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsDialogSource": "Kind",
+  "@webConnectionsDialogSource": {
+    "description": "connections.dialog.source"
+  },
+  "webConnectionsDialogName": "Name",
+  "@webConnectionsDialogName": {
+    "description": "connections.dialog.name"
+  },
+  "webConnectionsDialogNamePlaceholder": "Radarr",
+  "@webConnectionsDialogNamePlaceholder": {
+    "description": "connections.dialog.namePlaceholder"
+  },
+  "webConnectionsDialogSlug": "Slug",
+  "@webConnectionsDialogSlug": {
+    "description": "connections.dialog.slug"
+  },
+  "webConnectionsDialogSlugHint": "Names the environment variable the key can come from: {p1}",
+  "@webConnectionsDialogSlugHint": {
+    "description": "connections.dialog.slugHint",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsDialogSlugHintNoKey": "Capital letters, like BY_HAND.",
+  "@webConnectionsDialogSlugHintNoKey": {
+    "description": "connections.dialog.slugHintNoKey"
+  },
+  "webConnectionsDialogSlugInvalid": "Use capital letters, digits and underscores, starting with a letter.",
+  "@webConnectionsDialogSlugInvalid": {
+    "description": "connections.dialog.slugInvalid"
+  },
+  "webConnectionsDialogKey": "API key",
+  "@webConnectionsDialogKey": {
+    "description": "connections.dialog.key"
+  },
+  "webConnectionsDialogKeySaved": "Saved. Type to replace it.",
+  "@webConnectionsDialogKeySaved": {
+    "description": "connections.dialog.keySaved"
+  },
+  "webConnectionsDialogKeyFromEnvironment": "Set by {p1}",
+  "@webConnectionsDialogKeyFromEnvironment": {
+    "description": "connections.dialog.keyFromEnvironment",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsDialogKeyNone": "None",
+  "@webConnectionsDialogKeyNone": {
+    "description": "connections.dialog.keyNone"
+  },
+  "webConnectionsDialogKeyUseEnvironment": "Use the key from the environment",
+  "@webConnectionsDialogKeyUseEnvironment": {
+    "description": "connections.dialog.keyUseEnvironment"
+  },
+  "webConnectionsDialogKeyRemove": "Remove the saved key",
+  "@webConnectionsDialogKeyRemove": {
+    "description": "connections.dialog.keyRemove"
+  },
+  "webConnectionsDialogKeyKeep": "Keep the saved key",
+  "@webConnectionsDialogKeyKeep": {
+    "description": "connections.dialog.keyKeep"
+  },
+  "webConnectionsDialogKeyEnvironmentApplies": "The key from {p1} applies once you save.",
+  "@webConnectionsDialogKeyEnvironmentApplies": {
+    "description": "connections.dialog.keyEnvironmentApplies",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsDialogKeyRemoved": "The key is removed when you save.",
+  "@webConnectionsDialogKeyRemoved": {
+    "description": "connections.dialog.keyRemoved"
+  },
+  "webConnectionsDialogTest": "Test",
+  "@webConnectionsDialogTest": {
+    "description": "connections.dialog.test"
+  },
+  "webConnectionsDialogDefaultMovie": "Default for films",
+  "@webConnectionsDialogDefaultMovie": {
+    "description": "connections.dialog.default.movie"
+  },
+  "webConnectionsDialogDefaultShow": "Default for shows",
+  "@webConnectionsDialogDefaultShow": {
+    "description": "connections.dialog.default.show"
+  },
+  "webConnectionsDialogRequired": "Fill in {p1}.",
+  "@webConnectionsDialogRequired": {
+    "description": "connections.dialog.required",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsDialogSave": "Save",
+  "@webConnectionsDialogSave": {
+    "description": "connections.dialog.save"
+  },
+  "webConnectionsDialogCreate": "Add connection",
+  "@webConnectionsDialogCreate": {
+    "description": "connections.dialog.create"
+  },
+  "webConnectionsSectionDefaults": "Defaults",
+  "@webConnectionsSectionDefaults": {
+    "description": "connections.section.defaults"
+  },
+  "webConnectionsSectionAnime": "Anime",
+  "@webConnectionsSectionAnime": {
+    "description": "connections.section.anime"
+  },
+  "webConnectionsSectionBehaviour": "Behaviour",
+  "@webConnectionsSectionBehaviour": {
+    "description": "connections.section.behaviour"
+  },
+  "webConnectionsFieldUnset": "None",
+  "@webConnectionsFieldUnset": {
+    "description": "connections.field.unset"
+  },
+  "webConnectionsFieldSameAsAbove": "Same as above",
+  "@webConnectionsFieldSameAsAbove": {
+    "description": "connections.field.sameAsAbove"
+  },
+  "webConnectionsFieldFind": "Find",
+  "@webConnectionsFieldFind": {
+    "description": "connections.field.find"
+  },
+  "webConnectionsFieldFindEmpty": "Nothing matches.",
+  "@webConnectionsFieldFindEmpty": {
+    "description": "connections.field.findEmpty"
+  },
+  "webConnectionsFieldNoChoices": "None on the server yet.",
+  "@webConnectionsFieldNoChoices": {
+    "description": "connections.field.noChoices"
+  },
+  "webConnectionsLandsIn": "Lands in {p1}",
+  "@webConnectionsLandsIn": {
+    "description": "connections.landsIn",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsLost": "Can't tell where {p1} is. Choose where it lands.",
+  "@webConnectionsLost": {
+    "description": "connections.lost",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsLandsInPick": "Lands in",
+  "@webConnectionsLandsInPick": {
+    "description": "connections.landsInPick"
+  },
+  "webConnectionsLandsHidden": "{p1} is in a library you can't see, so this can't be saved with it. Choose another folder.",
+  "@webConnectionsLandsHidden": {
+    "description": "connections.landsHidden",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webConnectionsCardDefaultMovie": "Default for films",
+  "@webConnectionsCardDefaultMovie": {
+    "description": "connections.card.default.movie"
+  },
+  "webConnectionsCardDefaultShow": "Default for shows",
+  "@webConnectionsCardDefaultShow": {
+    "description": "connections.card.default.show"
+  },
+  "webConnectionsCardReadOnly": "It sends titles to a library you can't see, so you can look at it and test it but not change it.",
+  "@webConnectionsCardReadOnly": {
+    "description": "connections.card.readOnly"
+  },
+  "webConnectionsCardUnknownSource": "Unknown source",
+  "@webConnectionsCardUnknownSource": {
+    "description": "connections.card.unknownSource"
   }
 }

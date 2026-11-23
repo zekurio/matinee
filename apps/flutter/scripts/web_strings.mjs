@@ -13,6 +13,7 @@ const areas = [
   "branding",
   "catalog",
   "common",
+  "connections",
   "discover",
   "filters",
   "jobs",
