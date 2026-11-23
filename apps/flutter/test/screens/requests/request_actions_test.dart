@@ -3,7 +3,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
-import 'package:matinee/core/permissions.dart';
 import 'package:matinee/core/session.dart'
     show SignedIn, apiProvider, authStateProvider;
 import 'package:matinee/kit/kit.dart';

@@ -278,7 +278,9 @@ Only API tokens pick permissions one by one, see [API tokens](#api-tokens).
   names its permission.
 - Every account holds `BASE_PERMISSIONS`: using the app as a viewer and
   looking after its own account, its passkeys, sessions, and existing API
-  tokens included. Nobody grants or takes those.
+  tokens included. Nobody grants or takes those. `User.permissions` names
+  them with the rest, and `all` alone for an admin, so a client reads the
+  list without knowing which ones they are.
 - The capabilities grant the rest. Downloads grant `media.download`,
   API tokens `apiToken.create`, and requests `request.create`, with
   `request.autoApprove` when titles are added right away. Each part of

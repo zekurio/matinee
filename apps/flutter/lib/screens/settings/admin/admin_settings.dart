@@ -33,7 +33,11 @@ enum AdminCategory {
   ),
   users('users', Lucide.users, needs: [Permission.adminUserRead]),
   // Changing them takes `all`.
-  authentication('authentication', Lucide.keyRound, needs: [Permission.all]),
+  authentication(
+    'authentication',
+    Lucide.keyRound,
+    needs: [Permission.allValue],
+  ),
   transcoding(
     'transcoding',
     Lucide.film,

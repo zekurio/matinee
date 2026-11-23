@@ -43,9 +43,9 @@ TV app.
   generated from the OpenAPI document by `pnpm api:dart`
   (`apps/server/scripts/dart-client.ts`), and its theme presets, icons,
   and logo by `pnpm themes:dart`, `pnpm icons:dart`, and
-  `pnpm logo:dart`, and its permission names by `pnpm permissions:dart`.
+  `pnpm logo:dart`.
   `pnpm strings:dart` copies shared web messages into the ARBs and
-  generates the server message lookup. `pnpm verify` checks all six.
+  generates the server message lookup. `pnpm verify` checks all five.
   Screens build from `lib/kit`, its port of `packages/ui`; only
   the kit and `lib/app.dart` import Material or Cupertino, and
   `test/kit_boundary_test.dart` holds that. Strings live in ARB files in

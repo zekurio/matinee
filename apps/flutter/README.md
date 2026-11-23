@@ -132,15 +132,14 @@ it to the kit.
 Never edit or format these by hand. `pnpm verify` fails while any is out
 of date.
 
-| Command                 | Writes                                                | From                                         |
-| ----------------------- | ----------------------------------------------------- | -------------------------------------------- |
-| `pnpm api:dart`         | `lib/api/contract_*.dart`                             | the OpenAPI document                         |
-| `pnpm themes:dart`      | `lib/kit/theme_presets.g.dart`                        | `packages/ui`                                |
-| `pnpm icons:dart`       | `lib/kit/lucide.g.dart`                               | lucide-react, listed in `scripts/lucide.mjs` |
-| `pnpm logo:dart`        | `lib/kit/logo.g.dart`                                 | `brand/logo-*.svg`                           |
-| `pnpm permissions:dart` | `lib/core/permissions.g.dart`                         | `packages/contracts/src/permissions.ts`      |
-| `pnpm strings:dart`     | shared ARB entries, `lib/l10n/server_messages.g.dart` | the web's catalogs                           |
-| `just flutter pigeon`   | `lib/platform/*.g.dart` and the Kotlin side           | `pigeons/*.dart`                             |
+| Command               | Writes                                                | From                                         |
+| --------------------- | ----------------------------------------------------- | -------------------------------------------- |
+| `pnpm api:dart`       | `lib/api/contract_*.dart`                             | the OpenAPI document                         |
+| `pnpm themes:dart`    | `lib/kit/theme_presets.g.dart`                        | `packages/ui`                                |
+| `pnpm icons:dart`     | `lib/kit/lucide.g.dart`                               | lucide-react, listed in `scripts/lucide.mjs` |
+| `pnpm logo:dart`      | `lib/kit/logo.g.dart`                                 | `brand/logo-*.svg`                           |
+| `pnpm strings:dart`   | shared ARB entries, `lib/l10n/server_messages.g.dart` | the web's catalogs                           |
+| `just flutter pigeon` | `lib/platform/*.g.dart` and the Kotlin side           | `pigeons/*.dart`                             |
 
 ### Strings
 
@@ -161,9 +160,13 @@ and the lookup that turns a server message into the app's words.
 What a screen offers follows the account's permissions, never its role:
 `can(user, permission)` in `lib/core/permissions.dart`, or
 `canProvider(permission)` for the account signed in, which is false
-offline. The server sends `User.permissions` without the ones every
-account holds, and `can` adds those. A user saved before the server sent permissions reads with none
-until the session saves the server's answer.
+offline. The names are `Permission`'s in the API client, where
+`Permission.allValue` is the permission `all` and `Permission.all` lists
+every one. The server sends everything the account holds in
+`User.permissions`, the ones every account has included, and `all` alone
+for an admin, so `can` only looks a name up. A user saved before the
+server sent permissions reads with none until the session saves the
+server's answer.
 
 ## Sessions
 

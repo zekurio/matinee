@@ -1,5 +1,5 @@
 import {
-  holdsPermission,
+  grantsPermissions,
   type Permission,
   sortPermissions,
   type User,
@@ -16,7 +16,7 @@ export function can(
   user: Pick<User, "permissions">,
   permission: Permission,
 ): boolean {
-  return holdsPermission(user.permissions, permission)
+  return grantsPermissions(user.permissions, [permission])
 }
 
 /** Whether the account holds any of `permissions`. */

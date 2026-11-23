@@ -40,7 +40,7 @@ _May _mayOf(WidgetRef ref) => (
       ref.watch(canProvider(Permission.adminUserUpdate)) &&
       ref.watch(canProvider(Permission.groupRead)),
   // Making an admin hands over every permission, so it takes them all.
-  role: ref.watch(canProvider(Permission.all)),
+  role: ref.watch(canProvider(Permission.allValue)),
   signOut: ref.watch(canProvider(Permission.adminSessionDelete)),
   revokeTokens: ref.watch(canProvider(Permission.adminApiTokenDelete)),
   delete: ref.watch(canProvider(Permission.adminUserDelete)),
