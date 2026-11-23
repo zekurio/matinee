@@ -356,7 +356,6 @@ function RequestControl({
           name={name}
           seasons={seasons}
           first={first}
-          defaultFuture={detail.defaultScope?.future ?? false}
           libraryId={libraryId}
         />
       )}

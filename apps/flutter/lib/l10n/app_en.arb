@@ -4055,10 +4055,6 @@
   "@webAskCancel": {
     "description": "strings_web_ask.xml"
   },
-  "webAskChooserFuture": "New seasons as they air",
-  "@webAskChooserFuture": {
-    "description": "strings_web_ask.xml"
-  },
   "webAskChooserMany": "{count, plural, one{Request {count} season} other{Request {count} seasons}}",
   "@webAskChooserMany": {
     "description": "strings_web_ask.xml",
@@ -4067,10 +4063,6 @@
         "type": "int"
       }
     }
-  },
-  "webAskChooserNewOnly": "Request new seasons",
-  "@webAskChooserNewOnly": {
-    "description": "strings_web_ask.xml"
   },
   "webAskChooserNone": "Pick a season",
   "@webAskChooserNone": {
@@ -4280,11 +4272,11 @@
   "@webCatalogStateAsked": {
     "description": "strings_web_catalog.xml"
   },
-  "webCatalogStateComing": "On its way",
+  "webCatalogStateComing": "Processing",
   "@webCatalogStateComing": {
     "description": "strings_web_catalog.xml"
   },
-  "webCatalogStateComingPercent": "On its way · {p1}",
+  "webCatalogStateComingPercent": "Processing · {p1}",
   "@webCatalogStateComingPercent": {
     "description": "strings_web_catalog.xml",
     "placeholders": {
@@ -6045,19 +6037,6 @@
         "type": "String"
       }
     }
-  },
-  "webRequestsScopeAndFuture": "{p1} + new",
-  "@webRequestsScopeAndFuture": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webRequestsScopeFutureOnly": "New seasons",
-  "@webRequestsScopeFutureOnly": {
-    "description": "strings_web_requests.xml"
   },
   "webRequestsScopeSeasons": "{count, plural, one{Season {p1}} other{Seasons {p1}}}",
   "@webRequestsScopeSeasons": {
@@ -8862,19 +8841,19 @@
   "@webRequestsRecent": {
     "description": "requests.recent"
   },
-  "webRequestsStateWaiting": "Waiting",
+  "webRequestsStateWaiting": "Pending",
   "@webRequestsStateWaiting": {
     "description": "requests.state.waiting"
   },
-  "webRequestsStateNeedsAttention": "Needs attention",
+  "webRequestsStateNeedsAttention": "Failed",
   "@webRequestsStateNeedsAttention": {
     "description": "requests.state.needsAttention"
   },
-  "webRequestsStateOnTheWay": "On its way",
+  "webRequestsStateOnTheWay": "Processing",
   "@webRequestsStateOnTheWay": {
     "description": "requests.state.onTheWay"
   },
-  "webRequestsStateOnTheWayPercent": "On its way · {p1}",
+  "webRequestsStateOnTheWayPercent": "Processing · {p1}",
   "@webRequestsStateOnTheWayPercent": {
     "description": "requests.state.onTheWayPercent",
     "placeholders": {
@@ -8883,7 +8862,7 @@
       }
     }
   },
-  "webRequestsStateHere": "Here",
+  "webRequestsStateHere": "Available",
   "@webRequestsStateHere": {
     "description": "requests.state.here"
   },

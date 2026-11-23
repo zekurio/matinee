@@ -119,7 +119,6 @@ export const request = pgTable(
       .$type<"asked" | "approved" | "declined">()
       .notNull()
       .default("asked"),
-    future: boolean().notNull().default(false),
     declineReason: text().$type<"alreadyHere" | "notForServer" | "notFound">(),
     declineNote: text(),
     declinedBy: uuid().references(() => user.id, { onDelete: "set null" }),

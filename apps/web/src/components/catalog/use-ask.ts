@@ -49,7 +49,7 @@ export function useAsk() {
       ref: CatalogRef
       name: string
       libraryId?: string
-      scope?: { seasons: number[]; future: boolean }
+      scope?: { seasons: number[] }
       /**
        * Whether Undo may take the whole ask back. Not for more seasons of a
        * show the viewer already asked for, where it would take back the

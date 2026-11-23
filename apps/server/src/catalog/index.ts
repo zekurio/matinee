@@ -263,7 +263,6 @@ export async function routedDetails(
           seasons: seasons
             .filter((season) => season.number > 0 && season.episodesAired > 0)
             .map((season) => season.number),
-          future: true,
         }
       : null
   const detail = {
@@ -374,7 +373,7 @@ export async function missingSeasons(viewer: Viewer, titleId: string) {
         season.availability.episodesHere > 0 &&
         season.availability.episodesHere < season.availability.episodesAired,
     ),
-    defaultScope: detail.defaultScope ?? { seasons: [], future: true },
+    defaultScope: detail.defaultScope ?? { seasons: [] },
     destinations: detail.destinations,
   }
 }

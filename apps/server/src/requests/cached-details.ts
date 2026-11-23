@@ -19,6 +19,8 @@ const CachedDetail = t.object({
   genreIds: t.array(t.number()).optional(),
   keywordIds: t.array(t.number()).optional(),
   releaseDate: t.string().nullable(),
+  /** For a request card's backdrop. Optional, so a body without it still gives the rest. */
+  images: t.object({ backdrop: t.string().nullable() }).optional(),
   seasons: t.array(t.object({ number: t.number() })),
   episodes: t.array(
     t.object({ season: t.number(), airDate: t.string().nullable() }),
@@ -39,7 +41,7 @@ const PROVIDERS = ["tmdb", "tvdb"] satisfies CatalogRef["provider"][]
 export async function withCachedDetails(
   viewer: Viewer,
   titles: AvailabilityInput[],
-): Promise<AvailabilityInput[]> {
+): Promise<(AvailabilityInput & { backdrop?: string | null })[]> {
   if (!titles.length) return []
   const routing = await loadRouting()
   const [movies, shows] = await Promise.all([
@@ -115,6 +117,7 @@ export async function withCachedDetails(
       ),
       externalIds: { ...data.externalIds, ...input.externalIds },
       releaseDate: data.releaseDate,
+      backdrop: data.images?.backdrop ?? null,
       seasons: data.seasons.map((season) => {
         const episodes = data.episodes.filter(
           (episode) => episode.season === season.number,
