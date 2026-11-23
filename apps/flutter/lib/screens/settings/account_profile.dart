@@ -123,7 +123,7 @@ class AccountProfileSectionState extends ConsumerState<AccountProfileSection> {
               label: l.accountPictureUpload,
               onPressed: () => Navigator.pop(context, _PictureAction.upload),
             ),
-            if (_user.avatarId != null)
+            if (_user.avatarUrl != null)
               SheetItem(
                 icon: Lucide.trash,
                 label: l.accountPictureRemove,
@@ -240,11 +240,7 @@ class AccountProfileSectionState extends ConsumerState<AccountProfileSection> {
                 Row(
                   spacing: 16,
                   children: [
-                    Avatar(
-                      avatarId: _user.avatarId,
-                      name: _user.name,
-                      size: 64,
-                    ),
+                    Avatar(url: _user.avatarUrl, name: _user.name, size: 64),
                     Expanded(
                       child: MatineeButton(
                         look: ButtonLook.outline,

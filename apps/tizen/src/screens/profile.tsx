@@ -340,7 +340,7 @@ function Place(props: {
       </span>
       <Avatar
         name={name}
-        avatarId={place.user.avatarId}
+        url={place.user.avatarUrl}
         size={props.small ? 28 : 36}
       />
       <span class="place-name one-line">
@@ -530,7 +530,7 @@ export function ProfilePage() {
         <div class="profile-rows">
           <div data-scroll-home="">
             <div class="profile-head">
-              <Avatar name={name} avatarId={user.avatarId} size={96} />
+              <Avatar name={name} url={user.avatarUrl} size={96} />
               <div>
                 <div class="t-display one-line">{name}</div>
                 {facts.length > 0 && (

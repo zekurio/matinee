@@ -16,6 +16,7 @@ import {
 import { post } from "./contract-routes"
 import { t } from "./schema"
 import { TitleKind } from "./titles"
+import { AvatarUrl } from "./users"
 export const RequestStatus = t.enum(["asked", "approved", "declined"])
 
 export const FulfilmentState = t.enum(["queued", "sent", "failed"])
@@ -121,8 +122,7 @@ export const AdminRequestItem = RequestItem.extend({
       name: t.string(),
       /** For a link to their profile. */
       username: t.string(),
-      /** Load it through `avatarPath()`. Null shows the initial instead. */
-      avatarId: t.string().nullable(),
+      avatarUrl: AvatarUrl,
       createdAt: t.date(),
     }),
   ),

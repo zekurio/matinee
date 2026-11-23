@@ -199,7 +199,7 @@ function Drawer(props: {
         {entry.icon ? (
           <Icon icon={entry.icon} size={24} />
         ) : (
-          <Avatar name={entry.label} avatarId={user.avatarId} size={32} />
+          <Avatar name={entry.label} url={user.avatarUrl} size={32} />
         )}
       </span>
       <span class="drawer-label t-facts one-line">{entry.label}</span>

@@ -134,7 +134,7 @@ function AvatarPicker({
     enabled: providerName !== null,
   })
   const followsProvider =
-    user.avatarSource === "provider" && user.avatarId !== null
+    user.avatarSource === "provider" && user.avatarUrl !== null
   const canUseProvider =
     providerName !== null &&
     !followsProvider &&
@@ -180,7 +180,7 @@ function AvatarPicker({
 
   return (
     <>
-      {user.avatarId || canUseProvider ? (
+      {user.avatarUrl || canUseProvider ? (
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label={tr("account.picture.change")}
@@ -204,7 +204,7 @@ function AvatarPicker({
                 })}
               </DropdownMenuItem>
             )}
-            {user.avatarId && (
+            {user.avatarUrl && (
               <DropdownMenuItem
                 variant="destructive"
                 onClick={() => change.mutate({ kind: "remove" })}

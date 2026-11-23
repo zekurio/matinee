@@ -74,7 +74,7 @@ export default {
     "Wandelt Untertitel in WebVTT um und kopiert PGS-Untertitel aus Videos.",
   "jobs.queue.avatars.name": "Profilbilder",
   "jobs.queue.avatars.description":
-    "Schneidet und skaliert Uploads und die Bilder, die Anmeldeanbieter schicken.",
+    "Schneidet und skaliert die Bilder, die Leute hochladen.",
   "jobs.queue.downloads.name": "Download-Kodierungen",
   "jobs.queue.downloads.description":
     "Kodiert das Video von Downloads in einer anderen Größe oder einem anderen Codec, während die App oder der Browser sie abruft.",

@@ -1468,7 +1468,7 @@ final class AdminRequestItemFollower {
     required this.id,
     required this.name,
     required this.username,
-    required this.avatarId,
+    required this.avatarUrl,
     required this.createdAt,
   });
 
@@ -1478,7 +1478,7 @@ final class AdminRequestItemFollower {
       id: fields['id'] as String,
       name: fields['name'] as String,
       username: fields['username'] as String,
-      avatarId: fields['avatarId'] as String?,
+      avatarUrl: fields['avatarUrl'] as String?,
       createdAt: fields['createdAt'] as String,
     );
   }
@@ -1486,14 +1486,14 @@ final class AdminRequestItemFollower {
   final String id;
   final String name;
   final String username;
-  final String? avatarId;
+  final String? avatarUrl;
   final String createdAt;
 
   JsonMap toJson() => {
     'id': id,
     'name': name,
     'username': username,
-    'avatarId': avatarId,
+    'avatarUrl': avatarUrl,
     'createdAt': createdAt,
   };
 }
@@ -5134,7 +5134,7 @@ final class AdminUser {
     required this.displayName,
     required this.role,
     required this.permissions,
-    required this.avatarId,
+    required this.avatarUrl,
     required this.avatarSource,
     required this.playback,
     required this.library,
@@ -5157,7 +5157,7 @@ final class AdminUser {
       displayName: fields['displayName'] as String?,
       role: fields['role'] as String,
       permissions: readList(fields['permissions'], (value) => value as String),
-      avatarId: fields['avatarId'] as String?,
+      avatarUrl: fields['avatarUrl'] as String?,
       avatarSource: fields['avatarSource'] as String,
       playback: readNullable(fields['playback'], PlaybackPreferences.fromJson),
       library: LibraryPreferences.fromJson(fields['library']),
@@ -5178,7 +5178,7 @@ final class AdminUser {
   final String? displayName;
   final String role;
   final List<String> permissions;
-  final String? avatarId;
+  final String? avatarUrl;
   final String avatarSource;
   final PlaybackPreferences? playback;
   final LibraryPreferences library;
@@ -5198,7 +5198,7 @@ final class AdminUser {
     'displayName': displayName,
     'role': role,
     'permissions': permissions,
-    'avatarId': avatarId,
+    'avatarUrl': avatarUrl,
     'avatarSource': avatarSource,
     'playback': playback?.toJson(),
     'library': library.toJson(),
@@ -5314,7 +5314,7 @@ final class User {
     required this.displayName,
     required this.role,
     required this.permissions,
-    required this.avatarId,
+    required this.avatarUrl,
     required this.avatarSource,
     required this.playback,
     required this.library,
@@ -5329,7 +5329,7 @@ final class User {
       displayName: fields['displayName'] as String?,
       role: fields['role'] as String,
       permissions: readList(fields['permissions'], (value) => value as String),
-      avatarId: fields['avatarId'] as String?,
+      avatarUrl: fields['avatarUrl'] as String?,
       avatarSource: fields['avatarSource'] as String,
       playback: readNullable(fields['playback'], PlaybackPreferences.fromJson),
       library: LibraryPreferences.fromJson(fields['library']),
@@ -5342,7 +5342,7 @@ final class User {
   final String? displayName;
   final String role;
   final List<String> permissions;
-  final String? avatarId;
+  final String? avatarUrl;
   final String avatarSource;
   final PlaybackPreferences? playback;
   final LibraryPreferences library;
@@ -5354,7 +5354,7 @@ final class User {
     'displayName': displayName,
     'role': role,
     'permissions': permissions,
-    'avatarId': avatarId,
+    'avatarUrl': avatarUrl,
     'avatarSource': avatarSource,
     'playback': playback?.toJson(),
     'library': library.toJson(),
@@ -7389,7 +7389,7 @@ final class ProfileUser {
     required this.username,
     required this.displayName,
     required this.role,
-    required this.avatarId,
+    required this.avatarUrl,
     required this.createdAt,
   });
 
@@ -7400,7 +7400,7 @@ final class ProfileUser {
       username: fields['username'] as String,
       displayName: fields['displayName'] as String?,
       role: fields['role'] as String,
-      avatarId: fields['avatarId'] as String?,
+      avatarUrl: fields['avatarUrl'] as String?,
       createdAt: fields['createdAt'] as String,
     );
   }
@@ -7409,7 +7409,7 @@ final class ProfileUser {
   final String username;
   final String? displayName;
   final String role;
-  final String? avatarId;
+  final String? avatarUrl;
   final String createdAt;
 
   JsonMap toJson() => {
@@ -7417,7 +7417,7 @@ final class ProfileUser {
     'username': username,
     'displayName': displayName,
     'role': role,
-    'avatarId': avatarId,
+    'avatarUrl': avatarUrl,
     'createdAt': createdAt,
   };
 }

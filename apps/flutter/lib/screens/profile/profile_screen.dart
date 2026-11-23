@@ -68,7 +68,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ProfileHeader(
               name: user.name,
               username: user.username,
-              avatarId: user.avatarId,
+              avatarUrl: user.avatarUrl,
               isAdmin: user.isAdmin,
             ),
             Padding(
@@ -110,7 +110,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final header = ProfileHeader(
       name: user.name,
       username: user.username,
-      avatarId: user.avatarId,
+      avatarUrl: user.avatarUrl,
       isAdmin: user.isAdmin,
       joined: loaded?.user.createdAt,
     );

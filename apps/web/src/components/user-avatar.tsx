@@ -1,4 +1,4 @@
-import { avatarPath, type User } from "@matinee/contracts"
+import type { User } from "@matinee/contracts"
 import {
   Avatar,
   AvatarFallback,
@@ -15,13 +15,17 @@ export function UserAvatar({
   user,
   className,
 }: {
-  user: Pick<User, "avatarId" | "displayName" | "username">
+  user: Pick<User, "avatarUrl" | "displayName" | "username">
   className?: string
 }) {
   const name = user.displayName ?? user.username
   return (
     <Avatar aria-hidden className={cn("after:border-foreground/10", className)}>
-      {user.avatarId && <AvatarImage src={avatarPath(user.avatarId)} alt="" />}
+      {/* An upload on this server, or the provider's picture at its own
+          URL, which needn't learn which page shows it. */}
+      {user.avatarUrl && (
+        <AvatarImage src={user.avatarUrl} referrerPolicy="no-referrer" alt="" />
+      )}
       <AvatarFallback className="bg-secondary text-secondary-foreground [font-size:inherit] font-semibold">
         {/* Trimmed to the capital's own height, so the letter sits in the
             middle. A line box centers the room under the baseline too,

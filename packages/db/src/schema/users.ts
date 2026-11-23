@@ -36,10 +36,13 @@ export const user = pgTable(
       .$type<AccessSource>()
       .notNull()
       .default("manual"),
-    /** Names the file in `$MATINEE_DATA_DIR/avatars`. Null shows the initial. */
+    /** Names the upload in `$MATINEE_DATA_DIR/avatars`, for `upload` only. */
     avatarId: text(),
     avatarSource: text().$type<AvatarSource>().notNull().default("provider"),
-    /** The provider picture URL the current avatar came from. */
+    /**
+     * The provider's picture the user follows, for `provider` only. Clients
+     * load it from the provider; the server never fetches it.
+     */
     avatarUrl: text(),
     /** Season 0 lists among a show's seasons and comes up next. */
     showSpecials: boolean().notNull().default(true),

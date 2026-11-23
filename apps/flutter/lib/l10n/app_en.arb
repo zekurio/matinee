@@ -6783,10 +6783,6 @@
   "@webServerAuthUsernameTaken": {
     "description": "strings_web_server.xml"
   },
-  "webServerAvatarsLoadFailed": "Couldn't load the picture from your provider. Try again later.",
-  "@webServerAvatarsLoadFailed": {
-    "description": "strings_web_server.xml"
-  },
   "webServerAvatarsNoPicture": "Your provider hasn't sent a picture. Sign in with it once to fetch it.",
   "@webServerAvatarsNoPicture": {
     "description": "strings_web_server.xml"

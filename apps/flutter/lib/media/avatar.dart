@@ -4,19 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/session.dart';
 import '../kit/kit.dart';
 
-/// An account's picture in a circle [size] across: the server's picture when
+/// An account's picture in a circle [size] across: the picture at [url] when
 /// the account has one, else, and while no server is in use or the picture
 /// can't load, [fallback], or the name's first letter on the secondary fill.
 class Avatar extends ConsumerWidget {
   const Avatar({
     super.key,
-    required this.avatarId,
+    required this.url,
     required this.name,
     this.size = 40,
     this.fallback,
   });
 
-  final String? avatarId;
+  /// `avatarUrl` from the contract: a path on the server, which loads with
+  /// the session, or the sign-in provider's own URL, which loads without.
+  final String? url;
   final String name;
   final double size;
   final Widget? fallback;
@@ -24,16 +26,19 @@ class Avatar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final api = ref.watch(apiProvider);
-    final id = avatarId;
+    final url = this.url;
     final placeholder = fallback ?? _Initial(name: name, size: size);
+    final address = url == null || api == null ? null : api.paths.server(url);
+    // Only the server gets the session, never another host.
+    final ours = address != null && address.origin == api?.paths.base.origin;
     return SizedBox.square(
       dimension: size,
-      child: id == null || api == null
+      child: address == null
           ? placeholder
           : ClipOval(
               child: Image.network(
-                api.paths.avatar(id).toString(),
-                headers: ref.watch(playerHeadersProvider),
+                address.toString(),
+                headers: ours ? ref.watch(playerHeadersProvider) : null,
                 fit: BoxFit.cover,
                 semanticLabel: name,
                 errorBuilder: (context, error, stack) => placeholder,

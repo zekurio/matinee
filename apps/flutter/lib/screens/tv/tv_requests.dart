@@ -636,7 +636,7 @@ class TvRequestCard extends ConsumerWidget {
               spacing: 8,
               children: [
                 if (first != null)
-                  Avatar(avatarId: first.avatarId, name: first.name, size: 22),
+                  Avatar(url: first.avatarUrl, name: first.name, size: 22),
                 Flexible(child: _CardText(asked)),
               ],
             ),

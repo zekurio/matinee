@@ -216,8 +216,10 @@ TV app.
 - Validate inputs in the contract schemas. Procedures throw `ORPCError` with a
   message the user can act on; anything 500 is logged and hidden.
 - The server fetches only image URLs a metadata provider returned, stored in
-  the `artwork` table, and the `picture` claim the OIDC provider signed or
-  sent from userinfo. Never fetch a URL a client sent.
+  the `artwork` table. Never fetch a URL a client sent. The `picture` claim
+  the OIDC provider signed or sent from userinfo is stored as a URL, not
+  fetched: `avatarUrl` hands it to clients, which load it without the
+  session.
 - Passkeys and OIDC redirects bind to `PUBLIC_URL`. Never derive origins from
   request headers.
 - Auth cookies are HttpOnly and SameSite=Lax. Keep RPC on same-origin JSON

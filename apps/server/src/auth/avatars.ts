@@ -1,14 +1,21 @@
 import { randomBytes } from "node:crypto"
 import { createReadStream } from "node:fs"
-import { access, mkdir, rename, rm, stat, writeFile } from "node:fs/promises"
+import {
+  access,
+  mkdir,
+  readdir,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises"
 import { join } from "node:path"
 import { Readable } from "node:stream"
-import { setTimeout as sleep } from "node:timers/promises"
 
 import type { AvatarSource } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import { oidcAccount, user, type UserRow } from "@matinee/db"
-import { and, eq, isNotNull } from "drizzle-orm"
+import { and, eq, isNotNull, sql } from "drizzle-orm"
 import { Hono } from "hono"
 
 import { db } from "../db"
@@ -16,15 +23,11 @@ import { env } from "../env"
 import { ShownError } from "../errors"
 import { defineQueue } from "../jobs/queue"
 import { log } from "../log"
-import { fetchImage, sniffImage } from "../media/artwork"
+import { sniffImage } from "../media/artwork"
 import { processFailureKind, run } from "../media/process"
-import { urlForLog } from "../network/outbound"
 import { readSession } from "./session"
 
 const SIZE = 256
-// How long a sign-in waits for the provider's picture before going on
-// without it. The download keeps going and lands on a later page load.
-const SIGN_IN_WAIT_MS = 2000
 
 const dir = join(env.dataDir, "avatars")
 
@@ -39,10 +42,10 @@ const CONTENT_TYPES = {
 export class AvatarError extends ShownError {}
 
 /**
- * The `picture` claim as a URL the server may fetch. The ID token is signed
- * by the provider the admin set up, and userinfo comes from it over TLS, so
- * this is the provider's URL, not one a client sent. Only http and https,
- * written out with `://`.
+ * The `picture` claim as a URL clients may load. The ID token is signed by
+ * the provider the admin set up, and userinfo comes from it over TLS, so
+ * this is the provider's URL, not one a client sent. The server never
+ * fetches it. Only http and https, written out with `://`.
  */
 export const PictureUrl = t
   .string()
@@ -136,15 +139,13 @@ type AvatarState = {
 }
 
 /**
- * Point the user at a new avatar and delete the old file. With `expect`, the
- * change only applies while the user's avatar is still the provider's
- * picture `expect` names, so a slow download can't replace an upload made
- * meanwhile. Returns null when the user is gone or `expect` didn't hold.
+ * Point the user at a new avatar and delete the old upload. `avatarId` names
+ * an upload and `avatarUrl` a provider's picture; at most one is set.
+ * Returns null when the user is gone.
  */
 async function setAvatar(
   userId: string,
   next: AvatarState,
-  expect?: { avatarId: string | null },
 ): Promise<UserRow | null> {
   const result = await db.transaction(async (tx) => {
     const [row] = await tx
@@ -153,12 +154,6 @@ async function setAvatar(
       .where(eq(user.id, userId))
       .for("update")
     if (!row) return null
-    if (
-      expect &&
-      (row.avatarSource !== "provider" || row.avatarId !== expect.avatarId)
-    ) {
-      return null
-    }
     const [updated] = await tx
       .update(user)
       .set({ ...next, updatedAt: new Date() })
@@ -167,80 +162,28 @@ async function setAvatar(
     return updated ? { updated, old: row.avatarId } : null
   })
   if (!result) {
-    if (next.avatarId !== expect?.avatarId) await deleteFile(next.avatarId)
+    await deleteFile(next.avatarId)
     return null
   }
   if (result.old !== next.avatarId) await deleteFile(result.old)
   return result.updated
 }
 
-/**
- * An avatar to make: an uploaded image, the provider's picture at `url`,
- * or the sync of a user who follows the provider's picture.
- */
-type AvatarJob =
-  | { kind: "upload"; key: string; bytes: Uint8Array }
-  | { kind: "fetch"; key: string; url: string }
-  | { kind: "sync"; key: string; userId: string; url: string }
-
-/** Take the provider's picture if the user follows it and it changed. */
-async function sync(userId: string, url: string): Promise<void> {
-  const [row] = await db
-    .select({
-      avatarId: user.avatarId,
-      avatarSource: user.avatarSource,
-      avatarUrl: user.avatarUrl,
-    })
-    .from(user)
-    .where(eq(user.id, userId))
-  if (!row || row.avatarSource !== "provider") return
-  if (row.avatarId && row.avatarUrl === url) return
-  const id = await encode((await fetchImage(url)).bytes)
-  await setAvatar(
-    userId,
-    { avatarId: id, avatarSource: "provider", avatarUrl: url },
-    { avatarId: row.avatarId },
-  )
-}
-
-/** Profile pictures, scaled and re-encoded a couple at a time. */
-const avatars = defineQueue<AvatarJob, string | null>({
+/** Uploaded profile pictures, scaled and re-encoded a couple at a time. */
+const avatars = defineQueue<{ key: string; bytes: Uint8Array }, string>({
   id: "avatars",
   name: "Profile pictures",
-  description:
-    "Crop and scale uploads and the pictures sign-in providers send.",
+  description: "Crop and scale the pictures people upload.",
   concurrency: 2,
   key: (job) => job.key,
-  label: (job) => (job.kind === "upload" ? "an upload" : urlForLog(job.url)),
-  run: async (job) => {
-    switch (job.kind) {
-      case "upload":
-        return encode(job.bytes)
-      case "fetch":
-        return encode((await fetchImage(job.url)).bytes)
-      case "sync":
-        await sync(job.userId, job.url)
-        return null
-    }
-  },
+  label: () => "an upload",
+  run: (job) => encode(job.bytes),
 })
-
-async function providerAvatar(url: string): Promise<string> {
-  const id = await avatars.run({ kind: "fetch", key: `fetch-${url}`, url })
-  // Only a sync answers null.
-  if (!id) throw new AvatarError("Couldn't read that image. Try another file.")
-  return id
-}
-
-/** The user's sync with the provider's picture. One per user at a time. */
-async function syncProviderAvatar(userId: string, url: string): Promise<void> {
-  await avatars.run({ kind: "sync", key: `sync-${userId}`, userId, url })
-}
 
 /**
  * Remember the picture a provider sent at sign-in and, for users who follow
- * it, use it. `picture` is undefined when the provider couldn't say, which
- * keeps what was stored. Waits briefly for the download, never fails.
+ * it, show it. `picture` is undefined when the provider couldn't say, which
+ * keeps what was stored, and null when it has none. Never fails.
  */
 export async function recordProviderPicture(account: {
   issuer: string
@@ -251,22 +194,27 @@ export async function recordProviderPicture(account: {
   const { picture } = account
   if (picture === undefined) return
   try {
-    await db
-      .update(oidcAccount)
-      .set({ picture })
-      .where(
-        and(
-          eq(oidcAccount.issuer, account.issuer),
-          eq(oidcAccount.subject, account.subject),
-        ),
-      )
-    if (!picture) return
-    const sync = syncProviderAvatar(account.userId, picture).catch(
-      (cause: unknown) => {
-        log.warn(`Couldn't load the OIDC picture ${urlForLog(picture)}`, cause)
-      },
-    )
-    await Promise.race([sync, sleep(SIGN_IN_WAIT_MS)])
+    await db.transaction(async (tx) => {
+      await tx
+        .update(oidcAccount)
+        .set({ picture })
+        .where(
+          and(
+            eq(oidcAccount.issuer, account.issuer),
+            eq(oidcAccount.subject, account.subject),
+          ),
+        )
+      await tx
+        .update(user)
+        .set({ avatarUrl: picture, updatedAt: new Date() })
+        .where(
+          and(
+            eq(user.id, account.userId),
+            eq(user.avatarSource, "provider"),
+            sql`${user.avatarUrl} IS DISTINCT FROM ${picture}`,
+          ),
+        )
+    })
   } catch (cause) {
     log.warn("Couldn't record the OIDC picture", cause)
   }
@@ -278,10 +226,9 @@ export async function uploadAvatar(
   bytes: Uint8Array,
 ): Promise<UserRow | null> {
   const id = await avatars.run(
-    { kind: "upload", key: randomBytes(16).toString("hex"), bytes },
+    { key: randomBytes(16).toString("hex"), bytes },
     { priority: "high" },
   )
-  if (!id) return null
   return setAvatar(userId, {
     avatarId: id,
     avatarSource: "upload",
@@ -303,19 +250,8 @@ export async function followProviderAvatar(
       "Your provider hasn't sent a picture. Sign in with it once to fetch it.",
     )
   }
-  const [current] = await db.select().from(user).where(eq(user.id, userId))
-  if (!current) return null
-  // Only the provider's picture keeps its URL, so this is it already.
-  if (current.avatarId && current.avatarUrl === url) return current
-  const id = await providerAvatar(url).catch((cause: unknown) => {
-    if (cause instanceof AvatarError) throw cause
-    log.warn(`Couldn't load the OIDC picture ${urlForLog(url)}`, cause)
-    throw new AvatarError(
-      "Couldn't load the picture from your provider. Try again later.",
-    )
-  })
   return setAvatar(userId, {
-    avatarId: id,
+    avatarId: null,
     avatarSource: "provider",
     avatarUrl: url,
   })
@@ -328,6 +264,31 @@ export function removeAvatar(userId: string): Promise<UserRow | null> {
     avatarSource: "none",
     avatarUrl: null,
   })
+}
+
+/**
+ * Delete the files no user points at: copies of provider pictures from
+ * before clients loaded those themselves, and an upload's leftovers from a
+ * crash. Only at startup, before any upload can be under way.
+ */
+export async function sweepAvatars(): Promise<void> {
+  try {
+    const names = await readdir(dir).catch(() => [])
+    if (!names.length) return
+    const rows = await db
+      .select({ avatarId: user.avatarId })
+      .from(user)
+      .where(isNotNull(user.avatarId))
+    const kept = new Set(rows.map((row) => row.avatarId))
+    const stale = names.filter((name) => {
+      const match = /^([0-9a-f]{32})\.(jpg|png)$/.exec(name)
+      return !match || !kept.has(match[1] ?? "")
+    })
+    await Promise.all(stale.map((name) => rm(join(dir, name), { force: true })))
+    if (stale.length) log.info(`Deleted ${stale.length} unused avatar files`)
+  } catch (cause) {
+    log.warn("Couldn't clean up the avatar files", cause)
+  }
 }
 
 /** For deleted accounts, whose row is already gone. */

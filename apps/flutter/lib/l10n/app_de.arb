@@ -1273,7 +1273,6 @@
   "webServerAuthSsoOff": "Single Sign-on ist ausgeschaltet.",
   "webServerAuthTooManyTries": "Zu viele Versuche. Warte eine Weile und versuch es dann noch einmal.",
   "webServerAuthUsernameTaken": "Dieser Benutzername ist schon vergeben.",
-  "webServerAvatarsLoadFailed": "Das Bild deines Anbieters konnte nicht geladen werden. Versuch es später noch einmal.",
   "webServerAvatarsNoPicture": "Dein Anbieter hat noch kein Bild geschickt. Melde dich einmal darüber an, um es abzurufen.",
   "webServerAvatarsUnreadable": "Dieses Bild konnte nicht gelesen werden. Versuch es mit einer anderen Datei.",
   "webServerAvatarsUploadLabel": "ein Upload",

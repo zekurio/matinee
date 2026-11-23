@@ -77,7 +77,7 @@ export default defineMessages("jobs", {
     "Convert subtitles to WebVTT, and copy PGS subtitles out of videos.",
   "jobs.queue.avatars.name": "Profile pictures",
   "jobs.queue.avatars.description":
-    "Crop and scale uploads and the pictures sign-in providers send.",
+    "Crop and scale the pictures people upload.",
   "jobs.queue.downloads.name": "Download encodes",
   "jobs.queue.downloads.description":
     "Encode the video of downloads in another size or codec, while the app or browser fetches them.",

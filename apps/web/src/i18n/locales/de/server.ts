@@ -228,8 +228,6 @@ export default {
     "Dieses Bild konnte nicht gelesen werden. Versuch es mit einer anderen Datei.",
   "server.avatars.noPicture":
     "Dein Anbieter hat noch kein Bild geschickt. Melde dich einmal darüber an, um es abzurufen.",
-  "server.avatars.loadFailed":
-    "Das Bild deines Anbieters konnte nicht geladen werden. Versuch es später noch einmal.",
   "server.avatars.uploadLabel": "ein Upload",
 
   "server.account.lastMethod":

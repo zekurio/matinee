@@ -771,7 +771,7 @@ class _Askers extends StatelessWidget {
                           border: Border.all(color: colors.surface, width: 1.5),
                         ),
                         child: Avatar(
-                          avatarId: face.avatarId,
+                          url: face.avatarUrl,
                           name: face.name,
                           size: 17,
                         ),

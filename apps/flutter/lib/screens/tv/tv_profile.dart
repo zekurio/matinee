@@ -440,7 +440,7 @@ class _Header extends StatelessWidget {
       child: Row(
         spacing: 24,
         children: [
-          Avatar(avatarId: user.avatarId, name: user.name, size: 96),
+          Avatar(url: user.avatarUrl, name: user.name, size: 96),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -785,7 +785,7 @@ class _Place extends StatelessWidget {
                 ),
               ),
             ),
-            Avatar(avatarId: user.avatarId, name: name, size: small ? 28 : 36),
+            Avatar(url: user.avatarUrl, name: name, size: small ? 28 : 36),
             Expanded(
               child: Text(
                 place.self ? l.statsNameYou(name) : name,

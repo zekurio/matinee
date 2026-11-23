@@ -590,7 +590,7 @@ class LeaderboardPlace extends StatelessWidget {
                 ),
               ),
             ),
-            Avatar(avatarId: user.avatarId, name: name, size: 28),
+            Avatar(url: user.avatarUrl, name: name, size: 28),
             Expanded(
               child: Text(
                 place.self ? l.statsNameYou(name) : name,
