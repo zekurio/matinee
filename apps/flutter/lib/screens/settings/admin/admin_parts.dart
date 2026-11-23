@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Refreshable;
 import 'package:go_router/go_router.dart';
 
 import '../../../api/matinee_api.dart';
@@ -122,6 +123,18 @@ class AdminPage extends StatelessWidget {
   );
 }
 
+/// Asks the server again for what a save changed and waits for the answer,
+/// so the page is on what the server kept by the time its save bar says
+/// "Saved". The save went through either way: an answer that doesn't come
+/// shows on the page, as any read that failed.
+Future<void> reread(WidgetRef ref, Refreshable<Future<Object?>> read) async {
+  try {
+    final _ = await ref.refresh(read);
+  } on Object {
+    return;
+  }
+}
+
 /// How long "Saved" shows before the bar goes, as the web's.
 const savedFor = Duration(milliseconds: 1400);
 
@@ -133,9 +146,14 @@ const savedFor = Duration(milliseconds: 1400);
 /// the system or the page's bar, shakes the bar instead of leaving. The
 /// bar reports the save itself: Save turns into "Saved" for a moment
 /// before the bar goes, and a failure stays in it with the server's reason
-/// until the next try or a reset. [onSave] throws when the save fails; the
-/// page puts the server's word on each field it names ([fieldErrors]).
+/// until the next try or a reset. [onSave] ends once the page is on what
+/// the server kept ([reread]), and throws when the save fails; the page
+/// puts the server's word on each field it names ([fieldErrors]).
 /// [canSave] is false while a field holds what can't be sent at all.
+///
+/// The page keeps its form through the save: the server's answer starts
+/// the fields again, but a form built anew would take the bar with it
+/// before it said "Saved", and the list back to its top.
 class SaveBarPage extends StatefulWidget {
   const SaveBarPage({
     super.key,

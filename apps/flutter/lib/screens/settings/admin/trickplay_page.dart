@@ -32,14 +32,12 @@ class TrickplayPage extends ConsumerWidget {
         ),
       );
     }
-    // A save brings the settings back as the server has them, and the
-    // form starts again from there.
-    return _TrickplayForm(key: ObjectKey(saved), saved: saved);
+    return _TrickplayForm(saved: saved);
   }
 }
 
 class _TrickplayForm extends ConsumerStatefulWidget {
-  const _TrickplayForm({super.key, required this.saved});
+  const _TrickplayForm({required this.saved});
 
   final AdminTrickplaySettings saved;
 
@@ -49,6 +47,14 @@ class _TrickplayForm extends ConsumerStatefulWidget {
 
 class _TrickplayFormState extends ConsumerState<_TrickplayForm> {
   late TrickplaySettings _draft = widget.saved.settings;
+
+  /// A save brings the settings back as the server has them, and the form
+  /// starts again from there.
+  @override
+  void didUpdateWidget(_TrickplayForm old) {
+    super.didUpdateWidget(old);
+    if (!identical(widget.saved, old.saved)) _draft = widget.saved.settings;
+  }
 
   static bool _same(TrickplaySettings a, TrickplaySettings b) =>
       a.enabled == b.enabled &&
@@ -88,7 +94,7 @@ class _TrickplayFormState extends ConsumerState<_TrickplayForm> {
         final api = ref.read(apiProvider);
         if (api == null) return;
         await api.admin.trickplay.update(settings);
-        if (mounted) ref.invalidate(trickplayProvider);
+        if (mounted) await reread(ref, trickplayProvider.future);
       },
       child: AdminSections(
         bottom: !dirty,

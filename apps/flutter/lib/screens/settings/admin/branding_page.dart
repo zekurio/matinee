@@ -165,7 +165,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
     // preview goes.
     await ref.read(serverAccentsProvider.notifier).refresh();
     _preview.show(null);
-    if (mounted) ref.invalidate(brandingProvider);
+    if (mounted) await reread(ref, brandingProvider.future);
   }
 
   @override
