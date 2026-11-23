@@ -16,6 +16,10 @@ final class MatineeViewController: FlutterViewController {
     // frame.
     isViewOpaque = false
     view.backgroundColor = .clear
+    // UIDevice reports the orientation as unknown until something asks it to
+    // follow the accelerometer, and leaving fullscreen reads it. This view
+    // controller lasts as long as the app, so it never stops.
+    UIDevice.current.beginGeneratingDeviceOrientationNotifications()
   }
 
   override func viewDidAppear(_ animated: Bool) {
