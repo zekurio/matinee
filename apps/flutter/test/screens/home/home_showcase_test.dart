@@ -13,6 +13,7 @@ import 'package:matinee/l10n/app_localizations.dart';
 import 'package:matinee/media/artwork.dart';
 import 'package:matinee/screens/home/home_layout.dart';
 import 'package:matinee/screens/home/home_showcase.dart';
+import 'package:matinee/screens/shell/header.dart';
 
 import '../../media/fixtures.dart';
 
@@ -383,5 +384,25 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     }
+  });
+
+  // What the card's share of the window is for. The tabs are counted at
+  // Material 3's 80, the tallest they get.
+  testWidgets('a 1280 x 800 tablet keeps the first row\'s heading in view', (
+    tester,
+  ) async {
+    await _pump(tester, HomeShowcase(slides: _slides));
+    const statusBar = 24.0;
+    const tabs = 80.0;
+    const gestureBar = 24.0;
+    final room = 800 - statusBar - ShellHeader.height - tabs - gestureBar;
+    // Home's 8 over the card, the card and its dots, the 24 between
+    // sections, and the heading's own line.
+    final heading =
+        8 +
+        tester.getSize(find.byType(HomeShowcase)).height +
+        24 +
+        KitText.xl.lineHeight;
+    expect(heading, lessThanOrEqualTo(room));
   });
 }
