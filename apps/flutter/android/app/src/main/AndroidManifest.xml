@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- A TV's launcher shows Continue watching and Next up in its Watch
+         Next row, and reads their pictures again after a restart. -->
+    <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- LAN discovery. Runtime permission when targeting API 37 or above. -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <!-- To tell no network from a server that's down, and retry when it's back. -->
@@ -48,10 +52,24 @@
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
+            <!-- A Watch Next card's link goes to Dart through WatchNextApi,
+                 which checks who is signed in first. Flutter would otherwise
+                 push its path as a route of its own. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="matinee"
+                    android:host="watch-next" />
             </intent-filter>
         </activity>
         <!-- Where the browser sends the person back after signing in
@@ -72,6 +90,27 @@
                     android:path="/callback" />
             </intent-filter>
         </activity>
+        <!-- The pictures of the Watch Next cards, one read grant each to the
+             launchers and the TV provider. Both are off here and turned on
+             on a TV, so a phone has neither. -->
+        <provider
+            android:name=".launcher.WatchNextArtwork"
+            android:authorities="${applicationId}.watch-next-art"
+            android:enabled="false"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/watch_next_artwork" />
+        </provider>
+        <receiver
+            android:name=".launcher.WatchNextBoot"
+            android:enabled="false"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
         <!-- A download's job runs in the foreground while it fetches. -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
@@ -93,6 +132,11 @@
     </application>
     <!-- Lets Flutter's text fields offer the apps that process selected text. -->
     <queries>
+        <!-- The launchers, which get to read the Watch Next cards' pictures. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />

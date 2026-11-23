@@ -63,7 +63,7 @@ enum Capabilities {
       appBuild: Int64(info?["CFBundleVersion"] as? String ?? "") ?? 0, buildType: buildType,
       release: UIDevice.current.systemVersion,
       sdk: Int64(ProcessInfo.processInfo.operatingSystemVersion.majorVersion), manufacturer: "Apple",
-      model: DeviceBridge.hardwareModel(), abi: abi, tv: false,
+      model: DeviceBridge.hardwareModel(), abi: abi, tv: UIDevice.current.userInterfaceIdiom == .tv,
       // Media3 and its FFmpeg audio decoder are Android's.
       media3: "", ffmpeg: false)
   }

@@ -61,8 +61,9 @@ jobs:
             tools/ci/**
             .github/workflows/ci.yml
             !**/*.md
-          # What the iOS build compiles: the Dart and the Runner, icon
-          # included, and the version it reads from the root package.json.
+          # What the iOS and tvOS builds compile: the Dart and the two
+          # Runners, icons included, and the version they read from the
+          # root package.json.
           PATHS_FLUTTER_IOS: |
             apps/flutter/**
             apps/web/src/i18n/locales/en/*.ts
@@ -202,6 +203,67 @@ jobs:
         working-directory: apps/flutter
         run: sh ios/version.sh --check ../../package.json build/ios/iphoneos/Runner.app/Info.plist
 
+  flutter-tvos:
+    name: flutter tvos build
+    needs: changes
+    if: needs.changes.outputs.flutter_ios == 'true' && github.event_name != 'push'
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: select xcode
+        run: |
+          sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      # The Flutter the other apps build with. It makes the assets and
+      # resolves the packages; the Dart code is compiled by the tvOS
+      # engine's own tools.
+      - name: set up flutter
+        uses: subosito/flutter-action@1508160852fb97248640997f7cfb38da241df0ba # v2.9.1
+        with:
+          flutter-version: 3.47.4
+          channel: stable
+          cache: true
+
+      - name: fetch dart packages
+        working-directory: apps/flutter
+        run: flutter pub get
+
+      # Flutter's engine with Plezy's tvOS patches, checked against the
+      # SHA-256 in tvos/engine.sha256 before it's unpacked.
+      - name: fetch tvos engine
+        run: apps/flutter/tvos/scripts/fetch_engine.sh
+
+      # Unsigned, as the iOS build is. The simulator's app runs the Dart
+      # code from its kernel, on the debug engine.
+      - name: build unsigned debug app for the simulator
+        working-directory: apps/flutter/tvos
+        run: >
+          xcodebuild -project Runner.xcodeproj -scheme Runner
+          -configuration Debug -destination 'generic/platform=tvOS Simulator'
+          -derivedDataPath ../build/tvos-derived
+          CODE_SIGNING_ALLOWED=NO build
+
+      # A device's app is compiled ahead of time, which is what ships, so
+      # that path is built too. Nothing runs.
+      - name: build unsigned release app for a device
+        working-directory: apps/flutter/tvos
+        run: >
+          xcodebuild -project Runner.xcodeproj -scheme Runner
+          -configuration Release -destination 'generic/platform=tvOS'
+          -derivedDataPath ../build/tvos-derived
+          CODE_SIGNING_ALLOWED=NO build
+
+      - name: check app version
+        working-directory: apps/flutter
+        run: sh ios/version.sh --check ../../package.json build/tvos-derived/Build/Products/Release-appletvos/Runner.app/Info.plist
+
   nix:
     name: nix flake check
     needs: changes
@@ -246,7 +308,7 @@ jobs:
   # fails only on a check that failed or was cancelled, `changes` included.
   ci:
     name: ci
-    needs: [changes, checks, flutter, flutter-ios, nix]
+    needs: [changes, checks, flutter, flutter-ios, flutter-tvos, nix]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

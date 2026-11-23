@@ -57,6 +57,9 @@ dependencies {
     implementation("androidx.camera:camera-camera2:1.6.2")
     implementation("androidx.camera:camera-lifecycle:1.6.2")
     implementation("com.google.zxing:core:3.5.4")
+    // FileProvider, which lends a TV's launcher the pictures of its Watch
+    // Next cards. The version the other libraries already bring in.
+    implementation("androidx.core:core:1.18.0")
     // Downloads: one resumable job per file, which outlives the app and a reboot.
     implementation("androidx.work:work-runtime-ktx:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

@@ -38,3 +38,25 @@ The rest of `ios/Runner/` is Matinee's own.
 
 The iOS build links the `MPVKit` Swift package from the same mpv-build
 revision, libmpv and FFmpeg built for iOS under GPL-3.0.
+
+# Apple TV notices
+
+The Apple TV build compiles the files above from `ios/Runner` and links
+the same `MPVKit` package, built for tvOS. These files adapt code from
+Plezy at revision `8310991fa14f0cbac9c71cfb494d028d4314c7ff`, under
+GPL-3.0. Matinee paths are relative to `tvos/`, Plezy's to its repository
+root.
+
+| Matinee file                         | Plezy source                                                                                                                             |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/fetch_engine.sh`            | `tvos/scripts/fetch_engine.sh`, fetching the engine by version and checksum                                                              |
+| `scripts/build.sh`                   | `tvos/scripts/xcode_appletv.sh`, compiling the Dart code with the engine's tools and embedding the frameworks                            |
+| `Runner/MatineeViewController.swift` | `tvos/Runner/AppDelegate.swift`, taking the remote's Play/Pause before the engine                                                        |
+| `../lib/core/apple_tv.dart`          | `lib/services/apple_tv_remote_touch_service.dart`, how far a finger travels for one focus step, and the engine's touch and Menu channels |
+
+The engine is Flutter 3.47.1's with the tvOS patch series of
+[edde746/flutter-plezy](https://github.com/edde746/flutter-plezy),
+downloaded prebuilt from its `v3.47.1` release. The patches are under the
+BSD 3-Clause License, copyright © 2026 edde746 and contributors, as
+derivatives of Flutter, Dart, and Skia, whose licenses the app's license
+list carries.

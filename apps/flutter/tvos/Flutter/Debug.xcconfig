@@ -1,0 +1,4 @@
+#include "Generated.xcconfig"
+
+// The engine's simulator framework is arm64 alone.
+EXCLUDED_ARCHS[sdk=appletvsimulator*] = x86_64

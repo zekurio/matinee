@@ -273,6 +273,9 @@ class FakePlayer implements Player {
   final _updates = StreamController<PlaybackState>.broadcast();
   final opens = <OpenedSource>[];
   final trackChanges = <SourceTracks>[];
+
+  /// The external subtitle the session set after opening, each time.
+  final subtitleUrls = <String?>[];
   final seeks = <Duration>[];
   bool disposed = false;
   int pauses = 0;
@@ -405,7 +408,7 @@ class FakePlayer implements Player {
   Future<void> selectSubtitleTrack(String? id) => throw UnimplementedError();
 
   @override
-  Future<void> setSubtitleUrl(String? url) => throw UnimplementedError();
+  Future<void> setSubtitleUrl(String? url) async => subtitleUrls.add(url);
 
   @override
   Future<void> setVideoFit(VideoFit fit) async {}

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/apple_tv.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../kit/tv/tv.dart';
@@ -377,6 +378,7 @@ class _TvPageState extends State<TvPageFrame> {
 
   ModalRoute<Object?>? _route;
   FocusScopeNode? _scope;
+  AppleTvRemote? _remote;
 
   @override
   void initState() {
@@ -389,11 +391,16 @@ class _TvPageState extends State<TvPageFrame> {
     super.didChangeDependencies();
     _route = ModalRoute.of(context);
     _scope = FocusScope.of(context);
+    _remote = ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(appleTvRemoteProvider);
   }
 
   @override
   void dispose() {
     _live.remove(this);
+    _remote?.leavesOnBack(this, leaves: false);
     super.dispose();
   }
 
@@ -405,6 +412,12 @@ class _TvPageState extends State<TvPageFrame> {
     if (shell != null && route != null) shell.backdrop.open(route);
     final open = shell?.drawer.isOpen ?? false;
     final home = scope?.home ?? false;
+    // An Apple TV's Menu has to reach the system untouched to leave the
+    // app, so its engine hears beforehand that the next Back does.
+    _remote?.leavesOnBack(
+      this,
+      leaves: home && open && (route?.isCurrent ?? false),
+    );
     return PopScope(
       canPop: home ? open : !open,
       onPopInvokedWithResult: (didPop, _) {

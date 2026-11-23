@@ -136,14 +136,21 @@ final class MpvEngine {
       ("demuxer-max-bytes", "64MiB"),
       ("demuxer-max-back-bytes", "32MiB"),
     ]
-    // AVFoundation first: AudioUnit sizes its output from the route's
-    // channels, which AirPods report as 2 even with Spatial Audio. From iOS
-    // 26 mpv-build's spatial output takes TrueHD and DTS-HD first.
-    if #available(iOS 26, *) {
-      options.append(("ao", "spatial,avfoundation,audiounit"))
-    } else {
-      options.append(("ao", "avfoundation,audiounit"))
-    }
+    #if os(tvOS)
+      // An Apple TV keeps mpv's own order, AudioUnit first, which sends
+      // multichannel PCM over HDMI. From tvOS 26 mpv-build's spatial output
+      // goes ahead of it; the trailing comma keeps the rest after.
+      if #available(tvOS 26, *) { options.append(("ao", "spatial,")) }
+    #else
+      // AVFoundation first: AudioUnit sizes its output from the route's
+      // channels, which AirPods report as 2 even with Spatial Audio. From iOS
+      // 26 mpv-build's spatial output takes TrueHD and DTS-HD first.
+      if #available(iOS 26, *) {
+        options.append(("ao", "spatial,avfoundation,audiounit"))
+      } else {
+        options.append(("ao", "avfoundation,audiounit"))
+      }
+    #endif
     for (name, value) in options {
       try check(mpv_set_option_string(mpv, name, value), name)
     }
@@ -554,8 +561,13 @@ private enum AudioSessionGate {
     queue.sync { () -> Int? in
       let session = AVAudioSession.sharedInstance()
       do {
-        // Long-form video lets the system offer AirPlay for the whole video.
-        try session.setCategory(.playback, mode: .moviePlayback, policy: .longFormVideo)
+        #if os(tvOS)
+          // tvOS has no long-form policy for video; it plays to the TV.
+          try session.setCategory(.playback, mode: .moviePlayback)
+        #else
+          // Long-form video lets the system offer AirPlay for the whole video.
+          try session.setCategory(.playback, mode: .moviePlayback, policy: .longFormVideo)
+        #endif
         try session.setActive(true)
         generation += 1
         return generation

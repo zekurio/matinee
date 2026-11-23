@@ -38,7 +38,9 @@ TV app.
   codebase with each platform's player behind the Flutter view. It ships
   for Android, Android tablets, and Android TV. Its iPhone and iPad side,
   `ios/Runner`, compiles in CI and has run on simulators, but not yet on
-  a device. Apple TV waits until the iPhone app ships. Its API client,
+  a device. Its Apple TV side, `tvos/`, builds on Plezy's tvOS engine and
+  shares `ios/Runner`'s player. CI compiles it, and nobody has run it
+  yet. Its API client,
   `lib/api`, is
   generated from the OpenAPI document by `pnpm api:dart`
   (`apps/server/scripts/dart-client.ts`), and its theme presets, icons,

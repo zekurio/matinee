@@ -63,6 +63,12 @@ check:
 # Generate the platform channels again after a change in pigeons/
 pigeon:
     for input in pigeons/*.dart; do {{ if in_shell != "" { "dart" } else { "nix develop ../..#flutter -c dart" } }} run pigeon --input "$input"; done
+    # Pigeon imports Flutter for iOS and macOS alone, and the Apple TV target compiles the same files.
+    perl -pi -e 's/^#if os\(iOS\)$/#if os(iOS) || os(tvOS)/' ios/Runner/Pigeon/*.g.swift tvos/Runner/Pigeon/*.g.swift
+
+# Fetch the tvOS engine and point Xcode at it, on a Mac
+tvos:
+    tvos/scripts/fetch_engine.sh
 
 # Run the JVM unit tests of the Android side, like the downloads worker
 android-test:

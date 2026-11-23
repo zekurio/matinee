@@ -1,19 +1,19 @@
 # Matinee for phones, tablets, and TVs
 
-One Flutter app for Android phones, tablets, and TVs, and for iPhone and
-iPad. Screens are Flutter. Video plays in each platform's native player,
-which sits behind the Flutter view.
+One Flutter app for Android phones, tablets, and TVs, for iPhone and iPad,
+and for Apple TV. Screens are Flutter. Video plays in each platform's
+native player, which sits behind the Flutter view.
 
 Android phones and tablets have every screen, downloads, and offline mode.
 Android TV has its own routes and player. iPhone and iPad have the same
 screens as Android phones and tablets, with the native side in
 `ios/Runner`. CI compiles it, and it has run on iPhone and iPad
-simulators, but not yet on a device.
+simulators, but not yet on a device. Apple TV has Android TV's screens,
+with the native side in `tvos/Runner`. CI compiles that too, and nobody
+has run it yet, on a simulator or a device (see [Apple TV](#apple-tv)).
 
 Left out on purpose:
 
-- Apple TV waits until the iPhone app ships. It needs a second Xcode
-  target and a patched Flutter engine.
 - There's no 32-bit x86 APK, since Flutter builds no release engine for
   it.
 - Fulfilment's routing rules are set on the web. Their ordered rules and
@@ -37,6 +37,7 @@ JDK and the Android SDK.
 | `just flutter android-test` | Runs the Kotlin unit tests on the JVM         |
 | `just flutter api`          | Regenerates the API client                    |
 | `just flutter pigeon`       | Regenerates the platform channels             |
+| `just flutter tvos`         | Fetches the tvOS engine, for Xcode to build   |
 | `just flutter reverse`      | Forwards `localhost:5173` to the device       |
 | `just flutter logcat`       | Follows the debug app's log                   |
 
@@ -85,6 +86,61 @@ as `CFBundleVersion`, 9 for 0.0.9. It runs however the build starts,
 isn't `major.minor.patch`. CI reads both back with
 `ios/version.sh --check`.
 
+### Apple TV
+
+Flutter has no tvOS engine, so the Apple TV app runs on Flutter's with
+Plezy's tvOS patches,
+[edde746/flutter-plezy](https://github.com/edde746/flutter-plezy), a
+prebuilt download. `tvos/engine.version` and `tvos/engine.sha256` pin it,
+and nothing unpacks before the checksum matches. It is engine 3.47.1 under
+the framework of Flutter 3.47.4. That works because the engine's own
+frontend server compiles the Dart code against its own SDK. A framework
+release that calls into `dart:ui` where 3.47.1 has nothing fails in that
+compile, and then the engine needs a newer build first.
+
+On a Mac with Apple silicon, Xcode, and Flutter 3.47.4, from
+`apps/flutter`:
+
+```sh
+flutter pub get
+tvos/scripts/fetch_engine.sh        # once, and after engine.version changes
+open tvos/Runner.xcodeproj          # then build and run the Runner scheme
+```
+
+`fetch_engine.sh` keeps the engine in `~/.cache/matinee` and writes
+`tvos/Flutter/Generated.xcconfig`, which isn't checked in. The Flutter
+tool can't build for tvOS, so the Runner's build phases call
+`tvos/scripts/build.sh`. It makes `App.framework` from the Dart code and
+embeds it with the engine's `Flutter.framework`. A simulator gets a debug
+app. A device gets a release app whatever the configuration, since tvOS
+lets no app run code it compiled itself and the debug engine needs to.
+There's no hot reload and no `flutter run`.
+
+The bundle id is `io.github.zekurio.matinee`, the iPhone app's, and the
+version comes from the root `package.json` through `ios/version.sh`.
+`tvos/Runner.xcodeproj` is checked in, and `tvos/scripts/project.rb`
+writes it. To add a Swift file, add it to the list in that script and
+run it, rather than through Xcode.
+
+No plugin has a tvOS side, and no plugin registrant runs there. The
+target compiles the iPhone app's player and bridges from `ios/Runner`,
+which hold the few `#if os(tvOS)` branches, and its own files in
+`tvos/Runner`. `lib/core/apple_tv.dart` stands in for the plugins. Settings
+go to the system's defaults and tokens to the Keychain through
+`AppleTvApi`, and artwork to the caches folder.
+
+The engine sends the Siri Remote's ring, Select, and Menu as arrow keys,
+Select, and Escape. Escape is Back. tvOS gives an app no way to leave, so
+on the screen where Back would leave, Home with its drawer open, the app
+tells the engine to let the next Menu through to the system. Where the app
+didn't see it coming, as on the sign-in screens, the Menu after a Back
+that closed nothing leaves. A swipe on the touch surface comes as finger
+positions, which `AppleTvRemote` turns into arrow keys. Play/Pause comes
+from `tvos/Runner/MatineeViewController.swift` as a media command.
+
+Not there yet: matching the TV's frame rate and dynamic range to the
+video, picture in picture, and the Top Shelf.
+
 ### Tests
 
 The tests guard logic that breaks without anyone seeing it: the API
@@ -102,6 +158,7 @@ rule is easy to break and hard to notice, and name the bug it pins.
 | `lib/core`        | Session, device, permissions, and what screens share      |
 | `lib/query`       | Server reads: queries, live streams, reconnecting         |
 | `lib/kit`         | The UI kit and theme                                      |
+| `lib/launcher`    | Android TV's Watch Next row                               |
 | `lib/l10n`        | The strings, as ARB files                                 |
 | `lib/media`       | Artwork, cards filled from the API, media actions         |
 | `lib/player`      | The player, its sessions, and the TV player in `tv/`      |
@@ -111,6 +168,7 @@ rule is easy to break and hard to notice, and name the bug it pins.
 | `pigeons`         | Pigeon definitions for what Dart asks the platform        |
 | `android`         | The Android project, with the native side of each channel |
 | `ios`             | The iOS project, with the native side of each channel     |
+| `tvos`            | The Apple TV project, its own sources, and its scripts    |
 
 State is Riverpod without code generation, and routing is go_router.
 Screens open a page with `context.push(Routes.title(id))`, never with a
@@ -139,7 +197,7 @@ of date.
 | `pnpm icons:dart`     | `lib/kit/lucide.g.dart`                               | lucide-react, listed in `scripts/lucide.mjs` |
 | `pnpm logo:dart`      | `lib/kit/logo.g.dart`                                 | `brand/logo-*.svg`                           |
 | `pnpm strings:dart`   | shared ARB entries, `lib/l10n/server_messages.g.dart` | the web's catalogs                           |
-| `just flutter pigeon` | `lib/platform/*.g.dart` and the Kotlin side           | `pigeons/*.dart`                             |
+| `just flutter pigeon` | `lib/platform/*.g.dart`, the Kotlin and Swift sides   | `pigeons/*.dart`                             |
 
 ### Strings
 
@@ -244,6 +302,54 @@ Flutter view, at the rectangle `VideoView` leaves transparent, and the
 same layer feeds picture in picture. `NOTICE.md` lists what the player
 adapts from Plezy.
 
+iOS's picture in picture shows that layer and nothing of the Flutter view
+over it. Subtitles mpv draws go into the frames while the small window is
+open (`avfoundation-pip-composite-osd`). The text subtitles the app draws
+itself would be missing, so while the window is open the session hands mpv
+the same WebVTT as an external subtitle (`drawCaptionsInPlayer`), and the
+app leaves them out. They then have mpv's look, not the one Settings
+gives the app's. Android's small window is the whole app, so nothing
+changes there.
+
+## Watch Next
+
+On an Android TV, Continue watching and Next up also go to the launcher's
+Watch Next row. The server's two lists decide what goes in and in what
+order, and the launcher how the row looks.
+
+`lib/launcher/watch_next.dart` fetches the lists and syncs when the session
+changes, when the app comes to the front, and when what's watched changes,
+which includes the player's last report. Nothing syncs while the app is
+closed. A failed fetch leaves the row as it was. The Kotlin side,
+`launcher/WatchNext.kt`, writes the rows through the framework's
+`TvContract.WatchNextPrograms`, so there's no tvprovider dependency. Rows
+keep their ids, and a row whose columns are the same isn't written.
+
+- Continue watching rows are dated by `progress.updatedAt`. Next up rows
+  are dated by `NextUpEntry.lastWatchedAt`, when the episode before was
+  finished, and carry no position. A time that doesn't parse stays empty
+  and the device's clock never stands in.
+- Artwork needs a session, which the launcher doesn't have. Dart fetches
+  each picture once and Kotlin keeps it in private files. A FileProvider,
+  off in the manifest and turned on on a TV, grants each picture to the
+  launchers and the TV provider. Grants end with a restart, so a boot
+  receiver makes them again. No token or server address goes into the
+  launcher's table.
+- A card opens `matinee://watch-next/<hash>/<file>`, where the hash is of
+  the server and the account. Dart plays the file as Resume does, and only
+  for the account whose row it was. A stale card opens the app and
+  nothing else.
+- When the person removes a card, the launcher hides the row or deletes
+  it. The app never writes that flag. It remembers when the card was last
+  watched, and the file comes back only with playback after that.
+  `WatchNextPlanTest.kt` pins these rules.
+- Signing out, or another account or server, empties the row and deletes
+  its pictures.
+
+`adb shell content query --uri content://android.media.tv/watch_next_program`
+returns nothing on TV images that show a caller only its own rows. Look at
+the launcher's row.
+
 ## Downloads
 
 Downloads are native. `lib/downloads` follows the platform's list and tells
@@ -297,6 +403,11 @@ These differ from what someone might expect, on purpose.
   in a See all card. Discover's Recent requests row is the way to the
   requests overview, so it shows whenever it has a card; with none, there
   is nothing to open.
+- An Apple TV takes each Play/Pause press natively and sends it once, as
+  a media command. tvOS delivers one press in up to three ways, and two
+  toggles would cancel out, so the TV player ignores the play and pause
+  keys there and the native side drops a second command within half a
+  second.
 - The TV's code screen shows only the title, one sentence with the link
   address, the code, and the QR code. Change server sits small at the
   bottom left.

@@ -18,5 +18,6 @@ void main() {
     expect(_device(DevicePlatform.androidtv, 'SHIELD').systemName, 'Android');
     expect(_device(DevicePlatform.ios, 'iPhone18,3').systemName, 'iOS');
     expect(_device(DevicePlatform.ios, 'iPad16,3').systemName, 'iPadOS');
+    expect(_device(DevicePlatform.tvos, 'AppleTV14,1').systemName, 'tvOS');
   });
 }

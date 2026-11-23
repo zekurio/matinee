@@ -14,6 +14,7 @@ void main() {
       'androidx.camera': 'AndroidX CameraX',
       'com.google.zxing': 'ZXing',
       'androidx.work': 'AndroidX WorkManager',
+      'androidx.core': 'AndroidX Core',
       'com.squareup.okhttp3': 'OkHttp',
     };
     final gradle = File('android/app/build.gradle.kts').readAsStringSync();

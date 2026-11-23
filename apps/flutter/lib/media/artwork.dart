@@ -118,11 +118,20 @@ final class ArtworkLoader {
   }
 }
 
+/// Where the app keeps what it can fetch again. `main` gives an Apple TV
+/// its own, since path_provider has no tvOS side.
+final cacheFolderProvider = Provider<Future<Directory>>(
+  (ref) => getApplicationCacheDirectory(),
+);
+
 final artworkCacheProvider = Provider<ArtworkCache>(
   (ref) => DiskArtworkCache(
-    getApplicationCacheDirectory().then(
-      (folder) => Directory('${folder.path}/artwork').create(recursive: true),
-    ),
+    ref
+        .watch(cacheFolderProvider)
+        .then(
+          (folder) =>
+              Directory('${folder.path}/artwork').create(recursive: true),
+        ),
   ),
 );
 

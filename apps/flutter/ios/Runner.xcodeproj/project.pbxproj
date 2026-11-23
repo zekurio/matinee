@@ -23,6 +23,7 @@
 		1E9F33C71208FB182090357E /* Display.g.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABEE51E013DDFCBE12DD254D /* Display.g.swift */; };
 		2435E097665BB0F33700B8A5 /* DownloadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93765BEB188110F1F8950C41 /* DownloadStore.swift */; };
 		284FDFB54B67C666BDA02C7F /* Capabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B9C65C4AB1A38603AFCB5E7 /* Capabilities.swift */; };
+		A1C5E0D2F3B4A59687C0D1E2 /* CaptionStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D6F1E3A4C5B6A798D1E2F3 /* CaptionStyle.swift */; };
 		2BD3391ED7C9C849CFE7BD01 /* Downloads.g.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB766A24D0E6EE582DF61526 /* Downloads.g.swift */; };
 		377465A0E222ED85D20E0653 /* PlayerBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F2B6072BB10EE7C5CBD5F78 /* PlayerBridge.swift */; };
 		3CEA72DDF60C174EF6E4BCF7 /* Player.g.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5A71AE4221DC8A48883D8F /* Player.g.swift */; };
@@ -92,6 +93,7 @@
 		52875FEF15423270A11FD6AB /* PlayerSystem.g.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSystem.g.swift; sourceTree = "<group>"; };
 		546A5BA84481162BB35C6975 /* DeviceBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceBridge.swift; sourceTree = "<group>"; };
 		5B9C65C4AB1A38603AFCB5E7 /* Capabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Capabilities.swift; sourceTree = "<group>"; };
+		B2D6F1E3A4C5B6A798D1E2F3 /* CaptionStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptionStyle.swift; sourceTree = "<group>"; };
 		6FAFC721CE6694C0F79BD7E4 /* SystemBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemBridge.swift; sourceTree = "<group>"; };
 		83019E6528E4A79C36FD97BC /* MpvEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MpvEngine.swift; sourceTree = "<group>"; };
 		93765BEB188110F1F8950C41 /* DownloadStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadStore.swift; sourceTree = "<group>"; };
@@ -216,6 +218,7 @@
 			isa = PBXGroup;
 			children = (
 				5B9C65C4AB1A38603AFCB5E7 /* Capabilities.swift */,
+				B2D6F1E3A4C5B6A798D1E2F3 /* CaptionStyle.swift */,
 				83019E6528E4A79C36FD97BC /* MpvEngine.swift */,
 				FA470FC044CFF6168C8E2CCF /* NowPlaying.swift */,
 				0F2B6072BB10EE7C5CBD5F78 /* PlayerBridge.swift */,
@@ -418,6 +421,7 @@
 				3E2BFF6FA5FFEF31210AE8FA /* Scanner.g.swift in Sources */,
 				DC1AA747235FEEDE143C1C4C /* System.g.swift in Sources */,
 				284FDFB54B67C666BDA02C7F /* Capabilities.swift in Sources */,
+				A1C5E0D2F3B4A59687C0D1E2 /* CaptionStyle.swift in Sources */,
 				E52CDB4A15F946918072FF8F /* MpvEngine.swift in Sources */,
 				D441DDA5BD97E3B871B1DBBC /* NowPlaying.swift in Sources */,
 				377465A0E222ED85D20E0653 /* PlayerBridge.swift in Sources */,

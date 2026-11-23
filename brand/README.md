@@ -22,6 +22,10 @@ height, with a gap of 30% of its width.
 | `app-icon.svg`           | 1024px full-bleed app icon. Platforms round the corners     |
 | `app-icon-dark.svg`      | iOS dark appearance, mark on transparency                   |
 | `app-icon-tinted.svg`    | iOS tinted appearance, gray mark on transparency            |
+| `tv-icon-back.svg`       | Apple TV icon, back layer: the sky, 400×240                 |
+| `tv-icon-front.svg`      | Apple TV icon, front layer: the mark on transparency        |
+| `tv-top-shelf.svg`       | Apple TV top shelf picture, 1920×720                        |
+| `tv-top-shelf-wide.svg`  | The same at 2320×720                                        |
 | `android/res`            | Adaptive and themed icon, used directly by the Gradle build |
 | `android/play-store.png` | 512px Play Console icon                                     |
 | `wordmark.py`            | Draws the wordmark and writes the logo files                |
@@ -38,7 +42,9 @@ carries Unbounded's license (`apps/flutter/assets/licenses/unbounded-ofl.txt`).
 Flutter app, whose Android build takes its launcher icon from
 `android/res`. `render.sh` renders the three app icon SVGs into the
 Flutter app's iOS asset catalog,
-`apps/flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset`. The web
+`apps/flutter/ios/Runner/Assets.xcassets/AppIcon.appiconset`, and the
+four `tv-` ones into the Apple TV's,
+`apps/flutter/tvos/Runner/Assets.xcassets/AppIcon.brandassets`. The web
 app serves copies as `favicon.svg` and `apple-touch-icon.png`, and
 `brand.tsx` draws the mark inline. The Samsung TV app's
 `apps/tizen/public/icon.png` is the app icon at 512 px.

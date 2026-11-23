@@ -95,6 +95,26 @@ void main() {
       await session.close();
     });
 
+    test('the player draws the saved WebVTT while asked', () async {
+      final player = FakePlayer();
+      final session = _session(player, subtitle: captions);
+      await session.start();
+      expect(player.opens.single.tracks?.subtitleUrl, isNull);
+
+      await session.drawCaptionsInPlayer(true);
+      expect(player.subtitleUrls, ['/data/offline/subtitles/0.vtt']);
+      // Another audio track sets the tracks again, captions included.
+      await session.pickAudio(audioOne);
+      expect(
+        player.trackChanges.last.subtitleUrl,
+        '/data/offline/subtitles/0.vtt',
+      );
+
+      await session.drawCaptionsInPlayer(false);
+      expect(player.subtitleUrls.last, isNull);
+      await session.close();
+    });
+
     test('reports on pause, on close, and the time played', () async {
       var clock = Duration.zero;
       final reports = <OfflineReport>[];

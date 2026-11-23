@@ -30,6 +30,11 @@ abstract class PictureInPicture {
 
   /// Whether the app shows in the small window now.
   ValueListenable<bool> get active;
+
+  /// The small window shows the player's picture alone, as iOS's does, not
+  /// the app's view over it as Android's does. The player then draws the
+  /// captions the app otherwise would.
+  bool get videoOnly;
 }
 
 /// The video's controls outside the app: the notification shade, the lock
@@ -113,6 +118,9 @@ class PlatformPlayerSystem
 
   @override
   ValueListenable<bool> get active => _active;
+
+  @override
+  bool get videoOnly => defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   Stream<wire.MediaCommandMessage> get commands => _commands.stream;

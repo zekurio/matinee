@@ -393,6 +393,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     _pip = ref.read(pictureInPictureProvider);
     _small = _pip.active.value;
     _pip.active.addListener(_smallChanged);
+    if (_small) _captionsFollow();
     ref.listenManual(playerPrefsProvider, (_, _) => _syncAuto());
     _media = PlayerMediaSession(
       _session,
@@ -556,6 +557,13 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     unawaited(_pip.setAuto(auto));
   }
 
+  /// Where the small window shows the player's picture alone, the player
+  /// draws the captions while it's open, and the app again after.
+  void _captionsFollow() {
+    if (!_pip.videoOnly) return;
+    unawaited(_session.drawCaptionsInPlayer(_small).catchError((Object _) {}));
+  }
+
   void _smallChanged() {
     final small = _pip.active.value;
     if (small == _small) return;
@@ -568,6 +576,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     });
     _gesture.value = null;
     if (_holding) _hold(false);
+    _captionsFollow();
     // The small window shows the whole picture, then the fit comes back.
     unawaited(
       _session.player
@@ -727,8 +736,10 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
         (_visible || error != null || _session.ended || item == null);
     final enabled =
         item != null && error == null && !_session.busy && !_leaving;
-    final captions =
-        _session.captions?.at(_session.position) ?? const <TextSpan>[];
+    // In a small window of the player's picture alone, they're in the picture.
+    final captions = _small && _pip.videoOnly
+        ? const <TextSpan>[]
+        : _session.captions?.at(_session.position) ?? const <TextSpan>[];
     final menu = _menu;
     final prefs = ref.watch(playerPrefsProvider).value ?? const PlayerPrefs();
     final look = subtitleLook(ref, prefs);
