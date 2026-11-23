@@ -155,7 +155,9 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
                 // bar's inset to clear it, as [ShellTopBar] does.
                 removeTop: !_serverTabs.contains(widget.shell.currentIndex),
                 removeBottom: true,
-                child: widget.shell,
+                // Clear of a landscape phone's notch or Dynamic Island, as
+                // the header and the tab bar are.
+                child: SafeArea(top: false, bottom: false, child: widget.shell),
               ),
             ),
             TabBar(items: items, state: _selected, onSelected: _open),

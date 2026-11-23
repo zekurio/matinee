@@ -32,10 +32,6 @@
   "@a11yPlayerVideo": {
     "description": "strings_accessibility.xml"
   },
-  "aboutAndroid": "Android",
-  "@aboutAndroid": {
-    "description": "strings_diagnostics.xml"
-  },
   "aboutDevice": "Device",
   "@aboutDevice": {
     "description": "strings_diagnostics.xml"
@@ -3044,11 +3040,14 @@
   "@settingsUnknownValue": {
     "description": "strings.xml"
   },
-  "settingsVersion": "Matinee for Android {p1}",
+  "settingsVersion": "Matinee for {system} {version}",
   "@settingsVersion": {
-    "description": "strings.xml",
+    "description": "Settings: the app and its version. system is the platform's product name, like Android, iOS or iPadOS",
     "placeholders": {
-      "p1": {
+      "system": {
+        "type": "String"
+      },
+      "version": {
         "type": "String"
       }
     }

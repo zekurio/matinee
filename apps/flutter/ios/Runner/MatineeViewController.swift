@@ -16,6 +16,10 @@ final class MatineeViewController: FlutterViewController {
     // frame.
     isViewOpaque = false
     view.backgroundColor = .clear
+    // UIDevice reports the orientation as unknown until something asks it to
+    // follow the accelerometer, and leaving fullscreen reads it. This view
+    // controller lasts as long as the app, so it never stops.
+    UIDevice.current.beginGeneratingDeviceOrientationNotifications()
   }
 
   override func viewDidAppear(_ animated: Bool) {
@@ -51,6 +55,20 @@ final class MatineeViewController: FlutterViewController {
   private func updateOrientation() {
     setNeedsUpdateOfSupportedInterfaceOrientations()
     guard let scene = view.window?.windowScene else { return }
-    scene.requestGeometryUpdate(.iOS(interfaceOrientations: supportedInterfaceOrientations)) { _ in }
+    scene.requestGeometryUpdate(.iOS(interfaceOrientations: requestedOrientations)) { _ in }
+  }
+
+  /// Fullscreen asks for what it supports. Leaving it, a phone turns to how
+  /// it's held, as Android's sensor does when the player lets go, upright
+  /// when it lies flat or can't tell: asking for every orientation would
+  /// leave it sideways.
+  private var requestedOrientations: UIInterfaceOrientationMask {
+    if fullscreen || traitCollection.userInterfaceIdiom != .phone { return supportedInterfaceOrientations }
+    // The device turned left shows the interface turned right, and back.
+    switch UIDevice.current.orientation {
+    case .landscapeLeft: return .landscapeRight
+    case .landscapeRight: return .landscapeLeft
+    default: return .portrait
+    }
   }
 }
