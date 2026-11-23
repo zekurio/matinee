@@ -120,6 +120,13 @@ function flutterText(key, text) {
       return text
         .replaceAll("Settings → Account", "Account in Settings")
         .replaceAll("Einstellungen → Konto", "Konto in den Einstellungen")
+    case "access.group.providerGroupHintNoClaim":
+      return text
+        .replaceAll("Settings → Authentication", "Authentication in Settings")
+        .replaceAll(
+          "Einstellungen → Authentifizierung",
+          "Authentifizierung in den Einstellungen",
+        )
     case "oidc.passkeys.allowSignUpHint":
       return text
         .replaceAll("Settings → Users", "Users in Settings")

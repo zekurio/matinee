@@ -8,6 +8,7 @@ import '../../../kit/kit.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../router.dart';
 import '../settings_rows.dart';
+import 'access_groups_page.dart';
 import 'admin_parts.dart';
 import 'authentication_page.dart';
 import 'branding_page.dart';
@@ -33,6 +34,7 @@ enum AdminCategory {
     ],
   ),
   users('users', Lucide.users, needs: [Permission.adminUserRead]),
+  access('access', Lucide.shieldCheck, needs: [Permission.groupRead]),
   // Changing them takes `all`.
   authentication(
     'authentication',
@@ -106,6 +108,7 @@ enum AdminCategory {
   String title(AppLocalizations l) => switch (this) {
     libraries => l.settingsAdminLibraries,
     users => l.settingsAdminUsers,
+    access => l.settingsAdminAccess,
     authentication => l.settingsAdminAuthentication,
     transcoding => l.settingsAdminTranscoding,
     trickplay => l.settingsAdminTrickplay,
@@ -120,6 +123,7 @@ enum AdminCategory {
     child: switch (this) {
       libraries => const LibrariesPage(),
       users => const UsersPage(),
+      access => const AccessGroupsPage(),
       authentication => const AuthenticationPage(),
       transcoding => const TranscodingPage(),
       trickplay => const TrickplayPage(),

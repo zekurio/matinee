@@ -296,7 +296,7 @@
   "@adminAccessLibrariesPicked": {
     "description": "admin settings"
   },
-  "adminAccessNoGroups": "There are no other groups yet. Make one in the web app's Settings, under Access.",
+  "adminAccessNoGroups": "There are no other groups yet. Make one in Settings, under Access.",
   "@adminAccessNoGroups": {
     "description": "admin settings"
   },
@@ -443,6 +443,15 @@
   "adminEnterNumber": "Enter a number.",
   "@adminEnterNumber": {
     "description": "admin settings"
+  },
+  "adminGroupDeleteFailed": "Couldn't delete {p1}",
+  "@adminGroupDeleteFailed": {
+    "description": "admin settings",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
   },
   "adminInviteExpiryDays": "{count, plural, one{{count} day} other{{count} days}}",
   "@adminInviteExpiryDays": {
@@ -2926,6 +2935,10 @@
   },
   "settingsAdmin": "Administration",
   "@settingsAdmin": {
+    "description": "strings.xml"
+  },
+  "settingsAdminAccess": "Access",
+  "@settingsAdminAccess": {
     "description": "strings.xml"
   },
   "settingsAdminAuthentication": "Authentication",
@@ -8863,6 +8876,217 @@
   "webRequestsDeclineCancel": "Cancel",
   "@webRequestsDeclineCancel": {
     "description": "requests.decline.cancel"
+  },
+  "webAccessEveryone": "Everyone",
+  "@webAccessEveryone": {
+    "description": "access.everyone"
+  },
+  "webAccessBitrateHint": "A file over the limit streams as an encode under it. Downloads aren't limited.",
+  "@webAccessBitrateHint": {
+    "description": "access.bitrate.hint"
+  },
+  "webAccessTranscodeHint": "The server may encode video to fit the limit or a device. Off, a file plays as it is or with its video copied, and one that needs an encode doesn't play.",
+  "@webAccessTranscodeHint": {
+    "description": "access.transcode.hint"
+  },
+  "webAccessDownloadsHint": "Files as they are, and versions made for a device.",
+  "@webAccessDownloadsHint": {
+    "description": "access.downloads.hint"
+  },
+  "webAccessSectionWatching": "Watching",
+  "@webAccessSectionWatching": {
+    "description": "access.section.watching"
+  },
+  "webAccessSectionRequests": "Requests",
+  "@webAccessSectionRequests": {
+    "description": "access.section.requests"
+  },
+  "webAccessSectionApi": "API",
+  "@webAccessSectionApi": {
+    "description": "access.section.api"
+  },
+  "webAccessApiTokensHint": "Tokens for scripts and services that use the API as the account.",
+  "@webAccessApiTokensHint": {
+    "description": "access.apiTokens.hint"
+  },
+  "webAccessGroupsTitle": "Access groups",
+  "@webAccessGroupsTitle": {
+    "description": "access.groups.title"
+  },
+  "webAccessGroupsCreate": "New group",
+  "@webAccessGroupsCreate": {
+    "description": "access.groups.create"
+  },
+  "webAccessGroupsIntro": "An account gets the most its groups allow. Settings under Users override groups. Admins have no limits and can do everything.",
+  "@webAccessGroupsIntro": {
+    "description": "access.groups.intro"
+  },
+  "webAccessGroupsOnlyEveryone": "Every account is in Everyone. Add groups to give some accounts more.",
+  "@webAccessGroupsOnlyEveryone": {
+    "description": "access.groups.onlyEveryone"
+  },
+  "webAccessGroupEveryAccount": "Every account",
+  "@webAccessGroupEveryAccount": {
+    "description": "access.group.everyAccount"
+  },
+  "webAccessGroupMembers": "{count, plural, one{{count} member} other{{count} members}}",
+  "@webAccessGroupMembers": {
+    "description": "access.group.members",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webAccessGroupFollows": "Follows {p1} at the provider",
+  "@webAccessGroupFollows": {
+    "description": "access.group.follows",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webAccessGroupActions": "Actions for {p1}",
+  "@webAccessGroupActions": {
+    "description": "access.group.actions",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webAccessGroupEdit": "Edit",
+  "@webAccessGroupEdit": {
+    "description": "access.group.edit"
+  },
+  "webAccessGroupDelete": "Delete group",
+  "@webAccessGroupDelete": {
+    "description": "access.group.delete"
+  },
+  "webAccessGroupDeleted": "Deleted {p1}",
+  "@webAccessGroupDeleted": {
+    "description": "access.group.deleted",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webAccessGroupDeleteTitle": "Delete {p1}?",
+  "@webAccessGroupDeleteTitle": {
+    "description": "access.group.deleteTitle",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webAccessGroupDeleteDescription": "{count, plural, one{Its {count} member loses what only this group allowed. The account stays.} other{Its {count} members lose what only this group allowed. Their accounts stay.}}",
+  "@webAccessGroupDeleteDescription": {
+    "description": "access.group.deleteDescription",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webAccessGroupDeleteDescriptionEmpty": "Nobody is in it.",
+  "@webAccessGroupDeleteDescriptionEmpty": {
+    "description": "access.group.deleteDescriptionEmpty"
+  },
+  "webAccessGroupNewTitle": "New group",
+  "@webAccessGroupNewTitle": {
+    "description": "access.group.newTitle"
+  },
+  "webAccessGroupEditTitle": "Edit {p1}",
+  "@webAccessGroupEditTitle": {
+    "description": "access.group.editTitle",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webAccessGroupDescription": "Members get the most their groups allow.",
+  "@webAccessGroupDescription": {
+    "description": "access.group.description"
+  },
+  "webAccessGroupEveryoneDescription": "Every account is in this group. Take its libraries away to make access opt-in, then open them through other groups. Its limits then count only for accounts no group opens anything for.",
+  "@webAccessGroupEveryoneDescription": {
+    "description": "access.group.everyoneDescription"
+  },
+  "webAccessGroupName": "Name",
+  "@webAccessGroupName": {
+    "description": "access.group.name"
+  },
+  "webAccessGroupNamePlaceholder": "Family",
+  "@webAccessGroupNamePlaceholder": {
+    "description": "access.group.namePlaceholder"
+  },
+  "webAccessGroupProviderGroup": "Provider group",
+  "@webAccessGroupProviderGroup": {
+    "description": "access.group.providerGroup"
+  },
+  "webAccessGroupProviderGroupPlaceholder": "None",
+  "@webAccessGroupProviderGroupPlaceholder": {
+    "description": "access.group.providerGroupPlaceholder"
+  },
+  "webAccessGroupProviderGroupHint": "Accounts in this provider group join at sign-in and leave when removed there.",
+  "@webAccessGroupProviderGroupHint": {
+    "description": "access.group.providerGroupHint"
+  },
+  "webAccessGroupProviderGroupHintNoClaim": "No provider groups yet. Set the groups claim under Authentication in Settings.",
+  "@webAccessGroupProviderGroupHintNoClaim": {
+    "description": "access.group.providerGroupHintNoClaim"
+  },
+  "webAccessGroupCreate": "Create group",
+  "@webAccessGroupCreate": {
+    "description": "access.group.create"
+  },
+  "webAccessTranscodeOn": "Encodes video",
+  "@webAccessTranscodeOn": {
+    "description": "access.transcode.on"
+  },
+  "webAccessTranscodeOff": "No video encoding",
+  "@webAccessTranscodeOff": {
+    "description": "access.transcode.off"
+  },
+  "webAccessDownloadsOn": "Can download",
+  "@webAccessDownloadsOn": {
+    "description": "access.downloads.on"
+  },
+  "webAccessDownloadsOff": "No downloads",
+  "@webAccessDownloadsOff": {
+    "description": "access.downloads.off"
+  },
+  "webAccessRequestsFactOff": "No requests",
+  "@webAccessRequestsFactOff": {
+    "description": "access.requests.factOff"
+  },
+  "webAccessRequestsFactAsk": "Requests need approval",
+  "@webAccessRequestsFactAsk": {
+    "description": "access.requests.factAsk"
+  },
+  "webAccessRequestsFactAdd": "Requests added right away",
+  "@webAccessRequestsFactAdd": {
+    "description": "access.requests.factAdd"
+  },
+  "webAccessRequestsFactLimited": "{p1}, {p2}",
+  "@webAccessRequestsFactLimited": {
+    "description": "access.requests.factLimited",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "webAccessApiTokensOn": "Can make API tokens",
+  "@webAccessApiTokensOn": {
+    "description": "access.apiTokens.on"
   },
   "webNetworkTitle": "Local and remote",
   "@webNetworkTitle": {
