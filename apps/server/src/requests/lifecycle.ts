@@ -125,7 +125,7 @@ async function mergeScope(tx: Transaction, row: Row, scope: Scope | null) {
     await tx
       .insert(requestSeason)
       .values(numbers.map((number) => ({ requestId: row.id, number })))
-  return numbers.length > 0 || (scope.future && !row.future)
+  return numbers.length > 0
 }
 
 export async function ask(
@@ -227,7 +227,6 @@ export async function ask(
           connectionId: plan.connection.id,
           options: plan.options,
         }),
-        future: row.future || (scope?.future ?? false),
         fulfilmentState:
           approved && (inserted || changed || row.status !== "approved")
             ? "queued"
@@ -367,7 +366,6 @@ async function items(viewer: Viewer, rows: Row[]) {
               seasons: scopes
                 .filter((scope) => scope.requestId === row.id)
                 .map((scope) => scope.number),
-              future: row.future,
             }
           : null,
       createdAt: row.createdAt,

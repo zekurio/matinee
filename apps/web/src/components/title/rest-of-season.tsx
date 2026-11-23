@@ -74,7 +74,7 @@ export function RestOfSeasonCard({
                   ref: gaps.ref,
                   name,
                   libraryId: gaps.libraryId,
-                  scope: { seasons: [season.number], future: false },
+                  scope: { seasons: [season.number] },
                   undo: gaps.first,
                 })
               }

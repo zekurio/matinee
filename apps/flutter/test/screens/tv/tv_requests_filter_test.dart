@@ -191,7 +191,7 @@ void main() {
     await _openFilter(tester);
     await _tapChip(tester, 'Shows');
     await _tapChip(tester, 'Declined');
-    await _tapChip(tester, 'Waiting');
+    await _tapChip(tester, 'Pending');
     expect(_queueAsks(sent).skip(1), [
       {'limit': 20, 'states': <Object>[], 'kind': 'show'},
       {

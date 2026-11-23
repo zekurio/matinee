@@ -133,8 +133,10 @@ export function RequestCard({
           {admin && (
             <div className="flex h-6 w-full min-w-0 items-center">{who}</div>
           )}
+          {/* Both words trimmed to their capitals, so they and the badge's
+              mark center on one line, whatever the zoom rounds. */}
           <div className="text-13px flex h-6 w-full min-w-0 items-center gap-2">
-            <span className="text-foreground/85 shrink-0 font-semibold">
+            <span className="text-foreground/85 shrink-0 font-semibold [text-box:trim-both_cap_alphabetic]">
               {tr("requests.statusLabel")}
             </span>
             {state}
@@ -268,7 +270,11 @@ export function RequestStateBadge({
   const content = (
     <>
       {look.icon}
-      <span className="truncate">{look.label}</span>
+      {/* Clipped rather than hidden, with room for a "g" to hang below
+          the trimmed box. */}
+      <span className="min-w-0 overflow-clip text-ellipsis whitespace-nowrap [overflow-clip-margin:3px] [text-box:trim-both_cap_alphabetic]">
+        {look.label}
+      </span>
     </>
   )
   if (!detail) return <span className={className}>{content}</span>

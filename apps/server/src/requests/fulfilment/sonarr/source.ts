@@ -256,8 +256,7 @@ export const adapter = {
     const payload = {
       ...lookup,
       monitored: true,
-      monitorNewItems:
-        order.scope?.future || chosen.monitorNewSeasons ? "all" : "none",
+      monitorNewItems: chosen.monitorNewSeasons ? "all" : "none",
       seasons: t
         .object({
           seasons: t.array(
@@ -314,7 +313,6 @@ export const adapter = {
       id: saved.id,
       slug: saved.titleSlug ?? null,
       seasons: order.scope?.seasons ?? [],
-      future: order.scope?.future ?? false,
     }
   },
   link: (connection, ref) => link(connection, ref, "series"),
@@ -333,10 +331,7 @@ export const adapter = {
         )
         const forTitle = records.filter((value) => value.seriesId === id)
         const requested = t
-          .object({
-            seasons: t.array(t.number()).optional(),
-            future: t.boolean().optional(),
-          })
+          .object({ seasons: t.array(t.number()).optional() })
           .parse(item.ref)
         const episodes = current
           ? (await list(connection, `episode?seriesId=${id}`))
@@ -352,10 +347,7 @@ export const adapter = {
               .filter(
                 (value) =>
                   !value.hasFile &&
-                  (requested.seasons?.includes(value.seasonNumber) ||
-                    (requested.future &&
-                      value.seasonNumber >
-                        Math.max(0, ...(requested.seasons ?? [])))),
+                  requested.seasons?.includes(value.seasonNumber),
               )
           : []
         const summarize = (season: number | null) => {

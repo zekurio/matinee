@@ -9,6 +9,7 @@ import {
   CatalogInput,
   CatalogTitleSummary,
   DeclineReason,
+  AskScope,
   ShowScope,
   WaitingDeclineReason,
 } from "./catalog"
@@ -169,10 +170,10 @@ export const requestsContract = {
       ),
     ),
   ask: post("/requests/ask", "request.create")
-    .input(CatalogInput.extend({ scope: ShowScope.optional() }))
+    .input(CatalogInput.extend({ scope: AskScope.optional() }))
     .output(RequestItem),
   addSeasons: post("/requests/add-seasons", "request.create")
-    .input(RequestId.extend({ scope: ShowScope }))
+    .input(RequestId.extend({ scope: AskScope }))
     .output(RequestItem),
   cancel: post("/requests/cancel", "request.delete")
     .input(RequestId)

@@ -571,20 +571,33 @@ final class SeasonAvailabilityLimit {
 }
 
 final class ShowScope {
-  const ShowScope({required this.seasons, required this.future});
+  const ShowScope({required this.seasons});
 
   factory ShowScope.fromJson(Object? json) {
     final fields = json as JsonMap;
     return ShowScope(
       seasons: readList(fields['seasons'], (value) => value as int),
-      future: fields['future'] as bool,
     );
   }
 
   final List<int> seasons;
-  final bool future;
 
-  JsonMap toJson() => {'seasons': seasons, 'future': future};
+  JsonMap toJson() => {'seasons': seasons};
+}
+
+final class AskScope {
+  const AskScope({required this.seasons});
+
+  factory AskScope.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return AskScope(
+      seasons: readList(fields['seasons'], (value) => value as int),
+    );
+  }
+
+  final List<int> seasons;
+
+  JsonMap toJson() => {'seasons': seasons};
 }
 
 final class CatalogDestination {
@@ -10220,13 +10233,13 @@ final class RequestsAskInput {
     return RequestsAskInput(
       ref: CatalogRef.fromJson(fields['ref']),
       libraryId: fields['libraryId'] as String?,
-      scope: readNullable(fields['scope'], ShowScope.fromJson),
+      scope: readNullable(fields['scope'], AskScope.fromJson),
     );
   }
 
   final CatalogRef ref;
   final String? libraryId;
-  final ShowScope? scope;
+  final AskScope? scope;
 
   JsonMap toJson() => {
     'ref': ref.toJson(),
@@ -10242,12 +10255,12 @@ final class RequestsAddSeasonsInput {
     final fields = json as JsonMap;
     return RequestsAddSeasonsInput(
       id: fields['id'] as String,
-      scope: ShowScope.fromJson(fields['scope']),
+      scope: AskScope.fromJson(fields['scope']),
     );
   }
 
   final String id;
-  final ShowScope scope;
+  final AskScope scope;
 
   JsonMap toJson() => {'id': id, 'scope': scope.toJson()};
 }
