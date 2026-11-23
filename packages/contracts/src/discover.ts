@@ -231,10 +231,10 @@ export const DiscoverRails = t.object({
   enabled: t.boolean(),
   /**
    * The list to follow even while empty. A viewer with
-   * `adminRequest.read` and `adminRequest.update` gets the waiting list
-   * from admin.requests.live; one with `request.read` gets their
-   * in-progress requests from requests.mineLive. Null when Discover is
-   * disabled or the viewer holds neither.
+   * `adminRequest.read` and `adminRequest.approve` or `adminRequest.decline`
+   * gets the waiting list from admin.requests.live; one with `request.read`
+   * gets their in-progress requests from requests.mineLive. Null when
+   * Discover is disabled or the viewer holds neither.
    */
   requests: t.enum(["queue", "mine"]).nullable(),
   rails: t.array(DiscoverRail),

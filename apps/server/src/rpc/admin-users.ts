@@ -1,4 +1,8 @@
-import { type AdminUser, type Permission } from "@matinee/contracts"
+import {
+  type AdminUser,
+  type Permission,
+  permissionsOf,
+} from "@matinee/contracts"
 import {
   apiToken,
   invite,
@@ -22,6 +26,7 @@ import {
   readAccess,
   setMemberships,
 } from "../access/groups"
+import { overridePermissions } from "../access/policy"
 import { can, type Viewer } from "../access/viewer"
 import { revokeUserApiTokens } from "../auth/api-tokens"
 import { deleteAvatarFile } from "../auth/avatars"
@@ -78,7 +83,10 @@ async function toAdminUsers(rows: UserRow[]): Promise<AdminUser[]> {
     if (!described) return []
     return [
       {
-        ...publicUser(row, described.effective.permissions),
+        ...publicUser(
+          row,
+          row.role === "admin" ? ["all"] : permissionsOf(described.effective),
+        ),
         createdAt: row.createdAt,
         lastSeenAt: activity.get(row.id)?.lastSeenAt ?? null,
         passkeys: passkeyCount.get(row.id) ?? 0,
@@ -227,15 +235,16 @@ export const adminUsers = {
         )
         requirePeer(actor, target)
         // Moving the account between groups moves what they grant, and so
-        // does what the override allows and denies.
-        const before = overrideOf(target)
+        // does what the override grants and holds back.
+        const before = overridePermissions(overrideOf(target))
+        const after = overridePermissions(override)
         requireOwn(actor, [
           ...groupPermissionsIn(
             state,
             changed(manualGroupIdsIn(state, target.id), input.groupIds),
           ),
-          ...changed(before.allow ?? [], override.allow ?? []),
-          ...changed(before.deny ?? [], override.deny ?? []),
+          ...changed(before.allow, after.allow),
+          ...changed(before.deny, after.deny),
         ])
         await setMemberships(tx, target.id, "manual", input.groupIds)
         const [updated] = await tx

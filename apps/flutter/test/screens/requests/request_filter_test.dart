@@ -55,6 +55,7 @@ Map<String, Object?> _waiting(String id, String kind) => {
     'poster': null,
     'availability': _availability(),
   },
+  'backdrop': null,
   'library': {'id': 'lib', 'name': 'Lib'},
   'scope': null,
   'createdAt': '2026-11-01T00:00:00.000Z',
@@ -73,6 +74,7 @@ Map<String, Object?> _waiting(String id, String kind) => {
     {
       'id': 'u1',
       'name': 'Ben',
+      'username': 'ben',
       'avatarId': null,
       'createdAt': '2026-11-01T00:00:00.000Z',
     },
@@ -158,7 +160,16 @@ Future<void> _pumpOverview(
             client: client,
           ),
         ),
-        runsQueueProvider.overrideWithValue(queue),
+        canProvider.overrideWith(
+          (ref, permission) =>
+              queue &&
+              const [
+                Permission.adminRequestRead,
+                Permission.adminRequestApprove,
+                Permission.adminRequestDecline,
+                Permission.adminRequestRetry,
+              ].contains(permission),
+        ),
         toastProvider.overrideWithValue(_Toasts()),
       ],
       child: MaterialApp(
@@ -206,7 +217,7 @@ void main() {
     await _openFilter(tester);
     await _tapChip(tester, 'Shows');
     await _tapChip(tester, 'Declined');
-    await _tapChip(tester, 'Waiting');
+    await _tapChip(tester, 'Pending');
     expect(_queueAsks(sent).skip(1), [
       {'limit': 20, 'states': <Object>[], 'kind': 'show'},
       {
@@ -276,7 +287,7 @@ void main() {
     ];
     expect(find.text('Nothing requested yet'), findsOneWidget);
     await _openFilter(tester);
-    await _tapChip(tester, 'Waiting');
+    await _tapChip(tester, 'Pending');
     await _tapChip(tester, 'Movies');
     await _tapChip(tester, 'Show requests');
     await tester.pump(const Duration(milliseconds: 500));

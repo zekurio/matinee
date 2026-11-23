@@ -33,7 +33,7 @@ class RequestsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) =>
-      queue && ref.watch(runsQueueProvider)
+      queue && ref.watch(canProvider(Permission.adminRequestRead))
       ? const _QueuePage()
       : const _MinePage();
 }
@@ -217,7 +217,8 @@ class _QueuePageState extends ConsumerState<_QueuePage> {
       backLabel: l.commonBack,
       actions: [
         RequestFilterButton(filter: _filter),
-        if (waiting.length > 1)
+        if (waiting.length > 1 &&
+            ref.watch(canProvider(Permission.adminRequestApprove)))
           // The bar's end is set for icons; a button with words keeps
           // the gutter the back button has at the start.
           Padding(

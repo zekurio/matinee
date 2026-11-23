@@ -9,7 +9,6 @@ export default {
 
   "ask.dialog.title": "{name} anfragen",
   "ask.chooser.seasons": "Staffeln",
-  "ask.chooser.future": "Neue Staffeln, sobald sie laufen",
   "ask.chooser.unavailable": "Nicht im Angebot",
   "ask.chooser.none": "Wähle eine Staffel",
   "ask.chooser.one": "Staffel {number} anfragen",
@@ -18,7 +17,6 @@ export default {
     other: "{count} Staffeln anfragen",
   }),
   "ask.chooser.specials": "Specials anfragen",
-  "ask.chooser.newOnly": "Neue Staffeln anfragen",
 
   "ask.declined.why": "Abgelehnt: {reason}.",
   "ask.declined.notFound": "Der Titel ließ sich nicht finden.",

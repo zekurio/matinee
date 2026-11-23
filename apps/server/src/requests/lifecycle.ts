@@ -39,7 +39,12 @@ import { inLibraries, visibleTitles } from "../access/visible"
 import { details, routedDetails } from "../catalog"
 import { detailProvider } from "../catalog/cache"
 import { db } from "../db"
-import { placeholders, toArtwork } from "../media/artwork"
+import {
+  placeholders,
+  queueArtwork,
+  saveArtwork,
+  toArtwork,
+} from "../media/artwork"
 import { events } from "../realtime/events"
 import { availability, ExternalIds } from "./availability"
 import { withCachedDetails } from "./cached-details"
@@ -120,7 +125,7 @@ async function mergeScope(tx: Transaction, row: Row, scope: Scope | null) {
     await tx
       .insert(requestSeason)
       .values(numbers.map((number) => ({ requestId: row.id, number })))
-  return numbers.length > 0 || (scope.future && !row.future)
+  return numbers.length > 0
 }
 
 export async function ask(
@@ -222,7 +227,6 @@ export async function ask(
           connectionId: plan.connection.id,
           options: plan.options,
         }),
-        future: row.future || (scope?.future ?? false),
         fulfilmentState:
           approved && (inserted || changed || row.status !== "approved")
             ? "queued"
@@ -256,7 +260,7 @@ export async function addSeasons(
 
 /**
  * Takes the viewer's ask back, and the request with it once nobody asks.
- * Whoever runs the queue removes it outright.
+ * Whoever may approve or decline removes it outright.
  */
 export async function cancel(viewer: Viewer, id: string) {
   await db.transaction(async (tx) => {
@@ -266,7 +270,10 @@ export async function cancel(viewer: Viewer, id: string) {
       eq(requestFollower.userId, viewer.id),
     )
     const [self] = await tx.select().from(requestFollower).where(identity)
-    if (can(viewer, "adminRequest.update")) {
+    if (
+      can(viewer, "adminRequest.approve") ||
+      can(viewer, "adminRequest.decline")
+    ) {
       await tx.delete(request).where(eq(request.id, id))
       return
     }
@@ -306,25 +313,32 @@ async function items(viewer: Viewer, rows: Row[]) {
         rows.map((row) => row.libraryId),
       ),
     )
-  const art = await placeholders(
-    rows.flatMap((row) => (row.posterId ? [row.posterId] : [])),
-  )
-  const states = await availability(
+  const details = await withCachedDetails(
     viewer,
-    await withCachedDetails(
-      viewer,
-      rows.map((row) => ({
-        requestId: row.id,
-        ref: {
-          kind: row.kind,
-          provider: row.provider,
-          providerId: row.providerId,
-        },
-        libraryId: row.libraryId,
-        externalIds: ExternalIds.parse(row.externalIds),
-      })),
-    ),
+    rows.map((row) => ({
+      requestId: row.id,
+      ref: {
+        kind: row.kind,
+        provider: row.provider,
+        providerId: row.providerId,
+      },
+      libraryId: row.libraryId,
+      externalIds: ExternalIds.parse(row.externalIds),
+    })),
   )
+  // The backdrop comes from the title's cached details, as its title page
+  // shows it, so it's public catalog art like the poster.
+  const backdrops = await saveArtwork(
+    details.map((detail) => detail.backdrop),
+    db,
+    { catalog: true },
+  )
+  const art = await placeholders([
+    ...rows.flatMap((row) => (row.posterId ? [row.posterId] : [])),
+    ...backdrops.values(),
+  ])
+  queueArtwork([...backdrops.values()], "low")
+  const states = await availability(viewer, details)
   return rows.map((row, index) => {
     const state = states[index]
     const seasons = scopes.filter((scope) => scope.requestId === row.id)
@@ -341,6 +355,10 @@ async function items(viewer: Viewer, rows: Row[]) {
         poster: toArtwork(row.posterId, art),
         availability: state.availability,
       },
+      backdrop: toArtwork(
+        backdrops.get(details[index]?.backdrop ?? "") ?? null,
+        art,
+      ),
       library: { id: destination.id, name: destination.name },
       scope:
         row.kind === "show"
@@ -348,7 +366,6 @@ async function items(viewer: Viewer, rows: Row[]) {
               seasons: scopes
                 .filter((scope) => scope.requestId === row.id)
                 .map((scope) => scope.number),
-              future: row.future,
             }
           : null,
       createdAt: row.createdAt,
@@ -705,6 +722,7 @@ export async function queue(
           .map((f) => ({
             id: f.follower.userId,
             name: f.name ?? f.username,
+            username: f.username,
             avatarId: f.avatarId,
             createdAt: f.follower.createdAt,
           })),

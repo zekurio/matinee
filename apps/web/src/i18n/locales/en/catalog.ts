@@ -11,8 +11,8 @@ export default defineMessages("catalog", {
 
   // A state, on a card's second line and a poster's badge.
   "catalog.state.asked": "Requested",
-  "catalog.state.coming": "On its way",
-  "catalog.state.comingPercent": "On its way · {percent}",
+  "catalog.state.coming": "Processing",
+  "catalog.state.comingPercent": "Processing · {percent}",
   "catalog.state.out": "Out {date}",
   "catalog.state.notOut": "Not out yet",
   "catalog.state.unavailable": "Not available",

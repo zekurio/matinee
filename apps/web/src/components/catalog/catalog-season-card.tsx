@@ -71,7 +71,7 @@ export function CatalogSeasonCard({
                 ref: show.ref,
                 name,
                 libraryId,
-                scope: { seasons: [season.number], future: false },
+                scope: { seasons: [season.number] },
                 undo: first,
               })
             }

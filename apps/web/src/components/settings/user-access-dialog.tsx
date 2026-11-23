@@ -2,15 +2,18 @@ import {
   type AccessGroup,
   type AccessOverride,
   type AdminUser,
-  holdsPermission,
-  type Permission,
+  areaLevels,
+  MANAGED_AREAS,
+  type ManagedAccess,
+  type ManagedArea,
+  REQUEST_MODES,
+  type RequestMode,
   type UserAccess,
   UserAccessInput,
 } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -21,17 +24,10 @@ import { Spinner } from "@matinee/ui/components/spinner"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { LogInIcon } from "lucide-react"
-import type { ReactNode } from "react"
 
 import { tr } from "@/i18n"
 import { firstError, useAppForm } from "@/lib/form"
 import { formatDateTime, formatRelative } from "@/lib/format"
-import {
-  POLICY_PERMISSIONS,
-  REQUEST_PERMISSIONS,
-  type RequestsChoice as Requests,
-  requestsOf,
-} from "@/lib/permissions"
 import { client, orpc } from "@/lib/rpc"
 import { ShownError } from "@/lib/shown-error"
 import { useActionFeedback } from "@/lib/use-action-feedback"
@@ -46,19 +42,30 @@ import {
   limitValue,
   NO_LIMIT,
   QuotaInputs,
-  REQUEST_CHOICES,
   requestsLabel,
   streamLabel,
   streamOptions,
 } from "./access-controls"
 import {
+  areaHint,
+  areaLabel,
   bitrateLimitLabel,
   Fact,
+  levelLabel,
   librariesLabel,
   PolicyFacts,
   requestLimitLabel,
   streamLimitLabel,
 } from "./access-facts"
+import {
+  FormColumn,
+  FormColumns,
+  FormDialogBody,
+  FormDialogContent,
+  FormDialogForm,
+  FormDialogHeader,
+  FormSection,
+} from "./form-dialog"
 import {
   SelectField,
   SelectRow,
@@ -69,25 +76,30 @@ import { SettingNote, SettingRows } from "./settings-panel"
 
 /** A field of the override left out, so the groups decide it. */
 const FROM_GROUPS = "groups"
+type FromGroups = typeof FROM_GROUPS
 
-type LibraryChoice = typeof FROM_GROUPS | "all" | "some"
+type LibraryChoice = FromGroups | "all" | "some"
 const LIBRARY_CHOICES: readonly LibraryChoice[] = [FROM_GROUPS, "all", "some"]
 
-type SwitchChoice = typeof FROM_GROUPS | "on" | "off"
+type SwitchChoice = FromGroups | "on" | "off"
 const SWITCH_CHOICES: readonly SwitchChoice[] = [FROM_GROUPS, "on", "off"]
 
-type RequestsChoice = typeof FROM_GROUPS | Requests
-const REQUESTS_CHOICES: readonly RequestsChoice[] = [
+const REQUEST_CHOICES: readonly (FromGroups | RequestMode)[] = [
   FROM_GROUPS,
-  ...REQUEST_CHOICES,
+  ...REQUEST_MODES,
 ]
 
-type QuotaChoice = typeof FROM_GROUPS | typeof NO_LIMIT | "some"
+type QuotaChoice = FromGroups | typeof NO_LIMIT | "some"
 const QUOTA_CHOICES: readonly QuotaChoice[] = [FROM_GROUPS, NO_LIMIT, "some"]
 
 function quotaChoice(limit: AccessOverride["requestLimit"]): QuotaChoice {
   if (limit === undefined) return FROM_GROUPS
   return limit === null ? NO_LIMIT : "some"
+}
+
+/** Each area's level set on the account, or left to the groups. */
+type ManagedChoices = {
+  [Area in ManagedArea]: FromGroups | ManagedAccess[Area]
 }
 
 /** The dialog's form. Limits are text, as the selects hold them. */
@@ -98,45 +110,12 @@ type AccessValues = {
   libraryIds: string[]
   maxBitrate: string
   transcode: SwitchChoice
-  /**
-   * `request.create` and `request.autoApprove` as one choice, allowed or
-   * denied over the groups. Undefined follows them.
-   */
-  requests: Requests | undefined
-  requestLimit: AccessOverride["requestLimit"]
-  /** `media.download`, allowed or denied over the groups. */
-  downloads: SwitchChoice
   maxStreams: string
-  /**
-   * What else the override allows and denies. The dialog has no control
-   * for these, so a save keeps them as they are.
-   */
-  allow: Permission[]
-  deny: Permission[]
-}
-
-const others = (permissions: readonly Permission[] | undefined) =>
-  (permissions ?? []).filter(
-    (permission) => !POLICY_PERMISSIONS.includes(permission),
-  )
-
-/** The request choice an override's allow and deny lists spell. */
-function requestsChoice(override: AccessOverride): Requests | undefined {
-  const allow = override.allow ?? []
-  const deny = override.deny ?? []
-  if (deny.includes("request.create")) return "off"
-  if (!allow.includes("request.create")) return undefined
-  return allow.includes("request.autoApprove") ? "add" : "ask"
-}
-
-/** What a request choice allows and denies. */
-function requestsLists(choice: Requests | undefined) {
-  if (choice === undefined) return { allow: [], deny: [] }
-  const allow: Permission[] = []
-  const deny: Permission[] = []
-  ;(choice === "off" ? deny : allow).push("request.create")
-  ;(choice === "add" ? allow : deny).push("request.autoApprove")
-  return { allow, deny }
+  downloads: SwitchChoice
+  requests: FromGroups | RequestMode
+  requestLimit: AccessOverride["requestLimit"]
+  apiTokens: SwitchChoice
+  manages: ManagedChoices
 }
 
 function switchChoice(value: boolean | undefined): SwitchChoice {
@@ -144,13 +123,14 @@ function switchChoice(value: boolean | undefined): SwitchChoice {
   return value ? "on" : "off"
 }
 
+function switchValue(choice: SwitchChoice): boolean | undefined {
+  return choice === FROM_GROUPS ? undefined : choice === "on"
+}
+
 function valuesOf(access: UserAccess): AccessValues {
   const { override } = access
-  const downloads = override.allow?.includes("media.download")
-    ? true
-    : override.deny?.includes("media.download")
-      ? false
-      : undefined
+  const area = <Area extends ManagedArea>(name: Area) =>
+    override.manages?.[name] ?? FROM_GROUPS
   return {
     groupIds: access.groups
       .filter((group) => group.source === "manual")
@@ -166,44 +146,37 @@ function valuesOf(access: UserAccess): AccessValues {
         ? FROM_GROUPS
         : limitValue(override.maxBitrate),
     transcode: switchChoice(override.transcode),
-    requests: requestsChoice(override),
-    requestLimit: override.requestLimit,
-    downloads: switchChoice(downloads),
-    allow: others(override.allow),
-    deny: others(override.deny),
     maxStreams:
       override.maxStreams === undefined
         ? FROM_GROUPS
         : limitValue(override.maxStreams),
+    downloads: switchChoice(override.downloads),
+    requests: override.requests ?? FROM_GROUPS,
+    requestLimit: override.requestLimit,
+    apiTokens: switchChoice(override.apiTokens),
+    manages: {
+      requests: area("requests"),
+      connections: area("connections"),
+      libraries: area("libraries"),
+      metadata: area("metadata"),
+      users: area("users"),
+      server: area("server"),
+    },
   }
 }
 
-/** The request permissions among `permissions`. */
-const requestOnes = (permissions: readonly Permission[] | undefined) =>
-  (permissions ?? []).filter((permission) =>
-    REQUEST_PERMISSIONS.includes(permission),
-  )
-
-/**
- * The override to save. The request choice shows three mixes of its two
- * permissions, so one never touched keeps what `saved` allows and denies
- * of them: an override may deny adding without an approval and leave
- * asking to the groups. Once changed, even back to how it opened, the
- * choice is what it shows.
- */
-function overrideOf(
-  value: AccessValues,
-  saved: AccessOverride,
-  requestsChanged: boolean,
-): AccessOverride {
+/** The override to save: each field the form doesn't leave to the groups. */
+function overrideOf(value: AccessValues): AccessOverride {
   const all = value.libraries === "all"
-  const requests = !requestsChanged
-    ? { allow: requestOnes(saved.allow), deny: requestOnes(saved.deny) }
-    : requestsLists(value.requests)
-  const allow: Permission[] = [...value.allow, ...requests.allow]
-  const deny: Permission[] = [...value.deny, ...requests.deny]
-  if (value.downloads === "on") allow.push("media.download")
-  if (value.downloads === "off") deny.push("media.download")
+  const manages = Object.fromEntries(
+    MANAGED_AREAS.flatMap((area) => {
+      const level = value.manages[area]
+      return level === FROM_GROUPS ? [] : [[area, level]]
+    }),
+  )
+  const downloads = switchValue(value.downloads)
+  const transcode = switchValue(value.transcode)
+  const apiTokens = switchValue(value.apiTokens)
   return {
     ...(value.libraries !== FROM_GROUPS && {
       libraries: { all, ids: all ? [] : value.libraryIds },
@@ -211,17 +184,17 @@ function overrideOf(
     ...(value.maxBitrate !== FROM_GROUPS && {
       maxBitrate: limitOf(value.maxBitrate),
     }),
-    ...(value.transcode !== FROM_GROUPS && {
-      transcode: value.transcode === "on",
-    }),
-    ...(allow.length > 0 && { allow }),
-    ...(deny.length > 0 && { deny }),
-    ...(value.requestLimit !== undefined && {
-      requestLimit: value.requestLimit,
-    }),
+    ...(transcode !== undefined && { transcode }),
     ...(value.maxStreams !== FROM_GROUPS && {
       maxStreams: limitOf(value.maxStreams),
     }),
+    ...(downloads !== undefined && { downloads }),
+    ...(value.requests !== FROM_GROUPS && { requests: value.requests }),
+    ...(value.requestLimit !== undefined && {
+      requestLimit: value.requestLimit,
+    }),
+    ...(apiTokens !== undefined && { apiTokens }),
+    ...(Object.keys(manages).length > 0 && { manages }),
   }
 }
 
@@ -260,10 +233,7 @@ export function UserAccessDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-lg"
-      >
+      <FormDialogContent width="2xl">
         {userId && (
           <AccessForm
             userId={userId}
@@ -271,7 +241,7 @@ export function UserAccessDialog({
             onDone={() => onOpenChange(false)}
           />
         )}
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
   )
 }
@@ -292,7 +262,7 @@ function AccessForm({
     return users.isPending ? (
       <Spinner className="mx-auto my-16 size-6 opacity-60" />
     ) : (
-      <>
+      <div className="flex flex-col gap-5 p-6">
         <DialogHeader>
           <DialogTitle>{tr("access.user.goneTitle")}</DialogTitle>
           <DialogDescription>{tr("access.user.gone")}</DialogDescription>
@@ -300,7 +270,7 @@ function AccessForm({
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
           <Button onClick={onDone}>{tr("access.done")}</Button>
         </DialogFooter>
-      </>
+      </div>
     )
   }
   return <AccessEditor user={user} oidcName={oidcName} />
@@ -330,11 +300,7 @@ function AccessEditor({
       const parsed = UserAccessInput.safeParse({
         id: user.id,
         groupIds: value.groupIds,
-        override: overrideOf(
-          value,
-          user.access.override,
-          formApi.getFieldMeta("requests")?.isDirty ?? false,
-        ),
+        override: overrideOf(value),
       })
       if (!parsed.success) {
         throw new ShownError(
@@ -370,10 +336,9 @@ function AccessEditor({
       .map((group) => group.id),
   )
   // What "From groups" gives, as of the last save. A change to the groups
-  // above that isn't saved yet could give something else, so then it's
-  // left unsaid.
+  // that isn't saved yet could give something else, so then it's left
+  // unsaid.
   const { fromGroups } = user.access
-  const groupRequests = requestsOf(fromGroups.permissions)
   const groupsSaved =
     values.groupIds.toSorted().join() === initial.groupIds.toSorted().join()
   const inherited = (value: string) =>
@@ -389,218 +354,277 @@ function AccessEditor({
   const limitLabel =
     (format: (value: string) => string, given: string) => (value: string) =>
       value === FROM_GROUPS ? inherited(given) : format(value)
+  const requests =
+    values.requests === FROM_GROUPS ? fromGroups.requests : values.requests
 
   return (
-    <form
-      className="flex min-w-0 flex-col gap-6"
-      onSubmit={(event) => {
-        event.preventDefault()
-        submit()
-      }}
-    >
-      <DialogHeader>
-        <DialogTitle className="text-lg leading-7 font-semibold">
-          {tr("access.user.title", { name })}
-        </DialogTitle>
-        <DialogDescription>{tr("access.user.description")}</DialogDescription>
-      </DialogHeader>
+    <FormDialogForm onSubmit={submit}>
+      <FormDialogHeader
+        title={tr("access.user.title", { name })}
+        description={tr("access.user.description")}
+      />
 
-      <Block title={tr("access.user.gets", { name })}>
-        <div className="bg-foreground/[0.02] rounded-xl border px-4 py-3">
-          <PolicyFacts
-            policy={user.access.effective}
-            libraries={libraries.data}
-            className="text-foreground text-sm"
-          />
-        </div>
-        {dirty && <SettingNote>{tr("access.user.getsAfterSave")}</SettingNote>}
-        {user.oidcLinked && (
-          <SettingNote>
-            <span
-              className="inline-flex"
-              title={
-                user.claimsSyncedAt
-                  ? formatDateTime(user.claimsSyncedAt)
-                  : undefined
+      <FormDialogBody>
+        <FormColumns count={3}>
+          <FormColumn>
+            <FormSection title={tr("access.user.gets", { name })}>
+              <div className="bg-foreground/[0.02] rounded-xl border px-4 py-3">
+                <PolicyFacts
+                  policy={user.access.effective}
+                  admin={user.role === "admin"}
+                  libraries={libraries.data}
+                  className="text-foreground text-sm"
+                />
+              </div>
+              {dirty && (
+                <SettingNote>{tr("access.user.getsAfterSave")}</SettingNote>
+              )}
+              {user.oidcLinked && (
+                <SettingNote>
+                  <span
+                    className="inline-flex"
+                    title={
+                      user.claimsSyncedAt
+                        ? formatDateTime(user.claimsSyncedAt)
+                        : undefined
+                    }
+                  >
+                    <Fact icon={<LogInIcon />}>
+                      {user.claimsSyncedAt
+                        ? tr("access.user.claimsSynced", {
+                            provider,
+                            when: formatRelative(user.claimsSyncedAt),
+                          })
+                        : tr("access.user.claimsNever", { provider })}
+                    </Fact>
+                  </span>
+                </SettingNote>
+              )}
+            </FormSection>
+
+            <FormSection title={tr("access.user.groups")}>
+              <SettingRows>
+                {(groups.data ?? []).map((group) => (
+                  <GroupSwitch
+                    key={group.id}
+                    group={group}
+                    provider={provider}
+                    fromProvider={fromProvider.has(group.id)}
+                    checked={values.groupIds.includes(group.id)}
+                    onChange={(on) =>
+                      form.setFieldValue("groupIds", (ids) =>
+                        on
+                          ? [...ids, group.id]
+                          : ids.filter((id) => id !== group.id),
+                      )
+                    }
+                  />
+                ))}
+              </SettingRows>
+              {groups.data?.length === 1 && (
+                <SettingNote>{tr("access.user.noGroups")}</SettingNote>
+              )}
+            </FormSection>
+          </FormColumn>
+
+          <FormColumn tall>
+            <FormSection
+              title={tr("access.user.override")}
+              description={
+                user.access.overrideSource === "provider"
+                  ? undefined
+                  : tr("access.user.overrideHint")
               }
             >
-              <Fact icon={<LogInIcon />}>
-                {user.claimsSyncedAt
-                  ? tr("access.user.claimsSynced", {
-                      provider,
-                      when: formatRelative(user.claimsSyncedAt),
-                    })
-                  : tr("access.user.claimsNever", { provider })}
-              </Fact>
-            </span>
-          </SettingNote>
-        )}
-      </Block>
-
-      <Block title={tr("access.user.groups")}>
-        <SettingRows>
-          {(groups.data ?? []).map((group) => (
-            <GroupSwitch
-              key={group.id}
-              group={group}
-              provider={provider}
-              fromProvider={fromProvider.has(group.id)}
-              checked={values.groupIds.includes(group.id)}
-              onChange={(on) =>
-                form.setFieldValue("groupIds", (ids) =>
-                  on ? [...ids, group.id] : ids.filter((id) => id !== group.id),
-                )
-              }
-            />
-          ))}
-        </SettingRows>
-        {groups.data?.length === 1 && (
-          <SettingNote>{tr("access.user.noGroups")}</SettingNote>
-        )}
-      </Block>
-
-      <Block title={tr("access.user.override")}>
-        {user.access.overrideSource === "provider" ? (
-          <SettingWarning>
-            {tr("access.user.overrideFromProvider", { provider, name })}
-          </SettingWarning>
-        ) : (
-          <SettingNote>{tr("access.user.overrideHint")}</SettingNote>
-        )}
-        <SettingRows>
-          <form.AppField name="libraries">
-            {() => (
-              <SelectField
-                title={tr("access.libraries")}
-                options={LIBRARY_CHOICES}
-                labelOf={(choice) =>
-                  choice === FROM_GROUPS
-                    ? inherited(
-                        librariesLabel(fromGroups.libraries, libraries.data),
-                      )
-                    : choice === "all"
-                      ? tr("access.libraries.all")
-                      : tr("access.libraries.picked")
-                }
-                footer={
-                  values.libraries === "all" ? (
-                    <SettingNote>{tr("access.libraries.allHint")}</SettingNote>
-                  ) : values.libraries === "some" ? (
-                    <form.Field name="libraryIds">
-                      {(field) => (
-                        <LibraryPicker
-                          libraries={libraries.data}
-                          value={field.state.value}
-                          onChange={field.handleChange}
-                        />
-                      )}
-                    </form.Field>
-                  ) : null
-                }
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="maxBitrate">
-            {() => (
-              <SelectField
-                title={tr("access.bitrate")}
-                options={withGroups(bitrateOptions, values.maxBitrate)}
-                labelOf={limitLabel(
-                  bitrateLabel,
-                  bitrateLimitLabel(fromGroups.maxBitrate),
-                )}
-                footer={<SettingNote>{tr("access.bitrate.hint")}</SettingNote>}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="transcode">
-            {() => (
-              <SelectField
-                title={tr("access.transcode")}
-                options={SWITCH_CHOICES}
-                labelOf={switchLabel(fromGroups.transcode)}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="downloads">
-            {() => (
-              <SelectField
-                title={tr("access.downloads")}
-                options={SWITCH_CHOICES}
-                labelOf={switchLabel(
-                  holdsPermission(fromGroups.permissions, "media.download"),
-                )}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="maxStreams">
-            {() => (
-              <SelectField
-                title={tr("access.streams")}
-                options={withGroups(streamOptions, values.maxStreams)}
-                labelOf={limitLabel(
-                  streamLabel,
-                  streamLimitLabel(fromGroups.maxStreams),
-                )}
-              />
-            )}
-          </form.AppField>
-          <form.Field name="requests">
-            {(field) => (
-              <SelectRow
-                title={tr("access.requests")}
-                options={REQUESTS_CHOICES}
-                value={field.state.value ?? FROM_GROUPS}
-                labelOf={(choice) =>
-                  choice === FROM_GROUPS
-                    ? inherited(requestsLabel(groupRequests))
-                    : requestsLabel(choice)
-                }
-                onChange={(choice) =>
-                  field.handleChange(
-                    choice === FROM_GROUPS ? undefined : choice,
-                  )
-                }
-              />
-            )}
-          </form.Field>
-          {(values.requests ?? groupRequests) !== "off" && (
-            <form.Field name="requestLimit">
-              {(field) => (
-                <SelectRow
-                  title={tr("access.requestLimit")}
-                  options={QUOTA_CHOICES}
-                  value={quotaChoice(field.state.value)}
-                  labelOf={(choice) =>
-                    choice === FROM_GROUPS
-                      ? inherited(requestLimitLabel(fromGroups.requestLimit))
-                      : limitChoiceLabel(choice)
-                  }
-                  onChange={(choice) =>
-                    field.handleChange(
-                      choice === FROM_GROUPS
-                        ? undefined
-                        : choice === NO_LIMIT
-                          ? null
-                          : (fromGroups.requestLimit ?? DEFAULT_QUOTA),
-                    )
-                  }
-                  footer={
-                    field.state.value ? (
-                      <QuotaInputs
-                        value={field.state.value}
-                        onChange={field.handleChange}
-                      />
-                    ) : undefined
-                  }
-                />
+              {user.access.overrideSource === "provider" && (
+                <SettingWarning>
+                  {tr("access.user.overrideFromProvider", { provider, name })}
+                </SettingWarning>
               )}
-            </form.Field>
-          )}
-        </SettingRows>
-      </Block>
+              <SettingRows>
+                <form.AppField name="libraries">
+                  {() => (
+                    <SelectField
+                      title={tr("access.libraries")}
+                      layout="side"
+                      options={LIBRARY_CHOICES}
+                      labelOf={(choice) =>
+                        choice === FROM_GROUPS
+                          ? inherited(
+                              librariesLabel(
+                                fromGroups.libraries,
+                                libraries.data,
+                              ),
+                            )
+                          : choice === "all"
+                            ? tr("access.libraries.all")
+                            : tr("access.libraries.picked")
+                      }
+                      hint={
+                        values.libraries === "all"
+                          ? tr("access.libraries.allHint")
+                          : undefined
+                      }
+                      footer={
+                        values.libraries === "some" && (
+                          <form.Field name="libraryIds">
+                            {(field) => (
+                              <LibraryPicker
+                                libraries={libraries.data}
+                                value={field.state.value}
+                                onChange={field.handleChange}
+                              />
+                            )}
+                          </form.Field>
+                        )
+                      }
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="maxBitrate">
+                  {() => (
+                    <SelectField
+                      title={tr("access.bitrate")}
+                      layout="side"
+                      options={withGroups(bitrateOptions, values.maxBitrate)}
+                      labelOf={limitLabel(
+                        bitrateLabel,
+                        bitrateLimitLabel(fromGroups.maxBitrate),
+                      )}
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="transcode">
+                  {() => (
+                    <SelectField
+                      title={tr("access.transcode")}
+                      layout="side"
+                      options={SWITCH_CHOICES}
+                      labelOf={switchLabel(fromGroups.transcode)}
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="maxStreams">
+                  {() => (
+                    <SelectField
+                      title={tr("access.streams")}
+                      layout="side"
+                      options={withGroups(streamOptions, values.maxStreams)}
+                      labelOf={limitLabel(
+                        streamLabel,
+                        streamLimitLabel(fromGroups.maxStreams),
+                      )}
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="downloads">
+                  {() => (
+                    <SelectField
+                      title={tr("access.downloads")}
+                      layout="side"
+                      options={SWITCH_CHOICES}
+                      labelOf={switchLabel(fromGroups.downloads)}
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name="requests">
+                  {() => (
+                    <SelectField
+                      title={tr("access.requests")}
+                      layout="side"
+                      options={REQUEST_CHOICES}
+                      labelOf={(choice) =>
+                        choice === FROM_GROUPS
+                          ? inherited(requestsLabel(fromGroups.requests))
+                          : requestsLabel(choice)
+                      }
+                    />
+                  )}
+                </form.AppField>
+                {requests !== "off" && (
+                  <form.Field name="requestLimit">
+                    {(field) => (
+                      <SelectRow
+                        title={tr("access.requestLimit")}
+                        layout="side"
+                        options={QUOTA_CHOICES}
+                        value={quotaChoice(field.state.value)}
+                        labelOf={(choice) =>
+                          choice === FROM_GROUPS
+                            ? inherited(
+                                requestLimitLabel(fromGroups.requestLimit),
+                              )
+                            : limitChoiceLabel(choice)
+                        }
+                        onChange={(choice) =>
+                          field.handleChange(
+                            choice === FROM_GROUPS
+                              ? undefined
+                              : choice === NO_LIMIT
+                                ? null
+                                : (fromGroups.requestLimit ?? DEFAULT_QUOTA),
+                          )
+                        }
+                        footer={
+                          field.state.value ? (
+                            <QuotaInputs
+                              value={field.state.value}
+                              onChange={field.handleChange}
+                            />
+                          ) : undefined
+                        }
+                      />
+                    )}
+                  </form.Field>
+                )}
+                <form.AppField name="apiTokens">
+                  {() => (
+                    <SelectField
+                      title={tr("access.apiTokens")}
+                      layout="side"
+                      options={SWITCH_CHOICES}
+                      labelOf={switchLabel(fromGroups.apiTokens)}
+                    />
+                  )}
+                </form.AppField>
+              </SettingRows>
+            </FormSection>
+          </FormColumn>
 
-      <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+          <FormColumn>
+            <FormSection
+              title={tr("access.section.server")}
+              description={tr("access.section.serverHint")}
+            >
+              <SettingRows>
+                {MANAGED_AREAS.map((area) => (
+                  <SelectRow
+                    key={area}
+                    title={areaLabel(area)}
+                    layout="side"
+                    options={[FROM_GROUPS, ...areaLevels(area)]}
+                    value={values.manages[area]}
+                    labelOf={(choice) =>
+                      choice === FROM_GROUPS
+                        ? inherited(levelLabel(area, fromGroups.manages[area]))
+                        : levelLabel(area, choice)
+                    }
+                    onChange={(choice) =>
+                      form.setFieldValue("manages", (current) => ({
+                        ...current,
+                        [area]: choice,
+                      }))
+                    }
+                    hint={areaHint(area)}
+                  />
+                ))}
+              </SettingRows>
+            </FormSection>
+          </FormColumn>
+        </FormColumns>
+      </FormDialogBody>
+
+      <DialogFooter className="m-0 px-6 py-4">
         <FeedbackButton
           type="submit"
           state={feedback.state}
@@ -612,17 +636,7 @@ function AccessEditor({
           {tr("access.user.save")}
         </FeedbackButton>
       </DialogFooter>
-    </form>
-  )
-}
-
-/** A titled part of the dialog. */
-function Block({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h3 className="text-sm font-medium">{title}</h3>
-      {children}
-    </section>
+    </FormDialogForm>
   )
 }
 
@@ -649,7 +663,7 @@ function GroupSwitch({
         title={tr("access.everyone")}
         checked
         disabled
-        footer={<SettingNote>{tr("access.user.everyoneHint")}</SettingNote>}
+        hint={tr("access.user.everyoneHint")}
         onChange={() => {}}
       />
     )
@@ -660,11 +674,7 @@ function GroupSwitch({
         title={group.name}
         checked
         disabled
-        footer={
-          <SettingNote>
-            {tr("access.user.groupFromProvider", { provider })}
-          </SettingNote>
-        }
+        hint={tr("access.user.groupFromProvider", { provider })}
         onChange={() => {}}
       />
     )
@@ -673,15 +683,13 @@ function GroupSwitch({
     <SwitchRow
       title={group.name}
       checked={checked}
-      footer={
-        group.providerGroup ? (
-          <SettingNote>
-            {tr("access.user.groupFollows", {
+      hint={
+        group.providerGroup
+          ? tr("access.user.groupFollows", {
               provider,
               group: group.providerGroup,
-            })}
-          </SettingNote>
-        ) : undefined
+            })
+          : undefined
       }
       onChange={onChange}
     />

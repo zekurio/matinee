@@ -369,9 +369,13 @@ class PickerRow<T> extends StatelessWidget {
     required this.options,
     required this.current,
     required this.onPicked,
+    this.description,
   });
 
   final String title;
+
+  /// What the choice is for, under the title.
+  final String? description;
   final List<(T, String)> options;
   final T current;
   final ValueChanged<T> onPicked;
@@ -400,7 +404,7 @@ class PickerRow<T> extends StatelessWidget {
                 children: [
                   _TitleAndValue(
                     title: title,
-                    text: _RowText(title: title),
+                    text: _RowText(title: title, description: description),
                     value: shown,
                   ),
                   Padding(

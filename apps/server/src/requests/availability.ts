@@ -212,18 +212,11 @@ export async function availability(
         const files = owned.filter((file) => file.season === season.number)
         // The request that covers the season, whichever library it's in.
         const covering = pick(
-          matching.filter(
-            (row) =>
-              scopes.some(
-                (scope) =>
-                  scope.requestId === row.id && scope.number === season.number,
-              ) ||
-              // "New seasons as they air" covers the seasons that started
-              // airing after the ask, not ones left out of it that had aired.
-              (row.future &&
-                season.number > 0 &&
-                (season.airDate === null ||
-                  season.airDate >= row.createdAt.toISOString().slice(0, 10))),
+          matching.filter((row) =>
+            scopes.some(
+              (scope) =>
+                scope.requestId === row.id && scope.number === season.number,
+            ),
           ),
         )
         if (input.requestId && covering?.id !== input.requestId) return []

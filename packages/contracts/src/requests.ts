@@ -1,5 +1,6 @@
 import { eventIterator } from "@orpc/contract"
 
+import { Artwork } from "./artwork"
 import {
   CatalogRef,
   CatalogDestination,
@@ -8,6 +9,7 @@ import {
   CatalogInput,
   CatalogTitleSummary,
   DeclineReason,
+  AskScope,
   ShowScope,
   WaitingDeclineReason,
 } from "./catalog"
@@ -49,6 +51,12 @@ export const AdminRequestDestination = CatalogDestination.extend({
 export const RequestItem = t.object({
   id: t.uuid(),
   title: CatalogTitleSummary,
+  /**
+   * The title's backdrop as it was when it was first asked for, for the
+   * card to lie under its words. Null when it had none, or for a request
+   * made before requests kept it.
+   */
+  backdrop: Artwork.nullable(),
   library: RequestDestination,
   scope: ShowScope.nullable(),
   createdAt: t.date(),
@@ -111,6 +119,8 @@ export const AdminRequestItem = RequestItem.extend({
     t.object({
       id: t.uuid(),
       name: t.string(),
+      /** For a link to their profile. */
+      username: t.string(),
       /** Load it through `avatarPath()`. Null shows the initial instead. */
       avatarId: t.string().nullable(),
       createdAt: t.date(),
@@ -160,10 +170,10 @@ export const requestsContract = {
       ),
     ),
   ask: post("/requests/ask", "request.create")
-    .input(CatalogInput.extend({ scope: ShowScope.optional() }))
+    .input(CatalogInput.extend({ scope: AskScope.optional() }))
     .output(RequestItem),
   addSeasons: post("/requests/add-seasons", "request.create")
-    .input(RequestId.extend({ scope: ShowScope }))
+    .input(RequestId.extend({ scope: AskScope }))
     .output(RequestItem),
   cancel: post("/requests/cancel", "request.delete")
     .input(RequestId)
@@ -199,18 +209,18 @@ export const adminRequestsContract = {
    * Only a waiting request moves, and not into a library that already
    * has a request for the title.
    */
-  approve: post("/admin/requests/approve", "adminRequest.update")
+  approve: post("/admin/requests/approve", "adminRequest.approve")
     .input(RequestId.extend({ libraryId: t.uuid().optional() }))
     .output(t.void()),
   /** Explicit ids from the rendered waiting list, not unseen concurrent asks. */
-  approveAll: post("/admin/requests/approve-all", "adminRequest.update")
+  approveAll: post("/admin/requests/approve-all", "adminRequest.approve")
     .input(t.object({ ids: t.array(t.uuid()).min(1).max(500) }))
     .output(t.void()),
   /**
    * Declines a waiting request. A declined title can't be requested by
    * anyone until an admin allows requests for it again.
    */
-  decline: post("/admin/requests/decline", "adminRequest.update")
+  decline: post("/admin/requests/decline", "adminRequest.decline")
     .input(
       RequestId.extend({
         reason: WaitingDeclineReason,
@@ -227,7 +237,7 @@ export const adminRequestsContract = {
    * "Can't find a copy". Whatever the connection holds for it is left
    * alone, and if the file turns up anyway the request counts as arrived.
    */
-  giveUp: post("/admin/requests/give-up", "adminRequest.update")
+  giveUp: post("/admin/requests/give-up", "adminRequest.decline")
     .input(
       RequestId.extend({
         note: t
@@ -242,17 +252,17 @@ export const adminRequestsContract = {
    * Lifts a decline by removing the declined request, so anyone may
    * request the title afresh. Nobody is told.
    */
-  allowAgain: post("/admin/requests/allow-again", "adminRequest.update")
+  allowAgain: post("/admin/requests/allow-again", "adminRequest.decline")
     .input(RequestId)
     .output(t.void()),
   /**
    * Accepts a declined request as it stands, with its requesters and
    * seasons, and sends it.
    */
-  addAfterAll: post("/admin/requests/add-after-all", "adminRequest.update")
+  addAfterAll: post("/admin/requests/add-after-all", "adminRequest.approve")
     .input(RequestId)
     .output(t.void()),
-  retry: post("/admin/requests/retry", "adminRequest.update")
+  retry: post("/admin/requests/retry", "adminRequest.retry")
     .input(RequestId)
     .output(t.void()),
 }

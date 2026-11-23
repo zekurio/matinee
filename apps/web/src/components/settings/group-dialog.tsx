@@ -2,12 +2,15 @@ import {
   type AccessGroup,
   AccessGroupInput,
   type AccessPolicy,
-  GRANTABLE_PERMISSIONS,
+  areaLevels,
   GroupName,
-  type Permission,
+  MANAGED_AREAS,
+  type ManagedAccess,
+  MANAGES_NOTHING,
   type ProviderGroup,
-  sortPermissions,
   ProviderGroupName,
+  REQUEST_MODES,
+  type RequestMode,
 } from "@matinee/contracts"
 import {
   Autocomplete,
@@ -16,19 +19,11 @@ import {
   AutocompleteItem,
   AutocompleteList,
 } from "@matinee/ui/components/autocomplete"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
+import { Dialog } from "@matinee/ui/components/dialog"
 import {
   Field,
   FieldDescription,
   FieldError,
-  FieldGroup,
   FieldLabel,
 } from "@matinee/ui/components/field"
 import { Input } from "@matinee/ui/components/input"
@@ -40,20 +35,14 @@ import { useId } from "react"
 
 import { tr } from "@/i18n"
 import { firstError, useAppForm, useFieldContext } from "@/lib/form"
-import {
-  can,
-  POLICY_PERMISSIONS,
-  REQUEST_PERMISSIONS,
-  type RequestsChoice,
-  requestsOf,
-  withPermissions,
-  withRequests,
-} from "@/lib/permissions"
+import { canAll } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import {
   bitrateLabel,
   bitrateOptions,
+  type Capability,
+  capabilityPermissions,
   DEFAULT_QUOTA,
   LIMIT_CHOICES,
   LibraryPicker,
@@ -63,27 +52,26 @@ import {
   limitValue,
   NO_LIMIT,
   QuotaInputs,
-  REQUEST_CHOICES,
   requestsLabel,
   streamLabel,
   streamOptions,
 } from "./access-controls"
-import { groupName } from "./access-facts"
-import { PermissionPicker } from "./permission-picker"
+import { areaHint, areaLabel, groupName, levelLabel } from "./access-facts"
+import {
+  FormColumn,
+  FormColumns,
+  FormDialogBody,
+  FormDialogContent,
+  FormDialogFooter,
+  FormDialogForm,
+  FormDialogHeader,
+  FormSection,
+} from "./form-dialog"
 import { SelectField, SelectRow, SwitchField } from "./setting-controls"
-import { SettingNote, SettingRows } from "./settings-panel"
+import { SettingRows } from "./settings-panel"
 
 type LibraryChoice = "all" | "some"
 const LIBRARY_CHOICES: readonly LibraryChoice[] = ["all", "some"]
-
-/**
- * What the list under the settings offers: every permission a group can
- * grant but the ones the download switch and the request choice stand
- * for.
- */
-const MORE_PERMISSIONS = GRANTABLE_PERMISSIONS.filter(
-  (permission) => !POLICY_PERMISSIONS.includes(permission),
-)
 
 /** The editor's form. Limits are text, as the selects hold them. */
 type GroupValues = {
@@ -93,20 +81,18 @@ type GroupValues = {
   libraryIds: string[]
   maxBitrate: string
   transcode: boolean
-  /** `request.create` and `request.autoApprove`, as one choice. */
-  requests: RequestsChoice
-  requestLimit: AccessPolicy["requestLimit"]
-  /** `media.download`. */
-  downloads: boolean
   maxStreams: string
-  /** Every permission the group grants but those three. */
-  permissions: Permission[]
+  downloads: boolean
+  requests: RequestMode
+  requestLimit: AccessPolicy["requestLimit"]
+  apiTokens: boolean
+  manages: ManagedAccess
 }
 
 /**
  * A new group opens every library and limits nothing, as Everyone starts,
- * and grants downloading and nothing else. Downloading starts off for an
- * editor who can't grant it, since the server would refuse the group.
+ * and lets members download and nothing else. Downloading starts off for
+ * an editor who can't grant it, since the server would refuse the group.
  */
 function valuesOf(
   group: AccessGroup | undefined,
@@ -119,57 +105,27 @@ function valuesOf(
     libraryIds: group?.policy.libraries.ids ?? [],
     maxBitrate: limitValue(group?.policy.maxBitrate ?? null),
     transcode: group?.policy.transcode ?? true,
-    requests: group ? requestsOf(group.policy.permissions) : "off",
-    requestLimit: group?.policy.requestLimit ?? null,
-    downloads:
-      group?.policy.permissions.includes("media.download") ?? mayDownload,
     maxStreams: limitValue(group?.policy.maxStreams ?? null),
-    permissions:
-      group?.policy.permissions.filter(
-        (permission) => !POLICY_PERMISSIONS.includes(permission),
-      ) ?? [],
+    downloads: group?.policy.downloads ?? mayDownload,
+    requests: group?.policy.requests ?? "off",
+    requestLimit: group?.policy.requestLimit ?? null,
+    apiTokens: group?.policy.apiTokens ?? false,
+    manages: group?.policy.manages ?? MANAGES_NOTHING,
   }
 }
 
-/**
- * The request permissions to save. The choice shows three of their four
- * mixes, so one never touched keeps the group's own: a group may grant
- * adding without an approval alone, for members another group lets ask.
- * Once changed, even back to how it opened, the choice is what it shows.
- */
-function requestPermissions(
-  value: GroupValues,
-  group: AccessGroup | undefined,
-  requestsChanged: boolean,
-): Permission[] {
-  if (group && !requestsChanged) {
-    return group.policy.permissions.filter((permission) =>
-      REQUEST_PERMISSIONS.includes(permission),
-    )
-  }
-  return withRequests([], value.requests)
-}
-
-function policyOf(
-  value: GroupValues,
-  group: AccessGroup | undefined,
-  requestsChanged: boolean,
-): AccessPolicy {
+function policyOf(value: GroupValues): AccessPolicy {
   const all = value.libraries === "all"
   return {
     libraries: { all, ids: all ? [] : value.libraryIds },
     maxBitrate: limitOf(value.maxBitrate),
     transcode: value.transcode,
-    requestLimit: value.requestLimit,
     maxStreams: limitOf(value.maxStreams),
-    permissions: sortPermissions([
-      ...withPermissions(
-        value.permissions,
-        ["media.download"],
-        value.downloads,
-      ),
-      ...requestPermissions(value, group, requestsChanged),
-    ]),
+    downloads: value.downloads,
+    requests: value.requests,
+    requestLimit: value.requestLimit,
+    apiTokens: value.apiTokens,
+    manages: value.manages,
   }
 }
 
@@ -186,16 +142,13 @@ export function GroupDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-lg"
-      >
+      <FormDialogContent width="xl">
         <GroupForm
           key={group?.id ?? "new"}
           group={group}
           onDone={() => onOpenChange(false)}
         />
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
   )
 }
@@ -211,10 +164,11 @@ function GroupForm({
   const { user } = useRouteContext({ from: "/_authed" })
   const libraries = useQuery(orpc.libraries.list.queryOptions())
   const everyone = group?.everyone ?? false
-  // The server refuses a change to a permission its maker lacks, so those
-  // boxes stay as they are.
-  const mayGrant = (permission: Permission) => can(user, permission)
-  const grantsAll = MORE_PERMISSIONS.every(mayGrant)
+  // The server refuses a change to a permission its maker lacks, so a
+  // capability whose permissions they don't all hold stays as it is.
+  const mayGrant = (capability: Capability) =>
+    canAll(user, capabilityPermissions(capability))
+  const grantsAll = MANAGED_AREAS.every(mayGrant)
 
   const save = useMutation({
     mutationFn: (input: AccessGroupInput) =>
@@ -233,21 +187,19 @@ function GroupForm({
     onError: (error) => toast.error(errorMessage(error)),
   })
 
-  const toInput = (value: GroupValues, requestsChanged: boolean) => ({
+  const toInput = (value: GroupValues) => ({
     // The server keeps the built-in group's name and provider group.
     name: everyone && group ? group.name : value.name,
     providerGroup: everyone ? null : value.providerGroup.trim() || null,
-    policy: policyOf(value, group, requestsChanged),
+    policy: policyOf(value),
   })
 
   const form = useAppForm({
-    defaultValues: valuesOf(group, mayGrant("media.download")),
+    defaultValues: valuesOf(group, mayGrant("downloads")),
     validators: {
       // One message for the whole form, in a toast.
-      onSubmit: ({ value, formApi }) => {
-        const parsed = AccessGroupInput.safeParse(
-          toInput(value, formApi.getFieldMeta("requests")?.isDirty ?? false),
-        )
+      onSubmit: ({ value }) => {
+        const parsed = AccessGroupInput.safeParse(toInput(value))
         if (parsed.success) return undefined
         return {
           message:
@@ -255,12 +207,8 @@ function GroupForm({
         }
       },
     },
-    onSubmit: ({ value, formApi }) =>
-      save.mutate(
-        AccessGroupInput.parse(
-          toInput(value, formApi.getFieldMeta("requests")?.isDirty ?? false),
-        ),
-      ),
+    onSubmit: ({ value }) =>
+      save.mutate(AccessGroupInput.parse(toInput(value))),
     onSubmitInvalid: ({ formApi }) => {
       // Field errors show under their fields.
       const message = firstError(formApi.state.errors)
@@ -274,185 +222,215 @@ function GroupForm({
   const maxBitrate = useSelector(form.store, (state) => state.values.maxBitrate)
   const maxStreams = useSelector(form.store, (state) => state.values.maxStreams)
   const requests = useSelector(form.store, (state) => state.values.requests)
+  const manages = useSelector(form.store, (state) => state.values.manages)
 
   return (
     <form.AppForm>
-      <form
-        className="flex flex-col gap-6"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-lg leading-7 font-semibold">
-            {group
+      <FormDialogForm onSubmit={() => void form.handleSubmit()}>
+        <FormDialogHeader
+          title={
+            group
               ? tr("access.group.editTitle", { name: groupName(group) })
-              : tr("access.group.newTitle")}
-          </DialogTitle>
-          <DialogDescription>
-            {everyone
+              : tr("access.group.newTitle")
+          }
+          description={
+            everyone
               ? tr("access.group.everyoneDescription")
-              : tr("access.group.description")}
-          </DialogDescription>
-        </DialogHeader>
+              : tr("access.group.description")
+          }
+        />
 
-        {!everyone && (
-          <FieldGroup>
-            <form.AppField name="name" validators={{ onChange: GroupName }}>
-              {(field) => (
-                <field.TextField
-                  label={tr("access.group.name")}
-                  placeholder={tr("access.group.namePlaceholder")}
-                  maxLength={64}
-                  autoComplete="off"
-                />
-              )}
-            </form.AppField>
-            <form.AppField
-              name="providerGroup"
-              validators={{ onChange: ProviderGroupName }}
-            >
-              {() => <ProviderGroupField />}
-            </form.AppField>
-          </FieldGroup>
-        )}
-
-        <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">{tr("access.group.allows")}</h3>
-          <SettingRows>
-            <form.AppField name="libraries">
-              {() => (
-                <SelectField
-                  title={tr("access.libraries")}
-                  options={LIBRARY_CHOICES}
-                  labelOf={(choice) =>
-                    choice === "all"
-                      ? tr("access.libraries.all")
-                      : tr("access.libraries.picked")
-                  }
-                  footer={
-                    libraryChoice === "all" ? (
-                      <SettingNote>
-                        {tr("access.libraries.allHint")}
-                      </SettingNote>
-                    ) : (
-                      <form.Field name="libraryIds">
-                        {(field) => (
-                          <LibraryPicker
-                            libraries={libraries.data}
-                            value={field.state.value}
-                            onChange={field.handleChange}
-                          />
-                        )}
-                      </form.Field>
-                    )
-                  }
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="maxBitrate">
-              {() => (
-                <SelectField
-                  title={tr("access.bitrate")}
-                  options={bitrateOptions(maxBitrate)}
-                  labelOf={bitrateLabel}
-                  footer={
-                    <SettingNote>{tr("access.bitrate.hint")}</SettingNote>
-                  }
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="transcode">
-              {() => (
-                <SwitchField
-                  title={tr("access.transcode")}
-                  footer={
-                    <SettingNote>{tr("access.transcode.hint")}</SettingNote>
-                  }
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="downloads">
-              {() => (
-                <SwitchField
-                  title={tr("access.downloads")}
-                  disabled={!mayGrant("media.download")}
-                  footer={
-                    <SettingNote>{tr("access.downloads.hint")}</SettingNote>
-                  }
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="maxStreams">
-              {() => (
-                <SelectField
-                  title={tr("access.streams")}
-                  options={streamOptions(maxStreams)}
-                  labelOf={streamLabel}
-                  footer={
-                    <SettingNote>{tr("access.streams.hint")}</SettingNote>
-                  }
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="requests">
-              {() => (
-                <SelectField
-                  title={tr("access.requests")}
-                  disabled={!REQUEST_PERMISSIONS.every(mayGrant)}
-                  options={REQUEST_CHOICES}
-                  labelOf={requestsLabel}
-                />
-              )}
-            </form.AppField>
-            {requests !== "off" && (
-              <form.Field name="requestLimit">
+        <FormDialogBody>
+          {!everyone && (
+            <div className="grid items-start gap-x-8 gap-y-5 md:grid-cols-2">
+              <form.AppField name="name" validators={{ onChange: GroupName }}>
                 {(field) => (
-                  <SelectRow
-                    title={tr("access.requestLimit")}
-                    options={LIMIT_CHOICES}
-                    value={limitChoiceOf(field.state.value)}
-                    labelOf={limitChoiceLabel}
-                    onChange={(choice) =>
-                      field.handleChange(
-                        choice === NO_LIMIT ? null : DEFAULT_QUOTA,
-                      )
-                    }
-                    footer={
-                      field.state.value === null ? undefined : (
-                        <QuotaInputs
-                          value={field.state.value}
-                          onChange={field.handleChange}
-                        />
-                      )
-                    }
+                  <field.TextField
+                    label={tr("access.group.name")}
+                    placeholder={tr("access.group.namePlaceholder")}
+                    maxLength={64}
+                    autoComplete="off"
                   />
                 )}
-              </form.Field>
-            )}
-          </SettingRows>
-        </div>
-
-        <form.Field name="permissions">
-          {(field) => (
-            <div className="flex flex-col gap-2">
-              <PermissionPicker
-                legend={tr("access.permissions")}
-                offered={MORE_PERMISSIONS}
-                mayChange={mayGrant}
-                value={field.state.value}
-                onChange={field.handleChange}
-              />
-              <SettingNote>
-                {tr("access.permissions.groupHint")}
-                {!grantsAll && ` ${tr("access.permissions.ownOnly")}`}
-              </SettingNote>
+              </form.AppField>
+              <form.AppField
+                name="providerGroup"
+                validators={{ onChange: ProviderGroupName }}
+              >
+                {() => <ProviderGroupField />}
+              </form.AppField>
             </div>
           )}
-        </form.Field>
 
-        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
+          <FormColumns>
+            <FormColumn>
+              <FormSection title={tr("access.section.watching")}>
+                <SettingRows>
+                  <form.AppField name="libraries">
+                    {() => (
+                      <SelectField
+                        title={tr("access.libraries")}
+                        layout="side"
+                        options={LIBRARY_CHOICES}
+                        labelOf={(choice) =>
+                          choice === "all"
+                            ? tr("access.libraries.all")
+                            : tr("access.libraries.picked")
+                        }
+                        hint={
+                          libraryChoice === "all"
+                            ? tr("access.libraries.allHint")
+                            : undefined
+                        }
+                        footer={
+                          libraryChoice === "some" && (
+                            <form.Field name="libraryIds">
+                              {(field) => (
+                                <LibraryPicker
+                                  libraries={libraries.data}
+                                  value={field.state.value}
+                                  onChange={field.handleChange}
+                                />
+                              )}
+                            </form.Field>
+                          )
+                        }
+                      />
+                    )}
+                  </form.AppField>
+                  <form.AppField name="maxBitrate">
+                    {() => (
+                      <SelectField
+                        title={tr("access.bitrate")}
+                        layout="side"
+                        options={bitrateOptions(maxBitrate)}
+                        labelOf={bitrateLabel}
+                        hint={tr("access.bitrate.hint")}
+                      />
+                    )}
+                  </form.AppField>
+                  <form.AppField name="transcode">
+                    {() => (
+                      <SwitchField
+                        title={tr("access.transcode")}
+                        hint={tr("access.transcode.hint")}
+                      />
+                    )}
+                  </form.AppField>
+                  <form.AppField name="maxStreams">
+                    {() => (
+                      <SelectField
+                        title={tr("access.streams")}
+                        layout="side"
+                        options={streamOptions(maxStreams)}
+                        labelOf={streamLabel}
+                      />
+                    )}
+                  </form.AppField>
+                  <form.AppField name="downloads">
+                    {() => (
+                      <SwitchField
+                        title={tr("access.downloads")}
+                        disabled={!mayGrant("downloads")}
+                        hint={tr("access.downloads.hint")}
+                      />
+                    )}
+                  </form.AppField>
+                </SettingRows>
+              </FormSection>
+
+              <FormSection title={tr("access.section.requests")}>
+                <SettingRows>
+                  <form.AppField name="requests">
+                    {() => (
+                      <SelectField
+                        title={tr("access.requests")}
+                        layout="side"
+                        disabled={!mayGrant("requests")}
+                        options={REQUEST_MODES}
+                        labelOf={requestsLabel}
+                      />
+                    )}
+                  </form.AppField>
+                  {requests !== "off" && (
+                    <form.Field name="requestLimit">
+                      {(field) => (
+                        <SelectRow
+                          title={tr("access.requestLimit")}
+                          layout="side"
+                          options={LIMIT_CHOICES}
+                          value={limitChoiceOf(field.state.value)}
+                          labelOf={limitChoiceLabel}
+                          onChange={(choice) =>
+                            field.handleChange(
+                              choice === NO_LIMIT ? null : DEFAULT_QUOTA,
+                            )
+                          }
+                          footer={
+                            field.state.value === null ? undefined : (
+                              <QuotaInputs
+                                value={field.state.value}
+                                onChange={field.handleChange}
+                              />
+                            )
+                          }
+                        />
+                      )}
+                    </form.Field>
+                  )}
+                </SettingRows>
+              </FormSection>
+            </FormColumn>
+
+            <FormColumn>
+              <FormSection
+                title={tr("access.section.server")}
+                description={
+                  grantsAll
+                    ? tr("access.section.serverHint")
+                    : `${tr("access.section.serverHint")} ${tr("access.permissions.ownOnly")}`
+                }
+              >
+                <SettingRows>
+                  {MANAGED_AREAS.map((area) => (
+                    <SelectRow
+                      key={area}
+                      title={areaLabel(area)}
+                      layout="side"
+                      disabled={!mayGrant(area)}
+                      options={areaLevels(area)}
+                      value={manages[area]}
+                      labelOf={(level) => levelLabel(area, level)}
+                      onChange={(level) =>
+                        form.setFieldValue("manages", (current) => ({
+                          ...current,
+                          [area]: level,
+                        }))
+                      }
+                      hint={areaHint(area)}
+                    />
+                  ))}
+                </SettingRows>
+              </FormSection>
+
+              <FormSection title={tr("access.section.api")}>
+                <SettingRows>
+                  <form.AppField name="apiTokens">
+                    {() => (
+                      <SwitchField
+                        title={tr("access.apiTokens")}
+                        disabled={!mayGrant("apiTokens")}
+                        hint={tr("access.apiTokens.hint")}
+                      />
+                    )}
+                  </form.AppField>
+                </SettingRows>
+              </FormSection>
+            </FormColumn>
+          </FormColumns>
+        </FormDialogBody>
+
+        <FormDialogFooter>
           <form.Subscribe
             selector={(state) => !everyone && !state.values.name.trim()}
           >
@@ -462,8 +440,8 @@ function GroupForm({
               </form.SubmitButton>
             )}
           </form.Subscribe>
-        </DialogFooter>
-      </form>
+        </FormDialogFooter>
+      </FormDialogForm>
     </form.AppForm>
   )
 }

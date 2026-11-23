@@ -53,7 +53,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatMonth } from "@/lib/format"
-import { runsQueue } from "@/lib/permissions"
+import { can, runsQueue } from "@/lib/permissions"
 import { reloadOnEnter } from "@/lib/route-loading"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
@@ -255,7 +255,9 @@ function ProfileHeader({ profile }: { profile: Profile }) {
           />
           {own && (
             <>
-              {runsQueue(me) && <RequestsButton />}
+              {can(me, "adminRequest.read") && (
+                <RequestsButton answers={runsQueue(me)} />
+              )}
               <Link
                 to="/stats"
                 aria-label={tr("shell.statistics")}
@@ -279,9 +281,12 @@ function ProfileHeader({ profile }: { profile: Profile }) {
   )
 }
 
-/** The admin's way to the queue on a phone, with the dot while it needs them. */
-function RequestsButton() {
-  const needsYou = useNeedsYou(true)
+/**
+ * The way to the queue on a phone, for whoever may look at it, with the
+ * dot while it needs someone who `answers` it.
+ */
+function RequestsButton({ answers }: { answers: boolean }) {
+  const needsYou = useNeedsYou(answers)
   return (
     <Link
       to="/requests"

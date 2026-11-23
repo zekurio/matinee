@@ -1,7 +1,10 @@
 import {
+  type AccessLevel,
   type AccessPolicy,
-  holdsPermission,
+  areaLevels,
   type Library,
+  MANAGED_AREAS,
+  type ManagedArea,
   type RequestLimit,
 } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
@@ -10,6 +13,7 @@ import {
   FilmIcon,
   GaugeIcon,
   InboxIcon,
+  KeySquareIcon,
   LibraryBigIcon,
   MonitorPlayIcon,
   ShieldCheckIcon,
@@ -18,7 +22,6 @@ import type { ReactNode } from "react"
 
 import { formatBitrate } from "@/components/player-format"
 import { perLocale, tr } from "@/i18n"
-import { POLICY_PERMISSIONS, requestsOf } from "@/lib/permissions"
 
 /*
  * What an access policy allows, in the words the access panel, the group
@@ -62,9 +65,9 @@ export function requestLimitLabel(limit: RequestLimit): string {
 
 /** "Requests need approval, 5 titles every 7 days", or "No requests". */
 export function requestsFactLabel(
-  policy: Pick<AccessPolicy, "permissions" | "requestLimit">,
+  policy: Pick<AccessPolicy, "requests" | "requestLimit">,
 ): string {
-  const choice = requestsOf(policy.permissions)
+  const choice = policy.requests
   const requests =
     choice === "off"
       ? tr("access.requests.factOff")
@@ -76,6 +79,27 @@ export function requestsFactLabel(
     requests,
     limit: requestLimitLabel(policy.requestLimit),
   })
+}
+
+/** An area of running the server, like "Requests" or "Users". */
+export function areaLabel(area: ManagedArea): string {
+  return tr(`access.area.${area}`)
+}
+
+/** What an area covers, in a line. */
+export function areaHint(area: ManagedArea): string {
+  return tr(`access.area.${area}.hint`)
+}
+
+/**
+ * A level of an area. An area that is all or nothing says "On" for
+ * `manage`, as a switch would.
+ */
+export function levelLabel(area: ManagedArea, level: AccessLevel): string {
+  if (areaLevels(area).length === 2) {
+    return level === "none" ? tr("access.level.off") : tr("access.level.on")
+  }
+  return tr(`access.level.${level}`)
 }
 
 /** How a policy's libraries read in a line of facts. */
@@ -138,43 +162,54 @@ export function Fact({
 }
 
 /**
- * "Every permission" for an admin, or how many a policy grants besides
- * downloading and requesting, which have facts of their own. Null for
- * none. The tooltip names them.
+ * "Every permission" for an admin, or how many parts of running the
+ * server a policy hands on. Null for none. The tooltip names them.
  */
-function permissionsFact(
-  permissions: AccessPolicy["permissions"],
-): { label: string; names: string | undefined } | null {
-  if (permissions.includes("all")) {
-    return { label: tr("access.permissions.all"), names: undefined }
+function managesFact(
+  policy: AccessPolicy,
+  admin: boolean,
+): { label: string; names: string } | null {
+  if (admin) {
+    return {
+      label: tr("access.permissions.all"),
+      names: tr("access.permissions.allHint"),
+    }
   }
-  const more = permissions.filter(
-    (permission) => !POLICY_PERMISSIONS.includes(permission),
-  )
-  if (more.length === 0) return null
+  const areas = MANAGED_AREAS.filter((area) => policy.manages[area] !== "none")
+  if (areas.length === 0) return null
   return {
-    label: tr("access.permissions.count", { count: more.length }),
-    names: more.join(", "),
+    label: tr("access.manages.count", { count: areas.length }),
+    names: formatList(
+      areas.map((area) =>
+        tr("access.manages.area", {
+          area: areaLabel(area),
+          level: levelLabel(area, policy.manages[area]),
+        }),
+      ),
+    ),
   }
 }
 
 /**
  * A line of what a policy allows: its libraries, its bit rate limit, the
- * encoding and download switches, its stream limit, its requests, and
- * what else it grants.
+ * encoding and download switches, its stream limit, its requests, API
+ * tokens, and the parts of running the server it hands on.
  */
 export function PolicyFacts({
   policy,
+  admin = false,
   libraries,
   className,
 }: {
   policy: AccessPolicy
+  /** An admin's, which has every permission whatever it says. */
+  admin?: boolean
   /** Every library, for the names of those a list picks. */
   libraries: readonly Library[] | undefined
   className?: string
 }) {
   const library = librariesFact(policy.libraries, libraries)
-  const more = permissionsFact(policy.permissions)
+  const more = managesFact(policy, admin)
   return (
     <p
       className={cn(
@@ -192,7 +227,7 @@ export function PolicyFacts({
           : tr("access.transcode.off")}
       </Fact>
       <Fact icon={<DownloadIcon />}>
-        {holdsPermission(policy.permissions, "media.download")
+        {policy.downloads
           ? tr("access.downloads.on")
           : tr("access.downloads.off")}
       </Fact>
@@ -200,6 +235,9 @@ export function PolicyFacts({
         {streamLimitLabel(policy.maxStreams)}
       </Fact>
       <Fact icon={<InboxIcon />}>{requestsFactLabel(policy)}</Fact>
+      {policy.apiTokens && (
+        <Fact icon={<KeySquareIcon />}>{tr("access.apiTokens.on")}</Fact>
+      )}
       {more && (
         <Fact icon={<ShieldCheckIcon />} title={more.names}>
           {more.label}

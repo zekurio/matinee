@@ -23,7 +23,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { TriangleAlertIcon } from "lucide-react"
 import { type ReactNode, useId } from "react"
 
-import { ToggleChips } from "@/components/filters/filter-panel"
+import { MultiSelect } from "@/components/multi-select"
 import { tr, translateKnown } from "@/i18n"
 import { orpc } from "@/lib/rpc"
 
@@ -163,15 +163,12 @@ export function DescribedInput({
     const chosen = Array.isArray(current) ? current : []
     return (
       <Field>
-        <FieldLabel id={id}>{label}</FieldLabel>
+        <FieldLabel htmlFor={id}>{label}</FieldLabel>
         {field.choices.length ? (
-          <ToggleChips
-            labelId={id}
-            limit={24}
-            find={{
-              placeholder: tr("connections.field.find"),
-              empty: tr("connections.field.findEmpty"),
-            }}
+          <MultiSelect
+            id={id}
+            placeholder={tr("connections.field.find")}
+            empty={tr("connections.field.findEmpty")}
             choices={field.choices.map((choice) => ({
               value: choice.value,
               label: translateKnown(choice.label),
