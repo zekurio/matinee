@@ -20,6 +20,8 @@ enum SaveBarStatus { unsaved, saving, saved, failed }
 /// On a phone Reset and Save share the row, half each, and the status is
 /// only read out: the bar shows only while there are edits, so it says
 /// that already. A wide page has the status beside them, when it fits.
+/// Either way a screen reader hears the status once, from the bar itself,
+/// with the server's reason after a failure.
 class SaveBar extends StatefulWidget {
   const SaveBar({
     super.key,
@@ -98,6 +100,10 @@ class _SaveBarState extends State<SaveBar> with SingleTickerProviderStateMixin {
     final colors = MatineeTheme.of(context);
     final failed = widget.status == SaveBarStatus.failed;
     final message = widget.message;
+    // What a screen reader hears, whichever of it the bar shows.
+    final said = failed
+        ? [widget.statusLabel, ?message].join('. ')
+        : widget.statusLabel;
     final busy =
         widget.status == SaveBarStatus.saving ||
         widget.status == SaveBarStatus.saved;
@@ -163,15 +169,19 @@ class _SaveBarState extends State<SaveBar> with SingleTickerProviderStateMixin {
             _width(context, widget.saveLabel, buttonText) +
             pad +
             (busy ? 22 : 0);
-        final row =
-            constraints.maxWidth >= 440 && needed <= constraints.maxWidth
+        final wide =
+            constraints.maxWidth >= 440 && needed <= constraints.maxWidth;
+        // A failure's line over the buttons: the reason alone where the
+        // status is beside them already.
+        final reason = wide ? message : said;
+        final row = wide
             ? Row(
                 spacing: 8,
                 children: [
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsetsDirectional.only(start: 6),
-                      child: label,
+                      child: ExcludeSemantics(child: label),
                     ),
                   ),
                   reset(wide: false),
@@ -190,14 +200,16 @@ class _SaveBarState extends State<SaveBar> with SingleTickerProviderStateMixin {
           mainAxisSize: MainAxisSize.min,
           spacing: 8,
           children: [
-            if (failed)
+            if (failed && reason != null)
               Padding(
-                padding: const EdgeInsetsDirectional.only(start: 2),
-                child: Text(
-                  [widget.statusLabel, ?message].join('. '),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: KitText.xs.style(color: colors.danger),
+                padding: EdgeInsetsDirectional.only(start: wide ? 6 : 2),
+                child: ExcludeSemantics(
+                  child: Text(
+                    reason,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: KitText.xs.style(color: colors.danger),
+                  ),
                 ),
               ),
             row,
@@ -247,7 +259,7 @@ class _SaveBarState extends State<SaveBar> with SingleTickerProviderStateMixin {
             ),
             child: Semantics(
               liveRegion: true,
-              label: widget.statusLabel,
+              label: said,
               child: Padding(padding: const EdgeInsets.all(10), child: bar),
             ),
           ),

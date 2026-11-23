@@ -118,6 +118,40 @@ void main() {
     expect(find.text('Erneut versuchen'), findsOneWidget);
   });
 
+  // The bug it pins: a wide bar showed a failure twice, over the buttons and
+  // beside them, and a screen reader heard the status once for the bar and
+  // again for each place it showed.
+  testWidgets('a failure shows once and reads once, at either width', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    const status = 'Änderungen konnten nicht gespeichert werden';
+    const reason = 'Der Server hat abgelehnt.';
+    for (final width in [360.0, 1400.0]) {
+      await _pump(
+        tester,
+        status: SaveBarStatus.failed,
+        message: reason,
+        width: width,
+      );
+      expect(find.textContaining(status), findsOneWidget);
+      expect(find.textContaining(reason), findsOneWidget);
+      // Beside the buttons on the wide bar, with the reason over them.
+      expect(find.text(status), width > 360 ? findsOneWidget : findsNothing);
+      expect(
+        tester.getSemantics(find.bySemanticsLabel(RegExp(status))).label,
+        '$status. $reason',
+      );
+    }
+
+    await _pump(tester, width: 1400);
+    expect(
+      tester.getSemantics(find.bySemanticsLabel(RegExp('Ungespeicherte'))),
+      isSemantics(label: 'Ungespeicherte Änderungen', isLiveRegion: true),
+    );
+    semantics.dispose();
+  });
+
   testWidgets('an attempt to leave shakes the bar', (tester) async {
     await _pump(tester);
     final before = tester.getTopLeft(find.text('Zurücksetzen')).dx;
