@@ -6,7 +6,7 @@ import { tr } from "@/i18n"
 import { useRequestActionsStore } from "@/stores/request-actions"
 
 import { RequestCard, RequestStateBadge, requestProgress } from "./request-card"
-import { OwnProblem } from "./request-lines"
+import { ownDetail } from "./request-lines"
 
 /**
  * One of the viewer's requests, as the server says it stands: its
@@ -33,9 +33,9 @@ export function OwnRequest({
         <RequestStateBadge
           state={item.state}
           progress={requestProgress(item)}
+          detail={ownDetail(item)}
         />
       }
-      problem={<OwnProblem item={item} />}
       actions={
         cancellable && (
           <Button

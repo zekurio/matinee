@@ -16,6 +16,7 @@ export default defineMessages("requests", {
   "requests.recent": "Recent requests",
 
   // The one state each request's card shows.
+  "requests.statusLabel": "Status",
   "requests.state.waiting": "Waiting",
   "requests.state.needsAttention": "Needs attention",
   "requests.state.onTheWay": "On its way",

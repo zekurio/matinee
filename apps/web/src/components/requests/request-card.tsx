@@ -1,8 +1,10 @@
 import type { AdminRequestItem, RequestState } from "@matinee/contracts"
-import { Badge } from "@matinee/ui/components/badge"
+import { badgeVariants } from "@matinee/ui/components/badge"
 import {
   Popover,
   PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
   PopoverTrigger,
 } from "@matinee/ui/components/popover"
 import { Skeleton } from "@matinee/ui/components/skeleton"
@@ -10,6 +12,7 @@ import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
 import {
   CheckIcon,
+  ChevronDownIcon,
   CircleSlashIcon,
   ClockIcon,
   TriangleAlertIcon,
@@ -31,21 +34,21 @@ import { art } from "@/lib/media"
 import { scopeLabel, titleLink } from "./request-queue"
 
 /*
- * The one card every list of requests draws: the request's details on
- * the left and the poster, sharp, on the right, over the title's
- * backdrop. The backdrop fades into the card's own surface from the
- * top left corner down to the bottom right, so the words always sit on
- * the theme's colour, light or dark, and the picture only colours the
- * card. A request without a backdrop is the plain card.
+ * The one card every list of requests draws, laid out as Seerr's: the
+ * request's details on the left and the poster, sharp, on the right,
+ * over the title's backdrop. The backdrop fades into the card's own
+ * surface from the top left corner down to the bottom right, so the
+ * words always sit on the theme's colour, light or dark, and the
+ * picture only colours the card. A request without a backdrop is the
+ * plain card.
  */
 
 /**
  * One request, in one fixed anatomy whatever its state or page, exactly
- * as tall as its poster. From the top, one line each and the same small
- * gap between them: the year, and for a show the seasons asked for; the
- * name; on the admin's cards, who asked; the state's badge; and, only
- * when something went wrong, the problem. A row keeps its place on every
- * card, so the badges line up across a grid. The actions sit on the
+ * as tall as its poster. From the top: the year, and for a show the
+ * seasons asked for; the name, whole, on up to two lines; on the
+ * admin's cards, who asked; and "Status" with the state's badge, which
+ * opens what went wrong when something did. The actions sit on the
  * poster's bottom edge, and the space between is the only give. `menu`
  * sits beside the name, by the poster, and holds the rest.
  */
@@ -54,7 +57,6 @@ export function RequestCard({
   size = "rail",
   state,
   who,
-  problem,
   actions,
   menu,
   className,
@@ -73,8 +75,6 @@ export function RequestCard({
    * passing it at all is what makes a card the admin's.
    */
   who?: ReactNode
-  /** What went wrong, up to two lines under the badge. */
-  problem?: ReactNode
   actions?: ReactNode
   menu?: ReactNode
 }) {
@@ -97,14 +97,13 @@ export function RequestCard({
       aria-labelledby={`${id}-name`}
       {...props}
       className={cn(
-        "bg-card text-foreground relative isolate flex h-full min-w-0 gap-3 overflow-hidden rounded-xl border p-3 outline-none",
-        wide && "sm:gap-4 sm:p-4",
+        "bg-card text-foreground relative isolate flex h-full min-w-0 gap-4 overflow-hidden rounded-xl border p-4 outline-none",
         className,
       )}
     >
       {backdrop && (
         <div aria-hidden className="absolute inset-0 -z-10">
-          <Picture sources={[backdrop]} sizes="384px" />
+          <Picture sources={[backdrop]} sizes="424px" />
           <div className="from-card/50 to-card absolute inset-0 bg-linear-135 to-75%" />
         </div>
       )}
@@ -113,17 +112,17 @@ export function RequestCard({
       <div className="@container/card flex min-w-0 flex-1 flex-col [contain:size]">
         <div className="flex min-w-0 flex-col items-start gap-1">
           <div className="flex w-full min-w-0 items-start gap-2">
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex min-w-0 flex-1 flex-col">
               <Facts text={facts} onPicture={backdrop !== null} />
               <Link
                 {...link}
                 tabIndex={wide ? -1 : undefined}
                 title={title.name}
-                className="focus-visible:ring-ring -mx-1 flex min-w-0 rounded-sm px-1 outline-none focus-visible:ring-2"
+                className="focus-visible:ring-ring -mx-1 flex min-w-0 rounded-sm px-1 underline-offset-2 outline-none hover:underline focus-visible:ring-2"
               >
                 <span
                   id={`${id}-name`}
-                  className="text-15px truncate font-bold"
+                  className="line-clamp-2 min-w-0 text-base font-bold break-words"
                 >
                   {title.name}
                 </span>
@@ -134,8 +133,12 @@ export function RequestCard({
           {admin && (
             <div className="flex h-6 w-full min-w-0 items-center">{who}</div>
           )}
-          {state}
-          {problem && <div className="flex w-full min-w-0">{problem}</div>}
+          <div className="text-13px flex h-6 w-full min-w-0 items-center gap-2">
+            <span className="text-foreground/85 shrink-0 font-semibold">
+              {tr("requests.statusLabel")}
+            </span>
+            {state}
+          </div>
         </div>
         {actions && (
           <div className="mt-auto flex w-full min-w-0 items-center gap-1.5 pt-1.5">
@@ -147,27 +150,13 @@ export function RequestCard({
         {...link}
         tabIndex={-1}
         aria-hidden
-        className={cn(
-          "bg-muted ring-border relative block aspect-[2/3] shrink-0 self-start overflow-hidden rounded-md shadow-md ring-1 transition-transform duration-300 hover:scale-[1.03] motion-reduce:transition-none",
-          admin ? posterWidth.admin : posterWidth.own,
-        )}
+        className="bg-muted ring-border relative block aspect-[2/3] w-28 shrink-0 self-start overflow-hidden rounded-md shadow-md ring-1 transition-transform duration-300 hover:scale-[1.03] motion-reduce:transition-none"
       >
-        {poster && <Picture sources={[poster]} sizes="124px" />}
+        {poster && <Picture sources={[poster]} sizes="112px" />}
       </Link>
     </article>
   )
 }
-
-/**
- * The poster's width, which sets the card's height. The admin's cards
- * have a row more than a person's own, who asked, and their fullest
- * pairs it with a badge, a two-line problem, and two buttons. This is
- * the width that fits that with a little to spare.
- */
-const posterWidth = {
-  admin: "w-31",
-  own: "w-20",
-} as const
 
 /**
  * The year and a show's seasons, one line. Seasons can run long; when the
@@ -211,79 +200,101 @@ function Facts({ text, onPicture }: { text: string; onPicture: boolean }) {
 }
 
 /**
- * Each state's mark and colour. What needs whoever runs the queue stands
- * out for them, waiting in the accent and needs attention in the warning
- * colour, and reads plain on an asker's own card; what's on its way
- * reads plain, and what's finished quiet, an outline.
+ * Each state's mark and colour, filled as Seerr's are: waiting in the
+ * warning colour, on its way in the accent, here in green, and declined
+ * or needing attention in red.
  */
-function stateLook(
-  state: RequestState,
-  urgent: boolean,
-  progress: number | null,
-) {
+function stateLook(state: RequestState, progress: number | null) {
   switch (state) {
     case "waiting":
       return {
         icon: <ClockIcon strokeWidth={2.5} />,
         label: tr("requests.state.waiting"),
-        className: urgent
-          ? "bg-primary text-primary-foreground"
-          : "bg-secondary text-secondary-foreground",
+        className: "border-warning bg-warning/80",
       }
     case "needsAttention":
       return {
         icon: <TriangleAlertIcon strokeWidth={2.5} />,
         label: tr("requests.state.needsAttention"),
-        className: urgent
-          ? "bg-warning text-background"
-          : "bg-secondary text-secondary-foreground",
+        className: "border-destructive bg-destructive/80",
       }
     case "onTheWay":
       return {
-        icon: <ProgressRing progress={progress} className="size-5" />,
+        icon: <ProgressRing progress={progress} className="text-current" />,
         label:
           progress === null
             ? tr("requests.state.onTheWay")
             : tr("requests.state.onTheWayPercent", {
                 percent: formatPercent(progress),
               }),
-        className: "bg-secondary text-secondary-foreground",
+        className: "border-primary bg-primary/80",
       }
     case "here":
       return {
-        icon: <CheckIcon strokeWidth={2.5} className="text-success" />,
+        icon: <CheckIcon strokeWidth={3} />,
         label: tr("requests.state.here"),
-        className: "border-foreground/15 text-foreground/80 bg-transparent",
+        className: "border-success bg-success/80",
       }
     case "declined":
       return {
         icon: <CircleSlashIcon strokeWidth={2.5} />,
         label: tr("requests.state.declined"),
-        className: "border-foreground/15 text-muted-foreground bg-transparent",
+        className: "border-destructive bg-destructive/80",
       }
   }
 }
 
 /**
- * Where a request stands, as the server says: one pill with a mark and
- * a word, and how far along it is while it's on its way. `urgent` for
- * whoever runs the queue, for whom a waiting request is theirs to answer.
+ * Where a request stands, as the server says: one filled pill with a
+ * mark and a word, and how far along it is while it's on its way. With
+ * `detail`, what went wrong or why it was declined, the pill is a button
+ * with a chevron that opens it.
  */
 export function RequestStateBadge({
   state,
   progress = null,
-  urgent = false,
+  detail,
 }: {
   state: RequestState
   progress?: number | null
-  urgent?: boolean
+  detail?: ReactNode
 }) {
-  const look = stateLook(state, urgent, progress)
-  return (
-    <Badge className={cn("h-6 max-w-full gap-1.5 px-2.5", look.className)}>
+  const look = stateLook(state, progress)
+  const className = cn(
+    badgeVariants(),
+    "h-5 max-w-full min-w-0 gap-1 border px-2 font-semibold text-white",
+    look.className,
+  )
+  const content = (
+    <>
       {look.icon}
       <span className="truncate">{look.label}</span>
-    </Badge>
+    </>
+  )
+  if (!detail) return <span className={className}>{content}</span>
+  return (
+    <Popover>
+      <PopoverTrigger
+        className={cn(
+          className,
+          "focus-visible:ring-ring cursor-pointer outline-none hover:brightness-110 focus-visible:ring-2 data-popup-open:brightness-110",
+        )}
+      >
+        {content}
+        <ChevronDownIcon aria-hidden strokeWidth={2.5} />
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-80 max-w-(--available-width) gap-0 p-0"
+      >
+        <PopoverHeader>
+          <PopoverTitle className="truncate">{look.label}</PopoverTitle>
+        </PopoverHeader>
+        <div className="flex max-h-80 flex-col gap-2 overflow-y-auto px-3 py-2.5 text-sm break-words">
+          {detail}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -300,34 +311,17 @@ export const requestGrid =
   "grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),1fr))] sm:gap-4"
 
 /** The cards on their way, in the size of the card they stand in for. */
-export function RequestCardSkeleton({
-  size = "rail",
-  admin = false,
-}: {
-  size?: "rail" | "wide"
-  admin?: boolean
-}) {
-  const wide = size === "wide"
+export function RequestCardSkeleton({ admin = false }: { admin?: boolean }) {
   return (
-    <div
-      className={cn(
-        "bg-card flex gap-3 rounded-xl border p-3",
-        wide && "sm:gap-4 sm:p-4",
-      )}
-    >
-      <div className="flex min-w-0 flex-1 flex-col gap-1 [contain:size]">
+    <div className="bg-card flex gap-4 rounded-xl border p-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 [contain:size]">
         <Skeleton className="h-3 w-1/4" />
-        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-5 w-4/5" />
         {admin && <Skeleton className="h-6 w-2/5 rounded-full" />}
-        <Skeleton className="h-6 w-1/3 rounded-full" />
+        <Skeleton className="h-5 w-1/2 rounded-full" />
         <Skeleton className="mt-auto h-8 w-1/2" />
       </div>
-      <Skeleton
-        className={cn(
-          "aspect-[2/3] shrink-0 rounded-md",
-          admin ? posterWidth.admin : posterWidth.own,
-        )}
-      />
+      <Skeleton className="aspect-[2/3] w-28 shrink-0 rounded-md" />
     </div>
   )
 }

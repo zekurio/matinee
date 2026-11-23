@@ -12,6 +12,7 @@ export default {
 
   "requests.recent": "Letzte Anfragen",
 
+  "requests.statusLabel": "Status",
   "requests.state.waiting": "Wartet",
   "requests.state.needsAttention": "Braucht Aufmerksamkeit",
   "requests.state.onTheWay": "Unterwegs",
