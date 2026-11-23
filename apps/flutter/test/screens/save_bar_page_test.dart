@@ -85,10 +85,60 @@ void main() {
     expect(find.text(l.webCommonSaveBarRetry), findsOneWidget);
     expect(find.byType(SaveBar), findsOneWidget);
   });
+
+  // The bug it pins: a failure whose edits were undone by hand came back
+  // with the next edit, reason and Try again, before anything was tried.
+  testWidgets('a failure goes with the edits it failed to save', (
+    tester,
+  ) async {
+    await pump(tester, onSave: () async => throw Exception('refused'));
+    await tester.tap(find.text(l.saveBarSave));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text(l.webCommonSaveBarRetry), findsOneWidget);
+
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SaveBar), findsNothing);
+
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    expect(find.text(l.saveBarSave), findsOneWidget);
+    expect(find.text(l.webCommonSaveBarRetry), findsNothing);
+    expect(find.textContaining(l.webCommonSaveBarFailed), findsNothing);
+  });
+
+  // The bug it pins: the first save's "Saved" ran out during the second
+  // one, which put Save back while that was still on its way.
+  testWidgets('a save soon after another keeps spinning', (tester) async {
+    Completer<void>? second;
+    await pump(tester, onSave: () async => second?.future);
+    await tester.tap(find.text(l.saveBarSave));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text(l.webCommonSaveBarDone), findsOneWidget);
+
+    await tester.tap(find.text('Edit'));
+    await tester.pump();
+    second = Completer();
+    await tester.tap(find.text(l.saveBarSave));
+    await tester.pump();
+    await tester.pump(savedFor);
+    expect(find.byType(Spinner), findsOneWidget);
+    expect(find.text(l.saveBarSave), findsNothing);
+
+    second.complete();
+    await tester.pump();
+    await tester.pump();
+    expect(find.text(l.webCommonSaveBarDone), findsOneWidget);
+    await tester.pump(savedFor);
+    await tester.pumpAndSettle();
+    expect(find.byType(SaveBar), findsNothing);
+  });
 }
 
 /// A page whose edit clears [dirty] once its save goes through, as the real
-/// pages do when the server answers.
+/// pages do when the server answers, with an edit to make and to undo.
 class _Harness extends StatefulWidget {
   const _Harness({super.key, required this.startDirty, required this.onSave});
 
@@ -111,6 +161,17 @@ class _HarnessState extends State<_Harness> {
       await widget.onSave();
       if (mounted) setState(() => _dirty = false);
     },
-    child: const SizedBox.expand(),
+    child: Column(
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => _dirty = true),
+          child: const Text('Edit'),
+        ),
+        GestureDetector(
+          onTap: () => setState(() => _dirty = false),
+          child: const Text('Undo'),
+        ),
+      ],
+    ),
   );
 }

@@ -184,6 +184,14 @@ class _SaveBarPageState extends State<SaveBarPage> {
   int _attention = 0;
   Timer? _done;
 
+  /// What the bar stopped showing is over: a failure whose edits were
+  /// undone by hand doesn't come back with the next edit.
+  @override
+  void didUpdateWidget(SaveBarPage old) {
+    super.didUpdateWidget(old);
+    if (_shown == null) _status = null;
+  }
+
   @override
   void dispose() {
     _done?.cancel();
@@ -206,12 +214,13 @@ class _SaveBarPageState extends State<SaveBarPage> {
       return;
     }
     final l = AppLocalizations.of(context);
+    // The last save's "Saved" mustn't run out on this one.
+    _done?.cancel();
     setState(() => _status = SaveBarStatus.saving);
     try {
       await widget.onSave();
       if (!mounted) return;
       setState(() => _status = SaveBarStatus.saved);
-      _done?.cancel();
       _done = Timer(savedFor, () {
         if (mounted) setState(() => _status = null);
       });
