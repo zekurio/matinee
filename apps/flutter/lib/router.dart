@@ -36,6 +36,7 @@ import 'screens/sign_in/sign_in_screen.dart';
 import 'screens/sign_in/tv/tv_connect.dart';
 import 'screens/sign_in/tv/tv_sign_in.dart';
 import 'screens/sign_in/unreachable_screen.dart';
+import 'screens/statistics/statistics_screen.dart';
 import 'screens/title/episode_screen.dart';
 import 'screens/title/season_screen.dart';
 import 'screens/title/title_screen.dart';
@@ -79,6 +80,7 @@ abstract final class Routes {
   static const downloads = '/downloads';
   static const explore = '/explore';
   static const profile = '/profile';
+  static const statistics = '/statistics';
 
   /// The old links to one kind: Media, started on it.
   static const shows = '/shows';
@@ -384,6 +386,11 @@ List<RouteBase> _handsetRoutes() => [
     path: Routes.profile,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const ProfileScreen(),
+  ),
+  PushedRoute(
+    path: Routes.statistics,
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const StatisticsScreen(),
   ),
   PushedRoute(
     path: Routes.favorites,

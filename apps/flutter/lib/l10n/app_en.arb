@@ -3168,6 +3168,8 @@
       }
     }
   },
+  "statisticsLoadFailed": "Couldn't load statistics",
+  "statisticsLeaderboardPrivate": "Only you can see your own place while your statistics are private.",
   "statsDayCount": "{count, plural, one{{count} day} other{{count} days}}",
   "@statsDayCount": {
     "description": "strings.xml",
@@ -8923,5 +8925,283 @@
   "webNetworkUploadPlaceholder": "No limit",
   "@webNetworkUploadPlaceholder": {
     "description": "network.upload.placeholder"
+  },
+  "webStatsTitle": "Statistics",
+  "@webStatsTitle": {
+    "description": "stats.title"
+  },
+  "webStatsViewActivity": "Activity",
+  "@webStatsViewActivity": {
+    "description": "stats.view.activity"
+  },
+  "webStatsViewPlayback": "Playback",
+  "@webStatsViewPlayback": {
+    "description": "stats.view.playback"
+  },
+  "webStatsViewLibrary": "Library",
+  "@webStatsViewLibrary": {
+    "description": "stats.view.library"
+  },
+  "webStatsViewLeaderboard": "Leaderboard",
+  "@webStatsViewLeaderboard": {
+    "description": "stats.view.leaderboard"
+  },
+  "webStatsShowAllTime": "Show all time",
+  "@webStatsShowAllTime": {
+    "description": "stats.showAllTime"
+  },
+  "webStatsMethodDirect": "Original file",
+  "@webStatsMethodDirect": {
+    "description": "stats.method.direct"
+  },
+  "webStatsMethodRemux": "Converted, video unchanged",
+  "@webStatsMethodRemux": {
+    "description": "stats.method.remux"
+  },
+  "webStatsMethodTranscode": "Converted, video re-encoded",
+  "@webStatsMethodTranscode": {
+    "description": "stats.method.transcode"
+  },
+  "webStatsNotRead": "Not read yet",
+  "@webStatsNotRead": {
+    "description": "stats.notRead"
+  },
+  "webStatsPlays": "{count, plural, one{{count} play} other{{count} plays}}",
+  "@webStatsPlays": {
+    "description": "stats.plays",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webStatsServerEmpty": "Statistics fill in as people watch",
+  "@webStatsServerEmpty": {
+    "description": "stats.server.empty"
+  },
+  "webStatsServerNoPlays": "No plays {p1}",
+  "@webStatsServerNoPlays": {
+    "description": "stats.server.noPlays",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webStatsServerNothingTranscoded": "Nothing was transcoded in this period.",
+  "@webStatsServerNothingTranscoded": {
+    "description": "stats.server.nothingTranscoded"
+  },
+  "webStatsServerMethods": "How it played",
+  "@webStatsServerMethods": {
+    "description": "stats.server.methods"
+  },
+  "webStatsServerEncoders": "Encoders",
+  "@webStatsServerEncoders": {
+    "description": "stats.server.encoders"
+  },
+  "webStatsServerVideoFrom": "Video transcoded from",
+  "@webStatsServerVideoFrom": {
+    "description": "stats.server.videoFrom"
+  },
+  "webStatsServerAudioFrom": "Audio converted from",
+  "@webStatsServerAudioFrom": {
+    "description": "stats.server.audioFrom"
+  },
+  "webStatsServerViewers": "Viewers",
+  "@webStatsServerViewers": {
+    "description": "stats.server.viewers"
+  },
+  "webStatsServerClients": "Browsers and apps",
+  "@webStatsServerClients": {
+    "description": "stats.server.clients"
+  },
+  "webStatsLiveTitle": "Watching now",
+  "@webStatsLiveTitle": {
+    "description": "stats.live.title"
+  },
+  "webStatsLiveStreams": "{count, plural, one{{count} stream} other{{count} streams}}",
+  "@webStatsLiveStreams": {
+    "description": "stats.live.streams",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webStatsLiveEmpty": "Nobody's watching right now",
+  "@webStatsLiveEmpty": {
+    "description": "stats.live.empty"
+  },
+  "webStatsLiveGone": "A file that's gone from the library",
+  "@webStatsLiveGone": {
+    "description": "stats.live.gone"
+  },
+  "webStatsLivePaused": "Paused",
+  "@webStatsLivePaused": {
+    "description": "stats.live.paused"
+  },
+  "webStatsLibraryEmpty": "The libraries are empty",
+  "@webStatsLibraryEmpty": {
+    "description": "stats.library.empty"
+  },
+  "webStatsLibraryEmptyAdmin": "Add a library to see how it grows.",
+  "@webStatsLibraryEmptyAdmin": {
+    "description": "stats.library.emptyAdmin"
+  },
+  "webStatsLibraryEmptyUser": "An admin hasn't added any videos yet.",
+  "@webStatsLibraryEmptyUser": {
+    "description": "stats.library.emptyUser"
+  },
+  "webStatsLibraryAdd": "Add a library",
+  "@webStatsLibraryAdd": {
+    "description": "stats.library.add"
+  },
+  "webStatsLibraryAdded7d": "Added in the last 7 days",
+  "@webStatsLibraryAdded7d": {
+    "description": "stats.library.added.7d"
+  },
+  "webStatsLibraryAdded30d": "Added in the last 30 days",
+  "@webStatsLibraryAdded30d": {
+    "description": "stats.library.added.30d"
+  },
+  "webStatsLibraryAdded90d": "Added in the last 90 days",
+  "@webStatsLibraryAdded90d": {
+    "description": "stats.library.added.90d"
+  },
+  "webStatsLibraryAdded365d": "Added in the last year",
+  "@webStatsLibraryAdded365d": {
+    "description": "stats.library.added.365d"
+  },
+  "webStatsLibraryAddedAll": "Added over time",
+  "@webStatsLibraryAddedAll": {
+    "description": "stats.library.added.all"
+  },
+  "webStatsLibraryMovies": "Movies",
+  "@webStatsLibraryMovies": {
+    "description": "stats.library.movies"
+  },
+  "webStatsLibraryShows": "Shows",
+  "@webStatsLibraryShows": {
+    "description": "stats.library.shows"
+  },
+  "webStatsLibraryEpisodes": "Episodes",
+  "@webStatsLibraryEpisodes": {
+    "description": "stats.library.episodes"
+  },
+  "webStatsLibrarySize": "Size",
+  "@webStatsLibrarySize": {
+    "description": "stats.library.size"
+  },
+  "webStatsLibraryRunningTime": "Running time",
+  "@webStatsLibraryRunningTime": {
+    "description": "stats.library.runningTime"
+  },
+  "webStatsLibraryLibraries": "Libraries",
+  "@webStatsLibraryLibraries": {
+    "description": "stats.library.libraries"
+  },
+  "webStatsLibraryResolution": "Resolution",
+  "@webStatsLibraryResolution": {
+    "description": "stats.library.resolution"
+  },
+  "webStatsLibraryDynamicRange": "Dynamic range",
+  "@webStatsLibraryDynamicRange": {
+    "description": "stats.library.dynamicRange"
+  },
+  "webStatsLibraryVideoCodecs": "Video codecs",
+  "@webStatsLibraryVideoCodecs": {
+    "description": "stats.library.videoCodecs"
+  },
+  "webStatsLibraryAudioCodecs": "Audio codecs",
+  "@webStatsLibraryAudioCodecs": {
+    "description": "stats.library.audioCodecs"
+  },
+  "webStatsLeaderboardNoneWatchTime": "Nobody has watched anything yet.",
+  "@webStatsLeaderboardNoneWatchTime": {
+    "description": "stats.leaderboard.none.watchTime"
+  },
+  "webStatsLeaderboardNonePlays": "Nobody has played anything yet.",
+  "@webStatsLeaderboardNonePlays": {
+    "description": "stats.leaderboard.none.plays"
+  },
+  "webStatsLeaderboardNoneCurrentStreak": "Nobody is on a streak right now.",
+  "@webStatsLeaderboardNoneCurrentStreak": {
+    "description": "stats.leaderboard.none.currentStreak"
+  },
+  "webStatsLeaderboardNoneLongestStreak": "Nobody has a streak yet.",
+  "@webStatsLeaderboardNoneLongestStreak": {
+    "description": "stats.leaderboard.none.longestStreak"
+  },
+  "webStatsLeaderboardNoneMovies": "Nobody has finished a movie yet.",
+  "@webStatsLeaderboardNoneMovies": {
+    "description": "stats.leaderboard.none.movies"
+  },
+  "webStatsLeaderboardNoneEpisodes": "Nobody has finished an episode yet.",
+  "@webStatsLeaderboardNoneEpisodes": {
+    "description": "stats.leaderboard.none.episodes"
+  },
+  "webStatsLeaderboardEmpty": "The leaderboard fills in as people watch",
+  "@webStatsLeaderboardEmpty": {
+    "description": "stats.leaderboard.empty"
+  },
+  "webStatsLeaderboardEmptyHint": "Only people who share their statistics show up.",
+  "@webStatsLeaderboardEmptyHint": {
+    "description": "stats.leaderboard.emptyHint"
+  },
+  "webStatsLeaderboardNoPlays": "Nobody played anything {p1}",
+  "@webStatsLeaderboardNoPlays": {
+    "description": "stats.leaderboard.noPlays",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webStatsFiles": "{count, plural, one{{count} file} other{{count} files}}",
+  "@webStatsFiles": {
+    "description": "stats.files",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webStatsGrowthArrived": "{p1}, {p2}",
+  "@webStatsGrowthArrived": {
+    "description": "stats.growth.arrived",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "webStatsGrowthHeldAdded": "{p1} · {p2} added",
+  "@webStatsGrowthHeldAdded": {
+    "description": "stats.growth.heldAdded",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "webStatsShows": "{count, plural, one{{count} show} other{{count} shows}}",
+  "@webStatsShows": {
+    "description": "stats.shows",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webStatsGrowthNothing": "Nothing arrived",
+  "@webStatsGrowthNothing": {
+    "description": "stats.growth.nothing"
   }
 }
