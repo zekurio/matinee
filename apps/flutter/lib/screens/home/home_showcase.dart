@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/session.dart';
@@ -164,7 +163,7 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
   /// page does: to the left where text runs left to right, to the right in
   /// Arabic or Hebrew, where the dots run the other way too.
   void _endDrag(DragEndDetails details) {
-    final toward = Directionality.of(context) == ui.TextDirection.rtl ? -1 : 1;
+    final toward = Directionality.of(context) == TextDirection.rtl ? -1 : 1;
     final drag = _drag * toward;
     final velocity = (details.primaryVelocity ?? 0) * toward;
     final on = drag < -_swipeDistance || velocity < -_swipeVelocity;
@@ -385,9 +384,9 @@ class _Art extends StatelessWidget {
   );
 }
 
-/// The shade up from the card's bottom: black at 94% there, eased to nothing
-/// by three tenths of the way up, with many stops on a smootherstep curve so
-/// neither end shows as a line.
+/// The shade over the card's lower seven tenths: black at 94% along the
+/// bottom, eased to nothing three tenths of the way down from the top, with
+/// many stops on a smootherstep curve so neither end shows as a line.
 final _bottom = _shade(
   Alignment.topCenter,
   Alignment.bottomCenter,
@@ -397,7 +396,7 @@ final _bottom = _shade(
 );
 
 /// The shade in from the card's leading side, under the words: black at 72%
-/// on the edge, eased to nothing by 70% of the way across.
+/// across the leading three tenths, eased to nothing at the far edge.
 final _side = _shade(
   AlignmentDirectional.centerEnd,
   AlignmentDirectional.centerStart,
@@ -668,8 +667,7 @@ class _Facts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final foreground = MatineeTheme.of(context).foreground;
-    final dim = foreground.withValues(alpha: .8);
+    final dim = MatineeTheme.of(context).foreground.withValues(alpha: .8);
     final rating = this.rating;
     return Wrap(
       spacing: 12,
@@ -683,24 +681,7 @@ class _Facts extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: KitText.base.style(color: dim),
           ),
-        if (contentRating case final age?)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(
-              border: Border.all(color: foreground.withValues(alpha: .3)),
-              borderRadius: const BorderRadius.all(
-                Radius.circular(KitRadius.sm),
-              ),
-            ),
-            child: Text(
-              age,
-              style: KitText.xs.style(
-                color: dim,
-                weight: FontWeight.w500,
-                leading: 20,
-              ),
-            ),
-          ),
+        if (contentRating case final age?) Badge(age, outlined: true),
         if (rating != null)
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -713,10 +694,7 @@ class _Facts extends StatelessWidget {
                 label: l.mediaHeroRated,
               ),
               Text(
-                NumberFormat.decimalPatternDigits(
-                  locale: Localizations.localeOf(context).toString(),
-                  decimalDigits: 1,
-                ).format(rating),
+                formatRating(rating, l),
                 style: KitText.base.style(color: dim),
               ),
             ],
