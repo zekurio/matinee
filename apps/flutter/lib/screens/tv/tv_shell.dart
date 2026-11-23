@@ -308,11 +308,7 @@ class _TvShellState extends ConsumerState<TvShell> {
                   top: TvDrawerEntry(
                     key: TvDrawerKeys.profile,
                     label: name,
-                    leading: Avatar(
-                      url: user?.avatarUrl,
-                      name: name,
-                      size: 32,
-                    ),
+                    leading: Avatar(url: user?.avatarUrl, name: name, size: 32),
                   ),
                   entries: [
                     TvDrawerEntry(
