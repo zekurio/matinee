@@ -61,6 +61,9 @@ final class ImageTarget {
 const maxImageBytes = 25 * 1024 * 1024;
 const imageTypes = {'image/jpeg', 'image/png', 'image/webp'};
 
+/// The contract's `MAX_AVATAR_BYTES`: the server takes no picture over it.
+const maxAvatarBytes = 10 * 1024 * 1024;
+
 const originalLanguage = 'original';
 const defaultSkipSeconds = 10;
 

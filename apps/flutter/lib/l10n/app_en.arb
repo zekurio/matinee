@@ -77,6 +77,191 @@
   "@aboutVersion": {
     "description": "strings_diagnostics.xml"
   },
+  "accountApiTokensAllPermissions": "All permissions",
+  "@accountApiTokensAllPermissions": {
+    "description": "Account: a token that may do everything the account can"
+  },
+  "accountApiTokensAllPermissionsHint": "Everything you can do in Matinee, including changing this account and its tokens.",
+  "@accountApiTokensAllPermissionsHint": {
+    "description": "Account: under the all-permissions switch of a token"
+  },
+  "accountApiTokensCopied": "Copied",
+  "@accountApiTokensCopied": {
+    "description": "Account: after a token's secret went to the clipboard"
+  },
+  "accountApiTokensCopy": "Copy",
+  "@accountApiTokensCopy": {
+    "description": "Account: copies a new token's secret"
+  },
+  "accountApiTokensCreate": "Create token",
+  "@accountApiTokensCreate": {
+    "description": "Account: makes an API token, and the dialog's button"
+  },
+  "accountApiTokensCreateDescription": "Name it after what will use it, and give it only what that needs.",
+  "@accountApiTokensCreateDescription": {
+    "description": "Account: what an API token is for"
+  },
+  "accountApiTokensCreateTitle": "Create an API token",
+  "@accountApiTokensCreateTitle": {
+    "description": "Account: the dialog making an API token"
+  },
+  "accountApiTokensCreated": "Created {p1}",
+  "@accountApiTokensCreated": {
+    "description": "Account: when an API token was made",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "accountApiTokensDescription": "A service or an app sends one as Authorization: Bearer to call the API as you, within what your account may do. Tokens don't expire. Revoke one when it's no longer needed.",
+  "@accountApiTokensDescription": {
+    "description": "Account: what API tokens are for"
+  },
+  "accountApiTokensDone": "Done",
+  "@accountApiTokensDone": {
+    "description": "Account: closes a new token's secret"
+  },
+  "accountApiTokensEditDescription": "The token keeps its secret. Changes apply from its next request.",
+  "@accountApiTokensEditDescription": {
+    "description": "Account: changing an API token"
+  },
+  "accountApiTokensEditNamed": "Change {p1}",
+  "@accountApiTokensEditNamed": {
+    "description": "Account: changes the API token named p1",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "accountApiTokensEditTitle": "Change {p1}",
+  "@accountApiTokensEditTitle": {
+    "description": "Account: the dialog changing the API token named p1",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "accountApiTokensEmpty": "No API tokens yet.",
+  "@accountApiTokensEmpty": {
+    "description": "Account: the API token list with none"
+  },
+  "accountApiTokensLoadFailed": "Couldn't load your API tokens",
+  "@accountApiTokensLoadFailed": {
+    "description": "Account: the API token list did not load"
+  },
+  "accountApiTokensName": "Name",
+  "@accountApiTokensName": {
+    "description": "Account: an API token's name"
+  },
+  "accountApiTokensNamePlaceholder": "Home automation",
+  "@accountApiTokensNamePlaceholder": {
+    "description": "Account: what to call an API token"
+  },
+  "accountApiTokensNeverUsed": "Never used",
+  "@accountApiTokensNeverUsed": {
+    "description": "Account: an API token no request has used"
+  },
+  "accountApiTokensNoMatch": "No permission matches",
+  "@accountApiTokensNoMatch": {
+    "description": "Account: the permission search found nothing"
+  },
+  "accountApiTokensNotAllowed": "Your account may not create API tokens.",
+  "@accountApiTokensNotAllowed": {
+    "description": "Account: the account lacks apiToken.create"
+  },
+  "accountApiTokensPermissionCount": "{count, plural, one{{count} permission} other{{count} permissions}}",
+  "@accountApiTokensPermissionCount": {
+    "description": "Account: how many permissions an API token holds",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountApiTokensPermissions": "What it may do",
+  "@accountApiTokensPermissions": {
+    "description": "Account: the permissions an API token holds"
+  },
+  "accountApiTokensRevoke": "Revoke",
+  "@accountApiTokensRevoke": {
+    "description": "Account: takes an API token's secret out of use"
+  },
+  "accountApiTokensRevokeDescription": "The service using it stops working with Matinee until you give it a new token.",
+  "@accountApiTokensRevokeDescription": {
+    "description": "Account: what revoking an API token does"
+  },
+  "accountApiTokensRevokeFailed": "Couldn't revoke the API token",
+  "@accountApiTokensRevokeFailed": {
+    "description": "Account: the server refused to revoke an API token"
+  },
+  "accountApiTokensRevokeNamed": "Revoke {p1}",
+  "@accountApiTokensRevokeNamed": {
+    "description": "Account: revokes the API token named p1",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "accountApiTokensRevokeTitle": "Revoke {p1}?",
+  "@accountApiTokensRevokeTitle": {
+    "description": "Account: asks before revoking the API token named p1",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "accountApiTokensRevoked": "Revoked {p1}",
+  "@accountApiTokensRevoked": {
+    "description": "Account: an API token that was revoked",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "accountApiTokensSave": "Save",
+  "@accountApiTokensSave": {
+    "description": "Account: keeps a changed API token"
+  },
+  "accountApiTokensSearch": "Search permissions",
+  "@accountApiTokensSearch": {
+    "description": "Account: finds a permission by name"
+  },
+  "accountApiTokensSecretDescription": "This is the only time Matinee shows it. Keep it where the service keeps secrets.",
+  "@accountApiTokensSecretDescription": {
+    "description": "Account: a new API token's secret shows once"
+  },
+  "accountApiTokensSecretLabel": "API token",
+  "@accountApiTokensSecretLabel": {
+    "description": "Account: names a new API token's secret for a screen reader"
+  },
+  "accountApiTokensSecretTitle": "Copy the token for {p1}",
+  "@accountApiTokensSecretTitle": {
+    "description": "Account: the new API token named p1",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "accountApiTokensTitle": "API tokens",
+  "@accountApiTokensTitle": {
+    "description": "Account: credentials services call the API with"
+  },
+  "accountApiTokensUsed": "Used {p1}",
+  "@accountApiTokensUsed": {
+    "description": "Account: when an API token last called the API",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
   "accountDeviceApp": "{p1} app",
   "@accountDeviceApp": {
     "description": "strings.xml",
@@ -89,6 +274,50 @@
   "accountDeviceBrowser": "Browser",
   "@accountDeviceBrowser": {
     "description": "strings.xml"
+  },
+  "accountDisplayNameLabel": "Display name",
+  "@accountDisplayNameLabel": {
+    "description": "Account: the name others see instead of the username"
+  },
+  "accountDisplayNameSave": "Save",
+  "@accountDisplayNameSave": {
+    "description": "Account: keeps a changed display name"
+  },
+  "accountDisplayNameSaveFailed": "Couldn't save your name",
+  "@accountDisplayNameSaveFailed": {
+    "description": "Account: the server refused a display name"
+  },
+  "accountPictureChange": "Change picture",
+  "@accountPictureChange": {
+    "description": "Account: the profile picture, and the sheet changing it"
+  },
+  "accountPictureChangeFailed": "Couldn't change your picture",
+  "@accountPictureChangeFailed": {
+    "description": "Account: an avatar upload or removal the server refused"
+  },
+  "accountPictureRemove": "Remove picture",
+  "@accountPictureRemove": {
+    "description": "Account: shows the initial instead of an uploaded picture"
+  },
+  "accountPictureTooBig": "Pick an image under 10 MB.",
+  "@accountPictureTooBig": {
+    "description": "Account: an avatar over the contract's MAX_AVATAR_BYTES"
+  },
+  "accountPictureUnreadable": "Couldn't read that image. Try another file.",
+  "@accountPictureUnreadable": {
+    "description": "Account: the picked avatar had no readable bytes"
+  },
+  "accountPictureUpload": "Upload picture",
+  "@accountPictureUpload": {
+    "description": "Account: picks an avatar from the device"
+  },
+  "accountPictureWrongType": "Pick a JPEG, PNG, or WebP image.",
+  "@accountPictureWrongType": {
+    "description": "Account: an avatar that isn't one of AVATAR_TYPES"
+  },
+  "accountProfileTitle": "Profile",
+  "@accountProfileTitle": {
+    "description": "Account: the picture, display name, and what it shares"
   },
   "accountSessionsFailed": "Couldn't load your sessions",
   "@accountSessionsFailed": {
@@ -129,9 +358,54 @@
   "@accountSessionsThisDevice": {
     "description": "strings.xml"
   },
+  "accountSessionsSignOutOthers": "Sign out other sessions",
+  "@accountSessionsSignOutOthers": {
+    "description": "Account: ends every session but this one"
+  },
+  "accountSessionsSignOutOthersConfirm": "Sign out others",
+  "@accountSessionsSignOutOthersConfirm": {
+    "description": "Account: confirms signing out other sessions"
+  },
+  "accountSessionsSignOutOthersDescription": "Every browser and app but this one has to sign in again.",
+  "@accountSessionsSignOutOthersDescription": {
+    "description": "Account: what signing out other sessions does"
+  },
+  "accountSessionsSignOutOthersFailed": "Couldn't sign out the other sessions",
+  "@accountSessionsSignOutOthersFailed": {
+    "description": "Account: the server refused revoke-others"
+  },
+  "accountSessionsSignOutOthersTitle": "Sign out every other session?",
+  "@accountSessionsSignOutOthersTitle": {
+    "description": "Account: asks before signing out other sessions"
+  },
+  "accountSessionsSignedOutCount": "{count, plural, one{Signed out {count} session} other{Signed out {count} sessions}}",
+  "@accountSessionsSignedOutCount": {
+    "description": "Account: how many other sessions ended",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "accountSessionsTitle": "Sessions",
   "@accountSessionsTitle": {
     "description": "strings.xml"
+  },
+  "accountSharingFailed": "Couldn't change what your profile shows",
+  "@accountSharingFailed": {
+    "description": "Account: the server refused a profile sharing change"
+  },
+  "accountSharingFavorites": "Show my favorites",
+  "@accountSharingFavorites": {
+    "description": "Account: lets others see the favorites on the profile"
+  },
+  "accountSharingStats": "Show my statistics",
+  "@accountSharingStats": {
+    "description": "Account: lets others see the watch statistics on the profile"
+  },
+  "accountSharingTitle": "Who can see my profile",
+  "@accountSharingTitle": {
+    "description": "Account: the switches over what the profile shares"
   },
   "actionsEpisodeDetails": "Episode details",
   "@actionsEpisodeDetails": {

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/failure_text.dart';
+import '../../core/permissions.dart';
 import '../../core/session.dart';
 import '../../core/toasts.dart';
 import '../../kit/kit.dart';
@@ -15,6 +16,8 @@ import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../query/server_data.dart';
 import '../../router.dart';
+import 'account_profile.dart';
+import 'account_tokens.dart';
 import 'devices.dart';
 import 'settings_rows.dart';
 import 'settings_screen.dart';
@@ -29,9 +32,9 @@ final accountSessionsProvider = serverQuery(
 /// poll, up to five seconds after.
 const devicePoll = Duration(seconds: 6);
 
-/// Settings, Account: signing in another device, then the places the account is
-/// signed in, each but this one with a way to sign it out. Switching server or
-/// account and signing out are on the profile.
+/// Settings, Account: the profile, who may see it, signing in another device,
+/// the places the account is signed in, and its API tokens. Switching server
+/// or account and signing out are on the profile.
 class AccountPage extends ConsumerStatefulWidget {
   const AccountPage({super.key});
 
@@ -77,18 +80,59 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     }
   }
 
+  Future<void> _signOutOthers() async {
+    final l = AppLocalizations.of(context);
+    final api = ref.read(apiProvider);
+    final toasts = ref.read(toastProvider);
+    final yes = await ConfirmDialog.show(
+      context,
+      title: l.accountSessionsSignOutOthersTitle,
+      description: l.accountSessionsSignOutOthersDescription,
+      confirmLabel: l.accountSessionsSignOutOthersConfirm,
+      cancelLabel: l.commonCancel,
+      destructive: true,
+    );
+    if (!yes || !mounted) return;
+    try {
+      if (api == null) throw const NotConnected();
+      final result = await api.account.sessions.revokeOthers();
+      ref.invalidate(accountSessionsProvider);
+      unawaited(
+        toasts.show(
+          l.accountSessionsSignedOutCount(result.revoked),
+          kind: ToastKind.success,
+        ),
+      );
+    } on Object catch (error) {
+      unawaited(
+        toasts.show(
+          l.accountSessionsSignOutOthersFailed,
+          description: describeFailure(l, error),
+          kind: ToastKind.error,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
+    final auth = ref.watch(authStateProvider);
+    final user = auth is SignedIn ? auth.user : null;
     final sessions = ref.watch(accountSessionsProvider);
     final list = sessions.value;
+    final others = list?.any((session) => !session.current) ?? false;
     return ReturnWatcher(
       path: Routes.settingsPage(SettingsPage.account.key),
       onReturn: _returned,
       child: SettingsScaffold(
         title: l.settingsPageAccount,
         sections: [
+          if (user != null && can(user, Permission.accountUpdate)) ...[
+            AccountProfileSection(user: user),
+            AccountSharingSection(user: user),
+          ],
           Panel(
             rows: [
               LinkRow(
@@ -101,29 +145,51 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           ),
           SettingsSection(
             title: l.accountSessionsTitle,
-            child: list != null
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: 12,
-                    children: [
-                      for (final session in list)
-                        SessionRow(
-                          session: session,
-                          onSignOut: () => _signOut(session),
-                        ),
-                    ],
-                  )
-                : sessions.hasError
-                ? FailureState(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 12,
+              children: [
+                if (list != null)
+                  for (final session in list)
+                    SessionRow(
+                      session: session,
+                      onSignOut:
+                          user != null &&
+                              can(user, Permission.sessionDelete) &&
+                              !session.current
+                          ? () => _signOut(session)
+                          : null,
+                    )
+                else if (sessions.hasError)
+                  FailureState(
                     title: l.accountSessionsFailed,
                     error: sessions.error!,
                     onRetry: () => ref.invalidate(accountSessionsProvider),
                   )
-                : Text(
+                else
+                  Text(
                     '…',
                     style: KitText.sm.style(color: colors.mutedForeground),
                   ),
+                if (list != null &&
+                    others &&
+                    user != null &&
+                    can(user, Permission.sessionDelete))
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: MatineeButton(
+                      look: ButtonLook.outline,
+                      size: ButtonSize.sm,
+                      leading: Lucide.logOut,
+                      onPressed: _signOutOthers,
+                      child: Text(l.accountSessionsSignOutOthers),
+                    ),
+                  ),
+              ],
+            ),
           ),
+          if (user != null && can(user, Permission.apiTokenRead))
+            AccountApiTokensSection(user: user),
         ],
       ),
     );
@@ -146,7 +212,10 @@ class SessionRow extends StatelessWidget {
   const SessionRow({super.key, required this.session, required this.onSignOut});
 
   final Session session;
-  final VoidCallback onSignOut;
+
+  /// Null for an account that may not sign another session out, or for
+  /// this device.
+  final VoidCallback? onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -230,14 +299,14 @@ class SessionRow extends StatelessWidget {
               ],
             ),
           ),
-          if (!session.current)
+          if (onSignOut case final signOut?)
             RoundIconButton(
               icon: Lucide.logOut,
               label: l.accountSessionsSignOutNamed(name),
               size: 40,
               iconSize: 18,
               background: const Color(0x00000000),
-              onPressed: onSignOut,
+              onPressed: signOut,
             ),
         ],
       ),
