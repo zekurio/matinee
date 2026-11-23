@@ -4654,12 +4654,33 @@ final class TranscodingCapabilitiesFeatures {
   };
 }
 
+final class HardwareDecodeSupport {
+  const HardwareDecodeSupport({
+    required this.acceleration,
+    required this.codecs,
+  });
+
+  factory HardwareDecodeSupport.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return HardwareDecodeSupport(
+      acceleration: fields['acceleration'] as String,
+      codecs: readList(fields['codecs'], (value) => value as String),
+    );
+  }
+
+  final String acceleration;
+  final List<String> codecs;
+
+  JsonMap toJson() => {'acceleration': acceleration, 'codecs': codecs};
+}
+
 final class AdminTranscodingSettings {
   const AdminTranscodingSettings({
     required this.settings,
     required this.defaults,
     required this.environment,
     required this.capabilities,
+    required this.hardwareDecodeSupport,
   });
 
   factory AdminTranscodingSettings.fromJson(Object? json) {
@@ -4669,6 +4690,10 @@ final class AdminTranscodingSettings {
       defaults: TranscodingSettings.fromJson(fields['defaults']),
       environment: readList(fields['environment'], (value) => value as String),
       capabilities: TranscodingCapabilities.fromJson(fields['capabilities']),
+      hardwareDecodeSupport: readList(
+        fields['hardwareDecodeSupport'],
+        HardwareDecodeSupport.fromJson,
+      ),
     );
   }
 
@@ -4676,12 +4701,14 @@ final class AdminTranscodingSettings {
   final TranscodingSettings defaults;
   final List<String> environment;
   final TranscodingCapabilities capabilities;
+  final List<HardwareDecodeSupport> hardwareDecodeSupport;
 
   JsonMap toJson() => {
     'settings': settings.toJson(),
     'defaults': defaults.toJson(),
     'environment': environment,
     'capabilities': capabilities.toJson(),
+    'hardwareDecodeSupport': hardwareDecodeSupport.map((item) => item.toJson()).toList(),
   };
 }
 
@@ -6673,6 +6700,29 @@ final class InviteGroup {
   JsonMap toJson() => {'id': id, 'name': name};
 }
 
+final class InviteOptions {
+  const InviteOptions({
+    required this.expiryDays,
+    required this.defaultExpiryDays,
+  });
+
+  factory InviteOptions.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return InviteOptions(
+      expiryDays: readList(fields['expiryDays'], (value) => value as int),
+      defaultExpiryDays: fields['defaultExpiryDays'] as int,
+    );
+  }
+
+  final List<int> expiryDays;
+  final int defaultExpiryDays;
+
+  JsonMap toJson() => {
+    'expiryDays': expiryDays,
+    'defaultExpiryDays': defaultExpiryDays,
+  };
+}
+
 final class JobFailure {
   const JobFailure({
     required this.label,
@@ -7907,6 +7957,23 @@ final class Favorites {
     'episodes': episodes.map((item) => item.toJson()).toList(),
     'movies': movies.map((item) => item.toJson()).toList(),
   };
+}
+
+final class MetadataLanguageChoice {
+  const MetadataLanguageChoice({required this.code, required this.nameTag});
+
+  factory MetadataLanguageChoice.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return MetadataLanguageChoice(
+      code: fields['code'] as String,
+      nameTag: fields['nameTag'] as String,
+    );
+  }
+
+  final String code;
+  final String nameTag;
+
+  JsonMap toJson() => {'code': code, 'nameTag': nameTag};
 }
 
 final class MetadataMatch {

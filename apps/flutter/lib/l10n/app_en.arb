@@ -440,13 +440,18 @@
   "@adminAccessTranscode": {
     "description": "admin settings"
   },
-  "adminDays": "Days until it expires",
-  "@adminDays": {
-    "description": "admin settings"
-  },
   "adminEnterNumber": "Enter a number.",
   "@adminEnterNumber": {
     "description": "admin settings"
+  },
+  "adminInviteExpiryDays": "{count, plural, one{{count} day} other{{count} days}}",
+  "@adminInviteExpiryDays": {
+    "description": "admin settings: how long an invite link works",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "adminInviteRevokeConfirm": "Revoke",
   "@adminInviteRevokeConfirm": {

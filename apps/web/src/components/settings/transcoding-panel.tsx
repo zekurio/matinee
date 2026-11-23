@@ -113,7 +113,7 @@ function TranscodingForm({ settings }: { settings: AdminTranscodingSettings }) {
         onDetect={() => detect.mutate()}
       />
       <HardwareSection form={form} settings={settings} hardware={hardware} />
-      <HardwareDecodingSection form={form} />
+      <HardwareDecodingSection form={form} settings={settings} />
       <EncodingSection
         form={form}
         capabilities={capabilities}

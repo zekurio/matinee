@@ -1,4 +1,9 @@
-import { createInvite, listInvites, revokeInvite } from "../auth/invites"
+import {
+  createInvite,
+  INVITE_OPTIONS,
+  listInvites,
+  revokeInvite,
+} from "../auth/invites"
 import { log } from "../log"
 import {
   authed,
@@ -24,6 +29,8 @@ export const adminInvites = {
     log.info(`${context.user.username} created invite ${created.id}`)
     return created
   }),
+
+  options: authed.admin.invites.options.handler(() => INVITE_OPTIONS),
 
   revoke: authed.admin.invites.revoke.handler(async ({ context, input }) => {
     if (!(await revokeInvite(input.id))) {

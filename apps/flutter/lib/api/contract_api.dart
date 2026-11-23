@@ -976,6 +976,15 @@ final class MetadataApi {
       'providers',
     ], (value) => readList(value, MetadataProvider.fromJson));
   }
+
+  /// The account needs the `library.read` permission, and so does an API token.
+  /// `GET /metadata/languages`
+  Future<List<MetadataLanguageChoice>> languages() {
+    return _transport.call('GET', [
+      'metadata',
+      'languages',
+    ], (value) => readList(value, MetadataLanguageChoice.fromJson));
+  }
 }
 
 final class TitlesApi {
@@ -2450,6 +2459,16 @@ final class AdminInvitesApi {
       CreatedInvite.fromJson,
       body: body,
     );
+  }
+
+  /// The account needs the `invite.create` permission, and so does an API token.
+  /// `GET /admin/invites/options`
+  Future<InviteOptions> options() {
+    return _transport.call('GET', [
+      'admin',
+      'invites',
+      'options',
+    ], InviteOptions.fromJson);
   }
 
   /// The account needs the `invite.delete` permission, and so does an API token.

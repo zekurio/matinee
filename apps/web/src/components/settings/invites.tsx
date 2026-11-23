@@ -1,11 +1,10 @@
 import {
   type AccessGroup,
   type CreatedInvite,
-  DEFAULT_INVITE_EXPIRY_DAYS,
   type Invite,
-  INVITE_EXPIRY_DAYS,
   InviteInput,
   InviteLabel,
+  type InviteOptions,
 } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import { Dialog } from "@matinee/ui/components/dialog"
@@ -83,6 +82,11 @@ export function Invites({
     enabled: passkeysOn && mayCreate,
   })
   const joinable = groups.data ?? []
+  // How long a link can work, which the form starts from.
+  const options = useQuery({
+    ...orpc.admin.invites.options.queryOptions(),
+    enabled: passkeysOn && mayCreate,
+  })
 
   // No question first: a revoked link is quick to make again.
   const revoke = useMutation({
@@ -102,7 +106,7 @@ export function Invites({
       title={tr("users.invites.title")}
       action={
         passkeysOn && mayCreate ? (
-          <Button variant="outline" onClick={start}>
+          <Button variant="outline" disabled={!options.data} onClick={start}>
             <UserPlusIcon />
             {tr("users.invites.create")}
           </Button>
@@ -111,6 +115,13 @@ export function Invites({
     >
       {!passkeysOn && (
         <SettingNote>{tr("users.invites.passkeysOff")}</SettingNote>
+      )}
+      {options.isError && (
+        <SettingNote>
+          {tr("users.invites.loadFailed", {
+            error: errorMessage(options.error),
+          })}
+        </SettingNote>
       )}
       {invites.isPending ? (
         <Skeleton className="h-16 rounded-xl" />
@@ -144,13 +155,16 @@ export function Invites({
           {created ? (
             <CreatedLink invite={created} onDone={() => setCreating(false)} />
           ) : (
-            <InviteForm
-              groups={joinable}
-              onCreated={(invite) => {
-                setCreated(invite)
-                void refresh()
-              }}
-            />
+            options.data && (
+              <InviteForm
+                options={options.data}
+                groups={joinable}
+                onCreated={(invite) => {
+                  setCreated(invite)
+                  void refresh()
+                }}
+              />
+            )
           )}
         </FormDialogContent>
       </Dialog>
@@ -222,9 +236,11 @@ function InviteRow({
 }
 
 function InviteForm({
+  options,
   groups,
   onCreated,
 }: {
+  options: InviteOptions
   /** The groups an invite can put the account in. */
   groups: AccessGroup[]
   onCreated: (invite: CreatedInvite) => void
@@ -239,7 +255,7 @@ function InviteForm({
     // The select holds strings, so the days are one until the submit.
     defaultValues: {
       label: "",
-      expiresInDays: String(DEFAULT_INVITE_EXPIRY_DAYS),
+      expiresInDays: String(options.defaultExpiryDays),
       groupIds: noGroups,
     },
     onSubmit: ({ value }) =>
@@ -251,7 +267,7 @@ function InviteForm({
         }),
       ),
   })
-  const expiries = INVITE_EXPIRY_DAYS.map((days) => ({
+  const expiries = options.expiryDays.map((days) => ({
     value: String(days),
     label: tr("format.daysLong", { count: days }),
   }))

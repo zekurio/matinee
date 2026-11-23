@@ -9,6 +9,9 @@ final adminLibrariesProvider = serverQuery((api) => api.libraries.list());
 final metadataProvidersProvider = serverQuery(
   (api) => api.metadata.providers(),
 );
+final metadataLanguagesProvider = serverQuery(
+  (api) => api.metadata.languages(),
+);
 
 /// One folder of the server's, or where it starts with null.
 final folderProvider = serverQueryFamily(
@@ -17,6 +20,7 @@ final folderProvider = serverQueryFamily(
 
 final adminUsersProvider = serverQuery((api) => api.admin.users.list());
 final adminInvitesProvider = serverQuery((api) => api.admin.invites.list());
+final inviteOptionsProvider = serverQuery((api) => api.admin.invites.options());
 final adminGroupsProvider = serverQuery((api) => api.admin.groups.list());
 
 /// The sign-in methods the server offers, which the user list reads to

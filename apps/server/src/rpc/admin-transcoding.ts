@@ -11,6 +11,7 @@ import {
   transcodingFromEnvironment,
   transcodingSettings,
 } from "../transcode/settings"
+import { HARDWARE_DECODE_SUPPORT } from "../transcode/video/decoder"
 import { authed } from "./base"
 
 async function describe(
@@ -22,6 +23,7 @@ async function describe(
     defaults: transcodingDefaults(),
     environment: transcodingFromEnvironment(),
     capabilities: await transcodingCapabilities(settings, refresh),
+    hardwareDecodeSupport: [...HARDWARE_DECODE_SUPPORT],
   }
 }
 
