@@ -49,8 +49,9 @@ final _options = TitleFilterOptions(
 /// every scope.
 Future<ProviderContainer> _pump(
   WidgetTester tester,
-  List<Library> libraries,
-) async {
+  List<Library> libraries, {
+  TitleFilterOptions? options,
+}) async {
   tester.view.physicalSize = const Size(420, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -58,7 +59,9 @@ Future<ProviderContainer> _pump(
     overrides: [
       apiProvider.overrideWithValue(null),
       librariesProvider.overrideWith((ref) async => libraries),
-      filterOptionsProvider.overrideWith((ref, scope) async => _options),
+      filterOptionsProvider.overrideWith(
+        (ref, scope) async => options ?? _options,
+      ),
     ],
   );
   addTearDown(container.dispose);
@@ -97,6 +100,61 @@ Finder _row(String label) => find.byWidgetPredicate(
 );
 
 void main() {
+  testWidgets('a single choice is one row, its name and value together', (
+    tester,
+  ) async {
+    await _pump(tester, [
+      _library('m1', 'Movies A', LibraryKind.movies, 12),
+      _library('m2', 'Movies B', LibraryKind.movies, 8),
+    ]);
+    final type = find.byWidgetPredicate(
+      (widget) => widget is OptionRow && widget.label == 'Type',
+    );
+    expect(type, findsOneWidget);
+    expect(tester.getSize(type).height, 48);
+    expect(
+      (tester.getCenter(find.text('Type')).dy -
+              tester.getCenter(find.text('All')).dy)
+          .abs(),
+      lessThan(1),
+    );
+    final semantics = tester.ensureSemantics();
+    expect(find.bySemanticsLabel('Type, All'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('a section value ends where a compact row value does', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      [_library('m1', 'Movies A', LibraryKind.movies, 12)],
+      options: const TitleFilterOptions(
+        genres: [],
+        studios: [],
+        ratings: [],
+        languages: [],
+        years: FilterRange(min: 1990, max: 2024, step: 1),
+        scores: null,
+        runtime: null,
+        watched: TitleFilterOptionsWatched(
+          unwatched: 2,
+          inProgress: 1,
+          watched: 3,
+        ),
+        total: 6,
+        sorts: [TitleSort.name],
+      ),
+    );
+    expect(
+      tester.getTopRight(find.text('All')).dx,
+      moreOrLessEquals(
+        tester.getTopRight(find.text('Any year')).dx,
+        epsilon: 1,
+      ),
+    );
+  });
+
   testWidgets('Type and Library narrow by kind, and drop the other library', (
     tester,
   ) async {
@@ -112,20 +170,20 @@ void main() {
 
     // Pick a library of the movies, then the shows: the library goes back
     // to every library rather than keeping one of another kind.
-    await tester.tap(_row('All libraries'));
+    await tester.tap(_row('Library, All libraries'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Movies B'));
     await tester.pumpAndSettle();
     expect(container.read(choicesProvider(_list)).libraryId, 'm2');
 
-    await tester.tap(_row('All'));
+    await tester.tap(_row('Type, All'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Shows').last);
     await tester.pumpAndSettle();
     expect(container.read(choicesProvider(_list)).kind, TitleKind.show);
     expect(container.read(choicesProvider(_list)).libraryId, isNull);
     expect(find.text('All libraries'), findsOneWidget);
-    await tester.tap(_row('All libraries'));
+    await tester.tap(_row('Library, All libraries'));
     await tester.pumpAndSettle();
     expect(find.text('Shows A'), findsOneWidget);
     expect(find.text('Shows B'), findsOneWidget);
@@ -143,7 +201,7 @@ void main() {
     ]);
     expect(find.text('Library'), findsOneWidget);
 
-    await tester.tap(_row('All'));
+    await tester.tap(_row('Type, All'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Shows').last);
     await tester.pumpAndSettle();

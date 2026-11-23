@@ -108,11 +108,17 @@ class TitleFilterPanel extends ConsumerWidget {
     ], l.localeName);
     final languages = watchLanguageNames(ref, context, options);
 
-    Widget ratingRow(RatingSystem system) {
+    Widget ratingRow(
+      RatingSystem system, {
+      required String label,
+      String? hint,
+    }) {
       final show = system.kind == TitleKind.show;
       final current = show ? filters.showRating : filters.movieRating;
       return OptionRow(
-        label: current?.rating ?? l.webFiltersAny,
+        label: label,
+        hint: hint,
+        value: current?.rating ?? l.webFiltersAny,
         onPressed: () async {
           final picked = await OptionSheet.show(
             context,
@@ -138,108 +144,101 @@ class TitleFilterPanel extends ConsumerWidget {
       );
     }
 
+    final ratingHint = ratings.length == 1
+        ? l.webFiltersRatingHint(countries.nameOf(ratings.single.country))
+        : l.webFiltersRatingHintBoth;
+
+    final directRows = <Widget>[
+      OptionRow(
+        label: l.webRequestsFilterKind,
+        value: switch (choices.kind) {
+          TitleKind.movie => l.browseKindMovie,
+          TitleKind.show => l.browseKindShow,
+          _ => l.browseKindAll,
+        },
+        onPressed: () async {
+          final picked = await OptionSheet.show(
+            context,
+            title: l.webRequestsFilterKind,
+            anyLabel: l.browseKindAll,
+            choices: [
+              (value: TitleKind.movie, label: l.browseKindMovie, count: null),
+              (value: TitleKind.show, label: l.browseKindShow, count: null),
+            ],
+            value: choices.kind,
+          );
+          if (picked == null) return;
+          _pickKind(ref, list, picked.value, libraries);
+        },
+      ),
+      if (ofType.length > 1)
+        OptionRow(
+          label: l.browseLibrary,
+          value: pickedLibrary?.name ?? l.browseLibraryAll,
+          onPressed: () async {
+            final picked = await OptionSheet.show(
+              context,
+              title: l.browseLibrary,
+              anyLabel: l.browseLibraryAll,
+              choices: [
+                for (final library in ofType)
+                  (
+                    value: library.id,
+                    label: library.name,
+                    count: library.titleCount,
+                  ),
+              ],
+              value: choices.libraryId,
+            );
+            if (picked == null) return;
+            ref.read(choicesProvider(list).notifier).library(picked.value);
+          },
+        ),
+      if (options != null && options.total > 0)
+        OptionRow(
+          label: l.webFiltersProgress,
+          value: filters.watched == null
+              ? l.webFiltersAny
+              : watchWord(l, filters.watched!),
+          onPressed: () async {
+            final picked = await OptionSheet.show(
+              context,
+              title: l.webFiltersProgress,
+              anyLabel: l.webFiltersAny,
+              choices: [
+                for (final (state, count) in [
+                  (WatchFilter.unwatched, options.watched.unwatched),
+                  (WatchFilter.inProgress, options.watched.inProgress),
+                  (WatchFilter.watched, options.watched.watched),
+                ])
+                  (value: state, label: watchWord(l, state), count: count),
+              ],
+              value: filters.watched,
+            );
+            if (picked == null) return;
+            change(filters.copyWith(watched: () => picked.value));
+          },
+        ),
+    ];
+
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 24,
         children: [
-          FilterSection(
-            title: l.webRequestsFilterKind,
-            child: OptionRow(
-              label: switch (choices.kind) {
-                TitleKind.movie => l.browseKindMovie,
-                TitleKind.show => l.browseKindShow,
-                _ => l.browseKindAll,
-              },
-              onPressed: () async {
-                final picked = await OptionSheet.show(
-                  context,
-                  title: l.webRequestsFilterKind,
-                  anyLabel: l.browseKindAll,
-                  choices: [
-                    (
-                      value: TitleKind.movie,
-                      label: l.browseKindMovie,
-                      count: null,
-                    ),
-                    (
-                      value: TitleKind.show,
-                      label: l.browseKindShow,
-                      count: null,
-                    ),
-                  ],
-                  value: choices.kind,
-                );
-                if (picked == null) return;
-                _pickKind(ref, list, picked.value, libraries);
-              },
-            ),
+          // One choice after another reads as one list: the rows sit
+          // together, and only what keeps a heading has room above it.
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: directRows,
           ),
-          if (ofType.length > 1)
-            FilterSection(
-              title: l.browseLibrary,
-              child: OptionRow(
-                label: pickedLibrary?.name ?? l.browseLibraryAll,
-                onPressed: () async {
-                  final picked = await OptionSheet.show(
-                    context,
-                    title: l.browseLibrary,
-                    anyLabel: l.browseLibraryAll,
-                    choices: [
-                      for (final library in ofType)
-                        (
-                          value: library.id,
-                          label: library.name,
-                          count: library.titleCount,
-                        ),
-                    ],
-                    value: choices.libraryId,
-                  );
-                  if (picked == null) return;
-                  ref
-                      .read(choicesProvider(list).notifier)
-                      .library(picked.value);
-                },
-              ),
-            ),
           if (options == null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
               child: LoadingState(label: l.loadingInProgress),
             )
           else ...[
-            if (options.total > 0)
-              FilterSection(
-                title: l.webFiltersProgress,
-                child: OptionRow(
-                  label: filters.watched == null
-                      ? l.webFiltersAny
-                      : watchWord(l, filters.watched!),
-                  onPressed: () async {
-                    final picked = await OptionSheet.show(
-                      context,
-                      title: l.webFiltersProgress,
-                      anyLabel: l.webFiltersAny,
-                      choices: [
-                        for (final (state, count) in [
-                          (WatchFilter.unwatched, options.watched.unwatched),
-                          (WatchFilter.inProgress, options.watched.inProgress),
-                          (WatchFilter.watched, options.watched.watched),
-                        ])
-                          (
-                            value: state,
-                            label: watchWord(l, state),
-                            count: count,
-                          ),
-                      ],
-                      value: filters.watched,
-                    );
-                    if (picked == null) return;
-                    change(filters.copyWith(watched: () => picked.value));
-                  },
-                ),
-              ),
             if (options.genres.isNotEmpty)
               FilterSection(
                 title: l.webFiltersGenres,
@@ -306,63 +305,57 @@ class TitleFilterPanel extends ConsumerWidget {
                   filters.copyWith(scoreMin: () => low, scoreMax: () => high),
                 ),
               ),
-            if (ratings.isNotEmpty)
-              FilterSection(
-                title: l.webFiltersRating,
-                hint: ratings.length == 1
-                    ? l.webFiltersRatingHint(
-                        countries.nameOf(ratings.single.country),
-                      )
-                    : l.webFiltersRatingHintBoth,
-                child: ratings.length == 1
-                    ? ratingRow(ratings.single)
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        spacing: 12,
-                        children: [
-                          for (final system in ratings)
-                            FilterSection(
-                              title: system.kind == TitleKind.show
-                                  ? l.webFiltersRatingRowShow(
-                                      countries.nameOf(system.country),
-                                    )
-                                  : l.webFiltersRatingRowMovie(
-                                      countries.nameOf(system.country),
-                                    ),
-                              small: true,
-                              child: ratingRow(system),
-                            ),
-                        ],
+            if (ratings.isNotEmpty || options.languages.length > 1)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (ratings.length == 1)
+                    ratingRow(
+                      ratings.single,
+                      label: l.webFiltersRating,
+                      hint: ratingHint,
+                    )
+                  else
+                    for (final system in ratings)
+                      ratingRow(
+                        system,
+                        label: system.kind == TitleKind.show
+                            ? l.webFiltersRatingRowShow(
+                                countries.nameOf(system.country),
+                              )
+                            : l.webFiltersRatingRowMovie(
+                                countries.nameOf(system.country),
+                              ),
+                        hint: ratingHint,
                       ),
-              ),
-            if (options.languages.length > 1)
-              FilterSection(
-                title: l.webFiltersLanguage,
-                child: OptionRow(
-                  label: switch (filters.language) {
-                    final language? => languages.nameOf(language),
-                    null => l.webFiltersAnyLanguage,
-                  },
-                  onPressed: () async {
-                    final picked = await OptionSheet.show(
-                      context,
-                      title: l.webFiltersLanguage,
-                      anyLabel: l.webFiltersAnyLanguage,
-                      findPlaceholder: l.browseFindLanguage,
-                      choices: [
-                        for (final each in options.languages)
-                          (
-                            value: each.language,
-                            label: languages.nameOf(each.language),
-                            count: each.titleCount,
-                          ),
-                      ],
-                      value: filters.language,
-                    );
-                    if (picked == null) return;
-                    change(filters.copyWith(language: () => picked.value));
-                  },
-                ),
+                  if (options.languages.length > 1)
+                    OptionRow(
+                      label: l.webFiltersLanguage,
+                      value: switch (filters.language) {
+                        final language? => languages.nameOf(language),
+                        null => l.webFiltersAnyLanguage,
+                      },
+                      onPressed: () async {
+                        final picked = await OptionSheet.show(
+                          context,
+                          title: l.webFiltersLanguage,
+                          anyLabel: l.webFiltersAnyLanguage,
+                          findPlaceholder: l.browseFindLanguage,
+                          choices: [
+                            for (final each in options.languages)
+                              (
+                                value: each.language,
+                                label: languages.nameOf(each.language),
+                                count: each.titleCount,
+                              ),
+                          ],
+                          value: filters.language,
+                        );
+                        if (picked == null) return;
+                        change(filters.copyWith(language: () => picked.value));
+                      },
+                    ),
+                ],
               ),
             if (options.runtime case final runtime?)
               RangeField(
@@ -442,43 +435,92 @@ DisplayNames watchLanguageNames(
     each.language,
 ], AppLocalizations.of(context).localeName);
 
-/// A row naming what's picked from a long list, which opens an
-/// [OptionSheet] to pick another.
+/// A filter's name and what it's set to, which opens an [OptionSheet] to
+/// pick another. The whole row is the tap target, and [hint] says how the
+/// filter reads under the name.
 class OptionRow extends StatelessWidget {
-  const OptionRow({super.key, required this.label, required this.onPressed});
+  const OptionRow({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onPressed,
+    this.hint,
+  });
 
+  /// The filter's name, as the sections' headings have theirs.
   final String label;
+
+  /// What it's set to now, at the row's end.
+  final String value;
+
+  /// A line about the filter, under its name.
+  final String? hint;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
+    final muted = KitText.xs.style(color: colors.mutedForeground);
     return PressIndication(
       onPressed: onPressed,
-      label: label,
+      // The name and its value are one button to a screen reader, as the
+      // heading and value row used to read together.
+      label: '$label, $value',
       shape: KitRadius.control,
-      // The label above says it, once.
       builder: (context, state) => ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 48),
         child: ExcludeSemantics(
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: KitText.base.style(
-                    color: state == PressState.pressed
-                        ? colors.mutedForeground
-                        : colors.foreground,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: LayoutBuilder(
+              builder: (context, constraints) => Row(
+                spacing: 12,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: KitText.sm.style(
+                            color: state == PressState.pressed
+                                ? colors.mutedForeground
+                                : colors.foreground,
+                          ),
+                        ),
+                        if (hint case final hint?)
+                          Text(
+                            hint,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: muted,
+                          ),
+                      ],
+                    ),
                   ),
-                ),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth * .5,
+                    ),
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: muted,
+                    ),
+                  ),
+                  KitIcon(
+                    Lucide.chevronRight,
+                    size: 18,
+                    color: colors.mutedForeground,
+                  ),
+                ],
               ),
-              KitIcon(
-                Lucide.chevronRight,
-                size: 18,
-                color: colors.mutedForeground,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -649,7 +691,7 @@ class _PickRow extends StatelessWidget {
 }
 
 /// A filter's heading, a line about it, what it's set to at the end, and
-/// its control. [small] is a part under a filter's own heading.
+/// its control.
 class FilterSection extends StatelessWidget {
   const FilterSection({
     super.key,
@@ -657,13 +699,11 @@ class FilterSection extends StatelessWidget {
     required this.child,
     this.hint,
     this.value,
-    this.small = false,
   });
 
   final String title;
   final String? hint;
   final String? value;
-  final bool small;
   final Widget child;
 
   @override
@@ -672,7 +712,7 @@ class FilterSection extends StatelessWidget {
     final muted = KitText.xs.style(color: colors.mutedForeground);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: small ? 8 : 10,
+      spacing: 10,
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -683,25 +723,26 @@ class FilterSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Semantics(
-                    header: !small,
+                    header: true,
                     child: Text(
                       title,
-                      style: small
-                          ? KitText.xs.style(
-                              color: colors.mutedForeground,
-                              weight: FontWeight.w500,
-                            )
-                          : KitText.sm.style(
-                              color: colors.foreground,
-                              weight: FontWeight.w600,
-                            ),
+                      style: KitText.sm.style(
+                        color: colors.foreground,
+                        weight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   if (hint case final hint?) Text(hint, style: muted),
                 ],
               ),
             ),
-            if (value case final value?) Text(value, style: muted),
+            if (value case final value?)
+              Padding(
+                // The space an [OptionRow]'s chevron takes, so every value
+                // in the sheet ends in the same place.
+                padding: const EdgeInsetsDirectional.only(end: 30),
+                child: Text(value, style: muted),
+              ),
           ],
         ),
         child,

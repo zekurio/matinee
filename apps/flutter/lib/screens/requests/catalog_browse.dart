@@ -627,96 +627,103 @@ class _FilterPanel extends ConsumerWidget {
               withFilters(filters, scoreMin: () => low, scoreMax: () => high),
             ),
           ),
-          if (options.votes.isNotEmpty)
-            FilterSection(
-              title: l.webDiscoverBrowseVotes,
-              hint: floor == null
-                  ? null
-                  : sort == CatalogSort.scoreHigh ||
-                        sort == CatalogSort.scoreLow
-                  ? l.webDiscoverBrowseFloorScore(formatCount(floor, l))
-                  : l.webDiscoverBrowseFloorList(formatCount(floor, l)),
-              child: OptionRow(
-                label: switch (filters.votesMin) {
-                  final votes? => l.webDiscoverBrowseVotesStep(
-                    formatCount(votes, l),
-                  ),
-                  null => l.webFiltersAny,
-                },
-                onPressed: () async {
-                  final picked = await OptionSheet.show(
-                    context,
-                    title: l.webDiscoverBrowseVotes,
-                    anyLabel: l.webFiltersAny,
-                    choices: [
-                      for (final votes in options.votes)
-                        (
-                          value: '$votes',
-                          label: l.webDiscoverBrowseVotesStep(
-                            formatCount(votes, l),
-                          ),
-                          count: null,
+          if (options.votes.isNotEmpty ||
+              (ratings != null && ratings.ratings.isNotEmpty) ||
+              languages.isNotEmpty)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (options.votes.isNotEmpty)
+                  OptionRow(
+                    label: l.webDiscoverBrowseVotes,
+                    hint: floor == null
+                        ? null
+                        : sort == CatalogSort.scoreHigh ||
+                              sort == CatalogSort.scoreLow
+                        ? l.webDiscoverBrowseFloorScore(formatCount(floor, l))
+                        : l.webDiscoverBrowseFloorList(formatCount(floor, l)),
+                    value: switch (filters.votesMin) {
+                      final votes? => l.webDiscoverBrowseVotesStep(
+                        formatCount(votes, l),
+                      ),
+                      null => l.webFiltersAny,
+                    },
+                    onPressed: () async {
+                      final picked = await OptionSheet.show(
+                        context,
+                        title: l.webDiscoverBrowseVotes,
+                        anyLabel: l.webFiltersAny,
+                        choices: [
+                          for (final votes in options.votes)
+                            (
+                              value: '$votes',
+                              label: l.webDiscoverBrowseVotesStep(
+                                formatCount(votes, l),
+                              ),
+                              count: null,
+                            ),
+                        ],
+                        value: filters.votesMin?.toString(),
+                      );
+                      if (picked == null) return;
+                      onChange(
+                        withFilters(
+                          filters,
+                          votesMin: () => picked.value == null
+                              ? null
+                              : int.tryParse(picked.value!),
                         ),
-                    ],
-                    value: filters.votesMin?.toString(),
-                  );
-                  if (picked == null) return;
-                  onChange(
-                    withFilters(
-                      filters,
-                      votesMin: () => picked.value == null
-                          ? null
-                          : int.tryParse(picked.value!),
-                    ),
-                  );
-                },
-              ),
-            ),
-          if (ratings != null && ratings.ratings.isNotEmpty)
-            FilterSection(
-              title: l.webFiltersRating,
-              // The country's name needs the platform's words, which this
-              // app doesn't ask for yet; its code says which system it is.
-              hint: l.webFiltersRatingHint(ratings.country),
-              child: OptionRow(
-                label: filters.rating ?? l.webFiltersAny,
-                onPressed: () async {
-                  final picked = await OptionSheet.show(
-                    context,
-                    title: l.webFiltersRating,
-                    anyLabel: l.webFiltersAny,
-                    choices: [
-                      for (final rating in ratings.ratings)
-                        (value: rating, label: rating, count: null),
-                    ],
-                    value: filters.rating,
-                  );
-                  if (picked == null) return;
-                  onChange(withFilters(filters, rating: () => picked.value));
-                },
-              ),
-            ),
-          if (languages.isNotEmpty)
-            FilterSection(
-              title: l.webFiltersLanguage,
-              child: OptionRow(
-                label: language?.name ?? l.webFiltersAnyLanguage,
-                onPressed: () async {
-                  final picked = await OptionSheet.show(
-                    context,
-                    title: l.webFiltersLanguage,
-                    anyLabel: l.webFiltersAnyLanguage,
-                    findPlaceholder: l.browseFindLanguage,
-                    choices: [
-                      for (final each in languages)
-                        (value: each.id, label: each.name, count: null),
-                    ],
-                    value: filters.language,
-                  );
-                  if (picked == null) return;
-                  onChange(withFilters(filters, language: () => picked.value));
-                },
-              ),
+                      );
+                    },
+                  ),
+                if (ratings != null && ratings.ratings.isNotEmpty)
+                  OptionRow(
+                    label: l.webFiltersRating,
+                    // The country's name needs the platform's words, which
+                    // this app doesn't ask for yet; its code says which
+                    // system it is.
+                    hint: l.webFiltersRatingHint(ratings.country),
+                    value: filters.rating ?? l.webFiltersAny,
+                    onPressed: () async {
+                      final picked = await OptionSheet.show(
+                        context,
+                        title: l.webFiltersRating,
+                        anyLabel: l.webFiltersAny,
+                        choices: [
+                          for (final rating in ratings.ratings)
+                            (value: rating, label: rating, count: null),
+                        ],
+                        value: filters.rating,
+                      );
+                      if (picked == null) return;
+                      onChange(
+                        withFilters(filters, rating: () => picked.value),
+                      );
+                    },
+                  ),
+                if (languages.isNotEmpty)
+                  OptionRow(
+                    label: l.webFiltersLanguage,
+                    value: language?.name ?? l.webFiltersAnyLanguage,
+                    onPressed: () async {
+                      final picked = await OptionSheet.show(
+                        context,
+                        title: l.webFiltersLanguage,
+                        anyLabel: l.webFiltersAnyLanguage,
+                        findPlaceholder: l.browseFindLanguage,
+                        choices: [
+                          for (final each in languages)
+                            (value: each.id, label: each.name, count: null),
+                        ],
+                        value: filters.language,
+                      );
+                      if (picked == null) return;
+                      onChange(
+                        withFilters(filters, language: () => picked.value),
+                      );
+                    },
+                  ),
+              ],
             ),
           RangeField(
             title: l.webFiltersRuntime,

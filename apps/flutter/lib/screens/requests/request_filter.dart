@@ -90,37 +90,35 @@ void _showRequestFilters(
                   removeLabel: l.multiSelectRemove,
                 ),
               ),
-              FilterSection(
-                title: l.webRequestsFilterKind,
-                child: OptionRow(
-                  label: switch (value.kind) {
-                    TitleKind.movie => l.browseKindMovie,
-                    TitleKind.show => l.browseKindShow,
-                    _ => l.webFiltersAny,
-                  },
-                  onPressed: () async {
-                    final picked = await OptionSheet.show(
-                      context,
-                      title: l.webRequestsFilterKind,
-                      anyLabel: l.webFiltersAny,
-                      choices: [
-                        (
-                          value: TitleKind.movie,
-                          label: l.browseKindMovie,
-                          count: null,
-                        ),
-                        (
-                          value: TitleKind.show,
-                          label: l.browseKindShow,
-                          count: null,
-                        ),
-                      ],
-                      value: value.kind,
-                    );
-                    if (picked == null) return;
-                    filter.value = value.withKind(picked.value);
-                  },
-                ),
+              OptionRow(
+                label: l.webRequestsFilterKind,
+                value: switch (value.kind) {
+                  TitleKind.movie => l.browseKindMovie,
+                  TitleKind.show => l.browseKindShow,
+                  _ => l.webFiltersAny,
+                },
+                onPressed: () async {
+                  final picked = await OptionSheet.show(
+                    context,
+                    title: l.webRequestsFilterKind,
+                    anyLabel: l.webFiltersAny,
+                    choices: [
+                      (
+                        value: TitleKind.movie,
+                        label: l.browseKindMovie,
+                        count: null,
+                      ),
+                      (
+                        value: TitleKind.show,
+                        label: l.browseKindShow,
+                        count: null,
+                      ),
+                    ],
+                    value: value.kind,
+                  );
+                  if (picked == null) return;
+                  filter.value = value.withKind(picked.value);
+                },
               ),
             ],
           ),
