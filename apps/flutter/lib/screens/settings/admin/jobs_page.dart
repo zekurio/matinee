@@ -152,7 +152,7 @@ class _JobsPageState extends ConsumerState<JobsPage> {
                   child: Panel(
                     rows: [
                       for (final queue in tunable)
-                        _ConcurrencyRow(
+                        ConcurrencyRow(
                           queue: queue,
                           value: _edits[queue.id] ?? queue.concurrency,
                           onChanged: (value) => setState(
@@ -452,8 +452,9 @@ class _TaskRow extends StatelessWidget {
 
 /// How many jobs a queue runs at once, as it's edited, stepped between one
 /// and the most the server allows.
-class _ConcurrencyRow extends StatelessWidget {
-  const _ConcurrencyRow({
+class ConcurrencyRow extends StatelessWidget {
+  const ConcurrencyRow({
+    super.key,
     required this.queue,
     required this.value,
     required this.onChanged,
@@ -468,57 +469,68 @@ class _ConcurrencyRow extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final name = queueName(l, queue);
+    final note = KitText.sm.style(color: colors.mutedForeground);
+    // The stepper shares only the name's line; the notes under it take the
+    // whole width, so a phone doesn't wrap them a word to a line.
     return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 8),
-      child: Row(
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 8, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  style: KitText.base.style(color: colors.foreground),
+                ),
+              ),
+              RoundIconButton(
+                icon: Lucide.chevronLeft,
+                label: l.webJobsConcurrencyDecrease(name),
+                background: const Color(0x00000000),
+                onPressed: value > 1 ? () => onChanged(value - 1) : null,
+              ),
+              SizedBox(
+                width: 36,
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    '$value',
+                    textAlign: TextAlign.center,
+                    style: KitText.lg.style(
+                      color: colors.foreground,
+                      weight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+              RoundIconButton(
+                icon: Lucide.chevronRight,
+                label: l.webJobsConcurrencyIncrease(name),
+                background: const Color(0x00000000),
+                onPressed: value < queue.maxConcurrency
+                    ? () => onChanged(value + 1)
+                    : null,
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: KitText.base.style(color: colors.foreground)),
                 Text(
                   l.webJobsConcurrencyLimits(
                     '${queue.defaultConcurrency}',
                     '${queue.maxConcurrency}',
                   ),
-                  style: KitText.sm.style(color: colors.mutedForeground),
+                  style: note,
                 ),
-                if (queue.concurrencyNote case final note?)
-                  Text(
-                    note.serverWords(l),
-                    style: KitText.sm.style(color: colors.mutedForeground),
-                  ),
+                if (queue.concurrencyNote case final text?)
+                  Text(text.serverWords(l), style: note),
               ],
             ),
-          ),
-          RoundIconButton(
-            icon: Lucide.chevronLeft,
-            label: l.webJobsConcurrencyDecrease(name),
-            background: const Color(0x00000000),
-            onPressed: value > 1 ? () => onChanged(value - 1) : null,
-          ),
-          SizedBox(
-            width: 36,
-            child: Semantics(
-              liveRegion: true,
-              child: Text(
-                '$value',
-                textAlign: TextAlign.center,
-                style: KitText.lg.style(
-                  color: colors.foreground,
-                  weight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-          RoundIconButton(
-            icon: Lucide.chevronRight,
-            label: l.webJobsConcurrencyIncrease(name),
-            background: const Color(0x00000000),
-            onPressed: value < queue.maxConcurrency
-                ? () => onChanged(value + 1)
-                : null,
           ),
         ],
       ),

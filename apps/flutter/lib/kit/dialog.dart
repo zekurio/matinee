@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'button.dart';
+import 'keyboard_room.dart';
 import 'modal_backdrop.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -168,11 +169,15 @@ class _DialogRoute<T> extends RawDialogRoute<T> {
              ? Duration.zero
              : const Duration(milliseconds: 200),
          traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
-         pageBuilder: (context, animation, secondaryAnimation) => SafeArea(
-           child: Center(
-             child: Padding(
-               padding: const EdgeInsets.all(16),
-               child: Builder(builder: builder),
+         // Centered in what the keyboard leaves, where its text scrolls and
+         // its buttons stay in reach.
+         pageBuilder: (context, animation, secondaryAnimation) => KeyboardRoom(
+           child: SafeArea(
+             child: Center(
+               child: Padding(
+                 padding: const EdgeInsets.all(16),
+                 child: Builder(builder: builder),
+               ),
              ),
            ),
          ),

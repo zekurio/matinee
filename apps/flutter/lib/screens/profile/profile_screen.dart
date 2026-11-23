@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -114,15 +116,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: () => context.push(Routes.settings),
           ),
         ],
-        child: ListView.separated(
-          padding: EdgeInsets.only(
-            top: 8,
-            bottom: MediaQuery.paddingOf(context).bottom + 24,
-          ),
-          itemCount: sections.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 32),
-          itemBuilder: (context, index) => sections[index],
-        ),
+        child: ProfileColumn(sections: sections),
       ),
     );
   }
@@ -190,14 +184,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: LoadingState(label: l.loadingInProgress),
             );
     } else if (neverWatched) {
-      body = _Narrow(
+      body = _Gutters(
         child: _Note(
           title: l.profileSelfEmpty,
           message: l.profileSelfEmptyHint,
         ),
       );
     } else if (stats.totals.plays == 0) {
-      body = _Narrow(
+      body = _Gutters(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 12,
@@ -215,7 +209,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       );
     } else {
-      body = _Narrow(
+      body = _Gutters(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -264,23 +258,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 }
 
-/// Inside the gutters, and no wider than a phone's column on a tablet, so
-/// the cards' rows stay readable.
-class _Narrow extends StatelessWidget {
-  const _Narrow({required this.child});
+/// The page's sections in one column: the screen's width on a phone, and
+/// on a tablet [maxWidth] in the middle, so the rails and the stats cards
+/// all end where the column does and the cards' rows stay readable.
+class ProfileColumn extends StatelessWidget {
+  const ProfileColumn({super.key, required this.sections});
+
+  static const maxWidth = 720.0;
+
+  final List<Widget> sections;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final side = math.max(0.0, (constraints.maxWidth - maxWidth) / 2);
+      return ListView.separated(
+        padding: EdgeInsets.fromLTRB(
+          side,
+          8,
+          side,
+          MediaQuery.paddingOf(context).bottom + 24,
+        ),
+        itemCount: sections.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 32),
+        itemBuilder: (context, index) => sections[index],
+      );
+    },
+  );
+}
+
+/// Inside the gutters, as the rails' headings are.
+class _Gutters extends StatelessWidget {
+  const _Gutters({required this.child});
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
-    child: Align(
-      alignment: AlignmentDirectional.topStart,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
-        child: child,
-      ),
-    ),
+    child: child,
   );
 }
 
@@ -475,7 +491,7 @@ class _Account extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final server = activeServer(ref.watch(savedServersProvider));
-    return _Narrow(
+    return _Gutters(
       child: SettingsSection(
         title: l.settingsPageAccount,
         child: Panel(

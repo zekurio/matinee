@@ -33,8 +33,13 @@ double backdropHeight(BuildContext context) =>
     math.min(MediaQuery.sizeOf(context).height * .46, 420);
 
 /// How far down the backdrop a heading with a poster starts, so it
-/// overlaps the art's faded end.
-double headingTop(BuildContext context) => backdropHeight(context) - 150;
+/// overlaps the art's faded end. A phone on its side has so short a
+/// backdrop that this would put the poster under Back and Home, so it
+/// never starts above the [ItemTopBar]'s lower edge.
+double headingTop(BuildContext context) => math.max(
+  backdropHeight(context) - 150,
+  MediaQuery.paddingOf(context).top + TopVeil.bar,
+);
 
 /// Where a phone starts a heading without its poster, lower, for more of
 /// the backdrop, as the web's `max(10rem, 30vh)`.
