@@ -27,11 +27,28 @@ double railItemWidth(RailArt art, Size window) {
   };
 }
 
-/// How wide a request's card is in Explore's Requests row, the web's
-/// `min(88%, 21rem)`: one and a bit on a phone, 336 from a tablet up.
-double requestCardWidth(Size window) => WidthClass.of(window.width).isCompact
-    ? math.min((window.width - 2 * CardMetrics.gutter) * .88, 336)
-    : 336;
+/// How wide a request's card is: on a phone the page's width between the
+/// gutters, so the status row and its badge keep their words; from a tablet
+/// up, two posters and the gap between them, so the card lines up with the
+/// poster rows above and below it, as the web's request rail does.
+double requestCardWidth(Size window) {
+  final inner = math.max(0.0, window.width - 2 * CardMetrics.gutter);
+  if (WidthClass.of(window.width).isCompact) return inner;
+  return 2 * railItemWidth(RailArt.poster, window) + CardMetrics.gap;
+}
+
+/// The least a request card is wide in the overview's grid, the web's 24rem,
+/// so its poster and its words keep their room.
+const requestCardMinWidth = 384.0;
+
+/// How many request cards the overview's grid puts in a row: as many as the
+/// web's `auto-fill` grid takes at [requestCardMinWidth] least, each then
+/// filling its share of the row.
+int requestColumns(double width) => math.max(
+  1,
+  ((width + CardGrid.spacing) / (requestCardMinWidth + CardGrid.spacing))
+      .floor(),
+);
 
 /// The art's width to height in a rail of [art].
 double railAspect(RailArt art) => switch (art) {
