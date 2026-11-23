@@ -23,20 +23,20 @@ class Switch extends StatelessWidget {
     final motion = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 150);
-    const width = 36.0;
-    const height = 20.0;
+    const width = 52.0;
+    const height = 32.0;
     return PressIndication(
       onPressed: change == null ? null : () => change(!checked),
       button: false,
       toggled: checked,
       label: label,
       shape: KitRadius.pill,
-      focusInsets: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      focusInsets: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       builder: (context, state) => Opacity(
         opacity: change == null ? .5 : 1,
         child: SizedBox(
           width: width + 24,
-          height: height + 20,
+          height: height + 16,
           child: Center(
             child: AnimatedContainer(
               duration: motion,
@@ -46,15 +46,15 @@ class Switch extends StatelessWidget {
                 color: checked ? colors.accent : colors.inputHover,
                 borderRadius: KitRadius.pill,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: AnimatedAlign(
                 duration: motion,
                 alignment: checked
                     ? AlignmentDirectional.centerEnd
                     : AlignmentDirectional.centerStart,
                 child: Container(
-                  width: 16,
-                  height: 16,
+                  width: 24,
+                  height: 24,
                   decoration: BoxDecoration(
                     color: checked
                         ? colors.accentForeground

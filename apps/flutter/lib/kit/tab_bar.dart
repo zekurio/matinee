@@ -21,7 +21,7 @@ class TabBarItem {
   final String label;
 
   /// Drawn in the icon's place when set, like the account's picture. It
-  /// gets the icon's 22 by 22.
+  /// gets the icon's 24 by 24.
   final Widget? picture;
 }
 
@@ -150,8 +150,8 @@ class _Tab extends StatelessWidget {
       builder: (context, state) => ExcludeSemantics(
         child: Padding(
           padding: showLabel
-              ? const EdgeInsets.only(top: 6, bottom: 4)
-              : const EdgeInsets.symmetric(vertical: 8),
+              ? const EdgeInsets.only(top: 12, bottom: 16)
+              : const EdgeInsets.symmetric(vertical: 24),
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(end: selected ? 1 : 0),
             duration: motion,
@@ -166,20 +166,20 @@ class _Tab extends StatelessWidget {
               );
               return Column(
                 mainAxisSize: MainAxisSize.min,
-                spacing: 2,
+                spacing: 4,
                 children: [
                   AnimatedScale(
                     scale: state == PressState.pressed ? .92 : 1,
                     duration: motion,
                     child: SizedBox(
-                      width: 56,
+                      width: 64,
                       height: 32,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
                           if (progress > 0)
                             Container(
-                              width: 28 + 28 * progress,
+                              width: 32 + 32 * progress,
                               decoration: BoxDecoration(
                                 borderRadius: KitRadius.pill,
                                 color: colors.foreground.withValues(
@@ -199,9 +199,9 @@ class _Tab extends StatelessWidget {
                               child: const SizedBox.expand(),
                             ),
                           if (item.picture case final picture?)
-                            SizedBox.square(dimension: 22, child: picture)
+                            SizedBox.square(dimension: 24, child: picture)
                           else
-                            KitIcon(item.icon, size: 22, color: color),
+                            KitIcon(item.icon, size: 24, color: color),
                         ],
                       ),
                     ),
