@@ -847,7 +847,7 @@
   "webDiscoverRailPopularShows": "Beliebte Serien",
   "webDiscoverRailsFailed": "{count, plural, one{{count} Reihe hat nicht geladen.} other{{count} Reihen haben nicht geladen.}}",
   "webDiscoverStale": "Einiges davon ist vielleicht nicht aktuell.",
-  "webFiltersAny": "Egal",
+  "webFiltersAny": "Beliebig",
   "webFiltersAnyLanguage": "Jede Sprache",
   "webFiltersAnyLength": "Jede Länge",
   "webFiltersAnyScore": "Jede Bewertung",
