@@ -543,7 +543,7 @@ function QueueSkeleton() {
   return (
     <div className={requestGrid}>
       {[0, 1, 2, 3].map((index) => (
-        <RequestCardSkeleton key={index} size="wide" admin />
+        <RequestCardSkeleton key={index} admin />
       ))}
     </div>
   )

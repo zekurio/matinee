@@ -76,28 +76,23 @@ export const arrivals = defineQueue({
           .select()
           .from(requestSeason)
           .where(eq(requestSeason.requestId, row.id))
-        const last = Math.max(0, ...scope.map((season) => season.number))
         for (const number of new Set(
           files.flatMap((file) =>
             file.season !== null && file.episode !== null ? [file.season] : [],
           ),
         )) {
           const asked = scope.find((season) => season.number === number)
-          if (asked) {
-            // A season that was partly here when it was asked for arrives
-            // with its first new episode, not with the ones already here.
-            const fresh = files.some(
-              (file) =>
-                file.season === number &&
-                file.episode !== null &&
-                file.addedAt > asked.createdAt,
-            )
-            if (!fresh) continue
-          } else if (row.future && number > last)
-            await db
-              .insert(requestSeason)
-              .values({ requestId: row.id, number })
-              .onConflictDoNothing()
+          // Only the seasons asked for arrive; a request never grows.
+          if (!asked) continue
+          // A season that was partly here when it was asked for arrives
+          // with its first new episode, not with the ones already here.
+          const fresh = files.some(
+            (file) =>
+              file.season === number &&
+              file.episode !== null &&
+              file.addedAt > asked.createdAt,
+          )
+          if (!fresh) continue
           const updated = await db
             .update(requestSeason)
             .set({ arrivedAt: new Date() })

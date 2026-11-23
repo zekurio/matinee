@@ -115,7 +115,7 @@ function seasonRuns(numbers: readonly number[]): string {
   return runs.join(", ")
 }
 
-/** "Seasons 1–4 + new", for a show's request. */
+/** "Seasons 1–4", for a show's request. */
 export function scopeLabel(scope: AdminRequestItem["scope"]): string | null {
   if (!scope) return null
   const numbers = scope.seasons.filter((n) => n > 0).toSorted((a, b) => a - b)
@@ -132,8 +132,7 @@ export function scopeLabel(scope: AdminRequestItem["scope"]): string | null {
       ? tr("requests.scope.specialsAnd", { seasons })
       : tr("requests.scope.specials")
   }
-  if (!seasons) return scope.future ? tr("requests.scope.futureOnly") : null
-  return scope.future ? tr("requests.scope.andFuture", { seasons }) : seasons
+  return seasons
 }
 
 /**

@@ -6,7 +6,7 @@ import { tr } from "@/i18n"
 import { useRequestActionsStore } from "@/stores/request-actions"
 
 import { RequestCard, RequestStateBadge, requestProgress } from "./request-card"
-import { OwnProblem } from "./request-lines"
+import { ownDetail } from "./request-lines"
 
 /**
  * One of the viewer's requests, as the server says it stands: its
@@ -33,9 +33,9 @@ export function OwnRequest({
         <RequestStateBadge
           state={item.state}
           progress={requestProgress(item)}
+          detail={ownDetail(item)}
         />
       }
-      problem={<OwnProblem item={item} />}
       actions={
         cancellable && (
           <Button
@@ -49,7 +49,7 @@ export function OwnRequest({
                 names: [item.title.name],
               })
             }
-            className="hover:bg-foreground/10 text-foreground/85 hover:text-foreground -mr-1 px-2 [@media(pointer:coarse)]:h-10"
+            className="hover:bg-foreground/10 text-foreground/85 hover:text-foreground -ml-1 px-2 [@media(pointer:coarse)]:h-10"
           >
             {/* Where the card is too narrow for both, the time keeps
                 its words and Cancel drops its mark. */}

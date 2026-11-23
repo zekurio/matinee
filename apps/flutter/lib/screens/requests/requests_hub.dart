@@ -318,7 +318,7 @@ final class RequestsHub extends Notifier<RequestsState> {
     CatalogRef title,
     String name, {
     String? libraryId,
-    ShowScope? scope,
+    AskScope? scope,
     bool undo = true,
     VoidCallback? onDone,
   }) async {

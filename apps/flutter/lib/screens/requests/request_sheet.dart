@@ -20,8 +20,8 @@ import 'requests_hub.dart';
 /// Where a request that needs a decision is made, in a sheet from the
 /// bottom, as the web's request dialog: a show's seasons, each the viewer
 /// may still request with a box, the server's pick already ticked (or only
-/// [only], from a season's card), the rest with their state, and on a
-/// [first] request "New seasons as they air". Where it lands is the
+/// [only], from a season's card), and the rest with their state. Only
+/// seasons that are out can be asked for. Where it lands is the
 /// server's call; an admin moves a request from the queue. The button says
 /// what pressing it requests, and the sheet closes once the server took
 /// it.
@@ -31,7 +31,6 @@ Future<void> showRequestSheet(
   required String name,
   required List<CatalogSeason> seasons,
   required bool first,
-  required bool defaultFuture,
   required String? libraryId,
   Artwork? showPoster,
   int? only,
@@ -45,7 +44,6 @@ Future<void> showRequestSheet(
       name: name,
       seasons: seasons,
       first: first,
-      defaultFuture: defaultFuture,
       libraryId: libraryId,
       showPoster: showPoster,
       only: only,
@@ -59,7 +57,6 @@ class _RequestSheet extends ConsumerStatefulWidget {
     required this.name,
     required this.seasons,
     required this.first,
-    required this.defaultFuture,
     required this.libraryId,
     required this.showPoster,
     required this.only,
@@ -69,7 +66,6 @@ class _RequestSheet extends ConsumerStatefulWidget {
   final String name;
   final List<CatalogSeason> seasons;
   final bool first;
-  final bool defaultFuture;
   final String? libraryId;
 
   /// What a season without a poster of its own shows, as its card does.
@@ -83,8 +79,6 @@ class _RequestSheet extends ConsumerStatefulWidget {
 class _RequestSheetState extends ConsumerState<_RequestSheet> {
   // Each opening starts from the server's pick.
   late Set<int> _picked = chooserStart(widget.seasons, only: widget.only);
-  late bool _future =
-      widget.first && widget.defaultFuture && widget.only == null;
 
   /// The season a card opened the sheet with, scrolled to.
   final _opened = GlobalKey();
@@ -115,32 +109,18 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
       for (final season in seasons)
         if (_picked.contains(season.number)) season,
     ];
-    final label = show
-        ? chooserLabel(chosen, future: _future, first: widget.first)
-        : const TitleLabel();
+    final label = show ? chooserLabel(chosen) : const TitleLabel();
     final busy = ref.watch(
       requestsProvider.select((state) => state.busy.contains(refKey(title))),
     );
     return Sheet(
       title: l.webAskDialogTitle(widget.name),
-      footer: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        spacing: 8,
-        children: [
-          if (show && widget.first)
-            _FutureRow(
-              on: _future,
-              onChanged: (on) => setState(() => _future = on),
-            ),
-          MatineeButton(
-            size: ButtonSize.lg,
-            onPressed: label is PickOneLabel || busy
-                ? null
-                : () => _ask(context, l, chosen),
-            child: Text(chooserText(label, l)),
-          ),
-        ],
+      footer: MatineeButton(
+        size: ButtonSize.lg,
+        onPressed: label is PickOneLabel || busy
+            ? null
+            : () => _ask(context, l, chosen),
+        child: Text(chooserText(label, l)),
       ),
       child: show
           ? Column(
@@ -172,10 +152,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
   ) {
     final navigator = Navigator.of(context);
     final scope = widget.title.isShow
-        ? ShowScope(
-            seasons: [for (final season in chosen) season.number],
-            future: _future && widget.first,
-          )
+        ? AskScope(seasons: [for (final season in chosen) season.number])
         : null;
     unawaited(
       ref
@@ -191,43 +168,6 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
               if (navigator.mounted && navigator.canPop()) navigator.pop();
             },
           ),
-    );
-  }
-}
-
-/// "New seasons as they air", the whole row a switch.
-class _FutureRow extends StatelessWidget {
-  const _FutureRow({required this.on, required this.onChanged});
-
-  final bool on;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
-    return PressIndication(
-      onPressed: () => onChanged(!on),
-      button: false,
-      toggled: on,
-      label: l.webAskChooserFuture,
-      shape: KitRadius.control,
-      builder: (context, state) => ExcludeSemantics(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l.webAskChooserFuture,
-                  style: KitText.base.style(color: colors.foreground),
-                ),
-              ),
-              Switch(checked: on, onChanged: onChanged),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
