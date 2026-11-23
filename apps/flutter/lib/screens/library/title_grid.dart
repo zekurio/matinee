@@ -173,52 +173,6 @@ class _SkeletonGrid extends StatelessWidget {
   }
 }
 
-/// The filters in use as a row of chips that take themselves off, with
-/// Clear all once there are two, across the page under its heading.
-class ActiveFilterRow extends StatelessWidget {
-  const ActiveFilterRow({
-    super.key,
-    required this.chips,
-    required this.onClear,
-  });
-
-  final List<ActiveFilter> chips;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return SizedBox(
-      height: 40,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
-        children: [
-          for (final chip in chips)
-            Padding(
-              key: ValueKey(chip.key),
-              padding: const EdgeInsetsDirectional.only(end: 6),
-              child: RemovableChip(
-                label: chip.label,
-                removeLabel: l.browseRemoveFilter(chip.label),
-                onRemove: chip.remove,
-              ),
-            ),
-          if (chips.length > 1)
-            Center(
-              child: MatineeButton(
-                look: ButtonLook.ghost,
-                size: ButtonSize.sm,
-                onPressed: onClear,
-                child: Text(l.browseClearAll),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// An icon to press at the end of a list's heading, 48 square, with how
 /// many filters are on at the icon's top-end corner when there are any.
 class ListBarButton extends StatelessWidget {

@@ -15,7 +15,6 @@ import '../home/home_data.dart' show librariesProvider;
 import '../shell/header.dart';
 import '../shell/offline_note.dart';
 import '../shell/shell.dart' show tabReselectProvider;
-import 'filter_sheet.dart' show watchLanguageNames;
 import 'list_choices.dart';
 import 'list_words.dart';
 import 'title_grid.dart';
@@ -136,14 +135,7 @@ class _KindScreenState extends ConsumerState<KindScreen> {
     _request = request;
     _scope = scope;
     final notifier = ref.read(choicesProvider(list).notifier);
-    final chips = activeFilters(
-      context,
-      choices.filters,
-      bothRatings: (options?.ratings.length ?? 0) > 1,
-      change: notifier.filters,
-      languages: watchLanguageNames(ref, context, options),
-    );
-    final filtered = chips.isNotEmpty;
+    final filtered = choices.filters.count > 0;
 
     return ReturnWatcher(
       path: widget.path,
@@ -197,16 +189,6 @@ class _KindScreenState extends ConsumerState<KindScreen> {
                         ],
                       ),
                     ),
-                    if (filtered)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: ActiveFilterRow(
-                            chips: chips,
-                            onClear: notifier.clearFilters,
-                          ),
-                        ),
-                      ),
                   ],
                   empty: EmptyState(
                     icon: filtered
@@ -304,14 +286,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       _request = request;
       _scope = scope;
       final notifier = ref.read(choicesProvider(list).notifier);
-      final chips = activeFilters(
-        context,
-        choices.filters,
-        bothRatings: (options?.ratings.length ?? 0) > 1,
-        change: notifier.filters,
-        languages: watchLanguageNames(ref, context, options),
-      );
-      final filtered = chips.isNotEmpty;
+      final filtered = choices.filters.count > 0;
       actions.addAll([
         FilterButton(list: list, scope: scope, kind: kind),
         SortButton(list: list, current: order, offered: options?.sorts),
@@ -328,16 +303,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
               onKind: notifier.kind,
             ),
           ),
-          if (filtered)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: ActiveFilterRow(
-                  chips: chips,
-                  onClear: notifier.clearFilters,
-                ),
-              ),
-            ),
         ],
         empty: EmptyState(
           icon: filtered ? Lucide.searchX : Lucide.popcorn,
