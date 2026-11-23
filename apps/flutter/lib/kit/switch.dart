@@ -82,15 +82,9 @@ class SwitchTrack extends StatelessWidget {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              // Off, the thumb is light on the grey track in both themes:
-              // the page's background in light, the foreground in dark.
-              // The web's smaller thumb is the foreground in both; at 24
-              // across that's a heavy black dot in light.
-              color: checked
-                  ? colors.accentForeground
-                  : colors.isDark
-                  ? colors.foreground
-                  : colors.background,
+              // Off, the thumb is the foreground, as on the web. The page's
+              // background on the grey track would fall under 3:1 in light.
+              color: checked ? colors.accentForeground : colors.foreground,
               shape: BoxShape.circle,
             ),
           ),
