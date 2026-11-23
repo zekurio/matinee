@@ -2566,6 +2566,24 @@
   "@profileAdmin": {
     "description": "strings.xml"
   },
+  "profileFavoritesHidden": "{p1} doesn't share their favorites",
+  "@profileFavoritesHidden": {
+    "description": "Another person's favorites page when they don't share them. The web's profile.favorites.hidden.",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "profileFavoritesOtherEmpty": "{p1} has no favorites yet",
+  "@profileFavoritesOtherEmpty": {
+    "description": "Another person's favorites page when they share them and have none. The web's profile.favorites.otherEmpty.",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
   "profileJoined": "Joined {p1}",
   "@profileJoined": {
     "description": "strings.xml",
@@ -2591,6 +2609,44 @@
   "profileOffline": "Your favorites, requests, and stats come back once the server can be reached.",
   "@profileOffline": {
     "description": "The profile page while the server can't be reached."
+  },
+  "profileOtherEmpty": "{p1} hasn't watched anything yet",
+  "@profileOtherEmpty": {
+    "description": "Another person's statistics when they share them and haven't played anything. The web's profile.otherEmpty.",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "profileOtherEmptyHint": "Their statistics show up here after their first play.",
+  "@profileOtherEmptyHint": {
+    "description": "Under another person's empty statistics. The web's profile.otherEmptyHint."
+  },
+  "profileOtherFavoritesLoadFailed": "Couldn't load these favorites",
+  "@profileOtherFavoritesLoadFailed": {
+    "description": "Another person's favorites page when the read failed. The web's profile.favorites.loadFailed."
+  },
+  "profileOtherLoadFailed": "Couldn't load this profile",
+  "@profileOtherLoadFailed": {
+    "description": "Another person's profile page when the read failed. The web's profile.loadFailed."
+  },
+  "profileOtherRecentLoadFailed": "Couldn't load what they watched",
+  "@profileOtherRecentLoadFailed": {
+    "description": "Another person's recent list when the read failed."
+  },
+  "profileOtherStatsFailed": "Couldn't load their statistics",
+  "@profileOtherStatsFailed": {
+    "description": "Another person's statistics when the read failed."
+  },
+  "profilePrivate": "{p1} keeps their profile private",
+  "@profilePrivate": {
+    "description": "Another person's profile when they share neither favorites nor statistics. The web's profile.private.",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
   },
   "profileRecent": "Recently watched",
   "@profileRecent": {
@@ -2623,6 +2679,15 @@
   "profileStatsFailed": "Couldn't load your statistics",
   "@profileStatsFailed": {
     "description": "strings_loading.xml"
+  },
+  "profileStoppedSharing": "{p1} stopped sharing their statistics",
+  "@profileStoppedSharing": {
+    "description": "Another person's statistics when they stopped sharing them. The web's profile.stoppedSharing.",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
   },
   "profileSwitch": "Switch server or account",
   "@profileSwitch": {
@@ -2852,6 +2917,10 @@
   "searchSectionGenres": "Genres",
   "@searchSectionGenres": {
     "description": "strings.xml"
+  },
+  "searchSectionProfiles": "Profiles",
+  "@searchSectionProfiles": {
+    "description": "Search's row of people on the server whose names matched. The web's search.section.profiles."
   },
   "searchSectionStudios": "Studios",
   "@searchSectionStudios": {

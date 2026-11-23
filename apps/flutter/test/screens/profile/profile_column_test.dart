@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:matinee/screens/profile/profile_screen.dart';
+import 'package:matinee/screens/profile/profile_sections.dart';
 
 void main() {
   // The bug it pins: on a tablet the stats stopped at 720 while the rails

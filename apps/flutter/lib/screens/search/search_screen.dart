@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/permissions.dart';
 import '../../core/session.dart';
 import '../../downloads/downloads.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/artwork.dart';
+import '../../media/avatar.dart';
 import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
@@ -425,11 +427,33 @@ class _Results extends ConsumerWidget {
       RailArt.person,
       MediaQuery.sizeOf(context),
     );
+    // Whose username is the signed-in account's, so their card opens the
+    // profile tab's page rather than another person's.
+    final ownUsername = switch (ref.watch(authStateProvider)) {
+      SignedIn(:final user) => user.username,
+      _ => null,
+    };
+    final canSeeProfiles = ref.watch(canProvider(Permission.profileRead));
     const gap = SliverToBoxAdapter(child: SizedBox(height: 28));
     return CustomScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       slivers: [
         const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        if (results.users.isNotEmpty && canSeeProfiles) ...[
+          SliverToBoxAdapter(
+            child: Rail(
+              title: l.searchSectionProfiles,
+              itemWidth: personWidth,
+              itemHeight: PersonCard.height(personWidth, scaler),
+              itemCount: results.users.length,
+              itemBuilder: (context, index) => _UserResult(
+                user: results.users[index],
+                own: results.users[index].username == ownUsername,
+              ),
+            ),
+          ),
+          gap,
+        ],
         for (final MapEntry(key: library, value: titles)
             in results.titlesByLibrary.entries) ...[
           SliverToBoxAdapter(
@@ -614,6 +638,37 @@ class _Person extends StatelessWidget {
           ? null
           : Picture([ArtSource(photo, largest: ArtworkSize.small)]),
       onPressed: () => context.push(Routes.person(person.name)),
+    );
+  }
+}
+
+/// Someone on the server whose name matched, their picture and display name
+/// over their username, opening their profile. One's own opens the profile
+/// tab's page.
+class _UserResult extends StatelessWidget {
+  const _UserResult({required this.user, required this.own});
+
+  final ProfileUser user;
+  final bool own;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarId = user.avatarId;
+    return PersonCard(
+      name: user.name,
+      role: '@${user.username}',
+      photo: avatarId == null
+          ? null
+          : LayoutBuilder(
+              builder: (context, constraints) => Avatar(
+                avatarId: avatarId,
+                name: user.name,
+                size: constraints.maxWidth,
+              ),
+            ),
+      onPressed: () => context.push(
+        own ? Routes.profile : Routes.userProfile(user.username),
+      ),
     );
   }
 }
