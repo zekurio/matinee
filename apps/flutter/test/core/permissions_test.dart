@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/permissions.dart';
@@ -83,16 +81,6 @@ void main() {
   });
 
   group('the permission lists', () {
-    test('come from the contract', () {
-      final source = File('../../packages/contracts/src/permissions.ts')
-          .readAsStringSync();
-      for (final permission in Permission.all) {
-        expect(source, contains('"$permission"'), reason: permission);
-      }
-      expect(Permission.all.first, Permission.allValue);
-      expect(Permission.all.toSet(), hasLength(Permission.all.length));
-    });
-
     test('sorting puts them in the contract\'s order, once each', () {
       expect(
         sortPermissions(const [

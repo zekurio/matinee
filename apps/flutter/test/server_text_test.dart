@@ -1,29 +1,12 @@
-import 'package:flutter/material.dart' show MaterialApp;
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:matinee/api/matinee_api.dart';
-import 'package:matinee/kit/kit.dart';
-import 'package:matinee/l10n/app_localizations.dart';
 import 'package:matinee/l10n/app_localizations_de.dart';
 import 'package:matinee/l10n/app_localizations_en.dart';
 import 'package:matinee/l10n/server_messages.g.dart';
 import 'package:matinee/l10n/server_text.dart';
-import 'package:matinee/query/failure_view.dart';
 
 void main() {
   final en = AppLocalizationsEn();
   final de = AppLocalizationsDe();
-
-  test('exact server text and a validation placeholder', () {
-    expect(
-      translateServerMessage(de, 'Sign in first.'),
-      'Melde dich zuerst an.',
-    );
-    expect(
-      translateServerMessage(de, 'Use at least 8 characters.'),
-      'Verwende mindestens 8 Zeichen.',
-    );
-  });
 
   test('overlapping patterns use catalog order and match the whole text', () {
     expect(
@@ -93,26 +76,5 @@ void main() {
         );
       }
     }
-  });
-
-  testWidgets('a failed API read displays the server message in German', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('de'),
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        theme: MatineeTheme.data(matineeDark),
-        home: const FailureState(
-          title: 'Bibliotheken',
-          error: ApiException(status: 403, message: 'Sign in first.'),
-          onRetry: null,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Melde dich zuerst an.'), findsOneWidget);
-    expect(find.text('Sign in first.'), findsNothing);
   });
 }

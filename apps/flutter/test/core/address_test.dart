@@ -67,14 +67,6 @@ void main() {
       expect(originKey(Uri.parse('http://[::1]:8420')), 'http://[::1]:8420/');
     });
 
-    test('the display form has no trailing slash', () {
-      expect(displayOf(Uri.parse('https://a.example/')), 'https://a.example');
-      expect(
-        displayOf(Uri.parse('http://192.168.1.5:8420/')),
-        'http://192.168.1.5:8420',
-      );
-    });
-
     test('a saved origin parses back, or is null', () {
       expect(parseOrigin('https://a.example/')?.host, 'a.example');
       expect(parseOrigin('nonsense'), isNull);

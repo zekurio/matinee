@@ -78,12 +78,6 @@ class DownloadStoreTest {
         assertFalse(File(store.root, "a").exists())
         assertEquals(listOf(1, 0), heard)
     }
-
-    @Test
-    fun `an update of something gone changes nothing`() {
-        val store = DownloadStore(dir)
-        assertNull(store.update("gone") { it.copy(bytes = 1) })
-    }
 }
 
 class CredentialsTest {

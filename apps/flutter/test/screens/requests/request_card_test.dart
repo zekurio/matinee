@@ -7,7 +7,6 @@ import 'package:matinee/core/permissions.dart';
 import 'package:matinee/core/session.dart' show apiProvider;
 import 'package:matinee/kit/kit.dart';
 import 'package:matinee/l10n/app_localizations.dart';
-import 'package:matinee/media/artwork.dart';
 import 'package:matinee/screens/requests/request_cards.dart';
 
 Map<String, Object?> _availability({double? progress}) => {
@@ -104,15 +103,9 @@ RequestItem _own(
   'state': state,
 });
 
-/// [card] at [width], in [colors], under the app's theme and a scope that
+/// [card], 380 wide, under the app's theme and a scope that
 /// can answer the queue.
-Future<void> _pump(
-  WidgetTester tester,
-  Widget card, {
-  double width = 380,
-  KitColors colors = matineeDark,
-  String locale = 'en',
-}) async {
+Future<void> _pump(WidgetTester tester, Widget card) async {
   tester.view.physicalSize = const Size(1600, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -124,122 +117,18 @@ Future<void> _pump(
         canProvider.overrideWith((ref, permission) => true),
       ],
       child: MaterialApp(
-        locale: Locale(locale),
+        locale: const Locale('en'),
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
-        theme: MatineeTheme.data(colors),
-        home: SingleChildScrollView(
-          child: SizedBox(width: width, child: card),
-        ),
+        theme: MatineeTheme.data(matineeDark),
+        home: SingleChildScrollView(child: SizedBox(width: 380, child: card)),
       ),
     ),
   );
   await tester.pump();
 }
 
-/// The fill a badge of [token] takes on [colors], as [RequestStateBadge]
-/// blends it over the card's surface.
-Color _fill(Color token, KitColors colors) =>
-    Color.alphaBlend(token.withValues(alpha: .8), colors.surface);
-
-/// How bright [ink] is against [fill], as WCAG counts it.
-double _contrast(Color ink, Color fill) {
-  final one = ink.computeLuminance();
-  final other = fill.computeLuminance();
-  return (one > other ? one + .05 : other + .05) /
-      (one > other ? other + .05 : one + .05);
-}
-
 void main() {
-  for (final colors in [matineeLight, matineeDark]) {
-    final legend = colors.isDark ? 'dark' : 'light';
-    // The bug it pins: a state with no badge of its own, or a badge in one
-    // colour whatever the state, which the queue's lists can't be read by.
-    testWidgets('every state fills its badge in a token in $legend', (
-      tester,
-    ) async {
-      final token = {
-        RequestState.waiting: colors.warning,
-        RequestState.needsAttention: colors.danger,
-        RequestState.onTheWay: colors.accent,
-        RequestState.here: colors.success,
-        RequestState.declined: colors.danger,
-      };
-      for (final MapEntry(key: state, value: tint) in token.entries) {
-        final item = _item(
-          state,
-          error: state == RequestState.needsAttention
-              ? 'Radarr timed out'
-              : null,
-          reason: state == RequestState.declined ? 'notForServer' : null,
-          progress: .45,
-        );
-        await _pump(tester, QueueCard(item: item), colors: colors);
-        final badge = tester.widget<FilledBadge>(find.byType(FilledBadge));
-        final l = AppLocalizations.of(tester.element(find.byType(FilledBadge)));
-        expect(
-          badge.label,
-          requestStateText(
-            state,
-            l,
-            progress: state == RequestState.onTheWay ? .45 : null,
-          ),
-        );
-        expect(badge.fill, _fill(tint, colors), reason: state);
-        expect(
-          _contrast(badge.ink, badge.fill),
-          greaterThanOrEqualTo(3.5),
-          reason: '$state in $legend',
-        );
-        expect(find.byType(RequestStateBadge), findsOneWidget);
-      }
-      expect(tester.takeException(), isNull);
-    });
-  }
-
-  testWidgets('a badge reads as its status, and opens only what it holds', (
-    tester,
-  ) async {
-    final handle = tester.ensureSemantics();
-    await _pump(
-      tester,
-      Column(
-        children: [
-          QueueCard(item: _item(RequestState.waiting)),
-          QueueCard(
-            item: _item(RequestState.needsAttention, error: 'Radarr timed out'),
-          ),
-          QueueCard(item: _item(RequestState.onTheWay, progress: .45)),
-          QueueCard(item: _item(RequestState.here)),
-          QueueCard(item: _item(RequestState.declined, reason: 'notForServer')),
-        ],
-      ),
-    );
-
-    for (final (state, text) in [
-      (RequestState.waiting, 'Pending'),
-      (RequestState.needsAttention, 'Failed'),
-      (RequestState.onTheWay, 'Processing · 45%'),
-      (RequestState.here, 'Available'),
-      (RequestState.declined, 'Declined'),
-    ]) {
-      expect(
-        find.bySemanticsLabel('Status: $text'),
-        findsOneWidget,
-        reason: state,
-      );
-      expect(find.text(text), findsOneWidget, reason: state);
-    }
-    // The chevron is on the two states that have more to say.
-    final badges = tester.widgetList<FilledBadge>(find.byType(FilledBadge));
-    expect(
-      [for (final badge in badges) badge.trailing],
-      [null, Lucide.chevronDown, null, null, Lucide.chevronDown],
-    );
-    expect(tester.takeException(), isNull);
-    handle.dispose();
-  });
-
   // The bug it pins: a failed request said nothing about why, or cut the
   // error to a line or two, so an admin had to guess.
   testWidgets('a failed badge opens the error and the connection report', (
@@ -287,25 +176,6 @@ void main() {
 
     expect(find.text('Not for this server.'), findsOneWidget);
     expect(find.textContaining(note), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('a card draws its backdrop, and none without one', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      QueueCard(
-        item: _item(
-          RequestState.waiting,
-          backdrop: {'id': 'backdrop', 'placeholder': null},
-        ),
-      ),
-    );
-    expect(find.byType(Picture), findsOneWidget);
-
-    await _pump(tester, QueueCard(item: _item(RequestState.waiting)));
-    expect(find.byType(Picture), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

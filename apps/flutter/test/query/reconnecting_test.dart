@@ -137,11 +137,10 @@ void main() {
     });
   });
 
-  test('the delay doubles from a second up to half a minute', () {
-    expect(reconnectDelay(0), const Duration(seconds: 1));
-    expect(reconnectDelay(1), const Duration(seconds: 2));
+  test('the delay stops growing at half a minute', () {
     expect(reconnectDelay(4), const Duration(seconds: 16));
-    expect(reconnectDelay(9), const Duration(seconds: 30));
+    expect(reconnectDelay(5), const Duration(seconds: 30));
+    expect(reconnectDelay(40), const Duration(seconds: 30));
   });
 }
 

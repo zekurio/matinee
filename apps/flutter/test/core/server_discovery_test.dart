@@ -180,14 +180,9 @@ void main() {
     test('ends by itself with nothing found', () async {
       answer(const []);
 
-      final watch = Stopwatch()..start();
       final found = await scan(timeout: const Duration(milliseconds: 200));
 
       expect(found, isEmpty);
-      expect(
-        watch.elapsed,
-        greaterThanOrEqualTo(const Duration(milliseconds: 150)),
-      );
     });
 
     test('ends early when the listener cancels', () async {

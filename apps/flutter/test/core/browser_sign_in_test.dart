@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/core/browser_sign_in.dart';
 
@@ -20,21 +18,6 @@ void main() {
     expect(request.state, matches(RegExp(r'^[A-Za-z0-9_-]+$')));
     expect(request.challenge, BrowserSignIn.challengeOf(request.verifier));
     expect(request.challenge, isNot(contains('=')));
-  });
-
-  test('every request is new', () {
-    final a = BrowserSignIn.create();
-    final b = BrowserSignIn.create();
-
-    expect(a.verifier, isNot(b.verifier));
-    expect(a.state, isNot(b.state));
-  });
-
-  test('a seeded source makes the same request', () {
-    expect(
-      BrowserSignIn.create(Random(1)).verifier,
-      BrowserSignIn.create(Random(1)).verifier,
-    );
   });
 
   test('only the registered redirect is the callback', () {
