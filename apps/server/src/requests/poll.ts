@@ -27,7 +27,7 @@ async function activeRequests() {
   return rows.filter((row) =>
     row.kind === "movie"
       ? !row.arrivedAt
-      : row.future || pending.some((season) => season.requestId === row.id),
+      : pending.some((season) => season.requestId === row.id),
   )
 }
 

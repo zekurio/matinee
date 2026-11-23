@@ -164,10 +164,7 @@ class RestOfSeasonCard extends ConsumerWidget {
                                 gaps.ref,
                                 name,
                                 libraryId: gaps.libraryId,
-                                scope: ShowScope(
-                                  seasons: [season.number],
-                                  future: false,
-                                ),
+                                scope: AskScope(seasons: [season.number]),
                                 undo: gaps.first,
                               ),
                         ),

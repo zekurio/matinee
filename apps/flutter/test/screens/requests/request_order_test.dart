@@ -28,6 +28,7 @@ AdminRequestItem _item(String id, {String state = 'waiting'}) =>
         'poster': null,
         'availability': _availability,
       },
+      'backdrop': null,
       'library': {'id': 'films', 'name': 'Films'},
       'scope': null,
       'createdAt': '2026-11-01T00:00:00.000Z',
