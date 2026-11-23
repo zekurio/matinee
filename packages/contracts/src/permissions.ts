@@ -236,8 +236,8 @@ export function holdsPermission(
 }
 
 /**
- * Whether a list that names everything it covers, as an API token's
- * does, covers all of `requested`.
+ * Whether a list that names everything it covers, as an API token's and
+ * `User.permissions` do, covers all of `requested`.
  */
 export function grantsPermissions(
   held: readonly Permission[],
@@ -268,6 +268,18 @@ export function sortPermissions(
   permissions: readonly Permission[],
 ): Permission[] {
   return PERMISSIONS.filter((permission) => permissions.includes(permission))
+}
+
+/**
+ * Everything an account that was granted `granted` holds, as
+ * `User.permissions` names it: `all` alone when it has that, since `all`
+ * covers the rest, and else `BASE_PERMISSIONS` with what it was granted.
+ * A client can't import `BASE_PERMISSIONS` from an OpenAPI document, so
+ * the list it gets names them.
+ */
+export function heldPermissions(granted: readonly Permission[]): Permission[] {
+  if (granted.includes("all")) return ["all"]
+  return sortPermissions([...BASE_PERMISSIONS, ...granted])
 }
 
 /** What a contract procedure's `meta` holds. */

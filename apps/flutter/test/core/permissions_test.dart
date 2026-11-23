@@ -15,20 +15,21 @@ User _user(List<String> permissions, {String role = 'user'}) => User.fromJson({
 void main() {
   group('can', () {
     test('an admin holds every permission', () {
-      final admin = _user(const [Permission.all], role: 'admin');
-      for (final permission in Permission.values) {
+      final admin = _user(const [Permission.allValue], role: 'admin');
+      for (final permission in Permission.all) {
         expect(can(admin, permission), isTrue, reason: permission);
       }
     });
 
-    test('every account holds the base permissions without naming them', () {
-      final plain = _user(const []);
+    test('an account holds what the server lists, and nothing else', () {
+      final plain = _user(const [Permission.titleRead, Permission.mediaPlay]);
       expect(can(plain, Permission.titleRead), isTrue);
       expect(can(plain, Permission.mediaPlay), isTrue);
-      expect(can(plain, Permission.requestRead), isTrue);
       expect(can(plain, Permission.requestCreate), isFalse);
       expect(can(plain, Permission.adminUserRead), isFalse);
-      expect(can(plain, Permission.all), isFalse);
+      expect(can(plain, Permission.allValue), isFalse);
+      // The server names what every account holds; the app adds nothing.
+      expect(can(_user(const []), Permission.titleRead), isFalse);
     });
 
     test('a granted permission is held, and only that one', () {
@@ -74,7 +75,10 @@ void main() {
         ),
         isTrue,
       );
-      expect(runsQueue(_user(const [Permission.all], role: 'admin')), isTrue);
+      expect(
+        runsQueue(_user(const [Permission.allValue], role: 'admin')),
+        isTrue,
+      );
     });
   });
 
@@ -82,12 +86,11 @@ void main() {
     test('come from the contract', () {
       final source = File('../../packages/contracts/src/permissions.ts')
           .readAsStringSync();
-      for (final permission in Permission.values) {
+      for (final permission in Permission.all) {
         expect(source, contains('"$permission"'), reason: permission);
       }
-      expect(Permission.values.first, Permission.all);
-      expect(Permission.values.toSet(), hasLength(Permission.values.length));
-      expect(Permission.values, containsAll(Permission.base));
+      expect(Permission.all.first, Permission.allValue);
+      expect(Permission.all.toSet(), hasLength(Permission.all.length));
     });
 
     test('sorting puts them in the contract\'s order, once each', () {

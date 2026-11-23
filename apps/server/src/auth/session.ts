@@ -1,6 +1,7 @@
 import {
   type AppDevice,
   grantsPermissions,
+  heldPermissions,
   type Permission,
   PlaybackPreferences,
   type ProfileUser,
@@ -47,19 +48,18 @@ export type SessionUser = UserRow & {
 }
 
 /**
- * The account as its own clients get it. `permissions` is what it was
- * granted, from its access; `userOf` in access/viewer.ts looks it up.
+ * The account as its own clients get it. `granted` is what it was
+ * granted, from its access; `userOf` in access/viewer.ts looks it up. The
+ * list sent names what every account holds too, so a client reads it
+ * without rules of its own.
  */
-export function publicUser(
-  row: UserRow,
-  permissions: readonly Permission[],
-): User {
+export function publicUser(row: UserRow, granted: readonly Permission[]): User {
   return {
     id: row.id,
     username: row.username,
     displayName: row.displayName,
     role: row.role,
-    permissions: [...permissions],
+    permissions: heldPermissions(granted),
     avatarId: row.avatarId,
     avatarSource: row.avatarSource,
     playback:

@@ -1,27 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/matinee_api.dart';
-import 'permissions.g.dart';
 import 'session.dart';
-
-export 'permissions.g.dart';
 
 /* What the signed-in account may do, for showing only what it can use, as
  * the web's lib/permissions.ts. The server decides each call again; this
- * only keeps a screen from offering what would be refused. The names come
- * from the contract through permissions.g.dart. */
+ * only keeps a screen from offering what would be refused. The names are
+ * the API client's `Permission`, where `Permission.allValue` is the
+ * permission `all` and `Permission.all` lists every one. */
 
-/// Whether an account that was granted [granted] holds [permission]. The
-/// list needn't name what every account has. The contract's
-/// `holdsPermission`.
-bool holdsPermission(Iterable<String> granted, String permission) =>
-    granted.contains(Permission.all) ||
-    Permission.base.contains(permission) ||
-    granted.contains(permission);
-
-/// Whether [user] holds [permission], from its groups or as an admin.
+/// Whether [user] holds [permission], one of `Permission`'s names. The
+/// server lists everything the account holds, what every account has
+/// included, and `all` alone for an admin, which covers the rest. The
+/// contract's `grantsPermissions`.
 bool can(User user, String permission) =>
-    holdsPermission(user.permissions, permission);
+    user.permissions.contains(Permission.allValue) ||
+    user.permissions.contains(permission);
 
 /// Whether [user] holds any of [permissions].
 bool canAny(User user, Iterable<String> permissions) =>
@@ -59,7 +53,7 @@ final runsQueueProvider = Provider<bool>((ref) {
 List<String> sortPermissions(Iterable<String> permissions) {
   final held = permissions.toSet();
   return [
-    for (final permission in Permission.values)
+    for (final permission in Permission.all)
       if (held.contains(permission)) permission,
   ];
 }
