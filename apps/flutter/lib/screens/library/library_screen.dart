@@ -16,7 +16,6 @@ import '../shell/header.dart';
 import '../shell/offline_note.dart';
 import '../shell/shell.dart' show tabReselectProvider;
 import 'list_choices.dart';
-import 'list_words.dart';
 import 'title_grid.dart';
 import 'title_pages.dart';
 
@@ -27,28 +26,78 @@ const _refreshAfter = Duration(seconds: 30);
 String _libraryKind(String kind) =>
     kind == TitleKind.show ? LibraryKind.shows : LibraryKind.movies;
 
-/// The Shows or the Movies tab: every title of [kind] the viewer can see,
-/// across the libraries. With more than one library of the kind, a menu in the
-/// subtitle narrows it to one, as on the web.
-class KindScreen extends ConsumerStatefulWidget {
-  const KindScreen({super.key, required this.kind});
+/// The Media tab: every movie and show the viewer can see, across the
+/// libraries, starting on both. The type and the library narrow it from the
+/// filter sheet; the sort follows what the server offers for what's picked.
+///
+/// Shows and Movies open it with the type preset, so a link to either still
+/// lands on what it names.
+class MediaScreen extends ConsumerStatefulWidget {
+  const MediaScreen({super.key, this.initialKind});
 
-  /// A `TitleKind`.
-  final String kind;
-
-  String get path => kind == TitleKind.show ? Routes.shows : Routes.movies;
+  /// A `TitleKind` to start on, for `/shows` and `/movies`.
+  final String? initialKind;
 
   @override
-  ConsumerState<KindScreen> createState() => _KindScreenState();
+  ConsumerState<MediaScreen> createState() => _MediaScreenState();
 }
 
-class _KindScreenState extends ConsumerState<KindScreen> {
+class _MediaScreenState extends ConsumerState<MediaScreen> {
   final _scroll = ScrollController();
   var _fetched = DateTime.now();
   TitleListRequest? _request;
   FilterScope? _scope;
 
-  ListKey get _list => (kind: widget.kind, genre: null, studio: null);
+  /// A link's kind until the choices take it, so the first frame asks for
+  /// that kind rather than every title.
+  String? _presetKind;
+
+  ListKey get _list => (kind: null, genre: null, studio: null);
+
+  @override
+  void initState() {
+    super.initState();
+    _schedulePreset();
+  }
+
+  @override
+  void didUpdateWidget(MediaScreen old) {
+    super.didUpdateWidget(old);
+    if (old.initialKind != widget.initialKind) _schedulePreset();
+  }
+
+  /// A link to one kind starts the list on it, after the frame: a provider
+  /// can't change while the tree is building.
+  void _schedulePreset() {
+    final kind = widget.initialKind;
+    _presetKind = kind;
+    if (kind == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _preset();
+    });
+  }
+
+  /// A link to one kind starts the list on it, letting go of a library of
+  /// the other kind.
+  void _preset() {
+    final kind = widget.initialKind;
+    if (kind == null) return;
+    if (ref.read(choicesProvider(_list)).kind == kind) {
+      if (mounted) setState(() => _presetKind = null);
+      return;
+    }
+    final notifier = ref.read(choicesProvider(_list).notifier);
+    notifier.kind(kind);
+    final picked = ref.read(choicesProvider(_list)).libraryId;
+    final libraries = ref.read(librariesProvider).value;
+    final library = libraries
+        ?.where((library) => library.id == picked)
+        .firstOrNull;
+    if (library != null && library.kind != _libraryKind(kind)) {
+      notifier.library(null);
+    }
+    if (mounted) setState(() => _presetKind = null);
+  }
 
   @override
   void dispose() {
@@ -88,45 +137,52 @@ class _KindScreenState extends ConsumerState<KindScreen> {
     ref.listen(mediaChangesProvider, (_, _) => _changed());
     final colors = MatineeTheme.of(context);
     final l = AppLocalizations.of(context);
-    final kind = widget.kind;
-    final shows = kind == TitleKind.show;
-    final title = shows ? l.tabShows : l.tabMovies;
     if (ref.watch(authStateProvider) is Offline) {
       return ColoredBox(
         color: colors.background,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TabHeader(title: title, offline: true),
+            TabHeader(
+              title: l.tabMedia,
+              actions: [
+                HeaderButton(
+                  icon: Lucide.search,
+                  label: l.searchTitle,
+                  onPressed: () => context.push(Routes.search),
+                ),
+              ],
+            ),
             const Expanded(child: _Offline()),
           ],
         ),
       );
     }
     ref.listen(tabReselectProvider, (_, tap) {
-      if (tap?.path == widget.path) _toTop();
+      if (tap?.path == Routes.media) _toTop();
     });
     final list = _list;
     final choices = ref.watch(choicesProvider(list));
+    final type = _presetKind ?? choices.kind;
     final libraries = ref.watch(librariesProvider).value;
-    final ofKind = [
+    final ofType = [
       for (final library in libraries ?? const <Library>[])
-        if (library.kind == _libraryKind(kind)) library,
+        if (type == null || library.kind == _libraryKind(type)) library,
     ];
     // A library that's gone, or another kind's, is every library. Until
     // the libraries come, the one picked, so the list isn't asked twice.
     final picked = choices.libraryId;
     final libraryId =
-        libraries == null || ofKind.any((library) => library.id == picked)
+        libraries == null || ofType.any((library) => library.id == picked)
         ? picked
         : null;
     final FilterScope scope = libraryId == null
-        ? (libraryId: null, kind: kind, genre: null, studio: null)
+        ? (libraryId: null, kind: type, genre: null, studio: null)
         : (libraryId: libraryId, kind: null, genre: null, studio: null);
     final options = ref.watch(filterOptionsProvider(scope)).value;
     final order = choices.effectiveOrder(options?.sorts);
     final request = TitleListRequest(
-      kind: kind,
+      kind: type,
       libraryId: libraryId,
       sort: order.sort,
       order: order.order,
@@ -135,10 +191,10 @@ class _KindScreenState extends ConsumerState<KindScreen> {
     _request = request;
     _scope = scope;
     final notifier = ref.read(choicesProvider(list).notifier);
-    final filtered = choices.filters.count > 0;
+    final filtered = choices.filterCount > 0;
 
     return ReturnWatcher(
-      path: widget.path,
+      path: Routes.media,
       onReturn: _returned,
       child: ColoredBox(
         color: colors.background,
@@ -146,14 +202,9 @@ class _KindScreenState extends ConsumerState<KindScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TabHeader(
-              title: title,
+              title: l.tabMedia,
               actions: [
-                FilterButton(
-                  list: list,
-                  scope: scope,
-                  kind: kind,
-                  header: true,
-                ),
+                FilterButton(list: list, scope: scope, header: true),
                 SortButton(
                   list: list,
                   current: order,
@@ -174,34 +225,12 @@ class _KindScreenState extends ConsumerState<KindScreen> {
                 child: TitleGrid(
                   request: request,
                   controller: _scroll,
-                  header: (context, shown) => [
-                    SliverToBoxAdapter(
-                      child: _ListBar(
-                        subtitle: [
-                          if (ofKind.length > 1)
-                            LibraryMenu(
-                              libraries: ofKind,
-                              value: libraryId,
-                              onChanged: notifier.library,
-                            ),
-                          if (shown.total case final total?)
-                            Text(l.browseTitleCount(total)),
-                        ],
-                      ),
-                    ),
-                  ],
+                  header: (context, shown) => const [],
                   empty: EmptyState(
-                    icon: filtered
-                        ? Lucide.searchX
-                        : shows
-                        ? Lucide.tv
-                        : Lucide.film,
-                    title: switch ((filtered, shows)) {
-                      (true, true) => l.libraryNoFilterMatchShows,
-                      (true, false) => l.libraryNoFilterMatchMovies,
-                      (false, true) => l.libraryNoneShows,
-                      (false, false) => l.libraryNoneMovies,
-                    },
+                    icon: filtered ? Lucide.searchX : Lucide.libraryBig,
+                    title: filtered
+                        ? l.browseNoFilterMatch
+                        : l.libraryNoneMedia,
                     action: filtered
                         ? MatineeButton(
                             look: ButtonLook.outline,
@@ -221,8 +250,8 @@ class _KindScreenState extends ConsumerState<KindScreen> {
 }
 
 /// A genre's or a studio's titles from every library, opened from a chip on a
-/// title's page, with the filters and sorts the tabs have and a choice of
-/// movies or shows.
+/// title's page, with the filters and sorts Media has. The kind is a filter
+/// there too.
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key, this.genre, this.studio});
 
@@ -286,9 +315,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       _request = request;
       _scope = scope;
       final notifier = ref.read(choicesProvider(list).notifier);
-      final filtered = choices.filters.count > 0;
+      final filtered = choices.filterCount > 0;
       actions.addAll([
-        FilterButton(list: list, scope: scope, kind: kind),
+        FilterButton(list: list, scope: scope),
         SortButton(list: list, current: order, offered: options?.sorts),
       ]);
       body = TitleGrid(
@@ -298,9 +327,6 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
             child: _BrowseHeading(
               label: genre != null ? l.browseGenre : l.browseStudio,
               total: shown.total,
-              kinds: shown.kinds,
-              kind: kind,
-              onKind: notifier.kind,
             ),
           ),
         ],
@@ -353,73 +379,18 @@ void _refreshList(
   if (scope != null) ref.invalidate(filterOptionsProvider(scope));
 }
 
-/// The line under a tab's header: the library menu and how many titles there
-/// are. The tab's name, and its filter and sort, are the header's, above.
-class _ListBar extends StatelessWidget {
-  const _ListBar({required this.subtitle});
-
-  final List<Widget> subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    final muted = KitText.sm.style(color: colors.mutedForeground);
-    return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(
-        CardMetrics.gutter,
-        8,
-        CardMetrics.gutter,
-        8,
-      ),
-      child: DefaultTextStyle(
-        style: muted,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 20),
-          child: Row(
-            children: [
-              for (final (index, part) in subtitle.indexed) ...[
-                if (index > 0)
-                  ExcludeSemantics(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Text('·', style: muted),
-                    ),
-                  ),
-                Flexible(child: part),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Under a genre's or a studio's name: which it is and how many titles,
-/// then movies or shows, offered once there are both.
+/// Under a genre's or a studio's name: which it is and how many titles.
 class _BrowseHeading extends StatelessWidget {
-  const _BrowseHeading({
-    required this.label,
-    required this.total,
-    required this.kinds,
-    required this.kind,
-    required this.onKind,
-  });
+  const _BrowseHeading({required this.label, required this.total});
 
   final String label;
   final int? total;
-  final BrowsedTitlesKinds? kinds;
-  final String? kind;
-  final ValueChanged<String?> onKind;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final total = this.total;
-    final kinds = this.kinds;
-    final both =
-        kind != null || (kinds != null && kinds.movie > 0 && kinds.show > 0);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         CardMetrics.gutter,
@@ -427,37 +398,9 @@ class _BrowseHeading extends StatelessWidget {
         CardMetrics.gutter,
         12,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 12,
-        children: [
-          Text(
-            [label, if (total != null) l.browseTitleCount(total)].join(' · '),
-            style: KitText.sm.style(color: colors.mutedForeground),
-          ),
-          if (both)
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final (value, name, count) in [
-                  (
-                    null,
-                    l.browseKindAll,
-                    kinds == null ? null : kinds.movie + kinds.show,
-                  ),
-                  (TitleKind.movie, l.browseKindMovie, kinds?.movie),
-                  (TitleKind.show, l.browseKindShow, kinds?.show),
-                ])
-                  ChoiceChip(
-                    label: name,
-                    selected: kind == value,
-                    count: count == null ? null : countText(context, count),
-                    onPressed: () => onKind(value),
-                  ),
-              ],
-            ),
-        ],
+      child: Text(
+        [label, if (total != null) l.browseTitleCount(total)].join(' · '),
+        style: KitText.sm.style(color: colors.mutedForeground),
       ),
     );
   }

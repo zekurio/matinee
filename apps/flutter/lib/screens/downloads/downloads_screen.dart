@@ -287,11 +287,17 @@ class _StorageLine extends ConsumerWidget {
     final colors = MatineeTheme.of(context);
     final used = ref.watch(downloadsBytesProvider);
     final free = ref.watch(freeBytesProvider).value;
-    if (free == null) return const SizedBox.shrink();
+    final offline = ref.watch(authStateProvider) is Offline;
+    final said = [
+      if (free != null)
+        l.downloadsStorageValue(formatBytes(used, l), formatBytes(free, l)),
+      if (offline) l.downloadsOffline,
+    ];
+    if (said.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 4),
       child: Text(
-        l.downloadsStorageValue(formatBytes(used, l), formatBytes(free, l)),
+        said.join(' · '),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: KitText.sm.style(color: colors.mutedForeground),

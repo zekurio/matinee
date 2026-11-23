@@ -21,6 +21,7 @@ import 'screens/profile/lists_screens.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/requests/catalog_browse.dart';
 import 'screens/requests/catalog_screen.dart';
+import 'screens/requests/explore_screen.dart';
 import 'screens/requests/requests_screen.dart';
 import 'screens/search/search_screen.dart';
 import 'screens/settings/admin/library_editor.dart';
@@ -50,9 +51,9 @@ import 'screens/tv/tv_shell.dart';
 
 /// Every place in the app, as the paths go_router opens. Screens navigate with
 /// these, `context.push(Routes.title(id))`, never with a path typed out, so a
-/// route's shape changes in one place. Shows and Movies are tabs, and an
-/// admin's requests are one overview, which Explore's Recent requests row
-/// at the top opens.
+/// route's shape changes in one place. Media is a tab, with Shows and Movies
+/// its preset links, and Explore holds what search used to open under its
+/// empty field.
 abstract final class Routes {
   // Before the app: the session's state picks one (see [authRedirect]).
   /// Typing or picking a server's address.
@@ -73,17 +74,22 @@ abstract final class Routes {
 
   // The tabs, and the profile that each of their headers opens over them.
   static const home = '/';
-  static const shows = '/shows';
-  static const movies = '/movies';
+  static const media = '/media';
   static const downloads = '/downloads';
+  static const explore = '/explore';
   static const profile = '/profile';
 
-  /// Search, with Explore under the field: the catalog's rows, the recent
-  /// requests first.
+  /// The old links to one kind: Media, started on it.
+  static const shows = '/shows';
+  static const movies = '/movies';
+
+  /// Search, over the tab it opens from. Offline it looks through the
+  /// downloads.
   static const search = '/search';
   static const favorites = '/favorites';
 
-  /// Discover on a TV, from its drawer: the phone has it under Search.
+  /// Discover on a TV, from its drawer: the touch screens have it in the
+  /// Explore tab.
   static const discover = '/discover';
   static const recent = '/recent';
   static const settings = '/settings';
@@ -310,17 +316,18 @@ List<RouteBase> _handsetRoutes() => [
       StatefulShellBranch(
         routes: [
           GoRoute(
-            path: Routes.shows,
-            builder: (context, state) => const KindScreen(kind: TitleKind.show),
+            path: Routes.media,
+            builder: (context, state) => const MediaScreen(),
           ),
-        ],
-      ),
-      StatefulShellBranch(
-        routes: [
+          GoRoute(
+            path: Routes.shows,
+            builder: (context, state) =>
+                const MediaScreen(initialKind: TitleKind.show),
+          ),
           GoRoute(
             path: Routes.movies,
             builder: (context, state) =>
-                const KindScreen(kind: TitleKind.movie),
+                const MediaScreen(initialKind: TitleKind.movie),
           ),
         ],
       ),
@@ -329,6 +336,14 @@ List<RouteBase> _handsetRoutes() => [
           GoRoute(
             path: Routes.downloads,
             builder: (context, state) => const DownloadsScreen(),
+          ),
+        ],
+      ),
+      StatefulShellBranch(
+        routes: [
+          GoRoute(
+            path: Routes.explore,
+            builder: (context, state) => const ExploreScreen(),
           ),
         ],
       ),
@@ -538,7 +553,7 @@ bool get _hasPlayerLab => kDebugMode && _hasPlayer;
 /// whatever opened them. There's no downloads page, no admin page, no image
 /// editor or identify, and no single library's grid: the drawer's Movies and
 /// Shows take every library at once. Discover has a page of its own from the
-/// drawer, where the phone has it under Search.
+/// drawer, where the touch screens have it in the Explore tab.
 List<RouteBase> _tvRoutes() => [
   GoRoute(
     path: '/play/:id',

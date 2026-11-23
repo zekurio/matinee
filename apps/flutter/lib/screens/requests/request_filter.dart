@@ -4,7 +4,7 @@ import '../../api/matinee_api.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../library/filter_sheet.dart'
-    show FilterChoiceChips, FilterSection, FilterToggleChips;
+    show FilterSection, OptionRow, OptionSheet;
 import '../library/title_grid.dart' show ListBarButton;
 import 'request_words.dart';
 import 'requests_data.dart';
@@ -74,39 +74,51 @@ void _showRequestFilters(
             children: [
               FilterSection(
                 title: l.webRequestsFilterState,
-                child: FilterToggleChips(
+                child: MultiSelect(
                   choices: [
                     for (final state in RequestState.all)
-                      (
+                      MultiSelectChoice(
                         value: state,
                         label: requestStateWord(state, l),
-                        count: null,
                       ),
                   ],
                   value: value.states,
                   onChanged: (states) =>
                       filter.value = value.withStates(states),
+                  placeholder: l.webRequestsFilterState,
+                  label: l.webRequestsFilterState,
+                  removeLabel: l.multiSelectRemove,
                 ),
               ),
-              FilterSection(
-                title: l.webRequestsFilterKind,
-                child: FilterChoiceChips(
-                  anyLabel: l.webFiltersAny,
-                  choices: [
-                    (
-                      value: TitleKind.movie,
-                      label: l.browseKindMovie,
-                      count: null,
-                    ),
-                    (
-                      value: TitleKind.show,
-                      label: l.browseKindShow,
-                      count: null,
-                    ),
-                  ],
-                  value: value.kind,
-                  onChanged: (kind) => filter.value = value.withKind(kind),
-                ),
+              OptionRow(
+                label: l.webRequestsFilterKind,
+                value: switch (value.kind) {
+                  TitleKind.movie => l.browseKindMovie,
+                  TitleKind.show => l.browseKindShow,
+                  _ => l.webFiltersAny,
+                },
+                onPressed: () async {
+                  final picked = await OptionSheet.show(
+                    context,
+                    title: l.webRequestsFilterKind,
+                    anyLabel: l.webFiltersAny,
+                    choices: [
+                      (
+                        value: TitleKind.movie,
+                        label: l.browseKindMovie,
+                        count: null,
+                      ),
+                      (
+                        value: TitleKind.show,
+                        label: l.browseKindShow,
+                        count: null,
+                      ),
+                    ],
+                    value: value.kind,
+                  );
+                  if (picked == null) return;
+                  filter.value = value.withKind(picked.value);
+                },
               ),
             ],
           ),
