@@ -4,15 +4,18 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../api/extensions.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/avatar.dart';
 import '../../router.dart';
 
 /// The band at the top of every tab, laid out as YouTube's: the logo at the
-/// start, then settings and search as bare icons. It stays put while the page
-/// scrolls. Search opens Explore, which an admin's waiting requests head.
-/// Offline, where search can't work, the header says so in its place.
+/// start, then settings and search as bare icons, and the account's picture at
+/// the end. It stays put while the page scrolls. Search opens Explore, which an
+/// admin's waiting requests head. Offline, where search can't work, the header
+/// says so in its place.
 class ShellHeader extends ConsumerWidget {
   const ShellHeader({super.key});
 
@@ -52,6 +55,7 @@ class ShellHeader extends ConsumerWidget {
               label: words.searchTitle,
               onPressed: () => context.push(Routes.search),
             ),
+          const HeaderAvatar(),
         ],
       ),
     );
@@ -60,8 +64,8 @@ class ShellHeader extends ConsumerWidget {
 
 /// A tab's band, as tall as [ShellHeader]'s and under the status bar in the
 /// same way: the tab's name at the start, and only the actions that belong to
-/// it at the end. Offline, [offline] puts the cloud icon in the actions'
-/// place.
+/// it at the end, before the account's picture. Offline, [offline] puts the
+/// cloud icon in the actions' place.
 class TabHeader extends StatelessWidget {
   const TabHeader({
     super.key,
@@ -111,7 +115,39 @@ class TabHeader extends StatelessWidget {
             )
           else
             ...actions,
+          const HeaderAvatar(),
         ],
+      ),
+    );
+  }
+}
+
+/// The account's picture at a header's end, the way in to the profile: 30
+/// across in the header's 44 tap target, the initials while the picture can't
+/// load or the account has none, and always there offline, where the profile's
+/// account rows still work.
+class HeaderAvatar extends ConsumerWidget {
+  const HeaderAvatar({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final words = AppLocalizations.of(context);
+    final user = switch (ref.watch(authStateProvider)) {
+      SignedIn(:final user) || Offline(:final user) => user,
+      _ => null,
+    };
+    if (user == null) return const SizedBox.shrink();
+    return PressIndication(
+      onPressed: () => context.push(Routes.profile),
+      label: words.tabProfile,
+      shape: KitRadius.pill,
+      builder: (context, state) => SizedBox.square(
+        dimension: 44,
+        child: Center(
+          child: ExcludeSemantics(
+            child: Avatar(avatarId: user.avatarId, name: user.name, size: 30),
+          ),
+        ),
       ),
     );
   }
