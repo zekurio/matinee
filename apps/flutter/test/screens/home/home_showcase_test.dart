@@ -1,7 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart' show MaterialApp;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:matinee/api/matinee_api.dart';
 import 'package:matinee/core/session.dart' show apiProvider;
 import 'package:matinee/kit/kit.dart';
@@ -12,30 +16,63 @@ import 'package:matinee/screens/home/home_showcase.dart';
 
 import '../../media/fixtures.dart';
 
-FeaturedTitle _slide(String name) => FeaturedTitle.fromJson({
-  'title': titleJson(name, name: name),
-  'item': itemJson('item-$name'),
-  'count': 1,
-});
+/// A featured title called [name], with a backdrop and a logo of that name
+/// when [art] says.
+FeaturedTitle _slide(String name, {bool art = false, bool backdrop = true}) =>
+    FeaturedTitle.fromJson({
+      'title': {
+        ...titleJson(name, name: name),
+        if (art)
+          'images': {
+            'poster': null,
+            'backdrop': backdrop ? artJson('backdrop-$name') : null,
+            'logo': artJson('logo-$name'),
+          },
+      },
+      'item': itemJson('item-$name'),
+      'count': 1,
+    });
 
 final _slides = [
   for (final name in const ['Alien', 'Brazil', 'Contact', 'Dune']) _slide(name),
 ];
 
-/// [child] in a tablet's [window], under the app's theme.
+final class _NoCache implements ArtworkCache {
+  @override
+  Future<Uint8List?> read(Uri url) async => null;
+
+  @override
+  Future<void> write(Uri url, Uint8List bytes) async {}
+}
+
+/// [child] in a tablet's [window], under the app's theme. With [server], it
+/// asks that for its pictures; without, a title draws its tone and its name.
 Future<void> _pump(
   WidgetTester tester,
   Widget child, {
   Size window = const Size(1280, 800),
   bool tickers = true,
+  http.Client? server,
 }) async {
   tester.view.physicalSize = window;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
-      // No server, so a title draws its tone and its name.
-      overrides: [apiProvider.overrideWithValue(null)],
+      overrides: [
+        apiProvider.overrideWithValue(
+          server == null
+              ? null
+              : MatineeApi(
+                  base: Uri.parse('https://media.example.com'),
+                  client: server,
+                ),
+        ),
+        if (server != null)
+          artworkLoaderProvider.overrideWithValue(
+            ArtworkLoader(server, _NoCache()),
+          ),
+      ],
       child: MaterialApp(
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -204,5 +241,43 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.state(find.byType(Picture)), same(pictures.last));
     expect(alien.mounted, isFalse);
+  });
+
+  // The bugs it pins: a preload that failed was reported as an error, and a
+  // title with no backdrop had nothing loaded ahead.
+  testWidgets('the next title\'s art and logo load before it shows', (
+    tester,
+  ) async {
+    final asked = <String>[];
+    final server = MockClient((request) async {
+      asked.add('${request.url.path}?${request.url.query}');
+      return http.Response('', 404);
+    });
+    final slides = [
+      _slide('Alien', art: true),
+      _slide('Brazil', art: true),
+      _slide('Contact', art: true, backdrop: false),
+      _slide('Dune', art: true),
+    ];
+    await _pump(tester, HomeShowcase(slides: slides), server: server);
+    expect(
+      asked,
+      containsAll([
+        '/api/artwork/backdrop-Brazil?size=large',
+        '/api/artwork/logo-Brazil?size=medium',
+      ]),
+    );
+    expect(asked.where((path) => path.contains('Contact')), isEmpty);
+    expect(asked.where((path) => path.contains('Dune')), isEmpty);
+    expect(tester.takeException(), isNull);
+
+    asked.clear();
+    await tester.drag(find.byType(HomeShowcase), const Offset(-200, 0));
+    await tester.pumpAndSettle();
+    expect(asked, contains('/api/artwork/logo-Contact?size=medium'));
+    // No backdrop and no still, so a frame from its file.
+    expect(asked, contains('/api/media/item-Contact/thumbnail?size=large'));
+    expect(asked.where((path) => path.contains('Dune')), isEmpty);
+    expect(tester.takeException(), isNull);
   });
 }

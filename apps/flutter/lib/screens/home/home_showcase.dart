@@ -101,46 +101,29 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
     _prime();
   }
 
-  /// The slides whose art and logo are already loading.
-  final _primed = <int>{};
+  /// The pictures already asked for ahead of their title.
+  final _primed = <Uri>{};
 
-  /// Loads the title showing and the one after it before they take the card,
-  /// so a change shows the new picture at once rather than the one leaving.
+  /// Loads the next title's art and logo before it takes the card, so the
+  /// change shows its picture at once rather than its placeholder. One that
+  /// fails is left to the card, which falls back as it would have.
   void _prime() {
-    if (!mounted) return;
+    if (!mounted || _count < 2) return;
     final api = ref.read(apiProvider);
     if (api == null) return;
     final loader = ref.read(artworkLoaderProvider);
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    final card = ShowcaseLayout.width(
-      MediaQuery.sizeOf(context),
-      CardMetrics.gutter,
-    );
-    for (final index in {_current, (_current + 1) % _count}) {
-      if (!_primed.add(index)) continue;
-      final slide = widget.slides[index];
-      if (slide.title.images.backdrop case final backdrop?) {
-        unawaited(
-          precacheImage(
-            ArtworkImage(
-              ArtSource(backdrop).url(api.paths, card * dpr),
-              loader,
-            ),
-            context,
-          ).catchError((Object _) {}),
-        );
-      }
-      if (slide.title.images.logo case final logo?) {
-        unawaited(
-          precacheImage(
-            ArtworkImage(
-              api.paths.artwork(logo.id, size: ArtworkSize.medium),
-              loader,
-            ),
-            context,
-          ).catchError((Object _) {}),
-        );
-      }
+    final slide = widget.slides[(_current + 1) % _count];
+    final pixels =
+        ShowcaseLayout.width(MediaQuery.sizeOf(context), CardMetrics.gutter) *
+        MediaQuery.devicePixelRatioOf(context);
+    for (final url in [
+      _artOf(slide).first.url(api.paths, pixels),
+      if (slide.title.images.logo case final logo?) _logoUrl(api.paths, logo),
+    ]) {
+      if (!_primed.add(url)) continue;
+      unawaited(
+        precacheImage(ArtworkImage(url, loader), context, onError: (_, _) {}),
+      );
     }
   }
 
@@ -393,26 +376,29 @@ class _Card extends StatelessWidget {
   }
 }
 
-/// A title's picture: its backdrop, or a show's episode still, or a frame
-/// from the file, whole across the card with its top kept.
+/// A title's pictures, best first: its backdrop, or a show's episode still,
+/// or a frame from the file.
+List<PictureSource> _artOf(FeaturedTitle slide) => [
+  if (slide.title.images.backdrop case final backdrop?) ArtSource(backdrop),
+  if (slide.item.episode?.still case final still?) ArtSource(still),
+  FrameSource(slide.item.id),
+];
+
+/// Where a title's logo comes from, at the size the card draws it.
+Uri _logoUrl(Paths paths, Artwork logo) =>
+    paths.artwork(logo.id, size: ArtworkSize.medium);
+
+/// A title's picture, whole across the card with its top kept.
 class _Art extends StatelessWidget {
   const _Art({required this.slide});
 
   final FeaturedTitle slide;
 
   @override
-  Widget build(BuildContext context) {
-    final backdrop = slide.title.images.backdrop;
-    final still = slide.item.episode?.still;
-    return Tone(
-      toneKey: slide.title.name,
-      child: Picture([
-        if (backdrop != null) ArtSource(backdrop),
-        if (still != null) ArtSource(still),
-        FrameSource(slide.item.id),
-      ], alignment: Alignment.topCenter),
-    );
-  }
+  Widget build(BuildContext context) => Tone(
+    toneKey: slide.title.name,
+    child: Picture(_artOf(slide), alignment: Alignment.topCenter),
+  );
 }
 
 /// The shade up from the card's bottom: black at 94% there, eased to nothing
@@ -664,7 +650,7 @@ class _TitleMarkState extends ConsumerState<_TitleMark> {
 
   Widget _logo(MatineeApi api, Artwork logo) => Image(
     image: ArtworkImage(
-      api.paths.artwork(logo.id, size: ArtworkSize.medium),
+      _logoUrl(api.paths, logo),
       ref.watch(artworkLoaderProvider),
     ),
     fit: BoxFit.contain,
