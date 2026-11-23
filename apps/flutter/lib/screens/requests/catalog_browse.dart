@@ -1,5 +1,4 @@
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart' show TextInputAction;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,7 +10,7 @@ import '../../media/format.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
 import '../library/filter_sheet.dart'
-    show FilterChoiceChips, FilterSection, FilterToggleChips, RangeField;
+    show FilterSection, OptionRow, OptionSheet, RangeField;
 import '../library/list_words.dart';
 import '../library/title_grid.dart' show ListBarButton;
 import 'catalog_cards.dart';
@@ -535,22 +534,19 @@ class _FilterPanel extends ConsumerWidget {
           FilterSection(
             title: l.webDiscoverBrowseOnly,
             hint: l.webDiscoverBrowseOnlyHint,
-            child: FilterToggleChips(
+            child: MultiSelect(
               choices: [
-                (
+                MultiSelectChoice(
                   value: 'recommended',
                   label: l.webDiscoverBrowseRecommended,
-                  count: null,
                 ),
-                (
+                MultiSelectChoice(
                   value: 'upcoming',
                   label: l.webDiscoverBrowseUpcoming,
-                  count: null,
                 ),
-                (
+                MultiSelectChoice(
                   value: 'requestable',
                   label: l.webDiscoverBrowseRequestable,
-                  count: null,
                 ),
               ],
               value: [
@@ -568,15 +564,18 @@ class _FilterPanel extends ConsumerWidget {
                       picked.contains('requestable') ? true : null,
                 ),
               ),
+              placeholder: l.webDiscoverBrowseOnly,
+              label: l.webDiscoverBrowseOnly,
+              removeLabel: l.multiSelectRemove,
             ),
           ),
           if (options.genres.isNotEmpty)
             FilterSection(
               title: l.webFiltersGenres,
-              child: FilterToggleChips(
+              child: MultiSelect(
                 choices: [
                   for (final genre in options.genres)
-                    (value: '${genre.id}', label: genre.name, count: null),
+                    MultiSelectChoice(value: '${genre.id}', label: genre.name),
                 ],
                 value: [for (final id in filters.genres ?? <int>[]) '$id'],
                 onChanged: (picked) => onChange(
@@ -585,6 +584,10 @@ class _FilterPanel extends ConsumerWidget {
                     genres: [for (final id in picked) ?int.tryParse(id)],
                   ),
                 ),
+                placeholder: l.browseFindGenre,
+                label: l.webFiltersGenres,
+                empty: l.browseNoGenreMatch,
+                removeLabel: l.multiSelectRemove,
               ),
             ),
           RangeField(
@@ -624,75 +627,103 @@ class _FilterPanel extends ConsumerWidget {
               withFilters(filters, scoreMin: () => low, scoreMax: () => high),
             ),
           ),
-          if (options.votes.isNotEmpty)
-            FilterSection(
-              title: l.webDiscoverBrowseVotes,
-              hint: floor == null
-                  ? null
-                  : sort == CatalogSort.scoreHigh ||
-                        sort == CatalogSort.scoreLow
-                  ? l.webDiscoverBrowseFloorScore(formatCount(floor, l))
-                  : l.webDiscoverBrowseFloorList(formatCount(floor, l)),
-              child: FilterChoiceChips(
-                anyLabel: l.webFiltersAny,
-                choices: [
-                  for (final votes in options.votes)
-                    (
-                      value: '$votes',
-                      label: l.webDiscoverBrowseVotesStep(
+          if (options.votes.isNotEmpty ||
+              (ratings != null && ratings.ratings.isNotEmpty) ||
+              languages.isNotEmpty)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (options.votes.isNotEmpty)
+                  OptionRow(
+                    label: l.webDiscoverBrowseVotes,
+                    hint: floor == null
+                        ? null
+                        : sort == CatalogSort.scoreHigh ||
+                              sort == CatalogSort.scoreLow
+                        ? l.webDiscoverBrowseFloorScore(formatCount(floor, l))
+                        : l.webDiscoverBrowseFloorList(formatCount(floor, l)),
+                    value: switch (filters.votesMin) {
+                      final votes? => l.webDiscoverBrowseVotesStep(
                         formatCount(votes, l),
                       ),
-                      count: null,
-                    ),
-                ],
-                value: filters.votesMin?.toString(),
-                onChanged: (votes) => onChange(
-                  withFilters(
-                    filters,
-                    votesMin: () => votes == null ? null : int.tryParse(votes),
+                      null => l.webFiltersAny,
+                    },
+                    onPressed: () async {
+                      final picked = await OptionSheet.show(
+                        context,
+                        title: l.webDiscoverBrowseVotes,
+                        anyLabel: l.webFiltersAny,
+                        choices: [
+                          for (final votes in options.votes)
+                            (
+                              value: '$votes',
+                              label: l.webDiscoverBrowseVotesStep(
+                                formatCount(votes, l),
+                              ),
+                              count: null,
+                            ),
+                        ],
+                        value: filters.votesMin?.toString(),
+                      );
+                      if (picked == null) return;
+                      onChange(
+                        withFilters(
+                          filters,
+                          votesMin: () => picked.value == null
+                              ? null
+                              : int.tryParse(picked.value!),
+                        ),
+                      );
+                    },
                   ),
-                ),
-              ),
-            ),
-          if (ratings != null && ratings.ratings.isNotEmpty)
-            FilterSection(
-              title: l.webFiltersRating,
-              // The country's name needs the platform's words, which this
-              // app doesn't ask for yet; its code says which system it is.
-              hint: l.webFiltersRatingHint(ratings.country),
-              child: FilterChoiceChips(
-                anyLabel: l.webFiltersAny,
-                choices: [
-                  for (final rating in ratings.ratings)
-                    (value: rating, label: rating, count: null),
-                ],
-                value: filters.rating,
-                onChanged: (rating) =>
-                    onChange(withFilters(filters, rating: () => rating)),
-              ),
-            ),
-          if (languages.isNotEmpty)
-            FilterSection(
-              title: l.webFiltersLanguage,
-              child: MatineeButton(
-                look: ButtonLook.outline,
-                trailing: Lucide.chevronDown,
-                onPressed: () => _pickLanguage(
-                  context,
-                  languages,
-                  filters.language,
-                  (picked) =>
-                      onChange(withFilters(filters, language: () => picked)),
-                ),
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    language?.name ?? l.webFiltersAnyLanguage,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                if (ratings != null && ratings.ratings.isNotEmpty)
+                  OptionRow(
+                    label: l.webFiltersRating,
+                    // The country's name needs the platform's words, which
+                    // this app doesn't ask for yet; its code says which
+                    // system it is.
+                    hint: l.webFiltersRatingHint(ratings.country),
+                    value: filters.rating ?? l.webFiltersAny,
+                    onPressed: () async {
+                      final picked = await OptionSheet.show(
+                        context,
+                        title: l.webFiltersRating,
+                        anyLabel: l.webFiltersAny,
+                        choices: [
+                          for (final rating in ratings.ratings)
+                            (value: rating, label: rating, count: null),
+                        ],
+                        value: filters.rating,
+                      );
+                      if (picked == null) return;
+                      onChange(
+                        withFilters(filters, rating: () => picked.value),
+                      );
+                    },
                   ),
-                ),
-              ),
+                if (languages.isNotEmpty)
+                  OptionRow(
+                    label: l.webFiltersLanguage,
+                    value: language?.name ?? l.webFiltersAnyLanguage,
+                    onPressed: () async {
+                      final picked = await OptionSheet.show(
+                        context,
+                        title: l.webFiltersLanguage,
+                        anyLabel: l.webFiltersAnyLanguage,
+                        findPlaceholder: l.browseFindLanguage,
+                        choices: [
+                          for (final each in languages)
+                            (value: each.id, label: each.name, count: null),
+                        ],
+                        value: filters.language,
+                      );
+                      if (picked == null) return;
+                      onChange(
+                        withFilters(filters, language: () => picked.value),
+                      );
+                    },
+                  ),
+              ],
             ),
           RangeField(
             title: l.webFiltersRuntime,
@@ -716,103 +747,6 @@ class _FilterPanel extends ConsumerWidget {
                 runtimeMax: () => high?.round(),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The original language, in a sheet of its own with a field that finds
-/// one by name, Any language first.
-void _pickLanguage(
-  BuildContext context,
-  List<CatalogChoice> languages,
-  String? current,
-  ValueChanged<String?> onPick,
-) {
-  final l = AppLocalizations.of(context);
-  Sheet.show<void>(
-    context,
-    dismissLabel: l.commonCancel,
-    builder: (context) => _LanguageSheet(
-      languages: languages,
-      current: current,
-      onPick: (picked) {
-        Navigator.of(context).pop();
-        onPick(picked);
-      },
-    ),
-  ).ignore();
-}
-
-class _LanguageSheet extends StatefulWidget {
-  const _LanguageSheet({
-    required this.languages,
-    required this.current,
-    required this.onPick,
-  });
-
-  final List<CatalogChoice> languages;
-  final String? current;
-  final ValueChanged<String?> onPick;
-
-  @override
-  State<_LanguageSheet> createState() => _LanguageSheetState();
-}
-
-class _LanguageSheetState extends State<_LanguageSheet> {
-  final _query = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _query.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _query.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final query = _query.text.trim().toLowerCase();
-    final shown = [
-      for (final language in widget.languages)
-        if (query.isEmpty || language.name.toLowerCase().contains(query))
-          language,
-    ];
-    return Sheet(
-      title: l.webFiltersLanguage,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 8,
-        children: [
-          MatineeTextField(
-            controller: _query,
-            placeholder: l.browseFindLanguage,
-            leading: Lucide.search,
-            textInputAction: TextInputAction.search,
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (query.isEmpty)
-                RadioRow(
-                  label: l.webFiltersAnyLanguage,
-                  selected: widget.current == null,
-                  onPressed: () => widget.onPick(null),
-                ),
-              for (final language in shown)
-                RadioRow(
-                  label: language.name,
-                  selected: language.id == widget.current,
-                  onPressed: () => widget.onPick(language.id),
-                ),
-            ],
           ),
         ],
       ),

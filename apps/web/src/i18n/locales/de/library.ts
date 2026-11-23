@@ -19,8 +19,6 @@ export default {
     one: "Filter, {count} aktiv",
     other: "Filter, {count} aktiv",
   }),
-  "library.removeFilter": "Filter {name} entfernen",
-  "library.clearAll": "Alle entfernen",
   "library.filter": "Filtern",
   "library.sort": "Sortierung",
   "library.sortCurrent": "Sortierung: {sort}",

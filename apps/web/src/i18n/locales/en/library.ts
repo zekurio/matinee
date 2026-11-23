@@ -21,8 +21,6 @@ export default defineMessages("library", {
     one: "Filters, {count} on",
     other: "Filters, {count} on",
   }),
-  "library.removeFilter": "Remove filter {name}",
-  "library.clearAll": "Clear all",
   "library.filter": "Filter",
   "library.sort": "Sort",
   "library.sortCurrent": "Sort: {sort}",

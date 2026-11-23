@@ -27,7 +27,13 @@ height, with a gap of 30% of its width.
 | `wordmark.py`            | Draws the wordmark and writes the logo files                |
 | `render.sh`              | Runs it, then renders every PNG and the web icons           |
 
-`wordmark.py` also writes `apps/web/src/components/logo.gen.ts`, and
+`wordmark.py` also writes `apps/web/src/components/logo.gen.ts` and
+`apps/flutter/assets/fonts/unbounded_initials.ttf`, Unbounded Bold cut
+down to its capitals and digits for the initial on an avatar without a
+picture. That font's line box is one em with the capitals' middle in its
+middle, so the letter centers in its circle. Since the app ships it, it
+carries Unbounded's license (`apps/flutter/assets/licenses/unbounded-ofl.txt`).
+
 `pnpm logo:dart` copies `logo-light.svg` and `logo-dark.svg` into the
 Flutter app, whose Android build takes its launcher icon from
 `android/res`. `render.sh` renders the three app icon SVGs into the

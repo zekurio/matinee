@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,9 +43,10 @@ const _nearEnd = 8;
 /// The gap between cards, across and down.
 const _gap = 16.0;
 
-/// Cards in rows: one column on a phone, two on a tablet upright, three
-/// on its side. Every card of a list is as tall as the next, its poster
-/// setting it.
+/// Cards in rows: as many as the web's request grid fits at its least width,
+/// each filling its share, one on a phone and up to four across a big
+/// tablet. Every card of a list is as tall as the next, its poster setting
+/// it.
 class _CardRows extends StatelessWidget {
   const _CardRows({required this.itemCount, required this.itemBuilder});
 
@@ -58,7 +58,7 @@ class _CardRows extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
     sliver: SliverLayoutBuilder(
       builder: (context, constraints) {
-        final count = math.max(1, wideColumns(constraints.crossAxisExtent));
+        final count = requestColumns(constraints.crossAxisExtent);
         return SliverList.builder(
           itemCount: (itemCount + count - 1) ~/ count,
           itemBuilder: (context, row) => Padding(
