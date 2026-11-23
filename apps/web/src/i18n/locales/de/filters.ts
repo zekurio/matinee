@@ -20,7 +20,7 @@ export default {
   "filters.runtimeHint.movie": "Wie lang der Film ist",
   "filters.runtimeHint.show": "Wie lang eine Folge ist",
   "filters.runtimeHint.both": "Wie lang der Film oder eine Folge ist",
-  "filters.any": "Egal",
+  "filters.any": "Beliebig",
   "filters.anyYear": "Jedes Jahr",
   "filters.anyScore": "Jede Bewertung",
   "filters.anyLanguage": "Jede Sprache",

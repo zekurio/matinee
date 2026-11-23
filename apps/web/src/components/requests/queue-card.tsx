@@ -119,10 +119,7 @@ export function QueueCard({
         size="wide"
         tabIndex={focusable ? 0 : -1}
         onFocus={onFocusCard}
-        className={cn(
-          // The card J and K are on: a ring in the accent while focus is in it.
-          "focus-within:ring-ring/70 focus-visible:ring-ring focus-within:ring-1 focus-visible:ring-2",
-        )}
+        className="focus-visible:ring-ring focus-visible:ring-2"
         state={
           <RequestStateBadge
             state={state}
