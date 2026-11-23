@@ -304,10 +304,28 @@ class _Card extends StatelessWidget {
   final double buttonsBottom;
   final double wordsBottom;
 
+  /// How much of a title's art shows: the one coming fades in over the one
+  /// leaving, which stays whole underneath, so nothing dips through the
+  /// shade between them.
+  double _art(int index) =>
+      leaving == null || index != current ? 1 : fade.value;
+
+  /// How much of a title's words show: the leaving one's are gone by
+  /// halfway, so the two never read over each other, and the new one's come
+  /// in over the second half.
+  double _words(int index) {
+    if (leaving == null) return 1;
+    final t = fade.value;
+    return (index == current ? 2 * t - 1 : 1 - 2 * t).clamp(0, 1).toDouble();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    final slide = slides[current];
+    // Each is keyed by its place in the list, so a title keeps its own
+    // picture and logo as it goes from showing to leaving, and the one
+    // coming starts from its own placeholder, not the last title's art.
+    final showing = [?leaving, current];
     return DecoratedBox(
       position: DecorationPosition.foreground,
       decoration: BoxDecoration(
@@ -319,88 +337,57 @@ class _Card extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            _art(),
+            AnimatedBuilder(
+              animation: fade,
+              builder: (context, _) => Stack(
+                fit: StackFit.expand,
+                children: [
+                  for (final index in showing)
+                    Opacity(
+                      key: ValueKey(index),
+                      opacity: _art(index),
+                      child: _Art(slide: slides[index]),
+                    ),
+                ],
+              ),
+            ),
             DecoratedBox(decoration: BoxDecoration(gradient: _bottom)),
             DecoratedBox(decoration: BoxDecoration(gradient: _side)),
-            _words(),
+            PositionedDirectional(
+              start: ShowcaseLayout.padding,
+              bottom: wordsBottom,
+              width: wordsWidth,
+              child: AnimatedBuilder(
+                animation: fade,
+                builder: (context, _) => Stack(
+                  fit: StackFit.passthrough,
+                  alignment: AlignmentDirectional.bottomStart,
+                  children: [
+                    for (final index in showing)
+                      ExcludeSemantics(
+                        key: ValueKey(index),
+                        excluding: index != current,
+                        child: Opacity(
+                          opacity: _words(index),
+                          child: _SlideWords(
+                            slide: slides[index],
+                            width: wordsWidth,
+                            nameSize: nameSize,
+                            logoHeight: logoHeight,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
             PositionedDirectional(
               start: ShowcaseLayout.padding,
               bottom: buttonsBottom,
-              child: _Buttons(slide: slide),
+              child: _Buttons(slide: slides[current]),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  /// The art of the title showing, and over it the one coming, fading in:
-  /// the title leaving stays whole underneath, so nothing dips through the
-  /// shade between them.
-  Widget _art() {
-    final leaving = this.leaving;
-    return AnimatedBuilder(
-      animation: fade,
-      builder: (context, _) => Stack(
-        fit: StackFit.expand,
-        children: [
-          if (leaving != null) _Art(slide: slides[leaving]),
-          Opacity(
-            opacity: leaving == null ? 1 : fade.value,
-            child: _Art(slide: slides[current]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// The words of the title showing and of the one leaving: the leaving one
-  /// is gone by halfway, so the two never read over each other, and the new
-  /// one comes in over the second half.
-  Widget _words() {
-    final leaving = this.leaving;
-    return PositionedDirectional(
-      start: ShowcaseLayout.padding,
-      bottom: wordsBottom,
-      width: wordsWidth,
-      child: AnimatedBuilder(
-        animation: fade,
-        builder: (context, _) {
-          final t = fade.value;
-          final incoming = leaving == null
-              ? 1.0
-              : (2 * t - 1).clamp(0.0, 1.0).toDouble();
-          final outgoing = leaving == null
-              ? 0.0
-              : (1 - 2 * t).clamp(0.0, 1.0).toDouble();
-          return Stack(
-            fit: StackFit.passthrough,
-            alignment: AlignmentDirectional.bottomStart,
-            children: [
-              if (leaving != null)
-                ExcludeSemantics(
-                  child: Opacity(
-                    opacity: outgoing,
-                    child: _SlideWords(
-                      slide: slides[leaving],
-                      width: wordsWidth,
-                      nameSize: nameSize,
-                      logoHeight: logoHeight,
-                    ),
-                  ),
-                ),
-              Opacity(
-                opacity: incoming,
-                child: _SlideWords(
-                  slide: slides[current],
-                  width: wordsWidth,
-                  nameSize: nameSize,
-                  logoHeight: logoHeight,
-                ),
-              ),
-            ],
-          );
-        },
       ),
     );
   }
