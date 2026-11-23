@@ -12,7 +12,7 @@ class MatineeTheme extends ThemeExtension<MatineeTheme> {
   final KitColors? darkColors;
 
   /// The dark half of the theme [colors] belongs to, for what stays dark
-  /// in either scheme, like Home's banner over its art.
+  /// in either scheme, like a player's controls over its art.
   KitColors get dark => darkColors ?? (colors.isDark ? colors : matineeDark);
 
   static KitColors of(BuildContext context) {

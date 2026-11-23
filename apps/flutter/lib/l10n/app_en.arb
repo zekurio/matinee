@@ -1379,10 +1379,6 @@
   "@homeFailed": {
     "description": "strings_loading.xml"
   },
-  "homeFeaturedNext": "Next slide",
-  "@homeFeaturedNext": {
-    "description": "strings.xml"
-  },
   "homeFeaturedPosition": "{p1} of {p2}",
   "@homeFeaturedPosition": {
     "description": "strings.xml: TalkBack's word for where a card is in Home's featured carousel: its place, then how many there are.",
@@ -1391,19 +1387,6 @@
         "type": "int"
       },
       "p2": {
-        "type": "int"
-      }
-    }
-  },
-  "homeFeaturedPrevious": "Previous slide",
-  "@homeFeaturedPrevious": {
-    "description": "strings.xml: The buttons beside the featured banner's dots on a tablet, which move it a slide back or on."
-  },
-  "homeFeaturedShowSlide": "Show slide {p1}",
-  "@homeFeaturedShowSlide": {
-    "description": "strings.xml: TalkBack's name for one of the featured banner's dots on a tablet, which shows that slide.",
-    "placeholders": {
-      "p1": {
         "type": "int"
       }
     }

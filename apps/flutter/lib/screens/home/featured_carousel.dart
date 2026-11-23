@@ -13,12 +13,13 @@ import '../../media/blurhash.dart';
 import '../../router.dart';
 import 'home_layout.dart';
 
-/// The featured titles at the top of a phone's Home: a row of cards that swipes
-/// one at a time, each the title's backdrop under a dark shade with its genres
-/// and its name in white. A tap opens the title. It moves to the next card
-/// every five seconds, and back to the first after the last; not while a finger
-/// is on it, with animations off, with a screen reader on, or while Home is out
-/// of sight.
+/// The featured titles at the top of a phone's Home: a row of cards that
+/// swipes one at a time, each the title's backdrop under a dark shade with
+/// its genres and its name in white. A tap opens the title. A card runs from
+/// margin to margin, with the next one just off the screen. It moves to the
+/// next card every five seconds, and back to the first after the last; not
+/// while a finger is on it, with animations off, with a screen reader on, or
+/// while Home is out of sight.
 class FeaturedCarouselView extends StatefulWidget {
   const FeaturedCarouselView({super.key, required this.slides});
 
@@ -404,7 +405,7 @@ class _FeaturedCard extends StatelessWidget {
 }
 
 /// The carousel's place while the featured titles load: its card as it'll
-/// sit, and the next one's edge.
+/// sit.
 class FeaturedCarouselSkeleton extends StatelessWidget {
   const FeaturedCarouselSkeleton({super.key});
 
@@ -423,25 +424,12 @@ class FeaturedCarouselSkeleton extends StatelessWidget {
           final height = FeaturedCarousel.cardHeight(width, window.height);
           return SizedBox(
             height: height,
-            child: OverflowBox(
-              alignment: AlignmentDirectional.centerStart,
-              maxWidth: double.infinity,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.only(
-                  start: CardMetrics.gutter,
-                ),
-                child: Row(
-                  spacing: CardMetrics.gutter,
-                  children: [
-                    for (var i = 0; i < 2; i++)
-                      SkeletonBox(
-                        width: width,
-                        height: height,
-                        radius: KitRadius.xl,
-                        color: MatineeTheme.of(context).surface,
-                      ),
-                  ],
-                ),
+            child: Center(
+              child: SkeletonBox(
+                width: width,
+                height: height,
+                radius: KitRadius.xl,
+                color: MatineeTheme.of(context).surface,
               ),
             ),
           );

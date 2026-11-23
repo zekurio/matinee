@@ -39,7 +39,7 @@ class FocusedItem {
   final List<PictureSource> backdrop;
 }
 
-/// The art behind a file, best first, as the phone's banner has it.
+/// The art behind a file, best first, as Home's featured card has it.
 List<PictureSource> _backdropOf(MediaItem item, Artwork? backdrop) => [
   if (backdrop != null) ArtSource(backdrop, largest: ArtworkSize.large),
   if (item.episode?.still case final still?)

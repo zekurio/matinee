@@ -1,19 +1,16 @@
 import 'dart:math' as math;
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/width_class.dart';
+import '../../kit/kit.dart';
 
 /// The rules Home lays itself out and moves by. Lengths are logical pixels.
 
-/// How wide Home's box is before it opens with the banner rather than the
-/// cards: a tablet's.
-const bannerFromWidth = 600.0;
-
-bool opensWithBanner(double width) => width >= bannerFromWidth;
-
-/// The phone's featured cards: one to a row from margin to margin, with a
-/// gutter between, so the next card sits just off the screen.
+/// Home's featured cards on a phone: one to a row from margin to margin, so
+/// the next card sits just off the screen.
 abstract final class FeaturedCarousel {
   /// How long a card stays before the carousel moves on.
   static const advance = Duration(seconds: 5);
@@ -45,108 +42,133 @@ abstract final class FeaturedCarousel {
       (height - posterInset * 2) * 2 / 3 + posterInset;
 }
 
-/// The banner's slides, as its repeating pages.
-abstract final class HeroPaging {
-  /// How many times over the pages repeat, so it can keep going forward.
-  static const loops = 1000;
-
-  /// How long a slide stays: the web's 8 seconds.
+/// Home's featured titles on a tablet: one tall card, inset from the page by
+/// the same gutter the rows under it start at, showing one title at a time.
+/// [shows] picks it over the phone's cards by the window's shorter side, so a
+/// phone on its side keeps the phone's cards.
+abstract final class ShowcaseLayout {
+  /// How long a title stays before the next one takes its place: the web's
+  /// eight seconds.
   static const advance = Duration(seconds: 8);
 
-  static int pages(int count) => count > 1 ? count * loops : count;
+  /// How long the art and the words take to cross over to the next title.
+  static const fade = Duration(milliseconds: 450);
 
-  /// The middle of the repeats, so it can go either way.
-  static int initialPage(int count) => count > 1 ? count * (loops ~/ 2) : 0;
+  /// The card's share of a landscape window's height, which leaves the next
+  /// row's heading and the top of its cards showing under it.
+  static const landscapeShare = .58;
 
-  /// The slide [page] shows.
-  static int slide(int page, int count) =>
-      count > 0 ? ((page % count) + count) % count : 0;
+  /// The most of a portrait window's height the card takes, for a window only
+  /// just taller than it is wide.
+  static const portraitCap = .52;
 
-  /// The page nearest [from] that shows slide [showing], for a dot's tap.
-  static int page(int showing, int from, int count) =>
-      from - slide(from, count) + showing;
-}
+  /// The card's padding inside its edge, and the gap over its buttons.
+  static const padding = 32.0;
+  static const buttonGap = 16.0;
 
-enum HeroSize {
-  /// A tablet's: buttons well up from the bottom, the dots under them.
-  medium,
+  /// The most of the card's width its words take, and their widest on a
+  /// desktop.
+  static const wordsShare = .5;
+  static const wordsMax = 640.0;
 
-  /// A desktop's, from 1024 wide: the buttons near the bottom, the dots
-  /// level with them.
-  large,
+  /// The logo's widest, and its room above the facts.
+  static const logoMax = 420.0;
 
-  /// Under 540 tall: everything low, no genres.
-  short,
-}
+  /// Whether Home opens with the showcase: a window whose shorter side isn't
+  /// a phone's. A phone on its side keeps the phone's cards.
+  static bool shows(Size window) =>
+      !WidthClass.of(math.min(window.width, window.height)).isCompact;
 
-/// Where the banner puts things in a box [width] by [windowHeight], after
-/// the web's breakpoints. [rowsBelow]: Continue watching or Next up follow
-/// it (or may, while they load), which on a desktop-sized box keeps it
-/// short enough for them to start on the first screen.
-final class HeroLayout {
-  HeroLayout(this.width, this.windowHeight, {required this.rowsBelow});
+  /// The card's width in [window], with [gutter] on either side.
+  static double width(Size window, double gutter) =>
+      math.max(window.width - 2 * gutter, 0);
 
-  final double width;
-  final double windowHeight;
-  final bool rowsBelow;
+  /// The card's height in [window] with [gutter] on either side, before its
+  /// words have a say: roughly 58% of a landscape window, so the row under
+  /// it still starts on screen, and 16:9 of its width in portrait.
+  static double baseHeight(Size window, double gutter) {
+    final card = width(window, gutter);
+    if (window.width > window.height) return window.height * landscapeShare;
+    return math.min(card * 9 / 16, window.height * portraitCap);
+  }
 
-  late final HeroSize size = width >= 1024
-      ? HeroSize.large
-      : windowHeight <= 540
-      ? HeroSize.short
-      : HeroSize.medium;
+  /// The card's height at [scaler]'s text size. It starts at [baseHeight]
+  /// and grows for three lines of overview, in portrait up to
+  /// [portraitCap] of the window, which leaves the rows plenty of room. In
+  /// landscape it keeps its share, so the row under it still starts on
+  /// screen, and a short card shows fewer lines of overview, or none (see
+  /// [overviewLines]). It grows past either only when large text needs it
+  /// to show the rest of its words. The card's place while it loads takes
+  /// the same, so the page doesn't jump.
+  static double height(Size window, double gutter, TextScaler scaler) {
+    final base = baseHeight(window, gutter);
+    double needs(int overview) =>
+        padding + wordsRoom(base, scaler, overview: overview) + wordsBottom;
+    final most = window.width > window.height
+        ? base
+        : math.max(base, window.height * portraitCap);
+    return math.max(math.max(base, math.min(needs(3), most)), needs(0));
+  }
 
-  late final double height = switch (size) {
-    HeroSize.large when rowsBelow => math.max(
-      360,
-      math.min(windowHeight * .64, width * .4),
-    ),
-    HeroSize.short => windowHeight,
-    _ => math.max(math.min(windowHeight * .68, 720), 480),
-  };
+  /// How many of the overview's three lines fit the card at [height].
+  static int overviewLines(Size window, double gutter, TextScaler scaler) {
+    final base = baseHeight(window, gutter);
+    final room =
+        height(window, gutter, scaler) -
+        padding -
+        wordsRoom(base, scaler, overview: 0) -
+        wordsBottom;
+    final line =
+        scaler.scale(KitText.sm.size) * overviewLeading / KitText.sm.size;
+    return ((room - overviewGap) / line).floor().clamp(0, 3);
+  }
 
-  /// From the bottom to the buttons' bottom edge.
-  double get buttonsBottom => switch (size) {
-    HeroSize.large => 32,
-    HeroSize.short => 48,
-    HeroSize.medium => 112,
-  };
+  /// How far above the card's bottom its words end: over the buttons, the
+  /// kit's large ones, and the gap over them.
+  static final wordsBottom = padding + ButtonSize.lg.height + buttonGap;
 
-  /// Between the buttons and the slide's text above them.
-  double get textGap => size == HeroSize.short ? 16 : 24;
+  /// The tallest the words can be in a card [baseHeight] tall at [scaler]'s
+  /// text size, with [overview] lines of overview: every line a title may
+  /// show, and the logo's room.
+  static double wordsRoom(
+    double baseHeight,
+    TextScaler scaler, {
+    int overview = 3,
+  }) {
+    double lines(int count, double size, double lineHeight) =>
+        count * scaler.scale(size) * lineHeight / size;
+    final name = titleSize(baseHeight);
+    return math.max(logoHeight(baseHeight), lines(2, name, 1.1 * name)) +
+        12 +
+        // Two runs of facts, since a narrow card wraps the rating under them.
+        lines(2, KitText.base.size, KitText.base.lineHeight) +
+        6 +
+        8 +
+        lines(1, KitText.sm.size, KitText.sm.lineHeight) +
+        (overview > 0
+            ? overviewGap + lines(overview, KitText.sm.size, overviewLeading)
+            : 0) +
+        16 +
+        lines(1, KitText.xs.size, KitText.xs.lineHeight);
+  }
 
-  /// From the bottom to the dots, where they aren't level with the buttons.
-  double get dotsBottom => size == HeroSize.short ? 12 : 48;
+  /// The gap over the overview.
+  static const overviewGap = 10.0;
 
-  bool get dotsBesideButtons => size == HeroSize.large;
+  /// The overview's line height, roomier than the text size's own.
+  static const overviewLeading = 24.0;
 
-  bool get showsOverview => switch (size) {
-    HeroSize.large => windowHeight > 880,
-    HeroSize.short => false,
-    HeroSize.medium => windowHeight > 700,
-  };
+  /// How wide the words in the card run: no more than half of it.
+  static double wordsWidth(double cardWidth) =>
+      math.min(cardWidth * wordsShare, wordsMax);
 
-  bool get showsGenres => size != HeroSize.short;
+  /// The logo's room in a card [baseHeight] tall.
+  static double logoHeight(double baseHeight) =>
+      (baseHeight * .21).clamp(56, 112).toDouble();
 
-  /// `clamp(2.25rem, 7vh, 3rem)` on a tablet, `clamp(3rem, 5.5vh, 4.5rem)`
-  /// on a desktop.
-  double get titleSize => size == HeroSize.large
-      ? (windowHeight * .055).clamp(48, 72)
-      : (windowHeight * .07).clamp(36, 48);
-}
-
-/// Whether Continue watching or Next up follow the banner: either has
-/// titles, or still loads, as the web's fold assumes they'll come.
-bool rowsFollowBanner(
-  AsyncValue<List<MediaItem>> resume,
-  AsyncValue<List<MediaItem>> nextUp,
-) {
-  bool coming(AsyncValue<List<MediaItem>> load) => switch (load) {
-    AsyncData(:final value) => value.isNotEmpty,
-    AsyncError() => false,
-    _ => true,
-  };
-  return coming(resume) || coming(nextUp);
+  /// A title's name in a card [baseHeight] tall, when it has no logo.
+  static double titleSize(double baseHeight) =>
+      (baseHeight * .09).clamp(28, 52).toDouble();
 }
 
 /// Home is one error page only when nothing on it could show: the

@@ -31,7 +31,7 @@ import {
 const facts = (...values: (string | null | undefined)[]): string[] =>
   values.filter((value): value is string => Boolean(value))
 
-/** The art behind a file, best first, as the phone's banner has it. */
+/** The art behind a file, best first, as Home's featured card has it. */
 function backdropOf(
   item: MediaItem,
   title: TitleSummary | null,

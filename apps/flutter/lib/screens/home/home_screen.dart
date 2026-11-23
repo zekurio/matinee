@@ -14,17 +14,16 @@ import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
 import 'featured_carousel.dart';
-import 'home_banner.dart';
 import 'home_data.dart';
 import 'home_layout.dart';
+import 'home_showcase.dart';
 import 'offline_home.dart';
 
-/// The Home tab: the featured titles on top, as cards on a phone and the web's
-/// banner on a tablet, then Continue watching, Next up, the recommendation
-/// rows, and each library's newest titles. A row that's loading or has
-/// nothing is left out, and so is one that failed; Home is an error only
-/// when nothing on it could show. [links] are debug tools that have no
-/// screen yet.
+/// The Home tab: the featured titles on top, as cards on a phone and one big
+/// card on a tablet, then Continue watching, Next up, the recommendation rows,
+/// and each library's newest titles. A row that's loading or has nothing is
+/// left out, and so is one that failed; Home is an error only when nothing on
+/// it could show. [links] are debug tools that have no screen yet.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, this.links = const []});
 
@@ -126,41 +125,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
     } else {
-      body = LayoutBuilder(
-        builder: (context, constraints) {
-          final box = constraints.biggest;
-          final libs = libraries.value;
-          final sections = <Widget>[
-            _top(box, featured, resume, nextUp),
-            if (libs != null && libs.isEmpty)
-              const _NoLibraries()
-            else ...[
-              if (_rail(resume.value) case final items?)
-                _EpisodeRail(title: l.browseContinueWatching, items: items),
-              if (_rail(nextUp.value) case final items?)
-                _EpisodeRail(title: l.browseNextUp, items: items),
-              for (final rail
-                  in recommendations.value?.rails ??
-                      const <HomeRecommendationRail>[])
-                if (rail.items.isNotEmpty) _RecommendationRail(rail: rail),
-              if (libs == null && libraries.isLoading)
-                RailSkeleton(
-                  label: l.loadingInProgress,
-                  itemWidth: railCardSize(context, RailArt.poster).width,
-                  aspectRatio: CardMetrics.poster,
-                ),
-              for (final library in libs ?? const <Library>[])
-                if (!_shelfFailed(library)) _LibraryShelf(library: library),
-            ],
-            if (widget.links.isNotEmpty) _Links(links: widget.links),
-          ];
-          return ListView.separated(
-            padding: const EdgeInsets.only(bottom: 24),
-            itemCount: sections.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 24),
-            itemBuilder: (context, index) => sections[index],
-          );
-        },
+      final libs = libraries.value;
+      final sections = <Widget>[
+        _top(featured),
+        if (libs != null && libs.isEmpty)
+          const _NoLibraries()
+        else ...[
+          if (_rail(resume.value) case final items?)
+            _EpisodeRail(title: l.browseContinueWatching, items: items),
+          if (_rail(nextUp.value) case final items?)
+            _EpisodeRail(title: l.browseNextUp, items: items),
+          for (final rail
+              in recommendations.value?.rails ??
+                  const <HomeRecommendationRail>[])
+            if (rail.items.isNotEmpty) _RecommendationRail(rail: rail),
+          if (libs == null && libraries.isLoading)
+            RailSkeleton(
+              label: l.loadingInProgress,
+              itemWidth: railCardSize(context, RailArt.poster).width,
+              aspectRatio: CardMetrics.poster,
+            ),
+          for (final library in libs ?? const <Library>[])
+            if (!_shelfFailed(library)) _LibraryShelf(library: library),
+        ],
+        if (widget.links.isNotEmpty) _Links(links: widget.links),
+      ];
+      body = ListView.separated(
+        padding: const EdgeInsets.only(bottom: 24),
+        itemCount: sections.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 24),
+        itemBuilder: (context, index) => sections[index],
       );
     }
     return ReturnWatcher(
@@ -177,35 +171,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return shelf.hasError && !shelf.hasValue;
   }
 
-  /// The banner over a tablet's Home, the cards under a phone's header; or
-  /// nothing, when there are no featured titles or they failed.
-  Widget _top(
-    Size box,
-    AsyncValue<List<FeaturedTitle>> featured,
-    AsyncValue<List<MediaItem>> resume,
-    AsyncValue<List<MediaItem>> nextUp,
-  ) {
-    final banner = opensWithBanner(box.width);
-    final rowsBelow = rowsFollowBanner(resume, nextUp);
+  /// The featured titles over Home; or nothing, when there are none or they
+  /// failed.
+  Widget _top(AsyncValue<List<FeaturedTitle>> featured) {
     final slides = featured.value;
+    final showcase = ShowcaseLayout.shows(MediaQuery.sizeOf(context));
     if (slides == null) {
       if (featured.hasError) return const SizedBox.shrink();
-      return banner
-          ? HomeBannerSkeleton(box: box, rowsBelow: rowsBelow)
-          : const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: FeaturedCarouselSkeleton(),
-            );
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: showcase
+            ? const HomeShowcaseSkeleton()
+            : const FeaturedCarouselSkeleton(),
+      );
     }
     if (slides.isEmpty) return const SizedBox.shrink();
     // Other titles start it at the first again.
     final key = ValueKey(Object.hashAll([for (final s in slides) s.title.id]));
-    return banner
-        ? HomeBanner(key: key, slides: slides, box: box, rowsBelow: rowsBelow)
-        : Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: FeaturedCarouselView(key: key, slides: slides),
-          );
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: showcase
+          ? HomeShowcase(key: key, slides: slides)
+          : FeaturedCarouselView(key: key, slides: slides),
+    );
   }
 
   /// Continue watching or Next up, once it has something. Loading and
