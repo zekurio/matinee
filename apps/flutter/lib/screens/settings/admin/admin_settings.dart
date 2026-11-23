@@ -13,6 +13,7 @@ import 'authentication_page.dart';
 import 'branding_page.dart';
 import 'jobs_page.dart';
 import 'libraries_page.dart';
+import 'network_page.dart';
 import 'transcoding_page.dart';
 import 'trickplay_page.dart';
 import 'users_page.dart';
@@ -59,6 +60,14 @@ enum AdminCategory {
     Lucide.listChecks,
     needsAll: [Permission.jobRead, Permission.jobUpdate],
   ),
+  network(
+    'network',
+    Lucide.network,
+    needsAll: [
+      Permission.networkSettingsRead,
+      Permission.networkSettingsUpdate,
+    ],
+  ),
   branding(
     'branding',
     Lucide.paintbrush,
@@ -101,6 +110,7 @@ enum AdminCategory {
     transcoding => l.settingsAdminTranscoding,
     trickplay => l.settingsAdminTrickplay,
     jobs => l.settingsAdminJobs,
+    network => l.settingsAdminNetwork,
     branding => l.settingsAdminBranding,
   };
 
@@ -114,6 +124,7 @@ enum AdminCategory {
       transcoding => const TranscodingPage(),
       trickplay => const TrickplayPage(),
       jobs => const JobsPage(),
+      network => const NetworkPage(),
       branding => const BrandingPage(),
     },
   );

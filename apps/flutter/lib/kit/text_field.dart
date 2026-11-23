@@ -20,6 +20,7 @@ class MatineeTextField extends StatefulWidget {
     this.obscureText = false,
     this.autocorrect = true,
     this.keyboardType,
+    this.maxLines = 1,
     this.textInputAction,
     this.autofillHints,
     this.inputFormatters,
@@ -41,6 +42,7 @@ class MatineeTextField extends StatefulWidget {
   /// address, a path, a claim's name, or a code.
   final bool autocorrect;
   final TextInputType? keyboardType;
+  final int maxLines;
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
 
@@ -108,6 +110,8 @@ class _MatineeTextFieldState extends State<MatineeTextField> {
                   padding: EdgeInsetsDirectional.only(
                     start: widget.leading == null ? 12 : 10,
                     end: widget.trailing == null ? 12 : 4,
+                    top: widget.maxLines > 1 ? 8 : 0,
+                    bottom: widget.maxLines > 1 ? 8 : 0,
                   ),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 44),
@@ -131,7 +135,13 @@ class _MatineeTextFieldState extends State<MatineeTextField> {
                                 obscureText: widget.obscureText,
                                 autocorrect: widget.autocorrect,
                                 enableSuggestions: widget.autocorrect,
-                                keyboardType: widget.keyboardType,
+                                keyboardType:
+                                    widget.keyboardType ??
+                                    (widget.maxLines > 1
+                                        ? TextInputType.multiline
+                                        : null),
+                                maxLines: widget.maxLines,
+                                minLines: widget.maxLines > 1 ? 2 : null,
                                 textInputAction: widget.textInputAction,
                                 autofillHints: widget.autofillHints,
                                 inputFormatters: widget.inputFormatters,

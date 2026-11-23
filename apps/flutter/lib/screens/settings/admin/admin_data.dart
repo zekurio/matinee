@@ -31,6 +31,7 @@ final transcodingProvider = serverQuery((api) => api.admin.transcoding.get());
 final trickplayProvider = serverQuery((api) => api.admin.trickplay.get());
 final authSettingsProvider = serverQuery((api) => api.admin.auth.get());
 final brandingProvider = serverQuery((api) => api.admin.branding.get());
+final networkProvider = serverQuery((api) => api.admin.network.get());
 
 /// Whether a library is busy: the page asks again while one is.
 bool libraryBusy(Library library) => library.scanning || library.refreshing;

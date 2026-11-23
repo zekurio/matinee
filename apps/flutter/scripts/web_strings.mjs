@@ -18,6 +18,7 @@ const areas = [
   "jobs",
   "libraries",
   "metadata",
+  "network",
   "oidc",
   "requests",
   "server",
