@@ -47,7 +47,7 @@ class ShellTopBar extends ConsumerWidget {
       3 => TabHeader(
         title: words.tabExplore,
         actions: [
-          HeaderButton(
+          PageBarButton(
             icon: Lucide.search,
             label: words.searchTitle,
             onPressed: () => context.push(Routes.search),
@@ -58,7 +58,7 @@ class ShellTopBar extends ConsumerWidget {
         title: words.downloadsTitle,
         actions: [
           if (offline)
-            HeaderButton(
+            PageBarButton(
               icon: Lucide.search,
               label: words.searchTitle,
               onPressed: () => context.push(Routes.search),

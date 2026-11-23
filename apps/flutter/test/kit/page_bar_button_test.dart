@@ -2,9 +2,8 @@ import 'package:flutter/material.dart' show MaterialApp;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/kit/kit.dart';
-import 'package:matinee/screens/library/title_grid.dart';
 
-/// A filter button in a heading, at [count] filters on and [textScale].
+/// A filter button in a bar, at [count] filters on and [textScale].
 Future<void> _pump(
   WidgetTester tester, {
   required int count,
@@ -16,7 +15,7 @@ Future<void> _pump(
       home: MediaQuery(
         data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
         child: Center(
-          child: ListBarButton(
+          child: PageBarButton(
             icon: Lucide.listFilter,
             label: count > 0 ? '$count filters on' : 'Filter',
             count: count,

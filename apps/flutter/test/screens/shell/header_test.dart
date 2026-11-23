@@ -15,7 +15,6 @@ import 'package:matinee/media/avatar.dart';
 import 'package:matinee/router.dart';
 import 'package:matinee/screens/library/library_screen.dart';
 import 'package:matinee/screens/library/list_choices.dart';
-import 'package:matinee/screens/library/title_grid.dart';
 import 'package:matinee/screens/shell/header.dart';
 import 'package:matinee/screens/shell/shell.dart';
 
@@ -211,7 +210,6 @@ void main() {
     expect(_buttonStarting('Sort: '), findsOneWidget);
     expect(_button('Search'), findsOneWidget);
     expect(_button('Profile'), findsOneWidget);
-    expect(find.byType(ListBarButton), findsNothing);
     expect(find.text('0 titles'), findsNothing);
 
     // Filter, then Sort, Search, and the avatar at the edge, all in the

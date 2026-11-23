@@ -2,7 +2,6 @@ import 'package:flutter/material.dart' show MaterialApp;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:matinee/kit/kit.dart';
-import 'package:matinee/screens/shell/header.dart';
 
 /// [child] on the kit's dark theme, as a screen shows it.
 Widget _app(Widget child) => MaterialApp(
@@ -13,15 +12,16 @@ Widget _app(Widget child) => MaterialApp(
 );
 
 void main() {
-  testWidgets('a header button is 48 square, a phone thumb target', (
+  testWidgets('a bar button is a 24 icon in 48 square, a thumb\'s target', (
     tester,
   ) async {
     await tester.pumpWidget(
       _app(
-        HeaderButton(icon: Lucide.search, label: 'Search', onPressed: () {}),
+        PageBarButton(icon: Lucide.search, label: 'Search', onPressed: () {}),
       ),
     );
-    expect(tester.getSize(find.byType(HeaderButton)), const Size(48, 48));
+    expect(tester.getSize(find.byType(PageBarButton)), const Size(48, 48));
+    expect(tester.getSize(find.byType(KitIcon)), const Size(24, 24));
   });
 
   testWidgets('the switch track is 52 by 32 with a 48 tall target', (

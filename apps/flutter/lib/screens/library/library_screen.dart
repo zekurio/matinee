@@ -146,7 +146,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             TabHeader(
               title: l.tabMedia,
               actions: [
-                HeaderButton(
+                PageBarButton(
                   icon: Lucide.search,
                   label: l.searchTitle,
                   onPressed: () => context.push(Routes.search),
@@ -204,14 +204,9 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             TabHeader(
               title: l.tabMedia,
               actions: [
-                FilterButton(list: list, scope: scope, header: true),
-                SortButton(
-                  list: list,
-                  current: order,
-                  offered: options?.sorts,
-                  header: true,
-                ),
-                HeaderButton(
+                FilterButton(list: list, scope: scope),
+                SortButton(list: list, current: order, offered: options?.sorts),
+                PageBarButton(
                   icon: Lucide.search,
                   label: l.searchTitle,
                   onPressed: () => context.push(Routes.search),
