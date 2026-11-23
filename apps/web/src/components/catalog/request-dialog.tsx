@@ -8,9 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@matinee/ui/components/dialog"
-import { Switch } from "@matinee/ui/components/switch"
 import { cn } from "@matinee/ui/lib/utils"
-import { useId, useState } from "react"
+import { useState } from "react"
 
 import { Picture, tone } from "@/components/media-item"
 import { tr } from "@/i18n"
@@ -23,9 +22,9 @@ import { asks, seasonDetail, stateWord } from "./words"
 /**
  * Where a request that needs a decision is made: a show's seasons, each
  * the viewer may still request with a box and the server's pick already
- * ticked, the rest with their state, and on a first request "New seasons
- * as they air". Where it lands is the server's call, as in Seerr: an admin
- * moves a request from the queue.
+ * ticked, the rest with their state. Only seasons that are out can be
+ * asked for; a new one is asked for once it airs. Where it lands is the
+ * server's call, as in Seerr: an admin moves a request from the queue.
  */
 export function RequestDialog({
   open,
@@ -34,7 +33,6 @@ export function RequestDialog({
   name,
   seasons,
   first,
-  defaultFuture,
   libraryId,
 }: {
   open: boolean
@@ -45,8 +43,6 @@ export function RequestDialog({
   seasons: CatalogSeasonEntry[]
   /** Nothing is requested for this title yet. */
   first: boolean
-  /** Whether the server's default takes new seasons as they air. */
-  defaultFuture: boolean
   libraryId?: string
 }) {
   return (
@@ -63,7 +59,6 @@ export function RequestDialog({
           name={name}
           seasons={seasons}
           first={first}
-          defaultFuture={defaultFuture}
           libraryId={libraryId}
           onDone={() => onOpenChange(false)}
         />
@@ -78,7 +73,6 @@ function RequestForm({
   name,
   seasons,
   first,
-  defaultFuture,
   libraryId,
   onDone,
 }: {
@@ -86,7 +80,6 @@ function RequestForm({
   name: string
   seasons: CatalogSeasonEntry[]
   first: boolean
-  defaultFuture: boolean
   libraryId?: string
   onDone: () => void
 }) {
@@ -100,8 +93,6 @@ function RequestForm({
           .map((season) => season.number),
       ),
   )
-  const [future, setFuture] = useState(first && defaultFuture)
-  const futureId = useId()
   const toggle = (number: number, on: boolean) =>
     setPicked((prev) => {
       const next = new Set(prev)
@@ -113,7 +104,7 @@ function RequestForm({
   const chosen = seasons
     .filter((season) => picked.has(season.number))
     .map((season) => season.number)
-  const nothing = show && chosen.length === 0 && !(future && first)
+  const nothing = show && chosen.length === 0
 
   const submit = () =>
     ask.mutate(
@@ -121,7 +112,7 @@ function RequestForm({
         ref: titleRef,
         name,
         libraryId,
-        scope: show ? { seasons: chosen, future: future && first } : undefined,
+        scope: show ? { seasons: chosen } : undefined,
         undo: first,
       },
       { onSuccess: onDone },
@@ -193,30 +184,19 @@ function RequestForm({
         </div>
       )}
 
-      {show && first && (
-        <div className="flex min-h-9 items-center justify-between gap-3">
-          <label htmlFor={futureId} className="min-w-0 flex-1 cursor-pointer">
-            {tr("ask.chooser.future")}
-          </label>
-          <Switch id={futureId} checked={future} onCheckedChange={setFuture} />
-        </div>
-      )}
-
       <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
         <Button disabled={nothing || ask.isPending} onClick={submit}>
-          {show ? submitLabel(chosen, future && first) : tr("ask.ask")}
+          {show ? submitLabel(chosen) : tr("ask.ask")}
         </Button>
       </DialogFooter>
     </>
   )
 }
 
-/** "Request 3 seasons", "Request season 4", "Request new seasons", and so on. */
-function submitLabel(numbers: number[], future: boolean): string {
+/** "Request 3 seasons", "Request season 4", and so on. */
+function submitLabel(numbers: number[]): string {
   const [only] = numbers
-  if (numbers.length === 0) {
-    return future ? tr("ask.chooser.newOnly") : tr("ask.chooser.none")
-  }
+  if (numbers.length === 0) return tr("ask.chooser.none")
   if (numbers.length === 1 && only !== undefined) {
     return only === 0
       ? tr("ask.chooser.specials")

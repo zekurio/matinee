@@ -16,7 +16,6 @@ export default defineMessages("ask", {
   // The request dialog, for a show's seasons or a choice of library.
   "ask.dialog.title": "Request {name}",
   "ask.chooser.seasons": "Seasons",
-  "ask.chooser.future": "New seasons as they air",
   "ask.chooser.unavailable": "Not offered",
   "ask.chooser.none": "Pick a season",
   "ask.chooser.one": "Request season {number}",
@@ -25,7 +24,6 @@ export default defineMessages("ask", {
     other: "Request {count} seasons",
   }),
   "ask.chooser.specials": "Request the specials",
-  "ask.chooser.newOnly": "Request new seasons",
 
   // In the tooltip of the Request button, read aloud with it too: for
   // someone who requested or follows a declined title, the admin's

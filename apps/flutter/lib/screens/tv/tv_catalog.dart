@@ -225,7 +225,7 @@ Future<void> showTvNotInterested(
 /// Where a show is asked for on a TV, as the phone's request sheet: each
 /// season the viewer may still request with a box, the server's pick
 /// ticked (or only [only], from a season's card), the rest with their
-/// state; on a [first] request "New seasons as they air"; and a button
+/// state; and a button
 /// that says what pressing it requests. Focus starts on the first season
 /// with a box. It closes once the server took the ask.
 Future<void> showTvAsk(
@@ -234,7 +234,6 @@ Future<void> showTvAsk(
   required String name,
   required List<CatalogSeason> seasons,
   required bool first,
-  required bool defaultFuture,
   required String? libraryId,
   int? only,
 }) {
@@ -252,7 +251,6 @@ Future<void> showTvAsk(
         name: name,
         seasons: seasons,
         first: first,
-        defaultFuture: defaultFuture,
         libraryId: libraryId,
         only: only,
       ),
@@ -266,7 +264,6 @@ class _AskBody extends ConsumerStatefulWidget {
     required this.name,
     required this.seasons,
     required this.first,
-    required this.defaultFuture,
     required this.libraryId,
     required this.only,
   });
@@ -275,7 +272,6 @@ class _AskBody extends ConsumerStatefulWidget {
   final String name;
   final List<CatalogSeason> seasons;
   final bool first;
-  final bool defaultFuture;
   final String? libraryId;
   final int? only;
 
@@ -286,8 +282,6 @@ class _AskBody extends ConsumerStatefulWidget {
 class _AskBodyState extends ConsumerState<_AskBody> {
   // Each opening starts from the server's pick.
   late Set<int> _picked = chooserStart(widget.seasons, only: widget.only);
-  late bool _future =
-      widget.first && widget.defaultFuture && widget.only == null;
 
   void _toggle(int number) => setState(
     () => _picked = _picked.contains(number)
@@ -306,9 +300,8 @@ class _AskBodyState extends ConsumerState<_AskBody> {
             widget.title,
             widget.name,
             libraryId: widget.libraryId,
-            scope: ShowScope(
+            scope: AskScope(
               seasons: [for (final season in chosen) season.number],
-              future: _future && widget.first,
             ),
             // The panel asked; the toast only says it.
             undo: false,
@@ -331,7 +324,7 @@ class _AskBodyState extends ConsumerState<_AskBody> {
       for (final season in seasons)
         if (_picked.contains(season.number)) season,
     ];
-    final label = chooserLabel(chosen, future: _future, first: widget.first);
+    final label = chooserLabel(chosen);
     final busy = ref.watch(
       requestsProvider.select((state) => state.busy.contains(refKey(title))),
     );
@@ -347,15 +340,6 @@ class _AskBodyState extends ConsumerState<_AskBody> {
       spacing: 4,
       children: [
         for (final season in seasons) _seasonRow(l, season, start),
-        if (widget.first)
-          TvListItem(
-            title: l.webAskChooserFuture,
-            // "Neue Staffeln, sobald sie laufen" beside the switch.
-            titleLines: 2,
-            quiet: true,
-            trailing: TvListSwitch(checked: _future),
-            onPressed: () => setState(() => _future = !_future),
-          ),
         const SizedBox(height: 12),
         TvListItem(
           title: chooserText(label, l),
@@ -532,7 +516,6 @@ class _CatalogPageState extends ConsumerState<_CatalogPage> {
         name: detail.name,
         seasons: seasons,
         first: availability.asks,
-        defaultFuture: detail.defaultScope?.future ?? false,
         libraryId: destination?.id,
         only: only,
       ),
