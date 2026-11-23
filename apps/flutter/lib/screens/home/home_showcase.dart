@@ -22,8 +22,9 @@ import 'home_layout.dart';
 /// its name, its facts, its genres, its overview, how far the person is, and
 /// Play and Details. A swipe changes the title in place, the art crossing
 /// over while Play and Details stay put; it moves on every eight seconds, and
-/// not while a finger is on it, with animations off, with a screen reader on,
-/// or while Home is out of sight.
+/// not while a finger is on it, a pointer is over it, or the keyboard's focus
+/// is in it, with animations off, with a screen reader on, or while Home is
+/// out of sight.
 class HomeShowcase extends ConsumerStatefulWidget {
   const HomeShowcase({super.key, required this.slides});
 
@@ -53,7 +54,12 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
 
   /// The title fading out under the one that took its place.
   int? _leaving;
+
+  /// What holds the title where it is: a finger on the card, a pointer over
+  /// it, or the keyboard's focus in it.
   var _touched = false;
+  var _hovered = false;
+  var _focused = false;
   var _drag = 0.0;
 
   int get _count => widget.slides.length;
@@ -79,6 +85,8 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
 
   bool get _paused =>
       _touched ||
+      _hovered ||
+      _focused ||
       _count < 2 ||
       MediaQuery.disableAnimationsOf(context) ||
       MediaQuery.accessibleNavigationOf(context) ||
@@ -92,6 +100,13 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
       if (!mounted || _paused) return;
       _show((_current + 1) % _count);
     });
+  }
+
+  void _hold({bool? touched, bool? hovered, bool? focused}) {
+    _touched = touched ?? _touched;
+    _hovered = hovered ?? _hovered;
+    _focused = focused ?? _focused;
+    _restart();
   }
 
   @override
@@ -166,68 +181,70 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
     final gutter = CardMetrics.gutter;
     final base = ShowcaseLayout.baseHeight(window, gutter);
     final slide = widget.slides[_current];
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: gutter),
-          child: SizedBox(
-            height: ShowcaseLayout.height(
-              window,
-              gutter,
-              MediaQuery.textScalerOf(context),
-            ),
-            child: Listener(
-              onPointerDown: (_) {
-                _touched = true;
-                _advance?.cancel();
-              },
-              onPointerUp: (_) {
-                _touched = false;
-                _restart();
-              },
-              onPointerCancel: (_) {
-                _touched = false;
-                _restart();
-              },
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                excludeFromSemantics: true,
-                onTap: () => context.push(Routes.title(slide.title.id)),
-                onHorizontalDragStart: (_) => _drag = 0,
-                onHorizontalDragUpdate: (details) =>
-                    _drag += details.primaryDelta ?? 0,
-                onHorizontalDragEnd: _endDrag,
-                child: MatineeTheme.alwaysDark(
-                  context,
-                  _Card(
-                    slides: widget.slides,
-                    current: _current,
-                    leaving: _leaving,
-                    fade: _fade,
-                    wordsWidth: ShowcaseLayout.wordsWidth(
-                      ShowcaseLayout.width(window, gutter),
-                    ),
-                    logoHeight: ShowcaseLayout.logoHeight(base),
-                    nameSize: ShowcaseLayout.titleSize(base),
+    final card = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: () => context.push(Routes.title(slide.title.id)),
+      onHorizontalDragStart: (_) => _drag = 0,
+      onHorizontalDragUpdate: (details) => _drag += details.primaryDelta ?? 0,
+      onHorizontalDragEnd: _endDrag,
+      child: MatineeTheme.alwaysDark(
+        context,
+        _Card(
+          slides: widget.slides,
+          current: _current,
+          leaving: _leaving,
+          fade: _fade,
+          wordsWidth: ShowcaseLayout.wordsWidth(
+            ShowcaseLayout.width(window, gutter),
+          ),
+          logoHeight: ShowcaseLayout.logoHeight(base),
+          nameSize: ShowcaseLayout.titleSize(base),
+        ),
+      ),
+    );
+    // The card and its dots hold the title together: a title that changed
+    // under a pointer or the keyboard would put another one's Play there.
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (focused) => _hold(focused: focused),
+      child: MouseRegion(
+        onEnter: (_) => _hold(hovered: true),
+        onExit: (_) => _hold(hovered: false),
+        child: Listener(
+          onPointerDown: (_) => _hold(touched: true),
+          onPointerUp: (_) => _hold(touched: false),
+          onPointerCancel: (_) => _hold(touched: false),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: gutter),
+                child: SizedBox(
+                  height: ShowcaseLayout.height(
+                    window,
+                    gutter,
+                    MediaQuery.textScalerOf(context),
                   ),
+                  child: card,
                 ),
               ),
-            ),
+              if (_count > 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: PageDots(
+                    count: _count,
+                    current: _current,
+                    onSelected: _show,
+                    labelForPage: (index) =>
+                        l.homeFeaturedPosition(index + 1, _count),
+                  ),
+                ),
+            ],
           ),
         ),
-        if (_count > 1)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: PageDots(
-              count: _count,
-              current: _current,
-              onSelected: _show,
-              labelForPage: (index) =>
-                  l.homeFeaturedPosition(index + 1, _count),
-            ),
-          ),
-      ],
+      ),
     );
   }
 }

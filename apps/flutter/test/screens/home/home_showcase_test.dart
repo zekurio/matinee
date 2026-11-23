@@ -1,6 +1,6 @@
-import 'dart:typed_data';
-
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' show MaterialApp;
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -210,6 +210,42 @@ void main() {
     await _wait(tester, times: 2);
     expect(_showing(tester), 'Alien');
     await finger.up();
+    await _wait(tester);
+    expect(_showing(tester), 'Brazil');
+  });
+
+  // The bugs these two pin: the title changed under a mouse's pointer and
+  // under the keyboard's focus, so a click or Enter on Play could start the
+  // title that had just come in. The banner it replaced held for both.
+  testWidgets('it stays while a pointer is over it', (tester) async {
+    await _pump(tester, HomeShowcase(slides: _slides));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: const Offset(640, 790));
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(find.byType(HomeShowcase)));
+    await _wait(tester, times: 2);
+    expect(_showing(tester), 'Alien');
+    await mouse.moveTo(const Offset(640, 790));
+    await _wait(tester);
+    expect(_showing(tester), 'Brazil');
+  });
+
+  testWidgets('it stays while the keyboard\'s focus is in it', (tester) async {
+    await _pump(tester, HomeShowcase(slides: _slides));
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    final focus = FocusManager.instance.primaryFocus;
+    expect(
+      find.descendant(
+        of: find.byType(HomeShowcase),
+        matching: find.byWidget(focus!.context!.widget),
+      ),
+      findsOneWidget,
+    );
+    await _wait(tester, times: 2);
+    expect(_showing(tester), 'Alien');
+    focus.unfocus();
+    await tester.pump();
     await _wait(tester);
     expect(_showing(tester), 'Brazil');
   });
