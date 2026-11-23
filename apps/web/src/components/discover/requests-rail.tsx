@@ -21,7 +21,7 @@ import {
   RequestStateBadge,
   requestProgress,
 } from "@/components/requests/request-card"
-import { Askers, QueueProblem } from "@/components/requests/request-lines"
+import { Askers, queueDetail } from "@/components/requests/request-lines"
 import {
   addAction,
   useRequestQueue,
@@ -192,11 +192,10 @@ function QueueRequest({ item }: { item: AdminRequestItem }) {
         <RequestStateBadge
           state={item.state}
           progress={requestProgress(item)}
-          urgent
+          detail={queueDetail(item)}
         />
       }
       who={<Askers item={item} />}
-      problem={<QueueProblem item={item} />}
       menu={
         <CardMenu item={item} onAdd={() => hold(addAction([item]))} may={may} />
       }

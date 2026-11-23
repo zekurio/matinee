@@ -571,20 +571,33 @@ final class SeasonAvailabilityLimit {
 }
 
 final class ShowScope {
-  const ShowScope({required this.seasons, required this.future});
+  const ShowScope({required this.seasons});
 
   factory ShowScope.fromJson(Object? json) {
     final fields = json as JsonMap;
     return ShowScope(
       seasons: readList(fields['seasons'], (value) => value as int),
-      future: fields['future'] as bool,
     );
   }
 
   final List<int> seasons;
-  final bool future;
 
-  JsonMap toJson() => {'seasons': seasons, 'future': future};
+  JsonMap toJson() => {'seasons': seasons};
+}
+
+final class AskScope {
+  const AskScope({required this.seasons});
+
+  factory AskScope.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return AskScope(
+      seasons: readList(fields['seasons'], (value) => value as int),
+    );
+  }
+
+  final List<int> seasons;
+
+  JsonMap toJson() => {'seasons': seasons};
 }
 
 final class CatalogDestination {
@@ -1220,6 +1233,7 @@ final class RequestItem {
   const RequestItem({
     required this.id,
     required this.title,
+    required this.backdrop,
     required this.library,
     required this.scope,
     required this.createdAt,
@@ -1234,6 +1248,7 @@ final class RequestItem {
     return RequestItem(
       id: fields['id'] as String,
       title: CatalogTitleSummary.fromJson(fields['title']),
+      backdrop: readNullable(fields['backdrop'], Artwork.fromJson),
       library: RequestDestination.fromJson(fields['library']),
       scope: readNullable(fields['scope'], ShowScope.fromJson),
       createdAt: fields['createdAt'] as String,
@@ -1246,6 +1261,7 @@ final class RequestItem {
 
   final String id;
   final CatalogTitleSummary title;
+  final Artwork? backdrop;
   final RequestDestination library;
   final ShowScope? scope;
   final String createdAt;
@@ -1257,6 +1273,7 @@ final class RequestItem {
   JsonMap toJson() => {
     'id': id,
     'title': title.toJson(),
+    'backdrop': backdrop?.toJson(),
     'library': library.toJson(),
     'scope': scope?.toJson(),
     'createdAt': createdAt,
@@ -1308,6 +1325,7 @@ final class AdminRequestItem {
   const AdminRequestItem({
     required this.id,
     required this.title,
+    required this.backdrop,
     required this.library,
     required this.scope,
     required this.createdAt,
@@ -1333,6 +1351,7 @@ final class AdminRequestItem {
     return AdminRequestItem(
       id: fields['id'] as String,
       title: CatalogTitleSummary.fromJson(fields['title']),
+      backdrop: readNullable(fields['backdrop'], Artwork.fromJson),
       library: RequestDestination.fromJson(fields['library']),
       scope: readNullable(fields['scope'], ShowScope.fromJson),
       createdAt: fields['createdAt'] as String,
@@ -1368,6 +1387,7 @@ final class AdminRequestItem {
 
   final String id;
   final CatalogTitleSummary title;
+  final Artwork? backdrop;
   final RequestDestination library;
   final ShowScope? scope;
   final String createdAt;
@@ -1390,6 +1410,7 @@ final class AdminRequestItem {
   JsonMap toJson() => {
     'id': id,
     'title': title.toJson(),
+    'backdrop': backdrop?.toJson(),
     'library': library.toJson(),
     'scope': scope?.toJson(),
     'createdAt': createdAt,
@@ -1446,6 +1467,7 @@ final class AdminRequestItemFollower {
   const AdminRequestItemFollower({
     required this.id,
     required this.name,
+    required this.username,
     required this.avatarId,
     required this.createdAt,
   });
@@ -1455,6 +1477,7 @@ final class AdminRequestItemFollower {
     return AdminRequestItemFollower(
       id: fields['id'] as String,
       name: fields['name'] as String,
+      username: fields['username'] as String,
       avatarId: fields['avatarId'] as String?,
       createdAt: fields['createdAt'] as String,
     );
@@ -1462,12 +1485,14 @@ final class AdminRequestItemFollower {
 
   final String id;
   final String name;
+  final String username;
   final String? avatarId;
   final String createdAt;
 
   JsonMap toJson() => {
     'id': id,
     'name': name,
+    'username': username,
     'avatarId': avatarId,
     'createdAt': createdAt,
   };
@@ -10208,13 +10233,13 @@ final class RequestsAskInput {
     return RequestsAskInput(
       ref: CatalogRef.fromJson(fields['ref']),
       libraryId: fields['libraryId'] as String?,
-      scope: readNullable(fields['scope'], ShowScope.fromJson),
+      scope: readNullable(fields['scope'], AskScope.fromJson),
     );
   }
 
   final CatalogRef ref;
   final String? libraryId;
-  final ShowScope? scope;
+  final AskScope? scope;
 
   JsonMap toJson() => {
     'ref': ref.toJson(),
@@ -10230,12 +10255,12 @@ final class RequestsAddSeasonsInput {
     final fields = json as JsonMap;
     return RequestsAddSeasonsInput(
       id: fields['id'] as String,
-      scope: ShowScope.fromJson(fields['scope']),
+      scope: AskScope.fromJson(fields['scope']),
     );
   }
 
   final String id;
-  final ShowScope scope;
+  final AskScope scope;
 
   JsonMap toJson() => {'id': id, 'scope': scope.toJson()};
 }

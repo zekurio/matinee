@@ -234,7 +234,7 @@ final class RequestsApi {
   Future<RequestItem> ask({
     required CatalogRef ref,
     String? libraryId,
-    ShowScope? scope,
+    AskScope? scope,
   }) {
     final input = RequestsAskInput(
       ref: ref,
@@ -254,7 +254,7 @@ final class RequestsApi {
   /// `POST /requests/add-seasons`
   Future<RequestItem> addSeasons({
     required String id,
-    required ShowScope scope,
+    required AskScope scope,
   }) {
     final input = RequestsAddSeasonsInput(id: id, scope: scope);
     final body = JsonBody(input.toJson());
