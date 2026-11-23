@@ -94,4 +94,41 @@ void main() {
       Unreachability.certificate,
     );
   });
+
+  test("Cronet's errors read as dart:io's do", () {
+    http.ClientException cronet(String error, int code, int internal) =>
+        http.ClientException(
+          'Exception in CronetUrlRequest: net::$error, '
+          'ErrorCode=$code, InternalErrorCode=$internal, Retryable=false',
+        );
+    expect(
+      reason(cronet('ERR_NAME_NOT_RESOLVED', 1, -105)),
+      Unreachability.notFound,
+    );
+    expect(
+      reason(cronet('ERR_CONNECTION_REFUSED', 7, -102)),
+      Unreachability.refused,
+    );
+    expect(
+      reason(cronet('ERR_ADDRESS_UNREACHABLE', 9, -109)),
+      Unreachability.refused,
+    );
+    expect(
+      reason(cronet('ERR_CONNECTION_TIMED_OUT', 6, -118)),
+      Unreachability.timeout,
+    );
+    expect(reason(cronet('ERR_TIMED_OUT', 4, -7)), Unreachability.timeout);
+    expect(
+      reason(cronet('ERR_CERT_AUTHORITY_INVALID', 11, -202)),
+      Unreachability.certificate,
+    );
+    expect(
+      reason(cronet('ERR_SSL_PROTOCOL_ERROR', 11, -107)),
+      Unreachability.certificate,
+    );
+    expect(
+      reason(cronet('ERR_CONNECTION_RESET', 8, -101)),
+      Unreachability.other,
+    );
+  });
 }

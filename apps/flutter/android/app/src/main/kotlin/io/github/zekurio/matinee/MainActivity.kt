@@ -40,8 +40,29 @@ import java.net.NetworkInterface
 import java.security.KeyStore
 import java.util.IllformedLocaleException
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.chromium.net.CronetEngine
+
+private val cronetWarmed = AtomicBoolean(false)
+
+/**
+ * Loads Cronet from Play services on a thread of its own while Flutter starts.
+ * The Dart side's HTTP client builds its engine on the UI thread with the
+ * first request, and the first load of the library, about 100 ms, would
+ * hold up that request and the frames.
+ */
+private fun warmCronet(context: Context) {
+    if (!cronetWarmed.compareAndSet(false, true)) return
+    Thread {
+        try {
+            CronetEngine.Builder(context).build().shutdown()
+        } catch (_: Throwable) {
+            // No Cronet here: the Dart side falls back to its own client.
+        }
+    }.start()
+}
 
 @OptIn(UnstableApi::class)
 class MainActivity : FlutterActivity() {
@@ -63,6 +84,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         fresh = savedInstanceState == null
+        warmCronet(applicationContext)
         super.onCreate(savedInstanceState)
     }
 

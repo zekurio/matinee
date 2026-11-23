@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'api/matinee_api.dart' show DevicePlatform;
 import 'app.dart';
@@ -26,6 +27,9 @@ Future<void> main() async {
     await PlatformPreferences.open(),
     appleTv?.secrets ?? const PlatformSecretStore(),
   );
+  final httpStorage = device.platform == DevicePlatform.android
+      ? await getApplicationCacheDirectory()
+      : null;
   // A TV is driven by the remote alone, so focus shows from the start,
   // before the first key, and a stray touch event doesn't hide it.
   if (device.isTv) {
@@ -37,6 +41,7 @@ Future<void> main() async {
       overrides: [
         deviceProvider.overrideWithValue(device),
         sessionStoreProvider.overrideWithValue(store),
+        httpStorageProvider.overrideWithValue(httpStorage),
         if (appleTv != null) ...[
           networkMonitorProvider.overrideWithValue(appleTv.network),
           cacheFolderProvider.overrideWithValue(

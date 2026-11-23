@@ -86,6 +86,12 @@ const androidLicenses = <BundledLicense>[
     asset: _apache,
   ),
   (packages: ['ZXing'], copyright: 'Copyright © ZXing authors', asset: _apache),
+  // cronet_http's API to Cronet. Cronet itself comes from Play services.
+  (
+    packages: ['Cronet'],
+    copyright: null,
+    asset: 'assets/licenses/chromium-bsd-3.txt',
+  ),
   (
     packages: ['OkHttp', 'Okio'],
     copyright: 'Copyright © Square, Inc.',

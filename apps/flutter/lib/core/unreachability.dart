@@ -23,8 +23,8 @@ const _refused = {111, 61, 10061};
 const _networkUnreachable = {101, 51, 10051};
 const _timedOut = {110, 60, 10060};
 
-/// Why a request to a server failed, from what `dart:io` and `package:http`
-/// threw. [hasNetwork] is whether the device has a network with internet
+/// Why a request to a server failed, from what `dart:io`, Cronet, and
+/// `package:http` threw. [hasNetwork] is whether the device has a network with internet
 /// access; without one nothing else is worth saying.
 Unreachability unreachabilityOf(Object error, {required bool hasNetwork}) {
   if (!hasNetwork) return Unreachability.noNetwork;
@@ -33,8 +33,23 @@ Unreachability unreachabilityOf(Object error, {required bool hasNetwork}) {
   if (error is SocketException) return _socket(error);
   if (error is http.ClientException) {
     final message = error.message.toLowerCase();
-    if (message.contains('handshake') || message.contains('certificate')) {
+    if (message.contains('handshake') ||
+        message.contains('certificate') ||
+        message.contains('net::err_cert_') ||
+        message.contains('net::err_ssl_')) {
       return Unreachability.certificate;
+    }
+    // Cronet's, from Chromium's net errors.
+    if (message.contains('net::err_name_not_resolved')) {
+      return Unreachability.notFound;
+    }
+    if (message.contains('net::err_timed_out') ||
+        message.contains('net::err_connection_timed_out')) {
+      return Unreachability.timeout;
+    }
+    if (message.contains('net::err_connection_refused') ||
+        message.contains('net::err_address_unreachable')) {
+      return Unreachability.refused;
     }
   }
   return Unreachability.other;

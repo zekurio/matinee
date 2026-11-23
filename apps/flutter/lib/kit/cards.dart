@@ -316,10 +316,16 @@ class PosterCard extends StatelessWidget {
     this.onLongPress,
     this.longPressLabel,
     this.absentLabel,
+    this.artCovers = false,
   });
 
   final String name;
   final String? detail;
+
+  /// [art] always covers the tone, as art with a blurred stand-in does
+  /// while it loads and when it fails, so the name isn't laid out under it:
+  /// a card that scrolls in costs a third less text.
+  final bool artCovers;
 
   /// Set for something the server doesn't have, as a season under "More
   /// seasons": what a screen reader says for it, "Not here yet". The art
@@ -374,23 +380,24 @@ class PosterCard extends StatelessWidget {
               aspectRatio: CardMetrics.poster,
               dashed: absentLabel != null,
               children: [
-                ExcludeSemantics(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        name,
-                        textAlign: TextAlign.center,
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: KitText.sm.style(
-                          color: colors.foreground.withValues(alpha: .7),
-                          weight: FontWeight.w500,
+                if (art == null || !artCovers || absentLabel != null)
+                  ExcludeSemantics(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          name,
+                          textAlign: TextAlign.center,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: KitText.sm.style(
+                            color: colors.foreground.withValues(alpha: .7),
+                            weight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
                 if (art != null)
                   absentLabel == null ? art : Opacity(opacity: .35, child: art),
                 if (mark != null)

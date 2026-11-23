@@ -327,6 +327,7 @@ class _CatalogCardState extends ConsumerState<CatalogCard> {
       detailIcon: detail?.icon,
       detailLabel: detail?.label,
       art: poster == null ? null : Picture([ArtSource(poster)]),
+      artCovers: poster?.placeholder != null,
       badge: CatalogBadge(
         availability: availability,
         leaving: here != null,
@@ -365,6 +366,7 @@ class ArrivedCard extends ConsumerWidget {
         toneKey: refKey(title.ref),
         detail: yearLine(context, title.year, title.ref.kind),
         art: poster == null ? null : Picture([ArtSource(poster)]),
+        artCovers: poster?.placeholder != null,
         onPressed: () => context.push(Routes.title(titleId)),
       );
     }
@@ -499,6 +501,7 @@ class CatalogSeasonCard extends StatelessWidget {
       toneKey: '${refKey(show)}:${season.number}',
       detail: seasonLineText(season, l),
       art: poster == null ? null : Picture([ArtSource(poster)]),
+      artCovers: poster?.placeholder != null,
       badge: CatalogBadge(availability: availability),
       absentLabel: l.webCatalogNotHere,
       onPressed: requests ? onRequest : null,
@@ -550,6 +553,7 @@ class _AskedCardState extends ConsumerState<AskedCard> {
         toneKey: refKey(title.ref),
         detail: nextSeasonLine(pending.number, state, l),
         art: poster == null ? null : Picture([ArtSource(poster)]),
+        artCovers: poster?.placeholder != null,
         badge: CatalogBadge(availability: state),
         onPressed: () => context.push(Routes.title(here)),
       );

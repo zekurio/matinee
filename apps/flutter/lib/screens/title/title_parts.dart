@@ -1191,6 +1191,7 @@ class SeasonCard extends StatelessWidget {
         null => l.mediaEpisodeCount(season.itemCount),
       },
       art: art == null ? null : Picture([ArtSource(art)]),
+      artCovers: art?.placeholder != null,
       watchedLabel: left <= 0 ? l.mediaWatched : null,
       badge: left <= 0
           ? null

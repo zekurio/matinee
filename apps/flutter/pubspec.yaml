@@ -11,6 +11,7 @@ environment:
 dependencies:
   clock: ^1.1.2
   connectivity_plus: ^7.3.2
+  cronet_http: ^1.10.2
   crypto: ^3.0.8
   dynamic_color: ^2.1.0
   flutter:

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -837,9 +838,12 @@ final sessionStoreProvider = Provider<SessionStore>(
   (ref) => throw StateError('sessionStoreProvider needs an override'),
 );
 
-/// The shared `dart:io` client under every client of the session.
+/// Where the shared client keeps what it learns of servers, set in `main`.
+final httpStorageProvider = Provider<Directory?>((ref) => null);
+
+/// The shared client under every client of the session.
 final innerHttpClientProvider = Provider<http.Client>((ref) {
-  final client = createInnerClient();
+  final client = createInnerClient(storage: ref.watch(httpStorageProvider));
   ref.onDispose(client.close);
   return client;
 });
