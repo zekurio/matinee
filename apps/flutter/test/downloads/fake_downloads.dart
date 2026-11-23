@@ -146,6 +146,7 @@ wire.DownloadEntryMessage downloadEntry(
   wire.DownloadErrorMessage? error,
   String? errorMessage,
   List<SubtitleTrack> subtitles = const [],
+  DownloadOffline? offline,
   int addedAt = 0,
 }) {
   final media = MediaItem.fromJson(item);
@@ -159,6 +160,7 @@ wire.DownloadEntryMessage downloadEntry(
       item: media,
       audio: const [],
       subtitles: subtitles,
+      offline: offline,
     ).encode(),
     state: state,
     bytes: bytes,

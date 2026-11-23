@@ -455,6 +455,11 @@ device, which can
 re-encode the video, convert audio to AAC or Opus, and burn in a
 picture subtitle. Text subtitles save beside it as WebVTT.
 
+`downloads.resolve` also answers with what the file offers once it plays
+with no server to ask: the skip segments, where to start offering the
+next episode, and the show's files in order, for the app to keep with the
+download.
+
 The server keeps no finished downloads. ffmpeg makes six-second fMP4
 segments as the client fetches them, deletes the ones behind it, and
 stops 30 seconds after the client leaves. A client that comes back

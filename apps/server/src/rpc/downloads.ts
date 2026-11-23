@@ -17,8 +17,10 @@ import { db } from "../db"
 import { buildDownload, DownloadSpecError } from "../media/download-encode"
 import { resolveDownload } from "../media/download-resolve"
 import { removeDownload, startDownload } from "../media/downloads"
+import { playedFiles, showFiles } from "../media/items"
 import { listAudio } from "../media/playback"
 import { currentProbe } from "../media/probe"
+import { playerSegments } from "../media/segments"
 import { listSubtitles } from "../media/subtitles"
 import { rememberedTracks } from "../media/track-picks"
 import { encodableAudioCodecs } from "../transcode/audio"
@@ -51,6 +53,16 @@ export const downloads = {
   resolve: authed.downloads.resolve.handler(async ({ context, input }) => {
     const transcoding = await currentTranscoding()
     const results: DownloadResolution[] = []
+    // A season's files share their show, which is read once.
+    const shows = new Map<string, Promise<MediaItemRow[]>>()
+    const filesOf = (showId: string) => {
+      let files = shows.get(showId)
+      if (!files) {
+        files = showFiles(showId)
+        shows.set(showId, files)
+      }
+      return files
+    }
     // Bound memory and filesystem pressure, even for a whole season.
     for (const id of input.ids) {
       try {
@@ -91,7 +103,28 @@ export const downloads = {
             : [],
         })
         const { plan } = await buildDownload(row, resolved.spec)
-        results.push({ status: "ready", id, ...resolved, plan })
+        const show = parent?.kind === "show" ? parent : null
+        // ACCESS: The show's files share the visible file's title.
+        const order = show
+          ? playedFiles(await filesOf(show.id), row, context.user)
+          : []
+        const at = order.findIndex((file) => file.id === row.id)
+        // ACCESS: The segments are keyed by the visible file above.
+        const offered = await playerSegments(
+          { ...row, probe },
+          show,
+          at >= 0 && at + 1 < order.length,
+        )
+        results.push({
+          status: "ready",
+          id,
+          ...resolved,
+          plan,
+          offline: {
+            ...offered,
+            episodes: order.map((file) => file.id),
+          },
+        })
       } catch (cause) {
         if (!(cause instanceof DownloadSpecError)) throw cause
         results.push({ status: "unavailable", id, message: cause.message })

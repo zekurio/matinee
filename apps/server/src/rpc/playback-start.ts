@@ -11,13 +11,13 @@ import {
   type PlaybackRestrictedData,
   type PlaybackRestriction,
 } from "@matinee/contracts"
-import { mediaItem, title, watchProgress } from "@matinee/db"
+import { title, watchProgress } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
 import { and, eq } from "drizzle-orm"
 
 import { itemFor } from "../access/visible"
 import { db } from "../db"
-import { episodeOrder, publicItems } from "../media/items"
+import { episodeNeighbours, publicItems, showFiles } from "../media/items"
 import { keyframesNear, listAudio, mayStreamOriginal } from "../media/playback"
 import { decidePlayback, snapPlayback } from "../media/playback-start"
 import { currentProbe } from "../media/probe"
@@ -165,18 +165,11 @@ export const startPlayback = authed.playback.start.handler(
       plan = snapPlayback(plan, input, keyframes)
     }
     if (row?.kind === "show") {
-      // ACCESS: Files share the visible item's title and library.
-      const files = await db
-        .select()
-        .from(mediaItem)
-        .where(eq(mediaItem.titleId, row.id))
-        .orderBy(...episodeOrder)
-      // A hidden special doesn't come before or next, though one opened plays.
-      const shown = (file: (typeof files)[number]) =>
-        context.user.showSpecials || file.seasonNumber !== 0
-      const at = files.findIndex((file) => file.id === item.id)
-      const previous = at > 0 ? files.slice(0, at).findLast(shown) : undefined
-      const next = files.slice(at + 1).find(shown)
+      const { previous, next } = episodeNeighbours(
+        await showFiles(row.id),
+        item,
+        context.user,
+      )
       const neighbours = await publicItems(
         [previous, next].filter((file) => file !== undefined),
         context.user.id,

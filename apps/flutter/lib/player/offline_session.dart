@@ -50,6 +50,7 @@ class OfflinePlaybackSession extends ChangeNotifier
     required this.onReport,
     this.audio,
     this.subtitle,
+    this.offline,
     this.startAt = 0,
     this.skipBack,
     this.skipForward,
@@ -75,6 +76,11 @@ class OfflinePlaybackSession extends ChangeNotifier
   /// The engine is mpv, which draws ASS with its own styling.
   final bool mpv;
   final void Function(OfflineReport report) onReport;
+
+  /// What the server said to offer while this plays, as `downloads.resolve`
+  /// sent it for the download. Null for one made before it said: no skips,
+  /// and the next episode only at the end.
+  final DownloadOffline? offline;
   final double startAt;
   @override
   final int? skipBack;
@@ -102,8 +108,8 @@ class OfflinePlaybackSession extends ChangeNotifier
   @override
   (PlaybackNotice, Object?)? notice;
 
-  /// The episodes either side, which the server tells while it answers;
-  /// none without it.
+  /// The episodes either side, from the server while it answers, and from
+  /// the downloads on the device when it doesn't.
   @override
   MediaItem? previousEpisode;
   @override
@@ -120,6 +126,7 @@ class OfflinePlaybackSession extends ChangeNotifier
   bool _closed = false;
   Future<void>? _closing;
   int _captionRequest = 0;
+  (String, double, double)? _skipped;
 
   static Future<String> _readFile(String path) => File(path).readAsString();
 
@@ -155,9 +162,33 @@ class OfflinePlaybackSession extends ChangeNotifier
       error == null &&
       playback.phase == PlaybackPhase.idle;
 
-  /// Without a server's `upNextAt`, the next episode comes at the end.
+  /// The next episode, from the server's `upNextAt`, or at the end.
   @override
-  MediaItem? get next => ended && error == null ? nextEpisode : null;
+  MediaItem? get next =>
+      error == null &&
+          (ended || position >= (offline?.upNextAt ?? double.infinity))
+      ? nextEpisode
+      : null;
+
+  /// The part being played, until it's skipped, as a stream's.
+  @override
+  MediaSegment? get segment {
+    for (final segment in offline?.segments ?? const <MediaSegment>[]) {
+      if ((segment.kind, segment.start, segment.end) != _skipped &&
+          position >= segment.start &&
+          position < segment.end - 1) {
+        return segment;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<void> skipSegment(MediaSegment segment) async {
+    if (!_canChange) return;
+    await seek(segment.end);
+    _skipped = (segment.kind, segment.start, segment.end);
+  }
 
   @override
   List<SubtitleTrack> get subtitleTracks => [
@@ -353,6 +384,7 @@ class OfflinePlaybackSession extends ChangeNotifier
   @override
   Future<void> seek(double seconds) async {
     if (!_canChange) return;
+    _skipped = null;
     final length = duration;
     if (!seconds.isFinite || length <= 0) return;
     final target = seconds.clamp(0.0, max(0.0, length - 1)).toDouble();

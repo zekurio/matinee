@@ -1,6 +1,6 @@
 import { DownloadVideoPreset } from "./download-presets"
 import { DownloadContainer, DownloadPlan, DownloadSpec } from "./downloads"
-import { PlaybackDevice } from "./playback-start"
+import { MediaSegment, PlaybackDevice } from "./playback-start"
 import { TranscodeAudioCodec } from "./preferences"
 import { t } from "./schema"
 import { AudioTrack, SubtitleTrack } from "./streams"
@@ -65,6 +65,34 @@ export const DownloadChoices = t.object({
 })
 export type DownloadChoices = t.infer<typeof DownloadChoices>
 
+/**
+ * What a player offers while a download plays with no server to ask, as
+ * `playback.start` said it when the download was resolved. A client keeps
+ * it with the saved file.
+ */
+export const DownloadOffline = t.object({
+  /**
+   * The parts to offer a skip for, in order, as `playback.start` has
+   * them. Empty until the server has looked, which it does in the
+   * background.
+   */
+  segments: t.array(MediaSegment),
+  /**
+   * The ids of the show's files that play, in the order they play, with
+   * this one among them. Previous and Next go to the nearest of them on
+   * the device, so a file that wasn't downloaded is skipped over. Empty
+   * for a movie.
+   */
+  episodes: t.array(t.uuid()),
+  /**
+   * Seconds into the file to start offering the next one at, as
+   * `playback.start` has it. Null without a next file in the show, or for
+   * a short file, which offers it once it ends.
+   */
+  upNextAt: t.number().min(0).nullable(),
+})
+export type DownloadOffline = t.infer<typeof DownloadOffline>
+
 /** Resolve up to 100 files in one read. Results preserve order and duplicates. */
 export const DownloadResolveInput = t.object({
   /** Media item ids, usually the files of a season. */
@@ -90,6 +118,8 @@ export const DownloadResolution = t.union([
     plan: DownloadPlan,
     /** Available edits for a custom download form. */
     choices: DownloadChoices,
+    /** What to keep with the saved file for playing it without the server. */
+    offline: DownloadOffline,
   }),
   t.object({
     /** This file cannot be made with these wishes. */

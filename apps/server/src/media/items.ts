@@ -341,13 +341,54 @@ export async function publicItems(
   return rows.map((row) => toItem(row, details))
 }
 
-// ACCESS: Files are keyed by the visible title passed to nextItem.
+// ACCESS: Files are keyed by the visible title passed to nextItem, or by
+// the title of the visible file passed to showFiles.
 const titleFiles = db
   .select()
   .from(mediaItem)
   .where(eq(mediaItem.titleId, arg("titleId")))
   .orderBy(...episodeOrder)
   .prepare("title_files")
+
+/**
+ * A show's files in the order its episodes play, for the show of a file
+ * the viewer sees: they share its title and library.
+ */
+export function showFiles(titleId: string): Promise<MediaItemRow[]> {
+  return titleFiles.execute({ titleId })
+}
+
+/**
+ * A show's `files` in the order a player steps through them: a hidden
+ * special is left out, though `item` itself stays even when it's one, so
+ * the file being played can find its neighbours.
+ */
+export function playedFiles(
+  files: readonly MediaItemRow[],
+  item: { id: string },
+  viewer: { showSpecials: boolean },
+): MediaItemRow[] {
+  return files.filter(
+    (file) =>
+      viewer.showSpecials || file.seasonNumber !== 0 || file.id === item.id,
+  )
+}
+
+/**
+ * The files either side of `item` among its show's `files`, where a
+ * player's Previous and Next go. A hidden special doesn't come before or
+ * next, though one opened plays.
+ */
+export function episodeNeighbours(
+  files: readonly MediaItemRow[],
+  item: { id: string },
+  viewer: { showSpecials: boolean },
+) {
+  const shown = playedFiles(files, item, viewer)
+  const at = shown.findIndex((file) => file.id === item.id)
+  if (at < 0) return { previous: undefined, next: undefined }
+  return { previous: shown[at - 1], next: shown[at + 1] }
+}
 
 // The user's progress in the title, latest first.
 // ACCESS: Progress is keyed by the visible title passed to nextItem.
