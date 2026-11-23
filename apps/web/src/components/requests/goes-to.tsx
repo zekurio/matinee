@@ -12,8 +12,14 @@ import { useRequestActionsStore } from "@/stores/request-actions"
  */
 export function useGoesTo(item: AdminRequestItem) {
   const current = useGoesToLibrary(item)
-  if (current) return { library: current.name, connection: current.connection }
+  if (current)
+    return {
+      id: current.id,
+      library: current.name,
+      connection: current.connection,
+    }
   return {
+    id: item.library.id,
     library: item.library.name,
     connection: item.connection?.name ?? null,
   }
