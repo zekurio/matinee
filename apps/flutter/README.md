@@ -7,14 +7,25 @@ which sits behind the Flutter view.
 Android phones and tablets have every screen, downloads, and offline mode.
 Android TV has its own routes and player. iPhone and iPad have the same
 screens as Android phones and tablets, with the native side in
-`ios/Runner`. CI compiles it, but nobody has run it on a device yet.
-Apple TV isn't started. A route a platform doesn't have yet shows a
-placeholder with its path.
+`ios/Runner`. CI compiles it, and it has run on iPhone and iPad
+simulators, but not yet on a device.
+
+Left out on purpose:
+
+- Apple TV waits until the iPhone app ships. It needs a second Xcode
+  target and a patched Flutter engine.
+- There's no 32-bit x86 APK, since Flutter builds no release engine for
+  it.
+- Fulfilment's routing rules are set on the web. Their ordered rules and
+  conditions want a wide screen.
 
 ## Build, run, check
 
 The recipes enter the flake's Flutter shell for you. Entering it accepts
-the Android SDK license.
+the Android SDK license. The flake's shells are Linux-only, so on a Mac
+install Flutter 3.47.4 yourself and set `MATINEE_FLUTTER_SHELL=1`, and the
+recipes use the `flutter` on the PATH. An Android build there also needs a
+JDK and the Android SDK.
 
 | Recipe                      | What it does                                  |
 | --------------------------- | --------------------------------------------- |
@@ -99,6 +110,7 @@ rule is easy to break and hard to notice, and name the bug it pins.
 | `lib/router.dart` | Every route, and `Routes`, which builds their paths       |
 | `pigeons`         | Pigeon definitions for what Dart asks the platform        |
 | `android`         | The Android project, with the native side of each channel |
+| `ios`             | The iOS project, with the native side of each channel     |
 
 State is Riverpod without code generation, and routing is go_router.
 Screens open a page with `context.push(Routes.title(id))`, never with a

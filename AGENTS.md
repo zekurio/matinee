@@ -37,8 +37,9 @@ TV app.
 - `apps/flutter`: the app for phones, tablets, and TVs, one Flutter
   codebase with each platform's player behind the Flutter view. It ships
   for Android, Android tablets, and Android TV. Its iPhone and iPad side,
-  `ios/Runner`, compiles in CI, but nobody has run it on a device yet,
-  and Apple TV isn't started. Its API client, `lib/api`, is
+  `ios/Runner`, compiles in CI and has run on simulators, but not yet on
+  a device. Apple TV waits until the iPhone app ships. Its API client,
+  `lib/api`, is
   generated from the OpenAPI document by `pnpm api:dart`
   (`apps/server/scripts/dart-client.ts`), and its theme presets, icons,
   and logo by `pnpm themes:dart`, `pnpm icons:dart`, and
@@ -87,7 +88,9 @@ TV app.
 - Every part has the version in the root `package.json`. Don't set one
   anywhere else; `just tag <version>` changes it and releases (see Release
   below).
-- No automated tests yet. Check affected flows by hand in the browser.
+- The server and the web app have no automated tests yet, so check their
+  flows by hand in the browser. The Flutter app's Dart tests run in
+  `just flutter check`; check its screens by eye as well.
 - Generate migrations with a descriptive snake_case name:
   `pnpm db:generate --name watch_progress`. Never edit a migration after it
   ships in a release; add a new one. Unreleased migrations may be consolidated
