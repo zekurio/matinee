@@ -190,8 +190,8 @@ void main() {
     final search = tester.getCenter(_button('Search')).dx;
     final avatar = tester.getCenter(_button('Profile'));
     expect(search, lessThan(avatar.dx));
-    expect(tester.getSize(_button('Profile')), const Size(44, 44));
-    expect(tester.getSize(find.byType(Avatar)), const Size(30, 30));
+    expect(tester.getSize(_button('Profile')), const Size(48, 48));
+    expect(tester.getSize(find.byType(Avatar)), const Size(32, 32));
   });
 
   testWidgets('Media leaves the header to the tab', (tester) async {
@@ -254,9 +254,9 @@ void main() {
   ) async {
     await _pumpLibrary(tester, textScale: 3);
     for (final label in ['Filters', 'Search', 'Profile']) {
-      expect(tester.getSize(_button(label)), const Size(44, 44));
+      expect(tester.getSize(_button(label)), const Size(48, 48));
     }
-    expect(tester.getSize(_buttonStarting('Sort: ')), const Size(44, 44));
+    expect(tester.getSize(_buttonStarting('Sort: ')), const Size(48, 48));
     expect(tester.getSize(find.byType(TabHeader)).height, ShellHeader.height);
     expect(tester.takeException(), isNull);
   });
@@ -272,9 +272,9 @@ void main() {
       await _pumpLibrary(tester, textScale: 3, size: size);
       expect(tester.getSize(find.byType(TabHeader)).height, ShellHeader.height);
       for (final label in ['Filters', 'Search', 'Profile']) {
-        expect(tester.getSize(_button(label)), const Size(44, 44));
+        expect(tester.getSize(_button(label)), const Size(48, 48));
       }
-      expect(tester.getSize(_buttonStarting('Sort: ')), const Size(44, 44));
+      expect(tester.getSize(_buttonStarting('Sort: ')), const Size(48, 48));
       expect(
         tester.getRect(_button('Profile')).right,
         lessThanOrEqualTo(size.width),

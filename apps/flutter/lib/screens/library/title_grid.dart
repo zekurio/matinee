@@ -235,8 +235,8 @@ class ListBarButton extends StatelessWidget {
 }
 
 /// The Filter button, once the server says what the filters offer. [header]
-/// makes it a tab header's button, 44 square, instead of a list heading's,
-/// 48; both carry the count badge.
+/// makes it a tab header's button instead of a list heading's; both carry
+/// the count badge.
 class FilterButton extends ConsumerWidget {
   const FilterButton({
     super.key,
