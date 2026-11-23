@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/permissions.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
@@ -13,11 +14,12 @@ import '../../query/failure_view.dart';
 import 'favorite_cards.dart';
 import 'profile_data.dart';
 
-/// The signed-in account's username, which the profile's lists are under.
-String? _username(WidgetRef ref) => switch (ref.watch(authStateProvider)) {
-  SignedIn(:final user) || Offline(:final user) => user.username,
-  _ => null,
-};
+/// The signed-in account's username, which one's own lists are under.
+String? _signedInUsername(WidgetRef ref) =>
+    switch (ref.watch(authStateProvider)) {
+      SignedIn(:final user) || Offline(:final user) => user.username,
+      _ => null,
+    };
 
 /// A page over the tabs with Back and [title].
 class _Page extends StatelessWidget {
@@ -43,18 +45,48 @@ Widget _centered(Widget child) => Center(
   ),
 );
 
+/// Whether the page may read another person's lists, as the screen that
+/// opens them asks for `profile.read`; a device with no server can't.
+Widget? _notAllowed(BuildContext context, WidgetRef ref, String title) {
+  if (ref.watch(canProvider(Permission.profileRead))) return null;
+  final l = AppLocalizations.of(context);
+  final offline = ref.watch(authStateProvider) is Offline;
+  return _Page(
+    title: title,
+    child: _centered(
+      EmptyState(
+        icon: offline ? Lucide.cloudOff : Lucide.lock,
+        title: offline ? l.serverUnreachable : l.adminAccessNotAllowed,
+      ),
+    ),
+  );
+}
+
 /// What the person marked, a row for each kind: shows, seasons, episodes, and
-/// movies, each newest first, and only the kinds that have any.
+/// movies, each newest first, and only the kinds that have any. [username] is
+/// another person's, from their profile; null is the signed-in account's.
 class FavoritesScreen extends ConsumerWidget {
-  const FavoritesScreen({super.key});
+  const FavoritesScreen({super.key, this.username});
+
+  final String? username;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final username = _username(ref);
+    final own = this.username == null;
+    final username = this.username ?? _signedInUsername(ref);
     if (username == null) {
       return _Page(title: l.favoritesTitle, child: const SizedBox());
     }
+    if (!own) {
+      final notAllowed = _notAllowed(context, ref, l.favoritesTitle);
+      if (notAllowed != null) return notAllowed;
+    }
+    // The words for what isn't shared name the person, so another profile's
+    // display name comes from the same read their page made.
+    final name = own
+        ? username
+        : ref.watch(profileProvider(username)).value?.user.name ?? username;
     ref.listen(
       mediaChangesProvider,
       (_, _) => ref.invalidate(favoritesProvider(username)),
@@ -65,22 +97,42 @@ class FavoritesScreen extends ConsumerWidget {
     if (result.hasError && !result.isLoading) {
       body = _centered(
         FailureState(
-          title: l.favoritesLoadFailed,
+          title: own
+              ? l.favoritesLoadFailed
+              : l.profileOtherFavoritesLoadFailed,
           error: result.error!,
           onRetry: () => ref.invalidate(favoritesProvider(username)),
         ),
       );
     } else if (!result.hasValue) {
       body = LoadingState(label: l.loadingInProgress);
-    } else if (lists == null || lists.isEmpty) {
-      // The server sends null only for someone who doesn't share them,
-      // never for one's own; it reads as none.
+    } else if (lists == null) {
+      // The server sends null only for someone who doesn't share them; one's
+      // own lists come as empty instead.
       body = _centered(
-        EmptyState(
-          icon: Lucide.heart,
-          title: l.favoritesEmpty,
-          message: l.favoritesEmptyHint,
-        ),
+        own
+            ? EmptyState(
+                icon: Lucide.heart,
+                title: l.favoritesEmpty,
+                message: l.favoritesEmptyHint,
+              )
+            : EmptyState(
+                icon: Lucide.lock,
+                title: l.profileFavoritesHidden(name),
+              ),
+      );
+    } else if (lists.isEmpty) {
+      body = _centered(
+        own
+            ? EmptyState(
+                icon: Lucide.heart,
+                title: l.favoritesEmpty,
+                message: l.favoritesEmptyHint,
+              )
+            : EmptyState(
+                icon: Lucide.heart,
+                title: l.profileFavoritesOtherEmpty(name),
+              ),
       );
     } else {
       final poster = railCardSize(context, RailArt.poster);
@@ -136,17 +188,28 @@ class FavoritesScreen extends ConsumerWidget {
 }
 
 /// Everything the person watched last, the latest file of each title,
-/// newest first: the whole list behind the profile's row.
+/// newest first: the whole list behind the profile's row. [username] is
+/// another person's, from their profile; null is the signed-in account's.
 class RecentScreen extends ConsumerWidget {
-  const RecentScreen({super.key});
+  const RecentScreen({super.key, this.username});
+
+  final String? username;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final username = _username(ref);
+    final own = this.username == null;
+    final username = this.username ?? _signedInUsername(ref);
     if (username == null) {
       return _Page(title: l.profileRecent, child: const SizedBox());
     }
+    if (!own) {
+      final notAllowed = _notAllowed(context, ref, l.profileRecent);
+      if (notAllowed != null) return notAllowed;
+    }
+    final name = own
+        ? username
+        : ref.watch(profileProvider(username)).value?.user.name ?? username;
     ref.listen(
       mediaChangesProvider,
       (_, _) => ref.invalidate(recentProvider(username)),
@@ -157,13 +220,20 @@ class RecentScreen extends ConsumerWidget {
     if (result.hasError && !result.isLoading) {
       body = _centered(
         FailureState(
-          title: l.profileRecentLoadFailed,
+          title: own
+              ? l.profileRecentLoadFailed
+              : l.profileOtherRecentLoadFailed,
           error: result.error!,
           onRetry: () => ref.invalidate(recentProvider(username)),
         ),
       );
     } else if (!result.hasValue) {
       body = LoadingState(label: l.loadingInProgress);
+    } else if (result.value == null && !own) {
+      // Their profile shares statistics, but this read says they stopped.
+      body = _centered(
+        EmptyState(icon: Lucide.lock, title: l.profileStoppedSharing(name)),
+      );
     } else if (entries.isEmpty) {
       body = _centered(
         EmptyState(icon: Lucide.clock, title: l.profileRecentEmpty),

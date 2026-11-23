@@ -20,6 +20,7 @@ import 'screens/metadata/images_screen.dart';
 import 'screens/person/person_screen.dart';
 import 'screens/profile/lists_screens.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/profile/user_profile_screen.dart';
 import 'screens/requests/catalog_browse.dart';
 import 'screens/requests/catalog_screen.dart';
 import 'screens/requests/explore_screen.dart';
@@ -127,6 +128,19 @@ abstract final class Routes {
     path: '/person/${Uri.encodeComponent(name)}',
     queryParameters: _query({'tmdb': tmdbId}),
   ).toString();
+
+  /// Another person's profile, from Search or a link: their favorites,
+  /// statistics, and recent plays, as far as they share them.
+  static String userProfile(String username) =>
+      '/profiles/${Uri.encodeComponent(username)}';
+
+  /// The whole favorites list behind another person's profile.
+  static String userFavorites(String username) =>
+      '${userProfile(username)}/favorites';
+
+  /// The whole recent list behind another person's profile.
+  static String userRecent(String username) =>
+      '${userProfile(username)}/recent';
 
   static String downloadsShow(String titleId) => '/downloads/show/$titleId';
   static String identify(String titleId) => '/identify/$titleId';
@@ -406,6 +420,24 @@ List<RouteBase> _handsetRoutes() => [
     path: Routes.recent,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const RecentScreen(),
+  ),
+  PushedRoute(
+    path: '/profiles/:username',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        UserProfileScreen(username: state.pathParameters['username']!),
+  ),
+  PushedRoute(
+    path: '/profiles/:username/favorites',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        FavoritesScreen(username: state.pathParameters['username']!),
+  ),
+  PushedRoute(
+    path: '/profiles/:username/recent',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        RecentScreen(username: state.pathParameters['username']!),
   ),
   PushedRoute(
     path: Routes.settings,
