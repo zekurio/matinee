@@ -318,6 +318,7 @@ class TextRow extends StatefulWidget {
     this.placeholder,
     this.error,
     this.keyboardType,
+    this.maxLines = 1,
     this.secret = false,
     this.trailing,
     this.hint,
@@ -332,6 +333,7 @@ class TextRow extends StatefulWidget {
   /// What the field is for, under it while the server has nothing to say.
   final String? hint;
   final TextInputType? keyboardType;
+  final int maxLines;
   final bool secret;
   final Widget? trailing;
 
@@ -369,6 +371,7 @@ class _TextRowState extends State<TextRow> {
             placeholder: widget.placeholder,
             error: widget.error,
             keyboardType: widget.keyboardType,
+            maxLines: widget.maxLines,
             obscureText: widget.secret,
             autocorrect: false,
             trailing: widget.trailing,

@@ -547,6 +547,7 @@
   "settingsAdminAuthentication": "Authentifizierung",
   "settingsAdminBranding": "Branding",
   "settingsAdminJobs": "Aufgaben",
+  "settingsAdminNetwork": "Netzwerk",
   "settingsAdminLibraries": "Mediatheken",
   "settingsAdminTranscoding": "Transkodierung",
   "settingsAdminTrickplay": "Trickplay",
@@ -1698,5 +1699,18 @@
   "webDiscoverTitle": "Entdecken",
   "webFiltersLowest": "Untergrenze",
   "webFiltersHighest": "Obergrenze",
-  "webRequestsDeclineCancel": "Abbrechen"
+  "webRequestsDeclineCancel": "Abbrechen",
+  "webNetworkTitle": "Lokal und entfernt",
+  "webNetworkConnectionLocal": "Du bist von {p1} verbunden. Das zählt als lokal.",
+  "webNetworkConnectionRemote": "Du bist von {p1} verbunden. Das zählt als entfernt.",
+  "webNetworkConnectionUnknown": "Der Server kann nicht erkennen, von wo du verbunden bist. Du zählst deshalb als entfernt.",
+  "webNetworkUnheededProxy": "Ein Reverse-Proxy reicht deine Anfragen weiter, ist aber kein vertrauenswürdiger Proxy. Jede Anfrage sieht aus, als käme sie von {p1}. Trag diese Adresse unter „Vertrauenswürdige Proxys“ ein.",
+  "webNetworkLocalNetworks": "Lokale Netzwerke",
+  "webNetworkTrustedProxies": "Vertrauenswürdige Proxys",
+  "webNetworkRangesNote": "Eine Adresse oder ein Bereich pro Zeile, etwa 192.168.0.0/16.",
+  "webNetworkTrustedProxiesNote": "Reverse-Proxys, deren X-Forwarded-For der Server glaubt. Eine Adresse oder ein Bereich pro Zeile.",
+  "webNetworkUploadTitle": "Watch-Partys",
+  "webNetworkUpload": "Upload-Geschwindigkeit (Mbit/s)",
+  "webNetworkUploadNote": "Die entfernten Mitglieder einer Watch-Party teilen sich das als Bitraten-Limit. Lokale Mitglieder begrenzt es nicht. Leer für kein Limit.",
+  "webNetworkUploadPlaceholder": "Kein Limit"
 }

@@ -62,6 +62,7 @@ const resources = {
   logIn: "log-in",
   logOut: "log-out",
   monitor: "monitor",
+  network: "network",
   pause: "pause:filled",
   paintbrush: "paintbrush",
   palette: "palette",

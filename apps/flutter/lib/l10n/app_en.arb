@@ -2939,6 +2939,10 @@
   "@settingsAdminLibraries": {
     "description": "strings.xml"
   },
+  "settingsAdminNetwork": "Network",
+  "@settingsAdminNetwork": {
+    "description": "Administration row for network settings."
+  },
   "settingsAdminTranscoding": "Transcoding",
   "@settingsAdminTranscoding": {
     "description": "strings.xml"
@@ -8852,5 +8856,72 @@
   "webRequestsDeclineCancel": "Cancel",
   "@webRequestsDeclineCancel": {
     "description": "requests.decline.cancel"
+  },
+  "webNetworkTitle": "Local and remote",
+  "@webNetworkTitle": {
+    "description": "network.title"
+  },
+  "webNetworkConnectionLocal": "You're connected from {p1}, which counts as local.",
+  "@webNetworkConnectionLocal": {
+    "description": "network.connection.local",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webNetworkConnectionRemote": "You're connected from {p1}, which counts as remote.",
+  "@webNetworkConnectionRemote": {
+    "description": "network.connection.remote",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webNetworkConnectionUnknown": "The server can't tell where you're connected from, so you count as remote.",
+  "@webNetworkConnectionUnknown": {
+    "description": "network.connection.unknown"
+  },
+  "webNetworkUnheededProxy": "A reverse proxy passes your requests on, but it isn't a trusted proxy. Every request looks like it comes from {p1}. Add that address under Trusted proxies.",
+  "@webNetworkUnheededProxy": {
+    "description": "network.unheededProxy",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webNetworkLocalNetworks": "Local networks",
+  "@webNetworkLocalNetworks": {
+    "description": "network.localNetworks"
+  },
+  "webNetworkTrustedProxies": "Trusted proxies",
+  "@webNetworkTrustedProxies": {
+    "description": "network.trustedProxies"
+  },
+  "webNetworkRangesNote": "One address or range per line, like 192.168.0.0/16.",
+  "@webNetworkRangesNote": {
+    "description": "network.ranges.note"
+  },
+  "webNetworkTrustedProxiesNote": "Reverse proxies whose X-Forwarded-For the server believes. One address or range per line.",
+  "@webNetworkTrustedProxiesNote": {
+    "description": "network.trustedProxies.note"
+  },
+  "webNetworkUploadTitle": "Watch parties",
+  "@webNetworkUploadTitle": {
+    "description": "network.upload.title"
+  },
+  "webNetworkUpload": "Upload speed (Mbps)",
+  "@webNetworkUpload": {
+    "description": "network.upload"
+  },
+  "webNetworkUploadNote": "A watch party's remote members share this as their bit rate limit. Local members aren't limited by it. Empty for no limit.",
+  "@webNetworkUploadNote": {
+    "description": "network.upload.note"
+  },
+  "webNetworkUploadPlaceholder": "No limit",
+  "@webNetworkUploadPlaceholder": {
+    "description": "network.upload.placeholder"
   }
 }
