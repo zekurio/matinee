@@ -36,12 +36,12 @@ KitColors withThemeAccent(KitColors colors, Color seed) {
     textFaint: colors.textFaint,
     accent: accent,
     accentForeground: foreground,
-    accentHover: _ensureContrast(
+    accentHover: ensureContrast(
       mixColor(accent, dark ? _white : _black, dark ? .12 : .14),
       foreground,
       4.5,
     ),
-    accentActive: _ensureContrast(
+    accentActive: ensureContrast(
       mixColor(accent, dark ? _black : _white, dark ? .14 : .12),
       foreground,
       4.5,
@@ -105,13 +105,13 @@ double contrastRatio(Color first, Color second) {
 
 /// [color] lightened or darkened just enough to reach [minimum] on
 /// [background].
-Color _ensureContrast(Color color, Color background, double minimum) => _adjust(
+Color ensureContrast(Color color, Color background, double minimum) => _adjust(
   color,
   _contrastTarget(background),
   (candidate) => contrastRatio(candidate, background) >= minimum,
 );
 
-/// As [_ensureContrast], and readable on its own tint at [tintAlpha] too,
+/// As [ensureContrast], and readable on its own tint at [tintAlpha] too,
 /// which is how a picked row or chip shows it.
 Color _ensureTintedContrast(
   Color color,

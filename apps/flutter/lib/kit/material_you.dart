@@ -25,9 +25,13 @@ class MaterialYouColors {
 }
 
 /// The wallpaper's colors, or null where this device hasn't any: an older
-/// Android, iOS, or a platform without the plugin.
+/// Android, iOS, or a platform without the plugin. They're read again when
+/// the app comes back, as a new wallpaper or a new Material You color is
+/// picked while it's away, and the last ones stay until the new ones come.
 final materialYouProvider = FutureProvider<MaterialYouColors?>((ref) async {
   if (defaultTargetPlatform != TargetPlatform.android) return null;
+  final resumed = AppLifecycleListener(onResume: ref.invalidateSelf);
+  ref.onDispose(resumed.dispose);
   try {
     final palette = await DynamicColorPlugin.getCorePalette();
     if (palette == null) return null;
@@ -42,42 +46,6 @@ final materialYouProvider = FutureProvider<MaterialYouColors?>((ref) async {
     return null;
   }
 });
-
-/// Reads the wallpaper's colors again when the app comes back, as a new
-/// wallpaper or a new Material You color is picked while it's away.
-class MaterialYouWatcher extends ConsumerStatefulWidget {
-  const MaterialYouWatcher({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  ConsumerState<MaterialYouWatcher> createState() => _MaterialYouWatcherState();
-}
-
-class _MaterialYouWatcherState extends ConsumerState<MaterialYouWatcher>
-    with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      ref.invalidate(materialYouProvider);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
-}
 
 /// Material You's roles on the kit's, as `ColorScheme.toThemeColors` in the
 /// earlier Android app: the light and dark schemes from the system's primary
@@ -131,22 +99,22 @@ KitColors _scheme(
     textFaint: step(ramp.textFaint),
     accent: accent,
     accentForeground: onAccent,
-    accentHover: _ensureContrast(
+    accentHover: ensureContrast(
       mixColor(accent, dark ? _white : _black, dark ? .12 : .14),
       onAccent,
       4.5,
     ),
-    accentActive: _ensureContrast(
+    accentActive: ensureContrast(
       mixColor(accent, dark ? _black : _white, dark ? .14 : .12),
       onAccent,
       4.5,
     ),
     accentDim: accentDim,
-    success: _ensureContrast(base.success, background, 3),
-    warning: _ensureContrast(base.warning, background, 3),
-    danger: _ensureContrast(tone(error, dark ? 80 : 40), background, 3),
-    info: _ensureContrast(base.info, background, 3),
-    live: _ensureContrast(base.live, background, 3),
+    success: ensureContrast(base.success, background, 3),
+    warning: ensureContrast(base.warning, background, 3),
+    danger: ensureContrast(tone(error, dark ? 80 : 40), background, 3),
+    info: ensureContrast(base.info, background, 3),
+    live: ensureContrast(base.live, background, 3),
   );
 }
 
@@ -177,24 +145,3 @@ const _Ramp _darkRamp = (
 
 const _black = Color(0xFF000000);
 const _white = Color(0xFFFFFFFF);
-
-/// [color] moved toward black or white just far enough to reach [minimum]
-/// contrast on [background].
-Color _ensureContrast(Color color, Color background, double minimum) {
-  if (contrastRatio(color, background) >= minimum) return color;
-  final target =
-      contrastRatio(_white, background) > contrastRatio(_black, background)
-      ? _white
-      : _black;
-  var low = 0.0;
-  var high = 1.0;
-  for (var step = 0; step < 16; step++) {
-    final amount = (low + high) / 2;
-    if (contrastRatio(mixColor(color, target, amount), background) >= minimum) {
-      high = amount;
-    } else {
-      low = amount;
-    }
-  }
-  return mixColor(color, target, high);
-}

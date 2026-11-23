@@ -41,53 +41,51 @@ class MatineeApp extends ConsumerWidget {
         wallpaper?.light ?? accented(preferences.preset.light, accents?.light);
     final dark =
         wallpaper?.dark ?? accented(preferences.preset.dark, accents?.dark);
-    return MaterialYouWatcher(
-      child: MaterialApp.router(
-        routerConfig: ref.watch(routerProvider),
-        onNavigationNotification: ref.watch(backClaimProvider).onNotification,
-        theme: MatineeTheme.data(light, dark: dark),
-        darkTheme: MatineeTheme.data(dark),
-        themeMode: switch (preferences.appearance) {
-          ThemeAppearance.system => ThemeMode.system,
-          ThemeAppearance.light => ThemeMode.light,
-          ThemeAppearance.dark => ThemeMode.dark,
-        },
-        onGenerateTitle: (context) => AppLocalizations.of(context).appName,
-        debugShowCheckedModeBanner: false,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        builder: (context, child) => DefaultTextStyle(
-          style: KitText.sm.style(color: MatineeTheme.of(context).foreground),
-          // Toasts sit above the tab bar, over whatever page is open.
-          child: Stack(
-            children: [
-              child!,
-              if (device.isTv)
-                // Clear of the drawer's rail and the overscan.
-                Positioned(
-                  left: TvPage.start,
-                  right: TvPage.end,
-                  bottom: Overscan.vertical + 16,
-                  child: Center(
-                    child: ToastHost(state: ref.watch(toastProvider), tv: true),
-                  ),
-                )
-              else
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 64,
-                  child: Center(
-                    child: ToastHost(state: ref.watch(toastProvider)),
-                  ),
+    return MaterialApp.router(
+      routerConfig: ref.watch(routerProvider),
+      onNavigationNotification: ref.watch(backClaimProvider).onNotification,
+      theme: MatineeTheme.data(light, dark: dark),
+      darkTheme: MatineeTheme.data(dark),
+      themeMode: switch (preferences.appearance) {
+        ThemeAppearance.system => ThemeMode.system,
+        ThemeAppearance.light => ThemeMode.light,
+        ThemeAppearance.dark => ThemeMode.dark,
+      },
+      onGenerateTitle: (context) => AppLocalizations.of(context).appName,
+      debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) => DefaultTextStyle(
+        style: KitText.sm.style(color: MatineeTheme.of(context).foreground),
+        // Toasts sit above the tab bar, over whatever page is open.
+        child: Stack(
+          children: [
+            child!,
+            if (device.isTv)
+              // Clear of the drawer's rail and the overscan.
+              Positioned(
+                left: TvPage.start,
+                right: TvPage.end,
+                bottom: Overscan.vertical + 16,
+                child: Center(
+                  child: ToastHost(state: ref.watch(toastProvider), tv: true),
                 ),
-            ],
-          ),
+              )
+            else
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 64,
+                child: Center(
+                  child: ToastHost(state: ref.watch(toastProvider)),
+                ),
+              ),
+          ],
         ),
       ),
     );
