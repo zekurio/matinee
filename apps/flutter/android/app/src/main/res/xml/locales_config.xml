@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's languages, which Android 13 and later lists under the app's
+     language in its settings. The same as the ARB files in lib/l10n, which
+     test/l10n_test.dart checks. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="de" />
+</locale-config>
