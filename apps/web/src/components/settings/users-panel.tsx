@@ -302,7 +302,9 @@ function UserItem({
 
   return (
     <ListItem className="gap-3 py-2.5 pr-2">
-      <UserAvatar user={user} className="text-13px size-8 self-start" />
+      {/* Centered on the name and details lines (20 + 2 + 20px), not the
+          group badges that may wrap below them. */}
+      <UserAvatar user={user} className="text-13px mt-1.25 size-8 self-start" />
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-sm leading-5 font-medium">
           <span className="truncate">{name}</span>
