@@ -12,6 +12,11 @@ class Switch extends StatelessWidget {
     this.label,
   });
 
+  /// The track's size, and the size the switch takes up, which pads the
+  /// track out to 48 tall so a thumb can hit it.
+  static const track = Size(52, 32);
+  static const size = Size(76, 48);
+
   final bool checked;
   final ValueChanged<bool>? onChanged;
   final String? label;
@@ -23,8 +28,6 @@ class Switch extends StatelessWidget {
     final motion = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 150);
-    const width = 52.0;
-    const height = 32.0;
     return PressIndication(
       onPressed: change == null ? null : () => change(!checked),
       button: false,
@@ -34,14 +37,13 @@ class Switch extends StatelessWidget {
       focusInsets: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       builder: (context, state) => Opacity(
         opacity: change == null ? .5 : 1,
-        child: SizedBox(
-          width: width + 24,
-          height: height + 16,
+        child: SizedBox.fromSize(
+          size: size,
           child: Center(
             child: AnimatedContainer(
               duration: motion,
-              width: width,
-              height: height,
+              width: track.width,
+              height: track.height,
               decoration: BoxDecoration(
                 color: checked ? colors.accent : colors.inputHover,
                 borderRadius: KitRadius.pill,
@@ -56,9 +58,13 @@ class Switch extends StatelessWidget {
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
+                    // Off, a white thumb on the grey track in light, and a
+                    // light one in dark, as the web's switch has it.
                     color: checked
                         ? colors.accentForeground
-                        : colors.foreground,
+                        : colors.isDark
+                        ? colors.foreground
+                        : colors.background,
                     shape: BoxShape.circle,
                   ),
                 ),

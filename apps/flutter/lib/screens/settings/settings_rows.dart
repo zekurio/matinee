@@ -330,7 +330,17 @@ class SwitchRow extends StatelessWidget {
             if (icon != null) _RowIcon(icon),
             Expanded(child: _RowText(title: title)),
             const SizedBox(width: 12),
-            Switch(checked: checked, onChanged: change),
+            // The whole row is the tap target, so the switch's own 48
+            // reaches into the row's padding instead of making it taller
+            // than the rows with a value.
+            SizedBox(
+              width: Switch.size.width,
+              height: 20,
+              child: OverflowBox(
+                maxHeight: Switch.size.height,
+                child: Switch(checked: checked, onChanged: change),
+              ),
+            ),
           ],
         ),
       ),
