@@ -53,6 +53,7 @@ Future<void> _pump(
   Size window = const Size(1280, 800),
   bool tickers = true,
   double textScale = 1,
+  TextDirection direction = TextDirection.ltr,
   http.Client? server,
 }) async {
   tester.view.physicalSize = window;
@@ -80,9 +81,12 @@ Future<void> _pump(
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         theme: MatineeTheme.data(matineeDark),
-        home: TickerMode(
-          enabled: tickers,
-          child: SingleChildScrollView(child: child),
+        home: Directionality(
+          textDirection: direction,
+          child: TickerMode(
+            enabled: tickers,
+            child: SingleChildScrollView(child: child),
+          ),
         ),
       ),
     ),
@@ -137,6 +141,31 @@ void main() {
     // Too short to mean it.
     await _swipe(tester, -30);
     expect(_showing(tester), 'Alien');
+  });
+
+  // The bug it pins: right to left, a swipe went the same way as left to
+  // right, against the dots, which do turn round.
+  testWidgets('right to left, a swipe to the right shows the next title', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      HomeShowcase(slides: _slides),
+      direction: TextDirection.rtl,
+    );
+    await _swipe(tester, 200);
+    expect(_showing(tester), 'Brazil');
+    // The dots run from the right, so the second is left of the first.
+    expect(
+      tester.getCenter(find.bySemanticsLabel('2 of 4')).dx,
+      lessThan(tester.getCenter(find.bySemanticsLabel('1 of 4')).dx),
+    );
+    await _swipe(tester, -200);
+    expect(_showing(tester), 'Alien');
+    // A flick too short to count by its length, but fast.
+    await tester.fling(find.byType(HomeShowcase), const Offset(50, 0), 1500);
+    await tester.pumpAndSettle();
+    expect(_showing(tester), 'Brazil');
   });
 
   testWidgets('a dot shows its title', (tester) async {

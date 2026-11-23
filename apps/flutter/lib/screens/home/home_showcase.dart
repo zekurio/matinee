@@ -145,10 +145,15 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
     _prime();
   }
 
+  /// A swipe toward the leading side shows the next title, as turning a
+  /// page does: to the left where text runs left to right, to the right in
+  /// Arabic or Hebrew, where the dots run the other way too.
   void _endDrag(DragEndDetails details) {
-    final velocity = details.primaryVelocity ?? 0;
-    final on = _drag < -_swipeDistance || velocity < -_swipeVelocity;
-    final back = _drag > _swipeDistance || velocity > _swipeVelocity;
+    final toward = Directionality.of(context) == ui.TextDirection.rtl ? -1 : 1;
+    final drag = _drag * toward;
+    final velocity = (details.primaryVelocity ?? 0) * toward;
+    final on = drag < -_swipeDistance || velocity < -_swipeVelocity;
+    final back = drag > _swipeDistance || velocity > _swipeVelocity;
     _drag = 0;
     if (!on && !back) return;
     _show(on ? (_current + 1) % _count : (_current - 1 + _count) % _count);
