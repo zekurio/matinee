@@ -9,13 +9,14 @@ import 'package:matinee/l10n/app_localizations.dart';
 Future<List<String>> _pump(
   WidgetTester tester, {
   List<String> value = const [],
+  double width = 360,
   List<MultiSelectChoice> choices = const [
     MultiSelectChoice(value: 'drama', label: 'Drama', count: '12'),
     MultiSelectChoice(value: 'comedy', label: 'Comedy', count: '4'),
     MultiSelectChoice(value: 'horror', label: 'Horror', count: '7'),
   ],
 }) async {
-  tester.view.physicalSize = const Size(360, 800);
+  tester.view.physicalSize = Size(width, 800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final current = [...value];
@@ -34,7 +35,7 @@ Future<List<String>> _pump(
               return Align(
                 alignment: Alignment.topLeft,
                 child: SizedBox(
-                  width: 360,
+                  width: width,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: MultiSelect(
@@ -132,5 +133,14 @@ void main() {
     await _pump(tester, value: const ['lost']);
     expect(find.text('lost'), findsOneWidget);
     expect(_remove('Remove lost'), findsOneWidget);
+  });
+
+  testWidgets('two short chips keep the field one line tall', (tester) async {
+    // A wide field, since the test font draws each letter as a square.
+    await _pump(tester, value: const ['drama', 'comedy'], width: 700);
+    final withChips = tester.getSize(find.byType(MultiSelect)).height;
+    await _pump(tester, width: 700);
+    final empty = tester.getSize(find.byType(MultiSelect)).height;
+    expect(withChips, empty);
   });
 }

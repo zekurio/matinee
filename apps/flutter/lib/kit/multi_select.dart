@@ -11,6 +11,14 @@ import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
+/// How much of the field's last line the text field needs before it drops to
+/// a line of its own, so it stays wide enough to type in.
+const _minInputWidth = 80.0;
+
+/// What a chip takes besides its label: the padding at each end, the gap,
+/// and the ×'s box.
+const _chipChrome = 36.0;
+
 /// A choice a [MultiSelect] offers: what it sets, its words, and how many
 /// titles it has, as [Filters]'s controls read.
 @immutable
@@ -172,10 +180,10 @@ class _MultiSelectState extends State<MultiSelect> {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final width = math.max(96.0, constraints.maxWidth);
-                    final input = chosen.isEmpty
-                        ? width
-                        : math.min(220.0, math.max(120.0, width * .5));
+                    final input = _inputWidth(context, chosen, width);
                     return ConstrainedBox(
+                      // A line of chips, and the field with nothing picked,
+                      // are the kit's input height.
                       constraints: const BoxConstraints(minHeight: 36),
                       child: Wrap(
                         spacing: 4,
@@ -248,6 +256,38 @@ class _MultiSelectState extends State<MultiSelect> {
         ],
       ],
     );
+  }
+
+  /// The text field's width on the line the chips leave: the rest of that
+  /// line, or a line of its own when too little is left to type in.
+  double _inputWidth(
+    BuildContext context,
+    List<MultiSelectChoice> chosen,
+    double width,
+  ) {
+    if (chosen.isEmpty) return width;
+    // The chip's words as its Text lays them out, inherited style and all.
+    final style = DefaultTextStyle.of(context).style
+        .merge(KitText.px13.style(weight: FontWeight.w500));
+    final direction = Directionality.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    var line = 0.0;
+    for (final choice in chosen) {
+      final painter = TextPainter(
+        text: TextSpan(text: choice.label, style: style),
+        maxLines: 1,
+        textDirection: direction,
+        textScaler: scaler,
+      )..layout();
+      final chip = math.min(width - 8, _chipChrome + painter.width);
+      painter.dispose();
+      if (line > 0 && line + 4 + chip > width) line = 0;
+      line = line == 0 ? chip : line + 4 + chip;
+    }
+    final left = width - (line > 0 ? line + 4 : 0);
+    // Stay just under the line so rounding can't push the field onto the
+    // next one.
+    return left >= _minInputWidth ? left - .5 : width;
   }
 }
 
