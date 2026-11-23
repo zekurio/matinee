@@ -12,6 +12,7 @@ import 'access_groups_page.dart';
 import 'admin_parts.dart';
 import 'authentication_page.dart';
 import 'branding_page.dart';
+import 'connections_page.dart';
 import 'jobs_page.dart';
 import 'libraries_page.dart';
 import 'network_page.dart';
@@ -33,6 +34,9 @@ enum AdminCategory {
       Permission.libraryScan,
     ],
   ),
+  // Reading the connections opens the page. Each action checks the
+  // permission the contract names.
+  connections('connections', Lucide.inbox, needs: [Permission.fulfilmentRead]),
   users('users', Lucide.users, needs: [Permission.adminUserRead]),
   access('access', Lucide.shieldCheck, needs: [Permission.groupRead]),
   // Changing them takes `all`.
@@ -107,6 +111,7 @@ enum AdminCategory {
 
   String title(AppLocalizations l) => switch (this) {
     libraries => l.settingsAdminLibraries,
+    connections => l.webConnectionsTitle,
     users => l.settingsAdminUsers,
     access => l.settingsAdminAccess,
     authentication => l.settingsAdminAuthentication,
@@ -122,6 +127,7 @@ enum AdminCategory {
     allows: openFor,
     child: switch (this) {
       libraries => const LibrariesPage(),
+      connections => const ConnectionsPage(),
       users => const UsersPage(),
       access => const AccessGroupsPage(),
       authentication => const AuthenticationPage(),

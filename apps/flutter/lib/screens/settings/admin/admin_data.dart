@@ -18,6 +18,21 @@ final folderProvider = serverQueryFamily(
   (api, String? path) => api.admin.browse(path: path),
 );
 
+/// The services requests can go through, each describing its own fields.
+final fulfilmentSourcesProvider = serverQuery(
+  (api) => api.admin.fulfilment.sources(),
+);
+final adminConnectionsProvider = serverQuery(
+  (api) => api.admin.fulfilment.connections(),
+);
+
+/// The library the folder of a kind of title lands in, by the folders
+/// Matinee scans.
+final fulfilmentLandingProvider = serverQueryFamily(
+  (api, ({String kind, String folder}) query) =>
+      api.admin.fulfilment.landing(kind: query.kind, folder: query.folder),
+);
+
 final adminUsersProvider = serverQuery((api) => api.admin.users.list());
 final adminInvitesProvider = serverQuery((api) => api.admin.invites.list());
 final inviteOptionsProvider = serverQuery((api) => api.admin.invites.options());
