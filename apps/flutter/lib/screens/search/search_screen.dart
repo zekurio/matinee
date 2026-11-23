@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/session.dart';
+import '../../downloads/downloads.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/artwork.dart';
@@ -14,18 +16,22 @@ import '../../query/failure_view.dart';
 import '../../router.dart';
 import '../home/home_data.dart' show librariesProvider;
 import '../requests/catalog_cards.dart' show CatalogCard;
-import '../requests/discover.dart';
 import '../requests/request_words.dart' show askable, refKey;
 import '../requests/requests_data.dart' show catalogSearchProvider;
 import '../requests/requests_hub.dart';
+import 'offline_search.dart';
 import 'search_data.dart';
 
 /// Search across the library: the field at the top with Back in its magnifier's
 /// place, and under it, once something's typed and typing pauses, the titles by
 /// library in the order the server ranked them, then cast and crew, genres, and
 /// studios, then the catalog's "Not here yet", which loads on its own. The last
-/// answer stays while the next is out, with "Searching…" under it. Under the
-/// empty field is Explore.
+/// answer stays while the next is out, with "Searching…" under it.
+///
+/// Offline it looks through the downloads instead: the movies and shows on
+/// the device, by name, opening what the Downloads tab opens for them. Under
+/// an empty field it only says what it searches; the Explore tab has the
+/// catalog's rows.
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -39,7 +45,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Timer? _pause;
 
   /// The text the page searches for: the field's, trimmed, once typing
-  /// paused. Empty shows Explore.
+  /// paused. Empty shows what Search looks through.
   String _text = '';
 
   /// The last answer, kept on screen while the next one is out.
@@ -48,7 +54,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _typed(String value) {
     _pause?.cancel();
     final text = value.trim();
-    // Clearing the field goes back to Explore at once.
+    // Clearing the field goes back to the hint at once.
     if (text.isEmpty) {
       setState(() => _text = '');
       return;
@@ -70,6 +76,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
+    final offline = ref.watch(authStateProvider) is Offline;
     return ColoredBox(
       color: colors.background,
       child: Column(
@@ -110,11 +117,84 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: MediaQuery.removePadding(
               context: context,
               removeTop: true,
-              child: _text.isEmpty ? const Explore() : _found(l),
+              child: offline
+                  ? _offline(l)
+                  : _text.isEmpty
+                  ? const _EmptySearchHint()
+                  : _found(l),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _offline(AppLocalizations l) {
+    final colors = MatineeTheme.of(context);
+    final text = _text;
+    final scope = Text(
+      l.searchOfflineScope,
+      style: KitText.sm.style(color: colors.mutedForeground),
+    );
+    if (text.isEmpty) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+          child: Column(
+            spacing: 12,
+            children: [
+              KitIcon(Lucide.download, size: 40, color: colors.mutedForeground),
+              scope,
+              Text(
+                l.searchOfflineHint,
+                textAlign: TextAlign.center,
+                style: KitText.sm.style(color: colors.mutedForeground),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final hits = searchDownloads(
+      ref.watch(shownDownloadsProvider).values,
+      text,
+    );
+    final gutter = CardMetrics.gutter;
+    return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.only(
+        left: gutter,
+        right: gutter,
+        top: 4,
+        bottom: MediaQuery.paddingOf(context).bottom + 24,
+      ),
+      children: [
+        scope,
+        if (hits.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: EmptyState(
+              icon: Lucide.searchX,
+              title: l.searchNoMatch(text),
+              message: l.searchNoMatchHint,
+            ),
+          )
+        else
+          for (final hit in hits)
+            _DownloadHitRow(
+              hit: hit,
+              onPressed: () {
+                _focus.unfocus();
+                unawaited(
+                  context.push(
+                    hit.isShow
+                        ? Routes.downloadsShow(hit.id)
+                        : Routes.play(hit.id),
+                  ),
+                );
+              },
+            ),
+      ],
     );
   }
 
@@ -182,6 +262,94 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         catalogFailed: catalogFailed,
         catalogStale: page?.stale ?? false,
         onCatalogRetry: () => ref.invalidate(catalogSearchProvider(text)),
+      ),
+    );
+  }
+}
+
+/// Search's empty field: a quiet line saying where typing looks, since
+/// Discover's rows now have the Explore tab.
+class _EmptySearchHint extends StatelessWidget {
+  const _EmptySearchHint();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        child: Text(
+          l.searchEmptyHint,
+          textAlign: TextAlign.center,
+          style: KitText.sm.style(
+            color: MatineeTheme.of(context).mutedForeground,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A downloaded title Search found offline: a tap opens what the Downloads
+/// tab opens for it.
+class _DownloadHitRow extends StatelessWidget {
+  const _DownloadHitRow({required this.hit, required this.onPressed});
+
+  final DownloadHit hit;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final colors = MatineeTheme.of(context);
+    final detail = hit.isShow
+        ? l.mediaEpisodeCount(hit.count)
+        : hit.year?.toString();
+    return PressIndication(
+      onPressed: onPressed,
+      label: [hit.name, ?detail].join(', '),
+      shape: KitRadius.control,
+      builder: (context, state) => ColoredBox(
+        color: colors.foreground.withValues(
+          alpha: state == PressState.idle ? 0 : .04,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            spacing: 14,
+            children: [
+              KitIcon(
+                hit.isShow ? Lucide.tv : Lucide.film,
+                size: 22,
+                color: colors.mutedForeground,
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hit.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KitText.sm.style(color: colors.foreground),
+                    ),
+                    if (detail != null)
+                      Text(
+                        detail,
+                        maxLines: 1,
+                        style: KitText.xs.style(color: colors.mutedForeground),
+                      ),
+                  ],
+                ),
+              ),
+              KitIcon(
+                Lucide.chevronRight,
+                size: 18,
+                color: colors.mutedForeground,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

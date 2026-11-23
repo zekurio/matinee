@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/device.dart';
-import '../../core/permissions.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
@@ -16,9 +15,7 @@ import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
 import '../requests/asked_rail.dart';
-import '../requests/request_words.dart' show formatCount;
 import '../requests/requests_data.dart' show profileAskedProvider;
-import '../requests/requests_hub.dart' show requestsProvider;
 import '../settings/settings_rows.dart';
 import '../shell/offline_note.dart';
 import '../sign_in/server_switcher.dart';
@@ -26,10 +23,11 @@ import 'favorite_cards.dart';
 import 'profile_data.dart';
 import 'stats.dart';
 
-/// The profile tab: who's signed in, their favorites, their statistics, and
-/// what they watched last, then the account: switching server or account, and
-/// signing out, here with the account they act on. Offline it's the person and
-/// the account rows, since the rest is the server's.
+/// The profile page, which each tab header's avatar opens over the tabs: who's
+/// signed in, their favorites, their statistics, and what they watched last,
+/// then the account: switching server or account, and signing out, here with
+/// the account they act on. Offline it's the person and the account rows, since
+/// the rest is the server's.
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -53,6 +51,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  /// Back to the tab the avatar was on. A deep link has no page under the
+  /// profile, so that goes Home instead.
+  void _back(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(Routes.home);
+    }
+  }
+
   /// Back on the tab, favorites, requests, and what was watched may have
   /// moved on.
   void _returned(String username) {
@@ -73,14 +81,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (user == null) return ColoredBox(color: colors.background);
     ref.listen(mediaChangesProvider, (_, _) => _returned(user.username));
     final offline = auth is Offline;
+    final l = AppLocalizations.of(context);
     final sections = offline
         ? [
             _Header(user: user),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: OfflineNote(
-                message: AppLocalizations.of(context).profileOffline,
-              ),
+              child: OfflineNote(message: l.profileOffline),
             ),
             const _Account(),
           ]
@@ -88,8 +95,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return ReturnWatcher(
       path: Routes.profile,
       onReturn: () => _returned(user.username),
-      child: ColoredBox(
-        color: colors.background,
+      child: PageFrame(
+        title: l.tabProfile,
+        backLabel: l.commonBack,
+        onBack: () => _back(context),
+        actions: [
+          PageBarButton(
+            icon: Lucide.settings,
+            label: l.shellSettings,
+            onPressed: () => context.push(Routes.settings),
+          ),
+        ],
         child: ListView.separated(
           padding: EdgeInsets.only(
             top: 8,
@@ -111,7 +127,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (loaded == null) {
       return [
         header,
-        if (can(user, Permission.adminRequestRead)) const _Requests(),
         if (profile.hasError && !profile.isLoading)
           FailureState(
             title: l.profileLoadFailed,
@@ -132,7 +147,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final asked = ref.watch(profileAskedProvider).value?.items ?? const [];
     return [
       header,
-      if (can(user, Permission.adminRequestRead)) const _Requests(),
       _Favorites(favorites: loaded.favorites ?? const []),
       if (asked.isNotEmpty) AskedRail(items: asked, fresh: false),
       _statistics(context, user),
@@ -434,33 +448,6 @@ class _RecentRail extends StatelessWidget {
       itemHeight: size.height,
       itemCount: entries.length,
       itemBuilder: (context, index) => EpisodeCard(item: entries[index].item),
-    );
-  }
-}
-
-/// The way to the requests, with how many need an answer for whoever
-/// answers them.
-class _Requests extends ConsumerWidget {
-  const _Requests();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final answers = ref.watch(runsQueueProvider);
-    final needsYou = ref.watch(
-      requestsProvider.select((state) => state.needsYou),
-    );
-    return _Narrow(
-      child: Panel(
-        rows: [
-          LinkRow(
-            icon: Lucide.inbox,
-            title: l.webRequestsTitle,
-            value: answers && needsYou > 0 ? formatCount(needsYou, l) : null,
-            onPressed: () => context.push(Routes.requestQueue),
-          ),
-        ],
-      ),
     );
   }
 }

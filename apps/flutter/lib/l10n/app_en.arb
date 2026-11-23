@@ -583,10 +583,6 @@
   "@saveBarSave": {
     "description": "The save bar under a settings page: its button that saves the unsaved edits. Kept short so the bar fits on one row on a phone"
   },
-  "browseClearAll": "Clear all",
-  "@browseClearAll": {
-    "description": "strings.xml"
-  },
   "browseClearFilters": "Clear filters",
   "@browseClearFilters": {
     "description": "strings.xml"
@@ -619,6 +615,10 @@
   "browseFindLanguage": "Find a language",
   "@browseFindLanguage": {
     "description": "strings.xml"
+  },
+  "browseFindGenre": "Find a genre",
+  "@browseFindGenre": {
+    "description": "The field in the genres filter that finds one by name."
   },
   "browseGenre": "Genre",
   "@browseGenre": {
@@ -658,11 +658,11 @@
   },
   "browseLibrary": "Library",
   "@browseLibrary": {
-    "description": "Names the menu that narrows Shows or Movies to one library."
+    "description": "Names the filter that narrows Media to one library."
   },
   "browseLibraryAll": "All libraries",
   "@browseLibraryAll": {
-    "description": "The library menu's choice for every library at once."
+    "description": "The library filter's choice for every library at once."
   },
   "browseNextUp": "Next up",
   "@browseNextUp": {
@@ -672,17 +672,12 @@
   "@browseNoFilterMatch": {
     "description": "strings.xml"
   },
+  "browseNoGenreMatch": "No genre by that name",
+  "@browseNoGenreMatch": {
+    "description": "The field that finds a genre in the filters when nothing matches what's typed."
+  },
   "browseRecentlyAdded": "Recently added in {p1}",
   "@browseRecentlyAdded": {
-    "description": "strings.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "browseRemoveFilter": "Remove filter {p1}",
-  "@browseRemoveFilter": {
     "description": "strings.xml",
     "placeholders": {
       "p1": {
@@ -1471,13 +1466,17 @@
   "@libraryNoneMovies": {
     "description": "strings.xml"
   },
+  "libraryNoneMedia": "No movies or shows found",
+  "@libraryNoneMedia": {
+    "description": "Media, when no title is in any library."
+  },
   "libraryNoneShows": "No shows found",
   "@libraryNoneShows": {
     "description": "strings.xml"
   },
   "libraryOffline": "Your shows and movies come back once the server can be reached.",
   "@libraryOffline": {
-    "description": "Shows, Movies, or a genre's or studio's page while the server can't be reached."
+    "description": "Media, or a genre's or studio's page, while the server can't be reached."
   },
   "librarySearchMovies": "Search movies",
   "@librarySearchMovies": {
@@ -1908,6 +1907,15 @@
   "mediaWatchedDateTitle": "When did you watch it?",
   "@mediaWatchedDateTitle": {
     "description": "strings.xml"
+  },
+  "multiSelectRemove": "Remove {p1}",
+  "@multiSelectRemove": {
+    "description": "A chosen value's remove button in the filter fields, as the web's combobox has it.",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
   },
   "peopleCreditActor": "{count, plural, one{Actor} other{Cast}}",
   "@peopleCreditActor": {
@@ -2589,7 +2597,7 @@
   },
   "profileOffline": "Your favorites, requests, and stats come back once the server can be reached.",
   "@profileOffline": {
-    "description": "The Profile tab while the server can't be reached."
+    "description": "The profile page while the server can't be reached."
   },
   "profileRecent": "Recently watched",
   "@profileRecent": {
@@ -2783,6 +2791,10 @@
       }
     }
   },
+  "requestsStatusLabel": "Status",
+  "@requestsStatusLabel": {
+    "description": "The label before a request's state badge, as the web's requests.statusLabel"
+  },
   "requestsYearKind": "{p1} · {p2}",
   "@requestsYearKind": {
     "description": "strings.xml",
@@ -2811,6 +2823,10 @@
   "@searchField": {
     "description": "strings.xml"
   },
+  "searchEmptyHint": "Type above to search your library, people, genres, and studios.",
+  "@searchEmptyHint": {
+    "description": "Under Search's empty field, where Discover used to be; the Explore tab has the rows now."
+  },
   "searchNoMatch": "Nothing matches “{p1}”",
   "@searchNoMatch": {
     "description": "strings.xml",
@@ -2823,6 +2839,14 @@
   "searchNoMatchHint": "Check the spelling, or try part of the name.",
   "@searchNoMatchHint": {
     "description": "strings.xml"
+  },
+  "searchOfflineHint": "Type to find a movie or show you downloaded.",
+  "@searchOfflineHint": {
+    "description": "Search's empty field while offline: it looks through the downloads."
+  },
+  "searchOfflineScope": "Searching your downloads",
+  "@searchOfflineScope": {
+    "description": "Over Search's offline results, so the person knows what's searched."
   },
   "searchSearching": "Searching…",
   "@searchSearching": {
@@ -3319,17 +3343,17 @@
   "@tabHome": {
     "description": "strings.xml: The bottom bar"
   },
-  "tabMovies": "Movies",
-  "@tabMovies": {
-    "description": "The touch screens' shell"
+  "tabExplore": "Explore",
+  "@tabExplore": {
+    "description": "The touch screens' shell: the tab that shows Discover's rows, requests, and catalog browse."
+  },
+  "tabMedia": "Media",
+  "@tabMedia": {
+    "description": "The touch screens' shell: the tab with every movie and show, as the web's shell.media."
   },
   "tabProfile": "Profile",
   "@tabProfile": {
     "description": "strings.xml"
-  },
-  "tabShows": "Shows",
-  "@tabShows": {
-    "description": "The touch screens' shell"
   },
   "titleCast": "Cast",
   "@titleCast": {
@@ -4623,93 +4647,6 @@
   "webFiltersCardScoreSpoken": "Score {p1}",
   "@webFiltersCardScoreSpoken": {
     "description": "What a screen reader says for the star and the score on a card.",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipMovieRating": "Movies rated up to {p1}",
-  "@webFiltersChipMovieRating": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipRating": "Rated up to {p1}",
-  "@webFiltersChipRating": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipRuntimeAtLeast": "At least {p1} long",
-  "@webFiltersChipRuntimeAtLeast": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipRuntimeBetween": "{p1} to {p2} long",
-  "@webFiltersChipRuntimeBetween": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      },
-      "p2": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipRuntimeUpTo": "Up to {p1} long",
-  "@webFiltersChipRuntimeUpTo": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipScoreAtLeast": "Score at least {p1}",
-  "@webFiltersChipScoreAtLeast": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipScoreBetween": "Score {p1} to {p2}",
-  "@webFiltersChipScoreBetween": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      },
-      "p2": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipScoreUpTo": "Score up to {p1}",
-  "@webFiltersChipScoreUpTo": {
-    "description": "strings_web_filters.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webFiltersChipShowRating": "Shows rated up to {p1}",
-  "@webFiltersChipShowRating": {
-    "description": "strings_web_filters.xml",
     "placeholders": {
       "p1": {
         "type": "String"
@@ -8889,15 +8826,6 @@
   "webRequestsStateDeclined": "Declined",
   "@webRequestsStateDeclined": {
     "description": "requests.state.declined"
-  },
-  "webRequestsAddAfterAllNamed": "Add {p1} after all",
-  "@webRequestsAddAfterAllNamed": {
-    "description": "requests.addAfterAllNamed",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
   },
   "webRequestsEmptyNone": "No requests yet",
   "@webRequestsEmptyNone": {

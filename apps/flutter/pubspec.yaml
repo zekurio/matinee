@@ -51,3 +51,9 @@ flutter:
     - family: Red Hat Text
       fonts:
         - asset: assets/fonts/red_hat_text.ttf
+    # Unbounded Bold's capitals and digits, for an avatar's initial. Written
+    # by brand/wordmark.py.
+    - family: Unbounded
+      fonts:
+        - asset: assets/fonts/unbounded_initials.ttf
+          weight: 700

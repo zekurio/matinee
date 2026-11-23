@@ -54,70 +54,77 @@ class Sheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    return Glass(
-      shape: const BorderRadius.vertical(top: Radius.circular(KitRadius.xl)),
-      border: Border(top: BorderSide(color: colors.hairline)),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 8, bottom: 4),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colors.foreground.withValues(alpha: .2),
-                  borderRadius: KitRadius.pill,
+    return Padding(
+      // The keyboard takes the bottom of the screen: the sheet rises over it,
+      // so the field the person typed in and the list under it stay in view.
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Glass(
+        shape: const BorderRadius.vertical(top: Radius.circular(KitRadius.xl)),
+        border: Border(top: BorderSide(color: colors.hairline)),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8, bottom: 4),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.foreground.withValues(alpha: .2),
+                    borderRadius: KitRadius.pill,
+                  ),
                 ),
               ),
-            ),
-            if (title != null || description != null)
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 4,
-                  children: [
-                    if (title case final heading?)
-                      Semantics(
-                        header: true,
-                        child: Text(
-                          heading,
-                          style: KitText.base.style(
-                            color: colors.foreground,
-                            weight: FontWeight.w500,
+              if (title != null || description != null)
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 4,
+                    children: [
+                      if (title case final heading?)
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            heading,
+                            style: KitText.base.style(
+                              color: colors.foreground,
+                              weight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                      ),
-                    if (description case final text?)
-                      Text(
-                        text,
-                        style: KitText.sm.style(color: colors.mutedForeground),
-                      ),
-                  ],
+                      if (description case final text?)
+                        Text(
+                          text,
+                          style: KitText.sm.style(
+                            color: colors.mutedForeground,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
+                  child: DefaultTextStyle(
+                    style: KitText.sm.style(color: colors.foreground),
+                    child: child,
+                  ),
                 ),
               ),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
+              if (footer case final footer?)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                  child: footer,
                 ),
-                child: DefaultTextStyle(
-                  style: KitText.sm.style(color: colors.foreground),
-                  child: child,
-                ),
-              ),
-            ),
-            if (footer case final footer?)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                child: footer,
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

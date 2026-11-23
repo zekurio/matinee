@@ -2,7 +2,7 @@ import { defineMessages } from "../../catalog"
 
 /*
  * The filter panel and sort that Discover's browse and the libraries
- * share, and the chips for the filters in use.
+ * share.
  */
 export default defineMessages("filters", {
   "filters.sort.scoreHigh": "Highest score",
@@ -36,14 +36,6 @@ export default defineMessages("filters", {
   "filters.from": "From {value}",
   "filters.lowest": "Lowest",
   "filters.highest": "Highest",
-  // The chips for filters in use.
-  "filters.chip.scoreBetween": "Score {low} to {high}",
-  "filters.chip.scoreAtLeast": "Score at least {value}",
-  "filters.chip.scoreUpTo": "Score up to {value}",
-  "filters.chip.runtimeBetween": "{low} to {high} long",
-  "filters.chip.runtimeAtLeast": "At least {value} long",
-  "filters.chip.runtimeUpTo": "Up to {value} long",
-  "filters.chip.rating": "Rated up to {rating}",
   "filters.noneHint": "Take a filter off, or widen a range.",
   "filters.studios": "Studios",
   "filters.findStudio": "Find a studio",
@@ -57,8 +49,6 @@ export default defineMessages("filters", {
   "filters.watch.unwatched": "Unwatched",
   "filters.watch.inProgress": "In progress",
   "filters.watch.watched": "Watched",
-  "filters.chip.movieRating": "Movies rated up to {rating}",
-  "filters.chip.showRating": "Shows rated up to {rating}",
   "filters.sort.recentNew": "Recently added",
   "filters.sort.recentOld": "First added",
   "filters.sort.longest": "Longest",

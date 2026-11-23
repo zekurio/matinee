@@ -5,10 +5,21 @@ import 'package:flutter/widgets.dart';
 import 'theme.dart';
 
 class ProgressRing extends StatelessWidget {
-  const ProgressRing(this.progress, {super.key, this.size = 20});
+  const ProgressRing(
+    this.progress, {
+    super.key,
+    this.size = 20,
+    this.color,
+    this.track,
+  });
 
   final double? progress;
   final double size;
+
+  /// The share that's in, and the ring the rest sits on. The accent and a
+  /// faint foreground by default.
+  final Color? color;
+  final Color? track;
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +34,8 @@ class ProgressRing extends StatelessWidget {
         size: Size.square(size),
         painter: _RingPainter(
           value == null ? null : shown,
-          colors.foreground.withValues(alpha: .2),
-          colors.accent,
+          track ?? colors.foreground.withValues(alpha: .2),
+          color ?? colors.accent,
         ),
       ),
     );
