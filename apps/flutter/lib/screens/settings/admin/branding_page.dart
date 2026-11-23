@@ -278,32 +278,30 @@ class _Swatch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    return Semantics(
+    return PressIndication(
+      onPressed: onPressed,
+      label: name,
       selected: selected,
-      child: PressIndication(
-        onPressed: onPressed,
-        label: name,
-        builder: (context, state) => Container(
-          width: 40,
-          height: 40,
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              width: 2,
-              color: selected
-                  ? colors.foreground
-                  : colors.foreground.withValues(
-                      alpha: state == PressState.idle ? 0 : .2,
-                    ),
-            ),
+      builder: (context, state) => Container(
+        width: 40,
+        height: 40,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            width: 2,
+            color: selected
+                ? colors.foreground
+                : colors.foreground.withValues(
+                    alpha: state == PressState.idle ? 0 : .2,
+                  ),
           ),
-          child: ClipOval(
-            child: CustomPaint(
-              painter: _SplitPainter(
-                light: _shown(light) ?? colors.accent,
-                dark: _shown(dark) ?? colors.accent,
-              ),
+        ),
+        child: ClipOval(
+          child: CustomPaint(
+            painter: _SplitPainter(
+              light: _shown(light) ?? colors.accent,
+              dark: _shown(dark) ?? colors.accent,
             ),
           ),
         ),
@@ -380,12 +378,15 @@ class _AccentRowState extends State<_AccentRow> {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 16,
         children: [
+          // The field says its name itself.
           Expanded(
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(top: 10),
-              child: Text(
-                widget.label,
-                style: KitText.base.style(color: colors.foreground),
+            child: ExcludeSemantics(
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(top: 10),
+                child: Text(
+                  widget.label,
+                  style: KitText.base.style(color: colors.foreground),
+                ),
               ),
             ),
           ),
