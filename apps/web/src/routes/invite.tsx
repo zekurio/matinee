@@ -3,7 +3,6 @@ import { InviteToken } from "@matinee/contracts"
 import { Button, buttonVariants } from "@matinee/ui/components/button"
 import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
-import { cn } from "@matinee/ui/lib/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   createFileRoute,
@@ -109,15 +108,11 @@ function SignInLink() {
   return (
     <Link
       to="/login"
-      // Merged as `Button` does, or the base's transparent border wins over
-      // the outline's.
-      className={cn(
-        buttonVariants({
-          variant: "outline",
-          size: "lg",
-          className: "w-full",
-        }),
-      )}
+      className={buttonVariants({
+        variant: "outline",
+        size: "lg",
+        className: "w-full",
+      })}
     >
       {tr("auth.invite.toSignIn")}
     </Link>

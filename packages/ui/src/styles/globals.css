@@ -179,6 +179,10 @@
   );
   --secondary: var(--neutral-150);
   --secondary-foreground: var(--neutral-900);
+  /* The calm fill a quiet control takes on hover: the secondary surface
+     with a touch of the text color, so it reads as a change on the page in
+     either appearance. */
+  --surface-hover: color-mix(in oklch, var(--secondary), var(--foreground) 5%);
   --muted: var(--neutral-100);
   --muted-foreground: var(--neutral-600);
   --border: var(--neutral-200);
@@ -286,6 +290,7 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
   --color-surface: var(--neutral-50);
   --color-surface-raised: var(--neutral-100);
   --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
   --color-foreground-faint: var(--foreground-faint);
   --color-border: var(--border);
   --color-input: var(--input);
