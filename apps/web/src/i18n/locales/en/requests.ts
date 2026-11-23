@@ -16,12 +16,13 @@ export default defineMessages("requests", {
   "requests.recent": "Recent requests",
 
   // The one state each request's card shows.
-  "requests.state.waiting": "Waiting",
-  "requests.state.needsAttention": "Needs attention",
-  "requests.state.onTheWay": "On its way",
+  "requests.statusLabel": "Status",
+  "requests.state.waiting": "Pending",
+  "requests.state.needsAttention": "Failed",
+  "requests.state.onTheWay": "Processing",
   // {percent} like "42%".
-  "requests.state.onTheWayPercent": "On its way · {percent}",
-  "requests.state.here": "Here",
+  "requests.state.onTheWayPercent": "Processing · {percent}",
+  "requests.state.here": "Available",
   "requests.state.declined": "Declined",
   // A person's own card: taking the request back, small beside when they
   // asked.
@@ -66,9 +67,6 @@ export default defineMessages("requests", {
   }),
   "requests.scope.specials": "Specials",
   "requests.scope.specialsAnd": "Specials and {seasons}",
-  // New seasons as they air, after the ones requested.
-  "requests.scope.andFuture": "{seasons} + new",
-  "requests.scope.futureOnly": "New seasons",
   // The button that changes where a waiting request goes.
   "requests.goesTo.change": "Change where {name} goes, now {library}",
   "requests.goesTo.title": "Goes to",
@@ -83,7 +81,7 @@ export default defineMessages("requests", {
   // On a title's page, when the request could go to more than one library.
   "requests.addTo": "Add to {library}",
   "requests.retryNamed": "Retry {name}",
-  // On the way and Needs attention: stop waiting for a copy.
+  // Processing and Failed: stop waiting for a copy.
   "requests.giveUp": "Give up",
   "requests.giveUpNamed": "Give up on {name}",
   // Done, on a declined request: let anyone request it afresh, or
@@ -162,7 +160,7 @@ export default defineMessages("requests", {
   // {time} like "3 hours".
   "requests.progress.left": "{time} left",
 
-  // Needs attention.
+  // Failed.
   "requests.attention.unknown": "Failed without a reason",
   "requests.attention.failedUnknown":
     "This failed. The server log has the details.",

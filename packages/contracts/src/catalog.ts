@@ -98,9 +98,14 @@ export const SeasonAvailability = Availability.extend({
   episodesAired: t.number().int().min(0),
 })
 
+/** The seasons a show's request covers: only ones that have aired. */
 export const ShowScope = t.object({
   seasons: t.array(t.number().int().min(0)).max(1000),
-  future: t.boolean(),
+})
+
+/** The seasons asked for in a request, at least one. */
+export const AskScope = t.object({
+  seasons: t.array(t.number().int().min(0)).min(1).max(1000),
 })
 
 export const CatalogDestination = t.object({

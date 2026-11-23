@@ -11,7 +11,7 @@ import { CardMenu } from "./card-menu"
 import { type Answer, DeclinePopover } from "./decline-popover"
 import { KeyTip } from "./key-tip"
 import { RequestCard, RequestStateBadge, requestProgress } from "./request-card"
-import { Askers, QueueProblem } from "./request-lines"
+import { Askers, queueDetail } from "./request-lines"
 
 /*
  * A request on the requests page: the card every list draws, with what
@@ -127,11 +127,10 @@ export function QueueCard({
           <RequestStateBadge
             state={state}
             progress={requestProgress(item)}
-            urgent
+            detail={queueDetail(item)}
           />
         }
         who={<Askers item={item} />}
-        problem={<QueueProblem item={item} />}
         menu={
           <CardMenu
             item={item}
