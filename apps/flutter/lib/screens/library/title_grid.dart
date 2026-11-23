@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
+import '../shell/header.dart' show CountBadge, HeaderButton;
 import 'filter_sheet.dart';
 import 'list_choices.dart';
 import 'list_words.dart';
@@ -265,7 +264,7 @@ class ListBarButton extends StatelessWidget {
                 PositionedDirectional(
                   top: -6,
                   end: -8,
-                  child: _CountBadge(count),
+                  child: CountBadge(count),
                 ),
             ],
           ),
@@ -275,51 +274,16 @@ class ListBarButton extends StatelessWidget {
   }
 }
 
-/// How many filters are on, at an icon's corner: a filled accent circle
-/// with the number in its foreground, grown with the text so it stays
-/// legible at the largest size.
-class _CountBadge extends StatelessWidget {
-  const _CountBadge(this.count);
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    final size = math.max(
-      16.0,
-      MediaQuery.textScalerOf(context).scale(KitText.px11.lineHeight),
-    );
-    return ExcludeSemantics(
-      child: Container(
-        height: size,
-        constraints: BoxConstraints(minWidth: size),
-        padding: const EdgeInsets.symmetric(horizontal: 3),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: colors.accent,
-          borderRadius: KitRadius.pill,
-        ),
-        child: Text(
-          '$count',
-          maxLines: 1,
-          style: KitText.px11.style(
-            color: colors.accentForeground,
-            weight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The Filter button, once the server says what the filters offer.
+/// The Filter button, once the server says what the filters offer. [header]
+/// makes it a tab header's button, 44 square, instead of a list heading's,
+/// 48; both carry the count badge.
 class FilterButton extends ConsumerWidget {
   const FilterButton({
     super.key,
     required this.list,
     required this.scope,
     required this.kind,
+    this.header = false,
   });
 
   final ListKey list;
@@ -327,6 +291,7 @@ class FilterButton extends ConsumerWidget {
 
   /// Every title's kind when they're all one.
   final String? kind;
+  final bool header;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -335,23 +300,35 @@ class FilterButton extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     final active = ref.watch(choicesProvider(list)).filters.count;
+    final label = active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle;
+    void open() =>
+        showTitleFilters(context, list: list, scope: scope, kind: kind);
+    if (header) {
+      return HeaderButton(
+        icon: Lucide.listFilter,
+        label: label,
+        count: active,
+        onPressed: open,
+      );
+    }
     return ListBarButton(
       icon: Lucide.listFilter,
-      label: active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle,
+      label: label,
       count: active,
-      onPressed: () =>
-          showTitleFilters(context, list: list, scope: scope, kind: kind),
+      onPressed: open,
     );
   }
 }
 
 /// The sort, in a menu: each sort the list has values for, both ways.
+/// [header] makes its trigger a tab header's button, as [FilterButton]'s.
 class SortButton extends ConsumerWidget {
   const SortButton({
     super.key,
     required this.list,
     required this.current,
     required this.offered,
+    this.header = false,
   });
 
   final ListKey list;
@@ -359,20 +336,29 @@ class SortButton extends ConsumerWidget {
 
   /// The sorts the server has something to order by, once it says.
   final List<String>? offered;
+  final bool header;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    final label = l.browseSortCurrent(current.label(l));
     final offered = this.offered;
     return Menu(
       // The last of the heading's buttons, at its end.
       side: MenuSide.end,
-      trigger: (context, toggle, open, focusNode) => ListBarButton(
-        icon: Lucide.arrowUpDown,
-        label: l.browseSortCurrent(current.label(l)),
-        focusNode: focusNode,
-        onPressed: toggle,
-      ),
+      trigger: (context, toggle, open, focusNode) => header
+          ? HeaderButton(
+              icon: Lucide.arrowUpDown,
+              label: label,
+              focusNode: focusNode,
+              onPressed: toggle,
+            )
+          : ListBarButton(
+              icon: Lucide.arrowUpDown,
+              label: label,
+              focusNode: focusNode,
+              onPressed: toggle,
+            ),
       children: [
         for (final order in titleOrders)
           if (offered == null || offered.contains(order.sort))

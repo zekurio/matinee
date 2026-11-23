@@ -12,6 +12,7 @@ import '../../media/actions.dart' show mediaChangesProvider;
 import '../../query/refresh.dart';
 import '../../router.dart';
 import '../home/home_data.dart' show librariesProvider;
+import '../shell/header.dart';
 import '../shell/offline_note.dart';
 import '../shell/shell.dart' show tabReselectProvider;
 import 'filter_sheet.dart' show watchLanguageNames;
@@ -87,15 +88,25 @@ class _KindScreenState extends ConsumerState<KindScreen> {
   Widget build(BuildContext context) {
     ref.listen(mediaChangesProvider, (_, _) => _changed());
     final colors = MatineeTheme.of(context);
+    final l = AppLocalizations.of(context);
+    final kind = widget.kind;
+    final shows = kind == TitleKind.show;
+    final title = shows ? l.tabShows : l.tabMovies;
     if (ref.watch(authStateProvider) is Offline) {
-      return ColoredBox(color: colors.background, child: const _Offline());
+      return ColoredBox(
+        color: colors.background,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TabHeader(title: title, offline: true),
+            const Expanded(child: _Offline()),
+          ],
+        ),
+      );
     }
     ref.listen(tabReselectProvider, (_, tap) {
       if (tap?.path == widget.path) _toTop();
     });
-    final l = AppLocalizations.of(context);
-    final kind = widget.kind;
-    final shows = kind == TitleKind.show;
     final list = _list;
     final choices = ref.watch(choicesProvider(list));
     final libraries = ref.watch(librariesProvider).value;
@@ -139,64 +150,88 @@ class _KindScreenState extends ConsumerState<KindScreen> {
       onReturn: _returned,
       child: ColoredBox(
         color: colors.background,
-        child: TitleGrid(
-          request: request,
-          controller: _scroll,
-          header: (context, shown) => [
-            SliverToBoxAdapter(
-              child: _Heading(
-                title: shows ? l.tabShows : l.tabMovies,
-                subtitle: [
-                  if (ofKind.length > 1)
-                    LibraryMenu(
-                      libraries: ofKind,
-                      value: libraryId,
-                      onChanged: notifier.library,
-                    ),
-                  if (shown.total case final total?)
-                    Text(l.browseTitleCount(total)),
-                ],
-                actions: [
-                  FilterButton(list: list, scope: scope, kind: kind),
-                  SortButton(
-                    list: list,
-                    current: order,
-                    offered: options?.sorts,
-                  ),
-                ],
-              ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TabHeader(
+              title: title,
+              actions: [
+                FilterButton(
+                  list: list,
+                  scope: scope,
+                  kind: kind,
+                  header: true,
+                ),
+                SortButton(
+                  list: list,
+                  current: order,
+                  offered: options?.sorts,
+                  header: true,
+                ),
+                HeaderButton(
+                  icon: Lucide.search,
+                  label: l.searchTitle,
+                  onPressed: () => context.push(Routes.search),
+                ),
+              ],
             ),
-            if (filtered)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ActiveFilterRow(
-                    chips: chips,
-                    onClear: notifier.clearFilters,
+            Expanded(
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: TitleGrid(
+                  request: request,
+                  controller: _scroll,
+                  header: (context, shown) => [
+                    SliverToBoxAdapter(
+                      child: _ListBar(
+                        subtitle: [
+                          if (ofKind.length > 1)
+                            LibraryMenu(
+                              libraries: ofKind,
+                              value: libraryId,
+                              onChanged: notifier.library,
+                            ),
+                          if (shown.total case final total?)
+                            Text(l.browseTitleCount(total)),
+                        ],
+                      ),
+                    ),
+                    if (filtered)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: ActiveFilterRow(
+                            chips: chips,
+                            onClear: notifier.clearFilters,
+                          ),
+                        ),
+                      ),
+                  ],
+                  empty: EmptyState(
+                    icon: filtered
+                        ? Lucide.searchX
+                        : shows
+                        ? Lucide.tv
+                        : Lucide.film,
+                    title: switch ((filtered, shows)) {
+                      (true, true) => l.libraryNoFilterMatchShows,
+                      (true, false) => l.libraryNoFilterMatchMovies,
+                      (false, true) => l.libraryNoneShows,
+                      (false, false) => l.libraryNoneMovies,
+                    },
+                    action: filtered
+                        ? MatineeButton(
+                            look: ButtonLook.outline,
+                            onPressed: notifier.clearFilters,
+                            child: Text(l.browseClearFilters),
+                          )
+                        : null,
                   ),
                 ),
               ),
+            ),
           ],
-          empty: EmptyState(
-            icon: filtered
-                ? Lucide.searchX
-                : shows
-                ? Lucide.tv
-                : Lucide.film,
-            title: switch ((filtered, shows)) {
-              (true, true) => l.libraryNoFilterMatchShows,
-              (true, false) => l.libraryNoFilterMatchMovies,
-              (false, true) => l.libraryNoneShows,
-              (false, false) => l.libraryNoneMovies,
-            },
-            action: filtered
-                ? MatineeButton(
-                    look: ButtonLook.outline,
-                    onPressed: notifier.clearFilters,
-                    child: Text(l.browseClearFilters),
-                  )
-                : null,
-          ),
         ),
       ),
     );
@@ -353,80 +388,43 @@ void _refreshList(
   if (scope != null) ref.invalidate(filterOptionsProvider(scope));
 }
 
-/// A tab's heading: its name, the library menu and the count under it, and
-/// the filter and sort at the end.
-class _Heading extends StatelessWidget {
-  const _Heading({
-    required this.title,
-    required this.subtitle,
-    required this.actions,
-  });
+/// The line under a tab's header: the library menu and how many titles there
+/// are. The tab's name, and its filter and sort, are the header's, above.
+class _ListBar extends StatelessWidget {
+  const _ListBar({required this.subtitle});
 
-  final String title;
   final List<Widget> subtitle;
-  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     final muted = KitText.sm.style(color: colors.mutedForeground);
     return Padding(
-      // A bar button's 48 holds its 22 icon 13 in, so the last icon ends
-      // near the gutter the cards keep.
-      padding: const EdgeInsetsDirectional.only(
-        start: CardMetrics.gutter,
-        end: 4,
-        top: 8,
-        bottom: 8,
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        CardMetrics.gutter,
+        8,
+        CardMetrics.gutter,
+        8,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KitText.xl
-                        .style(
-                          color: colors.foreground,
-                          weight: FontWeight.w600,
-                        )
-                        .copyWith(letterSpacing: KitText.xl.size * -.025),
-                  ),
-                ),
-                if (subtitle.isNotEmpty)
-                  DefaultTextStyle(
-                    style: muted,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 20),
-                      child: Row(
-                        children: [
-                          for (final (index, part) in subtitle.indexed) ...[
-                            if (index > 0)
-                              ExcludeSemantics(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                  ),
-                                  child: Text('·', style: muted),
-                                ),
-                              ),
-                            Flexible(child: part),
-                          ],
-                        ],
-                      ),
+      child: DefaultTextStyle(
+        style: muted,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 20),
+          child: Row(
+            children: [
+              for (final (index, part) in subtitle.indexed) ...[
+                if (index > 0)
+                  ExcludeSemantics(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Text('·', style: muted),
                     ),
                   ),
+                Flexible(child: part),
               ],
-            ),
+            ],
           ),
-          ...actions,
-        ],
+        ),
       ),
     );
   }

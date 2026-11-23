@@ -6,6 +6,7 @@ import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/avatar.dart';
+import '../../router.dart';
 import 'header.dart';
 
 /// A tap on the tab that's already open: [path] is the tab's first page,
@@ -23,6 +24,40 @@ final class _TabReselects extends Notifier<TabReselect?> {
 
   void tapped(String path) =>
       state = (path: path, count: (state?.count ?? 0) + 1);
+}
+
+/// The header above the tabs: Home keeps the logo with settings and search,
+/// and each other tab gets its own name and only the actions it has. Shows and
+/// Movies build theirs in the tab itself, where the list's filter and sort
+/// live, so the shell leaves no band for them.
+class ShellTopBar extends ConsumerWidget {
+  const ShellTopBar({super.key, required this.index});
+
+  /// The shell's branch index: Home, Shows, Movies, Downloads, or Profile.
+  final int index;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final words = AppLocalizations.of(context);
+    return switch (index) {
+      0 => const ShellHeader(),
+      1 || 2 => const SizedBox.shrink(),
+      3 => TabHeader(
+        title: words.downloadsTitle,
+        offline: ref.watch(authStateProvider) is Offline,
+      ),
+      _ => TabHeader(
+        title: words.tabProfile,
+        actions: [
+          HeaderButton(
+            icon: Lucide.settings,
+            label: words.shellSettings,
+            onPressed: () => context.push(Routes.settings),
+          ),
+        ],
+      ),
+    };
+  }
 }
 
 /// The signed-in touch screens' frame, the same on a phone and a tablet:
@@ -125,11 +160,13 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
         color: MatineeTheme.of(context).background,
         child: Column(
           children: [
-            const ShellHeader(),
+            ShellTopBar(index: widget.shell.currentIndex),
             Expanded(
               child: MediaQuery.removePadding(
                 context: context,
-                removeTop: true,
+                // A library tab's header is inside the tab, which keeps the
+                // status bar's inset to clear it, as [ShellTopBar] does.
+                removeTop: !_libraryTabs.contains(widget.shell.currentIndex),
                 removeBottom: true,
                 child: widget.shell,
               ),
