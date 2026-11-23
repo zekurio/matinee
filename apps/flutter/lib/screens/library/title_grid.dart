@@ -1,15 +1,13 @@
-import 'dart:math' as math;
-
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../api/matinee_api.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
+import '../shell/header.dart' show CountBadge, HeaderButton;
 import 'filter_sheet.dart';
 import 'list_choices.dart';
 import 'list_words.dart';
@@ -101,22 +99,29 @@ class _TitleGridState extends ConsumerState<TitleGrid> {
         ),
       );
     } else {
+      final named =
+          request.kind == null &&
+          (shown.kinds == null ||
+              (shown.kinds!.movie > 0 && shown.kinds!.show > 0));
       body = SliverOpacity(
         opacity: dimmed ? .5 : 1,
-        sliver: CardGrid(
-          columns: posterColumns,
-          aspectRatio: CardMetrics.poster,
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            if (!dimmed && index >= items.length - TitleGrid._nearEnd) {
-              _more();
-            }
-            final title = items[index];
-            return TitleCard.withDetail(
-              title: title,
-              detail: cardDetail(context, title, request.sort),
-            );
-          },
+        sliver: NamedKinds(
+          named: named,
+          child: CardGrid(
+            columns: posterColumns,
+            aspectRatio: CardMetrics.poster,
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              if (!dimmed && index >= items.length - TitleGrid._nearEnd) {
+                _more();
+              }
+              final title = items[index];
+              return TitleCard.withDetail(
+                title: title,
+                detail: cardDetail(context, title, request.sort),
+              );
+            },
+          ),
         ),
       );
     }
@@ -174,52 +179,6 @@ class _SkeletonGrid extends StatelessWidget {
   }
 }
 
-/// The filters in use as a row of chips that take themselves off, with
-/// Clear all once there are two, across the page under its heading.
-class ActiveFilterRow extends StatelessWidget {
-  const ActiveFilterRow({
-    super.key,
-    required this.chips,
-    required this.onClear,
-  });
-
-  final List<ActiveFilter> chips;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return SizedBox(
-      height: 40,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
-        children: [
-          for (final chip in chips)
-            Padding(
-              key: ValueKey(chip.key),
-              padding: const EdgeInsetsDirectional.only(end: 6),
-              child: RemovableChip(
-                label: chip.label,
-                removeLabel: l.browseRemoveFilter(chip.label),
-                onRemove: chip.remove,
-              ),
-            ),
-          if (chips.length > 1)
-            Center(
-              child: MatineeButton(
-                look: ButtonLook.ghost,
-                size: ButtonSize.sm,
-                onPressed: onClear,
-                child: Text(l.browseClearAll),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// An icon to press at the end of a list's heading, 48 square, with how
 /// many filters are on at the icon's top-end corner when there are any.
 class ListBarButton extends StatelessWidget {
@@ -265,7 +224,7 @@ class ListBarButton extends StatelessWidget {
                 PositionedDirectional(
                   top: -6,
                   end: -8,
-                  child: _CountBadge(count),
+                  child: CountBadge(count),
                 ),
             ],
           ),
@@ -275,58 +234,20 @@ class ListBarButton extends StatelessWidget {
   }
 }
 
-/// How many filters are on, at an icon's corner: a filled accent circle
-/// with the number in its foreground, grown with the text so it stays
-/// legible at the largest size.
-class _CountBadge extends StatelessWidget {
-  const _CountBadge(this.count);
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    final size = math.max(
-      16.0,
-      MediaQuery.textScalerOf(context).scale(KitText.px11.lineHeight),
-    );
-    return ExcludeSemantics(
-      child: Container(
-        height: size,
-        constraints: BoxConstraints(minWidth: size),
-        padding: const EdgeInsets.symmetric(horizontal: 3),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: colors.accent,
-          borderRadius: KitRadius.pill,
-        ),
-        child: Text(
-          '$count',
-          maxLines: 1,
-          style: KitText.px11.style(
-            color: colors.accentForeground,
-            weight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The Filter button, once the server says what the filters offer.
+/// The Filter button, once the server says what the filters offer. [header]
+/// makes it a tab header's button, 44 square, instead of a list heading's,
+/// 48; both carry the count badge.
 class FilterButton extends ConsumerWidget {
   const FilterButton({
     super.key,
     required this.list,
     required this.scope,
-    required this.kind,
+    this.header = false,
   });
 
   final ListKey list;
   final FilterScope scope;
-
-  /// Every title's kind when they're all one.
-  final String? kind;
+  final bool header;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -334,24 +255,35 @@ class FilterButton extends ConsumerWidget {
     if (!ref.watch(filterOptionsProvider(scope)).hasValue) {
       return const SizedBox.shrink();
     }
-    final active = ref.watch(choicesProvider(list)).filters.count;
+    final active = ref.watch(choicesProvider(list)).filterCount;
+    final label = active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle;
+    void open() => showTitleFilters(context, list: list);
+    if (header) {
+      return HeaderButton(
+        icon: Lucide.listFilter,
+        label: label,
+        count: active,
+        onPressed: open,
+      );
+    }
     return ListBarButton(
       icon: Lucide.listFilter,
-      label: active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle,
+      label: label,
       count: active,
-      onPressed: () =>
-          showTitleFilters(context, list: list, scope: scope, kind: kind),
+      onPressed: open,
     );
   }
 }
 
 /// The sort, in a menu: each sort the list has values for, both ways.
+/// [header] makes its trigger a tab header's button, as [FilterButton]'s.
 class SortButton extends ConsumerWidget {
   const SortButton({
     super.key,
     required this.list,
     required this.current,
     required this.offered,
+    this.header = false,
   });
 
   final ListKey list;
@@ -359,20 +291,29 @@ class SortButton extends ConsumerWidget {
 
   /// The sorts the server has something to order by, once it says.
   final List<String>? offered;
+  final bool header;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    final label = l.browseSortCurrent(current.label(l));
     final offered = this.offered;
     return Menu(
       // The last of the heading's buttons, at its end.
       side: MenuSide.end,
-      trigger: (context, toggle, open, focusNode) => ListBarButton(
-        icon: Lucide.arrowUpDown,
-        label: l.browseSortCurrent(current.label(l)),
-        focusNode: focusNode,
-        onPressed: toggle,
-      ),
+      trigger: (context, toggle, open, focusNode) => header
+          ? HeaderButton(
+              icon: Lucide.arrowUpDown,
+              label: label,
+              focusNode: focusNode,
+              onPressed: toggle,
+            )
+          : ListBarButton(
+              icon: Lucide.arrowUpDown,
+              label: label,
+              focusNode: focusNode,
+              onPressed: toggle,
+            ),
       children: [
         for (final order in titleOrders)
           if (offered == null || offered.contains(order.sort))
@@ -383,77 +324,6 @@ class SortButton extends ConsumerWidget {
               onPressed: () =>
                   ref.read(choicesProvider(list).notifier).order(order),
             ),
-      ],
-    );
-  }
-}
-
-/// Every library of the kind, or one, as a menu behind the chosen one's
-/// name, as the web has it in the page's subtitle.
-class LibraryMenu extends StatelessWidget {
-  const LibraryMenu({
-    super.key,
-    required this.libraries,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final List<Library> libraries;
-  final String? value;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
-    final current = libraries.where((library) => library.id == value);
-    final name = current.isEmpty ? l.browseLibraryAll : current.first.name;
-    return Menu(
-      trigger: (context, toggle, open, focusNode) => PressIndication(
-        onPressed: toggle,
-        focusNode: focusNode,
-        label: '${l.browseLibrary}: $name',
-        shape: KitRadius.control,
-        builder: (context, state) => ConstrainedBox(
-          // A finger's height, without moving the text.
-          constraints: const BoxConstraints(minHeight: 40),
-          child: ExcludeSemantics(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 2,
-              children: [
-                Flexible(
-                  child: Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KitText.sm.style(
-                      color: state == PressState.idle && !open
-                          ? colors.foreground.withValues(alpha: .85)
-                          : colors.foreground,
-                      weight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                KitIcon(Lucide.chevronDown, size: 14, color: colors.foreground),
-              ],
-            ),
-          ),
-        ),
-      ),
-      children: [
-        MenuLabel(l.browseLibrary),
-        MenuItem(
-          label: l.browseLibraryAll,
-          selected: current.isEmpty,
-          onPressed: () => onChanged(null),
-        ),
-        for (final library in libraries)
-          MenuItem(
-            label: library.name,
-            selected: library.id == value,
-            onPressed: () => onChanged(library.id),
-          ),
       ],
     );
   }

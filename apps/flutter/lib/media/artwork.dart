@@ -299,7 +299,9 @@ class _PictureState extends ConsumerState<Picture> {
   @override
   Widget build(BuildContext context) {
     final api = ref.watch(apiProvider);
-    final loader = ref.watch(artworkLoaderProvider);
+    // No server means nothing to fetch: the loader would need the session's
+    // artwork client, which has nothing to send without one.
+    final loader = api == null ? null : ref.watch(artworkLoaderProvider);
     final sources = widget.sources;
     final hash = sources.isEmpty ? null : sources.first.placeholder?.blurhash;
     final index = _index;
@@ -320,7 +322,7 @@ class _PictureState extends ConsumerState<Picture> {
                 excludeFromSemantics: true,
                 errorBuilder: (context, error, stack) => const SizedBox(),
               ),
-            if (api != null && index < sources.length)
+            if (api != null && loader != null && index < sources.length)
               Image(
                 key: ValueKey(index),
                 image: ArtworkImage(

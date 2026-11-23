@@ -18,11 +18,13 @@ import 'requests_data.dart';
 import 'requests_hub.dart';
 import 'requests_rail.dart';
 
-/// Explore, for when there's nothing in mind yet: rows of titles under the
-/// empty field, in the order the server sends them, each loading on its own.
-/// Each row but "Because you watched" is the start of a browse, which its
-/// heading opens with the row's filters and sort. Nothing of it shows when the
-/// server says Discover is off.
+/// Explore, for when there's nothing in mind yet: rows of titles in the order
+/// the server sends them, each loading on its own, with the recent requests
+/// first. Each row but "Because you watched" is the start of a browse, which
+/// its heading opens with the row's filters and sort. Nothing of it shows when
+/// the server says Discover is off.
+///
+/// It fills the Explore tab; Search's empty field only says where to type.
 
 /// How many cards a row shows. Its heading leads to the rest.
 const _railCards = 20;
@@ -54,12 +56,15 @@ List<CatalogBrowseTitle> railShown(
     if (!recommendedRail(rail) || !hidden.contains(refKey(item.ref))) item,
 ].take(_railCards).toList();
 
-/// Under the empty search field: the Recent requests row the server names
+/// The Explore tab's rows: the Recent requests row the server names
 /// ([RequestsRail]), then Discover's rows when the server has Discover on,
 /// or why there are none. That row stays when the rows fail or
 /// are empty, since it reads streams of its own.
 class Explore extends ConsumerWidget {
-  const Explore({super.key});
+  const Explore({super.key, this.controller});
+
+  /// The tab's, so a second tap on Explore can scroll back to the top.
+  final ScrollController? controller;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -159,6 +164,7 @@ class Explore extends ConsumerWidget {
     return FollowTitles(
       titles: followed,
       child: CustomScrollView(
+        controller: controller,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         slivers: [
           const SliverToBoxAdapter(child: SizedBox(height: 8)),

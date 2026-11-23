@@ -19,16 +19,15 @@ import {
   ShowMore,
 } from "@/components/library/library-states"
 import {
-  FilterChips,
   HeaderControls,
   type ListControlsProps,
   PhoneControls,
 } from "@/components/library/list-controls"
+import { TitleFilterPanel } from "@/components/library/title-filter-panel"
 import {
-  activeTitleFilters,
-  TitleFilterPanel,
-} from "@/components/library/title-filter-panel"
-import { cardDetail } from "@/components/library/title-filter-params"
+  cardDetail,
+  titleFilterCount,
+} from "@/components/library/title-filter-params"
 import {
   browsedTitlesOptions,
   useTitleFilters,
@@ -94,7 +93,7 @@ export function BrowsePage({
   const rows = titles.data?.pages.flatMap((page) => page.items) ?? []
   const counts = titles.data?.pages[0]?.kinds
   const options = list.options
-  const chips = options ? activeTitleFilters(shown, options, list.change) : []
+  const filtered = titleFilterCount(shown) > 0
   const controls: ListControlsProps = {
     sorts: list.sorts,
     sort: list.sort,
@@ -124,7 +123,6 @@ export function BrowsePage({
             : groupLabel
         }
         actions={<HeaderControls {...controls} />}
-        chips={<FilterChips inline active={chips} clear={list.clear} />}
         phoneActions={<PhoneControls {...controls} />}
       />
       {counts && (
@@ -135,7 +133,6 @@ export function BrowsePage({
           className={belowHeader}
         />
       )}
-      <FilterChips active={chips} clear={list.clear} />
 
       {titles.isPending ? (
         <PosterGridSkeleton />
@@ -171,7 +168,7 @@ export function BrowsePage({
             />
           )}
         </>
-      ) : chips.length > 0 ? (
+      ) : filtered ? (
         <EmptyList
           title={tr("browse.noFilterMatch")}
           scanning={false}

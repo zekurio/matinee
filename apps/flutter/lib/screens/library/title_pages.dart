@@ -9,7 +9,7 @@ import '../../core/session.dart';
 import '../../query/server_data.dart';
 import 'list_choices.dart';
 
-/// What Shows, Movies, and Browse read: a page of titles at a time from
+/// What Media and Browse read: a page of titles at a time from
 /// `titles.browse`, which takes the kind across every library, or one
 /// library, with the filters and the order; and what each filter offers
 /// from `titles.filterOptions`.

@@ -5,10 +5,10 @@ import '../../api/matinee_api.dart';
 import '../../core/session.dart';
 import '../../l10n/app_localizations.dart';
 
-/// What a list of titles is ordered and filtered by, for Shows, Movies, and a
-/// genre's or a studio's page: the sort and its way, the filters the server
-/// takes, and for the tabs the library, for Browse the kind. The server does
-/// the sorting and filtering; these only say what was picked.
+/// What a list of titles is ordered and filtered by, for Media and a genre's
+/// or a studio's page: the sort and its way, the filters the server takes,
+/// and the type or library that narrows it. The server does the sorting and
+/// filtering; these only say what was picked.
 
 /// A sort and its way, in the order the sort menu offers them, each with
 /// its words.
@@ -186,10 +186,11 @@ final class ListChoices {
   final String order;
   final ListFilters filters;
 
-  /// Shows or Movies narrowed to one library; null is every library.
+  /// Media narrowed to one library; null is every library.
   final String? libraryId;
 
-  /// A genre's or a studio's page narrowed to movies or shows; null is both.
+  /// Media's or a genre's or a studio's page's movies or shows; null is
+  /// both.
   final String? kind;
 
   ListChoices copyWith({
@@ -204,6 +205,11 @@ final class ListChoices {
     libraryId: libraryId == null ? this.libraryId : libraryId(),
     kind: kind == null ? this.kind : kind(),
   );
+
+  /// How many filters are on: those in [filters] and the type or library,
+  /// as the Filter button says.
+  int get filterCount =>
+      filters.count + (kind == null ? 0 : 1) + (libraryId == null ? 0 : 1);
 
   /// The order the list asks for: the one picked, unless the server has
   /// nothing to order it by, like a score where no title has one; then A
@@ -230,8 +236,8 @@ final class ListChoices {
   int get hashCode => Object.hash(sort, order, filters, libraryId, kind);
 }
 
-/// Which list the choices are for: a tab's [kind], or a genre's or a
-/// studio's page.
+/// Which list the choices are for: Media's, with no kind, genre, or studio,
+/// or a genre's or a studio's page.
 typedef ListKey = ({String? kind, String? genre, String? studio});
 
 /// One list's choices. A new sign-in or another server starts them over,
@@ -251,14 +257,18 @@ final class ListChoicesNotifier extends Notifier<ListChoices> {
 
   void filters(ListFilters filters) => state = state.copyWith(filters: filters);
 
-  void clearFilters() => filters(ListFilters.none);
+  void clearFilters() => state = state.copyWith(
+    filters: ListFilters.none,
+    kind: () => null,
+    libraryId: () => null,
+  );
 
   void library(String? id) => state = state.copyWith(libraryId: () => id);
 
   void kind(String? kind) => state = state.copyWith(kind: () => kind);
 }
 
-/// Shows' and Movies' choices, kept for the sitting: leaving the tab and
+/// Media's and Browse's choices, kept for the sitting: leaving the tab and
 /// coming back finds them as they were.
 final tabChoicesProvider =
     NotifierProvider.family<ListChoicesNotifier, ListChoices, ListKey>(
@@ -269,7 +279,7 @@ final tabChoicesProvider =
 final browseChoicesProvider = NotifierProvider.autoDispose
     .family<ListChoicesNotifier, ListChoices, ListKey>(ListChoicesNotifier.new);
 
-/// The choices for [list]: a tab's, kept for the sitting, or a genre's or a
+/// The choices for [list]: Media's, kept for the sitting, or a genre's or a
 /// studio's page's, kept while it's open.
 NotifierProvider<ListChoicesNotifier, ListChoices> choicesProvider(
   ListKey list,

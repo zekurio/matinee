@@ -134,7 +134,12 @@ class _RequestsRow<T> extends ConsumerWidget {
     if (error != null) {
       child = RailFailed(title: title, error: error, onRetry: onRetry);
     } else if (items == null) {
-      child = _RowSkeleton(title: title, width: width, height: height);
+      child = _RowSkeleton(
+        title: title,
+        width: width,
+        height: height,
+        queue: queue,
+      );
     } else {
       final shown = [
         for (final item in items)
@@ -164,6 +169,7 @@ class _RowSkeleton extends StatelessWidget {
     required this.title,
     required this.width,
     required this.height,
+    required this.queue,
   });
 
   final String title;
@@ -171,6 +177,9 @@ class _RowSkeleton extends StatelessWidget {
 
   /// A card's, as the row's cards will be.
   final double height;
+
+  /// Whether the cards will be an admin's, which say who asked.
+  final bool queue;
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +213,7 @@ class _RowSkeleton extends StatelessWidget {
                     Container(
                       width: width,
                       height: height,
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         borderRadius: const BorderRadius.all(
                           Radius.circular(KitRadius.xl),
@@ -213,23 +222,46 @@ class _RowSkeleton extends StatelessWidget {
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 12,
+                        spacing: 16,
                         children: [
-                          SkeletonBox(
-                            width: (height - 24) / 1.5,
-                            height: height - 24,
-                          ),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              spacing: 8,
                               children: [
-                                SkeletonBox(width: 60, height: 12),
-                                SkeletonBox(width: 150, height: 16),
-                                SkeletonBox(width: 90, height: 16),
-                                SkeletonBox(width: 110, height: 24),
+                                const SkeletonBox(width: 60, height: 12),
+                                const SizedBox(height: 10),
+                                const SkeletonBox(width: 150, height: 16),
+                                const SizedBox(height: 6),
+                                const SkeletonBox(width: 110, height: 16),
+                                if (queue) ...[
+                                  const SizedBox(height: 10),
+                                  const SkeletonBox(
+                                    width: 90,
+                                    height: 20,
+                                    radius: 10,
+                                  ),
+                                ],
+                                const SizedBox(height: 12),
+                                const Row(
+                                  spacing: 8,
+                                  children: [
+                                    SkeletonBox(width: 38, height: 12),
+                                    SkeletonBox(
+                                      width: 88,
+                                      height: 20,
+                                      radius: 999,
+                                    ),
+                                  ],
+                                ),
+                                const Spacer(),
+                                const SkeletonBox(width: 104, height: 32),
                               ],
                             ),
+                          ),
+                          const SkeletonBox(
+                            width: 112,
+                            height: 168,
+                            radius: KitRadius.md,
                           ),
                         ],
                       ),

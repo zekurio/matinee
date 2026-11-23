@@ -2,8 +2,8 @@ import { tr } from "@/i18n"
 import { formatRuntime, formatScore } from "@/lib/format"
 
 /*
- * Ranges as the filter panel and its chips word them, and as the URL
- * holds them. Shared by Discover's browse and the libraries.
+ * Ranges as the filter panel words them, and as the URL holds them.
+ * Shared by Discover's browse and the libraries.
  */
 
 /** A span a range's handles move in, by `step`. */
@@ -11,35 +11,16 @@ export type Range = { min: number; max: number; step: number }
 /** A range's two ends; null leaves that side open. */
 export type Bounds = [number | null, number | null]
 
-export type RangeKeys = {
-  between:
-    | "filters.between"
-    | "filters.chip.scoreBetween"
-    | "filters.chip.runtimeBetween"
-  low:
-    | "filters.atLeast"
-    | "filters.from"
-    | "filters.chip.scoreAtLeast"
-    | "filters.chip.runtimeAtLeast"
-  high: "filters.upTo" | "filters.chip.scoreUpTo" | "filters.chip.runtimeUpTo"
+type RangeKeys = {
+  between: "filters.between"
+  low: "filters.atLeast" | "filters.from"
+  high: "filters.upTo"
 }
 
 const PANEL: RangeKeys = {
   between: "filters.between",
   low: "filters.atLeast",
   high: "filters.upTo",
-}
-
-/** What the chips say for a score and a runtime. */
-export const SCORE_CHIP: RangeKeys = {
-  between: "filters.chip.scoreBetween",
-  low: "filters.chip.scoreAtLeast",
-  high: "filters.chip.scoreUpTo",
-}
-export const RUNTIME_CHIP: RangeKeys = {
-  between: "filters.chip.runtimeBetween",
-  low: "filters.chip.runtimeAtLeast",
-  high: "filters.chip.runtimeUpTo",
 }
 
 /** A range's two ends as words: "1980 to 1989", "At least 7.5", "Any year". */
@@ -64,16 +45,15 @@ export function yearWords(bounds: Bounds): string {
   })
 }
 
-export function scoreWords(bounds: Bounds, keys?: RangeKeys): string {
-  return rangeWords(bounds, formatScore, tr("filters.anyScore"), keys)
+export function scoreWords(bounds: Bounds): string {
+  return rangeWords(bounds, formatScore, tr("filters.anyScore"))
 }
 
-export function runtimeWords(bounds: Bounds, keys?: RangeKeys): string {
+export function runtimeWords(bounds: Bounds): string {
   return rangeWords(
     bounds,
     (minutes) => formatRuntime(minutes) ?? "0",
     tr("filters.anyLength"),
-    keys,
   )
 }
 

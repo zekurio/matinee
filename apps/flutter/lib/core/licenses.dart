@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// for the licenses page: the project's own license, and every package's,
 /// Dart's and Flutter's from [LicenseRegistry] (the NOTICES file the build
 /// writes), with what that file can't know added here: the native
-/// libraries the build bundles, the font, and the icons.
+/// libraries the build bundles, the fonts, and the icons.
 
 /// The name the project's own license goes by in the list.
 const projectPackage = 'Matinee';
@@ -25,7 +25,7 @@ typedef BundledLicense = ({
 const _gpl = 'LICENSE';
 const _apache = 'assets/licenses/apache-2.0.txt';
 
-/// What every build carries: the project's license, the font, and the
+/// What every build carries: the project's license, the fonts, and the
 /// icons drawn from lucide.
 const commonLicenses = <BundledLicense>[
   (packages: [projectPackage], copyright: null, asset: _gpl),
@@ -33,6 +33,11 @@ const commonLicenses = <BundledLicense>[
     packages: ['Red Hat Text'],
     copyright: null,
     asset: 'assets/licenses/red-hat-text-ofl.txt',
+  ),
+  (
+    packages: ['Unbounded'],
+    copyright: null,
+    asset: 'assets/licenses/unbounded-ofl.txt',
   ),
   (
     packages: ['Lucide'],

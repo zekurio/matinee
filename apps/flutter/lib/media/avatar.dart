@@ -61,15 +61,17 @@ class _Initial extends StatelessWidget {
             color: colors.secondary,
             shape: BoxShape.circle,
           ),
+          // Unbounded, the wordmark's face, cut down to capitals whose
+          // middle is the middle of a one-em line box, so the letter
+          // centers with no nudging (brand/wordmark.py).
           child: Center(
             child: Text(
               letter,
               style: TextStyle(
-                fontFamily: KitText.family,
+                fontFamily: 'Unbounded',
                 fontSize: size * .4,
                 height: 1,
-                fontWeight: FontWeight.w600,
-                fontVariations: const [FontVariation('wght', 600)],
+                fontWeight: FontWeight.w700,
                 color: colors.mutedForeground,
               ),
             ),

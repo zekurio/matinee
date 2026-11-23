@@ -2,13 +2,16 @@
 
 The wordmark is "matinee" set in Unbounded Bold, lowercase, tracked in a
 little, with its glyphs turned into outlines so nothing needs the font to
-show it. Run it through render.sh, which provides fontTools and uharfbuzz,
-and commit what it writes.
+show it. The Flutter app also gets Unbounded Bold's capitals and digits as a
+font of their own, for the initial on an avatar without a picture. Run it
+through render.sh, which provides fontTools and uharfbuzz, and commit what
+it writes.
 """
 
 import hashlib
 import io
 import os
+import unicodedata
 import urllib.request
 from pathlib import Path
 
@@ -16,11 +19,13 @@ import uharfbuzz as hb
 from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
+from fontTools.subset import Options, Subsetter
 from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
 
 BRAND = Path(__file__).resolve().parent
 WEB = BRAND.parent / "apps" / "web" / "src" / "components"
+FLUTTER = BRAND.parent / "apps" / "flutter"
 
 # Unbounded (SIL OFL 1.1), pinned to a commit of google/fonts. A logo made
 # of its outlines isn't the font software, so the license asks nothing of
@@ -105,6 +110,40 @@ def draw_word() -> tuple[str, float, float]:
         transform = (SCALE, 0, 0, -SCALE, (gx - left) * SCALE, -top * SCALE)
         glyphs[name].draw(TransformPen(pen, transform))
     return pen.getCommands(), (right - left) * SCALE, -top * SCALE
+
+
+def write_initials() -> None:
+    """Unbounded Bold cut down to what an avatar's initial can be: every
+    capital and digit it draws, and the "?" for an empty name. Its line box
+    is one em with the capitals' middle in the middle of it, so a letter set
+    with a height of 1 sits centered in its circle with no nudging."""
+    font = load_font()
+    font.recalcTimestamp = False
+    keep = [
+        code
+        for code in font.getBestCmap()
+        if unicodedata.category(chr(code)) in ("Lu", "Lt", "Nd")
+    ] + [ord("?")]
+    options = Options()
+    options.layout_features = []
+    options.hinting = False
+    subsetter = Subsetter(options)
+    subsetter.populate(unicodes=keep)
+    subsetter.subset(font)
+
+    em = font["head"].unitsPerEm
+    os2, hhea, head = font["OS/2"], font["hhea"], font["head"]
+    ascent = round((em + os2.sCapHeight) / 2)
+    hhea.ascent, hhea.descent, hhea.lineGap = ascent, ascent - em, 0
+    os2.sTypoAscender, os2.sTypoDescender, os2.sTypoLineGap = ascent, ascent - em, 0
+    os2.fsSelection |= 1 << 7  # USE_TYPO_METRICS
+    # Windows clips to these, so they cover the accents above the capitals.
+    os2.usWinAscent = max(ascent, head.yMax)
+    os2.usWinDescent = max(em - ascent, -head.yMin)
+
+    path = FLUTTER / "assets" / "fonts" / "unbounded_initials.ttf"
+    font.save(path)
+    print(f"wrote {path.relative_to(BRAND.parent)}")
 
 
 def gradient(colors: dict[str, str] | None, id: str) -> str:
@@ -237,6 +276,8 @@ def main() -> None:
         f'  path: "{word}",\n'
         "}\n",
     )
+
+    write_initials()
 
 
 if __name__ == "__main__":
