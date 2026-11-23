@@ -2,16 +2,39 @@ import '../api/matinee_api.dart';
 import 'offline_item.dart';
 
 /// The episodes either side of [current] among the finished downloads,
-/// for Previous and Next with no server to ask. This is the same exception
-/// as picking a download's tracks (`download_tracks.dart`): online, the
-/// server says which episodes neighbour it.
-///
-/// Only an episode that truly neighbours [current] counts, so Next never
-/// skips one that isn't on the device: the one numbered either side in the
-/// same season; across a season, the next season's first episode after
-/// the last one downloaded of this season, and back from a first episode,
-/// the last one downloaded of the season before.
+/// for Previous and Next with no server to ask: the nearest of the show's
+/// files the server put before and after it that is on the device, so one
+/// that wasn't downloaded is skipped over rather than landed on.
 (MediaItem?, MediaItem?) downloadNeighbours(
+  OfflineItem current,
+  Iterable<OfflineItem> downloads,
+) {
+  final offline = current.offline;
+  if (offline == null) return _byNumber(current.item, downloads);
+  final here = {
+    for (final download in downloads)
+      if (download.done && download.id != current.id)
+        download.id: download.item,
+  };
+  final order = offline.episodes;
+  final at = order.indexOf(current.id);
+  if (at < 0) return (null, null);
+  MediaItem? nearest(int from, int step) {
+    for (var i = from; i >= 0 && i < order.length; i += step) {
+      if (here[order[i]] case final item?) return item;
+    }
+    return null;
+  }
+
+  return (nearest(at - 1, -1), nearest(at + 1, 1));
+}
+
+/// For a download made before the server sent its show's order: the one
+/// numbered either side in the same season; across a season, the next
+/// season's first episode after the last one downloaded of this season,
+/// and back from a first episode, the last one downloaded of the season
+/// before.
+(MediaItem?, MediaItem?) _byNumber(
   MediaItem current,
   Iterable<OfflineItem> downloads,
 ) {

@@ -31,12 +31,14 @@ final class OfflineSubtitle {
 
 /// What Dart keeps with a download, which the platform hands back as it
 /// was: the item as the server sent it, the audio tracks the file holds,
-/// and the subtitle tracks picked to save beside it.
+/// the subtitle tracks picked to save beside it, and what the server said
+/// to offer while it plays with no server to ask.
 final class DownloadMeta {
   const DownloadMeta({
     required this.item,
     required this.audio,
     required this.subtitles,
+    this.offline,
   });
 
   /// Null when what was kept can't be read any more, as after an update
@@ -49,6 +51,10 @@ final class DownloadMeta {
         item: MediaItem.fromJson(fields['item']),
         audio: _list(fields['audio'], AudioTrack.fromJson),
         subtitles: _list(fields['subtitles'], SubtitleTrack.fromJson),
+        offline: switch (fields['offline']) {
+          null => null,
+          final offline => DownloadOffline.fromJson(offline),
+        },
       );
     } on FormatException {
       return null;
@@ -61,6 +67,12 @@ final class DownloadMeta {
   final List<AudioTrack> audio;
   final List<SubtitleTrack> subtitles;
 
+  /// The skips, the show's files in order, and where to offer the next
+  /// one, as `downloads.resolve` sent them. Null for a download made
+  /// before the server sent them: it plays with no skips, and finds its
+  /// episodes by their numbers (`download_neighbours.dart`).
+  final DownloadOffline? offline;
+
   static List<T> _list<T>(Object? value, T Function(Object?) read) => [
     for (final entry in value is List<Object?> ? value : const <Object?>[])
       read(entry),
@@ -70,6 +82,7 @@ final class DownloadMeta {
     'item': item.toJson(),
     'audio': [for (final track in audio) track.toJson()],
     'subtitles': [for (final track in subtitles) track.toJson()],
+    if (offline case final offline?) 'offline': offline.toJson(),
   });
 }
 
@@ -165,6 +178,7 @@ final class OfflineItem {
 
   MediaItem get item => meta.item;
   List<AudioTrack> get audio => meta.audio;
+  DownloadOffline? get offline => meta.offline;
 
   /// The subtitles that came, each with its saved file.
   List<OfflineSubtitle> get subtitles => [

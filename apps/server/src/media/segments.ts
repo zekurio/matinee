@@ -673,7 +673,7 @@ export type Offer = Pick<PlaybackStart, "segments" | "upNextAt">
 /**
  * What a player offers for an episode: the parts to skip, and where to
  * start offering the next episode. An episode not looked at yet goes to
- * the front of the queue, for the next time it plays.
+ * the front of the queue, for the next time it plays or is downloaded.
  */
 export async function playerSegments(
   item: MediaItemRow,

@@ -6200,6 +6200,33 @@ final class DownloadChoicesAudioConversion {
   JsonMap toJson() => {'codec': codec, 'channels': channels};
 }
 
+final class DownloadOffline {
+  const DownloadOffline({
+    required this.segments,
+    required this.episodes,
+    required this.upNextAt,
+  });
+
+  factory DownloadOffline.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return DownloadOffline(
+      segments: readList(fields['segments'], MediaSegment.fromJson),
+      episodes: readList(fields['episodes'], (value) => value as String),
+      upNextAt: (fields['upNextAt'] as num?)?.toDouble(),
+    );
+  }
+
+  final List<MediaSegment> segments;
+  final List<String> episodes;
+  final double? upNextAt;
+
+  JsonMap toJson() => {
+    'segments': segments.map((item) => item.toJson()).toList(),
+    'episodes': episodes,
+    'upNextAt': upNextAt,
+  };
+}
+
 final class DownloadWishes {
   const DownloadWishes({
     this.container,
@@ -6469,6 +6496,7 @@ final class DownloadResolutionReady extends DownloadResolution {
     required this.spec,
     required this.plan,
     required this.choices,
+    required this.offline,
   });
 
   factory DownloadResolutionReady.fromJson(Object? json) {
@@ -6479,6 +6507,7 @@ final class DownloadResolutionReady extends DownloadResolution {
       spec: DownloadSpec.fromJson(fields['spec']),
       plan: DownloadPlan.fromJson(fields['plan']),
       choices: DownloadChoices.fromJson(fields['choices']),
+      offline: DownloadOffline.fromJson(fields['offline']),
     );
   }
 
@@ -6487,6 +6516,7 @@ final class DownloadResolutionReady extends DownloadResolution {
   final DownloadSpec spec;
   final DownloadPlan plan;
   final DownloadChoices choices;
+  final DownloadOffline offline;
 
   @override
   JsonMap toJson() => {
@@ -6496,6 +6526,7 @@ final class DownloadResolutionReady extends DownloadResolution {
     'spec': spec.toJson(),
     'plan': plan.toJson(),
     'choices': choices.toJson(),
+    'offline': offline.toJson(),
   };
 }
 

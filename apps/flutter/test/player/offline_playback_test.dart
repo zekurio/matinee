@@ -24,6 +24,7 @@ OfflinePlaybackSession _session(
   DownloadKind kind = DownloadKind.original,
   AudioTrack? audio = audioTwo,
   SubtitleTrack? subtitle,
+  DownloadOffline? offline,
   List<OfflineReport>? reports,
   Duration Function()? elapsed,
 }) => OfflinePlaybackSession(
@@ -39,6 +40,7 @@ OfflinePlaybackSession _session(
   mpv: true,
   audio: audio,
   subtitle: subtitle,
+  offline: offline,
   startAt: 30,
   onReport: (report) => reports?.add(report),
   readText: (path) async =>
@@ -109,6 +111,48 @@ void main() {
       await session.close();
       expect(reports.last.closed, isTrue);
       expect(player.disposed, isTrue);
+    });
+
+    test('offers the skips and the next episode the server sent', () async {
+      final player = FakePlayer();
+      final session = _session(
+        player,
+        offline: const DownloadOffline(
+          segments: [MediaSegment(kind: 'intro', start: 40, end: 70)],
+          episodes: [itemId],
+          upNextAt: 100,
+        ),
+      );
+      session.episodes(null, item('next'));
+      await session.start();
+      player.emit(PlaybackPhase.ready, 45, playing: true);
+      await pumpEventQueue();
+      final intro = session.segment!;
+      expect(intro.kind, 'intro');
+      expect(session.next, isNull);
+      await session.skipSegment(intro);
+      expect(player.seeks.last, const Duration(seconds: 70));
+      expect(session.segment, isNull);
+      player.emit(PlaybackPhase.ready, 100, playing: true);
+      await pumpEventQueue();
+      expect(session.next?.id, 'next');
+      await session.close();
+    });
+
+    test('a download without them offers no skip, and the next at the '
+        'end', () async {
+      final player = FakePlayer();
+      final session = _session(player);
+      session.episodes(null, item('next'));
+      await session.start();
+      player.emit(PlaybackPhase.ready, 110, playing: true);
+      await pumpEventQueue();
+      expect(session.segment, isNull);
+      expect(session.next, isNull);
+      player.emit(PlaybackPhase.ended, 120);
+      await pumpEventQueue();
+      expect(session.next?.id, 'next');
+      await session.close();
     });
   });
 }

@@ -16,8 +16,7 @@ enum PlaybackNotice {
 /// (`PlaybackSession`), or a download playing from the device
 /// (`OfflinePlaybackSession`). The controls, the gestures, the lock, the keys,
 /// picture in picture, and the system's media controls are the same for both;
-/// what only the server has, the quality, trickplay frames, and skip segments,
-/// a download leaves empty.
+/// the quality and trickplay frames a download leaves empty.
 abstract interface class PlayerSitting implements Listenable {
   Player get player;
 
@@ -74,7 +73,8 @@ abstract interface class PlayerSitting implements Listenable {
   /// Whether [track] would be burned into the picture.
   bool burnsIn(SubtitleTrack track);
 
-  /// The segment the person is in that can be skipped.
+  /// The segment the person is in that can be skipped, as the server said
+  /// either in its plan or with the download.
   MediaSegment? get segment;
 
   Trickplay? get trickplay;

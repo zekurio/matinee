@@ -262,7 +262,7 @@ class Downloads extends Notifier<DownloadsList> {
 
   wire.DownloadRequestMessage _request(
     MatineeApi api,
-    MediaItem item, {
+    DownloadSource source, {
     required wire.DownloadKindMessage kind,
     required String file,
     required List<AudioTrack> audio,
@@ -271,6 +271,7 @@ class Downloads extends Notifier<DownloadsList> {
     String? spec,
     int? totalBytes,
   }) {
+    final item = source.item;
     final paths = api.paths;
     final art = item.episode?.still ?? item.title?.images.backdrop;
     return wire.DownloadRequestMessage(
@@ -284,6 +285,7 @@ class Downloads extends Notifier<DownloadsList> {
         item: item,
         audio: audio,
         subtitles: subtitles,
+        offline: source.resolved.offline,
       ).encode(),
       streamUrl: paths.stream(item.id).toString(),
       imageUrl: (art == null ? paths.thumbnail(item.id) : paths.artwork(art.id))
@@ -316,7 +318,7 @@ class Downloads extends Notifier<DownloadsList> {
     return _platform.enqueue(
       _request(
         api,
-        item,
+        source,
         kind: wire.DownloadKindMessage.original,
         file:
             '${item.id}/video.${extension.substring(0, extension.length.clamp(0, 5))}',
@@ -357,7 +359,7 @@ class Downloads extends Notifier<DownloadsList> {
     return _platform.enqueue(
       _request(
         api,
-        item,
+        source,
         kind: wire.DownloadKindMessage.device,
         file: '${item.id}/video.mp4',
         audio: audio,

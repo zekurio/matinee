@@ -224,6 +224,11 @@ The TV player uses the same session with its own controls and one key
 handler. With Match frame rate on, it switches the screen to a refresh
 rate that plays the video's frame rate evenly.
 
+A downloaded file plays through `OfflinePlaybackSession`, which has no
+server to ask: its skip segments and the point to offer the next episode
+come from what `downloads.resolve` sent with the download, and the
+episodes either side from the other downloads of the same show.
+
 libmpv is the `mpv-android` AAR from
 [edde746/mpv-build](https://github.com/edde746/mpv-build), pinned by
 version and SHA-256 in `android/app/build.gradle.kts` and
@@ -256,12 +261,17 @@ The Swift side, `ios/Runner/Downloads`, follows the same rules on a
 background URLSession, which carries on with the app suspended or closed.
 
 Each download belongs to the server it came from and shows, plays, and
-syncs only with that one. The server decides what a download holds. The
-app picks tracks itself only for a download playing without a server
-(`download_tracks.dart`). Progress made offline waits in `PendingProgress`
-and goes to the server once it answers. Offline Home builds Continue
-watching and Next up from what online Home last saved, then from what was
-played offline since.
+syncs only with that one. The server decides what a download holds, and
+what it offers with no server to ask: `downloads.resolve` sends the skip
+segments, where to start offering the next episode, and the show's files
+in order, and `DownloadMeta` keeps them with the download. Previous and
+Next go to the nearest of those files that is on the device too. The app
+picks tracks itself only for a download playing without a server
+(`download_tracks.dart`). A download made before the server sent those
+plays without skips and finds its neighbours by season and episode
+number. Progress made offline waits in `PendingProgress` and goes to the
+server once it answers. Offline Home builds Continue watching and Next up
+from what online Home last saved, then from what was played offline since.
 
 ## Decisions to keep
 

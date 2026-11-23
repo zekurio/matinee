@@ -253,6 +253,7 @@ class _OfflinePlaybackScreenState extends ConsumerState<OfflinePlaybackScreen> {
           mpv: engine == PlayerEngine.mpv,
           audio: audio,
           subtitle: subtitle,
+          offline: download.offline,
           startAt: startAt,
           onReport: reporter.report,
           skipBack: preferences.skipBack,
@@ -457,10 +458,10 @@ class _OfflineHostState extends ConsumerState<_OfflineHost> {
         if (!mounted) return;
       }
     }
-    final (previous, next) = downloadNeighbours(
-      _session.item,
-      ref.read(shownDownloadsProvider).values,
-    );
+    final downloads = ref.read(shownDownloadsProvider);
+    final current = downloads[_session.item.id];
+    if (current == null) return;
+    final (previous, next) = downloadNeighbours(current, downloads.values);
     _session.episodes(previous, next);
   }
 
