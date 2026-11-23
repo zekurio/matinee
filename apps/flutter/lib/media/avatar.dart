@@ -43,12 +43,6 @@ class Avatar extends ConsumerWidget {
   }
 }
 
-/// How far below the middle of a one-high line box a capital's middle has to
-/// move to sit in the middle of it, in ems. Red Hat Text rises 1018 and drops
-/// 305 per 1000, so a line box one em high puts the baseline 1018 / 1323 down
-/// and a 700 high capital's middle .08 above the box's.
-const _capDrop = .5 - (1018 / 1323 - .35);
-
 class _Initial extends StatelessWidget {
   const _Initial({required this.name, required this.size});
 
@@ -59,7 +53,6 @@ class _Initial extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     final letter = name.isEmpty ? '?' : name.characters.first.toUpperCase();
-    final fontSize = size * .4;
     return Semantics(
       label: name,
       child: ExcludeSemantics(
@@ -68,19 +61,18 @@ class _Initial extends StatelessWidget {
             color: colors.secondary,
             shape: BoxShape.circle,
           ),
+          // Unbounded, the wordmark's face, cut down to capitals whose
+          // middle is the middle of a one-em line box, so the letter
+          // centers with no nudging (brand/wordmark.py).
           child: Center(
-            child: Transform.translate(
-              offset: Offset(0, fontSize * _capDrop),
-              child: Text(
-                letter,
-                style: TextStyle(
-                  fontFamily: KitText.family,
-                  fontSize: fontSize,
-                  height: 1,
-                  fontWeight: FontWeight.w600,
-                  fontVariations: const [FontVariation('wght', 600)],
-                  color: colors.mutedForeground,
-                ),
+            child: Text(
+              letter,
+              style: TextStyle(
+                fontFamily: 'Unbounded',
+                fontSize: size * .4,
+                height: 1,
+                fontWeight: FontWeight.w700,
+                color: colors.mutedForeground,
               ),
             ),
           ),
