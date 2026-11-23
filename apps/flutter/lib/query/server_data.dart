@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart'
     show FutureProviderFamily, StreamProviderFamily;
@@ -87,46 +85,6 @@ StreamProvider<T> serverStream<T>(Stream<T> Function(MatineeApi api) open) =>
       final api = serverApi(ref);
       return reconnecting(() => open(api));
     }, retry: _noRetry);
-
-/// A read the server has no live stream for, asked again [every] so long
-/// after each answer for as long as a screen watches it, as the web polls
-/// its jobs panel. A failure shows, and the next ask goes on all the same,
-/// keeping the last answer meanwhile.
-StreamProvider<T> serverPoll<T>(
-  Future<T> Function(MatineeApi api) read, {
-  Duration every = const Duration(seconds: 2),
-}) => StreamProvider.autoDispose<T>((ref) {
-  final api = serverApi(ref);
-  return polling(() => read(api), every: every);
-}, retry: _noRetry);
-
-/// The answers of [read], asked at once and then [every] after each one
-/// comes back, until the listener cancels.
-Stream<T> polling<T>(Future<T> Function() read, {required Duration every}) {
-  late final StreamController<T> controller;
-  Timer? wait;
-  var stopped = false;
-
-  Future<void> ask() async {
-    try {
-      final value = await read();
-      if (!stopped) controller.add(value);
-    } on Object catch (error, stack) {
-      if (!stopped) controller.addError(error, stack);
-    }
-    if (!stopped) wait = Timer(every, () => unawaited(ask()));
-  }
-
-  controller = StreamController<T>(
-    onListen: () => unawaited(ask()),
-    onCancel: () {
-      stopped = true;
-      wait?.cancel();
-      unawaited(controller.close());
-    },
-  );
-  return controller.stream;
-}
 
 /// A live stream for each [A].
 StreamProviderFamily<T, A> serverStreamFamily<T, A>(

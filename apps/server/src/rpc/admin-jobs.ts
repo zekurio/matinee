@@ -4,6 +4,7 @@ import { allQueues, queueById } from "../jobs/queue"
 import { allTasks, cancelTask, runTask, taskStatus } from "../jobs/scheduler"
 import { saveConcurrency } from "../jobs/settings"
 import { log } from "../log"
+import { follow } from "../realtime/follow"
 import { authed, badRequest, notFound } from "./base"
 
 function queueOf(id: JobQueueId) {
@@ -23,6 +24,10 @@ function jobCount(count: number) {
   return count === 1 ? "1 job" : `${count} jobs`
 }
 
+// A scan settles hundreds of jobs a second, so the stream waits this long
+// after a change and sends the overview at most once a second.
+const SETTLE_MS = 1000
+
 function overview() {
   return {
     queues: allQueues().map((queue) => queue.status()),
@@ -31,7 +36,14 @@ function overview() {
 }
 
 export const adminJobs = {
-  get: authed.admin.jobs.get.handler(() => overview()),
+  live: authed.admin.jobs.live.handler(({ signal }) =>
+    follow({
+      topics: ["jobs"],
+      load: () => Promise.resolve(overview()),
+      signal,
+      settleMs: SETTLE_MS,
+    }),
+  ),
 
   pause: authed.admin.jobs.pause.handler(({ context, input }) => {
     const queue = queueOf(input.queue)

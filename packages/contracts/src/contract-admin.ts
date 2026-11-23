@@ -1,4 +1,4 @@
-import { oc } from "@orpc/contract"
+import { eventIterator, oc } from "@orpc/contract"
 
 import {
   AccessGroup,
@@ -76,7 +76,15 @@ export const adminContract = oc.tag("Admin").router({
    * them. Changes apply at once, without a restart.
    */
   jobs: {
-    get: get("/admin/jobs", "job.read").output(JobsOverview),
+    /**
+     * The queues and the tasks, as a stream: how they stand first, then
+     * again whenever a job or a run changes them. Over REST it's
+     * server-sent events. The server ends the stream every few minutes;
+     * reconnect to keep following.
+     */
+    live: get("/admin/jobs/live", "job.read").output(
+      eventIterator(JobsOverview),
+    ),
     /** Start no more jobs from the queue. Running ones finish. */
     pause: post("/admin/jobs/{queue}/pause", "job.update")
       .input(QueueInput)

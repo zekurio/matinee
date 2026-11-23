@@ -2465,9 +2465,13 @@ final class AdminJobsApi {
   final ApiTransport _transport;
 
   /// The account needs the `job.read` permission, and so does an API token.
-  /// `GET /admin/jobs`
-  Future<JobsOverview> get() {
-    return _transport.call('GET', ['admin', 'jobs'], JobsOverview.fromJson);
+  /// `GET /admin/jobs/live`
+  Stream<JobsOverview> live() {
+    return _transport.events('GET', [
+      'admin',
+      'jobs',
+      'live',
+    ], JobsOverview.fromJson);
   }
 
   /// The account needs the `job.update` permission, and so does an API token.

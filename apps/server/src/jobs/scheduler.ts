@@ -9,13 +9,15 @@ import { scheduledTask } from "@matinee/db"
 import { db } from "../db"
 import { shownMessage, TASK_FAILED } from "../errors"
 import { log } from "../log"
+import { events } from "../realtime/events"
 
 /*
  * Scheduled tasks, the way Jellyfin's task manager runs them: each task
  * runs at startup, every so often, or when an admin starts it, never two
  * runs at once. Most of them only find work and hand it to the job
  * queues, then wait for those jobs. The last run is stored, so an
- * interval counts across restarts.
+ * interval counts across restarts. A run starting, moving on, or ending
+ * publishes `jobs`, which the admins' jobs page follows.
  */
 
 // A task due while the server was down waits this long after a start.
@@ -114,6 +116,7 @@ export function runTask(id: TaskId): Promise<void> {
   }
   const progress = (fraction: number) => {
     run.progress = Math.max(0, Math.min(1, fraction))
+    events.publish("jobs", undefined)
   }
   run.done = (async () => {
     let result: TaskResult = "completed"
@@ -137,11 +140,13 @@ export function runTask(id: TaskId): Promise<void> {
       ? new Date(last.endedAt.getTime() + intervalMs)
       : null
     arm(task)
+    events.publish("jobs", undefined)
     await record(id, last).catch((cause: unknown) =>
       log.warn(`Couldn't store the run of task ${task.definition.name}`, cause),
     )
   })()
   task.running = run
+  events.publish("jobs", undefined)
   return run.done
 }
 
@@ -184,6 +189,7 @@ export async function startTasks(definitions: TaskDefinition[]): Promise<void> {
     tasks.set(definition.id, task)
     arm(task)
   }
+  events.publish("jobs", undefined)
 }
 
 /** Stop the timers and the runs, and wait for the runs to end. */
