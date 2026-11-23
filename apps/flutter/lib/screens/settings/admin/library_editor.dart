@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/matinee_api.dart';
+import '../../../core/display_names.dart';
 import '../../../core/failure_text.dart';
 import '../../../core/field_errors.dart';
 import '../../../core/permissions.dart';
@@ -36,6 +37,17 @@ String parentFolder(String path) {
   return cut <= 0 ? '/' : trimmed.substring(0, cut);
 }
 
+/// Where a new library's language starts: the server's choice in [locale],
+/// else its first.
+String startLanguage(List<MetadataLanguageChoice> choices, Locale locale) {
+  final exact = choices.where((it) => it.nameTag == locale.toLanguageTag());
+  final same = choices.where(
+    (it) => it.code.split('-').first == locale.languageCode,
+  );
+  return (exact.firstOrNull ?? same.firstOrNull ?? choices.firstOrNull)?.code ??
+      locale.toLanguageTag();
+}
+
 /// The library's name, kind, metadata, and folders, as a page of its own: a new
 /// library, or with [id] one to change. Folders are picked on the next page,
 /// which hands the folder back; the draft stays here meanwhile. The server
@@ -50,6 +62,7 @@ class LibraryEditorScreen extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final libraries = ref.watch(adminLibrariesProvider);
     final providers = ref.watch(metadataProvidersProvider);
+    final languages = ref.watch(metadataLanguagesProvider);
     final title = id == null
         ? l.webLibrariesDialogAddTitle
         : l.webLibrariesDialogEditTitle;
@@ -58,9 +71,12 @@ class LibraryEditorScreen extends ConsumerWidget {
     for (final library in list ?? const <Library>[]) {
       if (library.id == id) existing = library;
     }
-    // The draft starts from the library and the providers, so it waits for
-    // both, and a library that's gone is an error.
-    final failed = libraries.error ?? (id == null ? null : providers.error);
+    // The draft starts from the library, the providers, and the languages,
+    // so it waits for them, and a library that's gone is an error.
+    final failed =
+        libraries.error ??
+        languages.error ??
+        (id == null ? null : providers.error);
     // The form browses the server's folders to pick from.
     bool allows(User user) =>
         can(
@@ -68,12 +84,15 @@ class LibraryEditorScreen extends ConsumerWidget {
           id == null ? Permission.libraryCreate : Permission.libraryUpdate,
         ) &&
         can(user, Permission.folderRead);
-    if (id != null && existing == null || providers.isLoading) {
+    if (id != null && existing == null ||
+        providers.isLoading ||
+        !languages.hasValue) {
       return AdminGate(
         allows: allows,
         child: AdminPage(
           title: title,
-          child: failed != null || (list != null && existing == null)
+          child:
+              failed != null || (id != null && list != null && existing == null)
               ? Center(
                   child: FailureState(
                     title: l.adminLoadFailed,
@@ -81,7 +100,8 @@ class LibraryEditorScreen extends ConsumerWidget {
                     onRetry: () {
                       ref
                         ..invalidate(adminLibrariesProvider)
-                        ..invalidate(metadataProvidersProvider);
+                        ..invalidate(metadataProvidersProvider)
+                        ..invalidate(metadataLanguagesProvider);
                     },
                   ),
                 )
@@ -95,6 +115,7 @@ class LibraryEditorScreen extends ConsumerWidget {
         title: title,
         existing: existing,
         providers: providers.value ?? const [],
+        languages: languages.value ?? const [],
         knownPath: list?.firstOrNull?.paths.firstOrNull,
       ),
     );
@@ -106,12 +127,14 @@ class _LibraryEditor extends ConsumerStatefulWidget {
     required this.title,
     required this.existing,
     required this.providers,
+    required this.languages,
     required this.knownPath,
   });
 
   final String title;
   final Library? existing;
   final List<MetadataProvider> providers;
+  final List<MetadataLanguageChoice> languages;
   final String? knownPath;
 
   @override
@@ -125,11 +148,11 @@ class _LibraryEditorState extends ConsumerState<_LibraryEditor> {
       widget.existing?.metadataProvider ??
       widget.providers.where((it) => it.configured).firstOrNull?.id;
 
-  /// The tag the provider is asked in; a new library starts in the
-  /// device's language, which only the device knows.
+  /// The tag the provider is asked in; a new library starts on the
+  /// server's choice in the app's language.
   late String _language =
       widget.existing?.metadataLanguage ??
-      View.of(context).platformDispatcher.locale.toLanguageTag();
+      startLanguage(widget.languages, Localizations.localeOf(context));
   late List<String> _paths = [...?widget.existing?.paths];
   bool _saving = false;
   Map<String, String> _errors = const {};
@@ -199,7 +222,7 @@ class _LibraryEditorState extends ConsumerState<_LibraryEditor> {
   }
 
   bool _shownAtField(Map<String, String> errors) =>
-      errors.keys.any(const {'name', 'paths', 'metadataLanguage'}.contains);
+      errors.keys.any(const {'name', 'paths'}.contains);
 
   String? _error(String field) {
     for (final MapEntry(:key, :value) in _errors.entries) {
@@ -213,6 +236,15 @@ class _LibraryEditorState extends ConsumerState<_LibraryEditor> {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final providers = widget.providers;
+    // A library saved with a language the server no longer offers keeps it.
+    final choices = [
+      for (final choice in widget.languages) (choice.code, choice.nameTag),
+      if (!widget.languages.any((it) => it.code == _language))
+        (_language, _language),
+    ];
+    final names = DisplayNames.watch(ref, DisplayNameKind.language, [
+      for (final (_, tag) in choices) tag,
+    ], l.localeName);
     final failure = _failure;
     final foldersError = _error('paths');
     return AdminPage(
@@ -286,12 +318,14 @@ class _LibraryEditorState extends ConsumerState<_LibraryEditor> {
                     },
                   ),
                   if (_provider != null)
-                    TextRow(
-                      label: l.webLibrariesDialogLanguage,
-                      value: _language,
-                      placeholder: 'en-US',
-                      error: _error('metadataLanguage'),
-                      onChanged: (value) => setState(() => _language = value),
+                    PickerRow<String>(
+                      title: l.webLibrariesDialogLanguage,
+                      options: [
+                        for (final (code, tag) in choices)
+                          (code, names.nameOf(tag)),
+                      ],
+                      current: _language,
+                      onPicked: (code) => setState(() => _language = code),
                     ),
                 ],
               ),

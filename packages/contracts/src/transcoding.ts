@@ -45,20 +45,12 @@ export const HARDWARE_DECODE_CODECS = [
 export const HardwareDecodeCodec = t.enum(HARDWARE_DECODE_CODECS)
 export type HardwareDecodeCodec = t.infer<typeof HardwareDecodeCodec>
 
-/** Which codecs each acceleration can decode, as Jellyfin's dashboard lists them. */
-export const HARDWARE_DECODE_SUPPORT = new Map<
-  HardwareDevice,
-  readonly HardwareDecodeCodec[]
->([
-  ["vaapi", ["h264", "hevc", "mpeg2video", "vc1", "vp8", "vp9", "av1"]],
-  ["qsv", ["h264", "hevc", "mpeg2video", "vc1", "vp8", "vp9", "av1"]],
-  [
-    "nvenc",
-    ["h264", "hevc", "mpeg2video", "mpeg4", "vc1", "vp8", "vp9", "av1"],
-  ],
-  // AV1 needs an Apple GPU that decodes it, which detection can't tell.
-  ["videotoolbox", ["h264", "hevc", "vp8", "vp9"]],
-])
+/** The codecs one acceleration can decode, in the order a form lists them. */
+export const HardwareDecodeSupport = t.object({
+  acceleration: HardwareDevice,
+  codecs: t.array(HardwareDecodeCodec),
+})
+export type HardwareDecodeSupport = t.infer<typeof HardwareDecodeSupport>
 
 /** x264's names. Auto is veryfast for software, each encoder's own pick otherwise. */
 export const ENCODER_PRESETS = [
@@ -349,6 +341,12 @@ export const AdminTranscodingSettings = t.object({
   environment: t.array(TranscodingEnvironmentField),
   /** What ffmpeg and the GPUs can do, detected for the devices in use. */
   capabilities: TranscodingCapabilities,
+  /**
+   * The codecs `hardwareDecodingCodecs` can list under each acceleration,
+   * for every one, so a form follows the acceleration picked in it before
+   * it's saved.
+   */
+  hardwareDecodeSupport: t.array(HardwareDecodeSupport),
 })
 export type AdminTranscodingSettings = t.infer<typeof AdminTranscodingSettings>
 

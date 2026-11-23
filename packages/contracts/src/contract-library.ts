@@ -17,6 +17,7 @@ import {
   Library,
   LibraryInput,
   MediaItem,
+  MetadataLanguageChoice,
   MetadataMatch,
   MetadataProvider,
   RemoteImage,
@@ -60,6 +61,14 @@ export const metadataContract = oc.tag("Metadata").router({
   /** Every provider the server knows, configured or not. */
   providers: get("/metadata/providers", "library.read").output(
     t.array(MetadataProvider),
+  ),
+  /**
+   * The languages a library's form offers. A new library starts on the
+   * one in the client's own language, else on the first. A library saved
+   * with another keeps it.
+   */
+  languages: get("/metadata/languages", "library.read").output(
+    t.array(MetadataLanguageChoice),
   ),
 })
 

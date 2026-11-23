@@ -9,10 +9,15 @@ export const InviteToken = t
   .string()
   .regex(/^[A-Za-z0-9_-]{43}$/, "That invite link is incomplete.")
 
-/** How long a link can work, in days. The first choices a form offers. */
-export const INVITE_EXPIRY_DAYS = [1, 7, 30] as const
-export const DEFAULT_INVITE_EXPIRY_DAYS = 7
+/** The longest a link can work, in days. */
 export const MAX_INVITE_EXPIRY_DAYS = 30
+
+/** How many days a link works: a whole number up to the longest. */
+export const InviteExpiryDays = t
+  .number()
+  .int()
+  .min(1)
+  .max(MAX_INVITE_EXPIRY_DAYS)
 
 /** A note on who the link is for. Empty means none. */
 export const InviteLabel = t
@@ -22,11 +27,20 @@ export const InviteLabel = t
 
 export const InviteInput = t.object({
   label: InviteLabel.optional(),
-  expiresInDays: t.number().int().min(1).max(MAX_INVITE_EXPIRY_DAYS),
+  expiresInDays: InviteExpiryDays,
   /** Access groups the new account starts in. */
   groupIds: t.array(t.uuid()).max(32).$default([]),
 })
 export type InviteInput = t.infer<typeof InviteInput>
+
+/** What the form for a new invite offers. */
+export const InviteOptions = t.object({
+  /** How long a link can work, in days, shortest first. */
+  expiryDays: t.array(InviteExpiryDays),
+  /** The one of them the form starts on. */
+  defaultExpiryDays: InviteExpiryDays,
+})
+export type InviteOptions = t.infer<typeof InviteOptions>
 
 /**
  * A link that lets one person create an account with a passkey while

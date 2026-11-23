@@ -132,7 +132,7 @@ function TranscodingForm({
           onDetect={() => detect.mutate()}
         />
         <HardwareSection form={form} settings={settings} hardware={hardware} />
-        <HardwareDecodingSection form={form} />
+        <HardwareDecodingSection form={form} settings={settings} />
       </SettingsSections>
       <StepActions onBack={onBack}>
         <Button type="button" variant="ghost" onClick={onNext}>

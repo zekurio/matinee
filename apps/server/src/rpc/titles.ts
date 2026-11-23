@@ -20,6 +20,7 @@ import {
   viewerStates,
 } from "../media/items"
 import { seasonsByTitle } from "../media/seasons"
+import { METADATA_LANGUAGES } from "../metadata/languages"
 import { refreshTitleNow, sourceFor } from "../metadata/refresh"
 import { providerList } from "../metadata/sources"
 import { youTubeUrl } from "../metadata/trailers"
@@ -303,4 +304,5 @@ export const titles = {
 
 export const metadata = {
   providers: authed.metadata.providers.handler(() => providerList()),
+  languages: authed.metadata.languages.handler(() => [...METADATA_LANGUAGES]),
 }

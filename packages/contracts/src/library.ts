@@ -15,6 +15,21 @@ export const MetadataLanguage = t
   .trim()
   .regex(/^[a-z]{2}(-[A-Z]{2})?$/, "Use a language code like en or de-DE.")
 
+/**
+ * A language a library's form offers for its metadata. The server picks
+ * the ones every provider has a fair amount of data in.
+ */
+export const MetadataLanguageChoice = t.object({
+  /** What the library saves and its provider is asked in, like `pt-BR`. */
+  code: MetadataLanguage,
+  /**
+   * The tag a client names it by, in its own language: `en` for `en-US`.
+   * It keeps the region only where that tells two apart, like `pt-BR`.
+   */
+  nameTag: t.string(),
+})
+export type MetadataLanguageChoice = t.infer<typeof MetadataLanguageChoice>
+
 export const MetadataProvider = t.object({
   id: MetadataProviderId,
   name: t.string(),

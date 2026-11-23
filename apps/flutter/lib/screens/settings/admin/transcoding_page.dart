@@ -57,6 +57,18 @@ String _codecName(String codec) => switch (codec) {
   _ => codec.toUpperCase(),
 };
 
+/// The codecs the GPU can decode under [acceleration], in the server's
+/// order: the switches the decoding section shows for the acceleration
+/// picked, before it's saved. None for software, or for one the server
+/// doesn't list.
+List<String> decodableCodecs(
+  List<HardwareDecodeSupport> support,
+  String acceleration,
+) => [
+  for (final entry in support)
+    if (entry.acceleration == acceleration) ...entry.codecs,
+];
+
 class _TranscodingForm extends ConsumerStatefulWidget {
   const _TranscodingForm({required this.saved});
 
@@ -215,11 +227,10 @@ class _TranscodingFormState extends ConsumerState<_TranscodingForm> {
       ],
       _ => const <String>[],
     };
-    // The codecs the server has a say on: its defaults and what's saved.
-    final decodable = {
-      ...saved.defaults.hardwareDecodingCodecs,
-      ...saved.settings.hardwareDecodingCodecs,
-    };
+    final decodable = decodableCodecs(
+      saved.hardwareDecodeSupport,
+      acceleration,
+    );
     final deviceFailure = _deviceFailure(l, capabilities, acceleration);
     return SaveBarPage(
       title: l.settingsAdminTranscoding,

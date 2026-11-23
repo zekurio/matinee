@@ -3,6 +3,7 @@ import {
   holdsPermission,
   type Invite,
   type InviteInput,
+  type InviteOptions,
   invitePagePath,
   type Permission,
 } from "@matinee/contracts"
@@ -31,6 +32,16 @@ import { lockUsers, type Tx } from "./users"
 
 export const INVITE_GONE =
   "This invite link doesn't work. It may have expired, or been used already."
+
+/**
+ * How long the form for a new link lets it work, and where it starts. A
+ * link can be made for any whole number of days up to
+ * `MAX_INVITE_EXPIRY_DAYS`; these are the ones worth offering.
+ */
+export const INVITE_OPTIONS = {
+  expiryDays: [1, 7, 30],
+  defaultExpiryDays: 7,
+} satisfies InviteOptions
 
 const publicColumns = {
   id: invite.id,

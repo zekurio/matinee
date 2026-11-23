@@ -3,6 +3,7 @@ import {
   LIBRARY_KINDS,
   type LibraryKind,
   LibraryInput,
+  type MetadataLanguageChoice,
   type MetadataProvider,
   type MetadataProviderId,
 } from "@matinee/contracts"
@@ -27,9 +28,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { FolderIcon, FolderPlusIcon, XIcon } from "lucide-react"
 import { useState } from "react"
 
-import { tr, translateKnown } from "@/i18n"
+import { getLocale, tr, translateKnown } from "@/i18n"
 import { firstError, useAppForm } from "@/lib/form"
-import { languageName } from "@/lib/languages"
+import { baseLanguage, languageName } from "@/lib/languages"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { FolderPicker } from "./folder-browser"
@@ -44,23 +45,6 @@ import {
   FormDialogHeader,
 } from "./settings/form-dialog"
 
-// Languages every provider has a fair amount of data in, with the tag
-// their name comes from: the region only where it matters.
-const languages = [
-  { value: "en-US", tag: "en" },
-  { value: "de-DE", tag: "de" },
-  { value: "fr-FR", tag: "fr" },
-  { value: "es-ES", tag: "es" },
-  { value: "it-IT", tag: "it" },
-  { value: "pt-BR", tag: "pt-BR" },
-  { value: "nl-NL", tag: "nl" },
-  { value: "pl-PL", tag: "pl" },
-  { value: "sv-SE", tag: "sv" },
-  { value: "ja-JP", tag: "ja" },
-  { value: "ko-KR", tag: "ko" },
-  { value: "zh-CN", tag: "zh" },
-]
-
 type ProviderChoice = MetadataProviderId | "none"
 
 type LibraryValues = {
@@ -69,7 +53,8 @@ type LibraryValues = {
   paths: string[]
   /** Null until the admin picks one; until then the default for the kind. */
   provider: ProviderChoice | null
-  language: string
+  /** Null until the admin picks one; until then `startLanguage`'s. */
+  language: string | null
 }
 
 function initialValues(library: Library | undefined): LibraryValues {
@@ -78,8 +63,22 @@ function initialValues(library: Library | undefined): LibraryValues {
     kind: library?.kind ?? "movies",
     paths: library?.paths ?? [],
     provider: library ? (library.metadataProvider ?? "none") : null,
-    language: library?.metadataLanguage ?? "en-US",
+    language: library?.metadataLanguage ?? null,
   }
+}
+
+/**
+ * Where a new library's language starts: the server's choice in the
+ * interface's language, else its first.
+ */
+function startLanguage(choices: MetadataLanguageChoice[]): string {
+  const locale = getLocale()
+  const base = baseLanguage(locale)
+  const match =
+    choices.find((choice) => choice.nameTag === locale) ??
+    choices.find((choice) => baseLanguage(choice.code) === base) ??
+    choices[0]
+  return match?.code ?? ""
 }
 
 /** TheTVDB for shows and TMDB for movies, when the server has the key. */
@@ -127,6 +126,7 @@ function LibraryForm({
   const queryClient = useQueryClient()
   const libraries = useQuery(orpc.libraries.list.queryOptions())
   const providers = useQuery(orpc.metadata.providers.queryOptions())
+  const languages = useQuery(orpc.metadata.languages.queryOptions())
 
   const save = useMutation({
     mutationFn: (input: LibraryInput) =>
@@ -151,7 +151,7 @@ function LibraryForm({
       kind: value.kind,
       paths: value.paths,
       metadataProvider: provider === "none" ? null : provider,
-      metadataLanguage: value.language,
+      metadataLanguage: value.language ?? startLanguage(languages.data ?? []),
     }
   }
 
@@ -182,7 +182,12 @@ function LibraryForm({
     form.store,
     (state) => state.values.provider,
   )
-  const language = useSelector(form.store, (state) => state.values.language)
+  const languageChoice = useSelector(
+    form.store,
+    (state) => state.values.language,
+  )
+  const choices = languages.data ?? []
+  const language = languageChoice ?? startLanguage(choices)
 
   const provider = providerChoice ?? defaultProvider(kind, providers.data ?? [])
   const providerInfo = providers.data?.find((p) => p.id === provider)
@@ -194,11 +199,15 @@ function LibraryForm({
     value,
     label: tr(`libraries.dialog.kind.${value}`),
   }))
+  // A library saved with a language the server no longer offers keeps it.
   const languageItems = (
-    languages.some((l) => l.value === language)
-      ? languages
-      : [...languages, { value: language, tag: language }]
-  ).map((l) => ({ value: l.value, label: languageName(l.tag) }))
+    choices.some((choice) => choice.code === language) || !language
+      ? choices
+      : [...choices, { code: language, nameTag: language }]
+  ).map((choice) => ({
+    value: choice.code,
+    label: languageName(choice.nameTag),
+  }))
   // Media usually sits beside the folders other libraries already use.
   const known = library?.paths[0] ?? libraries.data?.[0]?.paths[0]
   const startFolder = known ? parentFolder(known) : undefined
@@ -284,16 +293,37 @@ function LibraryForm({
                       </Field>
                     )}
                   </form.Field>
-                  <form.AppField name="language">
-                    {() => (
-                      <SelectField
-                        id="library-language"
-                        label={tr("libraries.dialog.language")}
-                        items={languageItems}
-                        disabled={provider === "none"}
-                      />
+                  <form.Field name="language">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor="library-language">
+                          {tr("libraries.dialog.language")}
+                        </FieldLabel>
+                        <Select
+                          items={languageItems}
+                          value={language}
+                          disabled={provider === "none" || !language}
+                          onValueChange={(value) =>
+                            value && field.handleChange(value)
+                          }
+                        >
+                          <SelectTrigger
+                            id="library-language"
+                            className="w-full"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {languageItems.map((item) => (
+                              <SelectItem key={item.value} value={item.value}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
                     )}
-                  </form.AppField>
+                  </form.Field>
                   <FieldDescription className="-mt-2 sm:col-span-2">
                     {provider === "none"
                       ? tr("libraries.dialog.noProviderHint")

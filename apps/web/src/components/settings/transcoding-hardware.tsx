@@ -2,7 +2,6 @@ import {
   type AdminTranscodingSettings,
   type CapabilityCheck,
   HARDWARE_ACCELERATIONS,
-  HARDWARE_DECODE_SUPPORT,
   type HardwareCapability,
   type TranscodeVideoCodec,
 } from "@matinee/contracts"
@@ -201,13 +200,17 @@ export const HardwareSection = withForm({
 
 export const HardwareDecodingSection = withForm({
   ...draftForm,
-  render: function Render({ form }) {
+  props: typeOnly<{ settings: AdminTranscodingSettings }>(),
+  render: function Render({ form, settings }) {
     const accel = useSelector(
       form.store,
       (state) => state.values.hardwareAcceleration,
     )
     if (accel === "none") return null
-    const decodable = HARDWARE_DECODE_SUPPORT.get(accel) ?? []
+    const decodable =
+      settings.hardwareDecodeSupport.find(
+        (entry) => entry.acceleration === accel,
+      )?.codecs ?? []
 
     return (
       <SettingsSubsection

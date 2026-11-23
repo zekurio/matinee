@@ -25,6 +25,7 @@ import {
   IdInput,
   Invite,
   InviteInput,
+  InviteOptions,
   UserRole,
 } from "./schemas"
 import { AdminTranscodingSettings, TranscodingSettings } from "./transcoding"
@@ -233,6 +234,10 @@ export const adminContract = oc.tag("Admin").router({
     create: post("/admin/invites", "invite.create")
       .input(InviteInput)
       .output(CreatedInvite),
+    /** What the form for a new link offers: how long it can work. */
+    options: get("/admin/invites/options", "invite.create").output(
+      InviteOptions,
+    ),
     /** Stop a link from working. */
     revoke: del("/admin/invites/{id}", "invite.delete")
       .input(IdInput)

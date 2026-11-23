@@ -1,7 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/services.dart'
-    show Clipboard, ClipboardData, TextInputType;
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -638,9 +637,8 @@ class _InviteDialog extends ConsumerStatefulWidget {
 class _InviteDialogState extends ConsumerState<_InviteDialog> {
   String _label = '';
 
-  /// What the days field holds; the server says when it's out of range.
-  /// It starts at the web's week.
-  String _days = '7';
+  /// The days picked, null until one is; until then the server's default.
+  int? _days;
   final _groups = <String>{};
   bool _creating = false;
   Map<String, String> _errors = const {};
@@ -652,11 +650,9 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
     final api = ref.read(apiProvider);
     if (api == null || _creating) return;
     final l = AppLocalizations.of(context);
-    final days = int.tryParse(_days.trim());
-    if (days == null) {
-      setState(() => _errors = {'expiresInDays': l.adminEnterNumber});
-      return;
-    }
+    final days =
+        _days ?? ref.read(inviteOptionsProvider).value?.defaultExpiryDays;
+    if (days == null) return;
     setState(() {
       _creating = true;
       _errors = const {};
@@ -732,6 +728,8 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
             // Everyone holds every account already, so it isn't offered.
             .where((group) => !group.everyone)
             .toList();
+    final options = ref.watch(inviteOptionsProvider);
+    final expiry = options.value;
     final failure = _failure;
     return Dialog(
       title: l.webUsersInvitesCreate,
@@ -743,7 +741,9 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
           child: Text(l.webUsersDialogCancel),
         ),
         MatineeButton(
-          onPressed: _creating ? null : () => unawaited(_create()),
+          onPressed: _creating || expiry == null
+              ? null
+              : () => unawaited(_create()),
           child: Text(l.webUsersInvitesDialogSubmit),
         ),
       ],
@@ -757,11 +757,20 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
             error: _errors['label'],
             onChanged: (value) => _label = value,
           ),
-          _DaysField(
-            value: _days,
-            error: _errors['expiresInDays'],
-            onChanged: (value) => _days = value,
-          ),
+          if (expiry != null)
+            InviteExpiryPicker(
+              options: expiry,
+              current: _days ?? expiry.defaultExpiryDays,
+              error: _errors['expiresInDays'],
+              onPicked: (days) => setState(() => _days = days),
+            )
+          else if (options.error case final error?)
+            Note(
+              l.webUsersInvitesLoadFailed(describeFailure(l, error)),
+              danger: true,
+            )
+          else
+            const SkeletonBox(height: 56, radius: KitRadius.lg),
           if (groups.isNotEmpty) ...[
             Text(
               l.webUsersInvitesDialogGroups,
@@ -794,49 +803,52 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
   }
 }
 
-/// How many days a link works, a number the server checks.
-class _DaysField extends StatefulWidget {
-  const _DaysField({
-    required this.value,
-    required this.error,
-    required this.onChanged,
+/// How many days a link works, from the lengths the server offers.
+class InviteExpiryPicker extends StatelessWidget {
+  const InviteExpiryPicker({
+    super.key,
+    required this.options,
+    required this.current,
+    required this.onPicked,
+    this.error,
   });
 
-  final String value;
+  final InviteOptions options;
+  final int current;
+  final ValueChanged<int> onPicked;
   final String? error;
-  final ValueChanged<String> onChanged;
-
-  @override
-  State<_DaysField> createState() => _DaysFieldState();
-}
-
-class _DaysFieldState extends State<_DaysField> {
-  late final _controller = TextEditingController(text: widget.value);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return MatineeTextField(
-      controller: _controller,
-      label: l.webUsersInvitesDialogExpiry,
-      error: widget.error,
-      keyboardType: TextInputType.number,
-      onChanged: widget.onChanged,
-      trailing: Padding(
-        padding: const EdgeInsetsDirectional.only(end: 8),
-        child: Text(
-          l.adminDays,
+    final colors = MatineeTheme.of(context);
+    final error = this.error;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 8,
+      children: [
+        Text(
+          l.webUsersInvitesDialogExpiry,
           style: KitText.sm.style(
-            color: MatineeTheme.of(context).mutedForeground,
+            color: colors.foreground,
+            weight: FontWeight.w500,
           ),
         ),
-      ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final days in options.expiryDays)
+              ChoiceChip(
+                label: l.adminInviteExpiryDays(days),
+                selected: days == current,
+                onPressed: () => onPicked(days),
+              ),
+          ],
+        ),
+        if (error != null)
+          Text(error, style: KitText.sm.style(color: colors.danger)),
+      ],
     );
   }
 }

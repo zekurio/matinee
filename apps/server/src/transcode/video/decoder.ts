@@ -1,7 +1,30 @@
+import type { HardwareDecodeSupport } from "@matinee/contracts"
+
 import { isHevcRext, isVaapiSupported, versionAtLeast } from "./support"
 import type { Decoder, Plan } from "./types"
 
 /* Decoding, from GetHardwareVideoDecoder and GetHwaccelType. */
+
+/**
+ * The codecs each acceleration can decode, as Jellyfin's dashboard lists
+ * them: what a form offers for `hardwareDecodingCodecs`.
+ */
+export const HARDWARE_DECODE_SUPPORT: readonly HardwareDecodeSupport[] = [
+  {
+    acceleration: "vaapi",
+    codecs: ["h264", "hevc", "mpeg2video", "vc1", "vp8", "vp9", "av1"],
+  },
+  {
+    acceleration: "qsv",
+    codecs: ["h264", "hevc", "mpeg2video", "vc1", "vp8", "vp9", "av1"],
+  },
+  {
+    acceleration: "nvenc",
+    codecs: ["h264", "hevc", "mpeg2video", "mpeg4", "vc1", "vp8", "vp9", "av1"],
+  },
+  // AV1 needs an Apple GPU that decodes it, which detection can't tell.
+  { acceleration: "videotoolbox", codecs: ["h264", "hevc", "vp8", "vp9"] },
+]
 
 /** Whether the GPU should decode this source, by the settings. */
 export function hardwareDecodes(plan: Plan): boolean {
