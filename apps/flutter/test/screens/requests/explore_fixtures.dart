@@ -61,7 +61,7 @@ Map<String, DiscoverRow> exploreRows() => {
     ),
 };
 
-const _items = <String, List<CatalogBrowseTitle>>{
+final _items = <String, List<CatalogBrowseTitle>>{
   DiscoverRailId.popularFilms: [
     CatalogBrowseTitle(
       ref: CatalogRef(
@@ -72,7 +72,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'Dune: Part Two',
       year: 2024,
       poster: null,
-      availability: _here,
+      availability: _here('dune-part-two'),
       title: TitleSummary(
         id: 'dune-part-two',
         libraryId: 'films',
@@ -102,7 +102,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'Poor Things',
       year: 2023,
       poster: null,
-      availability: _here,
+      availability: _here('poor-things'),
       title: TitleSummary(
         id: 'poor-things',
         libraryId: 'films',
@@ -132,7 +132,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'Oppenheimer',
       year: 2023,
       poster: null,
-      availability: _here,
+      availability: _here('oppenheimer'),
       title: TitleSummary(
         id: 'oppenheimer',
         libraryId: 'films',
@@ -162,7 +162,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'Past Lives',
       year: 2023,
       poster: null,
-      availability: _here,
+      availability: _here('past-lives'),
       title: TitleSummary(
         id: 'past-lives',
         libraryId: 'films',
@@ -192,7 +192,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'Everything Everywhere All at Once',
       year: 2022,
       poster: null,
-      availability: _here,
+      availability: _here('everything-everywhere'),
       title: TitleSummary(
         id: 'everything-everywhere',
         libraryId: 'films',
@@ -224,7 +224,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'The Bear',
       year: 2022,
       poster: null,
-      availability: _here,
+      availability: _here('the-bear'),
       title: TitleSummary(
         id: 'the-bear',
         libraryId: 'shows',
@@ -254,7 +254,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'Severance',
       year: 2022,
       poster: null,
-      availability: _here,
+      availability: _here('severance'),
       title: TitleSummary(
         id: 'severance',
         libraryId: 'shows',
@@ -284,7 +284,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'The Last of Us',
       year: 2023,
       poster: null,
-      availability: _here,
+      availability: _here('the-last-of-us'),
       title: TitleSummary(
         id: 'the-last-of-us',
         libraryId: 'shows',
@@ -314,7 +314,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'House of the Dragon',
       year: 2022,
       poster: null,
-      availability: _here,
+      availability: _here('house-of-the-dragon'),
       title: TitleSummary(
         id: 'house-of-the-dragon',
         libraryId: 'shows',
@@ -346,7 +346,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'Game of Thrones',
       year: 2011,
       poster: null,
-      availability: _here,
+      availability: _here('game-of-thrones'),
       title: TitleSummary(
         id: 'game-of-thrones',
         libraryId: 'shows',
@@ -376,7 +376,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'Better Call Saul',
       year: 2015,
       poster: null,
-      availability: _here,
+      availability: _here('better-call-saul'),
       title: TitleSummary(
         id: 'better-call-saul',
         libraryId: 'shows',
@@ -406,7 +406,7 @@ const _items = <String, List<CatalogBrowseTitle>>{
       name: 'Breaking Bad',
       year: 2008,
       poster: null,
-      availability: _here,
+      availability: _here('breaking-bad'),
       title: TitleSummary(
         id: 'breaking-bad',
         libraryId: 'shows',
@@ -430,7 +430,8 @@ const _items = <String, List<CatalogBrowseTitle>>{
   ],
 };
 
-const _here = Availability(
+/// A title the server has in [id]'s library row.
+Availability _here(String id) => Availability(
   state: AvailabilityState.here,
   action: null,
   progress: null,
@@ -440,9 +441,9 @@ const _here = Availability(
   reason: null,
   askedBySelf: false,
   requestId: null,
-  others: AvailabilityOthers(count: 0, names: []),
+  others: const AvailabilityOthers(count: 0, names: []),
   limit: null,
-  libraryTitleId: 'here',
+  libraryTitleId: id,
   disabledReason: null,
 );
 
