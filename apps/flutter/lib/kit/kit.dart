@@ -6,6 +6,7 @@ export 'cards.dart';
 export 'checkbox.dart';
 export 'chips.dart';
 export 'dialog.dart';
+export 'filled_badge.dart';
 export 'icon.dart';
 export 'logo.dart';
 export 'menu.dart';
