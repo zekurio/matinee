@@ -12,28 +12,27 @@ void main() {
     addTearDown(() => SharedPreferencesAsyncPlatform.instance = previous);
   });
 
-  test(
-    'theme mode survives a new container and queued edits keep their order',
-    () async {
-      final container = ProviderContainer.test();
-      expect(
-        await container.read(themeStoreProvider.future),
-        defaultThemePreferences,
-      );
-      final settings = container.read(themeStoreProvider.notifier);
+  test('theme mode and Material You survive a new container, and queued edits keep their order', () async {
+    final container = ProviderContainer.test();
+    expect(
+      await container.read(themeStoreProvider.future),
+      defaultThemePreferences,
+    );
+    final settings = container.read(themeStoreProvider.notifier);
 
-      await Future.wait([
-        settings.setAppearance(ThemeAppearance.light),
-        settings.setPreset(ThemePreset.matinee),
-        settings.setAppearance(ThemeAppearance.dark),
-      ]);
+    await Future.wait([
+      settings.setAppearance(ThemeAppearance.light),
+      settings.setPreset(ThemePreset.matinee),
+      settings.setMaterialYou(true),
+      settings.setAppearance(ThemeAppearance.dark),
+    ]);
 
-      final restarted = ProviderContainer.test();
-      final restored = await restarted.read(themeStoreProvider.future);
-      expect(restored, (
-        preset: ThemePreset.matinee,
-        appearance: ThemeAppearance.dark,
-      ));
-    },
-  );
+    final restarted = ProviderContainer.test();
+    final restored = await restarted.read(themeStoreProvider.future);
+    expect(restored, (
+      preset: ThemePreset.matinee,
+      appearance: ThemeAppearance.dark,
+      materialYou: true,
+    ));
+  });
 }

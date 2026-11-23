@@ -39,7 +39,7 @@ class AuthenticationPage extends ConsumerWidget {
         ),
       );
     }
-    return _AuthForm(key: ObjectKey(saved), saved: saved);
+    return _AuthForm(saved: saved);
   }
 }
 
@@ -54,7 +54,7 @@ const _advanced = {
 };
 
 class _AuthForm extends ConsumerStatefulWidget {
-  const _AuthForm({super.key, required this.saved});
+  const _AuthForm({required this.saved});
 
   final AdminAuthSettings saved;
 
@@ -66,12 +66,31 @@ class _AuthFormState extends ConsumerState<_AuthForm> {
   late PasskeySettings _passkeys = widget.saved.passkeys;
 
   /// The OIDC settings as JSON, for the fields to edit by name.
-  late final JsonMap _original = widget.saved.oidc.toJson();
+  late JsonMap _original = widget.saved.oidc.toJson();
   late JsonMap _oidc = {..._original};
   String _secret = '';
   bool _dropSecret = false;
   bool _showAdvanced = false;
   Map<String, String> _errors = const {};
+
+  /// A save brings the settings back as the server has them, and the form
+  /// starts again from there.
+  @override
+  void didUpdateWidget(_AuthForm old) {
+    super.didUpdateWidget(old);
+    if (identical(widget.saved, old.saved)) return;
+    _original = widget.saved.oidc.toJson();
+    _restart();
+  }
+
+  /// The fields as the server has them, the edits gone.
+  void _restart() {
+    _passkeys = widget.saved.passkeys;
+    _oidc = {..._original};
+    _secret = '';
+    _dropSecret = false;
+    _errors = const {};
+  }
 
   /// A new secret to save, the saved one dropped, or the saved one kept.
   Explicit<String>? get _secretChange => _secret.trim().isNotEmpty
@@ -140,7 +159,7 @@ class _AuthFormState extends ConsumerState<_AuthForm> {
       }
       rethrow;
     }
-    if (mounted) ref.invalidate(authSettingsProvider);
+    if (mounted) await reread(ref, authSettingsProvider.future);
   }
 
   Future<void> _copy(String url) async {
@@ -197,16 +216,9 @@ class _AuthFormState extends ConsumerState<_AuthForm> {
     return SaveBarPage(
       title: l.settingsAdminAuthentication,
       dirty: _dirty,
-      onReset: () => setState(() {
-        _passkeys = saved.passkeys;
-        _oidc = {..._original};
-        _secret = '';
-        _dropSecret = false;
-        _errors = const {};
-      }),
+      onReset: () => setState(_restart),
       onSave: _save,
       child: AdminSections(
-        bottom: !_dirty,
         sections: [
           SettingsSection(
             title: l.webOidcPasskeysTitle,

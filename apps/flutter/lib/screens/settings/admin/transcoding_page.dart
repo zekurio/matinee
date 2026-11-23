@@ -40,9 +40,7 @@ class TranscodingPage extends ConsumerWidget {
         ),
       );
     }
-    // A save or a detection brings the settings back as the server has
-    // them, and the form starts again from there.
-    return _TranscodingForm(key: ObjectKey(saved), saved: saved);
+    return _TranscodingForm(saved: saved);
   }
 }
 
@@ -60,7 +58,7 @@ String _codecName(String codec) => switch (codec) {
 };
 
 class _TranscodingForm extends ConsumerStatefulWidget {
-  const _TranscodingForm({super.key, required this.saved});
+  const _TranscodingForm({required this.saved});
 
   final AdminTranscodingSettings saved;
 
@@ -71,13 +69,30 @@ class _TranscodingForm extends ConsumerStatefulWidget {
 class _TranscodingFormState extends ConsumerState<_TranscodingForm> {
   /// The settings as JSON, every field written, for the fields to edit by
   /// name.
-  late final JsonMap _original = widget.saved.settings.toJson();
+  late JsonMap _original = widget.saved.settings.toJson();
   late JsonMap _draft = {..._original};
 
   /// What each number field holds while it isn't a number yet.
   var _typed = <String, String>{};
   Map<String, String> _errors = const {};
   bool _detecting = false;
+
+  /// A save or a detection brings the settings back as the server has
+  /// them, and the form starts again from there.
+  @override
+  void didUpdateWidget(_TranscodingForm old) {
+    super.didUpdateWidget(old);
+    if (identical(widget.saved, old.saved)) return;
+    _original = widget.saved.settings.toJson();
+    _restart();
+  }
+
+  /// The fields as the server has them, the edits gone.
+  void _restart() {
+    _draft = {..._original};
+    _typed = {};
+    _errors = const {};
+  }
 
   bool get _dirty =>
       _typed.isNotEmpty ||
@@ -111,7 +126,7 @@ class _TranscodingFormState extends ConsumerState<_TranscodingForm> {
       }
       rethrow;
     }
-    if (mounted) ref.invalidate(transcodingProvider);
+    if (mounted) await reread(ref, transcodingProvider.future);
   }
 
   Future<void> _detect() async {
@@ -210,14 +225,9 @@ class _TranscodingFormState extends ConsumerState<_TranscodingForm> {
       title: l.settingsAdminTranscoding,
       dirty: _dirty,
       canSave: _typed.isEmpty,
-      onReset: () => setState(() {
-        _draft = {..._original};
-        _typed = {};
-        _errors = const {};
-      }),
+      onReset: () => setState(_restart),
       onSave: _save,
       child: AdminSections(
-        bottom: !_dirty,
         sections: [
           _Ffmpeg(
             capabilities: capabilities,

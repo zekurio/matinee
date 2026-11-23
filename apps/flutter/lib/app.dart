@@ -7,6 +7,7 @@ import 'core/device.dart';
 import 'core/server_accents.dart';
 import 'core/toasts.dart';
 import 'kit/accent.dart';
+import 'kit/material_you.dart';
 import 'kit/theme.dart';
 import 'kit/theme_store.dart';
 import 'kit/toast.dart';
@@ -25,12 +26,21 @@ class MatineeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences =
         ref.watch(themeStoreProvider).value ?? defaultThemePreferences;
+    final device = ref.watch(deviceProvider);
+    // The wallpaper's colors instead of Matinee's, where Material You is on:
+    // the server's accents and the preset stay out of the way then.
+    final wallpaper = preferences.materialYou && !device.isTv
+        ? ref.watch(materialYouProvider).value
+        : null;
     // The server's accents, or the Branding page's before they're saved,
     // over the preset's own, as the web paints them.
-    final accents =
-        ref.watch(accentPreviewProvider) ?? ref.watch(serverAccentsProvider);
-    final light = accented(preferences.preset.light, accents?.light);
-    final dark = accented(preferences.preset.dark, accents?.dark);
+    final accents = wallpaper == null
+        ? ref.watch(accentPreviewProvider) ?? ref.watch(serverAccentsProvider)
+        : null;
+    final light =
+        wallpaper?.light ?? accented(preferences.preset.light, accents?.light);
+    final dark =
+        wallpaper?.dark ?? accented(preferences.preset.dark, accents?.dark);
     return MaterialApp.router(
       routerConfig: ref.watch(routerProvider),
       onNavigationNotification: ref.watch(backClaimProvider).onNotification,
@@ -56,7 +66,7 @@ class MatineeApp extends ConsumerWidget {
         child: Stack(
           children: [
             child!,
-            if (ref.watch(deviceProvider).isTv)
+            if (device.isTv)
               // Clear of the drawer's rail and the overscan.
               Positioned(
                 left: TvPage.start,

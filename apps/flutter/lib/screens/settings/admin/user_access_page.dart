@@ -253,14 +253,9 @@ class UserAccessPage extends ConsumerWidget {
         ),
       );
     }
-    // A save brings the account back as the server has it, and the form
-    // starts again from there.
     return AdminGate(
       allows: mayAccess,
-      child: _AccessForm(
-        key: ValueKey(user.access.toJson().toString()),
-        user: user,
-      ),
+      child: _AccessForm(key: ValueKey(user.id), user: user),
     );
   }
 }
@@ -275,9 +270,26 @@ class _AccessForm extends ConsumerStatefulWidget {
 }
 
 class _AccessFormState extends ConsumerState<_AccessForm> {
-  late final _saved = _Draft.of(widget.user.access);
+  late var _saved = _Draft.of(widget.user.access);
   late var _draft = _saved;
   Map<String, String> _errors = const {};
+
+  /// A save brings the account back as the server has it, and the form
+  /// starts again from there.
+  @override
+  void didUpdateWidget(_AccessForm old) {
+    super.didUpdateWidget(old);
+    final saved = _Draft.of(widget.user.access);
+    if (saved == _saved) return;
+    _saved = saved;
+    _restart();
+  }
+
+  /// The fields as the server has them, the edits gone.
+  void _restart() {
+    _draft = _saved;
+    _errors = const {};
+  }
 
   void _edit(_Draft draft) => setState(() => _draft = draft);
 
@@ -301,9 +313,8 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
     }
     if (!mounted) return;
     // Groups count their members.
-    ref
-      ..invalidate(adminUsersProvider)
-      ..invalidate(adminGroupsProvider);
+    ref.invalidate(adminGroupsProvider);
+    await reread(ref, adminUsersProvider.future);
   }
 
   String? _error(String field) {
@@ -354,13 +365,9 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
     return SaveBarPage(
       title: l.adminAccessTitle(user.name),
       dirty: dirty,
-      onReset: () => setState(() {
-        _draft = _saved;
-        _errors = const {};
-      }),
+      onReset: () => setState(_restart),
       onSave: _save,
       child: AdminSections(
-        bottom: false,
         sections: [
           Note(l.adminAccessDescription),
           SettingsSection(

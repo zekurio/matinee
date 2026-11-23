@@ -309,12 +309,16 @@ class SwitchRow extends StatelessWidget {
     required this.checked,
     required this.onChanged,
     this.icon,
+    this.description,
   });
 
   final String title;
   final bool checked;
   final ValueChanged<bool>? onChanged;
   final String? icon;
+
+  /// What the switch is for, under its title.
+  final String? description;
 
   @override
   Widget build(BuildContext context) {
@@ -328,7 +332,9 @@ class SwitchRow extends StatelessWidget {
         child: Row(
           children: [
             if (icon != null) _RowIcon(icon),
-            Expanded(child: _RowText(title: title)),
+            Expanded(
+              child: _RowText(title: title, description: description),
+            ),
             const SizedBox(width: 12),
             Switch(checked: checked, onChanged: change),
           ],
@@ -432,6 +438,26 @@ class PickerRow<T> extends StatelessWidget {
             },
           ),
       ],
+    );
+  }
+}
+
+/// Small muted lines under a panel, for what a page has to say about
+/// itself, or in the danger color for what an admin must know first.
+class Note extends StatelessWidget {
+  const Note(this.text, {super.key, this.danger = false});
+
+  final String text;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    return Text(
+      text,
+      style: KitText.sm.style(
+        color: danger ? colors.danger : colors.mutedForeground,
+      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Refreshable;
 import 'package:go_router/go_router.dart';
 
 import '../../../api/matinee_api.dart';
@@ -16,8 +17,8 @@ import '../settings_screen.dart';
 
 /* What the admin pages share: who may
  * see them, a page of the server's settings that loads first, the page
- * whose fields save together from a save bar, text rows, notes, and
- * running an action with a toast when it fails. */
+ * whose fields save together from a save bar, text rows, and running an
+ * action with a toast when it fails. */
 
 /// Whether the account in use may open an admin page that [allows] it:
 /// the server's permissions say so, and the app is on the server, not
@@ -43,15 +44,12 @@ class AdminGate extends ConsumerWidget {
 }
 
 /// A Settings page's sections down a list, as `SettingsScaffold` lays them
-/// out, without the frame.
+/// out, without the frame. The list keeps clear of the system's bar, which
+/// a [SaveBarPage] takes off its hands while its bar shows.
 class AdminSections extends StatelessWidget {
-  const AdminSections({super.key, required this.sections, this.bottom = true});
+  const AdminSections({super.key, required this.sections});
 
   final List<Widget> sections;
-
-  /// Whether the list keeps clear of the system's bar itself; not when a
-  /// save bar sits under it and does.
-  final bool bottom;
 
   @override
   Widget build(BuildContext context) => ListView.separated(
@@ -59,7 +57,7 @@ class AdminSections extends StatelessWidget {
       CardMetrics.gutter,
       8,
       CardMetrics.gutter,
-      (bottom ? MediaQuery.paddingOf(context).bottom : 0) + 20,
+      MediaQuery.paddingOf(context).bottom + 20,
     ),
     itemCount: sections.length,
     separatorBuilder: (context, index) => const SizedBox(height: 28),
@@ -122,20 +120,39 @@ class AdminPage extends StatelessWidget {
   );
 }
 
+/// Asks the server again for what a save changed and waits for the answer,
+/// so the page is on what the server kept by the time its save bar says
+/// "Saved". The save went through either way: an answer that doesn't come
+/// shows on the page, as any read that failed.
+Future<void> reread(WidgetRef ref, Refreshable<Future<Object?>> read) async {
+  try {
+    final _ = await ref.refresh(read);
+  } on Object {
+    return;
+  }
+}
+
 /// How long "Saved" shows before the bar goes, as the web's.
 const savedFor = Duration(milliseconds: 1400);
 
 /// A page whose fields wait to be saved together, as the web's panels with
 /// their save bar. The bar sits under the list, never over its last rows, and
 /// shows while the page has unsaved edits ([dirty]), with Reset and Save.
+/// Both move up over the keyboard, so Save and the field being typed in stay
+/// in reach.
 ///
 /// Until the edits are saved or reset it holds the page open: Back, from
 /// the system or the page's bar, shakes the bar instead of leaving. The
 /// bar reports the save itself: Save turns into "Saved" for a moment
 /// before the bar goes, and a failure stays in it with the server's reason
-/// until the next try or a reset. [onSave] throws when the save fails; the
-/// page puts the server's word on each field it names ([fieldErrors]).
+/// until the next try or a reset. [onSave] ends once the page is on what
+/// the server kept ([reread]), and throws when the save fails; the page
+/// puts the server's word on each field it names ([fieldErrors]).
 /// [canSave] is false while a field holds what can't be sent at all.
+///
+/// The page keeps its form through the save: the server's answer starts
+/// the fields again, but a form built anew would take the bar with it
+/// before it said "Saved", and the list back to its top.
 class SaveBarPage extends StatefulWidget {
   const SaveBarPage({
     super.key,
@@ -153,7 +170,7 @@ class SaveBarPage extends StatefulWidget {
   final VoidCallback onReset;
   final Future<void> Function() onSave;
 
-  /// The page's body, usually an [AdminSections] with `bottom: false`.
+  /// The page's body, usually an [AdminSections].
   final Widget child;
 
   @override
@@ -165,6 +182,14 @@ class _SaveBarPageState extends State<SaveBarPage> {
   String? _message;
   int _attention = 0;
   Timer? _done;
+
+  /// What the bar stopped showing is over: a failure whose edits were
+  /// undone by hand doesn't come back with the next edit.
+  @override
+  void didUpdateWidget(SaveBarPage old) {
+    super.didUpdateWidget(old);
+    if (_shown == null) _status = null;
+  }
 
   @override
   void dispose() {
@@ -188,12 +213,13 @@ class _SaveBarPageState extends State<SaveBarPage> {
       return;
     }
     final l = AppLocalizations.of(context);
+    // The last save's "Saved" mustn't run out on this one.
+    _done?.cancel();
     setState(() => _status = SaveBarStatus.saving);
     try {
       await widget.onSave();
       if (!mounted) return;
       setState(() => _status = SaveBarStatus.saved);
-      _done?.cancel();
       _done = Timer(savedFor, () {
         if (mounted) setState(() => _status = null);
       });
@@ -213,6 +239,9 @@ class _SaveBarPageState extends State<SaveBarPage> {
     final status = shown ?? SaveBarStatus.unsaved;
     final visible = widget.dirty || shown != null;
     final saving = status == SaveBarStatus.saving;
+    final motion = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
     return PopScope(
       canPop: !widget.dirty,
       onPopInvokedWithResult: (didPop, result) {
@@ -222,44 +251,55 @@ class _SaveBarPageState extends State<SaveBarPage> {
         title: widget.title,
         backLabel: l.commonBack,
         onBack: widget.dirty ? _attempt : () => context.pop(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: MediaQuery.removePadding(
-                context: context,
-                removeBottom: visible,
-                child: widget.child,
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: MediaQuery.removePadding(
+                  context: context,
+                  removeBottom: visible,
+                  child: widget.child,
+                ),
               ),
-            ),
-            if (visible)
-              SaveBar(
-                status: status,
-                attention: _attention,
-                message: _message,
-                statusLabel: switch (status) {
-                  SaveBarStatus.saved => l.webCommonSaveBarSaved,
-                  SaveBarStatus.failed => l.webCommonSaveBarFailed,
-                  _ => l.webCommonSaveBarUnsaved,
-                },
-                resetLabel: l.webCommonSaveBarReset,
-                saveLabel: switch (status) {
-                  SaveBarStatus.saving => l.webCommonSaveBarSaving,
-                  SaveBarStatus.saved => l.webCommonSaveBarDone,
-                  SaveBarStatus.failed => l.webCommonSaveBarRetry,
-                  SaveBarStatus.unsaved => l.webCommonSaveBarSave,
-                },
-                onReset: widget.dirty && !saving
-                    ? () {
-                        setState(() => _status = null);
-                        widget.onReset();
-                      }
-                    : null,
-                onSave: widget.dirty && widget.canSave && !saving
-                    ? () => unawaited(_save())
-                    : null,
+              AnimatedSize(
+                duration: motion,
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.bottomCenter,
+                child: visible
+                    ? SaveBar(
+                        status: status,
+                        attention: _attention,
+                        message: _message,
+                        statusLabel: switch (status) {
+                          SaveBarStatus.saved => l.webCommonSaveBarSaved,
+                          SaveBarStatus.failed => l.webCommonSaveBarFailed,
+                          _ => l.webCommonSaveBarUnsaved,
+                        },
+                        resetLabel: l.webCommonSaveBarReset,
+                        saveLabel: switch (status) {
+                          SaveBarStatus.saving => l.webCommonSaveBarSaving,
+                          SaveBarStatus.saved => l.webCommonSaveBarDone,
+                          SaveBarStatus.failed => l.webCommonSaveBarRetry,
+                          SaveBarStatus.unsaved => l.saveBarSave,
+                        },
+                        onReset: widget.dirty && !saving
+                            ? () {
+                                setState(() => _status = null);
+                                widget.onReset();
+                              }
+                            : null,
+                        onSave: widget.dirty && widget.canSave && !saving
+                            ? () => unawaited(_save())
+                            : null,
+                      )
+                    : const SizedBox(width: double.infinity),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -336,26 +376,6 @@ class _TextRowState extends State<TextRow> {
           ),
           if (hint != null && widget.error == null) Note(hint),
         ],
-      ),
-    );
-  }
-}
-
-/// Small muted lines under a panel, for what a page has to say about
-/// itself, or in the danger color for what an admin must know first.
-class Note extends StatelessWidget {
-  const Note(this.text, {super.key, this.danger = false});
-
-  final String text;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    return Text(
-      text,
-      style: KitText.sm.style(
-        color: danger ? colors.danger : colors.mutedForeground,
       ),
     );
   }

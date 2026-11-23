@@ -9,6 +9,7 @@ export 'dialog.dart';
 export 'filled_badge.dart';
 export 'icon.dart';
 export 'logo.dart';
+export 'material_you.dart';
 export 'menu.dart';
 export 'multi_select.dart';
 export 'page_dots.dart';
