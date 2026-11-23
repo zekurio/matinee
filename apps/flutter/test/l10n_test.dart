@@ -52,4 +52,35 @@ void main() {
       }
     }
   });
+
+  // Android 13 and later and iOS list an app's languages in their settings,
+  // the only place to pick one, from lists of their own.
+  test('the platforms list the languages the ARB files have', () {
+    final arbs = {
+      for (final file in Directory('lib/l10n').listSync())
+        if (RegExp(r'app_(\w+)\.arb$').firstMatch(file.path) case final m?)
+          m[1]!,
+    };
+    final android = {
+      for (final m in RegExp(r'<locale android:name="([^"]+)"').allMatches(
+        File('android/app/src/main/res/xml/locales_config.xml')
+            .readAsStringSync(),
+      ))
+        m[1]!,
+    };
+    final plist = File('ios/Runner/Info.plist').readAsStringSync();
+    final ios = {
+      for (final m
+          in RegExp(r'<string>([a-z]{2}(?:-\w+)?)</string>').allMatches(
+            RegExp(
+              r'<key>CFBundleLocalizations</key>\s*<array>(.*?)</array>',
+              dotAll: true,
+            ).firstMatch(plist)![1]!,
+          ))
+        m[1]!,
+    };
+    expect(arbs, isNotEmpty);
+    expect(android, arbs);
+    expect(ios, arbs);
+  });
 }
