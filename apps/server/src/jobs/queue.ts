@@ -8,6 +8,7 @@ import {
 
 import { shownMessage } from "../errors"
 import { log } from "../log"
+import { events } from "../realtime/events"
 
 /*
  * Background work, the way Immich runs it: named queues with a number of
@@ -17,7 +18,8 @@ import { log } from "../log"
  * Callers either wait for the result (`run`) or leave it to the queue
  * (`push`). Unlike Immich's Redis queues these live in memory: what they
  * work on is derived from the database, so the scheduled tasks find it
- * again after a restart.
+ * again after a restart. Whatever changes what `status` reports publishes
+ * `jobs`, which the admins' jobs page follows.
  */
 
 export type Priority = "high" | "normal" | "low"
@@ -227,6 +229,7 @@ export class Queue<P, R> implements QueueControl {
       }
       const entry = this.entry(key, payload, priority)
       this.after.set(key, entry)
+      events.publish("jobs", undefined)
       return entry.done.promise
     }
 
@@ -286,10 +289,12 @@ export class Queue<P, R> implements QueueControl {
 
   pause(): void {
     this.paused = true
+    events.publish("jobs", undefined)
   }
 
   resume(): void {
     this.paused = false
+    events.publish("jobs", undefined)
     this.pump()
   }
 
@@ -310,6 +315,7 @@ export class Queue<P, R> implements QueueControl {
       1,
       Math.min(this.maxConcurrency, Math.round(concurrency)),
     )
+    events.publish("jobs", undefined)
     this.pump()
   }
 
@@ -363,6 +369,7 @@ export class Queue<P, R> implements QueueControl {
     this.waiting.set(entry.key, entry)
     this.lanes.get(entry.priority)?.push(entry)
     this.batch ??= { started: Date.now(), completed: 0, failed: 0 }
+    events.publish("jobs", undefined)
   }
 
   /** Merge a request into a waiting job, moving it up if it's more urgent. */
@@ -386,6 +393,7 @@ export class Queue<P, R> implements QueueControl {
     entry.done.reject(cause)
     // Nobody may be waiting on it.
     entry.done.promise.catch(() => {})
+    events.publish("jobs", undefined)
     this.settleBatch()
   }
 
@@ -424,6 +432,7 @@ export class Queue<P, R> implements QueueControl {
     entry.startedAt = new Date()
     this.waiting.delete(entry.key)
     this.active.set(entry.key, entry)
+    events.publish("jobs", undefined)
     const { signal } = entry.controller
     // A job that throws before its first await still counts as a failure.
     void Promise.resolve()
@@ -439,6 +448,7 @@ export class Queue<P, R> implements QueueControl {
       .finally(() => {
         entry.state = "settled"
         this.active.delete(entry.key)
+        events.publish("jobs", undefined)
         const next = this.after.get(entry.key)
         if (next) {
           this.after.delete(entry.key)

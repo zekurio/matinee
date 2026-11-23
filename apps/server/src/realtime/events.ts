@@ -29,6 +29,8 @@ export type Topics = {
   partyHealth: undefined
   /** A file's trickplay images were made, or couldn't be. */
   trickplay: undefined
+  /** A job queue or a scheduled task changed: its jobs, its run, its settings. */
+  jobs: undefined
 }
 
 export type Topic = keyof Topics

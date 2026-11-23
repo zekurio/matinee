@@ -35,7 +35,7 @@ import {
   type SpanUnit,
   spanParts,
 } from "@/lib/format"
-import { client, errorMessage, orpc } from "@/lib/rpc"
+import { client, errorMessage, liveQuery, orpc } from "@/lib/rpc"
 
 import { ConcurrencySection, tunableQueues } from "./jobs-concurrency"
 import {
@@ -44,18 +44,6 @@ import {
   queueName,
 } from "./queue-details-dialog"
 import { SettingsSections, SettingsSubsection } from "./settings-panel"
-
-// Live while something runs, slow otherwise.
-const BUSY_REFRESH_MS = 2000
-const IDLE_REFRESH_MS = 10_000
-
-function isBusy(overview: JobsOverview | undefined): boolean {
-  if (!overview) return false
-  return (
-    overview.queues.some((queue) => queue.active + queue.waiting > 0) ||
-    overview.tasks.some((task) => task.startedAt !== null)
-  )
-}
 
 /** A task's name in the interface's language. */
 function taskName(task: ScheduledTask): string {
@@ -99,13 +87,15 @@ function scheduleOf(task: ScheduledTask): string {
   })
 }
 
+/**
+ * The queues and tasks as the server streams them: how they stand, and
+ * again on each change, so a reconnect loses nothing.
+ */
 export function JobsPanel() {
-  const jobs = useQuery(
-    orpc.admin.jobs.get.queryOptions({
-      refetchInterval: (query) =>
-        isBusy(query.state.data) ? BUSY_REFRESH_MS : IDLE_REFRESH_MS,
-    }),
-  )
+  const jobs = useQuery({
+    ...orpc.admin.jobs.live.experimental_liveOptions(),
+    ...liveQuery,
+  })
 
   return (
     <SettingsSections>
@@ -160,10 +150,13 @@ function LoadError({ error, retry }: { error: Error; retry: () => void }) {
   )
 }
 
-/** Update the cached overview with a queue's or task's new state. */
+/**
+ * Show a queue's or task's new state as its action answered it, ahead of
+ * the stream, which sends the same a moment later.
+ */
 function useJobsUpdate() {
   const queryClient = useQueryClient()
-  const key = orpc.admin.jobs.get.queryKey()
+  const key = orpc.admin.jobs.live.experimental_liveKey()
   return {
     queue: (next: JobQueueStatus) =>
       queryClient.setQueryData<JobsOverview>(key, (old) =>
@@ -176,7 +169,17 @@ function useJobsUpdate() {
             }
           : old,
       ),
-    refetch: () => queryClient.invalidateQueries({ queryKey: key }),
+    task: (next: ScheduledTask) =>
+      queryClient.setQueryData<JobsOverview>(key, (old) =>
+        old
+          ? {
+              ...old,
+              tasks: old.tasks.map((task) =>
+                task.id === next.id ? next : task,
+              ),
+            }
+          : old,
+      ),
   }
 }
 
@@ -467,7 +470,7 @@ function useTaskAction(task: ScheduledTask) {
       running
         ? client.admin.jobs.cancelTask({ task: task.id })
         : client.admin.jobs.runTask({ task: task.id }),
-    onSuccess: () => update.refetch(),
+    onSuccess: update.task,
     onError: (error) =>
       toast.error(
         running

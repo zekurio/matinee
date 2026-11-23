@@ -23,9 +23,11 @@ final adminGroupsProvider = serverQuery((api) => api.admin.groups.list());
 /// tell whether an account can sign in.
 final authConfigProvider = serverQuery((api) => api.auth.config());
 
-/// The queues and tasks, as they stand every two seconds: the server has
-/// no stream for them, and the web's panel polls too.
-final jobsProvider = serverPoll((api) => api.admin.jobs.get());
+/// The queues and tasks as `admin.jobs.live` sends them: how they stand,
+/// then again on each change, so a reconnect loses nothing. The server
+/// waits a second after a change before it sends, so an action invalidates
+/// it to open it again, which starts with the change.
+final jobsProvider = serverStream((api) => api.admin.jobs.live());
 
 final transcodingProvider = serverQuery((api) => api.admin.transcoding.get());
 final trickplayProvider = serverQuery((api) => api.admin.trickplay.get());

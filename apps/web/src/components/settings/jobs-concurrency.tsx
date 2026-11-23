@@ -57,13 +57,16 @@ export function ConcurrencySection({
     mutationFn: (input: ConcurrencyInput) =>
       client.admin.jobs.updateConcurrency(input),
   })
-  // Until the first edit, the form follows the saved numbers, so a refetch
-  // shows through.
+  // Until the first edit, the form follows the saved numbers, so what the
+  // stream sends shows through.
   const form = useAppForm({
     defaultValues: initial,
     onSubmit: async ({ value, formApi }) => {
       const next = await save.mutateAsync({ concurrency: value })
-      queryClient.setQueryData(orpc.admin.jobs.get.queryKey(), next)
+      queryClient.setQueryData(
+        orpc.admin.jobs.live.experimental_liveKey(),
+        next,
+      )
       formApi.reset(draftFrom(tunableQueues(next)))
     },
   })
