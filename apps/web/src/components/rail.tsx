@@ -322,8 +322,11 @@ export function RailItem({
         artwork === "poster" &&
           "w-[44%] sm:w-[176px] lg:w-[188px] 2xl:w-[204px]",
         artwork === "person" && "w-[28%] sm:w-[116px] lg:w-[128px]",
-        // A request's card: one and a bit on a phone, three or four wide.
-        artwork === "request" && "w-[min(88%,22rem)] sm:w-96",
+        // A request's card: one and a bit on a phone, and from there two
+        // posters and the gap between them wide, so it lines up with the
+        // poster rows around it.
+        artwork === "request" &&
+          "w-[min(88%,22rem)] sm:w-[calc(2*176px+1rem)] lg:w-[calc(2*188px+1rem)] 2xl:w-[calc(2*204px+1rem)]",
       )}
     >
       {children}

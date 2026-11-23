@@ -142,10 +142,7 @@ export const dispatch = defineQueue({
               year: row.year,
               scope:
                 row.kind === "show"
-                  ? {
-                      seasons: seasons.map((season) => season.number),
-                      future: row.future,
-                    }
+                  ? { seasons: seasons.map((season) => season.number) }
                   : null,
               options,
               requester: requester ?? null,
