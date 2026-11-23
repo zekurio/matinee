@@ -330,22 +330,33 @@ class SwitchRow extends StatelessWidget {
             if (icon != null) _RowIcon(icon),
             Expanded(child: _RowText(title: title)),
             const SizedBox(width: 12),
-            // The whole row is the tap target, so the switch's own 48
-            // reaches into the row's padding instead of making it taller
-            // than the rows with a value.
-            SizedBox(
-              width: Switch.size.width,
-              height: 20,
-              child: OverflowBox(
-                maxHeight: Switch.size.height,
-                child: Switch(checked: checked, onChanged: change),
-              ),
-            ),
+            RowSwitch(checked: checked, enabled: change != null),
           ],
         ),
       ),
     );
   }
+}
+
+/// The switch at the end of a row that toggles as a whole: the track alone,
+/// since the row takes the tap and the focus and says what's on. It's laid
+/// out a line of the title tall, so the taller track reaches into the row's
+/// padding and the row stays as tall as one with a value.
+class RowSwitch extends StatelessWidget {
+  const RowSwitch({super.key, required this.checked, this.enabled = true});
+
+  final bool checked;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: SwitchTrack.size.width,
+    height: KitText.base.lineHeight,
+    child: OverflowBox(
+      maxHeight: SwitchTrack.size.height,
+      child: SwitchTrack(checked: checked, enabled: enabled),
+    ),
+  );
 }
 
 /// A row that only tells something, its value at its end.

@@ -4,6 +4,9 @@ import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
+/// A switch to tap on its own: a [SwitchTrack] padded out to [size], 48
+/// tall, so a thumb can hit it. A row that toggles as a whole shows the
+/// track alone instead.
 class Switch extends StatelessWidget {
   const Switch({
     super.key,
@@ -12,9 +15,6 @@ class Switch extends StatelessWidget {
     this.label,
   });
 
-  /// The track's size, and the size the switch takes up, which pads the
-  /// track out to 48 tall so a thumb can hit it.
-  static const track = Size(52, 32);
   static const size = Size(76, 48);
 
   final bool checked;
@@ -23,52 +23,73 @@ class Switch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
     final change = onChanged;
-    final motion = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 150);
     return PressIndication(
       onPressed: change == null ? null : () => change(!checked),
       button: false,
       toggled: checked,
       label: label,
       shape: KitRadius.pill,
-      focusInsets: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      builder: (context, state) => Opacity(
-        opacity: change == null ? .5 : 1,
-        child: SizedBox.fromSize(
-          size: size,
-          child: Center(
-            child: AnimatedContainer(
-              duration: motion,
-              width: track.width,
-              height: track.height,
-              decoration: BoxDecoration(
-                color: checked ? colors.accent : colors.inputHover,
-                borderRadius: KitRadius.pill,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: AnimatedAlign(
-                duration: motion,
-                alignment: checked
-                    ? AlignmentDirectional.centerEnd
-                    : AlignmentDirectional.centerStart,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    // Off, a white thumb on the grey track in light, and a
-                    // light one in dark, as the web's switch has it.
-                    color: checked
-                        ? colors.accentForeground
-                        : colors.isDark
-                        ? colors.foreground
-                        : colors.background,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
+      // The ring goes round the track, not the room around it.
+      focusInsets: EdgeInsets.symmetric(
+        horizontal: (size.width - SwitchTrack.size.width) / 2,
+        vertical: (size.height - SwitchTrack.size.height) / 2,
+      ),
+      builder: (context, state) => SizedBox.fromSize(
+        size: size,
+        child: Center(
+          child: SwitchTrack(checked: checked, enabled: change != null),
+        ),
+      ),
+    );
+  }
+}
+
+/// A switch's track and thumb, with nothing to tap, focus, or read out: for
+/// a row that takes the tap itself and says what's on. Dimmed when not
+/// [enabled].
+class SwitchTrack extends StatelessWidget {
+  const SwitchTrack({super.key, required this.checked, this.enabled = true});
+
+  static const size = Size(52, 32);
+
+  final bool checked;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final motion = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 150);
+    return Opacity(
+      opacity: enabled ? 1 : .5,
+      child: AnimatedContainer(
+        duration: motion,
+        width: size.width,
+        height: size.height,
+        decoration: BoxDecoration(
+          color: checked ? colors.accent : colors.inputHover,
+          borderRadius: KitRadius.pill,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: AnimatedAlign(
+          duration: motion,
+          alignment: checked
+              ? AlignmentDirectional.centerEnd
+              : AlignmentDirectional.centerStart,
+          child: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              // Off, a white thumb on the grey track in light, and a
+              // light one in dark, as the web's switch has it.
+              color: checked
+                  ? colors.accentForeground
+                  : colors.isDark
+                  ? colors.foreground
+                  : colors.background,
+              shape: BoxShape.circle,
             ),
           ),
         ),

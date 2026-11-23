@@ -28,11 +28,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(_app(Switch(checked: true, onChanged: (_) {})));
-    final track = find.descendant(
-      of: find.byType(Switch),
-      matching: find.byType(AnimatedContainer),
-    );
-    expect(tester.getSize(track), const Size(52, 32));
+    expect(tester.getSize(find.byType(SwitchTrack)), const Size(52, 32));
     expect(
       tester.getSize(
         find.descendant(
@@ -42,7 +38,7 @@ void main() {
       ),
       const Size(24, 24),
     );
-    expect(tester.getSize(find.byType(PressIndication)).height, 48);
+    expect(tester.getSize(find.byType(PressIndication)), const Size(76, 48));
   });
 
   testWidgets('a bottom tab is at least 72 tall with its label', (
