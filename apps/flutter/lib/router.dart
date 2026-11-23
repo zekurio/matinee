@@ -25,6 +25,7 @@ import 'screens/requests/catalog_screen.dart';
 import 'screens/requests/explore_screen.dart';
 import 'screens/requests/requests_screen.dart';
 import 'screens/search/search_screen.dart';
+import 'screens/settings/admin/access_groups_page.dart';
 import 'screens/settings/admin/library_editor.dart';
 import 'screens/settings/admin/user_access_page.dart';
 import 'screens/settings/licenses_page.dart';
@@ -164,6 +165,10 @@ abstract final class Routes {
 
   /// What an account may see and do, set by an admin.
   static String userAccess(String id) => '/admin/users/$id/access';
+
+  /// An access group's page: [id]'s to change, or a new one.
+  static String accessGroup([String? id]) =>
+      id == null ? '/admin/groups' : '/admin/groups/$id';
 
   static Map<String, String>? _query(Map<String, String?> values) {
     final kept = {
@@ -455,6 +460,17 @@ List<RouteBase> _handsetRoutes() => [
     parentNavigatorKey: _rootKey,
     builder: (context, state) =>
         UserAccessPage(userId: state.pathParameters['id']!),
+  ),
+  PushedRoute(
+    path: '/admin/groups',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const AccessGroupPage(),
+  ),
+  PushedRoute(
+    path: '/admin/groups/:id',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        AccessGroupPage(id: state.pathParameters['id']),
   ),
   PushedRoute(
     path: '/downloads/show/:titleId',

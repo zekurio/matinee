@@ -23,6 +23,12 @@ final adminInvitesProvider = serverQuery((api) => api.admin.invites.list());
 final inviteOptionsProvider = serverQuery((api) => api.admin.invites.options());
 final adminGroupsProvider = serverQuery((api) => api.admin.groups.list());
 
+/// The group names the provider sent for linked accounts, which a
+/// group's editor offers as it names one to follow.
+final adminProviderGroupsProvider = serverQuery(
+  (api) => api.admin.groups.providerGroups(),
+);
+
 /// The sign-in methods the server offers, which the user list reads to
 /// tell whether an account can sign in.
 final authConfigProvider = serverQuery((api) => api.auth.config());
