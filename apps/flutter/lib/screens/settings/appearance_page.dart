@@ -81,7 +81,7 @@ class AppearancePage extends ConsumerWidget {
                     ),
                 ],
               ),
-              if (onWallpaper) _Note(l.appearancePresetLocked),
+              if (onWallpaper) Note(l.appearancePresetLocked),
             ],
           ),
         ),
@@ -103,26 +103,13 @@ class AppearancePage extends ConsumerWidget {
                     ),
                   ],
                 ),
-                if (onWallpaper) _Note(l.appearanceMaterialYouReplaces),
+                if (onWallpaper) Note(l.appearanceMaterialYouReplaces),
               ],
             ),
           ),
       ],
     );
   }
-}
-
-/// A section's line of context, muted, as the admin pages' notes.
-class _Note extends StatelessWidget {
-  const _Note(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    text,
-    style: KitText.sm.style(color: MatineeTheme.of(context).mutedForeground),
-  );
 }
 
 /// A preset as a settings row: its light and dark miniature, its name, and a

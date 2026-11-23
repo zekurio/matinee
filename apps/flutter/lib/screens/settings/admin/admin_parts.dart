@@ -17,8 +17,8 @@ import '../settings_screen.dart';
 
 /* What the admin pages share: who may
  * see them, a page of the server's settings that loads first, the page
- * whose fields save together from a save bar, text rows, notes, and
- * running an action with a toast when it fails. */
+ * whose fields save together from a save bar, text rows, and running an
+ * action with a toast when it fails. */
 
 /// Whether the account in use may open an admin page that [allows] it:
 /// the server's permissions say so, and the app is on the server, not
@@ -376,26 +376,6 @@ class _TextRowState extends State<TextRow> {
           ),
           if (hint != null && widget.error == null) Note(hint),
         ],
-      ),
-    );
-  }
-}
-
-/// Small muted lines under a panel, for what a page has to say about
-/// itself, or in the danger color for what an admin must know first.
-class Note extends StatelessWidget {
-  const Note(this.text, {super.key, this.danger = false});
-
-  final String text;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    return Text(
-      text,
-      style: KitText.sm.style(
-        color: danger ? colors.danger : colors.mutedForeground,
       ),
     );
   }
