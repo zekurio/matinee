@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import 'glass.dart';
 import 'icon.dart';
+import 'keyboard_room.dart';
 import 'modal_backdrop.dart';
 import 'press_indication.dart';
 import 'theme.dart';
@@ -54,10 +55,9 @@ class Sheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    return Padding(
-      // The keyboard takes the bottom of the screen: the sheet rises over it,
-      // so the field the person typed in and the list under it stay in view.
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+    // The keyboard takes the bottom of the screen: the sheet rises over it,
+    // so the field the person typed in and the list under it stay in view.
+    return KeyboardRoom(
       child: Glass(
         shape: const BorderRadius.vertical(top: Radius.circular(KitRadius.xl)),
         border: Border(top: BorderSide(color: colors.hairline)),

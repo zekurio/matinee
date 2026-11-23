@@ -8,6 +8,7 @@ export 'chips.dart';
 export 'dialog.dart';
 export 'filled_badge.dart';
 export 'icon.dart';
+export 'keyboard_room.dart';
 export 'logo.dart';
 export 'material_you.dart';
 export 'menu.dart';

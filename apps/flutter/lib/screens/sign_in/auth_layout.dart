@@ -28,10 +28,8 @@ class AuthLayout extends StatelessWidget {
         children: [
           ?backdrop,
           SafeArea(
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.viewInsetsOf(context).bottom,
-              ),
+            // The form moves up for the keyboard; the backdrop stays put.
+            child: KeyboardRoom(
               child: Stack(
                 children: [
                   const PositionedDirectional(

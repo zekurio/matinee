@@ -251,55 +251,54 @@ class _SaveBarPageState extends State<SaveBarPage> {
         title: widget.title,
         backLabel: l.commonBack,
         onBack: widget.dirty ? _attempt : () => context.pop(),
-        child: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: MediaQuery.removePadding(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              // Below the frame's padding and keyboard room: built from
+              // this page's context, they would come back.
+              child: Builder(
+                builder: (context) => MediaQuery.removePadding(
                   context: context,
                   removeBottom: visible,
                   child: widget.child,
                 ),
               ),
-              AnimatedSize(
-                duration: motion,
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.bottomCenter,
-                child: visible
-                    ? SaveBar(
-                        status: status,
-                        attention: _attention,
-                        message: _message,
-                        statusLabel: switch (status) {
-                          SaveBarStatus.saved => l.webCommonSaveBarSaved,
-                          SaveBarStatus.failed => l.webCommonSaveBarFailed,
-                          _ => l.webCommonSaveBarUnsaved,
-                        },
-                        resetLabel: l.webCommonSaveBarReset,
-                        saveLabel: switch (status) {
-                          SaveBarStatus.saving => l.webCommonSaveBarSaving,
-                          SaveBarStatus.saved => l.webCommonSaveBarDone,
-                          SaveBarStatus.failed => l.webCommonSaveBarRetry,
-                          SaveBarStatus.unsaved => l.saveBarSave,
-                        },
-                        onReset: widget.dirty && !saving
-                            ? () {
-                                setState(() => _status = null);
-                                widget.onReset();
-                              }
-                            : null,
-                        onSave: widget.dirty && widget.canSave && !saving
-                            ? () => unawaited(_save())
-                            : null,
-                      )
-                    : const SizedBox(width: double.infinity),
-              ),
-            ],
-          ),
+            ),
+            AnimatedSize(
+              duration: motion,
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.bottomCenter,
+              child: visible
+                  ? SaveBar(
+                      status: status,
+                      attention: _attention,
+                      message: _message,
+                      statusLabel: switch (status) {
+                        SaveBarStatus.saved => l.webCommonSaveBarSaved,
+                        SaveBarStatus.failed => l.webCommonSaveBarFailed,
+                        _ => l.webCommonSaveBarUnsaved,
+                      },
+                      resetLabel: l.webCommonSaveBarReset,
+                      saveLabel: switch (status) {
+                        SaveBarStatus.saving => l.webCommonSaveBarSaving,
+                        SaveBarStatus.saved => l.webCommonSaveBarDone,
+                        SaveBarStatus.failed => l.webCommonSaveBarRetry,
+                        SaveBarStatus.unsaved => l.saveBarSave,
+                      },
+                      onReset: widget.dirty && !saving
+                          ? () {
+                              setState(() => _status = null);
+                              widget.onReset();
+                            }
+                          : null,
+                      onSave: widget.dirty && widget.canSave && !saving
+                          ? () => unawaited(_save())
+                          : null,
+                    )
+                  : const SizedBox(width: double.infinity),
+            ),
+          ],
         ),
       ),
     );

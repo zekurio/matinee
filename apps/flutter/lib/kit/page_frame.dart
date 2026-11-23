@@ -3,13 +3,15 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import 'icon.dart';
+import 'keyboard_room.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
 /// A page opened over the tabs: under the status bar a 64 band with Back, the
-/// title, and [actions] at the end, then [child] filling the rest. Without
-/// [onBack] there's no Back, as on a page that's the first of its stack.
+/// title, and [actions] at the end, then [child] filling the rest, as far
+/// down as the keyboard while it's up. Without [onBack] there's no Back, as
+/// on a page that's the first of its stack.
 class PageFrame extends StatelessWidget {
   const PageFrame({
     super.key,
@@ -87,10 +89,13 @@ class PageFrame extends StatelessWidget {
             ),
           ),
           Expanded(
+            // removePadding rebuilds the MediaQuery from this context, the
+            // keyboard's inset included, so the room comes inside it and
+            // takes the inset away again for the page.
             child: MediaQuery.removePadding(
               context: context,
               removeTop: true,
-              child: child,
+              child: KeyboardRoom(child: child),
             ),
           ),
         ],
