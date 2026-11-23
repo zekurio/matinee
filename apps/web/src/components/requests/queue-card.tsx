@@ -5,12 +5,13 @@ import { CheckIcon, RotateCwIcon } from "lucide-react"
 import type { Ref } from "react"
 
 import { tr } from "@/i18n"
+import type { QueueActions } from "@/lib/permissions"
 
 import { CardMenu } from "./card-menu"
 import { type Answer, DeclinePopover } from "./decline-popover"
 import { KeyTip } from "./key-tip"
 import { RequestCard, RequestStateBadge, requestProgress } from "./request-card"
-import { Askers, QueueProblem } from "./request-lines"
+import { Askers, queueDetail } from "./request-lines"
 
 /*
  * A request on the requests page: the card every list draws, with what
@@ -39,6 +40,7 @@ export function QueueCard({
   onRetry,
   onReopen,
   onRemove,
+  may,
 }: {
   item: AdminRequestItem
   /** Held for Undo or on its way: out of the list, and inert. */
@@ -57,8 +59,20 @@ export function QueueCard({
   onRetry: () => void
   onReopen: (kind: Reopen) => void
   onRemove: () => void
+  /** What the viewer may do with it. */
+  may: QueueActions
 }) {
   const { state } = item
+  const hasActions =
+    state === "waiting"
+      ? may.approve || may.decline
+      : state === "needsAttention"
+        ? may.retry || may.decline
+        : state === "onTheWay"
+          ? may.decline
+          : state === "declined"
+            ? may.approve
+            : false
   const decline = (giveUp: boolean) => (
     <DeclinePopover
       item={item}
@@ -113,76 +127,81 @@ export function QueueCard({
           <RequestStateBadge
             state={state}
             progress={requestProgress(item)}
-            urgent
+            detail={queueDetail(item)}
           />
         }
         who={<Askers item={item} />}
-        problem={<QueueProblem item={item} />}
         menu={
           <CardMenu
             item={item}
             onAdd={onAdd}
             onRemove={onRemove}
             onAllowAgain={() => onReopen("allowAgain")}
+            may={may}
           />
         }
         actions={
-          <>
-            {state === "waiting" && (
-              <>
-                {decline(false)}
-                <KeyTip label={tr("requests.add")} keys="A">
+          hasActions ? (
+            <>
+              {state === "waiting" && (
+                <>
+                  {may.decline && decline(false)}
+                  {may.approve && (
+                    <KeyTip label={tr("requests.add")} keys="A">
+                      <Button
+                        size="sm"
+                        aria-keyshortcuts="A"
+                        aria-label={tr("requests.addNamed", {
+                          name: item.title.name,
+                        })}
+                        className={cardButton}
+                        onClick={onAdd}
+                      >
+                        <CheckIcon strokeWidth={2.5} />
+                        {tr("requests.add")}
+                      </Button>
+                    </KeyTip>
+                  )}
+                </>
+              )}
+              {(state === "needsAttention" || state === "onTheWay") &&
+                may.decline &&
+                decline(true)}
+              {state === "needsAttention" && may.retry && (
+                <KeyTip label={tr("requests.retry")} keys="R">
                   <Button
+                    variant="outline"
                     size="sm"
-                    aria-keyshortcuts="A"
-                    aria-label={tr("requests.addNamed", {
+                    aria-keyshortcuts="R"
+                    aria-label={tr("requests.retryNamed", {
                       name: item.title.name,
                     })}
                     className={cardButton}
-                    onClick={onAdd}
+                    onClick={onRetry}
                   >
-                    <CheckIcon strokeWidth={2.5} />
-                    {tr("requests.add")}
+                    <RotateCwIcon />
+                    {tr("requests.retry")}
                   </Button>
                 </KeyTip>
-              </>
-            )}
-            {(state === "needsAttention" || state === "onTheWay") &&
-              decline(true)}
-            {state === "needsAttention" && (
-              <KeyTip label={tr("requests.retry")} keys="R">
+              )}
+              {state === "declined" && may.approve && (
+                // "Allow requests again" is in the menu, where the other
+                // states' removal is: both don't fit a card's line.
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-keyshortcuts="R"
-                  aria-label={tr("requests.retryNamed", {
+                  aria-label={tr("requests.addAfterAllNamed", {
                     name: item.title.name,
                   })}
                   className={cardButton}
-                  onClick={onRetry}
+                  onClick={() => onReopen("addAfterAll")}
                 >
-                  <RotateCwIcon />
-                  {tr("requests.retry")}
+                  <CheckIcon />
+                  {tr("requests.addAfterAll")}
                 </Button>
-              </KeyTip>
-            )}
-            {state === "declined" && (
-              // "Allow requests again" is in the menu, where the other
-              // states' removal is: both don't fit a card's line.
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label={tr("requests.addAfterAllNamed", {
-                  name: item.title.name,
-                })}
-                className={cardButton}
-                onClick={() => onReopen("addAfterAll")}
-              >
-                <CheckIcon />
-                {tr("requests.addAfterAll")}
-              </Button>
-            )}
-          </>
+              )}
+            </>
+          ) : undefined
         }
       />
     </li>

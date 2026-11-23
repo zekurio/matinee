@@ -162,6 +162,7 @@ final serverMessages = <ServerMessage>[
   ServerMessage('That session already ended.', [], (l, values, count) => l.webServerAccountSessionGone),
   ServerMessage('That API token was already revoked.', [], (l, values, count) => l.webServerAccountApiTokenGone),
   ServerMessage("An API token can't grant permissions it doesn't have.", [], (l, values, count) => l.webServerAccountApiTokenGrant),
+  ServerMessage('You can only give an API token permissions your account has.', [], (l, values, count) => l.webServerAccountApiTokenAccountGrant),
   ServerMessage("This request didn't come with an API token.", [], (l, values, count) => l.webServerAccountNoApiToken),
   ServerMessage('That user no longer exists. Reload the list.', [], (l, values, count) => l.webServerAdminUsersGone),
   ServerMessage("{name} is an admin, and only an admin changes an admin's account.", ['name'], (l, values, count) => l.webServerAdminUsersAbove(values['name']!)),

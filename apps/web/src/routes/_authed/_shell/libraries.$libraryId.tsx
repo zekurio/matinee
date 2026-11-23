@@ -11,11 +11,8 @@ import {
 import { reloadOnEnter } from "@/lib/route-loading"
 import { orpc } from "@/lib/rpc"
 
-/** A library's search, and its titles' filters and order. */
-const LibrarySearch = t.object({
-  q: t.string().min(1).optional().catch(undefined),
-  ...titleListSearch,
-})
+/** A library's titles' filters and order. */
+const LibrarySearch = t.object(titleListSearch)
 
 export const Route = createFileRoute("/_authed/_shell/libraries/$libraryId")({
   validateSearch: LibrarySearch,

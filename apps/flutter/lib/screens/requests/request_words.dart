@@ -375,10 +375,6 @@ final class TitleLabel extends ChooserLabel {
   const TitleLabel();
 }
 
-final class FutureLabel extends ChooserLabel {
-  const FutureLabel();
-}
-
 final class SpecialsLabel extends ChooserLabel {
   const SpecialsLabel();
 }
@@ -395,16 +391,9 @@ final class ManyLabel extends ChooserLabel {
   final int count;
 }
 
-/// The sheet's button for the seasons [chosen], with new seasons as they
-/// air when [future] on a [first] request.
-ChooserLabel chooserLabel(
-  List<CatalogSeason> chosen, {
-  required bool future,
-  required bool first,
-}) {
-  if (chosen.isEmpty) {
-    return future && first ? const FutureLabel() : const PickOneLabel();
-  }
+/// The sheet's button for the seasons [chosen].
+ChooserLabel chooserLabel(List<CatalogSeason> chosen) {
+  if (chosen.isEmpty) return const PickOneLabel();
   if (chosen.length == 1) {
     final only = chosen.single.number;
     return only == 0 ? const SpecialsLabel() : OneLabel(only);
@@ -629,7 +618,6 @@ String? dimmedText(
 String chooserText(ChooserLabel label, AppLocalizations l) => switch (label) {
   PickOneLabel() => l.webAskChooserNone,
   TitleLabel() => l.webAskAsk,
-  FutureLabel() => l.webAskChooserNewOnly,
   SpecialsLabel() => l.webAskChooserSpecials,
   OneLabel(:final number) => l.webAskChooserOne('$number'),
   ManyLabel(:final count) => l.webAskChooserMany(count),
@@ -667,7 +655,7 @@ String seasonRuns(List<int> numbers) {
   return runs.join(', ');
 }
 
-/// "Seasons 1–4 + new", for a show's request.
+/// "Seasons 1–4", for a show's request.
 String? scopeText(ShowScope? scope, AppLocalizations l) {
   if (scope == null) return null;
   final numbers = [
@@ -683,10 +671,7 @@ String? scopeText(ShowScope? scope, AppLocalizations l) {
         ? l.webRequestsScopeSpecials
         : l.webRequestsScopeSpecialsAnd(seasons);
   }
-  if (seasons == null) {
-    return scope.future ? l.webRequestsScopeFutureOnly : null;
-  }
-  return scope.future ? l.webRequestsScopeAndFuture(seasons) : seasons;
+  return seasons;
 }
 
 /// A [RequestState]'s word, as its badge and the filter's chip say it.

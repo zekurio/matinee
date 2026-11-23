@@ -328,22 +328,9 @@
   "@adminAccessOverrideHint": {
     "description": "admin settings"
   },
-  "adminAccessPermissions": "Permissions",
-  "@adminAccessPermissions": {
-    "description": "admin settings"
-  },
   "adminAccessPermissionsAll": "Every permission",
   "@adminAccessPermissionsAll": {
     "description": "admin settings"
-  },
-  "adminAccessPermissionsCount": "{count, plural, one{{count} more permission} other{{count} more permissions}}",
-  "@adminAccessPermissionsCount": {
-    "description": "admin settings",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "adminAccessRequestLimit": "Limit",
   "@adminAccessRequestLimit": {
@@ -4068,10 +4055,6 @@
   "@webAskCancel": {
     "description": "strings_web_ask.xml"
   },
-  "webAskChooserFuture": "New seasons as they air",
-  "@webAskChooserFuture": {
-    "description": "strings_web_ask.xml"
-  },
   "webAskChooserMany": "{count, plural, one{Request {count} season} other{Request {count} seasons}}",
   "@webAskChooserMany": {
     "description": "strings_web_ask.xml",
@@ -4080,10 +4063,6 @@
         "type": "int"
       }
     }
-  },
-  "webAskChooserNewOnly": "Request new seasons",
-  "@webAskChooserNewOnly": {
-    "description": "strings_web_ask.xml"
   },
   "webAskChooserNone": "Pick a season",
   "@webAskChooserNone": {
@@ -4293,11 +4272,11 @@
   "@webCatalogStateAsked": {
     "description": "strings_web_catalog.xml"
   },
-  "webCatalogStateComing": "On its way",
+  "webCatalogStateComing": "Processing",
   "@webCatalogStateComing": {
     "description": "strings_web_catalog.xml"
   },
-  "webCatalogStateComingPercent": "On its way · {p1}",
+  "webCatalogStateComingPercent": "Processing · {p1}",
   "@webCatalogStateComingPercent": {
     "description": "strings_web_catalog.xml",
     "placeholders": {
@@ -6058,19 +6037,6 @@
         "type": "String"
       }
     }
-  },
-  "webRequestsScopeAndFuture": "{p1} + new",
-  "@webRequestsScopeAndFuture": {
-    "description": "strings_web_requests.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webRequestsScopeFutureOnly": "New seasons",
-  "@webRequestsScopeFutureOnly": {
-    "description": "strings_web_requests.xml"
   },
   "webRequestsScopeSeasons": "{count, plural, one{Season {p1}} other{Seasons {p1}}}",
   "@webRequestsScopeSeasons": {
@@ -8766,23 +8732,128 @@
   "@webValidationApiTokenPermissions": {
     "description": "validation.apiTokenPermissions"
   },
+  "webServerAccountApiTokenAccountGrant": "You can only give an API token permissions your account has.",
+  "@webServerAccountApiTokenAccountGrant": {
+    "description": "server.account.apiTokenAccountGrant"
+  },
+  "webAccessSectionServer": "Running the server",
+  "@webAccessSectionServer": {
+    "description": "access.section.server"
+  },
+  "webAccessSectionServerHint": "Parts of running the server that members take on. View lets them look, Manage lets them change it too.",
+  "@webAccessSectionServerHint": {
+    "description": "access.section.serverHint"
+  },
+  "webAccessApiTokens": "API tokens",
+  "@webAccessApiTokens": {
+    "description": "access.apiTokens"
+  },
+  "webAccessAreaRequests": "Request queue",
+  "@webAccessAreaRequests": {
+    "description": "access.area.requests"
+  },
+  "webAccessAreaRequestsHint": "Everyone's requests: approving, declining, retrying.",
+  "@webAccessAreaRequestsHint": {
+    "description": "access.area.requests.hint"
+  },
+  "webAccessAreaConnections": "Connections",
+  "@webAccessAreaConnections": {
+    "description": "access.area.connections"
+  },
+  "webAccessAreaConnectionsHint": "Radarr, Sonarr, and the rules that send requests to them.",
+  "@webAccessAreaConnectionsHint": {
+    "description": "access.area.connections.hint"
+  },
+  "webAccessAreaLibraries": "Libraries",
+  "@webAccessAreaLibraries": {
+    "description": "access.area.libraries"
+  },
+  "webAccessAreaLibrariesHint": "Adding, changing, scanning, and deleting libraries.",
+  "@webAccessAreaLibrariesHint": {
+    "description": "access.area.libraries.hint"
+  },
+  "webAccessAreaMetadata": "Metadata",
+  "@webAccessAreaMetadata": {
+    "description": "access.area.metadata"
+  },
+  "webAccessAreaMetadataHint": "Fixing matches, refreshing metadata, and images.",
+  "@webAccessAreaMetadataHint": {
+    "description": "access.area.metadata.hint"
+  },
+  "webAccessAreaUsers": "Users and groups",
+  "@webAccessAreaUsers": {
+    "description": "access.area.users"
+  },
+  "webAccessAreaUsersHint": "Accounts, access groups, invites, and who's watching.",
+  "@webAccessAreaUsersHint": {
+    "description": "access.area.users.hint"
+  },
+  "webAccessAreaServer": "Server settings",
+  "@webAccessAreaServer": {
+    "description": "access.area.server"
+  },
+  "webAccessAreaServerHint": "Transcoding, trickplay, network, branding, and the jobs.",
+  "@webAccessAreaServerHint": {
+    "description": "access.area.server.hint"
+  },
+  "webAccessLevelNone": "None",
+  "@webAccessLevelNone": {
+    "description": "access.level.none"
+  },
+  "webAccessLevelView": "View",
+  "@webAccessLevelView": {
+    "description": "access.level.view"
+  },
+  "webAccessLevelManage": "Manage",
+  "@webAccessLevelManage": {
+    "description": "access.level.manage"
+  },
+  "webAccessLevelOn": "On",
+  "@webAccessLevelOn": {
+    "description": "access.level.on"
+  },
+  "webAccessLevelOff": "Off",
+  "@webAccessLevelOff": {
+    "description": "access.level.off"
+  },
+  "webAccessManagesCount": "{count, plural, one{Runs {count} part of the server} other{Runs {count} parts of the server}}",
+  "@webAccessManagesCount": {
+    "description": "access.manages.count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webAccessManagesArea": "{p1}: {p2}",
+  "@webAccessManagesArea": {
+    "description": "access.manages.area",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
   "webRequestsRecent": "Recent requests",
   "@webRequestsRecent": {
     "description": "requests.recent"
   },
-  "webRequestsStateWaiting": "Waiting",
+  "webRequestsStateWaiting": "Pending",
   "@webRequestsStateWaiting": {
     "description": "requests.state.waiting"
   },
-  "webRequestsStateNeedsAttention": "Needs attention",
+  "webRequestsStateNeedsAttention": "Failed",
   "@webRequestsStateNeedsAttention": {
     "description": "requests.state.needsAttention"
   },
-  "webRequestsStateOnTheWay": "On its way",
+  "webRequestsStateOnTheWay": "Processing",
   "@webRequestsStateOnTheWay": {
     "description": "requests.state.onTheWay"
   },
-  "webRequestsStateOnTheWayPercent": "On its way · {p1}",
+  "webRequestsStateOnTheWayPercent": "Processing · {p1}",
   "@webRequestsStateOnTheWayPercent": {
     "description": "requests.state.onTheWayPercent",
     "placeholders": {
@@ -8791,7 +8862,7 @@
       }
     }
   },
-  "webRequestsStateHere": "Here",
+  "webRequestsStateHere": "Available",
   "@webRequestsStateHere": {
     "description": "requests.state.here"
   },

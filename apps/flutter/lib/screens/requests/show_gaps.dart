@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart' hide Title;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/permissions.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import 'catalog_cards.dart';
@@ -139,8 +140,14 @@ class RestOfSeasonCard extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           spacing: 8,
                           children: [
-                            AddButton(item: answering),
-                            DeclineButton(item: answering),
+                            if (ref.watch(
+                              canProvider(Permission.adminRequestApprove),
+                            ))
+                              AddButton(item: answering),
+                            if (ref.watch(
+                              canProvider(Permission.adminRequestDecline),
+                            ))
+                              DeclineButton(item: answering),
                           ],
                         )
                       else
@@ -157,10 +164,7 @@ class RestOfSeasonCard extends ConsumerWidget {
                                 gaps.ref,
                                 name,
                                 libraryId: gaps.libraryId,
-                                scope: ShowScope(
-                                  seasons: [season.number],
-                                  future: false,
-                                ),
+                                scope: AskScope(seasons: [season.number]),
                                 undo: gaps.first,
                               ),
                         ),

@@ -18,15 +18,7 @@ import {
 } from "@matinee/ui/components/alert-dialog"
 import { Badge } from "@matinee/ui/components/badge"
 import { Button } from "@matinee/ui/components/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
-import { FieldGroup } from "@matinee/ui/components/field"
+import { Dialog } from "@matinee/ui/components/dialog"
 import { Input } from "@matinee/ui/components/input"
 import { List, ListItem } from "@matinee/ui/components/list"
 import { Skeleton } from "@matinee/ui/components/skeleton"
@@ -52,21 +44,43 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
 import { useActionFeedback } from "@/lib/use-action-feedback"
 import { createSettingsApiTokensStore } from "@/stores/settings-api-tokens"
 
+import {
+  FormDialogBody,
+  FormDialogContent,
+  FormDialogFooter,
+  FormDialogForm,
+  FormDialogHeader,
+} from "./form-dialog"
 import { PermissionPicker } from "./permission-picker"
-import { RowIcon, SettingNote, SettingsSubsection } from "./settings-panel"
+import {
+  RowIcon,
+  SettingNote,
+  SettingsSections,
+  SettingsSubsection,
+} from "./settings-panel"
 
 // The server moves a token's last use at most once a minute.
 const LAST_USED_STEP_MS = 60 * 1000
+
+/** Settings → API tokens. */
+export function ApiTokensPanel() {
+  return (
+    <SettingsSections>
+      <ApiTokens />
+    </SettingsSections>
+  )
+}
 
 /**
  * Tokens a service or an app calls the API with as this account: making
  * one, whose secret shows once, changing what it may do, and revoking it.
  */
-export function ApiTokens() {
+function ApiTokens() {
   const queryClient = useQueryClient()
   const tokens = useQuery(orpc.account.apiTokens.list.queryOptions())
   const { user } = useRouteContext({ from: "/_authed" })
-  // Groups grant making tokens. The ones an account has stay its own.
+  // A group's API tokens capability grants making them. The ones an
+  // account has stay its own.
   const mayCreate = can(user, "apiToken.create")
   const [store] = useState(createSettingsApiTokensStore)
   const {
@@ -149,10 +163,7 @@ export function ApiTokens() {
         // The secret shows only here, so a stray click mustn't lose it.
         disablePointerDismissal={created !== null}
       >
-        <DialogContent
-          showCloseButton={false}
-          className="gap-5 p-6 sm:max-w-lg"
-        >
+        <FormDialogContent width={created ? "md" : "xl"}>
           {created ? (
             <CreatedSecret
               created={created}
@@ -166,14 +177,11 @@ export function ApiTokens() {
               }}
             />
           )}
-        </DialogContent>
+        </FormDialogContent>
       </Dialog>
 
       <Dialog open={editOpen} onOpenChange={(open) => !open && closeEdit()}>
-        <DialogContent
-          showCloseButton={false}
-          className="gap-5 p-6 sm:max-w-lg"
-        >
+        <FormDialogContent width="xl">
           {editing && (
             <EditForm
               // A form per token, so one opened after another starts from it.
@@ -185,7 +193,7 @@ export function ApiTokens() {
               }}
             />
           )}
-        </DialogContent>
+        </FormDialogContent>
       </Dialog>
 
       <AlertDialog
@@ -385,29 +393,22 @@ function TokenForm({
 
   return (
     <form.AppForm>
-      <form
-        className="flex flex-col gap-6"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <FieldGroup>
-          <form.AppField name="name" validators={{ onChange: ApiTokenName }}>
-            {(field) => (
-              <field.TextField
-                id="api-token-name"
-                label={tr("account.apiTokens.name")}
-                placeholder={tr("account.apiTokens.namePlaceholder")}
-                maxLength={64}
-                autoComplete="off"
-              />
-            )}
-          </form.AppField>
+      <FormDialogForm onSubmit={() => void form.handleSubmit()}>
+        <FormDialogHeader title={title} description={description} />
+        <FormDialogBody>
+          <div className="md:max-w-md">
+            <form.AppField name="name" validators={{ onChange: ApiTokenName }}>
+              {(field) => (
+                <field.TextField
+                  id="api-token-name"
+                  label={tr("account.apiTokens.name")}
+                  placeholder={tr("account.apiTokens.namePlaceholder")}
+                  maxLength={64}
+                  autoComplete="off"
+                />
+              )}
+            </form.AppField>
+          </div>
           {/* Checked when the form is sent, so the dialog doesn't open on an error. */}
           <form.Field
             name="permissions"
@@ -427,11 +428,11 @@ function TokenForm({
               />
             )}
           </form.Field>
-        </FieldGroup>
-        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
+        </FormDialogBody>
+        <FormDialogFooter>
           <form.SubmitButton pending={pending}>{submitLabel}</form.SubmitButton>
-        </DialogFooter>
-      </form>
+        </FormDialogFooter>
+      </FormDialogForm>
     </form.AppForm>
   )
 }
@@ -446,41 +447,39 @@ function CreatedSecret({
   const { feedback, run } = useActionFeedback({ successDuration: 1500 })
   const copied = feedback.state === "success"
   return (
-    <div className="flex flex-col gap-6">
-      <DialogHeader>
-        <DialogTitle>
-          {tr("account.apiTokens.secretTitle", {
-            name: created.apiToken.name,
-          })}
-        </DialogTitle>
-        <DialogDescription>
-          {tr("account.apiTokens.secretDescription")}
-        </DialogDescription>
-      </DialogHeader>
-      <div className="flex gap-2">
-        <Input
-          readOnly
-          value={created.token}
-          aria-label={tr("account.apiTokens.secretLabel")}
-          className="text-13px font-mono"
-          onFocus={(event) => event.currentTarget.select()}
-        />
-        <Button
-          variant="outline"
-          className="shrink-0"
-          onClick={() =>
-            void run(() => navigator.clipboard.writeText(created.token))
-          }
-        >
-          {copied ? <CheckIcon /> : <CopyIcon />}
-          {copied
-            ? tr("account.apiTokens.copied")
-            : tr("account.apiTokens.copy")}
-        </Button>
-      </div>
-      <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <FormDialogHeader
+        title={tr("account.apiTokens.secretTitle", {
+          name: created.apiToken.name,
+        })}
+        description={tr("account.apiTokens.secretDescription")}
+      />
+      <FormDialogBody>
+        <div className="flex gap-2">
+          <Input
+            readOnly
+            value={created.token}
+            aria-label={tr("account.apiTokens.secretLabel")}
+            className="text-13px font-mono"
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <Button
+            variant="outline"
+            className="shrink-0"
+            onClick={() =>
+              void run(() => navigator.clipboard.writeText(created.token))
+            }
+          >
+            {copied ? <CheckIcon /> : <CopyIcon />}
+            {copied
+              ? tr("account.apiTokens.copied")
+              : tr("account.apiTokens.copy")}
+          </Button>
+        </div>
+      </FormDialogBody>
+      <FormDialogFooter cancel={false}>
         <Button onClick={onDone}>{tr("account.apiTokens.done")}</Button>
-      </DialogFooter>
+      </FormDialogFooter>
     </div>
   )
 }

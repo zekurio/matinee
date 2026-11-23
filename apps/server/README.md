@@ -231,7 +231,8 @@ in the database again.
 ## Access
 
 Admins see everything and may do everything. Everyone else gets access
-from groups in Settings → Access. A group sets:
+from groups in Settings → Access. A group sets one list of capabilities,
+`AccessPolicy` in `packages/contracts/src/access.ts`:
 
 - which libraries, or all of them, future ones too. A library someone
   can't see doesn't show up anywhere, not even by URL.
@@ -239,16 +240,21 @@ from groups in Settings → Access. A group sets:
   Downloads aren't limited.
 - whether the server may encode video for them
 - how many devices may play at once
-- what its members may do, as permissions: downloading, requesting
-  titles, and any part of running the server it hands on. See
-  [Permissions](#permissions).
+- whether they may download
+- whether they may ask for titles: not at all, with an approval, or
+  added right away, and how many titles in how many days
+- whether they may make API tokens
+- how far they take on each part of running the server: none, view, or
+  manage. See [Permissions](#permissions).
 
-Someone in several groups gets the most generous mix. The built-in
-Everyone group holds every account and starts with all libraries and no
-limits. To make access opt-in, take its libraries away and grant them
-through other groups. A group that opens no libraries doesn't count for
-limits, so an emptied Everyone won't hold anyone back. Permissions always
-add up, whether a group opens a library or not.
+Someone in several groups gets the most generous mix: every library any
+of them opens, the loosest limits, and the highest level of each
+capability. The built-in Everyone group holds every account and starts
+with all libraries and no limits. To make access opt-in, take its
+libraries away and grant them through other groups. A group that opens
+no libraries doesn't count for the streaming limits, so an emptied
+Everyone won't hold anyone back. The other capabilities add up whether a
+group opens a library or not.
 
 Settings → Users puts accounts in groups. Invite links can assign groups,
 and a group can follow an OIDC group. Edit access in the user menu
@@ -257,10 +263,12 @@ next request, the next chunk of a playing stream included.
 
 ### Permissions
 
-What an account may do is a list of permissions named `resource.action`,
-like `media.download`, `library.scan`, or `adminRequest.update`.
-`PERMISSIONS` in `packages/contracts/src/permissions.ts` lists them. API
-tokens use the same list, see [API tokens](#api-tokens).
+The server checks permissions named `resource.action`, like
+`media.download`, `library.scan`, or `adminRequest.approve`.
+`PERMISSIONS` in `packages/contracts/src/permissions.ts` lists them.
+Groups and accounts never list them: `permissionsOf` in
+`packages/contracts/src/access.ts` works them out from the capabilities.
+Only API tokens pick permissions one by one, see [API tokens](#api-tokens).
 
 - Every procedure behind a sign-in names the permission it takes, as the
   second argument of `get`, `post`, and the rest in `packages/contracts`,
@@ -271,25 +279,32 @@ tokens use the same list, see [API tokens](#api-tokens).
 - Every account holds `BASE_PERMISSIONS`: using the app as a viewer and
   looking after its own account, its passkeys, sessions, and existing API
   tokens included. Nobody grants or takes those.
-- A group grants any of the rest, and an account holds every permission
-  any of its groups grants. The Everyone group starts with
-  `media.download` and `apiToken.create`. `request.create` lets members
-  ask for titles, and `request.autoApprove` adds what they ask for without
-  an approval. The others hand on parts of running the server:
-  `adminRequest.update` to someone who approves requests,
-  `library.scan` and `title.update` to someone who looks after the
-  libraries, `adminUser.read` and `invite.create` to someone who brings
-  people in.
+- The capabilities grant the rest. Downloads grant `media.download`,
+  API tokens `apiToken.create`, and requests `request.create`, with
+  `request.autoApprove` when titles are added right away. Each part of
+  running the server, `AREA_PERMISSIONS` in `access.ts`, grants its view
+  permissions at View and all of them at Manage:
+
+  | Part             | View                                                              | Manage adds                                                                               |
+  | ---------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+  | Request queue    | `adminRequest.read`                                               | `adminRequest.approve`, `.decline`, `.retry`                                              |
+  | Connections      | `fulfilment.read`                                                 | `fulfilment.create`, `.update`, `.delete`                                                 |
+  | Libraries        |                                                                   | `folder.read`, `library.create`, `.update`, `.delete`, `.scan`                            |
+  | Metadata         |                                                                   | `title.update`                                                                            |
+  | Users and groups | `adminUser.read`, `group.read`, `invite.read`, `serverStats.read` | the rest of `adminUser`, `group`, `invite`, `adminSession.delete`, `adminApiToken.delete` |
+  | Server settings  | the settings' `read`, `authSettings.read`, `job.read`             | the settings' `update`, `job.update`, `serverSetup.update`                                |
+
+  Libraries and Metadata are all or nothing.
+
 - An admin holds `all`. Only `all` makes someone an admin or takes it
   away, and no group grants it: the role is in Settings → Users, or the
   OIDC role claim.
-- An account's override can allow or deny permissions over its groups.
-  The dialog in Settings → Users does it for downloads and requests, and
-  `admin.users.setAccess` takes any.
+- An account's override sets any capability over its groups, each part
+  of running the server on its own. One it leaves out follows the groups.
 - Nobody grants or takes away a permission they don't hold. That covers
-  the permissions someone adds to a group or removes from it, deleting a
+  what a change to a group's capabilities adds or removes, deleting a
   group, putting an account in a group or taking it out, an invite link's
-  groups, and an override's allow and deny. Someone who edits groups
+  groups, and what an override grants or holds back. Someone who edits groups
   can't give themselves more through one. Only an admin changes, signs
   out, or deletes an admin's account.
 - Saving Settings → Authentication takes `all`, since the provider and its
@@ -514,7 +529,7 @@ People can request a title the server lacks from search, from Discover, or
 from a library show missing seasons. A group says whether its members may
 request, with the `request.create` permission, whether what they ask for
 is added at once, with `request.autoApprove`, or waits for someone with
-`adminRequest.update`, and how many titles they may request in a number of
+`adminRequest.approve`, and how many titles they may request in a number of
 days. Groups start with requests off.
 
 There's one request per title and library, with the seasons asked for and
@@ -634,10 +649,10 @@ account, as an object or as JSON text:
 }
 ```
 
-Fields left out follow the account's groups. `downloads` allows or denies
-the `media.download` permission. `requests` does the same for asking:
-`"off"` denies `request.create`, `"ask"` allows it and denies
-`request.autoApprove`, and `"add"` allows both. Libraries are ids or
+Fields left out follow the account's groups. `requests` is `"off"`,
+`"ask"` for asking with an approval, or `"add"` for titles added right
+away, and `requestLimit` is `{ "titles": 5, "days": 7 }` or `null`. The
+parts of running the server stay with groups. Libraries are ids or
 names, whatever their case, and `"all"` includes future ones. Bit rates are bits
 per second, at least 1000000, and `null` lifts a limit. A missing claim
 clears an override the provider set, but keeps one an admin set. Only the
@@ -694,16 +709,21 @@ everywhere once the provider refuses its token for good.
 ### API tokens
 
 An API token lets a service or an app call the API as an account without
-anyone signing in, for months if need be. Make one in Settings → Account →
-API tokens: name it after what will use it and choose what it may do. The
+anyone signing in, for months if need be. Make one in Settings → API
+tokens: name it after what will use it and choose what it may do. The
 secret shows once, when it's made. The list afterwards shows each token's
 name, how much it may do, when it was made, and when it was last used, to
 the minute. It changes a token's name and permissions, and revokes one.
 
 Permissions work as Immich's API keys do. A token holds `all`, or a list
-from the same [permissions](#permissions) its account's groups grant,
-like `title.read`, `library.scan`, or `adminRequest.update`. The settings
-dialog offers the ones the account holds.
+of [permissions](#permissions), like `title.read`, `library.scan`, or
+`adminRequest.retry`. It can only be given ones its account holds, so a
+token never waits on a permission for its account to be granted it. The
+settings dialog offers those.
+
+Approving, declining, and retrying are separate permissions, so an
+automation token can retry failed sends without being able to approve or
+decline requests, its own included.
 
 - A call made with a token needs its permission twice: the account holds
   it, and the token holds it or `all`. A token narrows its account and
@@ -713,8 +733,9 @@ dialog offers the ones the account holds.
   does. Put a service that asks for titles on an account in the group
   whose rules it should follow, and give its token `request.autoApprove`
   too if the group's members skip the approval.
-- Making a token takes `apiToken.create`, which a group grants. An
-  account without it keeps, changes, and revokes the tokens it has.
+- Making a token takes `apiToken.create`, which a group's API tokens
+  capability grants. An account without it keeps, changes, and revokes
+  the tokens it has.
 - `all` is the whole account: everything its owner can do signed in, the
   account's passkeys, sessions, and tokens included, and for an admin all
   of administration. On any other account it reaches what the account

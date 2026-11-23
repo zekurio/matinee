@@ -7,7 +7,9 @@ abstract final class Permission {
   static const accountUpdate = 'account.update';
   static const adminApiTokenDelete = 'adminApiToken.delete';
   static const adminRequestRead = 'adminRequest.read';
-  static const adminRequestUpdate = 'adminRequest.update';
+  static const adminRequestApprove = 'adminRequest.approve';
+  static const adminRequestDecline = 'adminRequest.decline';
+  static const adminRequestRetry = 'adminRequest.retry';
   static const adminSessionDelete = 'adminSession.delete';
   static const adminUserRead = 'adminUser.read';
   static const adminUserUpdate = 'adminUser.update';
@@ -85,7 +87,9 @@ abstract final class Permission {
     accountUpdate,
     adminApiTokenDelete,
     adminRequestRead,
-    adminRequestUpdate,
+    adminRequestApprove,
+    adminRequestDecline,
+    adminRequestRetry,
     adminSessionDelete,
     adminUserRead,
     adminUserUpdate,

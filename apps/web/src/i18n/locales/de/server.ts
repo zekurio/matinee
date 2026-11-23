@@ -247,6 +247,8 @@ export default {
   "server.account.apiTokenGone": "Dieses API-Token wurde bereits widerrufen.",
   "server.account.apiTokenGrant":
     "Ein API-Token kann keine Berechtigungen vergeben, die es selbst nicht hat.",
+  "server.account.apiTokenAccountGrant":
+    "Du kannst einem API-Token nur Berechtigungen geben, die dein Konto hat.",
   "server.account.noApiToken": "Diese Anfrage kam nicht mit einem API-Token.",
 
   "server.adminUsers.gone":

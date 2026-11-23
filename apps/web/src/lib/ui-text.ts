@@ -15,6 +15,7 @@ function applyUiText() {
     colorArea: (label) => tr("ui.colorArea", { label }),
     colorHue: (label) => tr("ui.colorHue", { label }),
     colorHex: (label) => tr("ui.colorHex", { label }),
+    remove: (label) => tr("ui.remove", { label }),
     previousMonth: tr("ui.previousMonth"),
     nextMonth: tr("ui.nextMonth"),
     today: (date) => tr("ui.today", { date }),

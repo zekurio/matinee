@@ -28,10 +28,12 @@ bool canAny(User user, Iterable<String> permissions) =>
     permissions.any((permission) => can(user, permission));
 
 /// Whether [user] runs the request queue: reading everyone's requests and
-/// answering them. The queue's screens are all answers, so it takes both.
+/// answering them, which takes approving or declining. A token that only
+/// retries failed sends reads the queue but doesn't run it.
 bool runsQueue(User user) =>
     can(user, Permission.adminRequestRead) &&
-    can(user, Permission.adminRequestUpdate);
+    (can(user, Permission.adminRequestApprove) ||
+        can(user, Permission.adminRequestDecline));
 
 /// The account signed in to the server, while the server answers; null
 /// offline and signed out, where nothing that asks the server shows.
@@ -60,32 +62,4 @@ List<String> sortPermissions(Iterable<String> permissions) {
     for (final permission in Permission.values)
       if (held.contains(permission)) permission,
   ];
-}
-
-/// Asking for titles as one choice, the way a form offers it: not at all,
-/// with an approval, or added right away. It stands for `request.create`
-/// and `request.autoApprove`.
-enum RequestsChoice { off, ask, add }
-
-/// The two permissions a request choice stands for.
-const requestPermissions = [
-  Permission.requestCreate,
-  Permission.requestAutoApprove,
-];
-
-/// The permissions the access forms give a control of their own.
-const policyPermissions = [
-  Permission.mediaDownload,
-  Permission.requestCreate,
-  Permission.requestAutoApprove,
-];
-
-/// The request choice [permissions] give.
-RequestsChoice requestsOf(Iterable<String> permissions) {
-  if (!holdsPermission(permissions, Permission.requestCreate)) {
-    return RequestsChoice.off;
-  }
-  return holdsPermission(permissions, Permission.requestAutoApprove)
-      ? RequestsChoice.add
-      : RequestsChoice.ask;
 }

@@ -11,6 +11,7 @@ export default {
   "ui.colorArea": "{label}: Sättigung und Helligkeit",
   "ui.colorHue": "{label}: Farbton",
   "ui.colorHex": "{label}: Hex-Wert",
+  "ui.remove": "{label} entfernen",
   "ui.previousMonth": "Zum vorherigen Monat",
   "ui.nextMonth": "Zum nächsten Monat",
   "ui.today": "Heute, {date}",
