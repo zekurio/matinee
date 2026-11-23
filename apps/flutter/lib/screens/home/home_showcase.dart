@@ -605,7 +605,6 @@ class _TitleMarkState extends ConsumerState<_TitleMark> {
           height: widget.height,
           child: Stack(
             clipBehavior: Clip.none,
-            alignment: AlignmentDirectional.centerStart,
             children: [
               // The mark's own shadow, so a light one reads on a light
               // picture, as the web's does.
@@ -624,7 +623,7 @@ class _TitleMarkState extends ConsumerState<_TitleMark> {
                   ),
                 ),
               ),
-              _logo(api, logo),
+              Positioned.fill(child: _logo(api, logo)),
             ],
           ),
         ),
@@ -638,7 +637,8 @@ class _TitleMarkState extends ConsumerState<_TitleMark> {
       ref.watch(artworkLoaderProvider),
     ),
     fit: BoxFit.contain,
-    alignment: AlignmentDirectional.centerStart,
+    // On the facts under it, as the name is, however short the mark.
+    alignment: AlignmentDirectional.bottomStart,
     errorBuilder: (context, error, stack) {
       // The name takes the logo's place once this frame is done.
       WidgetsBinding.instance.addPostFrameCallback((_) {
