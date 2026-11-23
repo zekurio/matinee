@@ -86,6 +86,16 @@ void main() {
     expect(find.byType(SaveBar), findsOneWidget);
   });
 
+  // The bug it pins: the keyboard came up over the bar and the list's end,
+  // so typing in a field hid Save and the fields under it.
+  testWidgets('the bar keeps clear of the keyboard', (tester) async {
+    await pump(tester);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(find.byType(SaveBar)).bottom, 500);
+  });
+
   // The bug it pins: a failure whose edits were undone by hand came back
   // with the next edit, reason and Try again, before anything was tried.
   testWidgets('a failure goes with the edits it failed to save', (

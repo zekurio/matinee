@@ -182,7 +182,6 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
       }),
       onSave: _save,
       child: AdminSections(
-        bottom: !_dirty,
         sections: [
           SettingsSection(
             title: l.webBrandingTitle,

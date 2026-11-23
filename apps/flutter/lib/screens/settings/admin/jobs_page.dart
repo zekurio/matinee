@@ -123,7 +123,6 @@ class _JobsPageState extends ConsumerState<JobsPage> {
               if (queue.concurrencyNote != null) queue,
           ];
           return AdminSections(
-            bottom: changed.isEmpty,
             sections: [
               SettingsSection(
                 title: l.webJobsQueues,

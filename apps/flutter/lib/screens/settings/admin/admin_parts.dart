@@ -44,15 +44,12 @@ class AdminGate extends ConsumerWidget {
 }
 
 /// A Settings page's sections down a list, as `SettingsScaffold` lays them
-/// out, without the frame.
+/// out, without the frame. The list keeps clear of the system's bar, which
+/// a [SaveBarPage] takes off its hands while its bar shows.
 class AdminSections extends StatelessWidget {
-  const AdminSections({super.key, required this.sections, this.bottom = true});
+  const AdminSections({super.key, required this.sections});
 
   final List<Widget> sections;
-
-  /// Whether the list keeps clear of the system's bar itself; not when a
-  /// save bar sits under it and does.
-  final bool bottom;
 
   @override
   Widget build(BuildContext context) => ListView.separated(
@@ -60,7 +57,7 @@ class AdminSections extends StatelessWidget {
       CardMetrics.gutter,
       8,
       CardMetrics.gutter,
-      (bottom ? MediaQuery.paddingOf(context).bottom : 0) + 20,
+      MediaQuery.paddingOf(context).bottom + 20,
     ),
     itemCount: sections.length,
     separatorBuilder: (context, index) => const SizedBox(height: 28),
@@ -141,6 +138,8 @@ const savedFor = Duration(milliseconds: 1400);
 /// A page whose fields wait to be saved together, as the web's panels with
 /// their save bar. The bar sits under the list, never over its last rows, and
 /// shows while the page has unsaved edits ([dirty]), with Reset and Save.
+/// Both move up over the keyboard, so Save and the field being typed in stay
+/// in reach.
 ///
 /// Until the edits are saved or reset it holds the page open: Back, from
 /// the system or the page's bar, shakes the bar instead of leaving. The
@@ -171,7 +170,7 @@ class SaveBarPage extends StatefulWidget {
   final VoidCallback onReset;
   final Future<void> Function() onSave;
 
-  /// The page's body, usually an [AdminSections] with `bottom: false`.
+  /// The page's body, usually an [AdminSections].
   final Widget child;
 
   @override
@@ -252,50 +251,55 @@ class _SaveBarPageState extends State<SaveBarPage> {
         title: widget.title,
         backLabel: l.commonBack,
         onBack: widget.dirty ? _attempt : () => context.pop(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: MediaQuery.removePadding(
-                context: context,
-                removeBottom: visible,
-                child: widget.child,
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: MediaQuery.removePadding(
+                  context: context,
+                  removeBottom: visible,
+                  child: widget.child,
+                ),
               ),
-            ),
-            AnimatedSize(
-              duration: motion,
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.bottomCenter,
-              child: visible
-                  ? SaveBar(
-                      status: status,
-                      attention: _attention,
-                      message: _message,
-                      statusLabel: switch (status) {
-                        SaveBarStatus.saved => l.webCommonSaveBarSaved,
-                        SaveBarStatus.failed => l.webCommonSaveBarFailed,
-                        _ => l.webCommonSaveBarUnsaved,
-                      },
-                      resetLabel: l.webCommonSaveBarReset,
-                      saveLabel: switch (status) {
-                        SaveBarStatus.saving => l.webCommonSaveBarSaving,
-                        SaveBarStatus.saved => l.webCommonSaveBarDone,
-                        SaveBarStatus.failed => l.webCommonSaveBarRetry,
-                        SaveBarStatus.unsaved => l.saveBarSave,
-                      },
-                      onReset: widget.dirty && !saving
-                          ? () {
-                              setState(() => _status = null);
-                              widget.onReset();
-                            }
-                          : null,
-                      onSave: widget.dirty && widget.canSave && !saving
-                          ? () => unawaited(_save())
-                          : null,
-                    )
-                  : const SizedBox(width: double.infinity),
-            ),
-          ],
+              AnimatedSize(
+                duration: motion,
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.bottomCenter,
+                child: visible
+                    ? SaveBar(
+                        status: status,
+                        attention: _attention,
+                        message: _message,
+                        statusLabel: switch (status) {
+                          SaveBarStatus.saved => l.webCommonSaveBarSaved,
+                          SaveBarStatus.failed => l.webCommonSaveBarFailed,
+                          _ => l.webCommonSaveBarUnsaved,
+                        },
+                        resetLabel: l.webCommonSaveBarReset,
+                        saveLabel: switch (status) {
+                          SaveBarStatus.saving => l.webCommonSaveBarSaving,
+                          SaveBarStatus.saved => l.webCommonSaveBarDone,
+                          SaveBarStatus.failed => l.webCommonSaveBarRetry,
+                          SaveBarStatus.unsaved => l.saveBarSave,
+                        },
+                        onReset: widget.dirty && !saving
+                            ? () {
+                                setState(() => _status = null);
+                                widget.onReset();
+                              }
+                            : null,
+                        onSave: widget.dirty && widget.canSave && !saving
+                            ? () => unawaited(_save())
+                            : null,
+                      )
+                    : const SizedBox(width: double.infinity),
+              ),
+            ],
+          ),
         ),
       ),
     );

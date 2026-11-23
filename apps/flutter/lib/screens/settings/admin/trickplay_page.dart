@@ -97,7 +97,6 @@ class _TrickplayFormState extends ConsumerState<_TrickplayForm> {
         if (mounted) await reread(ref, trickplayProvider.future);
       },
       child: AdminSections(
-        bottom: !dirty,
         sections: [
           SettingsSection(
             title: l.webTrickplayTitle,

@@ -228,7 +228,6 @@ class _TranscodingFormState extends ConsumerState<_TranscodingForm> {
       onReset: () => setState(_restart),
       onSave: _save,
       child: AdminSections(
-        bottom: !_dirty,
         sections: [
           _Ffmpeg(
             capabilities: capabilities,

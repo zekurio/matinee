@@ -368,7 +368,6 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
       onReset: () => setState(_restart),
       onSave: _save,
       child: AdminSections(
-        bottom: false,
         sections: [
           Note(l.adminAccessDescription),
           SettingsSection(

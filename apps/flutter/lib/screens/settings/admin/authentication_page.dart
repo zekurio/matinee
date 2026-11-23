@@ -219,7 +219,6 @@ class _AuthFormState extends ConsumerState<_AuthForm> {
       onReset: () => setState(_restart),
       onSave: _save,
       child: AdminSections(
-        bottom: !_dirty,
         sections: [
           SettingsSection(
             title: l.webOidcPasskeysTitle,
