@@ -92,7 +92,10 @@ export async function rails(
  * none otherwise.
  */
 function requestsRow(viewer: Viewer) {
-  if (can(viewer, "adminRequest.read") && can(viewer, "adminRequest.update"))
+  if (
+    can(viewer, "adminRequest.read") &&
+    (can(viewer, "adminRequest.approve") || can(viewer, "adminRequest.decline"))
+  )
     return "queue"
   return can(viewer, "request.read") ? "mine" : null
 }

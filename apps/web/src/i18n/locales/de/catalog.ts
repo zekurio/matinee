@@ -5,8 +5,8 @@ export default {
   "catalog.notHere": "Noch nicht hier",
 
   "catalog.state.asked": "Angefragt",
-  "catalog.state.coming": "Unterwegs",
-  "catalog.state.comingPercent": "Unterwegs · {percent}",
+  "catalog.state.coming": "In Bearbeitung",
+  "catalog.state.comingPercent": "In Bearbeitung · {percent}",
   "catalog.state.out": "Ab {date}",
   "catalog.state.notOut": "Noch nicht erschienen",
   "catalog.state.unavailable": "Nicht verfügbar",

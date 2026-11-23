@@ -33,6 +33,7 @@ Map<String, Object?> _availability(String state) => {
 Map<String, Object?> _follower(String name, int hours) => {
   'id': name,
   'name': name,
+  'username': name,
   'avatarId': null,
   'createdAt': DateTime.now()
       .subtract(Duration(hours: hours))
@@ -54,6 +55,7 @@ AdminRequestItem _item(
     'poster': null,
     'availability': _availability('asked'),
   },
+  'backdrop': null,
   'library': {
     'id': 'shows',
     'name': 'Spielfilme in Ultra HD für das Wohnzimmer',
@@ -121,6 +123,7 @@ RequestItem _own(
     'poster': null,
     'availability': _availability('asked'),
   },
+  'backdrop': null,
   'library': {'id': 'films', 'name': 'Films'},
   'scope': show
       ? {
@@ -175,7 +178,11 @@ Future<void> _pump(
             client: MockClient((_) async => http.Response('{}', 500)),
           ),
         ),
-        runsQueueProvider.overrideWithValue(false),
+        // The cards show every answer's button, and the hub reads no queue
+        // to keep the test off the network.
+        canProvider.overrideWith(
+          (ref, permission) => permission != Permission.adminRequestRead,
+        ),
       ],
       child: MaterialApp(
         locale: Locale(locale),

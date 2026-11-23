@@ -7,6 +7,7 @@ const flutter = resolve(import.meta.dirname, "..")
 const locales = join(flutter, "../web/src/i18n/locales")
 const l10n = join(flutter, "lib/l10n")
 const areas = [
+  "access",
   "appearance",
   "ask",
   "branding",

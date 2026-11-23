@@ -10,7 +10,7 @@ import { ORPCError } from "@orpc/server"
 import { and, asc, eq, inArray, ne } from "drizzle-orm"
 
 import { type Seer, seesLibrary } from "../access/visible"
-import { languagesIn } from "../catalog/browse"
+import { languagesIn, withCodes } from "../catalog/browse"
 import { genreProvider, keywordProvider } from "../catalog/cache"
 import { db } from "../db"
 import { sources as metadata } from "../metadata/sources"
@@ -317,6 +317,9 @@ function knownLanguages(language: string) {
     for (const b of letters) {
       const code = a + b
       try {
+        // An old code, like `iw` for Hebrew, is the same language as its
+        // new one.
+        if (Intl.getCanonicalLocales(code)[0] !== code) continue
         const name = names.of(code)
         if (name && name !== code) found.push({ id: code, name })
       } catch {
@@ -324,7 +327,7 @@ function knownLanguages(language: string) {
       }
     }
   const collator = new Intl.Collator(language)
-  return found.toSorted((x, y) => collator.compare(x.name, y.name))
+  return withCodes(found).toSorted((x, y) => collator.compare(x.name, y.name))
 }
 
 export const adminFulfilment = {

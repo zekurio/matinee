@@ -11,6 +11,8 @@ export default defineMessages("ui", {
   "ui.colorArea": "{label} saturation and brightness",
   "ui.colorHue": "{label} hue",
   "ui.colorHex": "{label} hex value",
+  // A chip's remove button, for the value it holds.
+  "ui.remove": "Remove {label}",
   // The calendar.
   "ui.previousMonth": "Go to the previous month",
   "ui.nextMonth": "Go to the next month",

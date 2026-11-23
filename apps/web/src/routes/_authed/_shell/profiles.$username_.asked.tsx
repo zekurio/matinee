@@ -118,7 +118,7 @@ function AskedPage() {
       {first.isPending ? (
         <div className={requestGrid}>
           {[0, 1, 2, 3].map((index) => (
-            <RequestCardSkeleton key={index} size="wide" />
+            <RequestCardSkeleton key={index} />
           ))}
         </div>
       ) : first.isError && !first.data ? (

@@ -1,5 +1,6 @@
 import {
   grantsPermissions,
+  holdsPermission,
   type Permission,
   type User,
 } from "@matinee/contracts"
@@ -7,7 +8,7 @@ import { oidcAccount, passkey, user, type UserRow } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
 import { and, desc, eq } from "drizzle-orm"
 
-import { userOf } from "../access/viewer"
+import { userOf, type Viewer } from "../access/viewer"
 import {
   createApiToken,
   getApiToken,
@@ -39,7 +40,6 @@ import {
   identifySession,
   listSessions,
   sessionIdOf,
-  type SessionUser,
 } from "../auth/session"
 import { signInMethods } from "../auth/users"
 import { db } from "../db"
@@ -59,11 +59,12 @@ const LAST_LINK =
 const TOKEN_GONE = "That API token was already revoked."
 
 /**
- * Refuse a token that asks for permissions it doesn't hold itself, for
- * another token it makes, changes, or rotates. A session grants any.
+ * Refuse `permissions` for an API token when the request came with a
+ * token that doesn't hold them all, for another token it makes, changes,
+ * or rotates. A session grants any of them.
  */
-function requireGrantable(
-  caller: SessionUser,
+function requireTokenGrants(
+  caller: Viewer,
   permissions: readonly Permission[],
 ): void {
   const { credential } = caller
@@ -73,6 +74,27 @@ function requireGrantable(
   ) {
     throw badRequest("An API token can't grant permissions it doesn't have.")
   }
+}
+
+/**
+ * Refuse permissions the account doesn't hold for a token it makes or
+ * gives more, so a token never sits on a permission waiting for the
+ * account to be granted it. What the token already holds stays.
+ */
+function requireAccountGrants(
+  caller: Viewer,
+  permissions: readonly Permission[],
+  kept: readonly Permission[] = [],
+): void {
+  const missing = permissions.filter(
+    (permission) =>
+      !kept.includes(permission) &&
+      !holdsPermission(caller.access.permissions, permission),
+  )
+  if (missing.length === 0) return
+  throw badRequest(
+    "You can only give an API token permissions your account has.",
+  )
 }
 
 /** The updated user, with avatar failures turned into a message to act on. */
@@ -269,7 +291,8 @@ export const account = {
     ),
 
     create: authed.account.apiTokens.create.handler(({ context, input }) => {
-      requireGrantable(context.user, input.permissions)
+      requireTokenGrants(context.user, input.permissions)
+      requireAccountGrants(context.user, input.permissions)
       return createApiToken(context.user.id, input.name, input.permissions)
     }),
 
@@ -288,7 +311,14 @@ export const account = {
     update: authed.account.apiTokens.update.handler(
       async ({ context, input }) => {
         if (input.permissions) {
-          requireGrantable(context.user, input.permissions)
+          requireTokenGrants(context.user, input.permissions)
+          const current = await getApiToken(context.user.id, input.id)
+          if (!current) throw notFound(TOKEN_GONE)
+          requireAccountGrants(
+            context.user,
+            input.permissions,
+            current.permissions,
+          )
         }
         const token = await updateApiToken(context.user.id, input.id, input)
         if (!token) throw notFound(TOKEN_GONE)
@@ -302,7 +332,7 @@ export const account = {
         const rotated = await rotateApiToken(
           context.user.id,
           input.id,
-          (permissions) => requireGrantable(context.user, permissions),
+          (permissions) => requireTokenGrants(context.user, permissions),
         )
         if (!rotated) throw notFound(TOKEN_GONE)
         return rotated

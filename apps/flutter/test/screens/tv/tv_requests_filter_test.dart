@@ -41,6 +41,7 @@ Map<String, Object?> _waiting(String id, String kind) => {
     'poster': null,
     'availability': _availability(),
   },
+  'backdrop': null,
   'library': {'id': 'lib', 'name': 'Lib'},
   'scope': null,
   'createdAt': '2026-11-01T00:00:00.000Z',
@@ -59,6 +60,7 @@ Map<String, Object?> _waiting(String id, String kind) => {
     {
       'id': 'u1',
       'name': 'Ben',
+      'username': 'ben',
       'avatarId': null,
       'createdAt': '2026-11-01T00:00:00.000Z',
     },
@@ -138,7 +140,14 @@ Future<void> _pumpOverview(WidgetTester tester, http.Client client) async {
             client: client,
           ),
         ),
-        runsQueueProvider.overrideWithValue(true),
+        canProvider.overrideWith(
+          (ref, permission) => const [
+            Permission.adminRequestRead,
+            Permission.adminRequestApprove,
+            Permission.adminRequestDecline,
+            Permission.adminRequestRetry,
+          ].contains(permission),
+        ),
       ],
       child: MaterialApp(
         locale: const Locale('en'),
@@ -182,7 +191,7 @@ void main() {
     await _openFilter(tester);
     await _tapChip(tester, 'Shows');
     await _tapChip(tester, 'Declined');
-    await _tapChip(tester, 'Waiting');
+    await _tapChip(tester, 'Pending');
     expect(_queueAsks(sent).skip(1), [
       {'limit': 20, 'states': <Object>[], 'kind': 'show'},
       {

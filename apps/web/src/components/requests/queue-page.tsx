@@ -15,7 +15,11 @@ import {
   useMutation,
   useQuery,
 } from "@tanstack/react-query"
-import { getRouteApi, useNavigate } from "@tanstack/react-router"
+import {
+  getRouteApi,
+  useNavigate,
+  useRouteContext,
+} from "@tanstack/react-router"
 import {
   CableIcon,
   CheckCheckIcon,
@@ -30,6 +34,7 @@ import { ShowMore } from "@/components/library/library-states"
 import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { ConfirmDialog } from "@/components/settings/user-dialogs"
 import { tr } from "@/i18n"
+import { queueActions } from "@/lib/permissions"
 import { client, errorMessage, orpc, queryClient } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import {
@@ -94,6 +99,8 @@ function ignoredKey(event: KeyboardEvent): boolean {
  */
 export function QueuePage() {
   useDocumentTitle(tr("requests.title"))
+  const { user } = useRouteContext({ from: "/_authed/_shell" })
+  const may = queueActions(user)
   const navigate = useNavigate()
   const filter = requestFilter(route.useSearch())
   const setFilter = (next: RequestFilter) =>
@@ -192,21 +199,24 @@ export function QueuePage() {
   }
 
   const add = (item: AdminRequestItem, index: number) => {
+    if (!may.approve) return
     hold(addAction([item]))
     moveOn(index)?.focus()
   }
   const answer = (item: AdminRequestItem, index: number, why: Answer) => {
+    if (!may.decline) return
     const next = moveOn(index)
     afterDecline.current = next
     setDeclining(null)
     hold({ ...why, ids: [item.id], names: [item.title.name] })
   }
   const reopen = (item: AdminRequestItem, index: number, kind: Reopen) => {
+    if (kind === "allowAgain" ? !may.decline : !may.approve) return
     hold({ kind, ids: [item.id], names: [item.title.name] })
     moveOn(index)?.focus()
   }
   const addAll = () => {
-    if (waiting.length === 0) return
+    if (!may.approve || waiting.length === 0) return
     hold(addAction(waiting))
     // The cards go, so focus moves to the first one after them.
     const next = visible.find((item) => item.state !== "waiting")
@@ -265,7 +275,7 @@ export function QueuePage() {
         return
       }
       if (key === "a" && event.shiftKey) {
-        if (waiting.length < 2) return
+        if (!may.approve || waiting.length < 2) return
         event.preventDefault()
         addAll()
         return
@@ -285,9 +295,11 @@ export function QueuePage() {
         event.preventDefault()
         focusCard(inList ? Math.max(activeIndex - 1, 0) : activeIndex)
       } else if (key === "a" && state === "waiting") {
+        if (!may.approve) return
         event.preventDefault()
         add(activeItem, activeIndex)
       } else if (key === "d" && state === "waiting") {
+        if (!may.decline) return
         event.preventDefault()
         afterDecline.current = null
         setDeclining(activeItem.id)
@@ -295,10 +307,12 @@ export function QueuePage() {
         key === "g" &&
         (state === "needsAttention" || state === "onTheWay")
       ) {
+        if (!may.decline) return
         event.preventDefault()
         afterDecline.current = null
         setDeclining(activeItem.id)
       } else if (key === "r" && state === "needsAttention") {
+        if (!may.retry) return
         event.preventDefault()
         retry.mutate(activeItem)
       } else if (
@@ -318,7 +332,7 @@ export function QueuePage() {
   // Add all acts on the waiting ones the filter shows, and goes when the
   // filter shows none.
   const addAllButton = (size: "sm" | "default") =>
-    waiting.length > 1 ? (
+    may.approve && waiting.length > 1 ? (
       <KeyTip label={tr("requests.keys.addAll")} keys="Shift A">
         <Button
           variant="outline"
@@ -420,6 +434,7 @@ export function QueuePage() {
               onRetry={() => retry.mutate(item)}
               onReopen={(kind) => reopen(item, index, kind)}
               onRemove={() => setRemoving(item)}
+              may={may}
             />
           )
         })}
@@ -528,7 +543,7 @@ function QueueSkeleton() {
   return (
     <div className={requestGrid}>
       {[0, 1, 2, 3].map((index) => (
-        <RequestCardSkeleton key={index} size="wide" admin />
+        <RequestCardSkeleton key={index} admin />
       ))}
     </div>
   )
