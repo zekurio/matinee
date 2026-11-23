@@ -126,6 +126,9 @@ class OfflinePlaybackSession extends ChangeNotifier
   bool _closed = false;
   Future<void>? _closing;
   int _captionRequest = 0;
+
+  /// The player draws the captions, as its external subtitle.
+  bool _playerCaptions = false;
   (String, double, double)? _skipped;
 
   static Future<String> _readFile(String path) => File(path).readAsString();
@@ -293,17 +296,35 @@ class OfflinePlaybackSession extends ChangeNotifier
         SubtitleInFile(:final stream) => stream,
         _ => null,
       },
+      subtitleUrl: _playerCaptions ? _captionFile(show) : null,
     );
+  }
+
+  /// The saved WebVTT of the subtitle the app draws, or null when it draws
+  /// none.
+  String? _captionFile(SubtitleShow show) {
+    if (show case SubtitleOnScreen(:final track)) {
+      for (final saved in subtitles) {
+        if (saved.track.id == track.id) return saved.path;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<void> drawCaptionsInPlayer(bool on) async {
+    if (_playerCaptions == on) return;
+    _playerCaptions = on;
+    final path = _captionFile(_show());
+    if (path == null || _closed) return;
+    await _command(() => player.setSubtitleUrl(on ? path : null));
   }
 
   void _showCaptions(SubtitleShow show) {
     final request = ++_captionRequest;
     captions = null;
-    if (show case SubtitleOnScreen(:final track)) {
-      final saved = subtitles.where((entry) => entry.track.id == track.id);
-      if (saved.isEmpty) return;
-      unawaited(_readCaptions(saved.first.path, request));
-    }
+    final path = _captionFile(show);
+    if (path != null) unawaited(_readCaptions(path, request));
   }
 
   Future<void> _readCaptions(String path, int request) async {

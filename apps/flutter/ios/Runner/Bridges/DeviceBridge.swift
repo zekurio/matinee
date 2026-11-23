@@ -7,7 +7,8 @@ final class DeviceBridge: DeviceApi {
   func facts() throws -> DeviceFacts {
     let device = UIDevice.current
     return DeviceFacts(
-      television: false,
+      // The Apple TV target compiles this file too.
+      television: device.userInterfaceIdiom == .tv,
       // From iOS 16 this is "iPhone" or "iPad" unless Apple grants the
       // user-assigned-device-name entitlement, which is still a fair name.
       name: device.name,

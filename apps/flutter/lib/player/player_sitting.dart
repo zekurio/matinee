@@ -48,6 +48,11 @@ abstract interface class PlayerSitting implements Listenable {
   /// The text subtitle the app draws itself, when one is shown.
   WebVtt? get captions;
 
+  /// Has the player draw [captions] in its own picture while [on], for a
+  /// window that shows the picture alone, as iOS's picture in picture does.
+  /// The app then leaves them out.
+  Future<void> drawCaptionsInPlayer(bool on);
+
   (PlaybackNotice, Object?)? get notice;
   void dismissNotice();
 

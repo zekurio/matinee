@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/apple_tv.dart';
 import 'core/back_claim.dart';
 import 'core/device.dart';
 import 'core/server_accents.dart';
@@ -15,6 +17,7 @@ import 'kit/tokens.dart';
 import 'kit/tv/tv_metrics.dart';
 
 import 'l10n/app_localizations.dart';
+import 'launcher/watch_next.dart';
 import 'router.dart';
 
 /// The app: one widget tree for phones, tablets, and TVs. Which screens a
@@ -41,8 +44,27 @@ class MatineeApp extends ConsumerWidget {
         wallpaper?.light ?? accented(preferences.preset.light, accents?.light);
     final dark =
         wallpaper?.dark ?? accented(preferences.preset.dark, accents?.dark);
+    final remote = ref.watch(appleTvRemoteProvider);
     return MaterialApp.router(
       routerConfig: ref.watch(routerProvider),
+      // Menu on the Siri Remote arrives as Escape, and is Back.
+      shortcuts: remote == null
+          ? null
+          : {
+              ...WidgetsApp.defaultShortcuts,
+              const SingleActivator(
+                LogicalKeyboardKey.escape,
+                includeRepeats: false,
+              ): const AppleTvBackIntent(),
+            },
+      actions: remote == null
+          ? null
+          : {
+              ...WidgetsApp.defaultActions,
+              AppleTvBackIntent: CallbackAction<AppleTvBackIntent>(
+                onInvoke: (_) => remote.back(),
+              ),
+            },
       onNavigationNotification: ref.watch(backClaimProvider).onNotification,
       theme: MatineeTheme.data(light, dark: dark),
       darkTheme: MatineeTheme.data(dark),
@@ -65,7 +87,11 @@ class MatineeApp extends ConsumerWidget {
         // Toasts sit above the tab bar, over whatever page is open.
         child: Stack(
           children: [
-            child!,
+            // An Android TV's launcher shows what to watch next.
+            if (ref.watch(hasWatchNextProvider))
+              WatchNextLifecycle(child: child!)
+            else
+              child!,
             if (device.isTv)
               // Clear of the drawer's rail and the overscan.
               Positioned(

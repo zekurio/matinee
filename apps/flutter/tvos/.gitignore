@@ -1,0 +1,10 @@
+**/DerivedData/
+xcuserdata
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.moved-aside
+
+# Written by scripts/fetch_engine.sh, with this machine's paths.
+Flutter/Generated.xcconfig

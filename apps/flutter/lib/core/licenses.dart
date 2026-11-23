@@ -80,6 +80,11 @@ const androidLicenses = <BundledLicense>[
     copyright: 'Copyright © The Android Open Source Project',
     asset: _apache,
   ),
+  (
+    packages: ['AndroidX Core'],
+    copyright: 'Copyright © The Android Open Source Project',
+    asset: _apache,
+  ),
   (packages: ['ZXing'], copyright: 'Copyright © ZXing authors', asset: _apache),
   (
     packages: ['OkHttp', 'Okio'],

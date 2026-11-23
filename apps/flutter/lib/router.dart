@@ -124,7 +124,10 @@ abstract final class Routes {
   static String episode(String itemId) => '/episode/$itemId';
 
   /// The player, for the file or download id `playback.start` takes.
-  static String play(String id) => '/play/${Uri.encodeComponent(id)}';
+  static String play(String id) => '$playPrefix${Uri.encodeComponent(id)}';
+
+  /// What every player's path starts with.
+  static const playPrefix = '/play/';
   static String person(String name, {String? tmdbId}) => Uri(
     path: '/person/${Uri.encodeComponent(name)}',
     queryParameters: _query({'tmdb': tmdbId}),

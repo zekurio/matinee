@@ -194,6 +194,58 @@ void main() {
     expect(player.opens.last.tracks?.subtitleUrl, isNull);
   });
 
+  // iOS's small window shows mpv's picture alone, so a caption the app
+  // draws would be missing there.
+  test('the player draws the captions while asked, across a seek', () async {
+    backend.start = (_) => FakePlaybackApi.answer(
+      plan(
+        method: PlaybackMethod.remux,
+        subtitle: captions,
+        subtitleMode: PlaybackSubtitleMode.client,
+        subtitleUrl: '/caption',
+      ),
+    );
+    await session.start();
+    await flush();
+    expect(player.opens.last.tracks?.subtitleUrl, isNull);
+
+    await session.drawCaptionsInPlayer(true);
+    expect(player.subtitleUrls, ['https://matinee.example/caption']);
+    // A seek opens a new source, which has to carry them too.
+    await session.seek(41);
+    expect(
+      player.opens.last.tracks?.subtitleUrl,
+      'https://matinee.example/caption',
+    );
+
+    await session.drawCaptionsInPlayer(false);
+    expect(player.subtitleUrls.last, isNull);
+    await session.seek(60);
+    expect(player.opens.last.tracks?.subtitleUrl, isNull);
+  });
+
+  test("the player's own subtitle stays when there are no captions", () async {
+    final picture = SubtitleTrack.fromJson({
+      ...captions.toJson(),
+      'delivery': SubtitleDelivery.pgs,
+    });
+    backend.start = (_) => FakePlaybackApi.answer(
+      plan(
+        subtitle: picture,
+        subtitleMode: PlaybackSubtitleMode.client,
+        subtitleUrl: '/picture',
+      ),
+    );
+    await session.start();
+    await flush();
+
+    await session.drawCaptionsInPlayer(true);
+    await session.drawCaptionsInPlayer(false);
+
+    // Taking the captions back would have removed the picture subtitle.
+    expect(player.subtitleUrls, isEmpty);
+  });
+
   test('passes embedded IDs and PGS sidecars to the engine', () async {
     final picture = SubtitleTrack.fromJson({
       ...captions.toJson(),

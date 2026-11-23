@@ -75,6 +75,19 @@ protocol PictureInPictureSource: AnyObject {
   var pipPlaying: Bool { get }
 }
 
+#if os(tvOS)
+  /// An Apple TV plays on the whole screen, with no small window. The
+  /// session keeps one shape on both systems, so this stands in for it.
+  final class PictureInPicture {
+    let active = false
+    let starting = false
+
+    func invalidate() {}
+
+    func close() {}
+  }
+#else
+
 /// The system's small window over the session's layer. Its play, pause and
 /// skip buttons go to Dart as media commands, as Android's do.
 final class PictureInPicture {
@@ -295,3 +308,5 @@ private final class PictureInPictureHelper: NSObject, AVPictureInPictureControll
     completionHandler()
   }
 }
+
+#endif

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240">
+  <!-- The back layer of the Apple TV icon: the dusk sky of app-icon.svg at
+       tvOS's five by three. The system moves the layers apart as the icon
+       takes focus, so the sky and the mark are separate pictures. -->
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="240" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#1d1a33"/>
+    <stop offset="1" stop-color="#0e0e10"/>
+  </linearGradient>
+  <rect width="400" height="240" fill="url(#sky)"/>
+</svg>

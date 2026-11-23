@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
+import '../../core/apple_tv.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../kit/tv/tv.dart';
@@ -300,6 +301,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
   late final UpNextCountdown _countdown;
   late final PlayerSpeed _speed;
   late final PlayerMediaSession _media;
+  bool _appleTv = false;
   late final bool _matchFrameRate;
   Timer? _hide;
 
@@ -351,6 +353,7 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
       headers: () => ref.read(playerHeadersProvider),
     );
     _session.addListener(_updated);
+    _appleTv = ref.read(appleTvRemoteProvider) != null;
     HardwareKeyboard.instance.addHandler(_preview);
     _resetHide();
   }
@@ -543,6 +546,8 @@ class _TvPlaybackState extends ConsumerState<_TvPlayback> {
       _swallow = null;
       return true;
     }
+    // An Apple TV's play and pause come as media commands, each press once.
+    if (_appleTv && AppleTvRemote.ownsKey(key)) return false;
     final playing = _session.playback.status.wantsPlay;
     final back = _session.skipBack;
     final ahead = _session.skipForward;

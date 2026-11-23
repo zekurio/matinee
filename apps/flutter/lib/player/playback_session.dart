@@ -95,6 +95,9 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
   double _offset = 0;
   (String, double, double)? _skipped;
   Uri? _captionUrl;
+
+  /// The player draws the captions, as its external subtitle.
+  bool _playerCaptions = false;
   int _request = 0;
   bool _sourceFailed = false;
   bool _opened = false;
@@ -301,6 +304,7 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
       final reuse =
           !forceReload && previous != null && _sameSource(previous, next);
       final settled = _settle(wants, lost, next);
+      final inPlayer = _playerCaptions;
       final tracks = _tracks(next, reuse ? _offset : next.offset);
       final caption = _captionFor(next);
 
@@ -320,7 +324,14 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
         }
         await _load(url, next.offset, next.start, tracks, autoplay: !pause);
       }
-      if (_current(request)) _showCaptions(caption);
+      if (_current(request)) {
+        _showCaptions(caption);
+        // The small window opened or closed while this loaded, with the
+        // captions where they were before.
+        if (inPlayer != _playerCaptions && caption != null) {
+          await player.setSubtitleUrl(_playerCaptions ? '$caption' : null);
+        }
+      }
     } catch (failure) {
       if (_current(request)) {
         await _handleRequestFailure(failure, seek: seek);
@@ -437,6 +448,8 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
         if (path != null) subtitleUrl = _serverUrl(path);
       }
     }
+    // The captions the app draws are text, which mpv draws as well.
+    if (_playerCaptions) subtitleUrl ??= _captionFor(answer);
     final ordinal = answer.audioTracks.indexWhere(
       (track) => track.index == audio?.index,
     );
@@ -466,6 +479,16 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
             path != null
         ? _serverUrl(path)
         : null;
+  }
+
+  @override
+  Future<void> drawCaptionsInPlayer(bool on) async {
+    if (_playerCaptions == on) return;
+    _playerCaptions = on;
+    final url = _captionUrl;
+    // Without captions of the app's, the player keeps the subtitle it has.
+    if (url == null || _closed) return;
+    await player.setSubtitleUrl(on ? '$url' : null);
   }
 
   void _showCaptions(Uri? url) {

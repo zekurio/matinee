@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.media.tv.TvContract
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
@@ -19,6 +20,8 @@ import io.github.zekurio.matinee.display.DisplayApi
 import io.github.zekurio.matinee.display.DisplayBridge
 import io.github.zekurio.matinee.downloads.DownloadsBridge
 import io.github.zekurio.matinee.downloads.DownloadsHostApi
+import io.github.zekurio.matinee.launcher.WatchNext
+import io.github.zekurio.matinee.launcher.WatchNextApi
 import io.github.zekurio.matinee.platform.DeviceApi
 import io.github.zekurio.matinee.platform.DeviceFacts
 import io.github.zekurio.matinee.platform.DisplayNameKind
@@ -48,11 +51,25 @@ class MainActivity : FlutterActivity() {
     private var scanner: ScannerBridge? = null
     private var downloads: DownloadsBridge? = null
     private var playerSystem: PlayerSystem? = null
+    private var watchNext: WatchNext? = null
+
+    /** Started new, not brought back with the intent it had before. */
+    private var fresh = true
 
     // Flutter paints into a transparent Android TextureView above the video SurfaceView.
     override fun getRenderMode(): RenderMode = RenderMode.texture
 
     override fun getTransparencyMode(): TransparencyMode = TransparencyMode.transparent
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        fresh = savedInstanceState == null
+        super.onCreate(savedInstanceState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        watchNext?.opened(intent, running = true)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -72,6 +89,13 @@ class MainActivity : FlutterActivity() {
         val around = PlayerSystem(this, messenger) { playback?.allowPlayInBackground() }
         playerSystem = around
         PlayerSystemApi.setUp(messenger, around)
+        // Only a TV's launcher has the row.
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) {
+            val row = WatchNext(this, messenger)
+            watchNext = row
+            WatchNextApi.setUp(messenger, row)
+            if (fresh) row.opened(intent, running = false)
+        }
     }
 
     override fun onUserLeaveHint() {
@@ -113,6 +137,9 @@ class MainActivity : FlutterActivity() {
         DisplayApi.setUp(messenger, null)
         ScannerApi.setUp(messenger, null)
         DownloadsHostApi.setUp(messenger, null)
+        WatchNextApi.setUp(messenger, null)
+        watchNext?.release()
+        watchNext = null
         downloads?.release()
         downloads = null
         playback?.release()

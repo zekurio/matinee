@@ -85,6 +85,8 @@ class Device {
         osVersion: facts.osVersion,
         appVersion: facts.appVersion,
         platform: switch (defaultTargetPlatform) {
+          // tvOS runs the iOS engine, built for it.
+          TargetPlatform.iOS when facts.television => DevicePlatform.tvos,
           TargetPlatform.iOS => DevicePlatform.ios,
           _ when facts.television => DevicePlatform.androidtv,
           _ => DevicePlatform.android,
