@@ -9,20 +9,11 @@ import 'theme.dart';
 import 'tokens.dart';
 
 class TabBarItem {
-  const TabBarItem({
-    required this.id,
-    required this.icon,
-    required this.label,
-    this.picture,
-  });
+  const TabBarItem({required this.id, required this.icon, required this.label});
 
   final Object id;
   final String icon;
   final String label;
-
-  /// Drawn in the icon's place when set, like the account's picture. It
-  /// gets the icon's 24 by 24.
-  final Widget? picture;
 }
 
 /// Share one state between pages to retain the selected tab across navigation.
@@ -198,10 +189,7 @@ class _Tab extends StatelessWidget {
                               ),
                               child: const SizedBox.expand(),
                             ),
-                          if (item.picture case final picture?)
-                            SizedBox.square(dimension: 24, child: picture)
-                          else
-                            KitIcon(item.icon, size: 24, color: color),
+                          KitIcon(item.icon, size: 24, color: color),
                         ],
                       ),
                     ),
