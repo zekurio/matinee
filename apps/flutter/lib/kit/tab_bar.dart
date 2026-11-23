@@ -150,8 +150,8 @@ class _Tab extends StatelessWidget {
       builder: (context, state) => ExcludeSemantics(
         child: Padding(
           padding: showLabel
-              ? const EdgeInsets.only(top: 4, bottom: 2)
-              : const EdgeInsets.symmetric(vertical: 6),
+              ? const EdgeInsets.only(top: 6, bottom: 4)
+              : const EdgeInsets.symmetric(vertical: 8),
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(end: selected ? 1 : 0),
             duration: motion,
@@ -173,7 +173,7 @@ class _Tab extends StatelessWidget {
                     duration: motion,
                     child: SizedBox(
                       width: 56,
-                      height: 28,
+                      height: 32,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
