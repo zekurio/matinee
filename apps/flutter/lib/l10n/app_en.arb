@@ -2746,6 +2746,10 @@
       }
     }
   },
+  "requestsStatusLabel": "Status",
+  "@requestsStatusLabel": {
+    "description": "The label before a request's state badge, as the web's requests.statusLabel"
+  },
   "requestsYearKind": "{p1} · {p2}",
   "@requestsYearKind": {
     "description": "strings.xml",
@@ -8769,15 +8773,6 @@
   "webRequestsStateDeclined": "Declined",
   "@webRequestsStateDeclined": {
     "description": "requests.state.declined"
-  },
-  "webRequestsAddAfterAllNamed": "Add {p1} after all",
-  "@webRequestsAddAfterAllNamed": {
-    "description": "requests.addAfterAllNamed",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
   },
   "webRequestsEmptyNone": "No requests yet",
   "@webRequestsEmptyNone": {
