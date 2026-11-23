@@ -52,11 +52,14 @@ Future<void> _pump(
   Widget child, {
   Size window = const Size(1280, 800),
   bool tickers = true,
+  double textScale = 1,
   http.Client? server,
 }) async {
   tester.view.physicalSize = window;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
+  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -279,5 +282,41 @@ void main() {
     expect(asked, contains('/api/media/item-Contact/thumbnail?size=large'));
     expect(asked.where((path) => path.contains('Dune')), isEmpty);
     expect(tester.takeException(), isNull);
+  });
+
+  // The bug it pins: the card's place while it loaded took the window's share
+  // alone, so on a small tablet or with large text the page jumped down when
+  // the titles arrived.
+  testWidgets('its place while it loads is as tall as the card', (
+    tester,
+  ) async {
+    for (final (window, scale) in const [
+      (Size(1280, 800), 1.0),
+      (Size(800, 1280), 1.0),
+      (Size(600, 960), 1.0),
+      (Size(960, 600), 1.0),
+      (Size(1280, 800), 2.0),
+    ]) {
+      await _pump(
+        tester,
+        const HomeShowcaseSkeleton(),
+        window: window,
+        textScale: scale,
+      );
+      final place = tester.getSize(find.byType(HomeShowcaseSkeleton));
+      // One title, so no dots under the card.
+      await _pump(
+        tester,
+        HomeShowcase(slides: [_slides.first]),
+        window: window,
+        textScale: scale,
+      );
+      expect(
+        tester.getSize(find.byType(HomeShowcase)),
+        place,
+        reason: '$window at $scale',
+      );
+      expect(tester.takeException(), isNull);
+    }
   });
 }

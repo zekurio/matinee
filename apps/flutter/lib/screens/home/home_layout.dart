@@ -1,10 +1,11 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/width_class.dart';
+import '../../kit/kit.dart';
 
 /// The rules Home lays itself out and moves by. Lengths are logical pixels.
 
@@ -82,26 +83,61 @@ abstract final class ShowcaseLayout {
   static double width(Size window, double gutter) =>
       math.max(window.width - 2 * gutter, 0);
 
-  /// The card's height in [window] with [gutter] on either side: roughly 58%
-  /// of a landscape window, so the row under it still starts on screen, and
-  /// 16:9 of its width in portrait.
-  static double height(Size window, double gutter) {
+  /// The card's height in [window] with [gutter] on either side, before its
+  /// words have a say: roughly 58% of a landscape window, so the row under
+  /// it still starts on screen, and 16:9 of its width in portrait.
+  static double baseHeight(Size window, double gutter) {
     final card = width(window, gutter);
     if (window.width > window.height) return window.height * landscapeShare;
     return math.min(card * 9 / 16, window.height * portraitCap);
   }
 
+  /// The card's height at [scaler]'s text size: [baseHeight], or what its
+  /// words and buttons need when that's more, on a small tablet or with
+  /// large text, so the card grows rather than cutting anything off. The
+  /// card's place while it loads takes the same, so the page doesn't jump.
+  static double height(Size window, double gutter, TextScaler scaler) {
+    final base = baseHeight(window, gutter);
+    return math.max(base, padding + wordsRoom(base, scaler) + wordsBottom);
+  }
+
+  /// How far above the card's bottom its words end: over the buttons, the
+  /// kit's large ones, and the gap over them.
+  static final wordsBottom = padding + ButtonSize.lg.height + buttonGap;
+
+  /// The tallest the words can be in a card [baseHeight] tall at [scaler]'s
+  /// text size: every line a title may show, and the logo's room.
+  static double wordsRoom(double baseHeight, TextScaler scaler) {
+    double lines(int count, double size, double lineHeight) =>
+        count * scaler.scale(size) * lineHeight / size;
+    final name = titleSize(baseHeight);
+    return math.max(logoHeight(baseHeight), lines(2, name, 1.1 * name)) +
+        12 +
+        // Two runs of facts, since a narrow card wraps the rating under them.
+        lines(2, KitText.base.size, KitText.base.lineHeight) +
+        6 +
+        8 +
+        lines(1, KitText.sm.size, KitText.sm.lineHeight) +
+        10 +
+        lines(3, KitText.sm.size, overviewLeading) +
+        16 +
+        lines(1, KitText.xs.size, KitText.xs.lineHeight);
+  }
+
+  /// The overview's line height, roomier than the text size's own.
+  static const overviewLeading = 24.0;
+
   /// How wide the words in the card run: no more than half of it.
   static double wordsWidth(double cardWidth) =>
       math.min(cardWidth * wordsShare, wordsMax);
 
-  /// The logo's room at a card [cardHeight] tall.
-  static double logoHeight(double cardHeight) =>
-      (cardHeight * .21).clamp(56, 112).toDouble();
+  /// The logo's room in a card [baseHeight] tall.
+  static double logoHeight(double baseHeight) =>
+      (baseHeight * .21).clamp(56, 112).toDouble();
 
-  /// A title's name at a card [cardHeight] tall, when it has no logo.
-  static double titleSize(double cardHeight) =>
-      (cardHeight * .09).clamp(28, 52).toDouble();
+  /// A title's name in a card [baseHeight] tall, when it has no logo.
+  static double titleSize(double baseHeight) =>
+      (baseHeight * .09).clamp(28, 52).toDouble();
 }
 
 /// Home is one error page only when nothing on it could show: the

@@ -159,20 +159,7 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
     final l = AppLocalizations.of(context);
     final window = MediaQuery.sizeOf(context);
     final gutter = CardMetrics.gutter;
-    final cardWidth = ShowcaseLayout.width(window, gutter);
-    final base = ShowcaseLayout.height(window, gutter);
-    final wordsWidth = ShowcaseLayout.wordsWidth(cardWidth);
-    final logoHeight = ShowcaseLayout.logoHeight(base);
-    final nameSize = ShowcaseLayout.titleSize(base);
-    final scaler = MediaQuery.textScalerOf(context);
-    final buttons = ButtonSize.lg.height;
-    final height = math.max(
-      base,
-      ShowcaseLayout.padding * 2 +
-          _wordsRoom(nameSize, logoHeight, scaler) +
-          ShowcaseLayout.buttonGap +
-          buttons,
-    );
+    final base = ShowcaseLayout.baseHeight(window, gutter);
     final slide = widget.slides[_current];
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -180,7 +167,11 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
         Padding(
           padding: EdgeInsets.symmetric(horizontal: gutter),
           child: SizedBox(
-            height: height,
+            height: ShowcaseLayout.height(
+              window,
+              gutter,
+              MediaQuery.textScalerOf(context),
+            ),
             child: Listener(
               onPointerDown: (_) {
                 _touched = true;
@@ -209,14 +200,11 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
                     current: _current,
                     leaving: _leaving,
                     fade: _fade,
-                    wordsWidth: wordsWidth,
-                    logoHeight: logoHeight,
-                    nameSize: nameSize,
-                    buttonsBottom: ShowcaseLayout.padding,
-                    wordsBottom:
-                        ShowcaseLayout.padding +
-                        buttons +
-                        ShowcaseLayout.buttonGap,
+                    wordsWidth: ShowcaseLayout.wordsWidth(
+                      ShowcaseLayout.width(window, gutter),
+                    ),
+                    logoHeight: ShowcaseLayout.logoHeight(base),
+                    nameSize: ShowcaseLayout.titleSize(base),
                   ),
                 ),
               ),
@@ -239,28 +227,6 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
   }
 }
 
-/// The tallest the words can be inside the card at this text size: every
-/// line a slide may show, and the logo's room, so the card grows rather than
-/// cutting anything off when large text needs more.
-double _wordsRoom(double nameSize, double logoHeight, TextScaler scaler) {
-  double line(double size, double height) => scaler.scale(size) * height / size;
-  final name = 2 * line(nameSize, 1.1 * nameSize);
-  // Two runs of facts, since a narrow card wraps the rating under them.
-  final facts = 2 * line(KitText.base.size, KitText.base.lineHeight) + 6;
-  final genres = line(KitText.sm.size, KitText.sm.lineHeight);
-  final overview = 3 * line(KitText.sm.size, 24);
-  final progress = line(KitText.xs.size, KitText.xs.lineHeight);
-  return math.max(logoHeight, name) +
-      12 +
-      facts +
-      8 +
-      genres +
-      10 +
-      overview +
-      16 +
-      progress;
-}
-
 /// One featured title's card: its art under the shades, its words low on the
 /// leading side, and Play and Details under them. Play and Details stay while
 /// the words and art change behind them, as the web's do.
@@ -273,8 +239,6 @@ class _Card extends StatelessWidget {
     required this.wordsWidth,
     required this.logoHeight,
     required this.nameSize,
-    required this.buttonsBottom,
-    required this.wordsBottom,
   });
 
   final List<FeaturedTitle> slides;
@@ -284,8 +248,6 @@ class _Card extends StatelessWidget {
   final double wordsWidth;
   final double logoHeight;
   final double nameSize;
-  final double buttonsBottom;
-  final double wordsBottom;
 
   /// How much of a title's art shows: the one coming fades in over the one
   /// leaving, which stays whole underneath, so nothing dips through the
@@ -338,7 +300,7 @@ class _Card extends StatelessWidget {
             DecoratedBox(decoration: BoxDecoration(gradient: _side)),
             PositionedDirectional(
               start: ShowcaseLayout.padding,
-              bottom: wordsBottom,
+              bottom: ShowcaseLayout.wordsBottom,
               width: wordsWidth,
               child: AnimatedBuilder(
                 animation: fade,
@@ -366,7 +328,7 @@ class _Card extends StatelessWidget {
             ),
             PositionedDirectional(
               start: ShowcaseLayout.padding,
-              bottom: buttonsBottom,
+              bottom: ShowcaseLayout.padding,
               child: _Buttons(slide: slides[current]),
             ),
           ],
@@ -518,7 +480,7 @@ class _SlideWords extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: KitText.sm.style(
                 color: foreground.withValues(alpha: .72),
-                leading: 24,
+                leading: ShowcaseLayout.overviewLeading,
               ),
             ),
           ],
@@ -786,7 +748,11 @@ class HomeShowcaseSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final window = MediaQuery.sizeOf(context);
     final width = ShowcaseLayout.width(window, CardMetrics.gutter);
-    final height = ShowcaseLayout.height(window, CardMetrics.gutter);
+    final height = ShowcaseLayout.height(
+      window,
+      CardMetrics.gutter,
+      MediaQuery.textScalerOf(context),
+    );
     final words = ShowcaseLayout.wordsWidth(width);
     final dark = MatineeTheme.darkOf(context);
     return Semantics(
