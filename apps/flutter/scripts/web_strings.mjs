@@ -22,6 +22,7 @@ const areas = [
   "oidc",
   "requests",
   "server",
+  "stats",
   "transcoding",
   "trickplay",
   "users",

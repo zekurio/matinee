@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../api/matinee_api.dart';
 import '../../core/device.dart';
+import '../../core/permissions.dart';
 import '../../core/session.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
@@ -19,6 +20,7 @@ import '../requests/requests_data.dart' show profileAskedProvider;
 import '../settings/settings_rows.dart';
 import '../shell/offline_note.dart';
 import '../sign_in/server_switcher.dart';
+import '../statistics/statistics_screen.dart' show statisticsPermissions;
 import 'favorite_cards.dart';
 import 'profile_data.dart';
 import 'stats.dart';
@@ -100,6 +102,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         backLabel: l.commonBack,
         onBack: () => _back(context),
         actions: [
+          if (!offline && canAny(user, statisticsPermissions))
+            PageBarButton(
+              icon: Lucide.activity,
+              label: l.webStatsTitle,
+              onPressed: () => context.push(Routes.statistics),
+            ),
           PageBarButton(
             icon: Lucide.settings,
             label: l.shellSettings,
@@ -211,21 +219,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            WatchTimeCard(stats: stats),
+            WatchTimeCard(
+              range: stats.range,
+              unit: stats.unit,
+              watchSeconds: stats.totals.watchSeconds,
+              buckets: stats.buckets,
+            ),
             const SizedBox(height: 28),
-            StatList(stats: stats),
+            StatList(totals: stats.totals),
             if (stats.titles.isNotEmpty) ...[
               const SizedBox(height: 28),
-              TopTitles(stats: stats),
+              TopTitles(titles: stats.titles),
             ],
             if (stats.genres.isNotEmpty) ...[
               const SizedBox(height: 28),
-              Genres(stats: stats),
+              Genres(genres: stats.genres),
             ],
             Standing(range: _range, timeZone: query.timeZone),
             if (stats.activity.isNotEmpty) ...[
               const SizedBox(height: 28),
-              Activity(stats: stats),
+              Activity(activity: stats.activity),
             ],
           ],
         ),

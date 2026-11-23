@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -90,20 +91,70 @@ class StatsCard extends StatelessWidget {
 /// The range's watch time: the total, big, over watch time per day, week,
 /// or month as bars. Touching a bar reads its day, week, or month out in
 /// the total's place.
-class WatchTimeCard extends StatefulWidget {
-  const WatchTimeCard({super.key, required this.stats});
+class WatchTimeCard extends StatelessWidget {
+  const WatchTimeCard({
+    super.key,
+    required this.range,
+    required this.unit,
+    required this.watchSeconds,
+    required this.buckets,
+  });
 
-  final WatchStats stats;
+  final String range;
+  final String unit;
+  final double watchSeconds;
+  final List<StatsBucket> buckets;
 
   @override
-  State<WatchTimeCard> createState() => _WatchTimeCardState();
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    return StatsTrendCard(
+      label: '${l.statsWatchTime} · ${rangeName(range, l)}',
+      total: formatWatchTime(watchSeconds, l),
+      points: [
+        for (final bucket in buckets)
+          (
+            label: bucketName(bucket.start, unit, l, locale),
+            detail: formatWatchTime(bucket.watchSeconds, l),
+            note: null,
+            value: bucket.watchSeconds,
+          ),
+      ],
+    );
+  }
 }
 
-class _WatchTimeCardState extends State<WatchTimeCard> {
+typedef StatsPoint = ({
+  String label,
+  String detail,
+  double value,
+  String? note,
+});
+
+class StatsTrendCard extends StatefulWidget {
+  const StatsTrendCard({
+    super.key,
+    required this.label,
+    required this.total,
+    required this.points,
+    this.totalNote,
+  });
+
+  final String label;
+  final String total;
+  final List<StatsPoint> points;
+  final String? totalNote;
+
+  @override
+  State<StatsTrendCard> createState() => _StatsTrendCardState();
+}
+
+class _StatsTrendCardState extends State<StatsTrendCard> {
   int? _active;
 
   void _touch(Offset position, double width) {
-    final count = widget.stats.buckets.length;
+    final count = widget.points.length;
     if (count == 0 || width <= 0) return;
     final index = (position.dx / width * count).floor().clamp(0, count - 1);
     if (index != _active) setState(() => _active = index);
@@ -114,22 +165,17 @@ class _WatchTimeCardState extends State<WatchTimeCard> {
   }
 
   @override
-  void didUpdateWidget(WatchTimeCard old) {
+  void didUpdateWidget(StatsTrendCard old) {
     super.didUpdateWidget(old);
-    if (!identical(old.stats, widget.stats)) _active = null;
+    if (!listEquals(old.points, widget.points)) _active = null;
   }
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    final stats = widget.stats;
-    final buckets = stats.buckets;
+    final points = widget.points;
     final active = _active;
-    final shown = active == null || active >= buckets.length
-        ? null
-        : buckets[active];
+    final shown = active == null ? null : points[active];
     return StatsCard(
       children: [
         Padding(
@@ -138,22 +184,23 @@ class _WatchTimeCardState extends State<WatchTimeCard> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                shown == null
-                    ? '${l.statsWatchTime} · ${rangeName(stats.range, l)}'
-                    : bucketName(shown.start, stats.unit, l, locale),
+                shown?.label ?? widget.label,
                 style: KitText.sm.style(color: colors.mutedForeground),
               ),
               Text(
-                formatWatchTime(
-                  shown?.watchSeconds ?? stats.totals.watchSeconds,
-                  l,
-                ),
+                shown?.detail ?? widget.total,
                 style: KitText.xxxl.style(
                   color: colors.foreground,
                   weight: FontWeight.w700,
                 ),
               ),
-              if (buckets.isNotEmpty) ...[
+              if ((shown == null ? widget.totalNote : shown.note)
+                  case final note?)
+                Text(
+                  note,
+                  style: KitText.sm.style(color: colors.mutedForeground),
+                ),
+              if (points.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -171,9 +218,7 @@ class _WatchTimeCardState extends State<WatchTimeCard> {
                         width: width,
                         child: CustomPaint(
                           painter: _BarsPainter(
-                            seconds: [
-                              for (final bucket in buckets) bucket.watchSeconds,
-                            ],
+                            values: [for (final point in points) point.value],
                             active: active,
                             accent: colors.accent,
                             baseline: colors.border,
@@ -195,13 +240,13 @@ class _WatchTimeCardState extends State<WatchTimeCard> {
 /// The bars, thinning to lines when there are hundreds, on a baseline.
 class _BarsPainter extends CustomPainter {
   _BarsPainter({
-    required this.seconds,
+    required this.values,
     required this.active,
     required this.accent,
     required this.baseline,
   });
 
-  final List<double> seconds;
+  final List<double> values;
   final int? active;
   final Color accent;
   final Color baseline;
@@ -215,13 +260,13 @@ class _BarsPainter extends CustomPainter {
         ..color = baseline
         ..strokeWidth = 1,
     );
-    if (seconds.isEmpty) return;
-    final top = scaleTop(seconds.reduce(math.max));
-    final slot = size.width / seconds.length;
+    if (values.isEmpty) return;
+    final top = scaleTop(values.reduce(math.max));
+    final slot = size.width / values.length;
     final gap = math.min(slot * .25, 4.0);
     final width = slot - gap;
     final radius = Radius.circular(math.min(2, width / 2));
-    for (final (index, value) in seconds.indexed) {
+    for (final (index, value) in values.indexed) {
       if (value <= 0) continue;
       final height = math.max(value / top * size.height, 2.0);
       final dim = active != null && active != index;
@@ -243,7 +288,7 @@ class _BarsPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BarsPainter old) =>
-      old.seconds != seconds ||
+      !listEquals(old.values, values) ||
       old.active != active ||
       old.accent != accent ||
       old.baseline != baseline;
@@ -252,9 +297,9 @@ class _BarsPainter extends CustomPainter {
 /// Plays and what was finished, a row each: an icon, what it counts, and
 /// the number at the end.
 class StatList extends StatelessWidget {
-  const StatList({super.key, required this.stats});
+  const StatList({super.key, required this.totals});
 
-  final WatchStats stats;
+  final WatchTotals totals;
 
   @override
   Widget build(BuildContext context) {
@@ -263,7 +308,6 @@ class StatList extends StatelessWidget {
     final count = NumberFormat.decimalPattern(
       Localizations.localeOf(context).toLanguageTag(),
     );
-    final totals = stats.totals;
     return Panel(
       rows: [
         for (final (icon, label, value) in [
@@ -324,9 +368,9 @@ class _CardRow extends StatelessWidget {
 /// The most watched titles, ranked: the poster, the name, how often it was
 /// played, and its watch time at the end. Each opens its title.
 class TopTitles extends StatelessWidget {
-  const TopTitles({super.key, required this.stats});
+  const TopTitles({super.key, required this.titles});
 
-  final WatchStats stats;
+  final List<TitleStat> titles;
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +379,7 @@ class TopTitles extends StatelessWidget {
     return StatsCard(
       label: l.statsTop,
       children: [
-        for (final (index, entry) in stats.titles.indexed) ...[
+        for (final (index, entry) in titles.indexed) ...[
           if (index > 0) const PanelDivider(indent: 16),
           _CardRow(
             onPressed: () => context.push(Routes.title(entry.title.id)),
@@ -407,9 +451,9 @@ class TopTitles extends StatelessWidget {
 /// Watch time per genre. A title can have several genres, so their times
 /// add up to more than the whole. Each opens Browse for its genre.
 class Genres extends StatelessWidget {
-  const Genres({super.key, required this.stats});
+  const Genres({super.key, required this.genres});
 
-  final WatchStats stats;
+  final List<GenreStat> genres;
 
   @override
   Widget build(BuildContext context) {
@@ -418,7 +462,7 @@ class Genres extends StatelessWidget {
     return StatsCard(
       label: l.statsGenres,
       children: [
-        for (final (index, genre) in stats.genres.indexed) ...[
+        for (final (index, genre) in genres.indexed) ...[
           if (index > 0) const PanelDivider(indent: 16),
           _CardRow(
             onPressed: () => context.push(Routes.browse(genre: genre.name)),
@@ -485,7 +529,7 @@ class Standing extends ConsumerWidget {
                     style: KitText.xs.style(color: colors.mutedForeground),
                   ),
                   for (final place in places)
-                    _PlaceRow(
+                    LeaderboardPlace(
                       place: place,
                       value: metricValue(board.metric, place.value, l),
                     ),
@@ -501,8 +545,8 @@ class Standing extends ConsumerWidget {
 
 /// A place: the rank, the podium's in the accent, the person, and the
 /// value, the person's own lit.
-class _PlaceRow extends StatelessWidget {
-  const _PlaceRow({required this.place, required this.value});
+class LeaderboardPlace extends StatelessWidget {
+  const LeaderboardPlace({super.key, required this.place, required this.value});
 
   final LeaderboardEntry place;
   final String value;
@@ -572,16 +616,16 @@ class _PlaceRow extends StatelessWidget {
 /// When in the week watching starts, as the web's heatmap: a square per
 /// hour of each weekday, deeper for more, and the busiest time under it.
 class Activity extends StatelessWidget {
-  const Activity({super.key, required this.stats});
+  const Activity({super.key, required this.activity});
 
-  final WatchStats stats;
+  final List<ActivityCell> activity;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final cells = stats.activity;
+    final cells = activity;
     final seconds = {
       for (final cell in cells) (cell.weekday, cell.hour): cell.watchSeconds,
     };
