@@ -5,7 +5,6 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../library/filter_sheet.dart'
     show FilterSection, OptionRow, OptionSheet;
-import '../library/title_grid.dart' show ListBarButton;
 import 'request_words.dart';
 import 'requests_data.dart';
 
@@ -24,7 +23,7 @@ class RequestFilterButton extends StatelessWidget {
       valueListenable: filter,
       builder: (context, value, _) {
         final active = value.count;
-        return ListBarButton(
+        return PageBarButton(
           icon: Lucide.listFilter,
           label: active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle,
           count: active,

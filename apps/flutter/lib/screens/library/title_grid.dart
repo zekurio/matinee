@@ -7,7 +7,6 @@ import '../../l10n/app_localizations.dart';
 import '../../media/cards.dart';
 import '../../media/layout.dart';
 import '../../query/failure_view.dart';
-import '../shell/header.dart' show CountBadge, HeaderButton;
 import 'filter_sheet.dart';
 import 'list_choices.dart';
 import 'list_words.dart';
@@ -179,75 +178,13 @@ class _SkeletonGrid extends StatelessWidget {
   }
 }
 
-/// An icon to press at the end of a list's heading, 48 square, with how
-/// many filters are on at the icon's top-end corner when there are any.
-class ListBarButton extends StatelessWidget {
-  const ListBarButton({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-    this.count = 0,
-    this.focusNode,
-  });
-
-  final String icon;
-  final String label;
-  final VoidCallback? onPressed;
-
-  /// How many filters are on: the badge's number, and none at zero.
-  final int count;
-  final FocusNode? focusNode;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    return PressIndication(
-      onPressed: onPressed,
-      label: label,
-      focusNode: focusNode,
-      shape: KitRadius.pill,
-      builder: (context, state) => SizedBox.square(
-        dimension: 48,
-        child: Center(
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              KitIcon(
-                icon,
-                size: 22,
-                color: state == PressState.pressed
-                    ? colors.mutedForeground
-                    : colors.foreground,
-              ),
-              if (count > 0)
-                PositionedDirectional(
-                  top: -6,
-                  end: -8,
-                  child: CountBadge(count),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The Filter button, once the server says what the filters offer. [header]
-/// makes it a tab header's button, 44 square, instead of a list heading's,
-/// 48; both carry the count badge.
+/// The Filter button, once the server says what the filters offer, with
+/// how many are on in its badge.
 class FilterButton extends ConsumerWidget {
-  const FilterButton({
-    super.key,
-    required this.list,
-    required this.scope,
-    this.header = false,
-  });
+  const FilterButton({super.key, required this.list, required this.scope});
 
   final ListKey list;
   final FilterScope scope;
-  final bool header;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -256,34 +193,22 @@ class FilterButton extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     final active = ref.watch(choicesProvider(list)).filterCount;
-    final label = active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle;
-    void open() => showTitleFilters(context, list: list);
-    if (header) {
-      return HeaderButton(
-        icon: Lucide.listFilter,
-        label: label,
-        count: active,
-        onPressed: open,
-      );
-    }
-    return ListBarButton(
+    return PageBarButton(
       icon: Lucide.listFilter,
-      label: label,
+      label: active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle,
       count: active,
-      onPressed: open,
+      onPressed: () => showTitleFilters(context, list: list),
     );
   }
 }
 
 /// The sort, in a menu: each sort the list has values for, both ways.
-/// [header] makes its trigger a tab header's button, as [FilterButton]'s.
 class SortButton extends ConsumerWidget {
   const SortButton({
     super.key,
     required this.list,
     required this.current,
     required this.offered,
-    this.header = false,
   });
 
   final ListKey list;
@@ -291,7 +216,6 @@ class SortButton extends ConsumerWidget {
 
   /// The sorts the server has something to order by, once it says.
   final List<String>? offered;
-  final bool header;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -301,19 +225,12 @@ class SortButton extends ConsumerWidget {
     return Menu(
       // The last of the heading's buttons, at its end.
       side: MenuSide.end,
-      trigger: (context, toggle, open, focusNode) => header
-          ? HeaderButton(
-              icon: Lucide.arrowUpDown,
-              label: label,
-              focusNode: focusNode,
-              onPressed: toggle,
-            )
-          : ListBarButton(
-              icon: Lucide.arrowUpDown,
-              label: label,
-              focusNode: focusNode,
-              onPressed: toggle,
-            ),
+      trigger: (context, toggle, open, focusNode) => PageBarButton(
+        icon: Lucide.arrowUpDown,
+        label: label,
+        focusNode: focusNode,
+        onPressed: toggle,
+      ),
       children: [
         for (final order in titleOrders)
           if (offered == null || offered.contains(order.sort))

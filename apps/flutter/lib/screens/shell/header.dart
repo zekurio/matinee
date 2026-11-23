@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,7 +31,7 @@ class ShellHeader extends StatelessWidget {
             child: Logo(height: 18, label: words.appName),
           ),
           const Spacer(),
-          HeaderButton(
+          PageBarButton(
             icon: Lucide.search,
             label: words.searchTitle,
             onPressed: () => context.push(Routes.search),
@@ -87,8 +85,8 @@ class TabHeader extends StatelessWidget {
   }
 }
 
-/// The account's picture at a header's end, the way in to the profile: 30
-/// across in the header's 44 tap target, the initials while the picture can't
+/// The account's picture at a header's end, the way in to the profile: 32
+/// across in the header's 48 tap target, the initials while the picture can't
 /// load or the account has none, and always there offline, where the profile's
 /// account rows still work.
 class HeaderAvatar extends ConsumerWidget {
@@ -107,10 +105,10 @@ class HeaderAvatar extends ConsumerWidget {
       label: words.tabProfile,
       shape: KitRadius.pill,
       builder: (context, state) => SizedBox.square(
-        dimension: 44,
+        dimension: 48,
         child: Center(
           child: ExcludeSemantics(
-            child: Avatar(avatarId: user.avatarId, name: user.name, size: 30),
+            child: Avatar(avatarId: user.avatarId, name: user.name, size: 32),
           ),
         ),
       ),
@@ -135,109 +133,12 @@ class _HeaderBand extends StatelessWidget {
         child: SizedBox(
           height: ShellHeader.height,
           child: Padding(
-            // A button's 44 holds its 22 icon 11 in, so the last icon ends
+            // A button's 48 holds its 24 icon 12 in, so the last icon ends
             // 16 from the edge, where the logo starts on the other side. The
             // row sits 8 under the status bar, as the web's phone headers do,
             // so its actions are easier to reach.
-            padding: const EdgeInsets.only(left: 16, top: 8, right: 5),
+            padding: const EdgeInsets.only(left: 16, top: 8, right: 4),
             child: child,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// An icon with nothing around it, 44 square to tap. Pressing dims it; with
-/// [count] above zero, a filled accent badge at the icon's top-end corner
-/// says how many things, as the filter button does.
-class HeaderButton extends StatelessWidget {
-  const HeaderButton({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-    this.count = 0,
-    this.focusNode,
-  });
-
-  final String icon;
-  final String label;
-  final VoidCallback onPressed;
-
-  /// The badge's number, and no badge at zero.
-  final int count;
-  final FocusNode? focusNode;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    return PressIndication(
-      onPressed: onPressed,
-      label: label,
-      focusNode: focusNode,
-      shape: KitRadius.pill,
-      builder: (context, state) => SizedBox.square(
-        dimension: 44,
-        child: Center(
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              KitIcon(
-                icon,
-                size: 22,
-                color: state == PressState.pressed
-                    ? colors.mutedForeground
-                    : colors.foreground,
-              ),
-              if (count > 0)
-                PositionedDirectional(
-                  top: -6,
-                  end: -8,
-                  child: CountBadge(count),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// How many filters are on, at an icon's corner, on a header's buttons and
-/// a list heading's: a filled accent circle
-/// with the number in its foreground, grown with the text so it stays
-/// legible at the largest size.
-class CountBadge extends StatelessWidget {
-  const CountBadge(this.count, {super.key});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    final size = math.max(
-      16.0,
-      MediaQuery.textScalerOf(context)
-          .clamp(maxScaleFactor: 1.6)
-          .scale(KitText.px11.lineHeight),
-    );
-    return ExcludeSemantics(
-      child: Container(
-        height: size,
-        constraints: BoxConstraints(minWidth: size),
-        padding: const EdgeInsets.symmetric(horizontal: 3),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: colors.accent,
-          borderRadius: KitRadius.pill,
-        ),
-        child: Text(
-          '$count',
-          maxLines: 1,
-          style: KitText.px11.style(
-            color: colors.accentForeground,
-            weight: FontWeight.w600,
           ),
         ),
       ),

@@ -496,23 +496,25 @@ class _ImageEditorState extends ConsumerState<_ImageEditor> {
                   setState(() => _allLanguages[_slot] = !allLanguages),
               label: l.titleImagesAllLanguages,
               checked: allLanguages,
+              // The row takes the tap, so it shows the track alone, and is
+              // 48 tall to hit.
               builder: (context, state) => ExcludeSemantics(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l.titleImagesAllLanguages,
-                        style: KitText.sm.style(
-                          color: MatineeTheme.of(context).foreground,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Row(
+                    spacing: 12,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l.titleImagesAllLanguages,
+                          style: KitText.sm.style(
+                            color: MatineeTheme.of(context).foreground,
+                          ),
                         ),
                       ),
-                    ),
-                    Switch(
-                      checked: allLanguages,
-                      onChanged: (on) =>
-                          setState(() => _allLanguages[_slot] = on),
-                    ),
-                  ],
+                      SwitchTrack(checked: allLanguages),
+                    ],
+                  ),
                 ),
               ),
             ),

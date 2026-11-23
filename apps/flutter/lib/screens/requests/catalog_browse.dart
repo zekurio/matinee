@@ -12,7 +12,6 @@ import '../../query/failure_view.dart';
 import '../library/filter_sheet.dart'
     show FilterSection, OptionRow, OptionSheet, RangeField;
 import '../library/list_words.dart';
-import '../library/title_grid.dart' show ListBarButton;
 import 'catalog_cards.dart';
 import 'follow_window.dart';
 import 'request_sheet.dart';
@@ -198,7 +197,7 @@ class _CatalogBrowseScreenState extends ConsumerState<CatalogBrowseScreen> {
       backLabel: l.commonBack,
       actions: [
         if (ready != null) ...[
-          ListBarButton(
+          PageBarButton(
             icon: Lucide.listFilter,
             label: active > 0 ? l.browseFiltersOn(active) : l.webFiltersTitle,
             count: active,
@@ -206,7 +205,7 @@ class _CatalogBrowseScreenState extends ConsumerState<CatalogBrowseScreen> {
           ),
           Menu(
             side: MenuSide.end,
-            trigger: (context, toggle, open, focusNode) => ListBarButton(
+            trigger: (context, toggle, open, focusNode) => PageBarButton(
               icon: Lucide.arrowUpDown,
               label: l.browseSortCurrent(sortWord(choices.sort, l)),
               focusNode: focusNode,

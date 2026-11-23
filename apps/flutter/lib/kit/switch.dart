@@ -4,6 +4,9 @@ import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
+/// A switch to tap on its own: a [SwitchTrack] padded out to [size], 48
+/// tall, so a thumb can hit it. A row that toggles as a whole shows the
+/// track alone instead.
 class Switch extends StatelessWidget {
   const Switch({
     super.key,
@@ -12,57 +15,77 @@ class Switch extends StatelessWidget {
     this.label,
   });
 
+  static const size = Size(76, 48);
+
   final bool checked;
   final ValueChanged<bool>? onChanged;
   final String? label;
 
   @override
   Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
     final change = onChanged;
-    final motion = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 150);
-    const width = 36.0;
-    const height = 20.0;
     return PressIndication(
       onPressed: change == null ? null : () => change(!checked),
       button: false,
       toggled: checked,
       label: label,
       shape: KitRadius.pill,
-      focusInsets: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      builder: (context, state) => Opacity(
-        opacity: change == null ? .5 : 1,
-        child: SizedBox(
-          width: width + 24,
-          height: height + 20,
-          child: Center(
-            child: AnimatedContainer(
-              duration: motion,
-              width: width,
-              height: height,
-              decoration: BoxDecoration(
-                color: checked ? colors.accent : colors.inputHover,
-                borderRadius: KitRadius.pill,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: AnimatedAlign(
-                duration: motion,
-                alignment: checked
-                    ? AlignmentDirectional.centerEnd
-                    : AlignmentDirectional.centerStart,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: checked
-                        ? colors.accentForeground
-                        : colors.foreground,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
+      // The ring goes round the track, not the room around it.
+      focusInsets: EdgeInsets.symmetric(
+        horizontal: (size.width - SwitchTrack.size.width) / 2,
+        vertical: (size.height - SwitchTrack.size.height) / 2,
+      ),
+      builder: (context, state) => SizedBox.fromSize(
+        size: size,
+        child: Center(
+          child: SwitchTrack(checked: checked, enabled: change != null),
+        ),
+      ),
+    );
+  }
+}
+
+/// A switch's track and thumb, with nothing to tap, focus, or read out: for
+/// a row that takes the tap itself and says what's on. Dimmed when not
+/// [enabled].
+class SwitchTrack extends StatelessWidget {
+  const SwitchTrack({super.key, required this.checked, this.enabled = true});
+
+  static const size = Size(52, 32);
+
+  final bool checked;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final motion = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 150);
+    return Opacity(
+      opacity: enabled ? 1 : .5,
+      child: AnimatedContainer(
+        duration: motion,
+        width: size.width,
+        height: size.height,
+        decoration: BoxDecoration(
+          color: checked ? colors.accent : colors.inputHover,
+          borderRadius: KitRadius.pill,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: AnimatedAlign(
+          duration: motion,
+          alignment: checked
+              ? AlignmentDirectional.centerEnd
+              : AlignmentDirectional.centerStart,
+          child: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              // Off, the thumb is the foreground, as on the web. The page's
+              // background on the grey track would fall under 3:1 in light.
+              color: checked ? colors.accentForeground : colors.foreground,
+              shape: BoxShape.circle,
             ),
           ),
         ),

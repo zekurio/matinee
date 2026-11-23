@@ -905,7 +905,7 @@ class _GroupRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                Switch(checked: checked, onChanged: change),
+                RowSwitch(checked: checked, enabled: change != null),
               ],
             ),
           ),
