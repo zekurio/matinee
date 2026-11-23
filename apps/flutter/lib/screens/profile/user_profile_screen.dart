@@ -63,7 +63,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       ProfileHeader(
         name: loaded?.user.name ?? _username,
         username: _username,
-        avatarId: loaded?.user.avatarId,
+        avatarUrl: loaded?.user.avatarUrl,
         isAdmin: loaded?.user.role == UserRole.admin,
         joined: loaded?.user.createdAt,
       ),

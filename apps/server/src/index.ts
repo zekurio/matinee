@@ -2,6 +2,7 @@ import { serve } from "@hono/node-server"
 import { migrateDb } from "@matinee/db"
 
 import { createApp } from "./app"
+import { sweepAvatars } from "./auth/avatars"
 import { oidcState } from "./auth/oidc-settings"
 import { passkeySettings, warnWithoutSignIn } from "./auth/passkey-settings"
 import { initSetupToken, setupRequired } from "./auth/setup"
@@ -27,6 +28,7 @@ await initSetupToken()
 // Before setup, initSetupToken says what can create the admin.
 if (!(await setupRequired())) await warnWithoutSignIn()
 await loadJobSettings()
+await sweepAvatars()
 await startTasks(TASKS)
 if (env.MATINEE_WATCH_LIBRARIES) startWatching()
 // Detect ffmpeg and the GPUs now, so the first transcode doesn't wait.

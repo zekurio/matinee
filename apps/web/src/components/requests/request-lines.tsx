@@ -108,7 +108,7 @@ export function Askers({ item }: { item: AdminRequestItem }) {
             <UserAvatar
               key={asker.id}
               user={{
-                avatarId: asker.avatarId,
+                avatarUrl: asker.avatarUrl,
                 displayName: asker.name,
                 username: asker.username,
               }}

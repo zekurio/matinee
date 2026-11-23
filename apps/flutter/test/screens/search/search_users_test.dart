@@ -20,7 +20,7 @@ JsonMap _profileUserJson(String username, String displayName) => {
   'username': username,
   'displayName': displayName,
   'role': 'user',
-  'avatarId': null,
+  'avatarUrl': null,
   'createdAt': '2024-05-01T00:00:00.000Z',
 };
 

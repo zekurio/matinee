@@ -290,8 +290,9 @@ export function artworkSrcSet(id: string, largest: ArtworkSize): string {
 }
 
 /**
- * A user's picture, a 256px square. Ids change with the picture, so browsers
- * may cache it for good. Take the id from `User.avatarId`.
+ * A picture a user uploaded, a 256px square. Ids change with the picture,
+ * so browsers may cache it for good. `User.avatarUrl` holds this path
+ * already; only the server builds it.
  */
 export function avatarPath(id: string): string {
   return `/api/avatars/${encodeURIComponent(id)}`

@@ -150,7 +150,6 @@ final serverMessages = <ServerMessage>[
   ServerMessage('The sign-in request expired. Try again.', [], (l, values, count) => l.webServerPasskeysSignInExpired),
   ServerMessage("Couldn't read that image. Try another file.", [], (l, values, count) => l.webServerAvatarsUnreadable),
   ServerMessage("Your provider hasn't sent a picture. Sign in with it once to fetch it.", [], (l, values, count) => l.webServerAvatarsNoPicture),
-  ServerMessage("Couldn't load the picture from your provider. Try again later.", [], (l, values, count) => l.webServerAvatarsLoadFailed),
   ServerMessage('an upload', [], (l, values, count) => l.webServerAvatarsUploadLabel),
   ServerMessage('Add another passkey or link an account before removing your last way to sign in.', [], (l, values, count) => l.webServerAccountLastMethod),
   ServerMessage('Passkeys are off, so single sign-on is your only way to sign in. Keep it linked.', [], (l, values, count) => l.webServerAccountLastLink),

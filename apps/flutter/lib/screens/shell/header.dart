@@ -108,7 +108,7 @@ class HeaderAvatar extends ConsumerWidget {
         dimension: 48,
         child: Center(
           child: ExcludeSemantics(
-            child: Avatar(avatarId: user.avatarId, name: user.name, size: 32),
+            child: Avatar(url: user.avatarUrl, name: user.name, size: 32),
           ),
         ),
       ),

@@ -1,5 +1,5 @@
 import type { Artwork } from "@matinee/contracts"
-import { artworkPath, avatarPath } from "@matinee/contracts/paths"
+import { artworkPath } from "@matinee/contracts/paths"
 import type { ComponentChildren } from "preact"
 import { useEffect, useState } from "preact/hooks"
 
@@ -277,7 +277,8 @@ export function Row(props: {
 /** A person's picture, or the first letter of their name on a tone. */
 export function Avatar(props: {
   name: string
-  avatarId: string | null
+  /** `avatarUrl` from the contract. */
+  url: string | null
   size: number
 }) {
   const size = `${props.size}rem`
@@ -287,7 +288,7 @@ export function Avatar(props: {
       style={{ width: size, height: size, fontSize: `${props.size * 0.4}rem` }}
     >
       {initials(props.name).charAt(0)}
-      {props.avatarId && <Picture sources={[avatarPath(props.avatarId)]} />}
+      {props.url && <Picture sources={[props.url]} />}
     </span>
   )
 }

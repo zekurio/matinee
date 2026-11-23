@@ -228,8 +228,6 @@ export default defineMessages("server", {
   "server.avatars.unreadable": "Couldn't read that image. Try another file.",
   "server.avatars.noPicture":
     "Your provider hasn't sent a picture. Sign in with it once to fetch it.",
-  "server.avatars.loadFailed":
-    "Couldn't load the picture from your provider. Try again later.",
   // A failed job's label in the profile pictures queue.
   "server.avatars.uploadLabel": "an upload",
 

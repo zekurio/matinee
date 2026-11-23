@@ -309,7 +309,7 @@ class _TvShellState extends ConsumerState<TvShell> {
                     key: TvDrawerKeys.profile,
                     label: name,
                     leading: Avatar(
-                      avatarId: user?.avatarId,
+                      url: user?.avatarUrl,
                       name: name,
                       size: 32,
                     ),

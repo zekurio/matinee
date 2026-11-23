@@ -653,15 +653,15 @@ class _UserResult extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatarId = user.avatarId;
+    final avatarUrl = user.avatarUrl;
     return PersonCard(
       name: user.name,
       role: '@${user.username}',
-      photo: avatarId == null
+      photo: avatarUrl == null
           ? null
           : LayoutBuilder(
               builder: (context, constraints) => Avatar(
-                avatarId: avatarId,
+                url: avatarUrl,
                 name: user.name,
                 size: constraints.maxWidth,
               ),

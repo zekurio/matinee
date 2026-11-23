@@ -16,6 +16,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie"
 import { arg, db } from "../db"
 import { env } from "../env"
 import { findApiToken, isApiToken } from "./api-tokens"
+import { avatarUrl } from "./avatar-url"
 import { randomToken, sha256 } from "./tokens"
 import type { Tx } from "./users"
 
@@ -60,7 +61,7 @@ export function publicUser(row: UserRow, granted: readonly Permission[]): User {
     displayName: row.displayName,
     role: row.role,
     permissions: heldPermissions(granted),
-    avatarId: row.avatarId,
+    avatarUrl: avatarUrl(row),
     avatarSource: row.avatarSource,
     playback:
       PlaybackPreferences.safeParse(row.playbackPreferences).data ?? null,
@@ -76,7 +77,7 @@ export function profileUser(row: UserRow): ProfileUser {
     username: row.username,
     displayName: row.displayName,
     role: row.role,
-    avatarId: row.avatarId,
+    avatarUrl: avatarUrl(row),
     createdAt: row.createdAt,
   }
 }

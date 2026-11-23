@@ -10,6 +10,7 @@ import { t } from "@matinee/contracts/schema"
 import { playbackSession, user } from "@matinee/db"
 import { type SQL, sql } from "drizzle-orm"
 
+import { avatarUrl } from "../auth/avatar-url"
 import { db } from "../db"
 import { dated, knownZone, rangeFirstDay, sinceStart } from "./range"
 import { isPlay } from "./sql"
@@ -30,6 +31,7 @@ const Rows = t.array(
     display_name: t.string().nullable(),
     role: UserRole,
     avatar_id: t.string().nullable(),
+    avatar_url: t.string().nullable(),
     created_at: t.coerce.date(),
   }),
 )
@@ -64,7 +66,10 @@ export async function leaderboard(
             username: row.username,
             displayName: row.display_name,
             role: row.role,
-            avatarId: row.avatar_id,
+            avatarUrl: avatarUrl({
+              avatarId: row.avatar_id,
+              avatarUrl: row.avatar_url,
+            }),
             createdAt: row.created_at,
           },
         })),
@@ -161,7 +166,7 @@ function leaderboardQuery(
       select metric, position from ranked where user_id = ${viewerId}
     )
     select r.metric, r.value, r.rank, u.id, u.username, u.display_name,
-      u.role, u.avatar_id, u.created_at
+      u.role, u.avatar_id, u.avatar_url, u.created_at
     from ranked r
     join ${user} u on u.id = r.user_id
     left join viewer v on v.metric = r.metric

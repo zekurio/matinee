@@ -55,7 +55,7 @@ class ProfileHeader extends StatelessWidget {
     super.key,
     required this.name,
     required this.username,
-    this.avatarId,
+    this.avatarUrl,
     this.isAdmin = false,
     this.joined,
   });
@@ -63,7 +63,7 @@ class ProfileHeader extends StatelessWidget {
   /// Their display name, or the username when they have none.
   final String name;
   final String username;
-  final String? avatarId;
+  final String? avatarUrl;
   final bool isAdmin;
 
   /// When the account was made, once the profile says.
@@ -85,7 +85,7 @@ class ProfileHeader extends StatelessWidget {
       child: Row(
         spacing: 16,
         children: [
-          Avatar(avatarId: avatarId, name: name, size: 64),
+          Avatar(url: avatarUrl, name: name, size: 64),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

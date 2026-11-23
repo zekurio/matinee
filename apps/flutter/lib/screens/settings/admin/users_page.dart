@@ -406,7 +406,7 @@ class _UserRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 14,
               children: [
-                Avatar(avatarId: user.avatarId, name: user.name),
+                Avatar(url: user.avatarUrl, name: user.name),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

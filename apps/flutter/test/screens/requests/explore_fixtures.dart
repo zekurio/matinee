@@ -459,7 +459,7 @@ List<Override> exploreOverrides() => [
         'displayName': null,
         'role': 'user',
         'permissions': <String>[],
-        'avatarId': null,
+        'avatarUrl': null,
         'avatarSource': 'none',
         'playback': null,
         'library': {'showSpecials': true},

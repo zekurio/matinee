@@ -166,7 +166,7 @@ class _NowPlayingRow extends StatelessWidget {
       label: title,
       note:
           '$name · ${session.paused ? l.webStatsLivePaused : _methodName(session.method, l)}',
-      leading: Avatar(avatarId: session.user.avatarId, name: name, size: 28),
+      leading: Avatar(url: session.user.avatarUrl, name: name, size: 28),
     );
     final target = item?.title;
     return target == null

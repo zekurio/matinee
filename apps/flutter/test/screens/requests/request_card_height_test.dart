@@ -34,7 +34,7 @@ Map<String, Object?> _follower(String name, int hours) => {
   'id': name,
   'name': name,
   'username': name,
-  'avatarId': null,
+  'avatarUrl': null,
   'createdAt': DateTime.now()
       .subtract(Duration(hours: hours))
       .toUtc()

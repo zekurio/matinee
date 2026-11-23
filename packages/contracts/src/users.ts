@@ -16,6 +16,14 @@ export const AvatarSource = t.enum(AVATAR_SOURCES)
 export type AvatarSource = t.infer<typeof AvatarSource>
 
 /**
+ * Where to load a user's picture; null shows the initial instead. A path,
+ * as `avatarPath()` gives, is an upload this server keeps, and takes the
+ * session like the other routes in paths.ts. A full URL is the sign-in
+ * provider's own picture: load it as it is, without the session.
+ */
+export const AvatarUrl = t.string().nullable()
+
+/**
  * What a user's profile shows to everyone else on the server. The owner
  * always sees all of it. Both start off.
  */
@@ -38,8 +46,7 @@ export const User = t.object({
    * override leave. Ask `grantsPermissions`, since `all` covers the rest.
    */
   permissions: t.array(Permission),
-  /** Load it through `avatarPath()`. Null shows the initial instead. */
-  avatarId: t.string().nullable(),
+  avatarUrl: AvatarUrl,
   avatarSource: AvatarSource,
   /**
    * The audio and subtitle choices this account syncs to its devices; null
@@ -58,8 +65,7 @@ export const ProfileUser = t.object({
   username: t.string(),
   displayName: t.string().nullable(),
   role: UserRole,
-  /** Load it through `avatarPath()`. Null shows the initial instead. */
-  avatarId: t.string().nullable(),
+  avatarUrl: AvatarUrl,
   /** When the account was created. */
   createdAt: t.date(),
 })

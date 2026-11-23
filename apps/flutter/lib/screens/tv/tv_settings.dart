@@ -981,7 +981,7 @@ class _AccountRows extends ConsumerWidget {
           ].join(' · ').nullIfEmpty,
           quiet: true,
           minHeight: 76,
-          leading: Avatar(avatarId: user.avatarId, name: user.name, size: 44),
+          leading: Avatar(url: user.avatarUrl, name: user.name, size: 44),
           onPressed: () {},
         ),
       TvListItem(

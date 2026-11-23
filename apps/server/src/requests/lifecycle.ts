@@ -36,6 +36,7 @@ import {
 import type { Access } from "../access/policy"
 import { can, type Viewer } from "../access/viewer"
 import { inLibraries, visibleTitles } from "../access/visible"
+import { avatarUrl } from "../auth/avatar-url"
 import { details, routedDetails } from "../catalog"
 import { detailProvider } from "../catalog/cache"
 import { db } from "../db"
@@ -670,6 +671,7 @@ export async function queue(
         name: user.displayName,
         username: user.username,
         avatarId: user.avatarId,
+        avatarUrl: user.avatarUrl,
       })
       .from(requestFollower)
       .innerJoin(user, eq(user.id, requestFollower.userId))
@@ -723,7 +725,7 @@ export async function queue(
             id: f.follower.userId,
             name: f.name ?? f.username,
             username: f.username,
-            avatarId: f.avatarId,
+            avatarUrl: avatarUrl(f),
             createdAt: f.follower.createdAt,
           })),
         // Its own library first if nothing fills that any more, so the

@@ -638,7 +638,10 @@ at startup. Enter it again before the next sign-in.
 A new account takes its username and display name from
 `MATINEE_OIDC_USERNAME_CLAIM` and `MATINEE_OIDC_NAME_CLAIM`,
 `preferred_username` and `name` by default, and keeps them. A `picture`
-claim is its picture until the user sets one. Access groups linked to a
+claim is its picture until the user sets one. Matinee keeps the claim's
+URL and clients load the picture from the provider, so viewers need to
+reach that URL, and a change at the provider shows once their cache lets
+it. Uploads are the only pictures Matinee stores. Access groups linked to a
 provider group sync their members at every sign-in, from the claim
 `MATINEE_OIDC_GROUPS_CLAIM` names, dotted paths like `realm_access.roles`
 included.

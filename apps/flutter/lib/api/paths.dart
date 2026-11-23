@@ -19,8 +19,6 @@ final class Paths {
   Uri artwork(String id, {ArtworkSize size = ArtworkSize.small}) =>
       route(['api', 'artwork', id], query: {'size': size.name});
 
-  Uri avatar(String id) => route(['api', 'avatars', id]);
-
   Uri thumbnail(String itemId, {bool large = false}) => route(
     ['api', 'media', itemId, 'thumbnail'],
     query: {'size': large ? 'large' : 'small'},

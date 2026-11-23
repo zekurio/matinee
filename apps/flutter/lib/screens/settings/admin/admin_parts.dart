@@ -553,7 +553,7 @@ User userOf(AdminUser user) => User(
   displayName: user.displayName,
   role: user.role,
   permissions: user.permissions,
-  avatarId: user.avatarId,
+  avatarUrl: user.avatarUrl,
   avatarSource: user.avatarSource,
   playback: user.playback,
   library: user.library,

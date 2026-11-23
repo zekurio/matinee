@@ -121,9 +121,18 @@ export type Picture = {
 
 const NONE: Picture = { src: null, failed: false }
 
+/**
+ * A full URL, like the sign-in provider's picture an avatar may point at.
+ * It loads as it is and never gets the session.
+ */
+function elsewhere(path: string): boolean {
+  return /^https?:\/\//i.test(path)
+}
+
 /** The picture at `path` on the server, loaded with the session. */
 export function usePicture(path: string | null | undefined): Picture {
-  const direct = session.sameOrigin
+  const external = !!path && elsewhere(path)
+  const direct = session.sameOrigin || external
   const [state, setState] = useState<{ path: string; picture: Picture } | null>(
     null,
   )
@@ -140,6 +149,7 @@ export function usePicture(path: string | null | undefined): Picture {
     }
   }, [path, direct])
   if (!path) return NONE
+  if (external) return { src: path, failed: false }
   if (direct) return { src: session.url(path), failed: false }
   // Another path's picture is still in the state for a render.
   return state?.path === path ? state.picture : NONE

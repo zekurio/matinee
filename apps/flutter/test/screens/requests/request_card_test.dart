@@ -30,7 +30,7 @@ Map<String, Object?> _follower(String name) => {
   'id': name,
   'name': name,
   'username': name,
-  'avatarId': null,
+  'avatarUrl': null,
   'createdAt': '2026-11-01T00:00:00.000Z',
 };
 

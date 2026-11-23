@@ -126,7 +126,7 @@ export function CardMenu({
                 >
                   <UserAvatar
                     user={{
-                      avatarId: asker.avatarId,
+                      avatarUrl: asker.avatarUrl,
                       displayName: asker.name,
                       username: asker.username,
                     }}

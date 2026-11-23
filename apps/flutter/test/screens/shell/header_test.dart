@@ -25,7 +25,7 @@ const _user = User(
   displayName: null,
   role: 'user',
   permissions: [],
-  avatarId: null,
+  avatarUrl: null,
   avatarSource: 'none',
   playback: null,
   library: LibraryPreferences(showSpecials: false),

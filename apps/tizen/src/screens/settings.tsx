@@ -610,7 +610,7 @@ function AccountRows(props: { onServers: () => void }) {
         }
         quiet
         minHeight={76}
-        leading={<Avatar name={name} avatarId={user.avatarId} size={44} />}
+        leading={<Avatar name={name} url={user.avatarUrl} size={44} />}
         onPress={() => {}}
       />
       <ListItem
