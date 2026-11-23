@@ -41,40 +41,90 @@ void main() {
     expect(tester.getSize(find.byType(PressIndication)), const Size(76, 48));
   });
 
-  testWidgets('a bottom tab is at least 72 tall with its label', (
+  testWidgets('the bottom bar is 80 tall, and each tab fills it', (
     tester,
   ) async {
-    final state = TabBarState('home');
-    addTearDown(state.dispose);
-    await tester.pumpWidget(
-      _app(
-        SizedBox(
-          width: 400,
+    await _pumpTabs(tester, ['Home', 'Media', 'Downloads']);
+    expect(find.text('Home'), findsOneWidget);
+    expect(tester.getSize(find.byType(TabBar)).height, 80);
+    for (final label in ['Home', 'Media', 'Downloads']) {
+      expect(tester.getSize(_tab(label)).height, 80, reason: label);
+    }
+  });
+
+  testWidgets('it stays 80 tall when the labels don\'t fit', (tester) async {
+    await _pumpTabs(tester, [
+      'Home',
+      'Media',
+      'A name no tab on a phone has room for',
+    ]);
+    expect(find.byType(Text), findsNothing);
+    expect(tester.getSize(find.byType(TabBar)).height, 80);
+    expect(tester.getSize(_tab('Home')).height, 80);
+  });
+
+  testWidgets('it stands on the gesture bar\'s inset', (tester) async {
+    await _pumpTabs(tester, [
+      'Home',
+      'Media',
+      'Downloads',
+    ], padding: const EdgeInsets.only(bottom: 24));
+    expect(tester.getSize(find.byType(TabBar)).height, 104);
+    expect(tester.getSize(_tab('Home')).height, 80);
+  });
+
+  testWidgets('four tabs fit the narrowest phone at the largest text', (
+    tester,
+  ) async {
+    await _pumpTabs(
+      tester,
+      ['Home', 'Media', 'Downloads', 'Explore'],
+      width: 320,
+      textScale: 3,
+    );
+    expect(tester.takeException(), isNull);
+    expect(tester.getSize(find.byType(TabBar)).height, 80);
+    for (final label in ['Home', 'Media', 'Downloads', 'Explore']) {
+      final size = tester.getSize(_tab(label));
+      expect(size.width, greaterThanOrEqualTo(48), reason: label);
+      expect(size.height, 80, reason: label);
+    }
+  });
+}
+
+/// The tab that reads [label].
+Finder _tab(String label) => find.byWidgetPredicate(
+  (widget) => widget is PressIndication && widget.label == label,
+);
+
+/// A bottom bar of tabs named [labels], [width] across.
+Future<void> _pumpTabs(
+  WidgetTester tester,
+  List<String> labels, {
+  double width = 400,
+  double textScale = 1,
+  EdgeInsets padding = EdgeInsets.zero,
+}) async {
+  final state = TabBarState(labels.first);
+  addTearDown(state.dispose);
+  await tester.pumpWidget(
+    _app(
+      MediaQuery(
+        data: MediaQueryData(
+          padding: padding,
+          textScaler: TextScaler.linear(textScale),
+        ),
+        child: SizedBox(
+          width: width,
           child: TabBar(
-            items: const [
-              TabBarItem(id: 'home', icon: Lucide.house, label: 'Home'),
-              TabBarItem(id: 'media', icon: Lucide.libraryBig, label: 'Media'),
-              TabBarItem(
-                id: 'downloads',
-                icon: Lucide.download,
-                label: 'Downloads',
-              ),
+            items: [
+              for (final label in labels)
+                TabBarItem(id: label, icon: Lucide.house, label: label),
             ],
             state: state,
           ),
         ),
       ),
-    );
-    expect(find.text('Home'), findsOneWidget);
-    for (final label in ['Home', 'Media', 'Downloads']) {
-      final tab = find.byWidgetPredicate(
-        (widget) => widget is PressIndication && widget.label == label,
-      );
-      expect(
-        tester.getSize(tab).height,
-        greaterThanOrEqualTo(72),
-        reason: label,
-      );
-    }
-  });
+    ),
+  );
 }
