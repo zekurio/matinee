@@ -131,4 +131,15 @@ void main() {
       Unreachability.other,
     );
   });
+
+  test("URLSession's error codes read as dart:io's errors do", () {
+    expect(urlErrorUnreachability(-1009), Unreachability.noNetwork);
+    expect(urlErrorUnreachability(-1001), Unreachability.timeout);
+    expect(urlErrorUnreachability(-1003), Unreachability.notFound);
+    expect(urlErrorUnreachability(-1004), Unreachability.refused);
+    expect(urlErrorUnreachability(-1200), Unreachability.certificate);
+    expect(urlErrorUnreachability(-1202), Unreachability.certificate);
+    expect(urlErrorUnreachability(-1206), Unreachability.certificate);
+    expect(urlErrorUnreachability(-1005), Unreachability.other);
+  });
 }

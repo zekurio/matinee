@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:cronet_http/cronet_http.dart';
+import 'package:cupertino_http/cupertino_http.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
+import '../api/matinee_api.dart' show DevicePlatform;
 import 'address.dart';
 
 /// A request kept after its sign-in ended must not use a later sign-in's
@@ -35,9 +37,26 @@ const connectTimeout = Duration(seconds: 15);
 /// costs a phone on a mobile network a round trip or two per request.
 /// Cronet keeps what it learns of each server in [storage], like that it
 /// speaks HTTP/3, so the first request after a start can use it. A device
-/// without Play services gets `dart:io`'s.
-http.Client createInnerClient({Directory? storage}) {
-  if (Platform.isAndroid) {
+/// without Play services gets `dart:io`'s. An iPhone or iPad gets
+/// URLSession, Apple's, for the same reasons. The Apple TV build has no
+/// plugins' native code, so it keeps `dart:io`'s.
+http.Client createInnerClient({required String platform, Directory? storage}) {
+  if (platform == DevicePlatform.ios) {
+    return CupertinoClient.fromSessionConfiguration(
+      // Nothing kept between requests that `dart:io` wouldn't keep: no
+      // cookies, as the bearer token is the sign-in and a cookie would
+      // outlive it, and no cached answers, as the API's change.
+      URLSessionConfiguration.ephemeralSessionConfiguration()
+        ..httpShouldSetCookies = false
+        ..httpCookieAcceptPolicy =
+            NSHTTPCookieAcceptPolicy.NSHTTPCookieAcceptPolicyNever
+        ..cache = null
+        ..requestCachePolicy =
+            NSURLRequestCachePolicy.NSURLRequestReloadIgnoringLocalCacheData,
+    );
+  }
+  if (platform == DevicePlatform.android ||
+      platform == DevicePlatform.androidtv) {
     try {
       final folder = storage == null
           ? null

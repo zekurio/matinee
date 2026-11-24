@@ -105,7 +105,7 @@ PlayerSubtitles playerSubtitles(PlayerPrefs prefs) {
 final systemCaptionStyleProvider = FutureProvider<wire.CaptionStyleMessage?>((
   ref,
 ) {
-  final listener = AppLifecycleListener(onResume: ref.invalidateSelf);
+  final listener = AppLifecycleListener(onShow: ref.invalidateSelf);
   ref.onDispose(listener.dispose);
   return ref.watch(playerSystemProvider).captionStyle();
 });

@@ -843,7 +843,10 @@ final httpStorageProvider = Provider<Directory?>((ref) => null);
 
 /// The shared client under every client of the session.
 final innerHttpClientProvider = Provider<http.Client>((ref) {
-  final client = createInnerClient(storage: ref.watch(httpStorageProvider));
+  final client = createInnerClient(
+    platform: ref.watch(deviceProvider).platform,
+    storage: ref.watch(httpStorageProvider),
+  );
   ref.onDispose(client.close);
   return client;
 });

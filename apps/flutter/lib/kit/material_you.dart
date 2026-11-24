@@ -30,7 +30,7 @@ class MaterialYouColors {
 /// picked while it's away, and the last ones stay until the new ones come.
 final materialYouProvider = FutureProvider<MaterialYouColors?>((ref) async {
   if (defaultTargetPlatform != TargetPlatform.android) return null;
-  final resumed = AppLifecycleListener(onResume: ref.invalidateSelf);
+  final resumed = AppLifecycleListener(onShow: ref.invalidateSelf);
   ref.onDispose(resumed.dispose);
   try {
     final palette = await DynamicColorPlugin.getCorePalette();

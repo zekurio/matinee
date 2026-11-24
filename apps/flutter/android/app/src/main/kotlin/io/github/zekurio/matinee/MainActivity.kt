@@ -77,8 +77,16 @@ class MainActivity : FlutterActivity() {
     /** Started new, not brought back with the intent it had before. */
     private var fresh = true
 
-    // Flutter paints into a transparent Android TextureView above the video SurfaceView.
-    override fun getRenderMode(): RenderMode = RenderMode.texture
+    /**
+     * Flutter paints into a transparent SurfaceView on top of the window, so
+     * the video and its subtitles, in views beneath it, show where it's clear.
+     * Not a TextureView: that one's frames go through the window's own
+     * drawing on the main thread, where Dart runs too, and lost about one
+     * frame in nine on a 120 Hz screen. It also asked Android 15 and later
+     * for 60 Hz once no finger was on the screen. A SurfaceView's frames go
+     * to the screen as they come, every one at 120 Hz.
+     */
+    override fun getRenderMode(): RenderMode = RenderMode.surface
 
     override fun getTransparencyMode(): TransparencyMode = TransparencyMode.transparent
 

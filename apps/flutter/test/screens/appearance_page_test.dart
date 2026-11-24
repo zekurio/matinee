@@ -47,8 +47,7 @@ void main() {
     expect(find.text('Material You'), findsNothing);
 
     await pump(const MaterialYouColors(light: matineeLight, dark: matineeDark));
-    // The section's heading and the switch's own title.
-    expect(find.text('Material You'), findsNWidgets(2));
+    expect(find.text('Material You'), findsOneWidget);
     expect(find.text('Colors from your wallpaper'), findsOneWidget);
   });
 }

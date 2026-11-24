@@ -103,7 +103,7 @@ class _TvShellState extends ConsumerState<TvShell> {
     FocusManager.instance.addListener(_focusChanged);
     drawer.addListener(_drawerChanged);
     _lifecycle = AppLifecycleListener(
-      onResume: () => ref.invalidate(tvKindsProvider),
+      onShow: () => ref.invalidate(tvKindsProvider),
     );
   }
 

@@ -2,9 +2,11 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 /// Tells a screen the person came back to it, to fetch again what may have
-/// moved on meanwhile: the app came back to the front, or [path] is where the
-/// router is again after another page or tab covered it. The screen decides
-/// what's old enough to fetch.
+/// moved on meanwhile: the app came back to the front from out of sight, or
+/// [path] is where the router is again after another page or tab covered it.
+/// The screen decides what's old enough to fetch. The notification shade
+/// or a system dialog over the app isn't a return: the screen stayed in
+/// sight under it.
 class ReturnWatcher extends StatefulWidget {
   const ReturnWatcher({
     super.key,
@@ -29,7 +31,7 @@ class _ReturnWatcherState extends State<ReturnWatcher> {
   @override
   void initState() {
     super.initState();
-    _lifecycle = AppLifecycleListener(onResume: () => widget.onReturn());
+    _lifecycle = AppLifecycleListener(onShow: () => widget.onReturn());
   }
 
   @override
