@@ -39,8 +39,9 @@ export function Diagnostics({ item }: { item: AdminRequestItem }) {
 
 /**
  * What went wrong with a request in the queue, for its badge to open:
- * the error on one that needs attention, the reason and note on one
- * declined or given up on. Null when nothing did.
+ * the error on one that needs attention, and on one declined or given up
+ * on, which it was, with the reason the admin typed. Null when nothing
+ * did.
  */
 export function queueDetail(item: AdminRequestItem): ReactNode {
   if (item.state === "needsAttention") {
@@ -55,8 +56,8 @@ export function queueDetail(item: AdminRequestItem): ReactNode {
     )
   }
   if (item.state !== "declined") return null
-  const why = item.reason
-    ? tr(`requests.reason.${item.reason}`)
+  const why = item.gaveUp
+    ? tr("requests.done.gaveUpUndated")
     : tr("requests.state.declined")
   return <Reason why={why} note={item.note} />
 }
@@ -69,7 +70,7 @@ export function ownDetail(item: AskedItem): ReactNode {
   return <Reason why={declineLine(reason)} note={reason.note} />
 }
 
-/** The reason a request was declined, and the admin's note under it. */
+/** That a request was declined, and the reason the admin typed under it. */
 function Reason({ why, note }: { why: string; note: string | null }) {
   return (
     <>

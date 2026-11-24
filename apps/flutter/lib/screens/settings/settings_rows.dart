@@ -5,28 +5,77 @@ import 'package:flutter/widgets.dart';
 import '../../kit/kit.dart';
 
 /// The rows Settings is built from, as the web's setting controls: sections of
-/// panels, each a card of rows with lines between them. The profile's account
-/// rows use them too.
+/// panels, each a card of rows with lines between them.
+///
+/// Where an action sits: one for a whole page that's a single list, as
+/// adding a library, is a button in the page's bar; one for a section, as
+/// creating a token, is [SettingsSection.action], at the end of its
+/// heading; one for a row is on the row or in its menu. A page doesn't
+/// explain itself in paragraphs; a [Note] says what an admin must know
+/// first, or why something's missing.
 
 /// How wide Settings' pages get, at the start of a wider screen.
 const settingsWidth = 720.0;
 
-/// A section's heading over what's under it.
+/// A section's heading over what's under it, with the section's [action],
+/// a small button, at the heading's end.
 class SettingsSection extends StatelessWidget {
-  const SettingsSection({super.key, required this.title, required this.child});
+  const SettingsSection({
+    super.key,
+    required this.title,
+    required this.child,
+    this.action,
+  });
 
   final String title;
   final Widget child;
+  final Widget? action;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    mainAxisSize: MainAxisSize.min,
-    spacing: 14,
-    children: [
-      SectionTitle(title: title),
-      child,
-    ],
+  Widget build(BuildContext context) {
+    final action = this.action;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      spacing: 14,
+      children: [
+        if (action == null)
+          SectionTitle(title: title)
+        else
+          Row(
+            spacing: 12,
+            children: [
+              Expanded(child: SectionTitle(title: title)),
+              action,
+            ],
+          ),
+        child,
+      ],
+    );
+  }
+}
+
+/// A section's action, as [SettingsSection.action] takes it: a small
+/// outlined button with its [icon] and [label].
+class SectionAction extends StatelessWidget {
+  const SectionAction({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => MatineeButton(
+    look: ButtonLook.outline,
+    size: ButtonSize.sm,
+    leading: icon,
+    onPressed: onPressed,
+    child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
   );
 }
 
@@ -463,8 +512,8 @@ class PickerRow<T> extends StatelessWidget {
   }
 }
 
-/// Small muted lines under a panel, for what a page has to say about
-/// itself, or in the danger color for what an admin must know first.
+/// Small muted lines under a panel, for why something's missing, or in
+/// the danger color for what an admin must know first.
 class Note extends StatelessWidget {
   const Note(this.text, {super.key, this.danger = false});
 

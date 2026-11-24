@@ -82,11 +82,12 @@ void main() {
     addTearDown(client.close);
 
     await _pump(tester, client, [Permission.sessionDelete]);
-    await tester.tap(find.text(l.accountSessionsSignOutOthers));
+    // The section's action, then the dialog's answer, which says the same.
+    await tester.tap(find.text(l.accountSessionsSignOutOthersConfirm));
     await tester.pumpAndSettle();
     expect(find.text(l.accountSessionsSignOutOthersTitle), findsOneWidget);
 
-    await tester.tap(find.text(l.accountSessionsSignOutOthersConfirm));
+    await tester.tap(find.text(l.accountSessionsSignOutOthersConfirm).last);
     await tester.pumpAndSettle();
 
     expect(revoked, 1);

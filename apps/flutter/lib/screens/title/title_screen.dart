@@ -136,6 +136,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> with PendingMarks {
               ? () => showActions(context, more)
               : null,
           trailers: title.trailers,
+          started: title.seasons.any((season) => season.watchedCount > 0),
         ),
         if (show) ...[
           if (next != null && showsNextUp(title)) NextUpEpisode(item: next),

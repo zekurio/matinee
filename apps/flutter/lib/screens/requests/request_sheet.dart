@@ -271,10 +271,10 @@ class _SeasonRow extends StatelessWidget {
   }
 }
 
-/// Decline, with why: the reason, picked as a sheet's choices are, and a
-/// note for whoever requested it. With [giveUp], the same sheet gives up on
-/// an accepted request, its reason fixed as "Can't find a copy". The answer
-/// goes through the hub, held for Undo.
+/// Decline, with why: one field for a reason to whoever requested it,
+/// which may stay empty. With [giveUp], the same sheet gives up on an
+/// accepted request, for want of a copy. The answer goes through the hub,
+/// held for Undo.
 Future<void> showDeclineSheet(
   BuildContext context,
   AdminRequestItem item, {
@@ -299,7 +299,6 @@ class _DeclineSheet extends ConsumerStatefulWidget {
 }
 
 class _DeclineSheetState extends ConsumerState<_DeclineSheet> {
-  String? _reason;
   final _note = TextEditingController();
 
   @override
@@ -315,10 +314,6 @@ class _DeclineSheetState extends ConsumerState<_DeclineSheet> {
     final item = widget.item;
     final giveUp = widget.giveUp;
     final askedBy = [for (final each in item.followers) each.name];
-    final label = KitText.sm.style(
-      color: colors.mutedForeground,
-      weight: FontWeight.w500,
-    );
     final keeps = item.connection;
     return Sheet(
       title: giveUp
@@ -327,7 +322,7 @@ class _DeclineSheetState extends ConsumerState<_DeclineSheet> {
       footer: MatineeButton(
         size: ButtonSize.lg,
         look: ButtonLook.destructive,
-        onPressed: giveUp || _reason != null ? () => _submit(l) : null,
+        onPressed: () => _submit(l),
         child: Text(
           giveUp ? l.webRequestsGiveUpSubmit : l.webRequestsDeclineSubmit,
         ),
@@ -336,26 +331,6 @@ class _DeclineSheetState extends ConsumerState<_DeclineSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 12,
         children: [
-          Text(l.webRequestsDeclineReason, style: label),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Only one reason fits giving up, so it's said, not offered.
-              if (giveUp)
-                RadioRow(
-                  label: adminReasonText(DeclineReason.notFound, l),
-                  selected: true,
-                  onPressed: null,
-                )
-              else
-                for (final code in WaitingDeclineReason.all)
-                  RadioRow(
-                    label: adminReasonText(code, l),
-                    selected: _reason == code,
-                    onPressed: () => setState(() => _reason = code),
-                  ),
-            ],
-          ),
           MatineeTextField(
             controller: _note,
             label: askedBy.isEmpty
@@ -379,14 +354,7 @@ class _DeclineSheetState extends ConsumerState<_DeclineSheet> {
   void _submit(AppLocalizations l) {
     final text = _note.text.trim();
     final note = text.isEmpty ? null : text;
-    final QueueAnswer answer;
-    if (widget.giveUp) {
-      answer = GiveUpAnswer(note);
-    } else {
-      final reason = _reason;
-      if (reason == null) return;
-      answer = DeclineAnswer(reason, note);
-    }
+    final answer = widget.giveUp ? GiveUpAnswer(note) : DeclineAnswer(note);
     final hub = ref.read(requestsProvider.notifier);
     Navigator.of(context).pop();
     unawaited(hub.answer(l, widget.item, answer));

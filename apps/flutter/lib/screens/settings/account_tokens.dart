@@ -110,24 +110,17 @@ class AccountApiTokensSectionState
     final mayRevoke = can(widget.user, Permission.apiTokenDelete);
     return SettingsSection(
       title: l.accountApiTokensTitle,
+      action: mayCreate
+          ? SectionAction(
+              icon: Lucide.plus,
+              label: l.accountApiTokensCreate,
+              onPressed: _create,
+            )
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 12,
         children: [
-          Note(l.accountApiTokensDescription),
-          if (mayCreate)
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: MatineeButton(
-                look: ButtonLook.outline,
-                size: ButtonSize.sm,
-                leading: Lucide.plus,
-                onPressed: _create,
-                child: Text(l.accountApiTokensCreate),
-              ),
-            )
-          else
-            Note(l.accountApiTokensNotAllowed),
           if (list != null)
             if (list.isEmpty)
               Note(l.accountApiTokensEmpty)

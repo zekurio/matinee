@@ -98,15 +98,14 @@ class SettingsScaffold extends StatelessWidget {
 }
 
 /// Settings' first page: offline mode on top, the categories, then the server
-/// this app is on and its version. Switching server or account and signing out
-/// are on the profile, with the account.
+/// this app is on, which opens the way to another server or account, and
+/// signing out, in red, as it ends the session.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
-    final colors = MatineeTheme.of(context);
     final auth = ref.watch(authStateProvider);
     final device = ref.watch(deviceProvider);
     final server = activeServer(ref.watch(savedServersProvider));
@@ -154,36 +153,17 @@ class SettingsScreen extends ConsumerWidget {
           title: l.settingsServer,
           child: Panel(
             rows: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  spacing: 14,
-                  children: [
-                    KitIcon(Lucide.server, color: colors.mutedForeground),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            server == null ? '' : serverTitle(server),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: KitText.base.style(color: colors.foreground),
-                          ),
-                          Text(
-                            l.settingsVersion(
-                              device.systemName,
-                              device.appVersion,
-                            ),
-                            style: KitText.xs.style(
-                              color: colors.mutedForeground,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              LinkRow(
+                icon: Lucide.server,
+                title: l.profileSwitch,
+                description: server == null ? null : serverTitle(server),
+                onPressed: () => showServerSwitcher(context),
+              ),
+              LinkRow(
+                icon: Lucide.logOut,
+                title: l.shellSignOut,
+                destructive: true,
+                onPressed: () => ref.read(sessionProvider.notifier).signOut(),
               ),
             ],
           ),

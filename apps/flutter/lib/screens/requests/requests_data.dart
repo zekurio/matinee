@@ -347,13 +347,6 @@ final myFilteredRequestsProvider = serverStreamFamily(
   ),
 );
 
-/// The profile's "My requests": the latest of everything the viewer asked for.
-/// Fetched again when an ask, a cancel, or an answer changes it.
-final profileAskedProvider = FutureProvider.autoDispose<RequestPage>((ref) {
-  ref.watch(requestsVersionProvider);
-  return serverApi(ref).requests.mine(limit: 24);
-}, retry: (_, _) => null);
-
 /// The queue under a filter, live as the hub's is, for the overview. With
 /// no filter on, the overview reads the hub's.
 final filteredQueueProvider = serverStreamFamily(

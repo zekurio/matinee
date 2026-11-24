@@ -57,11 +57,7 @@ extension SeasonAsTitle on SeasonAvailability {
     releaseDate: releaseDate,
     stillLooking: stillLooking,
     reason: switch (reason) {
-      final reason? => AvailabilityReason(
-        kind: reason.kind,
-        code: reason.code,
-        note: reason.note,
-      ),
+      final reason? => AvailabilityReason(kind: reason.kind, note: reason.note),
       null => null,
     },
     askedBySelf: askedBySelf,
@@ -247,19 +243,9 @@ PosterAction? posterAction(Availability availability) {
       : null;
 }
 
-/// Why a declined title isn't coming.
-enum ReasonWord { alreadyHere, notForServer, notFound, declined }
-
-ReasonWord declineOf(AvailabilityReason reason) {
-  if (reason.kind == 'notFound' || reason.code == DeclineReason.notFound) {
-    return ReasonWord.notFound;
-  }
-  return switch (reason.code) {
-    DeclineReason.alreadyHere => ReasonWord.alreadyHere,
-    DeclineReason.notForServer => ReasonWord.notForServer,
-    _ => ReasonWord.declined,
-  };
-}
+/// Whether a declined title was given up on, for want of a copy, rather
+/// than declined.
+bool gaveUpOn(AvailabilityReason reason) => reason.kind == 'notFound';
 
 /// Why the poster's Request can't be pressed, as the web's
 /// `requestDimmed`: the poster keeps it, dimmed, and a tap says this.
@@ -305,10 +291,10 @@ Blocked? requestBlocked(Availability availability) =>
 bool hasPosterButton(Availability availability) =>
     posterAction(availability) != null || requestBlocked(availability) != null;
 
-/// An admin's answer to the viewer's declined request: the reason he
-/// picked (the contract's code) and his note. Null when nothing of the
-/// viewer's was declined.
-typedef Answer = ({String? code, String? note});
+/// An admin's answer to the viewer's declined request: whether it was
+/// given up on for want of a copy, and the reason the admin typed, if
+/// any. Null when nothing of the viewer's was declined.
+typedef Answer = ({bool gaveUp, String? note});
 
 Answer? declineAnswer(Availability availability) {
   final reason = availability.reason;
@@ -317,9 +303,7 @@ Answer? declineAnswer(Availability availability) {
   }
   final note = reason.note?.trim();
   return (
-    code:
-        reason.code ??
-        (reason.kind == 'notFound' ? DeclineReason.notFound : null),
+    gaveUp: gaveUpOn(reason),
     note: note == null || note.isEmpty ? null : note,
   );
 }
@@ -544,14 +528,10 @@ String nextSeasonLine(
       : l.requestsSeasonNotHere(label);
 }
 
-/// A decline's reason, "Not for this server.", as the web's `declineLine`.
+/// A decline, "Declined." or "No copy found.", as the web's
+/// `declineLine`.
 String declineText(AvailabilityReason reason, AppLocalizations l) =>
-    switch (declineOf(reason)) {
-      ReasonWord.notFound => l.webAskReasonNotFound,
-      ReasonWord.alreadyHere => l.webAskReasonAlreadyHere,
-      ReasonWord.notForServer => l.webAskReasonNotForServer,
-      ReasonWord.declined => l.webAskReasonDeclined,
-    };
+    gaveUpOn(reason) ? l.webAskReasonNotFound : l.webAskReasonDeclined;
 
 /// Why a dimmed Request can't be pressed. A declined title says only that
 /// it's closed, and to an admin where to open it again.
@@ -565,23 +545,9 @@ String blockedText(Blocked blocked, AppLocalizations l, {bool admin = false}) =>
         admin ? l.webAskDisabledDeclinedAdmin : l.webAskDisabledDeclined,
     };
 
-/// A decline reason's words, as the admin picks them: "Not for this
-/// server".
-String adminReasonText(String code, AppLocalizations l) => switch (code) {
-  DeclineReason.alreadyHere => l.webRequestsReasonAlreadyHere,
-  DeclineReason.notForServer => l.webRequestsReasonNotForServer,
-  _ => l.webRequestsReasonNotFound,
-};
-
-/// "Declined: Not for this server.", or "No copy of this could be found."
-/// for one given up on.
-String answerText(Answer answer, AppLocalizations l) {
-  final code = answer.code;
-  if (code == DeclineReason.notFound) return l.webAskDeclinedNotFound;
-  return code == null
-      ? l.webAskReasonDeclined
-      : l.webAskDeclinedWhy(adminReasonText(code, l));
-}
+/// "Declined.", or "No copy of this could be found." for one given up on.
+String answerText(Answer answer, AppLocalizations l) =>
+    answer.gaveUp ? l.webAskDeclinedNotFound : l.webAskReasonDeclined;
 
 /// How much of an admin's note a tap shows; the requests page has all of
 /// it.

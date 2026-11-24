@@ -22,7 +22,6 @@ export const adminRequests = {
   decline: authed.admin.requests.decline.handler(({ context, input }) =>
     lifecycle.decline(context.user, input.id, {
       operation: "decline",
-      reason: input.reason,
       note: input.note,
     }),
   ),

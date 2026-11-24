@@ -1112,7 +1112,6 @@ class _AboutRowsState extends ConsumerState<_AboutRows> {
       TvListHeading(l.logsTitle),
       TvListItem(
         title: l.logsShow,
-        subtitle: l.logsNote,
         quiet: true,
         focusNode: _showLog,
         onPressed: () => _withLog(

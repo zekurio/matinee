@@ -11,20 +11,16 @@ import '../../media/actions.dart' show mediaChangesProvider;
 import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
-import '../requests/asked_rail.dart';
-import '../requests/requests_data.dart' show profileAskedProvider;
-import '../settings/settings_rows.dart';
 import '../shell/offline_note.dart';
-import '../sign_in/server_switcher.dart';
 import '../statistics/statistics_screen.dart' show statisticsPermissions;
 import 'profile_data.dart';
 import 'profile_sections.dart';
 
 /// The profile page, which each tab header's avatar opens over the tabs: who's
-/// signed in, their favorites, their statistics, and what they watched last,
-/// then the account: switching server or account, and signing out, here with
-/// the account they act on. Offline it's the person and the account rows, since
-/// the rest is the server's.
+/// signed in, their favorites, their statistics, and what they watched last.
+/// Their requests are on Explore, and switching server or account and
+/// signing out are in Settings. Offline it's the person alone, since the
+/// rest is the server's.
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -43,11 +39,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  /// Back on the tab, favorites, requests, and statistics may have moved on.
+  /// Back on the tab, favorites and statistics may have moved on.
   void _returned(String username) {
     ref
       ..invalidate(profileProvider(username))
-      ..invalidate(profileAskedProvider)
       ..invalidate(statsProvider);
   }
 
@@ -75,7 +70,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: OfflineNote(message: l.profileOffline),
             ),
-            const _Account(),
           ]
         : _online(context, user);
     return ReturnWatcher(
@@ -128,13 +122,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             height: 120,
             child: LoadingState(label: l.loadingInProgress),
           ),
-        const _Account(),
       ];
     }
     final recent = loaded.recent ?? const <WatchedEntry>[];
-    // What they asked for is theirs alone, and this is only their own
-    // profile. A row that's loading, empty, or failed is left out.
-    final asked = ref.watch(profileAskedProvider).value?.items ?? const [];
     return [
       header,
       ProfileFavoritesRail(
@@ -143,49 +133,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         emptyTitle: l.favoritesEmpty,
         emptyHint: l.favoritesEmptyHint,
       ),
-      if (asked.isNotEmpty) AskedRail(items: asked, fresh: false),
       ProfileStatistics(username: user.username, name: user.name, self: true),
       if (recent.isNotEmpty)
         ProfileRecentRail(
           entries: recent,
           onSeeAll: () => context.push(Routes.recent),
         ),
-      const _Account(),
     ];
-  }
-}
-
-/// The server this account is on, with the way to another server or
-/// account through the server list, and signing out, in red, as it ends
-/// the session.
-class _Account extends ConsumerWidget {
-  const _Account();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = AppLocalizations.of(context);
-    final server = activeServer(ref.watch(savedServersProvider));
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
-      child: SettingsSection(
-        title: l.settingsPageAccount,
-        child: Panel(
-          rows: [
-            LinkRow(
-              icon: Lucide.server,
-              title: l.profileSwitch,
-              description: server == null ? null : serverTitle(server),
-              onPressed: () => showServerSwitcher(context),
-            ),
-            LinkRow(
-              icon: Lucide.logOut,
-              title: l.shellSignOut,
-              destructive: true,
-              onPressed: () => ref.read(sessionProvider.notifier).signOut(),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -163,15 +163,15 @@ final class AddAnswer extends QueueAnswer {
   const AddAnswer();
 }
 
-/// Decline a waiting request, with the reason's code and a note.
+/// Decline a waiting request, with the reason the admin typed, if any.
 final class DeclineAnswer extends QueueAnswer {
-  const DeclineAnswer(this.reason, this.note);
+  const DeclineAnswer(this.note);
 
-  final String reason;
   final String? note;
 }
 
-/// Give up on an accepted request: declined with "Can't find a copy".
+/// Give up on an accepted request, for want of a copy, with the reason
+/// the admin typed, if any.
 final class GiveUpAnswer extends QueueAnswer {
   const GiveUpAnswer(this.note);
 
@@ -430,9 +430,8 @@ final class RequestsHub extends Notifier<RequestsState> {
           id: item.id,
           libraryId: movedTo,
         ),
-        DeclineAnswer(:final reason, :final note) => api.admin.requests.decline(
+        DeclineAnswer(:final note) => api.admin.requests.decline(
           id: item.id,
-          reason: reason,
           note: note,
         ),
         GiveUpAnswer(:final note) => api.admin.requests.giveUp(

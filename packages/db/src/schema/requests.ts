@@ -119,7 +119,13 @@ export const request = pgTable(
       .$type<"asked" | "approved" | "declined">()
       .notNull()
       .default("asked"),
-    declineReason: text().$type<"alreadyHere" | "notForServer" | "notFound">(),
+    /**
+     * "notFound" when an admin gave up on it for want of a copy, so a
+     * file that turns up anyway still counts as arrived; null for any
+     * other decline.
+     */
+    declineReason: text().$type<"notFound">(),
+    /** The reason the admin typed, if any. */
     declineNote: text(),
     declinedBy: uuid().references(() => user.id, { onDelete: "set null" }),
     declinedAt: instant(),
