@@ -19,8 +19,12 @@ export const ADVANCE_MS = 8000
 /** How long the art and the words take to cross over to the next title. */
 export const FADE_MS = 450
 
-/** The card's share of a landscape window's height. */
-const LANDSCAPE_SHARE = 0.58
+/**
+ * The card's share of a landscape window's height: half, under the Flutter
+ * tablet's 58%, so a desktop monitor shows the first row whole and the
+ * start of the next.
+ */
+const LANDSCAPE_SHARE = 0.5
 
 /** The least of a landscape window's height it takes, for the rule below. */
 const LANDSCAPE_FLOOR = 0.45
@@ -49,14 +53,11 @@ export const OVERVIEW_LEADING = 24
 export const WORDS_BOTTOM = SHOWCASE_PADDING + BUTTON_HEIGHT + BUTTON_GAP
 
 /** The rail's width and the bar's height (`app-shell.tsx`). */
-const RAIL = 80
+const RAIL = 64
 const BAR = 64
 
 /** The space over the card, under the bar, as the Flutter header leaves. */
 export const SHOWCASE_TOP = 8
-
-/** The dots under the card: their gap and their 32 tall row. */
-const DOTS = 12 + 32
 
 /** Between Home's sections from `sm` up (`home.tsx`), and a heading's row. */
 const SECTION_GAP = 32
@@ -82,7 +83,7 @@ export function cardWidth(window: Window): number {
 
 /**
  * The card's height before its words have a say. In a landscape window,
- * the Flutter tablet's 58% of it, but no more than leaves the first row
+ * half of it, but no more than leaves the first row
  * whole above the fold on a desktop monitor, and no less than 45%, where a
  * short window lets the row run past the fold instead. In portrait, 16:9
  * of its width, up to 52% of the window.
@@ -95,7 +96,6 @@ export function baseHeight(window: Window): number {
       window.height -
       BAR -
       SHOWCASE_TOP -
-      DOTS -
       SECTION_GAP -
       HEADING -
       row -

@@ -130,6 +130,12 @@ function useDestinations(): () => Destination[] {
  * from under the open one's icon; a pointer over another shows it faintly.
  * A press shrinks the icon a little. Keyboard focus rings the pill, not the
  * whole target.
+ *
+ * The rail shows the icon alone, on a rounded square where the tabs have
+ * the wide pill, which is a shape for an icon with a word under it. A word under each icon had to fit 80
+ * pixels in every language, and "Einstellungen" doesn't. Its label comes
+ * out beside the icon for a pointer or keyboard focus, drawn as the kit's
+ * tooltip is, and stays the link's name for a screen reader.
  */
 const destinationLink =
   "group/tab flex min-w-0 flex-col items-center gap-1 outline-none select-none"
@@ -142,27 +148,49 @@ const destinationLink =
 const destinationColor =
   "text-muted-foreground transition-colors duration-200 group-hover/tab:text-foreground group-data-[status=active]/tab:text-foreground motion-reduce:transition-none"
 
-function DestinationFace(props: { icon: IconNode; label: string }) {
+/** The rail's label: out of the rail, to the right of its icon. */
+const railLabel =
+  "bg-foreground text-background pointer-events-none absolute top-1/2 left-full z-50 ml-1.5 -translate-x-1 -translate-y-1/2 rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap opacity-0 transition-[opacity,translate] duration-150 group-hover/tab:translate-x-0 group-hover/tab:opacity-100 group-focus-visible/tab:translate-x-0 group-focus-visible/tab:opacity-100 motion-reduce:transition-none"
+
+function DestinationFace(props: {
+  icon: IconNode
+  label: string
+  rail?: boolean
+}) {
   return (
     <>
-      <span class="relative grid h-8 w-16 place-items-center transition-transform duration-200 group-active/tab:scale-[0.92] motion-reduce:transition-none">
+      <span
+        class={[
+          "relative grid place-items-center transition-transform duration-200 group-active/tab:scale-[0.92] motion-reduce:transition-none",
+          props.rail ? "size-10" : "h-8 w-16",
+        ]}
+      >
         <span
           aria-hidden="true"
           // Grows by scale, not width: a width would lay the rail out
           // again on every frame of the change.
-          class="bg-foreground/10 absolute inset-0 scale-x-50 rounded-full opacity-0 transition-[scale,opacity] duration-200 ease-out group-hover/tab:scale-x-[0.875] group-hover/tab:opacity-40 group-data-[status=active]/tab:scale-x-100 group-data-[status=active]/tab:opacity-100 motion-reduce:transition-none"
+          class={[
+            "bg-foreground/10 absolute inset-0 opacity-0 transition-[scale,opacity] duration-200 ease-out group-hover/tab:opacity-40 group-data-[status=active]/tab:opacity-100 motion-reduce:transition-none",
+            props.rail
+              ? "scale-75 rounded-xl group-hover/tab:scale-100 group-data-[status=active]/tab:scale-100"
+              : "scale-x-50 rounded-full group-hover/tab:scale-x-[0.875] group-data-[status=active]/tab:scale-x-100",
+          ]}
         />
         <span
           aria-hidden="true"
-          class="ring-ring absolute inset-0 hidden rounded-full ring-2 group-focus-visible/tab:block"
+          class={[
+            "ring-ring absolute inset-0 hidden ring-2 group-focus-visible/tab:block",
+            props.rail ? "rounded-xl" : "rounded-full",
+          ]}
         />
         <Icon icon={props.icon} class={["relative size-6", destinationColor]} />
       </span>
       <span
-        class={[
-          "max-w-full truncate px-1 text-xs font-medium",
-          destinationColor,
-        ]}
+        class={
+          props.rail
+            ? railLabel
+            : ["max-w-full truncate px-1 text-xs font-medium", destinationColor]
+        }
       >
         {props.label}
       </span>
@@ -170,20 +198,26 @@ function DestinationFace(props: { icon: IconNode; label: string }) {
   )
 }
 
-function DestinationLink(props: Destination & { class?: string }) {
+function DestinationLink(
+  props: Destination & { class?: string; rail?: boolean },
+) {
   return (
     <Link
       to={props.to}
       activeOptions={{ exact: props.exact ?? false, includeSearch: false }}
       class={cn(destinationLink, props.class)}
     >
-      <DestinationFace icon={props.icon} label={props.label} />
+      <DestinationFace
+        icon={props.icon}
+        label={props.label}
+        rail={props.rail}
+      />
     </Link>
   )
 }
 
 /** The rail's width, which the bar and the page start after. */
-const RAIL = "w-20"
+const RAIL = "w-16"
 
 /**
  * The rail: the destinations under the logo's cell, and Settings at the
@@ -204,7 +238,11 @@ function NavRail() {
         <For each={destinations()} keyed={(destination) => destination.to}>
           {(destination) => (
             <li>
-              <DestinationLink {...destination()} class="w-full py-2" />
+              <DestinationLink
+                {...destination()}
+                rail
+                class="relative w-full py-1.5"
+              />
             </li>
           )}
         </For>
@@ -212,9 +250,9 @@ function NavRail() {
       <Link
         to="/settings/$"
         params={{ _splat: "" }}
-        class={cn(destinationLink, "mt-auto w-full py-2")}
+        class={cn(destinationLink, "relative mt-auto w-full py-1.5")}
       >
-        <DestinationFace icon={Settings} label={tr("shell.settings")} />
+        <DestinationFace icon={Settings} label={tr("shell.settings")} rail />
       </Link>
     </nav>
   )
@@ -602,7 +640,7 @@ export function AppShell(props: ParentProps<{ user: User }>) {
       <main
         id="main"
         tabindex="-1"
-        class="pt-[calc(env(safe-area-inset-top)+4rem)] pb-[calc(env(safe-area-inset-bottom)+6.5rem)] outline-none sm:pt-16 sm:pb-12 sm:pl-20"
+        class="pt-[calc(env(safe-area-inset-top)+4rem)] pb-[calc(env(safe-area-inset-bottom)+6.5rem)] outline-none sm:pt-16 sm:pb-12 sm:pl-16"
       >
         {props.children}
       </main>

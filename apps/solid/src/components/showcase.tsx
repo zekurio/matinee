@@ -334,6 +334,52 @@ export function HomeShowcase(props: {
         <Show when={current()}>
           {(slide) => <SlideButtons slide={slide()} />}
         </Show>
+        <Show when={count() > 1}>
+          {/*
+           * The pager, low on the trailing side on the buttons' line, over
+           * the bottom shade, which is near black there on any art.
+           */}
+          <div
+            class="absolute z-30 flex h-10 items-center"
+            style={{
+              right: `${SHOWCASE_PADDING - 8}px`,
+              bottom: `${SHOWCASE_PADDING}px`,
+            }}
+          >
+            <PagerButton
+              label={tr("media.hero.previous")}
+              icon={ChevronLeft}
+              onClick={() => show(index() - 1)}
+            />
+            <nav aria-label={tr("media.hero.slides")} class="flex items-center">
+              <For each={props.slides} keyed={(slide) => slide.title.id}>
+                {(_slide, i) => (
+                  <button
+                    type="button"
+                    aria-label={tr("media.hero.showSlide", { index: i() + 1 })}
+                    aria-current={i() === index() ? "true" : undefined}
+                    onClick={() => show(i())}
+                    class="group/dot grid h-8 place-items-center px-1.5 outline-none"
+                  >
+                    <span
+                      class={[
+                        "group-focus-visible/dot:ring-ring block h-1.5 rounded-full transition-[width,background-color] duration-150 group-focus-visible/dot:ring-2 group-focus-visible/dot:ring-offset-2 group-focus-visible/dot:ring-offset-black motion-reduce:transition-none",
+                        i() === index()
+                          ? "bg-foreground/90 w-5"
+                          : "bg-foreground/35 group-hover/dot:bg-foreground/70 w-1.5",
+                      ]}
+                    />
+                  </button>
+                )}
+              </For>
+            </nav>
+            <PagerButton
+              label={tr("media.hero.next")}
+              icon={ChevronRight}
+              onClick={() => show(index() + 1)}
+            />
+          </div>
+        </Show>
         {/* The card's hairline, over the art. */}
         <div
           aria-hidden="true"
@@ -343,42 +389,6 @@ export function HomeShowcase(props: {
           )}
         />
       </div>
-      <Show when={count() > 1}>
-        <div class="mt-3 flex items-center justify-center gap-1">
-          <PagerButton
-            label={tr("media.hero.previous")}
-            icon={ChevronLeft}
-            onClick={() => show(index() - 1)}
-          />
-          <nav aria-label={tr("media.hero.slides")} class="flex items-center">
-            <For each={props.slides} keyed={(slide) => slide.title.id}>
-              {(_slide, i) => (
-                <button
-                  type="button"
-                  aria-label={tr("media.hero.showSlide", { index: i() + 1 })}
-                  aria-current={i() === index() ? "true" : undefined}
-                  onClick={() => show(i())}
-                  class="group/dot grid h-8 place-items-center px-1.5 outline-none"
-                >
-                  <span
-                    class={[
-                      "group-focus-visible/dot:ring-ring group-focus-visible/dot:ring-offset-background block h-1.5 rounded-full transition-[width,background-color] duration-150 group-focus-visible/dot:ring-2 group-focus-visible/dot:ring-offset-2 motion-reduce:transition-none",
-                      i() === index()
-                        ? "bg-foreground w-5"
-                        : "bg-foreground/40 group-hover/dot:bg-foreground/70 w-1.5",
-                    ]}
-                  />
-                </button>
-              )}
-            </For>
-          </nav>
-          <PagerButton
-            label={tr("media.hero.next")}
-            icon={ChevronRight}
-            onClick={() => show(index() + 1)}
-          />
-        </div>
-      </Show>
     </section>
   )
 }
@@ -393,7 +403,7 @@ function PagerButton(props: {
       type="button"
       aria-label={props.label}
       onClick={() => props.onClick()}
-      class="text-muted-foreground hover:bg-surface-hover hover:text-foreground focus-visible:outline-ring grid size-8 place-items-center rounded-full transition-colors outline-none focus-visible:outline-2 focus-visible:outline-solid motion-reduce:transition-none"
+      class="text-foreground/70 hover:bg-foreground/12 hover:text-foreground focus-visible:outline-ring grid size-8 place-items-center rounded-full transition-colors outline-none focus-visible:outline-2 focus-visible:outline-solid motion-reduce:transition-none"
     >
       <Icon icon={props.icon} class="size-4" />
     </button>
@@ -642,8 +652,7 @@ function SlideButtons(props: { slide: FeaturedTitle }) {
 /**
  * The showcase's place while the featured titles load: the card as dark as
  * it'll be and as tall, with the words' places low on the leading side, so
- * light doesn't flash to dark and the page doesn't jump. The dots' row
- * under it is held too.
+ * light doesn't flash to dark and the page doesn't jump.
  */
 export function HomeShowcaseSkeleton() {
   const height = () => showcaseHeight(viewport())
@@ -671,7 +680,6 @@ export function HomeShowcaseSkeleton() {
           <Skeleton class="bg-secondary h-10 w-30 rounded-lg" />
         </div>
       </div>
-      <div class="mt-3 h-8" />
     </div>
   )
 }
