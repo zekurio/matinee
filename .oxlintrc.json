@@ -39,6 +39,7 @@
     ".devenv/**",
     ".direnv/**",
     ".git/**",
+    "apps/solid/src/routeTree.gen.ts",
     "apps/web/src/routeTree.gen.ts",
     "packages/db/drizzle/**",
     "build/**",
@@ -188,7 +189,7 @@
       "rules": { "matinee/require-access-filter": "off" }
     },
     {
-      "files": ["apps/web/src/**", "packages/ui/src/**"],
+      "files": ["apps/solid/src/**", "apps/web/src/**", "packages/ui/src/**"],
       "rules": { "matinee/no-arbitrary-font-size": "error" }
     },
     {

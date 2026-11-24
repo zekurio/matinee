@@ -7,6 +7,7 @@ export default defineMessages("shell", {
   "shell.tabs": "Tabs",
   "shell.media": "Media",
   "shell.back": "Back",
+  "shell.forward": "Forward",
   // The banner over a phone's tab bar, on Android.
   "shell.appBanner.title": "Get the Android app",
   "shell.appBanner.text": "It plays better on a phone.",
@@ -16,6 +17,8 @@ export default defineMessages("shell", {
   "shell.home": "Home",
   "shell.movies": "Movies",
   "shell.shows": "Shows",
+  // Discover, as the rail and the phone's tabs name it, like the apps.
+  "shell.explore": "Explore",
   "shell.admin": "Admin",
   "shell.account": "Account: {name}",
   "shell.profile": "Profile",

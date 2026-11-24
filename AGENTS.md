@@ -31,6 +31,11 @@ TV app.
 - `apps/server/src/access`: account policies, viewers, and the shared library visibility filters.
 - `apps/web`: Vite React app. File routes live in `src/routes`;
   `src/routeTree.gen.ts` is generated.
+- `apps/solid`: a trial rewrite of `apps/web` on Solid 2.0 and ui-sdk,
+  with a desktop layout that follows the Flutter app. It runs beside the
+  React app on port 5174 and ships nowhere yet. It shares the React app's
+  framework-free modules through `@/`, and its build fails when anything
+  imports React. See its README before writing Solid code.
 - `brand/`: the logo, the wordmark, and the app icons, with the
   scripts that draw the wordmark and render their PNGs, the web app's
   favicon, and `apps/web/src/components/logo.gen.ts`. See `brand/README.md`.

@@ -1,0 +1,34 @@
+{
+  "name": "@matinee/solid",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite dev",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@matinee/client": "workspace:*",
+    "@matinee/contracts": "workspace:*",
+    "@matinee/ui": "workspace:*",
+    "@orpc/tanstack-query": "catalog:",
+    "@simplewebauthn/browser": "catalog:",
+    "@solidjs/web": "2.0.3",
+    "@tanstack/solid-query": "6.0.0-rc.6",
+    "@tanstack/solid-router": "2.0.0-rc.11",
+    "@ui-sdk/core": "0.1.0-beta.14",
+    "@ui-sdk/solid": "0.1.0-beta.14",
+    "blurhash": "catalog:",
+    "class-variance-authority": "0.7.1",
+    "lucide": "1.69.0",
+    "solid-js": "2.0.3"
+  },
+  "devDependencies": {
+    "@solidjs/vite-plugin": "3.0.1",
+    "@tailwindcss/vite": "4.3.4",
+    "@tanstack/router-plugin": "1.168.48",
+    "vite": "catalog:"
+  }
+}

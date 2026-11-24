@@ -20,6 +20,7 @@
     ".direnv/**",
     ".git/**",
     "apps/tizen/src/i18n/shared.gen.ts",
+    "apps/solid/src/routeTree.gen.ts",
     "apps/web/src/routeTree.gen.ts",
     "packages/db/drizzle/**",
     "data/**",
