@@ -161,18 +161,21 @@ class PageState extends StatelessWidget {
       child: Stack(
         children: [
           Positioned.fill(
-            child: Center(
-              child: error == null
-                  ? LoadingState(label: l.loadingInProgress)
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 72),
-                      child: FailureState(
-                        title: errorTitle ?? '',
-                        error: error,
-                        onRetry: onRetry,
-                        onHome: () => context.go(Routes.home),
+            child: FadeSwitcher(
+              value: error == null,
+              child: Center(
+                child: error == null
+                    ? LoadingState(label: l.loadingInProgress)
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 72),
+                        child: FailureState(
+                          title: errorTitle ?? '',
+                          error: error,
+                          onRetry: onRetry,
+                          onHome: () => context.go(Routes.home),
+                        ),
                       ),
-                    ),
+              ),
             ),
           ),
           const ItemTopBar(),

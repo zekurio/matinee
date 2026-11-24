@@ -46,13 +46,16 @@ class _EpisodeScreenState extends ConsumerState<EpisodeScreen>
     return ReturnWatcher(
       path: Routes.episode(widget.id),
       onReturn: _refresh,
-      child: item == null
-          ? PageState(
-              error: async.error,
-              errorTitle: l.titleEpisodeLoadError,
-              onRetry: () => ref.invalidate(itemProvider(widget.id)),
-            )
-          : _page(context, item),
+      child: FadeSwitcher(
+        value: item != null,
+        child: item == null
+            ? PageState(
+                error: async.error,
+                errorTitle: l.titleEpisodeLoadError,
+                onRetry: () => ref.invalidate(itemProvider(widget.id)),
+              )
+            : _page(context, item),
+      ),
     );
   }
 

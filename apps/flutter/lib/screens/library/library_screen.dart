@@ -124,11 +124,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     if (MediaQuery.disableAnimationsOf(context)) {
       _scroll.jumpTo(0);
     } else {
-      _scroll.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
+      _scroll.animateTo(0, duration: KitMotion.move, curve: KitMotion.easing);
     }
   }
 

@@ -47,13 +47,17 @@ class CatalogScreen extends ConsumerWidget {
         library: key.libraryId,
       ),
       onReturn: () => ref.invalidate(catalogDetailsProvider(catalogKey)),
-      child: detail == null
-          ? PageState(
-              error: async.error,
-              errorTitle: l.titleLoadError,
-              onRetry: () => ref.invalidate(catalogDetailsProvider(catalogKey)),
-            )
-          : _CatalogPage(detail: detail, library: key.libraryId),
+      child: FadeSwitcher(
+        value: detail != null,
+        child: detail == null
+            ? PageState(
+                error: async.error,
+                errorTitle: l.titleLoadError,
+                onRetry: () =>
+                    ref.invalidate(catalogDetailsProvider(catalogKey)),
+              )
+            : _CatalogPage(detail: detail, library: key.libraryId),
+      ),
     );
   }
 }

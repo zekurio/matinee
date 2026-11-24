@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'button.dart';
 import 'keyboard_room.dart';
 import 'modal_backdrop.dart';
+import 'motion.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
@@ -165,9 +166,7 @@ class _DialogRoute<T> extends RawDialogRoute<T> {
          barrierDismissible: dismissLabel != null,
          barrierLabel: dismissLabel,
          barrierColor: const Color(0x00000000),
-         transitionDuration: reducedMotion
-             ? Duration.zero
-             : const Duration(milliseconds: 200),
+         transitionDuration: reducedMotion ? Duration.zero : KitMotion.enter,
          traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
          // Centered in what the keyboard leaves, where its text scrolls and
          // its buttons stay in reach.
@@ -182,7 +181,7 @@ class _DialogRoute<T> extends RawDialogRoute<T> {
            ),
          ),
          transitionBuilder: (context, animation, secondaryAnimation, child) {
-           final t = animation.drive(CurveTween(curve: Curves.easeOut));
+           final t = animation.drive(CurveTween(curve: KitMotion.easing));
            return FadeTransition(
              opacity: t,
              child: ScaleTransition(
@@ -196,9 +195,8 @@ class _DialogRoute<T> extends RawDialogRoute<T> {
   final Color backdrop;
 
   @override
-  Duration get reverseTransitionDuration => transitionDuration == Duration.zero
-      ? Duration.zero
-      : const Duration(milliseconds: 150);
+  Duration get reverseTransitionDuration =>
+      transitionDuration == Duration.zero ? Duration.zero : KitMotion.exit;
 
   @override
   Widget buildModalBarrier() => ModalBackdrop(

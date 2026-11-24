@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import 'glass.dart';
 import 'icon.dart';
+import 'motion.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -130,9 +131,7 @@ class _Tab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    final motion = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 200);
+    final motion = KitMotion.of(context, KitMotion.enter);
     return PressIndication(
       onPressed: onPressed,
       selected: selected,
@@ -146,7 +145,7 @@ class _Tab extends StatelessWidget {
           child: TweenAnimationBuilder<double>(
             tween: Tween<double>(end: selected ? 1 : 0),
             duration: motion,
-            curve: Curves.easeOut,
+            curve: KitMotion.easing,
             builder: (context, progress, child) {
               final color = Color.lerp(
                 state == PressState.hovered

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/widgets.dart';
 
+import '../motion.dart';
 import '../spinner.dart';
 import '../theme.dart';
 import 'tv_focus.dart';
@@ -56,10 +57,10 @@ class TvPanelRoute<T> extends PopupRoute<T> {
   String? get barrierLabel => title ?? 'panel';
 
   @override
-  Duration get transitionDuration => TvMotion.move;
+  Duration get transitionDuration => KitMotion.move;
 
   @override
-  Duration get reverseTransitionDuration => TvMotion.exit;
+  Duration get reverseTransitionDuration => KitMotion.exit;
 
   @override
   TickerFuture didPush() {
@@ -96,8 +97,8 @@ class TvPanelRoute<T> extends PopupRoute<T> {
   ) {
     final slide = CurvedAnimation(
       parent: animation,
-      curve: TvMotion.easing,
-      reverseCurve: TvMotion.exitEasing,
+      curve: KitMotion.easing,
+      reverseCurve: KitMotion.exitEasing,
     );
     return Stack(
       fit: StackFit.expand,

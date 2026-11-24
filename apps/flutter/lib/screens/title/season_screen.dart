@@ -46,15 +46,20 @@ class _SeasonScreenState extends ConsumerState<SeasonScreen> with PendingMarks {
     final async = ref.watch(titleProvider(widget.titleId));
     final title = async.value;
     final Widget page;
+    // Which of the three the page shows, for the fade from one to the next.
+    final String shown;
     if (title == null) {
+      shown = 'loading';
       page = PageState(
         error: async.error,
         errorTitle: l.titleSeasonShowError,
         onRetry: () => ref.invalidate(titleProvider(widget.titleId)),
       );
     } else if (_find(title) case final season?) {
+      shown = 'season';
       page = _page(context, title, season);
     } else {
+      shown = 'missing';
       page = TitleScaffold(
         sections: [
           const SizedBox(height: 120),
@@ -68,7 +73,7 @@ class _SeasonScreenState extends ConsumerState<SeasonScreen> with PendingMarks {
     return ReturnWatcher(
       path: seasonRoute(widget.titleId, widget.season),
       onReturn: _refresh,
-      child: page,
+      child: FadeSwitcher(value: shown, child: page),
     );
   }
 

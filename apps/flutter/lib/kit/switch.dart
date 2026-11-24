@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'motion.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -59,9 +60,7 @@ class SwitchTrack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    final motion = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 150);
+    final motion = KitMotion.of(context, KitMotion.enter);
     return Opacity(
       opacity: enabled ? 1 : .5,
       child: AnimatedContainer(

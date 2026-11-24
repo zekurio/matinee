@@ -1,10 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../kit/motion.dart';
 import '../platform/player.g.dart' as wire show SubtitleEdgeMessage;
 import '../platform/player_system.g.dart' as wire;
 import 'player.dart' show PlayerSubtitles;
-import 'player_motion.dart';
 import 'player_preferences.dart';
 import 'player_system.dart';
 
@@ -232,8 +232,8 @@ class SubtitleLayer extends StatelessWidget {
     child: Align(
       alignment: Alignment.bottomCenter,
       child: AnimatedPadding(
-        duration: PlayerMotion.move,
-        curve: PlayerMotion.easing,
+        duration: KitMotion.move,
+        curve: KitMotion.easing,
         padding: EdgeInsets.fromLTRB(side, 0, side, bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,

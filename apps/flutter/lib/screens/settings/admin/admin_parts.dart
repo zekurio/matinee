@@ -239,9 +239,7 @@ class _SaveBarPageState extends State<SaveBarPage> {
     final status = shown ?? SaveBarStatus.unsaved;
     final visible = widget.dirty || shown != null;
     final saving = status == SaveBarStatus.saving;
-    final motion = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 220);
+    final motion = KitMotion.of(context, KitMotion.enter);
     return PopScope(
       canPop: !widget.dirty,
       onPopInvokedWithResult: (didPop, result) {
@@ -267,7 +265,7 @@ class _SaveBarPageState extends State<SaveBarPage> {
             ),
             AnimatedSize(
               duration: motion,
-              curve: Curves.easeOutCubic,
+              curve: KitMotion.easing,
               alignment: Alignment.bottomCenter,
               child: visible
                   ? SaveBar(

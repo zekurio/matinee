@@ -12,6 +12,7 @@ export 'keyboard_room.dart';
 export 'logo.dart';
 export 'material_you.dart';
 export 'menu.dart';
+export 'motion.dart';
 export 'multi_select.dart';
 export 'page_dots.dart';
 export 'page_frame.dart';

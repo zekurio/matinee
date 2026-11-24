@@ -8,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../motion.dart';
 import '../theme.dart';
 import '../tokens.dart';
 import 'tv_metrics.dart';
@@ -272,7 +273,7 @@ class TvLook {
 }
 
 /// The animation under every control's focus look: [t] runs to 1 with focus
-/// and back to 0 without, with [TvMotion]'s timing, and [builder] gets the
+/// and back to 0 without, with [KitMotion]'s timing, and [builder] gets the
 /// [TvLook] between [rest] and [content] at rest and the focused fill and
 /// content. Use [TvControl] unless the fill isn't a plain clipped box, as
 /// the drawer's.
@@ -319,8 +320,8 @@ class _TvFocusLookState extends State<TvFocusLook> {
     final resting = focused ? _before : _resting(widget);
     return TweenAnimationBuilder<double>(
       tween: Tween(end: focused ? 1 : 0),
-      duration: focused ? TvMotion.enter : TvMotion.exit,
-      curve: focused ? TvMotion.easing : TvMotion.exitEasing,
+      duration: focused ? KitMotion.enter : KitMotion.exit,
+      curve: focused ? KitMotion.easing : KitMotion.exitEasing,
       builder: (context, t, _) => widget.builder(
         context,
         TvLook._(
@@ -404,8 +405,8 @@ class TvPictureFocus extends StatelessWidget {
         : ClipRRect(borderRadius: radius, child: child);
     return TweenAnimationBuilder<double>(
       tween: Tween(end: focused ? 1 : 0),
-      duration: focused ? TvMotion.enter : TvMotion.exit,
-      curve: focused ? TvMotion.easing : TvMotion.exitEasing,
+      duration: focused ? KitMotion.enter : KitMotion.exit,
+      curve: focused ? KitMotion.easing : KitMotion.exitEasing,
       child: clipped,
       builder: (context, t, picture) => Transform.scale(
         scale: 1 + (scale - 1) * t,
@@ -1132,7 +1133,11 @@ class _TvFollowFocusState extends State<TvFollowFocus> {
     }
     if ((to - position.pixels).abs() < .5) return;
     unawaited(
-      position.animateTo(to, duration: widget.duration, curve: TvMotion.easing),
+      position.animateTo(
+        to,
+        duration: widget.duration,
+        curve: KitMotion.easing,
+      ),
     );
   }
 
@@ -1210,7 +1215,7 @@ class _TvFollowFocusState extends State<TvFollowFocus> {
         position.animateTo(
           position.minScrollExtent,
           duration: widget.duration,
-          curve: TvMotion.easing,
+          curve: KitMotion.easing,
         ),
       );
     }

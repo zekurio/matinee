@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'button.dart';
 import 'icon.dart';
+import 'motion.dart';
 import 'spinner.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -217,9 +218,7 @@ class _SaveBarState extends State<SaveBar> with SingleTickerProviderStateMixin {
         );
       },
     );
-    final motion = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 220);
+    final motion = KitMotion.of(context, KitMotion.enter);
     return Padding(
       padding: EdgeInsetsDirectional.only(
         start: 12,
@@ -229,7 +228,7 @@ class _SaveBarState extends State<SaveBar> with SingleTickerProviderStateMixin {
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: 1),
         duration: motion,
-        curve: Curves.easeOutCubic,
+        curve: KitMotion.easing,
         builder: (context, shown, child) => Opacity(
           opacity: shown,
           child: Transform.translate(
