@@ -45,21 +45,6 @@ final class CatalogRef {
   };
 }
 
-abstract final class DeclineReason {
-  static const alreadyHere = 'alreadyHere';
-  static const notForServer = 'notForServer';
-  static const notFound = 'notFound';
-
-  static const all = <String>[alreadyHere, notForServer, notFound];
-}
-
-abstract final class WaitingDeclineReason {
-  static const alreadyHere = 'alreadyHere';
-  static const notForServer = 'notForServer';
-
-  static const all = <String>[alreadyHere, notForServer];
-}
-
 final class RequestQuota {
   const RequestQuota({required this.titles, required this.days});
 
@@ -378,26 +363,20 @@ final class Availability {
 }
 
 final class AvailabilityReason {
-  const AvailabilityReason({
-    required this.kind,
-    required this.code,
-    required this.note,
-  });
+  const AvailabilityReason({required this.kind, required this.note});
 
   factory AvailabilityReason.fromJson(Object? json) {
     final fields = json as JsonMap;
     return AvailabilityReason(
       kind: fields['kind'] as String,
-      code: fields['code'] as String?,
       note: fields['note'] as String?,
     );
   }
 
   final String kind;
-  final String? code;
   final String? note;
 
-  JsonMap toJson() => {'kind': kind, 'code': code, 'note': note};
+  JsonMap toJson() => {'kind': kind, 'note': note};
 }
 
 final class AvailabilityOthers {
@@ -514,26 +493,20 @@ final class SeasonAvailability {
 }
 
 final class SeasonAvailabilityReason {
-  const SeasonAvailabilityReason({
-    required this.kind,
-    required this.code,
-    required this.note,
-  });
+  const SeasonAvailabilityReason({required this.kind, required this.note});
 
   factory SeasonAvailabilityReason.fromJson(Object? json) {
     final fields = json as JsonMap;
     return SeasonAvailabilityReason(
       kind: fields['kind'] as String,
-      code: fields['code'] as String?,
       note: fields['note'] as String?,
     );
   }
 
   final String kind;
-  final String? code;
   final String? note;
 
-  JsonMap toJson() => {'kind': kind, 'code': code, 'note': note};
+  JsonMap toJson() => {'kind': kind, 'note': note};
 }
 
 final class SeasonAvailabilityOthers {
@@ -1336,7 +1309,7 @@ final class AdminRequestItem {
     required this.status,
     required this.fulfilmentState,
     required this.error,
-    required this.reason,
+    required this.gaveUp,
     required this.note,
     required this.declinedAt,
     required this.connection,
@@ -1362,7 +1335,7 @@ final class AdminRequestItem {
       status: fields['status'] as String,
       fulfilmentState: fields['fulfilmentState'] as String?,
       error: fields['error'] as String?,
-      reason: fields['reason'] as String?,
+      gaveUp: fields['gaveUp'] as bool,
       note: fields['note'] as String?,
       declinedAt: fields['declinedAt'] as String?,
       connection: readNullable(
@@ -1398,7 +1371,7 @@ final class AdminRequestItem {
   final String status;
   final String? fulfilmentState;
   final String? error;
-  final String? reason;
+  final bool gaveUp;
   final String? note;
   final String? declinedAt;
   final AdminRequestItemConnection? connection;
@@ -1421,7 +1394,7 @@ final class AdminRequestItem {
     'status': status,
     'fulfilmentState': fulfilmentState,
     'error': error,
-    'reason': reason,
+    'gaveUp': gaveUp,
     'note': note,
     'declinedAt': declinedAt,
     'connection': connection?.toJson(),
@@ -11555,26 +11528,20 @@ final class AdminRequestsApproveAllInput {
 }
 
 final class AdminRequestsDeclineInput {
-  const AdminRequestsDeclineInput({
-    required this.id,
-    required this.reason,
-    required this.note,
-  });
+  const AdminRequestsDeclineInput({required this.id, required this.note});
 
   factory AdminRequestsDeclineInput.fromJson(Object? json) {
     final fields = json as JsonMap;
     return AdminRequestsDeclineInput(
       id: fields['id'] as String,
-      reason: fields['reason'] as String,
       note: fields['note'] as String?,
     );
   }
 
   final String id;
-  final String reason;
   final String? note;
 
-  JsonMap toJson() => {'id': id, 'reason': reason, 'note': note};
+  JsonMap toJson() => {'id': id, 'note': note};
 }
 
 final class AdminRequestsGiveUpInput {

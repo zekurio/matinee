@@ -114,10 +114,6 @@
       }
     }
   },
-  "accountApiTokensDescription": "A service or an app sends one as Authorization: Bearer to call the API as you, within what your account may do. Tokens don't expire. Revoke one when it's no longer needed.",
-  "@accountApiTokensDescription": {
-    "description": "Account: what API tokens are for"
-  },
   "accountApiTokensDone": "Done",
   "@accountApiTokensDone": {
     "description": "Account: closes a new token's secret"
@@ -167,10 +163,6 @@
   "accountApiTokensNoMatch": "No permission matches",
   "@accountApiTokensNoMatch": {
     "description": "Account: the permission search found nothing"
-  },
-  "accountApiTokensNotAllowed": "Your account may not create API tokens.",
-  "@accountApiTokensNotAllowed": {
-    "description": "Account: the account lacks apiToken.create"
   },
   "accountApiTokensPermissionCount": "{count, plural, one{{count} permission} other{{count} permissions}}",
   "@accountApiTokensPermissionCount": {
@@ -466,10 +458,6 @@
       }
     }
   },
-  "adminAccessDescription": "An account gets the most its groups allow. Settings here override them.",
-  "@adminAccessDescription": {
-    "description": "admin settings"
-  },
   "adminAccessDownloads": "Downloads",
   "@adminAccessDownloads": {
     "description": "admin settings"
@@ -549,10 +537,6 @@
   "@adminAccessLibrariesAll": {
     "description": "admin settings"
   },
-  "adminAccessLibrariesAllHint": "Includes libraries added later.",
-  "@adminAccessLibrariesAllHint": {
-    "description": "admin settings"
-  },
   "adminAccessLibrariesCount": "{count, plural, one{{count} library} other{{count} libraries}}",
   "@adminAccessLibrariesCount": {
     "description": "admin settings",
@@ -593,10 +577,6 @@
         "type": "String"
       }
     }
-  },
-  "adminAccessOverrideHint": "From groups leaves a setting to the groups. Anything else wins over them.",
-  "@adminAccessOverrideHint": {
-    "description": "admin settings"
   },
   "adminAccessPermissionsAll": "Every permission",
   "@adminAccessPermissionsAll": {
@@ -1851,10 +1831,6 @@
       }
     }
   },
-  "linkRowDescription": "Scan the QR code on a TV",
-  "@linkRowDescription": {
-    "description": "strings.xml"
-  },
   "linkScanForeign": "That QR code isn't a Matinee sign-in.",
   "@linkScanForeign": {
     "description": "strings.xml"
@@ -1910,10 +1886,6 @@
   },
   "logsCopy": "Copy log",
   "@logsCopy": {
-    "description": "strings_diagnostics.xml"
-  },
-  "logsNote": "Recent messages from this app, without addresses, accounts, or file names",
-  "@logsNote": {
     "description": "strings_diagnostics.xml"
   },
   "logsShare": "Share log",
@@ -4487,15 +4459,6 @@
       }
     }
   },
-  "webAskDeclinedWhy": "Declined: {p1}.",
-  "@webAskDeclinedWhy": {
-    "description": "strings_web_ask.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webAskDialogTitle": "Request {p1}",
   "@webAskDialogTitle": {
     "description": "strings_web_ask.xml",
@@ -4542,10 +4505,6 @@
   "@webAskMineEmptyHint": {
     "description": "strings_web_ask.xml"
   },
-  "webAskMineSeeAll": "See all",
-  "@webAskMineSeeAll": {
-    "description": "strings_web_ask.xml"
-  },
   "webAskMineTitle": "My requests",
   "@webAskMineTitle": {
     "description": "strings_web_ask.xml"
@@ -4554,16 +4513,8 @@
   "@webAskMore": {
     "description": "strings_web_ask.xml"
   },
-  "webAskReasonAlreadyHere": "Already have it.",
-  "@webAskReasonAlreadyHere": {
-    "description": "strings_web_ask.xml"
-  },
   "webAskReasonDeclined": "Declined.",
   "@webAskReasonDeclined": {
-    "description": "strings_web_ask.xml"
-  },
-  "webAskReasonNotForServer": "Not for this server.",
-  "@webAskReasonNotForServer": {
     "description": "strings_web_ask.xml"
   },
   "webAskReasonNotFound": "No copy found.",
@@ -6111,11 +6062,11 @@
   "@webRequestsDecline": {
     "description": "strings_web_requests.xml"
   },
-  "webRequestsDeclineNote": "Note",
+  "webRequestsDeclineNote": "Reason",
   "@webRequestsDeclineNote": {
     "description": "strings_web_requests.xml"
   },
-  "webRequestsDeclineNoteFor": "Note for {p1}",
+  "webRequestsDeclineNoteFor": "Reason for {p1}",
   "@webRequestsDeclineNoteFor": {
     "description": "strings_web_requests.xml",
     "placeholders": {
@@ -6126,10 +6077,6 @@
   },
   "webRequestsDeclineNotePlaceholder": "Optional",
   "@webRequestsDeclineNotePlaceholder": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsDeclineReason": "Reason",
-  "@webRequestsDeclineReason": {
     "description": "strings_web_requests.xml"
   },
   "webRequestsDeclineSubmit": "Decline",
@@ -6291,18 +6238,6 @@
   },
   "webRequestsProgressSent": "Sent",
   "@webRequestsProgressSent": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsReasonAlreadyHere": "Already have it",
-  "@webRequestsReasonAlreadyHere": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsReasonNotForServer": "Not for this server",
-  "@webRequestsReasonNotForServer": {
-    "description": "strings_web_requests.xml"
-  },
-  "webRequestsReasonNotFound": "Can't find a copy",
-  "@webRequestsReasonNotFound": {
     "description": "strings_web_requests.xml"
   },
   "webRequestsRetried": "Sending {p1} again",
@@ -8336,20 +8271,12 @@
   "@webUsersInvitesCreate": {
     "description": "strings_web_users.xml"
   },
-  "webUsersInvitesDialogDescription": "They open the link, pick a username, and create a passkey.",
-  "@webUsersInvitesDialogDescription": {
-    "description": "strings_web_users.xml"
-  },
   "webUsersInvitesDialogExpiry": "Works for",
   "@webUsersInvitesDialogExpiry": {
     "description": "strings_web_users.xml"
   },
   "webUsersInvitesDialogGroups": "Groups",
   "@webUsersInvitesDialogGroups": {
-    "description": "strings_web_users.xml"
-  },
-  "webUsersInvitesDialogGroupsHint": "The new account starts in these groups, and in Everyone.",
-  "@webUsersInvitesDialogGroupsHint": {
     "description": "strings_web_users.xml"
   },
   "webUsersInvitesDialogNote": "Note",
@@ -9034,10 +8961,6 @@
   "@webAccessSectionServer": {
     "description": "access.section.server"
   },
-  "webAccessSectionServerHint": "Parts of running the server that members take on. View lets them look, Manage lets them change it too.",
-  "@webAccessSectionServerHint": {
-    "description": "access.section.serverHint"
-  },
   "webAccessApiTokens": "API tokens",
   "@webAccessApiTokens": {
     "description": "access.apiTokens"
@@ -9046,49 +8969,25 @@
   "@webAccessAreaRequests": {
     "description": "access.area.requests"
   },
-  "webAccessAreaRequestsHint": "Everyone's requests: approving, declining, retrying.",
-  "@webAccessAreaRequestsHint": {
-    "description": "access.area.requests.hint"
-  },
   "webAccessAreaConnections": "Connections",
   "@webAccessAreaConnections": {
     "description": "access.area.connections"
-  },
-  "webAccessAreaConnectionsHint": "Radarr, Sonarr, and the rules that send requests to them.",
-  "@webAccessAreaConnectionsHint": {
-    "description": "access.area.connections.hint"
   },
   "webAccessAreaLibraries": "Libraries",
   "@webAccessAreaLibraries": {
     "description": "access.area.libraries"
   },
-  "webAccessAreaLibrariesHint": "Adding, changing, scanning, and deleting libraries.",
-  "@webAccessAreaLibrariesHint": {
-    "description": "access.area.libraries.hint"
-  },
   "webAccessAreaMetadata": "Metadata",
   "@webAccessAreaMetadata": {
     "description": "access.area.metadata"
-  },
-  "webAccessAreaMetadataHint": "Fixing matches, refreshing metadata, and images.",
-  "@webAccessAreaMetadataHint": {
-    "description": "access.area.metadata.hint"
   },
   "webAccessAreaUsers": "Users and groups",
   "@webAccessAreaUsers": {
     "description": "access.area.users"
   },
-  "webAccessAreaUsersHint": "Accounts, access groups, invites, and who's watching.",
-  "@webAccessAreaUsersHint": {
-    "description": "access.area.users.hint"
-  },
   "webAccessAreaServer": "Server settings",
   "@webAccessAreaServer": {
     "description": "access.area.server"
-  },
-  "webAccessAreaServerHint": "Transcoding, trickplay, network, branding, and the jobs.",
-  "@webAccessAreaServerHint": {
-    "description": "access.area.server.hint"
   },
   "webAccessLevelNone": "None",
   "@webAccessLevelNone": {
@@ -9212,18 +9111,6 @@
   "@webAccessEveryone": {
     "description": "access.everyone"
   },
-  "webAccessBitrateHint": "A file over the limit streams as an encode under it. Downloads aren't limited.",
-  "@webAccessBitrateHint": {
-    "description": "access.bitrate.hint"
-  },
-  "webAccessTranscodeHint": "The server may encode video to fit the limit or a device. Off, a file plays as it is or with its video copied, and one that needs an encode doesn't play.",
-  "@webAccessTranscodeHint": {
-    "description": "access.transcode.hint"
-  },
-  "webAccessDownloadsHint": "Files as they are, and versions made for a device.",
-  "@webAccessDownloadsHint": {
-    "description": "access.downloads.hint"
-  },
   "webAccessSectionWatching": "Watching",
   "@webAccessSectionWatching": {
     "description": "access.section.watching"
@@ -9236,10 +9123,6 @@
   "@webAccessSectionApi": {
     "description": "access.section.api"
   },
-  "webAccessApiTokensHint": "Tokens for scripts and services that use the API as the account.",
-  "@webAccessApiTokensHint": {
-    "description": "access.apiTokens.hint"
-  },
   "webAccessGroupsTitle": "Access groups",
   "@webAccessGroupsTitle": {
     "description": "access.groups.title"
@@ -9247,14 +9130,6 @@
   "webAccessGroupsCreate": "New group",
   "@webAccessGroupsCreate": {
     "description": "access.groups.create"
-  },
-  "webAccessGroupsIntro": "An account gets the most its groups allow. Settings under Users override groups. Admins have no limits and can do everything.",
-  "@webAccessGroupsIntro": {
-    "description": "access.groups.intro"
-  },
-  "webAccessGroupsOnlyEveryone": "Every account is in Everyone. Add groups to give some accounts more.",
-  "@webAccessGroupsOnlyEveryone": {
-    "description": "access.groups.onlyEveryone"
   },
   "webAccessGroupEveryAccount": "Every account",
   "@webAccessGroupEveryAccount": {
@@ -9338,14 +9213,6 @@
         "type": "String"
       }
     }
-  },
-  "webAccessGroupDescription": "Members get the most their groups allow.",
-  "@webAccessGroupDescription": {
-    "description": "access.group.description"
-  },
-  "webAccessGroupEveryoneDescription": "Every account is in this group. Take its libraries away to make access opt-in, then open them through other groups. Its limits then count only for accounts no group opens anything for.",
-  "@webAccessGroupEveryoneDescription": {
-    "description": "access.group.everyoneDescription"
   },
   "webAccessGroupName": "Name",
   "@webAccessGroupName": {

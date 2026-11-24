@@ -331,7 +331,6 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
       onSave: _save,
       child: AdminSections(
         sections: [
-          Note(l.adminAccessDescription),
           SettingsSection(
             title: l.adminAccessGets(user.name),
             child: Column(
@@ -455,9 +454,7 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                   Note(
                     l.adminAccessOverrideFromProvider(provider, user.name),
                     danger: true,
-                  )
-                else
-                  Note(l.adminAccessOverrideHint),
+                  ),
                 Panel(
                   rows: [
                     PickerRow<String>(
@@ -619,8 +616,6 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
                     ),
                   ],
                 ),
-                if (draft.libraries?.all ?? false)
-                  Note(l.adminAccessLibrariesAllHint),
                 if (_error('maxBitrate') ?? _error('maxStreams')
                     case final error?)
                   Note(error, danger: true),
@@ -633,14 +628,12 @@ class _AccessFormState extends ConsumerState<_AccessForm> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 8,
               children: [
-                Note(l.webAccessSectionServerHint),
                 Panel(
                   rows: [
                     for (final MapEntry(key: area, value: levels)
                         in managedAreas.entries)
                       PickerRow<String>(
                         title: words.area(area),
-                        description: words.areaHint(area),
                         options: [
                           (
                             _fromGroups,

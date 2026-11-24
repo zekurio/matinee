@@ -43,7 +43,7 @@ AdminRequestItem _item(String id, {String state = 'waiting'}) =>
       'state': state,
       'fulfilmentState': null,
       'error': null,
-      'reason': null,
+      'gaveUp': false,
       'note': null,
       'declinedAt': null,
       'connection': null,

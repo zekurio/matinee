@@ -138,13 +138,23 @@ class _AccountPageState extends ConsumerState<AccountPage> {
               LinkRow(
                 icon: Lucide.scanQrCode,
                 title: l.linkTitle,
-                description: l.linkRowDescription,
                 onPressed: () => context.push(Routes.linkDevice),
               ),
             ],
           ),
           SettingsSection(
             title: l.accountSessionsTitle,
+            action:
+                list != null &&
+                    others &&
+                    user != null &&
+                    can(user, Permission.sessionDelete)
+                ? SectionAction(
+                    icon: Lucide.logOut,
+                    label: l.accountSessionsSignOutOthersConfirm,
+                    onPressed: _signOutOthers,
+                  )
+                : null,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 12,
@@ -170,20 +180,6 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                   Text(
                     '…',
                     style: KitText.sm.style(color: colors.mutedForeground),
-                  ),
-                if (list != null &&
-                    others &&
-                    user != null &&
-                    can(user, Permission.sessionDelete))
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: MatineeButton(
-                      look: ButtonLook.outline,
-                      size: ButtonSize.sm,
-                      leading: Lucide.logOut,
-                      onPressed: _signOutOthers,
-                      child: Text(l.accountSessionsSignOutOthers),
-                    ),
                   ),
               ],
             ),

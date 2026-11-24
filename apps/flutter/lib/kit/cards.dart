@@ -380,7 +380,9 @@ class PosterCard extends StatelessWidget {
               aspectRatio: CardMetrics.poster,
               dashed: absentLabel != null,
               children: [
-                if (art == null || !artCovers || absentLabel != null)
+                // Dimmed art would let the name show through it, so an
+                // absent card with art leaves the name to the line under it.
+                if (art == null || (!artCovers && absentLabel == null))
                   ExcludeSemantics(
                     child: Center(
                       child: Padding(

@@ -47,7 +47,7 @@ AdminRequestItem _item(String state) => AdminRequestItem.fromJson({
   'status': 'approved',
   'fulfilmentState': null,
   'error': null,
-  'reason': null,
+  'gaveUp': false,
   'note': null,
   'declinedAt': null,
   'connection': null,

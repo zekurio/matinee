@@ -1991,12 +1991,8 @@ final class AdminRequestsApi {
 
   /// The account needs the `adminRequest.decline` permission, and so does an API token.
   /// `POST /admin/requests/decline`
-  Future<void> decline({
-    required String id,
-    required String reason,
-    required String? note,
-  }) {
-    final input = AdminRequestsDeclineInput(id: id, reason: reason, note: note);
+  Future<void> decline({required String id, required String? note}) {
+    final input = AdminRequestsDeclineInput(id: id, note: note);
     final body = JsonBody(input.toJson());
     return _transport.send('POST', [
       'admin',

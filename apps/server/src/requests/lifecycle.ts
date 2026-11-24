@@ -4,7 +4,6 @@ import type {
   RequestState,
   TitleKind,
   ShowScope,
-  WaitingDeclineReason,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import {
@@ -708,7 +707,7 @@ export async function queue(
         status: row.status,
         fulfilmentState: row.fulfilmentState,
         error: row.fulfilmentError,
-        reason: row.declineReason,
+        gaveUp: row.declineReason === "notFound",
         note: row.declineNote,
         declinedAt: row.declinedAt,
         connection: connection
@@ -1065,22 +1064,16 @@ export async function moderate(
 }
 
 /**
- * An admin's no: declining a waiting request with a reason, or giving up
- * on an accepted one that hasn't come, which can only be for want of a
- * copy. Either closes the title for everyone until an admin lifts it.
+ * An admin's no: declining a waiting request, or giving up on an accepted
+ * one that hasn't come, for want of a copy, either with a reason the
+ * admin typed or none. Either closes the title for everyone until an admin lifts it.
  * Giving up leaves the connection alone; if the file turns up anyway, the
  * arrival check takes the decline back.
  */
 export async function decline(
   viewer: Viewer,
   id: string,
-  answer:
-    | {
-        operation: "decline"
-        reason: WaitingDeclineReason
-        note: string | null
-      }
-    | { operation: "giveUp"; note: string | null },
+  answer: { operation: "decline" | "giveUp"; note: string | null },
 ) {
   await db.transaction(async (tx) => {
     const row = await visibleRequest(viewer, id, tx)
@@ -1108,8 +1101,7 @@ export async function decline(
       .update(request)
       .set({
         status: "declined",
-        declineReason:
-          answer.operation === "decline" ? answer.reason : "notFound",
+        declineReason: answer.operation === "giveUp" ? "notFound" : null,
         declineNote: answer.note || null,
         declinedBy: viewer.id,
         declinedAt: new Date(),

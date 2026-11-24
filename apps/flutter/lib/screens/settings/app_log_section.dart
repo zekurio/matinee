@@ -48,7 +48,6 @@ class _AppLogSectionState extends ConsumerState<AppLogSection> {
         rows: [
           LinkRow(
             title: l.logsShow,
-            description: l.logsNote,
             onPressed: () => _withLog((log) => showAppLog(context, log)),
           ),
           LinkRow(

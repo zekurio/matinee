@@ -45,42 +45,33 @@ class AccessGroupsPage extends ConsumerWidget {
     final words = AccessWords(l, libraries);
     return AdminPage(
       title: l.settingsAdminAccess,
+      actions: [
+        if (create)
+          PageBarButton(
+            icon: Lucide.plus,
+            label: l.webAccessGroupsCreate,
+            onPressed: () => unawaited(_edit(context, ref)),
+          ),
+      ],
       child: adminBody(
         context,
         groups,
         onRetry: () => ref.invalidate(adminGroupsProvider),
         loaded: (list) => AdminSections(
           sections: [
-            SettingsSection(
-              title: l.webAccessGroupsTitle,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 8,
-                children: [
-                  Note(l.webAccessGroupsIntro),
-                  Panel(
-                    rows: [
-                      for (final group in list)
-                        _GroupRow(
-                          key: ValueKey(group.id),
-                          group: group,
-                          words: words,
-                          onPressed: may.edit || (may.delete && !group.everyone)
-                              ? () => unawaited(_act(context, ref, group, may))
-                              : null,
-                        ),
-                    ],
+            Panel(
+              rows: [
+                for (final group in list)
+                  _GroupRow(
+                    key: ValueKey(group.id),
+                    group: group,
+                    words: words,
+                    onPressed: may.edit || (may.delete && !group.everyone)
+                        ? () => unawaited(_act(context, ref, group, may))
+                        : null,
                   ),
-                  if (list.length == 1) Note(l.webAccessGroupsOnlyEveryone),
-                ],
-              ),
+              ],
             ),
-            if (create)
-              MatineeButton(
-                leading: Lucide.plus,
-                onPressed: () => unawaited(_edit(context, ref)),
-                child: Text(l.webAccessGroupsCreate),
-              ),
           ],
         ),
       ),
@@ -604,11 +595,6 @@ class _GroupFormState extends ConsumerState<_GroupForm> {
     final sections = [
       if (failure != null) Note(failure, danger: true),
       for (final error in unshown) Note(error, danger: true),
-      Note(
-        everyone
-            ? l.webAccessGroupEveryoneDescription
-            : l.webAccessGroupDescription,
-      ),
       if (!everyone)
         Panel(
           rows: [
@@ -666,7 +652,6 @@ class _GroupFormState extends ConsumerState<_GroupForm> {
                     ),
                 PickerRow<int?>(
                   title: l.adminAccessBitrate,
-                  description: l.webAccessBitrateHint,
                   options: [
                     (null, words.bitrate(null)),
                     for (final rate in bitrates) (rate, words.bitrate(rate)),
@@ -676,7 +661,6 @@ class _GroupFormState extends ConsumerState<_GroupForm> {
                 ),
                 SwitchRow(
                   title: l.adminAccessTranscode,
-                  description: l.webAccessTranscodeHint,
                   checked: draft.transcode,
                   onChanged: (on) => _edit(draft.copy(transcode: on)),
                 ),
@@ -692,13 +676,11 @@ class _GroupFormState extends ConsumerState<_GroupForm> {
                 ),
                 SwitchRow(
                   title: l.adminAccessDownloads,
-                  description: l.webAccessDownloadsHint,
                   checked: draft.downloads,
                   onChanged: (on) => _edit(draft.copy(downloads: on)),
                 ),
               ],
             ),
-            if (draft.allLibraries) Note(l.adminAccessLibrariesAllHint),
           ],
         ),
       ),
@@ -746,14 +728,12 @@ class _GroupFormState extends ConsumerState<_GroupForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 8,
           children: [
-            Note(l.webAccessSectionServerHint),
             Panel(
               rows: [
                 for (final MapEntry(key: area, value: levels)
                     in managedAreas.entries)
                   PickerRow<String>(
                     title: words.area(area),
-                    description: words.areaHint(area),
                     options: [
                       for (final level in levels)
                         (level, words.level(area, level)),
@@ -774,7 +754,6 @@ class _GroupFormState extends ConsumerState<_GroupForm> {
           rows: [
             SwitchRow(
               title: l.webAccessApiTokens,
-              description: l.webAccessApiTokensHint,
               checked: draft.apiTokens,
               onChanged: (on) => _edit(draft.copy(apiTokens: on)),
             ),

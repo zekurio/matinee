@@ -519,6 +519,19 @@ class _Invites extends ConsumerWidget {
     final revoke = ref.watch(canProvider(Permission.inviteDelete));
     return SettingsSection(
       title: l.webUsersInvitesTitle,
+      action: create
+          ? SectionAction(
+              icon: Lucide.plus,
+              label: l.webUsersInvitesCreate,
+              onPressed: () => unawaited(
+                Dialog.show<void>(
+                  context,
+                  dismissLabel: l.commonCancel,
+                  builder: (context) => const _InviteDialog(),
+                ),
+              ),
+            )
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 12,
@@ -541,19 +554,6 @@ class _Invites extends ConsumerWidget {
                         : null,
                   ),
               ],
-            ),
-          if (create)
-            MatineeButton(
-              look: ButtonLook.outline,
-              leading: Lucide.plus,
-              onPressed: () => unawaited(
-                Dialog.show<void>(
-                  context,
-                  dismissLabel: l.commonCancel,
-                  builder: (context) => const _InviteDialog(),
-                ),
-              ),
-              child: Text(l.webUsersInvitesCreate),
             ),
         ],
       ),
@@ -733,7 +733,6 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
     final failure = _failure;
     return Dialog(
       title: l.webUsersInvitesCreate,
-      description: l.webUsersInvitesDialogDescription,
       actions: [
         MatineeButton(
           look: ButtonLook.outline,
@@ -794,7 +793,6 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
                   Expanded(child: Text(group.name)),
                 ],
               ),
-            Note(l.webUsersInvitesDialogGroupsHint),
           ],
           if (failure != null) Note(failure, danger: true),
         ],

@@ -216,12 +216,12 @@ void main() {
         Permission.fulfilmentCreate,
       ],
     );
-    expect(find.text(_l.webConnectionsAdd), findsNothing);
+    expect(_barButton(_l.webConnectionsAdd), findsNothing);
 
     final allowed = _Server(connections: [_connection()]);
     await _pump(tester, const ConnectionsPage(), allowed);
 
-    expect(find.text(_l.webConnectionsAdd), findsOneWidget);
+    expect(_barButton(_l.webConnectionsAdd), findsOneWidget);
     await tester.tap(find.text('Films'));
     await tester.pumpAndSettle();
     expect(find.text(_l.webConnectionsTest), findsOneWidget);
@@ -330,3 +330,8 @@ void main() {
     expect(find.text(_l.webConnectionsEmptyTitle), findsOneWidget);
   });
 }
+
+/// The page bar's button that says [label] to a screen reader.
+Finder _barButton(String label) => find.byWidgetPredicate(
+  (widget) => widget is PageBarButton && widget.label == label,
+);

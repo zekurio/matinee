@@ -28,12 +28,10 @@ export default defineMessages("ask", {
   // In the tooltip of the Request button, read aloud with it too: for
   // someone who requested or follows a declined title, the admin's
   // answer; for anyone else, why the button can't be pressed, or how few
-  // requests are left. {reason} is the reason the admin picked, as
-  // Requests words it.
-  "ask.declined.why": "Declined: {reason}.",
+  // requests are left.
   // A request the admin accepted and then gave up on.
   "ask.declined.notFound": "No copy of this could be found.",
-  // The admin's note, a line of its own under the answer.
+  // The reason the admin typed, a line of its own under the answer.
   "ask.declined.note": "“{note}”",
   // A declined title, for someone who didn't request it, and for an
   // admin, with where the decline is lifted.
@@ -49,9 +47,7 @@ export default defineMessages("ask", {
     one: "{count} request left.",
     other: "{count} requests left.",
   }),
-  // My requests: "Declined by Lukas: Not for this server."
-  "ask.reason.alreadyHere": "Already have it.",
-  "ask.reason.notForServer": "Not for this server.",
+  // My requests: that it was declined, or given up on for want of a copy.
   "ask.reason.notFound": "No copy found.",
   "ask.reason.declined": "Declined.",
 

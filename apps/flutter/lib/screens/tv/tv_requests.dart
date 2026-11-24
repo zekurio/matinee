@@ -104,7 +104,6 @@ class _DeclineBody extends ConsumerStatefulWidget {
 }
 
 class _DeclineBodyState extends ConsumerState<_DeclineBody> {
-  String? _reason;
   final _note = TextEditingController();
 
   @override
@@ -116,14 +115,7 @@ class _DeclineBodyState extends ConsumerState<_DeclineBody> {
   void _submit(AppLocalizations l) {
     final text = _note.text.trim();
     final note = text.isEmpty ? null : text;
-    final QueueAnswer answer;
-    if (widget.giveUp) {
-      answer = GiveUpAnswer(note);
-    } else {
-      final reason = _reason;
-      if (reason == null) return;
-      answer = DeclineAnswer(reason, note);
-    }
+    final answer = widget.giveUp ? GiveUpAnswer(note) : DeclineAnswer(note);
     final hub = ref.read(requestsProvider.notifier);
     Navigator.of(context).pop(true);
     unawaited(hub.answer(l, widget.item, answer, undo: false));
@@ -139,25 +131,6 @@ class _DeclineBodyState extends ConsumerState<_DeclineBody> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 4,
       children: [
-        TvListHeading(l.webRequestsDeclineReason),
-        // Only one reason fits giving up, so it's said, not offered.
-        if (giveUp)
-          TvListItem(
-            title: adminReasonText(DeclineReason.notFound, l),
-            quiet: true,
-            checked: true,
-            enabled: false,
-            onPressed: null,
-          )
-        else
-          for (final (index, code) in WaitingDeclineReason.all.indexed)
-            TvListItem(
-              title: adminReasonText(code, l),
-              quiet: true,
-              checked: _reason == code,
-              autofocus: index == 0,
-              onPressed: () => setState(() => _reason = code),
-            ),
         TvListHeading(
           askedBy.isEmpty
               ? l.webRequestsDeclineNote
@@ -174,14 +147,15 @@ class _DeclineBodyState extends ConsumerState<_DeclineBody> {
               : l.webRequestsDeclineSubmit,
           icon: giveUp ? Lucide.circleSlash : Lucide.x,
           destructive: true,
-          enabled: giveUp || _reason != null,
           onPressed: () => _submit(l),
         ),
         TvListItem(
           title: l.webRequestsDeclineCancel,
           icon: Lucide.arrowLeft,
           quiet: true,
-          autofocus: giveUp,
+          // Not the field, which would raise the keyboard for a reason
+          // that's optional, nor the destructive answer.
+          autofocus: true,
           onPressed: () => Navigator.of(context).pop(false),
         ),
       ],

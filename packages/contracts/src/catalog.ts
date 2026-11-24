@@ -17,23 +17,6 @@ export const CatalogRef = t.object({
 })
 export type CatalogRef = t.infer<typeof CatalogRef>
 
-export const DECLINE_REASONS = [
-  "alreadyHere",
-  "notForServer",
-  "notFound",
-] as const
-export const DeclineReason = t.enum(DECLINE_REASONS)
-export type DeclineReason = t.infer<typeof DeclineReason>
-
-/**
- * The reasons a waiting request is declined with. "Can't find a copy" is
- * only known once a request was accepted and sent, so it goes with
- * giving up on one instead.
- */
-export const WAITING_DECLINE_REASONS = ["alreadyHere", "notForServer"] as const
-export const WaitingDeclineReason = t.enum(WAITING_DECLINE_REASONS)
-export type WaitingDeclineReason = t.infer<typeof WaitingDeclineReason>
-
 export const RequestQuota = t.object({
   titles: t.number().int().min(1).max(10000),
   days: t.number().int().min(1).max(365),
@@ -55,14 +38,14 @@ export const Availability = t.object({
   releaseDate: t.string().nullable(),
   stillLooking: t.boolean(),
   /**
-   * Why a declined title is unavailable, with who declined it and the
-   * admin's note. Only for the people who requested it;
-   * everyone else sees the title as unavailable without it.
+   * Why a declined title is unavailable: declined, or given up on for
+   * want of a copy, with the reason the admin typed, if any. Only for the
+   * people who requested it; everyone else sees the title as unavailable
+   * without it.
    */
   reason: t
     .object({
       kind: t.enum(["declined", "notFound"]),
-      code: DeclineReason.nullable(),
       note: t.string().nullable(),
     })
     .nullable(),

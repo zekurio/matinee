@@ -164,6 +164,14 @@ class _LibrariesPageState extends ConsumerState<LibrariesPage> {
     final acts = may.scan || may.edit || may.remove;
     return AdminPage(
       title: l.settingsAdminLibraries,
+      actions: [
+        if (add)
+          PageBarButton(
+            icon: Lucide.folderPlus,
+            label: l.webLibrariesAdd,
+            onPressed: () => unawaited(_edit()),
+          ),
+      ],
       child: adminBody(
         context,
         libraries,
@@ -191,12 +199,6 @@ class _LibrariesPageState extends ConsumerState<LibrariesPage> {
                               : null,
                         ),
                     ],
-                  ),
-                if (add)
-                  MatineeButton(
-                    leading: Lucide.folderPlus,
-                    onPressed: () => unawaited(_edit()),
-                    child: Text(l.webLibrariesAdd),
                   ),
               ],
             ),
