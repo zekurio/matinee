@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart' hide Title;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/matinee_api.dart';
+import '../../kit/motion.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/actions.dart';
 import '../../media/artwork.dart';
@@ -48,13 +49,16 @@ class _TitleScreenState extends ConsumerState<TitleScreen> with PendingMarks {
     return ReturnWatcher(
       path: Routes.title(widget.id),
       onReturn: _refresh,
-      child: title == null
-          ? PageState(
-              error: async.error,
-              errorTitle: l.titleLoadError,
-              onRetry: () => ref.invalidate(titleProvider(widget.id)),
-            )
-          : _page(context, title),
+      child: FadeSwitcher(
+        value: title != null,
+        child: title == null
+            ? PageState(
+                error: async.error,
+                errorTitle: l.titleLoadError,
+                onRetry: () => ref.invalidate(titleProvider(widget.id)),
+              )
+            : _page(context, title),
+      ),
     );
   }
 

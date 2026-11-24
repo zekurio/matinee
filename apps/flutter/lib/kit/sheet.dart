@@ -5,6 +5,7 @@ import 'glass.dart';
 import 'icon.dart';
 import 'keyboard_room.dart';
 import 'modal_backdrop.dart';
+import 'motion.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -154,8 +155,10 @@ class _SheetRoute<T> extends material.ModalBottomSheetRoute<T> {
          sheetAnimationStyle: reducedMotion
              ? AnimationStyle.noAnimation
              : const AnimationStyle(
-                 duration: Duration(milliseconds: 280),
-                 reverseDuration: Duration(milliseconds: 200),
+                 duration: KitMotion.move,
+                 reverseDuration: KitMotion.exit,
+                 curve: KitMotion.easing,
+                 reverseCurve: KitMotion.exitEasing,
                ),
        );
 

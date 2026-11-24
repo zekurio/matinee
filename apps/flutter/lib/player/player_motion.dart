@@ -1,25 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// The timings the player's controls, menus, and notes move with.
-abstract final class PlayerMotion {
-  /// The web's cubic-bezier(0.22, 1, 0.36, 1): off at once, then a long, soft landing.
-  static const easing = Cubic(.22, 1, .36, 1);
-
-  /// The web's ease-in, for things on their way out.
-  static const exitEasing = Cubic(.4, 0, 1, 1);
-
-  /// A sheet or panel moving.
-  static const move = Duration(milliseconds: 280);
-
-  /// An overlay appearing.
-  static const enter = Duration(milliseconds: 200);
-
-  /// The same going away, quicker.
-  static const exit = Duration(milliseconds: 150);
-
-  /// A color or a selection changing.
-  static const color = Duration(milliseconds: 120);
-}
+import '../kit/motion.dart';
 
 /// Fades [child] in and out with the player's fades, and drops it once it has
 /// faded out, so hidden controls take no touches and a screen reader no longer
@@ -38,15 +19,15 @@ class _PlayerFadeState extends State<PlayerFade>
     with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(
     vsync: this,
-    duration: PlayerMotion.enter,
-    reverseDuration: PlayerMotion.exit,
+    duration: KitMotion.enter,
+    reverseDuration: KitMotion.exit,
     value: widget.visible ? 1 : 0,
   )..addStatusListener((_) => setState(() {}));
 
   late final _opacity = CurvedAnimation(
     parent: _controller,
-    curve: PlayerMotion.easing,
-    reverseCurve: PlayerMotion.exitEasing,
+    curve: KitMotion.easing,
+    reverseCurve: KitMotion.exitEasing,
   );
 
   @override

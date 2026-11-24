@@ -55,11 +55,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       _scroll.jumpTo(0);
     } else {
       unawaited(
-        _scroll.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-        ),
+        _scroll.animateTo(0, duration: KitMotion.move, curve: KitMotion.easing),
       );
     }
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../icon.dart';
+import '../motion.dart';
 import '../theme.dart';
 import 'tv_focus.dart';
 import 'tv_metrics.dart';
@@ -138,8 +139,8 @@ class TvIconButton extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: AnimatedSize(
-            duration: focused ? TvMotion.enter : TvMotion.exit,
-            curve: focused ? TvMotion.easing : TvMotion.exitEasing,
+            duration: focused ? KitMotion.enter : KitMotion.exit,
+            curve: focused ? KitMotion.easing : KitMotion.exitEasing,
             alignment: AlignmentDirectional.centerStart,
             child: Row(
               mainAxisSize: MainAxisSize.min,

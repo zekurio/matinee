@@ -177,17 +177,3 @@ abstract final class TvPanels {
   /// Where the panel's heading starts, in line with its rows' text.
   static const textStart = listPadding + TvListItems.inset;
 }
-
-/// The web's timings.
-abstract final class TvMotion {
-  /// The web's cubic-bezier(0.22, 1, 0.36, 1).
-  static const easing = Cubic(.22, 1, .36, 1);
-
-  /// The web's ease-in, for things on their way out.
-  static const exitEasing = Cubic(.4, 0, 1, 1);
-
-  static const move = Duration(milliseconds: 280);
-  static const enter = Duration(milliseconds: 200);
-  static const exit = Duration(milliseconds: 150);
-  static const color = Duration(milliseconds: 120);
-}

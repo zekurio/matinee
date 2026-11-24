@@ -10,6 +10,7 @@ import 'package:flutter/widgets.dart';
 
 import '../cards.dart' show WatchedBadge;
 import '../icon.dart';
+import '../motion.dart';
 import '../spinner.dart';
 import '../theme.dart';
 import '../tone.dart';
@@ -416,12 +417,12 @@ class _TvPosterGridState extends State<TvPosterGrid> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AnimatedSize(
-          duration: shown ? TvMotion.enter : TvMotion.exit,
-          curve: shown ? TvMotion.easing : TvMotion.exitEasing,
+          duration: shown ? KitMotion.enter : KitMotion.exit,
+          curve: shown ? KitMotion.easing : KitMotion.exitEasing,
           alignment: Alignment.topCenter,
           child: AnimatedOpacity(
             opacity: shown ? 1 : 0,
-            duration: shown ? TvMotion.enter : TvMotion.exit,
+            duration: shown ? KitMotion.enter : KitMotion.exit,
             child: shown && header != null
                 ? Focus(
                     canRequestFocus: false,
@@ -439,8 +440,8 @@ class _TvPosterGridState extends State<TvPosterGrid> {
         ),
         if (line != null || !shown)
           AnimatedPadding(
-            duration: TvMotion.enter,
-            curve: TvMotion.easing,
+            duration: KitMotion.enter,
+            curve: KitMotion.easing,
             padding: EdgeInsetsDirectional.only(
               start: TvPage.start,
               end: shown ? TvPage.end : TvPage.end + TvGrid.clockRoom,

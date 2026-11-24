@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'icon.dart';
+import 'motion.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -286,9 +287,7 @@ class _PressWash extends StatelessWidget {
     return IgnorePointer(
       child: AnimatedOpacity(
         opacity: opacity,
-        duration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : const Duration(milliseconds: 150),
+        duration: KitMotion.of(context, KitMotion.color),
         child: ColoredBox(color: MatineeTheme.of(context).foreground),
       ),
     );

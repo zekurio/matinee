@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 
 import '../kit/kit.dart';
-import 'player_motion.dart';
 
 /// One line of a player menu: a heading, a note, a divider, or a choice.
 sealed class PanelEntry {
@@ -66,12 +65,12 @@ class _PlayerPanelState extends State<PlayerPanel>
     with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(
     vsync: this,
-    duration: PlayerMotion.move,
+    duration: KitMotion.move,
     value: widget.entries == null ? 0 : 1,
   )..addStatusListener((_) => setState(() {}));
   late final _slide = CurvedAnimation(
     parent: _controller,
-    curve: PlayerMotion.easing,
+    curve: KitMotion.easing,
   );
   late List<PanelEntry> _last = widget.entries ?? const [];
 

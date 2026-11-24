@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../kit/kit.dart';
-import 'player_motion.dart';
 
 /// The time played and the full length over the seek track: the times on their
 /// own row, the track the full width under them, with nothing beside it.
@@ -338,8 +337,8 @@ class _SeekTrackState extends State<SeekTrack> {
                     // The dot grows under the finger, and while focused.
                     child: TweenAnimationBuilder<double>(
                       tween: Tween(end: widget.scrubbing || _focused ? 11 : 8),
-                      duration: PlayerMotion.color,
-                      curve: PlayerMotion.easing,
+                      duration: KitMotion.color,
+                      curve: KitMotion.easing,
                       builder: (context, thumb, _) => CustomPaint(
                         size: const Size(double.infinity, 24),
                         painter: _TrackPainter(

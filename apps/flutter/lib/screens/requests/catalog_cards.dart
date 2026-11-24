@@ -25,7 +25,7 @@ import 'requests_hub.dart';
 
 /// How long the badge takes to go when a title arrives, before the card
 /// becomes the library's.
-const _arrival = Duration(milliseconds: 200);
+const _arrival = KitMotion.enter;
 
 /// Says [text] at the bottom of the screen, in place of whatever said
 /// something before, as the web's tooltips do.
