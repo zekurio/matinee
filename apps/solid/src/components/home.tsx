@@ -1,6 +1,6 @@
 import type { Library, MediaItem } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
-import { useQuery } from "@tanstack/solid-query"
+import { useQuery, useQueryClient } from "@tanstack/solid-query"
 import {
   Link,
   useElementScrollRestoration,
@@ -8,7 +8,7 @@ import {
   useRouter,
 } from "@tanstack/solid-router"
 import { ChevronRight, FolderPlus, Popcorn } from "lucide"
-import { Errored, For, Loading, Repeat, Show } from "solid-js"
+import { createEffect, Errored, For, Loading, Repeat, Show } from "solid-js"
 
 import { tr } from "@/i18n"
 import {
@@ -21,7 +21,7 @@ import {
 import { Icon } from "@/kit/icon"
 import { Skeleton } from "@/kit/skeleton"
 import { Spinner } from "@/kit/spinner"
-import { homeQueries } from "@/lib/home-queries"
+import { enabledWhile, homeQueries, prefetchHome } from "@/lib/home-queries"
 import { can } from "@/lib/permissions"
 import { orpc } from "@/lib/rpc"
 import { isPhone } from "@/lib/viewport"
@@ -51,15 +51,34 @@ import {
  * Each section waits on its own query in its own boundary, so a slow one
  * holds only its place, and one that fails is left out, as on the React
  * app. While a section loads, a skeleton takes the room it will.
+ *
+ * The shell keeps Home out of the page while another one shows, and
+ * `showing` is false then: nothing in it runs or refetches.
  */
-export function Home() {
-  const libraries = useQuery(() => orpc.libraries.list.queryOptions())
+export function Home(props: { showing: boolean }) {
+  const enabled = enabledWhile(() => props.showing)
+  const queryClient = useQueryClient()
+  // The loader ran before Home was back. What went stale between then and
+  // now would wait for the next visit, so ask again; fresh rows are left.
+  createEffect(
+    () => props.showing,
+    (showing) => {
+      if (showing) prefetchHome(queryClient)
+    },
+    { defer: true },
+  )
+  const libraries = useQuery(() => ({
+    ...orpc.libraries.list.queryOptions(),
+    enabled,
+  }))
   const eager = returning()
   return (
-    <Errored fallback={<HomeSections eager={eager} />}>
-      <Loading fallback={<HomeSections eager={eager} />}>
+    <Errored fallback={<HomeSections eager={eager} showing={props.showing} />}>
+      <Loading
+        fallback={<HomeSections eager={eager} showing={props.showing} />}
+      >
         <Show when={libraries.data.length > 0} fallback={<NoLibraries />}>
-          <HomeSections eager={eager} />
+          <HomeSections eager={eager} showing={props.showing} />
         </Show>
       </Loading>
     </Errored>
@@ -92,11 +111,12 @@ const sectionGap = "gap-6 sm:gap-8"
  * Home's sections. Rails below the fold build their first card only, until
  * they come near the window (see {@link createRailReveal}).
  */
-function HomeSections(props: { eager: boolean }) {
-  const resume = useQuery(() => homeQueries.resume())
-  const nextUp = useQuery(() => homeQueries.nextUp())
-  const featured = useQuery(() => homeQueries.featured())
-  const reveal = createRailReveal(props.eager)
+function HomeSections(props: { eager: boolean; showing: boolean }) {
+  const enabled = enabledWhile(() => props.showing)
+  const resume = useQuery(() => ({ ...homeQueries.resume(), enabled }))
+  const nextUp = useQuery(() => ({ ...homeQueries.nextUp(), enabled }))
+  const featured = useQuery(() => ({ ...homeQueries.featured(), enabled }))
+  const reveal = createRailReveal(props.eager, () => props.showing)
   return (
     <div
       class={cn("flex flex-col pt-2", sectionGap)}
@@ -120,9 +140,14 @@ function HomeSections(props: { eager: boolean }) {
           <Show when={featured.data.length > 0}>
             <Show
               when={!isPhone()}
-              fallback={<FeaturedCarousel slides={featured.data} />}
+              fallback={
+                <FeaturedCarousel
+                  slides={featured.data}
+                  showing={props.showing}
+                />
+              }
             >
-              <HomeShowcase slides={featured.data} />
+              <HomeShowcase slides={featured.data} showing={props.showing} />
             </Show>
           </Show>
         </Loading>
@@ -174,7 +199,7 @@ function EpisodeRail(props: {
   title: string
   items: MediaItem[]
 }) {
-  const hold = holdRail(props.reveal)
+  const hold = holdRail(props.reveal, () => props.items)
   return (
     <Rail ref={hold.ref} title={props.title}>
       <For each={hold.cards(props.items)} keyed={(item) => item.id}>
@@ -190,7 +215,11 @@ function EpisodeRail(props: {
 
 /** Each library's latest, once the libraries are known. */
 function Shelves(props: { reveal: RailReveal }) {
-  const libraries = useQuery(() => orpc.libraries.list.queryOptions())
+  const enabled = enabledWhile(() => props.reveal.showing())
+  const libraries = useQuery(() => ({
+    ...orpc.libraries.list.queryOptions(),
+    enabled,
+  }))
   return (
     <Errored fallback={null}>
       <Loading fallback={<PosterRailSkeleton />}>
@@ -259,8 +288,14 @@ function PosterRailSkeleton() {
 }
 
 function LibraryShelf(props: { library: Library; reveal: RailReveal }) {
-  const entries = useQuery(() => homeQueries.shelf(props.library.id))
-  const hold = holdRail(props.reveal)
+  const enabled = enabledWhile(() => props.reveal.showing())
+  const entries = useQuery(() => ({
+    ...homeQueries.shelf(props.library.id),
+    enabled,
+  }))
+  const hold = holdRail(props.reveal, () =>
+    entries.isSuccess ? entries.data : undefined,
+  )
   const title = () =>
     tr("browse.home.recentlyAdded", { library: props.library.name })
   return (

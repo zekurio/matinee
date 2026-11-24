@@ -23,7 +23,12 @@ declare global {
 async function preloadedFetch(request: Request): Promise<Response> {
   const preload = window.__matineePreload
   if (preload && request.method === "POST") {
-    const key = `${new URL(request.url).pathname} ${await request.clone().text()}`
+    const path = new URL(request.url).pathname
+    // Only a request to a path that has an answer waiting reads its body.
+    const waiting = Object.keys(preload).some((key) =>
+      key.startsWith(`${path} `),
+    )
+    const key = waiting ? `${path} ${await request.clone().text()}` : ""
     const answer = preload[key]
     if (answer) {
       delete preload[key]

@@ -34,6 +34,7 @@ import {
   seasonName,
   timeLeft,
 } from "@/lib/media"
+import { pointerIntent } from "@/lib/pointer-intent"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 import { Picture, tone } from "./picture"
@@ -240,6 +241,9 @@ export function ThumbPlayButton(props: {
   )
 }
 
+/** How long the pointer rests on a play button before its title loads, in ms. */
+const PLAY_AHEAD_MS = 50
+
 /**
  * Play in the middle of a poster, for whatever the title's page would
  * play. The card doesn't know which file that is, so the button asks for
@@ -252,6 +256,7 @@ function TitlePlayButton(props: { title: TitleSummary; class?: string }) {
   const options = () =>
     orpc.titles.get.queryOptions({ input: { id: props.title.id } })
   const prefetch = () => void queryClient.prefetchQuery(options())
+  const pointed = pointerIntent(prefetch, () => PLAY_AHEAD_MS)
   const play = async () => {
     const name = props.title.name
     try {
@@ -271,7 +276,8 @@ function TitlePlayButton(props: { title: TitleSummary; class?: string }) {
     <button
       type="button"
       aria-label={tr("media.play", { name: props.title.name })}
-      onPointerEnter={prefetch}
+      onPointerEnter={pointed.enter}
+      onPointerLeave={pointed.cancel}
       onFocus={prefetch}
       onClick={() => void play()}
       class={cn(playControl, props.class)}
@@ -466,24 +472,19 @@ function CardLink(
   props: ParentProps<{ href: string; title?: string; class?: string }>,
 ) {
   const router = useRouter()
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const cancel = () => {
-    clearTimeout(timer)
-    timer = undefined
-  }
   // Both router calls go by `href`, so their type arguments say any path,
   // which lets `to` go unsaid.
   const preload = () => {
-    cancel()
     if (router.options.defaultPreload !== "intent") return
     // One that fails leaves the page to load on the click.
     router
       .preloadRoute<string, string>({ href: props.href })
       .catch(() => undefined)
   }
-  const soon = () => {
-    timer ??= setTimeout(preload, router.options.defaultPreloadDelay ?? 0)
-  }
+  const pointed = pointerIntent(
+    preload,
+    () => router.options.defaultPreloadDelay ?? 0,
+  )
   return (
     <a
       href={props.href}
@@ -501,17 +502,22 @@ function CardLink(
           return
         }
         event.preventDefault()
-        cancel()
+        pointed.cancel()
         void router.navigate<RegisteredRouter, string>({ href: props.href })
       }}
-      onMouseOver={soon}
+      onMouseOver={pointed.enter}
       onMouseOut={(event) => {
         const to = event.relatedTarget
-        if (!(to instanceof Node && event.currentTarget.contains(to))) cancel()
+        if (!(to instanceof Node && event.currentTarget.contains(to))) {
+          pointed.cancel()
+        }
       }}
-      onFocus={soon}
-      onBlur={cancel}
-      onTouchStart={preload}
+      onFocus={pointed.enter}
+      onBlur={pointed.cancel}
+      onTouchStart={() => {
+        pointed.cancel()
+        preload()
+      }}
     >
       {props.children}
     </a>

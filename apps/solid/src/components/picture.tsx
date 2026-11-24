@@ -1,5 +1,5 @@
 import { cn } from "@matinee/ui/lib/utils"
-import { createMemo, createSignal, Show } from "solid-js"
+import { createMemo, createSignal, onSettled, Show } from "solid-js"
 
 import type { ImageSource } from "@/lib/media"
 
@@ -67,6 +67,17 @@ function PictureSources(props: PictureProps) {
   // draws at once, so it mounts without the placeholder under it.
   const seen = createMemo(() => shown.has(source()?.src ?? ""))
   const fill = "absolute inset-0 size-full object-cover"
+  let image: HTMLImageElement | undefined
+  // A lazy image with `sizes="auto"` picks a file again when it leaves the
+  // page, at the window's width, and fetches the largest one for nothing. A
+  // windowed grid takes a row of them out with every row it scrolls by.
+  onSettled(() => () => {
+    queueMicrotask(() => {
+      if (!image || image.isConnected) return
+      image.removeAttribute("srcset")
+      image.removeAttribute("src")
+    })
+  })
   return (
     <Show when={source()}>
       {(current) => (
@@ -84,6 +95,7 @@ function PictureSources(props: PictureProps) {
               `loading="lazy"` that's every image on the page at once, and
               before `srcset` it's the wrong file. */}
           <img
+            ref={(element) => (image = element)}
             alt=""
             loading={props.eager ? "eager" : "lazy"}
             decoding="async"

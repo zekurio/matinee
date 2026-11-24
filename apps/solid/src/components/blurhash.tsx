@@ -2,10 +2,10 @@ import type { ImagePlaceholder } from "@matinee/contracts"
 import { isBlurhashValid } from "blurhash"
 import { createEffect, createMemo } from "solid-js"
 
-// Jellyfin decodes at 20 pixels too. Scaling the canvas up smooths the rest.
+// Jellyfin decodes at 20 pixels too. Scaling the image up smooths the rest.
 const LONG_SIDE = 20
 
-function canvasSize(aspectRatio: number): { width: number; height: number } {
+function imageSize(aspectRatio: number): { width: number; height: number } {
   return aspectRatio >= 1
     ? {
         width: LONG_SIDE,
@@ -26,7 +26,7 @@ let observer: IntersectionObserver | null = null
  * inside a row that scrolls sideways. A page of cards decoded every one at
  * once, most of them out of sight. Returns what stops watching it.
  */
-function drawWhenNear(canvas: HTMLCanvasElement, draw: () => void) {
+function drawWhenNear(element: Element, draw: () => void) {
   observer ??= new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
@@ -38,11 +38,11 @@ function drawWhenNear(canvas: HTMLCanvasElement, draw: () => void) {
     },
     { rootMargin: "50%", scrollMargin: "50%" },
   )
-  waiting.set(canvas, draw)
-  observer.observe(canvas)
+  waiting.set(element, draw)
+  observer.observe(element)
   return () => {
-    observer?.unobserve(canvas)
-    waiting.delete(canvas)
+    observer?.unobserve(element)
+    waiting.delete(element)
   }
 }
 
@@ -74,12 +74,18 @@ function signedSquare(value: number): number {
 }
 
 /**
- * The `blurhash` package's `decode`, to the same pixels, written straight
- * into `image`. It works each cosine out once per column and row rather
- * than once per pixel and component, which more than halves its time.
+ * The `blurhash` package's `decode`, to the same pixels, written as a
+ * 24-bit BMP's rows into `bytes` from `offset`, bottom row first. It works
+ * each cosine out once per column and row rather than once per pixel and
+ * component, which more than halves its time.
  */
-function decodeInto(image: ImageData, blurhash: string) {
-  const { width, height, data } = image
+function decodeInto(
+  bytes: Uint8Array,
+  offset: number,
+  blurhash: string,
+  width: number,
+  height: number,
+) {
   const size = base83(blurhash, 0, 1)
   const numY = Math.floor(size / 9) + 1
   const numX = (size % 9) + 1
@@ -108,7 +114,9 @@ function decodeInto(image: ImageData, blurhash: string) {
       cosY[y * numY + j] = Math.cos((Math.PI * y * j) / height)
     }
   }
+  const stride = rowBytes(width)
   for (let y = 0; y < height; y++) {
+    const row = offset + (height - 1 - y) * stride
     for (let x = 0; x < width; x++) {
       let r = 0
       let g = 0
@@ -122,32 +130,57 @@ function decodeInto(image: ImageData, blurhash: string) {
           b += (colors[color + 2] ?? 0) * basis
         }
       }
-      const pixel = (y * width + x) * 4
-      data[pixel] = toSrgb(r)
-      data[pixel + 1] = toSrgb(g)
-      data[pixel + 2] = toSrgb(b)
-      data[pixel + 3] = 255
+      const pixel = row + x * 3
+      bytes[pixel] = toSrgb(b)
+      bytes[pixel + 1] = toSrgb(g)
+      bytes[pixel + 2] = toSrgb(r)
     }
   }
 }
 
-/** How many decoded placeholders to keep, at about a kilobyte each. */
+/** A BMP row of `width` pixels, padded to four bytes. */
+function rowBytes(width: number): number {
+  return Math.ceil((width * 3) / 4) * 4
+}
+
+const HEADER = 54
+
+/** An uncompressed 24-bit BMP of the placeholder, as a `data:` address. */
+function bitmap(blurhash: string, width: number, height: number): string {
+  const pixels = rowBytes(width) * height
+  const bytes = new Uint8Array(HEADER + pixels)
+  const header = new DataView(bytes.buffer)
+  header.setUint16(0, 0x4d42, true)
+  header.setUint32(2, bytes.length, true)
+  header.setUint32(10, HEADER, true)
+  header.setUint32(14, 40, true)
+  header.setInt32(18, width, true)
+  header.setInt32(22, height, true)
+  header.setUint16(26, 1, true)
+  header.setUint16(28, 24, true)
+  header.setUint32(34, pixels, true)
+  decodeInto(bytes, HEADER, blurhash, width, height)
+  let text = ""
+  for (const byte of bytes) text += String.fromCharCode(byte)
+  return `data:image/bmp;base64,${btoa(text)}`
+}
+
+/** How many decoded placeholders to keep, at about three kilobytes each. */
 const KEPT = 600
 
 /** Decoded placeholders, the most recently drawn last. */
-const decoded = new Map<string, ImageData>()
+const decoded = new Map<string, string>()
 
 /**
- * A placeholder's pixels. Kept, since a card in a windowed grid mounts
+ * A placeholder's image. Kept, since a card in a windowed grid mounts
  * again each time it scrolls back in, and decoding its placeholder cost a
  * quarter of what scrolling did.
  */
-function pixels(
-  context: CanvasRenderingContext2D,
+function placeholderImage(
   blurhash: string,
   width: number,
   height: number,
-): ImageData | undefined {
+): string | undefined {
   const key = `${width}x${height}:${blurhash}`
   const kept = decoded.get(key)
   if (kept) {
@@ -156,8 +189,7 @@ function pixels(
     return kept
   }
   if (!isBlurhashValid(blurhash).result) return undefined
-  const image = context.createImageData(width, height)
-  decodeInto(image, blurhash)
+  const image = bitmap(blurhash, width, height)
   decoded.set(key, image)
   if (decoded.size > KEPT) {
     for (const oldest of decoded.keys()) {
@@ -169,35 +201,37 @@ function pixels(
 }
 
 /**
- * An image's BlurHash, decoded small and stretched to fit. The canvas has
- * the image's shape, so `object-cover` and `object-position` crop it the
- * way they crop the image.
+ * An image's BlurHash, decoded small and stretched to fit. The image has
+ * the original's shape, so `object-cover` and `object-position` crop it
+ * the way they crop the original.
+ *
+ * It's an image rather than a canvas: Chrome gives every canvas a layer of
+ * its own, and everything drawn over one a layer too, which a grid of
+ * cards paid for in every frame it scrolled.
  */
 export function Blurhash(props: {
   placeholder: ImagePlaceholder
   class?: string
 }) {
-  let canvas: HTMLCanvasElement | undefined
-  const size = createMemo(() => canvasSize(props.placeholder.aspectRatio))
+  let element: HTMLImageElement | undefined
+  const size = createMemo(() => imageSize(props.placeholder.aspectRatio))
   createEffect(
     () => ({ blurhash: props.placeholder.blurhash, ...size() }),
     ({ blurhash, width, height }) => {
-      const target = canvas
+      const target = element
       if (!target) return
       return drawWhenNear(target, () => {
-        const context = target.getContext("2d")
-        if (!context) return
-        const image = pixels(context, blurhash, width, height)
-        if (image) context.putImageData(image, 0, 0)
+        const image = placeholderImage(blurhash, width, height)
+        if (image) target.src = image
       })
     },
   )
   return (
-    <canvas
-      ref={(element) => (canvas = element)}
-      width={size().width}
-      height={size().height}
+    <img
+      ref={(image) => (element = image)}
+      alt=""
       aria-hidden="true"
+      draggable={false}
       class={props.class}
     />
   )

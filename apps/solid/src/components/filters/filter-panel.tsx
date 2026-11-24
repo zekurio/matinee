@@ -1,12 +1,15 @@
 import type { JSX } from "@solidjs/web"
 import { ListFilter, Search, X } from "lucide"
 import {
+  createContext,
   createMemo,
   createSignal,
   createUniqueId,
   For,
+  onSettled,
   type ParentProps,
   Show,
+  useContext,
 } from "solid-js"
 
 import { chipClass } from "@/components/chips"
@@ -48,6 +51,12 @@ const compactTriggerClass = buttonVariants({
 })
 const drawerCloseClass = buttonVariants({ class: "h-11 px-5" })
 
+/**
+ * Lets a part of the panel forget what it holds, like a typed search, when
+ * the popover closes, since the popover keeps its content between opens.
+ */
+const OnPanelClosed = createContext<(reset: () => void) => void>(() => {})
+
 export function FilterPanel(
   props: ParentProps<{
     active: number
@@ -59,6 +68,23 @@ export function FilterPanel(
     props.active > 0
       ? tr("library.filtersOn", { count: props.active })
       : tr("library.filters")
+  // The popover's content is built once, while the page is idle a while
+  // after it painted, so a click on Filter only shows it.
+  const [prebuilt, setPrebuilt] = createSignal(false)
+  const resets = new Set<() => void>()
+  let scroller: HTMLDivElement | undefined
+  onSettled(() => {
+    let idle = 0
+    const timer = setTimeout(() => {
+      if ("requestIdleCallback" in window)
+        idle = requestIdleCallback(() => setPrebuilt(true))
+      else setPrebuilt(true)
+    }, 2000)
+    return () => {
+      clearTimeout(timer)
+      if (idle) cancelIdleCallback(idle)
+    }
+  })
   const clear = () => (
     <Show when={props.active > 0}>
       <Button variant="ghost" onClick={() => props.onClear()}>
@@ -95,7 +121,13 @@ export function FilterPanel(
         </Drawer>
       }
     >
-      <Popover>
+      <Popover
+        onOpenChangeComplete={(open) => {
+          if (open) return
+          if (scroller) scroller.scrollTop = 0
+          for (const reset of resets) reset()
+        }}
+      >
         <PopoverTrigger
           aria-label={label()}
           class={chipClass(props.active > 0)}
@@ -106,6 +138,10 @@ export function FilterPanel(
         <PopoverContent
           align="start"
           sideOffset={6}
+          keepMounted={prebuilt()}
+          // Kept out of `main`, so the closed copy's chips aren't found
+          // among the page's own when something looks for them there.
+          container={document.body}
           class="max-h-[min(44rem,var(--available-height))] w-104 max-w-(--available-width) gap-0 p-0"
         >
           <PopoverHeader class="min-h-14 px-4">
@@ -114,8 +150,18 @@ export function FilterPanel(
             </PopoverTitle>
             {clear()}
           </PopoverHeader>
-          <div class="flex min-h-0 flex-col gap-6 overflow-y-auto overscroll-contain px-4 pt-3 pb-4">
-            {props.children}
+          <div
+            ref={(el) => (scroller = el)}
+            class="flex min-h-0 flex-col gap-6 overflow-y-auto overscroll-contain px-4 pt-3 pb-4"
+          >
+            <OnPanelClosed
+              value={(reset) => {
+                resets.add(reset)
+                onSettled(() => () => resets.delete(reset))
+              }}
+            >
+              {props.children}
+            </OnPanelClosed>
           </div>
         </PopoverContent>
       </Popover>
@@ -179,6 +225,7 @@ export function ToggleChips(props: {
   find?: { limit: number; placeholder: string; empty: string }
 }) {
   const [query, setQuery] = createSignal("")
+  useContext(OnPanelClosed)(() => setQuery(""))
   const finding = () =>
     props.find && props.choices.length > props.find.limit
       ? props.find

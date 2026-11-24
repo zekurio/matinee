@@ -1,6 +1,9 @@
 import "./styles.css"
 import "@matinee/ui/globals.css"
-import { API_REFERENCE_PAGE_PATH, INVITE_PAGE_PATH } from "@matinee/contracts"
+import {
+  API_REFERENCE_PAGE_PATH,
+  INVITE_PAGE_PATH,
+} from "@matinee/contracts/paths"
 import { initTheme } from "@matinee/ui/lib/theme"
 import { render } from "@solidjs/web"
 import { QueryClientProvider } from "@tanstack/solid-query"

@@ -53,7 +53,8 @@ import { Picture, tone } from "./picture"
  * changes in place, the art crossing over while Play and Details stay put.
  * It moves on every eight seconds, and not while a pointer is over it,
  * the keyboard's focus is in it, a finger is on it, with reduced motion,
- * or while the page is out of sight.
+ * or while the page is out of sight. Kept out of the page while another
+ * one shows, it goes back to the first title, as a new one would start.
  */
 
 /**
@@ -110,7 +111,10 @@ const frostedButton =
 const playClass = cn(buttonVariants({ size: "lg" }), inverseButton)
 const detailsClass = cn(buttonVariants({ size: "lg" }), frostedButton)
 
-export function HomeShowcase(props: { slides: FeaturedTitle[] }) {
+export function HomeShowcase(props: {
+  slides: FeaturedTitle[]
+  showing: boolean
+}) {
   const navigate = useNavigate()
   const count = () => props.slides.length
   const [picked, setPicked] = createSignal(0)
@@ -131,7 +135,8 @@ export function HomeShowcase(props: { slides: FeaturedTitle[] }) {
       pressed() ||
       count() < 2 ||
       reducedMotion() ||
-      !pageVisible(),
+      !pageVisible() ||
+      !props.showing,
   )
 
   /** Changes the title in place; the one showing stays under the fade. */
@@ -145,6 +150,20 @@ export function HomeShowcase(props: { slides: FeaturedTitle[] }) {
     setPicked(target)
     setPrimed((seen) => new Set([...seen, target, (target + 1) % total]))
   }
+
+  createEffect(
+    () => props.showing,
+    (showing) => {
+      if (showing) return
+      setLeaving(null)
+      setPicked(0)
+      // Leaving the page doesn't always say so to the card.
+      setHovered(false)
+      setFocused(false)
+      setPressed(false)
+    },
+    { defer: true },
+  )
 
   // The title that left is gone once the new one has faded in over it.
   createEffect(leaving, (gone) => {
@@ -663,7 +682,9 @@ export function HomeShowcaseSkeleton() {
  * dark shade with its genres and its name in white. A tap opens the title.
  * Each card runs from margin to margin. It moves on every five seconds,
  * and back to the first after the last; not while a finger is on it, with
- * reduced motion, or while the page is out of sight.
+ * reduced motion, or while the page is out of sight. Out of the page
+ * while another one shows, the row loses its place and starts again at
+ * the first.
  */
 
 const CAROUSEL_ADVANCE_MS = 5000
@@ -676,7 +697,10 @@ function carouselHeight(window: { width: number; height: number }) {
 const CAROUSEL_SHADE =
   "linear-gradient(to bottom, rgb(0 0 0 / 0.1) 0%, rgb(0 0 0 / 0.3) 40%, rgb(0 0 0 / 0.6) 70%, rgb(0 0 0 / 0.8) 100%)"
 
-export function FeaturedCarousel(props: { slides: FeaturedTitle[] }) {
+export function FeaturedCarousel(props: {
+  slides: FeaturedTitle[]
+  showing: boolean
+}) {
   let row: HTMLUListElement | undefined
   const [touching, setTouching] = createSignal(false)
   const [at, setAt] = createSignal(0)
@@ -696,7 +720,12 @@ export function FeaturedCarousel(props: { slides: FeaturedTitle[] }) {
   createEffect(
     () => ({
       from: at(),
-      held: touching() || count() < 2 || reducedMotion() || !pageVisible(),
+      held:
+        touching() ||
+        count() < 2 ||
+        reducedMotion() ||
+        !pageVisible() ||
+        !props.showing,
     }),
     ({ from, held }) => {
       if (held) return
@@ -708,6 +737,16 @@ export function FeaturedCarousel(props: { slides: FeaturedTitle[] }) {
       }, CAROUSEL_ADVANCE_MS)
       return () => window.clearTimeout(timer)
     },
+  )
+
+  createEffect(
+    () => props.showing,
+    (showing) => {
+      if (showing) return
+      setAt(0)
+      setTouching(false)
+    },
+    { defer: true },
   )
 
   return (

@@ -103,6 +103,15 @@ fix is:
   A `backdrop-blur` on something a list repeats goes on only while it
   shows.
 
+- A `<canvas>` gets a layer of its own in Chrome, and so does what's
+  drawn over it. A placeholder a list repeats is an `<img>`.
+- A lazy `<img sizes="auto">` picks a file again when it leaves the page,
+  at the window's width. `Picture` clears its source once it's out.
+- A screen that's dear to build and often come back to can be kept, as
+  the shell keeps Home: out of the document while away, its queries off.
+- Hover preloads go through `pointerIntent` (`lib/pointer-intent.ts`), so
+  a card that scrolls under a resting pointer loads nothing.
+
 Chrome's script time counter leaves out microtasks, which is where Solid
 renders, so it reads low for this app. Measure from a trace.
 

@@ -2,6 +2,7 @@ import { cn } from "@matinee/ui/lib/utils"
 import type { JSX } from "@solidjs/web"
 import { ChevronLeft, ChevronRight } from "lucide"
 import {
+  createEffect,
   createSignal,
   createUniqueId,
   flush,
@@ -51,7 +52,8 @@ export function Rail(
 
   const measure = () => {
     const el = scroller
-    if (!el) return
+    // A row out of the page has no width; it keeps what it showed.
+    if (!el || el.clientWidth === 0) return
     const max = el.scrollWidth - el.clientWidth
     // Within a pixel, for zoom levels that leave a fraction.
     setEdges({ atStart: el.scrollLeft <= 1, atEnd: el.scrollLeft >= max - 1 })
@@ -202,16 +204,23 @@ const REVEAL_MARGIN = 0.25
  * paints it near the window: on its first layout, on a resize or a scroll,
  * and otherwise when an observer sees it come near, a frame later. Keyboard
  * focus anywhere on the page fills in every rail, so Tab goes card by card.
+ * While the page is idle, held rails fill in a few cards at a time, so
+ * find-in-page and a screen reader's browse mode reach every card.
  */
 export type RailReveal = {
   /** Every rail shows all its cards from the start. */
   readonly eager: boolean
+  /** Whether the page is in view; nothing is watched while it's kept out. */
+  showing: () => boolean
   /** Calls `show` once `section` comes near the window, and stops watching. */
   watch: (section: Element, show: () => void) => () => void
   showAll: () => void
 }
 
-export function createRailReveal(eager: boolean): RailReveal {
+export function createRailReveal(
+  eager: boolean,
+  showing: () => boolean,
+): RailReveal {
   const pending = new Map<Element, { reveal: () => void; stop: () => void }>()
   let intersect: IntersectionObserver | undefined
 
@@ -246,8 +255,17 @@ export function createRailReveal(eager: boolean): RailReveal {
     intersect?.disconnect()
   })
 
+  // Rails out of the page come near nothing. Back in, each held rail's
+  // observer reports its new size, which checks it.
+  createEffect(showing, (shown) => {
+    if (shown && pending.size > 0) {
+      addEventListener("scroll", onScroll, { passive: true })
+    } else removeEventListener("scroll", onScroll)
+  })
+
   return {
     eager,
+    showing,
     watch(section, reveal) {
       intersect ??= new IntersectionObserver(
         (entries) =>
@@ -258,7 +276,7 @@ export function createRailReveal(eager: boolean): RailReveal {
           ),
         { rootMargin: `${REVEAL_MARGIN * 100}% 0px` },
       )
-      if (pending.size === 0) {
+      if (pending.size === 0 && showing()) {
         addEventListener("scroll", onScroll, { passive: true })
       }
       // On its first layout and on a resize, before the paint.
@@ -277,20 +295,48 @@ export function createRailReveal(eager: boolean): RailReveal {
   }
 }
 
+/** The cards a held rail adds each time the page is idle. */
+const IDLE_STEP = 4
+
 /**
  * A rail's part in a {@link RailReveal}: `ref` goes on the rail, and
- * `cards` cuts its list to the first card until the rail comes near.
+ * `cards` cuts its list to the cards it holds. `list` is the rail's list,
+ * or undefined while it loads.
  */
-export function holdRail(reveal: RailReveal) {
-  const [shown, setShown] = createSignal(reveal.eager)
+export function holdRail(
+  reveal: RailReveal,
+  list: () => readonly unknown[] | undefined,
+) {
+  const all = Number.POSITIVE_INFINITY
+  const [count, setCount] = createSignal(reveal.eager ? all : 1)
   let section: HTMLElement | undefined
+  let stop: (() => void) | undefined
   onSettled(() => {
     if (reveal.eager || !section) return
-    return reveal.watch(section, () => setShown(true))
+    stop = reveal.watch(section, () => setCount(all))
+    return stop
   })
+  // The next count to show when the page is next idle, one step at a time
+  // so no step holds up a click.
+  createEffect(
+    () => {
+      const shown = count()
+      if (shown === all) return "done"
+      const total = reveal.showing() ? (list()?.length ?? 0) : 0
+      if (shown >= total) return "wait"
+      return shown + IDLE_STEP >= total ? all : shown + IDLE_STEP
+    },
+    (next) => {
+      if (next === "done") return stop?.()
+      if (next === "wait" || !("requestIdleCallback" in window)) return
+      const idle = requestIdleCallback(() => setCount(next))
+      return () => cancelIdleCallback(idle)
+    },
+  )
   return {
     ref: (el: HTMLElement) => (section = el),
-    cards: <T,>(list: readonly T[]) => (shown() ? list : list.slice(0, 1)),
+    cards: <T,>(items: readonly T[]) =>
+      count() >= items.length ? items : items.slice(0, count()),
   }
 }
 

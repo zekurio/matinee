@@ -64,6 +64,40 @@ function noReact(): Plugin {
   }
 }
 
+/**
+ * Asks for the text face from the page's head. The first render waits for
+ * it (`main.tsx`), and asked for only once the app's code has run, it
+ * arrives after that code is done.
+ */
+function preloadTextFace(): Plugin {
+  return {
+    name: "matinee:preload-text-face",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(_html, { bundle }) {
+        const face = Object.keys(bundle ?? {}).find((name) =>
+          /\/red-hat-text-latin-wght-normal-[\w-]+\.woff2$/.test(name),
+        )
+        if (!face) return
+        return [
+          {
+            tag: "link",
+            attrs: {
+              rel: "preload",
+              as: "font",
+              type: "font/woff2",
+              href: `/${face}`,
+              crossorigin: "",
+            },
+            injectTo: "head",
+          },
+        ]
+      },
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "")
   const server = env.VITE_SERVER_URL || "http://localhost:8420"
@@ -81,6 +115,14 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       rolldownOptions: {
+        // A contract module only builds schemas, so one whose exports the
+        // page never uses can be left out. Without this, one import from
+        // the package's index builds every schema before the first screen.
+        treeshake: {
+          moduleSideEffects: [
+            { test: /\/packages\/contracts\/src\//, sideEffects: false },
+          ],
+        },
         output: {
           codeSplitting: { experimentalInlineCommonChunks: { maxSize: 16384 } },
         },
@@ -99,6 +141,7 @@ export default defineConfig(({ mode }) => {
       }),
       solid(),
       tailwindcss(),
+      preloadTextFace(),
     ],
   }
 })

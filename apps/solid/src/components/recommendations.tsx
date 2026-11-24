@@ -8,7 +8,7 @@ import { For, Show } from "solid-js"
 
 import { railKey, railName } from "@/components/discover/discover-data"
 import { tr } from "@/i18n"
-import { homeQueries } from "@/lib/home-queries"
+import { enabledWhile, homeQueries } from "@/lib/home-queries"
 
 import { PosterCard } from "./media-item"
 import { holdRail, Rail, RailItem, type RailReveal } from "./rail"
@@ -35,7 +35,11 @@ export function reasonLine(reason: RecommendationReason | null): string {
  * "Not interested" lives in the cards' menus, which come later.
  */
 export function RecommendationRails(props: { reveal: RailReveal }) {
-  const recommendations = useQuery(() => homeQueries.recommendations())
+  const enabled = enabledWhile(() => props.reveal.showing())
+  const recommendations = useQuery(() => ({
+    ...homeQueries.recommendations(),
+    enabled,
+  }))
   const rails = () =>
     recommendations.isSuccess ? recommendations.data.rails : []
   return (
@@ -53,7 +57,7 @@ function RecommendationRail(props: {
   rail: t.infer<typeof HomeRecommendationRail>
   reveal: RailReveal
 }) {
-  const hold = holdRail(props.reveal)
+  const hold = holdRail(props.reveal, () => props.rail.items)
   return (
     <Rail ref={hold.ref} title={railName(props.rail)}>
       <For each={hold.cards(props.rail.items)} keyed={(item) => item.title.id}>
