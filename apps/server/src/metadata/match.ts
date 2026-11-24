@@ -15,6 +15,23 @@ function normalize(name: string): string {
   )
 }
 
+/** Rank catalog results by how closely the query matches a title or alias. */
+export function searchRelevance(query: string) {
+  const wanted = normalize(query)
+  return (candidate: { name: string; aliases?: string[] }): number => {
+    if (!wanted) return 0
+    let best = 0
+    for (const name of [candidate.name, ...(candidate.aliases ?? [])]) {
+      const have = normalize(name)
+      if (have === wanted) return 4
+      if (have.startsWith(`${wanted} `)) best = Math.max(best, 3)
+      else if (` ${have} `.includes(` ${wanted} `)) best = Math.max(best, 2)
+      else if (have.startsWith(wanted)) best = Math.max(best, 1)
+    }
+    return best
+  }
+}
+
 function nameScore(candidate: Candidate, wanted: string): number {
   let best = 0
   for (const name of [candidate.name, ...candidate.aliases]) {
