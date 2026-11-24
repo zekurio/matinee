@@ -14,6 +14,7 @@ import {
   saveArtwork,
   toArtwork,
 } from "../media/artwork"
+import { searchRelevance } from "../metadata/match"
 import { youTubeUrl } from "../metadata/trailers"
 import { availability } from "../requests/availability"
 import { withCachedDetails } from "../requests/cached-details"
@@ -47,8 +48,11 @@ export async function search(
     page: number
   },
 ) {
-  // One list per kind, each in the provider's order of relevance.
-  const lists: t.infer<typeof CatalogTitleSummary>[][] = []
+  const relevance = searchRelevance(input.query)
+  const lists: {
+    title: t.infer<typeof CatalogTitleSummary>
+    score: number
+  }[][] = []
   let stale = false
   const routing = await loadRouting()
   for (const kind of input.kind
@@ -84,30 +88,34 @@ export async function search(
       await withCachedDetails(viewer, refs),
     )
     const art = await artwork(result.value.map((row) => row.poster))
-    const items: t.infer<typeof CatalogTitleSummary>[] = []
+    const items: (typeof lists)[number] = []
     lists.push(items)
     result.value.forEach((row, index) => {
       const state = states[index]
       const ref = refs[index]?.ref
       if (state && ref && state.availability.state !== "here")
         items.push({
-          ref,
-          name: row.name,
-          year: row.year,
-          poster: art(row.poster),
-          availability: state.availability,
+          title: {
+            ref,
+            name: row.name,
+            year: row.year,
+            poster: art(row.poster),
+            availability: state.availability,
+          },
+          score: relevance(row),
         })
     })
   }
-  // Films and shows take turns, so the best match of each kind leads
-  // rather than every film coming before the first show.
+  // Alternate films and shows in provider order to break ties in relevance.
   const longest = Math.max(0, ...lists.map((list) => list.length))
   const items = Array.from({ length: longest }, (_, index) =>
     lists.flatMap((list) => list.slice(index, index + 1)),
-  ).flat()
+  )
+    .flat()
+    .sort((a, b) => b.score - a.score)
   const start = (input.page - 1) * 40
   return {
-    items: items.slice(start, start + 40),
+    items: items.slice(start, start + 40).map(({ title }) => title),
     nextPage: items.length > start + 40 ? input.page + 1 : null,
     stale,
   }

@@ -137,7 +137,14 @@ export function searchProvider(
   return cached(
     JSON.stringify([ref.provider, language, "search", ref.kind, query]),
     CACHE_HOURS.search,
-    (body) => t.object({ items: t.array(Candidate) }).parse(body).items,
+    (body) =>
+      t
+        .object({
+          items: t.array(
+            Candidate.extend({ aliases: t.array(t.string()).optional() }),
+          ),
+        })
+        .parse(body).items,
     async () => ({
       items: await sources[ref.provider].search({
         kind: ref.kind,
