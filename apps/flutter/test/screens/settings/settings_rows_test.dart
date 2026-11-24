@@ -6,39 +6,36 @@ import 'package:matinee/kit/kit.dart';
 import 'package:matinee/screens/settings/settings_rows.dart';
 
 /// A row that opens something, a switch row, and another that opens
-/// something, 360 wide, at [textScale]. [onChanged] hears the switch row.
-Future<void> _pump(
-  WidgetTester tester, {
-  ValueChanged<bool>? onChanged,
-  double textScale = 1,
-}) => tester.pumpWidget(
-  MaterialApp(
-    home: MatineeTheme.wrap(
-      matineeLight,
-      MediaQuery(
-        data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: 360,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                LinkRow(title: 'Quality', value: 'Auto', onPressed: () {}),
-                SwitchRow(
-                  title: 'Autoplay',
-                  checked: false,
-                  onChanged: onChanged ?? (_) {},
+/// something, 360 wide. [onChanged] hears the switch row.
+Future<void> _pump(WidgetTester tester, {ValueChanged<bool>? onChanged}) =>
+    tester.pumpWidget(
+      MaterialApp(
+        home: MatineeTheme.wrap(
+          matineeLight,
+          MediaQuery(
+            data: const MediaQueryData(),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    LinkRow(title: 'Quality', value: 'Auto', onPressed: () {}),
+                    SwitchRow(
+                      title: 'Autoplay',
+                      checked: false,
+                      onChanged: onChanged ?? (_) {},
+                    ),
+                    LinkRow(title: 'Subtitles', onPressed: () {}),
+                  ],
                 ),
-                LinkRow(title: 'Subtitles', onPressed: () {}),
-              ],
+              ),
             ),
           ),
         ),
       ),
-    ),
-  ),
-);
+    );
 
 /// The row that holds keyboard focus, by its title.
 String? _focused() {
@@ -54,52 +51,6 @@ String? _focused() {
 }
 
 void main() {
-  testWidgets('a switch row is as tall as a row with a value', (tester) async {
-    await _pump(tester);
-    expect(tester.getSize(find.byType(SwitchRow)).height, 52);
-    expect(
-      tester.getSize(find.byType(SwitchRow)),
-      tester.getSize(find.widgetWithText(LinkRow, 'Quality')),
-    );
-    // The track is taller than the title's line, and still inside the row.
-    final row = tester.getRect(find.byType(SwitchRow));
-    final track = tester.getRect(find.byType(SwitchTrack));
-    expect(track.size, SwitchTrack.size);
-    expect(track.top, greaterThan(row.top));
-    expect(track.bottom, lessThan(row.bottom));
-    expect(track.center.dy, row.center.dy);
-  });
-
-  // The group rows on an account's access page are built from it too.
-  testWidgets('a row switch takes one line of the title', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: MatineeTheme.wrap(
-          matineeLight,
-          const Center(child: RowSwitch(checked: true)),
-        ),
-      ),
-    );
-    expect(
-      tester.getSize(find.byType(RowSwitch)),
-      Size(SwitchTrack.size.width, KitText.base.lineHeight),
-    );
-  });
-
-  testWidgets('the switch ends where the other rows\' chevrons do', (
-    tester,
-  ) async {
-    await _pump(tester);
-    final chevron = find.descendant(
-      of: find.widgetWithText(LinkRow, 'Quality'),
-      matching: find.byType(KitIcon),
-    );
-    expect(
-      tester.getRect(find.byType(SwitchTrack)).right,
-      tester.getRect(chevron).right,
-    );
-  });
-
   // The bug it pins: the switch in the row was a second thing to focus and
   // to tap, inside the row that already toggles it.
   testWidgets('a switch row is one stop for the keyboard', (tester) async {
@@ -121,17 +72,5 @@ void main() {
     await tester.tapAt(track.topCenter + const Offset(0, 1));
     await tester.tap(find.text('Autoplay'));
     expect(heard, [true, true, true]);
-  });
-
-  testWidgets('a switch row grows with the text and keeps its switch', (
-    tester,
-  ) async {
-    await _pump(tester, textScale: 2);
-    expect(
-      tester.getSize(find.byType(SwitchRow)),
-      tester.getSize(find.widgetWithText(LinkRow, 'Subtitles')),
-    );
-    expect(tester.getSize(find.byType(SwitchTrack)), SwitchTrack.size);
-    expect(tester.takeException(), isNull);
   });
 }

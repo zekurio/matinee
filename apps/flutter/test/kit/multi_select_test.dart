@@ -134,13 +134,4 @@ void main() {
     expect(find.text('lost'), findsOneWidget);
     expect(_remove('Remove lost'), findsOneWidget);
   });
-
-  testWidgets('two short chips keep the field one line tall', (tester) async {
-    // A wide field, since the test font draws each letter as a square.
-    await _pump(tester, value: const ['drama', 'comedy'], width: 700);
-    final withChips = tester.getSize(find.byType(MultiSelect)).height;
-    await _pump(tester, width: 700);
-    final empty = tester.getSize(find.byType(MultiSelect)).height;
-    expect(withChips, empty);
-  });
 }

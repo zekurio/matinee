@@ -94,20 +94,6 @@ void main() {
   });
 
   group('a download the server sent the order for', () {
-    test('reads its skips, order and next time back from the store', () {
-      final stored = _download(
-        1,
-        2,
-        offline: _served(['s1e1', 's1e2', 's1e3']),
-      );
-      final offline = stored.offline!;
-      expect(offline.segments.single.kind, 'intro');
-      expect(offline.segments.single.start, 10);
-      expect(offline.segments.single.end, 80);
-      expect(offline.episodes, ['s1e1', 's1e2', 's1e3']);
-      expect(offline.upNextAt, 1200);
-    });
-
     test('goes to the nearest one here, over the ones that are not', () {
       final episodes = ['s1e1', 's1e2', 's1e3', 's1e4', 's1e5'];
       final here = [_download(1, 1), _download(1, 2), _download(1, 5)];

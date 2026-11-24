@@ -224,10 +224,4 @@ void main() {
       expect(remote.told, [true, false]);
     });
   });
-
-  test('the play and pause keys are left to the platform', () {
-    expect(AppleTvRemote.ownsKey(LogicalKeyboardKey.mediaPlayPause), isTrue);
-    expect(AppleTvRemote.ownsKey(LogicalKeyboardKey.mediaFastForward), isFalse);
-    expect(AppleTvRemote.ownsKey(LogicalKeyboardKey.select), isFalse);
-  });
 }

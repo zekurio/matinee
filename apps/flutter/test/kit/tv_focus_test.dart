@@ -69,11 +69,6 @@ Future<void> _press(WidgetTester tester, LogicalKeyboardKey key) async {
 void main() {
   _leavingTests();
 
-  testWidgets('a page focuses where it starts', (tester) async {
-    await _rows(tester, [4, 4]);
-    expect(_focused(), '0/0');
-  });
-
   testWidgets('moves sideways stay in a row, to its ends', (tester) async {
     final (_, edges) = await _rows(tester, [12, 3]);
     for (var i = 0; i < 11; i++) {

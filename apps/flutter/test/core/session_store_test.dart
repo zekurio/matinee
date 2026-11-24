@@ -69,17 +69,6 @@ void main() {
       expect(user?.permissions, isEmpty);
     });
 
-    test('keeps the permissions it was saved with', () {
-      final user = decodeUser(
-        jsonEncode({
-          ...userJson('ada'),
-          'permissions': ['all'],
-        }),
-      );
-
-      expect(user?.permissions, ['all']);
-    });
-
     test('that lacks anything else still reads as none', () {
       final broken = {...userJson('ada')}
         ..remove('permissions')

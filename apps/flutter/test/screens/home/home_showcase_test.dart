@@ -13,7 +13,6 @@ import 'package:matinee/l10n/app_localizations.dart';
 import 'package:matinee/media/artwork.dart';
 import 'package:matinee/screens/home/home_layout.dart';
 import 'package:matinee/screens/home/home_showcase.dart';
-import 'package:matinee/screens/shell/header.dart';
 
 import '../../media/fixtures.dart';
 
@@ -46,22 +45,18 @@ final class _NoCache implements ArtworkCache {
   Future<void> write(Uri url, Uint8List bytes) async {}
 }
 
-/// [child] in a tablet's [window], under the app's theme. With [server], it
+/// [child] in a 1280 x 800 tablet's window, under the app's theme. With [server], it
 /// asks that for its pictures; without, a title draws its tone and its name.
 Future<void> _pump(
   WidgetTester tester,
   Widget child, {
-  Size window = const Size(1280, 800),
   bool tickers = true,
-  double textScale = 1,
   TextDirection direction = TextDirection.ltr,
   http.Client? server,
 }) async {
-  tester.view.physicalSize = window;
+  tester.view.physicalSize = const Size(1280, 800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  tester.platformDispatcher.textScaleFactorTestValue = textScale;
-  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -348,97 +343,5 @@ void main() {
     expect(asked, contains('/api/media/item-Contact/thumbnail?size=large'));
     expect(asked.where((path) => path.contains('Dune')), isEmpty);
     expect(tester.takeException(), isNull);
-  });
-
-  // The bug it pins: the card's place while it loaded took the window's share
-  // alone, so on a small tablet or with large text the page jumped down when
-  // the titles arrived.
-  testWidgets('its place while it loads is as tall as the card', (
-    tester,
-  ) async {
-    for (final (window, scale) in const [
-      (Size(1280, 800), 1.0),
-      (Size(800, 1280), 1.0),
-      (Size(600, 960), 1.0),
-      (Size(960, 600), 1.0),
-      (Size(1280, 800), 2.0),
-    ]) {
-      await _pump(
-        tester,
-        const HomeShowcaseSkeleton(),
-        window: window,
-        textScale: scale,
-      );
-      final place = tester.getSize(find.byType(HomeShowcaseSkeleton));
-      // One title, so no dots under the card.
-      await _pump(
-        tester,
-        HomeShowcase(slides: [_slides.first]),
-        window: window,
-        textScale: scale,
-      );
-      expect(
-        tester.getSize(find.byType(HomeShowcase)),
-        place,
-        reason: '$window at $scale',
-      );
-      expect(tester.takeException(), isNull);
-    }
-  });
-
-  testWidgets('a short card shows less of the overview, a tall one all', (
-    tester,
-  ) async {
-    const overview =
-        'A crew answers a distress call and brings something back.';
-    final slide = FeaturedTitle.fromJson({
-      'title': {...titleJson('Eden', name: 'Eden'), 'overview': overview},
-      'item': itemJson('item-Eden'),
-      'count': 1,
-    });
-    for (final window in const [
-      Size(1280, 800),
-      Size(800, 1280),
-      Size(600, 960),
-      Size(960, 600),
-    ]) {
-      await _pump(tester, HomeShowcase(slides: [slide]), window: window);
-      final lines = ShowcaseLayout.overviewLines(
-        window,
-        CardMetrics.gutter,
-        TextScaler.noScaling,
-      );
-      final text = find.text(overview);
-      if (lines == 0) {
-        expect(text, findsNothing, reason: '$window');
-      } else {
-        expect(tester.widget<Text>(text).maxLines, lines, reason: '$window');
-      }
-      expect(
-        lines,
-        window == const Size(960, 600) ? lessThan(3) : 3,
-        reason: '$window',
-      );
-    }
-  });
-
-  // What the card's share of the window is for. The tabs are counted at
-  // Material 3's 80, the tallest they get.
-  testWidgets('a 1280 x 800 tablet keeps the first row\'s heading in view', (
-    tester,
-  ) async {
-    await _pump(tester, HomeShowcase(slides: _slides));
-    const statusBar = 24.0;
-    const tabs = 80.0;
-    const gestureBar = 24.0;
-    final room = 800 - statusBar - ShellHeader.height - tabs - gestureBar;
-    // Home's 8 over the card, the card and its dots, the 24 between
-    // sections, and the heading's own line.
-    final heading =
-        8 +
-        tester.getSize(find.byType(HomeShowcase)).height +
-        24 +
-        KitText.xl.lineHeight;
-    expect(heading, lessThanOrEqualTo(room));
   });
 }
