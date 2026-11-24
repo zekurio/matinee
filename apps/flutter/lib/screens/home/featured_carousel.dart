@@ -112,55 +112,45 @@ class _FeaturedCarouselViewState extends State<FeaturedCarouselView> {
         );
         final stride = width + CardMetrics.gutter;
         final pager = _pagerFor(row == 0 ? 1 : stride / row);
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              height: height,
-              child: Listener(
-                onPointerDown: (_) {
-                  _touched = true;
-                  _advance?.cancel();
-                },
-                onPointerUp: (_) {
-                  _touched = false;
-                  _restart();
-                },
-                onPointerCancel: (_) {
-                  _touched = false;
-                  _restart();
-                },
-                child: NotificationListener<ScrollEndNotification>(
-                  onNotification: (_) {
-                    _restart();
-                    return false;
-                  },
-                  child: PageView.builder(
-                    controller: pager,
-                    itemCount: _count,
-                    onPageChanged: (page) => setState(() => _current = page),
-                    itemBuilder: (context, index) => Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: CardMetrics.gutter / 2,
-                      ),
-                      child: _FeaturedCard(
-                        slide: widget.slides[index],
-                        position: l.homeFeaturedPosition(index + 1, _count),
-                        height: height,
-                        nameStyle: nameStyle,
-                        nameLines: lines,
-                      ),
-                    ),
+        return SizedBox(
+          height: height,
+          child: Listener(
+            onPointerDown: (_) {
+              _touched = true;
+              _advance?.cancel();
+            },
+            onPointerUp: (_) {
+              _touched = false;
+              _restart();
+            },
+            onPointerCancel: (_) {
+              _touched = false;
+              _restart();
+            },
+            child: NotificationListener<ScrollEndNotification>(
+              onNotification: (_) {
+                _restart();
+                return false;
+              },
+              child: PageView.builder(
+                controller: pager,
+                itemCount: _count,
+                onPageChanged: (page) => setState(() => _current = page),
+                itemBuilder: (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: CardMetrics.gutter / 2,
+                  ),
+                  child: _FeaturedCard(
+                    slide: widget.slides[index],
+                    position: l.homeFeaturedPosition(index + 1, _count),
+                    height: height,
+                    nameStyle: nameStyle,
+                    nameLines: lines,
                   ),
                 ),
               ),
             ),
-            if (_count > 1)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: PageDots(count: _count, current: _current),
-              ),
-          ],
+          ),
         );
       },
     );

@@ -63,6 +63,9 @@ dependencies {
     // Downloads: one resumable job per file, which outlives the app and a reboot.
     implementation("androidx.work:work-runtime-ktx:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Cronet's API, to load Cronet early (MainActivity). cronet_http brings
+    // it at run time; keep the version its build.gradle names.
+    compileOnly("org.chromium.net:cronet-api:143.7445.0")
     // The downloads' logic, apart from Android, on the JVM.
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")

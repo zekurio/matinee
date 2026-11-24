@@ -16,13 +16,26 @@ import 'requests_hub.dart';
 /// A title the viewer can watch is the library's card; the rest are catalog
 /// cards that follow the stream. A row with nothing in it stays out, and rows
 /// that didn't load at all leave no gap, since the page is whole without them.
-class CatalogRelatedRows extends ConsumerWidget {
+/// In a page's lazy list it stays alive scrolled out of sight, so scrolling
+/// back doesn't fetch the rows or open their stream again.
+class CatalogRelatedRows extends ConsumerStatefulWidget {
   const CatalogRelatedRows({super.key, required this.relatedTo});
 
   final CatalogKey relatedTo;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CatalogRelatedRows> createState() => _CatalogRelatedRowsState();
+}
+
+class _CatalogRelatedRowsState extends ConsumerState<CatalogRelatedRows>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final relatedTo = widget.relatedTo;
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final rails = ref.watch(relatedRailsProvider(relatedTo));

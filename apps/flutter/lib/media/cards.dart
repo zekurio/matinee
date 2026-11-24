@@ -63,6 +63,7 @@ class TitleCard extends StatelessWidget {
       detailIcon: detailIcon,
       detailLabel: detailLabel,
       art: art == null ? null : Picture([ArtSource(art)]),
+      artCovers: art?.placeholder != null,
       watchedLabel: title.watched
           ? AppLocalizations.of(context).mediaWatched
           : null,

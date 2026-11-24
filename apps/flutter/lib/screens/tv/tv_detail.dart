@@ -473,7 +473,7 @@ class _TvTitleScreenState extends ConsumerState<TvTitleScreen>
     );
     final backdrop = title.images.backdrop;
     // One season, so no specials either: its episodes go right on the
-    // show's page, as on the phone.
+    // show's page too, as on the phone.
     final only = title.seasons.length == 1 ? title.seasons.single : null;
     return TvBackdrop(
       sources: [
@@ -487,16 +487,14 @@ class _TvTitleScreenState extends ConsumerState<TvTitleScreen>
             if (next != null && showsNextUp(title)) _nextUpRow(next),
             if (only != null)
               _EpisodesRow(
-                heading: l.titleEpisodes,
+                heading: seasonName(only.number, l),
                 row: _Rows.episodes,
                 titleId: title.id,
                 season: only.number,
                 memory: _memory,
                 start: next?.id,
               ),
-            // Its episodes are already above; a row of one season adds
-            // nothing.
-            if (only == null) ?_seasonsRow(title),
+            ?_seasonsRow(title),
           ],
           ?_peopleRow(context, title, _memory),
           ?_linksRow(context, title, _memory),

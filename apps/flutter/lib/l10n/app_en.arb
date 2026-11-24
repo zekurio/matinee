@@ -839,17 +839,9 @@
   "@appearanceMaterialYouHint": {
     "description": "Appearance: what Material You does, under its switch"
   },
-  "appearanceMaterialYouReplaces": "Matinee's theme and the server's accent color don't apply while this is on.",
-  "@appearanceMaterialYouReplaces": {
-    "description": "Appearance: under the Material You switch while it's on"
-  },
   "appearancePreset": "Theme",
   "@appearancePreset": {
     "description": "Appearance: the section picking the color preset"
-  },
-  "appearancePresetLocked": "Turn Material You off to pick a theme.",
-  "@appearancePresetLocked": {
-    "description": "Appearance: under the theme row while Material You is on"
   },
   "appearancePresetMatinee": "Matinee",
   "@appearancePresetMatinee": {

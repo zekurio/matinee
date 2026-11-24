@@ -56,9 +56,9 @@ class _CardRows extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SliverPadding(
     padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
-    sliver: SliverLayoutBuilder(
-      builder: (context, constraints) {
-        final count = requestColumns(constraints.crossAxisExtent);
+    sliver: SliverWidthBuilder(
+      builder: (width) {
+        final count = requestColumns(width);
         return SliverList.builder(
           itemCount: (itemCount + count - 1) ~/ count,
           itemBuilder: (context, row) => Padding(

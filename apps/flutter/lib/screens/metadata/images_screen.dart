@@ -365,14 +365,12 @@ class _ImageEditorState extends ConsumerState<_ImageEditor> {
                   padding: const EdgeInsets.symmetric(
                     horizontal: CardMetrics.gutter,
                   ),
-                  sliver: SliverLayoutBuilder(
-                    builder: (context, constraints) {
+                  sliver: SliverWidthBuilder(
+                    builder: (extent) {
                       const spacing = 12.0;
                       final width = math.max(
                         0.0,
-                        (constraints.crossAxisExtent -
-                                spacing * (columns - 1)) /
-                            columns,
+                        (extent - spacing * (columns - 1)) / columns,
                       );
                       return SliverGrid.builder(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

@@ -281,7 +281,7 @@ class _WatchNextLifecycleState extends ConsumerState<WatchNextLifecycle> {
   void initState() {
     super.initState();
     final row = ref.read(watchNextProvider);
-    _lifecycle = AppLifecycleListener(onResume: row.requestSync);
+    _lifecycle = AppLifecycleListener(onShow: row.requestSync);
     ref.listenManual(
       sessionProvider.select((state) => (state.version, state.auth)),
       (_, _) => row.requestSync(),

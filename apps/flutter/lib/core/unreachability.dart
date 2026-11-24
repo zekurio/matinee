@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cupertino_http/cupertino_http.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:objective_c/objective_c.dart';
 
 /// Why the server didn't answer, as far as the app can tell.
 enum Unreachability {
@@ -23,22 +26,55 @@ const _refused = {111, 61, 10061};
 const _networkUnreachable = {101, 51, 10051};
 const _timedOut = {110, 60, 10060};
 
-/// Why a request to a server failed, from what `dart:io` and `package:http`
-/// threw. [hasNetwork] is whether the device has a network with internet
+/// Why a request to a server failed, from what `dart:io`, Cronet,
+/// URLSession, and `package:http` threw. [hasNetwork] is whether the device has a network with internet
 /// access; without one nothing else is worth saying.
 Unreachability unreachabilityOf(Object error, {required bool hasNetwork}) {
   if (!hasNetwork) return Unreachability.noNetwork;
   if (error is TimeoutException) return Unreachability.timeout;
   if (error is TlsException) return Unreachability.certificate;
   if (error is SocketException) return _socket(error);
+  // URLSession's message is in the device's language, so its code it is.
+  if (error is NSErrorClientException &&
+      error.error.domain.toDartString() == 'NSURLErrorDomain') {
+    return urlErrorUnreachability(error.error.code);
+  }
   if (error is http.ClientException) {
     final message = error.message.toLowerCase();
-    if (message.contains('handshake') || message.contains('certificate')) {
+    if (message.contains('handshake') ||
+        message.contains('certificate') ||
+        message.contains('net::err_cert_') ||
+        message.contains('net::err_ssl_')) {
       return Unreachability.certificate;
+    }
+    // Cronet's, from Chromium's net errors.
+    if (message.contains('net::err_name_not_resolved')) {
+      return Unreachability.notFound;
+    }
+    if (message.contains('net::err_timed_out') ||
+        message.contains('net::err_connection_timed_out')) {
+      return Unreachability.timeout;
+    }
+    if (message.contains('net::err_connection_refused') ||
+        message.contains('net::err_address_unreachable')) {
+      return Unreachability.refused;
     }
   }
   return Unreachability.other;
 }
+
+/// What an `NSURLErrorDomain` [code] says of the server.
+@visibleForTesting
+Unreachability urlErrorUnreachability(int code) => switch (code) {
+  -1009 => Unreachability.noNetwork, // NotConnectedToInternet
+  -1001 => Unreachability.timeout, // TimedOut
+  -1003 || -1006 => Unreachability.notFound, // CannotFindHost, DNSLookupFailed
+  -1004 => Unreachability.refused, // CannotConnectToHost
+  // SecureConnectionFailed, then the ServerCertificate and
+  // ClientCertificate ones.
+  <= -1200 && >= -1206 => Unreachability.certificate,
+  _ => Unreachability.other,
+};
 
 Unreachability _socket(SocketException error) {
   final code = error.osError?.errorCode;

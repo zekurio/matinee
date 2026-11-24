@@ -81,17 +81,7 @@ class AppearancePage extends ConsumerWidget {
                     ),
                 ],
               ),
-              if (onWallpaper) Note(l.appearancePresetLocked),
-            ],
-          ),
-        ),
-        if (hasMaterialYou)
-          SettingsSection(
-            title: l.appearanceMaterialYou,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 8,
-              children: [
+              if (hasMaterialYou)
                 Panel(
                   rows: [
                     SwitchRow(
@@ -103,10 +93,9 @@ class AppearancePage extends ConsumerWidget {
                     ),
                   ],
                 ),
-                if (onWallpaper) Note(l.appearanceMaterialYouReplaces),
-              ],
-            ),
+            ],
           ),
+        ),
       ],
     );
   }

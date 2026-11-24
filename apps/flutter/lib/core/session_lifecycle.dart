@@ -8,6 +8,8 @@ import 'session.dart';
 
 /// Tells the session the app came to the foreground, so a saved server that
 /// didn't answer while the process ran in the background is tried again.
+/// Only back from out of sight: the notification shade or a system dialog
+/// over the app takes its focus for a moment, which says nothing new.
 class SessionLifecycle extends ConsumerStatefulWidget {
   const SessionLifecycle({required this.child, super.key});
 
@@ -19,6 +21,8 @@ class SessionLifecycle extends ConsumerStatefulWidget {
 
 class _SessionLifecycleState extends ConsumerState<SessionLifecycle>
     with WidgetsBindingObserver {
+  bool _away = false;
+
   @override
   void initState() {
     super.initState();
@@ -33,7 +37,11 @@ class _SessionLifecycleState extends ConsumerState<SessionLifecycle>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      _away = true;
+    } else if (state == AppLifecycleState.resumed && _away) {
+      _away = false;
       ref.read(sessionProvider.notifier).onForeground();
       unawaited(ref.read(serverAccentsProvider.notifier).refresh());
     }

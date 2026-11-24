@@ -139,12 +139,10 @@ class _TitleScreenState extends ConsumerState<TitleScreen> with PendingMarks {
         ),
         if (show) ...[
           if (next != null && showsNextUp(title)) NextUpEpisode(item: next),
-          // One season, so its episodes go right on the show's page.
-          if (only != null) ...[
+          // One season, so its episodes go right on the show's page too.
+          if (only != null)
             _OnlySeason(title: title, season: only, next: next, gaps: gaps),
-            if (SeasonsRail.any(title, gaps: gaps, extraOnly: true))
-              SeasonsRail(title: title, gaps: gaps, extraOnly: true),
-          ] else if (SeasonsRail.any(title, gaps: gaps))
+          if (SeasonsRail.any(title, gaps: gaps))
             SeasonsRail(title: title, gaps: gaps),
         ],
         if (CastRail.any(title.credits)) CastRail(credits: title.credits),
@@ -159,7 +157,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> with PendingMarks {
 }
 
 /// A one-season show's episodes as a row of stills, starting at the one up
-/// next; nothing while they load or when they fail.
+/// next, under the season's name, as the library's one season may be any of
+/// the show's; nothing while they load or when they fail.
 class _OnlySeason extends ConsumerWidget {
   const _OnlySeason({
     required this.title,
@@ -183,7 +182,7 @@ class _OnlySeason extends ConsumerWidget {
     final gaps = this.gaps;
     final partial = gaps?.partialOf(season.number);
     return EpisodesRail(
-      title: l.titleEpisodes,
+      title: seasonName(season.number, l),
       items: items,
       next: next,
       // The ask for the episodes the server lacks, after the last.

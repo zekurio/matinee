@@ -151,14 +151,17 @@ final class SessionStore {
     final servers = _decode(prefs.getString(_serversKey));
     final tokens = <String, String>{};
     final unreadable = <String>{};
-    for (final server in servers) {
+    Future<void> read(String origin) async {
       try {
-        final token = await secrets.read(_tokenKey(server.origin));
-        if (token != null) tokens[server.origin] = token;
+        final token = await secrets.read(_tokenKey(origin));
+        if (token != null) tokens[origin] = token;
       } on Object {
-        unreadable.add(server.origin);
+        unreadable.add(origin);
       }
     }
+
+    // All at once: each is a trip to the keystore, before the first frame.
+    await Future.wait([for (final server in servers) read(server.origin)]);
     return SessionStore._(
       prefs,
       secrets,

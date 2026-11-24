@@ -1191,6 +1191,7 @@ class SeasonCard extends StatelessWidget {
         null => l.mediaEpisodeCount(season.itemCount),
       },
       art: art == null ? null : Picture([ArtSource(art)]),
+      artCovers: art?.placeholder != null,
       watchedLabel: left <= 0 ? l.mediaWatched : null,
       badge: left <= 0
           ? null
@@ -1218,9 +1219,7 @@ class SeasonCard extends StatelessWidget {
 /// A show's seasons by their posters; on a season's page, [onSeason], the
 /// others, as "More seasons". [current] is that season's number, null for
 /// the files without one. After them, the seasons the server lacks, from
-/// [gaps], each with its state and its ask. On the page of a show with one
-/// season here, whose episodes are listed above, [extraOnly] leaves the
-/// library's out.
+/// [gaps], each with its state and its ask.
 class SeasonsRail extends StatelessWidget {
   const SeasonsRail({
     super.key,
@@ -1228,14 +1227,12 @@ class SeasonsRail extends StatelessWidget {
     this.onSeason = false,
     this.current,
     this.gaps,
-    this.extraOnly = false,
   });
 
   final Title title;
   final bool onSeason;
   final int? current;
   final ShowGaps? gaps;
-  final bool extraOnly;
 
   /// Whether it has a card to show.
   static bool any(
@@ -1243,10 +1240,8 @@ class SeasonsRail extends StatelessWidget {
     bool onSeason = false,
     int? current,
     ShowGaps? gaps,
-    bool extraOnly = false,
   }) =>
-      (!extraOnly &&
-          shown(title, onSeason: onSeason, current: current).isNotEmpty) ||
+      shown(title, onSeason: onSeason, current: current).isNotEmpty ||
       (gaps?.missing.isNotEmpty ?? false);
 
   /// The seasons it shows.
@@ -1262,15 +1257,13 @@ class SeasonsRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final seasons = extraOnly
-        ? const <Season>[]
-        : shown(title, onSeason: onSeason, current: current);
+    final seasons = shown(title, onSeason: onSeason, current: current);
     final gaps = this.gaps;
     final missing = gaps?.missing ?? const <CatalogSeason>[];
     final size = railCardSize(context, RailArt.poster);
     final summary = title.summary;
     return Rail(
-      title: onSeason || extraOnly ? l.titleSeasonsMore : l.titleSeasons,
+      title: onSeason ? l.titleSeasonsMore : l.titleSeasons,
       itemWidth: size.width,
       itemHeight: size.height,
       itemCount: seasons.length + missing.length,

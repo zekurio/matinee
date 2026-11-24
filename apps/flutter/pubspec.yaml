@@ -11,7 +11,9 @@ environment:
 dependencies:
   clock: ^1.1.2
   connectivity_plus: ^7.3.2
+  cronet_http: ^1.10.2
   crypto: ^3.0.8
+  cupertino_http: ^3.1.1
   dynamic_color: ^2.1.0
   flutter:
     sdk: flutter
@@ -25,6 +27,7 @@ dependencies:
   http: ^1.6.0
   intl: ^0.20.3
   material_color_utilities: ^0.13.0
+  objective_c: ^9.6.4
   path_provider: ^2.1.6
   qr: ^4.0.1
   shared_preferences: ^2.5.6

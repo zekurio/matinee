@@ -56,6 +56,10 @@ const _chars =
     '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#\$%*+,-.:;=?@[]^_{|}~';
 
 /// [hash] as [width] by [height] RGBA pixels, or null when it isn't one.
+///
+/// It runs on the UI thread as an image starts to load, once for every card
+/// that scrolls in, so the cosines are worked out once per column and row
+/// rather than for every pixel.
 Uint8List? decodeBlurHash(String hash, int width, int height) {
   int? decode83(int from, int to) {
     var value = 0;
@@ -76,24 +80,32 @@ Uint8List? decodeBlurHash(String hash, int width, int height) {
   final quantised = decode83(1, 2);
   if (quantised == null) return null;
   final maxAc = (quantised + 1) / 166;
-  final colors = <List<double>>[];
-  for (var i = 0; i < nx * ny; i++) {
-    if (i == 0) {
-      final dc = decode83(2, 6);
-      if (dc == null) return null;
-      colors.add([
-        _toLinear(dc >> 16),
-        _toLinear((dc >> 8) & 255),
-        _toLinear(dc & 255),
-      ]);
-    } else {
-      final ac = decode83(4 + i * 2, 6 + i * 2);
-      if (ac == null) return null;
-      colors.add([
-        _signPow((ac ~/ (19 * 19) - 9) / 9) * maxAc,
-        _signPow(((ac ~/ 19) % 19 - 9) / 9) * maxAc,
-        _signPow((ac % 19 - 9) / 9) * maxAc,
-      ]);
+  // Each component's red, green, and blue, one after another.
+  final colors = Float64List(nx * ny * 3);
+  final dc = decode83(2, 6);
+  if (dc == null) return null;
+  colors
+    ..[0] = _toLinear(dc >> 16)
+    ..[1] = _toLinear((dc >> 8) & 255)
+    ..[2] = _toLinear(dc & 255);
+  for (var i = 1; i < nx * ny; i++) {
+    final ac = decode83(4 + i * 2, 6 + i * 2);
+    if (ac == null) return null;
+    colors
+      ..[i * 3] = _signPow((ac ~/ (19 * 19) - 9) / 9) * maxAc
+      ..[i * 3 + 1] = _signPow(((ac ~/ 19) % 19 - 9) / 9) * maxAc
+      ..[i * 3 + 2] = _signPow((ac % 19 - 9) / 9) * maxAc;
+  }
+  final cosX = Float64List(width * nx);
+  for (var x = 0; x < width; x++) {
+    for (var i = 0; i < nx; i++) {
+      cosX[x * nx + i] = math.cos(math.pi * x * i / width);
+    }
+  }
+  final cosY = Float64List(height * ny);
+  for (var y = 0; y < height; y++) {
+    for (var j = 0; j < ny; j++) {
+      cosY[y * ny + j] = math.cos(math.pi * y * j / height);
     }
   }
   final pixels = Uint8List(width * height * 4);
@@ -103,13 +115,13 @@ Uint8List? decodeBlurHash(String hash, int width, int height) {
       var g = 0.0;
       var b = 0.0;
       for (var j = 0; j < ny; j++) {
-        final cy = math.cos(math.pi * y * j / height);
+        final cy = cosY[y * ny + j];
         for (var i = 0; i < nx; i++) {
-          final basis = math.cos(math.pi * x * i / width) * cy;
-          final color = colors[i + j * nx];
-          r += color[0] * basis;
-          g += color[1] * basis;
-          b += color[2] * basis;
+          final basis = cosX[x * nx + i] * cy;
+          final at = (i + j * nx) * 3;
+          r += colors[at] * basis;
+          g += colors[at + 1] * basis;
+          b += colors[at + 2] * basis;
         }
       }
       final at = (x + y * width) * 4;
@@ -127,8 +139,16 @@ double _toLinear(int value) {
   return v <= .04045 ? v / 12.92 : math.pow((v + .055) / 1.055, 2.4).toDouble();
 }
 
-int _toSrgb(double value) {
-  final v = value.clamp(0.0, 1.0);
+/// Linear light as an sRGB byte, from a table of 4096 steps rather than a
+/// power for each of a picture's thousands of channels. Next to black, where
+/// the curve is steepest, a step is under one byte.
+int _toSrgb(double value) => _srgb[(value.clamp(0.0, 1.0) * 4095 + .5).toInt()];
+
+final _srgb = Uint8List.fromList([
+  for (var i = 0; i < 4096; i++) _srgbByte(i / 4095),
+]);
+
+int _srgbByte(double v) {
   final srgb = v <= .0031308 ? v * 12.92 : 1.055 * math.pow(v, 1 / 2.4) - .055;
   return (srgb * 255 + .5).toInt().clamp(0, 255);
 }

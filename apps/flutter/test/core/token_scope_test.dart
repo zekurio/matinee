@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -258,6 +260,120 @@ void main() {
       expect(harness.session.playerHeaders(), {
         'Authorization': 'Bearer token-b',
       });
+    });
+  });
+
+  group('a redirect', () {
+    /// A server at a.example that sends [first] on to [location] with
+    /// [status], and answers everything else.
+    (MockClient, List<http.BaseRequest>) redirecting(
+      String first,
+      int status,
+      String location,
+    ) {
+      final sent = <http.BaseRequest>[];
+      final client = MockClient.streaming((request, body) async {
+        sent.add(request);
+        await body.drain<void>();
+        if (request.url.toString() == first) {
+          return http.StreamedResponse(
+            const Stream.empty(),
+            status,
+            headers: {'location': location},
+          );
+        }
+        return http.StreamedResponse(Stream.value('ok'.codeUnits), 200);
+      });
+      return (client, sent);
+    }
+
+    AuthorizedClient bound(http.Client inner) => boundClient(
+      inner,
+      agent,
+      server: Uri.parse('https://a.example/'),
+      bearer: 'secret',
+      made: 0,
+      generation: () => 0,
+    );
+
+    test('to another origin goes without the token', () async {
+      final (inner, sent) = redirecting(
+        'https://a.example/art',
+        302,
+        'https://cdn.example/art',
+      );
+      final response = await bound(inner)
+          .get(Uri.parse('https://a.example/art'));
+      expect(response.body, 'ok');
+      expect(sent.map((r) => '${r.url}'), [
+        'https://a.example/art',
+        'https://cdn.example/art',
+      ]);
+      expect(sent.first.headers['authorization'], 'Bearer secret');
+      expect(sent.last.headers.containsKey('authorization'), isFalse);
+      expect(sent.last.headers['user-agent'], agent);
+    });
+
+    test(
+      'within the origin keeps it, and a 303 turns a POST into a GET',
+      () async {
+        final (inner, sent) = redirecting(
+          'https://a.example/api/v1/x',
+          303,
+          '/api/v1/y',
+        );
+        await bound(inner).post(
+          Uri.parse('https://a.example/api/v1/x'),
+          headers: {'content-type': 'application/json'},
+          body: '{}',
+        );
+        expect(sent.last.url, Uri.parse('https://a.example/api/v1/y'));
+        expect(sent.last.method, 'GET');
+        expect(sent.last.headers['authorization'], 'Bearer secret');
+        expect(sent.last.headers.containsKey('content-type'), isFalse);
+      },
+    );
+
+    test('a 307 sends the same request on', () async {
+      final (inner, sent) = redirecting(
+        'https://a.example/api/v1/x',
+        307,
+        'https://a.example/api/v1/y',
+      );
+      await bound(inner)
+          .post(Uri.parse('https://a.example/api/v1/x'), body: 'payload');
+      final last = sent.last;
+      expect(last.method, 'POST');
+      expect(last, isA<http.Request>());
+      expect((last as http.Request).body, 'payload');
+    });
+
+    test('of a streamed request with a token comes back unfollowed', () async {
+      final (inner, sent) = redirecting(
+        'https://a.example/upload',
+        302,
+        'https://cdn.example/upload',
+      );
+      final request = http.StreamedRequest(
+        'PUT',
+        Uri.parse('https://a.example/upload'),
+      );
+      unawaited(request.sink.close());
+      final response = await bound(inner).send(request);
+      expect(response.statusCode, 302);
+      expect(sent, hasLength(1));
+    });
+
+    test('that goes round stops at the limit', () async {
+      final (inner, _) = redirecting(
+        'https://a.example/loop',
+        302,
+        'https://a.example/loop',
+      );
+      await expectLater(
+        bound(inner).get(Uri.parse('https://a.example/loop')),
+        throwsA(isA<http.ClientException>()),
+      );
     });
   });
 }
