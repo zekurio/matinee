@@ -150,6 +150,9 @@ importers:
       '@orpc/tanstack-query':
         specifier: 'catalog:'
         version: 1.16.1(@orpc/client@1.16.1)(@tanstack/query-core@5.107.1)
+      '@scalar/api-reference':
+        specifier: 1.78.0
+        version: 1.78.0(@oxc-project/types@0.156.0)(esbuild@0.28.2)(lightningcss@1.33.0)(rolldown@1.2.16)(tailwindcss@4.3.4)(typescript@7.0.2)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.7)
       '@simplewebauthn/browser':
         specifier: 'catalog:'
         version: 14.0.0
@@ -174,6 +177,15 @@ importers:
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
+      hls.js:
+        specifier: 1.7.4
+        version: 1.7.4
+      jassub:
+        specifier: ^2.5.37
+        version: 2.5.37
+      libpgs:
+        specifier: 0.9.0
+        version: 0.9.0
       lucide:
         specifier: 1.69.0
         version: 1.69.0
@@ -247,7 +259,7 @@ importers:
         version: 1.16.1(@orpc/client@1.16.1)(@tanstack/query-core@5.106.1)
       '@scalar/api-reference-react':
         specifier: 0.9.89
-        version: 0.9.89(@oxc-project/types@0.156.0)(esbuild@0.28.2)(lightningcss@1.33.0)(react@19.3.1)(rolldown@1.2.16)(tailwindcss@4.3.4)(typescript@7.0.2)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.7)
+        version: 0.9.89(esbuild@0.28.2)(react@19.3.1)(rolldown@1.2.16)(tailwindcss@4.3.4)(typescript@7.0.2)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.7)
       '@simplewebauthn/browser':
         specifier: 'catalog:'
         version: 14.0.0
@@ -3689,21 +3701,11 @@ packages:
     resolution: {integrity: sha512-GYrCADwpu6yV5OAvchkQ27Z5wwMxWAEMg5NNWjyHh/5DboFFqbdbvYNIvZouQpxXyeMPoTOh0vdPYKlf0ZswdQ==}
     hasBin: true
 
-  seroval-plugins@1.7.7:
-    resolution: {integrity: sha512-5PAKQPAfj2MD332QeCdzXKm334ftIb0B1Ek3I9IQa73rPOlBSHko9mODFo8XNjzs6KJQG3nE6dn9dw7hJjrZAQ==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      seroval: ^1.0
-
   seroval-plugins@1.8.0:
     resolution: {integrity: sha512-96vBb12rDvPPwdKUgWw1op3fGq8AVBFOr0IllbnM72yR5J9WWXF18cQ4g1XfDO7HCyh2dt70P3XdtyRayP8FWg==}
     engines: {node: '>=20'}
     peerDependencies:
       seroval: ^1.8.0
-
-  seroval@1.7.7:
-    resolution: {integrity: sha512-9OdYsqMLV5RSUNNtkgr6DT2bS/ncba6AqUJx8H7epNJNa0cKNWhQtF5GLRjkF/KuAdvAuRRitWrq86K/v1S/kg==}
-    engines: {node: '>=20'}
 
   seroval@1.8.2:
     resolution: {integrity: sha512-zmMxi/9MdLK1MKazLmIP6Rk39RuK0Xydd+QHeOYntS37olJeTjB3+nwVj4ce/ZWiZJeRhcO5htfxt0mUzQBscQ==}
@@ -5738,7 +5740,7 @@ snapshots:
       - typescript
       - universal-cookie
 
-  '@scalar/api-reference-react@0.9.89(@oxc-project/types@0.156.0)(esbuild@0.28.2)(lightningcss@1.33.0)(react@19.3.1)(rolldown@1.2.16)(tailwindcss@4.3.4)(typescript@7.0.2)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.7)':
+  '@scalar/api-reference-react@0.9.89(esbuild@0.28.2)(react@19.3.1)(rolldown@1.2.16)(tailwindcss@4.3.4)(typescript@7.0.2)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.7)':
     dependencies:
       '@scalar/api-reference': 1.78.0(@oxc-project/types@0.156.0)(esbuild@0.28.2)(lightningcss@1.33.0)(rolldown@1.2.16)(tailwindcss@4.3.4)(typescript@7.0.2)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.7)
       '@scalar/types': 0.28.0
@@ -6403,8 +6405,8 @@ snapshots:
     dependencies:
       '@tanstack/history': 1.162.5
       cookie-es: 3.1.1
-      seroval: 1.7.7
-      seroval-plugins: 1.7.7(seroval@1.7.7)
+      seroval: 1.8.2
+      seroval-plugins: 1.8.0(seroval@1.8.2)
 
   '@tanstack/router-generator@1.167.46':
     dependencies:
@@ -7969,15 +7971,9 @@ snapshots:
 
   semver@6.3.2: {}
 
-  seroval-plugins@1.7.7(seroval@1.7.7):
-    dependencies:
-      seroval: 1.7.7
-
   seroval-plugins@1.8.0(seroval@1.8.2):
     dependencies:
       seroval: 1.8.2
-
-  seroval@1.7.7: {}
 
   seroval@1.8.2: {}
 

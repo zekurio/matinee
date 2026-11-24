@@ -14,6 +14,7 @@
     "@matinee/contracts": "workspace:*",
     "@matinee/ui": "workspace:*",
     "@orpc/tanstack-query": "catalog:",
+    "@scalar/api-reference": "1.78.0",
     "@simplewebauthn/browser": "catalog:",
     "@solidjs/web": "2.0.3",
     "@tanstack/solid-query": "6.0.0-rc.6",
@@ -22,6 +23,9 @@
     "@ui-sdk/solid": "0.1.0-beta.14",
     "blurhash": "catalog:",
     "class-variance-authority": "0.7.1",
+    "hls.js": "1.7.4",
+    "jassub": "^2.5.37",
+    "libpgs": "0.9.0",
     "lucide": "1.69.0",
     "solid-js": "2.0.3"
   },
