@@ -6,8 +6,9 @@ import 'theme.dart';
 
 /// The sunset mark with the wordmark beside it, from brand/. [height] is
 /// the word's, which the mark matches; the round letters dip a little
-/// below it. The colors are the brand's own, for a light or a dark page,
-/// and never the accent.
+/// below it. The mark keeps the brand's sunset and is never the accent;
+/// the word is in the theme's text color, as the headings beside it are,
+/// so Material You tints it too.
 class Logo extends StatelessWidget {
   const Logo({super.key, this.height = 24, this.label});
 
@@ -18,9 +19,14 @@ class Logo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = MatineeTheme.of(context).isDark;
+    final colors = MatineeTheme.of(context);
+    final art = colors.isDark ? LogoArt.dark : LogoArt.light;
+    final ink = colors.isDark ? LogoArt.darkInk : LogoArt.lightInk;
+    final rgb = (colors.foreground.toARGB32() & 0xFFFFFF)
+        .toRadixString(16)
+        .padLeft(6, '0');
     return SvgPicture.string(
-      dark ? LogoArt.dark : LogoArt.light,
+      art.replaceFirst('fill="$ink"', 'fill="#$rgb"'),
       width: height * LogoArt.aspect,
       height: height * (1 + LogoArt.depth),
       semanticsLabel: label,

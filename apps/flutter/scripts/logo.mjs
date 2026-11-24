@@ -34,7 +34,16 @@ async function logo(name) {
       `viewBox="0 0 ${number(width - 2 * pad)} ${number(word + pad)}"`,
     )
     .trim()
-  return { svg: cropped, width: width - 2 * pad, word, depth: pad }
+  // The word is the one flat fill; the mark's is the sunset gradient.
+  const inks = [...cropped.matchAll(/fill="(#[0-9a-f]{6})"/gi)]
+  if (inks.length !== 1) throw new Error(`${name} has no single word fill`)
+  return {
+    svg: cropped,
+    ink: inks[0][1],
+    width: width - 2 * pad,
+    word,
+    depth: pad,
+  }
 }
 
 const light = await logo("logo-light.svg")
@@ -51,6 +60,10 @@ abstract final class LogoArt {
   /// the word's height.
   static const aspect = ${light.width / light.word};
   static const depth = ${light.depth / light.word};
+
+  /// The word's fill in each, which a theme may swap for its own text color.
+  static const lightInk = '${light.ink}';
+  static const darkInk = '${dark.ink}';
 
   static const light = '''
 ${light.svg}''';
