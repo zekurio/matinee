@@ -91,32 +91,26 @@ export function posterActionLabel(action: PosterAction): string {
   }
 }
 
-/** A decline's reason for My requests: "Not for this server.", or "No copy found." */
+/** A decline for My requests: "Declined.", or "No copy found." */
 export function declineLine(
   reason: NonNullable<Availability["reason"]>,
 ): string {
-  if (reason.kind === "notFound" || reason.code === "notFound") {
-    return tr("ask.reason.notFound")
-  }
-  return reason.code === "alreadyHere"
-    ? tr("ask.reason.alreadyHere")
-    : reason.code === "notForServer"
-      ? tr("ask.reason.notForServer")
-      : tr("ask.reason.declined")
+  return reason.kind === "notFound"
+    ? tr("ask.reason.notFound")
+    : tr("ask.reason.declined")
 }
 
 /**
  * The answer to a declined request the viewer requested or follows, in a
- * sentence: the reason picked, in the words it was picked from, or that no
- * copy was found. Null for everyone else, whom the server tells nothing.
+ * sentence: that it was declined, or that no copy was found. The reason
+ * the admin typed goes on a line of its own. Null for everyone else,
+ * whom the server tells nothing.
  */
 function declineAnswer(availability: Availability): string | null {
   const { reason } = availability
   if (availability.state !== "unavailable" || !reason) return null
-  const code = reason.code ?? (reason.kind === "notFound" ? "notFound" : null)
-  if (code === "notFound") return tr("ask.declined.notFound")
-  return code
-    ? tr("ask.declined.why", { reason: tr(`requests.reason.${code}`) })
+  return reason.kind === "notFound"
+    ? tr("ask.declined.notFound")
     : tr("ask.reason.declined")
 }
 
@@ -158,10 +152,9 @@ function dimmedWhy(availability: Availability, admin: boolean): string | null {
 /**
  * What the poster's Request says in its tooltip, which is read aloud
  * with it too: the admin's answer to a declined request the viewer
- * requested, as "Lukas declined this: Not for this server.", or why it
- * can't be pressed, or for one that works, how few requests are left
- * when two or fewer. The admin's note, when he left one, is `note`, a
- * line of its own. Null when there's nothing to say. `admin` points an
+ * requested, as "Declined.", or why it can't be pressed, or for one that
+ * works, how few requests are left when two or fewer. The reason the
+ * admin typed, when there is one, is `note`, a line of its own. Null when there's nothing to say. `admin` points an
  * admin to where a decline is lifted.
  */
 export function requestTip(

@@ -59,21 +59,24 @@ class _PersonScreenState extends ConsumerState<PersonScreen> {
           onPressed: () => context.go(Routes.home),
         ),
       ],
-      child: person == null
-          ? Center(
-              child: async.hasError
-                  ? SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 48),
-                      child: FailureState(
-                        title: l.personLoadFailed,
-                        error: async.error!,
-                        onRetry: () => ref.invalidate(personProvider(_key)),
-                        onHome: () => context.go(Routes.home),
-                      ),
-                    )
-                  : LoadingState(label: l.loadingInProgress),
-            )
-          : _page(context, person),
+      child: FadeSwitcher(
+        value: person != null ? 'person' : async.hasError,
+        child: person == null
+            ? Center(
+                child: async.hasError
+                    ? SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 48),
+                        child: FailureState(
+                          title: l.personLoadFailed,
+                          error: async.error!,
+                          onRetry: () => ref.invalidate(personProvider(_key)),
+                          onHome: () => context.go(Routes.home),
+                        ),
+                      )
+                    : LoadingState(label: l.loadingInProgress),
+              )
+            : _page(context, person),
+      ),
     );
   }
 

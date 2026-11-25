@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../api/matinee_api.dart';
 import '../core/session.dart';
+import '../kit/motion.dart';
 import 'blurhash.dart';
 
 /// Where artwork stays between runs. The server's artwork URLs never change
@@ -342,6 +343,10 @@ class _PictureState extends ConsumerState<Picture> {
                 alignment: widget.alignment,
                 excludeFromSemantics: true,
                 gaplessPlayback: true,
+                frameBuilder: (context, child, frame, synchronous) => _Arrival(
+                  arrived: synchronous || frame != null,
+                  child: child,
+                ),
                 errorBuilder: (context, error, stack) {
                   _failed(index);
                   return const SizedBox();
@@ -352,4 +357,36 @@ class _PictureState extends ConsumerState<Picture> {
       },
     );
   }
+}
+
+/// A picture fading in over its placeholder the first time it [arrived],
+/// and shown at once when it was already in memory. Once in, it stays: a
+/// sharper size of the same picture, for a box that grew, takes its place
+/// without fading out first.
+class _Arrival extends StatefulWidget {
+  const _Arrival({required this.arrived, required this.child});
+
+  final bool arrived;
+  final Widget child;
+
+  @override
+  State<_Arrival> createState() => _ArrivalState();
+}
+
+class _ArrivalState extends State<_Arrival> {
+  late bool _arrived = widget.arrived;
+
+  @override
+  void didUpdateWidget(_Arrival old) {
+    super.didUpdateWidget(old);
+    if (widget.arrived) _arrived = true;
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedOpacity(
+    opacity: _arrived ? 1 : 0,
+    duration: KitMotion.of(context, KitMotion.enter),
+    curve: KitMotion.easing,
+    child: widget.child,
+  );
 }

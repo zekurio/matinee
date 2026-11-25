@@ -83,12 +83,6 @@ class ConnectionsPage extends ConsumerWidget {
                       ),
                   ],
                 ),
-              if (list.isNotEmpty && may.add)
-                MatineeButton(
-                  leading: Lucide.plus,
-                  onPressed: () => unawaited(_edit(context, ref)),
-                  child: Text(l.webConnectionsAdd),
-                ),
             ],
           ),
         ],
@@ -107,7 +101,19 @@ class ConnectionsPage extends ConsumerWidget {
     } else {
       body = LoadingState(label: l.adminLoading);
     }
-    return AdminPage(title: l.webConnectionsTitle, child: body);
+    return AdminPage(
+      title: l.webConnectionsTitle,
+      // An empty list offers it in its own message.
+      actions: [
+        if (may.add && list != null && list.isNotEmpty)
+          PageBarButton(
+            icon: Lucide.plus,
+            label: l.webConnectionsAdd,
+            onPressed: () => unawaited(_edit(context, ref)),
+          ),
+      ],
+      child: body,
+    );
   }
 }
 

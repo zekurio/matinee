@@ -1,4 +1,4 @@
-import type { RequestState, WaitingDeclineReason } from "@matinee/contracts"
+import type { RequestState } from "@matinee/contracts"
 import { createMemo, createSignal, onSettled } from "solid-js"
 
 import { tr } from "@/i18n"
@@ -40,7 +40,6 @@ export type QueueAction =
       kind: "decline"
       ids: [string]
       names: [string]
-      reason: WaitingDeclineReason
       note: string | null
     }
   | { kind: "giveUp"; ids: [string]; names: [string]; note: string | null }
@@ -126,7 +125,6 @@ async function send(action: QueueAction) {
     case "decline":
       await client.admin.requests.decline({
         id: action.ids[0],
-        reason: action.reason,
         note: action.note,
       })
       return

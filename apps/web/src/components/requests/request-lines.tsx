@@ -59,8 +59,8 @@ export function queueDetail(item: AdminRequestItem): JSX.Element {
     )
   }
   if (item.state !== "declined") return null
-  const why = item.reason
-    ? tr(`requests.reason.${item.reason}`)
+  const why = item.gaveUp
+    ? tr("requests.done.gaveUpUndated")
     : tr("requests.state.declined")
   return <Reason why={why} note={item.note} />
 }

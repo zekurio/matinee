@@ -234,8 +234,8 @@ class _TvPlayerOverlayState extends State<TvPlayerOverlay> {
                   // sit under it. The trickplay frame, while seeking, is
                   // what to look at, and covers it.
                   AnimatedContainer(
-                    duration: TvMotion.move,
-                    curve: TvMotion.easing,
+                    duration: KitMotion.move,
+                    curve: KitMotion.easing,
                     height: _onSeek || widget.scrubbing ? _bubbleRoom : 12,
                   ),
                   Focus(
@@ -478,8 +478,8 @@ class _MenuButton extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: AnimatedSize(
-              duration: focused ? TvMotion.enter : TvMotion.exit,
-              curve: focused ? TvMotion.easing : TvMotion.exitEasing,
+              duration: focused ? KitMotion.enter : KitMotion.exit,
+              curve: focused ? KitMotion.easing : KitMotion.exitEasing,
               alignment: AlignmentDirectional.centerStart,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -658,7 +658,7 @@ class _Track extends StatelessWidget {
     final colors = MatineeTheme.of(context);
     return TweenAnimationBuilder<double>(
       tween: Tween(end: focused ? 1 : 0),
-      duration: TvMotion.color,
+      duration: KitMotion.color,
       builder: (context, t, _) => SizedBox(
         height: 28,
         child: LayoutBuilder(

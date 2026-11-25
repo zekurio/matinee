@@ -121,16 +121,6 @@ final class AccessWords {
     _ => l.webAccessAreaServer,
   };
 
-  /// What [area] covers, in a line.
-  String areaHint(String area) => switch (area) {
-    'requests' => l.webAccessAreaRequestsHint,
-    'connections' => l.webAccessAreaConnectionsHint,
-    'libraries' => l.webAccessAreaLibrariesHint,
-    'metadata' => l.webAccessAreaMetadataHint,
-    'users' => l.webAccessAreaUsersHint,
-    _ => l.webAccessAreaServerHint,
-  };
-
   /// A level of [area]. An area that is all or nothing says "On" for
   /// `manage`, as a switch would.
   String level(String area, String level) {

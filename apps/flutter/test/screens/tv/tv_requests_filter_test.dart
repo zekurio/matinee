@@ -52,7 +52,7 @@ Map<String, Object?> _waiting(String id, String kind) => {
   'status': 'pending',
   'fulfilmentState': null,
   'error': null,
-  'reason': null,
+  'gaveUp': false,
   'note': null,
   'declinedAt': null,
   'connection': null,

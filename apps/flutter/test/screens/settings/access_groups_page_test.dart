@@ -192,9 +192,8 @@ void main() {
       permissions: [Permission.groupRead],
     );
 
-    expect(find.text(l.webAccessGroupsTitle), findsOneWidget);
     expect(find.textContaining('Family'), findsOneWidget);
-    expect(find.text(l.webAccessGroupsCreate), findsNothing);
+    expect(_barButton(l.webAccessGroupsCreate), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('family')));
     await tester.pumpAndSettle();
@@ -217,7 +216,7 @@ void main() {
       ],
     );
 
-    expect(find.text(l.webAccessGroupsCreate), findsOneWidget);
+    expect(_barButton(l.webAccessGroupsCreate), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('family')));
     await tester.pumpAndSettle();
@@ -379,3 +378,8 @@ void main() {
     expect(find.byKey(const ValueKey('home')), findsOneWidget);
   });
 }
+
+/// The page bar's button that says [label] to a screen reader.
+Finder _barButton(String label) => find.byWidgetPredicate(
+  (widget) => widget is PageBarButton && widget.label == label,
+);

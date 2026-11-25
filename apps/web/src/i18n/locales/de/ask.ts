@@ -18,7 +18,6 @@ export default {
   }),
   "ask.chooser.specials": "Specials anfragen",
 
-  "ask.declined.why": "Abgelehnt: {reason}.",
   "ask.declined.notFound": "Der Titel ließ sich nicht finden.",
   "ask.declined.note": "„{note}“",
   "ask.disabled.declined":
@@ -33,8 +32,6 @@ export default {
     one: "Noch {count} Anfrage.",
     other: "Noch {count} Anfragen.",
   }),
-  "ask.reason.alreadyHere": "Haben wir schon.",
-  "ask.reason.notForServer": "Passt nicht auf diesen Server.",
   "ask.reason.notFound": "Nicht auffindbar.",
   "ask.reason.declined": "Abgelehnt.",
 

@@ -107,13 +107,10 @@ export default defineMessages("requests", {
 
   // Declining, in a popover on the row.
   "requests.decline.title": "Decline {name}",
-  "requests.decline.reason": "Reason",
-  "requests.reason.alreadyHere": "Already have it",
-  "requests.reason.notForServer": "Not for this server",
-  "requests.reason.notFound": "Can't find a copy",
-  "requests.decline.note": "Note",
-  // {names} is who requested it, who read the note with the reason.
-  "requests.decline.noteFor": "Note for {names}",
+  // The one field: why, typed, which may be left empty.
+  "requests.decline.note": "Reason",
+  // {names} is who requested it, who read the reason.
+  "requests.decline.noteFor": "Reason for {names}",
   "requests.decline.notePlaceholder": "Optional",
   "requests.decline.cancel": "Cancel",
   "requests.decline.submit": "Decline",

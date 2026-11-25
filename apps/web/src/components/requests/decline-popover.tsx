@@ -1,11 +1,6 @@
-import {
-  type AdminRequestItem,
-  WAITING_DECLINE_REASONS,
-  type WaitingDeclineReason,
-} from "@matinee/contracts"
+import type { AdminRequestItem } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
-import { Check } from "lucide"
-import { createSignal, createUniqueId, For, Show } from "solid-js"
+import { createSignal, createUniqueId, Show } from "solid-js"
 
 import type { TriggerRender } from "@/components/catalog/ask-sheet"
 import { tr } from "@/i18n"
@@ -18,7 +13,6 @@ import {
   DrawerTrigger,
 } from "@/kit/drawer"
 import { Field, FieldLabel } from "@/kit/field"
-import { Icon } from "@/kit/icon"
 import { Input } from "@/kit/input"
 import {
   Popover,
@@ -31,25 +25,13 @@ import { isPhone } from "@/lib/viewport"
 
 import { formatNames } from "./request-queue"
 
-/**
- * An admin's no, as the queue sends it: a waiting request declined with
- * a reason, or an accepted one given up on, whose reason is always that
- * no copy could be found.
- */
 export type Answer =
-  | { kind: "decline"; reason: WaitingDeclineReason; note: string | null }
+  | { kind: "decline"; note: string | null }
   | { kind: "giveUp"; note: string | null }
 
-/** What takes focus as the form opens: the first reason, or the note. */
 type FirstFocus = { element?: HTMLElement }
 
-/**
- * Decline, with why: the reason, picked like a menu's item, and a note
- * for whoever requested it, over a footer with Cancel and Decline. Or,
- * with `giveUp`, the same form for giving up on an accepted request, its
- * reason fixed. A popover beside the button, or a drawer from the bottom
- * on phones. Enter sends it once a reason is picked; Escape closes it.
- */
+/** Decline a request or give up on finding it, with an optional note. */
 export function DeclinePopover(props: {
   item: AdminRequestItem
   /** Give up on an accepted request rather than decline a waiting one. */
@@ -144,128 +126,33 @@ export function DeclinePopover(props: {
   )
 }
 
-const reasonRow =
-  "flex h-8 items-center justify-between gap-3 rounded-md px-2 text-left text-sm select-none [@media(pointer:coarse)]:h-11"
-
 function AnswerForm(props: {
   first: FirstFocus
   giveUp: boolean
   /** Where an accepted request was sent, which keeps what it has. */
   connection: string | null
-  /** Who requested it, who read the reason and the note. */
+  /** Who requested it, who read the note. */
   askers: string[]
   phone: boolean
   onAnswer: (answer: Answer) => void
   onCancel: () => void
 }) {
-  const [reason, setReason] = createSignal<WaitingDeclineReason | null>(null)
   const [note, setNote] = createSignal("")
   const id = createUniqueId()
-  const reasons: (HTMLButtonElement | undefined)[] = []
-  let cancel: HTMLButtonElement | undefined
-  const ready = () => props.giveUp || reason() !== null
-
-  const submit = () => {
-    const text = note().trim() || null
-    const picked = reason()
-    if (props.giveUp) props.onAnswer({ kind: "giveUp", note: text })
-    else if (picked)
-      props.onAnswer({ kind: "decline", reason: picked, note: text })
-  }
-
-  // Arrow keys move between the reasons, as in any radio group.
-  const moveReason = (event: KeyboardEvent, index: number) => {
-    const step =
-      event.key === "ArrowDown" || event.key === "ArrowRight"
-        ? 1
-        : event.key === "ArrowUp" || event.key === "ArrowLeft"
-          ? -1
-          : 0
-    if (step === 0) return
-    event.preventDefault()
-    const count = WAITING_DECLINE_REASONS.length
-    const next = (index + step + count) % count
-    const value = WAITING_DECLINE_REASONS[next]
-    if (value) setReason(value)
-    reasons[next]?.focus()
-  }
-
   return (
     <form
       class="flex flex-col"
       onSubmit={(event) => {
         event.preventDefault()
-        submit()
-      }}
-      // Enter sends it from anywhere in it once a reason is picked, the
-      // reasons included, which a form leaves to themselves. Cancel keeps
-      // its own Enter.
-      onKeyDown={(event) => {
-        if (event.key !== "Enter" || !ready() || event.isComposing) return
-        if (event.target === cancel) return
-        event.preventDefault()
-        event.currentTarget.requestSubmit()
+        props.onAnswer({
+          kind: props.giveUp ? "giveUp" : "decline",
+          note: note().trim() || null,
+        })
       }}
     >
       <div class={cn("flex flex-col gap-4", props.phone ? "px-5 py-4" : "p-3")}>
         <Field class="gap-1.5">
-          <FieldLabel id={`${id}-reason`} class="text-13px">
-            {tr("requests.decline.reason")}
-          </FieldLabel>
-          <Show
-            when={!props.giveUp}
-            fallback={
-              // Only one reason fits giving up, so it's said, not offered.
-              <p class={cn(reasonRow, "text-foreground -mx-1 font-medium")}>
-                {tr("requests.reason.notFound")}
-                <Icon icon={Check} class="text-primary size-4" />
-              </p>
-            }
-          >
-            <div
-              role="radiogroup"
-              aria-labelledby={`${id}-reason`}
-              class="-mx-1 flex flex-col"
-            >
-              <For each={WAITING_DECLINE_REASONS}>
-                {(value, index) => (
-                  <button
-                    ref={(element) => {
-                      const at = WAITING_DECLINE_REASONS.indexOf(value)
-                      reasons[at] = element
-                      if (at === 0) props.first.element = element
-                    }}
-                    type="button"
-                    role="radio"
-                    aria-checked={reason() === value ? "true" : "false"}
-                    tabindex={
-                      reason() === value || (reason() === null && index() === 0)
-                        ? 0
-                        : -1
-                    }
-                    onClick={() => setReason(value)}
-                    onKeyDown={(event) => moveReason(event, index())}
-                    class={cn(
-                      reasonRow,
-                      "outline-none",
-                      "hover:bg-foreground/[0.06] focus-visible:bg-foreground/10",
-                      reason() === value
-                        ? "text-foreground font-medium"
-                        : "text-foreground/80",
-                    )}
-                  >
-                    {tr(`requests.reason.${value}`)}
-                    <Show when={reason() === value}>
-                      <Icon icon={Check} class="text-primary size-4" />
-                    </Show>
-                  </button>
-                )}
-              </For>
-            </div>
-          </Show>
-        </Field>
-        <Field class="gap-1.5">
-          <FieldLabel class="text-13px">
+          <FieldLabel for={id} class="text-13px">
             {props.askers.length > 0
               ? tr("requests.decline.noteFor", {
                   names: formatNames(props.askers),
@@ -273,8 +160,9 @@ function AnswerForm(props: {
               : tr("requests.decline.note")}
           </FieldLabel>
           <Input
+            id={id}
             ref={(element: HTMLInputElement) => {
-              if (props.giveUp) props.first.element = element
+              props.first.element = element
             }}
             value={note()}
             maxlength={2000}
@@ -298,9 +186,6 @@ function AnswerForm(props: {
         )}
       >
         <Button
-          ref={(element: HTMLButtonElement) => {
-            cancel = element
-          }}
           type="button"
           variant="ghost"
           size={props.phone ? "lg" : "sm"}
@@ -312,7 +197,6 @@ function AnswerForm(props: {
           type="submit"
           variant="destructive"
           size={props.phone ? "lg" : "sm"}
-          disabled={!ready()}
         >
           {props.giveUp
             ? tr("requests.giveUp.submit")

@@ -161,18 +161,21 @@ class PageState extends StatelessWidget {
       child: Stack(
         children: [
           Positioned.fill(
-            child: Center(
-              child: error == null
-                  ? LoadingState(label: l.loadingInProgress)
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 72),
-                      child: FailureState(
-                        title: errorTitle ?? '',
-                        error: error,
-                        onRetry: onRetry,
-                        onHome: () => context.go(Routes.home),
+            child: FadeSwitcher(
+              value: error == null,
+              child: Center(
+                child: error == null
+                    ? LoadingState(label: l.loadingInProgress)
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 72),
+                        child: FailureState(
+                          title: errorTitle ?? '',
+                          error: error,
+                          onRetry: onRetry,
+                          onHome: () => context.go(Routes.home),
+                        ),
                       ),
-                    ),
+              ),
             ),
           ),
           const ItemTopBar(),
@@ -673,7 +676,9 @@ class CastRail extends StatelessWidget {
 }
 
 /// Play, then Trailer and the round watched, favorite, and more buttons,
-/// as under a page's heading. Resume says the time left beside it. Without
+/// as under a page's heading. Resume says the time left beside it, and
+/// Trailer goes once the person has begun it, by resuming or [started],
+/// since it's no use then and Resume wants the room. Without
 /// [onFavorite], for what can't be a favorite, the heart stays out;
 /// without [onMore], for a menu that would be empty, the dots do.
 class ActionRow extends ConsumerWidget {
@@ -686,6 +691,7 @@ class ActionRow extends ConsumerWidget {
     this.onFavorite,
     this.onMore,
     this.trailers = const [],
+    this.started = false,
   });
 
   final MediaItem? play;
@@ -696,6 +702,9 @@ class ActionRow extends ConsumerWidget {
   final VoidCallback? onMore;
   final List<Trailer> trailers;
 
+  /// Whether some of it is watched, as a show with an episode seen.
+  final bool started;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
@@ -704,7 +713,9 @@ class ActionRow extends ConsumerWidget {
     final resume = isResuming(play);
     final label = resume ? l.titleResume : l.titlePlay;
     final left = resume && play != null ? timeLeft(play, l) : null;
-    final trailer = pickTrailer(trailers, l.localeName);
+    final trailer = resume || started
+        ? null
+        : pickTrailer(trailers, l.localeName);
     final onFavorite = this.onFavorite;
     final onMore = this.onMore;
     final button = MatineeButton(

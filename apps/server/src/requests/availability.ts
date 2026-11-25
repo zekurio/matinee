@@ -326,14 +326,12 @@ function availabilityForScope(
     etaSeconds: state === "coming" ? (progress?.etaSeconds ?? null) : null,
     stillLooking: state === "coming" && (progress?.stillLooking ?? false),
     releaseDate,
-    // The reason and the note are an answer to the people who requested
-    // it, and only they hear it:
-    // "Already have it" could point at a library someone can't see.
+    // The reason is an answer to the people who requested it, and only
+    // they hear it: it could point at a library someone can't see.
     reason:
       state === "unavailable" && row && self
         ? {
-            kind: "declined",
-            code: row.declineReason,
+            kind: row.declineReason === "notFound" ? "notFound" : "declined",
             note: row.declineNote,
           }
         : null,

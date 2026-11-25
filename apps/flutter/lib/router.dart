@@ -6,9 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'api/matinee_api.dart' show ImageTarget, TitleKind;
 import 'core/device.dart';
 import 'core/session.dart';
+import 'kit/motion.dart';
 import 'kit/route_page.dart';
 import 'kit/theme.dart';
-import 'kit/tv/tv_metrics.dart';
 import 'player/offline_playback_screen.dart';
 import 'player/player_lab.dart';
 import 'player/tv/tv_playback_screen.dart';
@@ -347,21 +347,40 @@ final class PushedRoute extends GoRoute {
        );
 }
 
-/// One of them, which replaces the last without a slide: they are states of
-/// one place, not pages.
+/// One of them, which fades in over the last rather than sliding: they are
+/// states of one place, not pages.
 GoRoute _authRoute(String path, Widget screen) => GoRoute(
   path: path,
   parentNavigatorKey: _rootKey,
-  pageBuilder: (context, state) =>
-      NoTransitionPage<void>(key: state.pageKey, child: screen),
+  pageBuilder: (context, state) => _fadePage(state, screen),
 );
+
+/// [child] fading in over what was there, as the app does wherever one state
+/// of a place takes another's: a sign-in step for the next, or the app for
+/// the sign-in once the session is there.
+Page<void> _fadePage(GoRouterState state, Widget child) =>
+    CustomTransitionPage<void>(
+      key: state.pageKey,
+      name: state.name ?? state.path,
+      transitionDuration: KitMotion.enter,
+      reverseTransitionDuration: KitMotion.exit,
+      transitionsBuilder: (context, animation, secondary, child) =>
+          MediaQuery.disableAnimationsOf(context)
+          ? child
+          : FadeTransition(
+              opacity: animation.drive(CurveTween(curve: KitMotion.easing)),
+              child: child,
+            ),
+      child: child,
+    );
 
 /// The tabs, each with its own stack, and the pages that open over them. Pages
 /// open over the tabs, on the root navigator: a title page fills the screen
 /// without the bars.
 List<RouteBase> _handsetRoutes() => [
   StatefulShellRoute.indexedStack(
-    builder: (context, state, shell) => HandsetShell(shell: shell),
+    pageBuilder: (context, state, shell) =>
+        _fadePage(state, HandsetShell(shell: shell)),
     branches: [
       StatefulShellBranch(
         routes: [
@@ -676,8 +695,10 @@ List<RouteBase> _tvRoutes() => [
   ),
   ShellRoute(
     navigatorKey: tvPagesKey,
-    builder: (context, state, child) =>
-        TvShell(stack: _tvStack(GoRouter.of(context)), pages: child),
+    pageBuilder: (context, state, child) => _fadePage(
+      state,
+      TvShell(stack: _tvStack(GoRouter.of(context)), pages: child),
+    ),
     routes: [
       _tv(
         Routes.home,
@@ -783,19 +804,19 @@ GoRoute _tv(
   routes: routes,
   pageBuilder: (context, state) => CustomTransitionPage<void>(
     key: state.pageKey,
-    transitionDuration: TvMotion.enter + TvMotion.exit,
-    reverseTransitionDuration: TvMotion.enter + TvMotion.exit,
+    transitionDuration: KitMotion.enter + KitMotion.exit,
+    reverseTransitionDuration: KitMotion.enter + KitMotion.exit,
     transitionsBuilder: (context, animation, secondary, child) =>
         FadeTransition(
           opacity: CurvedAnimation(
             parent: animation,
-            curve: const Interval(.4, 1, curve: TvMotion.easing),
+            curve: const Interval(.4, 1, curve: KitMotion.easing),
           ),
           child: FadeTransition(
             opacity: Tween<double>(begin: 1, end: 0).animate(
               CurvedAnimation(
                 parent: secondary,
-                curve: const Interval(0, .4, curve: TvMotion.exitEasing),
+                curve: const Interval(0, .4, curve: KitMotion.exitEasing),
               ),
             ),
             child: child,

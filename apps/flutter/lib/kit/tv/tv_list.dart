@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../icon.dart';
+import '../motion.dart';
 import '../theme.dart';
 import 'tv_focus.dart';
 import 'tv_metrics.dart';
@@ -198,8 +199,8 @@ class TvListSwitch extends StatelessWidget {
     final color = DefaultTextStyle.of(context).style.color ?? colors.foreground;
     return TweenAnimationBuilder<double>(
       tween: Tween(end: checked ? 1 : 0),
-      duration: TvMotion.move,
-      curve: TvMotion.easing,
+      duration: KitMotion.move,
+      curve: KitMotion.easing,
       builder: (context, knob, _) => Container(
         width: 48,
         height: 28,

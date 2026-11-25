@@ -8,10 +8,8 @@ import {
   Availability,
   CatalogInput,
   CatalogTitleSummary,
-  DeclineReason,
   AskScope,
   ShowScope,
-  WaitingDeclineReason,
 } from "./catalog"
 import { post } from "./contract-routes"
 import { t } from "./schema"
@@ -98,7 +96,9 @@ export const AdminRequestItem = RequestItem.extend({
   status: RequestStatus,
   fulfilmentState: FulfilmentState.nullable(),
   error: t.string().nullable(),
-  reason: DeclineReason.nullable(),
+  /** Whether it was declined by giving up on it, for want of a copy. */
+  gaveUp: t.boolean(),
+  /** The reason the admin typed when declining it, if any. */
   note: t.string().nullable(),
   /** When an admin declined it. Done lists arrivals and declines together. */
   declinedAt: t.date().nullable(),
@@ -217,13 +217,13 @@ export const adminRequestsContract = {
     .input(t.object({ ids: t.array(t.uuid()).min(1).max(500) }))
     .output(t.void()),
   /**
-   * Declines a waiting request. A declined title can't be requested by
-   * anyone until an admin allows requests for it again.
+   * Declines a waiting request, with a reason the admin types or none. A
+   * declined title can't be requested by anyone until an admin allows
+   * requests for it again.
    */
   decline: post("/admin/requests/decline", "adminRequest.decline")
     .input(
       RequestId.extend({
-        reason: WaitingDeclineReason,
         note: t
           .string()
           .trim()
@@ -233,8 +233,8 @@ export const adminRequestsContract = {
     )
     .output(t.void()),
   /**
-   * Gives up on an accepted request that hasn't arrived: declines it with
-   * "Can't find a copy". Whatever the connection holds for it is left
+   * Gives up on an accepted request that hasn't arrived, for want of a
+   * copy, with a reason the admin types or none. Whatever the connection holds for it is left
    * alone, and if the file turns up anyway the request counts as arrived.
    */
   giveUp: post("/admin/requests/give-up", "adminRequest.decline")

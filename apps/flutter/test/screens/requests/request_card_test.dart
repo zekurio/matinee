@@ -36,7 +36,6 @@ Map<String, Object?> _follower(String name) => {
 AdminRequestItem _item(
   String state, {
   String? error,
-  String? reason,
   String? note,
   double? progress,
   Map<String, Object?>? backdrop,
@@ -63,7 +62,7 @@ AdminRequestItem _item(
   'status': 'approved',
   'fulfilmentState': null,
   'error': error,
-  'reason': reason,
+  'gaveUp': false,
   'note': note,
   'declinedAt': null,
   'connection': null,
@@ -75,7 +74,7 @@ AdminRequestItem _item(
 
 RequestItem _own(
   String state, {
-  String? reason,
+  bool declined = false,
   String? note,
   double? progress,
 }) => RequestItem.fromJson({
@@ -95,9 +94,7 @@ RequestItem _own(
   'availability': {
     ..._availability(progress: progress),
     'action': 'cancel',
-    'reason': reason == null
-        ? null
-        : {'kind': 'declined', 'code': reason, 'note': note},
+    'reason': declined ? {'kind': 'declined', 'note': note} : null,
   },
   'season': null,
   'state': state,
@@ -157,24 +154,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  // The bug it pins: a decline's reason and the admin's note were two lines
-  // under the name, and a long note was cut.
+  // The bug it pins: a decline and the reason the admin typed were two
+  // lines under the name, and a long reason was cut.
   testWidgets('a declined badge opens why and the whole note', (tester) async {
     const note =
         'We keep this one on the shelf at home, ask me for the disc whenever '
         'you want to watch it and I will bring it round.';
-    final item = _own(
-      RequestState.declined,
-      reason: 'notForServer',
-      note: note,
-    );
+    final item = _own(RequestState.declined, declined: true, note: note);
     await _pump(tester, OwnRequestCard(item: item));
     expect(find.textContaining(note), findsNothing);
 
     await tester.tap(find.byType(RequestStateBadge));
     await tester.pumpAndSettle();
 
-    expect(find.text('Not for this server.'), findsOneWidget);
+    expect(find.text('Declined.'), findsOneWidget);
     expect(find.textContaining(note), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

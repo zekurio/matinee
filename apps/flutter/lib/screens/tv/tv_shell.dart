@@ -293,7 +293,7 @@ class _TvShellState extends ConsumerState<TvShell> {
                   listenable: Listenable.merge([tvOpenPanels, _scrolled]),
                   builder: (context, _) => AnimatedOpacity(
                     opacity: tvOpenPanels.value > 0 || _scrolled.value ? 0 : 1,
-                    duration: TvMotion.color,
+                    duration: KitMotion.color,
                     child: const TvClock(),
                   ),
                 ),
@@ -577,8 +577,8 @@ class _TvBackdropLayerState extends State<TvBackdropLayer> {
     return ColoredBox(
       color: colors.background,
       child: AnimatedSwitcher(
-        duration: TvMotion.move * 2,
-        switchInCurve: TvMotion.easing,
+        duration: KitMotion.move * 2,
+        switchInCurve: KitMotion.easing,
         child: sources.isEmpty
             ? const SizedBox.expand()
             : Stack(

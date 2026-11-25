@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
 import 'tokens.dart';
@@ -56,6 +57,16 @@ class MatineeTheme extends ThemeExtension<MatineeTheme> {
         error: colors.danger,
       ),
       splashFactory: NoSplash.splashFactory,
+      // A page opening over another moves the platform's way, named here
+      // rather than left to Flutter's defaults, which have changed before:
+      // Android's slide and fade, which follows a predictive Back as it's
+      // dragged, and iOS's slide with the swipe back from the edge.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
       textSelectionTheme: TextSelectionThemeData(

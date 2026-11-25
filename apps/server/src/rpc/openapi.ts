@@ -7,8 +7,6 @@ import {
   ManagedAccess,
   RequestMode,
   CatalogRef,
-  DeclineReason,
-  WaitingDeclineReason,
   RequestQuota,
   Availability,
   SeasonAvailability,
@@ -338,8 +336,6 @@ const input = (schema: AnySchema) => ({ schema, strategy: "input" as const })
  */
 const commonSchemas = {
   CatalogRef: output(CatalogRef),
-  DeclineReason: output(DeclineReason),
-  WaitingDeclineReason: output(WaitingDeclineReason),
   RequestQuota: output(RequestQuota),
   RequestMode: output(RequestMode),
   AccessLevel: output(AccessLevel),

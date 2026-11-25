@@ -607,17 +607,13 @@ class QueueCard extends ConsumerWidget {
 String queueError(AdminRequestItem item, AppLocalizations l) =>
     item.error?.serverWords(l) ?? l.webRequestsAttentionUnknown;
 
-/// Why a request was declined: the reason an admin picked, or that it was
-/// given up on.
-String queueReason(AdminRequestItem item, AppLocalizations l) {
-  final reason = item.reason;
-  if (reason == DeclineReason.notFound) return l.webRequestsDoneGaveUpUndated;
-  return reason == null
-      ? l.webRequestsDoneDeclinedUndated
-      : adminReasonText(reason, l);
-}
+/// How a request was declined: "Declined", or "Given up" for want of a
+/// copy. What the admin typed is [queueNote].
+String queueReason(AdminRequestItem item, AppLocalizations l) => item.gaveUp
+    ? l.webRequestsDoneGaveUpUndated
+    : l.webRequestsDoneDeclinedUndated;
 
-/// The note an admin left with a decline, or null for none.
+/// The reason an admin typed with a decline, or null for none.
 String? queueNote(AdminRequestItem item) {
   final note = item.note?.trim();
   return note == null || note.isEmpty ? null : note;
@@ -818,9 +814,9 @@ String _whereText(
   return [goes.name, goes.connection ?? l.webRequestsNoConnection].join(' · ');
 }
 
-/// A request's menu, its details sheet: what its state allows, "Goes to"
-/// while it waits, its title's page, the request in its connection's app,
-/// and what the connection reported.
+/// A request's menu, its details sheet: its way so far on a timeline, then
+/// what its state allows, "Goes to" while it waits, its title's page, the
+/// request in its connection's app, and what the connection reported.
 Future<void> showRequestMenu(
   BuildContext context,
   WidgetRef ref,
@@ -857,7 +853,8 @@ Future<void> showRequestMenu(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Whole(_menuWhole(item, l)),
+            _Timeline(state: item.state, stops: _stops(item, l)),
+            const SheetSeparator(),
             ...switch (item.state) {
               RequestState.waiting => [
                 if (canApprove && choosesLibrary(item))
@@ -957,23 +954,218 @@ Future<void> showRequestMenu(
   );
 }
 
-/// What a queue card leaves out or cuts, whole, for its menu: who asked
-/// (and when, for one) and the seasons, then the state's own words: how
-/// far along it is, when it arrived, the error, or the decline's reason
-/// and note.
-List<String> _menuWhole(AdminRequestItem item, AppLocalizations l) => [
-  requestedText(item, l),
-  ...switch (item.state) {
-    RequestState.needsAttention => [queueError(item, l)],
-    RequestState.onTheWay => [?queueProgress(item, l)],
-    RequestState.here => [
-      if (relativeTime(item.arrivedAt, l) case final arrived?)
-        l.webRequestsDoneArrived(arrived),
-    ],
-    RequestState.declined => [queueReason(item, l), ?queueNote(item)],
-    _ => const <String>[],
-  },
-];
+/// How far a request has come: whether it's behind where it is now, the
+/// stop it's at, or still ahead.
+enum _Reach { past, now, ahead }
+
+/// A stop on a request's timeline: its name, and what the server says
+/// about it under that.
+typedef _Stop = ({String label, List<String> details, _Reach reach});
+
+/// A request's way, as its sheet's timeline has it: requested, by whom and
+/// when, with the seasons; where it is now, with how far along it is, the
+/// error, when it arrived, or the decline's reason and note; and Available
+/// while that's still ahead.
+List<_Stop> _stops(AdminRequestItem item, AppLocalizations l) {
+  final people = askers(item);
+  final state = item.state;
+  final ends = state == RequestState.here || state == RequestState.declined;
+  return [
+    (
+      label: l.webCatalogStateAsked,
+      details: [
+        if (people.isEmpty)
+          ?relativeTime(item.createdAt, l)
+        else
+          for (final one in people)
+            [one.name, ?relativeTime(one.createdAt, l)].join(' · '),
+        ?scopeText(item.scope, l),
+      ],
+      reach: _Reach.past,
+    ),
+    (
+      label: state == RequestState.declined
+          ? queueReason(item, l)
+          : requestStateText(
+              state,
+              l,
+              progress: state == RequestState.onTheWay
+                  ? item.availability.progress
+                  : null,
+            ),
+      details: switch (state) {
+        RequestState.needsAttention => [queueError(item, l)],
+        RequestState.onTheWay => [?queueProgress(item, l)],
+        RequestState.here => [?relativeTime(item.arrivedAt, l)],
+        // The reason the admin typed and when, as one line.
+        RequestState.declined => [
+          if ([?queueNote(item), ?relativeTime(item.declinedAt, l)]
+              case final parts when parts.isNotEmpty)
+            parts.join(' · '),
+        ],
+        _ => const <String>[],
+      },
+      reach: _Reach.now,
+    ),
+    if (!ends)
+      (
+        label: l.webRequestsStateHere,
+        details: const <String>[],
+        reach: _Reach.ahead,
+      ),
+  ];
+}
+
+/// A request's [stops] as dots on a line: what's behind it filled in the
+/// muted colour, the one it's at in its [state]'s with a halo, and an
+/// empty ring for what's ahead, so only where it is now takes a colour,
+/// and a failure doesn't paint the asking red. The dots sit where the menu's icons do, so the words line up
+/// with the items under them. Nothing on it is pressable.
+class _Timeline extends StatelessWidget {
+  const _Timeline({required this.state, required this.stops});
+
+  final String state;
+  final List<_Stop> stops;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final tone = _stateFill(state, colors).border;
+    final scaler = MediaQuery.textScalerOf(context);
+    // The dot sits on the middle of the stop's first line.
+    final middle = scaler.scale(KitText.base.lineHeight) / 2;
+    Color line(_Stop to) =>
+        to.reach == _Reach.ahead ? colors.borderStrong : colors.mutedForeground;
+    // The lines stop at a dot's edge, the halo's for the stop it's at.
+    double edge(_Stop stop) => stop.reach == _Reach.now ? 10 : 5;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (index, stop) in stops.indexed)
+            MergeSemantics(
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 16,
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      child: Stack(
+                        alignment: Alignment.topCenter,
+                        children: [
+                          if (index > 0)
+                            Positioned(
+                              top: 0,
+                              height: middle - edge(stop),
+                              child: _Line(line(stop)),
+                            ),
+                          if (index < stops.length - 1)
+                            Positioned(
+                              top: middle + edge(stop),
+                              bottom: 0,
+                              child: _Line(line(stops[index + 1])),
+                            ),
+                          Positioned(
+                            top: middle - 10,
+                            child: _Dot(reach: stop.reach, tone: tone),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index < stops.length - 1 ? 16 : 0,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          spacing: 2,
+                          children: [
+                            Text(
+                              stop.label,
+                              style: KitText.base.style(
+                                color: stop.reach == _Reach.ahead
+                                    ? colors.mutedForeground
+                                    : colors.foreground,
+                                weight: stop.reach == _Reach.now
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                            for (final detail in stop.details)
+                              Text(
+                                detail,
+                                style: KitText.sm.style(
+                                  color: colors.mutedForeground,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The stretch of a timeline between two dots.
+class _Line extends StatelessWidget {
+  const _Line(this.color);
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) =>
+      SizedBox(width: 2, child: ColoredBox(color: color));
+}
+
+/// A timeline's dot, 20 across with what it draws in the middle: filled in
+/// the muted colour once passed, in [tone] with a halo where the request
+/// is now, and an empty ring while it's ahead.
+class _Dot extends StatelessWidget {
+  const _Dot({required this.reach, required this.tone});
+
+  final _Reach reach;
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = MatineeTheme.of(context);
+    final dot = DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: switch (reach) {
+          _Reach.past => colors.mutedForeground,
+          _Reach.now => tone,
+          _Reach.ahead => const Color(0x00000000),
+        },
+        border: reach == _Reach.ahead
+            ? Border.all(color: colors.borderStrong, width: 2)
+            : null,
+      ),
+      child: const SizedBox.square(dimension: 10),
+    );
+    return SizedBox.square(
+      dimension: 20,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: reach == _Reach.now
+              ? tone.withValues(alpha: .25)
+              : const Color(0x00000000),
+        ),
+        child: Center(child: dot),
+      ),
+    );
+  }
+}
 
 /// What the connection reported about a request, label and value as the
 /// server words them, for an admin finding out why it's stuck.

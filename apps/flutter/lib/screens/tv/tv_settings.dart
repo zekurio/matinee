@@ -1112,7 +1112,6 @@ class _AboutRowsState extends ConsumerState<_AboutRows> {
       TvListHeading(l.logsTitle),
       TvListItem(
         title: l.logsShow,
-        subtitle: l.logsNote,
         quiet: true,
         focusNode: _showLog,
         onPressed: () => _withLog(
@@ -1141,8 +1140,8 @@ Future<void> showTvText(
 }) => Navigator.of(context, rootNavigator: true).push(
   PageRouteBuilder<void>(
     opaque: true,
-    transitionDuration: TvMotion.enter,
-    reverseTransitionDuration: TvMotion.exit,
+    transitionDuration: KitMotion.enter,
+    reverseTransitionDuration: KitMotion.exit,
     pageBuilder: (context, animation, secondary) =>
         _TextViewer(title: title, text: text, fromEnd: fromEnd),
     transitionsBuilder: (context, animation, secondary, child) =>
@@ -1207,8 +1206,8 @@ class _TextViewerState extends State<_TextViewer> {
       unawaited(
         position.animateTo(
           (position.pixels + step).clamp(0, position.maxScrollExtent),
-          duration: TvMotion.move,
-          curve: TvMotion.easing,
+          duration: KitMotion.move,
+          curve: KitMotion.easing,
         ),
       );
     }

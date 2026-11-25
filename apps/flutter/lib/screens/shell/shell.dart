@@ -147,17 +147,35 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
         color: MatineeTheme.of(context).background,
         child: Column(
           children: [
-            ShellTopBar(index: widget.shell.currentIndex),
+            // A tab fades in over the last, its header with it, while the
+            // tab bar stays put.
             Expanded(
-              child: MediaQuery.removePadding(
-                context: context,
-                // Media's header is inside the tab, which keeps the status
-                // bar's inset to clear it, as [ShellTopBar] does.
-                removeTop: !_serverTabs.contains(widget.shell.currentIndex),
-                removeBottom: true,
-                // Clear of a landscape phone's notch or Dynamic Island, as
-                // the header and the tab bar are.
-                child: SafeArea(top: false, bottom: false, child: widget.shell),
+              child: FadeOnChange(
+                value: widget.shell.currentIndex,
+                child: Column(
+                  children: [
+                    ShellTopBar(index: widget.shell.currentIndex),
+                    Expanded(
+                      child: MediaQuery.removePadding(
+                        context: context,
+                        // Media's header is inside the tab, which keeps the
+                        // status bar's inset to clear it, as [ShellTopBar]
+                        // does.
+                        removeTop: !_serverTabs.contains(
+                          widget.shell.currentIndex,
+                        ),
+                        removeBottom: true,
+                        // Clear of a landscape phone's notch or Dynamic
+                        // Island, as the header and the tab bar are.
+                        child: SafeArea(
+                          top: false,
+                          bottom: false,
+                          child: widget.shell,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             TabBar(items: items, state: _selected, onSelected: _open),

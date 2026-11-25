@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show TextInputAction;
 import 'package:flutter/widgets.dart';
 
 import 'icon.dart';
+import 'motion.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -41,9 +42,7 @@ class SearchPill extends StatelessWidget {
     final textStyle = KitText.base.style(color: colors.foreground);
     final editing = controller;
     final animate = !MediaQuery.disableAnimationsOf(context);
-    final duration = animate
-        ? const Duration(milliseconds: 220)
-        : Duration.zero;
+    final duration = animate ? KitMotion.enter : Duration.zero;
     final leading = _PillAction(
       icon: expanded ? Lucide.arrowLeft : Lucide.search,
       label: expanded ? backLabel! : searchLabel,
@@ -127,7 +126,7 @@ class SearchPill extends StatelessWidget {
     return animate
         ? AnimatedSize(
             alignment: AlignmentDirectional.centerStart,
-            curve: Curves.easeOutCubic,
+            curve: KitMotion.easing,
             duration: duration,
             child: pill,
           )

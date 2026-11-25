@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'motion.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -24,9 +25,7 @@ class PageDots extends StatelessWidget {
   Widget build(BuildContext context) {
     if (count < 2) return const SizedBox.shrink();
     final color = MatineeTheme.of(context).foreground;
-    final motion = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 150);
+    final motion = KitMotion.of(context, KitMotion.enter);
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: onSelected == null ? 6 : 0,

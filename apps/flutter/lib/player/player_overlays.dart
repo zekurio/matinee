@@ -152,8 +152,8 @@ class PlayerPrompts extends StatelessWidget {
     alignment: AlignmentDirectional.bottomEnd,
     child: SafeArea(
       child: AnimatedPadding(
-        duration: PlayerMotion.move,
-        curve: PlayerMotion.easing,
+        duration: KitMotion.move,
+        curve: KitMotion.easing,
         padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + (lifted ? 120 : 0)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -425,7 +425,8 @@ class _PlayerLockedState extends State<PlayerLocked> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: AnimatedOpacity(
                 opacity: _shown ? 1 : 0,
-                duration: const Duration(milliseconds: 200),
+                duration: KitMotion.enter,
+                curve: KitMotion.easing,
                 child: RoundIconButton(
                   icon: Lucide.lockOpen,
                   label: widget.unlockLabel,
