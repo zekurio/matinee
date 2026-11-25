@@ -194,8 +194,11 @@ TV app.
   stream ends on `streamSignal`, which also caps its length so the
   session gets checked again.
 - The web app reads one with
-  `useQuery(() => ({ ...orpc.x.experimental_liveOptions(), ...liveQuery }))`
-  (`liveQuery` from `src/lib/rpc.ts`), which reconnects. A stream from
+  `useLiveQuery(() => ({ ...orpc.x.experimental_liveOptions(), ...liveQuery }))`
+  (`useLiveQuery` from `src/lib/live-query.ts`, `liveQuery` from
+  `src/lib/rpc.ts`), which reconnects. Not `useQuery`: Solid Query holds
+  new data until a fetch settles, and a stream's fetch stays open, so it
+  would show the first answer only. A stream from
   `follow` starts with the current state, so nothing is lost while it
   reconnects. A stream of events needs its own way to catch up.
 
