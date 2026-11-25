@@ -112,7 +112,7 @@ class _SeasonScreenState extends ConsumerState<SeasonScreen> with PendingMarks {
       sections: [
         Backdrop(
           sources: [if (backdrop != null) ArtSource(backdrop)],
-          toneKey: title.name,
+          toneKey: title.id,
           top: headingTop(context),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -122,6 +122,7 @@ class _SeasonScreenState extends ConsumerState<SeasonScreen> with PendingMarks {
               children: [
                 HeadingPoster(
                   name: l.titleSeasonOf(title.name, name),
+                  toneKey: title.id,
                   art: season.poster ?? title.images.poster,
                 ),
                 Expanded(

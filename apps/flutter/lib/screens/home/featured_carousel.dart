@@ -314,7 +314,7 @@ class _FeaturedCard extends StatelessWidget {
           // doesn't show through the shade as a line.
           clipBehavior: Clip.antiAliasWithSaveLayer,
           child: Tone(
-            toneKey: name,
+            toneKey: slide.title.id,
             child: Stack(
               fit: StackFit.expand,
               children: [
