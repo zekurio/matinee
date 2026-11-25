@@ -21,6 +21,7 @@ const areas = [
   "metadata",
   "network",
   "oidc",
+  "party",
   "requests",
   "server",
   "stats",
@@ -121,6 +122,11 @@ function flutterText(key, text) {
       return text
         .replaceAll("Settings → Account", "Account in Settings")
         .replaceAll("Einstellungen → Konto", "Konto in den Einstellungen")
+    // Red Hat Text has no glyph for the web's "⋯", and the app's rows have
+    // their own menu buttons.
+    case "party.queue.owner":
+    case "party.queue.member":
+      return text.replace(" ⋯ menu", " menu").replace(" ⋯-Menü", " Menü")
     case "access.group.providerGroupHintNoClaim":
       return text
         .replaceAll("Settings → Authentication", "Authentication in Settings")

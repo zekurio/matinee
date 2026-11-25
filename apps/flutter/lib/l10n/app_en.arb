@@ -9868,5 +9868,377 @@
   "webConnectionsCardUnknownSource": "Unknown source",
   "@webConnectionsCardUnknownSource": {
     "description": "connections.card.unknownSource"
+  },
+  "partyJoinSection": "Join a watch party",
+  "@partyJoinSection": {
+    "description": "Watch party: the heading over joining one with an invite link"
+  },
+  "partyJoinHint": "Paste the invite link someone sent you.",
+  "@partyJoinHint": {
+    "description": "Watch party: what the join field takes"
+  },
+  "partyJoinField": "Invite link or code",
+  "@partyJoinField": {
+    "description": "Watch party: the field to join one"
+  },
+  "partyJoinInvalid": "That doesn't look like a watch party link or code.",
+  "@partyJoinInvalid": {
+    "description": "Watch party: what the join field says for text without a party id"
+  },
+  "partyLoadFailed": "Couldn't load the watch party",
+  "@partyLoadFailed": {
+    "description": "Watch party: the page when its state could not be read"
+  },
+  "partyOffline": "Watch parties need the server.",
+  "@partyOffline": {
+    "description": "Watch party: said where the app is offline"
+  },
+  "webPartyTitle": "Watch party",
+  "@webPartyTitle": {
+    "description": "party.title"
+  },
+  "webPartyInParty": "You're in this watch party",
+  "@webPartyInParty": {
+    "description": "party.inParty"
+  },
+  "webPartyStart": "Start a watch party",
+  "@webPartyStart": {
+    "description": "party.start"
+  },
+  "webPartyStartFailed": "Couldn't start a watch party",
+  "@webPartyStartFailed": {
+    "description": "party.startFailed"
+  },
+  "webPartyInviteCopied": "Invite link copied",
+  "@webPartyInviteCopied": {
+    "description": "party.inviteCopied"
+  },
+  "webPartyInviteHint": "Anyone with an account on this server can join with it.",
+  "@webPartyInviteHint": {
+    "description": "party.inviteHint"
+  },
+  "webPartyInviteFailed": "Couldn't copy the link",
+  "@webPartyInviteFailed": {
+    "description": "party.inviteFailed"
+  },
+  "webPartyOwner": "Owner",
+  "@webPartyOwner": {
+    "description": "party.owner"
+  },
+  "webPartyNothingOwner": "Nothing yet. Play something and the party watches it with you.",
+  "@webPartyNothingOwner": {
+    "description": "party.nothing.owner"
+  },
+  "webPartyNothingMember": "Nothing yet. The owner picks what plays.",
+  "@webPartyNothingMember": {
+    "description": "party.nothing.member"
+  },
+  "webPartyRestricted": "The party is watching something your account can't open.",
+  "@webPartyRestricted": {
+    "description": "party.restricted"
+  },
+  "webPartyWatchAlong": "Watch along",
+  "@webPartyWatchAlong": {
+    "description": "party.watchAlong"
+  },
+  "webPartyQueue": "Up next",
+  "@webPartyQueue": {
+    "description": "party.queue"
+  },
+  "webPartyQueueOwner": "Add movies and episodes from their menu.",
+  "@webPartyQueueOwner": {
+    "description": "party.queue.owner"
+  },
+  "webPartyQueueMember": "Propose movies and episodes from their menu.",
+  "@webPartyQueueMember": {
+    "description": "party.queue.member"
+  },
+  "webPartyInvite": "Invite people",
+  "@webPartyInvite": {
+    "description": "party.invite"
+  },
+  "webPartyProposals": "Suggestions",
+  "@webPartyProposals": {
+    "description": "party.proposals"
+  },
+  "webPartyProposedBy": "Suggested by {p1}",
+  "@webPartyProposedBy": {
+    "description": "party.proposedBy",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyEntryActions": "More for {p1}",
+  "@webPartyEntryActions": {
+    "description": "party.entryActions",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyMemberActions": "More for {p1}",
+  "@webPartyMemberActions": {
+    "description": "party.memberActions",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyPlayNow": "Play now",
+  "@webPartyPlayNow": {
+    "description": "party.playNow"
+  },
+  "webPartyMoveUp": "Move up",
+  "@webPartyMoveUp": {
+    "description": "party.moveUp"
+  },
+  "webPartyMoveDown": "Move down",
+  "@webPartyMoveDown": {
+    "description": "party.moveDown"
+  },
+  "webPartyRemove": "Remove",
+  "@webPartyRemove": {
+    "description": "party.remove"
+  },
+  "webPartyAccept": "Add to queue",
+  "@webPartyAccept": {
+    "description": "party.accept"
+  },
+  "webPartyDismiss": "Dismiss",
+  "@webPartyDismiss": {
+    "description": "party.dismiss"
+  },
+  "webPartyWithdraw": "Take back",
+  "@webPartyWithdraw": {
+    "description": "party.withdraw"
+  },
+  "webPartyMakeOwner": "Make owner",
+  "@webPartyMakeOwner": {
+    "description": "party.makeOwner"
+  },
+  "webPartyKick": "Remove from party",
+  "@webPartyKick": {
+    "description": "party.kick"
+  },
+  "webPartyRename": "Rename party",
+  "@webPartyRename": {
+    "description": "party.rename"
+  },
+  "webPartyRenameSave": "Save",
+  "@webPartyRenameSave": {
+    "description": "party.rename.save"
+  },
+  "webPartyLeave": "Leave party",
+  "@webPartyLeave": {
+    "description": "party.leave"
+  },
+  "webPartyFailed": "That didn't work",
+  "@webPartyFailed": {
+    "description": "party.failed"
+  },
+  "webPartyName": "Name",
+  "@webPartyName": {
+    "description": "party.name"
+  },
+  "webPartyNameOptional": "Name (optional)",
+  "@webPartyNameOptional": {
+    "description": "party.name.optional"
+  },
+  "webPartyNamePlaceholder": "Movie night",
+  "@webPartyNamePlaceholder": {
+    "description": "party.name.placeholder"
+  },
+  "webPartyMakeOwnerTitle": "Hand the party to {p1}?",
+  "@webPartyMakeOwnerTitle": {
+    "description": "party.makeOwner.title",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyMakeOwnerDescription": "{p1} then picks what plays, sets the queue, and can remove people. You stay in the party.",
+  "@webPartyMakeOwnerDescription": {
+    "description": "party.makeOwner.description",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyMakeOwnerConfirm": "Make owner",
+  "@webPartyMakeOwnerConfirm": {
+    "description": "party.makeOwner.confirm"
+  },
+  "webPartyKickTitle": "Remove {p1}?",
+  "@webPartyKickTitle": {
+    "description": "party.kick.title",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyKickDescription": "{p1} leaves the party and can't join it again with the link.",
+  "@webPartyKickDescription": {
+    "description": "party.kick.description",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyKickConfirm": "Remove",
+  "@webPartyKickConfirm": {
+    "description": "party.kick.confirm"
+  },
+  "webPartyCancel": "Cancel",
+  "@webPartyCancel": {
+    "description": "party.cancel"
+  },
+  "webPartyMenuQueue": "Add to party queue",
+  "@webPartyMenuQueue": {
+    "description": "party.menu.queue"
+  },
+  "webPartyMenuPropose": "Propose for the party",
+  "@webPartyMenuPropose": {
+    "description": "party.menu.propose"
+  },
+  "webPartyQueued": "{p1} is in the party's queue",
+  "@webPartyQueued": {
+    "description": "party.queued",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyProposed": "{p1} is proposed for the party",
+  "@webPartyProposed": {
+    "description": "party.proposed",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyJoinTitle": "Join {p1}'s watch party?",
+  "@webPartyJoinTitle": {
+    "description": "party.join.title",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyJoinTitleNamed": "Join {p1}?",
+  "@webPartyJoinTitleNamed": {
+    "description": "party.join.titleNamed",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyJoinNamedBy": "{p1}'s watch party. {p2}",
+  "@webPartyJoinNamedBy": {
+    "description": "party.join.namedBy",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyJoinPeople": "{count, plural, one{{count} person is in it.} other{{count} people are in it.}}",
+  "@webPartyJoinPeople": {
+    "description": "party.join.people",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webPartyJoinOver": "This watch party is over",
+  "@webPartyJoinOver": {
+    "description": "party.join.over"
+  },
+  "webPartyJoinDescription": "{p1} You'll watch along with the people in it. Joining leaves any party you're in now.",
+  "@webPartyJoinDescription": {
+    "description": "party.join.description",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyJoinButton": "Join",
+  "@webPartyJoinButton": {
+    "description": "party.join.button"
+  },
+  "webPartyJoinFailed": "Couldn't join",
+  "@webPartyJoinFailed": {
+    "description": "party.join.failed"
+  },
+  "webPartyJoinHome": "Back home",
+  "@webPartyJoinHome": {
+    "description": "party.join.home"
+  },
+  "webPartyHealthYou": "{p1} (you)",
+  "@webPartyHealthYou": {
+    "description": "party.health.you",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyHealthChecking": "Checking…",
+  "@webPartyHealthChecking": {
+    "description": "party.health.checking"
+  },
+  "webPartyHealthInSync": "In sync",
+  "@webPartyHealthInSync": {
+    "description": "party.health.inSync"
+  },
+  "webPartyHealthBehind": "{p1} s behind",
+  "@webPartyHealthBehind": {
+    "description": "party.health.behind",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyHealthAhead": "{p1} s ahead",
+  "@webPartyHealthAhead": {
+    "description": "party.health.ahead",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyHealthBuffering": "Buffering",
+  "@webPartyHealthBuffering": {
+    "description": "party.health.buffering"
+  },
+  "webPartyHealthPaused": "Paused",
+  "@webPartyHealthPaused": {
+    "description": "party.health.paused"
+  },
+  "webPartyHealthAway": "Not in the player",
+  "@webPartyHealthAway": {
+    "description": "party.health.away"
+  },
+  "webPartyHealthHint": "When someone's player can't keep up, the party pauses and plays on once it has caught up.",
+  "@webPartyHealthHint": {
+    "description": "party.health.hint"
   }
 }

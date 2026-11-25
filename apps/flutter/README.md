@@ -310,6 +310,21 @@ app leaves them out. They then have mpv's look, not the one Settings
 gives the app's. Android's small window is the whole app, so nothing
 changes there.
 
+## Watch parties
+
+A phone or tablet opens the watch party from the profile. It starts one,
+joins one with its invite link or code, and shows its members, what
+plays, the queue, and the proposals, with the owner's choices the web
+gives. A file's menu adds it to the queue, or proposes it to the owner.
+`lib/party` follows the party's live stream while the app is signed in,
+since the server takes a member with no stream open for a minute as gone.
+
+Not there yet:
+
+- A TV's screens and player don't show or follow a party.
+- An invite link is pasted into the join field. The app registers no
+  link handler for it.
+
 ## Watch Next
 
 On an Android TV, Continue watching and Next up also go to the launcher's

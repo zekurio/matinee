@@ -11,6 +11,7 @@ import '../core/toasts.dart';
 import '../downloads/downloads.dart';
 import '../kit/kit.dart';
 import '../l10n/app_localizations.dart';
+import '../party/party_controller.dart';
 import '../router.dart';
 import '../screens/downloads/download_files_sheet.dart';
 import '../screens/downloads/download_sheet.dart';
@@ -362,12 +363,14 @@ class _ActionsSheet extends ConsumerWidget {
       may: ref.watch(mayDownloadProvider),
       stored: ref.watch(shownDownloadsProvider).keys.toSet(),
     );
+    final party = ref.watch(partyProvider).value?.party;
     final (title, description, items) = switch (target) {
       ItemActions(:final item, :final here) => _item(
         l,
         item,
         here,
         downloads,
+        party,
         run,
       ),
       TitleActions(
@@ -401,6 +404,7 @@ class _ActionsSheet extends ConsumerWidget {
     MediaItem item,
     bool here,
     _Downloads downloads,
+    Party? party,
     void Function(_Act) run,
   ) {
     final names = itemNames(item, l);
@@ -423,6 +427,14 @@ class _ActionsSheet extends ConsumerWidget {
             ),
           ),
         if (resume) _fromStart(l, item, run),
+        if (party != null)
+          SheetItem(
+            icon: Lucide.listChecks,
+            label: party.owner ? l.webPartyMenuQueue : l.webPartyMenuPropose,
+            onPressed: () => run(
+              (context) => _addToParty(context, item, owner: party.owner),
+            ),
+          ),
         if (!here) ...[
           SheetItem(
             icon: Lucide.check,
@@ -485,6 +497,40 @@ class _ActionsSheet extends ConsumerWidget {
           ),
       ],
     );
+  }
+
+  /// Adds the file to the party's queue, or proposes it to the owner, as
+  /// the caller's role allows.
+  static Future<void> _addToParty(
+    BuildContext context,
+    MediaItem item, {
+    required bool owner,
+  }) async {
+    final container = ProviderScope.containerOf(context, listen: false);
+    final l = AppLocalizations.of(context);
+    final toasts = container.read(toastProvider);
+    final names = itemNames(item, l);
+    final code = episodeCode(item, l);
+    final name = code == null
+        ? names.title
+        : '${names.showName} · $code · ${names.title}';
+    try {
+      await container.read(partyProvider.notifier).queueAdd(item.id);
+      unawaited(
+        toasts.show(
+          owner ? l.webPartyQueued(name) : l.webPartyProposed(name),
+          kind: ToastKind.success,
+        ),
+      );
+    } on Object catch (error) {
+      unawaited(
+        toasts.show(
+          l.webPartyFailed,
+          description: describeFailure(l, error),
+          kind: ToastKind.error,
+        ),
+      );
+    }
   }
 
   static (String, String?, List<Widget>) _title(
