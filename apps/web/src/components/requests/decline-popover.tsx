@@ -3,36 +3,31 @@ import {
   WAITING_DECLINE_REASONS,
   type WaitingDeclineReason,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
+import { cn } from "@matinee/ui/lib/utils"
+import { Check } from "lucide"
+import { createSignal, createUniqueId, For, Show } from "solid-js"
+
+import type { TriggerRender } from "@/components/catalog/ask-sheet"
+import { tr } from "@/i18n"
+import { Button } from "@/kit/button"
 import {
   Drawer,
   DrawerContent,
   DrawerHandle,
   DrawerTitle,
   DrawerTrigger,
-} from "@matinee/ui/components/drawer"
-import { Field, FieldLabel } from "@matinee/ui/components/field"
-import { Input } from "@matinee/ui/components/input"
+} from "@/kit/drawer"
+import { Field, FieldLabel } from "@/kit/field"
+import { Icon } from "@/kit/icon"
+import { Input } from "@/kit/input"
 import {
   Popover,
   PopoverContent,
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@matinee/ui/components/popover"
-import { cn } from "@matinee/ui/lib/utils"
-import { CheckIcon } from "lucide-react"
-import {
-  type KeyboardEvent,
-  type ReactElement,
-  type RefObject,
-  useId,
-  useRef,
-  useState,
-} from "react"
-
-import { usePhone } from "@/components/sheet-menu"
-import { tr } from "@/i18n"
+} from "@/kit/popover"
+import { isPhone } from "@/lib/viewport"
 
 import { formatNames } from "./request-queue"
 
@@ -45,6 +40,9 @@ export type Answer =
   | { kind: "decline"; reason: WaitingDeclineReason; note: string | null }
   | { kind: "giveUp"; note: string | null }
 
+/** What takes focus as the form opens: the first reason, or the note. */
+type FirstFocus = { element?: HTMLElement }
+
 /**
  * Decline, with why: the reason, picked like a menu's item, and a note
  * for whoever requested it, over a footer with Cancel and Decline. Or,
@@ -52,111 +50,105 @@ export type Answer =
  * reason fixed. A popover beside the button, or a drawer from the bottom
  * on phones. Enter sends it once a reason is picked; Escape closes it.
  */
-export function DeclinePopover({
-  item,
-  giveUp = false,
-  open,
-  onOpenChange,
-  onAnswer,
-  trigger,
-  finalFocus,
-  onClosed,
-}: {
+export function DeclinePopover(props: {
   item: AdminRequestItem
   /** Give up on an accepted request rather than decline a waiting one. */
   giveUp?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
   onAnswer: (answer: Answer) => void
-  trigger: ReactElement
+  renderTrigger: TriggerRender
   /**
-   * Where focus goes as it closes: back to its button, or after an
-   * answer, to what takes the row's place.
+   * Where focus goes as it closes: back to its button when this gives
+   * nothing, or after an answer, to what takes the row's place.
    */
-  finalFocus?: () => HTMLElement | boolean
+  finalFocus?: () => HTMLElement | null | undefined
   /** Once it has finished closing, for focus to move on after an answer. */
   onClosed?: () => void
 }) {
-  const first = useRef<HTMLElement>(null)
-  const phone = usePhone()
-  const title = giveUp
-    ? tr("requests.giveUp.title", { name: item.title.name })
-    : tr("requests.decline.title", { name: item.title.name })
-  const askers = item.followers.map((follower) => follower.name)
+  const first: FirstFocus = {}
+  const title = () =>
+    props.giveUp
+      ? tr("requests.giveUp.title", { name: props.item.title.name })
+      : tr("requests.decline.title", { name: props.item.title.name })
   // Fresh for each opening.
-  const form = open && (
-    <AnswerForm
-      first={first}
-      giveUp={giveUp}
-      // A by-hand connection holds nothing to keep.
-      connection={
-        item.connection?.reportsProgress ? item.connection.name : null
-      }
-      askers={askers}
-      phone={phone}
-      onAnswer={onAnswer}
-      onCancel={() => onOpenChange(false)}
-    />
+  const form = () => (
+    <Show when={props.open}>
+      <AnswerForm
+        first={first}
+        giveUp={props.giveUp ?? false}
+        // A by-hand connection holds nothing to keep.
+        connection={
+          props.item.connection?.reportsProgress
+            ? props.item.connection.name
+            : null
+        }
+        askers={props.item.followers.map((follower) => follower.name)}
+        phone={isPhone()}
+        onAnswer={props.onAnswer}
+        onCancel={() => props.onOpenChange(false)}
+      />
+    </Show>
   )
-  if (phone) {
-    return (
+  const closed = (open: boolean) => {
+    if (!open) props.onClosed?.()
+  }
+  const finalFocus = () => props.finalFocus?.() ?? undefined
+  return (
+    <Show
+      when={isPhone()}
+      fallback={
+        <Popover
+          open={props.open}
+          onOpenChange={props.onOpenChange}
+          onOpenChangeComplete={closed}
+        >
+          <PopoverTrigger render={props.renderTrigger} />
+          <PopoverContent
+            align="end"
+            sideOffset={6}
+            initialFocus={() => first.element}
+            finalFocus={props.finalFocus ? finalFocus : "trigger"}
+            class="w-80 gap-0 p-0"
+          >
+            <PopoverHeader>
+              <PopoverTitle class="truncate font-semibold">
+                {title()}
+              </PopoverTitle>
+            </PopoverHeader>
+            {form()}
+          </PopoverContent>
+        </Popover>
+      }
+    >
       <Drawer
-        open={open}
-        onOpenChange={onOpenChange}
-        onOpenChangeComplete={(next) => !next && onClosed?.()}
+        open={props.open}
+        onOpenChange={props.onOpenChange}
+        onOpenChangeComplete={closed}
       >
-        <DrawerTrigger render={trigger} />
-        <DrawerContent initialFocus={first} finalFocus={finalFocus}>
+        <DrawerTrigger render={props.renderTrigger} />
+        <DrawerContent
+          initialFocus={() => first.element}
+          finalFocus={props.finalFocus ? finalFocus : "trigger"}
+        >
           <DrawerHandle />
-          <DrawerTitle className="truncate px-5 pt-3 text-lg leading-7 font-semibold tracking-tight">
-            {title}
+          <DrawerTitle class="truncate px-5 pt-3 text-lg leading-7 font-semibold tracking-tight">
+            {title()}
           </DrawerTitle>
-          <div className="flex min-h-0 flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
-            {form}
+          <div class="flex min-h-0 flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+            {form()}
           </div>
         </DrawerContent>
       </Drawer>
-    )
-  }
-  return (
-    <Popover
-      open={open}
-      onOpenChange={onOpenChange}
-      onOpenChangeComplete={(next) => !next && onClosed?.()}
-    >
-      <PopoverTrigger render={trigger} />
-      <PopoverContent
-        align="end"
-        sideOffset={6}
-        initialFocus={first}
-        finalFocus={finalFocus}
-        className="w-80 gap-0 p-0"
-      >
-        <PopoverHeader>
-          <PopoverTitle className="truncate font-semibold">
-            {title}
-          </PopoverTitle>
-        </PopoverHeader>
-        {form}
-      </PopoverContent>
-    </Popover>
+    </Show>
   )
 }
 
 const reasonRow =
   "flex h-8 items-center justify-between gap-3 rounded-md px-2 text-left text-sm select-none [@media(pointer:coarse)]:h-11"
 
-function AnswerForm({
-  first,
-  giveUp,
-  connection,
-  askers,
-  phone,
-  onAnswer,
-  onCancel,
-}: {
-  /** What takes focus as it opens: the first reason, or the note. */
-  first: RefObject<HTMLElement | null>
+function AnswerForm(props: {
+  first: FirstFocus
   giveUp: boolean
   /** Where an accepted request was sent, which keeps what it has. */
   connection: string | null
@@ -166,17 +158,19 @@ function AnswerForm({
   onAnswer: (answer: Answer) => void
   onCancel: () => void
 }) {
-  const [reason, setReason] = useState<WaitingDeclineReason | null>(null)
-  const [note, setNote] = useState("")
-  const id = useId()
-  const reasons = useRef<(HTMLButtonElement | null)[]>([])
-  const cancel = useRef<HTMLButtonElement>(null)
-  const ready = giveUp || reason !== null
+  const [reason, setReason] = createSignal<WaitingDeclineReason | null>(null)
+  const [note, setNote] = createSignal("")
+  const id = createUniqueId()
+  const reasons: (HTMLButtonElement | undefined)[] = []
+  let cancel: HTMLButtonElement | undefined
+  const ready = () => props.giveUp || reason() !== null
 
   const submit = () => {
-    const text = note.trim() || null
-    if (giveUp) onAnswer({ kind: "giveUp", note: text })
-    else if (reason) onAnswer({ kind: "decline", reason, note: text })
+    const text = note().trim() || null
+    const picked = reason()
+    if (props.giveUp) props.onAnswer({ kind: "giveUp", note: text })
+    else if (picked)
+      props.onAnswer({ kind: "decline", reason: picked, note: text })
   }
 
   // Arrow keys move between the reasons, as in any radio group.
@@ -193,12 +187,12 @@ function AnswerForm({
     const next = (index + step + count) % count
     const value = WAITING_DECLINE_REASONS[next]
     if (value) setReason(value)
-    reasons.current[next]?.focus()
+    reasons[next]?.focus()
   }
 
   return (
     <form
-      className="flex flex-col"
+      class="flex flex-col"
       onSubmit={(event) => {
         event.preventDefault()
         submit()
@@ -207,114 +201,120 @@ function AnswerForm({
       // reasons included, which a form leaves to themselves. Cancel keeps
       // its own Enter.
       onKeyDown={(event) => {
-        if (event.key !== "Enter" || !ready || event.nativeEvent.isComposing)
-          return
-        if (event.target === cancel.current) return
+        if (event.key !== "Enter" || !ready() || event.isComposing) return
+        if (event.target === cancel) return
         event.preventDefault()
         event.currentTarget.requestSubmit()
       }}
     >
-      <div className={cn("flex flex-col gap-4", phone ? "px-5 py-4" : "p-3")}>
-        <Field className="gap-1.5">
-          <FieldLabel id={`${id}-reason`} className="text-13px">
+      <div class={cn("flex flex-col gap-4", props.phone ? "px-5 py-4" : "p-3")}>
+        <Field class="gap-1.5">
+          <FieldLabel id={`${id}-reason`} class="text-13px">
             {tr("requests.decline.reason")}
           </FieldLabel>
-          {giveUp ? (
-            // Only one reason fits giving up, so it's said, not offered.
-            <p className={cn(reasonRow, "text-foreground -mx-1 font-medium")}>
-              {tr("requests.reason.notFound")}
-              <CheckIcon aria-hidden className="text-primary size-4" />
-            </p>
-          ) : (
+          <Show
+            when={!props.giveUp}
+            fallback={
+              // Only one reason fits giving up, so it's said, not offered.
+              <p class={cn(reasonRow, "text-foreground -mx-1 font-medium")}>
+                {tr("requests.reason.notFound")}
+                <Icon icon={Check} class="text-primary size-4" />
+              </p>
+            }
+          >
             <div
               role="radiogroup"
               aria-labelledby={`${id}-reason`}
-              className="-mx-1 flex flex-col"
+              class="-mx-1 flex flex-col"
             >
-              {WAITING_DECLINE_REASONS.map((value, index) => {
-                const checked = reason === value
-                return (
+              <For each={WAITING_DECLINE_REASONS}>
+                {(value, index) => (
                   <button
-                    key={value}
                     ref={(element) => {
-                      reasons.current[index] = element
-                      if (index === 0) first.current = element
+                      const at = WAITING_DECLINE_REASONS.indexOf(value)
+                      reasons[at] = element
+                      if (at === 0) props.first.element = element
                     }}
                     type="button"
                     role="radio"
-                    aria-checked={checked}
-                    tabIndex={
-                      checked || (reason === null && index === 0) ? 0 : -1
+                    aria-checked={reason() === value ? "true" : "false"}
+                    tabindex={
+                      reason() === value || (reason() === null && index() === 0)
+                        ? 0
+                        : -1
                     }
                     onClick={() => setReason(value)}
-                    onKeyDown={(event) => moveReason(event, index)}
-                    className={cn(
+                    onKeyDown={(event) => moveReason(event, index())}
+                    class={cn(
                       reasonRow,
                       "outline-none",
                       "hover:bg-foreground/[0.06] focus-visible:bg-foreground/10",
-                      checked
+                      reason() === value
                         ? "text-foreground font-medium"
                         : "text-foreground/80",
                     )}
                   >
                     {tr(`requests.reason.${value}`)}
-                    {checked && (
-                      <CheckIcon aria-hidden className="text-primary size-4" />
-                    )}
+                    <Show when={reason() === value}>
+                      <Icon icon={Check} class="text-primary size-4" />
+                    </Show>
                   </button>
-                )
-              })}
+                )}
+              </For>
             </div>
-          )}
+          </Show>
         </Field>
-        <Field className="gap-1.5">
-          <FieldLabel htmlFor={`${id}-note`} className="text-13px">
-            {askers.length > 0
-              ? tr("requests.decline.noteFor", { names: formatNames(askers) })
+        <Field class="gap-1.5">
+          <FieldLabel class="text-13px">
+            {props.askers.length > 0
+              ? tr("requests.decline.noteFor", {
+                  names: formatNames(props.askers),
+                })
               : tr("requests.decline.note")}
           </FieldLabel>
           <Input
-            id={`${id}-note`}
-            ref={(element) => {
-              if (giveUp) first.current = element
+            ref={(element: HTMLInputElement) => {
+              if (props.giveUp) props.first.element = element
             }}
-            value={note}
-            maxLength={2000}
-            autoComplete="off"
+            value={note()}
+            maxlength={2000}
+            autocomplete="off"
             placeholder={tr("requests.decline.notePlaceholder")}
-            onChange={(event) => setNote(event.target.value)}
+            onValueChange={(value: string) => setNote(value)}
           />
         </Field>
-        {giveUp && (
-          <p className="text-muted-foreground text-13px leading-5 text-pretty">
-            {connection
-              ? tr("requests.giveUp.keeps", { connection })
+        <Show when={props.giveUp}>
+          <p class="text-muted-foreground text-13px leading-5 text-pretty">
+            {props.connection
+              ? tr("requests.giveUp.keeps", { connection: props.connection })
               : tr("requests.giveUp.turnsUp")}
           </p>
-        )}
+        </Show>
       </div>
       <div
-        className={cn(
+        class={cn(
           "flex justify-end gap-2 border-t",
-          phone ? "px-5 py-3" : "px-3 py-2.5",
+          props.phone ? "px-5 py-3" : "px-3 py-2.5",
         )}
       >
         <Button
-          ref={cancel}
+          ref={(element: HTMLButtonElement) => {
+            cancel = element
+          }}
           type="button"
           variant="ghost"
-          size={phone ? "lg" : "sm"}
-          onClick={onCancel}
+          size={props.phone ? "lg" : "sm"}
+          onClick={() => props.onCancel()}
         >
           {tr("requests.decline.cancel")}
         </Button>
         <Button
           type="submit"
           variant="destructive"
-          size={phone ? "lg" : "sm"}
-          disabled={!ready}
+          size={props.phone ? "lg" : "sm"}
+          disabled={!ready()}
         >
-          {giveUp
+          {props.giveUp
             ? tr("requests.giveUp.submit")
             : tr("requests.decline.submit")}
         </Button>

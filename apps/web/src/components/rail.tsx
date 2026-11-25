@@ -1,149 +1,343 @@
-import { Button } from "@matinee/ui/components/button"
 import { cn } from "@matinee/ui/lib/utils"
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
+import type { JSX } from "@solidjs/web"
+import { ChevronLeft, ChevronRight } from "lucide"
 import {
-  type DragEvent,
-  type MouseEvent,
-  type PointerEvent,
-  type ReactNode,
-  type RefObject,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react"
-import { useStore } from "zustand"
-import { useShallow } from "zustand/shallow"
+  createEffect,
+  createSignal,
+  createUniqueId,
+  flush,
+  onSettled,
+  type ParentProps,
+} from "solid-js"
 
 import { tr } from "@/i18n"
-import { createRailStore } from "@/stores/browse-rail"
+import { buttonVariants } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+
+/*
+ * A titled row of cards that scrolls sideways past the page's gutter to
+ * the content's edge, as the Flutter app's rails do. Mice drag it or use
+ * the arrows by its heading, touch screens swipe, and keyboard users tab
+ * through the cards.
+ */
 
 /**
- * A titled row of cards that scrolls sideways. Mice drag it or use the
- * arrow buttons, touch screens swipe, and keyboard users tab through the
- * cards.
+ * Bleeds the row out over the page's gutter, so cards scroll off at the
+ * content's edge rather than at the margin, and snap back to the margin.
+ * The same steps as `pageGutter`.
  */
-export function Rail({
-  title,
-  heading,
-  action,
-  startIndex = 0,
-  children,
-}: {
-  title: string
-  /** Shown in the header instead of the plain title, like a see-all link. */
-  heading?: ReactNode
-  action?: ReactNode
-  /** The card that starts the row when it mounts. */
-  startIndex?: number
-  children: ReactNode
-}) {
-  const titleId = useId()
-  const scroller = useRef<HTMLUListElement>(null)
-  const [store] = useState(createRailStore)
-  const { atStart, atEnd, dragging } = useStore(
-    store,
-    useShallow((state) => ({
-      atStart: state.atStart,
-      atEnd: state.atEnd,
-      dragging: state.dragging,
-    })),
+const bleed =
+  "-mx-4 px-4 scroll-px-4 sm:-mx-6 sm:px-6 sm:scroll-px-6 xl:-mx-8 xl:px-8 xl:scroll-px-8"
+
+/** A section's heading, the Flutter kit's `SectionTitle`. */
+export const sectionTitle =
+  "min-w-0 truncate text-xl font-semibold tracking-tight"
+
+export function Rail(
+  props: ParentProps<{
+    title: string
+    /** Shown in the header instead of the plain title, like a see-all link. */
+    heading?: JSX.Element
+    action?: JSX.Element
+    ref?: (section: HTMLElement) => void
+  }>,
+) {
+  const titleId = createUniqueId()
+  let scroller: HTMLUListElement | undefined
+  const [edges, setEdges] = createSignal(
+    { atStart: true, atEnd: true },
+    { equals: (a, b) => a.atStart === b.atStart && a.atEnd === b.atEnd },
   )
-  const { measure, setDragging } = store.getState()
+  const [dragging, setDragging] = createSignal(false)
 
-  // Before paint, so the row doesn't jump. The measure below picks it up.
-  useLayoutEffect(() => {
-    const el = scroller.current
-    const card = el?.children[startIndex]
-    if (!el || !card || startIndex === 0) return
-    el.scrollLeft = cardStop(el, card)
-  }, [startIndex])
-
-  const handlers = useDragScroll(scroller, setDragging)
+  const measure = () => {
+    const el = scroller
+    // A row out of the page has no width; it keeps what it showed.
+    if (!el || el.clientWidth === 0) return
+    const max = el.scrollWidth - el.clientWidth
+    // Within a pixel, for zoom levels that leave a fraction.
+    setEdges({ atStart: el.scrollLeft <= 1, atEnd: el.scrollLeft >= max - 1 })
+  }
 
   // Whether the row can scroll changes with its size and its cards, and
-  // neither tells React.
-  useEffect(() => {
-    const el = scroller.current
+  // neither says so. The observer reports the box once it's laid out.
+  onSettled(() => {
+    const el = scroller
     if (!el) return
-    const update = () => measure(el)
-    // The observer reports the box once it's laid out, which measures it
-    // the first time without forcing a layout of the page from here. The
-    // list keeps its size when cards arrive, say when skeletons give way
-    // to data, so watch the cards as well as the box.
-    const resize = new ResizeObserver(update)
-    resize.observe(el)
-    const mutation = new MutationObserver(update)
+    const stopResize = onResize(el, measure)
+    // Cards come in just before a paint, and reading the row's width then
+    // would lay the page out an extra time; the frame after will do.
+    let frame = 0
+    const mutation = new MutationObserver(() => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(measure)
+    })
     mutation.observe(el, { childList: true })
     return () => {
-      resize.disconnect()
+      stopResize()
       mutation.disconnect()
+      cancelAnimationFrame(frame)
     }
-  }, [measure])
-
-  const scrollable = !(atStart && atEnd)
+  })
 
   const page = (direction: 1 | -1) => {
-    const el = scroller.current
+    const el = scroller
     if (!el) return
     el.scrollBy({ left: direction * el.clientWidth * 0.9, behavior: "smooth" })
   }
 
+  const drag = dragScroll(() => scroller, setDragging)
+
   return (
-    <section aria-labelledby={titleId}>
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <h2
-          id={titleId}
-          className="min-w-0 truncate text-xl font-semibold tracking-tight"
-        >
-          {heading ?? title}
+    <section ref={props.ref} aria-labelledby={titleId}>
+      <div class="mb-3 flex items-center justify-between gap-4">
+        <h2 id={titleId} class={sectionTitle}>
+          {props.heading ?? props.title}
         </h2>
-        <div className="flex shrink-0 items-center gap-1">
-          {action}
+        <div class="flex shrink-0 items-center gap-1">
+          {props.action}
           <div
-            className={cn(
+            class={[
               "flex gap-1 [@media(pointer:coarse)]:hidden",
-              !scrollable && "invisible",
-            )}
+              { invisible: edges().atStart && edges().atEnd },
+            ]}
           >
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={tr("media.rail.back", { title })}
-              disabled={atStart}
+            <ArrowButton
+              label={tr("media.rail.back", { title: props.title })}
+              icon={ChevronLeft}
+              disabled={edges().atStart}
               onClick={() => page(-1)}
-            >
-              <ChevronLeftIcon />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={tr("media.rail.forward", { title })}
-              disabled={atEnd}
+            />
+            <ArrowButton
+              label={tr("media.rail.forward", { title: props.title })}
+              icon={ChevronRight}
+              disabled={edges().atEnd}
               onClick={() => page(1)}
-            >
-              <ChevronRightIcon />
-            </Button>
+            />
           </div>
         </div>
       </div>
-      {/* Bleeds to the page edge on phones, so cards can scroll off it. */}
       <ul
-        ref={scroller}
-        onScroll={(event) => measure(event.currentTarget)}
-        {...handlers}
-        className={cn(
-          "-mx-4 -my-1.5 flex snap-x snap-mandatory scroll-px-4 [scrollbar-width:none] gap-3 overflow-x-auto px-4 py-1.5 sm:mx-0 sm:scroll-px-0 sm:gap-4 sm:px-0 [&::-webkit-scrollbar]:hidden",
+        ref={[
+          (element) => (scroller = element),
+          // Solid has no capture-phase prop; a listener of its own does it.
+          (element) =>
+            element.addEventListener("click", drag.onClickCapture, {
+              capture: true,
+            }),
+        ]}
+        onScroll={measure}
+        onPointerDown={drag.onPointerDown}
+        onPointerMove={drag.onPointerMove}
+        onPointerUp={drag.onPointerEnd}
+        onPointerCancel={drag.onPointerEnd}
+        onDragStart={(event) => event.preventDefault()}
+        class={[
+          bleed,
+          "-my-1.5 flex snap-x snap-mandatory [scrollbar-width:none] gap-3 overflow-x-auto py-1.5 sm:gap-4 [&::-webkit-scrollbar]:hidden",
           // The cards ignore the pointer mid-drag, so hover effects stay
           // put and the cursor comes from the list.
-          dragging && "cursor-grabbing select-none *:pointer-events-none",
-        )}
+          { "cursor-grabbing select-none *:pointer-events-none": dragging() },
+        ]}
       >
-        {children}
+        {props.children}
       </ul>
     </section>
   )
+}
+
+const arrowClass = cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))
+
+/**
+ * The kit's small ghost icon button, as a plain button: a page has two per
+ * rail, and the kit's takes several times as long to build.
+ */
+function ArrowButton(props: {
+  label: string
+  icon: typeof ChevronLeft
+  disabled: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      data-slot="button"
+      type="button"
+      disabled={props.disabled}
+      data-disabled={props.disabled ? "" : undefined}
+      aria-label={props.label}
+      class={arrowClass}
+      onClick={() => props.onClick()}
+    >
+      <Icon icon={props.icon} />
+    </button>
+  )
+}
+
+let resizeObserver: ResizeObserver | undefined
+const resizeWatchers = new Map<Element, () => void>()
+
+/**
+ * Calls `measure` once `el` is laid out and whenever its size changes. The
+ * rails and their reveal share one observer, so all of them read the
+ * layout before any of them changes the page; their writes wait for Solid's
+ * next flush. Observers of their own would each lay the page out again.
+ */
+function onResize(el: Element, measure: () => void) {
+  resizeObserver ??= new ResizeObserver((entries) => {
+    for (const entry of entries) resizeWatchers.get(entry.target)?.()
+  })
+  resizeWatchers.set(el, measure)
+  resizeObserver.observe(el)
+  return () => {
+    resizeWatchers.delete(el)
+    resizeObserver?.unobserve(el)
+  }
+}
+
+/** How far past the window, as a share of its height, a held rail fills in. */
+const REVEAL_MARGIN = 0.25
+
+/**
+ * Lets the rails of a long page hold back every card but the first until
+ * the rail comes near the window. The first card sets the row's height, so
+ * nothing moves when the rest come in. A rail fills in before the browser
+ * paints it near the window: on its first layout, on a resize or a scroll,
+ * and otherwise when an observer sees it come near, a frame later. Keyboard
+ * focus anywhere on the page fills in every rail, so Tab goes card by card.
+ * While the page is idle, held rails fill in a few cards at a time, so
+ * find-in-page and a screen reader's browse mode reach every card.
+ */
+export type RailReveal = {
+  /** Every rail shows all its cards from the start. */
+  readonly eager: boolean
+  /** Whether the page is in view; nothing is watched while it's kept out. */
+  showing: () => boolean
+  /** Calls `show` once `section` comes near the window, and stops watching. */
+  watch: (section: Element, show: () => void) => () => void
+  showAll: () => void
+}
+
+export function createRailReveal(
+  eager: boolean,
+  showing: () => boolean,
+): RailReveal {
+  const pending = new Map<Element, { reveal: () => void; stop: () => void }>()
+  let intersect: IntersectionObserver | undefined
+
+  const forget = (el: Element) => {
+    pending.get(el)?.stop()
+    pending.delete(el)
+    intersect?.unobserve(el)
+    if (pending.size === 0) removeEventListener("scroll", onScroll)
+  }
+  const show = (el: Element) => {
+    const watch = pending.get(el)
+    if (!watch) return
+    forget(el)
+    watch.reveal()
+  }
+  const near = (el: Element) => {
+    if (!el.isConnected) return false
+    const box = el.getBoundingClientRect()
+    const margin = window.innerHeight * REVEAL_MARGIN
+    return box.top < window.innerHeight + margin && box.bottom > -margin
+  }
+  // Applied at once, so the cards are in before this frame paints.
+  const check = (targets: Element[]) => {
+    const coming = targets.filter(near)
+    for (const el of coming) show(el)
+    if (coming.length > 0) flush()
+  }
+  const onScroll = () => check([...pending.keys()])
+
+  onSettled(() => () => {
+    for (const el of pending.keys()) forget(el)
+    intersect?.disconnect()
+  })
+
+  // Rails out of the page come near nothing. Back in, each held rail's
+  // observer reports its new size, which checks it.
+  createEffect(showing, (shown) => {
+    if (shown && pending.size > 0) {
+      addEventListener("scroll", onScroll, { passive: true })
+    } else removeEventListener("scroll", onScroll)
+  })
+
+  return {
+    eager,
+    showing,
+    watch(section, reveal) {
+      intersect ??= new IntersectionObserver(
+        (entries) =>
+          check(
+            entries
+              .filter((entry) => entry.isIntersecting)
+              .map((entry) => entry.target),
+          ),
+        { rootMargin: `${REVEAL_MARGIN * 100}% 0px` },
+      )
+      if (pending.size === 0 && showing()) {
+        addEventListener("scroll", onScroll, { passive: true })
+      }
+      // On its first layout and on a resize, before the paint.
+      const stop = onResize(section, () => {
+        if (near(section)) show(section)
+      })
+      pending.set(section, { reveal, stop })
+      intersect.observe(section)
+      return () => forget(section)
+    },
+    showAll() {
+      if (pending.size === 0) return
+      for (const el of pending.keys()) show(el)
+      flush()
+    },
+  }
+}
+
+/** The cards a held rail adds each time the page is idle. */
+const IDLE_STEP = 4
+
+/**
+ * A rail's part in a {@link RailReveal}: `ref` goes on the rail, and
+ * `cards` cuts its list to the cards it holds. `list` is the rail's list,
+ * or undefined while it loads.
+ */
+export function holdRail(
+  reveal: RailReveal,
+  list: () => readonly unknown[] | undefined,
+) {
+  const all = Number.POSITIVE_INFINITY
+  const [count, setCount] = createSignal(reveal.eager ? all : 1)
+  let section: HTMLElement | undefined
+  let stop: (() => void) | undefined
+  onSettled(() => {
+    if (reveal.eager || !section) return
+    stop = reveal.watch(section, () => setCount(all))
+    return stop
+  })
+  // The next count to show when the page is next idle, one step at a time
+  // so no step holds up a click.
+  createEffect(
+    () => {
+      const shown = count()
+      if (shown === all) return "done"
+      const total = reveal.showing() ? (list()?.length ?? 0) : 0
+      if (shown >= total) return "wait"
+      return shown + IDLE_STEP >= total ? all : shown + IDLE_STEP
+    },
+    (next) => {
+      if (next === "done") return stop?.()
+      if (next === "wait" || !("requestIdleCallback" in window)) return
+      const idle = requestIdleCallback(() => setCount(next))
+      return () => cancelIdleCallback(idle)
+    },
+  )
+  return {
+    ref: (el: HTMLElement) => (section = el),
+    cards: <T,>(items: readonly T[]) =>
+      count() >= items.length ? items : items.slice(0, count()),
+  }
 }
 
 /** How far the mouse moves before a press becomes a drag, in pixels. */
@@ -164,24 +358,23 @@ type Drag = {
 /**
  * Lets a mouse or pen drag the row sideways, the way a finger swipes it.
  * On release the row glides on at the drag's speed and settles on a card.
- * A press that moves less than a few pixels stays a click. Says when a
- * drag starts and ends through `setDragging`.
+ * A press that moves less than a few pixels stays a click.
  */
-function useDragScroll(
-  scroller: RefObject<HTMLUListElement | null>,
+function dragScroll(
+  scroller: () => HTMLElement | undefined,
   setDragging: (dragging: boolean) => void,
 ) {
-  const drag = useRef<Drag | null>(null)
+  let drag: Drag | null = null
   // The click that ends a drag lands on whatever card is under the mouse.
-  const swallowClick = useRef(false)
+  let swallowClick = false
 
-  const onPointerDown = (event: PointerEvent<HTMLUListElement>) => {
-    swallowClick.current = false
-    const el = scroller.current
+  const onPointerDown = (event: PointerEvent) => {
+    swallowClick = false
+    const el = scroller()
     // Touch scrolls natively, with the browser's own momentum.
     if (!el || event.pointerType === "touch" || event.button !== 0) return
     if (el.scrollWidth <= el.clientWidth) return
-    drag.current = {
+    drag = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startLeft: el.scrollLeft,
@@ -190,9 +383,9 @@ function useDragScroll(
     }
   }
 
-  const onPointerMove = (event: PointerEvent<HTMLUListElement>) => {
-    const state = drag.current
-    const el = scroller.current
+  const onPointerMove = (event: PointerEvent) => {
+    const state = drag
+    const el = scroller()
     if (!state || !el || event.pointerId !== state.pointerId) return
     const dx = event.clientX - state.startX
     if (!state.moved) {
@@ -218,13 +411,13 @@ function useDragScroll(
     ]
   }
 
-  const onPointerEnd = (event: PointerEvent<HTMLUListElement>) => {
-    const state = drag.current
-    const el = scroller.current
+  const onPointerEnd = (event: PointerEvent) => {
+    const state = drag
+    const el = scroller()
     if (!state || event.pointerId !== state.pointerId) return
-    drag.current = null
+    drag = null
     if (!state.moved || !el) return
-    swallowClick.current = true
+    swallowClick = true
     setDragging(false)
 
     const first = state.samples[0]
@@ -241,34 +434,26 @@ function useDragScroll(
 
     // Snapping comes back once the glide ends, unless a new drag began.
     const restoreSnap = () => {
-      if (!drag.current?.moved) el.style.scrollSnapType = ""
+      if (!drag?.moved) el.style.scrollSnapType = ""
     }
     if (Math.abs(target - el.scrollLeft) < 1) {
       restoreSnap()
       return
     }
     el.scrollTo({ left: target, behavior: "smooth" })
-    if ("onscrollend" in el) {
-      el.addEventListener("scrollend", restoreSnap, { once: true })
-    } else {
-      window.setTimeout(restoreSnap, 600)
-    }
+    el.addEventListener("scrollend", restoreSnap, { once: true })
   }
 
   return {
     onPointerDown,
     onPointerMove,
-    onPointerUp: onPointerEnd,
-    onPointerCancel: onPointerEnd,
-    onClickCapture: (event: MouseEvent<HTMLUListElement>) => {
-      if (!swallowClick.current) return
-      swallowClick.current = false
+    onPointerEnd,
+    onClickCapture: (event: MouseEvent) => {
+      if (!swallowClick) return
+      swallowClick = false
       event.preventDefault()
       event.stopPropagation()
     },
-    // Links and posters are draggable by default, which would hijack the
-    // gesture.
-    onDragStart: (event: DragEvent<HTMLUListElement>) => event.preventDefault(),
   }
 }
 
@@ -295,41 +480,30 @@ function nearestStop(el: HTMLElement, target: number) {
 }
 
 /**
- * One card in a rail. Widths step up with the screen, at about the density
- * of Jellyfin's home screen: a 16:9 card around 300px wide on a big monitor,
- * a 2:3 poster around 175px, a round portrait around 130px. On phones and
- * desktop, 16:9 cards also follow the window's height, so Home's first two
- * rows fit under the banner.
+ * One card in a rail. Widths step up with the screen: a 16:9 card around
+ * 300px wide on a big monitor, following the window's height from `lg` up
+ * (`landscapeCardWidth` in `lib/showcase-layout.ts`), a 2:3 poster around 200px.
  *
  * Cards after the first skip their style, layout, and paint while they're
  * scrolled out of view, which most of a long row is. The first keeps the
  * row's height; the rest stretch to it. Their clip leaves room for a focus
  * ring.
  */
-export function RailItem({
-  artwork = "landscape",
-  children,
-}: {
-  artwork?: "landscape" | "poster" | "person" | "request"
-  children: ReactNode
-}) {
+export function RailItem(
+  props: ParentProps<{ artwork?: "landscape" | "poster" }>,
+) {
   return (
     <li
-      className={cn(
+      class={[
         "shrink-0 snap-start not-first:[contain-intrinsic-size:auto_0px] not-first:[content-visibility:auto] not-first:[overflow-clip-margin:8px]",
-        artwork === "landscape" &&
-          "w-[min(80%,34svh)] sm:w-[300px] lg:w-[clamp(280px,30vh,360px)]",
-        artwork === "poster" &&
-          "w-[44%] sm:w-[176px] lg:w-[188px] 2xl:w-[204px]",
-        artwork === "person" && "w-[28%] sm:w-[116px] lg:w-[128px]",
-        // A request's card: one and a bit on a phone, and from there two
-        // posters and the gap between them wide, so it lines up with the
-        // poster rows around it.
-        artwork === "request" &&
-          "w-[min(88%,22rem)] sm:w-[calc(2*176px+1rem)] lg:w-[calc(2*188px+1rem)] 2xl:w-[calc(2*204px+1rem)]",
-      )}
+        (props.artwork ?? "landscape") === "landscape"
+          ? // The Flutter phone's two thirds, and stills no taller than a
+            // third of the window, so two rails fit under the carousel.
+            "w-[min(66%,60.444svh)] sm:w-[300px] lg:w-[clamp(280px,30vh,360px)]"
+          : "w-[44%] sm:w-[188px] lg:w-[200px] 2xl:w-[216px]",
+      ]}
     >
-      {children}
+      {props.children}
     </li>
   )
 }

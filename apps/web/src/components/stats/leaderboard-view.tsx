@@ -1,18 +1,20 @@
 import type {
+  Leaderboard,
   LeaderboardBoard,
   LeaderboardEntry,
   LeaderboardMetric,
   StatsRange,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { cn } from "@matinee/ui/lib/utils"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
-import { LockIcon, TrophyIcon } from "lucide-react"
+import { keepPreviousData, useQuery } from "@tanstack/solid-query"
+import { Link } from "@tanstack/solid-router"
+import { Lock, Trophy } from "lucide"
+import { For, Match, Show, Switch } from "solid-js"
 
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
-import { trRich } from "@/i18n/react"
+import { trRich } from "@/i18n/solid"
+import { Button } from "@/kit/button"
+import { Icon } from "@/kit/icon"
 import { formatWatchTime } from "@/lib/format"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
@@ -50,96 +52,120 @@ const PODIUM = new Map([
 ])
 
 /** People who share their statistics, ranked on each metric. */
-export function LeaderboardView({
-  range,
-  onRange,
-}: {
+export function LeaderboardView(props: {
+  range: StatsRange
+  onRange: (range: StatsRange) => void
+}) {
+  const board = useQuery(() => ({
+    ...orpc.stats.leaderboard.queryOptions({
+      input: { range: props.range, timeZone: TIME_ZONE },
+    }),
+    placeholderData: keepPreviousData,
+  }))
+  return (
+    <Switch
+      fallback={
+        <p class="text-muted-foreground text-sm">{errorMessage(board.error)}</p>
+      }
+    >
+      <Match when={board.isPending}>
+        <WatchStatsSkeleton />
+      </Match>
+      <Match when={board.isSuccess && board.data}>
+        {(data) => (
+          <Boards result={data()} range={props.range} onRange={props.onRange} />
+        )}
+      </Match>
+    </Switch>
+  )
+}
+
+function Boards(props: {
+  result: Leaderboard
   range: StatsRange
   onRange: (range: StatsRange) => void
 }) {
   const openSettings = useOpenSettings()
-  const board = useQuery({
-    ...orpc.stats.leaderboard.queryOptions({
-      input: { range, timeZone: TIME_ZONE },
-    }),
-    placeholderData: keepPreviousData,
-  })
-  if (board.isPending) return <WatchStatsSkeleton />
-  if (!board.data) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        {errorMessage(board.error)}
-      </p>
-    )
-  }
-  const { boards, sharing } = board.data
-  const join = (
+  const join = () => (
     <Button variant="outline" onClick={() => openSettings("account")}>
       {tr("stats.leaderboard.join")}
     </Button>
   )
-  if (boards.every((entry) => entry.entries.length === 0)) {
-    return range === "all" ? (
-      <StatsEmpty
-        icon={TrophyIcon}
-        title={tr("stats.leaderboard.empty")}
-        description={tr("stats.leaderboard.emptyHint")}
-        action={sharing ? undefined : join}
-      />
-    ) : (
-      <StatsEmpty
-        compact
-        icon={TrophyIcon}
-        title={tr("stats.leaderboard.noPlays", { period: rangePhrase(range) })}
-        action={
-          <Button variant="outline" onClick={() => onRange("all")}>
-            {tr("stats.showAllTime")}
-          </Button>
-        }
-      />
-    )
-  }
+  const empty = () =>
+    props.result.boards.every((entry) => entry.entries.length === 0)
   return (
-    <div className="flex flex-col gap-6">
-      {!sharing && (
-        <p className="text-muted-foreground text-13px flex flex-wrap items-center gap-x-2 gap-y-1">
-          <LockIcon aria-hidden className="size-3.5 shrink-0" />
-          {/* One run of text, so the message's own spaces and commas hold. */}
-          <span>
-            {trRich("stats.leaderboard.onlyYou", {
-              share: (
-                <button
-                  type="button"
-                  onClick={() => openSettings("account")}
-                  className="text-foreground focus-visible:ring-ring rounded underline-offset-2 outline-none hover:underline focus-visible:ring-2"
-                >
-                  {tr("stats.leaderboard.share")}
-                </button>
-              ),
-            })}
-          </span>
-        </p>
-      )}
-      <div className={statsGrid}>
-        {boards.map((entry) => (
-          <Board key={entry.metric} board={entry} />
-        ))}
+    <Show
+      when={!empty()}
+      fallback={
+        <Show
+          when={props.range === "all"}
+          fallback={
+            <StatsEmpty
+              compact
+              icon={Trophy}
+              title={tr("stats.leaderboard.noPlays", {
+                period: rangePhrase(props.range),
+              })}
+              action={
+                <Button variant="outline" onClick={() => props.onRange("all")}>
+                  {tr("stats.showAllTime")}
+                </Button>
+              }
+            />
+          }
+        >
+          <StatsEmpty
+            icon={Trophy}
+            title={tr("stats.leaderboard.empty")}
+            description={tr("stats.leaderboard.emptyHint")}
+            action={props.result.sharing ? undefined : join()}
+          />
+        </Show>
+      }
+    >
+      <div class="flex flex-col gap-6">
+        <Show when={!props.result.sharing}>
+          <p class="text-muted-foreground text-13px flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Icon icon={Lock} class="size-3.5 shrink-0" />
+            {/* One run of text, so the message's own spaces and commas hold. */}
+            <span>
+              {trRich("stats.leaderboard.onlyYou", {
+                share: (
+                  <button
+                    type="button"
+                    onClick={() => openSettings("account")}
+                    class="text-foreground focus-visible:ring-ring rounded underline-offset-2 outline-none hover:underline focus-visible:ring-2"
+                  >
+                    {tr("stats.leaderboard.share")}
+                  </button>
+                ),
+              })}
+            </span>
+          </p>
+        </Show>
+        <div class={statsGrid}>
+          <For each={props.result.boards} keyed={(entry) => entry.metric}>
+            {(entry) => <Board board={entry()} />}
+          </For>
+        </div>
       </div>
-    </div>
+    </Show>
   )
 }
 
-function Board({ board }: { board: LeaderboardBoard }) {
-  const { metric } = board
+function Board(props: { board: LeaderboardBoard }) {
   return (
-    <StatsSection title={tr(`stats.leaderboard.metric.${metric}`)}>
-      {board.entries.length === 0 ? (
-        <p className="text-muted-foreground text-13px">
-          {tr(`stats.leaderboard.none.${metric}`)}
-        </p>
-      ) : (
-        <BoardPlaces board={board} />
-      )}
+    <StatsSection title={tr(`stats.leaderboard.metric.${props.board.metric}`)}>
+      <Show
+        when={props.board.entries.length > 0}
+        fallback={
+          <p class="text-muted-foreground text-13px">
+            {tr(`stats.leaderboard.none.${props.board.metric}`)}
+          </p>
+        }
+      >
+        <BoardPlaces board={props.board} />
+      </Show>
     </StatsSection>
   )
 }
@@ -148,69 +174,64 @@ function Board({ board }: { board: LeaderboardBoard }) {
  * A board's places: the top ones, then the viewer's neighborhood, set off
  * unless it carries straight on from them.
  */
-export function BoardPlaces({ board }: { board: LeaderboardBoard }) {
+export function BoardPlaces(props: { board: LeaderboardBoard }) {
   return (
-    <ol className="-mx-2 flex flex-col">
-      {board.entries.map((entry, index) => (
-        <Place
-          key={entry.user.id}
-          entry={entry}
-          format={(value) => formatMetric(board.metric, value)}
-          apart={
-            index === TOP &&
-            entry.rank > (board.entries[TOP - 1]?.rank ?? 0) + 1
-          }
-        />
-      ))}
+    <ol class="-mx-2 flex flex-col">
+      <For each={props.board.entries} keyed={(entry) => entry.user.id}>
+        {(entry, index) => (
+          <Place
+            entry={entry()}
+            format={(value) => formatMetric(props.board.metric, value)}
+            apart={
+              index() === TOP &&
+              entry().rank > (props.board.entries[TOP - 1]?.rank ?? 0) + 1
+            }
+          />
+        )}
+      </For>
     </ol>
   )
 }
 
-export function Place({
-  entry,
-  format,
-  apart,
-}: {
+export function Place(props: {
   entry: LeaderboardEntry
   format: (value: number) => string
   apart: boolean
 }) {
-  const { user } = entry
   return (
     <li
-      className={cn(
+      class={[
         "flex items-center gap-2.5 rounded-md px-2 py-1",
-        entry.self && "bg-primary/10",
-        apart && "mt-1.5",
-      )}
+        { "bg-primary/10": props.entry.self, "mt-1.5": props.apart },
+      ]}
     >
       <span
-        className={cn(
-          "grid size-5 shrink-0 place-items-center rounded-full text-11px font-semibold tabular-nums",
-          PODIUM.get(entry.rank) ?? "text-muted-foreground",
-        )}
+        class={[
+          "text-11px grid size-5 shrink-0 place-items-center rounded-full font-semibold tabular-nums",
+          PODIUM.get(props.entry.rank) ?? "text-muted-foreground",
+        ]}
       >
-        <span className="sr-only">
-          {tr("stats.leaderboard.place", { rank: entry.rank })}
+        <span class="sr-only">
+          {tr("stats.leaderboard.place", { rank: props.entry.rank })}
         </span>
-        <span aria-hidden>{entry.rank}</span>
+        <span aria-hidden="true">{props.entry.rank}</span>
       </span>
-      <UserAvatar user={user} className="text-11px size-6 shrink-0" />
+      <UserAvatar user={props.entry.user} class="text-11px size-6 shrink-0" />
       <Link
         to="/profiles/$username"
-        params={{ username: user.username }}
-        className="text-13px min-w-0 flex-1 truncate underline-offset-2 hover:underline"
+        params={{ username: props.entry.user.username }}
+        class="text-13px min-w-0 flex-1 truncate underline-offset-2 hover:underline"
       >
-        {user.displayName ?? user.username}
-        {entry.self && (
-          <span className="text-muted-foreground font-normal">
+        {props.entry.user.displayName ?? props.entry.user.username}
+        <Show when={props.entry.self}>
+          <span class="text-muted-foreground font-normal">
             {" "}
             {tr("stats.leaderboard.you")}
           </span>
-        )}
+        </Show>
       </Link>
-      <span className="text-13px shrink-0 font-medium tabular-nums">
-        {format(entry.value)}
+      <span class="text-13px shrink-0 font-medium tabular-nums">
+        {props.format(props.entry.value)}
       </span>
     </li>
   )

@@ -16,11 +16,30 @@ import {
   videoCodecName,
 } from "@matinee/contracts"
 import {
+  hashKey,
+  keepPreviousData,
+  skipToken,
+  useMutation,
+  useQuery,
+} from "@tanstack/solid-query"
+import { Download } from "lucide"
+import {
+  createMemo,
+  createUniqueId,
+  For,
+  Show,
+  snapshot,
+  untrack,
+} from "solid-js"
+
+import { audioDetail, formatBitrate } from "@/components/player-format"
+import { tr, translateKnown } from "@/i18n"
+import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@matinee/ui/components/dialog"
+} from "@/kit/dialog"
 import {
   Field,
   FieldDescription,
@@ -28,32 +47,21 @@ import {
   FieldLabel,
   FieldLegend,
   FieldSet,
-} from "@matinee/ui/components/field"
+} from "@/kit/field"
+import { Icon } from "@/kit/icon"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@matinee/ui/components/select"
-import { toast } from "@matinee/ui/components/sonner"
-import { Spinner } from "@matinee/ui/components/spinner"
-import { Switch } from "@matinee/ui/components/switch"
-import { useSelector } from "@tanstack/react-form"
-import {
-  hashKey,
-  keepPreviousData,
-  skipToken,
-  useMutation,
-  useQuery,
-} from "@tanstack/react-query"
-import { DownloadIcon } from "lucide-react"
-import { useId } from "react"
-
-import { audioDetail, formatBitrate } from "@/components/player-format"
-import { tr, translateKnown } from "@/i18n"
+} from "@/kit/select"
+import { Spinner } from "@/kit/spinner"
+import { Switch } from "@/kit/switch"
+import { toast } from "@/kit/toast"
 import { downloadOriginal, downloadUrl } from "@/lib/download"
-import { firstError, useAppForm } from "@/lib/form"
+import { createForm } from "@/lib/form"
+import { SubmitButton } from "@/lib/form-fields"
 import { formatBytes } from "@/lib/format"
 import { trackLabel } from "@/lib/languages"
 import { outputChannelLayout } from "@/lib/media"
@@ -329,52 +337,44 @@ function specOf(
     audio: values.audio
       .filter((track) => track.on && track.choice !== NONE)
       .map(audioSpec),
-    subtitles: values.subtitles,
+    subtitles: [...values.subtitles],
     // Only an encode can have a subtitle drawn in.
     burnIn: codec && values.burnIn !== NONE ? values.burnIn : null,
   }
 }
 
-export function DownloadForm({
-  item,
-  name,
-  onDone,
-}: {
+export function DownloadForm(props: {
   item: MediaItem
   name: string
   onDone: () => void
 }) {
-  const video = item.probe?.video ?? null
+  const probed = () => props.item.probe?.video != null
   // The server may probe the file first. Until it answers, the dialog
   // spins, as it does while the form itself loads.
-  const resolved = useQuery({
-    ...resolveOptions(item.id, STARTING_CONTAINER),
-    enabled: video !== null,
-  })
-  const subtitles = useQuery(
-    orpc.media.subtitles.queryOptions({ input: { id: item.id } }),
+  const resolved = useQuery(() => ({
+    ...resolveOptions(props.item.id, STARTING_CONTAINER),
+    enabled: probed(),
+  }))
+  const subtitles = useQuery(() =>
+    orpc.media.subtitles.queryOptions({ input: { id: props.item.id } }),
   )
-  if (video !== null && resolved.isPending) {
-    return <Spinner className="mx-auto my-16 size-6 opacity-60" />
-  }
   return (
-    <DownloadFields
-      item={item}
-      name={name}
-      initial={readyOf(resolved.data)}
-      subtitles={subtitles.data?.tracks ?? []}
-      onDone={onDone}
-    />
+    <Show
+      when={!(probed() && resolved.isPending)}
+      fallback={<Spinner class="mx-auto my-16 size-6 opacity-60" />}
+    >
+      <DownloadFields
+        item={props.item}
+        name={props.name}
+        initial={resolved.isSuccess ? readyOf(resolved.data) : null}
+        subtitles={subtitles.isSuccess ? subtitles.data.tracks : []}
+        onDone={props.onDone}
+      />
+    </Show>
   )
 }
 
-function DownloadFields({
-  item,
-  name,
-  initial,
-  subtitles,
-  onDone,
-}: {
+function DownloadFields(props: {
   item: MediaItem
   name: string
   /** The server's answer the form starts from, null when it had none. */
@@ -383,409 +383,401 @@ function DownloadFields({
   subtitles: SubtitleTrack[]
   onDone: () => void
 }) {
-  const video = item.probe?.video ?? null
+  const video = () => props.item.probe?.video ?? null
 
-  const start = useMutation({
+  const start = useMutation(() => ({
     mutationFn: (spec: DownloadSpec) =>
-      client.downloads.start({ id: item.id, spec }),
-    onSuccess: (download) => {
+      client.downloads.start({ id: props.item.id, spec }),
+    onSuccess: (download: { id: string; fileName: string }) => {
       downloadUrl(downloadFilePath(download.id), download.fileName)
       toast.success(tr("downloads.started"), {
         description: tr("downloads.started.description"),
       })
-      onDone()
+      props.onDone()
     },
-    onError: (error) => toast.error(errorMessage(error)),
-  })
+    onError: (error: Error) => toast.error(errorMessage(error)),
+  }))
 
-  const defaultValues: DownloadValues = {
-    version: "original",
-    container: STARTING_CONTAINER,
-    keepHdr: hdrScreen(),
-    answered: initial !== null,
-    ...(initial
-      ? startingValues(initial)
-      : { video: COPY, codec: null, audio: [], subtitles: [], burnIn: NONE }),
-  }
-  const form = useAppForm({
+  // The server's first answer seeds the form once, as a form's defaults
+  // do. Query data is reactive, so the form gets a plain copy of it.
+  const defaultValues = untrack((): DownloadValues => {
+    const answer = props.initial ? snapshot(props.initial) : null
+    return {
+      version: "original",
+      container: STARTING_CONTAINER,
+      keepHdr: hdrScreen(),
+      answered: answer !== null,
+      ...(answer
+        ? startingValues(answer)
+        : { video: COPY, codec: null, audio: [], subtitles: [], burnIn: NONE }),
+    }
+  })
+  const form = createForm<DownloadValues>({
     defaultValues,
-    validators: {
-      onSubmit: ({ value }) =>
-        value.version === "custom" &&
-        value.audio.length > 0 &&
-        !value.audio.some((track) => track.on)
-          ? { message: tr("downloads.audio.none") }
-          : undefined,
-    },
-    onSubmit: ({ value }) => {
+    onSubmit: (value) => {
       if (value.version === "original") {
-        downloadOriginal(item)
-        onDone()
+        downloadOriginal(props.item)
+        props.onDone()
         return
       }
-      const ready = cachedReady(item.id, value.container)
+      if (value.audio.length > 0 && !value.audio.some((track) => track.on)) {
+        toast.error(tr("downloads.audio.none"))
+        return
+      }
+      const ready = cachedReady(props.item.id, value.container)
       if (ready) start.mutate(specOf(value, ready.choices))
     },
-    onSubmitInvalid: ({ formApi }) => {
-      const message = firstError(formApi.state.errors)
-      if (message) toast.error(message)
-    },
   })
 
-  const values = useSelector(form.store, (state) => state.values)
-  const custom = values.version === "custom"
+  const values = () => form.values()
+  const custom = () => values().version === "custom"
 
   // Cached by the first answer or by the container switch below.
-  const current = useQuery({
-    ...resolveOptions(item.id, values.container),
-    enabled: video !== null,
-  })
-  const ready = readyOf(current.data)
-  const unavailable = unavailableOf(current.data, current.error)
+  const current = useQuery(() => ({
+    ...resolveOptions(props.item.id, values().container),
+    enabled: video() !== null,
+  }))
+  const ready = () => (current.isSuccess ? readyOf(current.data) : null)
+  const unavailable = () =>
+    unavailableOf(current.isSuccess ? current.data : undefined, current.error)
 
   // A container changes what the download can hold, so the server is
   // asked again before the form moves to it.
-  const switchContainer = useMutation({
+  const switchContainer = useMutation(() => ({
     mutationFn: (container: DownloadContainer) =>
-      queryClient.fetchQuery(resolveOptions(item.id, container)),
-    onSuccess: (data, container) => {
+      queryClient.fetchQuery(resolveOptions(props.item.id, container)),
+    onSuccess: (data: DownloadResolution[], container: DownloadContainer) => {
       const next = readyOf(data)
       if (next) {
+        const now = snapshot(form.values())
         // Edits only carry over once the server has given choices.
-        const picks = form.state.values.answered
-          ? adapted(form.state.values, next)
-          : startingValues(next)
-        form.setFieldValue("answered", true)
-        form.setFieldValue("video", picks.video)
-        form.setFieldValue("codec", picks.codec)
-        form.setFieldValue("audio", picks.audio)
-        form.setFieldValue("subtitles", picks.subtitles)
-        form.setFieldValue("burnIn", picks.burnIn)
+        const picks = now.answered ? adapted(now, next) : startingValues(next)
+        form.set("answered", true)
+        form.set("video", picks.video)
+        form.set("codec", picks.codec)
+        form.set("audio", picks.audio)
+        form.set("subtitles", picks.subtitles)
+        form.set("burnIn", picks.burnIn)
       }
-      form.setFieldValue("container", container)
+      form.set("container", container)
     },
-    onError: (error) => toast.error(errorMessage(error)),
-  })
-  const switching = switchContainer.isPending
+    onError: (error: Error) => toast.error(errorMessage(error)),
+  }))
+  const switching = () => switchContainer.isPending
 
-  const spec = custom && ready ? specOf(values, ready.choices) : null
+  const spec = createMemo(() => {
+    const answer = ready()
+    return custom() && answer ? specOf(values(), answer.choices) : null
+  })
   // The server already planned its own spec.
-  const unchanged =
-    spec !== null && ready !== null && hashKey([spec]) === hashKey([ready.spec])
-  const sized =
-    spec !== null && (spec.audio.length > 0 || values.audio.length === 0)
-  const planned = sized && !unchanged && !switching
-  const plan = useQuery({
-    ...orpc.downloads.plan.queryOptions({
-      input: planned ? { id: item.id, spec } : skipToken,
-    }),
-    placeholderData: keepPreviousData,
-    retry: false,
+  const unchanged = createMemo(() => {
+    const planned = spec()
+    const answer = ready()
+    return (
+      planned !== null &&
+      answer !== null &&
+      hashKey([planned]) === hashKey([answer.spec])
+    )
   })
-  const estimate = switching ? undefined : unchanged ? ready?.plan : plan.data
+  const sized = () => {
+    const planned = spec()
+    return (
+      planned !== null &&
+      (planned.audio.length > 0 || values().audio.length === 0)
+    )
+  }
+  const planned = () => sized() && !unchanged() && !switching()
+  const plan = useQuery(() => {
+    const wanted = spec()
+    return {
+      ...orpc.downloads.plan.queryOptions({
+        input:
+          planned() && wanted ? { id: props.item.id, spec: wanted } : skipToken,
+      }),
+      placeholderData: keepPreviousData,
+      retry: false,
+    }
+  })
+  const estimate = () =>
+    switching()
+      ? undefined
+      : unchanged()
+        ? ready()?.plan
+        : plan.isSuccess || plan.isPlaceholderData
+          ? plan.data
+          : undefined
 
-  const encode = values.video !== COPY
-  const choices = ready?.choices
+  const estimateText = () => {
+    const known = estimate()
+    if (!known) return tr("downloads.estimating")
+    return tr(
+      known.video.toneMapped
+        ? "downloads.estimateToneMapped"
+        : "downloads.estimate",
+      { size: formatBytes(known.estimatedBytes) },
+    )
+  }
+
+  const encode = () => values().video !== COPY
+  const choices = () => ready()?.choices
   // The original holds its own streams; only files beside it are missing.
   // A custom version holds the ones it's given.
-  const files = custom
-    ? []
-    : subtitles.filter(
-        (track) =>
-          (track.delivery === "webvtt" || track.delivery === "pgs") &&
-          track.source === "sidecar",
-      )
+  const files = createMemo(() =>
+    custom()
+      ? []
+      : props.subtitles.filter(
+          (track) =>
+            (track.delivery === "webvtt" || track.delivery === "pgs") &&
+            track.source === "sidecar",
+        ),
+  )
   // Why the custom version can't be made, which holds the submit back, so
   // it stays in the form rather than going to a toast.
-  const failed =
-    custom && !switching
-      ? (unavailable ??
-        (planned && plan.error ? errorMessage(plan.error) : null))
+  const failed = () =>
+    custom() && !switching()
+      ? (unavailable() ??
+        (planned() && plan.error ? errorMessage(plan.error) : null))
       : null
 
   return (
-    <form.AppForm>
-      <form
-        className="flex flex-col gap-6"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-lg leading-7 font-semibold">
-            {tr("downloads.title", { name })}
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            {tr("downloads.description")}
-          </DialogDescription>
-        </DialogHeader>
+    <form
+      class="flex flex-col gap-6"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void form.submit()
+      }}
+    >
+      <DialogHeader>
+        <DialogTitle class="text-lg leading-7 font-semibold">
+          {tr("downloads.title", { name: props.name })}
+        </DialogTitle>
+        <DialogDescription class="sr-only">
+          {tr("downloads.description")}
+        </DialogDescription>
+      </DialogHeader>
 
-        <FieldGroup>
-          <form.Field name="version">
-            {(field) => (
-              <VersionChoice
-                value={field.state.value}
-                onChange={field.handleChange}
-                item={item}
-                customAvailable={video !== null}
-              />
-            )}
-          </form.Field>
+      <FieldGroup>
+        <VersionChoice
+          value={values().version}
+          onChange={(version) => form.set("version", version)}
+          item={props.item}
+          customAvailable={video() !== null}
+        />
 
-          {custom && video && (
+        <Show when={custom() && video()}>
+          {(probe) => (
             <>
-              <div className="grid gap-4 sm:grid-cols-[6rem_1fr_8rem]">
-                <form.Field name="container">
-                  {(field) => (
-                    <ChoiceField
-                      label={tr("downloads.container")}
-                      value={
-                        switching
-                          ? switchContainer.variables
-                          : field.state.value
-                      }
-                      disabled={switching}
-                      onChange={(value) => {
-                        const container = DOWNLOAD_CONTAINERS.find(
-                          (entry) => entry === value,
-                        )
-                        if (container && container !== field.state.value)
-                          switchContainer.mutate(container)
-                      }}
-                      items={DOWNLOAD_CONTAINERS.map((container) => ({
-                        value: container,
-                        label: container.toUpperCase(),
-                      }))}
-                    />
+              <div class="grid gap-4 sm:grid-cols-[6rem_1fr_8rem]">
+                <ChoiceField
+                  label={tr("downloads.container")}
+                  value={
+                    switching()
+                      ? (switchContainer.variables ?? values().container)
+                      : values().container
+                  }
+                  disabled={switching()}
+                  onChange={(value) => {
+                    const container = DOWNLOAD_CONTAINERS.find(
+                      (entry) => entry === value,
+                    )
+                    if (container && container !== values().container)
+                      switchContainer.mutate(container)
+                  }}
+                  items={DOWNLOAD_CONTAINERS.map((container) => ({
+                    value: container,
+                    label: container.toUpperCase(),
+                  }))}
+                />
+                <Show when={choices()}>
+                  {(offered) => (
+                    <>
+                      <ChoiceField
+                        label={tr("downloads.video")}
+                        value={values().video}
+                        onChange={(value) => form.set("video", value)}
+                        items={[
+                          ...(offered().keepsVideo
+                            ? [
+                                {
+                                  value: COPY,
+                                  label: tr("downloads.video.keep", {
+                                    codec: probe().format,
+                                    resolution: probe().resolution,
+                                  }),
+                                },
+                              ]
+                            : []),
+                          ...offered().presets.map((preset) => ({
+                            value: presetValue(preset),
+                            label: tr("downloads.video.preset", {
+                              resolution: `${preset.height}p`,
+                              bitrate: formatBitrate(preset.bitrate),
+                            }),
+                          })),
+                        ]}
+                      />
+                      <ChoiceField
+                        label={tr("downloads.codec")}
+                        value={values().codec ?? NONE}
+                        onChange={(value) => {
+                          const codec = offered().codecs.find(
+                            (entry) => entry === value,
+                          )
+                          if (codec) form.set("codec", codec)
+                        }}
+                        disabled={!encode()}
+                        items={offered().codecs.map((codec) => ({
+                          value: codec,
+                          label: videoCodecName(codec),
+                        }))}
+                      />
+                    </>
                   )}
-                </form.Field>
-                {choices && (
-                  <>
-                    <form.Field name="video">
-                      {(field) => (
-                        <ChoiceField
-                          label={tr("downloads.video")}
-                          value={field.state.value}
-                          onChange={field.handleChange}
-                          items={[
-                            ...(choices.keepsVideo
-                              ? [
-                                  {
-                                    value: COPY,
-                                    label: tr("downloads.video.keep", {
-                                      codec: video.format,
-                                      resolution: video.resolution,
-                                    }),
-                                  },
-                                ]
-                              : []),
-                            ...choices.presets.map((preset) => ({
-                              value: presetValue(preset),
-                              label: tr("downloads.video.preset", {
-                                resolution: `${preset.height}p`,
-                                bitrate: formatBitrate(preset.bitrate),
-                              }),
-                            })),
-                          ]}
-                        />
-                      )}
-                    </form.Field>
-                    <form.Field name="codec">
-                      {(field) => (
-                        <ChoiceField
-                          label={tr("downloads.codec")}
-                          value={field.state.value ?? NONE}
-                          onChange={(value) => {
-                            const codec = choices.codecs.find(
-                              (entry) => entry === value,
-                            )
-                            if (codec) field.handleChange(codec)
-                          }}
-                          disabled={!encode}
-                          items={choices.codecs.map((codec) => ({
-                            value: codec,
-                            label: videoCodecName(codec),
-                          }))}
-                        />
-                      )}
-                    </form.Field>
-                  </>
-                )}
+                </Show>
               </div>
 
-              {choices && (
-                <>
-                  {encode &&
-                    values.codec &&
-                    choices.hdrCodecs.includes(values.codec) && (
-                      <form.Field name="keepHdr">
-                        {(field) => (
-                          <SwitchField
-                            label={tr("downloads.keepHdr")}
-                            checked={field.state.value}
-                            onChange={field.handleChange}
-                          />
-                        )}
-                      </form.Field>
-                    )}
+              <Show when={choices()}>
+                {(offered) => (
+                  <>
+                    <Show
+                      when={
+                        encode() &&
+                        values().codec !== null &&
+                        offered().hdrCodecs.some(
+                          (codec) => codec === values().codec,
+                        )
+                      }
+                    >
+                      <SwitchField
+                        label={tr("downloads.keepHdr")}
+                        checked={values().keepHdr}
+                        onChange={(checked) => form.set("keepHdr", checked)}
+                      />
+                    </Show>
 
-                  {choices.audio.length > 0 && (
-                    <form.Field name="audio">
-                      {(field) => (
-                        <AudioTracks
-                          values={field.state.value}
-                          entries={choices.audio}
-                          onChange={field.handleChange}
-                        />
-                      )}
-                    </form.Field>
-                  )}
+                    <Show when={offered().audio.length > 0}>
+                      <AudioTracks
+                        values={values().audio}
+                        entries={offered().audio}
+                        onChange={(audio) => form.set("audio", audio)}
+                      />
+                    </Show>
 
-                  {choices.subtitles.length > 0 && (
-                    <form.Field name="subtitles">
-                      {(field) => (
-                        <SubtitleTracks
-                          values={field.state.value}
-                          tracks={choices.subtitles}
-                          all={subtitles}
-                          onChange={field.handleChange}
-                        />
-                      )}
-                    </form.Field>
-                  )}
+                    <Show when={offered().subtitles.length > 0}>
+                      <SubtitleTracks
+                        values={values().subtitles}
+                        tracks={offered().subtitles}
+                        all={props.subtitles}
+                        onChange={(ids) => form.set("subtitles", ids)}
+                      />
+                    </Show>
 
-                  {encode && choices.burnIn.length > 0 && (
-                    <form.Field name="burnIn">
-                      {(field) => (
-                        <ChoiceField
-                          label={tr("downloads.burnIn")}
-                          value={field.state.value}
-                          onChange={field.handleChange}
-                          items={[
-                            {
-                              value: NONE,
-                              label: tr("downloads.burnIn.none"),
-                            },
-                            ...choices.burnIn.map((track) => ({
-                              value: track.id,
-                              label: subtitleLabel(track, subtitles),
-                            })),
-                          ]}
-                        />
-                      )}
-                    </form.Field>
-                  )}
-                </>
-              )}
+                    <Show when={encode() && offered().burnIn.length > 0}>
+                      <ChoiceField
+                        label={tr("downloads.burnIn")}
+                        value={values().burnIn}
+                        onChange={(value) => form.set("burnIn", value)}
+                        items={[
+                          { value: NONE, label: tr("downloads.burnIn.none") },
+                          ...offered().burnIn.map((track) => ({
+                            value: track.id,
+                            label: subtitleLabel(track, props.subtitles),
+                          })),
+                        ]}
+                      />
+                    </Show>
+                  </>
+                )}
+              </Show>
             </>
           )}
+        </Show>
 
-          {files.length > 0 && (
-            <SubtitleFiles item={item} files={files} all={subtitles} />
-          )}
-        </FieldGroup>
+        <Show when={files().length > 0}>
+          <SubtitleFiles
+            item={props.item}
+            files={files()}
+            all={props.subtitles}
+          />
+        </Show>
+      </FieldGroup>
 
-        {sized && !failed && (
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            {estimate
-              ? tr(
-                  estimate.video.toneMapped
-                    ? "downloads.estimateToneMapped"
-                    : "downloads.estimate",
-                  { size: formatBytes(estimate.estimatedBytes) },
-                )
-              : tr("downloads.estimating")}
-          </p>
-        )}
-        {failed && <FormAlert message={failed} />}
+      <Show when={sized() && !failed()}>
+        <p class="text-muted-foreground text-sm" aria-live="polite">
+          {estimateText()}
+        </p>
+      </Show>
+      <Show when={failed()}>
+        {(message) => <FormAlert message={message()} />}
+      </Show>
 
-        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
-          <form.SubmitButton
-            icon={<DownloadIcon />}
-            pending={start.isPending}
-            disabled={custom && (switching || failed !== null)}
-          >
-            {tr("downloads.submit")}
-          </form.SubmitButton>
-        </DialogFooter>
-      </form>
-    </form.AppForm>
+      <DialogFooter showCancelButton class="-mx-6 -mb-6 px-6 py-4">
+        <SubmitButton
+          form={form}
+          icon={<Icon icon={Download} />}
+          pending={start.isPending}
+          disabled={custom() && (switching() || failed() !== null)}
+        >
+          {tr("downloads.submit")}
+        </SubmitButton>
+      </DialogFooter>
+    </form>
   )
 }
 
 /** The file as it is, or a custom version, as two cards. */
-function VersionChoice({
-  value,
-  onChange,
-  item,
-  customAvailable,
-}: {
+function VersionChoice(props: {
   value: Version
   onChange: (version: Version) => void
   item: MediaItem
   customAvailable: boolean
 }) {
-  const name = useId()
-  const descriptions = new Map<Version, string>([
-    [
-      "original",
-      tr("downloads.original.description", {
-        format: item.container.toUpperCase(),
-        size: formatBytes(item.sizeBytes),
-      }),
-    ],
-    [
-      "custom",
-      customAvailable
+  const name = createUniqueId()
+  const description = (version: Version) =>
+    version === "original"
+      ? tr("downloads.original.description", {
+          format: props.item.container.toUpperCase(),
+          size: formatBytes(props.item.sizeBytes),
+        })
+      : props.customAvailable
         ? tr("downloads.custom.description")
-        : tr("downloads.custom.unavailable"),
-    ],
-  ])
+        : tr("downloads.custom.unavailable")
   return (
     <div
       role="radiogroup"
       aria-label={tr("downloads.version")}
-      className="grid gap-2 sm:grid-cols-2"
+      class="grid gap-2 sm:grid-cols-2"
     >
-      {VERSIONS.map((version) => (
-        <label
-          key={version}
-          className="has-[:checked]:border-primary/40 has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-ring hover:bg-muted/50 flex cursor-pointer flex-col gap-1 rounded-lg border p-3 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 has-[:disabled]:hover:bg-transparent has-[:focus-visible]:ring-2"
-        >
-          <input
-            type="radio"
-            name={name}
-            value={version}
-            checked={value === version}
-            disabled={version === "custom" && !customAvailable}
-            onChange={() => onChange(version)}
-            className="sr-only"
-          />
-          <span className="text-sm font-medium">
-            {tr(
-              version === "original"
-                ? "downloads.original"
-                : "downloads.custom",
-            )}
-          </span>
-          <span className="text-muted-foreground text-13px leading-5">
-            {descriptions.get(version)}
-          </span>
-        </label>
-      ))}
+      <For each={VERSIONS}>
+        {(version) => (
+          <label class="has-[:checked]:border-primary/40 has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-ring hover:bg-muted/50 flex cursor-pointer flex-col gap-1 rounded-lg border p-3 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 has-[:disabled]:hover:bg-transparent has-[:focus-visible]:ring-2">
+            <input
+              type="radio"
+              name={name}
+              value={version}
+              checked={props.value === version}
+              disabled={version === "custom" && !props.customAvailable}
+              onChange={() => props.onChange(version)}
+              class="sr-only"
+            />
+            <span class="text-sm font-medium">
+              {tr(
+                version === "original"
+                  ? "downloads.original"
+                  : "downloads.custom",
+              )}
+            </span>
+            <span class="text-muted-foreground text-13px leading-5">
+              {description(version)}
+            </span>
+          </label>
+        )}
+      </For>
     </div>
   )
 }
 
-function ChoiceField({
-  label,
-  description,
-  value,
-  onChange,
-  items,
-  disabled,
-}: {
+function ChoiceField(props: {
   label: string
   description?: string
   value: string
@@ -793,141 +785,152 @@ function ChoiceField({
   items: ReadonlyArray<{ value: string; label: string }>
   disabled?: boolean
 }) {
-  const id = useId()
+  const id = createUniqueId()
   return (
     <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel for={id}>{props.label}</FieldLabel>
       <Select
-        items={items}
-        value={value}
-        disabled={disabled}
-        onValueChange={(next) => next !== null && onChange(next)}
+        items={[...props.items]}
+        value={props.value}
+        disabled={props.disabled}
+        onValueChange={(next) => {
+          if (next !== null) props.onChange(next)
+        }}
       >
-        <SelectTrigger id={id} className="w-full">
+        <SelectTrigger id={id} class="w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {items.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
+          <For each={props.items}>
+            {(option) => (
+              <SelectItem value={option.value}>{option.label}</SelectItem>
+            )}
+          </For>
         </SelectContent>
       </Select>
-      {description && <FieldDescription>{description}</FieldDescription>}
+      <Show when={props.description}>
+        <FieldDescription>{props.description}</FieldDescription>
+      </Show>
     </Field>
   )
 }
 
-function SwitchField({
-  label,
-  checked,
-  onChange,
-}: {
+function SwitchField(props: {
   label: string
   checked: boolean
   onChange: (checked: boolean) => void
 }) {
-  const id = useId()
+  const id = createUniqueId()
   return (
     <Field orientation="horizontal">
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Switch id={id} checked={checked} onCheckedChange={onChange} />
+      <FieldLabel for={id}>{props.label}</FieldLabel>
+      <Switch
+        id={id}
+        checked={props.checked}
+        onCheckedChange={(checked) => props.onChange(checked)}
+      />
     </Field>
   )
 }
 
 /** A switch per track, and what each becomes. */
-function AudioTracks({
-  values,
-  entries,
-  onChange,
-}: {
+function AudioTracks(props: {
   values: TrackValue[]
   /** The file's tracks, with the server's choices for each. */
   entries: AudioChoice[]
   onChange: (values: TrackValue[]) => void
 }) {
   const update = (index: number, change: Partial<TrackValue>) =>
-    onChange(
-      values.map((value) =>
+    props.onChange(
+      props.values.map((value) =>
         value.index === index ? { ...value, ...change } : value,
       ),
     )
   return (
     <FieldSet>
       <FieldLegend variant="label">{tr("downloads.audio")}</FieldLegend>
-      <ul className="flex flex-col gap-3">
-        {values.map((value) => {
-          const entry = entries.find(
-            (choice) => choice.track.index === value.index,
-          )
-          if (!entry) return null
-          const { track } = entry
-          const label = audioName(track, entries)
-          const choices = audioChoices(entry)
-          return (
-            <li
-              key={value.index}
-              className="flex flex-wrap items-center gap-x-3 gap-y-2"
-            >
-              <Switch
-                checked={value.on}
-                disabled={choices.length === 0}
-                onCheckedChange={(on) => update(value.index, { on })}
-                aria-label={tr("downloads.audio.include", { track: label })}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm">{label}</p>
-                {audioDetail(track) && (
-                  <p className="text-muted-foreground text-xs">
-                    {audioDetail(track)}
-                  </p>
-                )}
-              </div>
-              {choices.length === 0 ? (
-                <p className="text-muted-foreground w-44 text-sm max-sm:w-full">
-                  {tr("downloads.audio.unavailable")}
-                </p>
-              ) : (
-                <Select
-                  items={choices}
-                  value={value.choice}
-                  disabled={!value.on}
-                  onValueChange={(choice) =>
-                    choice !== null && update(value.index, { choice })
-                  }
-                >
-                  <SelectTrigger
-                    aria-label={tr("downloads.audio.format", { track: label })}
-                    className="w-44 max-sm:w-full"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {choices.map((choice) => (
-                      <SelectItem key={choice.value} value={choice.value}>
-                        {choice.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </li>
-          )
-        })}
+      <ul class="flex flex-col gap-3">
+        <For each={props.values} keyed={(value) => value.index}>
+          {(value) => {
+            const entry = createMemo(() =>
+              props.entries.find(
+                (choice) => choice.track.index === value().index,
+              ),
+            )
+            return (
+              <Show when={entry()}>
+                {(found) => {
+                  const label = () => audioName(found().track, props.entries)
+                  const choices = createMemo(() => audioChoices(found()))
+                  const detail = () => audioDetail(found().track)
+                  return (
+                    <li class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <Switch
+                        checked={value().on}
+                        disabled={choices().length === 0}
+                        onCheckedChange={(on) => update(value().index, { on })}
+                        aria-label={tr("downloads.audio.include", {
+                          track: label(),
+                        })}
+                      />
+                      <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm">{label()}</p>
+                        <Show when={detail()}>
+                          <p class="text-muted-foreground text-xs">
+                            {detail()}
+                          </p>
+                        </Show>
+                      </div>
+                      <Show
+                        when={choices().length > 0}
+                        fallback={
+                          <p class="text-muted-foreground w-44 text-sm max-sm:w-full">
+                            {tr("downloads.audio.unavailable")}
+                          </p>
+                        }
+                      >
+                        <Select
+                          items={choices()}
+                          value={value().choice}
+                          disabled={!value().on}
+                          onValueChange={(choice) => {
+                            if (choice !== null)
+                              update(value().index, { choice })
+                          }}
+                        >
+                          <SelectTrigger
+                            aria-label={tr("downloads.audio.format", {
+                              track: label(),
+                            })}
+                            class="w-44 max-sm:w-full"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <For each={choices()}>
+                              {(choice) => (
+                                <SelectItem value={choice.value}>
+                                  {choice.label}
+                                </SelectItem>
+                              )}
+                            </For>
+                          </SelectContent>
+                        </Select>
+                      </Show>
+                    </li>
+                  )
+                }}
+              </Show>
+            )
+          }}
+        </For>
       </ul>
     </FieldSet>
   )
 }
 
 /** A switch per subtitle, for whether it goes in the file. */
-function SubtitleTracks({
-  values,
-  tracks,
-  all,
-  onChange,
-}: {
+function SubtitleTracks(props: {
   values: string[]
   tracks: SubtitleTrack[]
   all: SubtitleTrack[]
@@ -938,50 +941,47 @@ function SubtitleTracks({
       <FieldLegend variant="label">
         {tr("downloads.subtitles.inFile")}
       </FieldLegend>
-      <ul className="flex flex-col gap-3">
-        {tracks.map((track) => {
-          const label = subtitleLabel(track, all)
-          const on = values.includes(track.id)
-          return (
-            <li key={track.id} className="flex items-center gap-3">
-              <Switch
-                checked={on}
-                onCheckedChange={(checked) =>
-                  // In the file's order, whichever is switched on first.
-                  onChange(
-                    tracks
-                      .filter((entry) =>
-                        entry.id === track.id
-                          ? checked
-                          : values.includes(entry.id),
-                      )
-                      .map((entry) => entry.id),
-                  )
-                }
-                aria-label={tr("downloads.subtitles.include", {
-                  track: label,
-                })}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm">{label}</p>
-                <p className="text-muted-foreground text-xs">
-                  {trackDetail(track)}
-                </p>
-              </div>
-            </li>
-          )
-        })}
+      <ul class="flex flex-col gap-3">
+        <For each={props.tracks}>
+          {(track) => {
+            const label = () => subtitleLabel(track, props.all)
+            return (
+              <li class="flex items-center gap-3">
+                <Switch
+                  checked={props.values.includes(track.id)}
+                  onCheckedChange={(checked) =>
+                    // In the file's order, whichever is switched on first.
+                    props.onChange(
+                      props.tracks
+                        .filter((entry) =>
+                          entry.id === track.id
+                            ? checked
+                            : props.values.includes(entry.id),
+                        )
+                        .map((entry) => entry.id),
+                    )
+                  }
+                  aria-label={tr("downloads.subtitles.include", {
+                    track: label(),
+                  })}
+                />
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm">{label()}</p>
+                  <p class="text-muted-foreground text-xs">
+                    {trackDetail(track)}
+                  </p>
+                </div>
+              </li>
+            )
+          }}
+        </For>
       </ul>
     </FieldSet>
   )
 }
 
 /** Links that save subtitle tracks as files next to the video. */
-function SubtitleFiles({
-  item,
-  files,
-  all,
-}: {
+function SubtitleFiles(props: {
   item: MediaItem
   files: SubtitleTrack[]
   all: SubtitleTrack[]
@@ -992,26 +992,33 @@ function SubtitleFiles({
       <FieldDescription>
         {tr("downloads.subtitles.description")}
       </FieldDescription>
-      <ul className="flex flex-col gap-1">
-        {files.map((track) => {
-          const label = subtitleLabel(track, all)
-          return (
-            <li key={track.id}>
-              <a
-                href={subtitlePath(item.id, track.id)}
-                download={subtitleFileName(item, track)}
-                aria-label={tr("downloads.subtitles.save", { track: label })}
-                className="hover:bg-muted/60 focus-visible:ring-ring flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm outline-none focus-visible:ring-2"
-              >
-                <DownloadIcon className="text-muted-foreground size-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate">{label}</span>
-                <span className="text-muted-foreground shrink-0 text-xs">
-                  {trackDetail(track)}
-                </span>
-              </a>
-            </li>
-          )
-        })}
+      <ul class="flex flex-col gap-1">
+        <For each={props.files}>
+          {(track) => {
+            const label = () => subtitleLabel(track, props.all)
+            return (
+              <li>
+                <a
+                  href={subtitlePath(props.item.id, track.id)}
+                  download={subtitleFileName(props.item, track)}
+                  aria-label={tr("downloads.subtitles.save", {
+                    track: label(),
+                  })}
+                  class="hover:bg-muted/60 focus-visible:ring-ring flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm outline-none focus-visible:ring-2"
+                >
+                  <Icon
+                    icon={Download}
+                    class="text-muted-foreground size-4 shrink-0"
+                  />
+                  <span class="min-w-0 flex-1 truncate">{label()}</span>
+                  <span class="text-muted-foreground shrink-0 text-xs">
+                    {trackDetail(track)}
+                  </span>
+                </a>
+              </li>
+            )
+          }}
+        </For>
       </ul>
     </FieldSet>
   )

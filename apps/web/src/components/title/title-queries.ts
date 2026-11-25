@@ -1,30 +1,57 @@
-import type { QueryClient } from "@tanstack/react-query"
+import type { Title } from "@matinee/contracts"
+import {
+  type QueryClient,
+  QueryObserver,
+  type QueryObserverResult,
+  useQueryClient,
+} from "@tanstack/solid-query"
+import { createMemo, from } from "solid-js"
 
 import { orpc } from "@/lib/rpc"
 
-import { onlySeason } from "./seasons"
+/** The current season on first arrival, including specials or ungrouped files. */
+export function initialSeason(title: Pick<Title, "seasons" | "next">) {
+  return (
+    title.seasons.find(
+      (season) => season.number === title.next?.seasonNumber,
+    ) ?? title.seasons[0]
+  )
+}
 
-/** Shared by the title's pages and the loaders that start their calls. */
 export function titleOptions(id: string) {
   return orpc.titles.get.queryOptions({ input: { id } })
 }
 
-/** One season's files, `null` for those without a season. */
+/**
+ * Keep the last title visible through refetches. The Solid Query RC's
+ * async data projection can restart on successive mutation invalidations.
+ */
+export function useTitle(id: () => string) {
+  const queryClient = useQueryClient()
+  return createMemo(() => {
+    const options = titleOptions(id())
+    return from<QueryObserverResult<Title>>((next) => {
+      const observer = new QueryObserver(queryClient, options)
+      const unsubscribe = observer.subscribe(next)
+      next(observer.getCurrentResult())
+      return unsubscribe
+    })
+  })
+}
+
 export function seasonItemsOptions(id: string, season: number | null) {
   return orpc.titles.items.queryOptions({ input: { id, season } })
 }
 
-/**
- * Starts the title page's calls: the title, and for a show with one season
- * its episodes as soon as the title says so, rather than after the page
- * has rendered it.
- */
 export async function preloadTitle(queryClient: QueryClient, id: string) {
   const options = titleOptions(id)
-  await queryClient.prefetchQuery(options)
-  const title = queryClient.getQueryData(options.queryKey)
-  const only = title && onlySeason(title)
-  if (only) {
-    await queryClient.prefetchQuery(seasonItemsOptions(id, only.number))
-  }
+  const title = await queryClient
+    .ensureQueryData({
+      ...options,
+      revalidateIfStale: true,
+    })
+    .catch(() => undefined)
+  const season = title?.kind === "show" ? initialSeason(title) : undefined
+  if (season)
+    await queryClient.prefetchQuery(seasonItemsOptions(id, season.number))
 }

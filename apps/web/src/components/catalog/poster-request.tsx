@@ -1,16 +1,14 @@
 import type { Availability } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@matinee/ui/components/tooltip"
 import { cn } from "@matinee/ui/lib/utils"
-import { getRouteApi } from "@tanstack/react-router"
-import { type LucideIcon, PlusIcon, XIcon } from "lucide-react"
-import { type ReactNode, useId } from "react"
+import type { JSX } from "@solidjs/web"
+import { getRouteApi } from "@tanstack/solid-router"
+import { Plus, X } from "lucide"
+import { createMemo, createUniqueId, Show } from "solid-js"
 
 import { tr } from "@/i18n"
+import { Button, buttonVariants } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/kit/tooltip"
 import { can } from "@/lib/permissions"
 
 import { useCancel } from "./use-ask"
@@ -48,10 +46,10 @@ const pageGlass =
  */
 export type ActionLook = "poster" | "plain" | "page"
 
-const icons = {
-  request: PlusIcon,
-  cancel: XIcon,
-} satisfies Record<PosterAction, LucideIcon>
+const icons = new Map([
+  ["request", Plus],
+  ["cancel", X],
+] satisfies [PosterAction, typeof Plus][])
 
 /**
  * Whether a title has a button, on its card's poster or in its page's
@@ -60,6 +58,27 @@ const icons = {
  */
 export function hasPosterButton(availability: Availability): boolean {
   return posterAction(availability) !== null || requestDimmed(availability)
+}
+
+export type PosterActionProps = {
+  availability: Availability
+  /** The action in place of the server's, like "Request more" for a show. */
+  action?: PosterAction
+  /** The title's name, for toasts and screen readers. */
+  name: string
+  onRequest: () => void
+  /** A request for this title is on its way to the server. */
+  busy?: boolean
+  size?: "sm" | "default"
+  /** Words in place of "Request", like "Request the rest". */
+  label?: JSX.Element
+  /**
+   * What Request is read aloud as where its words alone don't say what
+   * it asks for, like "Request Season 3" among a show's seasons.
+   */
+  requestName?: string
+  look?: ActionLook
+  class?: string
 }
 
 /**
@@ -72,126 +91,154 @@ export function hasPosterButton(availability: Availability): boolean {
  * Users does, with the admin's answer to a declined request; a working
  * one says there how few requests are left.
  */
-export function PosterActionButton({
-  availability,
-  action: override,
-  name,
-  onRequest,
-  busy = false,
-  size = "default",
-  label,
-  requestName,
-  look = "poster",
-  className,
-}: {
-  availability: Availability
-  /** The action in place of the server's, like "Request more" for a show. */
-  action?: PosterAction
-  /** The title's name, for toasts and screen readers. */
-  name: string
-  onRequest: () => void
-  /** A request for this title is on its way to the server. */
-  busy?: boolean
-  size?: "sm" | "default"
-  /** Words in place of "Request", like "Request the rest". */
-  label?: ReactNode
-  /**
-   * What Request is read aloud as where its words alone don't say what
-   * it asks for, like "Request Season 3" among a show's seasons.
-   */
-  requestName?: string
-  look?: ActionLook
-  className?: string
-}) {
+export function PosterActionButton(props: PosterActionProps) {
   const cancel = useCancel()
-  const tipId = useId()
-  const { user } = authed.useRouteContext()
-  const dimmed = !override && requestDimmed(availability)
-  const action =
-    override ?? posterAction(availability) ?? (dimmed ? "request" : null)
-  if (!action) return null
-  const tip =
-    action === "request" && !override
-      ? requestTip(availability, can(user, "adminRequest.decline"))
-      : null
-  const id = availability.requestId
-  const Icon = icons[action]
-  const pending = action === "request" ? busy : cancel.isPending
-  const press = () => {
-    if (dimmed) return
-    if (action === "request") onRequest()
-    else if (id) cancel.mutate({ id, name })
-  }
-  const page = look === "page"
-  const button = (
-    <Button
-      size={page ? "lg" : size}
-      variant={action === "request" ? "default" : "secondary"}
-      disabled={pending || dimmed}
-      // Focusable and hoverable, so its tooltip can say why.
-      focusableWhenDisabled={dimmed}
-      aria-label={action === "request" ? requestName : undefined}
-      aria-describedby={tip ? tipId : undefined}
-      onClick={press}
-      className={cn(
-        page
-          ? // Play's size and place: as wide as its words, filling the
-            // row on phones.
-            "min-w-0 max-sm:h-11 max-sm:flex-1"
-          : // Long words, like German's, wrap rather than cut off on a
-            // narrow poster.
-            cn(
-              "h-auto w-full py-1.5 leading-tight whitespace-normal",
-              size === "sm" ? "min-h-8" : "min-h-9",
-            ),
-        // Dimmed and flat: a lift would say it can be pressed.
-        "aria-disabled:hover:bg-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:shadow-none",
-        look === "poster" && "shadow-lg shadow-black/30",
-        action !== "request" && look === "poster" && glass,
-        action !== "request" && page && pageGlass,
-        className,
-      )}
-    >
-      <Icon aria-hidden strokeWidth={page ? 2 : 2.5} />
-      <span
-        key={action}
-        className={cn(
-          "animate-in fade-in-0 min-w-0 duration-150 motion-reduce:animate-none",
-          page ? "truncate" : "text-balance",
-        )}
-      >
-        {action === "request" && label ? label : posterActionLabel(action)}
-      </span>
-    </Button>
+  const tipId = createUniqueId()
+  const context = authed.useRouteContext()
+  const dimmed = () => !props.action && requestDimmed(props.availability)
+  const action = createMemo(
+    () =>
+      props.action ??
+      posterAction(props.availability) ??
+      (dimmed() ? "request" : null),
   )
-  if (!tip) return button
-  return (
+  const tip = createMemo(() =>
+    action() === "request" && !props.action
+      ? requestTip(
+          props.availability,
+          can(context().user, "adminRequest.decline"),
+        )
+      : null,
+  )
+  const pending = () =>
+    action() === "request" ? (props.busy ?? false) : cancel.isPending
+  const press = () => {
+    if (dimmed()) return
+    if (action() === "request") props.onRequest()
+    else {
+      const id = props.availability.requestId
+      if (id) cancel.mutate({ id, name: props.name })
+    }
+  }
+  const page = () => props.look === "page"
+  const look = () => props.look ?? "poster"
+
+  // Read only while there is an action.
+  const current = () => action() ?? "request"
+  const size = () => (page() ? "lg" : (props.size ?? "default"))
+  const variant = () => (current() === "request" ? "default" : "secondary")
+  const face = () =>
+    cn(
+      page()
+        ? // Play's size and place: as wide as its words, filling the
+          // row on phones.
+          "min-w-0 max-sm:flex-1"
+        : // Long words, like German's, wrap rather than cut off on a
+          // narrow poster.
+          cn(
+            "h-auto w-full py-1.5 leading-tight whitespace-normal",
+            props.size === "sm" ? "min-h-8" : "min-h-9",
+          ),
+      // Dimmed and flat: a lift would say it can be pressed. It still
+      // takes the pointer, for its tooltip.
+      "aria-disabled:hover:bg-primary aria-disabled:pointer-events-auto aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:shadow-none",
+      look() === "poster" && "shadow-lg shadow-black/30",
+      current() !== "request" && look() === "poster" && glass,
+      current() !== "request" && page() && pageGlass,
+      props.class,
+    )
+  const content = () => (
     <>
-      <Tooltip>
-        <TooltipTrigger render={button} />
-        <TooltipContent
-          // The answer and the note are two lines, and the note is cut
-          // short; aloud, the hidden copy below reads all of it.
-          className="max-w-64 flex-col items-start gap-1 leading-4 text-pretty"
-        >
-          <span>{tip.text}</span>
-          {tip.note && (
-            <span className="text-background/75 line-clamp-2 italic">
-              {tr("ask.declined.note", { note: tip.note })}
-            </span>
-          )}
-        </TooltipContent>
-      </Tooltip>
-      {/* The tooltip is for eyes; this reads the same words aloud. */}
-      <span id={tipId} hidden>
-        {tip.note
-          ? tr("catalog.tip.join", {
-              first: tip.text,
-              second: tr("ask.declined.note", { note: tip.note }),
-            })
-          : tip.text}
-      </span>
+      <Icon
+        icon={icons.get(current()) ?? Plus}
+        stroke-width={page() ? 2 : 2.5}
+      />
+      <Show when={current()} keyed>
+        {(shown) => (
+          <span
+            class={cn(
+              "animate-in fade-in-0 min-w-0 duration-150 motion-reduce:animate-none",
+              page() ? "truncate" : "text-balance",
+            )}
+          >
+            {shown === "request" && props.label
+              ? props.label
+              : posterActionLabel(shown)}
+          </span>
+        )}
+      </Show>
     </>
+  )
+
+  return (
+    <Show when={action()}>
+      <Show
+        when={tip()}
+        fallback={
+          <Button
+            size={size()}
+            variant={variant()}
+            disabled={pending() || dimmed()}
+            focusableWhenDisabled={dimmed()}
+            aria-label={current() === "request" ? props.requestName : undefined}
+            onClick={press}
+            class={face()}
+          >
+            {content()}
+          </Button>
+        }
+      >
+        {(shown) => (
+          <>
+            {/* It adds to what the trigger says, which names itself. */}
+            <Tooltip type="description">
+              {/* The trigger is the button: dimmed, it stays focusable and
+                  hoverable with aria-disabled, so its tooltip can say why. */}
+              <TooltipTrigger
+                aria-disabled={dimmed() ? "true" : undefined}
+                disabled={pending() && !dimmed()}
+                aria-label={
+                  current() === "request" ? props.requestName : undefined
+                }
+                aria-describedby={tipId}
+                onClick={press}
+                class={cn(
+                  buttonVariants({ size: size(), variant: variant() }),
+                  face(),
+                )}
+              >
+                {content()}
+              </TooltipTrigger>
+              <TooltipContent
+                // The answer and the note are two lines, and the note is
+                // cut short; aloud, the hidden copy below reads all of it.
+                class="max-w-64 flex-col items-start gap-1 leading-4 text-pretty"
+              >
+                <span>{shown().text}</span>
+                <Show when={shown().note}>
+                  {(note) => (
+                    <span class="text-background/75 line-clamp-2 italic">
+                      {tr("ask.declined.note", { note: note() })}
+                    </span>
+                  )}
+                </Show>
+              </TooltipContent>
+            </Tooltip>
+            {/* The tooltip is for eyes; this reads the same words aloud. */}
+            <span id={tipId} hidden>
+              {shown().note
+                ? tr("catalog.tip.join", {
+                    first: shown().text,
+                    second: tr("ask.declined.note", {
+                      note: shown().note ?? "",
+                    }),
+                  })
+                : shown().text}
+            </span>
+          </>
+        )}
+      </Show>
+    </Show>
   )
 }
 
@@ -202,21 +249,32 @@ export function PosterActionButton({
  * they leave it out and a tap opens the title's page, unless `touch`,
  * for a card with no page to open, where it stays.
  */
-export function CardActionButton({
-  touch = false,
-  ...props
-}: Parameters<typeof PosterActionButton>[0] & { touch?: boolean }) {
-  if (!props.action && !posterAction(props.availability)) return null
+export function CardActionButton(
+  props: PosterActionProps & { touch?: boolean },
+) {
   return (
-    <span
-      className={cn(
-        "pointer-events-auto absolute inset-x-0 bottom-0 p-2 opacity-0 transition-opacity group-hover/card:opacity-100 group-has-[:focus-visible]/card:opacity-100 motion-reduce:transition-none",
-        touch
-          ? "[@media(pointer:coarse)]:opacity-100"
-          : "[@media(pointer:coarse)]:hidden",
-      )}
-    >
-      <PosterActionButton size="sm" {...props} />
-    </span>
+    <Show when={props.action || posterAction(props.availability)}>
+      <span
+        class={cn(
+          "pointer-events-auto absolute inset-x-0 bottom-0 p-2 opacity-0 transition-opacity group-hover/card:opacity-100 group-has-[:focus-visible]/card:opacity-100 motion-reduce:transition-none",
+          props.touch
+            ? "[@media(pointer:coarse)]:opacity-100"
+            : "[@media(pointer:coarse)]:hidden",
+        )}
+      >
+        <PosterActionButton
+          availability={props.availability}
+          action={props.action}
+          name={props.name}
+          onRequest={props.onRequest}
+          busy={props.busy}
+          size="sm"
+          label={props.label}
+          requestName={props.requestName}
+          look={props.look}
+          class={props.class}
+        />
+      </span>
+    </Show>
   )
 }

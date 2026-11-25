@@ -3,18 +3,19 @@ import type {
   StatsRange,
   WatchStats,
 } from "@matinee/contracts"
+import { useQuery } from "@tanstack/solid-query"
+import { ChevronRight } from "lucide"
+import { createMemo, createSignal, For, Show } from "solid-js"
+
+import { tr } from "@/i18n"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@matinee/ui/components/dialog"
-import { useQuery } from "@tanstack/react-query"
-import { ChevronRightIcon } from "lucide-react"
-import { useState } from "react"
-
-import { tr } from "@/i18n"
+} from "@/kit/dialog"
+import { Icon } from "@/kit/icon"
 import { orpc } from "@/lib/rpc"
 import { browserTimeZone, rangeName } from "@/lib/stats"
 
@@ -30,78 +31,91 @@ const TIME_ZONE = browserTimeZone()
  * as the apps show it on the profile. A board's name opens it whole.
  * Boards they aren't on are left out.
  */
-export function StandingSection({ range }: { range: StatsRange }) {
-  const board = useQuery(
+export function StandingSection(props: { range: StatsRange }) {
+  const board = useQuery(() =>
     orpc.stats.leaderboard.queryOptions({
-      input: { range, timeZone: TIME_ZONE },
+      input: { range: props.range, timeZone: TIME_ZONE },
     }),
   )
-  const [open, setOpen] = useState<LeaderboardBoard | null>(null)
-  const standings = (board.data?.boards ?? []).flatMap((entry) => {
-    const at = entry.entries.findIndex((place) => place.self)
-    if (at < 0) return []
-    return [
-      {
-        board: entry,
-        places: entry.entries.slice(Math.max(0, at - 1), at + 2),
-      },
-    ]
-  })
-  if (standings.length === 0) return null
+  const [open, setOpen] = createSignal<LeaderboardBoard | null>(null)
+  const standings = createMemo(() =>
+    (board.isSuccess ? board.data.boards : []).flatMap((entry) => {
+      const at = entry.entries.findIndex((place) => place.self)
+      if (at < 0) return []
+      return [
+        {
+          board: entry,
+          places: entry.entries.slice(Math.max(0, at - 1), at + 2),
+        },
+      ]
+    }),
+  )
   return (
-    <StatsSection title={tr("stats.standing.title")}>
-      <ul className={statsRows}>
-        {standings.map(({ board: { metric }, board: whole, places }) => (
-          <li key={metric} className="flex flex-col gap-1.5 px-4 py-3">
-            <button
-              type="button"
-              onClick={() => setOpen(whole)}
-              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -mx-1 inline-flex items-center gap-0.5 self-start rounded px-1 text-sm outline-none focus-visible:ring-2"
-            >
-              {tr(`stats.leaderboard.metric.${metric}`)}
-              <ChevronRightIcon aria-hidden className="size-3.5" />
-            </button>
-            <ol className="-mx-2 flex flex-col">
-              {places.map((place) => (
-                <Place
-                  key={place.user.id}
-                  entry={place}
-                  format={(value) => formatMetric(metric, value)}
-                  apart={false}
-                />
-              ))}
-            </ol>
-          </li>
-        ))}
-      </ul>
-      {open && (
-        <BoardDialog board={open} range={range} onClose={() => setOpen(null)} />
-      )}
-    </StatsSection>
+    <Show when={standings().length > 0}>
+      <StatsSection title={tr("stats.standing.title")}>
+        <ul class={statsRows}>
+          <For each={standings()} keyed={(standing) => standing.board.metric}>
+            {(standing) => (
+              <li class="flex flex-col gap-1.5 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setOpen(standing().board)}
+                  class="text-muted-foreground hover:text-foreground focus-visible:ring-ring -mx-1 inline-flex items-center gap-0.5 self-start rounded px-1 text-sm outline-none focus-visible:ring-2"
+                >
+                  {tr(`stats.leaderboard.metric.${standing().board.metric}`)}
+                  <Icon icon={ChevronRight} class="size-3.5" />
+                </button>
+                <ol class="-mx-2 flex flex-col">
+                  <For
+                    each={standing().places}
+                    keyed={(place) => place.user.id}
+                  >
+                    {(place) => (
+                      <Place
+                        entry={place()}
+                        format={(value) =>
+                          formatMetric(standing().board.metric, value)
+                        }
+                        apart={false}
+                      />
+                    )}
+                  </For>
+                </ol>
+              </li>
+            )}
+          </For>
+        </ul>
+        <Show when={open()}>
+          {(whole) => (
+            <BoardDialog
+              board={whole()}
+              range={props.range}
+              onClose={() => setOpen(null)}
+            />
+          )}
+        </Show>
+      </StatsSection>
+    </Show>
   )
 }
 
 /** A whole board, as the leaderboard shows it, over the profile. */
-function BoardDialog({
-  board,
-  range,
-  onClose,
-}: {
+function BoardDialog(props: {
   board: LeaderboardBoard
   range: StatsRange
   onClose: () => void
 }) {
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100dvh-4rem)] grid-rows-[auto_minmax(0,1fr)] gap-4 p-6 sm:max-w-md">
-        <DialogHeader className="pr-8">
-          <DialogTitle className="text-lg leading-7 font-semibold">
-            {tr(`stats.leaderboard.metric.${board.metric}`)}
+    <Dialog open onOpenChange={(open) => !open && props.onClose()}>
+      <DialogContent class="max-h-[calc(100dvh-4rem)] grid-rows-[auto_minmax(0,1fr)] gap-4 p-6 sm:max-w-md">
+        <DialogHeader class="pr-8">
+          <DialogTitle class="text-lg leading-7 font-semibold">
+            {tr(`stats.leaderboard.metric.${props.board.metric}`)}
           </DialogTitle>
-          <DialogDescription>{rangeName(range)}</DialogDescription>
+          <DialogDescription>{rangeName(props.range)}</DialogDescription>
         </DialogHeader>
-        <div className="-mx-6 min-h-0 overflow-y-auto px-6">
-          <BoardPlaces board={board} />
+        <div class="-mx-6 min-h-0 overflow-y-auto px-6">
+          <BoardPlaces board={props.board} />
         </div>
       </DialogContent>
     </Dialog>
@@ -109,10 +123,10 @@ function BoardDialog({
 }
 
 /** When in the week and the day watching starts, as squares. */
-export function ActivitySection({ stats }: { stats: WatchStats }) {
+export function ActivitySection(props: { stats: WatchStats }) {
   return (
     <StatsSection title={tr("stats.heatmap.title")}>
-      <ActivityHeatmap activity={stats.activity} />
+      <ActivityHeatmap activity={props.stats.activity} />
     </StatsSection>
   )
 }

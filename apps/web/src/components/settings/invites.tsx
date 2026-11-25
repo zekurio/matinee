@@ -6,27 +6,22 @@ import {
   InviteLabel,
   type InviteOptions,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { Dialog } from "@matinee/ui/components/dialog"
-import { FieldGroup } from "@matinee/ui/components/field"
-import { Input } from "@matinee/ui/components/input"
-import { List, ListItem } from "@matinee/ui/components/list"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  CheckIcon,
-  CopyIcon,
-  LinkIcon,
-  Trash2Icon,
-  UserPlusIcon,
-} from "lucide-react"
-import { useState } from "react"
-import { useStore } from "zustand"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { Check, Copy, Link as LinkIcon, Trash2, UserPlus } from "lucide"
+import { For, Match, onSettled, Show, Switch } from "solid-js"
 
 import { SelectField } from "@/components/select-field"
 import { tr } from "@/i18n"
-import { useAppForm } from "@/lib/form"
+import { Button } from "@/kit/button"
+import { Dialog } from "@/kit/dialog"
+import { FieldGroup } from "@/kit/field"
+import { Icon } from "@/kit/icon"
+import { Input } from "@/kit/input"
+import { List, ListItem } from "@/kit/list"
+import { Skeleton } from "@/kit/skeleton"
+import { toast } from "@/kit/toast"
+import { createForm } from "@/lib/form"
+import { SubmitButton, TextField } from "@/lib/form-fields"
 import { formatDate, formatDateTime, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { useActionFeedback } from "@/lib/use-action-feedback"
@@ -56,11 +51,7 @@ import {
  * account with a passkey while sign-up is closed, and revoking those that
  * still work. Without passkeys nobody could use one, so none can be made.
  */
-export function Invites({
-  passkeysOn,
-  mayCreate,
-  mayRevoke,
-}: {
+export function Invites(props: {
   passkeysOn: boolean
   /** The account holds `invite.create`. */
   mayCreate: boolean
@@ -68,28 +59,28 @@ export function Invites({
   mayRevoke: boolean
 }) {
   const queryClient = useQueryClient()
-  const invites = useQuery(orpc.admin.invites.list.queryOptions())
-  const [store] = useState(createSettingsInvitesStore)
-  const { creating, created, start, setCreating, setCreated } = useStore(store)
+  const invites = useQuery(() => orpc.admin.invites.list.queryOptions())
+  const store = createSettingsInvitesStore()
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: orpc.admin.invites.key() })
+  const offering = () => props.passkeysOn && props.mayCreate
   // Everyone holds every account already, so it isn't offered. Without
   // other groups the form is a single column. Loaded with the panel, so the
   // dialog opens at its width.
-  const groups = useQuery({
+  const groups = useQuery(() => ({
     ...orpc.admin.groups.list.queryOptions(),
-    select: (list) => list.filter((group) => !group.everyone),
-    enabled: passkeysOn && mayCreate,
-  })
-  const joinable = groups.data ?? []
+    select: (list: AccessGroup[]) => list.filter((group) => !group.everyone),
+    enabled: offering(),
+  }))
+  const joinable = () => groups.data ?? []
   // How long a link can work, which the form starts from.
-  const options = useQuery({
+  const options = useQuery(() => ({
     ...orpc.admin.invites.options.queryOptions(),
-    enabled: passkeysOn && mayCreate,
-  })
+    enabled: offering(),
+  }))
 
   // No question first: a revoked link is quick to make again.
-  const revoke = useMutation({
+  const revoke = useMutation(() => ({
     mutationFn: (invite: Invite) =>
       client.admin.invites.revoke({ id: invite.id }),
     onSuccess: () => toast.success(tr("users.invites.revoked")),
@@ -98,301 +89,333 @@ export function Invites({
         description: errorMessage(error),
       }),
     onSettled: refresh,
-  })
+  }))
 
   return (
     <SettingsSubsection
       id="invites"
       title={tr("users.invites.title")}
       action={
-        passkeysOn && mayCreate ? (
-          <Button variant="outline" disabled={!options.data} onClick={start}>
-            <UserPlusIcon />
+        <Show when={offering()}>
+          <Button
+            variant="outline"
+            disabled={!options.data}
+            onClick={() => store.start()}
+          >
+            <Icon icon={UserPlus} />
             {tr("users.invites.create")}
           </Button>
-        ) : null
+        </Show>
       }
     >
-      {!passkeysOn && (
+      <Show when={!props.passkeysOn}>
         <SettingNote>{tr("users.invites.passkeysOff")}</SettingNote>
-      )}
-      {options.isError && (
+      </Show>
+      <Show when={options.isError}>
         <SettingNote>
           {tr("users.invites.loadFailed", {
             error: errorMessage(options.error),
           })}
         </SettingNote>
-      )}
-      {invites.isPending ? (
-        <Skeleton className="h-16 rounded-xl" />
-      ) : invites.isError ? (
-        <SettingNote>
-          {tr("users.invites.loadFailed", {
-            error: errorMessage(invites.error),
-          })}
-        </SettingNote>
-      ) : invites.data.length === 0 ? (
-        passkeysOn && <SettingNote>{tr("users.invites.empty")}</SettingNote>
-      ) : (
-        <List>
-          {invites.data.map((invite) => (
-            <InviteRow
-              key={invite.id}
-              invite={invite}
-              revoking={revoke.isPending && revoke.variables.id === invite.id}
-              onRevoke={mayRevoke ? () => revoke.mutate(invite) : null}
-            />
-          ))}
-        </List>
-      )}
+      </Show>
+      <Switch>
+        <Match when={invites.isPending}>
+          <Skeleton class="h-16 rounded-xl" />
+        </Match>
+        <Match when={invites.isError}>
+          <SettingNote>
+            {tr("users.invites.loadFailed", {
+              error: errorMessage(invites.error),
+            })}
+          </SettingNote>
+        </Match>
+        <Match when={invites.data?.length === 0}>
+          <Show when={props.passkeysOn}>
+            <SettingNote>{tr("users.invites.empty")}</SettingNote>
+          </Show>
+        </Match>
+        <Match when={invites.data}>
+          {(list) => (
+            <List>
+              <For each={list()} keyed={(invite) => invite.id}>
+                {(invite) => (
+                  <InviteRow
+                    invite={invite()}
+                    revoking={
+                      revoke.isPending && revoke.variables?.id === invite().id
+                    }
+                    onRevoke={
+                      props.mayRevoke ? () => revoke.mutate(invite()) : null
+                    }
+                  />
+                )}
+              </For>
+            </List>
+          )}
+        </Match>
+      </Switch>
 
       <Dialog
-        open={creating}
-        onOpenChange={setCreating}
-        disablePointerDismissal={created !== null}
+        open={store.creating()}
+        onOpenChange={(open) => store.setCreating(open)}
+        disablePointerDismissal={store.created() !== null}
       >
-        <FormDialogContent width={created || joinable.length > 0 ? "md" : "sm"}>
-          {created ? (
-            <CreatedLink invite={created} onDone={() => setCreating(false)} />
-          ) : (
-            options.data && (
-              <InviteForm
-                options={options.data}
-                groups={joinable}
-                onCreated={(invite) => {
-                  setCreated(invite)
-                  void refresh()
-                }}
+        <FormDialogContent
+          width={store.created() || joinable().length > 0 ? "md" : "sm"}
+        >
+          <Show
+            when={store.created()}
+            fallback={
+              <Show when={options.data}>
+                {(loaded) => (
+                  <InviteForm
+                    options={loaded()}
+                    groups={joinable()}
+                    onCreated={(invite) => {
+                      store.setCreated(invite)
+                      void refresh()
+                    }}
+                  />
+                )}
+              </Show>
+            }
+          >
+            {(created) => (
+              <CreatedLink
+                invite={created()}
+                onDone={() => store.setCreating(false)}
               />
-            )
-          )}
+            )}
+          </Show>
         </FormDialogContent>
       </Dialog>
     </SettingsSubsection>
   )
 }
 
-function InviteRow({
-  invite,
-  revoking,
-  onRevoke,
-}: {
+function InviteRow(props: {
   invite: Invite
   revoking: boolean
   /** Null for an account that may not revoke links. */
   onRevoke: (() => void) | null
 }) {
-  const details = [
-    tr("users.invites.made", { date: formatDate(invite.createdAt) }),
-    tr("users.invites.expires", { when: formatRelative(invite.expiresAt) }),
-    ...(invite.groups.length > 0
-      ? [
-          tr("users.invites.joins", {
-            groups: formatList(invite.groups.map((group) => group.name)),
-          }),
-        ]
-      : []),
-  ]
+  const details = () =>
+    [
+      tr("users.invites.made", { date: formatDate(props.invite.createdAt) }),
+      tr("users.invites.expires", {
+        when: formatRelative(props.invite.expiresAt),
+      }),
+      ...(props.invite.groups.length > 0
+        ? [
+            tr("users.invites.joins", {
+              groups: formatList(
+                props.invite.groups.map((group) => group.name),
+              ),
+            }),
+          ]
+        : []),
+    ].join(" · ")
   return (
-    <ListItem className="pr-2">
+    <ListItem class="pr-2">
       <RowIcon>
-        <LinkIcon />
+        <Icon icon={LinkIcon} />
       </RowIcon>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm leading-5 font-medium">
-          {invite.label ?? (
-            <span className="text-muted-foreground font-normal">
-              {tr("users.invites.noNote")}
-            </span>
-          )}
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm leading-5 font-medium">
+          <Show
+            when={props.invite.label}
+            fallback={
+              <span class="text-muted-foreground font-normal">
+                {tr("users.invites.noNote")}
+              </span>
+            }
+          >
+            {props.invite.label}
+          </Show>
         </p>
         <p
-          className="text-muted-foreground text-13px truncate leading-5"
+          class="text-muted-foreground text-13px truncate leading-5"
           title={tr("users.invites.expiresAt", {
-            date: formatDateTime(invite.expiresAt),
+            date: formatDateTime(props.invite.expiresAt),
           })}
         >
-          {details.join(" · ")}
+          {details()}
         </p>
       </div>
-      {onRevoke && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-destructive shrink-0"
-          aria-label={
-            invite.label
-              ? tr("users.invites.revokeNamed", { note: invite.label })
-              : tr("users.invites.revoke")
-          }
-          disabled={revoking}
-          onClick={onRevoke}
-        >
-          <Trash2Icon />
-        </Button>
-      )}
+      <Show when={props.onRevoke}>
+        {(onRevoke) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            class="text-muted-foreground hover:text-destructive shrink-0"
+            aria-label={(() => {
+              const note = props.invite.label
+              return note
+                ? tr("users.invites.revokeNamed", { note })
+                : tr("users.invites.revoke")
+            })()}
+            disabled={props.revoking}
+            onClick={() => onRevoke()()}
+          >
+            <Icon icon={Trash2} />
+          </Button>
+        )}
+      </Show>
     </ListItem>
   )
 }
 
-function InviteForm({
-  options,
-  groups,
-  onCreated,
-}: {
+type InviteValues = { label: string; expiresInDays: string; groupIds: string[] }
+
+function InviteForm(props: {
   options: InviteOptions
   /** The groups an invite can put the account in. */
   groups: AccessGroup[]
   onCreated: (invite: CreatedInvite) => void
 }) {
-  const create = useMutation({
+  const create = useMutation(() => ({
     mutationFn: (input: InviteInput) => client.admin.invites.create(input),
-    onSuccess: onCreated,
+    onSuccess: (invite: CreatedInvite) => props.onCreated(invite),
     onError: (error) => toast.error(errorMessage(error)),
-  })
-  const noGroups: string[] = []
-  const form = useAppForm({
+  }))
+  const form = createForm<InviteValues>({
     // The select holds strings, so the days are one until the submit.
-    defaultValues: {
-      label: "",
-      expiresInDays: String(options.defaultExpiryDays),
-      groupIds: noGroups,
-    },
-    onSubmit: ({ value }) =>
+    defaultValues: { label: "", expiresInDays: "", groupIds: [] },
+    checks: { label: InviteLabel },
+    onSubmit: (values) => {
       create.mutate(
         InviteInput.parse({
-          label: value.label,
-          expiresInDays: Number(value.expiresInDays),
-          groupIds: value.groupIds,
+          label: values.label,
+          expiresInDays: Number(values.expiresInDays),
+          groupIds: [...values.groupIds],
         }),
-      ),
+      )
+    },
   })
-  const expiries = options.expiryDays.map((days) => ({
-    value: String(days),
-    label: tr("format.daysLong", { count: days }),
-  }))
+  // Starts from the server's default length; a form per opening.
+  onSettled(() => {
+    form.reset({
+      label: "",
+      expiresInDays: String(props.options.defaultExpiryDays),
+      groupIds: [],
+    })
+  })
+  const expiries = () =>
+    props.options.expiryDays.map((days) => ({
+      value: String(days),
+      label: tr("format.daysLong", { count: days }),
+    }))
 
-  const fields = (
+  const fields = () => (
     <FieldGroup>
-      <form.AppField name="label" validators={{ onChange: InviteLabel }}>
-        {(field) => (
-          <field.TextField
-            label={tr("users.invites.dialog.note")}
-            description={tr("users.invites.dialog.noteHint")}
-            maxLength={64}
-            autoComplete="off"
-          />
-        )}
-      </form.AppField>
-      <form.AppField name="expiresInDays">
-        {() => (
-          <SelectField
-            id="invite-expiry"
-            label={tr("users.invites.dialog.expiry")}
-            items={expiries}
-          />
-        )}
-      </form.AppField>
+      <TextField
+        form={form}
+        name="label"
+        label={tr("users.invites.dialog.note")}
+        description={tr("users.invites.dialog.noteHint")}
+        maxlength={64}
+        autocomplete="off"
+      />
+      <SelectField
+        form={form}
+        name="expiresInDays"
+        id="invite-expiry"
+        label={tr("users.invites.dialog.expiry")}
+        items={expiries()}
+      />
     </FieldGroup>
   )
 
   return (
-    <form.AppForm>
-      <FormDialogForm onSubmit={() => void form.handleSubmit()}>
-        <FormDialogHeader
-          title={tr("users.invites.create")}
-          description={tr("users.invites.dialog.description")}
-        />
-        <FormDialogBody>
-          {groups.length === 0 ? (
-            fields
-          ) : (
-            <FormColumns>
-              <FormColumn>{fields}</FormColumn>
-              <FormColumn>
-                <FormSection
-                  title={tr("users.invites.dialog.groups")}
-                  description={tr("users.invites.dialog.groupsHint")}
-                >
-                  <form.Field name="groupIds">
-                    {(field) => (
-                      <SettingRows>
-                        {groups.map((group) => (
-                          <SwitchRow
-                            key={group.id}
-                            title={group.name}
-                            checked={field.state.value.includes(group.id)}
-                            onChange={(on) =>
-                              field.handleChange(
-                                on
-                                  ? [...field.state.value, group.id]
-                                  : field.state.value.filter(
-                                      (id) => id !== group.id,
-                                    ),
-                              )
-                            }
-                          />
-                        ))}
-                      </SettingRows>
+    <FormDialogForm onSubmit={() => void form.submit()}>
+      <FormDialogHeader
+        title={tr("users.invites.create")}
+        description={tr("users.invites.dialog.description")}
+      />
+      <FormDialogBody>
+        <Show when={props.groups.length > 0} fallback={fields()}>
+          <FormColumns>
+            <FormColumn>{fields()}</FormColumn>
+            <FormColumn>
+              <FormSection
+                title={tr("users.invites.dialog.groups")}
+                description={tr("users.invites.dialog.groupsHint")}
+              >
+                <SettingRows>
+                  <For each={props.groups} keyed={(group) => group.id}>
+                    {(group) => (
+                      <SwitchRow
+                        title={group().name}
+                        checked={form.values().groupIds.includes(group().id)}
+                        onChange={(on) => {
+                          const ids = form.values().groupIds
+                          form.set(
+                            "groupIds",
+                            on
+                              ? [...ids, group().id]
+                              : ids.filter((id) => id !== group().id),
+                          )
+                        }}
+                      />
                     )}
-                  </form.Field>
-                </FormSection>
-              </FormColumn>
-            </FormColumns>
-          )}
-        </FormDialogBody>
-        <FormDialogFooter>
-          <form.SubmitButton pending={create.isPending}>
-            {tr("users.invites.dialog.submit")}
-          </form.SubmitButton>
-        </FormDialogFooter>
-      </FormDialogForm>
-    </form.AppForm>
+                  </For>
+                </SettingRows>
+              </FormSection>
+            </FormColumn>
+          </FormColumns>
+        </Show>
+      </FormDialogBody>
+      <FormDialogFooter>
+        <SubmitButton form={form} pending={create.isPending}>
+          {tr("users.invites.dialog.submit")}
+        </SubmitButton>
+      </FormDialogFooter>
+    </FormDialogForm>
   )
 }
 
-function CreatedLink({
-  invite,
-  onDone,
-}: {
-  invite: CreatedInvite
-  onDone: () => void
-}) {
-  const { feedback, run } = useActionFeedback({ successDuration: 1500 })
-  const copied = feedback.state === "success"
+function CreatedLink(props: { invite: CreatedInvite; onDone: () => void }) {
+  const action = useActionFeedback({ successDuration: 1500 })
+  const copied = () => action.feedback().state === "success"
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div class="flex min-h-0 flex-1 flex-col">
       <FormDialogHeader
         title={tr("users.invites.link.title")}
         description={tr("users.invites.link.description", {
-          date: formatDateTime(invite.expiresAt),
+          date: formatDateTime(props.invite.expiresAt),
         })}
       />
       <FormDialogBody>
-        <div className="flex gap-2">
+        <div class="flex gap-2">
           <Input
-            readOnly
-            value={invite.url}
+            readonly
+            value={props.invite.url}
             aria-label={tr("users.invites.link.label")}
-            className="text-13px font-mono"
+            class="text-13px font-mono"
             onFocus={(event) => event.currentTarget.select()}
           />
           <Button
             variant="outline"
-            className="shrink-0"
+            class="shrink-0"
             onClick={() =>
-              void run(() => navigator.clipboard.writeText(invite.url))
+              void action.run(() =>
+                navigator.clipboard.writeText(props.invite.url),
+              )
             }
           >
-            {copied ? <CheckIcon /> : <CopyIcon />}
-            {copied
+            <Show when={copied()} fallback={<Icon icon={Copy} />}>
+              <Icon icon={Check} />
+            </Show>
+            {copied()
               ? tr("users.invites.link.copied")
               : tr("users.invites.link.copy")}
           </Button>
         </div>
       </FormDialogBody>
       <FormDialogFooter cancel={false}>
-        <Button onClick={onDone}>{tr("users.invites.link.done")}</Button>
+        <Button onClick={() => props.onDone()}>
+          {tr("users.invites.link.done")}
+        </Button>
       </FormDialogFooter>
     </div>
   )

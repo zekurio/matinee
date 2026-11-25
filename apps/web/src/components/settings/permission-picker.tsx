@@ -3,13 +3,13 @@ import {
   type PermissionResource,
   permissionResource,
 } from "@matinee/contracts"
-import { Checkbox } from "@matinee/ui/components/checkbox"
-import { FieldLegend, FieldSet } from "@matinee/ui/components/field"
-import { Input } from "@matinee/ui/components/input"
-import { Switch } from "@matinee/ui/components/switch"
-import { useState } from "react"
+import { createMemo, createSignal, For, Show } from "solid-js"
 
 import { tr } from "@/i18n"
+import { Checkbox } from "@/kit/checkbox"
+import { FieldLegend, FieldSet } from "@/kit/field"
+import { Input } from "@/kit/input"
+import { Switch } from "@/kit/switch"
 import { withPermissions } from "@/lib/permissions"
 
 /**
@@ -37,14 +37,7 @@ function groupByResource(permissions: readonly Permission[]) {
  * shows. `value` may hold permissions that aren't offered; they stay as
  * they are.
  */
-export function PermissionPicker({
-  legend,
-  offered,
-  all,
-  value,
-  error,
-  onChange,
-}: {
+export function PermissionPicker(props: {
   legend: string
   /** The permissions to pick from. `all` among them is left out. */
   offered: readonly Permission[]
@@ -57,111 +50,130 @@ export function PermissionPicker({
   error?: string | undefined
   onChange: (value: Permission[]) => void
 }) {
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = createSignal("")
   // What was picked before `all` went on, for when it goes off again.
-  const [picked, setPicked] = useState<Permission[]>([])
-  const everything = all !== undefined && value.includes("all")
-  const needle = search.trim().toLowerCase()
-  const groups = groupByResource(offered)
-    .map((group) => ({
-      ...group,
-      shown: group.permissions.filter(
-        (permission) =>
-          permission.toLowerCase().includes(needle) ||
-          tr(`access.permission.${group.resource}`)
-            .toLowerCase()
-            .includes(needle),
-      ),
-    }))
-    .filter((group) => group.shown.length > 0)
+  let picked: Permission[] = []
+  const everything = () =>
+    props.all !== undefined && props.value.includes("all")
+  const groups = createMemo(() => {
+    const needle = search().trim().toLowerCase()
+    return groupByResource(props.offered)
+      .map((group) => ({
+        ...group,
+        shown: group.permissions.filter(
+          (permission) =>
+            permission.toLowerCase().includes(needle) ||
+            tr(`access.permission.${group.resource}`)
+              .toLowerCase()
+              .includes(needle),
+        ),
+      }))
+      .filter((group) => group.shown.length > 0)
+  })
 
   return (
     <FieldSet>
-      <FieldLegend variant="label">{legend}</FieldLegend>
-      {all && (
-        <label className="-mt-1 flex min-w-0 items-start gap-3">
-          <Switch
-            className="mt-0.5"
-            checked={everything}
-            // `all` stands alone: picked permissions would mean nothing beside it.
-            onCheckedChange={(on) => {
-              if (on) setPicked([...value])
-              onChange(on ? ["all"] : picked)
-            }}
-          />
-          <span className="min-w-0">
-            <span className="block text-sm leading-5">{all.label}</span>
-            <span className="text-muted-foreground text-13px block leading-5">
-              {all.hint}
+      <FieldLegend variant="label">{props.legend}</FieldLegend>
+      <Show when={props.all}>
+        {(all) => (
+          <label class="-mt-1 flex min-w-0 items-start gap-3">
+            <Switch
+              class="mt-0.5"
+              checked={everything()}
+              // `all` stands alone: picked permissions would mean nothing beside it.
+              onCheckedChange={(on) => {
+                if (on) picked = [...props.value]
+                props.onChange(on ? ["all"] : picked)
+              }}
+            />
+            <span class="min-w-0">
+              <span class="block text-sm leading-5">{all().label}</span>
+              <span class="text-muted-foreground text-13px block leading-5">
+                {all().hint}
+              </span>
             </span>
-          </span>
-        </label>
-      )}
-      {!everything && (
-        <>
-          <Input
-            type="search"
-            value={search}
-            placeholder={tr("access.permissions.search")}
-            aria-label={tr("access.permissions.search")}
-            className="md:max-w-md"
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          {groups.length === 0 && (
-            <p className="text-muted-foreground text-13px">
-              {tr("access.permissions.noMatch")}
-            </p>
-          )}
-          {/* Columns by the dialog's width rather than the screen's. */}
-          <div className="@container">
-            <ul className="grid gap-x-8 gap-y-4 py-0.5 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
-              {groups.map(({ resource, shown }) => (
-                <li key={resource} className="flex min-w-0 flex-col gap-1.5">
-                  <label className="flex items-start gap-2.5">
+          </label>
+        )}
+      </Show>
+      <Show when={!everything()}>
+        <Input
+          type="search"
+          value={search()}
+          placeholder={tr("access.permissions.search")}
+          aria-label={tr("access.permissions.search")}
+          class="md:max-w-md"
+          onValueChange={setSearch}
+        />
+        <Show when={groups().length === 0}>
+          <p class="text-muted-foreground text-13px">
+            {tr("access.permissions.noMatch")}
+          </p>
+        </Show>
+        {/* Columns by the dialog's width rather than the screen's. */}
+        <div class="@container">
+          <ul class="grid gap-x-8 gap-y-4 py-0.5 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
+            <For each={groups()} keyed={(group) => group.resource}>
+              {(group) => (
+                <li class="flex min-w-0 flex-col gap-1.5">
+                  <label class="flex items-start gap-2.5">
                     <Checkbox
-                      className="mt-0.5"
-                      checked={shown.every((permission) =>
-                        value.includes(permission),
+                      class="mt-0.5"
+                      checked={group().shown.every((permission) =>
+                        props.value.includes(permission),
                       )}
                       onCheckedChange={(on) =>
-                        onChange(withPermissions(value, shown, on))
+                        props.onChange(
+                          withPermissions(
+                            props.value,
+                            group().shown,
+                            on === true,
+                          ),
+                        )
                       }
                     />
-                    <span className="min-w-0">
-                      <code className="block text-sm leading-5 font-medium">
-                        {resource}
+                    <span class="min-w-0">
+                      <code class="block text-sm leading-5 font-medium">
+                        {group().resource}
                       </code>
-                      <span className="text-muted-foreground text-13px block leading-5">
-                        {tr(`access.permission.${resource}`)}
+                      <span class="text-muted-foreground text-13px block leading-5">
+                        {tr(`access.permission.${group().resource}`)}
                       </span>
                     </span>
                   </label>
-                  <ul className="flex flex-wrap gap-x-4 gap-y-1.5 pl-7">
-                    {shown.map((permission) => (
-                      <li key={permission}>
-                        <label className="text-13px flex items-center gap-2">
-                          <Checkbox
-                            checked={value.includes(permission)}
-                            onCheckedChange={(on) =>
-                              onChange(withPermissions(value, [permission], on))
-                            }
-                          />
-                          <code>{permission}</code>
-                        </label>
-                      </li>
-                    ))}
+                  <ul class="flex flex-wrap gap-x-4 gap-y-1.5 pl-7">
+                    <For each={group().shown}>
+                      {(permission) => (
+                        <li>
+                          <label class="text-13px flex items-center gap-2">
+                            <Checkbox
+                              checked={props.value.includes(permission)}
+                              onCheckedChange={(on) =>
+                                props.onChange(
+                                  withPermissions(
+                                    props.value,
+                                    [permission],
+                                    on === true,
+                                  ),
+                                )
+                              }
+                            />
+                            <code>{permission}</code>
+                          </label>
+                        </li>
+                      )}
+                    </For>
                   </ul>
                 </li>
-              ))}
-            </ul>
-          </div>
-        </>
-      )}
-      {error && (
-        <p role="alert" className="text-destructive text-xs">
-          {error}
+              )}
+            </For>
+          </ul>
+        </div>
+      </Show>
+      <Show when={props.error}>
+        <p role="alert" class="text-destructive text-xs">
+          {props.error}
         </p>
-      )}
+      </Show>
     </FieldSet>
   )
 }

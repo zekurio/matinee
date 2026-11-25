@@ -1,14 +1,13 @@
 import type { AdminRequestItem, RequestQueue } from "@matinee/contracts"
-import { useQuery } from "@tanstack/react-query"
-import { linkOptions } from "@tanstack/react-router"
+import { linkOptions } from "@tanstack/solid-router"
 
 import { perLocale, tr } from "@/i18n"
+import { useLiveQuery } from "@/lib/live-query"
 import { liveQuery, orpc } from "@/lib/rpc"
 import {
   type HiddenRequests,
   isHidden,
   type QueueAction,
-  useHiddenRequests,
   useRequestActionsStore,
 } from "@/stores/request-actions"
 
@@ -38,19 +37,25 @@ export function filterInput(filter: RequestFilter | undefined) {
   return input
 }
 
+/** The shared live-query helper, under the name the request screens use. */
+export const useFollowedQuery = useLiveQuery
+
 /**
  * The live queue, which every part of the page that shows it shares:
- * the avatar's dot, Discover's row, a title page's Add, and the
- * requests page. The requests page alone passes a `filter`.
+ * Discover's row, a title page's Add, and the requests page. The requests
+ * page alone passes a `filter`. An accessor for the query's latest result.
  */
-export function useRequestQueue(enabled = true, filter?: RequestFilter) {
-  return useQuery({
+export function useRequestQueue(
+  enabled: () => boolean,
+  filter?: () => RequestFilter | undefined,
+) {
+  return useFollowedQuery(() => ({
     ...orpc.admin.requests.live.experimental_liveOptions({
-      input: { limit: RECENT_DONE, ...filterInput(filter) },
+      input: { limit: RECENT_DONE, ...filterInput(filter?.()) },
     }),
     ...liveQuery,
-    enabled,
-  })
+    enabled: enabled(),
+  }))
 }
 
 /**
@@ -70,13 +75,6 @@ export function needsYou(
   if (!queue) return 0
   const waiting = queue.waiting.filter((item) => !isHidden(hidden, item))
   return waiting.length + queue.needsAttention.length
-}
-
-/** The count behind the avatar's dot and the menu entry, live. */
-export function useNeedsYou(enabled: boolean): number {
-  const queue = useRequestQueue(enabled)
-  const hidden = useHiddenRequests()
-  return needsYou(queue.data, hidden)
 }
 
 const lists = perLocale(

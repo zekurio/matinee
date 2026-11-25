@@ -1,24 +1,24 @@
 import type { Permission, User } from "@matinee/contracts"
 import {
-  FilmIcon,
-  GalleryHorizontalEndIcon,
-  InboxIcon,
-  KeyRoundIcon,
-  KeySquareIcon,
-  LibraryBigIcon,
-  ListChecksIcon,
-  type LucideIcon,
-  NetworkIcon,
-  PaintbrushIcon,
-  PaletteIcon,
-  ShieldCheckIcon,
-  TvMinimalPlayIcon,
-  UserIcon,
-  UsersIcon,
-} from "lucide-react"
-import { type ComponentType, useMemo } from "react"
+  Film,
+  GalleryHorizontalEnd,
+  Inbox,
+  KeyRound,
+  KeySquare,
+  LibraryBig,
+  ListChecks,
+  Network,
+  Paintbrush,
+  Palette,
+  ShieldCheck,
+  TvMinimalPlay,
+  UserRound,
+  Users,
+} from "lucide"
+import { type Accessor, type Component, createMemo } from "solid-js"
 
 import { tr } from "@/i18n"
+import type { IconNode } from "@/kit/icon"
 import { can, canAny } from "@/lib/permissions"
 import type { SettingsSectionId } from "@/lib/settings"
 
@@ -47,8 +47,8 @@ export interface SettingsCategory {
   description: string
   /** Words a search should find this section by, shown as the match hint. */
   keywords: string[]
-  icon: LucideIcon
-  Panel: ComponentType
+  icon: IconNode
+  Panel: Component
 }
 
 const SETTINGS_GROUPS: readonly SettingsGroup[] = ["account", "admin"]
@@ -73,17 +73,17 @@ type SectionEntry = Pick<
 }
 
 const SECTIONS: SectionEntry[] = [
-  { id: "account", group: "account", icon: UserIcon, Panel: AccountPanel },
+  { id: "account", group: "account", icon: UserRound, Panel: AccountPanel },
   {
     id: "appearance",
     group: "account",
-    icon: PaletteIcon,
+    icon: Palette,
     Panel: AppearancePanel,
   },
   {
     id: "playback",
     group: "account",
-    icon: TvMinimalPlayIcon,
+    icon: TvMinimalPlay,
     Panel: PlaybackPanel,
   },
   {
@@ -91,7 +91,7 @@ const SECTIONS: SectionEntry[] = [
     // the ones it has.
     id: "apiTokens",
     group: "account",
-    icon: KeySquareIcon,
+    icon: KeySquare,
     Panel: ApiTokensPanel,
   },
   {
@@ -103,21 +103,21 @@ const SECTIONS: SectionEntry[] = [
       "library.delete",
       "library.scan",
     ],
-    icon: LibraryBigIcon,
+    icon: LibraryBig,
     Panel: LibrariesPanel,
   },
   {
     id: "users",
     group: "admin",
     needs: ["adminUser.read"],
-    icon: UsersIcon,
+    icon: Users,
     Panel: UsersPanel,
   },
   {
     id: "access",
     group: "admin",
     needs: ["group.read"],
-    icon: ShieldCheckIcon,
+    icon: ShieldCheck,
     Panel: AccessPanel,
   },
   {
@@ -129,49 +129,49 @@ const SECTIONS: SectionEntry[] = [
       "fulfilment.update",
       "fulfilment.delete",
     ],
-    icon: InboxIcon,
+    icon: Inbox,
     Panel: RequestsPanel,
   },
   {
     id: "authentication",
     group: "admin",
     needs: ["all"],
-    icon: KeyRoundIcon,
+    icon: KeyRound,
     Panel: AuthPanel,
   },
   {
     id: "transcoding",
     group: "admin",
     needsAll: ["transcodingSettings.read", "transcodingSettings.update"],
-    icon: FilmIcon,
+    icon: Film,
     Panel: TranscodingPanel,
   },
   {
     id: "trickplay",
     group: "admin",
     needsAll: ["trickplaySettings.read", "trickplaySettings.update"],
-    icon: GalleryHorizontalEndIcon,
+    icon: GalleryHorizontalEnd,
     Panel: TrickplayPanel,
   },
   {
     id: "network",
     group: "admin",
     needsAll: ["networkSettings.read", "networkSettings.update"],
-    icon: NetworkIcon,
+    icon: Network,
     Panel: NetworkPanel,
   },
   {
     id: "jobs",
     group: "admin",
     needsAll: ["job.read", "job.update"],
-    icon: ListChecksIcon,
+    icon: ListChecks,
     Panel: JobsPanel,
   },
   {
     id: "branding",
     group: "admin",
     needsAll: ["branding.read", "branding.update"],
-    icon: PaintbrushIcon,
+    icon: Paintbrush,
     Panel: BrandingPanel,
   },
 ]
@@ -191,19 +191,19 @@ function describe(section: SectionEntry): SettingsCategory {
 }
 
 /** Sections this user can open, in nav order. */
-export function useSettingsCategories(user: User): SettingsCategory[] {
-  const { permissions } = user
-  return useMemo(
-    () =>
-      SECTIONS.filter(
-        (section) =>
-          (!section.needs || canAny({ permissions }, section.needs)) &&
-          (section.needsAll ?? []).every((permission) =>
-            can({ permissions }, permission),
-          ),
-      ).map(describe),
-    [permissions],
-  )
+export function useSettingsCategories(
+  user: () => User,
+): Accessor<SettingsCategory[]> {
+  return createMemo(() => {
+    const { permissions } = user()
+    return SECTIONS.filter(
+      (section) =>
+        (!section.needs || canAny({ permissions }, section.needs)) &&
+        (section.needsAll ?? []).every((permission) =>
+          can({ permissions }, permission),
+        ),
+    ).map(describe)
+  })
 }
 
 function normalize(value: string): string {

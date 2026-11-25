@@ -1,4 +1,20 @@
 import type { Library } from "@matinee/contracts"
+import { cn } from "@matinee/ui/lib/utils"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { useRouteContext } from "@tanstack/solid-router"
+import {
+  CloudDownload,
+  Ellipsis,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide"
+import { createSignal, For, Match, Show, Switch } from "solid-js"
+
+import { libraryIcons } from "@/components/app-shell"
+import { LibraryDialog } from "@/components/library-dialog"
+import { tr } from "@/i18n"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,66 +24,59 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@matinee/ui/components/alert-dialog"
-import { Button } from "@matinee/ui/components/button"
+} from "@/kit/alert-dialog"
+import { Button, buttonVariants } from "@/kit/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
+} from "@/kit/dropdown-menu"
 import {
   Empty,
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
-} from "@matinee/ui/components/empty"
-import { List, ListItem } from "@matinee/ui/components/list"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import { Spinner } from "@matinee/ui/components/spinner"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useRouteContext } from "@tanstack/react-router"
-import {
-  CloudDownloadIcon,
-  EllipsisIcon,
-  PencilIcon,
-  PlusIcon,
-  RefreshCwIcon,
-  Trash2Icon,
-} from "lucide-react"
-import { useState } from "react"
-import { useStore } from "zustand"
-
-import { libraryIcons } from "@/components/app-shell"
-import { LibraryDialog } from "@/components/library-dialog"
-import { tr } from "@/i18n"
+} from "@/kit/empty"
+import { Icon } from "@/kit/icon"
+import { List, ListItem } from "@/kit/list"
+import { Skeleton } from "@/kit/skeleton"
+import { Spinner } from "@/kit/spinner"
+import { toast } from "@/kit/toast"
 import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createSettingsLibrariesStore } from "@/stores/settings-libraries"
 
 import { RowIcon, SettingsSections, SettingsSubsection } from "./settings-panel"
 
+const rowMenuButton = cn(
+  buttonVariants({ variant: "ghost", size: "icon" }),
+  "text-muted-foreground hover:text-foreground data-open:text-foreground",
+)
+
 export function LibrariesPanel() {
-  const [store] = useState(createSettingsLibrariesStore)
-  const { library, open, edit, close } = useStore(store)
-  const { user } = useRouteContext({ from: "/_authed" })
-  const libraries = useQuery(
-    orpc.libraries.list.queryOptions({
-      refetchInterval: (q) =>
-        q.state.data?.some((library) => library.scanning || library.refreshing)
-          ? 2000
-          : false,
-    }),
-  )
+  const store = createSettingsLibrariesStore()
+  const context = useRouteContext({ from: "/_authed" })
+  const libraries = useQuery(() => ({
+    ...orpc.libraries.list.queryOptions(),
+    refetchInterval: (q) =>
+      q.state.data?.some((library) => library.scanning || library.refreshing)
+        ? 2000
+        : false,
+  }))
+  const list = () => (libraries.isSuccess ? libraries.data : [])
   // The form browses the server's folders to pick from.
-  const addButton = can(user, "library.create") && can(user, "folder.read") && (
-    <Button onClick={() => edit()}>
-      <PlusIcon />
-      {tr("libraries.add")}
-    </Button>
+  const mayAdd = () =>
+    can(context().user, "library.create") && can(context().user, "folder.read")
+  const addButton = () => (
+    <Show when={mayAdd()}>
+      <Button onClick={() => store.edit()}>
+        <Icon icon={Plus} />
+        {tr("libraries.add")}
+      </Button>
+    </Show>
   )
 
   return (
@@ -75,184 +84,201 @@ export function LibrariesPanel() {
       <SettingsSubsection
         id="libraries"
         title={tr("libraries.title")}
-        action={libraries.data?.length ? addButton : undefined}
+        action={list().length && mayAdd() ? addButton() : undefined}
       >
-        {libraries.isPending ? (
-          <Skeleton className="h-32 rounded-xl" />
-        ) : libraries.isError ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
-            <p className="text-muted-foreground text-sm">
-              {tr("libraries.loadFailed", {
-                error: errorMessage(libraries.error),
-              })}
-            </p>
-            <Button variant="outline" onClick={() => void libraries.refetch()}>
-              <RefreshCwIcon />
-              {tr("libraries.retry")}
-            </Button>
-          </div>
-        ) : libraries.data.length === 0 ? (
-          <Empty className="border border-dashed">
-            <EmptyHeader>
-              <EmptyTitle>{tr("libraries.empty.title")}</EmptyTitle>
-              <EmptyDescription>
-                {tr("libraries.empty.description")}
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>{addButton}</EmptyContent>
-          </Empty>
-        ) : (
-          <List>
-            {libraries.data?.map((library) => (
-              <LibraryRow
-                key={library.id}
-                library={library}
-                onEdit={() => edit(library)}
-              />
-            ))}
-          </List>
-        )}
+        <Switch>
+          <Match when={libraries.isPending}>
+            <Skeleton class="h-32 rounded-xl" />
+          </Match>
+          <Match when={libraries.isError}>
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
+              <p class="text-muted-foreground text-sm">
+                {tr("libraries.loadFailed", {
+                  error: errorMessage(libraries.error),
+                })}
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => void libraries.refetch()}
+              >
+                <Icon icon={RefreshCw} />
+                {tr("libraries.retry")}
+              </Button>
+            </div>
+          </Match>
+          <Match when={list().length === 0}>
+            <Empty class="border border-dashed">
+              <EmptyHeader>
+                <EmptyTitle>{tr("libraries.empty.title")}</EmptyTitle>
+                <EmptyDescription>
+                  {tr("libraries.empty.description")}
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>{addButton()}</EmptyContent>
+            </Empty>
+          </Match>
+          <Match when={true}>
+            <List>
+              <For each={list()} keyed={(library) => library.id}>
+                {(library) => (
+                  <LibraryRow
+                    library={library()}
+                    onEdit={() => store.edit(library())}
+                  />
+                )}
+              </For>
+            </List>
+          </Match>
+        </Switch>
       </SettingsSubsection>
 
       <LibraryDialog
-        library={library}
-        open={open}
-        onOpenChange={(open) => !open && close()}
+        library={store.library()}
+        open={store.open()}
+        onOpenChange={(open) => {
+          if (!open) store.close()
+        }}
       />
     </SettingsSections>
   )
 }
 
-function LibraryRow({
-  library,
-  onEdit,
-}: {
-  library: Library
-  onEdit: () => void
-}) {
+function LibraryRow(props: { library: Library; onEdit: () => void }) {
   const queryClient = useQueryClient()
-  const { user } = useRouteContext({ from: "/_authed" })
-  const mayScan = can(user, "library.scan")
-  const mayEdit = can(user, "library.update") && can(user, "folder.read")
-  const mayRemove = can(user, "library.delete")
-  const [confirming, setConfirming] = useState(false)
-  const Icon = libraryIcons[library.kind]
-  const providers = useQuery(orpc.metadata.providers.queryOptions())
-  const provider = providers.data?.find(
-    (p) => p.id === library.metadataProvider,
-  )
+  const context = useRouteContext({ from: "/_authed" })
+  const mayScan = () => can(context().user, "library.scan")
+  const mayEdit = () =>
+    can(context().user, "library.update") && can(context().user, "folder.read")
+  const mayRemove = () => can(context().user, "library.delete")
+  const [confirming, setConfirming] = createSignal(false)
+  const providers = useQuery(() => orpc.metadata.providers.queryOptions())
+  const provider = () =>
+    (providers.isSuccess ? providers.data : []).find(
+      (p) => p.id === props.library.metadataProvider,
+    )
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: orpc.libraries.key() })
 
-  const scan = useMutation({
-    mutationFn: () => client.libraries.scan({ id: library.id }),
-    onSuccess: refresh,
-    onError: (error) =>
-      toast.error(tr("libraries.scanFailed"), {
-        description: errorMessage(error),
-      }),
+  // The callbacks run outside tracking, so the options read the library.
+  const scan = useMutation(() => {
+    const id = props.library.id
+    return {
+      mutationFn: () => client.libraries.scan({ id }),
+      onSuccess: refresh,
+      onError: (error: Error) =>
+        toast.error(tr("libraries.scanFailed"), {
+          description: errorMessage(error),
+        }),
+    }
   })
-  const refetchMetadata = useMutation({
-    mutationFn: () => client.libraries.refreshMetadata({ id: library.id }),
-    onSuccess: async () => {
-      await refresh()
-      toast.success(tr("libraries.fetching"), { description: library.name })
-    },
-    onError: (error) =>
-      toast.error(tr("libraries.fetchFailed"), {
-        description: errorMessage(error),
-      }),
+  const refetchMetadata = useMutation(() => {
+    const { id, name } = props.library
+    return {
+      mutationFn: () => client.libraries.refreshMetadata({ id }),
+      onSuccess: async () => {
+        await refresh()
+        toast.success(tr("libraries.fetching"), { description: name })
+      },
+      onError: (error: Error) =>
+        toast.error(tr("libraries.fetchFailed"), {
+          description: errorMessage(error),
+        }),
+    }
   })
-  const remove = useMutation({
-    mutationFn: () => client.libraries.remove({ id: library.id }),
-    onSuccess: async () => {
-      await refresh()
-      toast.success(tr("libraries.removed", { name: library.name }), {
-        description: tr("libraries.removed.description"),
-      })
-    },
-    onError: (error) =>
-      toast.error(tr("libraries.removeFailed", { name: library.name }), {
-        description: errorMessage(error),
-      }),
+  const remove = useMutation(() => {
+    const { id, name } = props.library
+    return {
+      mutationFn: () => client.libraries.remove({ id }),
+      onSuccess: async () => {
+        await refresh()
+        toast.success(tr("libraries.removed", { name }), {
+          description: tr("libraries.removed.description"),
+        })
+      },
+      onError: (error: Error) =>
+        toast.error(tr("libraries.removeFailed", { name }), {
+          description: errorMessage(error),
+        }),
+    }
   })
 
   return (
-    <ListItem className="items-center gap-3 py-2.5 pr-2">
+    <ListItem class="items-center gap-3 py-2.5 pr-2">
       <RowIcon>
-        <Icon />
+        <Icon icon={libraryIcons[props.library.kind]} />
       </RowIcon>
-      <div className="min-w-0 flex-1">
-        <h4 className="truncate text-sm leading-5 font-medium">
-          {library.name}
+      <div class="min-w-0 flex-1">
+        <h4 class="truncate text-sm leading-5 font-medium">
+          {props.library.name}
         </h4>
-        {(library.scanning || library.refreshing) && (
-          <p className="text-muted-foreground text-13px flex items-center gap-1.5 leading-5">
-            <Spinner className="size-3.5" />
-            {library.scanning
+        <Show when={props.library.scanning || props.library.refreshing}>
+          <p class="text-muted-foreground text-13px flex items-center gap-1.5 leading-5">
+            <Spinner class="size-3.5" />
+            {props.library.scanning
               ? tr("libraries.scanning")
-              : provider
-                ? tr("libraries.fetchingFrom", { provider: provider.name })
+              : provider()
+                ? tr("libraries.fetchingFrom", {
+                    provider: provider()?.name ?? "",
+                  })
                 : tr("libraries.fetchingFromProvider")}
           </p>
-        )}
+        </Show>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-foreground data-popup-open:text-foreground"
-              aria-label={tr("libraries.actions", { name: library.name })}
-            />
-          }
+          class={rowMenuButton}
+          aria-label={tr("libraries.actions", { name: props.library.name })}
         >
-          <EllipsisIcon />
+          <Icon icon={Ellipsis} />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
-          {mayScan && (
+        <DropdownMenuContent align="end" sideOffset={6} class="min-w-48">
+          <Show when={mayScan()}>
             <DropdownMenuItem
-              disabled={library.scanning || scan.isPending}
-              onClick={() => scan.mutate()}
+              disabled={props.library.scanning || scan.isPending}
+              onSelect={() => scan.mutate()}
             >
-              <RefreshCwIcon />
+              <Icon icon={RefreshCw} />
               {tr("libraries.scanNow")}
             </DropdownMenuItem>
-          )}
-          {mayScan && provider && (
+          </Show>
+          <Show when={mayScan() && provider()}>
             <DropdownMenuItem
-              disabled={library.refreshing || refetchMetadata.isPending}
-              onClick={() => refetchMetadata.mutate()}
+              disabled={props.library.refreshing || refetchMetadata.isPending}
+              onSelect={() => refetchMetadata.mutate()}
             >
-              <CloudDownloadIcon />
+              <Icon icon={CloudDownload} />
               {tr("libraries.refreshMetadata")}
             </DropdownMenuItem>
-          )}
-          {mayEdit && (
-            <DropdownMenuItem onClick={onEdit}>
-              <PencilIcon />
+          </Show>
+          <Show when={mayEdit()}>
+            <DropdownMenuItem onSelect={() => props.onEdit()}>
+              <Icon icon={Pencil} />
               {tr("libraries.edit")}
             </DropdownMenuItem>
-          )}
-          {mayRemove && (mayScan || mayEdit) && <DropdownMenuSeparator />}
-          {mayRemove && (
+          </Show>
+          <Show when={mayRemove() && (mayScan() || mayEdit())}>
+            <DropdownMenuSeparator />
+          </Show>
+          <Show when={mayRemove()}>
             <DropdownMenuItem
               variant="destructive"
-              onClick={() => setConfirming(true)}
+              onSelect={() => setConfirming(true)}
             >
-              <Trash2Icon />
+              <Icon icon={Trash2} />
               {tr("libraries.remove")}
             </DropdownMenuItem>
-          )}
+          </Show>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+      <AlertDialog
+        open={confirming()}
+        onOpenChange={(open) => setConfirming(open)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {tr("libraries.remove.title", { name: library.name })}
+              {tr("libraries.remove.title", { name: props.library.name })}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {tr("libraries.remove.description")}

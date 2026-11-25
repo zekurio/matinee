@@ -1,31 +1,32 @@
-import type { AccessGroup, Library } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
+import type { AccessGroup, Library, Permission } from "@matinee/contracts"
+import { cn } from "@matinee/ui/lib/utils"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { useRouteContext } from "@tanstack/solid-router"
+import {
+  Ellipsis,
+  Globe,
+  LogIn,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Users,
+} from "lucide"
+import { For, Show } from "solid-js"
+
+import { tr } from "@/i18n"
+import { Button, buttonVariants } from "@/kit/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
-import { List, ListItem } from "@matinee/ui/components/list"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useRouteContext } from "@tanstack/react-router"
-import {
-  EllipsisIcon,
-  GlobeIcon,
-  LogInIcon,
-  PencilIcon,
-  PlusIcon,
-  RefreshCwIcon,
-  Trash2Icon,
-  UsersIcon,
-} from "lucide-react"
-import { useState } from "react"
-import { useStore } from "zustand"
-
-import { tr } from "@/i18n"
+} from "@/kit/dropdown-menu"
+import { Icon } from "@/kit/icon"
+import { List, ListItem } from "@/kit/list"
+import { Skeleton } from "@/kit/skeleton"
+import { toast } from "@/kit/toast"
 import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createSettingsAccessStore } from "@/stores/settings-access"
@@ -46,26 +47,19 @@ import { ConfirmDialog } from "./user-dialogs"
  */
 export function AccessPanel() {
   const queryClient = useQueryClient()
-  const { user } = useRouteContext({ from: "/_authed" })
-  const groups = useQuery(orpc.admin.groups.list.queryOptions())
-  const libraries = useQuery(orpc.libraries.list.queryOptions())
-  const [store] = useState(createSettingsAccessStore)
-  const {
-    editing,
-    editOpen,
-    deleting,
-    deleteOpen,
-    edit,
-    setEditOpen,
-    askDelete,
-    closeDelete,
-  } = useStore(store)
+  const context = useRouteContext({ from: "/_authed" })
+  const groups = useQuery(() => orpc.admin.groups.list.queryOptions())
+  const libraries = useQuery(() => orpc.libraries.list.queryOptions())
+  const librariesData = () => (libraries.isSuccess ? libraries.data : undefined)
+  const groupsData = () => (groups.isSuccess ? groups.data : undefined)
+  const store = createSettingsAccessStore()
+  const may = (permission: Permission) => can(context().user, permission)
 
-  const remove = useMutation({
+  const remove = useMutation(() => ({
     mutationFn: (group: AccessGroup) =>
       client.admin.groups.remove({ id: group.id }),
     onSuccess: async (_result, group) => {
-      closeDelete()
+      store.closeDelete()
       toast.success(tr("access.group.deleted", { name: group.name }))
       // Accounts and invites name their groups.
       await Promise.all([
@@ -74,8 +68,8 @@ export function AccessPanel() {
         queryClient.invalidateQueries({ queryKey: orpc.admin.invites.key() }),
       ])
     },
-    onError: (error) => toast.error(errorMessage(error)),
-  })
+    onError: (error: Error) => toast.error(errorMessage(error)),
+  }))
 
   return (
     <SettingsSections>
@@ -83,160 +77,176 @@ export function AccessPanel() {
         id="groups"
         title={tr("access.groups.title")}
         action={
-          can(user, "group.create") && (
-            <Button variant="outline" onClick={() => edit()}>
-              <PlusIcon />
+          <Show when={may("group.create")}>
+            <Button variant="outline" onClick={() => store.edit()}>
+              <Icon icon={Plus} />
               {tr("access.groups.create")}
             </Button>
-          )
+          </Show>
         }
       >
         <SettingNote>{tr("access.groups.intro")}</SettingNote>
-        {groups.isPending ? (
-          <Skeleton className="h-32 rounded-xl" />
-        ) : groups.isError ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
-            <p className="text-muted-foreground text-sm">
-              {tr("access.groups.loadFailed", {
-                error: errorMessage(groups.error),
-              })}
-            </p>
-            <Button variant="outline" onClick={() => void groups.refetch()}>
-              <RefreshCwIcon />
-              {tr("access.retry")}
-            </Button>
-          </div>
-        ) : (
-          <List>
-            {groups.data.map((group) => (
-              <GroupRow
-                key={group.id}
-                group={group}
-                libraries={libraries.data}
-                onEdit={can(user, "group.update") ? () => edit(group) : null}
-                onDelete={
-                  can(user, "group.delete")
-                    ? () => {
-                        remove.reset()
-                        askDelete(group)
-                      }
-                    : null
-                }
-              />
-            ))}
-          </List>
-        )}
-        {groups.data?.length === 1 && (
+        <Show
+          when={groupsData()}
+          fallback={
+            <Show
+              when={groups.isError}
+              fallback={<Skeleton class="h-32 rounded-xl" />}
+            >
+              <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
+                <p class="text-muted-foreground text-sm">
+                  {tr("access.groups.loadFailed", {
+                    error: errorMessage(groups.error),
+                  })}
+                </p>
+                <Button variant="outline" onClick={() => void groups.refetch()}>
+                  <Icon icon={RefreshCw} />
+                  {tr("access.retry")}
+                </Button>
+              </div>
+            </Show>
+          }
+        >
+          {(list) => (
+            <List>
+              <For each={list()} keyed={(group) => group.id}>
+                {(group) => (
+                  <GroupRow
+                    group={group()}
+                    libraries={librariesData()}
+                    onEdit={
+                      may("group.update") ? () => store.edit(group()) : null
+                    }
+                    onDelete={
+                      may("group.delete")
+                        ? () => {
+                            remove.reset()
+                            store.askDelete(group())
+                          }
+                        : null
+                    }
+                  />
+                )}
+              </For>
+            </List>
+          )}
+        </Show>
+        <Show when={groupsData()?.length === 1}>
           <SettingNote>{tr("access.groups.onlyEveryone")}</SettingNote>
-        )}
+        </Show>
       </SettingsSubsection>
 
       <GroupDialog
-        group={editing.group}
-        open={editOpen}
-        onOpenChange={setEditOpen}
+        group={store.editing().group}
+        open={store.editOpen()}
+        onOpenChange={store.setEditOpen}
       />
 
       <ConfirmDialog
-        open={deleteOpen}
+        open={store.deleteOpen()}
         title={
-          deleting
-            ? tr("access.group.deleteTitle", { name: deleting.name })
+          store.deleting()
+            ? tr("access.group.deleteTitle", {
+                name: store.deleting()?.name ?? "",
+              })
             : ""
         }
-        description={
-          deleting
-            ? deleting.members > 0
-              ? tr("access.group.deleteDescription", {
-                  count: deleting.members,
-                })
-              : tr("access.group.deleteDescriptionEmpty")
-            : ""
-        }
+        description={deleteDescription(store.deleting())}
         confirmLabel={tr("access.group.delete")}
         destructive
         pending={remove.isPending}
-        onConfirm={() => deleting && remove.mutate(deleting)}
-        onClose={closeDelete}
+        onConfirm={() => {
+          const group = store.deleting()
+          if (group) remove.mutate(group)
+        }}
+        onClose={store.closeDelete}
       />
     </SettingsSections>
   )
 }
 
-function GroupRow({
-  group,
-  libraries,
-  onEdit,
-  onDelete,
-}: {
+function deleteDescription(group: AccessGroup | null): string {
+  if (!group) return ""
+  return group.members > 0
+    ? tr("access.group.deleteDescription", { count: group.members })
+    : tr("access.group.deleteDescriptionEmpty")
+}
+
+function GroupRow(props: {
   group: AccessGroup
   libraries: readonly Library[] | undefined
   /** Null when the account may not; so is the menu without either. */
   onEdit: (() => void) | null
   onDelete: (() => void) | null
 }) {
-  const name = groupName(group)
-  const mayDelete = onDelete !== null && !group.everyone
+  const name = () => groupName(props.group)
+  const mayDelete = () => props.onDelete !== null && !props.group.everyone
   return (
-    <ListItem className="gap-3 py-2.5 pr-2">
-      <div className="self-start">
-        <RowIcon>{group.everyone ? <GlobeIcon /> : <UsersIcon />}</RowIcon>
+    <ListItem class="gap-3 py-2.5 pr-2">
+      <div class="self-start">
+        <RowIcon>
+          <Icon icon={props.group.everyone ? Globe : Users} />
+        </RowIcon>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 text-sm leading-5 font-medium">
-          <span className="truncate">{name}</span>
-          <span className="text-muted-foreground shrink-0 font-normal">
-            {group.everyone
+      <div class="min-w-0 flex-1">
+        <p class="flex items-center gap-1.5 text-sm leading-5 font-medium">
+          <span class="truncate">{name()}</span>
+          <span class="text-muted-foreground shrink-0 font-normal">
+            {props.group.everyone
               ? tr("access.group.everyAccount")
-              : tr("access.group.members", { count: group.members })}
+              : tr("access.group.members", { count: props.group.members })}
           </span>
         </p>
-        {group.providerGroup && (
-          <p className="text-muted-foreground text-13px mt-0.5 flex leading-5">
-            <Fact icon={<LogInIcon />}>
-              {tr("access.group.follows", { group: group.providerGroup })}
-            </Fact>
-          </p>
-        )}
+        <Show when={props.group.providerGroup}>
+          {(providerGroup) => (
+            <p class="text-muted-foreground text-13px mt-0.5 flex leading-5">
+              <Fact icon={<Icon icon={LogIn} />}>
+                {tr("access.group.follows", { group: providerGroup() })}
+              </Fact>
+            </p>
+          )}
+        </Show>
         <PolicyFacts
-          policy={group.policy}
-          libraries={libraries}
-          className="mt-0.5"
+          policy={props.group.policy}
+          libraries={props.libraries}
+          class="mt-0.5"
         />
       </div>
-      {(onEdit || mayDelete) && (
+      <Show when={props.onEdit || mayDelete()}>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-foreground data-popup-open:text-foreground shrink-0"
-                aria-label={tr("access.group.actions", { name })}
-              />
-            }
+            class={cn(
+              buttonVariants({ variant: "ghost", size: "icon" }),
+              "text-muted-foreground hover:text-foreground data-open:text-foreground shrink-0",
+            )}
+            aria-label={tr("access.group.actions", { name: name() })}
           >
-            <EllipsisIcon />
+            <Icon icon={Ellipsis} />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
-            {onEdit && (
-              <DropdownMenuItem onClick={onEdit}>
-                <PencilIcon />
-                {tr("access.group.edit")}
-              </DropdownMenuItem>
-            )}
-            {mayDelete && (
-              <>
-                {onEdit && <DropdownMenuSeparator />}
-                <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                  <Trash2Icon />
-                  {tr("access.group.delete")}
+          <DropdownMenuContent align="end" sideOffset={6} class="min-w-48">
+            <Show when={props.onEdit}>
+              {(onEdit) => (
+                <DropdownMenuItem onSelect={() => onEdit()()}>
+                  <Icon icon={Pencil} />
+                  {tr("access.group.edit")}
                 </DropdownMenuItem>
-              </>
-            )}
+              )}
+            </Show>
+            <Show when={mayDelete()}>
+              <Show when={props.onEdit}>
+                <DropdownMenuSeparator />
+              </Show>
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => props.onDelete?.()}
+              >
+                <Icon icon={Trash2} />
+                {tr("access.group.delete")}
+              </DropdownMenuItem>
+            </Show>
           </DropdownMenuContent>
         </DropdownMenu>
-      )}
+      </Show>
     </ListItem>
   )
 }

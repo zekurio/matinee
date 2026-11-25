@@ -1,55 +1,42 @@
 import { t } from "@matinee/contracts/schema"
-import { create } from "zustand"
-import { createJSONStorage, persist } from "zustand/middleware"
+import { createEffect, createRoot } from "solid-js"
 
 import { activateLocale, browserLocale, LOCALES } from "@/i18n"
+import { persisted } from "@/lib/persisted"
 
 const LANGUAGE_KEY = "matinee.language"
 
 /** Follow the browser's languages rather than one picked here. */
 export const AUTO_LANGUAGE = "auto"
 
-const LanguageChoice = t.object({ language: t.string().max(35) })
+// Kept as `{ state: { language }, version }`, the shape the inline script
+// that `vite.config.ts` adds to `index.html` reads to preload the language.
+const Stored = t.object({
+  state: t.object({ language: t.string().max(35) }),
+  version: t.number().optional(),
+})
 
-type LanguageState = {
-  /** A tag from `LOCALES`, or `auto`. */
-  language: string
-  setLanguage: (language: string) => void
-}
+const [stored, setStored] = persisted(LANGUAGE_KEY, Stored, {
+  state: { language: AUTO_LANGUAGE },
+  version: 0,
+})
 
 /**
- * The interface language this device picked. It stays with the device,
- * like the color scheme, so a shared screen can speak another language.
+ * The interface language this device picked: a tag from `LOCALES`, or
+ * `auto`. It stays with the device, like the color scheme, so a shared
+ * screen can speak another language.
  */
-export const useLanguageStore = create<LanguageState>()(
-  persist(
-    (set) => ({
-      language: AUTO_LANGUAGE,
-      setLanguage: (language) => {
-        set({ language })
-        void applyLanguage()
-      },
-    }),
-    {
-      name: LANGUAGE_KEY,
-      storage: createJSONStorage(() => window.localStorage),
-      partialize: ({ language }) => ({ language }),
-      merge: (stored, current) => {
-        const parsed = LanguageChoice.safeParse(stored)
-        return {
-          ...current,
-          language: parsed.success ? parsed.data.language : AUTO_LANGUAGE,
-        }
-      },
-    },
-  ),
-)
+export const language = () => stored().state.language
+
+export function setLanguage(next: string) {
+  setStored({ state: { language: next }, version: 0 })
+}
 
 /** The language the interface shows for this device's choice. */
 function chosenLocale(): string {
-  const { language } = useLanguageStore.getState()
+  const picked = language()
   // A language that has since gone away falls back to the browser's.
-  return LOCALES.includes(language) ? language : browserLocale()
+  return LOCALES.includes(picked) ? picked : browserLocale()
 }
 
 /** Switches the interface to this device's choice. */
@@ -57,10 +44,9 @@ export function applyLanguage(): Promise<void> {
   return activateLocale(chosenLocale())
 }
 
-// A change made in another tab applies here too.
-window.addEventListener("storage", (event) => {
-  if (event.key !== null && event.key !== LANGUAGE_KEY) return
-  void Promise.resolve(useLanguageStore.persist.rehydrate()).then(applyLanguage)
+// A choice made here or in another tab applies as it changes.
+createRoot(() => {
+  createEffect(language, () => void applyLanguage(), { defer: true })
 })
 
 // As does a change to the browser's own languages.

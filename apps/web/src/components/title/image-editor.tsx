@@ -8,17 +8,6 @@ import {
   type Title,
   TITLE_IMAGE_SLOTS,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
-import { toast } from "@matinee/ui/components/sonner"
-import { Spinner } from "@matinee/ui/components/spinner"
-import { Switch } from "@matinee/ui/components/switch"
 import { cn } from "@matinee/ui/lib/utils"
 import {
   partialMatchKey,
@@ -26,13 +15,33 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
-} from "@tanstack/react-query"
-import { CheckIcon, ImageUpIcon, RotateCcwIcon, Trash2Icon } from "lucide-react"
-import { useId, useRef, useState } from "react"
+} from "@tanstack/solid-query"
+import { Check, ImageUp, RotateCcw, Trash2 } from "lucide"
+import {
+  createMemo,
+  createSignal,
+  createUniqueId,
+  For,
+  Match,
+  Show,
+  Switch,
+} from "solid-js"
 
 import { FormAlert } from "@/components/form-alert"
 import { Picture, tone } from "@/components/picture"
 import { tr, translateKnown } from "@/i18n"
+import { Button } from "@/kit/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/kit/dialog"
+import { Icon } from "@/kit/icon"
+import { Spinner } from "@/kit/spinner"
+import { Switch as Toggle } from "@/kit/switch"
+import { toast } from "@/kit/toast"
 import { languageName } from "@/lib/languages"
 import { art, present } from "@/lib/media"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -48,19 +57,19 @@ export type ImageOwner =
 /** What the editor needs of the movie or show. */
 type Owner = Pick<Title, "id" | "libraryId" | "providerId">
 
-const ASPECTS = {
-  poster: "aspect-[2/3]",
-  backdrop: "aspect-video",
-  logo: "aspect-video",
-  still: "aspect-video",
-} satisfies Record<ImageSlot, string>
+const ASPECTS = new Map<ImageSlot, string>([
+  ["poster", "aspect-[2/3]"],
+  ["backdrop", "aspect-video"],
+  ["logo", "aspect-video"],
+  ["still", "aspect-video"],
+])
 
-const GRIDS = {
-  poster: "grid-cols-3 sm:grid-cols-5",
-  backdrop: "grid-cols-2 sm:grid-cols-3",
-  logo: "grid-cols-2 sm:grid-cols-3",
-  still: "grid-cols-2 sm:grid-cols-3",
-} satisfies Record<ImageSlot, string>
+const GRIDS = new Map<ImageSlot, string>([
+  ["poster", "grid-cols-3 sm:grid-cols-5"],
+  ["backdrop", "grid-cols-2 sm:grid-cols-3"],
+  ["logo", "grid-cols-2 sm:grid-cols-3"],
+  ["still", "grid-cols-2 sm:grid-cols-3"],
+])
 
 function slotsOf(owner: ImageOwner): readonly ImageSlot[] {
   if (owner.kind === "title") return TITLE_IMAGE_SLOTS
@@ -107,13 +116,7 @@ function refetchShown(queryClient: QueryClient) {
  * provider has, or upload them, as Jellyfin's image editor does. What an
  * admin picks stays through refreshes.
  */
-export function ImageEditorDialog({
-  title,
-  owner,
-  name,
-  open,
-  onOpenChange,
-}: {
+export function ImageEditorDialog(props: {
   /** The movie or show, or the show the season or episode is in. */
   title: Owner
   owner: ImageOwner
@@ -123,86 +126,107 @@ export function ImageEditorDialog({
   onOpenChange: (open: boolean) => void
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(44rem,calc(100dvh-2rem))] flex-col gap-5 p-6 sm:max-w-3xl [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:right-4">
-        <ImageEditor title={title} owner={owner} name={name} />
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent class="flex h-[min(44rem,calc(100dvh-2rem))] flex-col gap-5 p-6 sm:max-w-3xl [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:right-4">
+        <ImageEditor
+          title={props.title}
+          owner={props.owner}
+          name={props.name}
+        />
       </DialogContent>
     </Dialog>
   )
 }
 
-function ImageEditor({
-  title,
-  owner,
-  name,
-}: {
-  title: Owner
-  owner: ImageOwner
-  name: string
-}) {
-  const slots = slotsOf(owner)
-  const [slot, setSlot] = useState<ImageSlot>(slots[0] ?? "poster")
-  const target = targetOf(title, owner)
-  const images = useQuery(orpc.titles.images.queryOptions({ input: target }))
-  const provider = useLibraryProvider(title.libraryId)
+function ImageEditor(props: { title: Owner; owner: ImageOwner; name: string }) {
+  const slots = createMemo(() => slotsOf(props.owner))
+  const [picked, setPicked] = createSignal<ImageSlot>()
+  // The first slot until another is picked, and again if the owner changes.
+  const slot = () => {
+    const chosen = picked()
+    return chosen && slots().includes(chosen)
+      ? chosen
+      : (slots()[0] ?? "poster")
+  }
+  const target = createMemo(() => targetOf(props.title, props.owner))
+  const images = useQuery(() =>
+    orpc.titles.images.queryOptions({ input: target() }),
+  )
+  const imageOf = (each: ImageSlot) =>
+    images.isSuccess
+      ? images.data.find((image) => image.slot === each)
+      : undefined
+  const provider = useLibraryProvider(() => props.title.libraryId)
   // One without its API key has nothing to list either.
-  const providerName = provider?.configured ? provider.name : null
+  const providerName = () => {
+    const found = provider()
+    return found?.configured ? found.name : null
+  }
+
+  const description = () => {
+    const name = providerName()
+    return name
+      ? tr("title.images.description", { name: props.name, provider: name })
+      : tr("title.images.descriptionLocal", { name: props.name })
+  }
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="text-lg leading-7 font-semibold">
+        <DialogTitle class="text-lg leading-7 font-semibold">
           {tr("title.images.title")}
         </DialogTitle>
-        <DialogDescription>
-          {providerName
-            ? tr("title.images.description", { name, provider: providerName })
-            : tr("title.images.descriptionLocal", { name })}
-        </DialogDescription>
+        <DialogDescription>{description()}</DialogDescription>
       </DialogHeader>
 
-      {images.isError ? (
-        <FormAlert
-          message={tr("title.images.loadError", {
-            error: errorMessage(images.error),
-          })}
-        />
-      ) : provider === undefined ? (
-        <div className="grid flex-1 place-items-center">
-          <Spinner className="size-5" />
-        </div>
-      ) : (
-        <>
+      <Switch>
+        <Match when={images.isError}>
+          <FormAlert
+            message={tr("title.images.loadError", {
+              error: errorMessage(images.error),
+            })}
+          />
+        </Match>
+        <Match when={provider() === undefined}>
+          <div class="grid flex-1 place-items-center">
+            <Spinner class="size-5" />
+          </div>
+        </Match>
+        <Match when={provider() !== undefined}>
           {/* Each slot with the image it has, which also picks the slot to
               change. Phones scroll the row sideways. */}
           <div
             role="group"
             aria-label={tr("title.images.slots")}
-            className="-mx-6 -my-1 flex [scrollbar-width:none] gap-2 overflow-x-auto px-6 py-1 [&::-webkit-scrollbar]:hidden"
+            class="-mx-6 -my-1 flex [scrollbar-width:none] gap-2 overflow-x-auto px-6 py-1 [&::-webkit-scrollbar]:hidden"
           >
-            {slots.map((each) => (
-              <SlotCard
-                key={each}
-                slot={each}
-                current={images.data?.find((image) => image.slot === each)}
-                toneKey={title.id}
-                providerName={providerName}
-                selected={each === slot}
-                onSelect={slots.length > 1 ? () => setSlot(each) : null}
-              />
-            ))}
+            <For each={slots()}>
+              {(each) => (
+                <SlotCard
+                  slot={each}
+                  current={imageOf(each)}
+                  toneKey={props.title.id}
+                  providerName={providerName()}
+                  selected={each === slot()}
+                  onSelect={slots().length > 1 ? () => setPicked(each) : null}
+                />
+              )}
+            </For>
           </div>
           {/* A new slot starts over, with its own language switch. */}
-          <SlotPanel
-            key={slot}
-            title={title}
-            target={target}
-            slot={slot}
-            current={images.data?.find((image) => image.slot === slot)}
-            providerName={providerName}
-          />
-        </>
-      )}
+          <Show when={slot()} keyed>
+            {(current) => (
+              <SlotPanel
+                title={props.title}
+                target={target()}
+                slot={current}
+                current={imageOf(current)}
+                providerName={providerName()}
+              />
+            )}
+          </Show>
+        </Match>
+      </Switch>
     </>
   )
 }
@@ -211,14 +235,7 @@ function ImageEditor({
  * A slot's name and the image it has, all at one height whatever the
  * image's shape. With several slots, it's the button that picks one.
  */
-function SlotCard({
-  slot,
-  current,
-  toneKey,
-  providerName,
-  selected,
-  onSelect,
-}: {
+function SlotCard(props: {
   slot: ImageSlot
   /** Undefined while loading. */
   current: ItemImage | undefined
@@ -227,47 +244,53 @@ function SlotCard({
   selected: boolean
   onSelect: (() => void) | null
 }) {
-  const body = (
+  const card = "flex shrink-0 items-center gap-3 rounded-lg border p-1.5 pr-4"
+  const body = () => (
     <>
       <span
-        className={cn(
+        class={cn(
           "relative h-14 shrink-0 overflow-hidden rounded-md border",
-          ASPECTS[slot],
-          tone(toneKey),
+          ASPECTS.get(props.slot),
+          tone(props.toneKey),
         )}
       >
         <Picture
-          sources={present(art(current?.image, "thumb"))}
-          className={slot === "logo" ? "object-contain p-1" : undefined}
+          sources={present(art(props.current?.image, "thumb"))}
+          class={props.slot === "logo" ? "object-contain p-1" : undefined}
         />
       </span>
-      <span className="min-w-0 text-left">
-        <span className="block text-sm font-medium">{slotName(slot)}</span>
-        <span className="text-muted-foreground block truncate text-xs">
-          {current ? stateText(slot, current, providerName) : "\u00a0"}
+      <span class="min-w-0 text-left">
+        <span class="block text-sm font-medium">{slotName(props.slot)}</span>
+        <span class="text-muted-foreground block truncate text-xs">
+          {props.current
+            ? stateText(props.slot, props.current, props.providerName)
+            : " "}
         </span>
       </span>
     </>
   )
-  const card = "flex shrink-0 items-center gap-3 rounded-lg border p-1.5 pr-4"
-  if (!onSelect) {
-    return <div className={cn(card, "border-foreground/10")}>{body}</div>
-  }
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onSelect}
-      className={cn(
-        card,
-        "focus-visible:ring-ring outline-none focus-visible:ring-2",
-        selected
-          ? "border-primary bg-primary/10"
-          : "border-foreground/10 hover:border-foreground/25 hover:bg-foreground/[0.04]",
-      )}
+    <Show
+      when={props.onSelect}
+      fallback={<div class={cn(card, "border-foreground/10")}>{body()}</div>}
     >
-      {body}
-    </button>
+      {(select) => (
+        <button
+          type="button"
+          aria-pressed={props.selected ? "true" : "false"}
+          onClick={() => select()()}
+          class={cn(
+            card,
+            "focus-visible:ring-ring outline-none focus-visible:ring-2",
+            props.selected
+              ? "border-primary bg-primary/10"
+              : "border-foreground/10 hover:border-foreground/25 hover:bg-foreground/[0.04]",
+          )}
+        >
+          {body()}
+        </button>
+      )}
+    </Show>
   )
 }
 
@@ -277,13 +300,7 @@ type Change =
   | { kind: "reset" }
 
 /** One slot: the image it has, what to do with it, and the choices. */
-function SlotPanel({
-  title,
-  target,
-  slot,
-  current,
-  providerName,
-}: {
+function SlotPanel(props: {
   title: Owner
   target: ImageTarget
   slot: ImageSlot
@@ -292,41 +309,46 @@ function SlotPanel({
   providerName: string | null
 }) {
   const queryClient = useQueryClient()
-  const fileInput = useRef<HTMLInputElement>(null)
-  const switchId = useId()
-  const [allLanguages, setAllLanguages] = useState(false)
+  let fileInput: HTMLInputElement | undefined
+  const switchId = createUniqueId()
+  const [allLanguages, setAllLanguages] = createSignal(false)
   // A provider lists images only for an entry the title matched.
-  const provider = title.providerId ? providerName : null
-  const remote = useQuery({
+  const provider = () => (props.title.providerId ? props.providerName : null)
+  const remote = useQuery(() => ({
     ...orpc.titles.remoteImages.queryOptions({
-      input: { ...target, slot, allLanguages },
+      input: {
+        ...props.target,
+        slot: props.slot,
+        allLanguages: allLanguages(),
+      },
     }),
-    enabled: provider !== null,
+    enabled: provider() !== null,
     staleTime: 5 * 60_000,
     retry: false,
-  })
+  }))
+  const choices = () => (remote.isSuccess ? remote.data : [])
 
-  const change = useMutation({
+  const change = useMutation(() => ({
     mutationFn: (action: Change) => {
-      const input = { ...target, slot }
+      const input = { ...props.target, slot: props.slot }
       if (action.kind === "upload") {
         return client.titles.uploadImage({ ...input, file: action.file })
       }
       if (action.kind === "reset") return client.titles.resetImage(input)
       return client.titles.setImage({ ...input, imageId: action.imageId })
     },
-    onSuccess: async (images) => {
+    onSuccess: async (images: ItemImage[]) => {
       queryClient.setQueryData(
-        orpc.titles.images.queryKey({ input: target }),
+        orpc.titles.images.queryKey({ input: props.target }),
         images,
       )
       await refetchShown(queryClient)
     },
-    onError: (error) =>
+    onError: (error: Error) =>
       toast.error(tr("title.images.error"), {
         description: errorMessage(error),
       }),
-  })
+  }))
 
   const upload = (file: File) => {
     const checked = ImageUpload.safeParse(file)
@@ -340,25 +362,37 @@ function SlotPanel({
   }
 
   // What's on its way to the server, to show a spinner on.
-  const busy = change.isPending ? change.variables : undefined
-  const removing = busy?.kind === "set" && busy.imageId === null
+  const busy = () => (change.isPending ? change.variables : undefined)
+  const removing = () => {
+    const now = busy()
+    return now?.kind === "set" && now.imageId === null
+  }
+  const pendingId = () => {
+    const now = busy()
+    return now?.kind === "set" ? now.imageId : undefined
+  }
 
   return (
-    <div className="-mx-6 flex min-h-0 flex-1 flex-col border-t">
+    <div class="-mx-6 flex min-h-0 flex-1 flex-col border-t">
       {/* One line for every slot, so what's below doesn't move. Phones
           show the buttons' icons only. */}
-      <div className="flex h-14 shrink-0 items-center gap-2 px-6">
+      <div class="flex h-14 shrink-0 items-center gap-2 px-6">
         <Button
           variant="secondary"
           size="sm"
           aria-label={tr("title.images.upload")}
           disabled={change.isPending}
-          onClick={() => fileInput.current?.click()}
+          onClick={() => fileInput?.click()}
         >
-          {busy?.kind === "upload" ? <Spinner /> : <ImageUpIcon />}
-          <span className="max-sm:hidden">{tr("title.images.upload")}</span>
+          <Show
+            when={busy()?.kind === "upload"}
+            fallback={<Icon icon={ImageUp} />}
+          >
+            <Spinner />
+          </Show>
+          <span class="max-sm:hidden">{tr("title.images.upload")}</span>
         </Button>
-        {current?.image && (
+        <Show when={props.current?.image}>
           <Button
             variant="ghost"
             size="sm"
@@ -366,96 +400,117 @@ function SlotPanel({
             disabled={change.isPending}
             onClick={() => change.mutate({ kind: "set", imageId: null })}
           >
-            {removing ? <Spinner /> : <Trash2Icon />}
-            <span className="max-sm:hidden">{tr("title.images.remove")}</span>
+            <Show when={removing()} fallback={<Icon icon={Trash2} />}>
+              <Spinner />
+            </Show>
+            <span class="max-sm:hidden">{tr("title.images.remove")}</span>
           </Button>
-        )}
-        {current?.chosen && provider && (
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={tr("title.images.reset", { provider })}
-            disabled={change.isPending}
-            onClick={() => change.mutate({ kind: "reset" })}
-          >
-            {busy?.kind === "reset" ? <Spinner /> : <RotateCcwIcon />}
-            <span className="max-sm:hidden">
-              {tr("title.images.reset", { provider })}
-            </span>
-          </Button>
-        )}
-        {provider && (
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+        </Show>
+        <Show when={props.current?.chosen && provider()}>
+          {(name) => (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={tr("title.images.reset", { provider: name() })}
+              disabled={change.isPending}
+              onClick={() => change.mutate({ kind: "reset" })}
+            >
+              <Show
+                when={busy()?.kind === "reset"}
+                fallback={<Icon icon={RotateCcw} />}
+              >
+                <Spinner />
+              </Show>
+              <span class="max-sm:hidden">
+                {tr("title.images.reset", { provider: name() })}
+              </span>
+            </Button>
+          )}
+        </Show>
+        <Show when={provider()}>
+          <div class="ml-auto flex shrink-0 items-center gap-2">
             <label
               id={`${switchId}-label`}
-              htmlFor={switchId}
-              className="text-muted-foreground text-sm whitespace-nowrap"
+              for={switchId}
+              class="text-muted-foreground text-sm whitespace-nowrap"
             >
               {tr("title.images.allLanguages")}
             </label>
-            <Switch
+            <Toggle
               id={switchId}
               aria-labelledby={`${switchId}-label`}
               size="sm"
-              checked={allLanguages}
+              checked={allLanguages()}
               onCheckedChange={(checked) => setAllLanguages(checked)}
             />
           </div>
-        )}
+        </Show>
         <input
-          ref={fileInput}
+          ref={(element) => (fileInput = element)}
           type="file"
           accept={IMAGE_TYPES.join(",")}
           hidden
           onChange={(event) => {
-            const file = event.target.files?.[0]
-            event.target.value = ""
+            const file = event.currentTarget.files?.[0]
+            event.currentTarget.value = ""
             if (file) upload(file)
           }}
         />
       </div>
 
-      {provider ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-6">
-          {remote.isPending ? (
-            <div className="grid flex-1 place-items-center">
-              <Spinner className="size-5" />
-            </div>
-          ) : remote.isError ? (
-            <FormAlert message={errorMessage(remote.error)} />
-          ) : remote.data.length === 0 ? (
-            <p className="text-muted-foreground grid flex-1 place-items-center text-center text-sm">
-              {allLanguages
-                ? tr("title.images.empty", { provider })
-                : tr("title.images.emptyLanguage", { provider })}
-            </p>
-          ) : (
-            <ul className={cn("grid gap-3 pt-1", GRIDS[slot])}>
-              {remote.data.map((image) => (
-                <li key={image.id}>
-                  <Choice
-                    image={image}
-                    slot={slot}
-                    toneKey={title.id}
-                    inUse={image.id === current?.image?.id}
-                    pending={busy?.kind === "set" && busy.imageId === image.id}
-                    disabled={change.isPending}
-                    onPick={() =>
-                      change.mutate({ kind: "set", imageId: image.id })
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : (
-        <p className="text-muted-foreground grid flex-1 place-items-center px-6 pb-6 text-center text-sm">
-          {providerName
-            ? tr("title.images.unmatched", { provider: providerName })
-            : tr("title.images.noProvider")}
-        </p>
-      )}
+      <Show
+        when={provider()}
+        fallback={
+          <p class="text-muted-foreground grid flex-1 place-items-center px-6 pb-6 text-center text-sm">
+            {props.providerName
+              ? tr("title.images.unmatched", { provider: props.providerName })
+              : tr("title.images.noProvider")}
+          </p>
+        }
+      >
+        {(name) => (
+          <div class="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-6">
+            <Switch>
+              <Match when={remote.isPending}>
+                <div class="grid flex-1 place-items-center">
+                  <Spinner class="size-5" />
+                </div>
+              </Match>
+              <Match when={remote.isError}>
+                <FormAlert message={errorMessage(remote.error)} />
+              </Match>
+              <Match when={choices().length === 0}>
+                <p class="text-muted-foreground grid flex-1 place-items-center text-center text-sm">
+                  {allLanguages()
+                    ? tr("title.images.empty", { provider: name() })
+                    : tr("title.images.emptyLanguage", { provider: name() })}
+                </p>
+              </Match>
+              <Match when={choices().length > 0}>
+                <ul class={cn("grid gap-3 pt-1", GRIDS.get(props.slot))}>
+                  <For each={choices()} keyed={(image) => image.id}>
+                    {(image) => (
+                      <li>
+                        <Choice
+                          image={image()}
+                          slot={props.slot}
+                          toneKey={props.title.id}
+                          inUse={image().id === props.current?.image?.id}
+                          pending={pendingId() === image().id}
+                          disabled={change.isPending}
+                          onPick={() =>
+                            change.mutate({ kind: "set", imageId: image().id })
+                          }
+                        />
+                      </li>
+                    )}
+                  </For>
+                </ul>
+              </Match>
+            </Switch>
+          </div>
+        )}
+      </Show>
     </div>
   )
 }
@@ -498,15 +553,7 @@ function caption(image: RemoteImage, slot: ImageSlot): string {
   return [size, language].filter(Boolean).join(" · ")
 }
 
-function Choice({
-  image,
-  slot,
-  toneKey,
-  inUse,
-  pending,
-  disabled,
-  onPick,
-}: {
+function Choice(props: {
   image: RemoteImage
   slot: ImageSlot
   toneKey: string
@@ -515,47 +562,47 @@ function Choice({
   disabled: boolean
   onPick: () => void
 }) {
-  const text = caption(image, slot)
+  const text = () => caption(props.image, props.slot)
   return (
     <button
       type="button"
-      aria-pressed={inUse}
-      disabled={disabled}
-      onClick={onPick}
-      className="group focus-visible:ring-ring focus-visible:ring-offset-background flex w-full flex-col gap-1.5 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-default"
+      aria-pressed={props.inUse ? "true" : "false"}
+      disabled={props.disabled}
+      onClick={() => props.onPick()}
+      class="group focus-visible:ring-ring focus-visible:ring-offset-background flex w-full flex-col gap-1.5 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-default"
     >
       <span
-        className={cn(
+        class={cn(
           "relative w-full overflow-hidden rounded-md border transition-colors",
-          ASPECTS[slot],
-          tone(toneKey),
-          inUse
+          ASPECTS.get(props.slot),
+          tone(props.toneKey),
+          props.inUse
             ? "border-primary ring-primary ring-1"
             : "group-hover:border-foreground/30",
         )}
       >
         <Picture
-          sources={present(art(image.preview))}
-          className={slot === "logo" ? "object-contain p-2" : undefined}
+          sources={present(art(props.image.preview))}
+          class={props.slot === "logo" ? "object-contain p-2" : undefined}
         />
-        {inUse && (
-          <span className="bg-primary text-primary-foreground absolute top-1.5 right-1.5 grid size-5 place-items-center rounded-full">
-            <CheckIcon className="size-3.5" />
+        <Show when={props.inUse}>
+          <span class="bg-primary text-primary-foreground absolute top-1.5 right-1.5 grid size-5 place-items-center rounded-full">
+            <Icon icon={Check} class="size-3.5" />
           </span>
-        )}
-        {pending && (
-          <span className="absolute inset-0 grid place-items-center bg-black/50 text-white">
+        </Show>
+        <Show when={props.pending}>
+          <span class="absolute inset-0 grid place-items-center bg-black/50 text-white">
             <Spinner />
           </span>
-        )}
+        </Show>
       </span>
-      {text && (
-        <span className="text-muted-foreground truncate text-xs tabular-nums">
-          {text}
+      <Show when={text()}>
+        <span class="text-muted-foreground truncate text-xs tabular-nums">
+          {text()}
         </span>
-      )}
-      <span className="sr-only">
-        {inUse ? tr("title.images.inUse") : tr("title.images.use")}
+      </Show>
+      <span class="sr-only">
+        {props.inUse ? tr("title.images.inUse") : tr("title.images.use")}
       </span>
     </button>
   )

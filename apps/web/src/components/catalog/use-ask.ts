@@ -1,8 +1,8 @@
 import type { CatalogRef } from "@matinee/contracts"
-import { toast } from "@matinee/ui/components/sonner"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/solid-query"
 
 import { tr } from "@/i18n"
+import { toast } from "@/kit/toast"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { applyAvailability } from "./catalog-data"
@@ -25,7 +25,7 @@ function refresh(queryClient: ReturnType<typeof useQueryClient>) {
  */
 export function useCancel() {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutation(() => ({
     mutationFn: ({ id }: { id: string; name: string }) =>
       client.requests.cancel({ id }),
     onSuccess: () => refresh(queryClient),
@@ -33,7 +33,7 @@ export function useCancel() {
       toast.error(tr("ask.toast.cancelFailed", { name }), {
         description: errorMessage(cause),
       }),
-  })
+  }))
 }
 
 /**
@@ -44,7 +44,7 @@ export function useCancel() {
 export function useAsk() {
   const queryClient = useQueryClient()
   const cancel = useCancel()
-  return useMutation({
+  return useMutation(() => ({
     mutationFn: (input: {
       ref: CatalogRef
       name: string
@@ -82,5 +82,5 @@ export function useAsk() {
       toast.error(tr("ask.toast.failed", { name }), {
         description: errorMessage(cause),
       }),
-  })
+  }))
 }

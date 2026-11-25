@@ -1,35 +1,46 @@
-import { Slider } from "@base-ui/react/slider"
-import { Spinner } from "@matinee/ui/components/spinner"
 import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
 import {
-  FastForwardIcon,
-  MaximizeIcon,
-  MinimizeIcon,
-  PauseIcon,
-  PlayIcon,
-  RewindIcon,
-  SkipBackIcon,
-  SkipForwardIcon,
-  Volume1Icon,
-  Volume2Icon,
-  VolumeXIcon,
-} from "lucide-react"
+  Slider,
+  SliderControl,
+  SliderThumb,
+  SliderTrack,
+} from "@ui-sdk/solid/slider"
 import {
-  type PointerEvent,
-  type ReactNode,
-  type Ref,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react"
-import { useShallow } from "zustand/shallow"
+  FastForward,
+  Maximize,
+  Minimize,
+  Pause,
+  Play,
+  Rewind,
+  RotateCcw,
+  RotateCw,
+  SkipBack,
+  SkipForward,
+  Volume1,
+  Volume2,
+  VolumeX,
+} from "lucide"
+import {
+  type Accessor,
+  createEffect,
+  createMemo,
+  createSignal,
+  onSettled,
+  Show,
+} from "solid-js"
 
+import {
+  formatClock,
+  formatPercent,
+  formatTime,
+} from "@/components/player-format"
 import { tr } from "@/i18n"
-import { selectBusy, usePlayerStore } from "@/stores/player"
+import { Icon } from "@/kit/icon"
+import { Spinner } from "@/kit/spinner"
+import { viewport } from "@/lib/viewport"
+import { selectBusy, usePlayerStore, usePlayerStoreApi } from "@/stores/player"
 
-import { formatClock, formatPercent, formatTime } from "./player-format"
 import { type TrickplayTiles, TrickplayThumb } from "./trickplay-thumb"
 
 export const VOLUME_STEP = 0.05
@@ -44,38 +55,32 @@ const overlayTextClass =
 export const controlButtonClass =
   "grid size-10 shrink-0 place-items-center rounded-full text-white/85 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white [@media(pointer:coarse)]:size-11 [&_svg]:size-5"
 
-export function ControlButton({
-  label,
-  onClick,
-  disabled = false,
-  children,
-  className,
-}: {
+export function ControlButton(props: {
   label: string
   onClick: () => void
   disabled?: boolean
-  children: ReactNode
-  className?: string
+  children: JSX.Element
+  class?: string
 }) {
   return (
     <button
       type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
+      aria-label={props.label}
+      title={props.label}
+      onClick={() => props.onClick()}
+      disabled={props.disabled ?? false}
+      class={cn(
         controlButtonClass,
         "disabled:pointer-events-none disabled:opacity-40",
-        className,
+        props.class,
       )}
     >
-      {children}
+      {props.children}
     </button>
   )
 }
 
-/** The thumb's width, `size-3.5`. Edge alignment keeps it inside the track. */
+/** The thumb's width, `size-3.5`. The rail is inset by half of it, so the thumb stays on the track. */
 const THUMB_PX = 14
 
 /** Where `value` sits between `from` and `to`, from 0 to 1. */
@@ -117,15 +122,7 @@ const CATCH_UP_RATE = 0.35
  * catches up with a quick one, and a finger past either end of the track
  * takes it to that end.
  */
-function touchDragValue({
-  from,
-  dx,
-  speed,
-  x,
-  left,
-  width,
-  max,
-}: {
+function touchDragValue(drag: {
   from: number
   dx: number
   speed: number
@@ -134,6 +131,7 @@ function touchDragValue({
   width: number
   max: number
 }): number {
+  const { from, dx, speed, x, left, width, max } = drag
   const travel = Math.max(1, width - THUMB_PX)
   const perPx = max / travel
   const finest = Math.min(1, Math.max(FINEST_GAIN, FINEST_PER_PX / perPx))
@@ -153,25 +151,11 @@ function touchDragValue({
 }
 
 const ARROW_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"])
+// A step the slider took from the keyboard or a screen reader.
+const KEY_REASONS = new Set(["step-key", "accessibility-adjust"])
 
 /** The track for seeking and volume: the accent on translucent white. */
-function MediaSlider({
-  ref,
-  label,
-  value,
-  max,
-  step,
-  buffered,
-  valueText,
-  renderPreview,
-  previewAtThumb = false,
-  preciseTouch = false,
-  playerKeys = false,
-  onChange,
-  onCommit,
-  className,
-}: {
-  ref?: Ref<HTMLDivElement>
+function MediaSlider(props: {
   label: string
   value: number
   max: number
@@ -183,7 +167,7 @@ function MediaSlider({
    * `--preview-inset` set to half its width, it stays inside the nearest
    * `data-preview-bounds` parent, or the track without one.
    */
-  renderPreview?: (value: number) => ReactNode
+  renderPreview?: (value: Accessor<number>) => JSX.Element
   /**
    * Show the preview over the thumb with its value while it's dragged,
    * rather than at the pointer. Touch has no pointer to hover with.
@@ -201,20 +185,110 @@ function MediaSlider({
   playerKeys?: boolean
   onChange: (value: number) => void
   onCommit?: (value: number) => void
-  className?: string
+  class?: string
 }) {
-  const safeMax = max > 0 ? max : 1
-  const shown = Math.min(value, safeMax)
-  const [hover, setHover] = useState<{ x: number; value: number } | null>(null)
-  const control = useRef<HTMLDivElement>(null)
-  const drag = useRef<TouchDrag | null>(null)
+  const safeMax = () => (props.max > 0 ? props.max : 1)
+  const shown = () => Math.min(props.value, safeMax())
+  const [hover, setHover] = createSignal<{ x: number; value: number } | null>(
+    null,
+  )
+  let control: HTMLDivElement | undefined
+  let drag: TouchDrag | null = null
+
+  const moveDrag = (event: PointerEvent, box: DOMRect) => {
+    const current = drag
+    if (!current || current.done || current.pointer !== event.pointerId) return
+    const dx = event.clientX - current.x
+    if (dx === 0) return
+    const sample = Math.abs(dx) / Math.max(1, event.timeStamp - current.at)
+    current.speed = current.speed * 0.6 + sample * 0.4
+    current.x = event.clientX
+    current.at = event.timeStamp
+    current.value = touchDragValue({
+      from: current.value ?? shown(),
+      dx,
+      speed: current.speed,
+      x: event.clientX,
+      left: box.left,
+      width: box.width,
+      max: safeMax(),
+    })
+    props.onChange(current.value)
+  }
+  // Idempotent: release, cancel, and the slider's own commit all end it.
+  const endDrag = () => {
+    const current = drag
+    if (!current || current.done) return
+    current.done = true
+    if (current.value !== null) props.onCommit?.(current.value)
+  }
+
+  onSettled(() => {
+    const el = control
+    if (!el) return
+    // In the capture phase, so a touch drag starts before the slider takes
+    // the press.
+    const start = (event: PointerEvent) => {
+      drag =
+        props.preciseTouch && event.pointerType !== "mouse"
+          ? {
+              pointer: event.pointerId,
+              x: event.clientX,
+              at: event.timeStamp,
+              speed: 0,
+              value: null,
+              done: false,
+            }
+          : null
+    }
+    const track = (event: PointerEvent) => {
+      const box = el.getBoundingClientRect()
+      moveDrag(event, box)
+      if (!props.renderPreview || event.pointerType === "touch") return
+      const x = Math.max(0, Math.min(box.width, event.clientX - box.left))
+      // The value a click here seeks to: the thumb's centre runs half a
+      // thumb in from each end.
+      const along = (x - THUMB_PX / 2) / Math.max(1, box.width - THUMB_PX)
+      setHover({ x, value: Math.max(0, Math.min(1, along)) * safeMax() })
+    }
+    const leave = () => setHover(null)
+    // The slider skips nothing it's given, so the seek bar hands the
+    // arrows to the player's listener on the window instead.
+    const keys = (event: KeyboardEvent) => {
+      if (!props.playerKeys || !ARROW_KEYS.has(event.key)) return
+      event.preventDefault()
+      event.stopPropagation()
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: event.key,
+          shiftKey: event.shiftKey,
+        }),
+      )
+    }
+    el.addEventListener("pointerdown", start, true)
+    el.addEventListener("pointermove", track)
+    el.addEventListener("pointerup", endDrag)
+    el.addEventListener("pointercancel", endDrag)
+    el.addEventListener("lostpointercapture", endDrag)
+    el.addEventListener("pointerleave", leave)
+    el.addEventListener("keydown", keys, true)
+    return () => {
+      el.removeEventListener("pointerdown", start, true)
+      el.removeEventListener("pointermove", track)
+      el.removeEventListener("pointerup", endDrag)
+      el.removeEventListener("pointercancel", endDrag)
+      el.removeEventListener("lostpointercapture", endDrag)
+      el.removeEventListener("pointerleave", leave)
+      el.removeEventListener("keydown", keys, true)
+    }
+  })
 
   // The preview may hang past the track's ends, over the times beside it,
   // as far as the nearest `data-preview-bounds` parent.
-  useEffect(() => {
-    const element = control.current
+  onSettled(() => {
+    const element = control
     const bounds = element?.parentElement?.closest("[data-preview-bounds]")
-    if (!renderPreview || !element || !bounds) return
+    if (!element || !bounds) return
     const measure = () => {
       const inner = element.getBoundingClientRect()
       const outer = bounds.getBoundingClientRect()
@@ -231,177 +305,137 @@ function MediaSlider({
     observer.observe(element)
     observer.observe(bounds)
     return () => observer.disconnect()
-  }, [renderPreview])
+  })
 
-  const startDrag = (event: PointerEvent<HTMLDivElement>) => {
-    drag.current =
-      preciseTouch && event.pointerType !== "mouse"
-        ? {
-            pointer: event.pointerId,
-            x: event.clientX,
-            at: event.timeStamp,
-            speed: 0,
-            value: null,
-            done: false,
-          }
-        : null
-  }
-  const moveDrag = (event: PointerEvent<HTMLDivElement>) => {
-    const current = drag.current
-    if (!current || current.done || current.pointer !== event.pointerId) return
-    const dx = event.clientX - current.x
-    if (dx === 0) return
-    const sample = Math.abs(dx) / Math.max(1, event.timeStamp - current.at)
-    current.speed = current.speed * 0.6 + sample * 0.4
-    current.x = event.clientX
-    current.at = event.timeStamp
-    const box = event.currentTarget.getBoundingClientRect()
-    current.value = touchDragValue({
-      from: current.value ?? shown,
-      dx,
-      speed: current.speed,
-      x: event.clientX,
-      left: box.left,
-      width: box.width,
-      max: safeMax,
-    })
-    onChange(current.value)
-  }
-  // Idempotent: release, cancel, and the slider's own commit all end it.
-  const endDrag = () => {
-    const current = drag.current
-    if (!current || current.done) return
-    current.done = true
-    if (current.value !== null) onCommit?.(current.value)
-  }
-
-  const track = (event: PointerEvent<HTMLDivElement>) => {
-    moveDrag(event)
-    if (!renderPreview || event.pointerType === "touch") return
-    const box = event.currentTarget.getBoundingClientRect()
-    const x = Math.max(0, Math.min(box.width, event.clientX - box.left))
-    // The value a click here seeks to: with edge alignment the thumb's
-    // centre runs half a thumb in from each end.
-    const along = (x - THUMB_PX / 2) / Math.max(1, box.width - THUMB_PX)
-    setHover({ x, value: Math.max(0, Math.min(1, along)) * safeMax })
-  }
   // A drag shows exactly where it lets go; a hover follows the pointer.
-  const previewAt = previewAtThumb
-    ? {
-        left: `calc(${THUMB_PX / 2}px + (100% - ${THUMB_PX}px) * ${shown / safeMax})`,
-        value: shown,
+  const previewAt = createMemo(() => {
+    if (props.previewAtThumb) {
+      return {
+        left: `calc(${THUMB_PX / 2}px + (100% - ${THUMB_PX}px) * ${shown() / safeMax()})`,
+        value: shown(),
       }
-    : hover
-      ? { left: `${hover.x}px`, value: hover.value }
-      : null
+    }
+    const at = hover()
+    return at ? { left: `${at.x}px`, value: at.value } : null
+  })
+  const fraction = () => shown() / safeMax()
+
   return (
-    <Slider.Root
-      ref={ref}
-      value={shown}
+    <Slider
+      value={shown()}
       min={0}
-      max={safeMax}
-      step={step}
+      max={safeMax()}
+      step={props.step}
+      format={(value: number) => props.valueText(value)}
       onValueChange={(next, details) => {
         const value = Array.isArray(next) ? (next[0] ?? 0) : next
-        const current = drag.current
-        if (current && details.reason !== "keyboard") {
+        const current = drag
+        if (current && !KEY_REASONS.has(details.reason)) {
           // A touch drag moves the value itself; a press still jumps.
-          if (current.done || details.reason !== "track-press") return
+          if (current.done || details.reason !== "track-press") {
+            details.cancel()
+            return
+          }
           current.value = value
         }
-        onChange(value)
+        props.onChange(value)
       }}
-      onValueCommitted={(next, details) => {
-        if (drag.current && details.reason !== "keyboard") {
+      onValueCommit={(next, details) => {
+        if (drag && !KEY_REASONS.has(details.reason)) {
           endDrag()
           return
         }
-        onCommit?.(Array.isArray(next) ? (next[0] ?? 0) : next)
+        props.onCommit?.(Array.isArray(next) ? (next[0] ?? 0) : next)
       }}
-      thumbAlignment="edge"
-      className={cn("group/slider", className)}
+      class={cn("group/slider", props.class)}
     >
-      {/* The track stays thin; the hit area is 32px, or 44px for touch. */}
-      <Slider.Control
-        ref={control}
-        onPointerDown={startDrag}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onLostPointerCapture={endDrag}
-        onPointerMove={track}
-        onPointerLeave={() => setHover(null)}
-        className="relative flex h-8 w-full cursor-pointer touch-none items-center select-none [@media(pointer:coarse)]:h-11"
+      {/* The bar stays thin; the hit area is 32px, or 44px for touch. */}
+      <SliderControl
+        ref={(el: HTMLDivElement) => (control = el)}
+        class="relative flex h-8 w-full cursor-pointer touch-none items-center select-none [@media(pointer:coarse)]:h-11"
       >
-        {renderPreview && previewAt && (
+        <Show when={props.renderPreview && previewAt()}>
+          {(at) => (
+            <span
+              aria-hidden="true"
+              class="pointer-events-none absolute bottom-full mb-1 -translate-x-1/2"
+              style={{
+                left: `clamp(calc(var(--preview-inset, 0px) - var(--preview-room-start, 0px)), ${at().left}, calc(100% - var(--preview-inset, 0px) + var(--preview-room-end, 0px)))`,
+              }}
+            >
+              {props.renderPreview?.(() => at().value)}
+            </span>
+          )}
+        </Show>
+        {/* Grows on hover by scale, which needs no layout. */}
+        <span
+          aria-hidden="true"
+          class="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 scale-y-[0.6667] rounded-full bg-white/25 transition-[scale] group-hover/slider:scale-y-100"
+        >
+          <Show when={props.buffered}>
+            {(buffered) => (
+              <span
+                class="absolute inset-y-0 left-0 rounded-full bg-white/30"
+                style={{
+                  width: `${Math.min(100, (buffered() / safeMax()) * 100)}%`,
+                }}
+              />
+            )}
+          </Show>
+          <Show when={props.renderPreview && hover()}>
+            {(at) => (
+              <span
+                class="absolute inset-y-0 left-0 rounded-full bg-white/20"
+                style={{ width: `${at().x}px` }}
+              />
+            )}
+          </Show>
           <span
-            aria-hidden
-            className="pointer-events-none absolute bottom-full mb-1 -translate-x-1/2"
+            class="bg-primary absolute inset-y-0 left-0 rounded-full"
             style={{
-              left: `clamp(calc(var(--preview-inset, 0px) - var(--preview-room-start, 0px)), ${previewAt.left}, calc(100% - var(--preview-inset, 0px) + var(--preview-room-end, 0px)))`,
+              width: `calc(${THUMB_PX / 2}px + (100% - ${THUMB_PX}px) * ${fraction()})`,
             }}
-          >
-            {renderPreview(previewAt.value)}
-          </span>
-        )}
-        <Slider.Track className="relative h-1 w-full rounded-full bg-white/25 transition-[height] group-hover/slider:h-1.5">
-          {buffered !== undefined && (
-            <span
-              aria-hidden
-              className="absolute inset-y-0 left-0 rounded-full bg-white/30"
-              style={{ width: `${Math.min(100, (buffered / safeMax) * 100)}%` }}
-            />
-          )}
-          {renderPreview && hover && (
-            <span
-              aria-hidden
-              className="absolute inset-y-0 left-0 rounded-full bg-white/20"
-              style={{ width: hover.x }}
-            />
-          )}
-          <Slider.Indicator className="bg-primary rounded-full" />
-          <Slider.Thumb
-            aria-label={label}
-            getAriaValueText={(_formatted, current) => valueText(current)}
-            data-player-keys={playerKeys || undefined}
-            onKeyDown={(event) => {
-              // The slider's own handler skips a prevented event, and
-              // the key goes on to the player's listener on the window.
-              if (playerKeys && ARROW_KEYS.has(event.key)) {
-                event.preventDefault()
-              }
-            }}
-            className="size-3.5 rounded-full bg-white opacity-0 shadow transition-opacity outline-none group-hover/slider:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white/60 data-dragging:opacity-100"
           />
-        </Slider.Track>
-      </Slider.Control>
-    </Slider.Root>
+        </span>
+        {/* The rail the thumb moves on, inset by half a thumb at each end,
+            so the thumb stays over the bar and a press at an end reaches it. */}
+        <SliderTrack class="mx-[7px] h-full flex-1">
+          <SliderThumb
+            aria-label={props.label}
+            data-player-keys={props.playerKeys ? "" : undefined}
+            class="size-3.5 rounded-full bg-white opacity-0 shadow transition-opacity outline-none group-hover/slider:opacity-100 has-[:focus-visible]:opacity-100 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-white/60 data-dragging:opacity-100"
+          />
+        </SliderTrack>
+      </SliderControl>
+    </Slider>
   )
 }
 
 /** What the seek bar shows above the pointer: the thumbnail there, and the time. */
-function SeekPreview({
-  time,
-  trickplay,
-}: {
-  time: number
+function SeekPreview(props: {
+  time: Accessor<number>
   trickplay: TrickplayTiles | null
 }) {
-  if (!trickplay) {
-    return (
-      <span className="block rounded-md bg-black/45 px-2 py-1 text-xs font-medium text-white tabular-nums shadow-lg ring-1 ring-white/15 backdrop-blur-md">
-        {formatTime(time)}
-      </span>
-    )
-  }
   return (
-    <span className="flex flex-col items-center gap-1 rounded-lg bg-black/45 p-1 pb-1.5 text-xs font-medium text-white tabular-nums shadow-lg ring-1 ring-white/15 backdrop-blur-md">
-      <TrickplayThumb
-        tiles={trickplay}
-        time={time}
-        className="w-40 rounded-md sm:w-60"
-      />
-      {formatTime(time)}
-    </span>
+    <Show
+      when={props.trickplay}
+      fallback={
+        <span class="block rounded-md bg-black/45 px-2 py-1 text-xs font-medium text-white tabular-nums shadow-lg ring-1 ring-white/15 backdrop-blur-md">
+          {formatTime(props.time())}
+        </span>
+      }
+    >
+      {(tiles) => (
+        <span class="flex flex-col items-center gap-1 rounded-lg bg-black/45 p-1 pb-1.5 text-xs font-medium text-white tabular-nums shadow-lg ring-1 ring-white/15 backdrop-blur-md">
+          <TrickplayThumb
+            tiles={tiles()}
+            time={props.time()}
+            class="w-40 rounded-md sm:w-60"
+          />
+          {formatTime(props.time())}
+        </span>
+      )}
+    </Show>
   )
 }
 
@@ -418,108 +452,108 @@ function selectShown(state: {
  * The seek bar, the full width of the controls. The times are beside it in
  * the controls rather than at its ends.
  */
-export function SeekBar({
-  ref,
-  trickplay,
-  onSeek,
-}: {
-  ref?: Ref<HTMLDivElement>
+export function SeekBar(props: {
   /** Thumbnails to show while hovering or dragging. */
   trickplay: TrickplayTiles | null
   onSeek: (to: number) => void
 }) {
-  const { shown, scrubbing, duration, buffered, setScrub, commitScrub } =
-    usePlayerStore(
-      useShallow((state) => ({
-        shown: selectShown(state),
-        scrubbing: state.scrub !== null,
-        duration: state.duration,
-        buffered: state.buffered,
-        setScrub: state.setScrub,
-        commitScrub: state.commitScrub,
-      })),
-    )
+  const actions = usePlayerStoreApi().getState()
+  const shown = usePlayerStore(selectShown)
+  const scrubbing = usePlayerStore((state) => state.scrub !== null)
+  const duration = usePlayerStore((state) => state.duration)
+  const buffered = usePlayerStore((state) => state.buffered)
   const timeText = (value: number) =>
     tr("player.seekValue", {
       time: formatTime(value),
-      duration: formatTime(duration),
+      duration: formatTime(duration()),
     })
 
   return (
-    <div ref={ref} data-preview-bounds>
+    <div data-preview-bounds>
       <MediaSlider
         label={tr("player.seek")}
-        value={shown}
-        max={duration}
+        value={shown()}
+        max={duration()}
         step={1}
-        buffered={buffered}
+        buffered={buffered()}
         valueText={timeText}
         renderPreview={(value) => (
-          <SeekPreview time={value} trickplay={trickplay} />
+          <SeekPreview time={value} trickplay={props.trickplay} />
         )}
         // Touch has no hover, so a drag shows where it's headed.
-        previewAtThumb={scrubbing}
+        previewAtThumb={scrubbing()}
         preciseTouch
         playerKeys
-        onChange={setScrub}
+        onChange={actions.setScrub}
         onCommit={(value) => {
-          commitScrub(value)
-          onSeek(value)
+          actions.commitScrub(value)
+          props.onSeek(value)
         }}
-        className={cn(
-          // Half the thumbnail and its padding, for 10rem and 15rem.
-          trickplay && "[--preview-inset:5.25rem] sm:[--preview-inset:7.75rem]",
-        )}
+        // Half the thumbnail and its padding, for 10rem and 15rem.
+        class={
+          props.trickplay
+            ? "[--preview-inset:5.25rem] sm:[--preview-inset:7.75rem]"
+            : undefined
+        }
       />
     </div>
   )
 }
 
 /** How far the video is, or where the seek bar is headed. */
-export function ElapsedTime({ className }: { className?: string }) {
+export function ElapsedTime(props: { class?: string }) {
   const shown = usePlayerStore(selectShown)
   return (
-    <span className={cn(overlayTextClass, className)}>{formatTime(shown)}</span>
+    <span class={cn(overlayTextClass, props.class)}>{formatTime(shown())}</span>
   )
 }
 
 /** The video's length, shown after the elapsed time. */
-export function TotalTime({ className }: { className?: string }) {
+export function TotalTime(props: { class?: string }) {
   const duration = usePlayerStore((state) => state.duration)
   return (
-    <span className={cn(overlayTextClass, className)}>
-      {formatTime(duration)}
+    <span class={cn(overlayTextClass, props.class)}>
+      {formatTime(duration())}
     </span>
   )
 }
 
 /**
  * When the video would end at this speed, as Jellyfin shows it. Playing,
- * each time update renders it again; paused or loading, the end moves on
+ * each time update works it out again; paused or loading, the end moves on
  * with the clock, so a timer does.
  */
-export function EndsAt({ className }: { className?: string }) {
-  const { left, speed, advancing } = usePlayerStore(
-    useShallow((state) => ({
-      left: state.duration - selectShown(state),
-      speed: state.speed,
-      advancing: state.playing && !state.waiting && state.scrub === null,
-    })),
+export function EndsAt(props: { class?: string }) {
+  const left = usePlayerStore((state) => state.duration - selectShown(state))
+  const speed = usePlayerStore((state) => state.speed)
+  const advancing = createMemo(
+    usePlayerStore(
+      (state) => state.playing && !state.waiting && state.scrub === null,
+    ),
   )
-  const [, tick] = useReducer((n: number) => n + 1, 0)
-  useEffect(() => {
-    if (advancing) return
-    const timer = window.setInterval(tick, 1000)
+  const [tick, setTick] = createSignal(0)
+  createEffect(advancing, (moving) => {
+    if (moving) return
+    const timer = window.setInterval(() => setTick((n) => n + 1), 1000)
     return () => window.clearInterval(timer)
-  }, [advancing])
-  if (!(left > 0) || !(speed > 0)) return null
-  // Read in render, right after the time update it pairs with. A clock
-  // kept in state would lag it and flicker the minute near a boundary.
-  const end = Date.now() + (left / speed) * 1000
+  })
+  // Read with the time update it pairs with. A clock kept apart would lag
+  // it and flicker the minute near a boundary.
+  const text = createMemo(() => {
+    tick()
+    const remaining = left()
+    const rate = speed()
+    if (!(remaining > 0) || !(rate > 0)) return null
+    return tr("player.endsAt", {
+      time: formatClock(Date.now() + (remaining / rate) * 1000),
+    })
+  })
   return (
-    <span className={cn(overlayTextClass, className)}>
-      {tr("player.endsAt", { time: formatClock(end) })}
-    </span>
+    <Show when={text()}>
+      {(shown) => (
+        <span class={cn(overlayTextClass, props.class)}>{shown()}</span>
+      )}
+    </Show>
   )
 }
 
@@ -532,29 +566,37 @@ export type Episodes = {
 }
 
 /** Play and pause, as one of the controls or the big one in the middle. */
-function PlayButton({ big, onToggle }: { big: boolean; onToggle: () => void }) {
+function PlayButton(props: { big: boolean; onToggle: () => void }) {
   const playing = usePlayerStore((state) => state.playing)
-  const label = big
-    ? playing
-      ? tr("player.pause")
-      : tr("player.play")
-    : playing
-      ? tr("player.pauseKey")
-      : tr("player.playKey")
+  const label = () =>
+    props.big
+      ? playing()
+        ? tr("player.pause")
+        : tr("player.play")
+      : playing()
+        ? tr("player.pauseKey")
+        : tr("player.playKey")
   return (
     <ControlButton
-      label={label}
-      onClick={onToggle}
-      className={cn(
-        big &&
-          "size-18 bg-black/45 text-white ring-1 ring-white/15 backdrop-blur-md [@media(pointer:coarse)]:size-18 [&_svg]:size-8",
-      )}
+      label={label()}
+      onClick={props.onToggle}
+      class={
+        props.big
+          ? "size-24 text-white drop-shadow-[0_2px_10px_rgb(0_0_0/0.6)] [&_svg]:size-12 [@media(pointer:coarse)]:size-24"
+          : undefined
+      }
     >
-      {playing ? (
-        <PauseIcon className="fill-current" />
-      ) : (
-        <PlayIcon className={cn("fill-current", big && "translate-x-0.5")} />
-      )}
+      <Show
+        when={playing()}
+        fallback={
+          <Icon
+            icon={Play}
+            class={["fill-current", { "translate-x-0.5": props.big }]}
+          />
+        }
+      >
+        <Icon icon={Pause} class="fill-current" />
+      </Show>
     </ControlButton>
   )
 }
@@ -566,14 +608,7 @@ function PlayButton({ big, onToggle }: { big: boolean; onToggle: () => void }) {
  * starts the control bar. While the video loads, the big play button
  * leaves its place to the spinner.
  */
-export function Transport({
-  big,
-  episodes,
-  skipBackSeconds,
-  skipForwardSeconds,
-  onSkip,
-  onToggle,
-}: {
+export function Transport(props: {
   big: boolean
   episodes: Episodes | null
   skipBackSeconds: number
@@ -582,56 +617,104 @@ export function Transport({
   onToggle: () => void
 }) {
   const busy = usePlayerStore(selectBusy)
-  const side = cn(
-    big && "size-12 [@media(pointer:coarse)]:size-12 [&_svg]:size-6",
-  )
-  const skip = cn(
-    big && "size-14 [@media(pointer:coarse)]:size-14 [&_svg]:size-7",
+  const side = () =>
+    props.big
+      ? "size-16 [@media(pointer:coarse)]:size-16 [&_svg]:size-[30px]"
+      : undefined
+  const skip = () =>
+    props.big
+      ? "size-[72px] [@media(pointer:coarse)]:size-[72px] [&_svg]:size-10"
+      : undefined
+  // The Flutter phone's middle row: 96 play, 72 skips, 64 episodes, and
+  // gaps that narrow from 32 before the buttons shrink together.
+  const fit = () => {
+    if (!props.big) return 1
+    const widths = 96 + 72 * 2 + (props.episodes ? 64 * 2 : 0)
+    const gaps = 8 * (props.episodes ? 4 : 2)
+    return Math.min(1, viewport().width / (widths + gaps))
+  }
+  const skipButton = (props2: {
+    icon: typeof RotateCcw
+    label: string
+    seconds: number
+    by: number
+  }) => (
+    <ControlButton
+      label={props2.label}
+      onClick={() => props.onSkip(props2.by)}
+      class={skip()}
+    >
+      <Show
+        when={props.big}
+        fallback={
+          <Icon
+            icon={props2.by < 0 ? Rewind : FastForward}
+            class="fill-current"
+          />
+        }
+      >
+        <span class="relative grid place-items-center">
+          <Icon icon={props2.icon} />
+          <span
+            aria-hidden="true"
+            class="text-10px absolute pt-1 leading-none font-semibold tabular-nums"
+          >
+            {props2.seconds}
+          </span>
+        </span>
+      </Show>
+    </ControlButton>
   )
   return (
     <div
-      className={cn("flex items-center", big ? "gap-2 sm:gap-8" : "gap-0.5")}
+      class={cn("flex items-center", props.big ? "gap-2 sm:gap-8" : "gap-0.5")}
+      style={{ transform: props.big ? `scale(${fit()})` : undefined }}
     >
-      {episodes && (
-        <ControlButton
-          label={tr("player.previousEpisode")}
-          onClick={() => episodes.previous?.()}
-          disabled={episodes.previous === null}
-          className={side}
-        >
-          <SkipBackIcon className="fill-current" />
-        </ControlButton>
-      )}
-      <ControlButton
-        label={tr("player.skipBack", { seconds: skipBackSeconds })}
-        onClick={() => onSkip(-skipBackSeconds)}
-        className={skip}
+      <Show when={props.episodes}>
+        {(episodes) => (
+          <ControlButton
+            label={tr("player.previousEpisode")}
+            onClick={() => episodes().previous?.()}
+            disabled={episodes().previous === null}
+            class={side()}
+          >
+            <Icon icon={SkipBack} class="fill-current" />
+          </ControlButton>
+        )}
+      </Show>
+      {skipButton({
+        icon: RotateCcw,
+        label: tr("player.skipBack", { seconds: props.skipBackSeconds }),
+        seconds: props.skipBackSeconds,
+        by: -props.skipBackSeconds,
+      })}
+      <Show
+        when={props.big && busy()}
+        fallback={<PlayButton big={props.big} onToggle={props.onToggle} />}
       >
-        <RewindIcon className="fill-current" />
-      </ControlButton>
-      {big && busy ? (
-        // The spinner in the middle of the player shows here.
-        <span aria-hidden className="size-18" />
-      ) : (
-        <PlayButton big={big} onToggle={onToggle} />
-      )}
-      <ControlButton
-        label={tr("player.skipForward", { seconds: skipForwardSeconds })}
-        onClick={() => onSkip(skipForwardSeconds)}
-        className={skip}
-      >
-        <FastForwardIcon className="fill-current" />
-      </ControlButton>
-      {episodes && (
-        <ControlButton
-          label={tr("player.nextEpisode")}
-          onClick={() => episodes.next?.()}
-          disabled={episodes.next === null}
-          className={side}
-        >
-          <SkipForwardIcon className="fill-current" />
-        </ControlButton>
-      )}
+        {/* The spinner in the middle of the player shows here. */}
+        <span aria-hidden="true" class="size-24" />
+      </Show>
+      {skipButton({
+        icon: RotateCw,
+        label: tr("player.skipForward", {
+          seconds: props.skipForwardSeconds,
+        }),
+        seconds: props.skipForwardSeconds,
+        by: props.skipForwardSeconds,
+      })}
+      <Show when={props.episodes}>
+        {(episodes) => (
+          <ControlButton
+            label={tr("player.nextEpisode")}
+            onClick={() => episodes().next?.()}
+            disabled={episodes().next === null}
+            class={side()}
+          >
+            <Icon icon={SkipForward} class="fill-current" />
+          </ControlButton>
+        )}
+      </Show>
     </div>
   )
 }
@@ -639,74 +722,68 @@ export function Transport({
 /** The spinner in the middle of the player while the video loads. */
 export function LoadingSpinner() {
   const busy = usePlayerStore(selectBusy)
-  if (!busy) return null
   return (
-    <div className="pointer-events-none absolute inset-0 grid place-items-center">
-      <Spinner className="size-10 text-white/85" />
-    </div>
+    <Show when={busy()}>
+      <div class="pointer-events-none absolute inset-0 grid place-items-center">
+        <Spinner class="size-10 text-white/85" />
+      </div>
+    </Show>
   )
 }
 
 /** The mute button, with a volume slider that opens on hover or focus. */
-export function VolumeControl({
-  onToggleMute,
-  onChange,
-}: {
+export function VolumeControl(props: {
   onToggleMute: () => void
   onChange: (volume: number) => void
 }) {
-  const { volume, muted } = usePlayerStore(
-    useShallow((state) => ({ volume: state.volume, muted: state.muted })),
-  )
-  const VolumeIcon =
-    muted || volume === 0
-      ? VolumeXIcon
-      : volume < 0.5
-        ? Volume1Icon
-        : Volume2Icon
+  const volume = usePlayerStore((state) => state.volume)
+  const muted = usePlayerStore((state) => state.muted)
+  const icon = () =>
+    muted() || volume() === 0 ? VolumeX : volume() < 0.5 ? Volume1 : Volume2
   return (
-    <div className="group/volume flex items-center">
+    <div class="group/volume flex items-center">
       <ControlButton
-        label={muted ? tr("player.unmuteKey") : tr("player.muteKey")}
-        onClick={onToggleMute}
+        label={muted() ? tr("player.unmuteKey") : tr("player.muteKey")}
+        onClick={props.onToggleMute}
       >
-        <VolumeIcon />
+        <Icon icon={icon()} />
       </ControlButton>
-      {/* Opens on hover or focus, like most players. */}
-      <div className="hidden w-0 overflow-hidden transition-[width] duration-200 group-focus-within/volume:w-24 group-hover/volume:w-24 motion-reduce:transition-none sm:block">
+      {/* Opens on hover or focus, like most players. It pushes the times
+          along as it opens, so it's the one width that animates. */}
+      <div class="hidden w-0 overflow-hidden transition-[width] duration-200 group-focus-within/volume:w-24 group-hover/volume:w-24 motion-reduce:transition-none sm:block">
         <MediaSlider
           label={tr("player.volume")}
-          value={muted ? 0 : volume}
+          value={muted() ? 0 : volume()}
           max={1}
           step={VOLUME_STEP}
           valueText={formatPercent}
-          onChange={onChange}
-          className="w-24 px-2"
+          onChange={props.onChange}
+          class="w-24 px-2"
         />
       </div>
     </div>
   )
 }
 
-function subscribeFullscreen(onChange: () => void) {
-  document.addEventListener("fullscreenchange", onChange)
-  return () => document.removeEventListener("fullscreenchange", onChange)
-}
-
-function isFullscreen() {
-  return document.fullscreenElement !== null
-}
-
-export function FullscreenButton({ onToggle }: { onToggle: () => void }) {
-  const fullscreen = useSyncExternalStore(subscribeFullscreen, isFullscreen)
+export function FullscreenButton(props: { onToggle: () => void }) {
+  const [fullscreen, setFullscreen] = createSignal(
+    document.fullscreenElement !== null,
+  )
+  onSettled(() => {
+    const onChange = () => setFullscreen(document.fullscreenElement !== null)
+    document.addEventListener("fullscreenchange", onChange)
+    return () => document.removeEventListener("fullscreenchange", onChange)
+  })
   return (
     <ControlButton
       label={
-        fullscreen ? tr("player.exitFullscreenKey") : tr("player.fullscreenKey")
+        fullscreen()
+          ? tr("player.exitFullscreenKey")
+          : tr("player.fullscreenKey")
       }
-      onClick={onToggle}
+      onClick={props.onToggle}
     >
-      {fullscreen ? <MinimizeIcon /> : <MaximizeIcon />}
+      <Icon icon={fullscreen() ? Minimize : Maximize} />
     </ControlButton>
   )
 }
@@ -714,22 +791,25 @@ export function FullscreenButton({ onToggle }: { onToggle: () => void }) {
 /** A short note over the picture, like the volume after a key press. */
 export function FlashNote() {
   const flash = usePlayerStore((state) => state.flash)
-  const hideFlash = usePlayerStore((state) => state.hideFlash)
+  const { hideFlash } = usePlayerStoreApi().getState()
   // A timer clears each note; a newer one starts its own.
-  useEffect(() => {
-    if (!flash) return
+  createEffect(flash, (note) => {
+    if (!note) return
     const timer = window.setTimeout(hideFlash, FLASH_MS)
     return () => window.clearTimeout(timer)
-  }, [flash])
-  if (!flash) return null
+  })
+  // Keyed, so each note mounts anew and plays its entrance again.
   return (
-    <div
-      key={flash.id}
-      aria-hidden
-      className="animate-in fade-in-0 zoom-in-95 pointer-events-none absolute top-1/4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm font-medium tabular-nums backdrop-blur-md duration-150 [&_svg]:size-4"
-    >
-      {flash.Icon && <flash.Icon />}
-      {flash.text}
-    </div>
+    <Show when={flash()} keyed>
+      {(note) => (
+        <div
+          aria-hidden="true"
+          class="animate-in fade-in-0 zoom-in-95 pointer-events-none absolute top-1/4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm font-medium tabular-nums backdrop-blur-md duration-150 [&_svg]:size-4"
+        >
+          <Show when={note.icon}>{(icon) => <Icon icon={icon()} />}</Show>
+          {note.text}
+        </div>
+      )}
+    </Show>
   )
 }

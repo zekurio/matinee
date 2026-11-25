@@ -1,9 +1,8 @@
 import type { RequestState, WaitingDeclineReason } from "@matinee/contracts"
-import { toast } from "@matinee/ui/components/sonner"
-import { useEffect } from "react"
-import { create } from "zustand"
+import { createMemo, createSignal, onSettled } from "solid-js"
 
 import { tr } from "@/i18n"
+import { toast } from "@/kit/toast"
 import { errorMessage, keepaliveClient, orpc, queryClient } from "@/lib/rpc"
 
 /*
@@ -167,15 +166,17 @@ async function send(action: QueueAction) {
     if (result.status === "rejected") throw result.reason
 }
 
-export const useRequestActionsStore = create<RequestActionsState>()((
-  set,
-  get,
-) => {
+function createRequestActionsStore() {
+  const get = () => current
+  const set = (patch: Partial<RequestActionsState>) => {
+    current = { ...current, ...patch }
+    setState(current)
+  }
   const release = (key: number) => {
     const entry = get().held.find((held) => held.key === key)
     if (!entry) return
     clearTimeout(entry.timer)
-    set((state) => ({ held: state.held.filter((held) => held.key !== key) }))
+    set({ held: get().held.filter((held) => held.key !== key) })
     return entry
   }
 
@@ -248,7 +249,7 @@ export const useRequestActionsStore = create<RequestActionsState>()((
       })
   }
 
-  return {
+  let current: RequestActionsState = {
     held: [],
     moves: new Map(),
     move: (id, libraryId) => {
@@ -273,9 +274,7 @@ export const useRequestActionsStore = create<RequestActionsState>()((
         onDismiss: () => commit(key),
       })
       const timer = setTimeout(() => commit(key), HOLD_MS)
-      set((state) => ({
-        held: [...state.held, { key, action, timer, toastId }],
-      }))
+      set({ held: [...get().held, { key, action, timer, toastId }] })
     },
     undo: (key) => {
       const target = key ?? get().held.at(-1)?.key
@@ -289,7 +288,18 @@ export const useRequestActionsStore = create<RequestActionsState>()((
       for (const held of get().held) commit(held.key)
     },
   }
-})
+  const [state, setState] = createSignal(current)
+  // Event handlers must see a release immediately, including during a flush.
+  return Object.assign(
+    <Value>(select: (state: RequestActionsState) => Value) =>
+      () =>
+        select(state()),
+    { getState: get },
+  )
+}
+
+/** A shared store. Calling it with a selector returns an accessor. */
+export const useRequestActionsStore = createRequestActionsStore()
 
 /**
  * The states each action takes a request out of. Once the server moves
@@ -308,18 +318,19 @@ const LEAVES = new Map<QueueAction["kind"], readonly RequestState[]>([
 /** The requests acted on, by id, with what was done: held, or sent and not gone yet. */
 export type HiddenRequests = ReadonlyMap<string, QueueAction["kind"]>
 
-export function useHiddenRequests(): HiddenRequests {
-  const held = useRequestActionsStore((state) => state.held)
-  const settled = useRequestActionsStore((state) => state.settled)
-  const kinds = useRequestActionsStore((state) => state.kinds)
-  const ids = new Map<string, QueueAction["kind"]>()
-  for (const id of settled.keys()) {
-    const kind = kinds.get(id)
-    if (kind) ids.set(id, kind)
-  }
-  for (const entry of held)
-    for (const id of entry.action.ids) ids.set(id, entry.action.kind)
-  return ids
+/** Accessor for the requests hidden by a held or recently sent action. */
+export function useHiddenRequests() {
+  return createMemo<HiddenRequests>(() => {
+    const { held, settled, kinds } = useRequestActionsStore((state) => state)()
+    const ids = new Map<string, QueueAction["kind"]>()
+    for (const id of settled.keys()) {
+      const kind = kinds.get(id)
+      if (kind) ids.set(id, kind)
+    }
+    for (const entry of held)
+      for (const id of entry.action.ids) ids.set(id, entry.action.kind)
+    return ids
+  })
 }
 
 /**
@@ -340,7 +351,7 @@ export function isHidden(
  * admin is still looking.
  */
 export function useSendHeldOnLeave() {
-  useEffect(() => {
+  onSettled(() => {
     const flush = () => useRequestActionsStore.getState().flush()
     const hidden = () => {
       if (document.visibilityState === "hidden") flush()
@@ -352,5 +363,5 @@ export function useSendHeldOnLeave() {
       document.removeEventListener("visibilitychange", hidden)
       flush()
     }
-  }, [])
+  })
 }

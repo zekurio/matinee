@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as ApiDocsRouteImport } from './routes/api-docs'
 import { Route as InviteRouteImport } from './routes/invite'
+import { Route as KitRouteImport } from './routes/kit'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as AuthedShellRouteImport } from './routes/_authed/_shell'
@@ -54,6 +55,11 @@ const ApiDocsRoute = ApiDocsRouteImport.update({
 const InviteRoute = InviteRouteImport.update({
   id: '/invite',
   path: '/invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KitRoute = KitRouteImport.update({
+  id: '/kit',
+  path: '/kit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthedShellIndexRoute
   '/api-docs': typeof ApiDocsRoute
   '/invite': typeof InviteRoute
+  '/kit': typeof KitRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
   '/authorize': typeof AuthedAuthorizeRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthedShellIndexRoute
   '/api-docs': typeof ApiDocsRoute
   '/invite': typeof InviteRoute
+  '/kit': typeof KitRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
   '/authorize': typeof AuthedAuthorizeRoute
@@ -283,6 +291,7 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/api-docs': typeof ApiDocsRoute
   '/invite': typeof InviteRoute
+  '/kit': typeof KitRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
   '/_authed/_shell': typeof AuthedShellRouteWithChildren
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api-docs'
     | '/invite'
+    | '/kit'
     | '/login'
     | '/setup'
     | '/authorize'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api-docs'
     | '/invite'
+    | '/kit'
     | '/login'
     | '/setup'
     | '/authorize'
@@ -383,6 +394,7 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/api-docs'
     | '/invite'
+    | '/kit'
     | '/login'
     | '/setup'
     | '/_authed/_shell'
@@ -418,11 +430,12 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   ApiDocsRoute: typeof ApiDocsRoute
   InviteRoute: typeof InviteRoute
+  KitRoute: typeof KitRoute
   LoginRoute: typeof LoginRoute
   SetupRoute: typeof SetupRoute
 }
 
-declare module '@tanstack/react-router' {
+declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
     '/_authed': {
       id: '/_authed'
@@ -443,6 +456,13 @@ declare module '@tanstack/react-router' {
       path: '/invite'
       fullPath: '/invite'
       preLoaderRoute: typeof InviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kit': {
+      id: '/kit'
+      path: '/kit'
+      fullPath: '/kit'
+      preLoaderRoute: typeof KitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -731,6 +751,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   ApiDocsRoute: ApiDocsRoute,
   InviteRoute: InviteRoute,
+  KitRoute: KitRoute,
   LoginRoute: LoginRoute,
   SetupRoute: SetupRoute,
 }

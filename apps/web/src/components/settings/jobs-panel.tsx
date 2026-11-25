@@ -3,31 +3,38 @@ import type {
   JobsOverview,
   ScheduledTask,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
+import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
+import {
+  QueryObserver,
+  type QueryObserverResult,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/solid-query"
+import { Ellipsis, Info, ListX, Pause, Play, RefreshCw, Square } from "lucide"
+import {
+  createMemo,
+  createSignal,
+  For,
+  from,
+  Match,
+  Show,
+  Switch,
+} from "solid-js"
+
+import { knownMessage, type MessageKey, tr, translateKnown } from "@/i18n"
+import { Button, buttonVariants } from "@/kit/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
-import { List, ListItem } from "@matinee/ui/components/list"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import { Spinner } from "@matinee/ui/components/spinner"
-import { cn } from "@matinee/ui/lib/utils"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  EllipsisIcon,
-  InfoIcon,
-  ListXIcon,
-  PauseIcon,
-  PlayIcon,
-  RefreshCwIcon,
-  SquareIcon,
-} from "lucide-react"
-import { type ReactNode, useState } from "react"
-
-import { knownMessage, type MessageKey, tr, translateKnown } from "@/i18n"
+} from "@/kit/dropdown-menu"
+import { Icon } from "@/kit/icon"
+import { List, ListItem } from "@/kit/list"
+import { Skeleton } from "@/kit/skeleton"
+import { Spinner } from "@/kit/spinner"
+import { toast } from "@/kit/toast"
 import {
   formatRelative,
   formatSpan,
@@ -87,30 +94,62 @@ function scheduleOf(task: ScheduledTask): string {
   })
 }
 
+const rowMenuButton = cn(
+  buttonVariants({ variant: "ghost", size: "icon" }),
+  "text-muted-foreground hover:text-foreground data-open:text-foreground",
+)
+
 /**
  * The queues and tasks as the server streams them: how they stand, and
  * again on each change, so a reconnect loses nothing.
  */
 export function JobsPanel() {
-  const jobs = useQuery({
-    ...orpc.admin.jobs.live.experimental_liveOptions(),
-    ...liveQuery,
-  })
+  const jobs = useJobsStream()
+  const overview = () => jobs()?.data
 
   return (
     <SettingsSections>
       <SettingsSubsection id="jobs" title={tr("jobs.queues")}>
-        {jobs.isPending ? (
-          <Skeleton className="h-96 rounded-xl" />
-        ) : jobs.isError ? (
-          <LoadError error={jobs.error} retry={() => void jobs.refetch()} />
-        ) : (
-          <JobsList overview={jobs.data} />
-        )}
+        <Switch>
+          <Match when={jobs()?.isError}>
+            <LoadError
+              error={jobs()?.error ?? null}
+              retry={() => void jobs()?.refetch()}
+            />
+          </Match>
+          <Match when={overview()}>
+            {(current) => <JobsList overview={current()} />}
+          </Match>
+          <Match when={true}>
+            <Skeleton class="h-96 rounded-xl" />
+          </Match>
+        </Switch>
       </SettingsSubsection>
 
-      {jobs.data && <ConcurrencySection queues={tunableQueues(jobs.data)} />}
+      <Show when={overview()}>
+        {(current) => <ConcurrencySection queues={tunableQueues(current())} />}
+      </Show>
     </SettingsSections>
+  )
+}
+
+/**
+ * The stream, read from an observer of its own. Solid Query holds a
+ * query's new data until its fetch settles, and a stream's fetch lasts
+ * until the stream ends, so `useQuery` would show its first answer alone.
+ */
+function useJobsStream() {
+  const queryClient = useQueryClient()
+  return createMemo(() =>
+    from<QueryObserverResult<JobsOverview>>((next) => {
+      const observer = new QueryObserver(queryClient, {
+        ...orpc.admin.jobs.live.experimental_liveOptions(),
+        ...liveQuery,
+      })
+      const unsubscribe = observer.subscribe(next)
+      next(observer.getCurrentResult())
+      return unsubscribe
+    }),
   )
 }
 
@@ -118,32 +157,39 @@ export function JobsPanel() {
  * Every queue, each with the task that fills it on a schedule, then the
  * tasks that fill none and do their upkeep themselves.
  */
-function JobsList({ overview }: { overview: JobsOverview }) {
-  const upkeep = overview.tasks.filter((task) => task.queue === null)
+function JobsList(props: { overview: JobsOverview }) {
+  const upkeep = () =>
+    props.overview.tasks.filter((task) => task.queue === null)
+  // Keyed by id: the stream sends every row anew, and a row keeps its menu
+  // and dialog open through that.
   return (
     <List>
-      {overview.queues.map((queue) => (
-        <QueueRow
-          key={queue.id}
-          queue={queue}
-          task={overview.tasks.find((task) => task.queue === queue.id) ?? null}
-        />
-      ))}
-      {upkeep.map((task) => (
-        <TaskRow key={task.id} task={task} />
-      ))}
+      <For each={props.overview.queues} keyed={(queue) => queue.id}>
+        {(queue) => (
+          <QueueRow
+            queue={queue()}
+            task={
+              props.overview.tasks.find((task) => task.queue === queue().id) ??
+              null
+            }
+          />
+        )}
+      </For>
+      <For each={upkeep()} keyed={(task) => task.id}>
+        {(task) => <TaskRow task={task()} />}
+      </For>
     </List>
   )
 }
 
-function LoadError({ error, retry }: { error: Error; retry: () => void }) {
+function LoadError(props: { error: Error | null; retry: () => void }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
-      <p className="text-muted-foreground text-sm">
-        {tr("jobs.loadFailed", { error: errorMessage(error) })}
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
+      <p class="text-muted-foreground text-sm">
+        {tr("jobs.loadFailed", { error: errorMessage(props.error) })}
       </p>
-      <Button variant="outline" onClick={retry}>
-        <RefreshCwIcon />
+      <Button variant="outline" onClick={() => props.retry()}>
+        <Icon icon={RefreshCw} />
         {tr("jobs.retry")}
       </Button>
     </div>
@@ -213,191 +259,199 @@ function failedText(queue: JobQueueStatus): string {
  * it's doing below in labelled facts, so the description reads apart from
  * the state.
  */
-function JobRow({
-  name,
-  description,
-  controls,
-  children,
-}: {
+function JobRow(props: {
   name: string
   description: string
-  controls: ReactNode
-  children: ReactNode
+  controls: JSX.Element
+  children: JSX.Element
 }) {
   return (
-    <ListItem className="@container flex-col items-stretch gap-3 py-3.5 pr-2">
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <h4 className="text-sm leading-5 font-medium">{name}</h4>
-          <p className="text-muted-foreground text-13px leading-5">
-            {description}
+    <ListItem class="@container flex-col items-stretch gap-3 py-3.5 pr-2">
+      <div class="flex items-start gap-3">
+        <div class="min-w-0 flex-1">
+          <h4 class="text-sm leading-5 font-medium">{props.name}</h4>
+          <p class="text-muted-foreground text-13px leading-5">
+            {props.description}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1">{controls}</div>
+        <div class="flex shrink-0 items-center gap-1">{props.controls}</div>
       </div>
-      <dl className="bg-foreground/[0.03] mr-2 grid grid-cols-1 gap-x-6 gap-y-3 rounded-lg px-3 py-2.5 @lg:grid-cols-3">
-        {children}
+      <dl class="bg-foreground/[0.03] mr-2 grid grid-cols-1 gap-x-6 gap-y-3 rounded-lg px-3 py-2.5 @lg:grid-cols-3">
+        {props.children}
       </dl>
     </ListItem>
   )
 }
 
 /** A label over its value, with a line of detail under it if there is one. */
-function Fact({
-  label,
-  children,
-  detail,
-  title,
-  tone = "default",
-}: {
+function Fact(props: {
   label: string
-  children: ReactNode
-  detail?: ReactNode
+  children: JSX.Element
+  detail?: JSX.Element
   /** The whole detail, for when it's cut short. */
   title?: string
   tone?: "default" | "muted" | "destructive"
 }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-foreground-faint text-xs leading-4">{label}</dt>
+    <div class="min-w-0">
+      <dt class="text-foreground-faint text-xs leading-4">{props.label}</dt>
       <dd
-        className={cn(
+        class={cn(
           "mt-1 flex h-5 min-w-0 items-center gap-1.5 text-13px leading-5 tabular-nums",
-          tone === "muted" && "text-muted-foreground",
+          props.tone === "muted" && "text-muted-foreground",
         )}
       >
-        {children}
+        {props.children}
       </dd>
-      {detail && (
+      <Show when={props.detail}>
         <dd
-          title={title}
-          className={cn(
+          title={props.title}
+          class={cn(
             "truncate text-xs leading-4 tabular-nums",
-            tone === "destructive"
+            props.tone === "destructive"
               ? "text-destructive"
               : "text-muted-foreground",
           )}
         >
-          {detail}
+          {props.detail}
         </dd>
-      )}
+      </Show>
     </div>
   )
 }
 
 /** Running spins; otherwise a dot, amber when paused. */
-function StatusMark({ state }: { state: "running" | "paused" | "idle" }) {
-  if (state === "running") return <Spinner className="size-3.5 shrink-0" />
+function StatusMark(props: { state: "running" | "paused" | "idle" }) {
   return (
-    <span
-      aria-hidden
-      className={cn(
-        "mx-1 size-1.5 shrink-0 rounded-full",
-        state === "paused" ? "bg-warning" : "bg-foreground-faint",
-      )}
-    />
+    <Show
+      when={props.state !== "running"}
+      fallback={<Spinner class="size-3.5 shrink-0" />}
+    >
+      <span
+        aria-hidden="true"
+        class={cn(
+          "mx-1 size-1.5 shrink-0 rounded-full",
+          props.state === "paused" ? "bg-warning" : "bg-foreground-faint",
+        )}
+      />
+    </Show>
   )
 }
 
-function QueueRow({
-  queue,
-  task,
-}: {
+function QueueRow(props: {
   queue: JobQueueStatus
   /** The scheduled task that fills it, if one does. */
   task: ScheduledTask | null
 }) {
   const update = useJobsUpdate()
-  const [details, setDetails] = useState(false)
-  const name = queueName(queue)
-  const onError = (what: "pause" | "resume" | "clear") => (cause: unknown) =>
-    toast.error(tr(`jobs.queue.${what}Failed`, { queue: name }), {
+  const [details, setDetails] = createSignal(false)
+  const name = () => queueName(props.queue)
+  const failed = (
+    what: "pause" | "resume" | "clear",
+    queue: string,
+    cause: Error,
+  ) =>
+    toast.error(tr(`jobs.queue.${what}Failed`, { queue }), {
       description: errorMessage(cause),
     })
-  const pause = useMutation({
-    mutationFn: () =>
-      queue.paused
-        ? client.admin.jobs.resume({ queue: queue.id })
-        : client.admin.jobs.pause({ queue: queue.id }),
-    onSuccess: update.queue,
-    onError: onError(queue.paused ? "resume" : "pause"),
+  // The callbacks run outside tracking, so the options read the queue. A
+  // pause takes whether the queue was paused, so a failure names the ask.
+  const pause = useMutation(() => {
+    const queue = props.queue.id
+    const shown = name()
+    return {
+      mutationFn: (paused: boolean) =>
+        paused
+          ? client.admin.jobs.resume({ queue })
+          : client.admin.jobs.pause({ queue }),
+      onSuccess: update.queue,
+      onError: (error: Error, paused: boolean) =>
+        failed(paused ? "resume" : "pause", shown, error),
+    }
   })
-  const clear = useMutation({
-    mutationFn: () => client.admin.jobs.clear({ queue: queue.id }),
-    onSuccess: update.queue,
-    onError: onError("clear"),
+  const clear = useMutation(() => {
+    const queue = props.queue.id
+    const shown = name()
+    return {
+      mutationFn: () => client.admin.jobs.clear({ queue }),
+      onSuccess: update.queue,
+      onError: (error: Error) => failed("clear", shown, error),
+    }
   })
-  const summary = queueSummary(queue)
+  const summary = () => queueSummary(props.queue)
 
-  const running = tr("jobs.queue.running", {
-    active: queue.active,
-    concurrency: queue.concurrency,
-  })
-  const state = queue.paused ? "paused" : queue.active > 0 ? "running" : "idle"
+  const running = () =>
+    tr("jobs.queue.running", {
+      active: props.queue.active,
+      concurrency: props.queue.concurrency,
+    })
+  const state = () =>
+    props.queue.paused ? "paused" : props.queue.active > 0 ? "running" : "idle"
   // A paused queue still finishes what it started, so say so under it.
-  const counts: string[] = []
-  if (queue.paused && queue.active > 0) counts.push(running)
-  if (queue.waiting > 0) {
-    counts.push(tr("jobs.queue.waiting", { count: queue.waiting }))
+  const counts = () => {
+    const queue = props.queue
+    const parts: string[] = []
+    if (queue.paused && queue.active > 0) parts.push(running())
+    if (queue.waiting > 0) {
+      parts.push(tr("jobs.queue.waiting", { count: queue.waiting }))
+    }
+    if (queue.completed > 0) {
+      parts.push(tr("jobs.queue.done", { count: queue.completed }))
+    }
+    return parts
   }
-  if (queue.completed > 0) {
-    counts.push(tr("jobs.queue.done", { count: queue.completed }))
-  }
-  const hasCounts = counts.length > 0 || queue.failed > 0
+  // A memo, so the line under the status is built once, not on each event.
+  const hasCounts = createMemo(
+    () => counts().length > 0 || props.queue.failed > 0,
+  )
 
   return (
     <JobRow
-      name={name}
-      description={queueDescription(queue)}
+      name={name()}
+      description={queueDescription(props.queue)}
       controls={
         <>
-          {task && <TaskButton task={task} />}
+          <Show when={props.task}>
+            {(task) => <TaskButton task={task()} />}
+          </Show>
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-foreground data-popup-open:text-foreground"
-                  aria-label={tr("jobs.queue.actions", { queue: name })}
-                />
-              }
+              class={rowMenuButton}
+              aria-label={tr("jobs.queue.actions", { queue: name() })}
             >
-              <EllipsisIcon />
+              <Icon icon={Ellipsis} />
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              sideOffset={6}
-              className="min-w-48"
-            >
-              <DropdownMenuItem onClick={() => setDetails(true)}>
-                <InfoIcon />
+            <DropdownMenuContent align="end" sideOffset={6} class="min-w-48">
+              <DropdownMenuItem onSelect={() => setDetails(true)}>
+                <Icon icon={Info} />
                 {tr("jobs.queue.details")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={pause.isPending}
-                onClick={() => pause.mutate()}
+                onSelect={() => pause.mutate(props.queue.paused)}
               >
-                {queue.paused ? <PlayIcon /> : <PauseIcon />}
-                {queue.paused
+                <Icon icon={props.queue.paused ? Play : Pause} />
+                {props.queue.paused
                   ? tr("jobs.queue.resume")
                   : tr("jobs.queue.pause")}
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={queue.waiting === 0 || clear.isPending}
-                onClick={() => clear.mutate()}
+                disabled={props.queue.waiting === 0 || clear.isPending}
+                onSelect={() => clear.mutate()}
               >
-                <ListXIcon />
+                <Icon icon={ListX} />
                 {tr("jobs.queue.clear")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <QueueDetailsDialog
-            queue={queue}
+            queue={props.queue}
             summary={
-              queue.failed > 0 ? `${summary} · ${failedText(queue)}` : summary
+              props.queue.failed > 0
+                ? `${summary()} · ${failedText(props.queue)}`
+                : summary()
             }
-            open={details}
+            open={details()}
             onOpenChange={setDetails}
           />
         </>
@@ -406,35 +460,33 @@ function QueueRow({
       <Fact
         label={tr("jobs.fact.status")}
         detail={
-          hasCounts && (
+          hasCounts() ? (
             <>
-              {counts.join(" · ")}
-              {queue.failed > 0 && (
-                <>
-                  {counts.length > 0 && " · "}
-                  <button
-                    type="button"
-                    className="text-destructive focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-3 outline-none hover:underline focus-visible:ring-2"
-                    onClick={() => setDetails(true)}
-                  >
-                    {failedText(queue)}
-                  </button>
-                </>
-              )}
+              {counts().join(" · ")}
+              <Show when={props.queue.failed > 0}>
+                {counts().length > 0 && " · "}
+                <button
+                  type="button"
+                  class="text-destructive focus-visible:ring-ring cursor-pointer rounded-sm underline-offset-3 outline-none hover:underline focus-visible:ring-2"
+                  onClick={() => setDetails(true)}
+                >
+                  {failedText(props.queue)}
+                </button>
+              </Show>
             </>
-          )
+          ) : undefined
         }
       >
-        <StatusMark state={state} />
-        <span className="truncate">
-          {state === "paused"
+        <StatusMark state={state()} />
+        <span class="truncate">
+          {state() === "paused"
             ? tr("jobs.queue.paused")
-            : state === "running"
-              ? running
+            : state() === "running"
+              ? running()
               : tr("jobs.queue.idle")}
         </span>
       </Fact>
-      {task && <TaskFacts task={task} />}
+      <Show when={props.task}>{(task) => <TaskFacts task={task()} />}</Show>
     </JobRow>
   )
 }
@@ -451,50 +503,50 @@ function lastRunDetail(
       return tr("jobs.task.took", { took })
     case "cancelled":
       return tr("jobs.task.cancelledAfter", { took })
-    case "failed":
+    case "failed": {
       if (!last.error) return tr("jobs.task.failed")
       const known = knownMessage(last.error)
       return known === null
         ? tr("jobs.task.failedUnknown")
         : tr("jobs.task.failedWith", { error: known })
+    }
   }
 }
 
-/** Starts the task, or cancels the run going on. */
-function useTaskAction(task: ScheduledTask) {
-  const update = useJobsUpdate()
-  const running = task.startedAt !== null
-  const name = taskName(task)
-  const action = useMutation({
-    mutationFn: () =>
-      running
-        ? client.admin.jobs.cancelTask({ task: task.id })
-        : client.admin.jobs.runTask({ task: task.id }),
-    onSuccess: update.task,
-    onError: (error) =>
-      toast.error(
-        running
-          ? tr("jobs.task.cancelFailed", { task: name })
-          : tr("jobs.task.startFailed", { task: name }),
-        { description: errorMessage(error) },
-      ),
-  })
-  return { running, action }
-}
-
 /** Run now, or cancel; the same width either way, so rows don't move. */
-function TaskButton({ task }: { task: ScheduledTask }) {
-  const { running, action } = useTaskAction(task)
+function TaskButton(props: { task: ScheduledTask }) {
+  const update = useJobsUpdate()
+  const running = () => props.task.startedAt !== null
+  // The callbacks run outside tracking, so the options read the task. It
+  // takes whether a run was going on, so a failure names what was asked.
+  const action = useMutation(() => {
+    const task = props.task.id
+    const name = taskName(props.task)
+    return {
+      mutationFn: (cancel: boolean) =>
+        cancel
+          ? client.admin.jobs.cancelTask({ task })
+          : client.admin.jobs.runTask({ task }),
+      onSuccess: update.task,
+      onError: (error: Error, cancel: boolean) =>
+        toast.error(
+          cancel
+            ? tr("jobs.task.cancelFailed", { task: name })
+            : tr("jobs.task.startFailed", { task: name }),
+          { description: errorMessage(error) },
+        ),
+    }
+  })
   return (
     <Button
       variant="outline"
       size="sm"
-      className="min-w-24 shrink-0"
+      class="min-w-24 shrink-0"
       disabled={action.isPending}
-      onClick={() => action.mutate()}
+      onClick={() => action.mutate(running())}
     >
-      {running ? <SquareIcon /> : <PlayIcon />}
-      {running ? tr("jobs.task.cancel") : tr("jobs.task.run")}
+      <Icon icon={running() ? Square : Play} />
+      {running() ? tr("jobs.task.cancel") : tr("jobs.task.run")}
     </Button>
   )
 }
@@ -503,73 +555,70 @@ function TaskButton({ task }: { task: ScheduledTask }) {
  * The run going on, with its progress, or how the last one went; then when
  * the next one starts and the schedule behind it.
  */
-function TaskFacts({ task }: { task: ScheduledTask }) {
-  const name = taskName(task)
-  const schedule = scheduleOf(task)
-  const last = task.lastRun
-  const lastDetail = last ? lastRunDetail(last) : undefined
-  const percent =
-    task.progress === null ? null : Math.round(task.progress * 100)
+function TaskFacts(props: { task: ScheduledTask }) {
+  const schedule = () => scheduleOf(props.task)
+  const lastDetail = () => {
+    const last = props.task.lastRun
+    return last ? lastRunDetail(last) : undefined
+  }
+  const percent = () =>
+    props.task.progress === null ? null : Math.round(props.task.progress * 100)
+  // A memo, so the bar is built once and its transition runs.
+  const hasProgress = createMemo(() => percent() !== null)
 
   return (
     <>
-      {task.startedAt !== null ? (
-        <Fact
-          label={tr("jobs.fact.currentRun")}
-          detail={
-            percent !== null && (
-              <span className="flex items-center gap-2">
-                <span
-                  role="progressbar"
-                  aria-label={tr("jobs.task.progress", { task: name })}
-                  aria-valuenow={percent}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  className="bg-secondary h-1 w-full max-w-32 overflow-hidden rounded-full"
-                >
-                  <span
-                    className="bg-primary block h-full rounded-full transition-[width]"
-                    style={{ width: `${percent}%` }}
-                  />
-                </span>
-                {tr("jobs.task.percent", { percent })}
-              </span>
-            )
-          }
-        >
-          <span className="truncate">
-            {tr("jobs.task.started", { when: formatRelative(task.startedAt) })}
-          </span>
-        </Fact>
-      ) : (
-        <Fact
-          label={tr("jobs.fact.lastRun")}
-          tone={
-            !last
-              ? "muted"
-              : last.result === "failed"
-                ? "destructive"
-                : "default"
-          }
-          detail={lastDetail}
-          title={lastDetail}
-        >
-          <span className="truncate">
-            {last ? formatRelative(last.endedAt) : tr("jobs.task.neverRan")}
-          </span>
-        </Fact>
-      )}
+      <Show
+        when={props.task.startedAt}
+        fallback={
+          <Fact
+            label={tr("jobs.fact.lastRun")}
+            tone={
+              !props.task.lastRun
+                ? "muted"
+                : props.task.lastRun.result === "failed"
+                  ? "destructive"
+                  : "default"
+            }
+            detail={lastDetail()}
+            title={lastDetail()}
+          >
+            <span class="truncate">
+              {props.task.lastRun
+                ? formatRelative(props.task.lastRun.endedAt)
+                : tr("jobs.task.neverRan")}
+            </span>
+          </Fact>
+        }
+      >
+        {(startedAt) => (
+          <Fact
+            label={tr("jobs.fact.currentRun")}
+            detail={
+              hasProgress() ? (
+                <TaskProgress task={props.task} percent={percent() ?? 0} />
+              ) : undefined
+            }
+          >
+            <span class="truncate">
+              {tr("jobs.task.started", { when: formatRelative(startedAt()) })}
+            </span>
+          </Fact>
+        )}
+      </Show>
       <Fact
         label={tr("jobs.fact.nextRun")}
-        tone={task.nextRunAt || task.startedAt ? "default" : "muted"}
-        detail={schedule}
-        title={schedule}
+        tone={
+          props.task.nextRunAt || props.task.startedAt ? "default" : "muted"
+        }
+        detail={schedule()}
+        title={schedule()}
       >
-        <span className="truncate">
-          {task.startedAt !== null
+        <span class="truncate">
+          {props.task.startedAt !== null
             ? tr("jobs.schedule.afterThisRun")
-            : task.nextRunAt
-              ? formatUpcoming(task.nextRunAt)
+            : props.task.nextRunAt
+              ? formatUpcoming(props.task.nextRunAt)
               : tr("jobs.schedule.notScheduled")}
         </span>
       </Fact>
@@ -577,22 +626,45 @@ function TaskFacts({ task }: { task: ScheduledTask }) {
   )
 }
 
+function TaskProgress(props: { task: ScheduledTask; percent: number }) {
+  return (
+    <span class="flex items-center gap-2">
+      <span
+        role="progressbar"
+        aria-label={tr("jobs.task.progress", { task: taskName(props.task) })}
+        aria-valuenow={props.percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        class="bg-secondary h-1 w-full max-w-32 overflow-hidden rounded-full"
+      >
+        {/* Slid in from the left rather than widened, so it animates on
+            the compositor. */}
+        <span
+          class="bg-primary block h-full rounded-full transition-[translate]"
+          style={{ translate: `${props.percent - 100}% 0` }}
+        />
+      </span>
+      {tr("jobs.task.percent", { percent: props.percent })}
+    </span>
+  )
+}
+
 /** A task that fills no queue: its name, what it does, and its runs. */
-function TaskRow({ task }: { task: ScheduledTask }) {
-  const running = task.startedAt !== null
+function TaskRow(props: { task: ScheduledTask }) {
+  const running = () => props.task.startedAt !== null
   return (
     <JobRow
-      name={taskName(task)}
-      description={taskDescription(task)}
-      controls={<TaskButton task={task} />}
+      name={taskName(props.task)}
+      description={taskDescription(props.task)}
+      controls={<TaskButton task={props.task} />}
     >
       <Fact label={tr("jobs.fact.status")}>
-        <StatusMark state={running ? "running" : "idle"} />
-        <span className="truncate">
-          {running ? tr("jobs.task.running") : tr("jobs.queue.idle")}
+        <StatusMark state={running() ? "running" : "idle"} />
+        <span class="truncate">
+          {running() ? tr("jobs.task.running") : tr("jobs.queue.idle")}
         </span>
       </Fact>
-      <TaskFacts task={task} />
+      <TaskFacts task={props.task} />
     </JobRow>
   )
 }

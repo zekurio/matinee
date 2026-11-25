@@ -8,13 +8,16 @@ import {
   type SessionStream,
   type DisplayVideoStream,
 } from "@matinee/contracts"
-import { useQuery } from "@tanstack/react-query"
-import { XIcon } from "lucide-react"
-import { type RefObject, useEffect, useState } from "react"
+import { X } from "lucide"
+import { createMemo, createSignal, For, onSettled, Show } from "solid-js"
 
+import type { PlaybackSource } from "@/components/playback-source"
+import { formatBitrate } from "@/components/player-format"
 import { perLocale, tr } from "@/i18n"
+import { Icon } from "@/kit/icon"
 import { formatBytes } from "@/lib/format"
 import { trackLabel } from "@/lib/languages"
+import { liveData, useLiveQuery } from "@/lib/live-query"
 import { liveQuery, orpc } from "@/lib/rpc"
 import {
   audioEncoderName,
@@ -24,10 +27,7 @@ import {
   encoderOutput,
   toneMapperName,
 } from "@/lib/stats"
-import { usePlayerStore } from "@/stores/player"
-
-import type { PlaybackSource } from "./playback-source"
-import { formatBitrate } from "./player-format"
+import { usePlayerStore, usePlayerStoreApi } from "@/stores/player"
 
 /** The file as the server knows it, for the stats. */
 export type FileInfo = {
@@ -55,13 +55,13 @@ type Sample = {
 
 const SAMPLE_MS = 1000
 
-/** Reads the video's size, frames, and buffer once a second. */
-function useSample(video: RefObject<HTMLVideoElement | null>): Sample | null {
-  const [sample, setSample] = useState<Sample | null>(null)
-  useEffect(() => {
+/** Reads the video's size, frames, and buffer once a second, while the stats show. */
+function useSample(video: () => HTMLVideoElement | undefined) {
+  const [sample, setSample] = createSignal<Sample | null>(null)
+  onSettled(() => {
     let last: { shown: number; at: number } | null = null
     const read = () => {
-      const el = video.current
+      const el = video()
       if (!el) return
       const quality = el.getVideoPlaybackQuality()
       const at = performance.now()
@@ -106,7 +106,7 @@ function useSample(video: RefObject<HTMLVideoElement | null>): Sample | null {
     read()
     const timer = window.setInterval(read, SAMPLE_MS)
     return () => window.clearInterval(timer)
-  }, [video])
+  })
   return sample
 }
 
@@ -428,20 +428,26 @@ function fileRows(file: FileInfo): Row[] {
   ]
 }
 
-function Rows({ rows }: { rows: Row[] }) {
-  if (rows.length === 0) return null
+function Rows(props: { rows: Row[] }) {
   return (
-    // On the panel's grid, so every group's labels line up.
-    <dl className="col-span-2 grid grid-cols-subgrid gap-y-1 py-2 first:pt-0 last:pb-0">
-      {rows.map((row) => (
-        <div key={row.label} className="contents">
-          <dt className="text-foreground/65 whitespace-nowrap">{row.label}</dt>
-          <dd className="min-w-0 font-medium break-words tabular-nums">
-            {row.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <Show when={props.rows.length > 0}>
+      {/* On the panel's grid, so every group's labels line up. */}
+      <dl class="col-span-2 grid grid-cols-subgrid gap-y-1 py-2 first:pt-0 last:pb-0">
+        {/* By label, so a new sample only changes the values. */}
+        <For each={props.rows} keyed={(row) => row.label}>
+          {(row) => (
+            <div class="contents">
+              <dt class="text-foreground/65 whitespace-nowrap">
+                {row().label}
+              </dt>
+              <dd class="min-w-0 font-medium break-words tabular-nums">
+                {row().value}
+              </dd>
+            </div>
+          )}
+        </For>
+      </dl>
+    </Show>
   )
 }
 
@@ -450,49 +456,51 @@ function Rows({ rows }: { rows: Row[] }) {
  * method and why, bitrates, dynamic range, and the browser's frame counts.
  * A transcode adds what the server encodes with, for `sessionId`.
  */
-export function PlayerStats({
-  video,
-  sessionId,
-}: {
-  video: RefObject<HTMLVideoElement | null>
+export function PlayerStats(props: {
+  video: () => HTMLVideoElement | undefined
   sessionId: string
 }) {
+  const { setStatsOpen } = usePlayerStoreApi().getState()
   const plan = usePlayerStore((state) => state.plan)
   const source = usePlayerStore((state) => state.source)
   const failed = usePlayerStore((state) => state.failed)
-  const file: FileInfo = plan.item
-  const setStatsOpen = usePlayerStore((state) => state.setStatsOpen)
-  const sample = useSample(video)
-  const server = useQuery({
-    ...orpc.playback.stream.experimental_liveOptions({ input: { sessionId } }),
+  const sample = useSample(props.video)
+  const stream = useLiveQuery(() => ({
+    ...orpc.playback.stream.experimental_liveOptions({
+      input: { sessionId: props.sessionId },
+    }),
     ...liveQuery,
-  }).data
-  const groups = [
-    playbackRows(plan, source, failed, file, sample),
-    videoRows(plan, file.probe?.video ?? null, server ?? null, sample),
-    audioRows(plan, server ?? null),
-    fileRows(file),
-  ]
+  }))
+  const server = () => liveData(stream()) ?? null
+  const groups = createMemo(() => {
+    const file: FileInfo = plan().item
+    return [
+      playbackRows(plan(), source(), failed(), file, sample()),
+      videoRows(plan(), file.probe?.video ?? null, server(), sample()),
+      audioRows(plan(), server()),
+      fileRows(file),
+    ]
+  })
 
   return (
     <section
       aria-label={tr("player.stats.toggle")}
-      className="glass text-popover-foreground ring-foreground/10 absolute top-3 right-3 z-10 max-h-[calc(100%-1.5rem)] w-[min(24rem,calc(100%-1.5rem))] overflow-y-auto rounded-xl p-3 pr-9 text-xs shadow-xl ring-1 shadow-black/40 sm:top-4 sm:right-5"
+      class="glass text-popover-foreground ring-foreground/10 absolute top-3 right-3 z-10 max-h-[calc(100%-1.5rem)] w-[min(24rem,calc(100%-1.5rem))] overflow-y-auto rounded-xl p-3 pr-9 text-xs shadow-xl ring-1 shadow-black/40 sm:top-4 sm:right-5"
     >
       <button
         type="button"
         aria-label={tr("player.stats.close")}
         title={tr("player.stats.close")}
-        className="text-foreground/65 hover:text-foreground hover:bg-foreground/10 focus-visible:ring-ring absolute top-2 right-2 grid size-6 place-items-center rounded-full outline-none focus-visible:ring-2"
+        class="text-foreground/65 hover:text-foreground hover:bg-foreground/10 focus-visible:ring-ring absolute top-2 right-2 grid size-6 place-items-center rounded-full outline-none focus-visible:ring-2"
         onClick={() => setStatsOpen(false)}
       >
-        <XIcon className="size-4" />
+        <Icon icon={X} class="size-4" />
       </button>
       {/* A rule between the groups in place of headings. */}
-      <div className="divide-foreground/10 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 divide-y">
-        {groups.map((rows, at) => (
-          <Rows key={at} rows={rows} />
-        ))}
+      <div class="divide-foreground/10 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 divide-y">
+        <For each={groups()} keyed={false}>
+          {(rows) => <Rows rows={rows()} />}
+        </For>
       </div>
     </section>
   )

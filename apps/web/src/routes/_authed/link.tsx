@@ -1,11 +1,13 @@
 import { formatUserCode, UserCode } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { buttonVariants } from "@matinee/ui/components/button"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { cn } from "@matinee/ui/lib/utils"
+import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router"
+import { Show } from "solid-js"
 
 import { AuthScreen } from "@/components/auth-screen"
 import { DeviceApproval, DeviceCodeForm } from "@/components/device-link"
 import { tr } from "@/i18n"
+import { buttonVariants } from "@/kit/button"
 
 const LinkSearch = t.object({
   /** The code from the app, when it showed a link or a QR code. */
@@ -13,11 +15,10 @@ const LinkSearch = t.object({
 })
 
 // The links that stand in for a full-width button.
-const WIDE_OUTLINE = buttonVariants({
-  variant: "outline",
-  size: "lg",
-  className: "w-full",
-})
+const WIDE_OUTLINE = cn(
+  buttonVariants({ variant: "outline", size: "lg" }),
+  "w-full",
+)
 
 /**
  * Where someone signs in an app that has no browser, with its code. A
@@ -30,38 +31,47 @@ export const Route = createFileRoute("/_authed/link")({
 })
 
 function LinkDevice() {
-  const { code } = Route.useSearch()
+  const search = Route.useSearch()
   const navigate = useNavigate()
-  if (code === undefined || !UserCode.safeParse(code).success) {
-    return (
-      <AuthScreen
-        title={tr("link.device.title")}
-        description={tr("link.device.enterCode")}
-      >
-        <DeviceCodeForm
-          code={code}
-          onSubmit={(userCode) =>
-            navigate({ to: "/link", search: { code: userCode } })
+  const valid = () => {
+    const code = search().code
+    return code !== undefined && UserCode.safeParse(code).success ? code : null
+  }
+
+  return (
+    <Show
+      when={valid()}
+      keyed
+      fallback={
+        <AuthScreen
+          title={tr("link.device.title")}
+          description={tr("link.device.enterCode")}
+        >
+          <DeviceCodeForm
+            code={search().code}
+            onSubmit={(userCode) =>
+              void navigate({ to: "/link", search: { code: userCode } })
+            }
+          />
+        </AuthScreen>
+      }
+    >
+      {(code) => (
+        <DeviceApproval
+          userCode={formatUserCode(code)}
+          Frame={AuthScreen}
+          done={
+            <Link to="/" class={WIDE_OUTLINE}>
+              {tr("link.device.home")}
+            </Link>
+          }
+          again={
+            <Link to="/link" class={WIDE_OUTLINE}>
+              {tr("link.device.anotherCode")}
+            </Link>
           }
         />
-      </AuthScreen>
-    )
-  }
-  return (
-    <DeviceApproval
-      key={code}
-      userCode={formatUserCode(code)}
-      Frame={AuthScreen}
-      done={
-        <Link to="/" className={WIDE_OUTLINE}>
-          {tr("link.device.home")}
-        </Link>
-      }
-      again={
-        <Link to="/link" className={WIDE_OUTLINE}>
-          {tr("link.device.anotherCode")}
-        </Link>
-      }
-    />
+      )}
+    </Show>
   )
 }

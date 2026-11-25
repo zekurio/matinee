@@ -1,5 +1,6 @@
 import type { PlaybackPreferences } from "@matinee/contracts"
-import { create } from "zustand"
+
+import { createPlainStore, type PlainStore, storeHook } from "./plain-store"
 
 type PendingPlaybackState = {
   /**
@@ -10,10 +11,12 @@ type PendingPlaybackState = {
   setPending: (pending: PlaybackPreferences | null) => void
 }
 
-/** See `updatePlaybackPreferences` in `lib/playback-sync.ts`. */
-export const usePendingPlaybackStore = create<PendingPlaybackState>()(
-  (set) => ({
+const store: PlainStore<PendingPlaybackState> =
+  createPlainStore<PendingPlaybackState>({
     pending: null,
-    setPending: (pending) => set({ pending }),
-  }),
-)
+    setPending: (pending: PlaybackPreferences | null) =>
+      store.setState({ pending }),
+  })
+
+/** See `updatePlaybackPreferences` in `lib/playback-sync.ts`. */
+export const usePendingPlaybackStore = storeHook(store)

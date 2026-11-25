@@ -1,6 +1,6 @@
 import { CatalogRef } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/solid-router"
 
 import { detailsOptions } from "@/components/catalog/catalog-data"
 import { CatalogTitlePage } from "@/components/catalog/catalog-page"

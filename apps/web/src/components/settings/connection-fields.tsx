@@ -5,27 +5,27 @@ import type {
   TitleKind,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import {
-  Field,
-  FieldDescription,
-  FieldLabel,
-} from "@matinee/ui/components/field"
-import { Input } from "@matinee/ui/components/input"
+import type { JSX } from "@solidjs/web"
+import { keepPreviousData, useQuery } from "@tanstack/solid-query"
+import { TriangleAlert } from "lucide"
+import { createUniqueId, For, Match, Show, Switch } from "solid-js"
+
+import { MultiSelect } from "@/components/multi-select"
+import { tr, translateKnown } from "@/i18n"
+import { Field, FieldDescription, FieldLabel } from "@/kit/field"
+import { Icon } from "@/kit/icon"
+import { Input } from "@/kit/input"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@matinee/ui/components/select"
-import { Switch } from "@matinee/ui/components/switch"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { TriangleAlertIcon } from "lucide-react"
-import { type ReactNode, useId } from "react"
-
-import { MultiSelect } from "@/components/multi-select"
-import { tr, translateKnown } from "@/i18n"
+} from "@/kit/select"
+import { Switch as Toggle } from "@/kit/switch"
 import { orpc } from "@/lib/rpc"
+
+import { RichSelectItem } from "./select-item-content"
 
 /** A described field's value as its input holds it. */
 export type FormValue = string | boolean | string[]
@@ -129,125 +129,171 @@ const UNSET = "\u0000unset"
  * or a switch. A choice that isn't required can be left unset, which
  * `unset` names.
  */
-export function DescribedInput({
-  field,
-  value,
-  onChange,
-  unset,
-  footer,
-}: {
+export function DescribedInput(props: {
   field: DescribedField
   value: FormValue | undefined
   onChange: (value: FormValue) => void
   /** What an unset choice means, like "Same as above". */
   unset?: string
   /** Under the field, such as where its folder lands. */
-  footer?: ReactNode
+  footer?: JSX.Element
 }) {
-  const id = useId()
-  const label = translateKnown(field.label)
-  const current = formValue(field, { [field.key]: value })
-  if (field.kind === "switch") {
-    return (
-      <Field orientation="horizontal" className="justify-between">
-        <FieldLabel htmlFor={id}>{label}</FieldLabel>
-        <Switch
+  const id = createUniqueId()
+  const label = () => translateKnown(props.field.label)
+  const current = () =>
+    formValue(props.field, { [props.field.key]: props.value })
+  const chosen = () => {
+    const value = current()
+    return Array.isArray(value) ? value : []
+  }
+  return (
+    <Switch
+      fallback={
+        <TextInput
           id={id}
-          checked={current === true}
-          onCheckedChange={(checked) => onChange(checked)}
+          label={label()}
+          field={props.field}
+          text={textOf(current())}
+          footer={props.footer}
+          onChange={(next) => props.onChange(next)}
         />
-      </Field>
-    )
-  }
-  if (field.kind === "multiselect") {
-    const chosen = Array.isArray(current) ? current : []
-    return (
-      <Field>
-        <FieldLabel htmlFor={id}>{label}</FieldLabel>
-        {field.choices.length ? (
-          <MultiSelect
+      }
+    >
+      <Match when={props.field.kind === "switch"}>
+        <Field orientation="horizontal" class="justify-between">
+          <FieldLabel for={id}>{label()}</FieldLabel>
+          <Toggle
             id={id}
-            placeholder={tr("connections.field.find")}
-            empty={tr("connections.field.findEmpty")}
-            choices={field.choices.map((choice) => ({
-              value: choice.value,
-              label: translateKnown(choice.label),
-            }))}
-            value={chosen}
-            onChange={onChange}
+            checked={current() === true}
+            onCheckedChange={(checked) => props.onChange(checked)}
           />
-        ) : (
-          <FieldDescription>
-            {tr("connections.field.noChoices")}
-          </FieldDescription>
-        )}
-        {footer}
-      </Field>
-    )
-  }
-  if (field.kind === "select") {
-    const text = textOf(current)
-    const items = [
-      ...(field.required
+        </Field>
+      </Match>
+      <Match when={props.field.kind === "multiselect"}>
+        <Field>
+          <FieldLabel for={id}>{label()}</FieldLabel>
+          <Show
+            when={props.field.choices.length > 0}
+            fallback={
+              <FieldDescription>
+                {tr("connections.field.noChoices")}
+              </FieldDescription>
+            }
+          >
+            <MultiSelect
+              id={id}
+              placeholder={tr("connections.field.find")}
+              empty={tr("connections.field.findEmpty")}
+              choices={props.field.choices.map((choice) => ({
+                value: choice.value,
+                label: translateKnown(choice.label),
+              }))}
+              value={chosen()}
+              onChange={(next) => props.onChange(next)}
+            />
+          </Show>
+          {props.footer}
+        </Field>
+      </Match>
+      <Match when={props.field.kind === "select"}>
+        <ChoiceInput
+          id={id}
+          label={label()}
+          field={props.field}
+          text={textOf(current())}
+          unset={props.unset}
+          footer={props.footer}
+          onChange={(next) => props.onChange(next)}
+        />
+      </Match>
+    </Switch>
+  )
+}
+
+type InputProps = {
+  id: string
+  label: string
+  field: DescribedField
+  text: string
+  unset?: string
+  footer: JSX.Element | undefined
+  onChange: (value: FormValue) => void
+}
+
+function ChoiceInput(props: InputProps) {
+  const items = () => {
+    const list = [
+      ...(props.field.required
         ? []
-        : [{ value: UNSET, label: unset ?? tr("connections.field.unset") }]),
-      ...field.choices.map((choice) => ({
+        : [
+            {
+              value: UNSET,
+              label: props.unset ?? tr("connections.field.unset"),
+            },
+          ]),
+      ...props.field.choices.map((choice) => ({
         value: choice.value,
         label: translateKnown(choice.label),
       })),
     ]
     // A saved value the server no longer offers still shows.
-    if (text && !items.some((item) => item.value === text))
-      items.push({ value: text, label: text })
-    return (
-      <Field>
-        <FieldLabel htmlFor={id}>{label}</FieldLabel>
-        <Select
-          items={items}
-          value={text || (field.required ? null : UNSET)}
-          onValueChange={(next) =>
-            next !== null && onChange(next === UNSET ? "" : next)
-          }
-        >
-          <SelectTrigger id={id} className="w-full">
-            <SelectValue placeholder={tr("connections.field.pick")} />
-          </SelectTrigger>
-          <SelectContent>
-            {items.map((item) => {
-              const description = field.choices.find(
-                (choice) => choice.value === item.value,
-              )?.description
-              return (
-                <SelectItem key={item.value} value={item.value}>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate">{item.label}</span>
-                    {description && (
-                      <span className="text-muted-foreground truncate text-xs">
-                        {translateKnown(description)}
-                      </span>
-                    )}
-                  </span>
-                </SelectItem>
-              )
-            })}
-          </SelectContent>
-        </Select>
-        {footer}
-      </Field>
-    )
+    if (props.text && !list.some((item) => item.value === props.text))
+      list.push({ value: props.text, label: props.text })
+    return list
   }
+  const description = (value: string) =>
+    props.field.choices.find((choice) => choice.value === value)?.description
   return (
     <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel for={props.id}>{props.label}</FieldLabel>
+      <Select
+        items={items()}
+        value={props.text || (props.field.required ? null : UNSET)}
+        onValueChange={(next) => {
+          if (next !== null) props.onChange(next === UNSET ? "" : next)
+        }}
+      >
+        <SelectTrigger id={props.id} class="w-full">
+          <SelectValue placeholder={tr("connections.field.pick")} />
+        </SelectTrigger>
+        <SelectContent>
+          <For each={items()}>
+            {(item) => (
+              <RichSelectItem value={item.value} label={item.label}>
+                <span class="flex min-w-0 flex-col">
+                  <span class="truncate">{item.label}</span>
+                  <Show when={description(item.value)}>
+                    {(text) => (
+                      <span class="text-muted-foreground truncate text-xs">
+                        {translateKnown(text())}
+                      </span>
+                    )}
+                  </Show>
+                </span>
+              </RichSelectItem>
+            )}
+          </For>
+        </SelectContent>
+      </Select>
+      {props.footer}
+    </Field>
+  )
+}
+
+function TextInput(props: InputProps) {
+  const secret = () => props.field.kind === "secret"
+  return (
+    <Field>
+      <FieldLabel for={props.id}>{props.label}</FieldLabel>
       <Input
-        id={id}
-        type={field.kind === "secret" ? "password" : "text"}
-        value={textOf(current)}
-        autoComplete={field.kind === "secret" ? "new-password" : "off"}
-        spellCheck={false}
-        onChange={(event) => onChange(event.target.value)}
+        id={props.id}
+        type={secret() ? "password" : "text"}
+        value={props.text}
+        autocomplete={secret() ? "new-password" : "off"}
+        spellcheck={false}
+        onValueChange={(next) => props.onChange(next)}
       />
-      {footer}
+      {props.footer}
     </Field>
   )
 }
@@ -256,81 +302,93 @@ export function DescribedInput({
  * Where a folder lands: the library whose folder holds it, which the
  * server works out, or, when none does, the library an admin picks.
  */
-export function LandsIn({
-  kind,
-  folder,
-  libraries,
-  picked,
-  onPick,
-}: {
+export function LandsIn(props: {
   kind: TitleKind
   folder: string
   libraries: Library[] | undefined
   picked: string | undefined
   onPick: (libraryId: string) => void
 }) {
-  const id = useId()
-  const landing = useQuery({
-    ...orpc.admin.fulfilment.landing.queryOptions({ input: { kind, folder } }),
-    enabled: folder.length > 0,
+  const id = createUniqueId()
+  const landing = useQuery(() => ({
+    ...orpc.admin.fulfilment.landing.queryOptions({
+      input: { kind: props.kind, folder: props.folder },
+    }),
+    enabled: props.folder.length > 0,
     placeholderData: keepPreviousData,
     retry: false,
-  })
-  if (!folder || !landing.isSuccess) return null
-  if (landing.data.hidden)
-    return (
-      <p className="text-13px flex items-start gap-1.5 pt-1 leading-5">
-        <TriangleAlertIcon
-          aria-hidden
-          className="text-warning mt-0.5 size-3.5 shrink-0"
-        />
-        <span>{tr("connections.landsHidden", { folder })}</span>
-      </p>
-    )
-  if (landing.data.library)
-    return (
-      <FieldDescription>
-        {tr("connections.landsIn", { library: landing.data.library.name })}
-      </FieldDescription>
-    )
-  const homes = (libraries ?? []).filter(
-    (library) =>
-      library.kind === (kind === "movie" ? "movies" : "shows") &&
-      library.metadataProvider !== null,
-  )
-  const items = homes.map((library) => ({
-    value: library.id,
-    label: library.name,
   }))
+  const found = () =>
+    props.folder && landing.isSuccess ? landing.data : undefined
+  const homes = () =>
+    (props.libraries ?? []).filter(
+      (library) =>
+        library.kind === (props.kind === "movie" ? "movies" : "shows") &&
+        library.metadataProvider !== null,
+    )
+  const items = () =>
+    homes().map((library) => ({ value: library.id, label: library.name }))
   return (
-    <div className="flex flex-col gap-2 pt-1">
-      <p className="text-13px flex items-start gap-1.5 leading-5">
-        <TriangleAlertIcon
-          aria-hidden
-          className="text-warning mt-0.5 size-3.5 shrink-0"
-        />
-        <span>{tr("connections.lost", { folder })}</span>
-      </p>
-      <Select
-        items={items}
-        value={homes.some((library) => library.id === picked) ? picked : null}
-        onValueChange={(next) => next && onPick(next)}
-      >
-        <SelectTrigger
-          id={id}
-          aria-label={tr("connections.landsInPick")}
-          className="w-full"
-        >
-          <SelectValue placeholder={tr("connections.landsInPick")} />
-        </SelectTrigger>
-        <SelectContent>
-          {items.map((item) => (
-            <SelectItem key={item.value} value={item.value}>
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <Show when={found()}>
+      {(data) => (
+        <Switch>
+          <Match when={data().hidden}>
+            <p class="text-13px flex items-start gap-1.5 pt-1 leading-5">
+              <Icon
+                icon={TriangleAlert}
+                class="text-warning mt-0.5 size-3.5 shrink-0"
+              />
+              <span>
+                {tr("connections.landsHidden", { folder: props.folder })}
+              </span>
+            </p>
+          </Match>
+          <Match when={data().library}>
+            {(library) => (
+              <FieldDescription>
+                {tr("connections.landsIn", { library: library().name })}
+              </FieldDescription>
+            )}
+          </Match>
+          <Match when={true}>
+            <div class="flex flex-col gap-2 pt-1">
+              <p class="text-13px flex items-start gap-1.5 leading-5">
+                <Icon
+                  icon={TriangleAlert}
+                  class="text-warning mt-0.5 size-3.5 shrink-0"
+                />
+                <span>{tr("connections.lost", { folder: props.folder })}</span>
+              </p>
+              <Select
+                items={items()}
+                value={
+                  homes().some((library) => library.id === props.picked)
+                    ? (props.picked ?? null)
+                    : null
+                }
+                onValueChange={(next) => {
+                  if (next) props.onPick(next)
+                }}
+              >
+                <SelectTrigger
+                  id={id}
+                  aria-label={tr("connections.landsInPick")}
+                  class="w-full"
+                >
+                  <SelectValue placeholder={tr("connections.landsInPick")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <For each={items()}>
+                    {(item) => (
+                      <SelectItem value={item.value}>{item.label}</SelectItem>
+                    )}
+                  </For>
+                </SelectContent>
+              </Select>
+            </div>
+          </Match>
+        </Switch>
+      )}
+    </Show>
   )
 }

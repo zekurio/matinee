@@ -7,13 +7,13 @@ import {
   type PlaybackQuality,
   type PlaybackStart,
 } from "@matinee/contracts"
-import { queryOptions } from "@tanstack/react-query"
+import { queryOptions } from "@tanstack/solid-query"
 
 import { loadHls } from "@/components/use-hls"
+import { playbackDevice } from "@/lib/playback-device"
+import { randomId } from "@/lib/random-id"
 import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
-import { playbackDevice } from "./playback-device"
-import { randomId } from "./random-id"
 import { client } from "./rpc"
 
 /** The first answer for a sitting with a file, and what it was asked with. */

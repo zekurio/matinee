@@ -1,73 +1,86 @@
-import { Alert, AlertDescription } from "@matinee/ui/components/alert"
-import { Input } from "@matinee/ui/components/input"
+import type { JSX } from "@solidjs/web"
+import { TriangleAlert } from "lucide"
+import { type ComponentProps, For, omit } from "solid-js"
+
+import { Alert, AlertDescription } from "@/kit/alert"
+import { Icon } from "@/kit/icon"
+import { Input } from "@/kit/input"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@matinee/ui/components/select"
-import { Switch } from "@matinee/ui/components/switch"
-import { useSelector } from "@tanstack/react-form"
-import { TriangleAlertIcon } from "lucide-react"
-import type { ComponentProps, ReactNode } from "react"
-
-import { useFieldContext } from "@/lib/form"
+} from "@/kit/select"
+import { Switch } from "@/kit/switch"
+import type { Form } from "@/lib/form"
 
 import { SettingRow } from "./settings-panel"
 
-/**
- * Stands in for a value `withForm` reads only the type of, for its
- * `defaultValues` and `props`. The panel's form brings the real ones.
- */
-export function typeOnly<T>(value?: T): T | undefined {
-  return value
+/** The names of a form's fields that hold a `Value`. */
+export type FieldName<Values extends object, Value> = {
+  [Name in keyof Values]-?: Values[Name] extends Value ? Name : never
+}[keyof Values]
+
+/** A form and one of its top-level fields, for a row's `Field` twin. */
+type Bound<Values extends object, Value> = {
+  form: Form<Values>
+  name: FieldName<Values, Value>
 }
 
 /*
- * Each row has a `Field` twin that binds to the form field it renders in,
- * inside `form.AppField`. The twins report changes but not blurs: a blur
- * counts as a touch, and a touched form stops following a refetch.
+ * Each row has a `Field` twin that binds to a field of a `createForm`
+ * form. The twins report changes but not blurs, as a settings form shows
+ * no message until it's saved. A field nested deeper than the form's top
+ * level takes the row itself, with its value and change handler.
  */
 
 type SwitchRowProps = {
   title: string
   /** Under the name, beside the switch. */
-  hint?: ReactNode
-  footer?: ReactNode
+  hint?: JSX.Element
+  footer?: JSX.Element
   checked: boolean
   disabled?: boolean
   onChange: (checked: boolean) => void
 }
 
-export function SwitchRow({
-  title,
-  hint,
-  footer,
-  checked,
-  disabled,
-  onChange,
-}: SwitchRowProps) {
+export function SwitchRow(props: SwitchRowProps) {
   return (
-    <SettingRow title={title} hint={hint} footer={footer}>
+    <SettingRow title={props.title} hint={props.hint} footer={props.footer}>
       {(ids) => (
         <Switch
           id={ids.controlId}
           aria-labelledby={ids.labelId}
           aria-describedby={ids.hintId}
-          checked={checked}
-          disabled={disabled}
-          onCheckedChange={onChange}
+          checked={props.checked}
+          disabled={props.disabled}
+          onCheckedChange={(checked) => props.onChange(checked)}
         />
       )}
     </SettingRow>
   )
 }
 
-export function SwitchField(row: Omit<SwitchRowProps, "checked" | "onChange">) {
-  const field = useFieldContext<boolean>()
-  const checked = useSelector(field.store, (state) => state.value)
-  return <SwitchRow {...row} checked={checked} onChange={field.handleChange} />
+export function SwitchField<Values extends object>(
+  props: Bound<Values, boolean> & Omit<SwitchRowProps, "checked" | "onChange">,
+) {
+  return (
+    <SwitchRow
+      title={props.title}
+      hint={props.hint}
+      footer={props.footer}
+      disabled={props.disabled}
+      checked={props.form.values()[props.name] === true}
+      onChange={(checked) =>
+        // SAFETY: FieldName only names fields that hold a boolean.
+        props.form.set(
+          props.name,
+          checked as Values[FieldName<Values, boolean>],
+        )
+      }
+    />
+  )
 }
 
 type SelectRowProps<T extends string> = {
@@ -75,8 +88,8 @@ type SelectRowProps<T extends string> = {
   /** `side` in a form dialog's columns. */
   layout?: "split" | "side"
   /** Under the name, beside the select. */
-  hint?: ReactNode
-  footer?: ReactNode
+  hint?: JSX.Element
+  footer?: JSX.Element
   value: T
   options: readonly T[]
   labelOf: (value: T) => string
@@ -84,42 +97,43 @@ type SelectRowProps<T extends string> = {
   onChange: (value: T) => void
 }
 
-export function SelectRow<T extends string>({
-  title,
-  layout = "split",
-  hint,
-  footer,
-  value,
-  options,
-  labelOf,
-  disabled,
-  onChange,
-}: SelectRowProps<T>) {
+export function SelectRow<T extends string>(props: SelectRowProps<T>) {
+  const items = () =>
+    props.options.map((option) => ({
+      value: option,
+      label: props.labelOf(option),
+    }))
   return (
-    <SettingRow title={title} layout={layout} hint={hint} footer={footer}>
+    <SettingRow
+      title={props.title}
+      layout={props.layout ?? "split"}
+      hint={props.hint}
+      footer={props.footer}
+    >
       {(ids) => (
-        <Select
-          items={options.map((option) => ({
-            value: option,
-            label: labelOf(option),
-          }))}
-          value={value}
-          disabled={disabled}
-          onValueChange={(next) => next && onChange(next)}
+        <Select<T>
+          items={items()}
+          value={props.value}
+          disabled={props.disabled}
+          onValueChange={(next) => {
+            if (next !== null) props.onChange(next)
+          }}
         >
           <SelectTrigger
             id={ids.controlId}
             aria-describedby={ids.hintId}
-            className="w-full"
+            class="w-full"
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {options.map((option) => (
-              <SelectItem key={option} value={option}>
-                {labelOf(option)}
-              </SelectItem>
-            ))}
+            <For each={props.options}>
+              {(option) => (
+                <SelectItem<T> value={option}>
+                  {props.labelOf(option)}
+                </SelectItem>
+              )}
+            </For>
           </SelectContent>
         </Select>
       )}
@@ -127,53 +141,72 @@ export function SelectRow<T extends string>({
   )
 }
 
-export function SelectField<T extends string>(
-  row: Omit<SelectRowProps<T>, "value" | "onChange">,
+export function SelectField<Values extends object, T extends string>(
+  props: Bound<Values, T> & Omit<SelectRowProps<T>, "value" | "onChange">,
 ) {
-  const field = useFieldContext<T>()
-  const value = useSelector(field.store, (state) => state.value)
-  return <SelectRow {...row} value={value} onChange={field.handleChange} />
+  return (
+    <SelectRow<T>
+      title={props.title}
+      layout={props.layout}
+      hint={props.hint}
+      footer={props.footer}
+      options={props.options}
+      labelOf={props.labelOf}
+      disabled={props.disabled}
+      // SAFETY: FieldName only names fields that hold a T.
+      value={props.form.values()[props.name] as T}
+      onChange={(value) =>
+        // SAFETY: as above, the field holds a T.
+        props.form.set(props.name, value as Values[FieldName<Values, T>])
+      }
+    />
+  )
 }
 
 type InputRowProps = Omit<ComponentProps<typeof Input>, "id" | "title"> & {
   title: string
   layout?: "split" | "stack"
   /** Under the row, such as a note on what changing it does. */
-  footer?: ReactNode
+  footer?: JSX.Element
 }
 
 /** A row whose control is an input; the rest of the props go to it. */
-function InputRow({
-  title,
-  layout = "split",
-  footer,
-  ...input
-}: InputRowProps) {
+export function InputRow(props: InputRowProps) {
+  const input = omit(props, "title", "layout", "footer")
   return (
-    <SettingRow title={title} layout={layout} footer={footer}>
+    <SettingRow
+      title={props.title}
+      layout={props.layout ?? "split"}
+      footer={props.footer}
+    >
       {(ids) => <Input id={ids.controlId} {...input} />}
     </SettingRow>
   )
 }
 
-export function InputField(row: Omit<InputRowProps, "value" | "onChange">) {
-  const field = useFieldContext<string>()
-  const value = useSelector(field.store, (state) => state.value)
+export function InputField<Values extends object>(
+  props: Bound<Values, string> &
+    Omit<InputRowProps, "value" | "onValueChange" | "form" | "name">,
+) {
+  const input = omit(props, "form", "name")
   return (
     <InputRow
-      {...row}
-      value={value}
-      onChange={(event) => field.handleChange(event.target.value)}
+      {...input}
+      value={String(props.form.values()[props.name])}
+      onValueChange={(value) =>
+        // SAFETY: FieldName only names fields that hold a string.
+        props.form.set(props.name, value as Values[FieldName<Values, string>])
+      }
     />
   )
 }
 
-export function SettingWarning({ children }: { children: ReactNode }) {
+export function SettingWarning(props: { children: JSX.Element }) {
   return (
     <Alert>
-      <TriangleAlertIcon />
-      <AlertDescription className="text-foreground">
-        {children}
+      <Icon icon={TriangleAlert} />
+      <AlertDescription class="text-foreground">
+        {props.children}
       </AlertDescription>
     </Alert>
   )

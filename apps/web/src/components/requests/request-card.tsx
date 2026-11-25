@@ -1,37 +1,36 @@
 import type { AdminRequestItem, RequestState } from "@matinee/contracts"
-import { badgeVariants } from "@matinee/ui/components/badge"
+import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
+import { Link } from "@tanstack/solid-router"
+import { Check, ChevronDown, CircleSlash, Clock, TriangleAlert } from "lucide"
+import {
+  children,
+  createMemo,
+  createSignal,
+  createUniqueId,
+  For,
+  onSettled,
+  type ParentProps,
+  Show,
+} from "solid-js"
+
+import { ProgressRing } from "@/components/catalog/catalog-card"
+import { Picture } from "@/components/picture"
+import { tr } from "@/i18n"
+import { badgeVariants } from "@/kit/badge"
+import { Icon } from "@/kit/icon"
 import {
   Popover,
   PopoverContent,
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@matinee/ui/components/popover"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { cn } from "@matinee/ui/lib/utils"
-import { Link } from "@tanstack/react-router"
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  CircleSlashIcon,
-  ClockIcon,
-  TriangleAlertIcon,
-} from "lucide-react"
-import {
-  type ComponentProps,
-  type ReactNode,
-  useEffect,
-  useId,
-  useState,
-} from "react"
-
-import { ProgressRing } from "@/components/catalog/catalog-card"
-import { Picture } from "@/components/picture"
-import { tr } from "@/i18n"
+} from "@/kit/popover"
+import { Skeleton } from "@/kit/skeleton"
 import { formatPercent } from "@/lib/format"
 import { art } from "@/lib/media"
 
-import { scopeLabel, titleLink } from "./request-queue"
+import { scopeLabel } from "./request-queue"
 
 /*
  * The one card every list of requests draws, laid out as Seerr's: the
@@ -52,16 +51,7 @@ import { scopeLabel, titleLink } from "./request-queue"
  * poster's bottom edge, and the space between is the only give. `menu`
  * sits beside the name, by the poster, and holds the rest.
  */
-export function RequestCard({
-  item,
-  size = "rail",
-  state,
-  who,
-  actions,
-  menu,
-  className,
-  ...props
-}: Omit<ComponentProps<"article">, "children"> & {
+export function RequestCard(props: {
   item: Pick<
     AdminRequestItem,
     "title" | "backdrop" | "library" | "scope" | "availability"
@@ -69,94 +59,154 @@ export function RequestCard({
   /** `rail` in Discover's row; `wide` in the requests pages' grids. */
   size?: "rail" | "wide"
   /** A {@link RequestStateBadge}. */
-  state: ReactNode
+  state: JSX.Element
   /**
    * Who asked, on the admin's cards. Its row is kept even when empty, so
    * passing it at all is what makes a card the admin's.
    */
-  who?: ReactNode
-  actions?: ReactNode
-  menu?: ReactNode
+  who?: JSX.Element
+  actions?: JSX.Element
+  menu?: JSX.Element
+  ref?: (element: HTMLElement) => void
+  tabindex?: number
+  onFocus?: () => void
+  class?: string
 }) {
-  const id = useId()
-  const { title } = item
-  const poster = art(title.poster)
-  const backdrop = art(item.backdrop)
-  const facts = [
-    title.year === null ? null : String(title.year),
-    scopeLabel(item.scope),
-  ]
-    .filter(Boolean)
-    .join(" · ")
-  const link = titleLink(item)
-  const wide = size === "wide"
-  const admin = who !== undefined
+  const id = createUniqueId()
+  const admin = "who" in props
+  const poster = () => art(props.item.title.poster)
+  const backdrop = () => art(props.item.backdrop)
+  const facts = () =>
+    [
+      props.item.title.year === null ? null : String(props.item.title.year),
+      scopeLabel(props.item.scope),
+    ]
+      .filter(Boolean)
+      .join(" · ")
+  const actions = children(() => props.actions)
+  const menu = children(() => props.menu)
 
   return (
     <article
       aria-labelledby={`${id}-name`}
-      {...props}
-      className={cn(
+      ref={props.ref}
+      tabindex={props.tabindex}
+      onFocus={() => props.onFocus?.()}
+      class={cn(
         "bg-card text-foreground relative isolate flex h-full min-w-0 gap-4 overflow-hidden rounded-xl border p-4 outline-none",
-        className,
+        props.class,
       )}
     >
-      {backdrop && (
-        <div aria-hidden className="absolute inset-0 -z-10">
-          <Picture sources={[backdrop]} sizes="424px" />
-          <div className="from-card/50 to-card absolute inset-0 bg-linear-135 to-75%" />
-        </div>
-      )}
+      <Show when={backdrop()}>
+        {(picture) => (
+          <div aria-hidden="true" class="absolute inset-0 -z-10">
+            <Picture sources={[picture()]} sizes="424px" />
+            <div class="from-card/50 to-card absolute inset-0 bg-linear-135 to-75%" />
+          </div>
+        )}
+      </Show>
       {/* Sized as if empty, so the poster alone sets the row's height,
           and the column stretches to it. */}
-      <div className="@container/card flex min-w-0 flex-1 flex-col [contain:size]">
-        <div className="flex min-w-0 flex-col items-start gap-1">
-          <div className="flex w-full min-w-0 items-start gap-2">
-            <div className="flex min-w-0 flex-1 flex-col">
-              <Facts text={facts} onPicture={backdrop !== null} />
-              <Link
-                {...link}
-                tabIndex={wide ? -1 : undefined}
-                title={title.name}
-                className="focus-visible:ring-ring -mx-1 flex min-w-0 rounded-sm px-1 underline-offset-2 outline-none hover:underline focus-visible:ring-2"
+      <div class="@container/card flex min-w-0 flex-1 flex-col [contain:size]">
+        <div class="flex min-w-0 flex-col items-start gap-1">
+          <div class="flex w-full min-w-0 items-start gap-2">
+            <div class="flex min-w-0 flex-1 flex-col">
+              <Facts text={facts()} onPicture={backdrop() !== null} />
+              <TitleLink
+                item={props.item}
+                tabindex={props.size === "wide" ? -1 : undefined}
+                title={props.item.title.name}
+                class="focus-visible:ring-ring -mx-1 flex min-w-0 rounded-sm px-1 underline-offset-2 outline-none hover:underline focus-visible:ring-2"
               >
                 <span
                   id={`${id}-name`}
-                  className="line-clamp-2 min-w-0 text-base font-bold break-words"
+                  class="line-clamp-2 min-w-0 text-base font-bold break-words"
                 >
-                  {title.name}
+                  {props.item.title.name}
                 </span>
-              </Link>
+              </TitleLink>
             </div>
-            {menu && <div className="-mt-1 -mr-1 shrink-0">{menu}</div>}
+            <Show when={menu.toArray().length > 0}>
+              <div class="-mt-1 -mr-1 shrink-0">{menu()}</div>
+            </Show>
           </div>
-          {admin && (
-            <div className="flex h-6 w-full min-w-0 items-center">{who}</div>
-          )}
+          <Show when={admin}>
+            <div class="flex h-6 w-full min-w-0 items-center">{props.who}</div>
+          </Show>
           {/* Both words trimmed to their capitals, so they and the badge's
               mark center on one line, whatever the zoom rounds. */}
-          <div className="text-13px flex h-6 w-full min-w-0 items-center gap-2">
-            <span className="text-foreground/85 shrink-0 font-semibold [text-box:trim-both_cap_alphabetic]">
+          <div class="text-13px flex h-6 w-full min-w-0 items-center gap-2">
+            <span class="text-foreground/85 shrink-0 font-semibold [text-box:trim-both_cap_alphabetic]">
               {tr("requests.statusLabel")}
             </span>
-            {state}
+            {props.state}
           </div>
         </div>
-        {actions && (
-          <div className="mt-auto flex w-full min-w-0 items-center gap-1.5 pt-1.5">
-            {actions}
+        <Show when={actions.toArray().length > 0}>
+          <div class="mt-auto flex w-full min-w-0 items-center gap-1.5 pt-1.5">
+            {actions()}
           </div>
-        )}
+        </Show>
       </div>
-      <Link
-        {...link}
-        tabIndex={-1}
-        aria-hidden
-        className="bg-muted ring-border relative block aspect-[2/3] w-28 shrink-0 self-start overflow-hidden rounded-md shadow-md ring-1 transition-transform duration-300 hover:scale-[1.03] motion-reduce:transition-none"
+      <TitleLink
+        item={props.item}
+        tabindex={-1}
+        hidden
+        class="bg-muted ring-border relative block aspect-[2/3] w-28 shrink-0 self-start overflow-hidden rounded-md shadow-md ring-1 transition-transform duration-300 hover:scale-[1.03] motion-reduce:transition-none"
       >
-        {poster && <Picture sources={[poster]} sizes="112px" />}
-      </Link>
+        <Show when={poster()}>
+          {(picture) => <Picture sources={[picture()]} sizes="112px" />}
+        </Show>
+      </TitleLink>
     </article>
+  )
+}
+
+/** A link to where the request's title opens, as `titleLink` says. */
+function TitleLink(
+  props: ParentProps<{
+    item: Pick<AdminRequestItem, "title" | "library" | "availability">
+    tabindex?: number
+    title?: string
+    /** For the second link to it, the poster beside its name. */
+    hidden?: boolean
+    class: string
+  }>,
+) {
+  return (
+    <Show
+      when={props.item.availability.libraryTitleId}
+      fallback={
+        <Link
+          to="/catalog/$kind/$provider/$providerId"
+          params={{
+            kind: props.item.title.ref.kind,
+            provider: props.item.title.ref.provider,
+            providerId: props.item.title.ref.providerId,
+          }}
+          search={{ library: props.item.library.id }}
+          tabindex={props.tabindex}
+          title={props.title}
+          aria-hidden={props.hidden ? "true" : undefined}
+          class={props.class}
+        >
+          {props.children}
+        </Link>
+      }
+    >
+      {(titleId) => (
+        <Link
+          to="/titles/$titleId"
+          params={{ titleId: titleId() }}
+          tabindex={props.tabindex}
+          title={props.title}
+          aria-hidden={props.hidden ? "true" : undefined}
+          class={props.class}
+        >
+          {props.children}
+        </Link>
+      )}
+    </Show>
   )
 }
 
@@ -164,41 +214,49 @@ export function RequestCard({
  * The year and a show's seasons, one line. Seasons can run long; when the
  * line is cut, it opens the whole of it in a popover.
  */
-function Facts({ text, onPicture }: { text: string; onPicture: boolean }) {
-  const [element, setElement] = useState<HTMLElement | null>(null)
-  const [cut, setCut] = useState(false)
-  useEffect(() => {
-    if (!element) return
-    const measure = () => setCut(element.scrollWidth > element.clientWidth + 1)
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [element])
-  const line = (
+function Facts(props: { text: string; onPicture: boolean }) {
+  const [cut, setCut] = createSignal(false)
+  let watched: HTMLElement | undefined
+  const observer = new ResizeObserver(() => {
+    if (watched) setCut(watched.scrollWidth > watched.clientWidth + 1)
+  })
+  onSettled(() => () => observer.disconnect())
+  // Each branch draws its own line, and the observer follows the one shown.
+  const line = () => (
     <span
-      ref={setElement}
-      className={cn(
+      ref={(node) => {
+        if (watched) observer.unobserve(watched)
+        watched = node
+        observer.observe(node)
+      }}
+      class={cn(
         "block h-4 min-w-0 truncate text-xs leading-4 font-medium",
         // Over the backdrop's lightest corner, the muted colour fades
         // into it.
-        onPicture ? "text-foreground/85" : "text-muted-foreground",
+        props.onPicture ? "text-foreground/85" : "text-muted-foreground",
       )}
     >
-      {text}
+      {props.text}
     </span>
   )
-  if (!cut) return line
   return (
-    <Popover>
-      <PopoverTrigger className="focus-visible:ring-ring hover:bg-foreground/[0.06] data-popup-open:bg-foreground/[0.06] -mx-1 flex min-w-0 rounded-sm px-1 text-left outline-none focus-visible:ring-2">
-        {line}
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto max-w-80 text-sm">
-        {text}
-      </PopoverContent>
-    </Popover>
+    <Show when={cut()} fallback={line()}>
+      <Popover>
+        <PopoverTrigger class="focus-visible:ring-ring hover:bg-foreground/[0.06] data-popup-open:bg-foreground/[0.06] -mx-1 flex min-w-0 rounded-sm px-1 text-left outline-none focus-visible:ring-2">
+          {line()}
+        </PopoverTrigger>
+        <PopoverContent align="start" class="w-auto max-w-80 text-sm">
+          {props.text}
+        </PopoverContent>
+      </Popover>
+    </Show>
   )
+}
+
+type Look = {
+  icon: () => JSX.Element
+  label: string
+  class: string
 }
 
 /**
@@ -206,42 +264,42 @@ function Facts({ text, onPicture }: { text: string; onPicture: boolean }) {
  * warning colour, on its way in the accent, here in green, and declined
  * or needing attention in red.
  */
-function stateLook(state: RequestState, progress: number | null) {
+function stateLook(state: RequestState, progress: number | null): Look {
   switch (state) {
     case "waiting":
       return {
-        icon: <ClockIcon strokeWidth={2.5} />,
+        icon: () => <Icon icon={Clock} stroke-width={2.5} />,
         label: tr("requests.state.waiting"),
-        className: "border-warning bg-warning/80",
+        class: "border-warning bg-warning/80",
       }
     case "needsAttention":
       return {
-        icon: <TriangleAlertIcon strokeWidth={2.5} />,
+        icon: () => <Icon icon={TriangleAlert} stroke-width={2.5} />,
         label: tr("requests.state.needsAttention"),
-        className: "border-destructive bg-destructive/80",
+        class: "border-destructive bg-destructive/80",
       }
     case "onTheWay":
       return {
-        icon: <ProgressRing progress={progress} className="text-current" />,
+        icon: () => <ProgressRing progress={progress} class="text-current" />,
         label:
           progress === null
             ? tr("requests.state.onTheWay")
             : tr("requests.state.onTheWayPercent", {
                 percent: formatPercent(progress),
               }),
-        className: "border-primary bg-primary/80",
+        class: "border-primary bg-primary/80",
       }
     case "here":
       return {
-        icon: <CheckIcon strokeWidth={3} />,
+        icon: () => <Icon icon={Check} stroke-width={3} />,
         label: tr("requests.state.here"),
-        className: "border-success bg-success/80",
+        class: "border-success bg-success/80",
       }
     case "declined":
       return {
-        icon: <CircleSlashIcon strokeWidth={2.5} />,
+        icon: () => <Icon icon={CircleSlash} stroke-width={2.5} />,
         label: tr("requests.state.declined"),
-        className: "border-destructive bg-destructive/80",
+        class: "border-destructive bg-destructive/80",
       }
   }
 }
@@ -252,55 +310,57 @@ function stateLook(state: RequestState, progress: number | null) {
  * `detail`, what went wrong or why it was declined, the pill is a button
  * with a chevron that opens it.
  */
-export function RequestStateBadge({
-  state,
-  progress = null,
-  detail,
-}: {
+export function RequestStateBadge(props: {
   state: RequestState
   progress?: number | null
-  detail?: ReactNode
+  detail?: JSX.Element
 }) {
-  const look = stateLook(state, progress)
-  const className = cn(
-    badgeVariants(),
-    "h-5 max-w-full min-w-0 gap-1 border px-2 font-semibold text-white",
-    look.className,
-  )
-  const content = (
+  const look = createMemo(() => stateLook(props.state, props.progress ?? null))
+  const detail = children(() => props.detail)
+  const pill = () =>
+    cn(
+      badgeVariants(),
+      "h-5 max-w-full min-w-0 gap-1 border px-2 font-semibold text-white",
+      look().class,
+    )
+  const content = () => (
     <>
-      {look.icon}
+      {look().icon()}
       {/* Clipped rather than hidden, with room for a "g" to hang below
           the trimmed box. */}
-      <span className="min-w-0 overflow-clip text-ellipsis whitespace-nowrap [overflow-clip-margin:3px] [text-box:trim-both_cap_alphabetic]">
-        {look.label}
+      <span class="min-w-0 overflow-clip text-ellipsis whitespace-nowrap [overflow-clip-margin:3px] [text-box:trim-both_cap_alphabetic]">
+        {look().label}
       </span>
     </>
   )
-  if (!detail) return <span className={className}>{content}</span>
   return (
-    <Popover>
-      <PopoverTrigger
-        className={cn(
-          className,
-          "focus-visible:ring-ring cursor-pointer outline-none hover:brightness-110 focus-visible:ring-2 data-popup-open:brightness-110",
-        )}
-      >
-        {content}
-        <ChevronDownIcon aria-hidden strokeWidth={2.5} />
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-80 max-w-(--available-width) gap-0 p-0"
-      >
-        <PopoverHeader>
-          <PopoverTitle className="truncate">{look.label}</PopoverTitle>
-        </PopoverHeader>
-        <div className="flex max-h-80 flex-col gap-2 overflow-y-auto px-3 py-2.5 text-sm break-words">
-          {detail}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <Show
+      when={detail.toArray().length > 0}
+      fallback={<span class={pill()}>{content()}</span>}
+    >
+      <Popover>
+        <PopoverTrigger
+          class={cn(
+            pill(),
+            "focus-visible:ring-ring cursor-pointer outline-none hover:brightness-110 focus-visible:ring-2 data-popup-open:brightness-110",
+          )}
+        >
+          {content()}
+          <Icon icon={ChevronDown} stroke-width={2.5} />
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          class="w-80 max-w-(--available-width) gap-0 p-0"
+        >
+          <PopoverHeader>
+            <PopoverTitle class="truncate">{look().label}</PopoverTitle>
+          </PopoverHeader>
+          <div class="flex max-h-80 flex-col gap-2 overflow-y-auto px-3 py-2.5 text-sm break-words">
+            {detail()}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </Show>
   )
 }
 
@@ -317,17 +377,30 @@ export const requestGrid =
   "grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),1fr))] sm:gap-4"
 
 /** The cards on their way, in the size of the card they stand in for. */
-export function RequestCardSkeleton({ admin = false }: { admin?: boolean }) {
+export function RequestCardSkeleton(props: { admin?: boolean }) {
   return (
-    <div className="bg-card flex gap-4 rounded-xl border p-4">
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 [contain:size]">
-        <Skeleton className="h-3 w-1/4" />
-        <Skeleton className="h-5 w-4/5" />
-        {admin && <Skeleton className="h-6 w-2/5 rounded-full" />}
-        <Skeleton className="h-5 w-1/2 rounded-full" />
-        <Skeleton className="mt-auto h-8 w-1/2" />
+    <div class="bg-card flex gap-4 rounded-xl border p-4">
+      <div class="flex min-w-0 flex-1 flex-col gap-1.5 [contain:size]">
+        <Skeleton class="h-3 w-1/4" />
+        <Skeleton class="h-5 w-4/5" />
+        <Show when={props.admin}>
+          <Skeleton class="h-6 w-2/5 rounded-full" />
+        </Show>
+        <Skeleton class="h-5 w-1/2 rounded-full" />
+        <Skeleton class="mt-auto h-8 w-1/2" />
       </div>
-      <Skeleton className="aspect-[2/3] w-28 shrink-0 rounded-md" />
+      <Skeleton class="aspect-[2/3] w-28 shrink-0 rounded-md" />
+    </div>
+  )
+}
+
+/** Four skeleton cards in the requests grid. */
+export function RequestGridSkeleton(props: { admin?: boolean }) {
+  return (
+    <div class={requestGrid}>
+      <For each={[0, 1, 2, 3]}>
+        {() => <RequestCardSkeleton admin={props.admin} />}
+      </For>
     </div>
   )
 }

@@ -1,4 +1,10 @@
 import type { Session } from "@matinee/contracts"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { LogOut } from "lucide"
+import { For, Match, Show, Switch } from "solid-js"
+
+import { PlatformIcon } from "@/components/device-card"
+import { tr } from "@/i18n"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,19 +14,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@matinee/ui/components/alert-dialog"
-import { Badge } from "@matinee/ui/components/badge"
-import { Button } from "@matinee/ui/components/button"
-import { List, ListItem } from "@matinee/ui/components/list"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { LogOutIcon } from "lucide-react"
-import { useState } from "react"
-import { useStore } from "zustand"
-
-import { PlatformIcon } from "@/components/device-card"
-import { tr } from "@/i18n"
+} from "@/kit/alert-dialog"
+import { Badge } from "@/kit/badge"
+import { Button } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+import { List, ListItem } from "@/kit/list"
+import { Skeleton } from "@/kit/skeleton"
+import { toast } from "@/kit/toast"
 import { platformLabel, sessionLabel } from "@/lib/devices"
 import { formatDate, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -43,16 +43,14 @@ const DEVICE_POLL_MS = 6000
  */
 export function Sessions() {
   const queryClient = useQueryClient()
-  const sessions = useQuery(orpc.account.sessions.list.queryOptions())
-  const [store] = useState(createSettingsSessionsStore)
-  const { revoking, open, revokingOthers, ask, close, setRevokingOthers } =
-    useStore(store)
+  const sessions = useQuery(() => orpc.account.sessions.list.queryOptions())
+  const store = createSettingsSessionsStore()
   const refresh = () =>
     queryClient.invalidateQueries({
       queryKey: orpc.account.sessions.list.key(),
     })
 
-  const revoke = useMutation({
+  const revoke = useMutation(() => ({
     mutationFn: (session: Session) =>
       client.account.sessions.revoke({ id: session.id }),
     onSuccess: (_, session) =>
@@ -64,8 +62,8 @@ export function Sessions() {
         description: errorMessage(error),
       }),
     onSettled: refresh,
-  })
-  const revokeOthers = useMutation({
+  }))
+  const revokeOthers = useMutation(() => ({
     mutationFn: () => client.account.sessions.revokeOthers(),
     onSuccess: ({ revoked }) =>
       toast.success(tr("account.sessions.signedOutCount", { count: revoked })),
@@ -74,82 +72,94 @@ export function Sessions() {
         description: errorMessage(error),
       }),
     onSettled: refresh,
-  })
+  }))
 
-  const others = sessions.data?.some((session) => !session.current) ?? false
+  const others = () =>
+    sessions.data?.some((session) => !session.current) ?? false
 
   return (
     <SettingsSubsection
       id="sessions"
       title={tr("account.sessions.title")}
       action={
-        <div className="flex flex-col gap-2 @lg:flex-row">
+        <div class="flex flex-col gap-2 @lg:flex-row">
           <LinkDeviceButton
             onClosed={() => {
               void refresh()
               setTimeout(() => void refresh(), DEVICE_POLL_MS)
             }}
           />
-          {others ? (
+          <Show when={others()}>
             <Button
               variant="outline"
               disabled={revokeOthers.isPending}
-              onClick={() => setRevokingOthers(true)}
+              onClick={() => store.setRevokingOthers(true)}
             >
-              <LogOutIcon />
+              <Icon icon={LogOut} />
               {tr("account.sessions.signOutOthers")}
             </Button>
-          ) : null}
+          </Show>
         </div>
       }
     >
-      {sessions.isPending ? (
-        <Skeleton className="h-16 rounded-xl" />
-      ) : sessions.isError ? (
-        <p className="text-muted-foreground text-sm">
-          {tr("account.sessions.loadFailed", {
-            reason: errorMessage(sessions.error),
-          })}
-        </p>
-      ) : (
-        <List>
-          {sessions.data.map((session) => (
-            <SessionRow
-              key={session.id}
-              session={session}
-              onSignOut={() => ask(session)}
-            />
-          ))}
-        </List>
-      )}
+      <Switch>
+        <Match when={sessions.isPending}>
+          <Skeleton class="h-16 rounded-xl" />
+        </Match>
+        <Match when={sessions.isError}>
+          <p class="text-muted-foreground text-sm">
+            {tr("account.sessions.loadFailed", {
+              reason: errorMessage(sessions.error),
+            })}
+          </p>
+        </Match>
+        <Match when={sessions.data}>
+          {(list) => (
+            <List>
+              <For each={list()} keyed={(session) => session.id}>
+                {(session) => (
+                  <SessionRow
+                    session={session()}
+                    onSignOut={() => store.ask(session())}
+                  />
+                )}
+              </For>
+            </List>
+          )}
+        </Match>
+      </Switch>
 
       <SignOutDialog
-        open={open}
-        onOpenChange={(open) => !open && close()}
-        title={
-          revoking
+        open={store.open()}
+        onOpenChange={(open) => {
+          if (!open) store.close()
+        }}
+        title={(() => {
+          const revoking = store.revoking()
+          return revoking
             ? tr("account.sessions.signOutTitle", {
                 session: sessionLabel(revoking),
               })
             : tr("account.sessions.signOutTitleUnnamed")
-        }
+        })()}
         description={tr("account.sessions.signOutDescription")}
         confirmLabel={tr("account.sessions.signOut")}
         onConfirm={() => {
+          const revoking = store.revoking()
           if (revoking) revoke.mutate(revoking)
-          close()
+          store.close()
         }}
       />
 
       <SignOutDialog
-        open={revokingOthers}
-        onOpenChange={setRevokingOthers}
+        open={store.revokingOthers()}
+        onOpenChange={(open) => store.setRevokingOthers(open)}
         title={tr("account.sessions.signOutOthersTitle")}
         description={tr("account.sessions.signOutOthersDescription")}
         confirmLabel={tr("account.sessions.signOutOthersConfirm")}
         onConfirm={() => {
           revokeOthers.mutate()
-          setRevokingOthers(false)
+          store.setRevokingOthers(false)
         }}
       />
     </SettingsSubsection>
@@ -157,14 +167,7 @@ export function Sessions() {
 }
 
 /** Asks before signing a session, or the others, out. */
-function SignOutDialog({
-  open,
-  onOpenChange,
-  title,
-  description,
-  confirmLabel,
-  onConfirm,
-}: {
+function SignOutDialog(props: {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
@@ -173,16 +176,22 @@ function SignOutDialog({
   onConfirm: () => void
 }) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog
+      open={props.open}
+      onOpenChange={(open) => props.onOpenChange(open)}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle>{props.title}</AlertDialogTitle>
+          <AlertDialogDescription>{props.description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{tr("account.cancel")}</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={onConfirm}>
-            {confirmLabel}
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => props.onConfirm()}
+          >
+            {props.confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -190,52 +199,53 @@ function SignOutDialog({
   )
 }
 
-function SessionRow({
-  session,
-  onSignOut,
-}: {
-  session: Session
-  onSignOut: () => void
-}) {
-  const label = sessionLabel(session)
-  const details = [
-    // A named device still says what it is.
-    session.platform && session.deviceName
-      ? tr("account.device.app", { platform: platformLabel(session.platform) })
-      : null,
-    lastActive(session),
-    tr("account.sessions.signedIn", { date: formatDate(session.createdAt) }),
-  ]
+function SessionRow(props: { session: Session; onSignOut: () => void }) {
+  const label = () => sessionLabel(props.session)
+  const details = () =>
+    [
+      // A named device still says what it is.
+      props.session.platform && props.session.deviceName
+        ? tr("account.device.app", {
+            platform: platformLabel(props.session.platform),
+          })
+        : null,
+      lastActive(props.session),
+      tr("account.sessions.signedIn", {
+        date: formatDate(props.session.createdAt),
+      }),
+    ]
+      .filter(Boolean)
+      .join(" · ")
 
   return (
-    <ListItem className="pr-2">
+    <ListItem class="pr-2">
       <RowIcon>
-        <PlatformIcon platform={session.platform} />
+        <PlatformIcon platform={props.session.platform} />
       </RowIcon>
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <p className="truncate text-sm leading-5 font-medium">{label}</p>
-          {session.current && (
+      <div class="min-w-0 flex-1">
+        <div class="flex min-w-0 items-center gap-2">
+          <p class="truncate text-sm leading-5 font-medium">{label()}</p>
+          <Show when={props.session.current}>
             <Badge variant="secondary">
               {tr("account.sessions.thisDevice")}
             </Badge>
-          )}
+          </Show>
         </div>
-        <p className="text-muted-foreground text-13px truncate leading-5">
-          {details.filter(Boolean).join(" · ")}
+        <p class="text-muted-foreground text-13px truncate leading-5">
+          {details()}
         </p>
       </div>
-      {!session.current && (
+      <Show when={!props.session.current}>
         <Button
           variant="ghost"
           size="icon"
-          className="text-muted-foreground hover:text-destructive shrink-0"
-          aria-label={tr("account.sessions.signOutNamed", { session: label })}
-          onClick={onSignOut}
+          class="text-muted-foreground hover:text-destructive shrink-0"
+          aria-label={tr("account.sessions.signOutNamed", { session: label() })}
+          onClick={() => props.onSignOut()}
         >
-          <LogOutIcon />
+          <Icon icon={LogOut} />
         </Button>
-      )}
+      </Show>
     </ListItem>
   )
 }

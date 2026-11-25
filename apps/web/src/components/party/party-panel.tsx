@@ -4,6 +4,30 @@ import {
   type PartyMember,
   PartyName,
 } from "@matinee/contracts"
+import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
+import { useMutation } from "@tanstack/solid-query"
+import { Link, useNavigate } from "@tanstack/solid-router"
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  Crown,
+  Ellipsis,
+  ListPlus,
+  LogOut,
+  Pencil,
+  Play,
+  UserRoundPlus,
+  UserRoundX,
+  UsersRound,
+  X,
+} from "lucide"
+import { createSignal, For, Show } from "solid-js"
+
+import { Picture, tone } from "@/components/picture"
+import { UserAvatar } from "@/components/user-avatar"
+import { tr } from "@/i18n"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,49 +37,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@matinee/ui/components/alert-dialog"
-import { Button } from "@matinee/ui/components/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
+} from "@/kit/alert-dialog"
+import { Button, buttonVariants } from "@/kit/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/kit/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
-import { Input } from "@matinee/ui/components/input"
-import { toast } from "@matinee/ui/components/sonner"
-import { Spinner } from "@matinee/ui/components/spinner"
-import { cn } from "@matinee/ui/lib/utils"
-import { useMutation } from "@tanstack/react-query"
-import { Link, useNavigate } from "@tanstack/react-router"
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  CheckIcon,
-  CrownIcon,
-  EllipsisIcon,
-  ListPlusIcon,
-  LogOutIcon,
-  PencilIcon,
-  PlayIcon,
-  UserRoundPlusIcon,
-  UserRoundXIcon,
-  UsersRoundIcon,
-  XIcon,
-} from "lucide-react"
-import { type ReactNode, useRef, useState } from "react"
-import { useStore } from "zustand"
-
-import { Picture, tone } from "@/components/picture"
-import { UserAvatar } from "@/components/user-avatar"
-import { tr } from "@/i18n"
-import { useAppForm } from "@/lib/form"
+} from "@/kit/dropdown-menu"
+import { Icon } from "@/kit/icon"
+import { Input } from "@/kit/input"
+import { Spinner } from "@/kit/spinner"
+import { toast } from "@/kit/toast"
+import { createForm } from "@/lib/form"
+import { SubmitButton, TextField } from "@/lib/form-fields"
 import { itemLabel, landscapeSources } from "@/lib/media"
 import {
   partyInviteUrl,
@@ -63,7 +60,6 @@ import {
   partyPosition,
   setParty,
   useParty,
-  usePartyRole,
 } from "@/lib/party"
 import { client, errorMessage } from "@/lib/rpc"
 import { createMemberMenuStore } from "@/stores/party-member-menu"
@@ -72,100 +68,85 @@ function failed(cause: unknown) {
   toast.error(tr("party.failed"), { description: errorMessage(cause) })
 }
 
-/**
- * The bar's watch party button, with a dot while the account is in one,
- * and the panel it opens. The panel mounts when first opened.
- */
-export function PartyButton({ className }: { className: string }) {
-  const role = usePartyRole()
-  const [open, setOpen] = useState(false)
+export function PartyDialog(props: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
   return (
-    <>
-      <button
-        type="button"
-        aria-label={tr("party.title")}
-        title={tr("party.title")}
-        onClick={() => setOpen(true)}
-        className={cn(className, "relative")}
-      >
-        <UsersRoundIcon />
-        {role && (
-          <span
-            aria-hidden
-            className="bg-primary absolute top-1.5 right-1.5 size-2 rounded-full"
-          />
-        )}
-      </button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-md">
-          <PartyPanel onClose={() => setOpen(false)} />
-        </DialogContent>
-      </Dialog>
-    </>
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent class="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-md">
+        <Show when={props.open}>
+          <PartyPanel onClose={() => props.onOpenChange(false)} />
+        </Show>
+      </DialogContent>
+    </Dialog>
   )
 }
 
-function PartyPanel({ onClose }: { onClose: () => void }) {
+function PartyPanel(props: { onClose: () => void }) {
   const { party, offsetMs } = useParty()
-  if (!party) {
-    return (
-      <>
-        <DialogHeader>
-          <DialogTitle>{tr("party.title")}</DialogTitle>
-        </DialogHeader>
-        <StartForm
-          onSubmit={async (name) => {
-            try {
-              setParty(await client.party.create({ name }))
-            } catch (cause) {
-              toast.error(tr("party.startFailed"), {
-                description: errorMessage(cause),
-              })
-            }
-          }}
+  return (
+    <Show
+      when={party()}
+      fallback={
+        <>
+          <DialogHeader>
+            <DialogTitle>{tr("party.title")}</DialogTitle>
+          </DialogHeader>
+          <StartForm
+            onSubmit={async (name) => {
+              try {
+                setParty(await client.party.create({ name }))
+              } catch (cause) {
+                toast.error(tr("party.startFailed"), {
+                  description: errorMessage(cause),
+                })
+              }
+            }}
+          />
+        </>
+      }
+    >
+      {(current) => (
+        <PartyDetails
+          party={current()}
+          offsetMs={offsetMs()}
+          onClose={props.onClose}
         />
-      </>
-    )
-  }
-  return <PartyDetails party={party} offsetMs={offsetMs} onClose={onClose} />
+      )}
+    </Show>
+  )
 }
 
 /**
  * The name to start a party with. Empty is fine: the party then goes by
  * its owner.
  */
-function StartForm({
-  onSubmit,
-}: {
-  onSubmit: (name: string) => Promise<void>
-}) {
-  const form = useAppForm({
+function StartForm(props: { onSubmit: (name: string) => Promise<void> }) {
+  const form = createForm({
     defaultValues: { name: "" },
-    onSubmit: ({ value }) => onSubmit(PartyName.parse(value.name)),
+    checks: { name: PartyName },
+    onSubmit: (values) => props.onSubmit(PartyName.parse(values.name)),
   })
   return (
     <form
-      className="grid gap-3"
+      class="grid gap-3"
       onSubmit={(event) => {
         event.preventDefault()
-        void form.handleSubmit()
+        void form.submit()
       }}
     >
-      <form.AppField name="name" validators={{ onChange: PartyName }}>
-        {(field) => (
-          <field.TextField
-            label={tr("party.name.optional")}
-            placeholder={tr("party.name.placeholder")}
-            maxLength={64}
-            autoComplete="off"
-          />
-        )}
-      </form.AppField>
-      <form.AppForm>
-        <form.SubmitButton icon={<UsersRoundIcon />}>
-          {tr("party.start")}
-        </form.SubmitButton>
-      </form.AppForm>
+      <TextField
+        form={form}
+        name="name"
+        label={tr("party.name.optional")}
+        placeholder={tr("party.name.placeholder")}
+        maxlength={64}
+        autocomplete="off"
+      />
+      <SubmitButton form={form} icon={<Icon icon={UsersRound} />}>
+        {tr("party.start")}
+      </SubmitButton>
     </form>
   )
 }
@@ -176,68 +157,61 @@ function StartForm({
  * Escape puts the name back. Both rows are 36px, and the field's 1px border
  * and 8px padding sit left of the column, so the text stays put.
  */
-function PartyTitle({ party }: { party: Party }) {
-  const [editing, setEditing] = useState(false)
-  const title = party.name ?? tr("party.title")
-  if (!editing) {
-    return (
-      <div className="flex h-9 min-w-0 items-center gap-1 pr-8">
-        <DialogTitle className="truncate text-lg leading-7">
-          {title}
-        </DialogTitle>
-        {party.owner && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={tr("party.rename")}
-            title={tr("party.rename")}
-            onClick={() => setEditing(true)}
-            className="text-muted-foreground shrink-0"
-          >
-            <PencilIcon />
-          </Button>
-        )}
-      </div>
-    )
-  }
+function PartyTitle(props: { party: Party }) {
+  const [editing, setEditing] = createSignal(false)
+  const title = () => props.party.name ?? tr("party.title")
   return (
-    <div className="flex h-9 min-w-0 items-center pr-8">
-      <DialogTitle className="sr-only">{title}</DialogTitle>
-      <RenameField name={party.name ?? ""} onDone={() => setEditing(false)} />
-    </div>
+    <Show
+      when={editing()}
+      fallback={
+        <div class="flex h-9 min-w-0 items-center gap-1 pr-8">
+          <DialogTitle class="truncate text-lg leading-7">
+            {title()}
+          </DialogTitle>
+          <Show when={props.party.owner}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={tr("party.rename")}
+              title={tr("party.rename")}
+              onClick={() => setEditing(true)}
+              class="text-muted-foreground shrink-0"
+            >
+              <Icon icon={Pencil} />
+            </Button>
+          </Show>
+        </div>
+      }
+    >
+      <div class="flex h-9 min-w-0 items-center pr-8">
+        <DialogTitle class="sr-only">{title()}</DialogTitle>
+        <RenameField
+          name={props.party.name ?? ""}
+          onDone={() => setEditing(false)}
+        />
+      </div>
+    </Show>
   )
 }
 
-/**
- * Puts the cursor in a field the click that opened it asked for, with its
- * text selected to type over. Module-level so React calls it once, on
- * mount, and not again on every render.
- */
-function focusAndSelect(node: HTMLInputElement | null) {
-  node?.focus()
-  node?.select()
-}
-
-function RenameField({
-  name,
-  onDone,
-}: {
+function RenameField(props: {
   /** The name the party has now. */
   name: string
   onDone: () => void
 }) {
   // Set once the field is on its way out, so the blur its removal can
   // cause doesn't save again, or save what Escape threw away.
-  const closed = useRef(false)
+  let closed = false
   const close = () => {
-    closed.current = true
-    onDone()
+    closed = true
+    props.onDone()
   }
-  const form = useAppForm({
-    defaultValues: { name },
-    onSubmit: async ({ value }) => {
-      const next = PartyName.parse(value.name)
-      if (next !== name) {
+  const form = createForm({
+    defaultValues: { name: props.name },
+    checks: { name: PartyName },
+    onSubmit: async (values) => {
+      const next = PartyName.parse(values.name)
+      if (next !== props.name) {
         try {
           await client.party.rename({ name: next })
         } catch (cause) {
@@ -249,56 +223,60 @@ function RenameField({
     },
   })
   const commit = () => {
-    if (!closed.current && !form.state.isSubmitting) void form.handleSubmit()
+    if (!closed && !form.submitting()) void form.submit()
   }
   return (
     <form
-      className="-ml-2.25 flex min-w-0 flex-1 items-center gap-1"
+      class="-ml-2.25 flex min-w-0 flex-1 items-center gap-1"
       onSubmit={(event) => {
         event.preventDefault()
         commit()
       }}
-      onBlur={(event) => {
+      onFocusOut={(event) => {
         // Focus moving to the save button stays in the field.
-        if (!event.currentTarget.contains(event.relatedTarget)) commit()
+        const next = event.relatedTarget
+        if (!(next instanceof Node) || !event.currentTarget.contains(next)) {
+          commit()
+        }
       }}
     >
-      <form.Field name="name" validators={{ onChange: PartyName }}>
-        {(field) => (
-          <Input
-            ref={focusAndSelect}
-            aria-label={tr("party.name")}
-            placeholder={tr("party.name.placeholder")}
-            maxLength={64}
-            autoComplete="off"
-            value={field.state.value}
-            onChange={(event) => field.handleChange(event.target.value)}
-            onKeyDown={(event) => {
-              // Escape leaves the field before it closes the dialog.
-              if (event.key === "Escape") {
-                event.stopPropagation()
-                close()
-              }
-            }}
-            className="h-9 py-0 pr-2 pl-2 text-lg leading-7 font-medium md:h-9 md:text-lg [@media(pointer:coarse)]:h-9"
-          />
-        )}
-      </form.Field>
-      <form.Subscribe selector={(state) => state.isSubmitting}>
-        {(submitting) => (
-          <Button
-            type="submit"
-            variant="ghost"
-            size="icon-sm"
-            disabled={submitting}
-            aria-label={tr("party.rename.save")}
-            title={tr("party.rename.save")}
-            className="text-muted-foreground shrink-0"
-          >
-            {submitting ? <Spinner /> : <CheckIcon />}
-          </Button>
-        )}
-      </form.Subscribe>
+      <Input
+        // The click that opened it asked for the cursor here, with the text
+        // selected to type over.
+        ref={(el: HTMLInputElement) =>
+          queueMicrotask(() => {
+            el.focus()
+            el.select()
+          })
+        }
+        aria-label={tr("party.name")}
+        placeholder={tr("party.name.placeholder")}
+        maxlength={64}
+        autocomplete="off"
+        value={form.values().name}
+        onValueChange={(value: string) => form.set("name", value)}
+        onKeyDown={(event: KeyboardEvent) => {
+          // Escape leaves the field before it closes the dialog.
+          if (event.key === "Escape") {
+            event.stopPropagation()
+            close()
+          }
+        }}
+        class="h-9 py-0 pr-2 pl-2 text-lg leading-7 font-medium md:h-9 md:text-lg [@media(pointer:coarse)]:h-9"
+      />
+      <Button
+        type="submit"
+        variant="ghost"
+        size="icon-sm"
+        disabled={form.submitting()}
+        aria-label={tr("party.rename.save")}
+        title={tr("party.rename.save")}
+        class="text-muted-foreground shrink-0"
+      >
+        <Show when={form.submitting()} fallback={<Icon icon={Check} />}>
+          <Spinner />
+        </Show>
+      </Button>
     </form>
   )
 }
@@ -308,23 +286,19 @@ function RenameField({
  * comes after. Each row has one quiet "⋯" for what the viewer may do
  * with it, so the panel stays a list of names and not of buttons.
  */
-function PartyDetails({
-  party,
-  offsetMs,
-  onClose,
-}: {
+function PartyDetails(props: {
   party: Party
   offsetMs: number
   onClose: () => void
 }) {
-  const leave = useMutation({
+  const leave = useMutation(() => ({
     mutationFn: () => client.party.leave(),
     onSuccess: () => setParty(null),
     onError: failed,
-  })
+  }))
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(partyInviteUrl(party))
+      await navigator.clipboard.writeText(partyInviteUrl(props.party))
       toast.success(tr("party.inviteCopied"), {
         description: tr("party.inviteHint"),
       })
@@ -337,49 +311,57 @@ function PartyDetails({
   return (
     <>
       <DialogHeader>
-        <PartyTitle party={party} />
+        <PartyTitle party={props.party} />
       </DialogHeader>
 
-      <ul className="-mx-2 grid">
-        {party.members.map((member) => (
-          <Row key={member.user.id}>
-            <UserAvatar user={member.user} className="size-7 text-xs" />
-            <span className="min-w-0 flex-1 truncate">
-              {member.user.displayName ?? member.user.username}
-            </span>
-            {member.owner && (
-              <span className="text-muted-foreground shrink-0 text-xs">
-                {tr("party.owner")}
+      <ul class="-mx-2 grid">
+        <For each={props.party.members} keyed={(member) => member.user.id}>
+          {(member) => (
+            <li class={rowLook}>
+              <UserAvatar user={member().user} class="size-7 text-xs" />
+              <span class="min-w-0 flex-1 truncate">
+                {member().user.displayName ?? member().user.username}
               </span>
-            )}
-            {party.owner && !member.owner && <MemberMenu member={member} />}
-          </Row>
-        ))}
+              <Show when={member().owner}>
+                <span class="text-muted-foreground shrink-0 text-xs">
+                  {tr("party.owner")}
+                </span>
+              </Show>
+              <Show when={props.party.owner && !member().owner}>
+                <MemberMenu member={member()} />
+              </Show>
+            </li>
+          )}
+        </For>
         <li>
           <button
             type="button"
             onClick={() => void copy()}
-            className={cn(rowLook, rowPress, "text-muted-foreground w-full")}
+            class={cn(rowLook, rowPress, "text-muted-foreground w-full")}
           >
-            <span className="border-foreground/25 grid size-7 shrink-0 place-items-center rounded-full border border-dashed">
-              <UserRoundPlusIcon className="size-3.5" />
+            <span class="border-foreground/25 grid size-7 shrink-0 place-items-center rounded-full border border-dashed">
+              <Icon icon={UserRoundPlus} class="size-3.5" />
             </span>
             {tr("party.invite")}
           </button>
         </li>
       </ul>
 
-      <NowPlaying party={party} offsetMs={offsetMs} onClose={onClose} />
+      <NowPlaying
+        party={props.party}
+        offsetMs={props.offsetMs}
+        onClose={props.onClose}
+      />
 
-      <Queue party={party} onClose={onClose} />
+      <Queue party={props.party} onClose={props.onClose} />
 
       <Button
         variant="ghost"
         disabled={leave.isPending}
         onClick={() => leave.mutate()}
-        className="text-destructive hover:bg-destructive/10 hover:text-destructive -mx-2 justify-self-start px-2"
+        class="text-destructive hover:bg-destructive/10 hover:text-destructive -mx-2 justify-self-start px-2"
       >
-        <LogOutIcon />
+        <Icon icon={LogOut} />
         {tr("party.leave")}
       </Button>
     </>
@@ -393,15 +375,11 @@ const rowLook =
 const rowPress =
   "outline-none hover:bg-foreground/[0.06] focus-visible:ring-2 focus-visible:ring-ring"
 
-function Row({ children }: { children: ReactNode }) {
-  return <li className={rowLook}>{children}</li>
-}
-
 /** A heading for one of the panel's lists, as quiet as its rows' details. */
-function ListTitle({ children }: { children: ReactNode }) {
+function ListTitle(props: { children: JSX.Element }) {
   return (
-    <h3 className="text-muted-foreground px-2 pb-1 text-xs font-medium">
-      {children}
+    <h3 class="text-muted-foreground px-2 pb-1 text-xs font-medium">
+      {props.children}
     </h3>
   )
 }
@@ -410,104 +388,113 @@ function ListTitle({ children }: { children: ReactNode }) {
  * A row's "⋯". Pointers that hover see it on hover and focus; touch
  * screens always do.
  */
-function RowMenu({ label, children }: { label: string; children: ReactNode }) {
+function RowMenu(props: { label: string; children: JSX.Element }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={label}
-            className="text-muted-foreground shrink-0 opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 aria-expanded:opacity-100 [@media(pointer:coarse)]:size-10 [@media(pointer:coarse)]:opacity-100"
-          />
-        }
+        aria-label={props.label}
+        class={cn(
+          buttonVariants({ variant: "ghost", size: "icon-sm" }),
+          "text-muted-foreground shrink-0 opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 aria-expanded:opacity-100 [@media(pointer:coarse)]:size-10 [@media(pointer:coarse)]:opacity-100",
+        )}
       >
-        <EllipsisIcon />
+        <Icon icon={Ellipsis} />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
         sideOffset={4}
-        className="w-max min-w-44 whitespace-nowrap"
+        class="w-max min-w-44 whitespace-nowrap"
       >
-        {children}
+        {props.children}
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
 
 /** What the party watches, which is the one picture in the panel. */
-function NowPlaying({
-  party,
-  offsetMs,
-  onClose,
-}: {
+function NowPlaying(props: {
   party: Party
   offsetMs: number
   onClose: () => void
 }) {
-  const { item, playback } = party
-  if (!item || !playback) {
-    return (
-      <p className="text-muted-foreground bg-foreground/[0.04] rounded-lg px-3 py-2.5">
-        {party.restricted
-          ? tr("party.restricted")
-          : party.owner
-            ? tr("party.nothing.owner")
-            : tr("party.nothing.member")}
-      </p>
-    )
+  const playing = () => {
+    const { item, playback } = props.party
+    return item && playback ? { item, playback } : null
   }
-  const label = itemLabel(item)
   return (
-    <Link
-      to="/watch/$itemId"
-      params={{ itemId: item.id }}
-      // Where the party is now, in place of the resume point.
-      search={{ start: Math.floor(partyPosition(playback, offsetMs)) }}
-      onClick={onClose}
-      className={cn(
-        "group/now bg-foreground/[0.04] flex items-center gap-3 rounded-lg p-2",
-        rowPress,
-      )}
+    <Show
+      when={playing()}
+      fallback={
+        <p class="text-muted-foreground bg-foreground/[0.04] rounded-lg px-3 py-2.5">
+          {props.party.restricted
+            ? tr("party.restricted")
+            : props.party.owner
+              ? tr("party.nothing.owner")
+              : tr("party.nothing.member")}
+        </p>
+      }
     >
-      <span
-        className={cn(
-          "relative aspect-video w-28 shrink-0 overflow-hidden rounded-md",
-          tone(label.showKey),
-        )}
-      >
-        <Picture sources={landscapeSources(item)} sizes="112px" />
-        <span className="absolute inset-0 grid place-items-center bg-black/30 text-white">
-          <PlayIcon className="size-5 fill-current" />
-        </span>
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium">{label.title}</span>
-        {label.code && (
-          <span className="text-muted-foreground block truncate text-xs">
-            {label.showName} {label.code}
-          </span>
-        )}
-        <span className="text-primary mt-1 block text-xs font-medium">
-          {tr("party.watchAlong")}
-        </span>
-      </span>
-    </Link>
+      {(current) => {
+        const label = () => itemLabel(current().item)
+        return (
+          <Link
+            to="/watch/$itemId"
+            params={{ itemId: current().item.id }}
+            // Where the party is now, in place of the resume point.
+            search={{
+              start: Math.floor(
+                partyPosition(current().playback, props.offsetMs),
+              ),
+            }}
+            onClick={() => props.onClose()}
+            class={cn(
+              "group/now bg-foreground/[0.04] flex items-center gap-3 rounded-lg p-2",
+              rowPress,
+            )}
+          >
+            <span
+              class={cn(
+                "relative aspect-video w-28 shrink-0 overflow-hidden rounded-md",
+                tone(label().showKey),
+              )}
+            >
+              <Picture
+                sources={landscapeSources(current().item)}
+                sizes="112px"
+              />
+              <span class="absolute inset-0 grid place-items-center bg-black/30 text-white">
+                <Icon icon={Play} class="size-5 fill-current" />
+              </span>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-medium">{label().title}</span>
+              <Show when={label().code}>
+                <span class="text-muted-foreground block truncate text-xs">
+                  {label().showName} {label().code}
+                </span>
+              </Show>
+              <span class="text-primary mt-1 block text-xs font-medium">
+                {tr("party.watchAlong")}
+              </span>
+            </span>
+          </Link>
+        )
+      }}
+    </Show>
   )
 }
 
 /** An entry's file: its name, and the show and episode under it. */
-function EntryName({ entry }: { entry: PartyEntry }) {
-  const label = itemLabel(entry.item)
+function EntryName(props: { entry: PartyEntry }) {
+  const label = () => itemLabel(props.entry.item)
   return (
-    <span className="min-w-0 flex-1">
-      <span className="block truncate">{label.title}</span>
-      {label.code && (
-        <span className="text-muted-foreground block truncate text-xs">
-          {label.showName} {label.code}
+    <span class="min-w-0 flex-1">
+      <span class="block truncate">{label().title}</span>
+      <Show when={label().code}>
+        <span class="text-muted-foreground block truncate text-xs">
+          {label().showName} {label().code}
         </span>
-      )}
+      </Show>
     </span>
   )
 }
@@ -516,218 +503,243 @@ function EntryName({ entry }: { entry: PartyEntry }) {
  * What plays next, numbered since the order is the point, and under it
  * what members suggested, each with who it came from.
  */
-function Queue({ party, onClose }: { party: Party; onClose: () => void }) {
-  const { queue, proposals } = party
+function Queue(props: { party: Party; onClose: () => void }) {
   return (
     <>
-      <div className="-mx-2">
+      <div class="-mx-2">
         <ListTitle>{tr("party.queue")}</ListTitle>
-        {queue.length === 0 ? (
-          <p className="text-muted-foreground px-2">
-            {party.owner ? tr("party.queue.owner") : tr("party.queue.member")}
-          </p>
-        ) : (
-          <ol className="grid">
-            {queue.map((entry, index) => (
-              <Row key={entry.id}>
-                <span className="text-muted-foreground w-7 shrink-0 text-center text-xs tabular-nums">
-                  {index + 1}
-                </span>
-                <EntryName entry={entry} />
-                {party.owner && (
-                  <QueueMenu
-                    entry={entry}
-                    index={index}
-                    last={index === queue.length - 1}
-                    onClose={onClose}
-                  />
-                )}
-              </Row>
-            ))}
-          </ol>
-        )}
-      </div>
-      {proposals.length > 0 && (
-        <div className="-mx-2">
-          <ListTitle>{tr("party.proposals")}</ListTitle>
-          <ul className="grid">
-            {proposals.map((entry) => (
-              <Row key={entry.id}>
-                {entry.by ? (
-                  <span
-                    title={tr("party.proposedBy", {
-                      name: entry.by.displayName ?? entry.by.username,
-                    })}
-                  >
-                    <UserAvatar user={entry.by} className="size-7 text-xs" />
-                    <span className="sr-only">
-                      {tr("party.proposedBy", {
-                        name: entry.by.displayName ?? entry.by.username,
-                      })}
-                    </span>
+        <Show
+          when={props.party.queue.length > 0}
+          fallback={
+            <p class="text-muted-foreground px-2">
+              {props.party.owner
+                ? tr("party.queue.owner")
+                : tr("party.queue.member")}
+            </p>
+          }
+        >
+          <ol class="grid">
+            <For each={props.party.queue} keyed={(entry) => entry.id}>
+              {(entry, index) => (
+                <li class={rowLook}>
+                  <span class="text-muted-foreground w-7 shrink-0 text-center text-xs tabular-nums">
+                    {index() + 1}
                   </span>
-                ) : (
-                  <span className="w-7 shrink-0" />
-                )}
-                <EntryName entry={entry} />
-                {(party.owner || entry.removable) && (
-                  <ProposalMenu entry={entry} owner={party.owner} />
-                )}
-              </Row>
-            ))}
+                  <EntryName entry={entry()} />
+                  <Show when={props.party.owner}>
+                    <QueueMenu
+                      entry={entry()}
+                      index={index()}
+                      last={index() === props.party.queue.length - 1}
+                      onClose={props.onClose}
+                    />
+                  </Show>
+                </li>
+              )}
+            </For>
+          </ol>
+        </Show>
+      </div>
+      <Show when={props.party.proposals.length > 0}>
+        <div class="-mx-2">
+          <ListTitle>{tr("party.proposals")}</ListTitle>
+          <ul class="grid">
+            <For each={props.party.proposals} keyed={(entry) => entry.id}>
+              {(entry) => (
+                <li class={rowLook}>
+                  <Show
+                    when={entry().by}
+                    fallback={<span class="w-7 shrink-0" />}
+                  >
+                    {(by) => {
+                      const proposedBy = () =>
+                        tr("party.proposedBy", {
+                          name: by().displayName ?? by().username,
+                        })
+                      return (
+                        <span title={proposedBy()}>
+                          <UserAvatar user={by()} class="size-7 text-xs" />
+                          <span class="sr-only">{proposedBy()}</span>
+                        </span>
+                      )
+                    }}
+                  </Show>
+                  <EntryName entry={entry()} />
+                  <Show when={props.party.owner || entry().removable}>
+                    <ProposalMenu entry={entry()} owner={props.party.owner} />
+                  </Show>
+                </li>
+              )}
+            </For>
           </ul>
         </div>
-      )}
+      </Show>
     </>
   )
 }
 
-function QueueMenu({
-  entry,
-  index,
-  last,
-  onClose,
-}: {
+function QueueMenu(props: {
   entry: PartyEntry
   index: number
   last: boolean
   onClose: () => void
 }) {
   const navigate = useNavigate()
-  const name = partyItemName(entry.item)
-  const move = useMutation({
+  const move = useMutation(() => ({
     mutationFn: (to: number) =>
-      client.party.queue.move({ entryId: entry.id, index: to }),
+      client.party.queue.move({ entryId: props.entry.id, index: to }),
     onError: failed,
-  })
-  const remove = useMutation({
-    mutationFn: () => client.party.queue.remove({ entryId: entry.id }),
+  }))
+  const remove = useMutation(() => ({
+    mutationFn: () => client.party.queue.remove({ entryId: props.entry.id }),
     onError: failed,
-  })
+  }))
   return (
-    <RowMenu label={tr("party.entryActions", { name })}>
+    <RowMenu
+      label={tr("party.entryActions", {
+        name: partyItemName(props.entry.item),
+      })}
+    >
       {/* The owner's player is where the party's file comes from, so
           playing one is opening it. */}
       <DropdownMenuItem
-        onClick={() => {
-          onClose()
+        onSelect={() => {
+          props.onClose()
           void navigate({
             to: "/watch/$itemId",
-            params: { itemId: entry.item.id },
+            params: { itemId: props.entry.item.id },
             search: { start: 0 },
           })
         }}
       >
-        <PlayIcon />
+        <Icon icon={Play} />
         {tr("party.playNow")}
       </DropdownMenuItem>
       <DropdownMenuItem
-        disabled={index === 0}
-        onClick={() => move.mutate(index - 1)}
+        disabled={props.index === 0}
+        onSelect={() => move.mutate(props.index - 1)}
       >
-        <ArrowUpIcon />
+        <Icon icon={ArrowUp} />
         {tr("party.moveUp")}
       </DropdownMenuItem>
-      <DropdownMenuItem disabled={last} onClick={() => move.mutate(index + 1)}>
-        <ArrowDownIcon />
+      <DropdownMenuItem
+        disabled={props.last}
+        onSelect={() => move.mutate(props.index + 1)}
+      >
+        <Icon icon={ArrowDown} />
         {tr("party.moveDown")}
       </DropdownMenuItem>
       <DropdownMenuSeparator />
-      <DropdownMenuItem onClick={() => remove.mutate()}>
-        <XIcon />
+      <DropdownMenuItem onSelect={() => remove.mutate()}>
+        <Icon icon={X} />
         {tr("party.remove")}
       </DropdownMenuItem>
     </RowMenu>
   )
 }
 
-function ProposalMenu({ entry, owner }: { entry: PartyEntry; owner: boolean }) {
-  const name = partyItemName(entry.item)
-  const accept = useMutation({
-    mutationFn: () => client.party.queue.accept({ entryId: entry.id }),
+function ProposalMenu(props: { entry: PartyEntry; owner: boolean }) {
+  const accept = useMutation(() => ({
+    mutationFn: () => client.party.queue.accept({ entryId: props.entry.id }),
     onError: failed,
-  })
-  const remove = useMutation({
-    mutationFn: () => client.party.queue.remove({ entryId: entry.id }),
+  }))
+  const remove = useMutation(() => ({
+    mutationFn: () => client.party.queue.remove({ entryId: props.entry.id }),
     onError: failed,
-  })
+  }))
   return (
-    <RowMenu label={tr("party.entryActions", { name })}>
-      {owner && (
-        <DropdownMenuItem onClick={() => accept.mutate()}>
-          <ListPlusIcon />
+    <RowMenu
+      label={tr("party.entryActions", {
+        name: partyItemName(props.entry.item),
+      })}
+    >
+      <Show when={props.owner}>
+        <DropdownMenuItem onSelect={() => accept.mutate()}>
+          <Icon icon={ListPlus} />
           {tr("party.accept")}
         </DropdownMenuItem>
-      )}
-      {entry.removable && (
-        <DropdownMenuItem onClick={() => remove.mutate()}>
-          <XIcon />
-          {owner ? tr("party.dismiss") : tr("party.withdraw")}
+      </Show>
+      <Show when={props.entry.removable}>
+        <DropdownMenuItem onSelect={() => remove.mutate()}>
+          <Icon icon={X} />
+          {props.owner ? tr("party.dismiss") : tr("party.withdraw")}
         </DropdownMenuItem>
-      )}
+      </Show>
     </RowMenu>
   )
 }
 
 /** What the owner can do about another member, each after asking. */
-function MemberMenu({ member }: { member: PartyMember }) {
-  const name = member.user.displayName ?? member.user.username
-  const userId = member.user.id
-  const [store] = useState(createMemberMenuStore)
-  const { open, shown, ask, close } = useStore(store)
-  const transfer = useMutation({
-    mutationFn: () => client.party.transfer({ userId }),
+function MemberMenu(props: { member: PartyMember }) {
+  const name = () => props.member.user.displayName ?? props.member.user.username
+  const menu = createMemberMenuStore()
+  const transfer = useMutation(() => ({
+    mutationFn: () => client.party.transfer({ userId: props.member.user.id }),
     onError: failed,
-  })
-  const kick = useMutation({
-    mutationFn: () => client.party.kick({ userId }),
+  }))
+  const kick = useMutation(() => ({
+    mutationFn: () => client.party.kick({ userId: props.member.user.id }),
     onError: failed,
-  })
+  }))
   return (
     <>
-      <RowMenu label={tr("party.memberActions", { name })}>
-        <DropdownMenuItem onClick={() => ask("owner")}>
-          <CrownIcon />
+      <RowMenu label={tr("party.memberActions", { name: name() })}>
+        <DropdownMenuItem onSelect={() => menu.ask("owner")}>
+          <Icon icon={Crown} />
           {tr("party.makeOwner")}
         </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" onClick={() => ask("kick")}>
-          <UserRoundXIcon />
+        <DropdownMenuItem
+          variant="destructive"
+          onSelect={() => menu.ask("kick")}
+        >
+          <Icon icon={UserRoundX} />
           {tr("party.kick")}
         </DropdownMenuItem>
       </RowMenu>
       <AlertDialog
-        open={open}
-        onOpenChange={(next) => {
-          if (!next) close()
+        open={menu.open()}
+        onOpenChange={(next: boolean) => {
+          if (!next) menu.close()
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {shown === "owner"
-                ? tr("party.makeOwner.title", { name })
-                : tr("party.kick.title", { name })}
+              {menu.shown() === "owner"
+                ? tr("party.makeOwner.title", { name: name() })
+                : tr("party.kick.title", { name: name() })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {shown === "owner"
-                ? tr("party.makeOwner.description", { name })
-                : tr("party.kick.description", { name })}
+              {menu.shown() === "owner"
+                ? tr("party.makeOwner.description", { name: name() })
+                : tr("party.kick.description", { name: name() })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tr("party.cancel")}</AlertDialogCancel>
-            {shown === "owner" ? (
-              <AlertDialogAction onClick={() => transfer.mutate()}>
+            <Show
+              when={menu.shown() === "owner"}
+              fallback={
+                <AlertDialogAction
+                  variant="destructive"
+                  onClick={() => {
+                    kick.mutate()
+                    menu.close()
+                  }}
+                >
+                  {tr("party.kick.confirm")}
+                </AlertDialogAction>
+              }
+            >
+              <AlertDialogAction
+                onClick={() => {
+                  transfer.mutate()
+                  menu.close()
+                }}
+              >
                 {tr("party.makeOwner.confirm")}
               </AlertDialogAction>
-            ) : (
-              <AlertDialogAction
-                variant="destructive"
-                onClick={() => kick.mutate()}
-              >
-                {tr("party.kick.confirm")}
-              </AlertDialogAction>
-            )}
+            </Show>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -1,10 +1,10 @@
-import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
+import { isPhone } from "@/lib/viewport"
 
 /**
- * Below Tailwind's `sm`: phones, which get the tab bar and the bars at the
- * top of pages instead of the floating bar, and menus as sheets, where the
- * thumb is.
+ * Below Tailwind's `sm`: phones, which get the shell's phone frame and
+ * menus as sheets, where the thumb is. An accessor; `isPhone` from
+ * `@/lib/viewport` is the same one.
  */
-export function usePhone() {
-  return useMediaQuery("(width < 40rem)")
+export function usePhone(): () => boolean {
+  return isPhone
 }

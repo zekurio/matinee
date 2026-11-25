@@ -5,7 +5,6 @@ import {
   TitleKind,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { useState } from "react"
 
 import {
   ChoiceChips,
@@ -62,25 +61,17 @@ export function filterCount(filter: RequestFilter): number {
  * number of them on, with the badges' words, and movies or shows. None on
  * lists everything.
  */
-export function RequestFilterPanel({
-  filter,
-  onChange,
-  compact = false,
-}: {
+export function RequestFilterPanel(props: {
   filter: RequestFilter
   onChange: (filter: RequestFilter) => void
   /** The icon the phone bar has room for. */
   compact?: boolean
 }) {
-  const [open, setOpen] = useState(false)
   return (
     <FilterPanel
-      active={filterCount(filter)}
-      onClear={() => onChange({ states: [] })}
-      open={open}
-      onOpenChange={setOpen}
-      compact={compact}
-      done={tr("requests.filter.show")}
+      active={filterCount(props.filter)}
+      onClear={() => props.onChange({ states: [] })}
+      compact={props.compact ?? false}
     >
       <Section label={tr("requests.filter.state")}>
         {(labelId) => (
@@ -90,10 +81,10 @@ export function RequestFilterPanel({
               value: state,
               label: tr(`requests.state.${state}`),
             }))}
-            value={filter.states}
+            value={props.filter.states}
             onChange={(next) =>
-              onChange({
-                ...filter,
+              props.onChange({
+                ...props.filter,
                 states: REQUEST_STATES.filter((state) => next.includes(state)),
               })
             }
@@ -108,9 +99,9 @@ export function RequestFilterPanel({
               value: kind,
               label: tr(`browse.kind.${kind}`),
             }))}
-            value={filter.kind ?? null}
+            value={props.filter.kind ?? null}
             onChange={(kind) =>
-              onChange({ ...filter, kind: kind ?? undefined })
+              props.onChange({ ...props.filter, kind: kind ?? undefined })
             }
           />
         )}

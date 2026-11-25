@@ -1,29 +1,22 @@
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@matinee/ui/components/alert"
-import { CircleAlertIcon } from "lucide-react"
+import { CircleAlert } from "lucide"
+import { Show } from "solid-js"
 
-/**
- * An error that stays because it holds the page or form back, such as data
- * that didn't load, with an optional next step. A failed action gets a
- * toast instead.
- */
-export function FormAlert({
-  message,
-  hint,
-  className,
-}: {
+import { Alert, AlertDescription, AlertTitle } from "@/kit/alert"
+import { Icon } from "@/kit/icon"
+
+/** An error that stays visible while it blocks the page or form. */
+export function FormAlert(props: {
   message: string
   hint?: string
-  className?: string
+  class?: string
 }) {
   return (
-    <Alert variant="destructive" className={className}>
-      <CircleAlertIcon />
-      <AlertTitle className="text-foreground">{message}</AlertTitle>
-      {hint && <AlertDescription>{hint}</AlertDescription>}
+    <Alert variant="destructive" class={props.class}>
+      <Icon icon={CircleAlert} />
+      <AlertTitle class="text-foreground">{props.message}</AlertTitle>
+      <Show when={props.hint}>
+        <AlertDescription>{props.hint}</AlertDescription>
+      </Show>
     </Alert>
   )
 }

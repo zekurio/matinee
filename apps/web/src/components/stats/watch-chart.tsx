@@ -1,4 +1,5 @@
 import type { StatsBucket, StatsUnit } from "@matinee/contracts"
+import { createMemo, Show } from "solid-js"
 
 import { tr } from "@/i18n"
 import { formatWatchTime } from "@/lib/format"
@@ -23,47 +24,41 @@ function scaleTop(seconds: number): number {
  * box, as the apps draw it. The bar pointed at goes to `onActive`, for
  * the card around it to read out.
  */
-export function WatchChart({
-  buckets,
-  unit,
-  active,
-  onActive,
-  className,
-}: {
+export function WatchChart(props: {
   buckets: StatsBucket[]
   unit: StatsUnit
   active: number | null
   onActive: (index: number | null) => void
-  className?: string
+  class?: string
 }) {
-  const top = scaleTop(
-    Math.max(0, ...buckets.map((bucket) => bucket.watchSeconds)),
+  const top = createMemo(() =>
+    scaleTop(
+      Math.max(0, ...props.buckets.map((bucket) => bucket.watchSeconds)),
+    ),
   )
   return (
     <BucketBars
-      label={watchChartTitle(unit)}
-      buckets={buckets}
-      unit={unit}
-      top={formatWatchTime(top)}
-      active={active}
-      onActive={onActive}
+      label={watchChartTitle(props.unit)}
+      buckets={props.buckets}
+      unit={props.unit}
+      top={formatWatchTime(top())}
+      active={props.active}
+      onActive={props.onActive}
       axis={false}
-      className={className}
+      class={props.class}
       describe={(bucket) =>
         tr("stats.chart.point", {
-          date: bucketName(bucket.start, unit),
+          date: bucketName(bucket.start, props.unit),
           value: formatWatchTime(bucket.watchSeconds),
         })
       }
-      bars={buckets.map(
-        (bucket) =>
-          bucket.watchSeconds > 0 && (
-            <span
-              key={bucket.start}
-              className="bg-primary min-h-0.5 w-full rounded-t-[2px]"
-              style={{ height: `${(bucket.watchSeconds / top) * 100}%` }}
-            />
-          ),
+      renderBar={(bucket) => (
+        <Show when={bucket.watchSeconds > 0}>
+          <span
+            class="bg-primary min-h-0.5 w-full rounded-t-[2px]"
+            style={{ height: `${(bucket.watchSeconds / top()) * 100}%` }}
+          />
+        </Show>
       )}
     />
   )

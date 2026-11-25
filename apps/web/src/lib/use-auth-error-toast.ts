@@ -1,30 +1,32 @@
 import { AUTH_ERROR_QUERY_KEY } from "@matinee/contracts"
-import { toast } from "@matinee/ui/components/sonner"
-import { useNavigate } from "@tanstack/react-router"
-import { useEffect } from "react"
+import { useNavigate } from "@tanstack/solid-router"
+import { createEffect } from "solid-js"
 
 import { knownMessage, tr } from "@/i18n"
+import { toast } from "@/kit/toast"
 
-/**
- * Toasts the error an auth redirect brought back in the URL, such as a
- * failed OIDC round trip, then drops it from the URL so a reload or a
- * back step doesn't show it again.
- */
-export function useAuthErrorToast(error: string | undefined, hint?: string) {
+/** Show the auth redirect's error once, then remove it from the URL. */
+export function useAuthErrorToast(
+  error: () => string | undefined,
+  hint: () => string | undefined = () => undefined,
+) {
   const navigate = useNavigate()
-  useEffect(() => {
-    if (error === undefined) return
-    // The URL can carry any text, so only a message the catalog knows is
-    // shown as it is. The id keeps a second run, as in StrictMode, to the
-    // one toast.
-    toast.error(knownMessage(error) ?? tr("auth.signIn.failed"), {
-      id: "auth-error",
-      description: hint,
-    })
-    void navigate({
-      to: ".",
-      search: (prev) => ({ ...prev, [AUTH_ERROR_QUERY_KEY]: undefined }),
-      replace: true,
-    })
-  }, [error, hint, navigate])
+  createEffect(
+    () => ({ error: error(), hint: hint() }),
+    ({ error, hint }) => {
+      if (error === undefined) return
+      toast.error(knownMessage(error) ?? tr("auth.signIn.failed"), {
+        id: "auth-error",
+        description: hint,
+      })
+      // The router reads its match store when building the next location.
+      queueMicrotask(() => {
+        void navigate({
+          to: ".",
+          search: (prev) => ({ ...prev, [AUTH_ERROR_QUERY_KEY]: undefined }),
+          replace: true,
+        })
+      })
+    },
+  )
 }

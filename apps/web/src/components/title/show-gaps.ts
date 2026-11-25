@@ -1,5 +1,6 @@
 import type { Title } from "@matinee/contracts"
-import { skipToken, useQuery } from "@tanstack/react-query"
+import { skipToken, useQuery } from "@tanstack/solid-query"
+import { createMemo } from "solid-js"
 
 import {
   type CatalogSeasonEntry,
@@ -28,29 +29,34 @@ function bySeason(a: CatalogSeasonEntry, b: CatalogSeasonEntry) {
  * loads, and when the provider can't say, so the page shows only what's
  * here.
  */
-export function useShowGaps(title: Title) {
-  const gaps = useQuery({
-    ...missingSeasonsOptions(title.kind === "show" ? title.id : null),
+// Returns an accessor.
+export function useShowGaps(title: () => Title) {
+  const gaps = useQuery(() => ({
+    ...missingSeasonsOptions(title().kind === "show" ? title().id : null),
     retry: 1,
+  }))
+  const data = () => (gaps.isSuccess ? gaps.data : undefined)
+  const live = useLiveAvailability(() => {
+    const found = data()
+    return found ? [{ ref: found.ref, libraryId: title().libraryId }] : []
   })
-  const data = gaps.data
-  const live = useLiveAvailability(
-    data ? [{ ref: data.ref, libraryId: title.libraryId }] : [],
-  )
-  if (!data) return null
-  const entry = liveEntry(live, data.ref)
-  const missing = liveSeasons(data.seasons, entry).toSorted(bySeason)
-  const partial = liveSeasons(data.partialSeasons, entry)
-  return {
-    ref: data.ref,
-    libraryId: title.libraryId,
-    missing,
-    partial,
-    /** Nothing of the show is asked for yet, so Undo may take back an ask. */
-    first: [...missing, ...partial].every(
-      (season) => season.availability.requestId === null,
-    ),
-  }
+  return createMemo(() => {
+    const found = data()
+    if (!found) return null
+    const entry = liveEntry(live(), found.ref)
+    const missing = liveSeasons(found.seasons, entry).toSorted(bySeason)
+    const partial = liveSeasons(found.partialSeasons, entry)
+    return {
+      ref: found.ref,
+      libraryId: title().libraryId,
+      missing,
+      partial,
+      /** Nothing of the show is asked for yet, so Undo may take back an ask. */
+      first: [...missing, ...partial].every(
+        (season) => season.availability.requestId === null,
+      ),
+    }
+  })
 }
 
-export type ShowGaps = NonNullable<ReturnType<typeof useShowGaps>>
+export type ShowGaps = NonNullable<ReturnType<ReturnType<typeof useShowGaps>>>

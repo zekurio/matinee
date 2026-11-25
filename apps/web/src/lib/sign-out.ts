@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
+import { useMutation, useQueryClient } from "@tanstack/solid-query"
+import { useNavigate } from "@tanstack/solid-router"
 
 import { client } from "@/lib/rpc"
 
@@ -7,11 +7,11 @@ import { client } from "@/lib/rpc"
 export function useSignOut() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  return useMutation({
+  return useMutation(() => ({
     mutationFn: () => client.auth.signOut(),
     onSuccess: async () => {
       queryClient.clear()
       await navigate({ to: "/login" })
     },
-  })
+  }))
 }

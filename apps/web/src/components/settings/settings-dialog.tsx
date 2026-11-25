@@ -1,23 +1,20 @@
 import type { User } from "@matinee/contracts"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
-import { Input } from "@matinee/ui/components/input"
-import { List, ListItemButton } from "@matinee/ui/components/list"
-import { ScrollArea } from "@matinee/ui/components/scroll-area"
-import { useIsMobile } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
-import { ArrowLeftIcon, LogOutIcon, SearchIcon, XIcon } from "lucide-react"
-import { type ReactNode, useMemo, useRef, useState } from "react"
+import { Dynamic, type JSX } from "@solidjs/web"
+import { ArrowLeft, LogOut, Search, X } from "lucide"
+import { createMemo, createSignal, For, onSettled, Show } from "solid-js"
 
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/kit/dialog"
+import { Icon } from "@/kit/icon"
+import { Input } from "@/kit/input"
+import { List, ListItemButton } from "@/kit/list"
+import { ScrollArea } from "@/kit/scroll-area"
 import type { SettingsTarget } from "@/lib/settings"
 import { useSignOut } from "@/lib/sign-out"
-import { useSettingsDialogStore } from "@/stores/settings-dialog"
+import { mediaQuery } from "@/lib/viewport"
+import { setSaveBarSlot } from "@/stores/settings-dialog"
 
 import {
   type SettingsCategory,
@@ -34,6 +31,9 @@ interface SettingsNavigation {
   onBack: () => void
 }
 
+/** Where the dialog turns into a full-screen sheet, as `md` ends. */
+const isMobile = () => mediaQuery("(max-width: 767px)")()
+
 /**
  * Settings as a dialog over the current page. Desktop pairs a sidebar with
  * the open section; a phone gets a full-screen sheet with the menu first and
@@ -42,103 +42,119 @@ interface SettingsNavigation {
  * A panel with unsaved edits holds every way out itself: its save bar blocks
  * the navigation that closing or switching sections makes.
  */
-export function SettingsDialog({
-  user,
-  section,
-  onClose,
-  ...navigation
-}: SettingsNavigation & {
-  user: User
-  /** The requested section, or null while closed. */
-  section: SettingsTarget | null
-  onClose: () => void
-}) {
-  const categories = useSettingsCategories(user)
-  const popupRef = useRef<HTMLDivElement>(null)
+export function SettingsDialog(
+  props: SettingsNavigation & {
+    user: User
+    /** The requested section, or null while closed. */
+    section: SettingsTarget | null
+    onClose: () => void
+  },
+) {
+  const categories = useSettingsCategories(() => props.user)
+  let popup: HTMLDivElement | undefined
   // Keeps the last section on screen while the dialog animates closed.
-  const [shown, setShown] = useState(section)
-  if (section !== null && section !== shown) setShown(section)
+  let last: SettingsTarget | null = null
+  const section = createMemo(() => {
+    if (props.section !== null) last = props.section
+    return props.section ?? last
+  })
+  // Rendered open, the dialog would leave focus where it was, outside it,
+  // so it opens once it's in the page, and moves focus in as it does.
+  const [mounted, setMounted] = createSignal(false)
+  onSettled(() => {
+    setMounted(true)
+  })
 
   return (
-    <Dialog open={section !== null} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={mounted() && props.section !== null}
+      onOpenChange={(open) => {
+        if (!open) props.onClose()
+      }}
+    >
       <DialogContent
-        ref={popupRef}
+        ref={(el: HTMLDivElement) => (popup = el)}
         // Keyboard users land in the search. A click or tap focuses the
         // dialog itself: no ring on open, and no phone keyboard popping up.
-        initialFocus={(type) => type === "keyboard" || popupRef.current}
+        initialFocus={() =>
+          // What had focus shows a ring only when reached by keyboard.
+          (document.activeElement?.matches(":focus-visible")
+            ? popup?.querySelector<HTMLElement>("input[type=search]")
+            : undefined) ?? popup
+        }
         showCloseButton={false}
         disableZoom
-        className={cn(
+        class={cn(
           // Scales with the viewport, keeping a margin on every side, up to
           // a cap that stops rows stretching too far on a big monitor.
           "bg-card flex h-[92dvh] max-h-[80rem] w-[94vw] max-w-[90rem] gap-0 overflow-hidden p-0 sm:max-w-[90rem]",
-          "settings-sheet max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-screen max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:ring-0",
+          "settings-sheet max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-screen max-md:max-w-none max-md:rounded-none max-md:ring-0",
         )}
       >
-        <DialogTitle className="sr-only">{tr("settings.title")}</DialogTitle>
+        <DialogTitle class="sr-only">{tr("settings.title")}</DialogTitle>
         <SettingsBody
-          user={user}
-          categories={categories}
-          section={section ?? shown}
-          {...navigation}
+          user={props.user}
+          categories={categories()}
+          section={section()}
+          onNavigate={props.onNavigate}
+          onOpenSection={props.onOpenSection}
+          onBack={props.onBack}
         />
       </DialogContent>
     </Dialog>
   )
 }
 
-function SettingsBody({
-  user,
-  categories,
-  section,
-  ...navigation
-}: SettingsNavigation & {
-  user: User
-  categories: SettingsCategory[]
-  section: SettingsTarget | null
-}) {
-  const isMobile = useIsMobile()
-  const requested = categories.find((category) => category.id === section)
+function SettingsBody(
+  props: SettingsNavigation & {
+    user: User
+    categories: SettingsCategory[]
+    section: SettingsTarget | null
+  },
+) {
   // A phone has room for the menu or a section, never both, so without a
   // section it shows the menu. Desktop always pairs the sidebar with one.
-  const active = requested ?? (isMobile ? null : categories[0])
+  const active = createMemo(
+    () =>
+      props.categories.find((category) => category.id === props.section) ??
+      (isMobile() ? undefined : props.categories[0]),
+  )
 
-  if (!active) {
-    return (
-      <SettingsOverview
-        user={user}
-        categories={categories}
-        onOpenSection={navigation.onOpenSection}
-      />
-    )
-  }
   return (
-    <SettingsSectionView
-      isMobile={isMobile}
-      categories={categories}
-      active={active}
-      {...navigation}
-    />
+    <Show
+      when={active()}
+      fallback={
+        <SettingsOverview
+          user={props.user}
+          categories={props.categories}
+          onOpenSection={props.onOpenSection}
+        />
+      }
+    >
+      {(category) => (
+        <SettingsSectionView
+          categories={props.categories}
+          active={category()}
+          onNavigate={props.onNavigate}
+          onOpenSection={props.onOpenSection}
+          onBack={props.onBack}
+        />
+      )}
+    </Show>
   )
 }
 
 const iconButton =
-  "text-muted-foreground hover:text-foreground focus-visible:ring-ring grid size-10 place-items-center rounded-lg outline-none transition-colors focus-visible:ring-2 [&_svg]:size-5"
+  "text-foreground focus-visible:ring-ring grid size-12 place-items-center rounded-full outline-none transition-colors hover:drop-shadow-[0_0_6px_currentColor] focus-visible:ring-2 active:bg-foreground/10 [&_svg]:size-6"
 
-/** The phone title bar: one button, then the title centred. */
-function MobileHeader({
-  title,
-  leading,
-}: {
-  title: string
-  leading: ReactNode
-}) {
+/** The phone title bar: Back, then the title, as the Flutter PageFrame. */
+function MobileHeader(props: { title: string; leading: JSX.Element }) {
   return (
-    <header className="bg-card shrink-0 border-b px-1 pt-[env(safe-area-inset-top)]">
-      <div className="grid h-13 grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center">
-        <div className="grid place-items-center">{leading}</div>
-        <h2 className="truncate text-center text-base font-semibold">
-          {title}
+    <header class="bg-card shrink-0 pt-[env(safe-area-inset-top)]">
+      <div class="flex h-16 items-center pr-1 pl-1">
+        {props.leading}
+        <h2 class="min-w-0 flex-1 truncate pl-1 text-xl leading-7 font-semibold tracking-tight">
+          {props.title}
         </h2>
       </div>
     </header>
@@ -149,250 +165,270 @@ function MobileHeader({
  * The phone menu: search, the signed-in account, then every section, and
  * signing out at its end, as phones have no account menu.
  */
-function SettingsOverview({
-  user,
-  categories,
-  onOpenSection,
-}: {
+function SettingsOverview(props: {
   user: User
   categories: SettingsCategory[]
   onOpenSection: (section: SettingsTarget) => void
 }) {
-  const [query, setQuery] = useState("")
-  const groups = useMemo(
-    () => searchSettings(categories, query),
-    [categories, query],
-  )
-  const name = user.displayName ?? user.username
+  const [query, setQuery] = createSignal("")
+  const groups = createMemo(() => searchSettings(props.categories, query()))
+  const name = () => props.user.displayName ?? props.user.username
   const signOut = useSignOut()
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
+    <div class="flex min-w-0 flex-1 flex-col">
       <MobileHeader
         title={tr("settings.title")}
         leading={
-          <DialogClose aria-label={tr("settings.close")} className={iconButton}>
-            <XIcon />
+          <DialogClose aria-label={tr("shell.back")} class={iconButton}>
+            <Icon icon={ArrowLeft} />
           </DialogClose>
         }
       />
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-        <SearchField value={query} onChange={setQuery} />
-        {groups.map((group) => (
-          <section key={group.id} className="flex flex-col gap-2">
-            {group.id !== "account" && (
-              <h3 className="text-muted-foreground text-13px px-1 font-medium">
-                {group.label}
-              </h3>
-            )}
-            <List>
-              {group.items.map(({ category, hint }) =>
-                // The account section reads as the account it edits.
-                category.id === "account" ? (
-                  <ListItemButton
-                    key={category.id}
-                    className="min-h-16"
-                    onClick={() => onOpenSection(category.id)}
-                  >
-                    <UserAvatar user={user} className="size-10 text-sm" />
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate font-medium">{name}</span>
-                      <span className="text-muted-foreground text-13px truncate">
-                        {hint ?? category.description}
-                      </span>
-                    </span>
-                  </ListItemButton>
-                ) : (
-                  <ListItemButton
-                    key={category.id}
-                    onClick={() => onOpenSection(category.id)}
-                  >
-                    <category.icon className="text-muted-foreground size-5 shrink-0" />
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate font-medium">
-                        {category.label}
-                      </span>
-                      <span className="text-muted-foreground text-13px truncate">
-                        {hint ?? category.description}
-                      </span>
-                    </span>
-                  </ListItemButton>
-                ),
-              )}
-            </List>
-          </section>
-        ))}
-        {groups.length === 0 && (
-          <p className="text-muted-foreground px-1 text-sm">
-            {tr("settings.noMatch", { query: query.trim() })}
+      <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <SearchField value={query()} onChange={setQuery} />
+        <For each={groups()} keyed={(group) => group.id}>
+          {(group) => (
+            <section class="flex flex-col gap-2">
+              <Show when={group().id !== "account"}>
+                <h3 class="text-muted-foreground text-13px px-1 font-medium">
+                  {group().label}
+                </h3>
+              </Show>
+              <List>
+                <For each={group().items} keyed={(item) => item.category.id}>
+                  {(item) => (
+                    // The account section reads as the account it edits.
+                    <Show
+                      when={item().category.id === "account"}
+                      fallback={
+                        <ListItemButton
+                          onClick={() =>
+                            props.onOpenSection(item().category.id)
+                          }
+                        >
+                          <Icon
+                            icon={item().category.icon}
+                            class="text-muted-foreground size-5 shrink-0"
+                          />
+                          <span class="flex min-w-0 flex-1 flex-col">
+                            <span class="truncate font-medium">
+                              {item().category.label}
+                            </span>
+                            <span class="text-muted-foreground text-13px truncate">
+                              {item().hint ?? item().category.description}
+                            </span>
+                          </span>
+                        </ListItemButton>
+                      }
+                    >
+                      <ListItemButton
+                        class="min-h-16"
+                        onClick={() => props.onOpenSection(item().category.id)}
+                      >
+                        <UserAvatar user={props.user} class="size-10 text-sm" />
+                        <span class="flex min-w-0 flex-1 flex-col">
+                          <span class="truncate font-medium">{name()}</span>
+                          <span class="text-muted-foreground text-13px truncate">
+                            {item().hint ?? item().category.description}
+                          </span>
+                        </span>
+                      </ListItemButton>
+                    </Show>
+                  )}
+                </For>
+              </List>
+            </section>
+          )}
+        </For>
+        <Show when={groups().length === 0}>
+          <p class="text-muted-foreground px-1 text-sm">
+            {tr("settings.noMatch", { query: query().trim() })}
           </p>
-        )}
-        {!query.trim() && (
+        </Show>
+        <Show when={!query().trim()}>
           <List>
             <ListItemButton
-              className="text-destructive"
+              class="text-destructive"
               disabled={signOut.isPending}
               onClick={() => signOut.mutate()}
               trailing={false}
             >
-              <LogOutIcon className="size-5 shrink-0" />
-              <span className="min-w-0 flex-1 truncate font-medium">
+              <Icon icon={LogOut} class="size-5 shrink-0" />
+              <span class="min-w-0 flex-1 truncate font-medium">
                 {tr("shell.signOut")}
               </span>
             </ListItemButton>
           </List>
-        )}
+        </Show>
       </div>
     </div>
   )
 }
 
-function SettingsSectionView({
-  isMobile,
-  categories,
-  active,
-  onNavigate,
-  onBack,
-}: SettingsNavigation & {
-  isMobile: boolean
-  categories: SettingsCategory[]
-  active: SettingsCategory
-}) {
-  const setSaveBarSlot = useSettingsDialogStore((state) => state.setSaveBarSlot)
-  const [query, setQuery] = useState("")
-  const groups = useMemo(
-    () => searchSettings(categories, query),
-    [categories, query],
-  )
+function SettingsSectionView(
+  props: SettingsNavigation & {
+    categories: SettingsCategory[]
+    active: SettingsCategory
+  },
+) {
+  const [query, setQuery] = createSignal("")
+  const groups = createMemo(() => searchSettings(props.categories, query()))
 
   return (
     <>
-      <ScrollArea
-        render={<nav aria-label={tr("settings.title")} />}
-        hasControls
-        className="bg-background/60 hidden w-56 shrink-0 border-r md:flex lg:w-64"
-        viewportClassName="flex flex-col gap-0.5 p-4"
+      <nav
+        aria-label={tr("settings.title")}
+        class="bg-background/60 hidden w-56 shrink-0 border-r md:flex lg:w-64"
       >
-        <div className="px-2.5 pt-1 pb-3 text-lg font-semibold tracking-tight">
-          {tr("settings.title")}
-        </div>
-        <SearchField value={query} onChange={setQuery} className="mb-2" />
-        {groups.map((group) => (
-          <div key={group.id} className="flex flex-col gap-0.5">
-            {group.id !== "account" && (
-              <div className="text-muted-foreground px-2.5 pt-5 pb-1.5 text-xs font-medium">
-                {group.label}
+        <ScrollArea
+          hasControls
+          class="min-w-0 flex-1"
+          viewportClassName="flex flex-col gap-0.5 p-4"
+        >
+          <div class="px-2.5 pt-1 pb-3 text-lg font-semibold tracking-tight">
+            {tr("settings.title")}
+          </div>
+          <SearchField value={query()} onChange={setQuery} class="mb-2" />
+          <For each={groups()} keyed={(group) => group.id}>
+            {(group) => (
+              <div class="flex flex-col gap-0.5">
+                <Show when={group().id !== "account"}>
+                  <div class="text-muted-foreground px-2.5 pt-5 pb-1.5 text-xs font-medium">
+                    {group().label}
+                  </div>
+                </Show>
+                <For each={group().items} keyed={(item) => item.category.id}>
+                  {(item) => {
+                    const isActive = () =>
+                      item().category.id === props.active.id
+                    return (
+                      <button
+                        type="button"
+                        aria-current={isActive() ? "page" : undefined}
+                        onClick={() => {
+                          if (!isActive()) props.onNavigate(item().category.id)
+                        }}
+                        class={[
+                          "focus-visible:ring-ring flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors outline-none focus-visible:ring-2",
+                          isActive()
+                            ? "text-foreground bg-foreground/[0.07]"
+                            : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]",
+                        ]}
+                      >
+                        <Icon
+                          icon={item().category.icon}
+                          class="size-4 shrink-0"
+                        />
+                        <span class="flex min-w-0 flex-col">
+                          <span class="truncate">{item().category.label}</span>
+                          <Show when={item().hint}>
+                            <span class="text-muted-foreground truncate text-xs">
+                              {item().hint}
+                            </span>
+                          </Show>
+                        </span>
+                      </button>
+                    )
+                  }}
+                </For>
               </div>
             )}
-            {group.items.map(({ category, hint }) => {
-              const isActive = category.id === active.id
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  aria-current={isActive ? "page" : undefined}
-                  onClick={() => !isActive && onNavigate(category.id)}
-                  className={cn(
-                    "focus-visible:ring-ring flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors focus-visible:ring-2",
-                    isActive
-                      ? "text-foreground bg-foreground/[0.07]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]",
-                  )}
-                >
-                  <category.icon className="size-4 shrink-0" />
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate">{category.label}</span>
-                    {hint && (
-                      <span className="text-muted-foreground truncate text-xs">
-                        {hint}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        ))}
-        {groups.length === 0 && (
-          <p className="text-muted-foreground px-2.5 pt-3 text-sm">
-            {tr("settings.noMatch", { query: query.trim() })}
-          </p>
-        )}
-      </ScrollArea>
+          </For>
+          <Show when={groups().length === 0}>
+            <p class="text-muted-foreground px-2.5 pt-3 text-sm">
+              {tr("settings.noMatch", { query: query().trim() })}
+            </p>
+          </Show>
+        </ScrollArea>
+      </nav>
 
       {/* On a phone a section replaces the menu, so it slides in over it. */}
-      <div className="max-md:animate-in max-md:fade-in-0 max-md:slide-in-from-right-4 animation-duration-200 flex min-w-0 flex-1 flex-col motion-reduce:animate-none">
-        {isMobile ? (
+      <div class="max-md:animate-in max-md:fade-in-0 max-md:slide-in-from-right-4 animation-duration-200 flex min-w-0 flex-1 flex-col motion-reduce:animate-none">
+        <Show
+          when={isMobile()}
+          fallback={
+            <header class="flex h-16 shrink-0 items-center justify-between gap-4 border-b pr-4 pl-6 lg:pl-10">
+              <h2 class="truncate text-lg font-semibold tracking-tight">
+                {props.active.label}
+              </h2>
+              <DialogClose
+                aria-label={tr("settings.close")}
+                class={cn(iconButton, "size-9 [&_svg]:size-4")}
+              >
+                <Icon icon={X} />
+              </DialogClose>
+            </header>
+          }
+        >
           <MobileHeader
-            title={active.label}
+            title={props.active.label}
             leading={
               <button
                 type="button"
                 aria-label={tr("settings.back")}
-                className={iconButton}
-                onClick={onBack}
+                class={iconButton}
+                onClick={() => props.onBack()}
               >
-                <ArrowLeftIcon />
+                <Icon icon={ArrowLeft} />
               </button>
             }
           />
-        ) : (
-          <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b pr-4 pl-6 lg:pl-10">
-            <h2 className="truncate text-lg font-semibold tracking-tight">
-              {active.label}
-            </h2>
-            <DialogClose
-              aria-label={tr("settings.close")}
-              className={cn(iconButton, "size-9 [&_svg]:size-4")}
-            >
-              <XIcon />
-            </DialogClose>
-          </header>
-        )}
+        </Show>
         {/* Keyed, so a new section starts at its top and fades in instead
             of snapping over the last. */}
-        <ScrollArea
-          key={active.id}
-          hasControls
-          className="animate-in fade-in-0 animation-duration-200 min-h-0 flex-1 motion-reduce:animate-none"
-          viewportClassName="px-4 py-6 md:px-6 md:py-8 lg:px-10 max-md:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
-        >
-          <active.Panel />
-        </ScrollArea>
-        {/* The save bar of a panel with unsaved edits lands here, on the
-            panel's bottom edge, outside the scrolling content. */}
-        <div ref={setSaveBarSlot} className="shrink-0 empty:hidden" />
+        <Show when={props.active.id} keyed>
+          {(id) => (
+            <ScrollArea
+              hasControls
+              data-section={id}
+              class="animate-in fade-in-0 animation-duration-200 min-h-0 flex-1 motion-reduce:animate-none"
+              viewportClassName="px-4 py-6 md:px-6 md:py-8 lg:px-10 max-md:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            >
+              <Dynamic component={props.active.Panel} />
+            </ScrollArea>
+          )}
+        </Show>
+        <SaveBarSlot />
       </div>
     </>
   )
 }
 
-function SearchField({
-  value,
-  onChange,
-  className,
-}: {
+/**
+ * The save bar of a panel with unsaved edits lands here, on the panel's
+ * bottom edge, outside the scrolling content.
+ */
+function SaveBarSlot() {
+  onSettled(() => () => setSaveBarSlot(undefined))
+  return <div ref={(el) => setSaveBarSlot(el)} class="shrink-0 empty:hidden" />
+}
+
+function SearchField(props: {
   value: string
   onChange: (value: string) => void
-  className?: string
+  class?: string
 }) {
   return (
-    <div className={cn("relative", className)}>
-      <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+    <div class={cn("relative", props.class)}>
+      <Icon
+        icon={Search}
+        class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+      />
       <Input
         type="search"
-        value={value}
-        onChange={(event) => onChange(event.currentTarget.value)}
+        value={props.value}
+        onValueChange={(value) => props.onChange(value)}
         onKeyDown={(event) => {
           // Escape clears the search before it closes the dialog.
-          if (event.key === "Escape" && value) {
+          if (event.key === "Escape" && props.value) {
             event.stopPropagation()
-            onChange("")
+            props.onChange("")
           }
         }}
         placeholder={tr("settings.search")}
         aria-label={tr("settings.search")}
-        className="pl-8 [&::-webkit-search-cancel-button]:appearance-none"
+        class="pl-8 [&::-webkit-search-cancel-button]:appearance-none"
       />
     </div>
   )

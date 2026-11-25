@@ -1,7 +1,7 @@
 import { audioFormatName, type PlaybackStart } from "@matinee/contracts"
-import { toast } from "@matinee/ui/components/sonner"
 
 import { tr } from "@/i18n"
+import { toast } from "@/kit/toast"
 import { errorMessage } from "@/lib/rpc"
 
 const NOTICE_ID = "playback-notice"

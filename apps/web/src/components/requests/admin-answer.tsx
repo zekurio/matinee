@@ -1,15 +1,17 @@
 import type { AdminRequestItem, Availability } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
 import { cn } from "@matinee/ui/lib/utils"
-import { useRouteContext } from "@tanstack/react-router"
-import { CheckIcon, ChevronDownIcon } from "lucide-react"
-import { useRef, useState } from "react"
+import { useRouteContext } from "@tanstack/solid-router"
+import { Check, ChevronDown } from "lucide"
+import { createMemo, createSignal, Show } from "solid-js"
 
 import type { BadgeTip } from "@/components/catalog/catalog-card"
 import { tr } from "@/i18n"
+import { Button, buttonVariants } from "@/kit/button"
+import { Icon } from "@/kit/icon"
 import { formatRelative } from "@/lib/format"
 import { can, runsQueue } from "@/lib/permissions"
 import {
+  type QueueAction,
   useHiddenRequests,
   useRequestActionsStore,
   useSendHeldOnLeave,
@@ -38,25 +40,27 @@ import {
  * opens no stream. A season outside the request, which only shares its
  * id, has none. `answered` while an Add or a Decline is held for Undo or
  * on its way, when the page shows what anyone sees. Null for anyone else
- * and while nothing waits.
+ * and while nothing waits. An accessor, read where it's shown.
  *
  * Call it once in a part of the page that outlives the answer: anything
  * held is sent as that part goes, since Undo is only for while the admin
  * is still looking.
  */
 export function useWaitingRequest(
-  availability: Availability,
-): { item: AdminRequestItem; answered: boolean } | null {
-  const { user } = useRouteContext({ from: "/_authed/_shell" })
-  const admin = runsQueue(user)
+  availability: () => Availability,
+): () => { item: AdminRequestItem; answered: boolean } | null {
+  const context = useRouteContext({ from: "/_authed/_shell" })
+  const admin = () => runsQueue(context().user)
   const queue = useRequestQueue(admin)
   const hidden = useHiddenRequests()
   useSendHeldOnLeave()
-  const { requestId, state } = availability
-  if (!admin || !requestId || state !== "asked") return null
-  const item = queue.data?.waiting.find((entry) => entry.id === requestId)
-  if (!item) return null
-  return { item, answered: hidden.has(item.id) }
+  return createMemo(() => {
+    const { requestId, state } = availability()
+    if (!admin() || !requestId || state !== "asked") return null
+    const item = queue()?.data?.waiting.find((entry) => entry.id === requestId)
+    if (!item) return null
+    return { item, answered: hidden().has(item.id) }
+  })
 }
 
 /**
@@ -97,33 +101,28 @@ export type AnswerLook = "page" | "plain" | "fill"
  * queue's row. Decline opens the queue's form. Once either is pressed,
  * focus moves to what takes their place beside them.
  */
-export function AdminAnswer({
-  item,
-  look,
-  className,
-}: {
+export function AdminAnswer(props: {
   item: AdminRequestItem
   look: AnswerLook
-  className?: string
+  class?: string
 }) {
-  const hold = useRequestActionsStore((state) => state.hold)
-  const [declining, setDeclining] = useState(false)
-  const root = useRef<HTMLDivElement>(null)
-  const { user } = useRouteContext({ from: "/_authed/_shell" })
-  const canApprove = can(user, "adminRequest.approve")
-  const canDecline = can(user, "adminRequest.decline")
-  const { library } = useGoesTo(item)
-  // Nothing to offer, so the row leaves no empty space.
-  if (!canApprove && !canDecline) return null
-  const fill = look === "fill"
-  const choice = !fill && choosesLibrary(item)
-  const page = look === "page"
-  const size = page ? "lg" : "sm"
+  const [declining, setDeclining] = createSignal(false)
+  let root: HTMLDivElement | undefined
+  const context = useRouteContext({ from: "/_authed/_shell" })
+  const canApprove = () => can(context().user, "adminRequest.approve")
+  const canDecline = () => can(context().user, "adminRequest.decline")
+  const goesTo = useGoesTo(() => props.item)
+  const fill = () => props.look === "fill"
+  const choice = () => !fill() && choosesLibrary(props.item)
+  const page = () => props.look === "page"
+  const size = () => (page() ? "lg" : "sm")
+  const hold = (action: QueueAction) =>
+    useRequestActionsStore.getState().hold(action)
 
   // The buttons go once answered; focus moves on to whatever the row
   // shows in their place, else the page keeps it.
   const answered = () => {
-    const box = root.current?.parentElement
+    const box = root?.parentElement
     requestAnimationFrame(() =>
       box
         ?.querySelector<HTMLElement>("button:not([disabled]), a[href]")
@@ -131,95 +130,109 @@ export function AdminAnswer({
     )
   }
 
-  const add = (
+  const add = () => (
     <Button
-      size={size}
+      size={size()}
       onClick={() => {
-        hold(addAction([item]))
+        hold(addAction([props.item]))
         answered()
       }}
-      className={cn(
+      class={cn(
         "min-w-0",
-        page && "max-sm:h-11 max-sm:flex-1",
-        fill && "flex-1",
-        choice && "rounded-r-none",
+        page() && "max-sm:h-11 max-sm:flex-1",
+        fill() && "flex-1",
+        choice() && "rounded-r-none",
       )}
     >
-      <CheckIcon
-        aria-hidden
-        strokeWidth={page ? 2 : 2.5}
+      <Icon
+        icon={Check}
+        stroke-width={page() ? 2 : 2.5}
         // On a card too narrow for both words, the words stay.
-        className={cn(fill && "@max-[12rem]/card:hidden")}
+        class={cn(fill() && "@max-[12rem]/card:hidden")}
       />
-      <span className="truncate">
-        {choice ? tr("requests.addTo", { library }) : tr("requests.add")}
+      <span class="truncate">
+        {choice()
+          ? tr("requests.addTo", { library: goesTo().library })
+          : tr("requests.add")}
       </span>
     </Button>
   )
 
+  // Nothing to offer, so the row leaves no empty space.
   return (
-    <div
-      ref={root}
-      className={cn(
-        "flex min-w-0 gap-2",
-        page && "contents",
-        fill && "w-full gap-1.5",
-        className,
-      )}
-    >
-      {canApprove &&
-        (choice ? (
-          <div className={cn("flex min-w-0", page && "max-sm:flex-1")}>
-            {add}
-            <GoesToChooser
-              item={item}
-              trigger={
-                <Button
-                  size={size}
-                  aria-label={tr("requests.goesTo.change", {
-                    name: item.title.name,
-                    library,
-                  })}
-                  className={cn(
-                    "border-l-primary-foreground/25 shrink-0 rounded-l-none",
-                    page ? "px-2.5 max-sm:h-11" : "px-1.5",
-                  )}
-                >
-                  <ChevronDownIcon aria-hidden />
-                </Button>
-              }
-            />
-          </div>
-        ) : (
-          add
-        ))}
-      {canDecline && (
-        <DeclinePopover
-          item={item}
-          open={declining}
-          onOpenChange={setDeclining}
-          onAnswer={(answer) => {
-            setDeclining(false)
-            hold({ ...answer, ids: [item.id], names: [item.title.name] })
-            answered()
-          }}
-          trigger={
-            <Button
-              variant="ghost"
-              size={size}
-              className={cn(
-                page &&
-                  "hover:bg-foreground/10 data-popup-open:bg-foreground/10 max-sm:h-11",
-                look === "plain" && "hover:bg-muted data-popup-open:bg-muted",
-                fill &&
-                  "hover:bg-foreground/10 data-popup-open:bg-foreground/10 shrink-0 px-2",
-              )}
-            >
-              {tr("requests.decline")}
-            </Button>
-          }
-        />
-      )}
-    </div>
+    <Show when={canApprove() || canDecline()}>
+      <div
+        ref={(element) => {
+          root = element
+        }}
+        class={cn(
+          "flex min-w-0 gap-2",
+          page() && "contents",
+          fill() && "w-full gap-1.5",
+          props.class,
+        )}
+      >
+        <Show when={canApprove()}>
+          <Show when={choice()} fallback={add()}>
+            <div class={cn("flex min-w-0", page() && "max-sm:flex-1")}>
+              {add()}
+              <GoesToChooser
+                item={props.item}
+                renderTrigger={(trigger) => (
+                  <button
+                    {...trigger}
+                    type="button"
+                    aria-label={tr("requests.goesTo.change", {
+                      name: props.item.title.name,
+                      library: goesTo().library,
+                    })}
+                    class={cn(
+                      buttonVariants({ size: size() }),
+                      "border-l-primary-foreground/25 shrink-0 rounded-l-none",
+                      page() ? "px-2.5 max-sm:h-11" : "px-1.5",
+                    )}
+                  >
+                    <Icon icon={ChevronDown} />
+                  </button>
+                )}
+              />
+            </div>
+          </Show>
+        </Show>
+        <Show when={canDecline()}>
+          <DeclinePopover
+            item={props.item}
+            open={declining()}
+            onOpenChange={setDeclining}
+            onAnswer={(answer) => {
+              setDeclining(false)
+              hold({
+                ...answer,
+                ids: [props.item.id],
+                names: [props.item.title.name],
+              })
+              answered()
+            }}
+            renderTrigger={(trigger) => (
+              <button
+                {...trigger}
+                type="button"
+                class={cn(
+                  buttonVariants({ variant: "ghost", size: size() }),
+                  page() &&
+                    "hover:bg-foreground/10 data-popup-open:bg-foreground/10 max-sm:h-11",
+                  props.look === "plain" &&
+                    "hover:bg-muted data-popup-open:bg-muted",
+                  fill() &&
+                    "hover:bg-foreground/10 data-popup-open:bg-foreground/10 shrink-0 px-2",
+                )}
+              >
+                {tr("requests.decline")}
+              </button>
+            )}
+          />
+        </Show>
+      </div>
+    </Show>
   )
 }

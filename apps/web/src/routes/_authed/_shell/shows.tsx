@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/solid-router"
 
 import { KindPage, kindPageLoader } from "@/components/browse/kind-page"
 import { KindSearch } from "@/lib/browse-search"
@@ -19,11 +19,12 @@ function ShowsPage() {
   return (
     <KindPage
       kind="show"
-      search={search}
+      search={search()}
       update={(patch) =>
         void navigate({
           search: (prev) => ({ ...prev, ...patch }),
           replace: true,
+          resetScroll: false,
         })
       }
     />

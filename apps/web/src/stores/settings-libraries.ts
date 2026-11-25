@@ -1,17 +1,18 @@
 import type { Library } from "@matinee/contracts"
-import { createStore } from "zustand/vanilla"
+import { createSignal } from "solid-js"
 
 /** Keeps the edited library in place while its dialog closes. */
 export function createSettingsLibrariesStore() {
-  return createStore<{
-    library: Library | undefined
-    open: boolean
-    edit: (library?: Library) => void
-    close: () => void
-  }>()((set) => ({
-    library: undefined,
-    open: false,
-    edit: (library) => set({ library, open: true }),
-    close: () => set({ open: false }),
-  }))
+  // Signals, not a store: the library goes into a form as it is.
+  const [library, setLibrary] = createSignal<Library | undefined>()
+  const [open, setOpen] = createSignal(false)
+  return {
+    library,
+    open,
+    edit: (next?: Library) => {
+      setLibrary(() => next)
+      setOpen(true)
+    },
+    close: () => setOpen(false),
+  }
 }

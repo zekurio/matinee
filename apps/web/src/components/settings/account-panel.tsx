@@ -2,9 +2,34 @@ import {
   AUTH_ERROR_QUERY_KEY,
   DisplayName,
   oidcStartPath,
+  type Passkey,
   PasskeyName,
   type User,
 } from "@matinee/contracts"
+import { cn } from "@matinee/ui/lib/utils"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { useNavigate, useSearch } from "@tanstack/solid-router"
+import {
+  ImageUp,
+  KeyRound,
+  Link as LinkIcon,
+  Pencil,
+  Plus,
+  Trash2,
+  UserRound,
+} from "lucide"
+import {
+  createEffect,
+  createSignal,
+  For,
+  Match,
+  onSettled,
+  Show,
+  Switch,
+} from "solid-js"
+
+import { UserAvatar } from "@/components/user-avatar"
+import { knownMessage, tr } from "@/i18n"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,8 +39,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@matinee/ui/components/alert-dialog"
-import { Button, buttonVariants } from "@matinee/ui/components/button"
+} from "@/kit/alert-dialog"
+import { Button, buttonVariants } from "@/kit/button"
 import {
   Dialog,
   DialogContent,
@@ -23,42 +48,26 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@matinee/ui/components/dialog"
+} from "@/kit/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
-import { Input } from "@matinee/ui/components/input"
-import { Label } from "@matinee/ui/components/label"
-import { List, ListItem } from "@matinee/ui/components/list"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import { Spinner } from "@matinee/ui/components/spinner"
-import { cn } from "@matinee/ui/lib/utils"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useSearch } from "@tanstack/react-router"
-import {
-  ImageUpIcon,
-  KeyRoundIcon,
-  LinkIcon,
-  PencilIcon,
-  PlusIcon,
-  Trash2Icon,
-  UserRoundIcon,
-} from "lucide-react"
-import { useRef, useState } from "react"
-import { useStore } from "zustand"
-
-import { UserAvatar } from "@/components/user-avatar"
-import { tr } from "@/i18n"
+} from "@/kit/dropdown-menu"
+import { Icon } from "@/kit/icon"
+import { Input } from "@/kit/input"
+import { Label } from "@/kit/label"
+import { List, ListItem } from "@/kit/list"
+import { Skeleton } from "@/kit/skeleton"
+import { Spinner } from "@/kit/spinner"
+import { toast } from "@/kit/toast"
 import { prepareAvatar } from "@/lib/avatar"
-import { firstError, useAppForm } from "@/lib/form"
+import { createForm } from "@/lib/form"
+import { SubmitButton, TextField } from "@/lib/form-fields"
 import { formatDate, formatRelative } from "@/lib/format"
 import { addPasskey } from "@/lib/passkey"
 import { client, errorMessage, orpc } from "@/lib/rpc"
-import { useAuthErrorToast } from "@/lib/use-auth-error-toast"
 import { createSettingsPasskeysStore } from "@/stores/settings-passkeys"
 
 import { SharingRows } from "./profile-sharing"
@@ -70,22 +79,51 @@ const LINK_RETURN = "/settings/account"
 
 export function AccountPanel() {
   const search = useSearch({ from: "/_authed/_shell" })
-  const config = useQuery(orpc.auth.config.queryOptions())
-  const session = useQuery(orpc.auth.session.queryOptions())
-  const oidc = config.data?.oidc ?? null
-  useAuthErrorToast(search[AUTH_ERROR_QUERY_KEY])
-  const user = session.data?.user ?? null
+  const config = useQuery(() => orpc.auth.config.queryOptions())
+  const session = useQuery(() => orpc.auth.session.queryOptions())
+  const oidc = () => config.data?.oidc ?? null
+  useLinkErrorToast(() => search()[AUTH_ERROR_QUERY_KEY])
 
   return (
     <SettingsSections>
-      {user ? (
-        <Profile user={user} providerName={oidc?.displayName ?? null} />
-      ) : null}
-      {config.data?.passkeys ? <Passkeys oidcEnabled={oidc !== null} /> : null}
-      {oidc ? <LinkedAccount displayName={oidc.displayName} /> : null}
+      <Show when={session.data?.user}>
+        {(user) => (
+          <Profile user={user()} providerName={oidc()?.displayName ?? null} />
+        )}
+      </Show>
+      <Show when={config.data?.passkeys}>
+        <Passkeys oidcEnabled={oidc() !== null} />
+      </Show>
+      <Show when={oidc()}>
+        {(provider) => <LinkedAccount displayName={provider().displayName} />}
+      </Show>
       <Sessions />
     </SettingsSections>
   )
+}
+
+/**
+ * Toasts the error an OIDC link round trip brought back in the URL, then
+ * drops it from the URL so a reload or a back step doesn't show it again.
+ */
+function useLinkErrorToast(error: () => string | undefined) {
+  const navigate = useNavigate()
+  createEffect(error, (message) => {
+    if (message === undefined) return
+    // The URL can carry any text, so only a message the catalog knows is
+    // shown as it is.
+    toast.error(knownMessage(message) ?? tr("auth.signIn.failed"), {
+      id: "auth-error",
+    })
+    // The router reads its match store when building the next location.
+    queueMicrotask(() => {
+      void navigate({
+        to: ".",
+        search: (prev) => ({ ...prev, [AUTH_ERROR_QUERY_KEY]: undefined }),
+        replace: true,
+      })
+    })
+  })
 }
 
 /** Store the user a profile change returned, wherever the app shows it. */
@@ -97,53 +135,46 @@ function useProfileSaved() {
   }
 }
 
-function Profile({
-  user,
-  providerName,
-}: {
+function Profile(props: {
   user: User
   /** The single sign-on provider while it's on. */
   providerName: string | null
 }) {
   return (
     <SettingsSubsection id="profile" title={tr("account.profile.title")}>
-      <div className="flex items-center gap-4">
-        <AvatarPicker user={user} providerName={providerName} />
-        <DisplayNameField user={user} />
+      <div class="flex items-center gap-4">
+        <AvatarPicker user={props.user} providerName={props.providerName} />
+        <DisplayNameField user={props.user} />
       </div>
-      <SharingRows sharing={user.sharing} />
+      <SharingRows sharing={props.user.sharing} />
     </SettingsSubsection>
   )
 }
+
+type AvatarChange =
+  | { kind: "upload"; file: File }
+  | { kind: "provider" | "remove" }
 
 /**
  * The picture itself is the control. With a picture or a provider one to
  * pick, clicking opens a menu; otherwise it opens the file picker.
  */
-function AvatarPicker({
-  user,
-  providerName,
-}: {
-  user: User
-  providerName: string | null
-}) {
+function AvatarPicker(props: { user: User; providerName: string | null }) {
   const saved = useProfileSaved()
-  const fileInput = useRef<HTMLInputElement>(null)
-  const linked = useQuery({
+  let fileInput: HTMLInputElement | undefined
+  const linked = useQuery(() => ({
     ...orpc.account.oidc.get.queryOptions(),
-    enabled: providerName !== null,
-  })
-  const followsProvider =
-    user.avatarSource === "provider" && user.avatarUrl !== null
-  const canUseProvider =
-    providerName !== null &&
-    !followsProvider &&
+    enabled: props.providerName !== null,
+  }))
+  const followsProvider = () =>
+    props.user.avatarSource === "provider" && props.user.avatarUrl !== null
+  const canUseProvider = () =>
+    props.providerName !== null &&
+    !followsProvider() &&
     (linked.data?.hasPicture ?? false)
 
-  const change = useMutation({
-    mutationFn: async (
-      action: { kind: "upload"; file: File } | { kind: "provider" | "remove" },
-    ) => {
+  const change = useMutation(() => ({
+    mutationFn: async (action: AvatarChange) => {
       if (action.kind === "upload") {
         const file = await prepareAvatar(action.file)
         return client.account.avatar.upload({ file })
@@ -157,83 +188,88 @@ function AvatarPicker({
       toast.error(tr("account.picture.changeFailed"), {
         description: errorMessage(error),
       }),
-  })
+  }))
 
-  const pickFile = () => fileInput.current?.click()
+  const pickFile = () => fileInput?.click()
   const surface =
     "group focus-visible:ring-ring focus-visible:ring-offset-background relative size-16 shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-default"
-  const face = (
+  const face = () => (
     <>
-      <UserAvatar user={user} className="size-full text-2xl" />
+      <UserAvatar user={props.user} class="size-full text-2xl" />
       <span
-        className={cn(
+        class={cn(
           "absolute inset-0 grid place-items-center rounded-full bg-black/50 text-white transition-opacity [&_svg]:size-4",
           change.isPending
             ? "opacity-100"
             : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
         )}
       >
-        {change.isPending ? <Spinner /> : <PencilIcon />}
+        <Show when={change.isPending} fallback={<Icon icon={Pencil} />}>
+          <Spinner />
+        </Show>
       </span>
     </>
   )
 
   return (
     <>
-      {user.avatarUrl || canUseProvider ? (
+      <Show
+        when={props.user.avatarUrl || canUseProvider()}
+        fallback={
+          <button
+            type="button"
+            aria-label={tr("account.picture.upload")}
+            disabled={change.isPending}
+            onClick={pickFile}
+            class={surface}
+          >
+            {face()}
+          </button>
+        }
+      >
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label={tr("account.picture.change")}
             disabled={change.isPending}
-            className={surface}
+            class={surface}
           >
-            {face}
+            {face()}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-48">
-            <DropdownMenuItem onClick={pickFile}>
-              <ImageUpIcon />
+          <DropdownMenuContent align="start" class="min-w-48">
+            <DropdownMenuItem onSelect={pickFile}>
+              <Icon icon={ImageUp} />
               {tr("account.picture.upload")}
             </DropdownMenuItem>
-            {canUseProvider && (
+            <Show when={canUseProvider()}>
               <DropdownMenuItem
-                onClick={() => change.mutate({ kind: "provider" })}
+                onSelect={() => change.mutate({ kind: "provider" })}
               >
-                <UserRoundIcon />
+                <Icon icon={UserRound} />
                 {tr("account.picture.useProvider", {
-                  provider: providerName,
+                  provider: props.providerName ?? "",
                 })}
               </DropdownMenuItem>
-            )}
-            {user.avatarUrl && (
+            </Show>
+            <Show when={props.user.avatarUrl}>
               <DropdownMenuItem
                 variant="destructive"
-                onClick={() => change.mutate({ kind: "remove" })}
+                onSelect={() => change.mutate({ kind: "remove" })}
               >
-                <Trash2Icon />
+                <Icon icon={Trash2} />
                 {tr("account.picture.remove")}
               </DropdownMenuItem>
-            )}
+            </Show>
           </DropdownMenuContent>
         </DropdownMenu>
-      ) : (
-        <button
-          type="button"
-          aria-label={tr("account.picture.upload")}
-          disabled={change.isPending}
-          onClick={pickFile}
-          className={surface}
-        >
-          {face}
-        </button>
-      )}
+      </Show>
       <input
-        ref={fileInput}
+        ref={(el) => (fileInput = el)}
         type="file"
         accept="image/*"
         hidden
         onChange={(event) => {
-          const file = event.target.files?.[0]
-          event.target.value = ""
+          const file = event.currentTarget.files?.[0]
+          event.currentTarget.value = ""
           if (file) change.mutate({ kind: "upload", file })
         }}
       />
@@ -242,102 +278,99 @@ function AvatarPicker({
 }
 
 /** Saves on Enter or when focus leaves; Escape puts the saved name back. */
-function DisplayNameField({ user }: { user: User }) {
+function DisplayNameField(props: { user: User }) {
   const saved = useProfileSaved()
-  const current = user.displayName ?? ""
-  const save = useMutation({
-    mutationFn: (displayName: string) =>
-      client.account.profile.update({ displayName }),
-    onError: (error) =>
-      toast.error(
-        tr("account.displayName.saveFailed", { reason: errorMessage(error) }),
-      ),
-  })
-  const form = useAppForm({
-    defaultValues: { displayName: current },
-    onSubmit: async ({ value, formApi }) => {
-      const displayName = DisplayName.parse(value.displayName)
-      if (displayName === current) return
+  const current = () => props.user.displayName ?? ""
+  const form = createForm({
+    defaultValues: { displayName: "" },
+    checks: { displayName: DisplayName },
+    onSubmit: async (values) => {
+      const displayName = DisplayName.parse(values.displayName)
+      if (displayName === current()) return
       try {
-        const updated = await save.mutateAsync(displayName)
+        const updated = await client.account.profile.update({ displayName })
         await saved(updated)
-        formApi.reset({ displayName: updated.displayName ?? "" })
-      } catch {
+        form.reset({ displayName: updated.displayName ?? "" })
+      } catch (cause) {
         // The failure gets a toast, and the field goes back to the saved name.
-        formApi.reset()
+        toast.error(
+          tr("account.displayName.saveFailed", { reason: errorMessage(cause) }),
+        )
+        form.reset()
       }
     },
   })
+  // Starts from the saved name; a save resets the form to the new one.
+  onSettled(() => {
+    form.reset({ displayName: current() })
+  })
   const commit = () => {
-    if (form.state.isSubmitting) return
-    // Still the saved name: nothing to send. A submit would mark the form
-    // touched, and a touched form stops following the saved name.
-    if (form.state.values.displayName === current) form.reset()
-    else void form.handleSubmit()
+    if (form.submitting()) return
+    // Still the saved name: nothing to send.
+    if (form.values().displayName === current()) form.reset()
+    else void form.submit()
   }
+  const message = () => form.message("displayName")
 
   return (
-    <form.Field name="displayName" validators={{ onChange: DisplayName }}>
-      {(field) => {
-        const message = firstError(field.state.meta.errors)
-        return (
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <Label htmlFor="profile-display-name">
-              {tr("account.displayName.label")}
-            </Label>
-            <Input
-              id="profile-display-name"
-              placeholder={user.username}
-              maxLength={64}
-              autoComplete="nickname"
-              value={field.state.value}
-              aria-invalid={message ? true : undefined}
-              aria-describedby={
-                message ? "profile-display-name-error" : undefined
-              }
-              onChange={(event) => {
-                field.handleChange(event.target.value)
-              }}
-              onBlur={commit}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") commit()
-                if (event.key === "Escape" && field.state.value !== current) {
-                  event.stopPropagation()
-                  form.reset()
-                }
-              }}
-            />
-            {message && (
-              <p
-                id="profile-display-name-error"
-                role="alert"
-                className="text-destructive text-xs"
-              >
-                {message}
-              </p>
-            )}
-          </div>
-        )
-      }}
-    </form.Field>
+    <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+      <Label for="profile-display-name">
+        {tr("account.displayName.label")}
+      </Label>
+      <Input
+        id="profile-display-name"
+        placeholder={props.user.username}
+        maxlength={64}
+        autocomplete="nickname"
+        value={form.values().displayName}
+        aria-invalid={message() ? "true" : undefined}
+        aria-describedby={message() ? "profile-display-name-error" : undefined}
+        onValueChange={(value) => {
+          form.set("displayName", value)
+          form.blur("displayName")
+        }}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") commit()
+          if (
+            event.key === "Escape" &&
+            form.values().displayName !== current()
+          ) {
+            event.stopPropagation()
+            form.reset()
+          }
+        }}
+      />
+      <Show when={message()}>
+        <p
+          id="profile-display-name-error"
+          role="alert"
+          class="text-destructive text-xs"
+        >
+          {message()}
+        </p>
+      </Show>
+    </div>
   )
 }
 
-function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
+function Passkeys(props: { oidcEnabled: boolean }) {
   const queryClient = useQueryClient()
-  const passkeys = useQuery(orpc.account.passkeys.list.queryOptions())
-  const linked = useQuery({
+  const passkeys = useQuery(() => orpc.account.passkeys.list.queryOptions())
+  const linked = useQuery(() => ({
     ...orpc.account.oidc.get.queryOptions(),
-    enabled: oidcEnabled,
-  })
+    enabled: props.oidcEnabled,
+  }))
   // The server refuses to remove the last way to sign in, so say so here.
-  const methods =
-    (passkeys.data?.length ?? 0) + (oidcEnabled && linked.data?.signsIn ? 1 : 0)
-  const isLast = passkeys.isSuccess && methods <= 1
-  const [store] = useState(createSettingsPasskeysStore)
-  const { removing, open, ask, close } = useStore(store)
+  const isLast = () => {
+    const methods =
+      (passkeys.data?.length ?? 0) +
+      (props.oidcEnabled && linked.data?.signsIn ? 1 : 0)
+    return passkeys.isSuccess && methods <= 1
+  }
+  const store = createSettingsPasskeysStore()
 
-  const remove = useMutation({
+  const remove = useMutation(() => ({
     mutationFn: (id: string) => client.account.passkeys.remove({ id }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: orpc.account.key() })
@@ -347,7 +380,7 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
       toast.error(tr("account.passkeys.removeFailed"), {
         description: errorMessage(error),
       }),
-  })
+  }))
 
   return (
     <SettingsSubsection
@@ -355,68 +388,72 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
       title={tr("account.passkeys.title")}
       action={<AddPasskey />}
     >
-      {passkeys.isPending ? (
-        <Skeleton className="h-16 rounded-xl" />
-      ) : passkeys.data?.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          {tr("account.passkeys.empty")}
-        </p>
-      ) : (
-        <List>
-          {passkeys.data?.map((passkey) => (
-            <ListItem key={passkey.id} className="pr-2">
-              <RowIcon>
-                <KeyRoundIcon />
-              </RowIcon>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm leading-5 font-medium">
-                  {passkey.name ?? tr("account.passkeys.unnamed")}
-                </p>
-                <p className="text-muted-foreground text-13px truncate leading-5">
-                  {[
-                    passkey.backedUp ? tr("account.passkeys.synced") : null,
-                    passkey.lastUsedAt
-                      ? tr("account.passkeys.used", {
-                          time: formatRelative(passkey.lastUsedAt),
-                        })
-                      : tr("account.passkeys.added", {
-                          date: formatDate(passkey.createdAt),
-                        }),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
-              </div>
-              {/* The server keeps at least one way to sign in. */}
-              {!isLast && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-destructive shrink-0"
-                  aria-label={
-                    passkey.name
-                      ? tr("account.passkeys.removeNamed", {
-                          name: passkey.name,
-                        })
-                      : tr("account.passkeys.remove")
-                  }
-                  onClick={() => ask(passkey)}
-                >
-                  <Trash2Icon />
-                </Button>
-              )}
-            </ListItem>
-          ))}
-        </List>
-      )}
+      <Switch>
+        <Match when={passkeys.isPending}>
+          <Skeleton class="h-16 rounded-xl" />
+        </Match>
+        <Match when={passkeys.data?.length === 0}>
+          <p class="text-muted-foreground text-sm">
+            {tr("account.passkeys.empty")}
+          </p>
+        </Match>
+        <Match when={passkeys.data}>
+          {(list) => (
+            <List>
+              <For each={list()} keyed={(passkey) => passkey.id}>
+                {(passkey) => (
+                  <ListItem class="pr-2">
+                    <RowIcon>
+                      <Icon icon={KeyRound} />
+                    </RowIcon>
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-sm leading-5 font-medium">
+                        {passkey().name ?? tr("account.passkeys.unnamed")}
+                      </p>
+                      <p class="text-muted-foreground text-13px truncate leading-5">
+                        {passkeyDetails(passkey())}
+                      </p>
+                    </div>
+                    {/* The server keeps at least one way to sign in. */}
+                    <Show when={!isLast()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        class="text-muted-foreground hover:text-destructive shrink-0"
+                        aria-label={(() => {
+                          const name = passkey().name
+                          return name
+                            ? tr("account.passkeys.removeNamed", { name })
+                            : tr("account.passkeys.remove")
+                        })()}
+                        onClick={() => store.ask(passkey())}
+                      >
+                        <Icon icon={Trash2} />
+                      </Button>
+                    </Show>
+                  </ListItem>
+                )}
+              </For>
+            </List>
+          )}
+        </Match>
+      </Switch>
 
-      <AlertDialog open={open} onOpenChange={(open) => !open && close()}>
+      <AlertDialog
+        open={store.open()}
+        onOpenChange={(open) => {
+          if (!open) store.close()
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {removing?.name
-                ? tr("account.passkeys.removeTitle", { name: removing.name })
-                : tr("account.passkeys.removeTitleUnnamed")}
+              {(() => {
+                const name = store.removing()?.name
+                return name
+                  ? tr("account.passkeys.removeTitle", { name })
+                  : tr("account.passkeys.removeTitleUnnamed")
+              })()}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {tr("account.passkeys.removeDescription")}
@@ -426,7 +463,10 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
             <AlertDialogCancel>{tr("account.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={() => removing && remove.mutate(removing.id)}
+              onClick={() => {
+                const removing = store.removing()
+                if (removing) remove.mutate(removing.id)
+              }}
             >
               {tr("account.passkeys.remove")}
             </AlertDialogAction>
@@ -437,20 +477,38 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
   )
 }
 
+function passkeyDetails(passkey: Passkey): string {
+  return [
+    passkey.backedUp ? tr("account.passkeys.synced") : null,
+    passkey.lastUsedAt
+      ? tr("account.passkeys.used", {
+          time: formatRelative(passkey.lastUsedAt),
+        })
+      : tr("account.passkeys.added", { date: formatDate(passkey.createdAt) }),
+  ]
+    .filter(Boolean)
+    .join(" · ")
+}
+
 /** The section's add button and the dialog that names the new passkey. */
 function AddPasskey() {
   const queryClient = useQueryClient()
-  const [open, setOpen] = useState(false)
-  const form = useAppForm({
+  const [open, setOpen] = createSignal(false)
+  const form = createForm({
     defaultValues: { passkeyName: "" },
-    onSubmit: ({ value }) => {
+    // The contract's check, which takes null too: no name.
+    checks: {
+      passkeyName: (value) =>
+        PasskeyName.safeParse(value).error?.issues[0]?.message,
+    },
+    onSubmit: (values) => {
       if (add.isPending) return
-      add.mutate(PasskeyName.parse(value.passkeyName) || null)
+      add.mutate(PasskeyName.parse(values.passkeyName) || null)
     },
   })
   // Lives outside the dialog content, so closing it while the browser prompt
   // is up still records the new passkey.
-  const add = useMutation({
+  const add = useMutation(() => ({
     mutationFn: (name: string | null) => addPasskey(name),
     onSuccess: async () => {
       setOpen(false)
@@ -462,24 +520,21 @@ function AddPasskey() {
       toast.error(tr("account.passkeys.addFailed"), {
         description: errorMessage(error),
       }),
-  })
+  }))
 
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)}>
-        <PlusIcon />
+        <Icon icon={Plus} />
         {tr("account.passkeys.add")}
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          showCloseButton={false}
-          className="gap-5 p-6 sm:max-w-md"
-        >
+      <Dialog open={open()} onOpenChange={(next) => setOpen(next)}>
+        <DialogContent showCloseButton={false} class="gap-5 p-6 sm:max-w-md">
           <form
-            className="contents"
+            class="contents"
             onSubmit={(event) => {
               event.preventDefault()
-              void form.handleSubmit()
+              void form.submit()
             }}
           >
             <DialogHeader>
@@ -488,31 +543,20 @@ function AddPasskey() {
                 {tr("account.passkeys.addDescription")}
               </DialogDescription>
             </DialogHeader>
-            <form.AppField
+            <TextField
+              form={form}
               name="passkeyName"
-              validators={{
-                // The contract's check, which takes null too: no name.
-                onChange: ({ value }) =>
-                  PasskeyName.safeParse(value).error?.issues[0],
-              }}
-            >
-              {(field) => (
-                <field.TextField
-                  id="passkey-name"
-                  label={tr("account.passkeys.name")}
-                  placeholder={tr("account.passkeys.namePlaceholder")}
-                  maxLength={64}
-                />
-              )}
-            </form.AppField>
-            <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
-              <form.AppForm>
-                <form.SubmitButton pending={add.isPending}>
-                  {add.isPending
-                    ? tr("account.passkeys.waiting")
-                    : tr("account.passkeys.add")}
-                </form.SubmitButton>
-              </form.AppForm>
+              id="passkey-name"
+              label={tr("account.passkeys.name")}
+              placeholder={tr("account.passkeys.namePlaceholder")}
+              maxlength={64}
+            />
+            <DialogFooter showCancelButton class="-mx-6 -mb-6 px-6 py-4">
+              <SubmitButton form={form} pending={add.isPending}>
+                {add.isPending
+                  ? tr("account.passkeys.waiting")
+                  : tr("account.passkeys.add")}
+              </SubmitButton>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -521,75 +565,86 @@ function AddPasskey() {
   )
 }
 
-function LinkedAccount({ displayName }: { displayName: string }) {
+function LinkedAccount(props: { displayName: string }) {
   const queryClient = useQueryClient()
-  const linked = useQuery(orpc.account.oidc.get.queryOptions())
-  const unlink = useMutation({
+  const linked = useQuery(() => orpc.account.oidc.get.queryOptions())
+  const unlink = useMutation(() => ({
     mutationFn: () => client.account.oidc.unlink(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: orpc.account.key() })
-      toast.success(tr("account.oidc.unlinked", { provider: displayName }))
+      toast.success(
+        tr("account.oidc.unlinked", { provider: props.displayName }),
+      )
     },
     onError: (error) =>
-      toast.error(tr("account.oidc.unlinkFailed", { provider: displayName }), {
-        description: errorMessage(error),
-      }),
-  })
-  const account = linked.data
+      toast.error(
+        tr("account.oidc.unlinkFailed", { provider: props.displayName }),
+        { description: errorMessage(error) },
+      ),
+  }))
 
   return (
     <SettingsSubsection
       id="single-sign-on"
-      title={displayName}
+      title={props.displayName}
       action={
         // One account per user: linking another means unlinking this one,
         // unless it can't sign in anyway, and then linking replaces it.
-        linked.isSuccess && !account?.signsIn ? (
+        <Show when={linked.isSuccess && !linked.data?.signsIn}>
           <a
             href={oidcStartPath("link", LINK_RETURN)}
-            className={buttonVariants({ variant: "outline" })}
+            class={buttonVariants({ variant: "outline" })}
           >
-            <LinkIcon />
-            {tr("account.oidc.link", { provider: displayName })}
+            <Icon icon={LinkIcon} />
+            {tr("account.oidc.link", { provider: props.displayName })}
           </a>
-        ) : null
+        </Show>
       }
     >
-      {linked.isPending ? (
-        <Skeleton className="h-16 rounded-xl" />
-      ) : account ? (
-        <List>
-          <ListItem className="pr-2">
-            <RowIcon>
-              <LinkIcon />
-            </RowIcon>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">
-                {account.label ?? displayName}
-              </p>
-              <p className="text-muted-foreground text-13px">
-                {account.signsIn
-                  ? tr("account.oidc.linked", {
-                      date: formatDate(account.createdAt),
-                    })
-                  : tr("account.oidc.stale", { provider: displayName })}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              className="shrink-0"
-              disabled={unlink.isPending}
-              onClick={() => unlink.mutate()}
-            >
-              {tr("account.oidc.unlink")}
-            </Button>
-          </ListItem>
-        </List>
-      ) : (
-        <p className="text-muted-foreground text-sm">
-          {tr("account.oidc.none", { provider: displayName })}
-        </p>
-      )}
+      <Switch
+        fallback={
+          <p class="text-muted-foreground text-sm">
+            {tr("account.oidc.none", { provider: props.displayName })}
+          </p>
+        }
+      >
+        <Match when={linked.isPending}>
+          <Skeleton class="h-16 rounded-xl" />
+        </Match>
+        <Match when={linked.data}>
+          {(account) => (
+            <List>
+              <ListItem class="pr-2">
+                <RowIcon>
+                  <Icon icon={LinkIcon} />
+                </RowIcon>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-medium">
+                    {account().label ?? props.displayName}
+                  </p>
+                  <p class="text-muted-foreground text-13px">
+                    {account().signsIn
+                      ? tr("account.oidc.linked", {
+                          date: formatDate(account().createdAt),
+                        })
+                      : tr("account.oidc.stale", {
+                          provider: props.displayName,
+                        })}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  class="shrink-0"
+                  disabled={unlink.isPending}
+                  onClick={() => unlink.mutate()}
+                >
+                  {tr("account.oidc.unlink")}
+                </Button>
+              </ListItem>
+            </List>
+          )}
+        </Match>
+      </Switch>
     </SettingsSubsection>
   )
 }

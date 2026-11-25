@@ -1,14 +1,15 @@
-import { toast } from "@matinee/ui/components/sonner"
-import { skipToken, useQuery } from "@tanstack/react-query"
-import { type RefObject, useEffect } from "react"
-import { useShallow } from "zustand/shallow"
+import { QueryObserver, useQueryClient } from "@tanstack/solid-query"
+import {
+  type Accessor,
+  createEffect,
+  createMemo,
+  from,
+  onCleanup,
+} from "solid-js"
 
 import { tr } from "@/i18n"
-import {
-  selectSubtitle,
-  usePlayerStore,
-  usePlayerStoreApi,
-} from "@/stores/player"
+import { toast } from "@/kit/toast"
+import { type PlayerStore, selectSubtitle } from "@/stores/player"
 
 import { subtitlesLoadingNotice } from "./playback-notices"
 import { useAss } from "./use-ass"
@@ -39,8 +40,8 @@ let measure: CanvasRenderingContext2D | null = null
 
 /** How far cues at the bottom of the video must rise to clear the controls. */
 function liftPixels(
-  video: HTMLVideoElement | null,
-  controls: HTMLElement | null,
+  video: HTMLVideoElement | undefined,
+  controls: HTMLElement | undefined,
 ): number {
   if (!video || !controls) return 0
   const bottom = video.getBoundingClientRect().bottom
@@ -130,6 +131,21 @@ function trackElement(
   return element && element.dataset.trackId === trackId ? element : undefined
 }
 
+export type SubtitleOptions = {
+  video: () => HTMLVideoElement | undefined
+  /** What the cues rise above while the controls show. */
+  controls: () => HTMLElement | undefined
+  /** Where PGS pictures draw. */
+  pgsLayer: () => HTMLElement | undefined
+  lifted: Accessor<boolean>
+  /** Where in the file the video's time 0 is. */
+  offset: Accessor<number>
+  /** Asks the server again for a track, none for null, or its pick for undefined. */
+  onSelect: (trackId: string | null | undefined) => void
+  /** The viewer picked a track, for the server to remember. */
+  onPick: (trackId: string | null) => void
+}
+
 /**
  * Subtitles for the player, as the server answered: the track that shows
  * and how. A track the player draws (`client`) is fetched from its
@@ -149,37 +165,25 @@ function trackElement(
  * `currentTime` stops and `canplay` and `playing` never fire. Pulling a
  * track out of a large file can take the server minutes.
  */
-export function useSubtitles(
-  video: RefObject<HTMLVideoElement | null>,
-  controls: RefObject<HTMLElement | null>,
-  pgsLayer: RefObject<HTMLElement | null>,
-  lifted: boolean,
-  offset: number,
-  onSelect: (trackId: string | null | undefined) => void,
-  onPick: (trackId: string | null) => void,
-) {
-  const store = usePlayerStoreApi()
-  const { plan, selected, objectUrl, delay, itemId, source } = usePlayerStore(
-    useShallow((state) => ({
-      plan: state.plan,
-      itemId: state.itemId,
-      source: state.source,
-      selected: selectSubtitle(state),
-      objectUrl: state.subtitleUrl,
-      delay: state.subtitleDelay,
-    })),
-  )
-  const tracks = plan.subtitleTracks
+export function useSubtitles(store: PlayerStore, options: SubtitleOptions) {
+  const { view } = store
+  const { video } = options
+  const queryClient = useQueryClient()
+  const tracks = () => view.plan.subtitleTracks
+  const selected = () => selectSubtitle(view)
   // The file's time that shows at the video's 0: the stream's start, less
   // the viewer's delay, so a later cue shows later.
-  const cueOffset = offset - delay / 1000
+  const cueOffset = createMemo(
+    () => options.offset() - view.subtitleDelay / 1000,
+  )
   // The track the player draws, once the answer for the pick is here.
-  const track =
-    plan.subtitleMode === "client" && plan.subtitle?.id === selected
-      ? plan.subtitle
-      : null
-  const shownId = track?.id ?? null
-  const delivery = track?.delivery ?? null
+  const track = createMemo(() =>
+    view.plan.subtitleMode === "client" && view.plan.subtitle?.id === selected()
+      ? view.plan.subtitle
+      : null,
+  )
+  const shownId = createMemo(() => track()?.id ?? null)
+  const delivery = createMemo(() => track()?.delivery ?? null)
   // Off, for a track whose file didn't load. The next answer agrees.
   const turnOff = () => {
     store.getState().pick({ subtitle: { trackId: null } })
@@ -187,176 +191,211 @@ export function useSubtitles(
   }
 
   const assFailed = () => {
-    const { device } = store.getState()
-    store.setState({
-      device: {
-        ...device,
-        subtitles: device.subtitles.filter((value) => value !== "ass"),
-        sidecarSubtitles: device.sidecarSubtitles.filter(
-          (value) => value !== "ass",
-        ),
-      },
+    const { device, setDevice } = store.getState()
+    setDevice({
+      ...device,
+      subtitles: device.subtitles.filter((value) => value !== "ass"),
+      sidecarSubtitles: device.sidecarSubtitles.filter(
+        (value) => value !== "ass",
+      ),
     })
     toast.error(tr("player.error.assFallback"), { position: "top-center" })
-    onSelect(shownId)
+    options.onSelect(shownId())
   }
   // The shown track's file. A pick that changes cancels the fetch.
-  const url =
-    track && (delivery === "webvtt" || delivery === "pgs" || delivery === "ass")
-      ? plan.subtitleUrl
+  const url = createMemo(() => {
+    const kind = delivery()
+    return track() && (kind === "webvtt" || kind === "pgs" || kind === "ass")
+      ? view.plan.subtitleUrl
       : null
-  const file = useQuery({
-    queryKey: ["player", "subtitles", url, delivery],
-    queryFn:
-      url === null
-        ? skipToken
-        : async ({ signal }): Promise<SubtitleFile> => {
-            try {
-              const response = await fetch(url, { signal })
-              if (!response.ok) {
-                throw new Error(`Subtitles answered ${response.status}`)
-              }
-              return delivery === "pgs"
-                ? { kind: "pgs", data: await response.arrayBuffer() }
-                : {
-                    kind: delivery === "ass" ? "ass" : "webvtt",
-                    text: await response.text(),
-                  }
-            } catch (cause) {
-              if (!signal.aborted) {
-                if (delivery === "ass") assFailed()
-                else turnOff()
-              }
-              throw cause
+  })
+  // The shown track's file, from the query cache, so picking a track again
+  // finds it. An observer per file: a pick that changes lets go of the last
+  // one, which cancels its fetch.
+  const file = createMemo(() => {
+    const address = url()
+    const kind = delivery()
+    return from<SubtitleFile | undefined>((next) => {
+      if (address === null || kind === null) {
+        next(undefined)
+        return () => {}
+      }
+      const observer = new QueryObserver(queryClient, {
+        queryKey: ["player", "subtitles", address, kind],
+        queryFn: async ({ signal }): Promise<SubtitleFile> => {
+          try {
+            const response = await fetch(address, { signal })
+            if (!response.ok) {
+              throw new Error(`Subtitles answered ${response.status}`)
             }
-          },
-    staleTime: Infinity,
-    // A PGS file can be tens of megabytes; don't keep one nobody shows.
-    // Picking it again revalidates it with the browser's cache.
-    gcTime: delivery === "pgs" ? 0 : undefined,
-    retry: false,
-  }).data
-  const text = file?.kind === "webvtt" ? file.text : undefined
+            return kind === "pgs"
+              ? { kind: "pgs", data: await response.arrayBuffer() }
+              : {
+                  kind: kind === "ass" ? "ass" : "webvtt",
+                  text: await response.text(),
+                }
+          } catch (cause) {
+            if (!signal.aborted) {
+              if (kind === "ass") assFailed()
+              else turnOff()
+            }
+            throw cause
+          }
+        },
+        staleTime: Infinity,
+        // A PGS file can be tens of megabytes; don't keep one nobody shows.
+        // Picking it again revalidates it with the browser's cache.
+        gcTime: kind === "pgs" ? 0 : undefined,
+        retry: false,
+      })
+      const unsubscribe = observer.subscribe((result) => next(result.data))
+      next(observer.getCurrentResult().data)
+      return unsubscribe
+    })
+  })
+  const text = createMemo(() => {
+    const current = file()
+    return current?.kind === "webvtt" ? current.text : undefined
+  })
 
   useAss(
     video,
-    file?.kind === "ass" ? file.text : undefined,
-    itemId,
-    `${source.url}:${shownId}`,
+    () => {
+      const current = file()
+      return current?.kind === "ass" ? current.text : undefined
+    },
+    store.getState().itemId,
+    () => `${view.source.url}:${shownId()}`,
     cueOffset,
     assFailed,
   )
 
   usePgs(
-    pgsLayer,
+    options.pgsLayer,
     video,
-    file?.kind === "pgs" ? file.data : undefined,
+    () => {
+      const current = file()
+      return current?.kind === "pgs" ? current.data : undefined
+    },
     cueOffset,
     turnOff,
   )
 
   // The text as an object URL for the `<track>`, revoked once it's gone.
-  useEffect(() => {
-    if (shownId === null || text === undefined) return
-    const { setSubtitleUrl } = store.getState()
-    const created = URL.createObjectURL(new Blob([text], { type: "text/vtt" }))
-    setSubtitleUrl({ trackId: shownId, url: created })
-    return () => {
-      URL.revokeObjectURL(created)
-      setSubtitleUrl(null)
-    }
-  }, [shownId, text])
+  const src = createMemo(() => {
+    const body = text()
+    if (shownId() === null || body === undefined) return null
+    const created = URL.createObjectURL(new Blob([body], { type: "text/vtt" }))
+    onCleanup(() => URL.revokeObjectURL(created))
+    return created
+  })
+  // What the `<track>` effects follow: the track, its file, and the list.
+  const rendered = () => ({ id: shownId(), src: src(), tracks: tracks() })
 
-  const src =
-    objectUrl !== null && objectUrl.trackId === shownId ? objectUrl.url : null
-
-  // Show the track, and keep any track the browser found inside
-  // the file off.
-  useEffect(() => {
-    const el = video.current
+  // Show the track, and keep any track the browser found inside the file
+  // off.
+  createEffect(rendered, ({ id }) => {
+    const el = video()
     if (!el) return
-    const current = trackElement(el, shownId)
+    const current = trackElement(el, id)
     const apply = () => {
-      for (const track of el.textTracks) {
-        const mode = track === current?.track ? "showing" : "disabled"
-        if (track.mode !== mode) track.mode = mode
+      for (const textTrack of el.textTracks) {
+        const mode = textTrack === current?.track ? "showing" : "disabled"
+        if (textTrack.mode !== mode) textTrack.mode = mode
       }
     }
     apply()
     el.textTracks.addEventListener("change", apply)
-    if (!current) {
-      return () => el.textTracks.removeEventListener("change", apply)
-    }
-    current.addEventListener("error", turnOff)
+    current?.addEventListener("error", turnOff)
     return () => {
       el.textTracks.removeEventListener("change", apply)
-      current.removeEventListener("error", turnOff)
+      current?.removeEventListener("error", turnOff)
     }
-  }, [shownId, src, tracks])
+  })
 
   // Line cues up with a stream that starts partway into the file, and
   // with the viewer's delay.
-  useEffect(() => {
-    const el = video.current
-    if (!el) return
-    const track = trackElement(el, shownId)
-    if (!track) return
-    const shift = () => shiftCues(track.track, cueOffset)
-    shift()
-    track.addEventListener("load", shift)
-    return () => track.removeEventListener("load", shift)
-  }, [shownId, src, cueOffset, tracks])
+  createEffect(
+    () => ({ ...rendered(), offset: cueOffset() }),
+    ({ id, offset }) => {
+      const el = video()
+      if (!el) return
+      const element = trackElement(el, id)
+      if (!element) return
+      const shift = () => shiftCues(element.track, offset)
+      shift()
+      element.addEventListener("load", shift)
+      return () => element.removeEventListener("load", shift)
+    },
+  )
 
   // Lift the cues above the controls while they show, and again as the
   // window or the track's cues change.
-  useEffect(() => {
-    const el = video.current
-    if (!el) return
-    const track = trackElement(el, shownId)
-    const place = () => {
-      const lift = lifted ? liftPixels(el, controls.current) : 0
-      if (MOVE_CONTAINER) el.style.setProperty("--cue-lift", `${lift}px`)
-      else if (track) placeCues(el, track.track, lift)
-    }
-    place()
-    track?.addEventListener("load", place)
-    window.addEventListener("resize", place)
-    return () => {
-      track?.removeEventListener("load", place)
-      window.removeEventListener("resize", place)
-    }
-  }, [shownId, src, lifted, tracks])
+  createEffect(
+    () => ({ ...rendered(), lifted: options.lifted() }),
+    ({ id, lifted }) => {
+      const el = video()
+      if (!el) return
+      const element = trackElement(el, id)
+      const place = () => {
+        const lift = lifted ? liftPixels(el, options.controls()) : 0
+        if (MOVE_CONTAINER) el.style.setProperty("--cue-lift", `${lift}px`)
+        else if (element) placeCues(el, element.track, lift)
+      }
+      place()
+      element?.addEventListener("load", place)
+      window.addEventListener("resize", place)
+      return () => {
+        element?.removeEventListener("load", place)
+        window.removeEventListener("resize", place)
+      }
+    },
+  )
 
   /** Show a track, or none for null, as the viewer's pick. */
   const select = (trackId: string | null) => {
-    onSelect(trackId)
-    onPick(trackId)
+    options.onSelect(trackId)
+    options.onPick(trackId)
   }
 
   /** Off if a track shows; otherwise the last pick or the best guess. */
   const toggle = () => {
-    if (selected !== null) {
+    const state = store.getState()
+    if (selectSubtitle(state) !== null) {
       select(null)
       return
     }
-    const { pickedSubtitle } = store.getState()
-    const again = tracks.find((track) => track.id === pickedSubtitle)
+    const again = state.plan.subtitleTracks.find(
+      (entry) => entry.id === state.pickedSubtitle,
+    )
     if (again) select(again.id)
-    else onSelect(undefined)
+    else options.onSelect(undefined)
   }
 
   // The `<track>` to render, once its text is here.
-  const current =
-    track && delivery === "webvtt" && src !== null ? { track, src } : null
-  const loading =
-    (delivery === "webvtt" && current === null) ||
-    (delivery === "pgs" && file?.kind !== "pgs")
+  const current = createMemo(() => {
+    const shown = track()
+    const address = src()
+    return shown && delivery() === "webvtt" && address !== null
+      ? { track: shown, src: address }
+      : null
+  })
+  const loading = createMemo(
+    () =>
+      (delivery() === "webvtt" && current() === null) ||
+      (delivery() === "pgs" && file()?.kind !== "pgs"),
+  )
 
   // A toast while the track is on its way.
-  useEffect(() => {
-    if (!loading) return
-    return subtitlesLoadingNotice()
-  }, [loading, shownId])
+  createEffect(
+    () => ({ loading: loading(), id: shownId() }),
+    ({ loading }) => {
+      if (!loading) return
+      return subtitlesLoadingNotice()
+    },
+  )
 
   return { tracks, selected, current, select, toggle }
 }
+
+export type Subtitles = ReturnType<typeof useSubtitles>

@@ -1,25 +1,19 @@
-import { Button } from "@matinee/ui/components/button"
+import { useQuery } from "@tanstack/solid-query"
+import { ArrowLeft, ChevronRight, CornerDownLeft, Folder, Plus } from "lucide"
+import { createSignal, For, Match, Repeat, Show, Switch } from "solid-js"
+
+import { tr } from "@/i18n"
+import { Button } from "@/kit/button"
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@matinee/ui/components/dialog"
-import { Input } from "@matinee/ui/components/input"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { useQuery } from "@tanstack/react-query"
-import {
-  ArrowLeftIcon,
-  ChevronRightIcon,
-  CornerDownLeftIcon,
-  FolderIcon,
-  PlusIcon,
-} from "lucide-react"
-import { useState } from "react"
-
-import { tr } from "@/i18n"
-import { useAppForm } from "@/lib/form"
+} from "@/kit/dialog"
+import { Icon } from "@/kit/icon"
+import { Input } from "@/kit/input"
+import { Skeleton } from "@/kit/skeleton"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 function folderName(path: string): string {
@@ -31,13 +25,7 @@ function folderName(path: string): string {
  * A path typed in opens that folder; a row opens its folder or adds it
  * straight away; the footer adds the one that's open. Adding closes it.
  */
-export function FolderPicker({
-  open,
-  onOpenChange,
-  onPick,
-  picked,
-  initialPath,
-}: {
+export function FolderPicker(props: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onPick: (path: string) => void
@@ -46,15 +34,15 @@ export function FolderPicker({
   initialPath?: string
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="gap-4 p-6 sm:max-w-lg">
+    <Dialog open={props.open} onOpenChange={(open) => props.onOpenChange(open)}>
+      <DialogContent showCloseButton={false} class="gap-4 p-6 sm:max-w-lg">
         <FolderBrowser
-          initialPath={initialPath}
-          picked={picked}
-          onCancel={() => onOpenChange(false)}
+          initialPath={props.initialPath}
+          picked={props.picked}
+          onCancel={() => props.onOpenChange(false)}
           onPick={(path) => {
-            onPick(path)
-            onOpenChange(false)
+            props.onPick(path)
+            props.onOpenChange(false)
           }}
         />
       </DialogContent>
@@ -62,130 +50,151 @@ export function FolderPicker({
   )
 }
 
-function FolderBrowser({
-  onPick,
-  onCancel,
-  picked,
-  initialPath,
-}: {
+function FolderBrowser(props: {
   onPick: (path: string) => void
   onCancel: () => void
   picked: string[]
   initialPath?: string
 }) {
-  const [path, setPath] = useState<string | undefined>(initialPath)
-  const listing = useQuery({
-    ...orpc.admin.browse.queryOptions({ input: { path } }),
+  const [path, setPath] = createSignal<string | undefined>(
+    () => props.initialPath,
+  )
+  const listing = useQuery(() => ({
+    ...orpc.admin.browse.queryOptions({ input: { path: path() } }),
     staleTime: 5_000,
-  })
-  const current = listing.data?.path ?? path ?? "/"
-  const root = listing.data ? listing.data.parent === null : current === "/"
-  const alreadyPicked = picked.includes(current)
+  }))
+  const data = () => (listing.isSuccess ? listing.data : undefined)
+  const current = () => data()?.path ?? path() ?? "/"
+  const root = () => {
+    const found = data()
+    return found ? found.parent === null : current() === "/"
+  }
+  const alreadyPicked = () => props.picked.includes(current())
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="text-lg leading-7 font-semibold">
+        <DialogTitle class="text-lg leading-7 font-semibold">
           {tr("libraries.dialog.browse")}
         </DialogTitle>
       </DialogHeader>
 
       {/* Keyed by the folder, so opening another one shows its path. */}
-      <PathField key={current} path={current} onOpen={setPath} />
+      <Show when={current()} keyed>
+        {(shown) => <PathField path={shown} onOpen={setPath} />}
+      </Show>
 
-      <div className="h-72 overflow-y-auto rounded-lg border p-1">
-        {listing.isPending ? (
-          <div className="flex flex-col gap-1 p-1">
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-8" />
-            ))}
-          </div>
-        ) : listing.error ? (
-          <p className="text-destructive p-3 text-sm">
-            {errorMessage(listing.error)}
-          </p>
-        ) : (
-          <ul>
-            {listing.data?.parent && (
-              <li>
-                <button
-                  type="button"
-                  aria-label={tr("libraries.browser.parent")}
-                  className="hover:bg-foreground/[0.06] focus-visible:ring-ring flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset"
-                  onClick={() => setPath(listing.data.parent ?? undefined)}
-                >
-                  <ArrowLeftIcon className="text-muted-foreground size-4 shrink-0" />
-                  <span>..</span>
-                </button>
-              </li>
+      <div class="h-72 overflow-y-auto rounded-lg border p-1">
+        <Switch>
+          <Match when={listing.isPending}>
+            <div class="flex flex-col gap-1 p-1">
+              <Repeat count={4}>{() => <Skeleton class="h-8" />}</Repeat>
+            </div>
+          </Match>
+          <Match when={listing.isError}>
+            <p class="text-destructive p-3 text-sm">
+              {errorMessage(listing.error)}
+            </p>
+          </Match>
+          <Match when={data()}>
+            {(found) => (
+              <ul>
+                <Show when={found().parent}>
+                  {(parent) => (
+                    <li>
+                      <button
+                        type="button"
+                        aria-label={tr("libraries.browser.parent")}
+                        class="hover:bg-foreground/[0.06] focus-visible:ring-ring flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                        onClick={() => setPath(parent())}
+                      >
+                        <Icon
+                          icon={ArrowLeft}
+                          class="text-muted-foreground size-4 shrink-0"
+                        />
+                        <span>..</span>
+                      </button>
+                    </li>
+                  )}
+                </Show>
+                <Show when={found().directories.length === 0}>
+                  <li class="text-muted-foreground p-2.5 text-sm">
+                    {tr("libraries.browser.empty")}
+                  </li>
+                </Show>
+                <For each={found().directories}>
+                  {(dir) => {
+                    const added = () => props.picked.includes(dir.path)
+                    return (
+                      <li class="group/row hover:bg-foreground/[0.06] relative rounded-md">
+                        <button
+                          type="button"
+                          aria-label={tr("libraries.browser.open", {
+                            name: dir.name,
+                          })}
+                          class="focus-visible:ring-ring flex h-9 w-full min-w-0 items-center gap-2.5 rounded-md px-2.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                          onClick={() => setPath(dir.path)}
+                        >
+                          <Icon
+                            icon={Folder}
+                            class="text-muted-foreground size-4 shrink-0"
+                          />
+                          <span class="min-w-0 flex-1 truncate">
+                            {dir.name}
+                          </span>
+                          <Icon
+                            icon={ChevronRight}
+                            class="text-muted-foreground size-4 shrink-0"
+                          />
+                        </button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          aria-label={tr("libraries.browser.addNamed", {
+                            name: dir.name,
+                          })}
+                          disabled={added()}
+                          class="absolute top-1/2 right-8 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 disabled:opacity-60 [@media(hover:none)]:opacity-100"
+                          onClick={() => props.onPick(dir.path)}
+                        >
+                          {added()
+                            ? tr("libraries.browser.added")
+                            : tr("libraries.browser.add")}
+                        </Button>
+                      </li>
+                    )
+                  }}
+                </For>
+              </ul>
             )}
-            {listing.data?.directories.length === 0 && (
-              <li className="text-muted-foreground p-2.5 text-sm">
-                {tr("libraries.browser.empty")}
-              </li>
-            )}
-            {listing.data?.directories.map((dir) => {
-              const added = picked.includes(dir.path)
-              return (
-                <li
-                  key={dir.path}
-                  className="group/row hover:bg-foreground/[0.06] relative rounded-md"
-                >
-                  <button
-                    type="button"
-                    aria-label={tr("libraries.browser.open", {
-                      name: dir.name,
-                    })}
-                    className="focus-visible:ring-ring flex h-9 w-full min-w-0 items-center gap-2.5 rounded-md px-2.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset"
-                    onClick={() => setPath(dir.path)}
-                  >
-                    <FolderIcon className="text-muted-foreground size-4 shrink-0" />
-                    <span className="min-w-0 flex-1 truncate">{dir.name}</span>
-                    <ChevronRightIcon className="text-muted-foreground size-4 shrink-0" />
-                  </button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={tr("libraries.browser.addNamed", {
-                      name: dir.name,
-                    })}
-                    disabled={added}
-                    className="absolute top-1/2 right-8 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 disabled:opacity-60 [@media(hover:none)]:opacity-100"
-                    onClick={() => onPick(dir.path)}
-                  >
-                    {added
-                      ? tr("libraries.browser.added")
-                      : tr("libraries.browser.add")}
-                  </Button>
-                </li>
-              )
-            })}
-          </ul>
-        )}
+          </Match>
+        </Switch>
       </div>
 
-      <p className="text-muted-foreground text-13px">
-        {root
+      <p class="text-muted-foreground text-13px">
+        {root()
           ? tr("libraries.browser.openRoot")
-          : alreadyPicked
-            ? tr("libraries.browser.alreadyAdded", { path: current })
-            : tr("libraries.browser.adds", { path: current })}
+          : alreadyPicked()
+            ? tr("libraries.browser.alreadyAdded", { path: current() })
+            : tr("libraries.browser.adds", { path: current() })}
       </p>
 
-      <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
-        <Button type="button" variant="ghost" onClick={onCancel}>
+      <DialogFooter class="-mx-6 -mb-6 px-6 py-4">
+        <Button type="button" variant="ghost" onClick={() => props.onCancel()}>
           {tr("libraries.dialog.cancel")}
         </Button>
         <Button
           type="button"
-          disabled={root || alreadyPicked || !listing.data}
-          onClick={() => onPick(current)}
+          disabled={root() || alreadyPicked() || !data()}
+          onClick={() => props.onPick(current())}
         >
-          <PlusIcon />
-          {alreadyPicked
+          <Icon icon={Plus} />
+          {alreadyPicked()
             ? tr("libraries.browser.added")
-            : tr("libraries.browser.addCurrent", { name: folderName(current) })}
+            : tr("libraries.browser.addCurrent", {
+                name: folderName(current()),
+              })}
         </Button>
       </DialogFooter>
     </>
@@ -193,55 +202,38 @@ function FolderBrowser({
 }
 
 /** The open folder's path, which a path typed in and Enter replace. */
-function PathField({
-  path,
-  onOpen,
-}: {
-  path: string
-  onOpen: (path: string) => void
-}) {
-  const form = useAppForm({
-    defaultValues: { path },
-    onSubmit: ({ value }) => {
-      const typed = value.path.trim()
-      if (typed) onOpen(typed)
-    },
-  })
+function PathField(props: { path: string; onOpen: (path: string) => void }) {
+  const [typed, setTyped] = createSignal(() => props.path)
+  const open = () => {
+    const next = typed().trim()
+    if (next) props.onOpen(next)
+  }
   return (
-    <div className="flex gap-2">
-      <form.Field name="path">
-        {(field) => (
-          <>
-            <Input
-              aria-label={tr("libraries.browser.path")}
-              value={field.state.value}
-              spellCheck={false}
-              autoCapitalize="off"
-              autoComplete="off"
-              className="font-mono"
-              onChange={(event) => field.handleChange(event.target.value)}
-              onBlur={field.handleBlur}
-              onKeyDown={(event) => {
-                // Enter opens the folder; it mustn't submit the library form behind.
-                if (event.key !== "Enter") return
-                event.preventDefault()
-                void form.handleSubmit()
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              disabled={
-                !field.state.value.trim() || field.state.value.trim() === path
-              }
-              onClick={() => void form.handleSubmit()}
-            >
-              <CornerDownLeftIcon />
-              {tr("libraries.browser.go")}
-            </Button>
-          </>
-        )}
-      </form.Field>
+    <div class="flex gap-2">
+      <Input
+        aria-label={tr("libraries.browser.path")}
+        value={typed()}
+        spellcheck={false}
+        autocapitalize="off"
+        autocomplete="off"
+        class="font-mono"
+        onValueChange={setTyped}
+        onKeyDown={(event) => {
+          // Enter opens the folder; it mustn't submit the library form behind.
+          if (event.key !== "Enter") return
+          event.preventDefault()
+          open()
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        disabled={!typed().trim() || typed().trim() === props.path}
+        onClick={open}
+      >
+        <Icon icon={CornerDownLeft} />
+        {tr("libraries.browser.go")}
+      </Button>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import type { StatsUnit } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
-import type { ReactNode } from "react"
+import type { JSX } from "@solidjs/web"
+import { createMemo, For, Show } from "solid-js"
 
 import { bucketAxisLabel } from "@/lib/stats"
 
@@ -56,20 +57,9 @@ const BAR_WIDTH = "w-2/3"
 /**
  * The plot of a bucket chart: one bar per bucket on a baseline, a dashed
  * line at the top of the scale with its value beside it, and dates under
- * the bars. The caller draws each bar, in `bars`, as a share of `top`.
+ * the bars. The caller draws each bar, in `renderBar`, as a share of `top`.
  */
-export function BucketBars<Bucket extends { start: string }>({
-  label,
-  buckets,
-  unit,
-  top,
-  active,
-  onActive,
-  describe,
-  bars,
-  axis = true,
-  className,
-}: {
+export function BucketBars<Bucket extends { start: string }>(props: {
   label: string
   buckets: Bucket[]
   unit: StatsUnit
@@ -79,101 +69,110 @@ export function BucketBars<Bucket extends { start: string }>({
   onActive: (index: number | null) => void
   /** What a screen reader hears for a bucket. */
   describe: (bucket: Bucket) => string
-  /** Each bucket's bar, in the order of `buckets`; nothing for an empty one. */
-  bars: ReactNode[]
+  /** A bucket's bar; nothing for an empty one. */
+  renderBar: (bucket: Bucket) => JSX.Element
   /**
    * The scale's value and dashed line, and the dates under the bars. Off,
    * only the bars on their baseline, filling the plot's box, as the apps
    * draw a chart.
    */
   axis?: boolean
-  className?: string
+  class?: string
 }) {
-  const ticks = axisTicks(buckets.length)
+  const axis = () => props.axis ?? true
+  const ticks = createMemo(() => axisTicks(props.buckets.length))
 
-  const plot = (
+  // Pointing at a bar changes only the dimming, so each bar reads
+  // `active` in its class and nothing else is drawn again.
+  const plot = () => (
     <ol
-      aria-label={label}
-      onPointerLeave={() => onActive(null)}
-      className={cn(
+      aria-label={props.label}
+      onPointerLeave={() => props.onActive(null)}
+      class={[
         "border-foreground/15 relative flex border-b",
-        axis ? "h-36" : "h-full",
-      )}
+        axis() ? "h-36" : "h-full",
+      ]}
     >
-      {buckets.map((bucket, index) => (
-        <li
-          key={bucket.start}
-          onPointerEnter={() => onActive(index)}
-          onPointerDown={() => onActive(index)}
-          className="flex h-full min-w-0 flex-1 justify-center"
-        >
-          <span className="sr-only">{describe(bucket)}</span>
-          <span
-            aria-hidden
-            className={cn(
-              "flex h-full flex-col justify-end transition-opacity duration-150 motion-reduce:transition-none",
-              BAR_WIDTH,
-              active !== null && active !== index && "opacity-40",
-            )}
+      <For each={props.buckets} keyed={(bucket) => bucket.start}>
+        {(bucket, index) => (
+          <li
+            onPointerEnter={() => props.onActive(index())}
+            onPointerDown={() => props.onActive(index())}
+            class="flex h-full min-w-0 flex-1 justify-center"
           >
-            {bars[index]}
-          </span>
-        </li>
-      ))}
+            <span class="sr-only">{props.describe(bucket())}</span>
+            <span
+              aria-hidden="true"
+              class={[
+                "flex h-full flex-col justify-end transition-opacity duration-150 motion-reduce:transition-none",
+                BAR_WIDTH,
+                {
+                  "opacity-40":
+                    props.active !== null && props.active !== index(),
+                },
+              ]}
+            >
+              {props.renderBar(bucket())}
+            </span>
+          </li>
+        )}
+      </For>
     </ol>
   )
-  if (!axis) return <div className={className}>{plot}</div>
 
   return (
-    <div
-      className={cn(
-        "grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2",
-        className,
-      )}
-    >
-      <span
-        aria-hidden
-        className="text-muted-foreground text-11px -translate-y-1/2 self-start leading-none tabular-nums"
-      >
-        {top}
-      </span>
-      <div className="relative">
-        <span
-          aria-hidden
-          className="border-foreground/10 absolute inset-x-0 top-0 border-t border-dashed"
-        />
-        {plot}
-      </div>
+    <Show when={axis()} fallback={<div class={props.class}>{plot()}</div>}>
       <div
-        aria-hidden
-        className="text-muted-foreground text-11px col-start-2 flex h-4 leading-4 tabular-nums"
+        class={cn(
+          "grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2",
+          props.class,
+        )}
       >
-        {buckets.map((bucket, index) => {
-          const tick = ticks.get(index)
-          return (
-            <span
-              key={bucket.start}
-              className="flex min-w-0 flex-1 justify-center"
-            >
-              <span className={cn("relative", BAR_WIDTH)}>
-                {tick && (
-                  <span
-                    className={cn(
-                      "absolute top-0 whitespace-nowrap",
-                      tick.align === "start" && "left-0",
-                      tick.align === "center" && "left-1/2 -translate-x-1/2",
-                      tick.align === "end" && "right-0",
-                      !tick.narrow && "hidden sm:block",
+        <span
+          aria-hidden="true"
+          class="text-muted-foreground text-11px -translate-y-1/2 self-start leading-none tabular-nums"
+        >
+          {props.top}
+        </span>
+        <div class="relative">
+          <span
+            aria-hidden="true"
+            class="border-foreground/10 absolute inset-x-0 top-0 border-t border-dashed"
+          />
+          {plot()}
+        </div>
+        <div
+          aria-hidden="true"
+          class="text-muted-foreground text-11px col-start-2 flex h-4 leading-4 tabular-nums"
+        >
+          <For each={props.buckets} keyed={(bucket) => bucket.start}>
+            {(bucket, index) => (
+              <span class="flex min-w-0 flex-1 justify-center">
+                <span class={["relative", BAR_WIDTH]}>
+                  <Show when={ticks().get(index())}>
+                    {(tick) => (
+                      <span
+                        class={[
+                          "absolute top-0 whitespace-nowrap",
+                          {
+                            "left-0": tick().align === "start",
+                            "left-1/2 -translate-x-1/2":
+                              tick().align === "center",
+                            "right-0": tick().align === "end",
+                            "hidden sm:block": !tick().narrow,
+                          },
+                        ]}
+                      >
+                        {bucketAxisLabel(bucket().start, props.unit)}
+                      </span>
                     )}
-                  >
-                    {bucketAxisLabel(bucket.start, unit)}
-                  </span>
-                )}
+                  </Show>
+                </span>
               </span>
-            </span>
-          )
-        })}
+            )}
+          </For>
+        </div>
       </div>
-    </div>
+    </Show>
   )
 }

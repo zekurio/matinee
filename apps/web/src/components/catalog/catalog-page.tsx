@@ -1,15 +1,27 @@
-import { type Availability, CatalogRef } from "@matinee/contracts"
-import { buttonVariants } from "@matinee/ui/components/button"
+import { type Availability, CatalogRef, type Trailer } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { getRouteApi, Link, useNavigate } from "@tanstack/react-router"
-import { StarIcon } from "lucide-react"
-import { useEffect, useState } from "react"
+import {
+  QueryObserver,
+  type QueryObserverResult,
+  useQueryClient,
+} from "@tanstack/solid-query"
+import { getRouteApi, Link, useNavigate } from "@tanstack/solid-router"
+import { Clapperboard, Star } from "lucide"
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  from,
+  Show,
+} from "solid-js"
 
-import { pageBleed } from "@/components/app-shell"
+import { pageGutter } from "@/components/app-shell"
 import { CastRail, CrewFacts, unitList } from "@/components/credits"
+import { PosterArt } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
 import { ItemTopBar } from "@/components/phone-nav"
+import { Picture, tone } from "@/components/picture"
 import { Rail, RailItem } from "@/components/rail"
 import {
   AdminAnswer,
@@ -17,17 +29,13 @@ import {
   useWaitingRequest,
 } from "@/components/requests/admin-answer"
 import { HeaderOverview } from "@/components/title/header-overview"
-import {
-  HeaderBackdrop,
-  headerColumn,
-  HeaderPoster,
-  ratings,
-  TrailerButton,
-} from "@/components/title/title-header"
+import { headingPoster, headingTop } from "@/components/title/title-header"
 import { TitleSkeleton } from "@/components/title/title-page"
 import { titleOptions } from "@/components/title/title-queries"
-import { tr } from "@/i18n"
-import { art } from "@/lib/media"
+import { getLocale, perLocale, tr } from "@/i18n"
+import { buttonVariants } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+import { art, present } from "@/lib/media"
 import { errorMessage } from "@/lib/rpc"
 
 import { PosterBadge } from "./catalog-card"
@@ -48,7 +56,7 @@ import { RequestDialog } from "./request-dialog"
 import { useAsk } from "./use-ask"
 import { asks, posterAction } from "./words"
 
-declare module "@tanstack/react-router" {
+declare module "@tanstack/solid-router" {
   interface HistoryState {
     /** The title page took over from its catalog page as the title arrived. */
     arrived?: boolean
@@ -56,6 +64,35 @@ declare module "@tanstack/react-router" {
 }
 
 const route = getRouteApi("/_authed/_shell/catalog/$kind/$provider/$providerId")
+
+const ratings = perLocale(
+  (locale) =>
+    new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }),
+)
+
+/**
+ * A title's details, read through its observer so a change of library
+ * keeps the page up while the new answer loads. An accessor for the
+ * latest result.
+ */
+function useDetails(
+  ref: () => CatalogRef | null,
+  library: () => string | undefined,
+) {
+  const queryClient = useQueryClient()
+  return createMemo(() => {
+    const options = detailsOptions(ref(), library())
+    return from<QueryObserverResult<CatalogDetail>>((next) => {
+      const observer = new QueryObserver(queryClient, options)
+      const unsubscribe = observer.subscribe(next)
+      next(observer.getCurrentResult())
+      return unsubscribe
+    })
+  })
+}
 
 /**
  * A title the server doesn't have, on a page built like a library title's
@@ -66,103 +103,139 @@ const route = getRouteApi("/_authed/_shell/catalog/$kind/$provider/$providerId")
  */
 export function CatalogTitlePage() {
   const params = route.useParams()
-  const { library } = route.useSearch()
-  const parsed = CatalogRef.safeParse(params)
-  const ref = parsed.success ? parsed.data : null
+  const search = route.useSearch()
+  const ref = createMemo(
+    () => {
+      const parsed = CatalogRef.safeParse(params())
+      return parsed.success ? parsed.data : null
+    },
+    {
+      equals: (before, after) =>
+        before === after ||
+        (before !== null && after !== null && sameRef(before, after)),
+    },
+  )
+  const details = useDetails(ref, () => search().library)
   // Picking another library keeps the page up while its answer loads,
   // but another title's page never stands in for this one.
-  const details = useQuery({
-    ...detailsOptions(ref, library),
-    placeholderData: (previous) =>
-      previous && ref && sameRef(previous.ref, ref) ? previous : undefined,
+  const detail = createMemo<CatalogDetail | undefined>((previous) => {
+    const current = details()?.data
+    if (current) return current
+    const asked = ref()
+    return previous && asked && sameRef(previous.ref, asked)
+      ? previous
+      : undefined
   })
-  useDocumentTitle(details.data?.name)
-
-  if (ref && details.isPending) {
-    return (
-      <>
-        <ItemTopBar />
-        <TitleSkeleton />
-      </>
-    )
-  }
-  if (!details.data) {
-    return (
-      <div className="py-24 text-center">
-        <ItemTopBar />
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {tr("title.loadError")}
-        </h1>
-        <p className="text-muted-foreground mt-2 text-sm">
-          {details.error
-            ? errorMessage(details.error)
-            : tr("catalog.page.badLink")}
-        </p>
-        <Link
-          to="/"
-          className={buttonVariants({
-            variant: "secondary",
-            className: "mt-6",
-          })}
-        >
-          {tr("title.backHome")}
-        </Link>
-      </div>
-    )
+  useDocumentTitle(() => detail()?.name)
+  // Keyed by the address, not the answer: another library's provider
+  // answers with its own reference for the same title.
+  const key = () => {
+    const asked = ref()
+    const shown = detail()
+    if (!shown) return null
+    return asked ? refKey(asked) : refKey(shown.ref)
   }
   return (
-    // Keyed by the address, not the answer: another library's provider
-    // answers with its own reference for the same title.
-    <CatalogDetailPage
-      key={ref ? refKey(ref) : refKey(details.data.ref)}
-      detail={details.data}
-      library={library}
-    />
+    <div class={[pageGutter, "relative sm:-mt-16"]}>
+      <ItemTopBar />
+      <Show
+        when={key()}
+        keyed
+        fallback={
+          <Show
+            when={!(ref() && (details()?.isPending ?? true))}
+            fallback={<TitleSkeleton />}
+          >
+            <CatalogLoadError
+              message={
+                details()?.error
+                  ? errorMessage(details()?.error)
+                  : tr("catalog.page.badLink")
+              }
+            />
+          </Show>
+        }
+      >
+        {(_key: string) => (
+          <Show when={detail()}>
+            {(shown) => (
+              <CatalogDetailPage detail={shown()} library={search().library} />
+            )}
+          </Show>
+        )}
+      </Show>
+    </div>
   )
 }
 
-function CatalogDetailPage({
-  detail,
-  library,
-}: {
+function CatalogLoadError(props: { message: string }) {
+  return (
+    <div class="pt-40 pb-24 text-center">
+      <h1 class="text-2xl font-semibold tracking-tight">
+        {tr("title.loadError")}
+      </h1>
+      <p class="text-muted-foreground mt-2 text-sm">{props.message}</p>
+      <Link
+        to="/"
+        class={buttonVariants({ variant: "secondary", className: "mt-6" })}
+      >
+        {tr("title.backHome")}
+      </Link>
+    </div>
+  )
+}
+
+function CatalogDetailPage(props: {
   detail: CatalogDetail
   /** The library the viewer picked, which the page reads in. */
   library: string | undefined
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const destination = detail.destinations.find((entry) => entry.selected)
-  const related = useRelated(detail.ref, library)
+  const destination = () =>
+    props.detail.destinations.find((entry) => entry.selected)
+  const related = useRelated(
+    () => props.detail.ref,
+    () => props.library,
+  )
   // One stream for the page: the title, then the related titles too
   // once their rows have loaded.
-  const stream = useLiveAvailability([
-    { ref: detail.ref, libraryId: destination?.id },
-    ...related.followed,
+  const stream = useLiveAvailability(() => [
+    { ref: props.detail.ref, libraryId: destination()?.id },
+    ...related.followed(),
   ])
-  const live = liveEntry(stream, detail.ref)
-  const availability = live?.availability ?? detail.availability
+  const live = createMemo(() => liveEntry(stream(), props.detail.ref))
+  const availability = () => live()?.availability ?? props.detail.availability
   // Numbered seasons in order, then the specials, in the rail and the
   // chooser alike.
-  const seasons = liveSeasons(detail.seasons, live).toSorted(
-    (a, b) => (a.number || Infinity) - (b.number || Infinity),
+  const seasons = createMemo(() =>
+    liveSeasons(props.detail.seasons, live()).toSorted(
+      (a, b) => (a.number || Infinity) - (b.number || Infinity),
+    ),
   )
   // For an admin, someone's request that waits for them: Add and Decline
   // lead the row, and who requested it is in the badge's tooltip.
   const waiting = useWaitingRequest(availability)
+  const tip = () => {
+    const answer = waiting()
+    return answer ? requestedTip(answer.item) : null
+  }
 
   // Once the title is in a library the viewer can see, this page becomes
   // that title's page. Its data loads first, so the page swaps without a
   // skeleton, and the scroll stays where it is.
-  const arrived =
-    availability.state === "here" ? availability.libraryTitleId : null
-  useEffect(() => {
-    if (!arrived) return
+  const arrived = createMemo(() => {
+    const current = availability()
+    return current.state === "here" ? current.libraryTitleId : null
+  })
+  createEffect(arrived, (titleId) => {
+    if (!titleId) return
     let current = true
-    void queryClient.prefetchQuery(titleOptions(arrived)).finally(() => {
+    void queryClient.prefetchQuery(titleOptions(titleId)).finally(() => {
       if (!current) return
       void navigate({
         to: "/titles/$titleId",
-        params: { titleId: arrived },
+        params: { titleId },
         replace: true,
         resetScroll: false,
         state: { arrived: true },
@@ -171,136 +244,147 @@ function CatalogDetailPage({
     return () => {
       current = false
     }
-  }, [arrived, navigate, queryClient])
+  })
 
-  const toneKey = refKey(detail.ref)
-  const numbered = seasons.filter((season) => season.number > 0)
+  const toneKey = () => refKey(props.detail.ref)
   // As a library title's page has them, without what only a file tells.
-  const facts = [
-    detail.year === null ? null : String(detail.year),
-    detail.ref.kind === "show" && numbered.length > 0
-      ? tr("title.seasonCount", { count: numbered.length })
-      : null,
-  ].filter(Boolean)
+  const facts = () => {
+    const numbered = seasons().filter((season) => season.number > 0)
+    return [
+      props.detail.year === null ? null : String(props.detail.year),
+      props.detail.ref.kind === "show" && numbered.length > 0
+        ? tr("title.seasonCount", { count: numbered.length })
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · ")
+  }
+  const backdrop = createMemo(() =>
+    present(art(props.detail.backdrop, "large")),
+  )
+  const rating = () =>
+    props.detail.rating === null ? null : ratings().format(props.detail.rating)
 
   return (
-    <div className="flex flex-col gap-6 sm:gap-8">
-      <ItemTopBar />
-      <section className={pageBleed} aria-labelledby="title-name">
-        <HeaderBackdrop
-          title={{
-            id: toneKey,
-            images: { backdrop: detail.backdrop, poster: detail.poster },
-          }}
-        />
-        <div className={cn(headerColumn, "max-sm:pt-[max(10rem,30vh)]")}>
-          {/* The details are as tall as the poster, 2:3 at its width, so
-              their buttons line up with its lower edge. */}
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-8">
-            {/* The state in the poster's corner; what to do about it is
-                in the row of buttons. */}
-            <HeaderPoster
-              name={detail.name}
-              toneKey={toneKey}
-              poster={art(detail.poster)}
-              className="max-sm:w-40"
+    <div class="flex flex-col gap-6 sm:gap-8">
+      <section aria-labelledby="title-name" class="isolate">
+        <div
+          aria-hidden="true"
+          data-title-backdrop={backdrop().length ? "" : undefined}
+          class={[
+            "absolute inset-x-0 top-0 -z-10 h-[min(46vh,420px)] overflow-hidden",
+            tone(toneKey()),
+          ]}
+        >
+          <Picture sources={backdrop()} eager class="object-top" />
+          <div class="from-background/95 via-background/50 max-sm:from-background/70 max-sm:via-background/25 absolute inset-0 bg-linear-to-r to-transparent" />
+          <div class="from-background via-background/70 absolute inset-0 bg-linear-to-t via-40% to-transparent" />
+        </div>
+
+        <div class={["flex items-end gap-4 sm:gap-6", headingTop]}>
+          {/* The state in the poster's corner; what to do about it is in
+              the row of buttons. */}
+          {/* Unlike a library title's, shown on phones too, for its state. */}
+          <div class={cn(headingPoster, "relative max-sm:block max-sm:w-28")}>
+            <PosterArt
+              name={props.detail.name}
+              toneKey={toneKey()}
+              poster={art(props.detail.poster)}
+            />
+            <PosterBadge
+              availability={availability()}
+              size="lg"
+              tip={tip()}
+              class="absolute top-2 right-2 max-w-[calc(100%-1rem)] sm:top-2.5 sm:right-2.5"
+            />
+          </div>
+          <div class="min-w-0 pb-1">
+            <h1
+              id="title-name"
+              class="max-sm:text-30px text-2xl leading-[1.1] font-semibold tracking-tight text-balance max-sm:line-clamp-3 max-sm:leading-9 max-sm:font-bold sm:text-4xl lg:text-5xl"
             >
-              <PosterBadge
-                availability={availability}
-                size="lg"
-                tip={waiting && requestedTip(waiting.item)}
-                className="absolute top-2 right-2 max-w-[calc(100%-1rem)] sm:top-2.5 sm:right-2.5"
-              />
-            </HeaderPoster>
-            <div className="contents sm:flex sm:min-h-72 sm:min-w-0 sm:flex-1 sm:flex-col lg:min-h-84 2xl:min-h-96">
-              <div className="min-w-0">
-                <h1
-                  id="title-name"
-                  className="-mt-1 text-2xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl"
-                >
-                  {detail.name}
-                </h1>
-                <div className="text-foreground/80 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-                  {facts.length > 0 && <span>{facts.join(" · ")}</span>}
-                  {detail.contentRating && (
-                    <span className="border-foreground/25 rounded border px-1.5 text-xs leading-5">
-                      {detail.contentRating}
+              {props.detail.name}
+            </h1>
+            <div class="text-foreground/80 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+              <Show when={facts()}>
+                <span>{facts()}</span>
+              </Show>
+              <Show when={props.detail.contentRating}>
+                <span class="border-foreground/25 rounded border px-1.5 text-xs leading-5">
+                  {props.detail.contentRating}
+                </span>
+              </Show>
+              <Show when={rating()}>
+                {(score) => (
+                  <span class="inline-flex items-center gap-1 tabular-nums">
+                    <Icon
+                      icon={Star}
+                      class="size-3.5 fill-current text-amber-500 dark:text-amber-300"
+                    />
+                    <span class="sr-only">
+                      {tr("title.rating", { rating: score() })}
                     </span>
-                  )}
-                  {detail.rating !== null && (
-                    <span className="inline-flex items-center gap-1 tabular-nums">
-                      <StarIcon
-                        aria-hidden
-                        className="size-3.5 fill-current text-amber-300"
-                      />
-                      <span className="sr-only">
-                        {tr("title.rating", {
-                          rating: ratings().format(detail.rating),
-                        })}
-                      </span>
-                      <span aria-hidden>{ratings().format(detail.rating)}</span>
-                    </span>
-                  )}
-                </div>
-                {/* Plain text: genre pages list the library's titles. */}
-                {detail.genres.length > 0 && (
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {unitList().format(detail.genres.slice(0, 4))}
-                  </p>
+                    <span aria-hidden="true">{score()}</span>
+                  </span>
                 )}
-                {detail.stale && (
-                  <p className="text-muted-foreground mt-2 text-sm">
-                    {tr("catalog.page.stale")}
-                  </p>
-                )}
-              </div>
-              <div className="col-span-2 min-w-0 sm:flex sm:flex-1 sm:flex-col">
-                <HeaderOverview
-                  name={detail.name}
-                  overview={detail.overview}
-                  className="sm:mt-4"
-                />
-                <CrewFacts title={detail} className="mt-4" />
-                <div className="sm:mt-auto">
-                  {/* As a library title's row: the main action, then
-                      Trailer. For an admin with a request to answer, Add
-                      and Decline take the action's place. Any may be
-                      missing; with none, no row. */}
-                  <div className="flex items-center gap-2 pt-6 empty:hidden">
-                    {waiting && !waiting.answered ? (
-                      <AdminAnswer item={waiting.item} look="page" />
-                    ) : (
-                      <RequestControl
-                        detail={detail}
-                        availability={availability}
-                        seasons={seasons}
-                        libraryId={destination?.id}
-                      />
-                    )}
-                    <TrailerButton trailers={detail.trailers} />
-                  </div>
-                </div>
-              </div>
+              </Show>
             </div>
+            {/* Plain text: genre pages list the library's titles. */}
+            <Show when={props.detail.genres.length > 0}>
+              <p class="text-muted-foreground mt-1.5 text-sm">
+                {unitList().format(props.detail.genres.slice(0, 4))}
+              </p>
+            </Show>
+            <Show when={props.detail.stale}>
+              <p class="text-muted-foreground mt-2 text-sm">
+                {tr("catalog.page.stale")}
+              </p>
+            </Show>
+          </div>
+        </div>
+
+        <div class="mt-4 flex max-w-4xl flex-col gap-4">
+          <HeaderOverview tagline={null} overview={props.detail.overview} />
+          <CrewFacts title={props.detail} />
+          {/* As a library title's row: the main action, then Trailer. For
+              an admin with a request to answer, Add and Decline take the
+              action's place. Any may be missing; with none, no row. */}
+          <div class="mt-1 flex items-center gap-2 empty:hidden">
+            <Show
+              when={waiting() && !waiting()?.answered && waiting()}
+              fallback={
+                <RequestControl
+                  detail={props.detail}
+                  availability={availability()}
+                  seasons={seasons()}
+                  libraryId={destination()?.id}
+                />
+              }
+            >
+              {(answer) => <AdminAnswer item={answer().item} look="page" />}
+            </Show>
+            <TrailerButton trailers={props.detail.trailers} />
           </div>
         </div>
       </section>
-      {detail.ref.kind === "show" && seasons.length > 0 && (
+      <Show when={props.detail.ref.kind === "show" && seasons().length > 0}>
         <Rail title={tr("title.seasons")}>
-          {seasons.map((season) => (
-            <RailItem key={season.number} artwork="poster">
-              <CatalogSeasonCard
-                show={detail}
-                season={season}
-                libraryId={destination?.id}
-                first={asks(availability)}
-              />
-            </RailItem>
-          ))}
+          <For each={seasons()} keyed={(season) => String(season.number)}>
+            {(season) => (
+              <RailItem artwork="poster">
+                <CatalogSeasonCard
+                  show={props.detail}
+                  season={season()}
+                  libraryId={destination()?.id}
+                  first={asks(availability())}
+                />
+              </RailItem>
+            )}
+          </For>
         </Rail>
-      )}
-      <CastRail credits={detail.credits} />
-      <RelatedRails related={related} live={stream} />
+      </Show>
+      <CastRail credits={props.detail.credits} />
+      <RelatedRails related={related} live={stream()} />
     </div>
   )
 }
@@ -308,57 +392,95 @@ function CatalogDetailPage({
 /**
  * The title's one action, leading the row of buttons as Play leads a
  * library title's, with Trailer after it: "Request", "Cancel request",
- * or a dimmed Request with why in its tooltip. A show's request opens the request dialog for its seasons.
- * Null while there's nothing to do.
+ * or a dimmed Request with why in its tooltip. A show's request opens the
+ * request dialog for its seasons. Nothing while there's nothing to do.
  */
-function RequestControl({
-  detail,
-  availability,
-  seasons,
-  libraryId,
-}: {
+function RequestControl(props: {
   detail: CatalogDetail
   availability: Availability
   seasons: CatalogSeasonEntry[]
   libraryId?: string
 }) {
   const ask = useAsk()
-  const [dialog, setDialog] = useState(false)
-  const { ref, name } = detail
-  const show = ref.kind === "show"
-  const first = asks(availability)
+  const [dialog, setDialog] = createSignal(false)
+  const show = () => props.detail.ref.kind === "show"
   // A show asked for already, with seasons still to request, offers them.
-  const more =
-    show &&
-    posterAction(availability) === null &&
-    seasons.some((season) => asks(season.availability))
+  const more = () =>
+    show() &&
+    posterAction(props.availability) === null &&
+    props.seasons.some((season) => asks(season.availability))
   const request = () => {
-    if (show) setDialog(true)
-    else ask.mutate({ ref, name, libraryId })
+    if (show()) setDialog(true)
+    else
+      ask.mutate({
+        ref: props.detail.ref,
+        name: props.detail.name,
+        libraryId: props.libraryId,
+      })
   }
-  if (!more && !hasPosterButton(availability)) return null
   return (
-    <>
+    <Show when={more() || hasPosterButton(props.availability)}>
       <PosterActionButton
-        availability={availability}
-        action={more ? "request" : undefined}
-        label={more ? tr("ask.more") : undefined}
-        name={name}
+        availability={props.availability}
+        action={more() ? "request" : undefined}
+        label={more() ? tr("ask.more") : undefined}
+        name={props.detail.name}
         busy={ask.isPending}
         look="page"
         onRequest={request}
       />
-      {show && (
+      <Show when={show()}>
         <RequestDialog
-          open={dialog}
+          open={dialog()}
           onOpenChange={setDialog}
-          titleRef={ref}
-          name={name}
-          seasons={seasons}
-          first={first}
-          libraryId={libraryId}
+          titleRef={props.detail.ref}
+          name={props.detail.name}
+          seasons={props.seasons}
+          first={asks(props.availability)}
+          libraryId={props.libraryId}
         />
+      </Show>
+    </Show>
+  )
+}
+
+function baseLanguage(tag: string): string {
+  return tag.split("-")[0]?.toLowerCase() ?? tag
+}
+
+/**
+ * The title's first trailer in the interface's language, else the
+ * server's first, on YouTube in a new tab. Just the icon on phones, where
+ * the request takes the row.
+ */
+function TrailerButton(props: { trailers: Trailer[] }) {
+  const trailer = () => {
+    const language = baseLanguage(getLocale())
+    return (
+      props.trailers.find(
+        (entry) => entry.language && baseLanguage(entry.language) === language,
+      ) ?? props.trailers[0]
+    )
+  }
+  return (
+    <Show when={trailer()}>
+      {(shown) => (
+        <a
+          href={shown().url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={tr("title.trailerHint")}
+          class={buttonVariants({
+            variant: "secondary",
+            size: "lg",
+            className:
+              "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11 max-sm:rounded-full max-sm:px-0",
+          })}
+        >
+          <Icon icon={Clapperboard} class="max-sm:size-5" />
+          <span class="max-sm:sr-only">{tr("title.trailer")}</span>
+        </a>
       )}
-    </>
+    </Show>
   )
 }

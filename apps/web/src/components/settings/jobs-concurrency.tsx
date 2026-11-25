@@ -1,22 +1,22 @@
 import {
   type ConcurrencyInput,
-  JOB_QUEUE_IDS,
   type JobQueueId,
   type JobQueueStatus,
   type JobsOverview,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { Input } from "@matinee/ui/components/input"
-import { useSelector } from "@tanstack/react-form"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { MinusIcon, PlusIcon } from "lucide-react"
-import { useState } from "react"
+import { useMutation, useQueryClient } from "@tanstack/solid-query"
+import { Minus, Plus } from "lucide"
+import { createSignal, For } from "solid-js"
 
 import { tr, translateKnown } from "@/i18n"
-import { useAppForm, useFieldContext } from "@/lib/form"
+import { Button } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+import { Input } from "@/kit/input"
+import type { Form } from "@/lib/form"
 import { client, orpc } from "@/lib/rpc"
 
 import { queueName } from "./queue-details-dialog"
+import { createDraftForm } from "./settings-draft"
 import {
   SettingNote,
   SettingRow,
@@ -33,10 +33,6 @@ function draftFrom(queues: readonly JobQueueStatus[]): Draft {
   )
 }
 
-function sameDraft(a: Draft, b: Draft): boolean {
-  return JOB_QUEUE_IDS.every((id) => a[id] === b[id])
-}
-
 /** The queues whose concurrency an admin may change. */
 export function tunableQueues(overview: JobsOverview): JobQueueStatus[] {
   return overview.queues.filter((queue) => queue.concurrencyNote !== null)
@@ -46,50 +42,40 @@ export function tunableQueues(overview: JobsOverview): JobQueueStatus[] {
  * How many jobs each queue runs at once, saved with the save bar like the
  * rest of Settings.
  */
-export function ConcurrencySection({
-  queues,
-}: {
+export function ConcurrencySection(props: {
   queues: readonly JobQueueStatus[]
 }) {
   const queryClient = useQueryClient()
-  const initial = draftFrom(queues)
-  const save = useMutation({
+  const save = useMutation(() => ({
     mutationFn: (input: ConcurrencyInput) =>
       client.admin.jobs.updateConcurrency(input),
-  })
+  }))
   // Until the first edit, the form follows the saved numbers, so what the
   // stream sends shows through.
-  const form = useAppForm({
-    defaultValues: initial,
-    onSubmit: async ({ value, formApi }) => {
-      const next = await save.mutateAsync({ concurrency: value })
+  const form = createDraftForm<Draft>({
+    initial: () => draftFrom(props.queues),
+    onSubmit: async (value) => {
+      const next = await save.mutate({ concurrency: value })
       queryClient.setQueryData(
         orpc.admin.jobs.live.experimental_liveKey(),
         next,
       )
-      formApi.reset(draftFrom(tunableQueues(next)))
+      form.reset()
     },
   })
-  const dirty = useSelector(
-    form.store,
-    (state) => state.isTouched && !sameDraft(state.values, initial),
-  )
-
   return (
-    <form className="contents" onSubmit={(event) => event.preventDefault()}>
+    <form class="contents" onSubmit={(event) => event.preventDefault()}>
       <SettingsSubsection id="concurrency" title={tr("jobs.concurrency")}>
         <SettingRows>
-          {queues.map((queue) => (
-            <form.AppField key={queue.id} name={queue.id}>
-              {() => <StepperField queue={queue} />}
-            </form.AppField>
-          ))}
+          <For each={props.queues} keyed={(queue) => queue.id}>
+            {(queue) => <StepperField form={form} queue={queue()} />}
+          </For>
         </SettingRows>
       </SettingsSubsection>
       <SettingsSaveBar
-        dirty={dirty}
+        dirty={form.dirty()}
         onReset={() => form.reset()}
-        onSave={() => form.handleSubmit()}
+        onSave={() => form.submit()}
       />
     </form>
   )
@@ -100,63 +86,70 @@ export function ConcurrencySection({
  * typed number counts once it's in range; leaving the field puts back the
  * last one that was.
  */
-function StepperField({ queue }: { queue: JobQueueStatus }) {
-  const field = useFieldContext<number | undefined>()
-  const value =
-    useSelector(field.store, (state) => state.value) ?? queue.concurrency
+function StepperField(props: { form: Form<Draft>; queue: JobQueueStatus }) {
+  const value = () =>
+    props.form.values()[props.queue.id] ?? props.queue.concurrency
   // What's typed, while it differs from the field's number.
-  const [typed, setTyped] = useState<string | null>(null)
-  const max = queue.maxConcurrency
-  const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= max
-  const typedValid = typed === null || inRange(Number(typed))
+  const [typed, setTyped] = createSignal<string | null>(null)
+  const max = () => props.queue.maxConcurrency
+  const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= max()
+  const typedValid = () => {
+    const text = typed()
+    return text === null || inRange(Number(text))
+  }
   const set = (n: number) => {
     setTyped(null)
-    field.handleChange(Math.max(1, Math.min(max, n)))
+    props.form.set(props.queue.id, Math.max(1, Math.min(max(), n)))
   }
-  const name = queueName(queue)
-  // The server's note on what the limit does, in English, translated when known.
-  const note = queue.concurrencyNote
+  const name = () => queueName(props.queue)
 
   return (
     <SettingRow
-      title={name}
+      title={name()}
       layout="split"
       footer={
-        note === null ? null : <SettingNote>{translateKnown(note)}</SettingNote>
+        // The server's note on what the limit does, in English, translated when known.
+        props.queue.concurrencyNote === null ? undefined : (
+          <SettingNote>
+            {translateKnown(props.queue.concurrencyNote)}
+          </SettingNote>
+        )
       }
     >
       {(ids) => (
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div class="flex shrink-0 items-center gap-1.5">
           <Button
             type="button"
             variant="outline"
             size="icon-sm"
-            aria-label={tr("jobs.concurrency.decrease", { queue: name })}
-            disabled={value <= 1}
-            onClick={() => set(value - 1)}
+            aria-label={tr("jobs.concurrency.decrease", { queue: name() })}
+            disabled={value() <= 1}
+            onClick={() => set(value() - 1)}
           >
-            <MinusIcon />
+            <Icon icon={Minus} />
           </Button>
           <Input
             id={ids.controlId}
-            aria-invalid={typedValid ? undefined : true}
-            inputMode="numeric"
-            className="w-14 text-center tabular-nums"
-            value={typed ?? String(value)}
-            onChange={(event) => {
-              const text = event.target.value.replace(/\D/g, "")
+            aria-invalid={typedValid() ? undefined : "true"}
+            inputmode="numeric"
+            class="w-14 text-center tabular-nums"
+            value={typed() ?? String(value())}
+            onInput={(event) => {
+              const text = event.currentTarget.value.replace(/\D/g, "")
+              // Letters typed are taken out of the field at once.
+              event.currentTarget.value = text
               const n = Number(text)
               if (text !== "" && inRange(n)) set(n)
               else setTyped(text)
             }}
             onBlur={() => setTyped(null)}
             onKeyDown={(event) => {
-              if (event.key === "ArrowUp" && value < max) {
+              if (event.key === "ArrowUp" && value() < max()) {
                 event.preventDefault()
-                set(value + 1)
-              } else if (event.key === "ArrowDown" && value > 1) {
+                set(value() + 1)
+              } else if (event.key === "ArrowDown" && value() > 1) {
                 event.preventDefault()
-                set(value - 1)
+                set(value() - 1)
               }
             }}
           />
@@ -164,14 +157,14 @@ function StepperField({ queue }: { queue: JobQueueStatus }) {
             type="button"
             variant="outline"
             size="icon-sm"
-            aria-label={tr("jobs.concurrency.increase", { queue: name })}
-            disabled={value >= max}
-            onClick={() => set(value + 1)}
+            aria-label={tr("jobs.concurrency.increase", { queue: name() })}
+            disabled={value() >= max()}
+            onClick={() => set(value() + 1)}
           >
-            <PlusIcon />
+            <Icon icon={Plus} />
           </Button>
-          <span className="sr-only" aria-live="polite">
-            {tr("jobs.concurrency.atOnce", { count: value })}
+          <span class="sr-only" aria-live="polite">
+            {tr("jobs.concurrency.atOnce", { count: value() })}
           </span>
         </div>
       )}

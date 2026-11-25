@@ -6,8 +6,6 @@ import {
 import { type MessageKey, tr, translateKnown } from "@/i18n"
 import { ShownError } from "@/lib/shown-error"
 
-import { typeOnly } from "./setting-controls"
-
 const NUMBER_FIELDS = [
   "h264Crf",
   "hevcCrf",
@@ -29,15 +27,13 @@ export type NumberField = (typeof NUMBER_FIELDS)[number]
 export type Draft = Omit<TranscodingSettings, NumberField> &
   Record<NumberField, string>
 
-/** `withForm`'s options for a section of the form. */
-export const draftForm = { defaultValues: typeOnly<Draft>() }
-
 export function draftFrom({
   settings,
   defaults,
 }: AdminTranscodingSettings): Draft {
   return {
     ...settings,
+    hardwareDecodingCodecs: [...settings.hardwareDecodingCodecs],
     vaapiDevice:
       settings.vaapiDevice === defaults.vaapiDevice ? "" : settings.vaapiDevice,
     qsvDevice:

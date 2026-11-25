@@ -1,3 +1,5 @@
+import { createMemo, For } from "solid-js"
+
 import {
   Combobox,
   ComboboxChip,
@@ -7,8 +9,7 @@ import {
   ComboboxEmpty,
   ComboboxItem,
   ComboboxList,
-  useComboboxAnchor,
-} from "@matinee/ui/components/combobox"
+} from "@/kit/combobox"
 
 export type MultiSelectChoice = { value: string; label: string }
 
@@ -18,16 +19,7 @@ export type MultiSelectChoice = { value: string; label: string }
  * like a saved one the server no longer offers, stays a chip named by
  * `unknown` until it's taken off.
  */
-export function MultiSelect({
-  id,
-  choices,
-  value,
-  onChange,
-  placeholder,
-  empty,
-  unknown = (missing) => missing,
-  describedBy,
-}: {
+export function MultiSelect(props: {
   /** The text field's, for its label. */
   id: string
   choices: readonly MultiSelectChoice[]
@@ -40,39 +32,40 @@ export function MultiSelect({
   unknown?: (value: string) => string
   describedBy?: string
 }) {
-  const anchor = useComboboxAnchor()
-  const byValue = new Map(choices.map((choice) => [choice.value, choice]))
-  const chosen = value.map(
-    (entry) => byValue.get(entry) ?? { value: entry, label: unknown(entry) },
+  const labels = createMemo(
+    () => new Map(props.choices.map((choice) => [choice.value, choice.label])),
   )
+  const labelOf = (value: string) =>
+    labels().get(value) ?? props.unknown?.(value) ?? value
   return (
     <Combobox
       multiple
-      items={choices}
-      value={chosen}
-      isItemEqualToValue={(item, other) => item.value === other.value}
-      onValueChange={(next) => onChange(next.map((choice) => choice.value))}
+      value={[...props.value]}
+      itemToLabel={labelOf}
+      onValueChange={(next) => props.onChange(next)}
     >
-      <ComboboxChips ref={anchor}>
-        {chosen.map((choice) => (
-          <ComboboxChip key={choice.value} label={choice.label} />
-        ))}
+      <ComboboxChips>
+        <For each={props.value}>
+          {(value) => <ComboboxChip value={value} label={labelOf(value)} />}
+        </For>
         <ComboboxChipsInput
-          id={id}
-          placeholder={chosen.length ? undefined : placeholder}
-          aria-describedby={describedBy}
-          autoComplete="off"
-          spellCheck={false}
+          id={props.id}
+          placeholder={props.value.length ? undefined : props.placeholder}
+          aria-describedby={props.describedBy}
+          autocomplete="off"
+          spellcheck={false}
         />
       </ComboboxChips>
-      <ComboboxContent anchor={anchor}>
-        <ComboboxEmpty>{empty}</ComboboxEmpty>
+      <ComboboxContent>
+        <ComboboxEmpty>{props.empty}</ComboboxEmpty>
         <ComboboxList>
-          {(choice: MultiSelectChoice) => (
-            <ComboboxItem key={choice.value} value={choice}>
-              <span className="min-w-0 flex-1 truncate">{choice.label}</span>
-            </ComboboxItem>
-          )}
+          <For each={props.choices}>
+            {(choice) => (
+              <ComboboxItem value={choice.value} label={choice.label}>
+                <span class="min-w-0 flex-1 truncate">{choice.label}</span>
+              </ComboboxItem>
+            )}
+          </For>
         </ComboboxList>
       </ComboboxContent>
     </Combobox>

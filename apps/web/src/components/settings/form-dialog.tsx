@@ -1,12 +1,14 @@
+import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
+import { Show } from "solid-js"
+
 import {
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@matinee/ui/components/dialog"
-import { cn } from "@matinee/ui/lib/utils"
-import type { FormEvent, ReactNode } from "react"
+} from "@/kit/dialog"
 
 /*
  * The settings' form dialogs: wide, with their sections side by side in
@@ -31,88 +33,76 @@ const WIDTHS = {
   "2xl": "sm:max-w-7xl 2xl:max-w-[96rem]",
 } satisfies Record<string, string>
 
-export function FormDialogContent({
-  width = "lg",
-  children,
-}: {
+export function FormDialogContent(props: {
   width?: keyof typeof WIDTHS
-  children: ReactNode
+  children: JSX.Element
 }) {
   return (
     <DialogContent
       showCloseButton={false}
-      className={cn(
+      class={cn(
         "flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0",
-        WIDTHS[width],
+        WIDTHS[props.width ?? "lg"],
       )}
     >
-      {children}
+      {props.children}
     </DialogContent>
   )
 }
 
 /** The dialog's form, which holds its header, body, and footer. */
-export function FormDialogForm({
-  onSubmit,
-  children,
-}: {
+export function FormDialogForm(props: {
   onSubmit: () => void
-  children: ReactNode
+  children: JSX.Element
 }) {
   return (
     <form
-      className="flex min-h-0 flex-1 flex-col"
-      onSubmit={(event: FormEvent) => {
+      class="flex min-h-0 flex-1 flex-col"
+      onSubmit={(event) => {
         event.preventDefault()
-        onSubmit()
+        props.onSubmit()
       }}
     >
-      {children}
+      {props.children}
     </form>
   )
 }
 
-export function FormDialogHeader({
-  title,
-  description,
-}: {
-  title: ReactNode
-  description?: ReactNode
+export function FormDialogHeader(props: {
+  title: JSX.Element
+  description?: JSX.Element
 }) {
   return (
-    <DialogHeader className="border-b px-6 pt-6 pb-5">
-      <DialogTitle className="text-lg leading-7 font-semibold">
-        {title}
+    <DialogHeader class="border-b px-6 pt-6 pb-5">
+      <DialogTitle class="text-lg leading-7 font-semibold">
+        {props.title}
       </DialogTitle>
-      {description && (
-        <DialogDescription className="max-w-3xl">
-          {description}
+      <Show when={props.description}>
+        <DialogDescription class="max-w-3xl">
+          {props.description}
         </DialogDescription>
-      )}
+      </Show>
     </DialogHeader>
   )
 }
 
 /** What scrolls between the header and the footer. */
-export function FormDialogBody({ children }: { children: ReactNode }) {
+export function FormDialogBody(props: { children: JSX.Element }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-5">
-      {children}
+    <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-5">
+      {props.children}
     </div>
   )
 }
 
-export function FormDialogFooter({
-  cancel = true,
-  children,
-}: {
+export function FormDialogFooter(props: {
   /** A Cancel button before the actions. */
   cancel?: boolean
-  children: ReactNode
+  children: JSX.Element
 }) {
   return (
-    <DialogFooter showCancelButton={cancel} className="m-0 px-6 py-4">
-      {children}
+    <DialogFooter showCancelButton={props.cancel ?? true} class="m-0 px-6 py-4">
+      {props.children}
     </DialogFooter>
   )
 }
@@ -121,76 +111,66 @@ export function FormDialogFooter({
  * Columns of sections, each a {@link FormColumn}. `count` is how many sit
  * side by side on a wide screen; fewer fit on a narrower one.
  */
-export function FormColumns({
-  count = 2,
-  children,
-}: {
-  count?: 2 | 3
-  children: ReactNode
-}) {
+export function FormColumns(props: { count?: 2 | 3; children: JSX.Element }) {
   return (
     <div
-      className={cn(
+      class={[
         "grid items-start gap-x-8 gap-y-6",
-        count === 2 ? "md:grid-cols-2" : "md:grid-cols-2 2xl:grid-cols-3",
-      )}
+        (props.count ?? 2) === 2
+          ? "md:grid-cols-2"
+          : "md:grid-cols-2 2xl:grid-cols-3",
+      ]}
     >
-      {children}
+      {props.children}
     </div>
   )
 }
 
-export function FormColumn({
-  tall = false,
-  className,
-  children,
-}: {
+export function FormColumn(props: {
   /**
    * For the longest of three columns. While they sit as two, it runs down
    * both rows, and the third column goes beside it, under the other one,
    * rather than below the pair.
    */
   tall?: boolean
-  className?: string
-  children: ReactNode
+  class?: string
+  children: JSX.Element
 }) {
   return (
     <div
-      className={cn(
+      class={cn(
         "flex min-w-0 flex-col gap-6",
-        tall && "md:row-span-2 2xl:row-span-1",
-        className,
+        props.tall && "md:row-span-2 2xl:row-span-1",
+        props.class,
       )}
     >
-      {children}
+      {props.children}
     </div>
   )
 }
 
 /** A titled part of a form dialog. */
-export function FormSection({
-  title,
-  description,
-  children,
-}: {
+export function FormSection(props: {
   title?: string
   /** A line under the title on what the part covers. */
-  description?: ReactNode
-  children: ReactNode
+  description?: JSX.Element
+  children: JSX.Element
 }) {
   return (
-    <section className="flex min-w-0 flex-col gap-2.5">
-      {(title || description) && (
-        <div className="flex flex-col gap-0.5">
-          {title && <h3 className="text-sm font-semibold">{title}</h3>}
-          {description && (
-            <p className="text-muted-foreground text-13px leading-5">
-              {description}
+    <section class="flex min-w-0 flex-col gap-2.5">
+      <Show when={props.title || props.description}>
+        <div class="flex flex-col gap-0.5">
+          <Show when={props.title}>
+            <h3 class="text-sm font-semibold">{props.title}</h3>
+          </Show>
+          <Show when={props.description}>
+            <p class="text-muted-foreground text-13px leading-5">
+              {props.description}
             </p>
-          )}
+          </Show>
         </div>
-      )}
-      {children}
+      </Show>
+      {props.children}
     </section>
   )
 }

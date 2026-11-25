@@ -8,20 +8,22 @@ import {
   type RequestLimit,
 } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
 import {
-  DownloadIcon,
-  FilmIcon,
-  GaugeIcon,
-  InboxIcon,
-  KeySquareIcon,
-  LibraryBigIcon,
-  MonitorPlayIcon,
-  ShieldCheckIcon,
-} from "lucide-react"
-import type { ReactNode } from "react"
+  Download,
+  Film,
+  Gauge,
+  Inbox,
+  KeySquare,
+  LibraryBig,
+  MonitorPlay,
+  ShieldCheck,
+} from "lucide"
+import { Show } from "solid-js"
 
 import { formatBitrate } from "@/components/player-format"
 import { perLocale, tr } from "@/i18n"
+import { Icon } from "@/kit/icon"
 
 /*
  * What an access policy allows, in the words the access panel, the group
@@ -140,23 +142,19 @@ export function librariesLabel(
 }
 
 /** A fact with its glyph, sized to read in a line of them. */
-export function Fact({
-  icon,
-  title,
-  children,
-}: {
-  icon: ReactNode
+export function Fact(props: {
+  icon: JSX.Element
   /** The whole of it, when the text is cut short. */
   title?: string
-  children: ReactNode
+  children: JSX.Element
 }) {
   return (
     <span
-      className="inline-flex min-w-0 items-center gap-1.5 [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:opacity-80"
-      title={title}
+      class="inline-flex min-w-0 items-center gap-1.5 [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:opacity-80"
+      title={props.title}
     >
-      {icon}
-      <span className="truncate">{children}</span>
+      {props.icon}
+      <span class="truncate">{props.children}</span>
     </span>
   )
 }
@@ -195,54 +193,57 @@ function managesFact(
  * encoding and download switches, its stream limit, its requests, API
  * tokens, and the parts of running the server it hands on.
  */
-export function PolicyFacts({
-  policy,
-  admin = false,
-  libraries,
-  className,
-}: {
+export function PolicyFacts(props: {
   policy: AccessPolicy
   /** An admin's, which has every permission whatever it says. */
   admin?: boolean
   /** Every library, for the names of those a list picks. */
   libraries: readonly Library[] | undefined
-  className?: string
+  class?: string
 }) {
-  const library = librariesFact(policy.libraries, libraries)
-  const more = managesFact(policy, admin)
+  const library = () => librariesFact(props.policy.libraries, props.libraries)
+  const more = () => managesFact(props.policy, props.admin ?? false)
   return (
     <p
-      className={cn(
-        "text-muted-foreground flex flex-wrap items-center gap-x-3.5 gap-y-0.5 text-13px leading-5",
-        className,
+      class={cn(
+        "text-muted-foreground text-13px flex flex-wrap items-center gap-x-3.5 gap-y-0.5 leading-5",
+        props.class,
       )}
     >
-      <Fact icon={<LibraryBigIcon />} title={library.names}>
-        {library.label}
+      <Fact icon={<Icon icon={LibraryBig} />} title={library().names}>
+        {library().label}
       </Fact>
-      <Fact icon={<GaugeIcon />}>{bitrateLimitLabel(policy.maxBitrate)}</Fact>
-      <Fact icon={<FilmIcon />}>
-        {policy.transcode
+      <Fact icon={<Icon icon={Gauge} />}>
+        {bitrateLimitLabel(props.policy.maxBitrate)}
+      </Fact>
+      <Fact icon={<Icon icon={Film} />}>
+        {props.policy.transcode
           ? tr("access.transcode.on")
           : tr("access.transcode.off")}
       </Fact>
-      <Fact icon={<DownloadIcon />}>
-        {policy.downloads
+      <Fact icon={<Icon icon={Download} />}>
+        {props.policy.downloads
           ? tr("access.downloads.on")
           : tr("access.downloads.off")}
       </Fact>
-      <Fact icon={<MonitorPlayIcon />}>
-        {streamLimitLabel(policy.maxStreams)}
+      <Fact icon={<Icon icon={MonitorPlay} />}>
+        {streamLimitLabel(props.policy.maxStreams)}
       </Fact>
-      <Fact icon={<InboxIcon />}>{requestsFactLabel(policy)}</Fact>
-      {policy.apiTokens && (
-        <Fact icon={<KeySquareIcon />}>{tr("access.apiTokens.on")}</Fact>
-      )}
-      {more && (
-        <Fact icon={<ShieldCheckIcon />} title={more.names}>
-          {more.label}
+      <Fact icon={<Icon icon={Inbox} />}>
+        {requestsFactLabel(props.policy)}
+      </Fact>
+      <Show when={props.policy.apiTokens}>
+        <Fact icon={<Icon icon={KeySquare} />}>
+          {tr("access.apiTokens.on")}
         </Fact>
-      )}
+      </Show>
+      <Show when={more()}>
+        {(fact) => (
+          <Fact icon={<Icon icon={ShieldCheck} />} title={fact().names}>
+            {fact().label}
+          </Fact>
+        )}
+      </Show>
     </p>
   )
 }

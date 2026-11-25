@@ -4,37 +4,36 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "NODE_ENV=production vite build",
     "dev": "vite dev",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@base-ui/react": "catalog:",
     "@matinee/client": "workspace:*",
     "@matinee/contracts": "workspace:*",
+    "@matinee/tv": "workspace:*",
     "@matinee/ui": "workspace:*",
     "@orpc/tanstack-query": "catalog:",
-    "@scalar/api-reference-react": "0.9.89",
+    "@scalar/api-reference": "1.78.0",
     "@simplewebauthn/browser": "catalog:",
-    "@tanstack/react-form": "1.33.5",
-    "@tanstack/react-query": "5.106.1",
-    "@tanstack/react-router": "1.170.46",
+    "@solidjs/web": "2.0.3",
+    "@tanstack/solid-query": "6.0.0-rc.6",
+    "@tanstack/solid-router": "2.0.0-rc.11",
+    "@ui-sdk/core": "0.1.0-beta.14",
+    "@ui-sdk/solid": "0.1.0-beta.14",
     "blurhash": "catalog:",
+    "class-variance-authority": "0.7.1",
     "hls.js": "1.7.4",
     "jassub": "^2.5.37",
     "libpgs": "0.9.0",
-    "lucide-react": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:",
-    "zustand": "5.0.16"
+    "lucide": "1.69.0",
+    "solid-js": "2.0.3"
   },
   "devDependencies": {
+    "@solidjs/vite-plugin": "3.0.1",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/router-plugin": "1.168.48",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
-    "@vitejs/plugin-react": "6.2.1",
     "vite": "catalog:"
   }
 }

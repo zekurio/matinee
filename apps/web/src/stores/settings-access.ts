@@ -1,27 +1,30 @@
 import type { AccessGroup } from "@matinee/contracts"
-import { createStore } from "zustand/vanilla"
+import { createSignal } from "solid-js"
 
-type AccessPanelState = {
-  editing: { group?: AccessGroup }
-  editOpen: boolean
-  deleting: AccessGroup | null
-  deleteOpen: boolean
-  edit: (group?: AccessGroup) => void
-  setEditOpen: (open: boolean) => void
-  askDelete: (group: AccessGroup) => void
-  closeDelete: () => void
-}
-
-/** Each panel keeps its dialog contents while the closing animation runs. */
+/**
+ * Each panel keeps its dialog contents while the closing animation runs.
+ * Signals rather than a store, so the editor gets the group as the list
+ * sent it.
+ */
 export function createSettingsAccessStore() {
-  return createStore<AccessPanelState>()((set) => ({
-    editing: {},
-    editOpen: false,
-    deleting: null,
-    deleteOpen: false,
-    edit: (group) => set({ editing: { group }, editOpen: true }),
-    setEditOpen: (editOpen) => set({ editOpen }),
-    askDelete: (deleting) => set({ deleting, deleteOpen: true }),
-    closeDelete: () => set({ deleteOpen: false }),
-  }))
+  const [editing, setEditing] = createSignal<{ group?: AccessGroup }>({})
+  const [editOpen, setEditOpen] = createSignal(false)
+  const [deleting, setDeleting] = createSignal<AccessGroup | null>(null)
+  const [deleteOpen, setDeleteOpen] = createSignal(false)
+  return {
+    editing,
+    editOpen,
+    deleting,
+    deleteOpen,
+    edit: (group?: AccessGroup) => {
+      setEditing({ group })
+      setEditOpen(true)
+    },
+    setEditOpen: (open: boolean) => setEditOpen(open),
+    askDelete: (group: AccessGroup) => {
+      setDeleting(group)
+      setDeleteOpen(true)
+    },
+    closeDelete: () => setDeleteOpen(false),
+  }
 }

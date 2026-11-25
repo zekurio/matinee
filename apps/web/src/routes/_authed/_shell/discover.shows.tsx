@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/solid-router"
 
+import { pageGutter } from "@/components/app-shell"
 import {
   BrowsePage,
   browseOptionsQuery,
@@ -20,10 +21,12 @@ function BrowseShows() {
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   return (
-    <BrowsePage
-      kind="show"
-      search={search}
-      navigate={(next) => void navigate({ search: next, replace: true })}
-    />
+    <div class={[pageGutter, "pb-6 sm:pt-8"]}>
+      <BrowsePage
+        kind="show"
+        search={search()}
+        navigate={(next) => void navigate({ search: next, replace: true })}
+      />
+    </div>
   )
 }

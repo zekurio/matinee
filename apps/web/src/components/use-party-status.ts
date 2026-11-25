@@ -1,9 +1,9 @@
 import type { PartyPlayerState } from "@matinee/contracts"
-import { type RefObject, useEffect, useEffectEvent, useRef } from "react"
+import { type Accessor, createEffect, createMemo } from "solid-js"
 
+import { bufferedEnd } from "@/components/playback-source"
 import type { PlayerStore } from "@/stores/player"
 
-import { bufferedEnd } from "./playback-source"
 import type { PartyLink } from "./use-party-sync"
 
 const TICK_MS = 1000
@@ -37,58 +37,60 @@ function ready(el: HTMLVideoElement, hls: boolean): boolean {
  * has loaded enough where the party waits.
  */
 export function usePartyStatus(
-  video: RefObject<HTMLVideoElement | null>,
+  video: () => HTMLVideoElement | undefined,
   store: PlayerStore,
   position: () => number,
-  party: PartyLink | null,
+  party: Accessor<PartyLink | null>,
 ) {
-  const loadingSince = useRef<number | null>(null)
-  const sent = useRef<{ state: PartyPlayerState; at: number } | null>(null)
+  let loadingSince: number | null = null
+  let sent: { state: PartyPlayerState; at: number } | null = null
 
-  const check = useEffectEvent(() => {
-    const el = video.current
-    if (!el || !party) return
+  const check = () => {
+    const el = video()
+    const link = party()
+    if (!el || !link) return
     const state = store.getState()
     const now = Date.now()
     const loading = state.waiting || state.pending !== null
-    if (!loading) loadingSince.current = null
-    else loadingSince.current ??= now
+    if (!loading) loadingSince = null
+    else loadingSince ??= now
 
-    const waits = party.waitingFor.length > 0
+    const waits = link.waitingFor.length > 0
     let next: PartyPlayerState
-    if (party.waitingFor.includes(party.selfId)) {
+    if (link.waitingFor.includes(link.selfId)) {
       next = !loading && ready(el, state.source.hls) ? "paused" : "buffering"
     } else if (
       loading &&
-      (party.playback.playing || waits) &&
-      now - (loadingSince.current ?? now) >= STALL_MS
+      (link.playback.playing || waits) &&
+      now - (loadingSince ?? now) >= STALL_MS
     ) {
       next = "buffering"
     } else {
       next = el.paused ? "paused" : "playing"
     }
 
-    const last = sent.current
-    if (last && last.state === next && now - last.at < STATUS_MS) return
-    sent.current = { state: next, at: now }
+    if (sent && sent.state === next && now - sent.at < STATUS_MS) return
+    sent = { state: next, at: now }
     const end = bufferedEnd(el, el.currentTime)
-    party.report({
+    link.report({
       state: next,
       positionSeconds: Math.max(0, position()),
       bufferedSeconds: end === null ? 0 : end - el.currentTime,
       method: state.source.method,
       quality: state.quality,
     })
-  })
+  }
 
-  const active = party !== null
-  useEffect(() => {
-    if (!active) return
-    check()
+  const active = createMemo(() => party() !== null)
+  createEffect(active, (following) => {
+    if (!following) return
+    // Once this run is over, as the timer's checks are, since a check reads
+    // the party as it is then.
+    queueMicrotask(check)
     const timer = window.setInterval(check, TICK_MS)
     return () => {
       window.clearInterval(timer)
-      sent.current = null
+      sent = null
     }
-  }, [active])
+  })
 }

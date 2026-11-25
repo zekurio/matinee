@@ -2,27 +2,22 @@ import {
   type AdminTranscodingSettings,
   type CapabilityCheck,
   HARDWARE_ACCELERATIONS,
+  type HardwareAcceleration,
   type HardwareCapability,
   type TranscodeVideoCodec,
 } from "@matinee/contracts"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@matinee/ui/components/select"
-import { useSelector } from "@tanstack/react-form"
+import { For, Show } from "solid-js"
 
 import { tr, translateKnown } from "@/i18n"
-import { withForm } from "@/lib/form"
+import { Select, SelectContent, SelectTrigger, SelectValue } from "@/kit/select"
+import type { Form } from "@/lib/form"
 
+import { RichSelectItem } from "./select-item-content"
 import {
   InputField,
   SettingWarning,
   SwitchField,
   SwitchRow,
-  typeOnly,
 } from "./setting-controls"
 import { SettingRow, SettingRows, SettingsSubsection } from "./settings-panel"
 import {
@@ -33,7 +28,7 @@ import {
   firstLine,
   label,
 } from "./transcoding-controls"
-import { draftForm } from "./transcoding-draft"
+import type { Draft } from "./transcoding-draft"
 
 const CODEC_LABELS = new Map<string, string>([
   ["h264", "H.264"],
@@ -75,191 +70,196 @@ const lowPowerCheck = (
   codec: TranscodeVideoCodec,
 ) => hardware.encoders.find((entry) => entry.codec === codec)?.lowPower
 
-export const HardwareSection = withForm({
-  ...draftForm,
-  props: typeOnly<{
-    settings: AdminTranscodingSettings
-    /** What the draft's acceleration detected as; null for software. */
-    hardware: HardwareCapability | null
-  }>(),
-  render: function Render({ form, settings, hardware }) {
-    const { capabilities } = settings
-    const accel = useSelector(
-      form.store,
-      (state) => state.values.hardwareAcceleration,
-    )
-    // A saved acceleration this build lacks stays listed so the select can
-    // still show it.
-    const accelerations = HARDWARE_ACCELERATIONS.filter(
+export function HardwareSection(props: {
+  form: Form<Draft>
+  settings: AdminTranscodingSettings
+  /** What the draft's acceleration detected as; null for software. */
+  hardware: HardwareCapability | null
+}) {
+  const accel = () => props.form.values().hardwareAcceleration
+  // A saved acceleration this build lacks stays listed so the select can
+  // still show it.
+  const accelerations = () =>
+    HARDWARE_ACCELERATIONS.filter(
       (value) =>
-        value === accel ||
-        value === settings.settings.hardwareAcceleration ||
-        accelerationAvailable(capabilities, value),
+        value === accel() ||
+        value === props.settings.settings.hardwareAcceleration ||
+        accelerationAvailable(props.settings.capabilities, value),
     )
-    const device = accel === "vaapi" ? "vaapiDevice" : "qsvDevice"
+  const device = () => (accel() === "vaapi" ? "vaapiDevice" : "qsvDevice")
 
-    return (
-      <SettingsSubsection
-        id="hardware"
-        title={tr("transcoding.hardware.title")}
-      >
-        <SettingRows>
-          <SettingRow
-            title={tr("transcoding.hardware.acceleration")}
-            layout="split"
-            footer={
-              hardware && hardware.device.status === "failed" ? (
-                <SettingWarning>
-                  {deviceFailure(hardware.device)}
-                </SettingWarning>
-              ) : null
+  return (
+    <SettingsSubsection id="hardware" title={tr("transcoding.hardware.title")}>
+      <SettingRows>
+        <SettingRow
+          title={tr("transcoding.hardware.acceleration")}
+          layout="split"
+          footer={
+            <Show
+              when={
+                props.hardware?.device.status === "failed" &&
+                props.hardware.device
+              }
+            >
+              {(failed) => (
+                <SettingWarning>{deviceFailure(failed())}</SettingWarning>
+              )}
+            </Show>
+          }
+        >
+          {(ids) => (
+            <Select<HardwareAcceleration>
+              items={accelerations().map((value) => ({
+                value,
+                label: accelerationLabel(value),
+              }))}
+              value={accel()}
+              onValueChange={(value) => {
+                if (value) props.form.set("hardwareAcceleration", value)
+              }}
+            >
+              <SelectTrigger id={ids.controlId} class="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <For each={accelerations()}>
+                  {(value) => (
+                    <RichSelectItem
+                      value={value}
+                      label={accelerationLabel(value)}
+                    >
+                      <>
+                        {accelerationLabel(value)}
+                        <Show
+                          when={
+                            !accelerationAvailable(
+                              props.settings.capabilities,
+                              value,
+                            )
+                          }
+                        >
+                          <span class="text-muted-foreground text-xs font-normal">
+                            {tr("transcoding.hardware.notInBuild")}
+                          </span>
+                        </Show>
+                      </>
+                    </RichSelectItem>
+                  )}
+                </For>
+              </SelectContent>
+            </Select>
+          )}
+        </SettingRow>
+        <Show when={accel() === "vaapi" || accel() === "qsv"}>
+          <InputField
+            form={props.form}
+            name={device()}
+            title={tr(`transcoding.field.${device()}`)}
+            autocomplete="off"
+            spellcheck={false}
+            class="text-13px font-mono"
+            placeholder={
+              props.settings.defaults[device()] ||
+              // Detection ran with the saved device, so its node is the
+              // default only while nothing is saved.
+              (props.settings.settings[device()] === ""
+                ? props.hardware?.devicePath
+                : null) ||
+              "/dev/dri/renderD128"
             }
-          >
-            {(ids) => (
-              <form.Field name="hardwareAcceleration">
-                {(field) => (
-                  <Select
-                    items={accelerations.map((value) => ({
-                      value,
-                      label: accelerationLabel(value),
-                    }))}
-                    value={field.state.value}
-                    onValueChange={(value) =>
-                      value && field.handleChange(value)
-                    }
-                  >
-                    <SelectTrigger id={ids.controlId} className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accelerations.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {accelerationLabel(value)}
-                          {!accelerationAvailable(capabilities, value) && (
-                            <span className="text-muted-foreground text-xs font-normal">
-                              {tr("transcoding.hardware.notInBuild")}
-                            </span>
-                          )}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </form.Field>
-            )}
-          </SettingRow>
-          {(accel === "vaapi" || accel === "qsv") && (
-            // Keyed, so switching between the two binds the other field.
-            <form.AppField key={device} name={device}>
-              {() => (
-                <InputField
-                  title={tr(`transcoding.field.${device}`)}
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="text-13px font-mono"
-                  placeholder={
-                    settings.defaults[device] ||
-                    // Detection ran with the saved device, so its node is the
-                    // default only while nothing is saved.
-                    (settings.settings[device] === ""
-                      ? hardware?.devicePath
-                      : null) ||
-                    "/dev/dri/renderD128"
-                  }
-                />
-              )}
-            </form.AppField>
+          />
+        </Show>
+        <Show when={props.hardware}>
+          {(hardware) => (
+            <>
+              <SwitchField
+                form={props.form}
+                name="enableHardwareEncoding"
+                title={tr("transcoding.hardware.encoding")}
+              />
+              <Show when={hasLowPower(hardware())}>
+                <For each={LOW_POWER_FIELDS}>
+                  {([codec, name, codecLabel]) => (
+                    <CapabilitySwitchField
+                      form={props.form}
+                      name={name}
+                      title={tr("transcoding.hardware.lowPower", {
+                        codec: codecLabel,
+                      })}
+                      unavailable={checkNote(lowPowerCheck(hardware(), codec))}
+                      available={
+                        lowPowerCheck(hardware(), codec)?.status === "ok"
+                      }
+                    />
+                  )}
+                </For>
+              </Show>
+            </>
           )}
-          {hardware && (
-            <form.AppField name="enableHardwareEncoding">
-              {() => (
-                <SwitchField title={tr("transcoding.hardware.encoding")} />
-              )}
-            </form.AppField>
-          )}
-          {hardware &&
-            hasLowPower(hardware) &&
-            LOW_POWER_FIELDS.map(([codec, name, codecLabel]) => (
-              <form.AppField key={name} name={name}>
-                {() => (
-                  <CapabilitySwitchField
-                    title={tr("transcoding.hardware.lowPower", {
-                      codec: codecLabel,
-                    })}
-                    unavailable={checkNote(lowPowerCheck(hardware, codec))}
-                    available={lowPowerCheck(hardware, codec)?.status === "ok"}
-                  />
-                )}
-              </form.AppField>
-            ))}
-        </SettingRows>
-      </SettingsSubsection>
-    )
-  },
-})
+        </Show>
+      </SettingRows>
+    </SettingsSubsection>
+  )
+}
 
-export const HardwareDecodingSection = withForm({
-  ...draftForm,
-  props: typeOnly<{ settings: AdminTranscodingSettings }>(),
-  render: function Render({ form, settings }) {
-    const accel = useSelector(
-      form.store,
-      (state) => state.values.hardwareAcceleration,
-    )
-    if (accel === "none") return null
-    const decodable =
-      settings.hardwareDecodeSupport.find(
-        (entry) => entry.acceleration === accel,
-      )?.codecs ?? []
+export function HardwareDecodingSection(props: {
+  form: Form<Draft>
+  settings: AdminTranscodingSettings
+}) {
+  const accel = () => props.form.values().hardwareAcceleration
+  const decodable = () =>
+    props.settings.hardwareDecodeSupport.find(
+      (entry) => entry.acceleration === accel(),
+    )?.codecs ?? []
+  const codecs = () => props.form.values().hardwareDecodingCodecs
 
-    return (
+  return (
+    <Show when={accel() !== "none"}>
       <SettingsSubsection
         id="hardware-decoding"
         title={tr("transcoding.decoding.title")}
       >
         <SettingRows>
-          <form.Field name="hardwareDecodingCodecs">
-            {(field) =>
-              decodable.map((codec) => (
-                <SwitchRow
-                  key={codec}
-                  title={label(CODEC_LABELS, codec)}
-                  checked={field.state.value.includes(codec)}
-                  onChange={(on) =>
-                    field.handleChange((codecs) =>
-                      on
-                        ? [...codecs, codec]
-                        : codecs.filter((entry) => entry !== codec),
-                    )
-                  }
-                />
-              ))
-            }
-          </form.Field>
-          {accel !== "videotoolbox" && (
-            <>
-              <form.AppField name="enableDecodingColorDepth10Hevc">
-                {() => (
-                  <SwitchField title={tr("transcoding.decoding.hevc10")} />
-                )}
-              </form.AppField>
-              <form.AppField name="enableDecodingColorDepth10Vp9">
-                {() => <SwitchField title={tr("transcoding.decoding.vp910")} />}
-              </form.AppField>
-              <form.AppField name="enableDecodingColorDepth10HevcRext">
-                {() => (
-                  <SwitchField title={tr("transcoding.decoding.hevcRext")} />
-                )}
-              </form.AppField>
-              <form.AppField name="enableDecodingColorDepth12HevcRext">
-                {() => (
-                  <SwitchField title={tr("transcoding.decoding.hevcRext12")} />
-                )}
-              </form.AppField>
-            </>
-          )}
+          <For each={decodable()}>
+            {(codec) => (
+              <SwitchRow
+                title={label(CODEC_LABELS, codec)}
+                checked={codecs().includes(codec)}
+                onChange={(on) =>
+                  props.form.set(
+                    "hardwareDecodingCodecs",
+                    on
+                      ? [...codecs(), codec]
+                      : codecs().filter((entry) => entry !== codec),
+                  )
+                }
+              />
+            )}
+          </For>
+          <Show when={accel() !== "videotoolbox"}>
+            <SwitchField
+              form={props.form}
+              name="enableDecodingColorDepth10Hevc"
+              title={tr("transcoding.decoding.hevc10")}
+            />
+            <SwitchField
+              form={props.form}
+              name="enableDecodingColorDepth10Vp9"
+              title={tr("transcoding.decoding.vp910")}
+            />
+            <SwitchField
+              form={props.form}
+              name="enableDecodingColorDepth10HevcRext"
+              title={tr("transcoding.decoding.hevcRext")}
+            />
+            <SwitchField
+              form={props.form}
+              name="enableDecodingColorDepth12HevcRext"
+              title={tr("transcoding.decoding.hevcRext12")}
+            />
+          </Show>
         </SettingRows>
       </SettingsSubsection>
-    )
-  },
-})
+    </Show>
+  )
+}

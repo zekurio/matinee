@@ -1,17 +1,22 @@
+import "./styles.css"
 import "@matinee/ui/globals.css"
-import { API_REFERENCE_PAGE_PATH, INVITE_PAGE_PATH } from "@matinee/contracts"
+import {
+  API_REFERENCE_PAGE_PATH,
+  INVITE_PAGE_PATH,
+} from "@matinee/contracts/paths"
 import { initTheme } from "@matinee/ui/lib/theme"
-import { QueryClientProvider } from "@tanstack/react-query"
-import { createRouter, RouterProvider } from "@tanstack/react-router"
-import { StrictMode } from "react"
-import { createRoot } from "react-dom/client"
+import { render } from "@solidjs/web"
+import { QueryClientProvider } from "@tanstack/solid-query"
+import { createRouter, RouterProvider } from "@tanstack/solid-router"
 
-import { LocaleBoundary } from "./i18n/react"
-import { prefetchHome } from "./lib/home-queries"
-import { orpc, queryClient, sessionLost } from "./lib/rpc"
-import { syncUiText } from "./lib/ui-text"
+import { LocaleBoundary } from "@/i18n/solid"
+import { prefetchHome } from "@/lib/home-queries"
+import { orpc, queryClient, sessionLost } from "@/lib/rpc"
+import { syncUiText } from "@/lib/ui-text"
+import { warmUiSdk } from "@/lib/warm-styles"
+import { applyLanguage } from "@/stores/language"
+
 import { routeTree } from "./routeTree.gen"
-import { applyLanguage } from "./stores/language"
 
 initTheme()
 syncUiText()
@@ -26,8 +31,7 @@ const fontReady = Promise.race([
 ])
 /**
  * Pages for someone signed out. They ask for nothing that needs a session,
- * and a lost session doesn't send them to the login. An invite link has its
- * token in the fragment, which must not end up in the login's `redirect`.
+ * and a lost session doesn't send them to the login.
  */
 const SIGNED_OUT_PAGES = [
   "/login",
@@ -36,22 +40,13 @@ const SIGNED_OUT_PAGES = [
   API_REFERENCE_PAGE_PATH,
 ]
 // Every page but the login asks who is signed in first. Asking now, while
-// the language loads, saves the round trip after it. So does asking for
-// what the signed-in pages show first: the libraries in the menu, and on
-// Home its rows. Without a session they fail, and the login follows.
+// the language loads, saves the round trip after it.
 void queryClient.prefetchQuery(orpc.auth.session.queryOptions())
 if (!SIGNED_OUT_PAGES.includes(location.pathname)) {
   void queryClient.prefetchQuery(orpc.libraries.list.queryOptions())
 }
-// A settings address opened fresh shows its dialog over Home.
-if (
-  location.pathname === "/" ||
-  /^\/settings(?:\/|$)/.test(location.pathname)
-) {
-  prefetchHome(queryClient)
-}
-// The first render is in the right language and face, so it waits for
-// both to load.
+if (location.pathname === "/") prefetchHome(queryClient)
+warmUiSdk()
 await Promise.all([applyLanguage(), fontReady])
 
 const router = createRouter({
@@ -69,7 +64,7 @@ sessionLost.handler = () => {
   void router.navigate({ to: "/login", search: { redirect: href } })
 }
 
-declare module "@tanstack/react-router" {
+declare module "@tanstack/solid-router" {
   interface Register {
     router: typeof router
   }
@@ -78,12 +73,13 @@ declare module "@tanstack/react-router" {
 const root = document.getElementById("root")
 if (!root) throw new Error("Missing #root element")
 
-createRoot(root).render(
-  <StrictMode>
+render(
+  () => (
     <QueryClientProvider client={queryClient}>
       <LocaleBoundary>
         <RouterProvider router={router} />
       </LocaleBoundary>
     </QueryClientProvider>
-  </StrictMode>,
+  ),
+  root,
 )

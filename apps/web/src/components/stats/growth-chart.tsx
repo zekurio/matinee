@@ -1,6 +1,6 @@
 import type { LibraryGrowthBucket, StatsUnit } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
-import { type PointerEvent, useState } from "react"
+import { createMemo, createSignal, For, Show } from "solid-js"
 
 import { perLocale, tr } from "@/i18n"
 import { formatBytes, formatCount } from "@/lib/format"
@@ -59,154 +59,179 @@ function tickAlign(index: number, count: number) {
  * line. Pointing at the plot reads out the nearest bucket in place of
  * what arrived in the whole range.
  */
-export function GrowthChart({
-  buckets,
-  unit,
-  className,
-}: {
+export function GrowthChart(props: {
   buckets: LibraryGrowthBucket[]
   unit: StatsUnit
-  className?: string
+  class?: string
 }) {
-  const [active, setActive] = useState<number | null>(null)
-  const count = buckets.length
-  const top = niceCeiling(
-    Math.max(0, ...buckets.map((bucket) => bucket.totalFiles)),
-  )
-  const added = buckets.reduce(
-    (sum, bucket) => ({
-      movies: sum.movies + bucket.movies,
-      episodes: sum.episodes + bucket.episodes,
-      sizeBytes: sum.sizeBytes + bucket.sizeBytes,
-    }),
-    { movies: 0, episodes: 0, sizeBytes: 0 },
-  )
+  const [active, setActive] = createSignal<number | null>(null)
+  const count = () => props.buckets.length
 
-  // `y` counts up from the baseline, in percent of the plot's height.
-  const points = buckets.map((bucket, index) => ({
-    x: xAt(index, count),
-    y: (bucket.totalFiles / top) * 100,
-  }))
-  const first = points[0]
-  // A single bucket still gets a line, flat across the plot.
-  const drawn =
-    points.length === 1 && first
-      ? [
-          { x: 0, y: first.y },
-          { x: 100, y: first.y },
-        ]
-      : points
-  const segments = drawn.map((point) => `${point.x} ${100 - point.y}`)
-  const line = `M${segments.join(" L")}`
-  const area = `M${drawn[0]?.x ?? 0} 100 L${segments.join(" L")} L${drawn.at(-1)?.x ?? 100} 100 Z`
-
-  const shown = active === null ? null : buckets[active]
-  const marker = active === null ? null : points[active]
-
-  function pointAt(event: PointerEvent<HTMLDivElement>) {
-    const rect = event.currentTarget.getBoundingClientRect()
-    if (count === 0 || rect.width === 0) return
-    const index = Math.round(
-      ((event.clientX - rect.left) / rect.width) * (count - 1),
+  // Worked out once per answer; pointing moves only the marker and the caption.
+  const chart = createMemo(() => {
+    const buckets = props.buckets
+    const top = niceCeiling(
+      Math.max(0, ...buckets.map((bucket) => bucket.totalFiles)),
     )
-    setActive(Math.min(count - 1, Math.max(0, index)))
+    const added = buckets.reduce(
+      (sum, bucket) => ({
+        movies: sum.movies + bucket.movies,
+        episodes: sum.episodes + bucket.episodes,
+        sizeBytes: sum.sizeBytes + bucket.sizeBytes,
+      }),
+      { movies: 0, episodes: 0, sizeBytes: 0 },
+    )
+    // `y` counts up from the baseline, in percent of the plot's height.
+    const points = buckets.map((bucket, index) => ({
+      x: xAt(index, buckets.length),
+      y: (bucket.totalFiles / top) * 100,
+    }))
+    const first = points[0]
+    // A single bucket still gets a line, flat across the plot.
+    const drawn =
+      points.length === 1 && first
+        ? [
+            { x: 0, y: first.y },
+            { x: 100, y: first.y },
+          ]
+        : points
+    const segments = drawn.map((point) => `${point.x} ${100 - point.y}`)
+    return {
+      top,
+      summary: arrivals(added),
+      points,
+      line: `M${segments.join(" L")}`,
+      area: `M${drawn[0]?.x ?? 0} 100 L${segments.join(" L")} L${drawn.at(-1)?.x ?? 100} 100 Z`,
+      ticks: [...axisTicks(buckets.length)],
+    }
+  })
+
+  const shown = () => {
+    const index = active()
+    return index === null ? undefined : props.buckets[index]
+  }
+  const caption = () => {
+    const bucket = shown()
+    return bucket
+      ? { name: bucketName(bucket.start, props.unit), text: describe(bucket) }
+      : { name: tr("stats.growth.total"), text: chart().summary }
+  }
+  const marker = () => {
+    const index = active()
+    return index === null ? undefined : chart().points[index]
+  }
+
+  function pointAt(event: PointerEvent & { currentTarget: HTMLDivElement }) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    if (count() === 0 || rect.width === 0) return
+    const index = Math.round(
+      ((event.clientX - rect.left) / rect.width) * (count() - 1),
+    )
+    setActive(Math.min(count() - 1, Math.max(0, index)))
   }
 
   return (
-    <figure className={cn("flex min-w-0 flex-col gap-2", className)}>
-      <figcaption className="text-muted-foreground min-h-5 truncate text-xs leading-5 tabular-nums">
-        <span className="text-foreground font-medium">
-          {shown ? bucketName(shown.start, unit) : tr("stats.growth.total")}
-        </span>
-        {` · ${shown ? describe(shown) : arrivals(added)}`}
+    <figure class={cn("flex min-w-0 flex-col gap-2", props.class)}>
+      <figcaption class="text-muted-foreground min-h-5 truncate text-xs leading-5 tabular-nums">
+        <span class="text-foreground font-medium">{caption().name}</span>
+        {` · ${caption().text}`}
       </figcaption>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2">
+      <div class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2">
         <span
-          aria-hidden
-          className="text-muted-foreground text-11px -translate-y-1/2 self-start leading-none tabular-nums"
+          aria-hidden="true"
+          class="text-muted-foreground text-11px -translate-y-1/2 self-start leading-none tabular-nums"
         >
-          {formatCount(top)}
+          {formatCount(chart().top)}
         </span>
         <div
           onPointerMove={pointAt}
           onPointerDown={pointAt}
           onPointerLeave={() => setActive(null)}
-          className="border-foreground/15 relative h-36 touch-pan-y border-b"
+          class="border-foreground/15 relative h-36 touch-pan-y border-b"
         >
           <span
-            aria-hidden
-            className="border-foreground/10 absolute inset-x-0 top-0 border-t border-dashed"
+            aria-hidden="true"
+            class="border-foreground/10 absolute inset-x-0 top-0 border-t border-dashed"
           />
           <svg
-            aria-hidden
+            aria-hidden="true"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
-            className="absolute inset-0 size-full overflow-visible"
+            class="absolute inset-0 size-full overflow-visible"
           >
-            <path d={area} className="fill-primary/10" />
+            <path d={chart().area} class="fill-primary/10" />
             <path
-              d={line}
+              d={chart().line}
               fill="none"
-              strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-              className="stroke-primary"
+              stroke-width={2}
+              stroke-linejoin="round"
+              stroke-linecap="round"
+              vector-effect="non-scaling-stroke"
+              class="stroke-primary"
             />
           </svg>
-          {marker && (
-            <>
-              <span
-                aria-hidden
-                className="bg-foreground/20 absolute inset-y-0 w-px -translate-x-1/2"
-                style={{ left: `${marker.x}%` }}
-              />
-              <span
-                aria-hidden
-                className="bg-primary ring-background absolute size-2 -translate-x-1/2 translate-y-1/2 rounded-full ring-2"
-                style={{ left: `${marker.x}%`, bottom: `${marker.y}%` }}
-              />
-            </>
-          )}
-          <ol aria-label={tr("stats.growth.label")} className="sr-only">
-            {buckets.map((bucket) => (
-              <li key={bucket.start}>
-                {tr("stats.chart.point", {
-                  date: bucketName(bucket.start, unit),
-                  value: describe(bucket),
-                })}
-              </li>
-            ))}
+          <Show when={marker()}>
+            {(point) => (
+              <>
+                <span
+                  aria-hidden="true"
+                  class="bg-foreground/20 absolute inset-y-0 w-px -translate-x-1/2"
+                  style={{ left: `${point().x}%` }}
+                />
+                <span
+                  aria-hidden="true"
+                  class="bg-primary ring-background absolute size-2 -translate-x-1/2 translate-y-1/2 rounded-full ring-2"
+                  style={{ left: `${point().x}%`, bottom: `${point().y}%` }}
+                />
+              </>
+            )}
+          </Show>
+          <ol aria-label={tr("stats.growth.label")} class="sr-only">
+            <For each={props.buckets} keyed={(bucket) => bucket.start}>
+              {(bucket) => (
+                <li>
+                  {tr("stats.chart.point", {
+                    date: bucketName(bucket().start, props.unit),
+                    value: describe(bucket()),
+                  })}
+                </li>
+              )}
+            </For>
           </ol>
         </div>
         <div
-          aria-hidden
-          className="text-muted-foreground text-11px relative col-start-2 h-4 leading-4 tabular-nums"
+          aria-hidden="true"
+          class="text-muted-foreground text-11px relative col-start-2 h-4 leading-4 tabular-nums"
         >
-          {[...axisTicks(count)].map(([index, tick]) => {
-            const bucket = buckets[index]
-            if (!bucket) return null
-            const align = tickAlign(index, count)
-            return (
-              <span
-                key={bucket.start}
-                className={cn(
-                  "absolute top-0 whitespace-nowrap",
-                  align === "start" && "left-0",
-                  align === "end" && "right-0",
-                  align === "center" && "-translate-x-1/2",
-                  !tick.narrow && "hidden sm:block",
-                )}
-                style={
-                  align === "center"
-                    ? { left: `${xAt(index, count)}%` }
-                    : undefined
-                }
-              >
-                {bucketAxisLabel(bucket.start, unit)}
-              </span>
-            )
-          })}
+          <For each={chart().ticks}>
+            {([index, tick]) => (
+              <Show when={props.buckets[index]}>
+                {(bucket) => {
+                  const align = () => tickAlign(index, count())
+                  return (
+                    <span
+                      class={[
+                        "absolute top-0 whitespace-nowrap",
+                        {
+                          "left-0": align() === "start",
+                          "right-0": align() === "end",
+                          "-translate-x-1/2": align() === "center",
+                          "hidden sm:block": !tick.narrow,
+                        },
+                      ]}
+                      style={
+                        align() === "center"
+                          ? { left: `${xAt(index, count())}%` }
+                          : undefined
+                      }
+                    >
+                      {bucketAxisLabel(bucket().start, props.unit)}
+                    </span>
+                  )
+                }}
+              </Show>
+            )}
+          </For>
         </div>
       </div>
     </figure>

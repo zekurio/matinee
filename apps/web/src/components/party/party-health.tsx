@@ -1,18 +1,18 @@
 import type { PartyMemberHealth } from "@matinee/contracts"
+import { Hourglass, UsersRound } from "lucide"
+import { createMemo, For, Show } from "solid-js"
+
+import { UserAvatar } from "@/components/user-avatar"
+import { perLocale, tr } from "@/i18n"
+import { Icon } from "@/kit/icon"
 import {
   Popover,
   PopoverContent,
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@matinee/ui/components/popover"
-import { cn } from "@matinee/ui/lib/utils"
-import { useQuery } from "@tanstack/react-query"
-import { HourglassIcon, UsersRoundIcon } from "lucide-react"
-import type { RefObject } from "react"
-
-import { UserAvatar } from "@/components/user-avatar"
-import { perLocale, tr } from "@/i18n"
+} from "@/kit/popover"
+import { liveData, useLiveQuery } from "@/lib/live-query"
 import { liveQuery, orpc } from "@/lib/rpc"
 import { methodName, qualityName } from "@/lib/stats"
 import { usePlayerStore, usePlayerStoreApi } from "@/stores/player"
@@ -89,49 +89,60 @@ function detailOf(health: PartyMemberHealth): string | null {
 }
 
 /** Each member with how their player keeps up, while the list is open. */
-function HealthList({ party }: { party: PartyLink }) {
+function HealthList(props: { party: PartyLink }) {
   // Mounted only while open, so the stream closes with the list.
-  const health = useQuery({
+  const health = useLiveQuery(() => ({
     ...orpc.party.health.experimental_liveOptions(),
     ...liveQuery,
+  }))
+  const byId = createMemo(() => {
+    const members = liveData(health())?.members ?? []
+    return new Map(members.map((entry) => [entry.userId, entry]))
   })
-  const byId = new Map(
-    (health.data?.members ?? []).map((entry) => [entry.userId, entry]),
-  )
   return (
-    <ul className="flex flex-col gap-1">
-      {party.members.map(({ user }) => {
-        const entry = byId.get(user.id)
-        const verdict: Verdict = entry
-          ? judge(entry, party.playback.playing)
-          : { tone: "off", text: tr("party.health.checking") }
-        const detail = entry ? detailOf(entry) : null
-        const name = user.displayName ?? user.username
-        return (
-          <li key={user.id} className="flex items-center gap-2.5 px-1.5 py-1">
-            <UserAvatar user={user} className="size-7 text-xs" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">
-                {user.id === party.selfId
-                  ? tr("party.health.you", { name })
-                  : name}
-              </p>
-              {detail && (
-                <p className="text-muted-foreground truncate text-xs">
-                  {detail}
+    <ul class="flex flex-col gap-1">
+      <For each={props.party.members} keyed={(member) => member.user.id}>
+        {(member) => {
+          const entry = () => byId().get(member().user.id)
+          const verdict = (): Verdict => {
+            const found = entry()
+            return found
+              ? judge(found, props.party.playback.playing)
+              : { tone: "off", text: tr("party.health.checking") }
+          }
+          const detail = () => {
+            const found = entry()
+            return found ? detailOf(found) : null
+          }
+          const name = () => member().user.displayName ?? member().user.username
+          return (
+            <li class="flex items-center gap-2.5 px-1.5 py-1">
+              <UserAvatar user={member().user} class="size-7 text-xs" />
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-medium">
+                  {member().user.id === props.party.selfId
+                    ? tr("party.health.you", { name: name() })
+                    : name()}
                 </p>
-              )}
-            </div>
-            <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium tabular-nums">
-              <span
-                aria-hidden
-                className={cn("size-2 rounded-full", TONES.get(verdict.tone))}
-              />
-              {verdict.text}
-            </span>
-          </li>
-        )
-      })}
+                <Show when={detail()}>
+                  {(text) => (
+                    <p class="text-muted-foreground truncate text-xs">
+                      {text()}
+                    </p>
+                  )}
+                </Show>
+              </div>
+              <span class="flex shrink-0 items-center gap-1.5 text-xs font-medium tabular-nums">
+                <span
+                  aria-hidden="true"
+                  class={["size-2 rounded-full", TONES.get(verdict().tone)]}
+                />
+                {verdict().text}
+              </span>
+            </li>
+          )
+        }}
+      </For>
     </ul>
   )
 }
@@ -140,48 +151,48 @@ function HealthList({ party }: { party: PartyLink }) {
  * How many watch, or who the party waits for, over the picture. Pressing
  * it lists how each member's player keeps up.
  */
-export function PartyHealthButton({
-  party,
-  container,
-}: {
+export function PartyHealthButton(props: {
   party: PartyLink
   /** The player, which may be the full-screen element. */
-  container: RefObject<HTMLDivElement | null>
+  container: () => HTMLElement | undefined
 }) {
-  const actions = usePlayerStoreApi().getState()
+  const { setMenuOpen } = usePlayerStoreApi().getState()
   // As a menu of the player's, so the controls stay up while it's open.
   const open = usePlayerStore((state) => state.openMenu === MENU)
-  const waits = party.waitingFor.length > 0
-  const who = waits ? waitingNames(party) : null
-  const label = !waits
-    ? tr("party.player.watching", { count: party.members.length })
-    : who
+  const waits = () => props.party.waitingFor.length > 0
+  const label = () => {
+    if (!waits()) {
+      return tr("party.player.watching", { count: props.party.members.length })
+    }
+    const who = waitingNames(props.party)
+    return who
       ? tr("party.player.waiting", { names: who })
       : tr("party.player.waitingForYou")
+  }
   return (
     <Popover
-      open={open}
-      onOpenChange={(next) => actions.setMenuOpen(MENU, next)}
+      open={open()}
+      onOpenChange={(next: boolean) => setMenuOpen(MENU, next)}
     >
       <PopoverTrigger
         title={tr("party.health.title")}
-        className="flex max-w-60 min-w-0 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur-md outline-none hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white/70 [&_svg]:size-4 [&_svg]:shrink-0"
+        class="flex max-w-60 min-w-0 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur-md outline-none hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white/70 [&_svg]:size-4 [&_svg]:shrink-0"
       >
-        {waits ? <HourglassIcon aria-hidden /> : <UsersRoundIcon aria-hidden />}
-        <span className="truncate">{label}</span>
+        <Icon icon={waits() ? Hourglass : UsersRound} />
+        <span class="truncate">{label()}</span>
       </PopoverTrigger>
       <PopoverContent
         side="bottom"
         align="end"
         sideOffset={8}
-        portalContainer={container}
-        className="w-80 max-w-(--available-width) p-1.5"
+        portalContainer={props.container()}
+        class="w-80 max-w-(--available-width) p-1.5"
       >
-        <PopoverHeader className="px-2">
+        <PopoverHeader class="px-2">
           <PopoverTitle>{tr("party.health.title")}</PopoverTitle>
         </PopoverHeader>
-        <HealthList party={party} />
-        <p className="text-muted-foreground px-2 pt-1 pb-1.5 text-xs">
+        <HealthList party={props.party} />
+        <p class="text-muted-foreground px-2 pt-1 pb-1.5 text-xs">
           {tr("party.health.hint")}
         </p>
       </PopoverContent>

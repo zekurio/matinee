@@ -1,5 +1,5 @@
 import type HlsPlayer from "hls.js"
-import { type RefObject, useEffect, useEffectEvent } from "react"
+import { type Accessor, createEffect, createMemo } from "solid-js"
 
 /** A playlist to play, from `start` seconds. A new `attempt` loads it again. */
 export type HlsSource = { url: string; start: number; attempt: number }
@@ -22,23 +22,22 @@ export function loadHls() {
 /**
  * Plays an HLS playlist in `video`: with hls.js where the browser has
  * Media Source Extensions, else natively (iOS before 17.1). `onError` gets
- * a `MediaError` code for failures the video doesn't report itself.
+ * a `MediaError` code for failures the video doesn't report itself. Each
+ * source, and each attempt at it, gets its own instance, destroyed when the
+ * next one starts or the player goes.
  */
 export function useHls(
-  video: RefObject<HTMLVideoElement | null>,
-  source: HlsSource | null,
+  video: () => HTMLVideoElement | undefined,
+  source: Accessor<HlsSource | null>,
   onError: (code: number) => void,
 ) {
-  // hls.js reports to whichever `onError` the latest render passed.
-  const report = useEffectEvent(onError)
-
-  const url = source?.url
-  const start = source?.start ?? 0
-  const attempt = source?.attempt
-  // Runs hls.js for the playlist, with a new instance for each attempt.
-  useEffect(() => {
-    const el = video.current
-    if (!el || url === undefined) return
+  const current = createMemo(source, {
+    equals: (a, b) => a?.url === b?.url && a?.attempt === b?.attempt,
+  })
+  createEffect(current, (playing) => {
+    const el = video()
+    if (!el || !playing) return
+    const { url, start } = playing
     let cancelled = false
     let hls: HlsPlayer | null = null
     loadHls().then(
@@ -49,7 +48,7 @@ export function useHls(
           if (el.canPlayType("application/vnd.apple.mpegurl")) {
             // The video loads it, and reports errors as for any source.
             el.src = url
-          } else report(MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED)
+          } else onError(MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED)
           return
         }
         const player = new Hls({
@@ -88,20 +87,22 @@ export function useHls(
                 ? MediaError.MEDIA_ERR_DECODE
                 : MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
           player.destroy()
-          report(code)
+          hls = null
+          onError(code)
         })
         player.loadSource(url)
         player.attachMedia(el)
       },
       () => {
         // The chunk didn't load, as when the server went away.
-        if (!cancelled) report(MediaError.MEDIA_ERR_NETWORK)
+        if (!cancelled) onError(MediaError.MEDIA_ERR_NETWORK)
       },
     )
     // Leaves the video's src alone unless it's still hls.js's own.
     return () => {
       cancelled = true
       hls?.destroy()
+      hls = null
     }
-  }, [url, attempt])
+  })
 }

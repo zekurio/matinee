@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { createFileRoute, Outlet, redirect } from "@tanstack/solid-router"
 
 import { identifyBrowser } from "@/lib/client-name"
 import { orpc } from "@/lib/rpc"

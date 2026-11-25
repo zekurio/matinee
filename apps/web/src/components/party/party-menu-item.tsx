@@ -1,10 +1,11 @@
 import type { MediaItem } from "@matinee/contracts"
-import { DropdownMenuItem } from "@matinee/ui/components/dropdown-menu"
-import { toast } from "@matinee/ui/components/sonner"
-import { useMutation } from "@tanstack/react-query"
-import { ListPlusIcon } from "lucide-react"
+import { useMutation } from "@tanstack/solid-query"
+import { ListPlus } from "lucide"
 
 import { tr } from "@/i18n"
+import { DropdownMenuItem } from "@/kit/dropdown-menu"
+import { Icon } from "@/kit/icon"
+import { toast } from "@/kit/toast"
 import type { PartyRole } from "@/lib/party"
 import { client, errorMessage } from "@/lib/rpc"
 
@@ -13,31 +14,29 @@ import { client, errorMessage } from "@/lib/rpc"
  * queues the file, anyone else proposes it. The server tells the two
  * apart; the wording here only says which it will be.
  */
-export function PartyMenuItem({
-  item,
-  name,
-  role,
-}: {
+export function PartyMenuItem(props: {
   item: MediaItem
   /** Names the file in the toast. */
   name: string
   role: PartyRole
 }) {
-  const add = useMutation({
-    mutationFn: () => client.party.queue.add({ itemId: item.id }),
+  const add = useMutation(() => ({
+    mutationFn: () => client.party.queue.add({ itemId: props.item.id }),
     onSuccess: () =>
       toast.success(
-        role === "owner"
-          ? tr("party.queued", { name })
-          : tr("party.proposed", { name }),
+        props.role === "owner"
+          ? tr("party.queued", { name: props.name })
+          : tr("party.proposed", { name: props.name }),
       ),
-    onError: (cause) =>
+    onError: (cause: Error) =>
       toast.error(tr("party.failed"), { description: errorMessage(cause) }),
-  })
+  }))
   return (
-    <DropdownMenuItem disabled={add.isPending} onClick={() => add.mutate()}>
-      <ListPlusIcon />
-      {role === "owner" ? tr("party.menu.queue") : tr("party.menu.propose")}
+    <DropdownMenuItem disabled={add.isPending} onSelect={() => add.mutate()}>
+      <Icon icon={ListPlus} />
+      {props.role === "owner"
+        ? tr("party.menu.queue")
+        : tr("party.menu.propose")}
     </DropdownMenuItem>
   )
 }

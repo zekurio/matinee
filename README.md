@@ -29,8 +29,8 @@ README with the details.
 - [The server](apps/server) scans libraries, fetches metadata, streams,
   transcodes, and serves the web app, so one process is the whole
   install. Hosting it starts there.
-- [The web app](apps/web) is what you get in a browser. The Solid rewrite
-  in [apps/solid](apps/solid) also serves the TV UI at `/tv/`.
+- [The web app](apps/web) is what you get in a browser, built on Solid. It
+  also serves the TV UI at `/tv/`.
 - [The Flutter app](apps/flutter) runs on Android phones, tablets, and
   Android TV, and keeps downloads for watching offline. Its iPhone and
   iPad side has run on simulators, but not yet on a device.

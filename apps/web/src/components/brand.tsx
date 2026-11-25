@@ -1,7 +1,7 @@
 import { cn } from "@matinee/ui/lib/utils"
-import { useId } from "react"
+import { createUniqueId } from "solid-js"
 
-import { LOGO } from "./logo.gen"
+import { LOGO } from "@/components/logo.gen"
 
 /**
  * A sun going down behind three horizon bands: the cap, then two slices
@@ -14,60 +14,60 @@ const SUNSET =
   "M2.53 16.2H21.47A10 10 0 0 1 20.77 17.8H3.23A10 10 0 0 1 2.53 16.2Z" +
   "M4.15 19.2H19.85A10 10 0 0 1 18.38 20.7H5.62A10 10 0 0 1 4.15 19.2Z"
 
-/**
- * The Matinee mark: an afternoon sun, amber at the top and blue at the
- * horizon. The colors are the logo's own (`--logo-*` in globals.css), a
- * deeper set in light mode, and don't follow the server's accent.
- */
-export function LogoMark({ className }: { className?: string }) {
-  const gradient = useId()
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden
-      className={cn("size-6 shrink-0", className)}
-    >
-      <Sunset id={gradient} />
-    </svg>
-  )
-}
-
 /** The mark's gradient and path, on its 24 unit grid. */
-function Sunset({ id, transform }: { id: string; transform?: string }) {
+function Sunset(props: { id: string; transform?: string }) {
   return (
     <>
       <defs>
         <linearGradient
-          id={id}
+          id={props.id}
           x1="0"
           y1="3"
           x2="0"
           y2="20.7"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0" style={{ stopColor: "var(--logo-sun)" }} />
-          <stop offset="0.5" style={{ stopColor: "var(--logo-dusk)" }} />
-          <stop offset="1" style={{ stopColor: "var(--logo-horizon)" }} />
+          <stop offset="0" style={{ "stop-color": "var(--logo-sun)" }} />
+          <stop offset="0.5" style={{ "stop-color": "var(--logo-dusk)" }} />
+          <stop offset="1" style={{ "stop-color": "var(--logo-horizon)" }} />
         </linearGradient>
       </defs>
-      <path d={SUNSET} fill={`url(#${id})`} transform={transform} />
+      <path d={SUNSET} fill={`url(#${props.id})`} transform={props.transform} />
     </>
   )
 }
 
 /**
- * The mark with the wordmark beside it, lowercase "matinee" in Unbounded
- * Bold drawn as outlines (brand/wordmark.py). The word takes the text
- * color. It is as tall as the font size, so set the size with a text class.
+ * The Matinee mark: an afternoon sun, amber at the top and blue at the
+ * horizon. The colors are the logo's own (`--logo-*` in globals.css), a
+ * deeper set in light mode, and don't follow the server's accent.
  */
-export function Logo({ className }: { className?: string }) {
-  const gradient = useId()
+export function LogoMark(props: { class?: string }) {
+  const gradient = createUniqueId()
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      class={cn("size-6 shrink-0", props.class)}
+    >
+      <Sunset id={gradient} />
+    </svg>
+  )
+}
+
+/**
+ * The mark with the wordmark beside it, lowercase "matinee" drawn as
+ * outlines (brand/wordmark.py). The word takes the text color. It is as
+ * tall as the font size, so set the size with a text class or a height.
+ */
+export function Logo(props: { class?: string; label?: string }) {
+  const gradient = createUniqueId()
   return (
     <svg
       viewBox={`0 0 ${LOGO.width} ${LOGO.height}`}
       role="img"
-      aria-label="Matinee"
-      className={cn("h-[1em] w-auto shrink-0 text-15px", className)}
+      aria-label={props.label ?? "Matinee"}
+      class={cn("h-[1em] w-auto shrink-0 text-15px", props.class)}
     >
       <Sunset id={gradient} transform={LOGO.mark} />
       <path

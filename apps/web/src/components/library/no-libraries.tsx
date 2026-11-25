@@ -1,4 +1,9 @@
-import { buttonVariants } from "@matinee/ui/components/button"
+import { Link } from "@tanstack/solid-router"
+import { FolderPlus, Popcorn } from "lucide"
+import { Show } from "solid-js"
+
+import { tr } from "@/i18n"
+import { buttonVariants } from "@/kit/button"
 import {
   Empty,
   EmptyContent,
@@ -6,11 +11,8 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@matinee/ui/components/empty"
-import { Link } from "@tanstack/react-router"
-import { FolderPlusIcon, PopcornIcon } from "lucide-react"
-
-import { tr } from "@/i18n"
+} from "@/kit/empty"
+import { Icon } from "@/kit/icon"
 import { settingsLink } from "@/lib/settings"
 
 /**
@@ -18,29 +20,31 @@ import { settingsLink } from "@/lib/settings"
  * every library, so none means none exist, and gets the way to add one.
  * Anyone else may be in no group that opens one.
  */
-export function NoLibraries({ admin }: { admin: boolean }) {
+export function NoLibraries(props: { admin: boolean }) {
   return (
-    <Empty className="border border-dashed">
+    <Empty class="border border-dashed">
       <EmptyHeader>
         <EmptyMedia variant="icon">
-          {admin ? <FolderPlusIcon /> : <PopcornIcon />}
+          <Icon icon={props.admin ? FolderPlus : Popcorn} />
         </EmptyMedia>
         <EmptyTitle>
-          {admin ? tr("browse.home.noLibraries") : tr("browse.home.nothingYet")}
+          {props.admin
+            ? tr("browse.home.noLibraries")
+            : tr("browse.home.nothingYet")}
         </EmptyTitle>
         <EmptyDescription>
-          {admin
+          {props.admin
             ? tr("browse.home.noLibrariesAdmin")
             : tr("browse.home.nothingYetDescription")}
         </EmptyDescription>
       </EmptyHeader>
-      {admin && (
+      <Show when={props.admin}>
         <EmptyContent>
-          <Link {...settingsLink("libraries")} className={buttonVariants()}>
+          <Link {...settingsLink("libraries")} class={buttonVariants()}>
             {tr("browse.home.addLibrary")}
           </Link>
         </EmptyContent>
-      )}
+      </Show>
     </Empty>
   )
 }

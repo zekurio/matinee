@@ -1,4 +1,22 @@
-import { Button } from "@matinee/ui/components/button"
+import type { JSX } from "@solidjs/web"
+import { ListFilter, Search, X } from "lucide"
+import {
+  createContext,
+  createMemo,
+  createSignal,
+  createUniqueId,
+  For,
+  onSettled,
+  type ParentProps,
+  Show,
+  useContext,
+} from "solid-js"
+
+import { chipClass } from "@/components/chips"
+import type { Bounds, Range } from "@/components/filters/ranges"
+import { FilterButtonFace } from "@/components/library/list-controls"
+import { tr } from "@/i18n"
+import { Button, buttonVariants } from "@/kit/button"
 import {
   Drawer,
   DrawerClose,
@@ -6,442 +24,410 @@ import {
   DrawerHandle,
   DrawerTitle,
   DrawerTrigger,
-} from "@matinee/ui/components/drawer"
+} from "@/kit/drawer"
+import { Icon } from "@/kit/icon"
 import {
   Popover,
   PopoverContent,
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@matinee/ui/components/popover"
+} from "@/kit/popover"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@matinee/ui/components/select"
-import { Slider } from "@matinee/ui/components/slider"
-import { cn } from "@matinee/ui/lib/utils"
-import { SearchIcon, XIcon } from "lucide-react"
-import {
-  type KeyboardEvent,
-  type ReactNode,
-  useId,
-  useRef,
-  useState,
-} from "react"
-
-import {
-  FilterButton,
-  FilterButtonFace,
-} from "@/components/library/list-controls"
-import { usePhone } from "@/components/sheet-menu"
-import { tr } from "@/i18n"
+} from "@/kit/select"
+import { Slider } from "@/kit/slider"
 import { formatCount } from "@/lib/format"
 
-import type { Bounds, Range } from "./ranges"
+// These two looks never change, so they are worked out once.
+const compactTriggerClass = buttonVariants({
+  variant: "ghost",
+  size: "icon",
+  class: "relative [@media(pointer:coarse)]:size-12",
+})
+const drawerCloseClass = buttonVariants({ class: "h-11 px-5" })
 
-/*
- * The filter panel Discover's browse and the libraries share: the Filter
- * button with how many are on, and what it opens, a popover from `sm` up
- * and a drawer from the bottom on phones. Each page fills it with its own
- * fields, built from the parts below. Each change applies at once; a
- * range applies when its handle is let go.
+/**
+ * Lets a part of the panel forget what it holds, like a typed search, when
+ * the popover closes, since the popover keeps its content between opens.
  */
+const OnPanelClosed = createContext<(reset: () => void) => void>(() => {})
 
-export function FilterPanel({
-  active,
-  onClear,
-  open,
-  onOpenChange,
-  compact = false,
-  done = tr("filters.done"),
-  children,
-}: {
-  /** How many filters are on. */
-  active: number
-  onClear: () => void
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  /** The icon the phone bar has room for. */
-  compact?: boolean
-  /** The phone drawer's closing button, which shows the list. */
-  done?: string
-  children: ReactNode
-}) {
-  const phone = usePhone()
-  const fields = <div className="flex flex-col gap-6">{children}</div>
-  const clear = active > 0 && (
-    <Button variant="ghost" onClick={onClear}>
-      <XIcon />
-      {tr("library.clearFilters")}
-    </Button>
+export function FilterPanel(
+  props: ParentProps<{
+    active: number
+    onClear: () => void
+    compact: boolean
+    /** Controls whether it's open, where the page needs to know. */
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    /** The phone drawer's closing button, which shows the list. */
+    done?: string
+    /**
+     * The desktop trigger: a chip among a page's quick filters, or the
+     * outline button a page's own toolbar gives it.
+     */
+    trigger?: "chip" | "button"
+    /** Which edge of the trigger the popover lines up with. */
+    align?: "start" | "end"
+  }>,
+) {
+  const label = () =>
+    props.active > 0
+      ? tr("library.filtersOn", { count: props.active })
+      : tr("library.filters")
+  // The popover's content is built once, while the page is idle a while
+  // after it painted, so a click on Filter only shows it.
+  const [prebuilt, setPrebuilt] = createSignal(false)
+  const resets = new Set<() => void>()
+  let scroller: HTMLDivElement | undefined
+  onSettled(() => {
+    let idle = 0
+    const timer = setTimeout(() => {
+      if ("requestIdleCallback" in window)
+        idle = requestIdleCallback(() => setPrebuilt(true))
+      else setPrebuilt(true)
+    }, 2000)
+    return () => {
+      clearTimeout(timer)
+      if (idle) cancelIdleCallback(idle)
+    }
+  })
+  const clear = () => (
+    <Show when={props.active > 0}>
+      <Button variant="ghost" onClick={() => props.onClear()}>
+        <Icon icon={X} />
+        {tr("library.clearFilters")}
+      </Button>
+    </Show>
   )
-  if (phone) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerTrigger
-          render={<FilterButton compact={compact} active={active} />}
-        >
-          <FilterButtonFace compact={compact} active={active} />
-        </DrawerTrigger>
-        <DrawerContent>
-          <DrawerHandle />
-          <DrawerTitle className="px-5 pt-3 pb-1 text-lg leading-7 font-semibold tracking-tight">
-            {tr("filters.title")}
-          </DrawerTitle>
-          <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pt-2 pb-4">
-            {fields}
-          </div>
-          <div className="border-foreground/10 flex items-center justify-between gap-2 border-t px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            {clear || <span />}
-            <DrawerClose render={<Button className="h-11 px-5" />}>
-              {done}
-            </DrawerClose>
-          </div>
-        </DrawerContent>
-      </Drawer>
-    )
-  }
+
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger
-        render={<FilterButton compact={compact} active={active} />}
-      >
-        <FilterButtonFace compact={compact} active={active} />
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        sideOffset={6}
-        className="max-h-[min(44rem,var(--available-height))] w-[26rem] gap-0 p-0"
-      >
-        {/* A title bar as the app's other popovers have, which stays put
-            while the fields scroll. */}
-        <PopoverHeader className="px-4">
-          <PopoverTitle className="font-semibold">
-            {tr("filters.title")}
-          </PopoverTitle>
-          {clear}
-        </PopoverHeader>
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 pt-3 pb-4">
-          {fields}
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-/** A chip in the panel, smaller than a page's chips. */
-function smallChip(on: boolean) {
-  return cn(
-    "focus-visible:ring-ring inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-13px font-medium outline-none select-none focus-visible:ring-2 [@media(pointer:coarse)]:h-10",
-    on
-      ? "bg-foreground text-background border-transparent"
-      : "text-foreground/80 hover:text-foreground border-foreground/15 hover:border-foreground/30",
-  )
-}
-
-/** How many titles a chip or an item stands for, after its name. */
-function Count({ value, on }: { value: number | undefined; on: boolean }) {
-  if (value === undefined) return null
-  return (
-    <span
-      className={cn(
-        "tabular-nums",
-        on ? "text-background/70" : "text-muted-foreground",
-      )}
+    <Show
+      when={!props.compact}
+      fallback={
+        <Drawer open={props.open} onOpenChange={props.onOpenChange}>
+          <DrawerTrigger aria-label={label()} class={compactTriggerClass}>
+            <Icon
+              icon={ListFilter}
+              class="size-5 [@media(pointer:coarse)]:size-6"
+            />
+            <FilterButtonFace compact active={props.active} />
+          </DrawerTrigger>
+          <DrawerContent class="glass-readable">
+            <DrawerHandle />
+            <DrawerTitle class="px-5 pt-3 pb-1 text-lg leading-7 font-semibold tracking-tight">
+              {tr("filters.title")}
+            </DrawerTitle>
+            <div class="flex min-h-0 flex-col gap-6 overflow-y-auto overscroll-contain px-5 pt-2 pb-4">
+              {props.children}
+            </div>
+            <div class="border-foreground/10 flex shrink-0 items-center justify-between gap-2 border-t px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <div>{clear()}</div>
+              <DrawerClose class={drawerCloseClass}>
+                {props.done ?? tr("filters.done")}
+              </DrawerClose>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      }
     >
-      {formatCount(value)}
-    </span>
+      <Popover
+        open={props.open}
+        onOpenChange={props.onOpenChange}
+        onOpenChangeComplete={(open) => {
+          if (open) return
+          if (scroller) scroller.scrollTop = 0
+          for (const reset of resets) reset()
+        }}
+      >
+        <PopoverTrigger
+          aria-label={label()}
+          class={
+            props.trigger === "button"
+              ? buttonVariants({
+                  variant: "outline",
+                  class: "data-popup-open:border-ring h-10 font-normal md:h-9",
+                })
+              : chipClass(props.active > 0)
+          }
+        >
+          <Icon icon={ListFilter} class="size-4" />
+          <FilterButtonFace
+            active={props.active}
+            badge={props.trigger === "button"}
+          />
+        </PopoverTrigger>
+        <PopoverContent
+          align={props.align ?? "start"}
+          sideOffset={6}
+          keepMounted={prebuilt()}
+          // Kept out of `main`, so the closed copy's chips aren't found
+          // among the page's own when something looks for them there.
+          container={document.body}
+          class="glass-readable max-h-[min(44rem,var(--available-height))] w-104 max-w-(--available-width) gap-0 p-0"
+        >
+          <PopoverHeader class="min-h-14 px-4">
+            <PopoverTitle class="font-semibold">
+              {tr("filters.title")}
+            </PopoverTitle>
+            {clear()}
+          </PopoverHeader>
+          <div
+            ref={(el) => (scroller = el)}
+            class="flex min-h-0 flex-col gap-6 overflow-y-auto overscroll-contain px-4 pt-3 pb-4"
+          >
+            <OnPanelClosed
+              value={(reset) => {
+                resets.add(reset)
+                onSettled(() => () => resets.delete(reset))
+              }}
+            >
+              {props.children}
+            </OnPanelClosed>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </Show>
   )
 }
 
-/** A filter's heading, a line about it, and its control. */
-export function Section({
-  label,
-  hint,
-  value,
-  small = false,
-  children,
-}: {
+export function Section(props: {
   label: string
   hint?: string
-  /** What it's set to, at the heading's end. */
   value?: string
-  /** A part of a filter, under the filter's own heading. */
-  small?: boolean
-  children: (labelId: string) => ReactNode
+  children: (labelId: string) => JSX.Element
 }) {
-  const id = useId()
+  const id = createUniqueId()
   return (
-    <section className={cn("flex flex-col", small ? "gap-2" : "gap-2.5")}>
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
-          <h3
-            id={id}
-            className={
-              // Smaller than the title, as the app's popover forms label
-              // their fields.
-              small
-                ? "text-muted-foreground text-xs font-medium"
-                : "text-13px font-medium"
-            }
-          >
-            {label}
+    <section class="flex shrink-0 flex-col gap-2.5">
+      <div class="flex items-baseline justify-between gap-3">
+        <div class="min-w-0">
+          <h3 id={id} class="text-13px font-medium">
+            {props.label}
           </h3>
-          {hint && (
-            <p className="text-muted-foreground text-13px leading-5">{hint}</p>
-          )}
+          <Show when={props.hint}>
+            <p class="text-muted-foreground text-13px leading-5">
+              {props.hint}
+            </p>
+          </Show>
         </div>
-        {value && (
-          <span className="text-muted-foreground text-13px shrink-0 tabular-nums">
-            {value}
+        <Show when={props.value}>
+          <span class="text-muted-foreground text-13px text-right tabular-nums">
+            {props.value}
           </span>
-        )}
+        </Show>
       </div>
-      {children(id)}
+      {props.children(id)}
     </section>
   )
 }
 
-/** A choice in a chip group or a select, with how many titles it has, where known. */
 export type Choice<T> = { value: T; label: string; count?: number }
 
-/**
- * Any number of choices, each a chip that turns on and off. Past
- * `limit` choices, a field finds the rest by name, and only the first
- * `limit` that match show, with those that are on.
- */
-export function ToggleChips({
-  labelId,
-  choices,
-  value,
-  onChange,
-  limit,
-  find,
-}: {
+function Count(props: { value?: number; active?: boolean }) {
+  return (
+    <Show when={props.value !== undefined}>
+      <span
+        class={[
+          "tabular-nums",
+          props.active ? "text-background/70" : "text-muted-foreground",
+        ]}
+      >
+        {formatCount(props.value ?? 0)}
+      </span>
+    </Show>
+  )
+}
+
+export function ToggleChips(props: {
   labelId: string
   choices: Choice<string>[]
   value: readonly string[]
   onChange: (value: string[]) => void
-  limit?: number
-  /** The find field's placeholder and what it says when nothing matches. */
-  find?: { placeholder: string; empty: string }
+  find?: { limit: number; placeholder: string; empty: string }
 }) {
-  const [query, setQuery] = useState("")
-  const finding = limit !== undefined && choices.length > limit
-  const needle = query.trim().toLowerCase()
-  const matching = choices.filter((choice) =>
-    choice.label.toLowerCase().includes(needle),
-  )
-  const shown = finding
-    ? [
-        ...choices.filter(
-          (choice) =>
-            value.includes(choice.value) &&
-            !matching.slice(0, limit).includes(choice),
-        ),
-        ...matching.slice(0, limit),
-      ]
-    : choices
+  const [query, setQuery] = createSignal("")
+  useContext(OnPanelClosed)(() => setQuery(""))
+  const finding = () =>
+    props.find && props.choices.length > props.find.limit
+      ? props.find
+      : undefined
+  const shown = createMemo(() => {
+    const find = finding()
+    if (!find) return props.choices
+    const needle = query().trim().toLowerCase()
+    const matches = props.choices
+      .filter((choice) => choice.label.toLowerCase().includes(needle))
+      .slice(0, find.limit)
+    return [
+      ...props.choices.filter(
+        (choice) =>
+          props.value.includes(choice.value) && !matches.includes(choice),
+      ),
+      ...matches,
+    ]
+  })
+
   return (
-    <div className="flex flex-col gap-2.5">
-      {finding && find && (
-        <label className="border-input focus-within:border-ring focus-within:ring-ring/50 flex h-8 items-center gap-2 rounded-md border bg-transparent px-2.5 focus-within:ring-3 [@media(pointer:coarse)]:h-10">
-          <SearchIcon
-            aria-hidden
-            className="text-muted-foreground size-3.5 shrink-0"
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              // Escape empties the field before it closes the panel.
-              if (event.key === "Escape" && query) {
-                event.stopPropagation()
-                setQuery("")
-              }
-            }}
-            placeholder={find.placeholder}
-            aria-label={find.placeholder}
-            className="placeholder:text-muted-foreground text-13px h-full min-w-0 flex-1 bg-transparent outline-none [&::-webkit-search-cancel-button]:appearance-none"
-          />
-        </label>
-      )}
+    <>
+      <Show when={finding()}>
+        {(find) => (
+          <label class="border-input focus-within:border-ring focus-within:ring-ring/50 flex h-8 items-center gap-2 rounded-md border px-2.5 focus-within:ring-3 [@media(pointer:coarse)]:h-10">
+            <Icon
+              icon={Search}
+              class="text-muted-foreground size-3.5 shrink-0"
+            />
+            <input
+              type="search"
+              value={query()}
+              onInput={(event) => setQuery(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && query()) {
+                  event.stopPropagation()
+                  setQuery("")
+                }
+              }}
+              placeholder={find().placeholder}
+              aria-label={find().placeholder}
+              class="placeholder:text-muted-foreground text-13px h-full min-w-0 flex-1 bg-transparent outline-none"
+            />
+          </label>
+        )}
+      </Show>
       <div
         role="group"
-        aria-labelledby={labelId}
-        className="flex flex-wrap gap-1.5"
+        aria-labelledby={props.labelId}
+        class="flex flex-wrap gap-1.5"
       >
-        {shown.map((choice) => {
-          const on = value.includes(choice.value)
-          return (
-            <button
-              key={choice.value}
-              type="button"
-              aria-pressed={on}
-              onClick={() =>
-                onChange(
-                  on
-                    ? value.filter((other) => other !== choice.value)
-                    : [...value, choice.value],
-                )
-              }
-              className={smallChip(on)}
-            >
-              {choice.label}
-              <Count value={choice.count} on={on} />
-            </button>
-          )
-        })}
-        {shown.length === 0 && find && (
-          <p className="text-muted-foreground text-13px leading-8">
-            {find.empty}
-          </p>
-        )}
+        <For each={shown()} keyed={(choice) => choice.value}>
+          {(choice) => {
+            const active = () => props.value.includes(choice().value)
+            return (
+              <button
+                type="button"
+                aria-pressed={active() ? "true" : "false"}
+                class={chipClass(active())}
+                onClick={() => {
+                  const name = choice().value
+                  props.onChange(
+                    active()
+                      ? props.value.filter((other) => other !== name)
+                      : [...props.value, name],
+                  )
+                }}
+              >
+                {choice().label}
+                <Count value={choice().count} active={active()} />
+              </button>
+            )
+          }}
+        </For>
+        <Show when={shown().length === 0 && finding()}>
+          {(find) => (
+            <p class="text-muted-foreground text-13px leading-8">
+              {find().empty}
+            </p>
+          )}
+        </Show>
       </div>
-    </div>
+    </>
   )
 }
 
-/**
- * One of a few values, or none: "Any" first, then each, as a radio
- * group the arrow keys move through.
- */
-export function ChoiceChips<T extends string | number>({
-  labelId,
-  choices,
-  value,
-  onChange,
-}: {
+export function ChoiceChips<T extends string>(props: {
   labelId: string
   choices: Choice<T>[]
   value: T | null
   onChange: (value: T | null) => void
+  /** The word for leaving it unset, where "Any" isn't the right one. */
+  anyLabel?: string
 }) {
-  const all: Choice<T | null>[] = [
-    { value: null, label: tr("filters.any") },
-    ...choices,
+  const name = createUniqueId()
+  const all = (): Choice<T | null>[] => [
+    { value: null, label: props.anyLabel ?? tr("filters.any") },
+    ...props.choices,
   ]
-  const refs = useRef<(HTMLButtonElement | null)[]>([])
-  const selected = Math.max(
-    0,
-    all.findIndex((choice) => choice.value === value),
-  )
-  const move = (event: KeyboardEvent, index: number) => {
-    const step =
-      event.key === "ArrowRight" || event.key === "ArrowDown"
-        ? 1
-        : event.key === "ArrowLeft" || event.key === "ArrowUp"
-          ? -1
-          : 0
-    if (step === 0) return
-    event.preventDefault()
-    const next = (index + step + all.length) % all.length
-    const choice = all[next]
-    if (choice) onChange(choice.value)
-    refs.current[next]?.focus()
-  }
   return (
     <div
       role="radiogroup"
-      aria-labelledby={labelId}
-      className="flex flex-wrap gap-1.5"
+      aria-labelledby={props.labelId}
+      class="flex flex-wrap gap-1.5"
     >
-      {all.map((choice, index) => (
-        <button
-          key={String(choice.value)}
-          ref={(element) => {
-            refs.current[index] = element
-          }}
-          type="button"
-          role="radio"
-          aria-checked={index === selected}
-          tabIndex={index === selected ? 0 : -1}
-          onClick={() => onChange(choice.value)}
-          onKeyDown={(event) => move(event, index)}
-          className={smallChip(index === selected)}
-        >
-          {choice.label}
-          <Count value={choice.count} on={index === selected} />
-        </button>
-      ))}
+      <For each={all()} keyed={(choice) => choice.value}>
+        {(choice) => {
+          const active = () => choice().value === props.value
+          return (
+            <label
+              class={chipClass(
+                active(),
+                "focus-within:ring-ring focus-within:ring-2",
+              )}
+            >
+              <input
+                type="radio"
+                name={name}
+                checked={active()}
+                class="sr-only"
+                onChange={() => props.onChange(choice().value)}
+              />
+              {choice().label}
+              <Count value={choice().count} active={active()} />
+            </label>
+          )
+        }}
+      </For>
     </div>
   )
 }
 
-/**
- * Two handles on a range, each open at its end. What it says follows the
- * handles as they move; the list changes once they're let go, or with
- * each key press.
- */
-export function RangeField({
-  label,
-  hint,
-  range,
-  value,
-  words,
-  format,
-  onCommit,
-}: {
+export function RangeField(props: {
   label: string
   hint?: string
   range: Range
   value: Bounds
   words: (bounds: Bounds) => string
-  /** One handle's value, for screen readers. */
   format: (value: number) => string
   onCommit: (bounds: Bounds) => void
 }) {
-  const closed = (bounds: Bounds): [number, number] => [
-    bounds[0] ?? range.min,
-    bounds[1] ?? range.max,
-  ]
-  const [moving, setMoving] = useState(() => closed(value))
-  // A chip or "Clear" changes the range from outside. Not a `key`: the
-  // handle being moved by keyboard would lose focus on every step.
-  const [seen, setSeen] = useState(value)
-  if (seen[0] !== value[0] || seen[1] !== value[1]) {
-    setSeen(value)
-    setMoving(closed(value))
+  const low = createMemo(() => props.value[0] ?? props.range.min)
+  const high = createMemo(() => props.value[1] ?? props.range.max)
+  const [moving, setMoving] = createSignal(() => [low(), high()])
+  const bounds = (values: readonly number[]): Bounds => {
+    const [min = props.range.min, max = props.range.max] = values
+    return [
+      min <= props.range.min ? null : min,
+      max >= props.range.max ? null : max,
+    ]
   }
-  const open = ([low, high]: [number, number]): Bounds => [
-    low <= range.min ? null : low,
-    high >= range.max ? null : high,
-  ]
-  const pair = (next: number | readonly number[]): [number, number] | null =>
-    Array.isArray(next) && next.length === 2
-      ? [next[0] ?? range.min, next[1] ?? range.max]
-      : null
   return (
-    <Section label={label} hint={hint} value={words(open(moving))}>
+    <Section
+      label={props.label}
+      hint={props.hint}
+      value={props.words(bounds(moving()))}
+    >
       {(labelId) => (
-        <div className="px-1.5 py-2">
+        <div class="px-1.5 py-2">
           <Slider
             aria-labelledby={labelId}
-            min={range.min}
-            max={range.max}
-            step={range.step}
-            value={moving}
+            min={props.range.min}
+            max={props.range.max}
+            step={props.range.step}
+            value={moving()}
             onValueChange={(next) => {
-              const both = pair(next)
-              if (both) setMoving(both)
+              if (Array.isArray(next)) setMoving(next)
             }}
-            onValueCommitted={(next) => {
-              const both = pair(next)
-              if (both) onCommit(open(both))
+            onValueCommit={(next) => {
+              if (Array.isArray(next)) props.onCommit(bounds(next))
             }}
             thumbLabel={(index) =>
               index === 0 ? tr("filters.lowest") : tr("filters.highest")
             }
-            thumbValueText={(handle, index) =>
-              (index === 0 && handle <= range.min) ||
-              (index === 1 && handle >= range.max)
-                ? tr("filters.any")
-                : format(handle)
-            }
+            format={props.format}
           />
         </div>
       )}
@@ -449,42 +435,36 @@ export function RangeField({
   )
 }
 
-/** One of many values, or none, as a select: "Any …" first, then each. */
-export function OptionSelect({
-  labelId,
-  any,
-  choices,
-  value,
-  onChange,
-}: {
+export function OptionSelect(props: {
   labelId: string
-  /** What the select says with none picked, like "Any language". */
   any: string
   choices: Choice<string>[]
   value: string | null
   onChange: (value: string | null) => void
 }) {
-  const items: Choice<string>[] = [{ value: "", label: any }, ...choices]
+  const items = createMemo(() => [
+    { value: "", label: props.any },
+    ...props.choices,
+  ])
+  const selected = () =>
+    items().find((item) => item.value === props.value)?.label ?? props.any
   return (
     <Select
-      items={items}
-      value={value ?? ""}
-      onValueChange={(next) => onChange(next || null)}
+      value={props.value ?? ""}
+      onValueChange={(value) => props.onChange(value || null)}
     >
-      <SelectTrigger aria-labelledby={labelId} className="w-full">
-        <SelectValue />
+      <SelectTrigger aria-labelledby={props.labelId} class="w-full">
+        <SelectValue>{selected()}</SelectValue>
       </SelectTrigger>
-      <SelectContent className="max-h-[min(22rem,var(--available-height))]">
-        {items.map((item) => (
-          <SelectItem key={item.value} value={item.value}>
-            <span className="min-w-0 flex-1 truncate">{item.label}</span>
-            {item.count !== undefined && (
-              <span className="text-muted-foreground pl-3 text-xs tabular-nums">
-                {formatCount(item.count)}
-              </span>
-            )}
-          </SelectItem>
-        ))}
+      <SelectContent class="max-h-[min(22rem,var(--available-height))]">
+        <For each={items()} keyed={(item) => item.value}>
+          {(item) => (
+            <SelectItem value={item().value} label={item().label}>
+              <span class="min-w-0 flex-1 truncate">{item().label}</span>
+              <Count value={item().count} />
+            </SelectItem>
+          )}
+        </For>
       </SelectContent>
     </Select>
   )

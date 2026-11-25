@@ -1,29 +1,32 @@
 import { ORPCError } from "@matinee/client"
 import { InviteToken } from "@matinee/contracts"
-import { Button, buttonVariants } from "@matinee/ui/components/button"
-import { toast } from "@matinee/ui/components/sonner"
-import { Spinner } from "@matinee/ui/components/spinner"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
 import {
   createFileRoute,
   Link,
   redirect,
   useLocation,
   useNavigate,
-} from "@tanstack/react-router"
-import { RefreshCwIcon } from "lucide-react"
-import type { ComponentProps } from "react"
+} from "@tanstack/solid-router"
+import { RefreshCw } from "lucide"
+import { Match, Show, Switch } from "solid-js"
 
 import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
 import { PublicLoginBackdrop } from "@/components/login-backdrop"
 import { UsernamePasskeyForm } from "@/components/username-passkey-form"
 import { tr } from "@/i18n"
+import { Button, buttonVariants } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+import { Spinner } from "@/kit/spinner"
+import { toast } from "@/kit/toast"
 import { formatDateTime } from "@/lib/format"
 import { signUpWithPasskey } from "@/lib/passkey"
 import { errorMessage, orpc } from "@/lib/rpc"
 
-const WIDE_BUTTON = buttonVariants({ size: "lg", className: "w-full" })
+const WIDE_BUTTON = cn(buttonVariants({ size: "lg" }), "w-full")
 
 /**
  * Where an invite link from Settings → Users opens. The token is the URL's
@@ -47,49 +50,62 @@ export const Route = createFileRoute("/invite")({
 })
 
 function InvitePage() {
-  const { config, signedInAs } = Route.useRouteContext()
+  const context = Route.useRouteContext()
   const hash = useLocation({ select: (location) => location.hash })
+  const token = () => {
+    const parsed = InviteToken.safeParse(hash())
+    return parsed.success ? parsed.data : null
+  }
 
-  // Someone with an account leaves the link for whoever it's meant for.
-  if (signedInAs) {
-    return (
-      <InviteScreen
-        title={tr("auth.invite.signedInTitle")}
-        description={tr("auth.invite.signedInDescription", {
-          username: signedInAs.username,
-        })}
-      >
-        <Link to="/" className={WIDE_BUTTON}>
-          {tr("auth.invite.continue")}
-        </Link>
-      </InviteScreen>
-    )
-  }
-  if (!config.passkeys) {
-    return (
-      <InviteScreen
-        title={tr("auth.invite.unusableTitle")}
-        description={tr("auth.invite.passkeysOff")}
-      >
-        <SignInLink />
-      </InviteScreen>
-    )
-  }
-  const token = InviteToken.safeParse(hash)
-  if (!token.success) return <BrokenLink />
-  return <InviteSignUp key={token.data} token={token.data} />
+  return (
+    <Switch fallback={<BrokenLink />}>
+      {/* Someone with an account leaves the link for whoever it's meant for. */}
+      <Match when={context().signedInAs}>
+        {(user) => (
+          <InviteScreen
+            title={tr("auth.invite.signedInTitle")}
+            description={tr("auth.invite.signedInDescription", {
+              username: user().username,
+            })}
+          >
+            <Link to="/" class={WIDE_BUTTON}>
+              {tr("auth.invite.continue")}
+            </Link>
+          </InviteScreen>
+        )}
+      </Match>
+      <Match when={!context().config.passkeys}>
+        <InviteScreen
+          title={tr("auth.invite.unusableTitle")}
+          description={tr("auth.invite.passkeysOff")}
+        >
+          <SignInLink />
+        </InviteScreen>
+      </Match>
+      <Match when={token()} keyed>
+        {(value) => <InviteSignUp token={value} />}
+      </Match>
+    </Switch>
+  )
 }
 
 /** The auth screen over the server's login backdrop, as the login page shows it. */
-function InviteScreen(
-  props: Omit<ComponentProps<typeof AuthScreen>, "backdrop">,
-) {
-  const { config } = Route.useRouteContext()
+function InviteScreen(props: {
+  title: string
+  description?: JSX.Element
+  children?: JSX.Element
+}) {
+  const context = Route.useRouteContext()
   return (
     <AuthScreen
-      {...props}
-      backdrop={<PublicLoginBackdrop settings={config.loginBackdrop} />}
-    />
+      title={props.title}
+      description={props.description}
+      backdrop={
+        <PublicLoginBackdrop settings={context().config.loginBackdrop} />
+      }
+    >
+      {props.children}
+    </AuthScreen>
   )
 }
 
@@ -108,11 +124,7 @@ function SignInLink() {
   return (
     <Link
       to="/login"
-      className={buttonVariants({
-        variant: "outline",
-        size: "lg",
-        className: "w-full",
-      })}
+      class={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}
     >
       {tr("auth.invite.toSignIn")}
     </Link>
@@ -120,20 +132,19 @@ function SignInLink() {
 }
 
 /** The server turned the token down: used, revoked, expired, or garbled. */
-const rejected = (error: Error) =>
+const rejected = (error: Error | null) =>
   error instanceof ORPCError &&
   (error.code === "NOT_FOUND" || error.code === "BAD_REQUEST")
 
-function InviteSignUp({ token }: { token: string }) {
+function InviteSignUp(props: { token: string }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const checkOptions = orpc.auth.invite.check.queryOptions({
-    input: { token },
-  })
+  const checkOptions = () =>
+    orpc.auth.invite.check.queryOptions({ input: { token: props.token } })
   const check = useQuery(checkOptions)
 
-  const signUp = useMutation({
-    mutationFn: (username: string) => signUpWithPasskey(username, token),
+  const signUp = useMutation(() => ({
+    mutationFn: (username: string) => signUpWithPasskey(username, props.token),
     onSuccess: async (user) => {
       queryClient.setQueryData(orpc.auth.session.queryKey(), { user })
       await navigate({ to: "/", replace: true })
@@ -142,49 +153,61 @@ function InviteSignUp({ token }: { token: string }) {
     // used or revoked it meanwhile. Asking again shows which.
     onError: (error) => {
       toast.error(errorMessage(error))
-      return queryClient.invalidateQueries({ queryKey: checkOptions.queryKey })
+      return queryClient.invalidateQueries({
+        queryKey: checkOptions().queryKey,
+      })
     },
-  })
-
-  if (check.isPending) {
-    return (
-      <InviteScreen title={tr("auth.invite.checking")}>
-        <Spinner className="text-muted-foreground mx-auto size-6" />
-      </InviteScreen>
-    )
-  }
-  if (check.isError) {
-    if (rejected(check.error)) return <BrokenLink />
-    return (
-      <InviteScreen title={tr("auth.invite.checkFailed")}>
-        <div className="flex flex-col gap-3">
-          <FormAlert message={errorMessage(check.error)} />
-          <Button
-            variant="outline"
-            size="lg"
-            disabled={check.isFetching}
-            onClick={() => void check.refetch()}
-          >
-            {check.isFetching ? <Spinner /> : <RefreshCwIcon />}
-            {tr("auth.invite.retry")}
-          </Button>
-        </div>
-      </InviteScreen>
-    )
-  }
+  }))
 
   return (
-    <InviteScreen
-      title={tr("auth.invite.title")}
-      description={tr("auth.invite.description", {
-        date: formatDateTime(check.data.expiresAt),
-      })}
-    >
-      <UsernamePasskeyForm
-        submitLabel={tr("auth.signIn.createAccount")}
-        pending={signUp.isPending || signUp.isSuccess}
-        onSubmit={(username) => signUp.mutate(username)}
-      />
-    </InviteScreen>
+    <Switch>
+      <Match when={check.isPending}>
+        <InviteScreen title={tr("auth.invite.checking")}>
+          <Spinner class="text-muted-foreground mx-auto size-6" />
+        </InviteScreen>
+      </Match>
+      <Match when={check.isError && rejected(check.error)}>
+        <BrokenLink />
+      </Match>
+      <Match when={check.isError}>
+        <InviteScreen title={tr("auth.invite.checkFailed")}>
+          <div class="flex flex-col gap-3">
+            <FormAlert message={errorMessage(check.error)} />
+            <Button
+              variant="outline"
+              size="lg"
+              disabled={check.isFetching}
+              onClick={() => void check.refetch()}
+            >
+              <Show
+                when={check.isFetching}
+                fallback={<Icon icon={RefreshCw} />}
+              >
+                <Spinner />
+              </Show>
+              {tr("auth.invite.retry")}
+            </Button>
+          </div>
+        </InviteScreen>
+      </Match>
+      <Match when={check.data}>
+        {(invite) => (
+          <InviteScreen
+            title={tr("auth.invite.title")}
+            description={tr("auth.invite.description", {
+              date: formatDateTime(invite().expiresAt),
+            })}
+          >
+            <UsernamePasskeyForm
+              submitLabel={tr("auth.signIn.createAccount")}
+              onSubmit={async (username) => {
+                // The mutation already displays the error in a toast.
+                await signUp.mutate(username).catch(() => undefined)
+              }}
+            />
+          </InviteScreen>
+        )}
+      </Match>
+    </Switch>
   )
 }

@@ -1,9 +1,9 @@
-import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
-import type { UseQueryResult } from "@tanstack/react-query"
+import { For, Repeat, Show } from "solid-js"
 
-import { posterGrid } from "@/components/media-item"
+import { posterGrid } from "@/components/library/library-states"
 import { tr } from "@/i18n"
+import { Skeleton } from "@/kit/skeleton"
 
 import { CatalogCard } from "./catalog-card"
 import {
@@ -13,10 +13,16 @@ import {
   useLiveAvailability,
 } from "./catalog-data"
 
-type CatalogResults = UseQueryResult<{
-  items: CatalogSummary[]
-  stale: boolean
-}>
+/**
+ * What the section reads of the catalog's search, as a query gives it.
+ * `data` is read only once `isSuccess` says it's there.
+ */
+export type CatalogResults = {
+  isPending: boolean
+  isError: boolean
+  isSuccess: boolean
+  data: { items: CatalogSummary[]; stale: boolean } | undefined
+}
 
 /**
  * The catalog's results someone could ask for. A viewer whose account
@@ -35,63 +41,67 @@ export function askable(items: CatalogSummary[] | undefined): CatalogSummary[] {
  * the page's heading when the library has none. It loads on its own, so
  * the library's results never wait for the catalog.
  */
-export function NotHereSection({
-  results,
-  first,
-}: {
+export function NotHereSection(props: {
   results: CatalogResults
   /** The library found nothing, so this leads the page, unheaded. */
   first: boolean
 }) {
-  const items = askable(results.data?.items)
-  const live = useLiveAvailability(items.map((item) => ({ ref: item.ref })))
-  if (results.isSuccess && items.length === 0) return null
+  const items = () =>
+    askable(props.results.isSuccess ? props.results.data?.items : undefined)
+  const live = useLiveAvailability(() =>
+    items().map((item) => ({ ref: item.ref })),
+  )
   const id = "results-not-here"
   return (
-    <section
-      aria-labelledby={first ? undefined : id}
-      aria-label={first ? tr("catalog.notHere") : undefined}
-      aria-busy={results.isPending || undefined}
-    >
-      {!first && (
-        <h2
-          id={id}
-          className="mb-3 flex items-baseline gap-2 text-xl font-semibold tracking-tight"
-        >
-          {tr("catalog.notHere")}
-          {items.length > 0 && (
-            <span className="text-muted-foreground text-sm font-normal">
-              {tr("search.titles", { count: items.length })}
-            </span>
-          )}
-        </h2>
-      )}
-      {results.isError ? (
-        <p className="text-muted-foreground text-sm">
-          {tr("catalog.search.failed")}
-        </p>
-      ) : results.isPending ? (
-        <RowSkeleton />
-      ) : (
-        <>
-          {results.data.stale && (
-            <p className="text-muted-foreground -mt-1 mb-3 text-sm">
-              {tr("catalog.search.stale")}
+    <Show when={!(props.results.isSuccess && items().length === 0)}>
+      <section
+        aria-labelledby={props.first ? undefined : id}
+        aria-label={props.first ? tr("catalog.notHere") : undefined}
+        aria-busy={props.results.isPending ? "true" : undefined}
+      >
+        <Show when={!props.first}>
+          <h2
+            id={id}
+            class="mb-3 flex items-baseline gap-2 text-xl font-semibold tracking-tight"
+          >
+            {tr("catalog.notHere")}
+            <Show when={items().length > 0}>
+              <span class="text-muted-foreground text-sm font-normal">
+                {tr("search.titles", { count: items().length })}
+              </span>
+            </Show>
+          </h2>
+        </Show>
+        <Show
+          when={!props.results.isError}
+          fallback={
+            <p class="text-muted-foreground text-sm">
+              {tr("catalog.search.failed")}
             </p>
-          )}
-          <ul className={posterGrid}>
-            {items.map((item) => (
-              <li key={refKey(item.ref)}>
-                <CatalogCard
-                  title={item}
-                  availability={liveEntry(live, item.ref)?.availability}
-                />
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </section>
+          }
+        >
+          <Show when={!props.results.isPending} fallback={<RowSkeleton />}>
+            <Show when={props.results.isSuccess && props.results.data?.stale}>
+              <p class="text-muted-foreground -mt-1 mb-3 text-sm">
+                {tr("catalog.search.stale")}
+              </p>
+            </Show>
+            <ul class={posterGrid}>
+              <For each={items()} keyed={(item) => refKey(item.ref)}>
+                {(item) => (
+                  <li>
+                    <CatalogCard
+                      title={item()}
+                      availability={liveEntry(live(), item().ref)?.availability}
+                    />
+                  </li>
+                )}
+              </For>
+            </ul>
+          </Show>
+        </Show>
+      </section>
+    </Show>
   )
 }
 
@@ -99,19 +109,21 @@ export function NotHereSection({
 function RowSkeleton() {
   return (
     <ul
-      aria-hidden
-      className={cn(
+      aria-hidden="true"
+      class={cn(
         posterGrid,
         "auto-rows-[0px] grid-rows-1 gap-y-0 overflow-hidden",
       )}
     >
-      {Array.from({ length: 10 }, (_, i) => (
-        <li key={i}>
-          <Skeleton className="aspect-[2/3] rounded-md" />
-          <Skeleton className="mt-2.5 h-3.5 w-3/4" />
-          <Skeleton className="mt-2 h-3 w-1/3" />
-        </li>
-      ))}
+      <Repeat count={10}>
+        {() => (
+          <li>
+            <Skeleton class="aspect-[2/3] rounded-md" />
+            <Skeleton class="mt-2.5 h-3.5 w-3/4" />
+            <Skeleton class="mt-2 h-3 w-1/3" />
+          </li>
+        )}
+      </Repeat>
     </ul>
   )
 }

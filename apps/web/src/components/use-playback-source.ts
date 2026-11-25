@@ -3,8 +3,13 @@ import type {
   PlaybackSnap,
   PlaybackStart,
 } from "@matinee/contracts"
-import { type RefObject, useRef } from "react"
 
+import {
+  type PlaybackPicks,
+  type PlaybackSource,
+  sameSource,
+  sourceOf,
+} from "@/components/playback-source"
 import { isUnplayable, playbackRefusal } from "@/lib/playback-start"
 import { client } from "@/lib/rpc"
 import type { PlayerStore } from "@/stores/player"
@@ -15,53 +20,44 @@ import {
   qualityFailedNotice,
   switchFailedNotice,
 } from "./playback-notices"
-import {
-  type PlaybackPicks,
-  type PlaybackSource,
-  sameSource,
-  sourceOf,
-} from "./playback-source"
+
+/** A value the player keeps between events, which nothing renders. */
+type Box<Value> = { current: Value }
+
+function box<Value>(current: Value): Box<Value> {
+  return { current }
+}
 
 /**
  * What the player remembers about the sources it starts, which nothing
  * renders. The source on screen and the viewer's picks are in the store.
  */
 export function useSourceRefs(store: PlayerStore) {
-  const { source } = store.getInitialState()
-  // Where the source on its way plays from once it loads, in its own time.
-  // A copied stream begins on the keyframe before it.
-  const seekOnLoad = useRef<number | null>(
-    source.start > 0 ? source.start : null,
-  )
-  // Where in the file the source on its way starts, until it loads, so a
-  // failure before then still knows where the viewer was.
-  const startsAt = useRef<number | null>(source.offset + source.start)
-  // Whether the next source plays once it loads: at first, after a switch
-  // made while playing, or as the viewer picks while it loads.
-  const playOnLoad = useRef(true)
-  // Set when the player pauses the old source to hold it still while a new
-  // one is on its way, so that pause isn't taken for the viewer's.
-  const holding = useRef(false)
-  // Counts the requests for a source. Only the latest one's answer loads.
-  const generation = useRef(0)
-  // A `playback.start` is on its way.
-  const asking = useRef(false)
-  // The methods this browser has played. One that fails after it played
-  // failed on the server or the network, not on the codecs: Chrome
-  // reports a 500 from the server as a format error.
-  const played = useRef(new Set<PlaybackMethod>())
-  // The last source whose failure was handled. hls.js and the video can
-  // both report one failure.
-  const handled = useRef<PlaybackSource | null>(null)
+  const { source } = store.initial
   return {
-    seekOnLoad,
-    startsAt,
-    playOnLoad,
-    holding,
-    generation,
-    asking,
-    played,
-    handled,
+    // Where the source on its way plays from once it loads, in its own
+    // time. A copied stream begins on the keyframe before it.
+    seekOnLoad: box<number | null>(source.start > 0 ? source.start : null),
+    // Where in the file the source on its way starts, until it loads, so
+    // a failure before then still knows where the viewer was.
+    startsAt: box<number | null>(source.offset + source.start),
+    // Whether the next source plays once it loads: at first, after a
+    // switch made while playing, or as the viewer picks while it loads.
+    playOnLoad: box(true),
+    // Set when the player pauses the old source to hold it still while a
+    // new one is on its way, so that pause isn't taken for the viewer's.
+    holding: box(false),
+    // Counts the requests for a source. Only the latest one's answer loads.
+    generation: box(0),
+    // A `playback.start` is on its way.
+    asking: box(false),
+    // The methods this browser has played. One that fails after it played
+    // failed on the server or the network, not on the codecs: Chrome
+    // reports a 500 from the server as a format error.
+    played: box(new Set<PlaybackMethod>()),
+    // The last source whose failure was handled. hls.js and the video can
+    // both report one failure.
+    handled: box<PlaybackSource | null>(null),
   }
 }
 
@@ -69,7 +65,7 @@ type SourceRefs = ReturnType<typeof useSourceRefs>
 
 /** What the playback functions share. */
 export type PlaybackCore = {
-  video: RefObject<HTMLVideoElement | null>
+  video: () => HTMLVideoElement | undefined
   store: PlayerStore
   refs: SourceRefs
   /** Nothing this browser can play is left. */
@@ -82,7 +78,7 @@ export type PlaybackCore = {
 export function playbackClock({ video, store, refs }: PlaybackCore) {
   /** Seconds into the file. */
   const position = (): number => {
-    const el = video.current
+    const el = video()
     return el ? store.getState().source.offset + el.currentTime : 0
   }
 
@@ -94,7 +90,7 @@ export function playbackClock({ video, store, refs }: PlaybackCore) {
     store.getState().pending ?? refs.startsAt.current ?? position()
 
   const duration = (): number => {
-    const el = video.current
+    const el = video()
     const { source, plan } = store.getState()
     const known =
       plan.item.durationSeconds ?? plan.item.probe?.format.durationSeconds
@@ -135,7 +131,7 @@ export function sourceStarters(core: PlaybackCore) {
 
   /** Remember whether to keep playing across a reload. */
   const holdPlayState = () => {
-    const el = video.current
+    const el = video()
     // A source still on its way keeps the state from before it.
     if (el && store.getState().pending === null && startsAt.current === null) {
       playOnLoad.current = !el.paused
@@ -144,7 +140,7 @@ export function sourceStarters(core: PlaybackCore) {
 
   /** Pause the old source while a new one is on its way. */
   const holdStill = () => {
-    const el = video.current
+    const el = video()
     if (el && !el.paused) {
       holding.current = true
       el.pause()
@@ -153,7 +149,7 @@ export function sourceStarters(core: PlaybackCore) {
 
   /** Play on with the old source after a switch that left it. */
   const release = () => {
-    const el = video.current
+    const el = video()
     if (el && el.paused && playOnLoad.current) void el.play().catch(() => {})
   }
 
@@ -167,7 +163,7 @@ export function sourceStarters(core: PlaybackCore) {
     if (state.pending === null) state.setPending(next.offset + next.start)
     if (plan) state.setPlan(plan, next)
     else state.setSource(next)
-    if (reloads) video.current?.load()
+    if (reloads) video()?.load()
   }
 
   /** Take an answer: a new source to load, or the tracks around this one. */

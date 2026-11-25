@@ -131,9 +131,8 @@ copies `config.xml` into `dist/app/` with the version from the root
 to `http://localhost:5174`, not to the server itself. Then its requests
 are same-origin and the browser's video element gets the session cookie.
 
-The same UI is in the Solid web app: run `pnpm --filter @matinee/solid
-dev` and open `http://localhost:5174/tv/` (or `SOLID_PORT=5180` beside
-the Tizen dev server). Its `/tv/` document imports only `packages/tv`, so
+The same UI is in the web app: run `pnpm dev:web` and open
+`http://localhost:5173/tv/`, which runs beside the Tizen dev server. Its `/tv/` document imports only `packages/tv`, so
 the desktop app's root size, theme, and Tailwind styles don't follow it.
 The Tizen app and `/tv/` take the same screens from the same package; a
 change there shows in both.

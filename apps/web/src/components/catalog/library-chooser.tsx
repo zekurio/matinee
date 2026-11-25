@@ -1,89 +1,84 @@
+import { Check } from "lucide"
+import { createSignal, For, Show } from "solid-js"
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
-import { CheckIcon } from "lucide-react"
-import { type ReactElement, useState } from "react"
+} from "@/kit/dropdown-menu"
+import { Icon } from "@/kit/icon"
+import { isPhone } from "@/lib/viewport"
 
-import { usePhone } from "@/components/sheet-menu"
-
-import { AskSheet } from "./ask-sheet"
+import { AskSheet, type TriggerRender } from "./ask-sheet"
 
 /**
- * Which library something goes to, picked from `trigger`: a menu on
+ * Which library something goes to, picked from `renderTrigger`: a menu on
  * wider screens, a drawer on phones. Picking the one it's on does nothing.
  */
-export function LibraryChooser({
-  libraries,
-  value,
-  onChange,
-  title,
-  trigger,
-}: {
+export function LibraryChooser(props: {
   libraries: readonly { id: string; name: string }[]
   value: string
   onChange: (id: string) => void
   /** The drawer's heading on phones. */
   title: string
-  trigger: ReactElement
+  renderTrigger: TriggerRender
 }) {
-  const phone = usePhone()
-  const [open, setOpen] = useState(false)
-  if (phone) {
-    return (
-      <AskSheet
-        open={open}
-        onOpenChange={setOpen}
-        title={title}
-        trigger={trigger}
-      >
-        <div role="radiogroup" className="-mx-2 flex flex-col">
-          {libraries.map((library) => (
-            <button
-              key={library.id}
-              type="button"
-              role="radio"
-              aria-checked={library.id === value}
-              onClick={() => {
-                setOpen(false)
-                if (library.id !== value) onChange(library.id)
+  const [open, setOpen] = createSignal(false)
+  return (
+    <Show
+      when={isPhone()}
+      fallback={
+        <DropdownMenu>
+          <DropdownMenuTrigger render={props.renderTrigger} />
+          <DropdownMenuContent align="start">
+            <DropdownMenuRadioGroup
+              value={props.value}
+              onValueChange={(id: string) => {
+                if (id !== props.value) props.onChange(id)
               }}
-              className="active:bg-foreground/[0.06] flex min-h-12 items-center justify-between gap-3 rounded-lg px-2 text-left font-medium"
             >
-              {library.name}
-              {library.id === value && (
-                <CheckIcon aria-hidden className="text-primary size-5" />
-              )}
-            </button>
-          ))}
+              <For each={props.libraries}>
+                {(library) => (
+                  <DropdownMenuRadioItem value={library.id} closeOnSelect>
+                    {library.name}
+                  </DropdownMenuRadioItem>
+                )}
+              </For>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      }
+    >
+      <AskSheet
+        open={open()}
+        onOpenChange={setOpen}
+        title={props.title}
+        renderTrigger={props.renderTrigger}
+      >
+        <div role="radiogroup" class="-mx-2 flex flex-col">
+          <For each={props.libraries}>
+            {(library) => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={library.id === props.value ? "true" : "false"}
+                onClick={() => {
+                  setOpen(false)
+                  if (library.id !== props.value) props.onChange(library.id)
+                }}
+                class="active:bg-foreground/[0.06] flex min-h-12 items-center justify-between gap-3 rounded-lg px-2 text-left font-medium"
+              >
+                {library.name}
+                <Show when={library.id === props.value}>
+                  <Icon icon={Check} class="text-primary size-5" />
+                </Show>
+              </button>
+            )}
+          </For>
         </div>
       </AskSheet>
-    )
-  }
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger render={trigger} />
-      <DropdownMenuContent align="start">
-        <DropdownMenuRadioGroup
-          value={value}
-          onValueChange={(id: string) => {
-            if (id !== value) onChange(id)
-          }}
-        >
-          {libraries.map((library) => (
-            <DropdownMenuRadioItem
-              key={library.id}
-              value={library.id}
-              closeOnClick
-            >
-              {library.name}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    </Show>
   )
 }

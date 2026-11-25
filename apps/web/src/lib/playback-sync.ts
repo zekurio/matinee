@@ -7,11 +7,11 @@ import {
   type User,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { toast } from "@matinee/ui/components/sonner"
-import { useQuery } from "@tanstack/react-query"
-import { useEffect } from "react"
+import { useQuery } from "@tanstack/solid-query"
+import { createEffect, createMemo } from "solid-js"
 
 import { tr } from "@/i18n"
+import { toast } from "@/kit/toast"
 import { usePendingPlaybackStore } from "@/stores/playback-preferences"
 import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
@@ -44,11 +44,16 @@ export function currentPlaybackPreferences(): PlaybackPreferences {
   )
 }
 
-/** The signed-in account's preferences, with a change on its way in place. */
-export function usePlaybackPreferences(): PlaybackPreferences {
-  const saved = useQuery(orpc.auth.session.queryOptions()).data?.user?.playback
+/** Accessor for the account's preferences, with a pending change in place. */
+export function usePlaybackPreferences() {
+  const session = useQuery(() => orpc.auth.session.queryOptions())
   const pending = usePendingPlaybackStore((state) => state.pending)
-  return pending ?? saved ?? DEFAULT_PLAYBACK_PREFERENCES
+  return () =>
+    pending() ??
+    (session.isSuccess || session.isRefetchError
+      ? session.data?.user?.playback
+      : undefined) ??
+    DEFAULT_PLAYBACK_PREFERENCES
 }
 
 /** Change some of the preferences. They apply at once and save shortly. */
@@ -123,19 +128,17 @@ function takeLegacySubtitles(): Partial<PlaybackPreferences> | null {
     // Storage is off, so there's nothing to bring along.
   }
   if (stored === null) return null
-  let json: unknown
   try {
-    json = JSON.parse(stored)
+    const parsed = LegacySubtitles.safeParse(JSON.parse(stored))
+    if (!parsed.success) return null
+    const language = LanguageTag.safeParse(parsed.data.language)
+    return {
+      // Off kept showing forced tracks, as `forced` does.
+      subtitleMode: parsed.data.enabled ? "always" : "forced",
+      subtitleLanguage: language.success ? language.data : null,
+    }
   } catch {
     return null
-  }
-  const parsed = LegacySubtitles.safeParse(json)
-  if (!parsed.success) return null
-  const language = LanguageTag.safeParse(parsed.data.language)
-  return {
-    // Off kept showing forced tracks, as `forced` does.
-    subtitleMode: parsed.data.enabled ? "always" : "forced",
-    subtitleLanguage: language.success ? language.data : null,
   }
 }
 
@@ -156,17 +159,15 @@ function takeLegacySkip(): number | null {
     return null
   }
   if (stored === null) return null
-  let json: unknown
   try {
-    json = JSON.parse(stored)
+    const parsed = LegacySkip.safeParse(JSON.parse(stored))
+    if (!parsed.success) return null
+    // A preference write saves the device settings without the old key.
+    usePlayerPreferencesStore.getState().setDevicePlayback({})
+    return parsed.data.skipSeconds
   } catch {
     return null
   }
-  const parsed = LegacySkip.safeParse(json)
-  if (!parsed.success) return null
-  // Any set writes the store back without the old key.
-  usePlayerPreferencesStore.setState({})
-  return parsed.data.skipSeconds
 }
 
 /** This browser's old skip, while the account's skips are the defaults. */
@@ -187,25 +188,27 @@ function legacySkip(): number | null {
  * forgets its own either way.
  */
 export function PlaybackAccountSync() {
-  const session = useQuery(orpc.auth.session.queryOptions())
-  const user = session.data?.user
-  const userId = user?.id ?? null
-  const unset = user ? user.playback === null : false
+  const session = useQuery(() => orpc.auth.session.queryOptions())
+  const user = () => (session.isSuccess ? session.data?.user : undefined)
+  const userId = createMemo(() => user()?.id ?? null)
+  const unset = createMemo(() => user()?.playback === null)
 
-  // Moves the pick and the skip from local storage into the account.
-  useEffect(() => {
-    if (!userId) return
-    const legacy = takeLegacySubtitles()
-    if (legacy && unset) updatePlaybackPreferences(legacy)
-    // Both changes go out in the same save.
-    const skip = legacySkip()
-    if (skip !== null) {
-      updatePlaybackPreferences({
-        skipBackSeconds: skip,
-        skipForwardSeconds: skip,
-      })
-    }
-  }, [userId, unset])
+  createEffect(
+    () => ({ id: userId(), unset: unset() }),
+    ({ id, unset }) => {
+      if (!id) return
+      const legacy = takeLegacySubtitles()
+      const skip = legacySkip()
+      if ((legacy && unset) || skip !== null) {
+        updatePlaybackPreferences({
+          ...(unset ? legacy : null),
+          ...(skip === null
+            ? null
+            : { skipBackSeconds: skip, skipForwardSeconds: skip }),
+        })
+      }
+    },
+  )
 
   return null
 }

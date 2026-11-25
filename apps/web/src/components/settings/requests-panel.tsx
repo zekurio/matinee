@@ -7,49 +7,46 @@ import type {
   FulfilmentSourceDescription,
   Library,
 } from "@matinee/contracts"
-import { Badge } from "@matinee/ui/components/badge"
-import { Button } from "@matinee/ui/components/button"
+import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import {
+  ArrowDown,
+  ArrowUp,
+  Cable,
+  CircleCheck,
+  Ellipsis,
+  OctagonX,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide"
+import { createSignal, For, Match, Show, Switch } from "solid-js"
+
+import { libraryIcons } from "@/components/app-shell"
+import { perLocale, tr, translateKnown } from "@/i18n"
+import { trRich } from "@/i18n/solid"
+import { Badge } from "@/kit/badge"
+import { Button, buttonVariants } from "@/kit/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
+} from "@/kit/dropdown-menu"
 import {
   Empty,
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
-} from "@matinee/ui/components/empty"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import { Spinner } from "@matinee/ui/components/spinner"
-import { cn } from "@matinee/ui/lib/utils"
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type UseQueryResult,
-} from "@tanstack/react-query"
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  CableIcon,
-  CircleCheckIcon,
-  EllipsisIcon,
-  OctagonXIcon,
-  PencilIcon,
-  PlusIcon,
-  RefreshCwIcon,
-  Trash2Icon,
-} from "lucide-react"
-import { type ReactNode, useState } from "react"
-
-import { libraryIcons } from "@/components/app-shell"
-import { perLocale, tr, translateKnown } from "@/i18n"
-import { trRich } from "@/i18n/react"
+} from "@/kit/empty"
+import { Icon } from "@/kit/icon"
+import { Skeleton } from "@/kit/skeleton"
+import { Spinner } from "@/kit/spinner"
+import { toast } from "@/kit/toast"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import {
@@ -58,17 +55,23 @@ import {
   KeyVariable,
 } from "./connection-dialog"
 import { shownValue } from "./connection-fields"
+import { fetching } from "./query-state"
 import { RuleDialog } from "./rule-dialog"
 import {
+  RowIcon,
   SettingRows,
   SettingsSections,
   SettingsSubsection,
-  RowIcon,
 } from "./settings-panel"
 import { ConfirmDialog } from "./user-dialogs"
 
 const lists = perLocale(
   (locale) => new Intl.ListFormat(locale, { type: "conjunction" }),
+)
+
+const rowMenuButton = cn(
+  buttonVariants({ variant: "ghost", size: "icon" }),
+  "text-muted-foreground hover:text-foreground data-open:text-foreground",
 )
 
 /**
@@ -77,22 +80,27 @@ const lists = perLocale(
  * then, for each library, which connection fills it.
  */
 export function RequestsPanel() {
-  const sources = useQuery(orpc.admin.fulfilment.sources.queryOptions())
-  const connections = useQuery(orpc.admin.fulfilment.connections.queryOptions())
-  const libraries = useQuery(orpc.libraries.list.queryOptions())
+  const sources = useQuery(() => orpc.admin.fulfilment.sources.queryOptions())
+  const connections = useQuery(() =>
+    orpc.admin.fulfilment.connections.queryOptions(),
+  )
+  const libraries = useQuery(() => orpc.libraries.list.queryOptions())
+  const sourceList = () => (sources.isSuccess ? sources.data : undefined)
+  const connectionList = () =>
+    connections.isSuccess ? connections.data : undefined
   // Kept after the dialog closes, so its words stay put as it fades.
-  const [editing, setEditing] = useState<{
+  const [editing, setEditing] = createSignal<{
     connection?: FulfilmentConnection
   }>({})
-  const [editOpen, setEditOpen] = useState(false)
+  const [editOpen, setEditOpen] = createSignal(false)
   const edit = (connection?: FulfilmentConnection) => {
     setEditing({ connection })
     setEditOpen(true)
   }
 
-  const addButton = (
-    <Button onClick={() => edit()} disabled={!sources.data}>
-      <PlusIcon />
+  const addButton = () => (
+    <Button onClick={() => edit()} disabled={!sourceList()}>
+      <Icon icon={Plus} />
       {tr("connections.add")}
     </Button>
   )
@@ -102,276 +110,302 @@ export function RequestsPanel() {
       <SettingsSubsection
         id="connections"
         title={tr("connections.title")}
-        action={connections.data?.length ? addButton : undefined}
+        action={connectionList()?.length ? addButton() : undefined}
       >
-        {connections.isPending || sources.isPending ? (
-          <Skeleton className="h-32 rounded-xl" />
-        ) : connections.isError || sources.isError ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
-            <p className="text-muted-foreground text-sm">
-              {tr("connections.loadFailed", {
-                error: errorMessage(connections.error ?? sources.error),
-              })}
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                void connections.refetch()
-                void sources.refetch()
-              }}
-            >
-              <RefreshCwIcon />
-              {tr("connections.retry")}
-            </Button>
-          </div>
-        ) : connections.data.length === 0 ? (
-          <Empty className="border border-dashed">
-            <EmptyHeader>
-              <EmptyTitle>{tr("connections.empty.title")}</EmptyTitle>
-              <EmptyDescription>
-                {tr("connections.empty.description")}
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>{addButton}</EmptyContent>
-          </Empty>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {connections.data.map((connection) => (
-              <ConnectionCard
-                key={connection.id}
-                connection={connection}
-                source={sources.data.find((s) => s.id === connection.source)}
-                onEdit={() => edit(connection)}
-              />
-            ))}
-          </div>
-        )}
+        <Switch>
+          <Match when={connections.isPending || sources.isPending}>
+            <Skeleton class="h-32 rounded-xl" />
+          </Match>
+          <Match when={connections.isError || sources.isError}>
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
+              <p class="text-muted-foreground text-sm">
+                {tr("connections.loadFailed", {
+                  error: errorMessage(connections.error ?? sources.error),
+                })}
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void connections.refetch()
+                  void sources.refetch()
+                }}
+              >
+                <Icon icon={RefreshCw} />
+                {tr("connections.retry")}
+              </Button>
+            </div>
+          </Match>
+          <Match when={connectionList()?.length === 0}>
+            <Empty class="border border-dashed">
+              <EmptyHeader>
+                <EmptyTitle>{tr("connections.empty.title")}</EmptyTitle>
+                <EmptyDescription>
+                  {tr("connections.empty.description")}
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>{addButton()}</EmptyContent>
+            </Empty>
+          </Match>
+          <Match when={true}>
+            <div class="flex flex-col gap-3">
+              <For
+                each={connectionList() ?? []}
+                keyed={(connection) => connection.id}
+              >
+                {(connection) => (
+                  <ConnectionCard
+                    connection={connection()}
+                    source={sourceList()?.find(
+                      (s) => s.id === connection().source,
+                    )}
+                    onEdit={() => edit(connection())}
+                  />
+                )}
+              </For>
+            </div>
+          </Match>
+        </Switch>
       </SettingsSubsection>
 
-      <LibraryCoverage libraries={libraries} connections={connections.data} />
+      <LibraryCoverage
+        libraries={libraries.isSuccess ? libraries.data : undefined}
+        connections={connectionList()}
+      />
 
-      {sources.data && (
-        <ConnectionDialog
-          connection={editing.connection}
-          sources={sources.data}
-          connections={connections.data ?? []}
-          open={editOpen}
-          onOpenChange={setEditOpen}
-        />
-      )}
+      <Show when={sourceList()}>
+        {(list) => (
+          <ConnectionDialog
+            connection={editing().connection}
+            sources={list()}
+            connections={connectionList() ?? []}
+            open={editOpen()}
+            onOpenChange={setEditOpen}
+          />
+        )}
+      </Show>
     </SettingsSections>
   )
 }
 
 /** The choices a saved connection offers, for naming what it sends. */
-function useConnectionChoices(connection: FulfilmentConnection) {
-  return useQuery({
+function useConnectionChoices(connection: () => FulfilmentConnection) {
+  return useQuery(() => ({
     ...orpc.admin.fulfilment.options.queryOptions({
       input: {
-        id: connection.id,
-        source: connection.source,
-        slug: connection.slug,
-        settings: connection.settings,
+        id: connection().id,
+        source: connection().source,
+        slug: connection().slug,
+        settings: connection().settings,
       },
     }),
     retry: false,
     staleTime: 60_000,
-  })
+  }))
 }
 
 /**
  * A saved connection, tested each time the panel opens and again after
  * each edit, so one that stopped answering shows it here.
  */
-function ConnectionCard({
-  connection,
-  source,
-  onEdit,
-}: {
+function ConnectionCard(props: {
   connection: FulfilmentConnection
   source: FulfilmentSourceDescription | undefined
   onEdit: () => void
 }) {
   const queryClient = useQueryClient()
-  const [confirming, setConfirming] = useState(false)
-  const test = useQuery({
-    // A new key for each version of the connection, so an edit tests again.
-    queryKey: [CONNECTION_TEST, connection.id, JSON.stringify(connection)],
-    queryFn: () =>
-      client.admin.fulfilment.test({ id: connection.id }).then(() => true),
-    retry: false,
-    staleTime: 60_000,
+  const [confirming, setConfirming] = createSignal(false)
+  // The callbacks run outside tracking, so the options read the connection.
+  const test = useQuery(() => {
+    const id = props.connection.id
+    return {
+      // A new key for each version of the connection, so an edit tests again.
+      queryKey: [CONNECTION_TEST, id, JSON.stringify(props.connection)],
+      queryFn: () => client.admin.fulfilment.test({ id }).then(() => true),
+      retry: false,
+      staleTime: 60_000,
+    }
   })
-  const choices = useConnectionChoices(connection)
-  const remove = useMutation({
-    mutationFn: () => client.admin.fulfilment.remove({ id: connection.id }),
-    onSuccess: async () => {
-      setConfirming(false)
-      toast.success(tr("connections.deleted", { name: connection.name }))
-      await queryClient.invalidateQueries({
-        queryKey: orpc.admin.fulfilment.connections.key(),
-      })
-    },
-    onError: (error) => toast.error(errorMessage(error)),
+  const choices = useConnectionChoices(() => props.connection)
+  const choiceData = () => (choices.isSuccess ? choices.data : undefined)
+  const remove = useMutation(() => {
+    const { id, name } = props.connection
+    return {
+      mutationFn: () => client.admin.fulfilment.remove({ id }),
+      onSuccess: async () => {
+        setConfirming(false)
+        toast.success(tr("connections.deleted", { name }))
+        await queryClient.invalidateQueries({
+          queryKey: orpc.admin.fulfilment.connections.key(),
+        })
+      },
+      onError: (error: Error) => toast.error(errorMessage(error)),
+    }
   })
 
-  const variable = <KeyVariable slug={connection.slug} />
-  const sourceName = source
-    ? translateKnown(source.name)
-    : tr("connections.card.unknownSource")
+  const sourceName = () =>
+    props.source
+      ? translateKnown(props.source.name)
+      : tr("connections.card.unknownSource")
   const quality = (key: string) => {
-    const field = choices.data?.fields.find((each) => each.key === key)
+    const field = choiceData()?.fields.find((each) => each.key === key)
     return field
-      ? (shownValue(field, connection.options, key)[0] ?? null)
+      ? (shownValue(field, props.connection.options, key)[0] ?? null)
       : null
   }
-  const lines = connection.landings
-    .filter((landing) => landing.from !== "rule")
-    .map((landing) => ({
-      landing,
-      quality: quality(
-        landing.from === "anime" ? "animeQualityProfileId" : "qualityProfileId",
-      ),
-    }))
+  const lines = () =>
+    props.connection.landings
+      .filter((landing) => landing.from !== "rule")
+      .map((landing) => ({
+        landing,
+        quality: quality(
+          landing.from === "anime"
+            ? "animeQualityProfileId"
+            : "qualityProfileId",
+        ),
+      }))
 
   return (
-    <article className="bg-foreground/[0.02] rounded-xl border">
-      <div className="flex items-start gap-3 py-3 pr-2 pl-4">
+    <article class="bg-foreground/[0.02] rounded-xl border">
+      <div class="flex items-start gap-3 py-3 pr-2 pl-4">
         <RowIcon>
-          <CableIcon />
+          <Icon icon={Cable} />
         </RowIcon>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-5">
-            <span className="truncate font-medium">{connection.name}</span>
-            <span className="text-muted-foreground text-13px shrink-0">
-              {sourceName}
+        <div class="flex min-w-0 flex-1 flex-col gap-1">
+          <span class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-5">
+            <span class="truncate font-medium">{props.connection.name}</span>
+            <span class="text-muted-foreground text-13px shrink-0">
+              {sourceName()}
             </span>
-            {connection.defaultFor.map((kind) => (
-              <Badge key={kind} variant="secondary">
-                {tr(`connections.card.default.${kind}`)}
-              </Badge>
-            ))}
+            <For each={props.connection.defaultFor}>
+              {(kind) => (
+                <Badge variant="secondary">
+                  {tr(`connections.card.default.${kind}`)}
+                </Badge>
+              )}
+            </For>
           </span>
           <span
             role="status"
-            className={cn(
+            class={cn(
               "flex min-w-0 items-start gap-1.5 text-13px leading-5",
               test.isError ? "text-foreground" : "text-muted-foreground",
             )}
           >
-            {test.isFetching ? (
-              <>
-                <Spinner className="mt-0.5 size-3.5 shrink-0" />
+            <Switch>
+              <Match when={fetching(test)}>
+                <Spinner class="mt-0.5 size-3.5 shrink-0" />
                 {tr("connections.testing")}
-              </>
-            ) : test.isError ? (
-              <>
-                <OctagonXIcon
-                  aria-hidden
-                  className="text-danger mt-0.5 size-3.5 shrink-0"
+              </Match>
+              <Match when={test.isError}>
+                <Icon
+                  icon={OctagonX}
+                  class="text-danger mt-0.5 size-3.5 shrink-0"
                 />
                 <span>
                   {tr("connections.testFailed.detail", {
                     error: errorMessage(test.error),
                   })}
                 </span>
-              </>
-            ) : test.isSuccess ? (
-              <>
-                <CircleCheckIcon
-                  aria-hidden
-                  className="text-success mt-0.5 size-3.5 shrink-0"
+              </Match>
+              <Match when={test.isSuccess}>
+                <Icon
+                  icon={CircleCheck}
+                  class="text-success mt-0.5 size-3.5 shrink-0"
                 />
                 {tr("connections.connected")}
-              </>
-            ) : null}
+              </Match>
+            </Switch>
           </span>
-          {lines.length > 0 && (
-            <span className="text-13px grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 leading-5">
-              {lines.map(({ landing, quality }) => (
-                <LandingLine
-                  key={`${landing.kind}-${landing.folder}`}
-                  landing={landing}
-                  quality={quality}
-                  byKind={(source?.kinds.length ?? 1) > 1}
-                />
-              ))}
+          <Show when={lines().length > 0}>
+            <span class="text-13px grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 leading-5">
+              <For
+                each={lines()}
+                keyed={(line) => `${line.landing.kind}-${line.landing.folder}`}
+              >
+                {(line) => (
+                  <LandingLine
+                    landing={line().landing}
+                    quality={line().quality}
+                    byKind={(props.source?.kinds.length ?? 1) > 1}
+                  />
+                )}
+              </For>
             </span>
-          )}
-          {!connection.editable && (
-            <span className="text-muted-foreground text-xs leading-5">
+          </Show>
+          <Show when={!props.connection.editable}>
+            <span class="text-muted-foreground text-xs leading-5">
               {tr("connections.card.readOnly")}
             </span>
-          )}
-          {source?.apiKey && connection.apiKey.source === null && (
-            <span className="text-warning text-xs leading-5">
-              {trRich("connections.key.none", { variable })}
+          </Show>
+          <Show
+            when={
+              props.source?.apiKey && props.connection.apiKey.source === null
+            }
+          >
+            <span class="text-warning text-xs leading-5">
+              {trRich("connections.key.none", {
+                variable: <KeyVariable slug={props.connection.slug} />,
+              })}
             </span>
-          )}
+          </Show>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-foreground data-popup-open:text-foreground"
-                aria-label={tr("connections.actions", {
-                  name: connection.name,
-                })}
-              />
-            }
+            class={rowMenuButton}
+            aria-label={tr("connections.actions", {
+              name: props.connection.name,
+            })}
           >
-            <EllipsisIcon />
+            <Icon icon={Ellipsis} />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
+          <DropdownMenuContent align="end" sideOffset={6} class="min-w-48">
             <DropdownMenuItem
-              disabled={test.isFetching}
-              onClick={() => void test.refetch()}
+              disabled={fetching(test)}
+              onSelect={() => void test.refetch()}
             >
-              <RefreshCwIcon />
+              <Icon icon={RefreshCw} />
               {tr("connections.test")}
             </DropdownMenuItem>
-            {connection.editable && (
-              <>
-                <DropdownMenuItem onClick={onEdit}>
-                  <PencilIcon />
-                  {tr("connections.edit")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setConfirming(true)}
-                >
-                  <Trash2Icon />
-                  {tr("connections.delete")}
-                </DropdownMenuItem>
-              </>
-            )}
+            <Show when={props.connection.editable}>
+              <DropdownMenuItem onSelect={() => props.onEdit()}>
+                <Icon icon={Pencil} />
+                {tr("connections.edit")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => setConfirming(true)}
+              >
+                <Icon icon={Trash2} />
+                {tr("connections.delete")}
+              </DropdownMenuItem>
+            </Show>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {source?.rules && (
-        <ConnectionRules
-          connection={connection}
-          source={source}
-          fields={choices.data?.rule}
-        />
-      )}
+      <Show when={props.source?.rules && props.source}>
+        {(source) => (
+          <ConnectionRules
+            connection={props.connection}
+            source={source()}
+            fields={choiceData()?.rule}
+          />
+        )}
+      </Show>
 
       <ConfirmDialog
-        open={confirming}
-        title={tr("connections.delete.title", { name: connection.name })}
+        open={confirming()}
+        title={tr("connections.delete.title", { name: props.connection.name })}
         description={
-          connection.defaultFor.length > 0
+          props.connection.defaultFor.length > 0
             ? tr("connections.delete.descriptionDefault")
             : tr("connections.delete.descriptionUnused")
         }
         confirmLabel={tr("connections.delete.confirm")}
         destructive
         pending={remove.isPending}
-        onConfirm={() => remove.mutate()}
+        onConfirm={() => void remove.mutate()}
         onClose={() => setConfirming(false)}
       />
     </article>
@@ -383,11 +417,7 @@ function ConnectionCard({
  * or by kind for a source that takes both, then the library, its folder,
  * and the quality.
  */
-function LandingLine({
-  landing,
-  quality,
-  byKind,
-}: {
+function LandingLine(props: {
   landing: FulfilmentLanding
   quality: string | null
   /** The connection takes films and shows, so each line names its kind. */
@@ -395,212 +425,215 @@ function LandingLine({
 }) {
   return (
     <>
-      <span className="text-muted-foreground">
-        {byKind && landing.from === "default"
-          ? tr(`connections.card.kind.${landing.kind}`)
-          : landing.from === "anime"
+      <span class="text-muted-foreground">
+        {props.byKind && props.landing.from === "default"
+          ? tr(`connections.card.kind.${props.landing.kind}`)
+          : props.landing.from === "anime"
             ? tr("connections.section.anime")
             : tr("connections.section.defaults")}
       </span>
       <Destination
-        library={landing.library?.name ?? null}
-        hidden={landing.hidden}
-        rest={[landing.folder, quality]}
+        library={props.landing.library?.name ?? null}
+        hidden={props.landing.hidden}
+        rest={[props.landing.folder, props.quality]}
       />
     </>
   )
 }
 
 /** A library in bold, then what else says how a title gets there. */
-function Destination({
-  library,
-  hidden,
-  rest,
-}: {
+function Destination(props: {
   /** Null when the folder is in no library, or in one the account can't see. */
   library: string | null
   /** The folder is in a library the account can't see. */
   hidden: boolean
-  rest: (ReactNode | null)[]
+  rest: (JSX.Element | null)[]
 }) {
-  const shown = rest.filter((part) => part !== null && part !== "")
+  const shown = () => props.rest.filter((part) => part !== null && part !== "")
   return (
-    <span className="min-w-0 break-words">
-      {library ? (
-        <span className="font-medium">{library}</span>
-      ) : hidden ? (
-        <span className="text-muted-foreground font-medium">
-          {tr("connections.card.hidden")}
-        </span>
-      ) : (
-        <span className="text-warning">{tr("connections.card.nowhere")}</span>
-      )}
-      {shown.map((part, index) => (
-        // The parts are fixed for a landing or a rule, so their places are.
-        <span key={index} className="text-muted-foreground">
-          {" · "}
-          {part}
-        </span>
-      ))}
+    <span class="min-w-0 break-words">
+      <Switch
+        fallback={
+          <span class="text-warning">{tr("connections.card.nowhere")}</span>
+        }
+      >
+        <Match when={props.library}>
+          {(library) => <span class="font-medium">{library()}</span>}
+        </Match>
+        <Match when={props.hidden}>
+          <span class="text-muted-foreground font-medium">
+            {tr("connections.card.hidden")}
+          </span>
+        </Match>
+      </Switch>
+      <For each={shown()}>
+        {(part) => (
+          <span class="text-muted-foreground">
+            {" · "}
+            {part}
+          </span>
+        )}
+      </For>
     </span>
   )
 }
 
 /** A connection's override rules, in the order they win a tie. */
-function ConnectionRules({
-  connection,
-  source,
-  fields,
-}: {
+function ConnectionRules(props: {
   connection: FulfilmentConnection
   source: FulfilmentSourceDescription
   /** The settings a rule can change. Unset until the server answers. */
   fields: DescribedField[] | undefined
 }) {
   const queryClient = useQueryClient()
-  const kind = source.kinds[0] ?? "movie"
-  const rules = useQuery(
+  const kind = () => props.source.kinds[0] ?? "movie"
+  const rules = useQuery(() =>
     orpc.admin.fulfilment.rules.queryOptions({
-      input: { connectionId: connection.id },
+      input: { connectionId: props.connection.id },
     }),
   )
-  const choices = useQuery(
-    orpc.admin.fulfilment.ruleChoices.queryOptions({ input: { kind } }),
+  const choices = useQuery(() =>
+    orpc.admin.fulfilment.ruleChoices.queryOptions({ input: { kind: kind() } }),
   )
-  const [editing, setEditing] = useState<{ rule?: FulfilmentRule }>({})
-  const [open, setOpen] = useState(false)
-  const [removing, setRemoving] = useState<FulfilmentRule | null>(null)
+  const choiceData = () => (choices.isSuccess ? choices.data : undefined)
+  const [editing, setEditing] = createSignal<{ rule?: FulfilmentRule }>({})
+  const [open, setOpen] = createSignal(false)
+  const [removing, setRemoving] = createSignal<FulfilmentRule | null>(null)
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: orpc.admin.fulfilment.key() })
-  const reorder = useMutation({
-    mutationFn: (ids: string[]) =>
-      client.admin.fulfilment.reorderRules({
-        connectionId: connection.id,
-        ids,
-      }),
-    onSuccess: refresh,
-    onError: (error) => toast.error(errorMessage(error)),
+  const reorder = useMutation(() => {
+    const connectionId = props.connection.id
+    return {
+      mutationFn: (ids: string[]) =>
+        client.admin.fulfilment.reorderRules({ connectionId, ids }),
+      onSuccess: refresh,
+      onError: (error: Error) => toast.error(errorMessage(error)),
+    }
   })
-  const remove = useMutation({
+  const remove = useMutation(() => ({
     mutationFn: (id: string) => client.admin.fulfilment.removeRule({ id }),
     onSuccess: async () => {
       setRemoving(null)
       await refresh()
     },
     onError: (error) => toast.error(errorMessage(error)),
-  })
-  const list = rules.data ?? []
+  }))
+  const list = () => (rules.isSuccess ? rules.data : [])
   const move = (index: number, by: number) => {
-    const ids = list.map((rule) => rule.id)
+    const ids = list().map((rule) => rule.id)
     const [moved] = ids.splice(index, 1)
     if (!moved) return
     ids.splice(index + by, 0, moved)
-    reorder.mutate(ids)
+    void reorder.mutate(ids)
   }
 
   return (
-    <div className="flex flex-col gap-2 border-t px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
-        <h5 className="text-13px font-medium">
-          {tr("connections.rules.title")}
-        </h5>
-        {connection.editable && (
+    <div class="flex flex-col gap-2 border-t px-4 py-3">
+      <div class="flex items-center justify-between gap-3">
+        <h5 class="text-13px font-medium">{tr("connections.rules.title")}</h5>
+        <Show when={props.connection.editable}>
           <Button
             variant="ghost"
             size="sm"
-            disabled={!fields}
+            disabled={!props.fields}
             onClick={() => {
               setEditing({})
               setOpen(true)
             }}
           >
-            <PlusIcon />
+            <Icon icon={Plus} />
             {tr("connections.rules.add")}
           </Button>
-        )}
+        </Show>
       </div>
-      {list.length > 0 && (
-        <ol className="flex flex-col divide-y rounded-lg border">
-          {list.map((rule, index) => (
-            <li
-              key={rule.id}
-              className="flex items-start gap-2 py-2 pr-1.5 pl-3"
-            >
-              <span className="text-muted-foreground text-13px w-4 shrink-0 pt-px tabular-nums">
-                {index + 1}
-              </span>
-              <RuleSummary
-                rule={rule}
-                fields={fields}
-                choices={choices.data}
-                landings={connection.landings}
-              />
-              {connection.editable && (
-                <div className="flex shrink-0 items-center self-center">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={tr("connections.rules.up")}
-                    disabled={index === 0 || reorder.isPending}
-                    onClick={() => move(index, -1)}
-                  >
-                    <ArrowUpIcon />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={tr("connections.rules.down")}
-                    disabled={index === list.length - 1 || reorder.isPending}
-                    onClick={() => move(index, 1)}
-                  >
-                    <ArrowDownIcon />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={tr("connections.rules.edit")}
-                    disabled={!fields}
-                    onClick={() => {
-                      setEditing({ rule })
-                      setOpen(true)
-                    }}
-                  >
-                    <PencilIcon />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={tr("connections.rules.delete")}
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setRemoving(rule)}
-                  >
-                    <Trash2Icon />
-                  </Button>
-                </div>
-              )}
-            </li>
-          ))}
+      <Show when={list().length > 0}>
+        <ol class="flex flex-col divide-y rounded-lg border">
+          <For each={list()} keyed={(rule) => rule.id}>
+            {(rule, index) => (
+              <li class="flex items-start gap-2 py-2 pr-1.5 pl-3">
+                <span class="text-muted-foreground text-13px w-4 shrink-0 pt-px tabular-nums">
+                  {index() + 1}
+                </span>
+                <RuleSummary
+                  rule={rule()}
+                  fields={props.fields}
+                  choices={choiceData()}
+                  landings={props.connection.landings}
+                />
+                <Show when={props.connection.editable}>
+                  <div class="flex shrink-0 items-center self-center">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={tr("connections.rules.up")}
+                      disabled={index() === 0 || reorder.isPending}
+                      onClick={() => move(index(), -1)}
+                    >
+                      <Icon icon={ArrowUp} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={tr("connections.rules.down")}
+                      disabled={
+                        index() === list().length - 1 || reorder.isPending
+                      }
+                      onClick={() => move(index(), 1)}
+                    >
+                      <Icon icon={ArrowDown} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={tr("connections.rules.edit")}
+                      disabled={!props.fields}
+                      onClick={() => {
+                        setEditing({ rule: rule() })
+                        setOpen(true)
+                      }}
+                    >
+                      <Icon icon={Pencil} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={tr("connections.rules.delete")}
+                      class="text-destructive hover:text-destructive"
+                      onClick={() => setRemoving(rule())}
+                    >
+                      <Icon icon={Trash2} />
+                    </Button>
+                  </div>
+                </Show>
+              </li>
+            )}
+          </For>
         </ol>
-      )}
-      {fields && connection.editable && (
-        <RuleDialog
-          connection={connection}
-          kind={kind}
-          fields={fields}
-          choices={choices.data}
-          rule={editing.rule}
-          open={open}
-          onOpenChange={setOpen}
-        />
-      )}
+      </Show>
+      <Show when={props.connection.editable && props.fields}>
+        {(fields) => (
+          <RuleDialog
+            connection={props.connection}
+            kind={kind()}
+            fields={fields()}
+            choices={choiceData()}
+            rule={editing().rule}
+            open={open()}
+            onOpenChange={setOpen}
+          />
+        )}
+      </Show>
       <ConfirmDialog
-        open={removing !== null}
+        open={removing() !== null}
         title={tr("connections.rules.delete.title")}
         description={tr("connections.rules.delete.description")}
         confirmLabel={tr("connections.rules.delete.confirm")}
         destructive
         pending={remove.isPending}
-        onConfirm={() => removing && remove.mutate(removing.id)}
+        onConfirm={() => {
+          const rule = removing()
+          if (rule) void remove.mutate(rule.id)
+        }}
         onClose={() => setRemoving(null)}
       />
     </div>
@@ -608,25 +641,38 @@ function ConnectionRules({
 }
 
 /** A rule's conditions, then what it changes, each by name. */
-function RuleSummary({
-  rule,
-  fields,
-  choices,
-  landings,
-}: {
+function RuleSummary(props: {
   rule: FulfilmentRule
   fields: DescribedField[] | undefined
   choices: FulfilmentRuleChoices | undefined
   landings: FulfilmentLanding[]
 }) {
   // Until both answer, names and setting labels would show as ids and keys.
-  if (!fields || !choices) {
-    return (
-      <p className="text-13px text-muted-foreground min-w-0 flex-1 leading-5">
-        {tr("connections.rules.summaryPending")}
-      </p>
-    )
-  }
+  return (
+    <Show
+      when={props.fields !== undefined && props.choices !== undefined}
+      fallback={
+        <p class="text-13px text-muted-foreground min-w-0 flex-1 leading-5">
+          {tr("connections.rules.summaryPending")}
+        </p>
+      }
+    >
+      <RuleParts
+        rule={props.rule}
+        fields={props.fields ?? []}
+        choices={props.choices}
+        landings={props.landings}
+      />
+    </Show>
+  )
+}
+
+function RuleParts(props: {
+  rule: FulfilmentRule
+  fields: DescribedField[]
+  choices: FulfilmentRuleChoices | undefined
+  landings: FulfilmentLanding[]
+}) {
   const named = <T,>(
     ids: T[],
     list: { id: T; name: string }[] | undefined,
@@ -638,131 +684,146 @@ function RuleSummary({
           tr("connections.rules.unknownChoice"),
       ),
     )
-  const conditions = [
-    rule.users.length > 0 && {
-      label: tr("connections.rules.users"),
-      value: named(rule.users, choices?.users),
-    },
-    rule.genres.length > 0 && {
-      label: tr("connections.rules.genres"),
-      value: named(rule.genres, choices?.genres),
-    },
-    rule.languages.length > 0 && {
-      label: tr("connections.rules.languages"),
-      value: named(rule.languages, choices?.languages),
-    },
-    rule.keywords.length > 0 && {
-      label: tr("connections.rules.keywords"),
-      value: lists().format(rule.keywords.map((keyword) => keyword.name)),
-    },
-  ].filter((entry) => entry !== false)
+  const conditions = () => {
+    const rule = props.rule
+    const choices = props.choices
+    return [
+      rule.users.length > 0 && {
+        label: tr("connections.rules.users"),
+        value: named(rule.users, choices?.users),
+      },
+      rule.genres.length > 0 && {
+        label: tr("connections.rules.genres"),
+        value: named(rule.genres, choices?.genres),
+      },
+      rule.languages.length > 0 && {
+        label: tr("connections.rules.languages"),
+        value: named(rule.languages, choices?.languages),
+      },
+      rule.keywords.length > 0 && {
+        label: tr("connections.rules.keywords"),
+        value: lists().format(rule.keywords.map((keyword) => keyword.name)),
+      },
+    ].filter((entry) => entry !== false)
+  }
   // In the order the form lists them, and only the ones it knows.
-  const known = fields.filter((each) => Object.hasOwn(rule.settings, each.key))
+  const known = () =>
+    props.fields.filter((each) => Object.hasOwn(props.rule.settings, each.key))
   // A folder and a quality read as what they are; anything else by name.
-  const folderField = known.find((each) => each.folder)
-  const landing = folderField?.folder
-    ? landings.find(
-        (each) =>
-          each.folder ===
-            shownValue(undefined, rule.settings, folderField.key)[0] &&
-          each.kind === folderField.folder,
-      )
-    : undefined
-  const folder = folderField?.folder
-    ? {
-        library: landing?.library?.name ?? null,
-        hidden: landing?.hidden ?? false,
-      }
-    : null
-  const settings = known.map((field) => {
-    const shown = lists().format(shownValue(field, rule.settings, field.key))
-    if (field.folder || field.key === "qualityProfileId") return shown
-    return (
-      <>
-        {translateKnown(field.label)}{" "}
-        <span className="text-foreground">{shown}</span>
-      </>
+  const folder = () => {
+    const folderField = known().find((each) => each.folder)
+    if (!folderField?.folder) return null
+    const landing = props.landings.find(
+      (each) =>
+        each.folder ===
+          shownValue(undefined, props.rule.settings, folderField.key)[0] &&
+        each.kind === folderField.folder,
     )
-  })
+    return {
+      library: landing?.library?.name ?? null,
+      hidden: landing?.hidden ?? false,
+    }
+  }
+  const settings = () =>
+    known().map((field): JSX.Element => {
+      const shown = lists().format(
+        shownValue(field, props.rule.settings, field.key),
+      )
+      if (field.folder || field.key === "qualityProfileId") return shown
+      return (
+        <>
+          {translateKnown(field.label)}{" "}
+          <span class="text-foreground">{shown}</span>
+        </>
+      )
+    })
   return (
-    <div className="text-13px flex min-w-0 flex-1 flex-col gap-0.5 leading-5">
-      <p className="min-w-0 break-words">
-        {conditions.map((entry, index) => (
-          <span key={entry.label}>
-            {index > 0 && <span className="text-muted-foreground"> · </span>}
-            <span className="text-muted-foreground">{entry.label} </span>
-            {entry.value}
-          </span>
-        ))}
-      </p>
-      {folder ? (
-        <Destination
-          library={folder.library}
-          hidden={folder.hidden}
-          rest={settings}
-        />
-      ) : (
-        <p className="text-muted-foreground min-w-0 break-words">
-          {settings.map((part, index) => (
-            // The settings are fixed for a rule, so their places are.
-            <span key={index}>
-              {index > 0 && " · "}
-              {part}
+    <div class="text-13px flex min-w-0 flex-1 flex-col gap-0.5 leading-5">
+      <p class="min-w-0 break-words">
+        <For each={conditions()} keyed={(entry) => entry.label}>
+          {(entry, index) => (
+            <span>
+              <Show when={index() > 0}>
+                <span class="text-muted-foreground"> · </span>
+              </Show>
+              <span class="text-muted-foreground">{entry().label} </span>
+              {entry().value}
             </span>
-          ))}
-        </p>
-      )}
+          )}
+        </For>
+      </p>
+      <Show
+        when={folder()}
+        fallback={
+          <p class="text-muted-foreground min-w-0 break-words">
+            <For each={settings()}>
+              {(part, index) => (
+                <span>
+                  <Show when={index() > 0}>{" · "}</Show>
+                  {part}
+                </span>
+              )}
+            </For>
+          </p>
+        }
+      >
+        {(place) => (
+          <Destination
+            library={place().library}
+            hidden={place().hidden}
+            rest={settings()}
+          />
+        )}
+      </Show>
     </div>
   )
 }
 
 /** For each library, the connections whose settings or rules land in it. */
-function LibraryCoverage({
-  libraries,
-  connections,
-}: {
-  libraries: UseQueryResult<Library[]>
+function LibraryCoverage(props: {
+  libraries: Library[] | undefined
   connections: FulfilmentConnection[] | undefined
 }) {
-  const list = libraries.data ?? []
-  if (!list.length || !connections) return null
   return (
-    <SettingsSubsection id="fill" title={tr("connections.libraries.title")}>
-      <SettingRows>
-        {list.map((library) => {
-          const Icon = libraryIcons[library.kind]
-          const filling = connections
-            .filter((connection) =>
-              connection.landings.some(
-                (landing) => landing.library?.id === library.id,
-              ),
-            )
-            .map((connection) => connection.name)
-          return (
-            <div
-              key={library.id}
-              className="flex min-w-0 items-center gap-3 px-4 py-2.5 text-sm"
-            >
-              <Icon
-                aria-hidden
-                className="text-muted-foreground size-4 shrink-0"
-              />
-              <span className="min-w-0 truncate font-medium">
-                {library.name}
-              </span>
-              <span className="text-muted-foreground text-13px ml-auto min-w-0 truncate">
-                {library.metadataProvider === null
-                  ? tr("connections.libraries.noProvider")
-                  : filling.length
-                    ? tr("connections.libraries.filledBy", {
-                        connections: lists().format(filling),
-                      })
-                    : tr("connections.libraries.unfilled")}
-              </span>
-            </div>
-          )
-        })}
-      </SettingRows>
-    </SettingsSubsection>
+    <Show when={(props.libraries?.length ?? 0) > 0 && props.connections}>
+      {(connections) => (
+        <SettingsSubsection id="fill" title={tr("connections.libraries.title")}>
+          <SettingRows>
+            <For each={props.libraries ?? []}>
+              {(library) => {
+                const filling = () =>
+                  connections()
+                    .filter((connection) =>
+                      connection.landings.some(
+                        (landing) => landing.library?.id === library.id,
+                      ),
+                    )
+                    .map((connection) => connection.name)
+                return (
+                  <div class="flex min-w-0 items-center gap-3 px-4 py-2.5 text-sm">
+                    <Icon
+                      icon={libraryIcons[library.kind]}
+                      class="text-muted-foreground size-4 shrink-0"
+                    />
+                    <span class="min-w-0 truncate font-medium">
+                      {library.name}
+                    </span>
+                    <span class="text-muted-foreground text-13px ml-auto min-w-0 truncate">
+                      {library.metadataProvider === null
+                        ? tr("connections.libraries.noProvider")
+                        : filling().length
+                          ? tr("connections.libraries.filledBy", {
+                              connections: lists().format(filling()),
+                            })
+                          : tr("connections.libraries.unfilled")}
+                    </span>
+                  </div>
+                )
+              }}
+            </For>
+          </SettingRows>
+        </SettingsSubsection>
+      )}
+    </Show>
   )
 }

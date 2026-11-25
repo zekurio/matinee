@@ -1,78 +1,82 @@
+import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
+import type { RenderProp } from "@ui-sdk/solid/primitive"
+import { Show } from "solid-js"
+
 import {
   Drawer,
   DrawerContent,
   DrawerHandle,
   DrawerTitle,
   DrawerTrigger,
-} from "@matinee/ui/components/drawer"
+} from "@/kit/drawer"
 import {
   Popover,
   PopoverContent,
   PopoverTitle,
   PopoverTrigger,
-} from "@matinee/ui/components/popover"
-import { cn } from "@matinee/ui/lib/utils"
-import type { ReactElement, ReactNode } from "react"
+} from "@/kit/popover"
+import { isPhone } from "@/lib/viewport"
 
-import { usePhone } from "@/components/sheet-menu"
+/** The props a popup's trigger part hands the element it renders. */
+export type TriggerProps = Parameters<RenderProp>[0]
+
+/**
+ * A trigger's element, which spreads the props it's handed on the element
+ * it renders, as ui-sdk's `render` takes them.
+ */
+export type TriggerRender = (props: TriggerProps) => JSX.Element
 
 /**
  * What a request button opens: a popover beside it on wider screens, a
  * drawer from the bottom on phones, where the thumb is. Both close with
- * Escape and give focus back to `trigger`.
+ * Escape and give focus back to the trigger.
  */
-export function AskSheet({
-  open,
-  onOpenChange,
-  trigger,
-  title,
-  align = "start",
-  className,
-  children,
-}: {
+export function AskSheet(props: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  trigger: ReactElement
-  title: ReactNode
+  renderTrigger: TriggerRender
+  title: JSX.Element
   align?: "start" | "center" | "end"
-  className?: string
-  children: ReactNode
+  class?: string
+  children: JSX.Element
 }) {
-  const phone = usePhone()
-  if (phone) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerTrigger render={trigger} />
+  return (
+    <Show
+      when={isPhone()}
+      fallback={
+        <Popover open={props.open} onOpenChange={props.onOpenChange}>
+          <PopoverTrigger render={props.renderTrigger} />
+          <PopoverContent
+            align={props.align ?? "start"}
+            sideOffset={8}
+            class={cn("w-[22rem] gap-3 p-4", props.class)}
+          >
+            <PopoverTitle class="text-base leading-6 font-semibold tracking-tight">
+              {props.title}
+            </PopoverTitle>
+            {props.children}
+          </PopoverContent>
+        </Popover>
+      }
+    >
+      <Drawer open={props.open} onOpenChange={props.onOpenChange}>
+        <DrawerTrigger render={props.renderTrigger} />
         <DrawerContent>
           <DrawerHandle />
-          <DrawerTitle className="px-5 pt-3 text-lg leading-7 font-semibold tracking-tight">
-            {title}
+          <DrawerTitle class="px-5 pt-3 text-lg leading-7 font-semibold tracking-tight">
+            {props.title}
           </DrawerTitle>
           <div
-            className={cn(
-              "flex min-h-0 flex-col gap-3 overflow-y-auto px-5 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-15px",
-              className,
+            class={cn(
+              "text-15px flex min-h-0 flex-col gap-3 overflow-y-auto px-5 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom))]",
+              props.class,
             )}
           >
-            {children}
+            {props.children}
           </div>
         </DrawerContent>
       </Drawer>
-    )
-  }
-  return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger render={trigger} />
-      <PopoverContent
-        align={align}
-        sideOffset={8}
-        className={cn("w-[22rem] gap-3 p-4", className)}
-      >
-        <PopoverTitle className="text-base leading-6 font-semibold tracking-tight">
-          {title}
-        </PopoverTitle>
-        {children}
-      </PopoverContent>
-    </Popover>
+    </Show>
   )
 }

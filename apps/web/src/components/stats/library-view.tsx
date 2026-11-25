@@ -5,19 +5,21 @@ import {
   type StatsRange,
   videoCodecName,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
+import { keepPreviousData, useQuery } from "@tanstack/solid-query"
+import { Link } from "@tanstack/solid-router"
 import {
-  ClockIcon,
-  FilmIcon,
-  FolderPlusIcon,
-  HardDriveIcon,
-  TvMinimalIcon,
-  TvMinimalPlayIcon,
-} from "lucide-react"
+  Clock,
+  Film,
+  FolderPlus,
+  HardDrive,
+  TvMinimal,
+  TvMinimalPlay,
+} from "lucide"
+import { Match, Show, Switch } from "solid-js"
 
 import { tr } from "@/i18n"
+import { Button } from "@/kit/button"
+import { Icon } from "@/kit/icon"
 import { formatBytes, formatCount, formatWatchTime } from "@/lib/format"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
@@ -52,73 +54,75 @@ function inOrder(rows: QualityStat[], order: string[]): QualityStat[] {
 }
 
 /** A trait's files, as bars: its size at the end, how many files under its name. */
-function QualitySection({
-  title,
-  rows,
-  name,
-}: {
+function QualitySection(props: {
   title: string
   rows: QualityStat[]
   name: (value: string) => string
 }) {
-  if (rows.length === 0) return null
   return (
-    <StatsSection title={title}>
-      <RankedBars
-        rows={rows.map((row) => ({
-          key: row.name,
-          label: name(row.name),
-          value: row.files,
-          detail: formatBytes(row.sizeBytes),
-          note: tr("stats.files", { count: row.files }),
-        }))}
-      />
-    </StatsSection>
+    <Show when={props.rows.length > 0}>
+      <StatsSection title={props.title}>
+        <RankedBars
+          rows={props.rows.map((row) => ({
+            key: row.name,
+            label: props.name(row.name),
+            value: row.files,
+            detail: formatBytes(row.sizeBytes),
+            note: tr("stats.files", { count: row.files }),
+          }))}
+        />
+      </StatsSection>
+    </Show>
   )
 }
 
 /** What the libraries hold, how they grew, and in what quality. */
-export function LibraryView({
-  range,
-  admin,
-}: {
-  range: StatsRange
-  admin: boolean
-}) {
+export function LibraryView(props: { range: StatsRange; admin: boolean }) {
   const openSettings = useOpenSettings()
-  const stats = useQuery({
+  const stats = useQuery(() => ({
     ...orpc.stats.library.queryOptions({
-      input: { range, timeZone: TIME_ZONE },
+      input: { range: props.range, timeZone: TIME_ZONE },
     }),
     placeholderData: keepPreviousData,
-  })
-  if (stats.isPending) return <WatchStatsSkeleton />
-  if (!stats.data) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        {errorMessage(stats.error)}
-      </p>
-    )
-  }
-  if (stats.data.totals.files === 0) {
-    return (
-      <StatsEmpty
-        icon={FolderPlusIcon}
-        title={tr("stats.library.empty")}
-        description={
-          admin ? tr("stats.library.emptyAdmin") : tr("stats.library.emptyUser")
-        }
-        action={
-          admin ? (
-            <Button onClick={() => openSettings("libraries")}>
-              {tr("stats.library.add")}
-            </Button>
-          ) : undefined
-        }
-      />
-    )
-  }
-  return <LibrarySections stats={stats.data} />
+  }))
+  return (
+    <Switch
+      fallback={
+        <p class="text-muted-foreground text-sm">{errorMessage(stats.error)}</p>
+      }
+    >
+      <Match when={stats.isPending}>
+        <WatchStatsSkeleton />
+      </Match>
+      <Match when={stats.isSuccess && stats.data}>
+        {(data) => (
+          <Show
+            when={data().totals.files > 0}
+            fallback={
+              <StatsEmpty
+                icon={FolderPlus}
+                title={tr("stats.library.empty")}
+                description={
+                  props.admin
+                    ? tr("stats.library.emptyAdmin")
+                    : tr("stats.library.emptyUser")
+                }
+                action={
+                  props.admin ? (
+                    <Button onClick={() => openSettings("libraries")}>
+                      {tr("stats.library.add")}
+                    </Button>
+                  ) : undefined
+                }
+              />
+            }
+          >
+            <LibrarySections stats={data()} />
+          </Show>
+        )}
+      </Match>
+    </Switch>
+  )
 }
 
 /** The growth chart's heading; the range only applies to it. */
@@ -126,92 +130,87 @@ function addedTitle(range: StatsRange): string {
   return tr(`stats.library.added.${range}`)
 }
 
-function LibrarySections({ stats }: { stats: LibraryStats }) {
-  const { totals } = stats
-  const libraries = [...stats.libraries].sort(
-    (a, b) => b.sizeBytes - a.sizeBytes,
-  )
+function LibrarySections(props: { stats: LibraryStats }) {
+  const libraries = () =>
+    [...props.stats.libraries].sort((a, b) => b.sizeBytes - a.sizeBytes)
   return (
-    <div className="flex flex-col gap-4">
+    <div class="flex flex-col gap-4">
       <StatFigures
         figures={[
           {
             label: tr("stats.library.movies"),
-            value: formatCount(totals.movies),
-            icon: FilmIcon,
+            value: formatCount(props.stats.totals.movies),
+            icon: Film,
           },
           {
             label: tr("stats.library.shows"),
-            value: formatCount(totals.shows),
-            icon: TvMinimalIcon,
+            value: formatCount(props.stats.totals.shows),
+            icon: TvMinimal,
           },
           {
             label: tr("stats.library.episodes"),
-            value: formatCount(totals.episodes),
-            icon: TvMinimalPlayIcon,
+            value: formatCount(props.stats.totals.episodes),
+            icon: TvMinimalPlay,
           },
           {
             label: tr("stats.library.size"),
-            value: formatBytes(totals.sizeBytes),
-            icon: HardDriveIcon,
+            value: formatBytes(props.stats.totals.sizeBytes),
+            icon: HardDrive,
           },
           {
             label: tr("stats.library.runningTime"),
-            value: formatWatchTime(totals.durationSeconds),
-            icon: ClockIcon,
+            value: formatWatchTime(props.stats.totals.durationSeconds),
+            icon: Clock,
           },
         ]}
       />
-      <StatsSection title={addedTitle(stats.range)}>
-        <GrowthChart buckets={stats.growth} unit={stats.unit} />
+      <StatsSection title={addedTitle(props.stats.range)}>
+        <GrowthChart buckets={props.stats.growth} unit={props.stats.unit} />
       </StatsSection>
-      <div className={statsGrid}>
+      <div class={statsGrid}>
         <StatsSection title={tr("stats.library.libraries")}>
           <RankedBars
-            rows={libraries.map((library) => {
-              const Icon = library.kind === "movies" ? FilmIcon : TvMinimalIcon
-              return {
-                key: library.id,
-                label: (
-                  <Link
-                    to="/libraries/$libraryId"
-                    params={{ libraryId: library.id }}
-                    className="inline-flex max-w-full items-center gap-1.5 underline-offset-2 hover:underline"
-                  >
-                    <Icon
-                      aria-hidden
-                      className="text-muted-foreground size-3.5 shrink-0"
-                    />
-                    <span className="truncate">{library.name}</span>
-                  </Link>
-                ),
-                value: library.sizeBytes,
-                detail: formatBytes(library.sizeBytes),
-                note: tr(`stats.${library.kind}`, { count: library.titles }),
-              }
-            })}
+            rows={libraries().map((library) => ({
+              key: library.id,
+              label: (
+                <Link
+                  to="/libraries/$libraryId"
+                  params={{ libraryId: library.id }}
+                  class="inline-flex max-w-full items-center gap-1.5 underline-offset-2 hover:underline"
+                >
+                  <Icon
+                    icon={library.kind === "movies" ? Film : TvMinimal}
+                    class="text-muted-foreground size-3.5 shrink-0"
+                  />
+                  <span class="truncate">{library.name}</span>
+                </Link>
+              ),
+              value: library.sizeBytes,
+              detail: formatBytes(library.sizeBytes),
+              note: tr(`stats.${library.kind}`, { count: library.titles }),
+            }))}
           />
         </StatsSection>
         <QualitySection
           title={tr("stats.library.resolution")}
-          rows={inOrder(stats.resolutions, RESOLUTION_ORDER)}
+          rows={inOrder(props.stats.resolutions, RESOLUTION_ORDER)}
           name={resolutionName}
         />
         <QualitySection
           title={tr("stats.library.dynamicRange")}
-          rows={inOrder(stats.dynamicRange, DYNAMIC_RANGE_ORDER)}
+          rows={inOrder(props.stats.dynamicRange, DYNAMIC_RANGE_ORDER)}
           name={dynamicRangeName}
         />
         <QualitySection
           title={tr("stats.library.videoCodecs")}
-          rows={stats.videoCodecs}
+          rows={props.stats.videoCodecs}
           name={(codec) =>
             codec === "unknown" ? tr("stats.notRead") : videoCodecName(codec)
           }
         />
         <QualitySection
           title={tr("stats.library.audioCodecs")}
-          rows={stats.audioCodecs}
+          rows={props.stats.audioCodecs}
           name={(codec) =>
             codec === "unknown" ? tr("stats.notRead") : audioFormatName(codec)
           }

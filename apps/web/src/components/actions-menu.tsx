@@ -1,31 +1,9 @@
 import type { MediaItem, Season, TitleSummary } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
-import { toast } from "@matinee/ui/components/sonner"
 import { cn } from "@matinee/ui/lib/utils"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { getRouteApi, useNavigate } from "@tanstack/react-router"
-import {
-  EllipsisIcon,
-  EyeOffIcon,
-  ImageIcon,
-  RefreshCwIcon,
-  RotateCcwIcon,
-  SearchIcon,
-} from "lucide-react"
-import {
-  type ComponentProps,
-  type ReactElement,
-  type ReactNode,
-  useState,
-} from "react"
-import { useStore } from "zustand"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { getRouteApi, useNavigate } from "@tanstack/solid-router"
+import { Ellipsis, EyeOff, Image, RefreshCw, RotateCcw, Search } from "lucide"
+import { createMemo, Show } from "solid-js"
 
 import { cardIconButton } from "@/components/card-actions"
 import { useDeferredMenu } from "@/components/deferred-menu"
@@ -35,6 +13,7 @@ import {
   DownloadMenuItem,
   useDownloadsAllowed,
 } from "@/components/download-dialog"
+import { titleActionButton } from "@/components/favorite-button"
 import {
   IdentifyDialog,
   invalidateTitleData,
@@ -46,6 +25,16 @@ import {
 } from "@/components/title/image-editor"
 import { useLibraryProvider } from "@/components/title/library-provider"
 import { tr } from "@/i18n"
+import { buttonVariants } from "@/kit/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/kit/dropdown-menu"
+import { Icon } from "@/kit/icon"
+import { toast } from "@/kit/toast"
 import { seasonName } from "@/lib/media"
 import { type PartyRole, usePartyRole } from "@/lib/party"
 import { can } from "@/lib/permissions"
@@ -131,12 +120,7 @@ function itemImages(item: MediaItem): ImageOwner | null {
  * menu has none.
  */
 function restartable(target: ActionsTarget): MediaItem | null {
-  const file =
-    target.kind === "item"
-      ? target.item
-      : target.kind === "title" && target.title.kind === "movie"
-        ? (target.file ?? null)
-        : null
+  const file = fileOf(target)
   const progress = file?.progress
   if (!progress || progress.completed || progress.positionSeconds <= 0) {
     return null
@@ -204,92 +188,6 @@ function scopeOf(target: ActionsTarget): Scope {
   }
 }
 
-const pageButton =
-  "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11"
-
-/**
- * The trigger's button, for `render`. An element, not a component: the
- * trigger hands it its handlers and state as props. `props` go on it as
- * well, as the bare button's before the menu mounts. The icon goes in it
- * here, since the element's own props win over the trigger's, children
- * too, even when undefined.
- */
-function triggerButton(
-  look: MenuLook,
-  label: string,
-  className: string | undefined,
-  icon: ReactNode,
-  props?: ComponentProps<typeof Button>,
-): ReactElement {
-  switch (look) {
-    case "card":
-      return (
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={label}
-          {...props}
-          className={cn(cardIconButton, className)}
-        >
-          {icon}
-        </Button>
-      )
-    case "page":
-      return (
-        <Button
-          variant="secondary"
-          size="icon-lg"
-          aria-label={label}
-          {...props}
-          className={cn(pageButton, className)}
-        >
-          {icon}
-        </Button>
-      )
-  }
-}
-
-/**
- * The menu of a movie, show, season, or file. The menu and its dialogs
- * mount once someone reaches for its button.
- */
-export function ActionsMenu({
-  target,
-  look,
-  dismiss,
-  className,
-}: {
-  target: ActionsTarget
-  look: MenuLook
-  /** "Not interested", for a title the viewer was recommended. */
-  dismiss?: () => void
-  /** For the trigger, to place it. */
-  className?: string
-}) {
-  const { user } = authed.useRouteContext()
-  // What the menu calls an admin's: fixing a match, refreshing, images.
-  const admin = can(user, "title.update")
-  const scope = scopeOf(target)
-  const role = usePartyRole()
-  const file = fileOf(target)
-  const plan = {
-    scope,
-    restart: restartable(target),
-    party: role && file ? { role, file } : null,
-    admin,
-    images: admin && scope.title ? scope.images : null,
-    dismiss: dismiss ?? null,
-    look,
-  }
-  // Most menus hold something whatever the server says: playing from the
-  // start, or an admin's image editor. Only the rest ask it before
-  // showing a trigger.
-  if (plan.restart || plan.party || plan.images || plan.dismiss) {
-    return <DeferredActionsMenu {...plan} className={className} />
-  }
-  return <CheckedActionsMenu {...plan} className={className} />
-}
-
 /** What a menu holds before it asks the server anything. */
 type MenuPlan = {
   scope: Scope
@@ -305,20 +203,94 @@ type MenuPlan = {
   look: MenuLook
 }
 
+function triggerClass(look: MenuLook, extra: string | undefined) {
+  return look === "card"
+    ? cn(
+        buttonVariants({ variant: "ghost", size: "icon" }),
+        cardIconButton,
+        extra,
+      )
+    : cn(
+        buttonVariants({ variant: "secondary", size: "icon-lg" }),
+        titleActionButton,
+        extra,
+      )
+}
+
+function MenuIcon(props: { look: MenuLook }) {
+  return (
+    <Icon
+      icon={Ellipsis}
+      class={props.look === "card" ? "size-5" : undefined}
+    />
+  )
+}
+
+/**
+ * The menu of a movie, show, season, or file. The menu and its dialogs
+ * mount once someone reaches for its button.
+ */
+export function ActionsMenu(props: {
+  target: ActionsTarget
+  look: MenuLook
+  /** "Not interested", for a title the viewer was recommended. */
+  dismiss?: () => void
+  /** For the trigger, to place it. */
+  class?: string
+}) {
+  const context = authed.useRouteContext()
+  const role = usePartyRole()
+  const plan = createMemo<MenuPlan>(() => {
+    // What the menu calls an admin's: fixing a match, refreshing, images.
+    const admin = can(context().user, "title.update")
+    const scope = scopeOf(props.target)
+    const file = fileOf(props.target)
+    const party = role()
+    return {
+      scope,
+      restart: restartable(props.target),
+      party: party && file ? { role: party, file } : null,
+      admin,
+      images: admin && scope.title ? scope.images : null,
+      dismiss: props.dismiss ?? null,
+      look: props.look,
+    }
+  })
+  // Most menus hold something whatever the server says: playing from the
+  // start, or an admin's image editor. Only the rest ask it before
+  // showing a trigger.
+  const known = () => {
+    const current = plan()
+    return Boolean(
+      current.restart || current.party || current.images || current.dismiss,
+    )
+  }
+  return (
+    <Show
+      when={known()}
+      fallback={<CheckedActionsMenu plan={plan()} class={props.class} />}
+    >
+      <DeferredActionsMenu plan={plan()} class={props.class} />
+    </Show>
+  )
+}
+
 /**
  * A menu that holds only what the server allows: Download, when the
  * account may, and an admin's fix match and refresh, when the library has
  * a provider. An account that may do neither gets no menu.
  */
-function CheckedActionsMenu({
-  className,
-  ...plan
-}: MenuPlan & { className: string | undefined }) {
+function CheckedActionsMenu(props: { plan: MenuPlan; class?: string }) {
   const downloads = useDownloadsAllowed(true)
-  const owner = plan.admin ? plan.scope.title : null
-  const provider = useLibraryProvider(plan.scope.libraryId, owner !== null)
-  if (!downloads && !provider) return null
-  return <DeferredActionsMenu {...plan} className={className} />
+  const provider = useLibraryProvider(
+    () => props.plan.scope.libraryId,
+    () => props.plan.admin && props.plan.scope.title !== null,
+  )
+  return (
+    <Show when={downloads() || provider()}>
+      <DeferredActionsMenu plan={props.plan} class={props.class} />
+    </Show>
+  )
 }
 
 /**
@@ -326,26 +298,35 @@ function CheckedActionsMenu({
  * from {@link ActionsMenu}, so a menu that goes away and comes back starts
  * bare again.
  */
-function DeferredActionsMenu({
-  className,
-  ...plan
-}: MenuPlan & { className: string | undefined }) {
+function DeferredActionsMenu(props: { plan: MenuPlan; class?: string }) {
   const deferred = useDeferredMenu()
-  const label = tr("media.moreActions", { name: plan.scope.name })
-  const icon = (
-    <EllipsisIcon className={plan.look === "card" ? "size-5" : undefined} />
-  )
-  if (!deferred.mounted) {
-    return triggerButton(plan.look, label, className, icon, deferred.bare)
-  }
+  const label = () => tr("media.moreActions", { name: props.plan.scope.name })
   return (
-    <MountedActionsMenu
-      {...plan}
-      trigger={triggerButton(plan.look, label, className, icon, {
-        ref: deferred.focusRef,
-      })}
-      defaultOpen={deferred.defaultOpen}
-    />
+    <Show
+      when={deferred.mounted()}
+      fallback={
+        <button
+          type="button"
+          aria-label={label()}
+          class={triggerClass(props.plan.look, props.class)}
+          aria-haspopup={deferred.bare["aria-haspopup"]}
+          aria-expanded="false"
+          onPointerEnter={deferred.bare.onPointerEnter}
+          onFocus={deferred.bare.onFocus}
+          onClick={deferred.bare.onClick}
+        >
+          <MenuIcon look={props.plan.look} />
+        </button>
+      }
+    >
+      <MountedActionsMenu
+        plan={props.plan}
+        label={label()}
+        class={props.class}
+        defaultOpen={deferred.defaultOpen()}
+        focusRef={deferred.focusRef}
+      />
+    </Show>
   )
 }
 
@@ -354,44 +335,33 @@ function DeferredActionsMenu({
  * download and the library's provider load from then, before the press
  * that opens it, and their items join the menu when they arrive.
  */
-function MountedActionsMenu({
-  scope,
-  restart,
-  party,
-  admin,
-  images,
-  dismiss,
-  look,
-  trigger,
-  defaultOpen,
-}: MenuPlan & {
-  trigger: ReactElement
+function MountedActionsMenu(props: {
+  plan: MenuPlan
+  label: string
+  class?: string
   defaultOpen: boolean
+  focusRef: (element: HTMLElement) => void
 }) {
-  const owner = scope.title
-  const provider = useLibraryProvider(scope.libraryId, admin && owner !== null)
+  const owner = () => props.plan.scope.title
+  const provider = useLibraryProvider(
+    () => props.plan.scope.libraryId,
+    () => props.plan.admin && owner() !== null,
+  )
   // Set when the user can fix the match and refresh.
-  const adminProvider = (admin && owner ? provider : null) ?? null
+  const adminProvider = () =>
+    (props.plan.admin && owner() ? provider() : null) ?? null
   const downloads = useDownloadsAllowed()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   // Kept after closing, so the dialogs can animate out. Null until one
   // first opens, so none mounts before then.
-  const [store] = useState(createTitleActionsStore)
-  const { file, downloading, titleId, identifying, editingImages } =
-    useStore(store)
-  const {
-    setFile,
-    setDownloading,
-    setTitleId,
-    setIdentifying,
-    setEditingImages,
-  } = store.getState()
+  const store = createTitleActionsStore()
   // Keep the title in Query so refreshes also reach an open dialog.
-  const full = useQuery({
-    ...orpc.titles.get.queryOptions({ input: { id: titleId ?? "" } }),
-    enabled: titleId !== null,
-  }).data
+  const full = useQuery(() => ({
+    ...orpc.titles.get.queryOptions({ input: { id: store.titleId() ?? "" } }),
+    enabled: store.titleId() !== null,
+  }))
+  const fullTitle = () => (full.isSuccess ? full.data : undefined)
 
   const load = (title: TitleSummary) =>
     queryClient.ensureQueryData(
@@ -402,8 +372,8 @@ function MountedActionsMenu({
       description: errorMessage(cause),
     })
   const startDownload = async () => {
-    const download = scope.download
-    if (download.kind === "file") setFile(download.item)
+    const download = props.plan.scope.download
+    if (download.kind === "file") store.setFile(download.item)
     if (download.kind === "movie") {
       try {
         const found = (await load(download.title)).next
@@ -411,13 +381,13 @@ function MountedActionsMenu({
           toast.error(tr("media.noFiles", { name: download.title.name }))
           return
         }
-        setFile(found)
+        store.setFile(found)
       } catch (cause) {
         loadFailed(download.title, cause)
         return
       }
     }
-    setDownloading(true)
+    store.setDownloading(true)
   }
   /** Loads the whole movie or show, then opens a dialog for it. */
   const withTitle = async (
@@ -426,141 +396,181 @@ function MountedActionsMenu({
   ) => {
     try {
       await load(title)
-      setTitleId(title.id)
+      store.setTitleId(title.id)
       open(true)
     } catch (cause) {
       loadFailed(title, cause)
     }
   }
-  const refresh = useMutation({
+  const refresh = useMutation(() => ({
     mutationFn: (title: TitleSummary) =>
       client.titles.refresh({ id: title.id }),
-    onSuccess: async (_, title) => {
+    onSuccess: async (_result, title) => {
       await invalidateTitleData(queryClient)
       toast.success(tr("title.refresh.done", { name: title.name }), {
         description: tr("title.refresh.doneDescription", {
-          provider: adminProvider?.name ?? "",
+          provider: adminProvider()?.name ?? "",
         }),
       })
     },
-    onError: (error) =>
+    onError: (error: Error) =>
       toast.error(tr("title.refresh.error"), {
         description: errorMessage(error),
       }),
-  })
+  }))
 
-  const adminItems = Boolean(adminProvider) || images !== null
-  const playItems = Boolean(restart || party)
+  const adminItems = () =>
+    adminProvider() !== null || props.plan.images !== null
+  const playItems = () => Boolean(props.plan.restart || props.plan.party)
   return (
     <>
-      <DropdownMenu defaultOpen={defaultOpen}>
-        <DropdownMenuTrigger render={trigger} />
-        <DropdownMenuContent
-          align={look === "page" ? "start" : "end"}
-          sideOffset={look === "page" ? 6 : 4}
-          // As wide as its items, rather than its small trigger, so none wraps.
-          className="w-max min-w-48 whitespace-nowrap"
+      <DropdownMenu defaultOpen={props.defaultOpen}>
+        <DropdownMenuTrigger
+          ref={props.focusRef}
+          aria-label={props.label}
+          class={triggerClass(props.plan.look, props.class)}
         >
-          {restart && (
-            <DropdownMenuItem
-              onClick={() =>
-                void navigate({
-                  to: "/watch/$itemId",
-                  params: { itemId: restart.id },
-                  search: { start: 0 },
-                })
-              }
-            >
-              <RotateCcwIcon />
-              {tr("media.playFromStart")}
-            </DropdownMenuItem>
-          )}
-          {party && (
-            <PartyMenuItem
-              item={party.file}
-              name={scope.name}
-              role={party.role}
-            />
-          )}
-          {playItems && (downloads || adminItems) && <DropdownMenuSeparator />}
-          {downloads && (
+          <MenuIcon look={props.plan.look} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align={props.plan.look === "page" ? "start" : "end"}
+          sideOffset={props.plan.look === "page" ? 6 : 4}
+          // As wide as its items, rather than its small trigger, so none wraps.
+          class="w-max min-w-48 whitespace-nowrap"
+        >
+          <Show when={props.plan.restart}>
+            {(restart) => (
+              <DropdownMenuItem
+                onSelect={() =>
+                  void navigate({
+                    to: "/watch/$itemId",
+                    params: { itemId: restart().id },
+                    search: { start: 0 },
+                  })
+                }
+              >
+                <Icon icon={RotateCcw} />
+                {tr("media.playFromStart")}
+              </DropdownMenuItem>
+            )}
+          </Show>
+          <Show when={props.plan.party}>
+            {(party) => (
+              <PartyMenuItem
+                item={party().file}
+                name={props.plan.scope.name}
+                role={party().role}
+              />
+            )}
+          </Show>
+          <Show when={playItems() && (downloads() || adminItems())}>
+            <DropdownMenuSeparator />
+          </Show>
+          <Show when={downloads()}>
             <DownloadMenuItem onSelect={() => void startDownload()} />
-          )}
-          {downloads && adminItems && <DropdownMenuSeparator />}
-          {owner && adminProvider && (
-            <>
+          </Show>
+          <Show when={downloads() && adminItems()}>
+            <DropdownMenuSeparator />
+          </Show>
+          <Show when={adminProvider() && owner()}>
+            {(title) => (
+              <>
+                <DropdownMenuItem
+                  onSelect={() => void withTitle(title(), store.setIdentifying)}
+                >
+                  <Icon icon={Search} />
+                  {tr("title.menu.fixMatch")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={refresh.isPending}
+                  onSelect={() => refresh.mutate(title())}
+                >
+                  <Icon icon={RefreshCw} />
+                  {tr("title.menu.refresh")}
+                </DropdownMenuItem>
+              </>
+            )}
+          </Show>
+          <Show when={props.plan.images && owner()}>
+            {(title) => (
               <DropdownMenuItem
-                onClick={() => void withTitle(owner, setIdentifying)}
+                onSelect={() => void withTitle(title(), store.setEditingImages)}
               >
-                <SearchIcon />
-                {tr("title.menu.fixMatch")}
+                <Icon icon={Image} />
+                {tr("title.menu.editImages")}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={refresh.isPending}
-                onClick={() => refresh.mutate(owner)}
-              >
-                <RefreshCwIcon />
-                {tr("title.menu.refresh")}
-              </DropdownMenuItem>
-            </>
-          )}
-          {owner && images && (
-            <DropdownMenuItem
-              onClick={() => void withTitle(owner, setEditingImages)}
-            >
-              <ImageIcon />
-              {tr("title.menu.editImages")}
-            </DropdownMenuItem>
-          )}
-          {dismiss && (
-            <>
-              {(playItems || downloads || adminItems) && (
-                <DropdownMenuSeparator />
-              )}
-              <DropdownMenuItem onClick={dismiss}>
-                <EyeOffIcon />
-                {tr("discover.notInterested")}
-              </DropdownMenuItem>
-            </>
-          )}
+            )}
+          </Show>
+          <Show when={props.plan.dismiss}>
+            {(dismiss) => (
+              <>
+                <Show when={playItems() || downloads() || adminItems()}>
+                  <DropdownMenuSeparator />
+                </Show>
+                <DropdownMenuItem onSelect={() => dismiss()()}>
+                  <Icon icon={EyeOff} />
+                  {tr("discover.notInterested")}
+                </DropdownMenuItem>
+              </>
+            )}
+          </Show>
         </DropdownMenuContent>
       </DropdownMenu>
-      {downloading !== null &&
-        (scope.download.kind === "files" ? (
-          <DownloadFilesDialog
-            title={scope.download.title}
-            season={scope.download.season}
-            name={scope.name}
-            open={downloading}
-            onOpenChange={setDownloading}
-          />
-        ) : (
-          file && (
-            <DownloadDialog
-              item={file}
-              name={scope.name}
-              open={downloading}
-              onOpenChange={setDownloading}
+      <Show when={store.downloading() !== null}>
+        <Show
+          when={
+            props.plan.scope.download.kind === "files" &&
+            props.plan.scope.download
+          }
+          fallback={
+            <Show when={store.file()}>
+              {(file) => (
+                <DownloadDialog
+                  item={file()}
+                  name={props.plan.scope.name}
+                  open={store.downloading() ?? false}
+                  onOpenChange={store.setDownloading}
+                />
+              )}
+            </Show>
+          }
+        >
+          {(download) => (
+            <DownloadFilesDialog
+              title={download().title}
+              season={download().season}
+              name={props.plan.scope.name}
+              open={store.downloading() ?? false}
+              onOpenChange={store.setDownloading}
             />
-          )
-        ))}
-      {adminProvider && full && (
-        <IdentifyDialog
-          title={full}
-          providerName={adminProvider.name}
-          open={identifying}
-          onOpenChange={setIdentifying}
-        />
-      )}
-      {images && full && (
-        <ImageEditorDialog
-          title={full}
-          owner={images}
-          name={scope.name}
-          open={editingImages}
-          onOpenChange={setEditingImages}
-        />
-      )}
+          )}
+        </Show>
+      </Show>
+      <Show when={adminProvider() && fullTitle()}>
+        {(title) => (
+          <IdentifyDialog
+            title={title()}
+            providerName={adminProvider()?.name ?? ""}
+            open={store.identifying()}
+            onOpenChange={store.setIdentifying}
+          />
+        )}
+      </Show>
+      <Show when={props.plan.images && fullTitle()}>
+        {(title) => (
+          <Show when={props.plan.images}>
+            {(images) => (
+              <ImageEditorDialog
+                title={title()}
+                owner={images()}
+                name={props.plan.scope.name}
+                open={store.editingImages()}
+                onOpenChange={store.setEditingImages}
+              />
+            )}
+          </Show>
+        )}
+      </Show>
     </>
   )
 }
