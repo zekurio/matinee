@@ -3,7 +3,6 @@ import {
   type RatingSystem,
   type TitleFilterOptions,
   type TitleFilters,
-  type TitleKind,
   WATCH_STATES,
 } from "@matinee/contracts"
 
@@ -40,7 +39,6 @@ const STUDIOS_SHOWN = 10
 
 /** The Filter button and what it opens, with a list of titles' fields. */
 export function TitleFilterPanel({
-  kind,
   options,
   filters,
   change,
@@ -48,8 +46,6 @@ export function TitleFilterPanel({
   onOpenChange,
   compact = false,
 }: {
-  /** The kind of every title in the list, if they're all one. */
-  kind: TitleKind | undefined
   options: TitleFilterOptions
   filters: TitleFilters
   change: Change
@@ -194,8 +190,6 @@ export function TitleFilterPanel({
       {options.runtime && (
         <RuntimeField
           range={options.runtime}
-          // A show's runtime is an episode's.
-          hint={tr(`filters.runtimeHint.${kind ?? "both"}`)}
           filters={filters}
           change={change}
         />
@@ -206,19 +200,16 @@ export function TitleFilterPanel({
 
 function RuntimeField({
   range,
-  hint,
   filters,
   change,
 }: {
   range: NonNullable<TitleFilterOptions["runtime"]>
-  hint: string | undefined
   filters: TitleFilters
   change: Change
 }) {
   return (
     <RangeField
       label={tr("filters.runtime")}
-      hint={hint}
       range={range}
       value={[filters.runtimeMin, filters.runtimeMax]}
       words={(bounds) => runtimeWords(bounds)}

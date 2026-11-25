@@ -141,7 +141,6 @@ export function KindPage({
     filter: options
       ? (compact) => (
           <TitleFilterPanel
-            kind={kind}
             options={options}
             filters={list.filters}
             change={list.change}

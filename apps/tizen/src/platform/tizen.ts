@@ -1,3 +1,12 @@
+import {
+  type Engine,
+  type EngineListener,
+  type Platform,
+  VideoEngine,
+} from "@matinee/tv"
+
+import { AvplayEngine } from "../player/engine"
+
 /*
  * The parts of Tizen's and Samsung's TV APIs the app uses, typed as their
  * references describe them. `window.tizen` is there in any Tizen web app;
@@ -213,4 +222,41 @@ export function appVersion(): string | null {
       () => window.tizen?.application.getCurrentApplication().appInfo.version,
     ) ?? null
   )
+}
+
+/**
+ * Samsung's host: AVPlay where the TV has it, its own keys, and the
+ * package's version and model. A packaged app is loaded by file path, so
+ * it has no server to fall back to; one served by address during
+ * development uses that address, as the Solid web app does.
+ */
+export const tizenPlatform: Platform = {
+  onTv: true,
+  model: tvModel,
+  tizenVersion,
+  panelWidth,
+  showsHdr,
+  get hasNativePlayer() {
+    // The TV loads `webapis.js` in the page's head, but ask again each
+    // time: a model that loads it late still plays with AVPlay.
+    return window.webapis?.avplay !== undefined
+  },
+  devicePlatform: "tizen",
+  appVersion,
+  tvName,
+  registerRemoteKeys,
+  exitApp,
+  holdScreenSaver,
+  createEngine(host: HTMLElement, listener: EngineListener): Engine {
+    const avplay = window.webapis?.avplay
+    if (!avplay) {
+      // The browser stand-in a dev shell uses.
+      return new VideoEngine(host, listener)
+    }
+    return new AvplayEngine(host, avplay, listener)
+  },
+  defaultServer(): string | null {
+    const { protocol, origin } = window.location
+    return protocol === "http:" || protocol === "https:" ? origin : null
+  },
 }

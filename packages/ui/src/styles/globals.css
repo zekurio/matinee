@@ -252,6 +252,8 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
   --text-26px--line-height: 32px;
   --text-28px: 28px;
   --text-28px--line-height: 32px;
+  --text-30px: 30px;
+  --text-30px--line-height: 36px;
   --text-32px: 32px;
   --text-32px--line-height: 40px;
   --leading-tight: round(1.25em, 2px);

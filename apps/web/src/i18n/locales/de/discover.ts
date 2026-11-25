@@ -47,14 +47,9 @@ export default {
   "discover.browse.votes": "Stimmen",
   "discover.browse.votesStep": "{count}+",
   "discover.browse.only": "Nur",
-  "discover.browse.onlyHint": "Demnächst heißt in den nächsten drei Monaten.",
   "discover.browse.recommended": "Empfehlungen für dich",
   "discover.browse.upcoming": "Demnächst",
   "discover.browse.requestable": "Was du anfragen kannst",
-  "discover.browse.floorScore":
-    "Nur Titel mit mindestens {count} Stimmen, damit nicht eine Handvoll Stimmen die Liste anführt.",
-  "discover.browse.floorList":
-    "Nur Titel mit mindestens {count} Stimmen, damit die Liste nicht voller Titel ist, die kaum jemand kennt.",
   "discover.browse.none.movie": "Keine Filme passen zu diesen Filtern",
   "discover.browse.none.show": "Keine Serien passen zu diesen Filtern",
   "discover.browse.nothing": "Gerade nichts zu zeigen",

@@ -59,14 +59,9 @@ export default defineMessages("discover", {
   "discover.browse.votesStep": "{count}+",
   // Filters that narrow what's listed rather than describe a title.
   "discover.browse.only": "Only",
-  "discover.browse.onlyHint": "Coming soon looks three months ahead.",
   "discover.browse.recommended": "Recommended for you",
   "discover.browse.upcoming": "Coming soon",
   "discover.browse.requestable": "Ones to ask for",
-  "discover.browse.floorScore":
-    "Only titles with at least {count} votes, so a handful of votes can't top the list.",
-  "discover.browse.floorList":
-    "Only titles with at least {count} votes, so the list isn't filled with ones hardly anyone has seen.",
   "discover.browse.none.movie": "No movies match these filters",
   "discover.browse.none.show": "No shows match these filters",
   "discover.browse.nothing": "Nothing to show right now",

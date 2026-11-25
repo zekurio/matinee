@@ -1,8 +1,6 @@
-import type { Library } from "@matinee/contracts"
-import { ArrowUpDown, ChevronDown } from "lucide"
+import { ArrowUpDown } from "lucide"
 import { createMemo, For, Show } from "solid-js"
 
-import { chipClass } from "@/components/chips"
 import { tr } from "@/i18n"
 import { buttonVariants } from "@/kit/button"
 import {
@@ -13,14 +11,20 @@ import {
   DropdownMenuTrigger,
 } from "@/kit/dropdown-menu"
 import { Icon } from "@/kit/icon"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/kit/select"
 
 // The sort trigger's look doesn't depend on its label, so it is worked out
 // once at module load rather than on each mount.
 const sortTriggerClass = buttonVariants({
   variant: "ghost",
   size: "icon",
-  class:
-    "[@media(pointer:coarse)]:max-sm:size-11 sm:h-8 sm:w-auto sm:gap-2 sm:px-2 sm:text-13px",
+  class: "data-popup-open:bg-foreground/10 [@media(pointer:coarse)]:size-12",
 })
 
 export function SortMenu(props: {
@@ -37,9 +41,10 @@ export function SortMenu(props: {
         aria-label={tr("library.sortCurrent", { sort: label() ?? "" })}
         class={sortTriggerClass}
       >
-        <Icon icon={ArrowUpDown} class="size-5 sm:size-4" />
-        <span class="max-sm:hidden">{label()}</span>
-        <Icon icon={ChevronDown} class="size-3.5 max-sm:hidden" />
+        <Icon
+          icon={ArrowUpDown}
+          class="size-5 [@media(pointer:coarse)]:size-6"
+        />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" class="w-max min-w-48">
         <DropdownMenuRadioGroup
@@ -64,46 +69,48 @@ export function SortMenu(props: {
   )
 }
 
-export function LibraryMenu(props: {
-  libraries: Library[]
-  value?: string
-  onChange: (value?: string) => void
+/** The sort as a select with its words in place, from `sm` up. */
+export function SortSelect<T extends string>(props: {
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
 }) {
-  const all = tr("browse.library.all")
+  const label = () =>
+    props.options.find((option) => option.value === props.value)?.label
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label={tr("browse.library")}
-        class={chipClass(!!props.value)}
+    <Select
+      value={props.value}
+      onValueChange={(next) => {
+        const choice = props.options.find((option) => option.value === next)
+        if (choice) props.onChange(choice.value)
+      }}
+    >
+      <SelectTrigger
+        aria-label={tr("library.sort")}
+        class="min-w-44 shrink-0 justify-between gap-1"
       >
-        <span class="max-w-36 truncate">
-          {props.libraries.find((library) => library.id === props.value)
-            ?.name ?? all}
-        </span>
-        <Icon icon={ChevronDown} class="size-3.5 shrink-0" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent class="w-max min-w-48">
-        <DropdownMenuRadioGroup
-          value={props.value ?? ""}
-          onValueChange={(value) => props.onChange(value || undefined)}
-        >
-          <DropdownMenuRadioItem value="" closeOnSelect>
-            {all}
-          </DropdownMenuRadioItem>
-          <For each={props.libraries} keyed={(library) => library.id}>
-            {(library) => (
-              <DropdownMenuRadioItem value={library().id} closeOnSelect>
-                {library().name}
-              </DropdownMenuRadioItem>
-            )}
-          </For>
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <span class="text-muted-foreground">{tr("library.sortPrefix")}</span>
+        <SelectValue>{label()}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <For each={props.options} keyed={(option) => option.value}>
+          {(option) => (
+            <SelectItem value={option().value} label={option().label}>
+              {option().label}
+            </SelectItem>
+          )}
+        </For>
+      </SelectContent>
+    </Select>
   )
 }
 
-export function FilterButtonFace(props: { active: number; compact?: boolean }) {
+export function FilterButtonFace(props: {
+  active: number
+  compact?: boolean
+  /** The count as a badge, for a trigger that isn't itself a filled chip. */
+  badge?: boolean
+}) {
   return (
     <>
       <Show when={!props.compact}>{tr("library.filter")}</Show>
@@ -112,8 +119,10 @@ export function FilterButtonFace(props: { active: number; compact?: boolean }) {
           aria-hidden="true"
           class={
             props.compact
-              ? "bg-primary text-primary-foreground text-10px absolute top-0.5 right-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 leading-4 font-semibold tabular-nums"
-              : "text-background/70 tabular-nums"
+              ? "bg-primary text-primary-foreground text-11px absolute top-1.5 right-1 grid h-4 min-w-4 place-items-center rounded-full px-1 leading-4 font-semibold tabular-nums"
+              : props.badge
+                ? "bg-foreground text-background rounded-full px-1.5 text-xs leading-5 tabular-nums"
+                : "text-background/70 tabular-nums"
           }
         >
           {props.active}

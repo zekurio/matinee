@@ -1,3 +1,4 @@
+import solid from "@solidjs/vite-plugin"
 import legacy from "@vitejs/plugin-legacy"
 import { defineConfig, loadEnv, type Plugin } from "vite"
 
@@ -52,6 +53,8 @@ export default defineConfig(({ mode }) => {
     base: "./",
     clearScreen: false,
     resolve: { tsconfigPaths: true },
+    // The shared TV view is source, compiled here with this app's plugin.
+    optimizeDeps: { exclude: ["@matinee/tv"] },
     server: {
       port: 5174,
       strictPort: true,
@@ -67,6 +70,9 @@ export default defineConfig(({ mode }) => {
       rolldownOptions: { output: { codeSplitting: false } },
     },
     plugins: [
+      // The package a TV gets is the production runtime, without the
+      // development diagnostics an in-browser session keeps.
+      solid({ dev: false, diagnostics: false }),
       legacy({
         targets: [OLDEST],
         // Every TV gets the same build. One for newer engines would only

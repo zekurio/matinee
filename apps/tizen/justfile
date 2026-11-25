@@ -20,4 +20,4 @@ package:
 
 # Take the strings shared with the Flutter app from its ARB files again
 strings:
-    {{ pnpm }} strings
+    {{ pnpm }} --filter @matinee/tv strings

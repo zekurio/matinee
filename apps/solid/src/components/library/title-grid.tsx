@@ -9,19 +9,19 @@ import {
   createMemo,
   createSignal,
   Errored,
-  For,
   Loading,
+  onSettled,
   Show,
   untrack,
 } from "solid-js"
 
 import { pageGutter } from "@/components/app-shell"
-import { chipClass } from "@/components/chips"
 import {
   cardDetail,
   titleFilterCount,
 } from "@/components/library/title-filter-params"
 import { PosterCard } from "@/components/media-item"
+import { TabHeader } from "@/components/phone-nav"
 import { sectionTitle } from "@/components/rail"
 import { WindowedGrid } from "@/components/windowed-grid"
 import { tr } from "@/i18n"
@@ -38,7 +38,7 @@ import {
   PosterGridSkeleton,
   ShowMore,
 } from "./library-states"
-import { LibraryMenu, SortMenu } from "./list-controls"
+import { SortMenu, SortSelect } from "./list-controls"
 import { TitleFilterPanel } from "./title-filter-panel"
 import type {
   browsedTitlesOptions,
@@ -55,16 +55,21 @@ type TitlesRequest =
 
 export function TitleGrid(props: {
   name: string
-  kind: TitleKind
+  /** The one kind the list holds, or none for movies and shows together. */
+  kind?: TitleKind
   scanning: boolean
   list: Filters
-  request: TitlesRequest
+  request: TitlesRequest | undefined
   poll?: number | false
   description?: JSX.Element
   libraries?: Library[]
   libraryId?: string
   onLibraryChange?: (value?: string) => void
+  /** The kind narrows the list from the filter panel. */
+  onKindChange?: (value?: TitleKind) => void
   back?: boolean
+  /** The first page of a phone tab: its band rather than a heading. */
+  tab?: boolean
 }) {
   createEffect(
     () => props.name,
@@ -88,20 +93,18 @@ export function TitleGrid(props: {
     },
   )
   const history = useHistorySteps()
-  const selectedGenres = () => props.list.filters().genres
-  const quickGenres = createMemo(() => {
-    const options = props.list.options()
-    if (!options) return []
-    const selected = selectedGenres()
-    return [
-      ...new Set([
-        ...selected,
-        ...options.genres.slice(0, 5).map((genre) => genre.name),
-      ]),
-    ]
-  })
-  const sort = () => (
+  // The count belongs beside the title, but the query that knows it lives
+  // with the grid. It writes the total here as its pages arrive.
+  const [total, setTotal] = createSignal<number>()
+  const sortMenu = () => (
     <SortMenu
+      options={props.list.sorts()}
+      value={props.list.sort()}
+      onChange={props.list.setSort}
+    />
+  )
+  const sortSelect = () => (
+    <SortSelect
       options={props.list.sorts()}
       value={props.list.sort()}
       onChange={props.list.setSort}
@@ -113,115 +116,101 @@ export function TitleGrid(props: {
       fallback={
         <Show when={props.list.optionsPending()}>
           <Skeleton
-            class={compact ? "size-9 rounded-full" : "h-8 w-20 rounded-full"}
+            class={compact ? "size-9 rounded-full" : "h-9 w-20 rounded-lg"}
           />
         </Show>
       }
     >
       {(options) => (
         <TitleFilterPanel
-          kind={props.kind}
           options={options()}
           filters={props.list.filters()}
           change={props.list.change}
           compact={compact}
-        />
-      )}
-    </Show>
-  )
-  const libraryMenu = () => (
-    <Show
-      when={props.libraries && props.libraries.length > 1 && props.libraries}
-    >
-      {(libraries) => (
-        <LibraryMenu
-          libraries={libraries()}
-          value={props.libraryId}
-          onChange={(id) => props.onLibraryChange?.(id)}
+          libraries={props.libraries}
+          libraryId={props.libraryId}
+          onLibraryChange={props.onLibraryChange}
+          kind={props.kind}
+          onKindChange={props.onKindChange}
+          trigger="button"
+          align="end"
         />
       )}
     </Show>
   )
   return (
     <div class={browseLayout}>
-      <header class="max-sm:bg-background order-1 flex min-h-12 items-center gap-1 max-sm:sticky max-sm:top-[calc(env(safe-area-inset-top)+4rem)] max-sm:z-20 max-sm:-mx-4 max-sm:px-4">
-        <Show when={props.back && isPhone() && history.canGoBack()}>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={tr("shell.back")}
-            class="-ml-2"
-            onClick={history.back}
-          >
-            <Icon icon={ArrowLeft} class="size-5" />
-          </Button>
-        </Show>
-        <h1 class={[sectionTitle, "sm:text-26px flex-1"]}>{props.name}</h1>
-        <Show when={isPhone()}>
-          {filter(true)}
-          {sort()}
-        </Show>
-      </header>
-      <Show when={props.description}>
-        <div class="text-muted-foreground text-13px order-2 mb-3 sm:mb-0 sm:text-sm">
-          {props.description}
-        </div>
-      </Show>
-      <Show when={isPhone() && props.libraries && props.libraries.length > 1}>
-        <div class="order-2 mb-2">{libraryMenu()}</div>
-      </Show>
-      <Show when={!isPhone()}>
-        <div class="order-3 mt-3 mb-4 flex min-h-8 items-start justify-between gap-3">
-          <div class="flex min-w-0 flex-wrap items-center gap-1.5">
-            {filter(false)}
-            {libraryMenu()}
-            <div
-              role="group"
-              aria-label={tr("filters.genres")}
-              class="flex flex-wrap gap-1.5"
-            >
-              <For each={quickGenres()}>
-                {(genre) => {
-                  const active = () => selectedGenres().includes(genre)
-                  return (
-                    <button
-                      type="button"
-                      aria-pressed={active() ? "true" : "false"}
-                      class={chipClass(active())}
-                      onClick={() => {
-                        const genres = selectedGenres()
-                        props.list.change({
-                          genres: active()
-                            ? genres.filter((name) => name !== genre)
-                            : [...genres, genre],
-                        })
-                      }}
-                    >
-                      {genre}
-                    </button>
-                  )
-                }}
-              </For>
-            </div>
-          </div>
-          <div class="shrink-0">{sort()}</div>
-        </div>
-      </Show>
       <Show
-        when={request()}
-        keyed
-        fallback={<TitleGridLoading showCount={!props.back} />}
+        when={isPhone() && props.tab}
+        fallback={
+          <header class="max-sm:bg-background order-1 mb-4 max-sm:sticky max-sm:top-[calc(env(safe-area-inset-top)+4rem)] max-sm:z-20 max-sm:-mx-4 max-sm:mb-3 max-sm:px-4 md:mb-6">
+            <div class="flex items-end justify-between gap-4">
+              <div class="min-w-0 flex-1">
+                <div class="flex min-h-12 items-center gap-1">
+                  <Show when={props.back && isPhone() && history.canGoBack()}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={tr("shell.back")}
+                      class="-ml-2"
+                      onClick={history.back}
+                    >
+                      <Icon icon={ArrowLeft} class="size-5" />
+                    </Button>
+                  </Show>
+                  <h1 class={[sectionTitle, "sm:text-26px flex-1"]}>
+                    {props.name}
+                  </h1>
+                  <Show when={isPhone()}>
+                    <div class="flex shrink-0 items-center gap-1">
+                      {filter(true)}
+                      {sortMenu()}
+                    </div>
+                  </Show>
+                </div>
+                <Show when={props.description}>
+                  <div class="text-muted-foreground text-13px mt-1 sm:text-sm">
+                    {props.description}
+                  </div>
+                </Show>
+                <Show when={!props.back && total() !== undefined}>
+                  <p class="text-muted-foreground text-13px mt-1 sm:text-sm">
+                    {tr("browse.titleCount", { count: total() ?? 0 })}
+                  </p>
+                </Show>
+              </div>
+              <Show when={!isPhone()}>
+                <div class="flex shrink-0 items-center gap-2">
+                  {filter(false)}
+                  {sortSelect()}
+                </div>
+              </Show>
+            </div>
+          </header>
+        }
       >
+        <TabHeader
+          title={props.name}
+          search
+          actions={
+            <>
+              {filter(true)}
+              {sortMenu()}
+            </>
+          }
+        />
+      </Show>
+      <Show when={request()} keyed fallback={<TitleGridLoading />}>
         {(input) => (
           <Errored fallback={titleResultsError}>
-            <Loading fallback={<TitleGridLoading showCount={!props.back} />}>
+            <Loading fallback={<TitleGridLoading />}>
               <TitleResults
                 kind={props.kind}
                 scanning={props.scanning}
                 list={props.list}
                 request={input}
                 poll={props.poll}
-                showCount={!props.back}
+                onTotal={setTotal}
               />
             </Loading>
           </Errored>
@@ -239,26 +228,22 @@ function titleResultsError(
   )
 }
 
-function TitleGridLoading(props: { showCount: boolean }) {
+function TitleGridLoading() {
   return (
-    <>
-      <Show when={props.showCount}>
-        <div class="order-2 mb-3 h-5 sm:mb-0" />
-      </Show>
-      <div class="order-4">
-        <PosterGridSkeleton />
-      </div>
-    </>
+    <div class="order-4">
+      <PosterGridSkeleton />
+    </div>
   )
 }
 
 function TitleResults(props: {
-  kind: TitleKind
+  /** None when the list holds movies and shows together. */
+  kind?: TitleKind
   scanning: boolean
   list: Filters
   request: TitlesRequest
   poll?: number | false
-  showCount: boolean
+  onTotal: (total: number | undefined) => void
 }) {
   const titles = useInfiniteQuery<
     TitleList,
@@ -293,8 +278,14 @@ function TitleResults(props: {
     },
   )
   const total = () => titles.data.pages[0]?.total
+  createEffect(total, (value) => {
+    props.onTotal(value)
+  })
+  onSettled(() => () => props.onTotal(undefined))
   const filtered = () => titleFilterCount(props.list.filters()) > 0
   const emptyTitle = () => {
+    if (!props.kind)
+      return filtered() ? tr("browse.noFilterMatch") : tr("library.none.media")
     const kind = props.kind === "movie" ? "movies" : "shows"
     return filtered()
       ? tr(`library.noFilterMatch.${kind}`)
@@ -306,52 +297,41 @@ function TitleResults(props: {
     }
   }
   return (
-    <>
-      <Show when={props.showCount}>
-        <p class="text-muted-foreground text-13px order-2 mb-3 min-h-5 sm:mb-0 sm:text-sm">
-          <Show when={total() !== undefined}>
-            {tr("browse.titleCount", { count: total() ?? 0 })}
-          </Show>
-        </p>
-      </Show>
-      <div class="order-4">
-        <Show
-          when={rows()?.length !== 0}
-          fallback={
-            <EmptyList
-              title={emptyTitle()}
-              scanning={props.scanning}
-              clear={filtered() ? props.list.clear : undefined}
-            />
-          }
+    <div class="order-4">
+      <Show
+        when={rows()?.length !== 0}
+        fallback={
+          <EmptyList
+            title={emptyTitle()}
+            scanning={props.scanning}
+            clear={filtered() ? props.list.clear : undefined}
+          />
+        }
+      >
+        <WindowedGrid
+          data-slot="title-grid"
+          class={posterGrid}
+          items={rows() ?? []}
+          keyed={(title) => title.id}
         >
-          <WindowedGrid
-            data-slot="title-grid"
-            class={posterGrid}
-            items={rows() ?? []}
-            keyed={(title) => title.id}
-          >
-            {(title) => (
-              <li>
-                <PosterCard
-                  title={title()}
-                  detail={cardDetail(title(), props.list.order().sort)}
-                />
-              </li>
-            )}
-          </WindowedGrid>
-          <Show when={titles.hasNextPage}>
-            <ShowMore
-              fetching={titles.isFetchingNextPage}
-              paused={
-                titles.fetchStatus !== "idle" && !titles.isFetchingNextPage
-              }
-              failed={titles.isFetchNextPageError}
-              onLoad={load}
-            />
-          </Show>
+          {(title) => (
+            <li>
+              <PosterCard
+                title={title()}
+                detail={cardDetail(title(), props.list.order().sort)}
+              />
+            </li>
+          )}
+        </WindowedGrid>
+        <Show when={titles.hasNextPage}>
+          <ShowMore
+            fetching={titles.isFetchingNextPage}
+            paused={titles.fetchStatus !== "idle" && !titles.isFetchingNextPage}
+            failed={titles.isFetchNextPageError}
+            onLoad={load}
+          />
         </Show>
-      </div>
-    </>
+      </Show>
+    </div>
   )
 }

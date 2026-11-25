@@ -17,6 +17,7 @@
   "sortTailwindcss": true,
   "ignorePatterns": [
     ".devenv/**",
+    "packages/tv/src/i18n/shared.gen.ts",
     ".direnv/**",
     ".git/**",
     "apps/tizen/src/i18n/shared.gen.ts",

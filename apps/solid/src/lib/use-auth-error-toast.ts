@@ -8,7 +8,7 @@ import { toast } from "@/kit/toast"
 /** Show the auth redirect's error once, then remove it from the URL. */
 export function useAuthErrorToast(
   error: () => string | undefined,
-  hint: () => string,
+  hint: () => string | undefined = () => undefined,
 ) {
   const navigate = useNavigate()
   createEffect(
@@ -22,7 +22,7 @@ export function useAuthErrorToast(
       // The router reads its match store when building the next location.
       queueMicrotask(() => {
         void navigate({
-          to: "/login",
+          to: ".",
           search: (prev) => ({ ...prev, [AUTH_ERROR_QUERY_KEY]: undefined }),
           replace: true,
         })

@@ -1,6 +1,6 @@
 import type { User } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
-import { type ParentProps, Show } from "solid-js"
+import { Show } from "solid-js"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/kit/avatar"
 
@@ -33,23 +33,5 @@ export function UserAvatar(props: {
         </span>
       </AvatarFallback>
     </Avatar>
-  )
-}
-
-/**
- * An avatar with the accent dot on its corner, as an admin's shows while
- * requests wait for them or need their attention.
- */
-export function AvatarWithDot(props: ParentProps<{ dot: boolean }>) {
-  return (
-    <span class="relative inline-flex shrink-0">
-      {props.children}
-      <Show when={props.dot}>
-        <span
-          aria-hidden="true"
-          class="bg-primary ring-background absolute -top-px -right-px size-2 rounded-full ring-2"
-        />
-      </Show>
-    </span>
   )
 }

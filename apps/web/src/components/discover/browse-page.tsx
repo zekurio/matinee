@@ -209,11 +209,8 @@ function BrowseGrid({
   const phone = usePhone()
   const panel = (compact: boolean) => (
     <BrowseFilterPanel
-      kind={kind}
       options={options}
       filters={browse.filters}
-      sort={browse.sort}
-      voteFloor={first?.voteFloor ?? null}
       change={change}
       open={panelOpen}
       onOpenChange={setPanelOpen}

@@ -26,6 +26,8 @@ export default defineMessages("search", {
   "search.page.documentTitle": "“{query}”",
   "search.page.intro":
     "Find movies, shows, cast and crew, genres, studios, and profiles.",
+  "search.page.emptyHint":
+    "Type above to search your library, people, genres, and studios.",
   "search.page.heading": "Results for “{query}”",
   "search.page.noMatch": "Nothing matches “{query}”",
   "search.page.noMatchHint": "Check the spelling, or try part of the name.",

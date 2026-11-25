@@ -12,6 +12,7 @@
   "dependencies": {
     "@matinee/client": "workspace:*",
     "@matinee/contracts": "workspace:*",
+    "@matinee/tv": "workspace:*",
     "@matinee/ui": "workspace:*",
     "@orpc/tanstack-query": "catalog:",
     "@scalar/api-reference": "1.78.0",

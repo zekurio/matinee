@@ -1,4 +1,5 @@
-import type { Credit, CreditKind, Title } from "@matinee/contracts"
+import type { Artwork, Credit, CreditKind, Title } from "@matinee/contracts"
+import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/solid-router"
 import { createMemo, For, Show } from "solid-js"
 
@@ -16,6 +17,11 @@ const conjunctionList = perLocale(
 export const unitList = perLocale(
   (locale) => new Intl.ListFormat(locale, { type: "unit", style: "short" }),
 )
+
+/** What someone is credited as, like `Director`, or `Directors` for more. */
+export function creditLabel(kind: CreditKind, count = 1): string {
+  return tr(`people.credit.${kind}`, { count })
+}
 
 function PersonLink(props: { name: string }) {
   return (
@@ -110,7 +116,7 @@ export function CastRail(props: { credits: Credit[] }) {
       <Rail title={tr("people.cast")}>
         <For each={cast()} keyed={false}>
           {(person) => (
-            <li class="w-24 shrink-0 snap-start sm:w-28 lg:w-32">
+            <li class="w-[28%] shrink-0 snap-start sm:w-28 lg:w-32">
               <Link
                 to="/people/$name"
                 params={{ name: person().name }}
@@ -152,5 +158,79 @@ export function CastRail(props: { credits: Credit[] }) {
         </For>
       </Rail>
     </Show>
+  )
+}
+
+/**
+ * A round portrait, or the person's initials on their tone while it loads
+ * or when there's none. `class` sets the size and the initials' type.
+ */
+export function PersonPortrait(props: {
+  name: string
+  photo: Artwork | null
+  eager?: boolean
+  class?: string
+}) {
+  return (
+    <span
+      class={cn(
+        "relative grid aspect-square shrink-0 place-items-center overflow-hidden rounded-full border shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]",
+        tone(props.name),
+        props.class,
+      )}
+    >
+      <span
+        aria-hidden="true"
+        class="text-muted-foreground font-medium tracking-wide"
+      >
+        {initials(props.name)}
+      </span>
+      {/* Headshots are portrait; keep the face, not the chest, in the circle. */}
+      <Show when={art(props.photo)}>
+        {(source) => (
+          <Picture
+            sources={[source()]}
+            eager={props.eager}
+            class="object-[50%_20%]"
+          />
+        )}
+      </Show>
+    </span>
+  )
+}
+
+/** Someone's portrait and name, opening their page. */
+export function PersonCard(props: {
+  name: string
+  photo: Artwork | null
+  /** A line under the name, like the character. */
+  detail?: string | null
+  tmdbId?: string | null
+}) {
+  return (
+    <Link
+      to="/people/$name"
+      params={{ name: props.name }}
+      search={{ tmdb: props.tmdbId ? Number(props.tmdbId) : undefined }}
+      class="group focus-visible:ring-ring focus-visible:ring-offset-background block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+    >
+      <figure class="flex flex-col items-center text-center">
+        <PersonPortrait
+          name={props.name}
+          photo={props.photo}
+          class="group-hover:border-foreground/25 w-full text-xl"
+        />
+        <figcaption class="mt-2.5 w-full px-1">
+          <span class="line-clamp-2 text-sm leading-5 font-medium text-balance">
+            {props.name}
+          </span>
+          <Show when={props.detail}>
+            <span class="text-muted-foreground text-13px mt-0.5 line-clamp-2 leading-[1.125rem] text-balance">
+              {props.detail}
+            </span>
+          </Show>
+        </figcaption>
+      </figure>
+    </Link>
   )
 }

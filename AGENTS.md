@@ -35,7 +35,8 @@ TV app.
   with a desktop layout that follows the Flutter app. It runs beside the
   React app on port 5174 and ships nowhere yet. It shares the React app's
   framework-free modules through `@/`, and its build fails when anything
-  imports React. See its README before writing Solid code.
+  imports React. Its `/tv/` document serves the shared TV UI below. See
+  its README before writing Solid code.
 - `brand/`: the logo, the wordmark, and the app icons, with the
   scripts that draw the wordmark and render their PNGs, the web app's
   favicon, and `apps/web/src/components/logo.gen.ts`. See `brand/README.md`.
@@ -58,13 +59,20 @@ TV app.
   `test/kit_boundary_test.dart` holds that. Strings live in ARB files in
   `lib/l10n`. Build it with `just flutter build` and check it with
   `just flutter check`; see its README.
-- `apps/tizen`: the Samsung TV app, a Preact web app packaged as a `.wgt`
-  with the Flutter app's TV screens and Samsung's AVPlay for video. It
-  runs from file paths on Chromium 56 and up, so it imports only types
-  from `@matinee/contracts`, plus `@matinee/contracts/paths`, and the
-  server answers CORS for `Origin: file://`. Its shared words come from
-  the Flutter app's ARB files through `pnpm --filter @matinee/tizen
-  strings`; `pnpm verify` checks them. Nobody has run it on a TV yet.
+- `packages/tv`: the TV UI shared by the Samsung package and the Solid
+  web app's `/tv/`: Solid 2 screens, the remote's focus and navigation,
+  the session, the API reads, the i18n, and the player controller. A host
+  supplies a `Platform` (AVPlay or the browser's player, keys, screen
+  saver, and device details), so no Samsung API or desktop component is
+  imported into the wrong entry. Its words come from the Flutter app's
+  ARB files through `pnpm --filter @matinee/tv strings`; `pnpm verify`
+  checks them.
+- `apps/tizen`: the thin Samsung package around `packages/tv`: Samsung's
+  AVPlay engine and platform (keys, lifecycle, model, screen saver), the
+  file-origin server setup, the legacy polyfills and Vite build, and the
+  `.wgt` packaging. It runs from file paths on Chromium 56 and up, and
+  the server answers CORS for `Origin: file://`. Nobody has run it on a
+  TV yet; see `apps/tizen/README.md`.
 - `tools/release`: the scripts behind `just tag` and
   `.github/workflows/release.yml`, in `.mjs` on Node's own modules, since
   the workflow runs them before any install. Workflow steps and `just`
@@ -79,7 +87,10 @@ TV app.
 - Use Node 24 and pnpm 11, not npm, Yarn, or Bun. `nix develop` provides
   both plus a repo-local Postgres.
 - Run `pnpm verify` before finishing a change. CI runs the same checks plus
-  `pnpm audit` and the web build.
+  `pnpm audit` and the web build. The TV package's `strings` check is
+  `pnpm --filter @matinee/tv strings --check`. `apps/tizen` builds with
+  `NODE_ENV=production` so the dev shell's `NODE_ENV` doesn't bundle
+  Solid's development runtime.
 - Lint is type-aware oxlint plus the anti-slop rules in `tools/oxlint`
   (borrowed from alloy). In practice:
   - Parse untrusted values (search params, JSON columns, provider payloads,

@@ -1,4 +1,5 @@
 import {
+  type Library,
   NO_TITLE_FILTERS,
   type RatingSystem,
   type TitleFilterOptions,
@@ -29,18 +30,62 @@ import { languageName } from "@/lib/languages"
 type Change = (patch: Partial<TitleFilters>) => void
 
 export function TitleFilterPanel(props: {
-  kind: TitleKind
   options: TitleFilterOptions
   filters: TitleFilters
   change: Change
   compact: boolean
+  /** Every library of this kind, when the page can narrow to one. */
+  libraries?: Library[]
+  libraryId?: string
+  onLibraryChange?: (libraryId?: string) => void
+  /** Movies, shows, or both, when the list can hold both. */
+  kind?: TitleKind
+  onKindChange?: (kind?: TitleKind) => void
+  trigger?: "chip" | "button"
+  align?: "start" | "end"
 }) {
   return (
     <FilterPanel
       active={titleFilterCount(props.filters)}
       onClear={() => props.change(NO_TITLE_FILTERS)}
       compact={props.compact}
+      trigger={props.trigger}
+      align={props.align}
     >
+      <Show when={props.onKindChange}>
+        <Section label={tr("requests.filter.kind")}>
+          {(labelId) => (
+            <ChoiceChips
+              labelId={labelId}
+              anyLabel={tr("browse.kind.all")}
+              choices={[
+                { value: "movie", label: tr("browse.kind.movie") },
+                { value: "show", label: tr("browse.kind.show") },
+              ]}
+              value={props.kind ?? null}
+              onChange={(kind) => props.onKindChange?.(kind ?? undefined)}
+            />
+          )}
+        </Section>
+      </Show>
+      <Show when={(props.libraries?.length ?? 0) > 1}>
+        <Section label={tr("browse.library")}>
+          {(labelId) => (
+            <ChoiceChips
+              labelId={labelId}
+              anyLabel={tr("browse.library.all")}
+              choices={(props.libraries ?? []).map((library) => ({
+                value: library.id,
+                label: library.name,
+              }))}
+              value={props.libraryId ?? null}
+              onChange={(libraryId) =>
+                props.onLibraryChange?.(libraryId ?? undefined)
+              }
+            />
+          )}
+        </Section>
+      </Show>
       <Show when={props.options.total > 0}>
         <Section label={tr("filters.progress")}>
           {(labelId) => (
@@ -153,7 +198,6 @@ export function TitleFilterPanel(props: {
         {(range) => (
           <RangeField
             label={tr("filters.runtime")}
-            hint={tr(`filters.runtimeHint.${props.kind}`)}
             range={range()}
             value={[props.filters.runtimeMin, props.filters.runtimeMax]}
             words={runtimeWords}

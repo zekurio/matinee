@@ -14,6 +14,7 @@ export default {
   "library.noFilterMatch.shows": "Keine Serien passen zu diesen Filtern",
   "library.none.movies": "Keine Filme gefunden",
   "library.none.shows": "Keine Serien gefunden",
+  "library.none.media": "Keine Filme oder Serien gefunden",
   "library.filters": "Filter",
   "library.filtersOn": plural({
     one: "Filter, {count} aktiv",

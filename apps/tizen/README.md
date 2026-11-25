@@ -1,15 +1,25 @@
 # Matinee for Samsung TVs
 
-A web app for Samsung TVs on Tizen, with the Flutter app's TV screens
-in Preact. It's in English and German, with the same words as the
-Flutter app.
+The Samsung TV package of Matinee's shared TV UI, a Solid 2 app with the
+Flutter app's TV screens. The screens, the remote's focus, the session,
+and the player controller live in `packages/tv`; this app adds Samsung's
+AVPlay, its remote keys, its package metadata, and the legacy build that
+a TV loads by file path. The same UI is served by the Solid web app at
+`/tv/`, where the browser's video element plays instead. It's in English
+and German, with the same words as the Flutter app.
 
-**Nobody has run it on a TV yet.** It was built and checked without one,
-in Chromium 63 (the engine of Tizen 5.0) and in current Chromium with a
-stand-in for Samsung's APIs that rejects every call AVPlay's reference
-forbids in the player's state. The video, the remote, and the codec
-table are educated guesses until someone tries them. If you do, the
-About page in Settings lists what to report.
+**Nobody has run it on a TV yet.** The packaged `file://` document has
+run in Chromium 63 (Tizen 5.0's engine): it connected, completed a real
+device-code sign-in, and drew the screens, with the remote's arrows and
+Back. The same UI at the Solid web app's `/tv/` played an H.264 file in
+Chrome. The packaged app's player could not be played in the open-source
+Chromium available here, which has no H.264 decoder, so AVPlay and the
+file path stay untested. Chromium 56 (Tizen 4.0) is still the build
+target, but the old binary available here crashes in its own tcmalloc
+before the page loads, so its last check is the same legacy bundle in
+Chromium 63. The video, the remote's media keys, and the codec table are
+educated guesses until someone tries them. If you do, the About page in
+Settings lists what to report.
 
 ## Install
 
@@ -34,7 +44,8 @@ pnpm --filter @matinee/tizen package
 
 Without Nix, install Node 24 and pnpm 11 and run the last two commands.
 `just tizen package` does the last one too, once dependencies are
-installed.
+installed. The package is built with `NODE_ENV=production`, so the dev
+shell's `NODE_ENV` doesn't put Solid's development runtime in it.
 
 This writes `apps/tizen/dist/Matinee.wgt`. Copy it to the device that
 runs Apps2Samsung if that isn't this computer.
@@ -98,19 +109,20 @@ tizen install -n Matinee.wgt -s <tv-address>:26101 -- apps/tizen/dist/signed
 | Recipe               | What it does                                              |
 | -------------------- | --------------------------------------------------------- |
 | `just tizen package` | Builds `dist/app/` and packs it into `dist/Matinee.wgt`   |
-| `just tizen dev`     | Runs the app in a browser on `:5174`                      |
+| `just tizen dev`     | Runs the TV UI in a browser on `:5174`                    |
 | `just tizen strings` | Takes the shared strings from the Flutter app's ARB files |
 
 Inside `apps/tizen`, drop the `tizen`. By hand, `pnpm --filter
 @matinee/tizen package`.
 
 Every TV gets the same build, Vite's legacy output for Chromium 56 with
-core-js filling in what old engines lack. A Samsung TV loads a packaged
-app by file path, which allows no module scripts and no `crossorigin`,
-so `vite.config.ts` makes one plain script. It also adds the tag that
-loads Samsung's `webapis.js`, which only the TV has.
-`scripts/package.mjs` copies `config.xml` into `dist/app/` with the
-version from the root `package.json`, and zips the folder.
+core-js filling in what old engines lack, and the Solid compiler that
+`packages/tv` and the web app share. A Samsung TV loads a packaged app by
+file path, which allows no module scripts and no `crossorigin`, so
+`vite.config.ts` makes one plain script. It also adds the tag that loads
+Samsung's `webapis.js`, which only the TV has. `scripts/package.mjs`
+copies `config.xml` into `dist/app/` with the version from the root
+`package.json`, and zips the folder.
 
 ## Develop
 
@@ -118,6 +130,13 @@ version from the root `package.json`, and zips the folder.
 `/api/` to the server on `:8420`, or to `VITE_SERVER_URL`. Connect the app
 to `http://localhost:5174`, not to the server itself. Then its requests
 are same-origin and the browser's video element gets the session cookie.
+
+The same UI is in the Solid web app: run `pnpm --filter @matinee/solid
+dev` and open `http://localhost:5174/tv/` (or `SOLID_PORT=5180` beside
+the Tizen dev server). Its `/tv/` document imports only `packages/tv`, so
+the desktop app's root size, theme, and Tailwind styles don't follow it.
+The Tizen app and `/tv/` take the same screens from the same package; a
+change there shows in both.
 
 The keyboard stands in for the remote. The arrows move, Enter selects,
 and Escape or Backspace goes back. Holding Enter opens a card's menu, as
@@ -131,45 +150,60 @@ but every screen up to it works.
 
 ## How it works
 
-- `platform/tizen.ts` types the parts of `tizen` and `webapis` the app
-  uses, and asks for the remote's media keys. In a browser they're
-  missing, and everything that uses them checks.
-- `input/` has the remote. `focus.ts` moves focus with the arrows by
-  where things are on screen, within the groups and rows the markup names
-  with `data-f*` attributes, and remembers the last focus per row and
-  page. `scroll.ts` scrolls whatever holds the focus so it shows, and
-  nothing scrolls otherwise.
-- `kit/` has the buttons, cards, list rows, fields, and the right-edge
-  panel. Sizes are in `rem`, where 1 rem is a 960th of the screen's
-  width.
-- `screens/` has the pages: connecting and signing in, the drawer, Home,
-  title, season, and episode pages, Movies and Shows, genres and
-  studios, people, search, favorites, the profile with its statistics,
-  recently watched, settings, and the player.
-- `auth/session.ts` keeps several servers, each with its own sign-in.
-  Without a scheme an address tries https, then http. Sign-in is the
-  device grant, with the code and a QR code, as on Android TV. See
+- `packages/tv` is the shared UI: its `input/` moves focus with the
+  arrows by where things are on screen, within the groups and rows the
+  markup names with `data-f*` attributes, and remembers the last focus
+  per row and page. Its `kit/` has the buttons, cards, list rows, fields,
+  and the right-edge panel, in `rem`, where 1 rem is a 960th of the
+  screen's width. Its `screens/` has connecting and signing in, the
+  drawer, Home, title, season, and episode pages, Movies and Shows,
+  genres and studios, people, search, favorites, the profile with its
+  statistics, recently watched, settings, and the player.
+- `src/platform/tizen.ts` implements the package's `Platform`: it types
+  the parts of `tizen` and `webapis` used here, asks for the remote's
+  media keys, closes the app, keeps the screen saver away, and gives the
+  package AVPlay or the browser's player. In a browser the Samsung APIs
+  are missing, and everything that uses them checks.
+- `src/player/engine.ts` is the AVPlay engine, which stays here because
+  it is Samsung's. The shared `player/engine.ts` has the browser's video
+  element and the interface both follow.
+- `src/platform/polyfills.ts` stands in for APIs old engines lack before
+  the app's code runs. The Vite legacy plugin covers the language.
+- `src/main.tsx` is the whole app: it mounts the shared UI with the
+  Samsung platform.
+- The shared `auth/session.ts` keeps several servers, each with its own
+  sign-in. A page at a web address starts on its own origin, which is how
+  `/tv/` and a Tizen app served in development sign in; a packaged app
+  loaded by file path has none, so the person types one. Without a scheme
+  an address tries https, then http. Sign-in is the device grant, with
+  the code and a QR code, as on Android TV. See
   [Signing in apps](../server/README.md#signing-in-apps).
-- `i18n/shared.gen.ts` holds the Flutter app's messages the app names,
-  made by `scripts/strings.mjs` from `apps/flutter/lib/l10n`. Strings of its own start with `tizen_` and live
-  in `i18n/own.ts`. `pnpm verify` fails while the generated file is
+- `packages/tv/src/i18n/shared.gen.ts` holds the Flutter app's messages
+  the UI names, made by `packages/tv/scripts/strings.mjs` from
+  `apps/flutter/lib/l10n`. Strings of its own start with `tizen_` and
+  live in `i18n/own.ts`. `pnpm verify` fails while the generated file is
   stale.
 
-The app imports only types from `@matinee/contracts`, plus
+The UI imports only types from `@matinee/contracts`, plus
 `@matinee/contracts/paths`. Its schemas use syntax Chromium 56 can't
 parse, so `lib/decode.ts` reads the few untyped values by hand.
 
 ### The player
 
-`player/device.ts` tells `playback.start` what the TV plays, by its Tizen
-version and panel, since a Samsung TV doesn't say. Where Samsung's spec
-sheets and the Litefin and Jellyfin clients' reports disagree, it leaves a
-format out and the server converts it. HLS needs a 2021 TV or later.
-Before that, an encode comes as one stream.
+`packages/tv/src/player/device.ts` tells `playback.start` what the TV
+plays, by its Tizen version and panel, since a Samsung TV doesn't say.
+Where Samsung's spec sheets and the Litefin and Jellyfin clients' reports
+disagree, it leaves a format out and the server converts it. HLS needs a
+2021 TV or later. Before that, an encode comes as one stream. In a
+browser it asks the video element what it decodes, and asks only for
+encodes it can play; an open-source Chromium without H.264 can't play a
+file the server only encodes to H.264, so it turns that down rather than
+show a black screen.
 
-`player/engine.ts` drives Samsung's AVPlay, which plays on a plane behind
-the page. The page stays see-through where the video is. Its call order
-follows Samsung's reference and what Litefin learned across model years:
+`src/player/engine.ts` drives Samsung's AVPlay, which plays on a plane
+behind the page. The page stays see-through where the video is. Its call
+order follows Samsung's reference and what Litefin learned across model
+years:
 
 - Properties and the display go in between `open` and `prepareAsync`.
 - A seek goes out only while it plays or is paused, and nothing else is
@@ -184,15 +218,19 @@ follows Samsung's reference and what Litefin learned across model years:
   Until a source has played on the TV, a retry also sends it as a header
   through `CUSTOM_MESSAGE`.
 
-`player/controller.ts` asks the server again when a source fails, seeks copied streams with
-`playback.seek`, reports progress, and loads trickplay. The app draws
-WebVTT itself. The server burns picture subtitles in, since AVPlay draws
-none the app can style.
+`packages/tv/src/player/controller.ts` asks the server again when a source
+fails, seeks copied streams with `playback.seek`, reports progress, and
+loads trickplay. The app draws WebVTT itself. The server burns picture
+subtitles in, since AVPlay draws none the app can style.
 
 ## What it leaves out
 
 - LAN discovery. A web app can't send the UDP broadcast, so you type the
   address.
+- A browser without H.264, like an open-source Chromium build, can't play
+  a file that needs an encode: the server has no VP9 or Opus encode, and
+  its `/play` answers an MP4 content type even for a direct WebM. Chrome
+  with proprietary codecs plays the H.264 path.
 - Speeds other than 1×. AVPlay's others are silent trick modes.
 - Requests, downloads, watch parties, and the admin pages.
 - Matching the TV's refresh rate to the video, which the Flutter app
@@ -202,11 +240,12 @@ none the app can style.
 
 - The player plays a file as it is, an HLS encode, and a copied stream,
   and seeks in each.
+- The same in the Solid web app's `/tv/` with Chrome that has H.264.
 - Picking another audio track in an MKV with several, and seeking after.
 - Leaving for the Home screen mid-video and coming back.
 - The remote's media keys, and Back out of every layer.
 - How Home scrolls on a 2018 or 2019 model.
-- What the codec table in `player/device.ts` gets wrong: a file that
+- What the codec table in `packages/tv/src/player/device.ts` gets wrong: a file that
   should play as it is but fails, or one that plays but goes to the server.
 
 ## Credits

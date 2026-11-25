@@ -101,7 +101,6 @@ export function BrowsePage({
     filter: options
       ? (compact) => (
           <TitleFilterPanel
-            kind={kind}
             options={options}
             filters={shown}
             change={list.change}

@@ -65,6 +65,25 @@ function noReact(): Plugin {
 }
 
 /**
+ * Serves `/tv` as `/tv/`, whose own document holds the TV UI. The route
+ * is a document of its own, so the desktop app's root font size and
+ * theme don't follow it, and the TV one doesn't follow the desktop app.
+ */
+function tvPath(): Plugin {
+  return {
+    name: "matinee:tv-path",
+    configureServer(server) {
+      server.middlewares.use((request, _response, next) => {
+        if (request.url === "/tv" || request.url?.startsWith("/tv?")) {
+          request.url = `/tv/${request.url.slice(3)}`
+        }
+        next()
+      })
+    },
+  }
+}
+
+/**
  * Asks for the text face from the page's head. The first render waits for
  * it (`main.tsx`), and asked for only once the app's code has run, it
  * arrives after that code is done.
@@ -104,7 +123,8 @@ export default defineConfig(({ mode }) => {
   return {
     clearScreen: false,
     // A core entry the app imports must be the copy `@ui-sdk/solid` loads.
-    optimizeDeps: { exclude: ["@ui-sdk/core"] },
+    // The TV package is source, compiled with this app's Solid plugin.
+    optimizeDeps: { exclude: ["@matinee/tv", "@ui-sdk/core"] },
     server: {
       // Beside the React app on 5173. Cookies go by host, so a session
       // from either works in both; a passkey is bound to PUBLIC_URL, so
@@ -115,6 +135,11 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       rolldownOptions: {
+        // The desktop app, and the TV UI at /tv/, in one build.
+        input: {
+          main: fileURLToPath(new URL("./index.html", import.meta.url)),
+          tv: fileURLToPath(new URL("./tv/index.html", import.meta.url)),
+        },
         // A contract module only builds schemas, so one whose exports the
         // page never uses can be left out. Without this, one import from
         // the package's index builds every schema before the first screen.
@@ -129,6 +154,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
+      tvPath(),
       sharedSource(),
       noReact(),
       tanstackRouter({

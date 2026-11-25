@@ -1,6 +1,6 @@
 import type { Library } from "@matinee/contracts"
 import { useQuery, useQueryClient } from "@tanstack/solid-query"
-import { FolderOpen, SearchX } from "lucide"
+import { LibraryBig, SearchX } from "lucide"
 import { createEffect, Repeat, Show } from "solid-js"
 
 import { tr } from "@/i18n"
@@ -20,7 +20,7 @@ import { client, orpc } from "@/lib/rpc"
 
 /** Keep two posters on phones and fit as many as the desktop content can hold. */
 export const posterGrid =
-  "grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))]"
+  "grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-[repeat(auto-fill,minmax(11rem,1fr))]"
 
 export function PosterGridSkeleton() {
   return (
@@ -49,7 +49,7 @@ export function EmptyList(props: {
     <Empty class="min-h-64 py-16">
       <EmptyHeader>
         <EmptyMedia variant="icon" class="mb-4 size-9 [&_svg]:size-5">
-          <Icon icon={props.clear ? SearchX : FolderOpen} />
+          <Icon icon={props.clear ? SearchX : LibraryBig} />
         </EmptyMedia>
         <EmptyTitle class="text-base font-semibold">{props.title}</EmptyTitle>
         <Show when={!props.clear}>

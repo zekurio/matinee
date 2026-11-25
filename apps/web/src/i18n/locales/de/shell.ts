@@ -18,6 +18,7 @@ export default {
   "shell.explore": "Entdecken",
   "shell.admin": "Admin",
   "shell.account": "Konto: {name}",
+  "shell.openProfile": "Profil öffnen: {name}",
   "shell.profile": "Profil",
   "shell.statistics": "Statistiken",
   "shell.settings": "Einstellungen",

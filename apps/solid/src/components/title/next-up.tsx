@@ -1,6 +1,9 @@
 import type { MediaItem } from "@matinee/contracts"
 import { Show } from "solid-js"
 
+import { ActionsMenu } from "@/components/actions-menu"
+import { CardActions, CardScrim } from "@/components/card-actions"
+import { useItemFavorite } from "@/components/favorite-button"
 import {
   ItemLink,
   textLink,
@@ -8,6 +11,7 @@ import {
   ThumbPlayButton,
 } from "@/components/media-item"
 import { sectionTitle } from "@/components/rail"
+import { useItemWatched } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { formatDate, formatRuntime } from "@/lib/format"
 import {
@@ -23,8 +27,14 @@ import { MediaInfoLine } from "./media-info"
 export function NextUp(props: { item: MediaItem }) {
   const label = () => itemLabel(props.item)
   const code = () => episodeCode(props.item)
-  const name = () =>
-    tr("title.episodes.codedName", { code: code() ?? "", name: label().title })
+  const name = () => {
+    const at = code()
+    return at
+      ? tr("title.episodes.codedName", { code: at, name: label().title })
+      : label().title
+  }
+  const watched = useItemWatched(() => props.item)
+  const favorite = useItemFavorite(() => props.item)
   const facts = () => {
     const { episode, durationSeconds, progress } = props.item
     const runtime = formatRuntime(
@@ -54,13 +64,25 @@ export function NextUp(props: { item: MediaItem }) {
             <Thumb
               sources={landscapeSources(props.item, "large")}
               toneKey={label().showKey}
-              progress={progressRatio(props.item)}
+              progress={watched.on() ? null : progressRatio(props.item)}
               class="w-full"
-            />
+            >
+              <CardScrim />
+            </Thumb>
           </ItemLink>
-          <ThumbPlayButton
-            item={props.item}
-            label={code() ? name() : label().title}
+          <ThumbPlayButton item={props.item} label={name()} />
+          <CardActions
+            name={name()}
+            watched={watched}
+            favorite={favorite}
+            menu={
+              <ActionsMenu
+                target={{ kind: "item", item: props.item, name: name() }}
+                look="card"
+              />
+            }
+            touch
+            class="absolute right-1 bottom-1.5 [@media(pointer:coarse)]:bottom-3"
           />
         </div>
         <div class="min-w-0 py-0.5">

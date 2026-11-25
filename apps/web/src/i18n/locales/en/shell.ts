@@ -21,6 +21,7 @@ export default defineMessages("shell", {
   "shell.explore": "Explore",
   "shell.admin": "Admin",
   "shell.account": "Account: {name}",
+  "shell.openProfile": "Open profile: {name}",
   "shell.profile": "Profile",
   "shell.statistics": "Statistics",
   "shell.settings": "Settings",

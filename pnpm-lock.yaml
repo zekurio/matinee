@@ -144,6 +144,9 @@ importers:
       '@matinee/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@matinee/tv':
+        specifier: workspace:*
+        version: link:../../packages/tv
       '@matinee/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -208,28 +211,13 @@ importers:
 
   apps/tizen:
     dependencies:
-      '@fontsource-variable/red-hat-mono':
-        specifier: 5.3.0
-        version: 5.3.0
-      '@fontsource-variable/red-hat-text':
-        specifier: 5.3.0
-        version: 5.3.0
-      '@matinee/client':
+      '@matinee/tv':
         specifier: workspace:*
-        version: link:../../packages/client
-      '@matinee/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
-      lucide:
-        specifier: 1.69.0
-        version: 1.69.0
-      preact:
-        specifier: 11.2.0
-        version: 11.2.0
-      qrcode-generator:
-        specifier: 2.0.4
-        version: 2.0.4
+        version: link:../../packages/tv
     devDependencies:
+      '@solidjs/vite-plugin':
+        specifier: 3.0.1
+        version: 3.0.1(@babel/core@7.29.13)(@solidjs/web@2.0.3(solid-js@2.0.3))(solid-js@2.0.3)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       '@vitejs/plugin-legacy':
         specifier: 8.2.4
         version: 8.2.4(terser@5.51.2)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
@@ -361,6 +349,37 @@ importers:
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11
+
+  packages/tv:
+    dependencies:
+      '@fontsource-variable/red-hat-mono':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/red-hat-text':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@matinee/client':
+        specifier: workspace:*
+        version: link:../client
+      '@matinee/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@solidjs/web':
+        specifier: 2.0.3
+        version: 2.0.3(solid-js@2.0.3)
+      lucide:
+        specifier: 1.69.0
+        version: 1.69.0
+      qrcode-generator:
+        specifier: 2.0.4
+        version: 2.0.4
+      solid-js:
+        specifier: 2.0.3
+        version: 2.0.3
+    devDependencies:
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
 
   packages/ui:
     dependencies:
@@ -3546,14 +3565,6 @@ packages:
   postgres-interval@1.2.0:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
-
-  preact@11.2.0:
-    resolution: {integrity: sha512-/HfHI/7N84e6GrWBJ3J280z3mLaRJiDcSvj/A+y/4AbLnND/1UlGHe1sR6oYuTGwId0nP7dqDU9OnLxMPZ7xBg==}
-    peerDependencies:
-      preact-render-to-string: '>=6.7.0'
-    peerDependenciesMeta:
-      preact-render-to-string:
-        optional: true
 
   prettier@3.9.10:
     resolution: {integrity: sha512-skGHTH1Yb9QvaTC4hWnRTzEYtCpApF0UMBPz+t/0ZPzP8ihefo/btKd+QA7pUE0fEwA1SbS/NmhyEcstdXOIdA==}
@@ -7767,8 +7778,6 @@ snapshots:
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
-
-  preact@11.2.0: {}
 
   prettier@3.9.10: {}
 

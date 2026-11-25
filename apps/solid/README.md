@@ -6,12 +6,22 @@ the React app against the same server. Nothing ships from here yet.
 
 ```sh
 pnpm --filter @matinee/solid dev     # http://localhost:5174
+pnpm --filter @matinee/solid dev     # then http://localhost:5174/tv/
 ```
 
 The server and the React app come from `pnpm dev` as usual. Cookies go by
 host, so a session from `localhost:5173` works here too. A passkey is bound
 to `PUBLIC_URL`, so sign in on the React app, or run this one on its port
 with `SOLID_PORT=5173`.
+
+`/tv/` is the Matinee TV UI, the same screens the Samsung package runs,
+from `@matinee/tv` in `packages/tv`. It is a document of its own, not a
+route in the desktop shell, so its root size and theme don't mix with the
+desktop app's Tailwind. It starts on the page's own origin and signs in
+with the device code (or with the web app's cookie if one is there); a
+Tizen package loaded by file path asks for the server's address instead.
+The browser's video element plays; Samsung's AVPlay, the remote's media
+keys, and the `.wgt` stay in `apps/tizen`.
 
 ## What it's built on
 

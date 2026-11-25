@@ -56,7 +56,7 @@ export const Route = createFileRoute("/login")({
     // A signed-in user confirms the pending link on this page.
     if (pendingLink) return { config, pendingLink }
     if (user) throw redirect({ href: safeRedirect(search.redirect) })
-    // The setup redirect waits until the trial app has a /setup route.
+    if (config.setup?.accountRequired) throw redirect({ to: "/setup" })
     return { config, pendingLink: null }
   },
   component: LoginPage,

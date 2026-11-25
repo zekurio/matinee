@@ -482,7 +482,7 @@ function nearestStop(el: HTMLElement, target: number) {
 /**
  * One card in a rail. Widths step up with the screen: a 16:9 card around
  * 300px wide on a big monitor, following the window's height from `lg` up
- * (`landscapeCardWidth` in `lib/showcase-layout.ts`), a 2:3 poster around 190px.
+ * (`landscapeCardWidth` in `lib/showcase-layout.ts`), a 2:3 poster around 200px.
  *
  * Cards after the first skip their style, layout, and paint while they're
  * scrolled out of view, which most of a long row is. The first keeps the
@@ -497,8 +497,10 @@ export function RailItem(
       class={[
         "shrink-0 snap-start not-first:[contain-intrinsic-size:auto_0px] not-first:[content-visibility:auto] not-first:[overflow-clip-margin:8px]",
         (props.artwork ?? "landscape") === "landscape"
-          ? "w-[min(80%,34svh)] sm:w-[300px] lg:w-[clamp(280px,30vh,360px)]"
-          : "w-[44%] sm:w-[176px] lg:w-[188px] 2xl:w-[204px]",
+          ? // The Flutter phone's two thirds, and stills no taller than a
+            // third of the window, so two rails fit under the carousel.
+            "w-[min(66%,60.444svh)] sm:w-[300px] lg:w-[clamp(280px,30vh,360px)]"
+          : "w-[44%] sm:w-[188px] lg:w-[200px] 2xl:w-[216px]",
       ]}
     >
       {props.children}

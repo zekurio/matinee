@@ -10,28 +10,51 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as ApiDocsRouteImport } from './routes/api-docs'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as KitRouteImport } from './routes/kit'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as AuthedShellRouteImport } from './routes/_authed/_shell'
+import { Route as AuthedAuthorizeRouteImport } from './routes/_authed/authorize'
+import { Route as AuthedLinkRouteImport } from './routes/_authed/link'
 import { Route as AuthedShellIndexRouteImport } from './routes/_authed/_shell/index'
+import { Route as AuthedShellMediaRouteImport } from './routes/_authed/_shell/media'
 import { Route as AuthedShellMoviesRouteImport } from './routes/_authed/_shell/movies'
 import { Route as AuthedShellRequestsRouteImport } from './routes/_authed/_shell/requests'
 import { Route as AuthedShellSearchRouteImport } from './routes/_authed/_shell/search'
 import { Route as AuthedShellShowsRouteImport } from './routes/_authed/_shell/shows'
 import { Route as AuthedShellStatsRouteImport } from './routes/_authed/_shell/stats'
+import { Route as AuthedPartyPartyIdRouteImport } from './routes/_authed/party.$partyId'
 import { Route as AuthedWatchItemIdRouteImport } from './routes/_authed/watch.$itemId'
 import { Route as AuthedShellDiscoverIndexRouteImport } from './routes/_authed/_shell/discover.index'
+import { Route as AuthedShellDiscoverMoviesRouteImport } from './routes/_authed/_shell/discover.movies'
+import { Route as AuthedShellDiscoverShowsRouteImport } from './routes/_authed/_shell/discover.shows'
 import { Route as AuthedShellEpisodesItemIdRouteImport } from './routes/_authed/_shell/episodes.$itemId'
 import { Route as AuthedShellGenresGenreRouteImport } from './routes/_authed/_shell/genres.$genre'
 import { Route as AuthedShellLibrariesLibraryIdRouteImport } from './routes/_authed/_shell/libraries.$libraryId'
 import { Route as AuthedShellPeopleNameRouteImport } from './routes/_authed/_shell/people.$name'
 import { Route as AuthedShellProfilesUsernameRouteImport } from './routes/_authed/_shell/profiles.$username'
 import { Route as AuthedShellSettingsSplatRouteImport } from './routes/_authed/_shell/settings.$'
+import { Route as AuthedShellStudiosStudioRouteImport } from './routes/_authed/_shell/studios.$studio'
 import { Route as AuthedShellTitlesTitleIdRouteImport } from './routes/_authed/_shell/titles.$titleId'
+import { Route as AuthedShellProfilesUsernameAskedRouteImport } from './routes/_authed/_shell/profiles.$username_.asked'
+import { Route as AuthedShellProfilesUsernameFavoritesRouteImport } from './routes/_authed/_shell/profiles.$username_.favorites'
+import { Route as AuthedShellCatalogKindProviderProviderIdRouteImport } from './routes/_authed/_shell/catalog.$kind.$provider.$providerId'
 import { Route as AuthedShellTitlesTitleIdSeasonsSeasonRouteImport } from './routes/_authed/_shell/titles.$titleId_.seasons.$season'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDocsRoute = ApiDocsRouteImport.update({
+  id: '/api-docs',
+  path: '/api-docs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KitRoute = KitRouteImport.update({
@@ -44,13 +67,33 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedShellRoute = AuthedShellRouteImport.update({
   id: '/_shell',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedAuthorizeRoute = AuthedAuthorizeRouteImport.update({
+  id: '/authorize',
+  path: '/authorize',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedLinkRoute = AuthedLinkRouteImport.update({
+  id: '/link',
+  path: '/link',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedShellIndexRoute = AuthedShellIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthedShellRoute,
+} as any)
+const AuthedShellMediaRoute = AuthedShellMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
   getParentRoute: () => AuthedShellRoute,
 } as any)
 const AuthedShellMoviesRoute = AuthedShellMoviesRouteImport.update({
@@ -78,6 +121,11 @@ const AuthedShellStatsRoute = AuthedShellStatsRouteImport.update({
   path: '/stats',
   getParentRoute: () => AuthedShellRoute,
 } as any)
+const AuthedPartyPartyIdRoute = AuthedPartyPartyIdRouteImport.update({
+  id: '/party/$partyId',
+  path: '/party/$partyId',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedWatchItemIdRoute = AuthedWatchItemIdRouteImport.update({
   id: '/watch/$itemId',
   path: '/watch/$itemId',
@@ -87,6 +135,18 @@ const AuthedShellDiscoverIndexRoute =
   AuthedShellDiscoverIndexRouteImport.update({
     id: '/discover/',
     path: '/discover/',
+    getParentRoute: () => AuthedShellRoute,
+  } as any)
+const AuthedShellDiscoverMoviesRoute =
+  AuthedShellDiscoverMoviesRouteImport.update({
+    id: '/discover/movies',
+    path: '/discover/movies',
+    getParentRoute: () => AuthedShellRoute,
+  } as any)
+const AuthedShellDiscoverShowsRoute =
+  AuthedShellDiscoverShowsRouteImport.update({
+    id: '/discover/shows',
+    path: '/discover/shows',
     getParentRoute: () => AuthedShellRoute,
   } as any)
 const AuthedShellEpisodesItemIdRoute =
@@ -123,10 +183,34 @@ const AuthedShellSettingsSplatRoute =
     path: '/settings/$',
     getParentRoute: () => AuthedShellRoute,
   } as any)
+const AuthedShellStudiosStudioRoute =
+  AuthedShellStudiosStudioRouteImport.update({
+    id: '/studios/$studio',
+    path: '/studios/$studio',
+    getParentRoute: () => AuthedShellRoute,
+  } as any)
 const AuthedShellTitlesTitleIdRoute =
   AuthedShellTitlesTitleIdRouteImport.update({
     id: '/titles/$titleId',
     path: '/titles/$titleId',
+    getParentRoute: () => AuthedShellRoute,
+  } as any)
+const AuthedShellProfilesUsernameAskedRoute =
+  AuthedShellProfilesUsernameAskedRouteImport.update({
+    id: '/profiles/$username_/asked',
+    path: '/profiles/$username/asked',
+    getParentRoute: () => AuthedShellRoute,
+  } as any)
+const AuthedShellProfilesUsernameFavoritesRoute =
+  AuthedShellProfilesUsernameFavoritesRouteImport.update({
+    id: '/profiles/$username_/favorites',
+    path: '/profiles/$username/favorites',
+    getParentRoute: () => AuthedShellRoute,
+  } as any)
+const AuthedShellCatalogKindProviderProviderIdRoute =
+  AuthedShellCatalogKindProviderProviderIdRouteImport.update({
+    id: '/catalog/$kind/$provider/$providerId',
+    path: '/catalog/$kind/$provider/$providerId',
     getParentRoute: () => AuthedShellRoute,
   } as any)
 const AuthedShellTitlesTitleIdSeasonsSeasonRoute =
@@ -138,136 +222,217 @@ const AuthedShellTitlesTitleIdSeasonsSeasonRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedShellIndexRoute
+  '/api-docs': typeof ApiDocsRoute
+  '/invite': typeof InviteRoute
   '/kit': typeof KitRoute
   '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
+  '/authorize': typeof AuthedAuthorizeRoute
+  '/link': typeof AuthedLinkRoute
+  '/media': typeof AuthedShellMediaRoute
   '/movies': typeof AuthedShellMoviesRoute
   '/requests': typeof AuthedShellRequestsRoute
   '/search': typeof AuthedShellSearchRoute
   '/shows': typeof AuthedShellShowsRoute
   '/stats': typeof AuthedShellStatsRoute
+  '/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
+  '/discover/movies': typeof AuthedShellDiscoverMoviesRoute
+  '/discover/shows': typeof AuthedShellDiscoverShowsRoute
   '/episodes/$itemId': typeof AuthedShellEpisodesItemIdRoute
   '/genres/$genre': typeof AuthedShellGenresGenreRoute
   '/libraries/$libraryId': typeof AuthedShellLibrariesLibraryIdRoute
   '/people/$name': typeof AuthedShellPeopleNameRoute
   '/profiles/$username': typeof AuthedShellProfilesUsernameRoute
   '/settings/$': typeof AuthedShellSettingsSplatRoute
+  '/studios/$studio': typeof AuthedShellStudiosStudioRoute
   '/titles/$titleId': typeof AuthedShellTitlesTitleIdRoute
   '/discover/': typeof AuthedShellDiscoverIndexRoute
+  '/profiles/$username/asked': typeof AuthedShellProfilesUsernameAskedRoute
+  '/profiles/$username/favorites': typeof AuthedShellProfilesUsernameFavoritesRoute
+  '/catalog/$kind/$provider/$providerId': typeof AuthedShellCatalogKindProviderProviderIdRoute
   '/titles/$titleId/seasons/$season': typeof AuthedShellTitlesTitleIdSeasonsSeasonRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthedShellIndexRoute
+  '/api-docs': typeof ApiDocsRoute
+  '/invite': typeof InviteRoute
   '/kit': typeof KitRoute
   '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
+  '/authorize': typeof AuthedAuthorizeRoute
+  '/link': typeof AuthedLinkRoute
+  '/media': typeof AuthedShellMediaRoute
   '/movies': typeof AuthedShellMoviesRoute
   '/requests': typeof AuthedShellRequestsRoute
   '/search': typeof AuthedShellSearchRoute
   '/shows': typeof AuthedShellShowsRoute
   '/stats': typeof AuthedShellStatsRoute
+  '/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
+  '/discover/movies': typeof AuthedShellDiscoverMoviesRoute
+  '/discover/shows': typeof AuthedShellDiscoverShowsRoute
   '/episodes/$itemId': typeof AuthedShellEpisodesItemIdRoute
   '/genres/$genre': typeof AuthedShellGenresGenreRoute
   '/libraries/$libraryId': typeof AuthedShellLibrariesLibraryIdRoute
   '/people/$name': typeof AuthedShellPeopleNameRoute
   '/profiles/$username': typeof AuthedShellProfilesUsernameRoute
   '/settings/$': typeof AuthedShellSettingsSplatRoute
+  '/studios/$studio': typeof AuthedShellStudiosStudioRoute
   '/titles/$titleId': typeof AuthedShellTitlesTitleIdRoute
   '/discover': typeof AuthedShellDiscoverIndexRoute
+  '/profiles/$username/asked': typeof AuthedShellProfilesUsernameAskedRoute
+  '/profiles/$username/favorites': typeof AuthedShellProfilesUsernameFavoritesRoute
+  '/catalog/$kind/$provider/$providerId': typeof AuthedShellCatalogKindProviderProviderIdRoute
   '/titles/$titleId/seasons/$season': typeof AuthedShellTitlesTitleIdSeasonsSeasonRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
+  '/api-docs': typeof ApiDocsRoute
+  '/invite': typeof InviteRoute
   '/kit': typeof KitRoute
   '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
   '/_authed/_shell': typeof AuthedShellRouteWithChildren
+  '/_authed/authorize': typeof AuthedAuthorizeRoute
+  '/_authed/link': typeof AuthedLinkRoute
+  '/_authed/_shell/media': typeof AuthedShellMediaRoute
   '/_authed/_shell/movies': typeof AuthedShellMoviesRoute
   '/_authed/_shell/requests': typeof AuthedShellRequestsRoute
   '/_authed/_shell/search': typeof AuthedShellSearchRoute
   '/_authed/_shell/shows': typeof AuthedShellShowsRoute
   '/_authed/_shell/stats': typeof AuthedShellStatsRoute
+  '/_authed/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/_authed/watch/$itemId': typeof AuthedWatchItemIdRoute
   '/_authed/_shell/': typeof AuthedShellIndexRoute
+  '/_authed/_shell/discover/movies': typeof AuthedShellDiscoverMoviesRoute
+  '/_authed/_shell/discover/shows': typeof AuthedShellDiscoverShowsRoute
   '/_authed/_shell/episodes/$itemId': typeof AuthedShellEpisodesItemIdRoute
   '/_authed/_shell/genres/$genre': typeof AuthedShellGenresGenreRoute
   '/_authed/_shell/libraries/$libraryId': typeof AuthedShellLibrariesLibraryIdRoute
   '/_authed/_shell/people/$name': typeof AuthedShellPeopleNameRoute
   '/_authed/_shell/profiles/$username': typeof AuthedShellProfilesUsernameRoute
   '/_authed/_shell/settings/$': typeof AuthedShellSettingsSplatRoute
+  '/_authed/_shell/studios/$studio': typeof AuthedShellStudiosStudioRoute
   '/_authed/_shell/titles/$titleId': typeof AuthedShellTitlesTitleIdRoute
   '/_authed/_shell/discover/': typeof AuthedShellDiscoverIndexRoute
+  '/_authed/_shell/profiles/$username_/asked': typeof AuthedShellProfilesUsernameAskedRoute
+  '/_authed/_shell/profiles/$username_/favorites': typeof AuthedShellProfilesUsernameFavoritesRoute
+  '/_authed/_shell/catalog/$kind/$provider/$providerId': typeof AuthedShellCatalogKindProviderProviderIdRoute
   '/_authed/_shell/titles/$titleId_/seasons/$season': typeof AuthedShellTitlesTitleIdSeasonsSeasonRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/api-docs'
+    | '/invite'
     | '/kit'
     | '/login'
+    | '/setup'
+    | '/authorize'
+    | '/link'
+    | '/media'
     | '/movies'
     | '/requests'
     | '/search'
     | '/shows'
     | '/stats'
+    | '/party/$partyId'
     | '/watch/$itemId'
+    | '/discover/movies'
+    | '/discover/shows'
     | '/episodes/$itemId'
     | '/genres/$genre'
     | '/libraries/$libraryId'
     | '/people/$name'
     | '/profiles/$username'
     | '/settings/$'
+    | '/studios/$studio'
     | '/titles/$titleId'
     | '/discover/'
+    | '/profiles/$username/asked'
+    | '/profiles/$username/favorites'
+    | '/catalog/$kind/$provider/$providerId'
     | '/titles/$titleId/seasons/$season'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/api-docs'
+    | '/invite'
     | '/kit'
     | '/login'
+    | '/setup'
+    | '/authorize'
+    | '/link'
+    | '/media'
     | '/movies'
     | '/requests'
     | '/search'
     | '/shows'
     | '/stats'
+    | '/party/$partyId'
     | '/watch/$itemId'
+    | '/discover/movies'
+    | '/discover/shows'
     | '/episodes/$itemId'
     | '/genres/$genre'
     | '/libraries/$libraryId'
     | '/people/$name'
     | '/profiles/$username'
     | '/settings/$'
+    | '/studios/$studio'
     | '/titles/$titleId'
     | '/discover'
+    | '/profiles/$username/asked'
+    | '/profiles/$username/favorites'
+    | '/catalog/$kind/$provider/$providerId'
     | '/titles/$titleId/seasons/$season'
   id:
     | '__root__'
     | '/_authed'
+    | '/api-docs'
+    | '/invite'
     | '/kit'
     | '/login'
+    | '/setup'
     | '/_authed/_shell'
+    | '/_authed/authorize'
+    | '/_authed/link'
+    | '/_authed/_shell/media'
     | '/_authed/_shell/movies'
     | '/_authed/_shell/requests'
     | '/_authed/_shell/search'
     | '/_authed/_shell/shows'
     | '/_authed/_shell/stats'
+    | '/_authed/party/$partyId'
     | '/_authed/watch/$itemId'
     | '/_authed/_shell/'
+    | '/_authed/_shell/discover/movies'
+    | '/_authed/_shell/discover/shows'
     | '/_authed/_shell/episodes/$itemId'
     | '/_authed/_shell/genres/$genre'
     | '/_authed/_shell/libraries/$libraryId'
     | '/_authed/_shell/people/$name'
     | '/_authed/_shell/profiles/$username'
     | '/_authed/_shell/settings/$'
+    | '/_authed/_shell/studios/$studio'
     | '/_authed/_shell/titles/$titleId'
     | '/_authed/_shell/discover/'
+    | '/_authed/_shell/profiles/$username_/asked'
+    | '/_authed/_shell/profiles/$username_/favorites'
+    | '/_authed/_shell/catalog/$kind/$provider/$providerId'
     | '/_authed/_shell/titles/$titleId_/seasons/$season'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
+  ApiDocsRoute: typeof ApiDocsRoute
+  InviteRoute: typeof InviteRoute
   KitRoute: typeof KitRoute
   LoginRoute: typeof LoginRoute
+  SetupRoute: typeof SetupRoute
 }
 
 declare module '@tanstack/solid-router' {
@@ -277,6 +442,20 @@ declare module '@tanstack/solid-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api-docs': {
+      id: '/api-docs'
+      path: '/api-docs'
+      fullPath: '/api-docs'
+      preLoaderRoute: typeof ApiDocsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kit': {
@@ -293,6 +472,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authed/_shell': {
       id: '/_authed/_shell'
       path: ''
@@ -300,11 +486,32 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof AuthedShellRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/authorize': {
+      id: '/_authed/authorize'
+      path: '/authorize'
+      fullPath: '/authorize'
+      preLoaderRoute: typeof AuthedAuthorizeRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/link': {
+      id: '/_authed/link'
+      path: '/link'
+      fullPath: '/link'
+      preLoaderRoute: typeof AuthedLinkRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/_shell/': {
       id: '/_authed/_shell/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthedShellIndexRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/_shell/media': {
+      id: '/_authed/_shell/media'
+      path: '/media'
+      fullPath: '/media'
+      preLoaderRoute: typeof AuthedShellMediaRouteImport
       parentRoute: typeof AuthedShellRoute
     }
     '/_authed/_shell/movies': {
@@ -342,6 +549,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof AuthedShellStatsRouteImport
       parentRoute: typeof AuthedShellRoute
     }
+    '/_authed/party/$partyId': {
+      id: '/_authed/party/$partyId'
+      path: '/party/$partyId'
+      fullPath: '/party/$partyId'
+      preLoaderRoute: typeof AuthedPartyPartyIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/watch/$itemId': {
       id: '/_authed/watch/$itemId'
       path: '/watch/$itemId'
@@ -354,6 +568,20 @@ declare module '@tanstack/solid-router' {
       path: '/discover'
       fullPath: '/discover/'
       preLoaderRoute: typeof AuthedShellDiscoverIndexRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/_shell/discover/movies': {
+      id: '/_authed/_shell/discover/movies'
+      path: '/discover/movies'
+      fullPath: '/discover/movies'
+      preLoaderRoute: typeof AuthedShellDiscoverMoviesRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/_shell/discover/shows': {
+      id: '/_authed/_shell/discover/shows'
+      path: '/discover/shows'
+      fullPath: '/discover/shows'
+      preLoaderRoute: typeof AuthedShellDiscoverShowsRouteImport
       parentRoute: typeof AuthedShellRoute
     }
     '/_authed/_shell/episodes/$itemId': {
@@ -398,11 +626,39 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof AuthedShellSettingsSplatRouteImport
       parentRoute: typeof AuthedShellRoute
     }
+    '/_authed/_shell/studios/$studio': {
+      id: '/_authed/_shell/studios/$studio'
+      path: '/studios/$studio'
+      fullPath: '/studios/$studio'
+      preLoaderRoute: typeof AuthedShellStudiosStudioRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
     '/_authed/_shell/titles/$titleId': {
       id: '/_authed/_shell/titles/$titleId'
       path: '/titles/$titleId'
       fullPath: '/titles/$titleId'
       preLoaderRoute: typeof AuthedShellTitlesTitleIdRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/_shell/profiles/$username_/asked': {
+      id: '/_authed/_shell/profiles/$username_/asked'
+      path: '/profiles/$username/asked'
+      fullPath: '/profiles/$username/asked'
+      preLoaderRoute: typeof AuthedShellProfilesUsernameAskedRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/_shell/profiles/$username_/favorites': {
+      id: '/_authed/_shell/profiles/$username_/favorites'
+      path: '/profiles/$username/favorites'
+      fullPath: '/profiles/$username/favorites'
+      preLoaderRoute: typeof AuthedShellProfilesUsernameFavoritesRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/_shell/catalog/$kind/$provider/$providerId': {
+      id: '/_authed/_shell/catalog/$kind/$provider/$providerId'
+      path: '/catalog/$kind/$provider/$providerId'
+      fullPath: '/catalog/$kind/$provider/$providerId'
+      preLoaderRoute: typeof AuthedShellCatalogKindProviderProviderIdRouteImport
       parentRoute: typeof AuthedShellRoute
     }
     '/_authed/_shell/titles/$titleId_/seasons/$season': {
@@ -416,38 +672,54 @@ declare module '@tanstack/solid-router' {
 }
 
 interface AuthedShellRouteChildren {
+  AuthedShellMediaRoute: typeof AuthedShellMediaRoute
   AuthedShellMoviesRoute: typeof AuthedShellMoviesRoute
   AuthedShellRequestsRoute: typeof AuthedShellRequestsRoute
   AuthedShellSearchRoute: typeof AuthedShellSearchRoute
   AuthedShellShowsRoute: typeof AuthedShellShowsRoute
   AuthedShellStatsRoute: typeof AuthedShellStatsRoute
   AuthedShellIndexRoute: typeof AuthedShellIndexRoute
+  AuthedShellDiscoverMoviesRoute: typeof AuthedShellDiscoverMoviesRoute
+  AuthedShellDiscoverShowsRoute: typeof AuthedShellDiscoverShowsRoute
   AuthedShellEpisodesItemIdRoute: typeof AuthedShellEpisodesItemIdRoute
   AuthedShellGenresGenreRoute: typeof AuthedShellGenresGenreRoute
   AuthedShellLibrariesLibraryIdRoute: typeof AuthedShellLibrariesLibraryIdRoute
   AuthedShellPeopleNameRoute: typeof AuthedShellPeopleNameRoute
   AuthedShellProfilesUsernameRoute: typeof AuthedShellProfilesUsernameRoute
   AuthedShellSettingsSplatRoute: typeof AuthedShellSettingsSplatRoute
+  AuthedShellStudiosStudioRoute: typeof AuthedShellStudiosStudioRoute
   AuthedShellTitlesTitleIdRoute: typeof AuthedShellTitlesTitleIdRoute
   AuthedShellDiscoverIndexRoute: typeof AuthedShellDiscoverIndexRoute
+  AuthedShellProfilesUsernameAskedRoute: typeof AuthedShellProfilesUsernameAskedRoute
+  AuthedShellProfilesUsernameFavoritesRoute: typeof AuthedShellProfilesUsernameFavoritesRoute
+  AuthedShellCatalogKindProviderProviderIdRoute: typeof AuthedShellCatalogKindProviderProviderIdRoute
   AuthedShellTitlesTitleIdSeasonsSeasonRoute: typeof AuthedShellTitlesTitleIdSeasonsSeasonRoute
 }
 
 const AuthedShellRouteChildren: AuthedShellRouteChildren = {
+  AuthedShellMediaRoute: AuthedShellMediaRoute,
   AuthedShellMoviesRoute: AuthedShellMoviesRoute,
   AuthedShellRequestsRoute: AuthedShellRequestsRoute,
   AuthedShellSearchRoute: AuthedShellSearchRoute,
   AuthedShellShowsRoute: AuthedShellShowsRoute,
   AuthedShellStatsRoute: AuthedShellStatsRoute,
   AuthedShellIndexRoute: AuthedShellIndexRoute,
+  AuthedShellDiscoverMoviesRoute: AuthedShellDiscoverMoviesRoute,
+  AuthedShellDiscoverShowsRoute: AuthedShellDiscoverShowsRoute,
   AuthedShellEpisodesItemIdRoute: AuthedShellEpisodesItemIdRoute,
   AuthedShellGenresGenreRoute: AuthedShellGenresGenreRoute,
   AuthedShellLibrariesLibraryIdRoute: AuthedShellLibrariesLibraryIdRoute,
   AuthedShellPeopleNameRoute: AuthedShellPeopleNameRoute,
   AuthedShellProfilesUsernameRoute: AuthedShellProfilesUsernameRoute,
   AuthedShellSettingsSplatRoute: AuthedShellSettingsSplatRoute,
+  AuthedShellStudiosStudioRoute: AuthedShellStudiosStudioRoute,
   AuthedShellTitlesTitleIdRoute: AuthedShellTitlesTitleIdRoute,
   AuthedShellDiscoverIndexRoute: AuthedShellDiscoverIndexRoute,
+  AuthedShellProfilesUsernameAskedRoute: AuthedShellProfilesUsernameAskedRoute,
+  AuthedShellProfilesUsernameFavoritesRoute:
+    AuthedShellProfilesUsernameFavoritesRoute,
+  AuthedShellCatalogKindProviderProviderIdRoute:
+    AuthedShellCatalogKindProviderProviderIdRoute,
   AuthedShellTitlesTitleIdSeasonsSeasonRoute:
     AuthedShellTitlesTitleIdSeasonsSeasonRoute,
 }
@@ -458,11 +730,17 @@ const AuthedShellRouteWithChildren = AuthedShellRoute._addFileChildren(
 
 interface AuthedRouteChildren {
   AuthedShellRoute: typeof AuthedShellRouteWithChildren
+  AuthedAuthorizeRoute: typeof AuthedAuthorizeRoute
+  AuthedLinkRoute: typeof AuthedLinkRoute
+  AuthedPartyPartyIdRoute: typeof AuthedPartyPartyIdRoute
   AuthedWatchItemIdRoute: typeof AuthedWatchItemIdRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedShellRoute: AuthedShellRouteWithChildren,
+  AuthedAuthorizeRoute: AuthedAuthorizeRoute,
+  AuthedLinkRoute: AuthedLinkRoute,
+  AuthedPartyPartyIdRoute: AuthedPartyPartyIdRoute,
   AuthedWatchItemIdRoute: AuthedWatchItemIdRoute,
 }
 
@@ -471,8 +749,11 @@ const AuthedRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
+  ApiDocsRoute: ApiDocsRoute,
+  InviteRoute: InviteRoute,
   KitRoute: KitRoute,
   LoginRoute: LoginRoute,
+  SetupRoute: SetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

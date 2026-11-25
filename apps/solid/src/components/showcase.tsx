@@ -1,7 +1,7 @@
 import type { FeaturedTitle } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
-import { Link, useNavigate } from "@tanstack/solid-router"
-import { ChevronLeft, ChevronRight, Info, Play, Star } from "lucide"
+import { Link } from "@tanstack/solid-router"
+import { ChevronLeft, ChevronRight, Play, Star } from "lucide"
 import {
   createEffect,
   createMemo,
@@ -104,18 +104,12 @@ function artOf(slide: FeaturedTitle) {
 const inverseButton =
   "border-transparent bg-white text-[#0e0e10] hover:bg-[color-mix(in_oklch,white,#0e0e10_7%)] active:bg-[color-mix(in_oklch,white,#0e0e10_14%)]"
 
-/** Details beside it: the foreground faintly over the art, frosted. */
-const frostedButton =
-  "border-foreground/10 bg-foreground/15 text-foreground backdrop-blur hover:bg-foreground/24"
-
 const playClass = cn(buttonVariants({ size: "lg" }), inverseButton)
-const detailsClass = cn(buttonVariants({ size: "lg" }), frostedButton)
 
 export function HomeShowcase(props: {
   slides: FeaturedTitle[]
   showing: boolean
 }) {
-  const navigate = useNavigate()
   const count = () => props.slides.length
   const [picked, setPicked] = createSignal(0)
   // Fewer titles after a refetch leave the last one on screen.
@@ -196,7 +190,9 @@ export function HomeShowcase(props: {
 
   // A swipe toward the start shows the next title, as turning a page does.
   let swipeFrom: { x: number; y: number } | null = null
-  let swiped = false
+  // A swipe's click must not open the title. Time-stamped so a later
+  // keyboard click isn't swallowed by a swipe that produced no click.
+  let swipedAt = 0
 
   const current = () => props.slides[index()]
 
@@ -207,7 +203,16 @@ export function HomeShowcase(props: {
       class={pageGutter}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onFocusIn={() => setFocused(true)}
+      onFocusIn={(event) => {
+        // A pointer's focus comes with a hover, which holds it already. A
+        // keyboard's stays after the pointer leaves, so it holds it now.
+        if (
+          event.target instanceof Element &&
+          event.target.matches(":focus-visible")
+        ) {
+          setFocused(true)
+        }
+      }}
       onFocusOut={(event) => {
         const next = event.relatedTarget
         if (!(next instanceof Node && event.currentTarget.contains(next))) {
@@ -220,14 +225,28 @@ export function HomeShowcase(props: {
       }}
     >
       <div
+        ref={(element) => {
+          // Solid has no capture-phase prop; a listener of its own does it.
+          element.addEventListener(
+            "click",
+            (event) => {
+              // The click a swipe ends with must not follow its link, but a
+              // later one may.
+              if (performance.now() - swipedAt > 500) return
+              event.preventDefault()
+              event.stopPropagation()
+            },
+            { capture: true },
+          )
+        }}
         class={cn(
           CARD_RADIUS,
-          "dark text-foreground relative cursor-pointer overflow-hidden bg-[#141416] select-none",
+          "dark text-foreground relative isolate cursor-pointer overflow-hidden bg-[#141416] select-none [clip-path:inset(0_round_20px)]",
         )}
         style={{ height: `${layout().height}px` }}
+        onDragStart={(event) => event.preventDefault()}
         onPointerDown={(event) => {
           setPressed(true)
-          swiped = false
           swipeFrom = { x: event.clientX, y: event.clientY }
         }}
         onPointerUp={(event) => {
@@ -240,37 +259,27 @@ export function HomeShowcase(props: {
           if (Math.abs(dx) < SWIPE_DISTANCE || Math.abs(dx) < Math.abs(dy)) {
             return
           }
-          swiped = true
+          swipedAt = performance.now()
           show(index() + (dx < 0 ? 1 : -1))
         }}
         onPointerCancel={() => {
           setPressed(false)
           swipeFrom = null
         }}
-        onClick={(event) => {
-          // A press on the card opens its title; its buttons are their own.
-          if (swiped) return
-          if (
-            event.target instanceof Element &&
-            event.target.closest("a, button")
-          ) {
-            return
-          }
-          const slide = current()
-          if (slide) {
-            void navigate({
-              to: "/titles/$titleId",
-              params: { titleId: slide.title.id },
-            })
-          }
-        }}
       >
+        {/*
+         * The art fades out over the card's bottom corner radius, onto the
+         * card's own fill under the bottom shade. Where the card's edge
+         * falls between device pixels, as at 80% zoom, the art and the
+         * shade each get only part of that last row, so the shade can't
+         * cover the art there and the art shows as a bright line.
+         */}
         <For each={props.slides} keyed={(slide) => slide.title.id}>
           {(slide, i) => (
             <div
               aria-hidden="true"
               class={[
-                "absolute inset-0",
+                "absolute inset-0 [mask-image:linear-gradient(to_top,transparent,black_20px)]",
                 tone(slide().title.id),
                 i() === index()
                   ? "z-10 opacity-100 transition-opacity ease-out motion-reduce:transition-none"
@@ -300,8 +309,20 @@ export function HomeShowcase(props: {
           class="pointer-events-none absolute inset-0 z-20"
           style={{ "background-image": SIDE_SHADE }}
         />
+        {/* The card's surface is the title's link. The Play button and the
+            pager sit above it, so only they do their own work. */}
+        <Show when={current()}>
+          {(slide) => (
+            <Link
+              to="/titles/$titleId"
+              params={{ titleId: slide().title.id }}
+              aria-label={slide().title.name}
+              class="focus-visible:ring-ring absolute inset-0 z-20 rounded-[20px] outline-none focus-visible:ring-2 focus-visible:ring-inset"
+            />
+          )}
+        </Show>
         <div
-          class="absolute z-30"
+          class="pointer-events-none absolute z-30"
           style={{
             left: `${SHOWCASE_PADDING}px`,
             bottom: `${WORDS_BOTTOM}px`,
@@ -380,12 +401,14 @@ export function HomeShowcase(props: {
             />
           </div>
         </Show>
-        {/* The card's hairline, over the art. */}
+        {/* The card's hairline, over the art. It fades out under the
+            bottom shade, which would otherwise leave a bright line where
+            the card meets the page. */}
         <div
           aria-hidden="true"
           class={cn(
             CARD_RADIUS,
-            "border-foreground/10 pointer-events-none absolute inset-0 z-40 border",
+            "border-foreground/10 pointer-events-none absolute inset-0 z-40 border [mask-image:linear-gradient(to_top,transparent,black_48px)]",
           )}
         />
       </div>
@@ -616,14 +639,14 @@ function TitleMark(props: {
 }
 
 /**
- * Play, from where the person is, and the title's page, for the title
- * showing. They stay while the words and the art change behind them.
+ * Play, from where the person is, for the title showing. It stays while
+ * the words and the art change behind it.
  */
 function SlideButtons(props: { slide: FeaturedTitle }) {
   const resuming = () => timeLeft(props.slide.item) !== null
   return (
     <div
-      class="absolute z-30 flex gap-2"
+      class="absolute z-30 flex"
       style={{
         left: `${SHOWCASE_PADDING}px`,
         bottom: `${SHOWCASE_PADDING}px`,
@@ -636,14 +659,6 @@ function SlideButtons(props: { slide: FeaturedTitle }) {
       >
         <Icon icon={Play} fill="currentColor" />
         {resuming() ? tr("title.resume") : tr("title.play")}
-      </Link>
-      <Link
-        to="/titles/$titleId"
-        params={{ titleId: props.slide.title.id }}
-        class={detailsClass}
-      >
-        <Icon icon={Info} />
-        {tr("media.hero.details")}
       </Link>
     </div>
   )
@@ -675,9 +690,8 @@ export function HomeShowcaseSkeleton() {
           class="bg-secondary mt-2.5 h-3"
           style={{ width: `${Math.min(words(), 440)}px` }}
         />
-        <div class="mt-6 flex gap-2">
+        <div class="mt-6 flex">
           <Skeleton class="bg-secondary h-10 w-28 rounded-lg" />
-          <Skeleton class="bg-secondary h-10 w-30 rounded-lg" />
         </div>
       </div>
     </div>
@@ -778,8 +792,18 @@ export function FeaturedCarousel(props: {
               <Link
                 to="/titles/$titleId"
                 params={{ titleId: slide().title.id }}
+                aria-label={[
+                  slide().title.name,
+                  slide().title.genres.slice(0, 3).join(" · "),
+                  tr("media.hero.position", {
+                    index: i() + 1,
+                    count: count(),
+                  }),
+                ]
+                  .filter((part) => part.length > 0)
+                  .join(", ")}
                 class={cn(
-                  "dark text-foreground focus-visible:ring-ring relative block overflow-hidden rounded-xl outline-none focus-visible:ring-2",
+                  "group/carousel-card dark text-foreground focus-visible:ring-ring relative block overflow-hidden rounded-xl outline-none focus-visible:ring-2",
                   tone(slide().title.id),
                 )}
                 style={{ height: `${carouselHeight(viewport())}px` }}
@@ -793,6 +817,10 @@ export function FeaturedCarousel(props: {
                   aria-hidden="true"
                   class="absolute inset-0"
                   style={{ "background-image": CAROUSEL_SHADE }}
+                />
+                <span
+                  aria-hidden="true"
+                  class="bg-foreground pointer-events-none absolute inset-0 opacity-0 transition-opacity group-active/carousel-card:opacity-10 motion-reduce:transition-none"
                 />
                 <span class="absolute inset-x-4 bottom-4 flex flex-col gap-1">
                   <Show when={slide().title.genres.length > 0}>

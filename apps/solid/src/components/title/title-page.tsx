@@ -1,18 +1,16 @@
 import type { Season, Title } from "@matinee/contracts"
 import { useQueryClient } from "@tanstack/solid-query"
-import { Link, useNavigate, useRouter } from "@tanstack/solid-router"
-import { ArrowLeft, House } from "lucide"
+import { Link } from "@tanstack/solid-router"
 import { createEffect, createSignal, Show } from "solid-js"
 
 import { pageGutter } from "@/components/app-shell"
 import { CastRail } from "@/components/credits"
+import { ItemTopBar } from "@/components/phone-nav"
 import { useTitleWatched } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { buttonVariants } from "@/kit/button"
-import { Icon } from "@/kit/icon"
 import { Skeleton } from "@/kit/skeleton"
 import { errorMessage } from "@/lib/rpc"
-import { isPhone } from "@/lib/viewport"
 
 import { ShowEpisodes } from "./episodes"
 import { NextUp } from "./next-up"
@@ -20,64 +18,13 @@ import { SeasonsRail } from "./seasons-rail"
 import { headingPoster, headingTop, TitleHeader } from "./title-header"
 import { initialSeason, seasonItemsOptions, useTitle } from "./title-queries"
 
-/*
- * Until AppShell delegates its phone chrome to the detail route. Installed
- * once: a <style> that mounts with the page restyles the whole document
- * every time it opens, and these rules only match while the page is here.
- */
-const phoneChrome = `@media (max-width: 39.999rem) {
-  header:has(+ #main [data-title-page]),
-  #main:has([data-title-page]) + nav { display: none; }
-  #main:has([data-title-page]) { padding-bottom: calc(env(safe-area-inset-bottom) + 2rem); }
-}`
-if (!document.getElementById("title-page-phone-chrome")) {
-  const style = document.createElement("style")
-  style.id = "title-page-phone-chrome"
-  style.textContent = phoneChrome
-  document.head.append(style)
-}
-
 export function TitlePage(props: { titleId: string }) {
   return (
-    <div
-      data-title-page
-      class={[
-        pageGutter,
-        "relative -mt-[calc(env(safe-area-inset-top)+4rem)] sm:-mt-16",
-      ]}
-    >
-      <Show when={isPhone()}>
-        <ItemTopBar />
-      </Show>
+    <div class={[pageGutter, "relative sm:-mt-16"]}>
+      <ItemTopBar />
       <Show when={props.titleId} keyed>
         {(id) => <TitleDetail titleId={id} />}
       </Show>
-    </div>
-  )
-}
-
-function ItemTopBar() {
-  const router = useRouter()
-  const navigate = useNavigate()
-  const back = () => {
-    if (router.history.canGoBack()) router.history.back()
-    else void navigate({ to: "/" })
-  }
-  const floatButton =
-    "bg-background/70 grid size-11 place-items-center rounded-full backdrop-blur-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-  return (
-    <div class="pointer-events-none fixed inset-x-0 top-0 z-40 flex gap-1.5 px-2 pt-[calc(env(safe-area-inset-top)+0.375rem)] *:pointer-events-auto sm:hidden">
-      <button
-        type="button"
-        aria-label={tr("shell.back")}
-        class={floatButton}
-        onClick={back}
-      >
-        <Icon icon={ArrowLeft} class="size-5" />
-      </button>
-      <Link to="/" aria-label={tr("shell.homeLink")} class={floatButton}>
-        <Icon icon={House} class="size-5" />
-      </Link>
     </div>
   )
 }
@@ -166,7 +113,7 @@ function ShowSections(props: { title: Title; watched: boolean | undefined }) {
   )
 }
 
-function TitleSkeleton() {
+export function TitleSkeleton() {
   return (
     <div role="status" aria-label={tr("ui.loading")}>
       <Skeleton class="absolute inset-x-0 top-0 h-[min(46vh,420px)] rounded-none [mask-image:linear-gradient(black,transparent)]" />

@@ -12,6 +12,7 @@ import {
 import { tr } from "@/i18n"
 import type { KindSearch } from "@/lib/browse-search"
 import { orpc } from "@/lib/rpc"
+import { isPhone } from "@/lib/viewport"
 
 /** The kind of library that holds each kind of title. */
 export const libraryKind = {
@@ -112,8 +113,13 @@ function KindTitles(
 
   return (
     <TitleGrid
-      name={tr(`shell.${libraryKind[props.kind]}`)}
+      // A phone tab is Media, as in the Flutter app; wider screens keep the
+      // rail's own Movies and Shows names.
+      name={
+        isPhone() ? tr("shell.media") : tr(`shell.${libraryKind[props.kind]}`)
+      }
       kind={props.kind}
+      tab={isPhone()}
       scanning={props.libraries.some((library) => library.scanning)}
       list={list}
       request={request()}

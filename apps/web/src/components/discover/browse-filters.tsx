@@ -1,4 +1,4 @@
-import type { CatalogFilters, CatalogSort, TitleKind } from "@matinee/contracts"
+import type { CatalogFilters } from "@matinee/contracts"
 
 import {
   ChoiceChips,
@@ -33,22 +33,15 @@ import { type BrowseOptions, filterCount, NO_FILTERS } from "./browse-params"
 
 /** The Filter button and what it opens, with Discover's fields. */
 export function BrowseFilterPanel({
-  kind,
   options,
   filters,
-  sort,
-  voteFloor,
   change,
   open,
   onOpenChange,
   compact = false,
 }: {
-  kind: TitleKind
   options: BrowseOptions
   filters: CatalogFilters
-  sort: CatalogSort
-  /** The votes the server asks of the list while no minimum is chosen. */
-  voteFloor: number | null
   change: (patch: Partial<CatalogFilters>) => void
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -71,10 +64,7 @@ export function BrowseFilterPanel({
       onOpenChange={onOpenChange}
       compact={compact}
     >
-      <Section
-        label={tr("discover.browse.only")}
-        hint={tr("discover.browse.onlyHint")}
-      >
+      <Section label={tr("discover.browse.only")}>
         {(labelId) => (
           <ToggleChips
             labelId={labelId}
@@ -140,19 +130,7 @@ export function BrowseFilterPanel({
         onCommit={([scoreMin, scoreMax]) => change({ scoreMin, scoreMax })}
       />
       {options.votes.length > 0 && (
-        <Section
-          label={tr("discover.browse.votes")}
-          hint={
-            voteFloor === null
-              ? undefined
-              : tr(
-                  sort === "scoreHigh" || sort === "scoreLow"
-                    ? "discover.browse.floorScore"
-                    : "discover.browse.floorList",
-                  { count: voteFloor },
-                )
-          }
-        >
+        <Section label={tr("discover.browse.votes")}>
           {(labelId) => (
             <ChoiceChips
               labelId={labelId}
@@ -206,7 +184,6 @@ export function BrowseFilterPanel({
       )}
       <RangeField
         label={tr("filters.runtime")}
-        hint={tr(`filters.runtimeHint.${kind}`)}
         range={options.runtime}
         value={[filters.runtimeMin, filters.runtimeMax]}
         words={(bounds) => runtimeWords(bounds)}

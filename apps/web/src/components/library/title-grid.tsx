@@ -59,7 +59,6 @@ export function TitleGrid({ library }: { library: Library }) {
     filter: options
       ? (compact) => (
           <TitleFilterPanel
-            kind={kind === "movies" ? "movie" : "show"}
             options={options}
             filters={list.filters}
             change={list.change}

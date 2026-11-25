@@ -92,13 +92,6 @@ class TitleFilterPanel extends ConsumerWidget {
           )
         : (libraryId: libraryId, kind: null, genre: null, studio: null);
     final options = ref.watch(filterOptionsProvider(scope)).value;
-    final kind =
-        choices.kind ??
-        switch (pickedLibrary?.kind) {
-          LibraryKind.shows => TitleKind.show,
-          LibraryKind.movies => TitleKind.movie,
-          _ => null,
-        };
     final filters = choices.filters;
     void change(ListFilters next) =>
         ref.read(choicesProvider(list).notifier).filters(next);
@@ -360,12 +353,6 @@ class TitleFilterPanel extends ConsumerWidget {
             if (options.runtime case final runtime?)
               RangeField(
                 title: l.webFiltersRuntime,
-                // A show's runtime is an episode's.
-                hint: switch (kind) {
-                  TitleKind.show => l.webFiltersRuntimeHintShow,
-                  TitleKind.movie => l.webFiltersRuntimeHintMovie,
-                  _ => l.webFiltersRuntimeHintBoth,
-                },
                 range: runtime,
                 low: filters.runtimeMin?.toDouble(),
                 high: filters.runtimeMax?.toDouble(),

@@ -5,6 +5,7 @@ import { For } from "solid-js"
 import { Button } from "@/kit/button"
 import { KitControls } from "@/kit/gallery/controls"
 import { KitOverlays } from "@/kit/gallery/overlays"
+import { KitPickers } from "@/kit/gallery/pickers"
 import { Icon } from "@/kit/icon"
 
 export const Route = createFileRoute("/kit")({ component: KitGallery })
@@ -50,6 +51,7 @@ function KitGallery() {
         </div>
       </section>
       <KitControls />
+      <KitPickers />
       <KitOverlays />
     </main>
   )

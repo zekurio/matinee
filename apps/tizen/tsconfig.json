@@ -2,8 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "include": ["src", "vite.config.ts"],
   "compilerOptions": {
-    "jsx": "react-jsx",
-    "jsxImportSource": "preact",
+    "jsx": "preserve",
+    "jsxImportSource": "@solidjs/web",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
     "paths": {

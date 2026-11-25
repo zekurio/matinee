@@ -1,3 +1,27 @@
 /* ui-sdk adds the little CSS its behaviors need to this layer. Declared
    before the theme loads, so the app's own styles win over it. */
 @layer ui-sdk;
+
+/*
+ * A denser frosted surface for panels of text, like the filters. It keeps
+ * the picture behind in view without letting its colours through the muted
+ * labels and counts: less blur than the glass utility, and more of the
+ * popover laid over it, so bright posters don't leave distracting edges.
+ * The glass utility still supplies the solid and reduced-transparency
+ * fallbacks; this only gives it calmer values.
+ */
+.glass-readable {
+  --glass-filter: var(--glass-readable-filter);
+  --popover-glass: var(--glass-readable-tint);
+}
+
+:root,
+.dark {
+  --glass-readable-filter: blur(14px) saturate(1.05) brightness(0.88);
+  --glass-readable-tint: color-mix(in oklab, var(--popover) 90%, transparent);
+}
+
+:root.light {
+  --glass-readable-filter: blur(24px) saturate(1.05);
+  --glass-readable-tint: color-mix(in oklab, var(--popover) 93%, transparent);
+}

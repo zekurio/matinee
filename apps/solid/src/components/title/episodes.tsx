@@ -10,6 +10,7 @@ import {
   Show,
 } from "solid-js"
 
+import { CardScrim } from "@/components/card-actions"
 import {
   ItemLink,
   textLink,
@@ -116,7 +117,9 @@ function SeasonEpisode(props: {
               props.watched === undefined ? progressRatio(props.item) : null
             }
             class="w-full"
-          />
+          >
+            <CardScrim />
+          </Thumb>
         </ItemLink>
         <Show when={props.watched ?? props.item.progress?.completed}>
           <WatchedBadge class="pointer-events-none absolute top-1.5 right-1.5" />

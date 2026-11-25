@@ -58,3 +58,36 @@ export function AuthScreen(props: {
     </main>
   )
 }
+
+/**
+ * A page outside the shell that only reports something, such as a missing
+ * page, an error, or a link that no longer works. The actions stack the full
+ * width of the column, as the sign-in form's buttons do, so they line up with
+ * the text above them. `detail` is a smaller line under them, for what the
+ * reader can do about it.
+ */
+export function StatusScreen(props: {
+  title: string
+  description: JSX.Element
+  /** `Button`s, and links styled as one, the main one first. */
+  actions?: JSX.Element
+  detail?: JSX.Element
+}) {
+  return (
+    <AuthScreen title={props.title} description={props.description}>
+      <Show when={props.actions}>
+        <div class="grid gap-2">{props.actions}</div>
+      </Show>
+      <Show when={props.detail}>
+        <p
+          class={cn(
+            "text-muted-foreground text-13px leading-5",
+            props.actions && "mt-4",
+          )}
+        >
+          {props.detail}
+        </p>
+      </Show>
+    </AuthScreen>
+  )
+}

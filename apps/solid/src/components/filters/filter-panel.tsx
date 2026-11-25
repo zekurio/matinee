@@ -47,7 +47,7 @@ import { formatCount } from "@/lib/format"
 const compactTriggerClass = buttonVariants({
   variant: "ghost",
   size: "icon",
-  class: "relative [@media(pointer:coarse)]:size-11",
+  class: "relative [@media(pointer:coarse)]:size-12",
 })
 const drawerCloseClass = buttonVariants({ class: "h-11 px-5" })
 
@@ -62,6 +62,18 @@ export function FilterPanel(
     active: number
     onClear: () => void
     compact: boolean
+    /** Controls whether it's open, where the page needs to know. */
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    /** The phone drawer's closing button, which shows the list. */
+    done?: string
+    /**
+     * The desktop trigger: a chip among a page's quick filters, or the
+     * outline button a page's own toolbar gives it.
+     */
+    trigger?: "chip" | "button"
+    /** Which edge of the trigger the popover lines up with. */
+    align?: "start" | "end"
   }>,
 ) {
   const label = () =>
@@ -98,12 +110,15 @@ export function FilterPanel(
     <Show
       when={!props.compact}
       fallback={
-        <Drawer>
+        <Drawer open={props.open} onOpenChange={props.onOpenChange}>
           <DrawerTrigger aria-label={label()} class={compactTriggerClass}>
-            <Icon icon={ListFilter} class="size-5" />
+            <Icon
+              icon={ListFilter}
+              class="size-5 [@media(pointer:coarse)]:size-6"
+            />
             <FilterButtonFace compact active={props.active} />
           </DrawerTrigger>
-          <DrawerContent>
+          <DrawerContent class="glass-readable">
             <DrawerHandle />
             <DrawerTitle class="px-5 pt-3 pb-1 text-lg leading-7 font-semibold tracking-tight">
               {tr("filters.title")}
@@ -114,7 +129,7 @@ export function FilterPanel(
             <div class="border-foreground/10 flex shrink-0 items-center justify-between gap-2 border-t px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <div>{clear()}</div>
               <DrawerClose class={drawerCloseClass}>
-                {tr("filters.done")}
+                {props.done ?? tr("filters.done")}
               </DrawerClose>
             </div>
           </DrawerContent>
@@ -122,6 +137,8 @@ export function FilterPanel(
       }
     >
       <Popover
+        open={props.open}
+        onOpenChange={props.onOpenChange}
         onOpenChangeComplete={(open) => {
           if (open) return
           if (scroller) scroller.scrollTop = 0
@@ -130,19 +147,29 @@ export function FilterPanel(
       >
         <PopoverTrigger
           aria-label={label()}
-          class={chipClass(props.active > 0)}
+          class={
+            props.trigger === "button"
+              ? buttonVariants({
+                  variant: "outline",
+                  class: "data-popup-open:border-ring h-10 font-normal md:h-9",
+                })
+              : chipClass(props.active > 0)
+          }
         >
           <Icon icon={ListFilter} class="size-4" />
-          <FilterButtonFace active={props.active} />
+          <FilterButtonFace
+            active={props.active}
+            badge={props.trigger === "button"}
+          />
         </PopoverTrigger>
         <PopoverContent
-          align="start"
+          align={props.align ?? "start"}
           sideOffset={6}
           keepMounted={prebuilt()}
           // Kept out of `main`, so the closed copy's chips aren't found
           // among the page's own when something looks for them there.
           container={document.body}
-          class="max-h-[min(44rem,var(--available-height))] w-104 max-w-(--available-width) gap-0 p-0"
+          class="glass-readable max-h-[min(44rem,var(--available-height))] w-104 max-w-(--available-width) gap-0 p-0"
         >
           <PopoverHeader class="min-h-14 px-4">
             <PopoverTitle class="font-semibold">
@@ -317,10 +344,12 @@ export function ChoiceChips<T extends string>(props: {
   choices: Choice<T>[]
   value: T | null
   onChange: (value: T | null) => void
+  /** The word for leaving it unset, where "Any" isn't the right one. */
+  anyLabel?: string
 }) {
   const name = createUniqueId()
   const all = (): Choice<T | null>[] => [
-    { value: null, label: tr("filters.any") },
+    { value: null, label: props.anyLabel ?? tr("filters.any") },
     ...props.choices,
   ]
   return (

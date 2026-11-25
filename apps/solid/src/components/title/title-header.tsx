@@ -3,6 +3,7 @@ import { Link } from "@tanstack/solid-router"
 import { Play, Star } from "lucide"
 import { createMemo, For, Show } from "solid-js"
 
+import { ActionsMenu } from "@/components/actions-menu"
 import { CrewFacts, unitList } from "@/components/credits"
 import { FavoriteButton } from "@/components/favorite-button"
 import { PosterArt, textLink } from "@/components/media-item"
@@ -16,6 +17,7 @@ import { art, frame, mediaFlags, present, timeLeft } from "@/lib/media"
 
 import { HeaderOverview } from "./header-overview"
 import { MediaInfo } from "./media-info"
+import { MatchNote } from "./title-menu"
 
 export const headingTop =
   "pt-[max(10rem,30vh)] sm:pt-[max(4rem,calc(min(46vh,420px)-150px))]"
@@ -59,7 +61,7 @@ export function TitleHeader(props: {
         <div class="min-w-0 pb-1">
           <h1
             id="title-name"
-            class="text-2xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl"
+            class="max-sm:text-30px text-2xl leading-[1.1] font-semibold tracking-tight text-balance max-sm:line-clamp-3 max-sm:leading-9 max-sm:font-bold sm:text-4xl lg:text-5xl"
           >
             {props.title.name}
           </h1>
@@ -69,7 +71,7 @@ export function TitleHeader(props: {
               props.title.originalName !== props.title.name
             }
           >
-            <p class="text-muted-foreground mt-1 text-sm">
+            <p class="text-muted-foreground mt-1 text-sm max-sm:text-base">
               {props.title.originalName}
             </p>
           </Show>
@@ -84,7 +86,7 @@ export function TitleHeader(props: {
         />
         <CrewFacts title={props.title} />
         <Show when={movie()}>{(item) => <MediaInfo item={item()} />}</Show>
-        <div class="mt-1 flex items-center gap-2">
+        <div class="mt-1 flex items-center gap-2.5">
           <Show when={props.title.next}>
             {(item) => <PlayButton item={item()} />}
           </Show>
@@ -92,7 +94,16 @@ export function TitleHeader(props: {
             <WatchedButton watched={props.watched} />
           </Show>
           <FavoriteButton title={props.title} />
+          <ActionsMenu
+            target={{
+              kind: "title",
+              title: props.title,
+              file: props.title.next,
+            }}
+            look="page"
+          />
         </div>
+        <MatchNote title={props.title} />
       </div>
     </section>
   )
@@ -185,7 +196,11 @@ function TitleFacts(props: { title: Title }) {
   )
 }
 
-function PlayButton(props: { item: MediaItem }) {
+/**
+ * Resume what's in progress, with the time left, or play the next or
+ * first file. Fills the row on phones.
+ */
+export function PlayButton(props: { item: MediaItem }) {
   const resume = () => props.item.progress && !props.item.progress.completed
   return (
     <Link
@@ -193,7 +208,7 @@ function PlayButton(props: { item: MediaItem }) {
       params={{ itemId: props.item.id }}
       class={buttonVariants({
         size: "lg",
-        className: "min-w-0 max-sm:h-11 max-sm:flex-1 sm:min-w-40",
+        className: "min-w-0 max-sm:flex-1 sm:min-w-40",
       })}
     >
       <Icon icon={Play} fill="currentColor" />
