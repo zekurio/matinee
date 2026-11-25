@@ -1,6 +1,4 @@
-// Copyright (C) edde746 and Plezy contributors.
 // SPDX-License-Identifier: GPL-3.0-only
-// The underlay and its stacking order are adapted from Plezy.
 package io.github.zekurio.matinee.player
 
 import android.app.Activity

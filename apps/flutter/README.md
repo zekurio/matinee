@@ -299,8 +299,7 @@ On iOS there is one engine, libmpv, in `ios/Runner/Player`. It is the
 MPVKit Swift package from the same repository, pinned by revision in the
 Xcode project. mpv's avfoundation output draws into a layer beneath the
 Flutter view, at the rectangle `VideoView` leaves transparent, and the
-same layer feeds picture in picture. `NOTICE.md` lists what the player
-adapts from Plezy.
+same layer feeds picture in picture.
 
 iOS's picture in picture shows that layer and nothing of the Flutter view
 over it. Subtitles mpv draws go into the frames while the small window is

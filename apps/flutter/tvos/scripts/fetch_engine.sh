@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# Copyright (C) edde746 and Plezy contributors.
 # SPDX-License-Identifier: GPL-3.0-only
-# Adapted from Plezy's tvos/scripts/fetch_engine.sh.
 #
-# Flutter has no tvOS engine of its own. This fetches the one Plezy builds,
+# Flutter has no tvOS engine of its own. This fetches a prebuilt one,
 # Flutter's with a patch series for tvOS (github.com/edde746/flutter-plezy),
 # checks it against the SHA-256 in tvos/engine.sha256, unpacks it into a
 # cache, and writes tvos/Flutter/Generated.xcconfig, which tells Xcode

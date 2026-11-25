@@ -1,7 +1,4 @@
-// Copyright (C) edde746 and Plezy contributors.
 // SPDX-License-Identifier: GPL-3.0-only
-// The layer beneath the Flutter view and the picture in picture over it are
-// adapted from Plezy's MpvPlayerCore.swift and MpvPipController.swift.
 import AVFoundation
 import AVKit
 import UIKit

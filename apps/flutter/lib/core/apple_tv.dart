@@ -207,10 +207,10 @@ class AppleTvBackIntent extends Intent {
 /// touch surface as messages. This turns a swipe into arrow keys, Menu into
 /// Back, and tells the engine when Menu is the system's, to leave the app.
 ///
-/// How far a finger travels for one step is what Plezy measured against
-/// tvOS's own focus engine: the focused control's size along the swipe plus
-/// 155 points, between 200 and 700, and 400 with nothing to measure. A drag
-/// repeats no faster than every 60 ms.
+/// How far a finger travels for one step matches tvOS's own focus engine:
+/// the focused control's size along the swipe plus 155 points, between 200
+/// and 700, and 400 with nothing to measure. A drag repeats no faster than
+/// every 60 ms.
 final class AppleTvRemote {
   AppleTvRemote({
     void Function(LogicalKeyboardKey key)? press,

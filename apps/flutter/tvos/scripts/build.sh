@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (C) edde746 and Plezy contributors.
 # SPDX-License-Identifier: GPL-3.0-only
-# Adapted from Plezy's tvos/scripts/xcode_appletv.sh.
 #
 # What `flutter build` does for iOS, done by hand for tvOS, which the
 # Flutter tool doesn't know: it makes App.framework from the Dart code with
@@ -16,7 +14,7 @@
 # A simulator gets a debug app that runs the Dart code from its kernel. A
 # device gets a release app, compiled ahead of time, in every configuration:
 # tvOS lets no app make memory executable, so the debug engine can't run
-# there, and Plezy ships none.
+# there, and the prebuilt engine ships none.
 set -euo pipefail
 
 fail() {
