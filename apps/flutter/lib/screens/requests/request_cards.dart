@@ -197,189 +197,197 @@ class RequestCard extends StatelessWidget {
         leading: 24,
       ),
     );
+    const radius = BorderRadius.all(Radius.circular(KitRadius.xl));
     return ClipRRect(
-      borderRadius: const BorderRadius.all(Radius.circular(KitRadius.xl)),
+      borderRadius: radius,
+      // The rim over the backdrop, as the web's border sits over what it
+      // clips; under it, the backdrop would cover it and bleed out at the
+      // rounded corners.
       child: DecoratedBox(
+        position: DecorationPosition.foreground,
         decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(KitRadius.xl)),
+          borderRadius: radius,
           border: Border.all(color: colors.border),
         ),
-        child: Stack(
-          children: [
-            if (backdrop != null) ...[
-              Positioned.fill(
-                child: ExcludeSemantics(
-                  child: Picture([
-                    ArtSource(backdrop, largest: ArtworkSize.large),
-                  ]),
+        child: ColoredBox(
+          color: colors.surface,
+          child: Stack(
+            children: [
+              if (backdrop != null) ...[
+                Positioned.fill(
+                  child: ExcludeSemantics(
+                    child: Picture([
+                      ArtSource(backdrop, largest: ArtworkSize.large),
+                    ]),
+                  ),
                 ),
-              ),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        stops: const [0, .75],
-                        colors: [
-                          colors.surface.withValues(alpha: .5),
-                          colors.surface,
-                        ],
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          stops: const [0, .75],
+                          colors: [
+                            colors.surface.withValues(alpha: .5),
+                            colors.surface,
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-            Padding(
-              padding: const EdgeInsets.all(_padding),
-              child: SizedBox(
-                height: layout.height,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: _gap,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        final cut =
-                                            wholeYear &&
-                                            _cut(
-                                              context,
+              ],
+              Padding(
+                padding: const EdgeInsets.all(_padding),
+                child: SizedBox(
+                  height: layout.height,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: _gap,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          final cut =
+                                              wholeYear &&
+                                              _cut(
+                                                context,
+                                                factsText,
+                                                constraints.maxWidth,
+                                              );
+                                          if (!cut) {
+                                            return pressable(
+                                              facts,
+                                              open,
                                               factsText,
-                                              constraints.maxWidth,
                                             );
-                                        if (!cut) {
+                                          }
                                           return pressable(
                                             facts,
-                                            open,
+                                            () => unawaited(
+                                              _showWhole(context, title.name, [
+                                                facts,
+                                              ]),
+                                            ),
                                             factsText,
                                           );
-                                        }
-                                        return pressable(
-                                          facts,
-                                          () => unawaited(
-                                            _showWhole(context, title.name, [
-                                              facts,
-                                            ]),
-                                          ),
-                                          factsText,
-                                        );
-                                      },
+                                        },
+                                      ),
+                                      const SizedBox(height: _afterFacts),
+                                      pressable(title.name, open, titleText),
+                                    ],
+                                  ),
+                                ),
+                                if (onMore != null)
+                                  Padding(
+                                    padding: const EdgeInsetsDirectional.only(
+                                      start: 4,
                                     ),
-                                    const SizedBox(height: _afterFacts),
-                                    pressable(title.name, open, titleText),
-                                  ],
+                                    child: MatineeButton(
+                                      look: ButtonLook.ghost,
+                                      size: ButtonSize.iconSm,
+                                      leading: Lucide.ellipsis,
+                                      label: l.webRequestsMore(title.name),
+                                      onPressed: onMore,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (queue) ...[
+                              const SizedBox(height: _rowGap),
+                              SizedBox(
+                                height: math.max(
+                                  _askRow,
+                                  scaler.scale(KitText.px13.lineHeight),
                                 ),
+                                child: who,
                               ),
-                              if (onMore != null)
-                                Padding(
-                                  padding: const EdgeInsetsDirectional.only(
-                                    start: 4,
-                                  ),
-                                  child: MatineeButton(
-                                    look: ButtonLook.ghost,
-                                    size: ButtonSize.iconSm,
-                                    leading: Lucide.ellipsis,
-                                    label: l.webRequestsMore(title.name),
-                                    onPressed: onMore,
-                                  ),
-                                ),
                             ],
-                          ),
-                          if (queue) ...[
                             const SizedBox(height: _rowGap),
                             SizedBox(
-                              height: math.max(
-                                _askRow,
-                                scaler.scale(KitText.px13.lineHeight),
-                              ),
-                              child: who,
-                            ),
-                          ],
-                          const SizedBox(height: _rowGap),
-                          SizedBox(
-                            height: _statusHeight(scaler),
-                            child: Row(
-                              spacing: 8,
-                              children: [
-                                ExcludeSemantics(
-                                  child: Text(
-                                    l.requestsStatusLabel,
-                                    style: KitText.px13.style(
-                                      color: colors.foreground.withValues(
-                                        alpha: .85,
+                              height: _statusHeight(scaler),
+                              child: Row(
+                                spacing: 8,
+                                children: [
+                                  ExcludeSemantics(
+                                    child: Text(
+                                      l.requestsStatusLabel,
+                                      style: KitText.px13.style(
+                                        color: colors.foreground.withValues(
+                                          alpha: .85,
+                                        ),
+                                        weight: FontWeight.w600,
                                       ),
-                                      weight: FontWeight.w600,
                                     ),
                                   ),
-                                ),
-                                Flexible(child: badge),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          SizedBox(
-                            height: _actionHeight(scaler),
-                            child: Align(
-                              alignment: AlignmentDirectional.centerStart,
-                              child: actions,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(
-                      width: layout.posterWidth,
-                      height: layout.posterWidth * _posterHeight,
-                      child: ExcludeSemantics(
-                        child: PressIndication(
-                          onPressed: open,
-                          shape: const BorderRadius.all(
-                            Radius.circular(KitRadius.md),
-                          ),
-                          builder: (context, _) => DecoratedBox(
-                            decoration: const BoxDecoration(
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(KitRadius.md),
+                                  Flexible(child: badge),
+                                ],
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0x38000000),
-                                  offset: Offset(0, 4),
-                                  blurRadius: 12,
-                                ),
-                              ],
                             ),
-                            child: ArtFrame(
-                              toneKey: refKey(title.ref),
-                              aspectRatio: CardMetrics.poster,
-                              children: [
-                                if (poster != null)
-                                  Picture([ArtSource(poster)]),
-                              ],
+                            const Spacer(),
+                            SizedBox(
+                              height: _actionHeight(scaler),
+                              child: Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: actions,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(
+                        width: layout.posterWidth,
+                        height: layout.posterWidth * _posterHeight,
+                        child: ExcludeSemantics(
+                          child: PressIndication(
+                            onPressed: open,
+                            shape: const BorderRadius.all(
+                              Radius.circular(KitRadius.md),
+                            ),
+                            builder: (context, _) => DecoratedBox(
+                              decoration: const BoxDecoration(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(KitRadius.md),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color(0x38000000),
+                                    offset: Offset(0, 4),
+                                    blurRadius: 12,
+                                  ),
+                                ],
+                              ),
+                              child: ArtFrame(
+                                toneKey: refKey(title.ref),
+                                aspectRatio: CardMetrics.poster,
+                                children: [
+                                  if (poster != null)
+                                    Picture([ArtSource(poster)]),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

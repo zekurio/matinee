@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import 'glass.dart';
@@ -71,6 +73,7 @@ class MatineeButton extends StatelessWidget {
     this.shape,
     this.dimmed,
     this.autofocus = false,
+    this.tightIcon = true,
   }) : assert(child != null || leading != null || trailing != null),
        assert(child != null || label != null);
 
@@ -84,6 +87,11 @@ class MatineeButton extends StatelessWidget {
   final BorderRadiusGeometry? shape;
   final bool? dimmed;
   final bool autofocus;
+
+  /// Whether the end an icon is at takes the size's tighter padding, as a
+  /// web button's icon marked `data-icon` does. One without, as the home
+  /// showcase's Play, keeps the plain padding.
+  final bool tightIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -181,17 +189,20 @@ class MatineeButton extends StatelessWidget {
               : style,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          // Inside the 1px border every look has, as the surface below adds.
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minWidth: size.isIcon ? size.height : 0,
-              minHeight: size.height,
+              minWidth: size.isIcon ? size.height - 2 : 0,
+              minHeight: size.height - 2,
             ),
             child: Padding(
-              // The web's button has a 1px border (transparent on most looks)
-              // inside which the padding sits.
               padding: EdgeInsetsDirectional.only(
-                start: 1 + (leading != null ? size.iconPadding : size.padding),
-                end: 1 + (trailing != null ? size.iconPadding : size.padding),
+                start: leading != null && tightIcon
+                    ? size.iconPadding
+                    : size.padding,
+                end: trailing != null && tightIcon
+                    ? size.iconPadding
+                    : size.padding,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -215,20 +226,47 @@ class MatineeButton extends StatelessWidget {
           ),
         );
         final outline = border == null ? null : Border.all(color: border);
+        final inset = Padding(padding: const EdgeInsets.all(1), child: content);
+        // The web's button has a 1px border, transparent on most looks, and
+        // its `bg-clip-padding` stops the fill inside it, so a filled
+        // button shows 2px less than its height.
         final surface = look == ButtonLook.frosted
-            ? Glass(shape: radius, tint: fill, border: outline, child: content)
+            ? Glass(shape: radius, tint: fill, border: outline, child: inset)
             : DecoratedBox(
                 decoration: BoxDecoration(
-                  color: look == ButtonLook.glass
-                      ? Color.alphaBlend(fill, const Color(0x66000000))
-                      : fill,
                   border: outline,
                   borderRadius: radius,
                 ),
-                child: content,
+                child: Padding(
+                  padding: const EdgeInsets.all(1),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: look == ButtonLook.glass
+                          ? Color.alphaBlend(fill, const Color(0x66000000))
+                          : fill,
+                      borderRadius: _inside(
+                        radius.resolve(Directionality.of(context)),
+                      ),
+                    ),
+                    child: content,
+                  ),
+                ),
               );
         return Opacity(opacity: isDimmed ? .5 : 1, child: surface);
       },
     );
   }
+}
+
+/// [radius] 1px in, for a fill inside a 1px border, so it follows the
+/// border's inner edge.
+BorderRadius _inside(BorderRadius radius) {
+  Radius less(Radius corner) =>
+      Radius.elliptical(math.max(0, corner.x - 1), math.max(0, corner.y - 1));
+  return BorderRadius.only(
+    topLeft: less(radius.topLeft),
+    topRight: less(radius.topRight),
+    bottomLeft: less(radius.bottomLeft),
+    bottomRight: less(radius.bottomRight),
+  );
 }

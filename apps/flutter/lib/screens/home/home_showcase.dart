@@ -299,12 +299,8 @@ class _Card extends StatelessWidget {
     // picture and logo as it goes from showing to leaving, and the one
     // coming starts from its own placeholder, not the last title's art.
     final showing = [?leaving, current];
-    return DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: BoxDecoration(
-        borderRadius: _radius,
-        border: Border.all(color: colors.foreground.withValues(alpha: .1)),
-      ),
+    return CustomPaint(
+      foregroundPainter: _Rim(colors.foreground.withValues(alpha: .1)),
       child: ClipRRect(
         borderRadius: _radius,
         // The art and its shades are clipped together, not each on its own,
@@ -739,6 +735,7 @@ class _Buttons extends StatelessWidget {
           size: ButtonSize.lg,
           look: ButtonLook.inverse,
           leading: Lucide.play,
+          tightIcon: false,
           onPressed: () => context.push(Routes.play(slide.item.id)),
           child: Text(resuming ? l.titleResume : l.titlePlay),
         ),
@@ -832,4 +829,37 @@ class HomeShowcaseSkeleton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The card's rim, fading out over its last 48px as the web's masked
+/// border does, so no bright line runs where the bottom shade meets the
+/// page.
+class _Rim extends CustomPainter {
+  _Rim(this.color);
+
+  final Color color;
+
+  static const _fade = 48.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final bounds = Offset.zero & size;
+    final solid = math.max(0.0, (size.height - _fade) / size.height);
+    canvas.drawRRect(
+      _radius.toRRect(bounds).deflate(.5),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0, solid, 1],
+          colors: [color, color, color.withValues(alpha: 0)],
+        ).createShader(bounds),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_Rim old) => old.color != color;
 }
