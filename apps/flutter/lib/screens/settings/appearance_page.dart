@@ -1,16 +1,17 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_colors.dart';
 import '../../core/device.dart';
 import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import 'settings_rows.dart';
 import 'settings_screen.dart';
 
-/// Settings, Appearance, as the web's: the color scheme as three miniatures of
-/// the app, the theme preset as a row, and, on Android 12 and later, the
-/// choice to take the wallpaper's colors instead. All are this device's, kept
-/// by `themeStoreProvider`.
+/// Settings, Appearance: the color scheme as three miniatures of the app in
+/// the colors it paints with, the server's accent included, and, on Android
+/// 12 and later, a switch to take the wallpaper's colors instead. Both are
+/// this device's, kept by `themeStoreProvider`.
 class AppearancePage extends ConsumerWidget {
   const AppearancePage({super.key});
 
@@ -20,64 +21,46 @@ class AppearancePage extends ConsumerWidget {
     final saved =
         ref.watch(themeStoreProvider).value ?? defaultThemePreferences;
     final store = ref.read(themeStoreProvider.notifier);
-    final preset = saved.preset;
-    final wallpaper = ref.watch(materialYouProvider).value;
+    final (:light, :dark) = ref.watch(appColorsProvider);
     // Material You is Android's, and a TV keeps Matinee's own theme.
-    final hasMaterialYou = wallpaper != null && !ref.watch(deviceProvider).isTv;
-    final onWallpaper = hasMaterialYou && saved.materialYou;
-    final light = onWallpaper ? wallpaper.light : preset.light;
-    final dark = onWallpaper ? wallpaper.dark : preset.dark;
+    final hasMaterialYou =
+        ref.watch(materialYouProvider).value != null &&
+        !ref.watch(deviceProvider).isTv;
     return SettingsScaffold(
       title: l.settingsPageAppearance,
       sections: [
         SettingsSection(
           title: l.webAppearanceColorScheme,
-          child: Row(
-            spacing: 10,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final appearance in ThemeAppearance.values)
-                Expanded(
-                  child: _Choice(
-                    label: switch (appearance) {
-                      ThemeAppearance.system =>
-                        l.webAppearanceColorSchemeSystem,
-                      ThemeAppearance.light => l.webAppearanceColorSchemeLight,
-                      ThemeAppearance.dark => l.webAppearanceColorSchemeDark,
-                    },
-                    selected: saved.appearance == appearance,
-                    onPressed: () => store.setAppearance(appearance),
-                    picture: switch (appearance) {
-                      ThemeAppearance.system => _Split(
-                        light: light,
-                        dark: dark,
-                      ),
-                      ThemeAppearance.light => _Miniature(light),
-                      ThemeAppearance.dark => _Miniature(dark),
-                    },
-                  ),
-                ),
-            ],
-          ),
-        ),
-        SettingsSection(
-          title: l.appearancePreset,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 8,
+            spacing: 12,
             children: [
-              Panel(
-                rows: [
-                  for (final option in ThemePreset.values)
-                    _PresetRow(
-                      label: switch (option) {
-                        ThemePreset.matinee => l.appearancePresetMatinee,
-                      },
-                      light: option.light,
-                      dark: option.dark,
-                      selected: option == preset,
-                      enabled: !onWallpaper,
-                      onPressed: () => store.setPreset(option),
+              Row(
+                spacing: 10,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final appearance in ThemeAppearance.values)
+                    Expanded(
+                      child: _Choice(
+                        label: switch (appearance) {
+                          ThemeAppearance.system =>
+                            l.webAppearanceColorSchemeSystem,
+                          ThemeAppearance.light =>
+                            l.webAppearanceColorSchemeLight,
+                          ThemeAppearance.dark =>
+                            l.webAppearanceColorSchemeDark,
+                        },
+                        selected: saved.appearance == appearance,
+                        onPressed: () => store.setAppearance(appearance),
+                        picture: switch (appearance) {
+                          ThemeAppearance.system => _Split(
+                            light: light,
+                            dark: dark,
+                          ),
+                          ThemeAppearance.light => _Miniature(light),
+                          ThemeAppearance.dark => _Miniature(dark),
+                        },
+                      ),
                     ),
                 ],
               ),
@@ -97,63 +80,6 @@ class AppearancePage extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// A preset as a settings row: its light and dark miniature, its name, and a
-/// check when it's the one picked. It dims while Material You gives the app
-/// its colors instead.
-class _PresetRow extends StatelessWidget {
-  const _PresetRow({
-    required this.label,
-    required this.light,
-    required this.dark,
-    required this.selected,
-    required this.enabled,
-    required this.onPressed,
-  });
-
-  final String label;
-  final KitColors light;
-  final KitColors dark;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = MatineeTheme.of(context);
-    return PressIndication(
-      onPressed: enabled ? onPressed : null,
-      label: label,
-      checked: selected,
-      inMutuallyExclusiveGroup: true,
-      builder: (context, state) => Opacity(
-        opacity: enabled ? 1 : .5,
-        child: ExcludeSemantics(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              spacing: 14,
-              children: [
-                SizedBox(
-                  width: 64,
-                  child: _Split(light: light, dark: dark),
-                ),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: KitText.base.style(color: colors.foreground),
-                  ),
-                ),
-                if (selected)
-                  KitIcon(Lucide.check, size: 18, color: colors.accent),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
