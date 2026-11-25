@@ -3,6 +3,7 @@ import { defineMessages, plural } from "../../catalog"
 export default defineMessages("party", {
   // The watch party panel, from the bar.
   "party.title": "Watch party",
+  "party.inParty": "You're in this watch party",
   "party.start": "Start a watch party",
   "party.startFailed": "Couldn't start a watch party",
   "party.inviteCopied": "Invite link copied",

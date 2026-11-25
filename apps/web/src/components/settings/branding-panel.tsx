@@ -5,10 +5,6 @@ import {
   type LoginBackdrop as LoginBackdropSettings,
   type ThemeAccents,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { Slider } from "@matinee/ui/components/slider"
-import { Spinner } from "@matinee/ui/components/spinner"
 import {
   endAccentPreview,
   previewServerAccents,
@@ -21,20 +17,25 @@ import {
   type ThemeAppearance,
 } from "@matinee/ui/lib/theme-colors"
 import { cn } from "@matinee/ui/lib/utils"
-import { useSelector } from "@tanstack/react-form"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ShuffleIcon } from "lucide-react"
-import { useEffect } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { Shuffle } from "lucide"
+import { For, Match, onSettled, Show, Switch } from "solid-js"
 
+import { AuthScreen } from "@/components/auth-screen"
+import { LoginBackdrop } from "@/components/login-backdrop"
+import { SignInForm } from "@/components/sign-in-form"
 import { tr } from "@/i18n"
-import { useAppForm } from "@/lib/form"
+import { Button } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+import { Skeleton } from "@/kit/skeleton"
+import { Slider } from "@/kit/slider"
+import { Spinner } from "@/kit/spinner"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
-import { AuthScreen } from "../auth-screen"
-import { LoginBackdrop } from "../login-backdrop"
-import { SignInForm } from "../sign-in-form"
 import { HexColorInput } from "./hex-color-input"
-import { SelectField, SwitchField } from "./setting-controls"
+import { fetching } from "./query-state"
+import { SelectRow, SwitchRow } from "./setting-controls"
+import { createDraftForm } from "./settings-draft"
 import {
   SettingNote,
   SettingRow,
@@ -66,29 +67,33 @@ const ACCENT_PRESETS: readonly AccentPair[] = [
 
 /**
  * How the server looks to everyone on it: the Matinee theme's accent and
- * the login screen. Ported from alloy.
+ * the login screen.
  */
 export function BrandingPanel() {
-  const saved = useQuery(orpc.admin.branding.get.queryOptions())
+  const saved = useQuery(() => orpc.admin.branding.get.queryOptions())
 
   return (
     <SettingsSections>
-      {saved.isPending ? (
-        <Skeleton className="h-96 rounded-xl" />
-      ) : saved.isError ? (
-        <p className="text-muted-foreground text-sm">
-          {tr("branding.loadFailed", { error: errorMessage(saved.error) })}
-        </p>
-      ) : (
-        <BrandingForm saved={saved.data} />
-      )}
+      <Switch>
+        <Match when={saved.isPending}>
+          <Skeleton class="h-96 rounded-xl" />
+        </Match>
+        <Match when={saved.isError}>
+          <p class="text-muted-foreground text-sm">
+            {tr("branding.loadFailed", { error: errorMessage(saved.error) })}
+          </p>
+        </Match>
+        <Match when={saved.isSuccess && saved.data}>
+          {(branding) => <BrandingForm saved={branding()} />}
+        </Match>
+      </Switch>
     </SettingsSections>
   )
 }
 
-function BrandingForm({ saved }: { saved: Branding }) {
+function BrandingForm(props: { saved: Branding }) {
   const queryClient = useQueryClient()
-  const save = useMutation({
+  const save = useMutation(() => ({
     mutationFn: (input: Branding) => client.admin.branding.update(input),
     onSuccess: async (next) => {
       // The saved accents show at once, without waiting for the config.
@@ -102,104 +107,104 @@ function BrandingForm({ saved }: { saved: Branding }) {
         }),
       ])
     },
-  })
-  const form = useAppForm({
-    // The form follows a refetch until the first edit.
-    defaultValues: saved,
-    onSubmit: async ({ value, formApi }) => {
-      formApi.reset(await save.mutateAsync(value))
+  }))
+  // The form follows a refetch until the first edit.
+  const form = createDraftForm<Branding>({
+    initial: () => props.saved,
+    onSubmit: async (value) => {
+      await save.mutate(value)
+      form.reset()
     },
   })
-  const draft = useSelector(form.store, (state) => state.values)
-  const dirty = useSelector(form.store, (state) => !state.isDefaultValue)
+  const draft = () => form.values()
+  const backdrop = () => draft().loginBackdrop
+  const setBackdrop = (change: Partial<LoginBackdropSettings>) =>
+    form.set("loginBackdrop", { ...backdrop(), ...change })
 
   // The page previews each accent edit, and goes back to the saved accents
   // on a reset or when the panel closes.
-  const preview = (change: Partial<ThemeAccents>) =>
-    previewServerAccents({ ...form.state.values.themeAccents, ...change })
-  const pickPreset = (preset: AccentPair) => {
-    const next = {
+  const setAccents = (change: Partial<ThemeAccents>) => {
+    const next = { ...draft().themeAccents, ...change }
+    previewServerAccents(next)
+    form.set("themeAccents", next)
+  }
+  const pickPreset = (preset: AccentPair) =>
+    setAccents({
       light: storedAccent("light", preset.light),
       dark: storedAccent("dark", preset.dark),
-    }
-    preview(next)
-    form.setFieldValue("themeAccents.light", next.light)
-    form.setFieldValue("themeAccents.dark", next.dark)
-  }
+    })
   // Takes the preview off the page when the panel closes.
-  useEffect(() => endAccentPreview, [])
+  onSettled(() => () => endAccentPreview())
 
   const accent = (appearance: ThemeAppearance) =>
-    draft.themeAccents[appearance] ?? defaultThemeAccent(appearance)
+    draft().themeAccents[appearance] ?? defaultThemeAccent(appearance)
 
   return (
-    <form className="contents" onSubmit={(event) => event.preventDefault()}>
+    <form class="contents" onSubmit={(event) => event.preventDefault()}>
       <SettingsSubsection id="accent-color" title={tr("branding.title")}>
         <div
           role="group"
           aria-label={tr("branding.presets")}
-          className="flex flex-wrap gap-2.5"
+          class="flex flex-wrap gap-2.5"
         >
-          {ACCENT_PRESETS.map((preset, index) => {
-            const name =
-              index === 0
-                ? tr("branding.default")
-                : `${preset.light} / ${preset.dark}`
-            const selected = THEME_APPEARANCES.every(
-              (appearance) => accent(appearance) === preset[appearance],
-            )
-            return (
-              <button
-                key={preset.dark}
-                type="button"
-                aria-label={name}
-                title={name}
-                aria-pressed={selected}
-                onClick={() => pickPreset(preset)}
-                className={cn(
-                  "ring-offset-background focus-visible:outline-ring size-8 rounded-full ring-offset-2 outline-offset-4 transition-shadow focus-visible:outline-2",
-                  selected
-                    ? "ring-foreground ring-2"
-                    : "hover:ring-foreground/30 hover:ring-2",
-                )}
-                style={{
-                  // A hard stop on a diagonal stair-steps; a pixel of blend
-                  // smooths it.
-                  background: `linear-gradient(135deg, ${preset.light} calc(50% - 0.5px), ${preset.dark} calc(50% + 0.5px))`,
-                }}
-              />
-            )
-          })}
+          <For each={ACCENT_PRESETS}>
+            {(preset, index) => {
+              const name = () =>
+                index() === 0
+                  ? tr("branding.default")
+                  : `${preset.light} / ${preset.dark}`
+              const selected = () =>
+                THEME_APPEARANCES.every(
+                  (appearance) => accent(appearance) === preset[appearance],
+                )
+              return (
+                <button
+                  type="button"
+                  aria-label={name()}
+                  title={name()}
+                  aria-pressed={selected() ? "true" : "false"}
+                  onClick={() => pickPreset(preset)}
+                  class={cn(
+                    "ring-offset-background focus-visible:outline-ring size-8 rounded-full ring-offset-2 outline-offset-4 transition-shadow focus-visible:outline-2",
+                    selected()
+                      ? "ring-foreground ring-2"
+                      : "hover:ring-foreground/30 hover:ring-2",
+                  )}
+                  style={{
+                    // A hard stop on a diagonal stair-steps; a pixel of blend
+                    // smooths it.
+                    background: `linear-gradient(135deg, ${preset.light} calc(50% - 0.5px), ${preset.dark} calc(50% + 0.5px))`,
+                  }}
+                />
+              )
+            }}
+          </For>
         </div>
         <SettingRows>
-          {THEME_APPEARANCES.map((appearance) => {
-            const label = tr(`branding.mode.${appearance}`)
-            return (
-              <SettingRow key={appearance} title={label} layout="split">
+          <For each={THEME_APPEARANCES}>
+            {(appearance) => (
+              <SettingRow
+                title={tr(`branding.mode.${appearance}`)}
+                layout="split"
+              >
                 {(ids) => (
-                  <form.Field name={`themeAccents.${appearance}`}>
-                    {(field) => (
-                      <div className="w-full">
-                        <HexColorInput
-                          id={ids.controlId}
-                          value={
-                            field.state.value ?? defaultThemeAccent(appearance)
-                          }
-                          label={tr(`branding.accent.${appearance}`)}
-                          commit={normalizeThemeColor}
-                          onChange={(color) => {
-                            const stored = storedAccent(appearance, color)
-                            preview({ [appearance]: stored })
-                            field.handleChange(stored)
-                          }}
-                        />
-                      </div>
-                    )}
-                  </form.Field>
+                  <div class="w-full">
+                    <HexColorInput
+                      id={ids.controlId}
+                      value={accent(appearance)}
+                      label={tr(`branding.accent.${appearance}`)}
+                      commit={normalizeThemeColor}
+                      onChange={(color) =>
+                        setAccents({
+                          [appearance]: storedAccent(appearance, color),
+                        })
+                      }
+                    />
+                  </div>
                 )}
               </SettingRow>
-            )
-          })}
+            )}
+          </For>
         </SettingRows>
       </SettingsSubsection>
 
@@ -208,68 +213,53 @@ function BrandingForm({ saved }: { saved: Branding }) {
         title={tr("branding.backdrop.title")}
       >
         <SettingRows>
-          <form.AppField name="loginBackdrop.enabled">
-            {() => <SwitchField title={tr("branding.backdrop.enabled")} />}
-          </form.AppField>
-          <form.AppField name="loginBackdrop.artwork">
-            {() => (
-              <SelectField
-                title={tr("branding.backdrop.artwork")}
-                options={LOGIN_BACKDROP_ARTWORK}
-                labelOf={(value) => tr(`branding.backdrop.artwork.${value}`)}
-                disabled={!draft.loginBackdrop.enabled}
-              />
-            )}
-          </form.AppField>
-          <form.Field name="loginBackdrop.blur">
-            {(field) => (
-              <SliderRow
-                title={tr("branding.backdrop.blur")}
-                value={field.state.value}
-                max={LOGIN_BACKDROP_MAX_BLUR}
-                label={(value) => tr("branding.backdrop.blurValue", { value })}
-                disabled={!draft.loginBackdrop.enabled}
-                onChange={field.handleChange}
-              />
-            )}
-          </form.Field>
-          <form.Field name="loginBackdrop.fade">
-            {(field) => (
-              <SliderRow
-                title={tr("branding.backdrop.fade")}
-                value={field.state.value}
-                max={100}
-                label={(value) => tr("branding.backdrop.fadeValue", { value })}
-                disabled={!draft.loginBackdrop.enabled}
-                onChange={field.handleChange}
-              />
-            )}
-          </form.Field>
+          <SwitchRow
+            title={tr("branding.backdrop.enabled")}
+            checked={backdrop().enabled}
+            onChange={(enabled) => setBackdrop({ enabled })}
+          />
+          <SelectRow
+            title={tr("branding.backdrop.artwork")}
+            options={LOGIN_BACKDROP_ARTWORK}
+            labelOf={(value) => tr(`branding.backdrop.artwork.${value}`)}
+            disabled={!backdrop().enabled}
+            value={backdrop().artwork}
+            onChange={(artwork) => setBackdrop({ artwork })}
+          />
+          <SliderRow
+            title={tr("branding.backdrop.blur")}
+            value={backdrop().blur}
+            max={LOGIN_BACKDROP_MAX_BLUR}
+            label={(value) => tr("branding.backdrop.blurValue", { value })}
+            disabled={!backdrop().enabled}
+            onChange={(blur) => setBackdrop({ blur })}
+          />
+          <SliderRow
+            title={tr("branding.backdrop.fade")}
+            value={backdrop().fade}
+            max={100}
+            label={(value) => tr("branding.backdrop.fadeValue", { value })}
+            disabled={!backdrop().enabled}
+            onChange={(fade) => setBackdrop({ fade })}
+          />
         </SettingRows>
         <SettingNote>{tr("branding.backdrop.source")}</SettingNote>
-        <LoginPreview settings={draft.loginBackdrop} />
+        <LoginPreview settings={backdrop()} />
       </SettingsSubsection>
 
       <SettingsSaveBar
-        dirty={dirty}
+        dirty={form.dirty()}
         onReset={() => {
           form.reset()
           endAccentPreview()
         }}
-        onSave={() => form.handleSubmit()}
+        onSave={() => form.submit()}
       />
     </form>
   )
 }
 
-function SliderRow({
-  title,
-  value,
-  max,
-  label,
-  disabled,
-  onChange,
-}: {
+function SliderRow(props: {
   title: string
   value: number
   max: number
@@ -278,22 +268,26 @@ function SliderRow({
   onChange: (value: number) => void
 }) {
   return (
-    <SettingRow title={title} layout="split">
+    <SettingRow title={props.title} layout="split">
       {(ids) => (
-        <div className="flex w-full items-center gap-3">
+        <div class="flex w-full items-center gap-3">
           <Slider
             id={ids.controlId}
             aria-labelledby={ids.labelId}
-            value={[value]}
+            value={[props.value]}
             min={0}
-            max={max}
+            max={props.max}
             step={1}
-            disabled={disabled}
-            onValueChange={(next) => onChange([next].flat()[0] ?? value)}
-            className="flex-1"
+            disabled={props.disabled}
+            onValueChange={(next) =>
+              props.onChange(
+                (Array.isArray(next) ? next[0] : next) ?? props.value,
+              )
+            }
+            class="flex-1"
           />
-          <span className="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
-            {label(value)}
+          <span class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
+            {props.label(props.value)}
           </span>
         </div>
       )}
@@ -305,63 +299,65 @@ function SliderRow({
  * The login screen as people will see it with the draft settings: the
  * real form over the backdrop, which shuffles on request.
  */
-function LoginPreview({ settings }: { settings: LoginBackdropSettings }) {
-  const config = useQuery(orpc.auth.config.queryOptions())
-  const tiles = useQuery({
+function LoginPreview(props: { settings: LoginBackdropSettings }) {
+  const config = useQuery(() => orpc.auth.config.queryOptions())
+  const tiles = useQuery(() => ({
     ...orpc.admin.branding.preview.queryOptions({
-      input: { artwork: settings.artwork },
+      input: { artwork: props.settings.artwork },
     }),
-    enabled: settings.enabled,
+    enabled: props.settings.enabled,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
-  })
-  const empty =
-    settings.enabled && tiles.isSuccess && tiles.data.tiles.length === 0
+  }))
+  const shown = () => (tiles.isSuccess ? tiles.data.tiles : [])
+  const empty = () =>
+    props.settings.enabled && tiles.isSuccess && tiles.data.tiles.length === 0
 
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground text-xs">
+    <div class="flex flex-col gap-2.5">
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-muted-foreground text-xs">
           {tr("branding.backdrop.preview")}
         </span>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          disabled={!settings.enabled || tiles.isFetching}
+          disabled={!props.settings.enabled || fetching(tiles)}
           onClick={() => void tiles.refetch()}
         >
-          {tiles.isFetching ? <Spinner /> : <ShuffleIcon />}
+          <Show when={fetching(tiles)} fallback={<Icon icon={Shuffle} />}>
+            <Spinner />
+          </Show>
           {tr("branding.backdrop.shuffle")}
         </Button>
       </div>
       {/* The real form, inert, so a click in the preview signs nobody in. */}
       <div
         inert
-        className="bg-background h-[440px] overflow-hidden rounded-xl border select-none"
+        class="bg-background h-[440px] overflow-hidden rounded-xl border select-none"
       >
-        {config.data && (
-          <AuthScreen
-            contained
-            title={tr("auth.signIn.title")}
-            backdrop={
-              <LoginBackdrop
-                settings={settings}
-                tiles={tiles.data?.tiles ?? []}
-              />
-            }
-          >
-            <SignInForm config={config.data} target="/" />
-          </AuthScreen>
-        )}
+        <Show when={config.isSuccess && config.data}>
+          {(current) => (
+            <AuthScreen
+              contained
+              title={tr("auth.signIn.title")}
+              backdrop={
+                <LoginBackdrop settings={props.settings} tiles={shown()} />
+              }
+            >
+              <SignInForm config={current()} target="/" />
+            </AuthScreen>
+          )}
+        </Show>
       </div>
-      {(empty || !settings.enabled) && (
+      <Show when={empty() || !props.settings.enabled}>
         <SettingNote>
-          {empty
+          {empty()
             ? tr("branding.backdrop.empty")
             : tr("branding.backdrop.previewOff")}
         </SettingNote>
-      )}
+      </Show>
     </div>
   )
 }

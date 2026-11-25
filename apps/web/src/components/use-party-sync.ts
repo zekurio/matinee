@@ -3,20 +3,14 @@ import type {
   PartyPlayback,
   PartyStatusReport,
 } from "@matinee/contracts"
-import {
-  HourglassIcon,
-  PauseIcon,
-  PlayIcon,
-  UsersRoundIcon,
-} from "lucide-react"
-import { type RefObject, useEffect, useEffectEvent, useRef } from "react"
+import { Hourglass, Pause, Play, UsersRound } from "lucide"
+import { type Accessor, createEffect, createMemo } from "solid-js"
 
+import { bufferedEnd } from "@/components/playback-source"
+import { formatTime } from "@/components/player-format"
 import { perLocale, tr } from "@/i18n"
 import { partyPosition } from "@/lib/party"
 import type { PlayerStore } from "@/stores/player"
-
-import { bufferedEnd } from "./playback-source"
-import { formatTime } from "./player-format"
 
 /** The party a player follows, from the watch page. */
 export type PartyLink = {
@@ -109,32 +103,32 @@ function mayHurry(el: HTMLVideoElement): boolean {
  * forever.
  */
 export function usePartySync(
-  video: RefObject<HTMLVideoElement | null>,
+  video: () => HTMLVideoElement | undefined,
   store: PlayerStore,
   clock: Clock,
-  party: PartyLink | null,
+  party: Accessor<PartyLink | null>,
 ) {
-  const holdUntil = useRef(0)
-  const jumpedAt = useRef(0)
-  const last = useRef<PartyPlayback | null>(null)
-  const waited = useRef<string[]>([])
+  let holdUntil = 0
+  let jumpedAt = 0
+  let last: PartyPlayback | null = null
+  let waited: string[] = []
   /** Seconds a jump past the buffer aims ahead of the party. */
-  const lead = useRef(LEAD_GUESS_S)
+  let lead = LEAD_GUESS_S
   /** When a jump past the buffer began, until the video plays again. */
-  const landing = useRef<number | null>(null)
+  let landing: number | null = null
 
-  const apply = useEffectEvent((fresh: boolean) => {
-    const el = video.current
-    if (!el || !party) return
+  const apply = (fresh: boolean, link = party()) => {
+    const el = video()
+    if (!el || !link) return
     const state = store.getState()
     // A source on its way, a drag of the seek bar, or the viewer's own
     // change come first.
     if (state.pending !== null || state.scrub !== null) return
     if (el.readyState < HTMLMediaElement.HAVE_METADATA) return
     const now = Date.now()
-    if (now < holdUntil.current) return
+    if (now < holdUntil) return
 
-    const { playback, offsetMs } = party
+    const { playback, offsetMs } = link
     const length = clock.duration()
     const target = partyPosition(playback, offsetMs)
     const expected = length > 0 ? Math.min(target, length) : target
@@ -144,16 +138,16 @@ export function usePartySync(
       source.method === "remux" && !source.hls
         ? JUMP_AGAIN_COPIED_MS
         : JUMP_AGAIN_MS
-    const mayJump = fresh || now - jumpedAt.current > wait
+    const mayJump = fresh || now - jumpedAt > wait
     const jump = () => {
-      jumpedAt.current = now
+      jumpedAt = now
       setRate(el, 1)
       // A paused party waits where it is, and a jump within the buffer
       // plays at once, so only a playing one past it needs the lead.
       const far =
         playback.playing && bufferedEnd(el, expected - source.offset) === null
-      landing.current = far ? now : null
-      const ahead = far ? expected + lead.current : expected
+      landing = far ? now : null
+      const ahead = far ? expected + lead : expected
       const to = length > 0 ? Math.min(ahead, length) : ahead
       state.setTime(to)
       clock.seek(to)
@@ -170,7 +164,7 @@ export function usePartySync(
       setRate(el, 1)
       // A party that waits for this player waits where it paused, so the
       // player loads that very spot.
-      const close = party.waitingFor.includes(party.selfId) ? NUDGE_S : JUMP_S
+      const close = link.waitingFor.includes(link.selfId) ? NUDGE_S : JUMP_S
       if (Math.abs(drift) > close && mayJump) jump()
       return
     }
@@ -191,119 +185,117 @@ export function usePartySync(
     } else if (Math.abs(drift) < SETTLED_S) {
       setRate(el, 1)
     }
-  })
+  }
 
   /** Says what another member did, over the picture. */
-  const announce = useEffectEvent(
-    (before: PartyPlayback | null, waitedBefore: string[]) => {
-      if (!party || !before) return
-      const { playback } = party
-      const { showFlash } = store.getState()
-      // A pause for slow players says who it waits for, and its end that
-      // everyone caught up, rather than who pressed what.
-      if (party.waitingFor.length > 0) {
-        if (party.waitingFor.join() === waitedBefore.join()) return
-        const who = waitingNames(party)
-        showFlash(
-          HourglassIcon,
-          who
-            ? tr("party.flash.waiting", { names: who })
-            : tr("party.flash.waitingForYou"),
-        )
-        return
-      }
-      if (waitedBefore.length > 0 && playback.playing) {
-        showFlash(PlayIcon, tr("party.flash.caughtUp"))
-        return
-      }
-      const name = playback.by ? party.nameOf(playback.by) : null
-      if (!name) return
-      if (playback.playing !== before.playing) {
-        if (playback.playing)
-          showFlash(PlayIcon, tr("party.flash.played", { name }))
-        else showFlash(PauseIcon, tr("party.flash.paused", { name }))
-        return
-      }
+  const announce = (
+    link: PartyLink,
+    before: PartyPlayback | null,
+    waitedBefore: string[],
+  ) => {
+    if (!before) return
+    const { playback } = link
+    const { showFlash } = store.getState()
+    // A pause for slow players says who it waits for, and its end that
+    // everyone caught up, rather than who pressed what.
+    if (link.waitingFor.length > 0) {
+      if (link.waitingFor.join() === waitedBefore.join()) return
+      const who = waitingNames(link)
       showFlash(
-        UsersRoundIcon,
-        tr("party.flash.moved", {
-          name,
-          time: formatTime(playback.positionSeconds),
-        }),
+        Hourglass,
+        who
+          ? tr("party.flash.waiting", { names: who })
+          : tr("party.flash.waitingForYou"),
       )
+      return
+    }
+    if (waitedBefore.length > 0 && playback.playing) {
+      showFlash(Play, tr("party.flash.caughtUp"))
+      return
+    }
+    const name = playback.by ? link.nameOf(playback.by) : null
+    if (!name) return
+    if (playback.playing !== before.playing) {
+      if (playback.playing) showFlash(Play, tr("party.flash.played", { name }))
+      else showFlash(Pause, tr("party.flash.paused", { name }))
+      return
+    }
+    showFlash(
+      UsersRound,
+      tr("party.flash.moved", {
+        name,
+        time: formatTime(playback.positionSeconds),
+      }),
+    )
+  }
+
+  const active = createMemo(() => party() !== null)
+  // The party, as of the parts of its state that matter here. The server
+  // sends the same state again every little while, which changes none of
+  // them.
+  const moment = createMemo(
+    () => {
+      const link = party()
+      if (!link) return null
+      const { playback } = link
+      return {
+        key: `${playback.at.getTime()}|${playback.playing}|${playback.positionSeconds}|${link.waitingFor.join()}`,
+        link,
+      }
     },
+    { equals: (a, b) => a?.key === b?.key },
   )
 
-  const active = party !== null
-  const at = party?.playback.at.getTime()
-  const playing = party?.playback.playing
-  const positionSeconds = party?.playback.positionSeconds
-  const waiting = party?.waitingFor.join()
-
-  /** Takes a state the server sent that differs from the last. */
-  const changed = useEffectEvent(() => {
-    if (!party) return
-    const before = last.current
-    const waitedBefore = waited.current
-    last.current = party.playback
-    waited.current = party.waitingFor
-    // The server's state is newer than whatever the viewer just did.
-    holdUntil.current = 0
-    announce(before, waitedBefore)
-    apply(true)
-  })
-
   // Follows the party: at once when its state changes, then each second.
-  // The server sends the same state again every little while, which
-  // changes none of its parts.
-  useEffect(() => {
-    if (!active) return
-    changed()
+  createEffect(moment, (current) => {
+    if (current === null) return
+    const { link } = current
+    const before = last
+    const waitedBefore = waited
+    last = link.playback
+    waited = link.waitingFor
+    // The server's state is newer than whatever the viewer just did.
+    holdUntil = 0
+    announce(link, before, waitedBefore)
+    apply(true, link)
     const timer = window.setInterval(() => apply(false), TICK_MS)
     return () => window.clearInterval(timer)
-  }, [active, at, playing, positionSeconds, waiting])
-
-  // A jump past the buffer plays again once it has loaded, and how long
-  // that took is the next one's lead.
-  useEffect(() => {
-    const el = video.current
-    if (!active || !el) return
-    const landed = () => {
-      const since = landing.current
-      if (since === null) return
-      landing.current = null
-      const took = (Date.now() - since) / 1000
-      if (took <= MAX_LANDING_S) lead.current = Math.min(took, MAX_LEAD_S)
-    }
-    el.addEventListener("playing", landed)
-    return () => el.removeEventListener("playing", landed)
-  }, [active, video])
+  })
 
   // A party plays at normal speed, and the video goes back to it after.
-  useEffect(() => {
-    if (!active) return
-    const el = video.current
-    if (el) {
-      el.defaultPlaybackRate = 1
+  // A jump past the buffer plays again once it has loaded, and how long
+  // that took is the next one's lead.
+  createEffect(active, (following) => {
+    const el = video()
+    if (!following || !el) return
+    el.defaultPlaybackRate = 1
+    el.playbackRate = 1
+    store.getState().setSpeed(1)
+    const landed = () => {
+      const since = landing
+      if (since === null) return
+      landing = null
+      const took = (Date.now() - since) / 1000
+      if (took <= MAX_LANDING_S) lead = Math.min(took, MAX_LEAD_S)
+    }
+    el.addEventListener("playing", landed)
+    return () => {
+      el.removeEventListener("playing", landed)
+      last = null
+      waited = []
       el.playbackRate = 1
     }
-    store.getState().setSpeed(1)
-    return () => {
-      last.current = null
-      waited.current = []
-      if (video.current) video.current.playbackRate = 1
-    }
-  }, [active, video, store])
+  })
 
   return {
-    active,
     /** The viewer played, paused, or moved the file. */
     tell: (isPlaying: boolean, to: number) => {
-      if (!party) return
-      holdUntil.current = Date.now() + HOLD_MS
+      const link = party()
+      if (!link) return
+      holdUntil = Date.now() + HOLD_MS
       // The viewer moved it, so the wait that follows isn't a jump's.
-      landing.current = null
-      party.control(isPlaying, Math.max(0, to))
+      landing = null
+      link.control(isPlaying, Math.max(0, to))
     },
   }
 }

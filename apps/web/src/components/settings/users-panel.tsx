@@ -1,41 +1,39 @@
 import type { AdminUser, Permission } from "@matinee/contracts"
-import { Badge } from "@matinee/ui/components/badge"
-import { Button } from "@matinee/ui/components/button"
+import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { useNavigate, useRouter } from "@tanstack/solid-router"
+import {
+  Ellipsis,
+  KeyRound,
+  KeySquare,
+  LogIn,
+  LogOut,
+  RefreshCw,
+  Shield,
+  ShieldOff,
+  SlidersHorizontal,
+  Trash2,
+  TriangleAlert,
+} from "lucide"
+import { For, omit, Show } from "solid-js"
+
+import { UserAvatar } from "@/components/user-avatar"
+import { tr } from "@/i18n"
+import { Badge } from "@/kit/badge"
+import { Button, buttonVariants } from "@/kit/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
-import { List, ListItem } from "@matinee/ui/components/list"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@matinee/ui/components/tooltip"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useNavigate, useRouter } from "@tanstack/react-router"
-import {
-  EllipsisIcon,
-  KeyRoundIcon,
-  KeySquareIcon,
-  LogInIcon,
-  LogOutIcon,
-  RefreshCwIcon,
-  ShieldIcon,
-  ShieldOffIcon,
-  SlidersHorizontalIcon,
-  Trash2Icon,
-  TriangleAlertIcon,
-} from "lucide-react"
-import { type ComponentProps, type ReactNode, useState } from "react"
-import { useStore } from "zustand"
-
-import { UserAvatar } from "@/components/user-avatar"
-import { tr } from "@/i18n"
+} from "@/kit/dropdown-menu"
+import { Icon } from "@/kit/icon"
+import { List, ListItem } from "@/kit/list"
+import { Skeleton } from "@/kit/skeleton"
+import { toast } from "@/kit/toast"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/kit/tooltip"
 import { formatDate, formatRelative } from "@/lib/format"
 import { can } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -61,34 +59,33 @@ export function UsersPanel() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const router = useRouter()
-  const users = useQuery(orpc.admin.users.list.queryOptions())
-  const session = useQuery(orpc.auth.session.queryOptions())
-  const config = useQuery(orpc.auth.config.queryOptions())
-  const me = session.data?.user ?? null
+  const users = useQuery(() => orpc.admin.users.list.queryOptions())
+  const session = useQuery(() => orpc.auth.session.queryOptions())
+  const config = useQuery(() => orpc.auth.config.queryOptions())
+  const usersData = () => (users.isSuccess ? users.data : undefined)
+  const me = () => (session.isSuccess ? session.data.user : null)
   // The menu offers only what the account may do. The server also keeps
   // anyone from changing an account that may do more than they may.
-  const may = (permission: Permission) => me !== null && can(me, permission)
-  const oidcName = config.data?.oidc?.displayName ?? null
-  const [store] = useState(createUsersPanelStore)
-  const confirming = useStore(store, (state) => state.confirming)
-  const confirmOpen = useStore(store, (state) => state.confirmOpen)
-  const accessUserId = useStore(store, (state) => state.accessUserId)
-  const accessOpen = useStore(store, (state) => state.accessOpen)
-  const { openConfirm, closeConfirm, openAccess, closeAccess } =
-    store.getState()
+  const may = (permission: Permission) => {
+    const user = me()
+    return user !== null && can(user, permission)
+  }
+  const oidcName = () =>
+    config.isSuccess ? (config.data.oidc?.displayName ?? null) : null
+  const store = createUsersPanelStore()
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: orpc.admin.users.key() })
 
-  const setRole = useMutation({
+  const setRole = useMutation(() => ({
     mutationFn: (user: AdminUser) =>
       client.admin.users.setRole({
         id: user.id,
         role: user.role === "admin" ? "user" : "admin",
       }),
-    onSuccess: async (updated) => {
-      closeConfirm()
-      const self = updated.id === me?.id
+    onSuccess: async (updated: AdminUser) => {
+      store.closeConfirm()
+      const self = updated.id === me()?.id
       toast.success(
         updated.role === "admin"
           ? tr("users.madeAdmin", { name: displayName(updated) })
@@ -106,14 +103,14 @@ export function UsersPanel() {
       }
       await refresh()
     },
-    onError: (error) => toast.error(errorMessage(error)),
-  })
+    onError: (error: Error) => toast.error(errorMessage(error)),
+  }))
 
-  const remove = useMutation({
+  const remove = useMutation(() => ({
     mutationFn: (user: AdminUser) => client.admin.users.remove({ id: user.id }),
     onSuccess: async (_result, user) => {
-      closeConfirm()
-      if (user.id === me?.id) {
+      store.closeConfirm()
+      if (user.id === me()?.id) {
         queryClient.clear()
         await navigate({ to: "/login" })
         return
@@ -121,16 +118,16 @@ export function UsersPanel() {
       toast.success(tr("users.deleted", { name: displayName(user) }))
       await refresh()
     },
-    onError: (error) => toast.error(errorMessage(error)),
-  })
+    onError: (error: Error) => toast.error(errorMessage(error)),
+  }))
 
-  const signOut = useMutation({
+  const signOut = useMutation(() => ({
     mutationFn: (user: AdminUser) =>
       client.admin.users.signOut({ id: user.id }),
-    onSuccess: async ({ ended }, user) => {
-      closeConfirm()
+    onSuccess: async ({ ended }: { ended: number }, user: AdminUser) => {
+      store.closeConfirm()
       toast.success(
-        user.id === me?.id
+        user.id === me()?.id
           ? tr("users.endedOwnSessions", { count: ended })
           : tr("users.endedSessions", {
               count: ended,
@@ -139,141 +136,160 @@ export function UsersPanel() {
       )
       await refresh()
     },
-    onError: (error) => toast.error(errorMessage(error)),
-  })
+    onError: (error: Error) => toast.error(errorMessage(error)),
+  }))
 
-  const revokeTokens = useMutation({
+  const revokeTokens = useMutation(() => ({
     mutationFn: (user: AdminUser) =>
       client.admin.users.revokeApiTokens({ id: user.id }),
-    onSuccess: async ({ revoked }, user) => {
-      closeConfirm()
+    onSuccess: async ({ revoked }: { revoked: number }, user: AdminUser) => {
+      store.closeConfirm()
       toast.success(
         tr("users.revokedTokens", { count: revoked, name: displayName(user) }),
       )
       await refresh()
       // Your own tokens are listed in your account too.
-      if (user.id === me?.id) {
+      if (user.id === me()?.id) {
         await queryClient.invalidateQueries({
           queryKey: orpc.account.apiTokens.key(),
         })
       }
     },
-    onError: (error) => toast.error(errorMessage(error)),
-  })
+    onError: (error: Error) => toast.error(errorMessage(error)),
+  }))
 
   const ask = (action: UserAction, user: AdminUser) => {
     setRole.reset()
     remove.reset()
     signOut.reset()
     revokeTokens.reset()
-    openConfirm(action, user)
+    store.openConfirm(action, user)
   }
 
   // The server refuses to demote or delete the last admin who can sign in,
   // so the menu says so up front.
-  const oidcOn = oidcName !== null
-  const passkeysOn = config.data?.passkeys ?? true
-  const signInAdmins =
-    users.data?.filter(
-      (user) =>
-        user.role === "admin" &&
-        ((passkeysOn && user.passkeys > 0) || (oidcOn && user.oidcLinked)),
-    ) ?? []
+  const passkeysOn = () => (config.isSuccess ? config.data.passkeys : true)
+  const signInAdmins = () => {
+    const oidcOn = oidcName() !== null
+    return (
+      usersData()?.filter(
+        (user) =>
+          user.role === "admin" &&
+          ((passkeysOn() && user.passkeys > 0) || (oidcOn && user.oidcLinked)),
+      ) ?? []
+    )
+  }
   const isLastAdmin = (user: AdminUser) =>
-    user.role === "admin" && signInAdmins.every((other) => other.id === user.id)
+    user.role === "admin" &&
+    signInAdmins().every((other) => other.id === user.id)
 
   // Kept while the dialog closes, so its words stay put as it fades.
-  const mutation = confirming
-    ? {
-        role: setRole,
-        "sign-out": signOut,
-        "revoke-tokens": revokeTokens,
-        delete: remove,
-      }[confirming.action]
-    : null
-  const copy = confirming
-    ? confirmCopy(
-        confirming.action,
-        confirming.user,
-        confirming.user.id === me?.id,
-      )
-    : null
+  const mutation = () => {
+    const confirming = store.confirming()
+    if (!confirming) return null
+    switch (confirming.action) {
+      case "role":
+        return setRole
+      case "sign-out":
+        return signOut
+      case "revoke-tokens":
+        return revokeTokens
+      case "delete":
+        return remove
+    }
+  }
+  const copy = () => {
+    const confirming = store.confirming()
+    return confirming
+      ? confirmCopy(
+          confirming.action,
+          confirming.user,
+          confirming.user.id === me()?.id,
+        )
+      : null
+  }
 
   return (
     <SettingsSections>
       <SettingsSubsection id="users" title={tr("users.title")}>
-        {users.isPending ? (
-          <Skeleton className="h-32 rounded-xl" />
-        ) : users.isError ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
-            <p className="text-muted-foreground text-sm">
-              {tr("users.loadFailed", { error: errorMessage(users.error) })}
-            </p>
-            <Button variant="outline" onClick={() => void users.refetch()}>
-              <RefreshCwIcon />
-              {tr("users.retry")}
-            </Button>
-          </div>
-        ) : (
-          <List>
-            {users.data.map((user) => (
-              <UserItem
-                key={user.id}
-                user={user}
-                self={user.id === me?.id}
-                oidcName={oidcName}
-                passkeysOn={passkeysOn}
-                lastAdmin={isLastAdmin(user)}
-                may={may}
-                onConfirm={(action) => ask(action, user)}
-                onAccess={() => openAccess(user)}
-              />
-            ))}
-          </List>
-        )}
+        <Show
+          when={usersData()}
+          fallback={
+            <Show
+              when={users.isError}
+              fallback={<Skeleton class="h-32 rounded-xl" />}
+            >
+              <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
+                <p class="text-muted-foreground text-sm">
+                  {tr("users.loadFailed", { error: errorMessage(users.error) })}
+                </p>
+                <Button variant="outline" onClick={() => void users.refetch()}>
+                  <Icon icon={RefreshCw} />
+                  {tr("users.retry")}
+                </Button>
+              </div>
+            </Show>
+          }
+        >
+          {(list) => (
+            <List>
+              <For each={list()} keyed={(user) => user.id}>
+                {(user) => (
+                  <UserItem
+                    user={user()}
+                    self={user().id === me()?.id}
+                    oidcName={oidcName()}
+                    passkeysOn={passkeysOn()}
+                    lastAdmin={isLastAdmin(user())}
+                    may={may}
+                    onConfirm={(action) => ask(action, user())}
+                    onAccess={() => store.openAccess(user())}
+                  />
+                )}
+              </For>
+            </List>
+          )}
+        </Show>
       </SettingsSubsection>
 
-      {may("invite.read") && (
+      <Show when={may("invite.read")}>
         <Invites
-          passkeysOn={passkeysOn}
+          passkeysOn={passkeysOn()}
           mayCreate={may("invite.create")}
           mayRevoke={may("invite.delete")}
         />
-      )}
+      </Show>
 
       <UserAccessDialog
-        userId={accessUserId}
-        oidcName={oidcName}
-        open={accessOpen}
-        onOpenChange={(open) => !open && closeAccess()}
+        userId={store.accessUserId()}
+        oidcName={oidcName()}
+        open={store.accessOpen()}
+        onOpenChange={(open) => {
+          if (!open) store.closeAccess()
+        }}
       />
 
       <ConfirmDialog
-        open={confirmOpen}
-        title={copy?.title ?? ""}
-        description={copy?.description}
-        confirmLabel={copy?.confirmLabel ?? ""}
+        open={store.confirmOpen()}
+        title={copy()?.title ?? ""}
+        description={copy()?.description}
+        confirmLabel={copy()?.confirmLabel ?? ""}
         destructive={
-          confirming?.action !== "role" || confirming.user.role === "admin"
+          store.confirming()?.action !== "role" ||
+          store.confirming()?.user.role === "admin"
         }
-        pending={mutation?.isPending ?? false}
-        onConfirm={() => confirming && mutation?.mutate(confirming.user)}
-        onClose={closeConfirm}
+        pending={mutation()?.isPending ?? false}
+        onConfirm={() => {
+          const confirming = store.confirming()
+          if (confirming) mutation()?.mutate(confirming.user)
+        }}
+        onClose={store.closeConfirm}
       />
     </SettingsSections>
   )
 }
 
-function UserItem({
-  user,
-  self,
-  oidcName,
-  passkeysOn,
-  lastAdmin,
-  may,
-  onConfirm,
-  onAccess,
-}: {
+function UserItem(props: {
   user: AdminUser
   self: boolean
   oidcName: string | null
@@ -283,134 +299,143 @@ function UserItem({
   onConfirm: (action: UserAction) => void
   onAccess: () => void
 }) {
-  const name = displayName(user)
-  const signOutLabel = self
-    ? tr("users.menu.signOutOthers")
-    : tr("users.menu.signOut")
+  const name = () => displayName(props.user)
   const lastAdminNote = tr("users.lastAdmin")
   // The access dialog lists the groups to put the account in.
-  const mayAccess = may("adminUser.update") && may("group.read")
+  const mayAccess = () =>
+    props.may("adminUser.update") && props.may("group.read")
   // Making an admin hands over every permission, so it takes them all.
-  const mayRole = may("all")
-  const maySignOut = may("adminSession.delete")
-  const mayRevoke = may("adminApiToken.delete")
-  const mayDelete = may("adminUser.delete")
+  const mayRole = () => props.may("all")
+  const maySignOut = () => props.may("adminSession.delete")
+  const mayRevoke = () => props.may("adminApiToken.delete")
+  const mayDelete = () => props.may("adminUser.delete")
   // Only an admin changes an admin's account, their own aside.
-  const reachable = user.role !== "admin" || mayRole || self
-  const anything =
-    reachable && (mayAccess || mayRole || maySignOut || mayRevoke || mayDelete)
+  const reachable = () => props.user.role !== "admin" || mayRole() || props.self
+  const anything = () =>
+    reachable() &&
+    (mayAccess() || mayRole() || maySignOut() || mayRevoke() || mayDelete())
+  const admin = () => props.user.role === "admin"
 
   return (
-    <ListItem className="gap-3 py-2.5 pr-2">
+    <ListItem class="gap-3 py-2.5 pr-2">
       {/* Centered on the name and details lines (20 + 2 + 20px), not the
           group badges that may wrap below them. */}
-      <UserAvatar user={user} className="text-13px mt-1.25 size-8 self-start" />
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 text-sm leading-5 font-medium">
-          <span className="truncate">{name}</span>
-          {user.displayName && (
-            <span className="text-muted-foreground truncate font-normal">
-              @{user.username}
+      <UserAvatar
+        user={props.user}
+        class="text-13px mt-1.25 size-8 self-start"
+      />
+      <div class="min-w-0 flex-1">
+        <p class="flex items-center gap-1.5 text-sm leading-5 font-medium">
+          <span class="truncate">{name()}</span>
+          <Show when={props.user.displayName}>
+            <span class="text-muted-foreground truncate font-normal">
+              @{props.user.username}
             </span>
-          )}
-          {user.role === "admin" && (
-            <ShieldIcon
-              role="img"
+          </Show>
+          <Show when={admin()}>
+            <Icon
+              icon={Shield}
               aria-label={tr("users.admin")}
-              className="text-muted-foreground size-3.5 shrink-0"
+              class="text-muted-foreground size-3.5 shrink-0"
             />
-          )}
-          {self && (
-            <span className="text-muted-foreground font-normal">
+          </Show>
+          <Show when={props.self}>
+            <span class="text-muted-foreground font-normal">
               {tr("users.you")}
             </span>
-          )}
+          </Show>
         </p>
         <UserDetails
-          user={user}
-          self={self}
-          oidcName={oidcName}
-          passkeysOn={passkeysOn}
+          user={props.user}
+          self={props.self}
+          oidcName={props.oidcName}
+          passkeysOn={props.passkeysOn}
         />
-        <UserGroups user={user} oidcName={oidcName} />
+        <UserGroups user={props.user} oidcName={props.oidcName} />
       </div>
-      {anything && (
+      <Show when={anything()}>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-foreground shrink-0"
-                aria-label={tr("users.actions", { name })}
-              />
-            }
+            class={cn(
+              buttonVariants({ variant: "ghost", size: "icon" }),
+              "text-muted-foreground hover:text-foreground data-open:text-foreground shrink-0",
+            )}
+            aria-label={tr("users.actions", { name: name() })}
           >
-            <EllipsisIcon />
+            <Icon icon={Ellipsis} />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" sideOffset={6} className="min-w-56">
+          <DropdownMenuContent align="end" sideOffset={6} class="min-w-56">
             {/* An admin's access is everything, so there's nothing to set. */}
-            {mayAccess && (
+            <Show when={mayAccess()}>
               <BlockableItem
-                blocked={user.role === "admin" ? tr("users.adminAccess") : null}
-                onClick={onAccess}
+                blocked={admin() ? tr("users.adminAccess") : null}
+                onSelect={() => props.onAccess()}
               >
-                <SlidersHorizontalIcon />
+                <Icon icon={SlidersHorizontal} />
                 {tr("users.menu.access")}
               </BlockableItem>
-            )}
-            {mayAccess && (mayRole || maySignOut || mayRevoke) && (
+            </Show>
+            <Show
+              when={mayAccess() && (mayRole() || maySignOut() || mayRevoke())}
+            >
               <DropdownMenuSeparator />
-            )}
-            {mayRole && (
+            </Show>
+            <Show when={mayRole()}>
               <BlockableItem
-                blocked={
-                  user.role === "admin" && lastAdmin ? lastAdminNote : null
-                }
-                onClick={() => onConfirm("role")}
+                blocked={admin() && props.lastAdmin ? lastAdminNote : null}
+                onSelect={() => props.onConfirm("role")}
               >
-                {user.role === "admin" ? <ShieldOffIcon /> : <ShieldIcon />}
-                {user.role === "admin"
-                  ? self
+                <Icon icon={admin() ? ShieldOff : Shield} />
+                {admin()
+                  ? props.self
                     ? tr("users.menu.stepDown")
                     : tr("users.menu.removeAdmin")
                   : tr("users.menu.makeAdmin")}
               </BlockableItem>
-            )}
-            {maySignOut && (
+            </Show>
+            <Show when={maySignOut()}>
               <DropdownMenuItem
-                disabled={user.sessions <= (self ? 1 : 0)}
-                onClick={() => onConfirm("sign-out")}
+                disabled={props.user.sessions <= (props.self ? 1 : 0)}
+                onSelect={() => props.onConfirm("sign-out")}
               >
-                <LogOutIcon />
-                {signOutLabel}
+                <Icon icon={LogOut} />
+                {props.self
+                  ? tr("users.menu.signOutOthers")
+                  : tr("users.menu.signOut")}
               </DropdownMenuItem>
-            )}
-            {mayRevoke && (
+            </Show>
+            <Show when={mayRevoke()}>
               <DropdownMenuItem
-                disabled={user.apiTokens === 0}
-                onClick={() => onConfirm("revoke-tokens")}
+                disabled={props.user.apiTokens === 0}
+                onSelect={() => props.onConfirm("revoke-tokens")}
               >
-                <KeySquareIcon />
+                <Icon icon={KeySquare} />
                 {tr("users.menu.revokeTokens")}
               </DropdownMenuItem>
-            )}
-            {mayDelete && (mayAccess || mayRole || maySignOut || mayRevoke) && (
+            </Show>
+            <Show
+              when={
+                mayDelete() &&
+                (mayAccess() || mayRole() || maySignOut() || mayRevoke())
+              }
+            >
               <DropdownMenuSeparator />
-            )}
-            {mayDelete && (
+            </Show>
+            <Show when={mayDelete()}>
               <BlockableItem
                 variant="destructive"
-                blocked={lastAdmin ? lastAdminNote : null}
-                onClick={() => onConfirm("delete")}
+                blocked={props.lastAdmin ? lastAdminNote : null}
+                onSelect={() => props.onConfirm("delete")}
               >
-                <Trash2Icon />
-                {self ? tr("users.menu.deleteOwn") : tr("users.menu.delete")}
+                <Icon icon={Trash2} />
+                {props.self
+                  ? tr("users.menu.deleteOwn")
+                  : tr("users.menu.delete")}
               </BlockableItem>
-            )}
+            </Show>
           </DropdownMenuContent>
         </DropdownMenu>
-      )}
+      </Show>
     </ListItem>
   )
 }
@@ -420,26 +445,45 @@ function UserItem({
  * hovered, so a blocked one stays focusable, looks disabled, does nothing,
  * and gives the reason in a tooltip.
  */
-function BlockableItem({
-  blocked,
-  onClick,
-  ...props
-}: ComponentProps<typeof DropdownMenuItem> & { blocked: string | null }) {
-  if (!blocked) return <DropdownMenuItem onClick={onClick} {...props} />
+function BlockableItem(props: {
+  blocked: string | null
+  variant?: "default" | "destructive"
+  onSelect: () => void
+  children: JSX.Element
+}) {
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <DropdownMenuItem
-            {...props}
-            aria-disabled
-            closeOnClick={false}
-            className="cursor-not-allowed opacity-50"
-          />
-        }
-      />
-      <TooltipContent side="left">{blocked}</TooltipContent>
-    </Tooltip>
+    <Show
+      when={props.blocked}
+      fallback={
+        <DropdownMenuItem
+          variant={props.variant}
+          onSelect={() => props.onSelect()}
+        >
+          {props.children}
+        </DropdownMenuItem>
+      }
+    >
+      {(blocked) => (
+        <Tooltip>
+          <TooltipTrigger
+            render={(trigger) => (
+              <DropdownMenuItem
+                // The trigger's button type means nothing on a menu item.
+                {...omit(trigger, "type")}
+                variant={props.variant}
+                aria-disabled="true"
+                closeOnSelect={false}
+                class="cursor-not-allowed opacity-50"
+                onSelect={(event) => event.preventDefault()}
+              />
+            )}
+          >
+            {props.children}
+          </TooltipTrigger>
+          <TooltipContent side="left">{blocked()}</TooltipContent>
+        </Tooltip>
+      )}
+    </Show>
   )
 }
 
@@ -447,60 +491,56 @@ function BlockableItem({
  * The line under a user's name: where they stand, then how they sign in.
  * Each fact gets a glyph, so the line reads without separators.
  */
-function UserDetails({
-  user,
-  self,
-  oidcName,
-  passkeysOn,
-}: {
+function UserDetails(props: {
   user: AdminUser
   self: boolean
   oidcName: string | null
   passkeysOn: boolean
 }) {
+  const presence = () => activity(props.user, props.self)
   // A service can still call the API with a token of an account nobody
   // signs in to.
-  const tokens = user.apiTokens > 0 && (
-    <Fact icon={<KeySquareIcon />}>
-      {tr("users.apiTokens", { count: user.apiTokens })}
-    </Fact>
+  const tokens = () => (
+    <Show when={props.user.apiTokens > 0}>
+      <Fact icon={<Icon icon={KeySquare} />}>
+        {tr("users.apiTokens", { count: props.user.apiTokens })}
+      </Fact>
+    </Show>
   )
-  let facts: ReactNode
-  if (hasSignInMethod(user)) {
-    const { label, tone } = activity(user, self)
-    facts = (
-      <>
-        <Fact icon={<StatusDot tone={tone} />}>{label}</Fact>
-        {user.passkeys > 0 && (
-          <Fact icon={<KeyRoundIcon />}>
-            {passkeysOn
-              ? tr("users.passkeys", { count: user.passkeys })
-              : tr("users.passkeysOff", { count: user.passkeys })}
-          </Fact>
-        )}
-        {user.oidcLinked && (
-          <Fact icon={<LogInIcon />}>{oidcName ?? tr("users.oidcOff")}</Fact>
-        )}
-        {tokens}
-      </>
-    )
-  } else {
-    facts = (
-      <>
-        <Fact icon={<TriangleAlertIcon className="text-warning" />}>
-          {tr("users.noSignIn")}
-        </Fact>
-        {tokens}
-      </>
-    )
-  }
 
   return (
     <p
-      className="text-muted-foreground text-13px mt-0.5 flex flex-wrap items-center gap-x-3.5 gap-y-0.5 leading-5"
-      title={tr("users.joined", { date: formatDate(user.createdAt) })}
+      class="text-muted-foreground text-13px mt-0.5 flex flex-wrap items-center gap-x-3.5 gap-y-0.5 leading-5"
+      title={tr("users.joined", { date: formatDate(props.user.createdAt) })}
     >
-      {facts}
+      <Show
+        when={hasSignInMethod(props.user)}
+        fallback={
+          <>
+            <Fact icon={<Icon icon={TriangleAlert} class="text-warning" />}>
+              {tr("users.noSignIn")}
+            </Fact>
+            {tokens()}
+          </>
+        }
+      >
+        <Fact icon={<StatusDot tone={presence().tone} />}>
+          {presence().label}
+        </Fact>
+        <Show when={props.user.passkeys > 0}>
+          <Fact icon={<Icon icon={KeyRound} />}>
+            {props.passkeysOn
+              ? tr("users.passkeys", { count: props.user.passkeys })
+              : tr("users.passkeysOff", { count: props.user.passkeys })}
+          </Fact>
+        </Show>
+        <Show when={props.user.oidcLinked}>
+          <Fact icon={<Icon icon={LogIn} />}>
+            {props.oidcName ?? tr("users.oidcOff")}
+          </Fact>
+        </Show>
+        {tokens()}
+      </Show>
     </p>
   )
 }
@@ -509,54 +549,49 @@ function UserDetails({
  * The groups an account is in besides Everyone, with the ones the provider
  * put it in marked, and whether it has settings of its own.
  */
-function UserGroups({
-  user,
-  oidcName,
-}: {
-  user: AdminUser
-  oidcName: string | null
-}) {
-  const { groups, override } = user.access
-  const own = Object.keys(override).length > 0
-  if (groups.length === 0 && !own) return null
-  const provider = oidcName ?? tr("access.user.theProvider")
+function UserGroups(props: { user: AdminUser; oidcName: string | null }) {
+  const own = () => Object.keys(props.user.access.override).length > 0
+  const provider = () => props.oidcName ?? tr("access.user.theProvider")
+  const fromProvider = () => props.user.access.overrideSource === "provider"
   return (
-    <p className="mt-1.5 flex flex-wrap gap-1">
-      {groups.map((group) =>
-        group.source === "provider" ? (
-          <Badge
-            key={group.id}
-            variant="secondary"
-            title={tr("users.groupFromProvider", { provider })}
-          >
-            <LogInIcon aria-hidden />
-            {group.name}
-            <span className="sr-only">
-              {tr("users.groupFromProviderShort", { provider })}
-            </span>
-          </Badge>
-        ) : (
-          <Badge key={group.id} variant="secondary">
-            {group.name}
-          </Badge>
-        ),
-      )}
-      {own && (
-        <Badge
-          variant="outline"
-          title={
-            user.access.overrideSource === "provider"
-              ? tr("users.ownAccessFromProvider", { provider })
-              : tr("users.ownAccessHint")
-          }
-        >
-          {user.access.overrideSource === "provider" && (
-            <LogInIcon aria-hidden />
+    <Show when={props.user.access.groups.length > 0 || own()}>
+      <p class="mt-1.5 flex flex-wrap gap-1">
+        <For each={props.user.access.groups} keyed={(group) => group.id}>
+          {(group) => (
+            <Show
+              when={group().source === "provider"}
+              fallback={<Badge variant="secondary">{group().name}</Badge>}
+            >
+              <Badge
+                variant="secondary"
+                title={tr("users.groupFromProvider", { provider: provider() })}
+              >
+                <Icon icon={LogIn} />
+                {group().name}
+                <span class="sr-only">
+                  {tr("users.groupFromProviderShort", { provider: provider() })}
+                </span>
+              </Badge>
+            </Show>
           )}
-          {tr("users.ownAccess")}
-        </Badge>
-      )}
-    </p>
+        </For>
+        <Show when={own()}>
+          <Badge
+            variant="outline"
+            title={
+              fromProvider()
+                ? tr("users.ownAccessFromProvider", { provider: provider() })
+                : tr("users.ownAccessHint")
+            }
+          >
+            <Show when={fromProvider()}>
+              <Icon icon={LogIn} />
+            </Show>
+            {tr("users.ownAccess")}
+          </Badge>
+        </Show>
+      </p>
+    </Show>
   )
 }
 
@@ -568,10 +603,10 @@ const dotClassName = {
 } satisfies Record<Tone, string>
 
 /** A presence dot, sized to sit in an icon's slot. */
-function StatusDot({ tone }: { tone: Tone }) {
+function StatusDot(props: { tone: Tone }) {
   return (
-    <span aria-hidden className="grid size-3.5 shrink-0 place-items-center">
-      <span className={`size-2 rounded-full ${dotClassName[tone]}`} />
+    <span aria-hidden="true" class="grid size-3.5 shrink-0 place-items-center">
+      <span class={["size-2 rounded-full", dotClassName[props.tone]]} />
     </span>
   )
 }

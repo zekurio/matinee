@@ -7,34 +7,29 @@ import {
   MANAGED_AREAS,
   type ManagedAccess,
   MANAGES_NOTHING,
-  type ProviderGroup,
   ProviderGroupName,
   REQUEST_MODES,
   type RequestMode,
 } from "@matinee/contracts"
+import { FIELD_CLASS_NAME } from "@matinee/ui/lib/field"
+import { cn } from "@matinee/ui/lib/utils"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { useRouteContext } from "@tanstack/solid-router"
+import { createUniqueId, For, Show, snapshot, untrack } from "solid-js"
+
+import { tr, translateKnown } from "@/i18n"
 import {
   Autocomplete,
   AutocompleteContent,
   AutocompleteInput,
   AutocompleteItem,
   AutocompleteList,
-} from "@matinee/ui/components/autocomplete"
-import { Dialog } from "@matinee/ui/components/dialog"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@matinee/ui/components/field"
-import { Input } from "@matinee/ui/components/input"
-import { toast } from "@matinee/ui/components/sonner"
-import { useSelector } from "@tanstack/react-form"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useRouteContext } from "@tanstack/react-router"
-import { useId } from "react"
-
-import { tr } from "@/i18n"
-import { firstError, useAppForm, useFieldContext } from "@/lib/form"
+} from "@/kit/autocomplete"
+import { Dialog } from "@/kit/dialog"
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/kit/field"
+import { toast } from "@/kit/toast"
+import { createForm, type Form } from "@/lib/form"
+import { SubmitButton, TextField } from "@/lib/form-fields"
 import { canAll } from "@/lib/permissions"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
@@ -129,48 +124,61 @@ function policyOf(value: GroupValues): AccessPolicy {
   }
 }
 
+/** The kit input's look, for a field ui-sdk's autocomplete renders. */
+const INPUT_CLASS = cn(
+  FIELD_CLASS_NAME,
+  "h-10 w-full min-w-0 rounded-lg px-3 py-1 md:h-9 [@media(pointer:coarse)]:h-11 text-base placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive/60 aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm",
+)
+
+/** The first issue's message, in the interface's language. */
+function firstIssue(
+  issues: ReadonlyArray<{ message?: string }>,
+): string | undefined {
+  const message = issues.find((issue) => issue.message)?.message
+  return message === undefined ? undefined : translateKnown(message)
+}
+
 /** Creates a group, or edits one. The built-in group only has its policy. */
-export function GroupDialog({
-  group,
-  open,
-  onOpenChange,
-}: {
+export function GroupDialog(props: {
   /** Unset for a new group. */
   group?: AccessGroup
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  // A form of its own for each group, as its values start from the group.
+  const editing = () => ({ group: props.group })
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={props.open} onOpenChange={(open) => props.onOpenChange(open)}>
       <FormDialogContent width="xl">
-        <GroupForm
-          key={group?.id ?? "new"}
-          group={group}
-          onDone={() => onOpenChange(false)}
-        />
+        <Show when={editing()} keyed>
+          {(entry) => (
+            <GroupForm
+              group={entry.group}
+              onDone={() => props.onOpenChange(false)}
+            />
+          )}
+        </Show>
       </FormDialogContent>
     </Dialog>
   )
 }
 
-function GroupForm({
-  group,
-  onDone,
-}: {
-  group?: AccessGroup
-  onDone: () => void
-}) {
+function GroupForm(props: { group?: AccessGroup; onDone: () => void }) {
   const queryClient = useQueryClient()
-  const { user } = useRouteContext({ from: "/_authed" })
-  const libraries = useQuery(orpc.libraries.list.queryOptions())
+  const context = useRouteContext({ from: "/_authed" })
+  const libraries = useQuery(() => orpc.libraries.list.queryOptions())
+  const librariesData = () => (libraries.isSuccess ? libraries.data : undefined)
+  // The form starts from the group it opened with; another group gets
+  // another form. A plain copy, as the form clones what it starts from.
+  const group = props.group && snapshot(props.group)
   const everyone = group?.everyone ?? false
   // The server refuses a change to a permission its maker lacks, so a
   // capability whose permissions they don't all hold stays as it is.
   const mayGrant = (capability: Capability) =>
-    canAll(user, capabilityPermissions(capability))
-  const grantsAll = MANAGED_AREAS.every(mayGrant)
+    canAll(context().user, capabilityPermissions(capability))
+  const grantsAll = () => MANAGED_AREAS.every(mayGrant)
 
-  const save = useMutation({
+  const save = useMutation(() => ({
     mutationFn: (input: AccessGroupInput) =>
       group
         ? client.admin.groups.update({ ...input, id: group.id })
@@ -182,10 +190,10 @@ function GroupForm({
         queryClient.invalidateQueries({ queryKey: orpc.admin.users.key() }),
         queryClient.invalidateQueries({ queryKey: orpc.admin.invites.key() }),
       ])
-      onDone()
+      props.onDone()
     },
     onError: (error) => toast.error(errorMessage(error)),
-  })
+  }))
 
   const toInput = (value: GroupValues) => ({
     // The server keeps the built-in group's name and provider group.
@@ -194,255 +202,236 @@ function GroupForm({
     policy: policyOf(value),
   })
 
-  const form = useAppForm({
-    defaultValues: valuesOf(group, mayGrant("downloads")),
-    validators: {
+  const form = createForm<GroupValues>({
+    // Seeded once, from who opened it; another group opens another form.
+    defaultValues: valuesOf(
+      group,
+      untrack(() => mayGrant("downloads")),
+    ),
+    // The built-in group has no name or provider group to check.
+    checks: everyone
+      ? {}
+      : { name: GroupName, providerGroup: ProviderGroupName },
+    onSubmit: (value) => {
       // One message for the whole form, in a toast.
-      onSubmit: ({ value }) => {
-        const parsed = AccessGroupInput.safeParse(toInput(value))
-        if (parsed.success) return undefined
-        return {
-          message:
-            firstError(parsed.error.issues) ?? tr("access.group.checkFields"),
-        }
-      },
-    },
-    onSubmit: ({ value }) =>
-      save.mutate(AccessGroupInput.parse(toInput(value))),
-    onSubmitInvalid: ({ formApi }) => {
-      // Field errors show under their fields.
-      const message = firstError(formApi.state.errors)
-      if (message) toast.error(message)
+      const parsed = AccessGroupInput.safeParse(toInput(value))
+      if (!parsed.success) {
+        toast.error(
+          firstIssue(parsed.error.issues) ?? tr("access.group.checkFields"),
+        )
+        return
+      }
+      save.mutate(parsed.data)
     },
   })
-  const libraryChoice = useSelector(
-    form.store,
-    (state) => state.values.libraries,
-  )
-  const maxBitrate = useSelector(form.store, (state) => state.values.maxBitrate)
-  const maxStreams = useSelector(form.store, (state) => state.values.maxStreams)
-  const requests = useSelector(form.store, (state) => state.values.requests)
-  const manages = useSelector(form.store, (state) => state.values.manages)
+  const values = () => form.values()
+
+  const submit = () => {
+    if (!everyone) {
+      // Field errors show under their fields, and the first in a toast.
+      const name = GroupName.safeParse(values().name)
+      const provider = ProviderGroupName.safeParse(values().providerGroup)
+      const message = !name.success
+        ? firstIssue(name.error.issues)
+        : !provider.success
+          ? firstIssue(provider.error.issues)
+          : undefined
+      if (message) toast.error(message)
+    }
+    void form.submit()
+  }
 
   return (
-    <form.AppForm>
-      <FormDialogForm onSubmit={() => void form.handleSubmit()}>
-        <FormDialogHeader
-          title={
-            group
-              ? tr("access.group.editTitle", { name: groupName(group) })
-              : tr("access.group.newTitle")
-          }
-          description={
-            everyone
-              ? tr("access.group.everyoneDescription")
-              : tr("access.group.description")
-          }
-        />
+    <FormDialogForm onSubmit={submit}>
+      <FormDialogHeader
+        title={
+          group
+            ? tr("access.group.editTitle", { name: groupName(group) })
+            : tr("access.group.newTitle")
+        }
+        description={
+          everyone
+            ? tr("access.group.everyoneDescription")
+            : tr("access.group.description")
+        }
+      />
 
-        <FormDialogBody>
-          {!everyone && (
-            <div className="grid items-start gap-x-8 gap-y-5 md:grid-cols-2">
-              <form.AppField name="name" validators={{ onChange: GroupName }}>
-                {(field) => (
-                  <field.TextField
-                    label={tr("access.group.name")}
-                    placeholder={tr("access.group.namePlaceholder")}
-                    maxLength={64}
-                    autoComplete="off"
+      <FormDialogBody>
+        <Show when={!everyone}>
+          <div class="grid items-start gap-x-8 gap-y-5 md:grid-cols-2">
+            <TextField
+              form={form}
+              name="name"
+              label={tr("access.group.name")}
+              placeholder={tr("access.group.namePlaceholder")}
+              maxlength={64}
+              autocomplete="off"
+              revealEmptyOnBlur={false}
+            />
+            <ProviderGroupField form={form} name="providerGroup" />
+          </div>
+        </Show>
+
+        <FormColumns>
+          <FormColumn>
+            <FormSection title={tr("access.section.watching")}>
+              <SettingRows>
+                <SelectField
+                  form={form}
+                  name="libraries"
+                  title={tr("access.libraries")}
+                  layout="side"
+                  options={LIBRARY_CHOICES}
+                  labelOf={(choice) =>
+                    choice === "all"
+                      ? tr("access.libraries.all")
+                      : tr("access.libraries.picked")
+                  }
+                  hint={
+                    values().libraries === "all"
+                      ? tr("access.libraries.allHint")
+                      : undefined
+                  }
+                  footer={
+                    <Show when={values().libraries === "some"}>
+                      <LibraryPicker
+                        libraries={librariesData()}
+                        value={values().libraryIds}
+                        onChange={(ids) => form.set("libraryIds", ids)}
+                      />
+                    </Show>
+                  }
+                />
+                <SelectField
+                  form={form}
+                  name="maxBitrate"
+                  title={tr("access.bitrate")}
+                  layout="side"
+                  options={bitrateOptions(values().maxBitrate)}
+                  labelOf={bitrateLabel}
+                  hint={tr("access.bitrate.hint")}
+                />
+                <SwitchField
+                  form={form}
+                  name="transcode"
+                  title={tr("access.transcode")}
+                  hint={tr("access.transcode.hint")}
+                />
+                <SelectField
+                  form={form}
+                  name="maxStreams"
+                  title={tr("access.streams")}
+                  layout="side"
+                  options={streamOptions(values().maxStreams)}
+                  labelOf={streamLabel}
+                />
+                <SwitchField
+                  form={form}
+                  name="downloads"
+                  title={tr("access.downloads")}
+                  disabled={!mayGrant("downloads")}
+                  hint={tr("access.downloads.hint")}
+                />
+              </SettingRows>
+            </FormSection>
+
+            <FormSection title={tr("access.section.requests")}>
+              <SettingRows>
+                <SelectField
+                  form={form}
+                  name="requests"
+                  title={tr("access.requests")}
+                  layout="side"
+                  disabled={!mayGrant("requests")}
+                  options={REQUEST_MODES}
+                  labelOf={requestsLabel}
+                />
+                <Show when={values().requests !== "off"}>
+                  <SelectRow
+                    title={tr("access.requestLimit")}
+                    layout="side"
+                    options={LIMIT_CHOICES}
+                    value={limitChoiceOf(values().requestLimit)}
+                    labelOf={limitChoiceLabel}
+                    onChange={(choice) =>
+                      form.set(
+                        "requestLimit",
+                        choice === NO_LIMIT ? null : DEFAULT_QUOTA,
+                      )
+                    }
+                    footer={
+                      <Show when={values().requestLimit}>
+                        {(limit) => (
+                          <QuotaInputs
+                            value={limit()}
+                            onChange={(next) => form.set("requestLimit", next)}
+                          />
+                        )}
+                      </Show>
+                    }
                   />
-                )}
-              </form.AppField>
-              <form.AppField
-                name="providerGroup"
-                validators={{ onChange: ProviderGroupName }}
-              >
-                {() => <ProviderGroupField />}
-              </form.AppField>
-            </div>
-          )}
+                </Show>
+              </SettingRows>
+            </FormSection>
+          </FormColumn>
 
-          <FormColumns>
-            <FormColumn>
-              <FormSection title={tr("access.section.watching")}>
-                <SettingRows>
-                  <form.AppField name="libraries">
-                    {() => (
-                      <SelectField
-                        title={tr("access.libraries")}
-                        layout="side"
-                        options={LIBRARY_CHOICES}
-                        labelOf={(choice) =>
-                          choice === "all"
-                            ? tr("access.libraries.all")
-                            : tr("access.libraries.picked")
-                        }
-                        hint={
-                          libraryChoice === "all"
-                            ? tr("access.libraries.allHint")
-                            : undefined
-                        }
-                        footer={
-                          libraryChoice === "some" && (
-                            <form.Field name="libraryIds">
-                              {(field) => (
-                                <LibraryPicker
-                                  libraries={libraries.data}
-                                  value={field.state.value}
-                                  onChange={field.handleChange}
-                                />
-                              )}
-                            </form.Field>
-                          )
-                        }
-                      />
-                    )}
-                  </form.AppField>
-                  <form.AppField name="maxBitrate">
-                    {() => (
-                      <SelectField
-                        title={tr("access.bitrate")}
-                        layout="side"
-                        options={bitrateOptions(maxBitrate)}
-                        labelOf={bitrateLabel}
-                        hint={tr("access.bitrate.hint")}
-                      />
-                    )}
-                  </form.AppField>
-                  <form.AppField name="transcode">
-                    {() => (
-                      <SwitchField
-                        title={tr("access.transcode")}
-                        hint={tr("access.transcode.hint")}
-                      />
-                    )}
-                  </form.AppField>
-                  <form.AppField name="maxStreams">
-                    {() => (
-                      <SelectField
-                        title={tr("access.streams")}
-                        layout="side"
-                        options={streamOptions(maxStreams)}
-                        labelOf={streamLabel}
-                      />
-                    )}
-                  </form.AppField>
-                  <form.AppField name="downloads">
-                    {() => (
-                      <SwitchField
-                        title={tr("access.downloads")}
-                        disabled={!mayGrant("downloads")}
-                        hint={tr("access.downloads.hint")}
-                      />
-                    )}
-                  </form.AppField>
-                </SettingRows>
-              </FormSection>
-
-              <FormSection title={tr("access.section.requests")}>
-                <SettingRows>
-                  <form.AppField name="requests">
-                    {() => (
-                      <SelectField
-                        title={tr("access.requests")}
-                        layout="side"
-                        disabled={!mayGrant("requests")}
-                        options={REQUEST_MODES}
-                        labelOf={requestsLabel}
-                      />
-                    )}
-                  </form.AppField>
-                  {requests !== "off" && (
-                    <form.Field name="requestLimit">
-                      {(field) => (
-                        <SelectRow
-                          title={tr("access.requestLimit")}
-                          layout="side"
-                          options={LIMIT_CHOICES}
-                          value={limitChoiceOf(field.state.value)}
-                          labelOf={limitChoiceLabel}
-                          onChange={(choice) =>
-                            field.handleChange(
-                              choice === NO_LIMIT ? null : DEFAULT_QUOTA,
-                            )
-                          }
-                          footer={
-                            field.state.value === null ? undefined : (
-                              <QuotaInputs
-                                value={field.state.value}
-                                onChange={field.handleChange}
-                              />
-                            )
-                          }
-                        />
-                      )}
-                    </form.Field>
-                  )}
-                </SettingRows>
-              </FormSection>
-            </FormColumn>
-
-            <FormColumn>
-              <FormSection
-                title={tr("access.section.server")}
-                description={
-                  grantsAll
-                    ? tr("access.section.serverHint")
-                    : `${tr("access.section.serverHint")} ${tr("access.permissions.ownOnly")}`
-                }
-              >
-                <SettingRows>
-                  {MANAGED_AREAS.map((area) => (
+          <FormColumn>
+            <FormSection
+              title={tr("access.section.server")}
+              description={
+                grantsAll()
+                  ? tr("access.section.serverHint")
+                  : `${tr("access.section.serverHint")} ${tr("access.permissions.ownOnly")}`
+              }
+            >
+              <SettingRows>
+                <For each={MANAGED_AREAS}>
+                  {(area) => (
                     <SelectRow
-                      key={area}
                       title={areaLabel(area)}
                       layout="side"
                       disabled={!mayGrant(area)}
                       options={areaLevels(area)}
-                      value={manages[area]}
+                      value={values().manages[area]}
                       labelOf={(level) => levelLabel(area, level)}
                       onChange={(level) =>
-                        form.setFieldValue("manages", (current) => ({
-                          ...current,
+                        form.set("manages", {
+                          ...values().manages,
                           [area]: level,
-                        }))
+                        })
                       }
                       hint={areaHint(area)}
                     />
-                  ))}
-                </SettingRows>
-              </FormSection>
+                  )}
+                </For>
+              </SettingRows>
+            </FormSection>
 
-              <FormSection title={tr("access.section.api")}>
-                <SettingRows>
-                  <form.AppField name="apiTokens">
-                    {() => (
-                      <SwitchField
-                        title={tr("access.apiTokens")}
-                        disabled={!mayGrant("apiTokens")}
-                        hint={tr("access.apiTokens.hint")}
-                      />
-                    )}
-                  </form.AppField>
-                </SettingRows>
-              </FormSection>
-            </FormColumn>
-          </FormColumns>
-        </FormDialogBody>
+            <FormSection title={tr("access.section.api")}>
+              <SettingRows>
+                <SwitchField
+                  form={form}
+                  name="apiTokens"
+                  title={tr("access.apiTokens")}
+                  disabled={!mayGrant("apiTokens")}
+                  hint={tr("access.apiTokens.hint")}
+                />
+              </SettingRows>
+            </FormSection>
+          </FormColumn>
+        </FormColumns>
+      </FormDialogBody>
 
-        <FormDialogFooter>
-          <form.Subscribe
-            selector={(state) => !everyone && !state.values.name.trim()}
-          >
-            {(incomplete) => (
-              <form.SubmitButton disabled={incomplete} pending={save.isPending}>
-                {group ? tr("access.group.save") : tr("access.group.create")}
-              </form.SubmitButton>
-            )}
-          </form.Subscribe>
-        </FormDialogFooter>
-      </FormDialogForm>
-    </form.AppForm>
+      <FormDialogFooter>
+        <SubmitButton
+          form={form}
+          disabled={!everyone && !values().name.trim()}
+          pending={save.isPending}
+        >
+          {group ? tr("access.group.save") : tr("access.group.create")}
+        </SubmitButton>
+      </FormDialogFooter>
+    </FormDialogForm>
   )
 }
 
@@ -450,61 +439,75 @@ function GroupForm({
  * The provider group a group follows: free text, with the names the
  * provider sent for linked accounts offered as it's typed.
  */
-function ProviderGroupField() {
-  const field = useFieldContext<string>()
-  const value = useSelector(field.store, (state) => state.value)
-  const errors = useSelector(field.store, (state) => state.meta.errors)
-  const suggestions = useQuery(orpc.admin.groups.providerGroups.queryOptions())
-  const id = useId()
-  const message = firstError(errors)
-  const items = suggestions.data ?? []
-
+function ProviderGroupField(props: {
+  form: Form<GroupValues>
+  name: "providerGroup"
+}) {
+  const suggestions = useQuery(() =>
+    orpc.admin.groups.providerGroups.queryOptions(),
+  )
+  const items = () => (suggestions.isSuccess ? suggestions.data : [])
+  const id = createUniqueId()
+  const message = () => props.form.message(props.name)
   return (
-    <Field data-invalid={message ? true : undefined}>
-      <FieldLabel htmlFor={id}>{tr("access.group.providerGroup")}</FieldLabel>
+    <Field
+      invalid={message() ? true : undefined}
+      class="data-invalid:text-destructive"
+    >
+      <FieldLabel for={id}>{tr("access.group.providerGroup")}</FieldLabel>
+      {/* The form only follows it: each group opens a form of its own, so
+          nothing else changes the text. */}
       <Autocomplete
-        items={items}
-        value={value}
-        itemToStringValue={(item: ProviderGroup) => item.name}
-        openOnInputClick
-        onValueChange={(next) => field.handleChange(next)}
+        defaultValue={props.form.values().providerGroup}
+        openOnFocus
+        onValueChange={(next) => props.form.set(props.name, next)}
       >
         <AutocompleteInput
           id={id}
-          name={field.name}
-          aria-invalid={message ? true : undefined}
+          name={props.name}
+          aria-invalid={message() ? "true" : undefined}
           placeholder={tr("access.group.providerGroupPlaceholder")}
-          autoComplete="off"
-          spellCheck={false}
-          maxLength={256}
-          render={<Input />}
+          autocomplete="off"
+          spellcheck={false}
+          maxlength={256}
+          onBlur={() => props.form.blur(props.name)}
+          class={INPUT_CLASS}
         />
-        {items.length > 0 && (
-          <AutocompleteContent sideOffset={4} className="data-empty:hidden">
+        <Show when={items().length > 0}>
+          <AutocompleteContent
+            anchor={`#${CSS.escape(id)}`}
+            sideOffset={4}
+            class="has-data-empty:hidden"
+          >
             <AutocompleteList>
-              {(item: ProviderGroup) => (
-                <AutocompleteItem key={item.name} value={item}>
-                  <span className="min-w-0 flex-1 truncate">{item.name}</span>
-                  <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                    {tr("access.group.providerAccounts", {
-                      count: item.accounts,
-                    })}
-                  </span>
-                </AutocompleteItem>
-              )}
+              <For each={items()} keyed={(item) => item.name}>
+                {(item) => (
+                  <AutocompleteItem value={item().name}>
+                    <span class="min-w-0 flex-1 truncate">{item().name}</span>
+                    <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
+                      {tr("access.group.providerAccounts", {
+                        count: item().accounts,
+                      })}
+                    </span>
+                  </AutocompleteItem>
+                )}
+              </For>
             </AutocompleteList>
           </AutocompleteContent>
-        )}
+        </Show>
       </Autocomplete>
-      {message ? (
-        <FieldError>{message}</FieldError>
-      ) : (
-        <FieldDescription>
-          {suggestions.data?.length === 0
-            ? tr("access.group.providerGroupHintNoClaim")
-            : tr("access.group.providerGroupHint")}
-        </FieldDescription>
-      )}
+      <Show
+        when={message()}
+        fallback={
+          <FieldDescription>
+            {suggestions.isSuccess && suggestions.data.length === 0
+              ? tr("access.group.providerGroupHintNoClaim")
+              : tr("access.group.providerGroupHint")}
+          </FieldDescription>
+        }
+      >
+        {(text) => <FieldError>{text()}</FieldError>}
+      </Show>
     </Field>
   )
 }

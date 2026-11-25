@@ -1,64 +1,70 @@
 import { type Profile, StatsRange } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { Button, buttonVariants } from "@matinee/ui/components/button"
-import { FeedbackButton } from "@matinee/ui/components/feedback-button"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
-import { cn } from "@matinee/ui/lib/utils"
 import {
   keepPreviousData,
   type QueryClient,
   useQuery,
-} from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+} from "@tanstack/solid-query"
+import { createFileRoute, Link } from "@tanstack/solid-router"
 import {
-  CalendarDaysIcon,
-  ChartColumnIcon,
-  ChevronRightIcon,
-  HeartIcon,
-  LinkIcon,
-  LockIcon,
-  PencilIcon,
-  PopcornIcon,
-  InboxIcon,
-  SettingsIcon,
-  Share2Icon,
-  ShieldIcon,
-} from "lucide-react"
+  Activity,
+  CalendarDays,
+  ChevronRight,
+  Heart,
+  Link as LinkIcon,
+  Lock,
+  LogOut,
+  Pencil,
+  Popcorn,
+  Settings,
+  Share2,
+  Shield,
+  UsersRound,
+} from "lucide"
+import { createSignal, For, Match, Show, Switch } from "solid-js"
 
+import { pageGutter } from "@/components/app-shell"
 import { ProfileAskedRail } from "@/components/asked/asked"
 import { FavoriteCard, favoriteKey } from "@/components/favorites"
 import { EpisodeCard } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
-import { PhoneTopBar, usePhoneTab } from "@/components/phone-nav"
+import { PartyDialog } from "@/components/party/party-panel"
+import { phoneBarButton, PhoneTopBar } from "@/components/phone-nav"
 import { Rail, RailItem } from "@/components/rail"
-import { useNeedsYou } from "@/components/requests/request-queue"
 import { RangePicker } from "@/components/stats/range-picker"
 import { ActivitySection, StandingSection } from "@/components/stats/standing"
 import {
   PrivateNote,
   SectionHeading,
-  statsGrid,
   StatsEmpty,
+  statsGrid,
 } from "@/components/stats/stat-blocks"
 import {
   GenresSection,
   hasPlays,
   TopTitlesSection,
   watchFigures,
-  WatchStatsSkeleton,
   WatchOverview,
+  WatchStatsSkeleton,
 } from "@/components/stats/watch-stats"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
+import { Button, buttonVariants } from "@/kit/button"
+import { FeedbackButton } from "@/kit/feedback-button"
+import { Icon } from "@/kit/icon"
+import { List, ListItemButton } from "@/kit/list"
+import { Skeleton } from "@/kit/skeleton"
+import { toast } from "@/kit/toast"
 import { formatMonth } from "@/lib/format"
-import { can, runsQueue } from "@/lib/permissions"
+import { usePartyRole } from "@/lib/party"
+import { canAny } from "@/lib/permissions"
 import { reloadOnEnter } from "@/lib/route-loading"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
+import { useSignOut } from "@/lib/sign-out"
 import { browserTimeZone, rangePhrase } from "@/lib/stats"
 import { useActionFeedback } from "@/lib/use-action-feedback"
+import { isPhone, mediaQuery } from "@/lib/viewport"
 
 /** All time is the default, so the URL leaves it out. */
 const ProfileSearch = t.object({
@@ -110,88 +116,183 @@ function displayName(profile: Profile): string {
   return profile.user.displayName ?? profile.user.username
 }
 
+// A profile is never a tab's first page here, so phones always get the bar
+// with Back.
 function ProfilePage() {
-  // Your own is the profile tab's first page on phones; anyone else's has
-  // the bar with Back.
-  const bar = usePhoneTab() === null && <PhoneTopBar home />
+  const params = Route.useParams()
+  const context = Route.useRouteContext()
+  const openSettings = useOpenSettings()
+  const stats = () => canAny(context().user, ["serverStats.read", "stats.read"])
   return (
-    <>
-      {bar}
-      <ProfileContent />
-    </>
-  )
-}
-
-function ProfileContent() {
-  const { username } = Route.useParams()
-  const profile = useQuery(profileOptions(username))
-  useDocumentTitle(profile.data ? displayName(profile.data) : null)
-
-  if (profile.isPending) return <ProfileSkeleton />
-  if (!profile.data) {
-    return (
-      <div className="py-24 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {tr("profile.loadFailed")}
-        </h1>
-        <p className="text-muted-foreground mt-2 text-sm">
-          {errorMessage(profile.error)}
-        </p>
-        <Link
-          to="/"
-          className={buttonVariants({
-            variant: "secondary",
-            className: "mt-6",
-          })}
-        >
-          {tr("profile.backHome")}
-        </Link>
-      </div>
-    )
-  }
-  const data = profile.data
-  const shared = data.self || data.sharing.favorites || data.sharing.stats
-  return (
-    <div className="flex flex-col gap-10">
-      <ProfileHeader profile={data} />
-      {!shared ? (
-        <StatsEmpty
-          icon={LockIcon}
-          title={tr("profile.private", { name: displayName(data) })}
-        />
-      ) : (
-        <>
-          <Favorites profile={data} />
-          {/* What you asked for is yours alone, never on show to others. */}
-          {data.self && <ProfileAskedRail username={data.user.username} />}
-          {statsShown(data) && <Statistics profile={data} />}
-          {data.recent && data.recent.length > 0 && (
-            <Rail title={tr("profile.recent")}>
-              {data.recent.map((entry) => (
-                <RailItem key={entry.item.id}>
-                  <EpisodeCard item={entry.item} />
-                </RailItem>
-              ))}
-            </Rail>
-          )}
-        </>
-      )}
+    <div class={[pageGutter, "sm:pt-8"]}>
+      <PhoneTopBar
+        title={tr("shell.profile")}
+        actions={
+          <>
+            <Show when={stats()}>
+              <Link
+                to="/stats"
+                aria-label={tr("shell.statistics")}
+                class={phoneBarButton}
+              >
+                <Icon icon={Activity} class="size-6" />
+              </Link>
+            </Show>
+            <button
+              type="button"
+              aria-label={tr("shell.settings")}
+              onClick={() => openSettings()}
+              class={phoneBarButton}
+            >
+              <Icon icon={Settings} class="size-6" />
+            </button>
+          </>
+        }
+      />
+      <Show when={params().username} keyed>
+        {(username) => <ProfileContent username={username} />}
+      </Show>
     </div>
   )
 }
 
-// Your own profile on a phone starts under the status bar, without a bar.
-const ownTop = "max-sm:pt-[calc(env(safe-area-inset-top)+1rem)]"
+function ProfileContent(props: { username: string }) {
+  const profile = useQuery(() => profileOptions(props.username))
+  useDocumentTitle(() => (profile.isSuccess ? displayName(profile.data) : null))
+  return (
+    <Switch
+      fallback={
+        <div class="py-24 text-center">
+          <h1 class="text-2xl font-semibold tracking-tight">
+            {tr("profile.loadFailed")}
+          </h1>
+          <p class="text-muted-foreground mt-2 text-sm">
+            {errorMessage(profile.error)}
+          </p>
+          <Link
+            to="/"
+            class={buttonVariants({ variant: "secondary", className: "mt-6" })}
+          >
+            {tr("profile.backHome")}
+          </Link>
+        </div>
+      }
+    >
+      <Match when={profile.isPending}>
+        <ProfileSkeleton />
+      </Match>
+      <Match when={profile.isSuccess && profile.data}>
+        {(data) => (
+          <div class="flex flex-col gap-10">
+            <ProfileHeader profile={data()} />
+            <Show
+              when={
+                data().self || data().sharing.favorites || data().sharing.stats
+              }
+              fallback={
+                <StatsEmpty
+                  icon={Lock}
+                  title={tr("profile.private", { name: displayName(data()) })}
+                />
+              }
+            >
+              <Favorites profile={data()} />
+              {/* What you asked for is yours alone, never on show to others. */}
+              <Show when={data().self}>
+                <ProfileAskedRail username={data().user.username} />
+              </Show>
+              <Show when={statsShown(data())}>
+                <Statistics profile={data()} />
+              </Show>
+              <Show when={data().recent?.length ? data().recent : undefined}>
+                {(recent) => (
+                  <Rail title={tr("profile.recent")}>
+                    <For each={recent()} keyed={(entry) => entry.item.id}>
+                      {(entry) => (
+                        <RailItem>
+                          <EpisodeCard item={entry().item} />
+                        </RailItem>
+                      )}
+                    </For>
+                  </Rail>
+                )}
+              </Show>
+            </Show>
+            <Show when={data().self && isPhone()}>
+              <PhoneAccount />
+            </Show>
+          </div>
+        )}
+      </Match>
+    </Switch>
+  )
+}
+
+/**
+ * The account on a phone's own profile, as the Flutter app ends it: the
+ * watch party and the way out, where the avatar led.
+ */
+function PhoneAccount() {
+  const signOut = useSignOut()
+  const partyRole = usePartyRole()
+  const [partyOpen, setPartyOpen] = createSignal(false)
+  return (
+    <>
+      <section class="flex flex-col gap-2">
+        <h2 class="text-xl font-semibold tracking-tight">
+          {tr("settings.section.account.label")}
+        </h2>
+        <List>
+          <ListItemButton
+            aria-haspopup="dialog"
+            trailing={
+              <span class="flex shrink-0 items-center gap-2">
+                <Show when={partyRole()}>
+                  <span
+                    aria-hidden="true"
+                    class="bg-primary size-2 rounded-full"
+                  />
+                  <span class="sr-only">{tr("party.inParty")}</span>
+                </Show>
+                <Icon
+                  icon={ChevronRight}
+                  class="text-muted-foreground size-4 shrink-0"
+                />
+              </span>
+            }
+            onClick={() => setPartyOpen(true)}
+          >
+            <Icon icon={UsersRound} class="size-5 shrink-0" />
+            <span class="min-w-0 flex-1 truncate font-medium">
+              {tr("party.title")}
+            </span>
+          </ListItemButton>
+          <ListItemButton
+            class="text-destructive"
+            disabled={signOut.isPending}
+            trailing={false}
+            onClick={() => signOut.mutate()}
+          >
+            <Icon icon={LogOut} class="size-5 shrink-0" />
+            <span class="min-w-0 flex-1 truncate font-medium">
+              {tr("shell.signOut")}
+            </span>
+          </ListItemButton>
+        </List>
+      </section>
+      <PartyDialog open={partyOpen()} onOpenChange={setPartyOpen} />
+    </>
+  )
+}
 
 function ProfileSkeleton() {
-  const own = usePhoneTab() === "profile"
   return (
-    <div className={cn("flex flex-col gap-10", own && ownTop)}>
-      <div className="flex items-center gap-5">
-        <Skeleton className="size-16 shrink-0 rounded-full sm:size-20" />
-        <div className="flex-1">
-          <Skeleton className="h-9 w-56" />
-          <Skeleton className="mt-3 h-4 w-40" />
+    <div class="flex flex-col gap-10">
+      <div class="flex items-center gap-5">
+        <Skeleton class="size-16 shrink-0 rounded-full sm:size-20" />
+        <div class="flex-1">
+          <Skeleton class="h-9 w-56" />
+          <Skeleton class="mt-3 h-4 w-40" />
         </div>
       </div>
       <WatchStatsSkeleton />
@@ -199,82 +300,45 @@ function ProfileSkeleton() {
   )
 }
 
-/**
- * The picture, the name, and a way to share the page or change it. Your
- * own on a phone is one row, as the Android app's profile tab: the
- * picture, who it is, and statistics and Settings at its end.
- */
-function ProfileHeader({ profile }: { profile: Profile }) {
-  const { user } = profile
-  const { user: me } = Route.useRouteContext()
+/** The picture, the name, and a way to share the page or change it. */
+function ProfileHeader(props: { profile: Profile }) {
   const openSettings = useOpenSettings()
-  const own = usePhoneTab() === "profile"
+  const user = () => props.profile.user
   return (
-    <header className={cn(own && ownTop)}>
-      <div
-        className={cn(
-          "flex flex-wrap items-center gap-x-6 gap-y-4",
-          own && "max-sm:flex-nowrap max-sm:gap-x-4",
-        )}
-      >
+    <header>
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-4">
         <UserAvatar
-          user={user}
-          className="size-16 text-2xl shadow-lg shadow-black/40 sm:size-20 sm:text-3xl"
+          user={user()}
+          class="size-16 text-2xl shadow-lg shadow-black/40 sm:size-20 sm:text-3xl"
         />
-        <div className="min-w-0 flex-1">
-          <h1 className="text-26px max-sm:text-22px md:text-32px truncate leading-8 font-semibold tracking-tight max-sm:leading-7 md:leading-10">
-            {displayName(profile)}
+        <div class="min-w-0 flex-1">
+          <h1 class="text-26px md:text-32px truncate leading-8 font-semibold tracking-tight max-sm:text-xl max-sm:leading-7 md:leading-10">
+            {displayName(props.profile)}
           </h1>
-          <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            {user.displayName && <span>@{user.username}</span>}
-            {user.role === "admin" && (
-              <span className="inline-flex items-center gap-1">
-                <ShieldIcon aria-hidden className="size-3.5" />
+          <p class="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <Show when={user().displayName}>
+              <span>@{user().username}</span>
+            </Show>
+            <Show when={user().role === "admin"}>
+              <span class="inline-flex items-center gap-1">
+                <Icon icon={Shield} class="size-3.5" />
                 {tr("profile.admin")}
               </span>
-            )}
+            </Show>
             <span>
-              {tr("profile.joined", { date: formatMonth(user.createdAt) })}
+              {tr("profile.joined", { date: formatMonth(user().createdAt) })}
             </span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {profile.self && (
-            <Button
-              variant="secondary"
-              onClick={() => openSettings("account")}
-              className={cn(own && "max-sm:hidden")}
-            >
-              <PencilIcon />
+        {/* A row of its own on phones, so the name keeps the width. */}
+        <div class="flex items-center gap-2 max-sm:w-full">
+          <Show when={props.profile.self}>
+            <Button variant="secondary" onClick={() => openSettings("account")}>
+              <Icon icon={Pencil} />
               {tr("profile.edit")}
             </Button>
-          )}
-          <ShareButton
-            profile={profile}
-            className={cn(own && "max-sm:hidden")}
-          />
-          {own && (
-            <>
-              {can(me, "adminRequest.read") && (
-                <RequestsButton answers={runsQueue(me)} />
-              )}
-              <Link
-                to="/stats"
-                aria-label={tr("shell.statistics")}
-                className={cn(roundButton, "sm:hidden")}
-              >
-                <ChartColumnIcon />
-              </Link>
-              <button
-                type="button"
-                aria-label={tr("shell.settings")}
-                onClick={() => openSettings()}
-                className={cn(roundButton, "sm:hidden")}
-              >
-                <SettingsIcon />
-              </button>
-            </>
-          )}
+          </Show>
+          <ShareButton profile={props.profile} />
         </div>
       </div>
     </header>
@@ -282,93 +346,55 @@ function ProfileHeader({ profile }: { profile: Profile }) {
 }
 
 /**
- * The way to the queue on a phone, for whoever may look at it, with the
- * dot while it needs someone who `answers` it.
- */
-function RequestsButton({ answers }: { answers: boolean }) {
-  const needsYou = useNeedsYou(answers)
-  return (
-    <Link
-      to="/requests"
-      aria-label={
-        needsYou > 0
-          ? tr("requests.menuWaiting", { count: needsYou })
-          : tr("requests.menu")
-      }
-      className={cn(roundButton, "relative sm:hidden")}
-    >
-      <InboxIcon />
-      {needsYou > 0 && (
-        <span
-          aria-hidden
-          className="bg-primary ring-secondary absolute top-1.5 right-1.5 size-2 rounded-full ring-2"
-        />
-      )}
-    </Link>
-  )
-}
-
-/** A round button at the end of your own profile's row on a phone. */
-const roundButton =
-  "bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-ring grid size-11 shrink-0 place-items-center rounded-full outline-none transition-colors focus-visible:ring-2 [&_svg]:size-5"
-
-/**
  * Hands the page's address to a phone's share sheet, or copies it. Only
  * people with an account here can open it.
  */
-function ShareButton({
-  profile,
-  className,
-}: {
-  profile: Profile
-  className?: string
-}) {
+function ShareButton(props: { profile: Profile; class?: string }) {
   const { feedback, run } = useActionFeedback()
-  const coarse = useMediaQuery("(pointer: coarse)")
-  const url = new URL(
-    `/profiles/${encodeURIComponent(profile.user.username)}`,
-    window.location.origin,
-  ).href
-  const canShare = coarse && "share" in navigator
-  const canCopy = window.isSecureContext
-  if (!canShare && !canCopy) return null
-  if (canShare) {
-    return (
-      <Button
-        variant="secondary"
-        className={className}
-        onClick={() =>
-          void navigator
-            .share({
-              title: tr("profile.shareTitle", { name: displayName(profile) }),
-              url,
-            })
-            .catch((cause: unknown) => {
-              // Closing the share sheet isn't a failure.
-              if (cause instanceof Error && cause.name === "AbortError") return
-              toast.error(tr("profile.shareFailed"), {
-                description: errorMessage(cause),
-              })
-            })
-        }
-      >
-        <Share2Icon />
+  const coarse = mediaQuery("(pointer: coarse)")
+  const url = () =>
+    new URL(
+      `/profiles/${encodeURIComponent(props.profile.user.username)}`,
+      window.location.origin,
+    ).href
+  const canShare = () => coarse() && "share" in navigator
+  const share = () =>
+    void navigator
+      .share({
+        title: tr("profile.shareTitle", { name: displayName(props.profile) }),
+        url: url(),
+      })
+      .catch((cause: unknown) => {
+        // Closing the share sheet isn't a failure.
+        if (cause instanceof Error && cause.name === "AbortError") return
+        toast.error(tr("profile.shareFailed"), {
+          description: errorMessage(cause),
+        })
+      })
+  return (
+    <Show
+      when={canShare()}
+      fallback={
+        <Show when={window.isSecureContext}>
+          <FeedbackButton
+            variant="secondary"
+            class={props.class}
+            state={feedback().state}
+            successLabel={tr("profile.copied")}
+            errorLabel={tr("profile.tryAgain")}
+            onClick={() => void run(() => navigator.clipboard.writeText(url()))}
+          >
+            <Icon icon={LinkIcon} />
+            {tr("profile.copyLink")}
+          </FeedbackButton>
+        </Show>
+      }
+    >
+      <Button variant="secondary" class={props.class} onClick={share}>
+        <Icon icon={Share2} />
         {tr("profile.share")}
       </Button>
-    )
-  }
-  return (
-    <FeedbackButton
-      variant="secondary"
-      className={className}
-      state={feedback.state}
-      successLabel={tr("profile.copied")}
-      errorLabel={tr("profile.tryAgain")}
-      onClick={() => void run(() => navigator.clipboard.writeText(url))}
-    >
-      <LinkIcon />
-      {tr("profile.copyLink")}
-    </FeedbackButton>
+    </Show>
   )
 }
 
@@ -377,142 +403,182 @@ function ShareButton({
  * heading opens the favorites page, a row for each kind. Hidden for others
  * when there are none.
  */
-function Favorites({ profile }: { profile: Profile }) {
-  const { favorites } = profile
-  if (!favorites) return null
-  const privateNote =
-    profile.self && !profile.sharing.favorites ? <PrivateNote /> : undefined
-  if (favorites.length === 0) {
-    if (!profile.self) return null
-    return (
-      <section aria-label={tr("profile.favorites")}>
-        <SectionHeading title={tr("profile.favorites")}>
-          {privateNote}
-        </SectionHeading>
-        <StatsEmpty
-          compact
-          icon={HeartIcon}
-          title={tr("profile.noFavorites")}
-          description={tr("profile.noFavoritesHint")}
-        />
-      </section>
-    )
-  }
+function Favorites(props: { profile: Profile }) {
+  const privateNote = () =>
+    props.profile.self && !props.profile.sharing.favorites
   return (
-    <Rail
-      title={tr("profile.favorites")}
-      heading={
-        <Link
-          to="/profiles/$username/favorites"
-          params={{ username: profile.user.username }}
-          className="focus-visible:ring-ring group/heading inline-flex max-w-full items-center gap-1 rounded-sm outline-none focus-visible:ring-2"
+    <Show when={props.profile.favorites}>
+      {(favorites) => (
+        <Show
+          when={favorites().length > 0}
+          fallback={
+            <Show when={props.profile.self}>
+              <section aria-label={tr("profile.favorites")}>
+                <SectionHeading title={tr("profile.favorites")}>
+                  <Show when={privateNote()}>
+                    <PrivateNote />
+                  </Show>
+                </SectionHeading>
+                <StatsEmpty
+                  compact
+                  icon={Heart}
+                  title={tr("profile.noFavorites")}
+                  description={tr("profile.noFavoritesHint")}
+                />
+              </section>
+            </Show>
+          }
         >
-          <span className="truncate">{tr("profile.favorites")}</span>
-          <ChevronRightIcon
-            aria-hidden
-            className="text-muted-foreground group-hover/heading:text-foreground size-5 shrink-0 transition-colors"
-          />
-        </Link>
-      }
-      action={privateNote}
-    >
-      {favorites.map((favorite) => (
-        <RailItem key={favoriteKey(favorite)} artwork="poster">
-          <FavoriteCard favorite={favorite} />
-        </RailItem>
-      ))}
-    </Rail>
+          <Rail
+            title={tr("profile.favorites")}
+            heading={
+              <Link
+                to="/profiles/$username/favorites"
+                params={{ username: props.profile.user.username }}
+                class="focus-visible:ring-ring group/heading inline-flex max-w-full items-center gap-1 rounded-sm outline-none focus-visible:ring-2"
+              >
+                <span class="truncate">{tr("profile.favorites")}</span>
+                <Icon
+                  icon={ChevronRight}
+                  class="text-muted-foreground group-hover/heading:text-foreground size-5 shrink-0 transition-colors"
+                />
+              </Link>
+            }
+            action={privateNote() ? <PrivateNote /> : undefined}
+          >
+            <For each={favorites()} keyed={favoriteKey}>
+              {(favorite) => (
+                <RailItem artwork="poster">
+                  <FavoriteCard favorite={favorite()} />
+                </RailItem>
+              )}
+            </For>
+          </Rail>
+        </Show>
+      )}
+    </Show>
   )
 }
 
-function Statistics({ profile }: { profile: Profile }) {
-  const { range = "all" } = Route.useSearch()
+function Statistics(props: { profile: Profile }) {
+  const search = Route.useSearch()
   const navigate = Route.useNavigate()
-  const stats = useQuery({
-    ...statsOptions(profile.user.username, range),
+  const range = (): StatsRange => search().range ?? "all"
+  const stats = useQuery(() => ({
+    ...statsOptions(props.profile.user.username, range()),
     placeholderData: keepPreviousData,
-  })
+  }))
   const setRange = (next: StatsRange) =>
     void navigate({
       search: { range: next === "all" ? undefined : next },
       replace: true,
       resetScroll: false,
     })
-  const data = stats.data
   // With nothing ever watched, picking a period changes nothing.
-  const neverWatched =
-    data !== undefined && data !== null && range === "all" && !hasPlays(data)
+  const neverWatched = () =>
+    stats.isSuccess &&
+    stats.data !== null &&
+    range() === "all" &&
+    !hasPlays(stats.data)
 
   return (
     <section aria-label={tr("profile.statistics")}>
       <SectionHeading
         title={tr("profile.statistics")}
         action={
-          neverWatched ? undefined : (
-            <RangePicker value={range} onChange={setRange} />
+          neverWatched() ? undefined : (
+            <RangePicker value={range()} onChange={setRange} />
           )
         }
       >
-        {profile.self && !profile.sharing.stats && <PrivateNote />}
+        <Show when={props.profile.self && !props.profile.sharing.stats}>
+          <PrivateNote />
+        </Show>
       </SectionHeading>
-      {stats.isPending ? (
-        <WatchStatsSkeleton />
-      ) : stats.isError ? (
-        <p className="text-muted-foreground text-sm">
-          {errorMessage(stats.error)}
-        </p>
-      ) : !data ? (
-        <StatsEmpty
-          compact
-          icon={LockIcon}
-          title={tr("profile.stoppedSharing", { name: displayName(profile) })}
-        />
-      ) : neverWatched ? (
-        profile.self ? (
+      <Switch
+        fallback={
+          <p class="text-muted-foreground text-sm">
+            {errorMessage(stats.error)}
+          </p>
+        }
+      >
+        <Match when={stats.isPending}>
+          <WatchStatsSkeleton />
+        </Match>
+        <Match when={stats.isSuccess && stats.data === null}>
           <StatsEmpty
-            icon={PopcornIcon}
-            title={tr("profile.selfEmpty")}
-            description={tr("profile.selfEmptyHint")}
-            action={
-              <Link to="/" className={buttonVariants()}>
-                {tr("profile.findSomething")}
-              </Link>
+            compact
+            icon={Lock}
+            title={tr("profile.stoppedSharing", {
+              name: displayName(props.profile),
+            })}
+          />
+        </Match>
+        <Match when={neverWatched()}>
+          <Show
+            when={props.profile.self}
+            fallback={
+              <StatsEmpty
+                icon={Popcorn}
+                title={tr("profile.otherEmpty", {
+                  name: displayName(props.profile),
+                })}
+                description={tr("profile.otherEmptyHint")}
+              />
             }
-          />
-        ) : (
-          <StatsEmpty
-            icon={PopcornIcon}
-            title={tr("profile.otherEmpty", { name: displayName(profile) })}
-            description={tr("profile.otherEmptyHint")}
-          />
-        )
-      ) : !hasPlays(data) ? (
-        <StatsEmpty
-          compact
-          icon={CalendarDaysIcon}
-          title={tr("profile.nothingWatched", { period: rangePhrase(range) })}
-          action={
-            <Button variant="outline" onClick={() => setRange("all")}>
-              {tr("profile.showAllTime")}
-            </Button>
-          }
-        />
-      ) : (
-        <div className="flex flex-col gap-4 pt-1">
-          <WatchOverview stats={data} figures={watchFigures(data)} />
-          <div className={statsGrid}>
-            <TopTitlesSection stats={data} />
-            <GenresSection stats={data} />
-            {/* The third column: where you stand among the people sharing
-                their statistics, only on your own profile since the board
-                is the viewer's, and when in the week the watching happens. */}
-            <div className="flex flex-col gap-4">
-              {profile.self && <StandingSection range={range} />}
-              <ActivitySection stats={data} />
-            </div>
-          </div>
-        </div>
-      )}
+          >
+            <StatsEmpty
+              icon={Popcorn}
+              title={tr("profile.selfEmpty")}
+              description={tr("profile.selfEmptyHint")}
+              action={
+                <Link to="/" class={buttonVariants()}>
+                  {tr("profile.findSomething")}
+                </Link>
+              }
+            />
+          </Show>
+        </Match>
+        <Match when={stats.isSuccess && stats.data}>
+          {(data) => (
+            <Show
+              when={hasPlays(data())}
+              fallback={
+                <StatsEmpty
+                  compact
+                  icon={CalendarDays}
+                  title={tr("profile.nothingWatched", {
+                    period: rangePhrase(range()),
+                  })}
+                  action={
+                    <Button variant="outline" onClick={() => setRange("all")}>
+                      {tr("profile.showAllTime")}
+                    </Button>
+                  }
+                />
+              }
+            >
+              <div class="flex flex-col gap-4 pt-1">
+                <WatchOverview stats={data()} figures={watchFigures(data())} />
+                <div class={statsGrid}>
+                  <TopTitlesSection stats={data()} />
+                  <GenresSection stats={data()} />
+                  {/* The third column: where you stand among the people
+                      sharing their statistics, only on your own profile
+                      since the board is the viewer's, and when in the week
+                      the watching happens. */}
+                  <div class="flex flex-col gap-4">
+                    <Show when={props.profile.self}>
+                      <StandingSection range={range()} />
+                    </Show>
+                    <ActivitySection stats={data()} />
+                  </div>
+                </div>
+              </div>
+            </Show>
+          )}
+        </Match>
+      </Switch>
     </section>
   )
 }

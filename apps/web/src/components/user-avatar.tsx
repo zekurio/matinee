@@ -1,63 +1,37 @@
 import type { User } from "@matinee/contracts"
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@matinee/ui/components/avatar"
 import { cn } from "@matinee/ui/lib/utils"
-import type { ReactNode } from "react"
+import { Show } from "solid-js"
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/kit/avatar"
 
 /**
  * The user's picture, or the first letter of their name without one. Size it
- * with `className`; the letter takes the font size set there.
+ * with `class`; the letter takes the font size set there.
  */
-export function UserAvatar({
-  user,
-  className,
-}: {
+export function UserAvatar(props: {
   user: Pick<User, "avatarUrl" | "displayName" | "username">
-  className?: string
+  class?: string
 }) {
-  const name = user.displayName ?? user.username
+  const name = () => props.user.displayName ?? props.user.username
   return (
-    <Avatar aria-hidden className={cn("after:border-foreground/10", className)}>
+    <Avatar
+      aria-hidden="true"
+      class={cn("after:border-foreground/10", props.class)}
+    >
       {/* An upload on this server, or the provider's picture at its own
           URL, which needn't learn which page shows it. */}
-      {user.avatarUrl && (
-        <AvatarImage src={user.avatarUrl} referrerPolicy="no-referrer" alt="" />
-      )}
-      <AvatarFallback className="bg-secondary text-secondary-foreground [font-size:inherit] font-semibold">
+      <Show when={props.user.avatarUrl}>
+        {(url) => (
+          <AvatarImage src={url()} referrerpolicy="no-referrer" alt="" />
+        )}
+      </Show>
+      <AvatarFallback class="bg-secondary text-secondary-foreground [font-size:inherit] font-semibold">
         {/* Trimmed to the capital's own height, so the letter sits in the
-            middle. A line box centers the room under the baseline too,
-            which leaves a capital a little high. */}
-        <span className="block leading-none [text-box:trim-both_cap_alphabetic]">
-          {name.slice(0, 1).toUpperCase()}
+            middle. */}
+        <span class="block leading-none [text-box:trim-both_cap_alphabetic]">
+          {name().slice(0, 1).toUpperCase()}
         </span>
       </AvatarFallback>
     </Avatar>
-  )
-}
-
-/**
- * An avatar with the accent dot on its corner, as an admin's shows while
- * requests wait for them or need their attention.
- */
-export function AvatarWithDot({
-  dot,
-  children,
-}: {
-  dot: boolean
-  children: ReactNode
-}) {
-  return (
-    <span className="relative inline-flex shrink-0">
-      {children}
-      {dot && (
-        <span
-          aria-hidden
-          className="bg-primary ring-background animate-in zoom-in-50 absolute -top-px -right-px size-2 rounded-full ring-2 duration-200 motion-reduce:animate-none"
-        />
-      )}
-    </span>
   )
 }

@@ -23,7 +23,7 @@
     "lint": "oxlint",
     "typecheck": "pnpm -r --parallel typecheck && pnpm typecheck:oxlint",
     "typecheck:oxlint": "tsc -p tools/oxlint",
-    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:dart --check && pnpm themes:dart --check && pnpm icons:dart --check && pnpm logo:dart --check && pnpm strings:dart --check && pnpm --filter @matinee/tizen strings --check"
+    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:dart --check && pnpm themes:dart --check && pnpm icons:dart --check && pnpm logo:dart --check && pnpm strings:dart --check && pnpm --filter @matinee/tv strings --check"
   },
   "devDependencies": {
     "@oxlint/plugins": "1.91.0",

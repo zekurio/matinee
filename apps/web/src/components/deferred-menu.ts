@@ -1,11 +1,7 @@
-import { type FocusEvent, type PointerEvent, useState } from "react"
+import { createSignal } from "solid-js"
 
 /** How a deferred menu mounted: open at once, and whether its trigger takes focus. */
 type Mounted = { open: boolean; focus: boolean }
-
-function focusOnMount(element: HTMLElement | null) {
-  element?.focus()
-}
 
 /**
  * Puts off mounting a menu, with the dialogs and queries that come with
@@ -15,26 +11,31 @@ function focusOnMount(element: HTMLElement | null) {
  *
  * Until then the button renders bare, with `bare` spread on it. A mouse
  * over it, or keyboard focus on it, mounts the menu closed with the same
- * button as its trigger, so the press lands on the real one; `focusRef` on
- * the trigger hands the focus over. A press that comes first, as a tap
+ * button as its trigger, so the press lands on the real one. Attach `focusRef` to the
+ * mounted trigger to hand focus over. A press that comes first, as a tap
  * does with no hover before it, mounts the menu open.
  */
+// mounted and defaultOpen are accessors.
 export function useDeferredMenu() {
-  const [mounted, setMounted] = useState<Mounted | null>(null)
+  const [mounted, setMounted] = createSignal<Mounted | null>(null)
   return {
-    mounted: mounted !== null,
-    defaultOpen: mounted?.open ?? false,
-    focusRef: mounted?.focus ? focusOnMount : undefined,
+    mounted: () => mounted() !== null,
+    defaultOpen: () => mounted()?.open ?? false,
+    focusRef: (element: HTMLElement) => {
+      queueMicrotask(() => {
+        if (element.isConnected && mounted()?.focus) element.focus()
+      })
+    },
     bare: {
       "aria-haspopup": "menu",
       "aria-expanded": false,
-      onPointerEnter: (event: PointerEvent<HTMLElement>) => {
+      onPointerEnter: (event: PointerEvent) => {
         // A tap's pointer arrives with its press, too late to swap the
         // button under it; its click opens the menu instead.
         if (event.pointerType === "touch") return
         setMounted({ open: false, focus: false })
       },
-      onFocus: (event: FocusEvent<HTMLElement>) => {
+      onFocus: (event: FocusEvent & { currentTarget: HTMLElement }) => {
         // Focus from a press is followed by its click, which opens.
         if (!event.currentTarget.matches(":focus-visible")) return
         setMounted({ open: false, focus: true })

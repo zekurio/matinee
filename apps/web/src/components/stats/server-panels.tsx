@@ -6,8 +6,8 @@ import {
   type ServerStats,
   videoCodecName,
 } from "@matinee/contracts"
-import { cn } from "@matinee/ui/lib/utils"
-import { Link } from "@tanstack/react-router"
+import { Link } from "@tanstack/solid-router"
+import { createMemo, For, Show } from "solid-js"
 
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
@@ -23,146 +23,145 @@ const METHOD_TONES = new Map<PlaybackMethod, string>([
 ])
 
 /** Each method's share of the watch time, as one bar and a legend. */
-export function Methods({ methods }: { methods: MethodStat[] }) {
-  const total = methods.reduce((sum, entry) => sum + entry.watchSeconds, 0)
+export function Methods(props: { methods: MethodStat[] }) {
+  const total = createMemo(() =>
+    props.methods.reduce((sum, entry) => sum + entry.watchSeconds, 0),
+  )
   return (
     <StatsSection title={tr("stats.server.methods")}>
       <div
-        aria-hidden
-        className="bg-foreground/[0.07] flex h-1.5 gap-0.5 overflow-hidden rounded-full"
+        aria-hidden="true"
+        class="bg-foreground/[0.07] flex h-1.5 gap-0.5 overflow-hidden rounded-full"
       >
-        {methods
-          .filter((entry) => entry.watchSeconds > 0)
-          .map((entry) => (
+        <For
+          each={props.methods.filter((entry) => entry.watchSeconds > 0)}
+          keyed={(entry) => entry.method}
+        >
+          {(entry) => (
             <span
-              key={entry.method}
-              style={{ width: `${(entry.watchSeconds / total) * 100}%` }}
-              className={METHOD_TONES.get(entry.method)}
+              style={{ width: `${(entry().watchSeconds / total()) * 100}%` }}
+              class={METHOD_TONES.get(entry().method)}
             />
-          ))}
+          )}
+        </For>
       </div>
-      <ul className="flex flex-col gap-2">
-        {methods.map((entry) => {
-          return (
-            <li
-              key={entry.method}
-              className="text-13px flex items-center gap-2.5 leading-5"
-            >
+      <ul class="flex flex-col gap-2">
+        <For each={props.methods} keyed={(entry) => entry.method}>
+          {(entry) => (
+            <li class="text-13px flex items-center gap-2.5 leading-5">
               <span
-                aria-hidden
-                className={cn(
+                aria-hidden="true"
+                class={[
                   "size-2 shrink-0 rounded-[2px]",
-                  METHOD_TONES.get(entry.method),
-                )}
+                  METHOD_TONES.get(entry().method),
+                ]}
               />
-              <span className="min-w-0 flex-1 truncate">
-                {methodName(entry.method)}
+              <span class="min-w-0 flex-1 truncate">
+                {methodName(entry().method)}
               </span>
-              <span className="text-muted-foreground shrink-0 tabular-nums">
-                {`${formatWatchTime(entry.watchSeconds)} · `}
-                <span className="text-foreground font-medium">
-                  {percent(entry.watchSeconds, total)}
+              <span class="text-muted-foreground shrink-0 tabular-nums">
+                {`${formatWatchTime(entry().watchSeconds)} · `}
+                <span class="text-foreground font-medium">
+                  {percent(entry().watchSeconds, total())}
                 </span>
               </span>
             </li>
-          )
-        })}
+          )}
+        </For>
       </ul>
     </StatsSection>
   )
 }
 
 /** Transcoded plays per name. */
-function CodecSection({
-  title,
-  rows,
-  name,
-}: {
+function CodecSection(props: {
   title: string
   rows: NamedCount[]
   name: (value: string) => string
 }) {
-  if (rows.length === 0) return null
   return (
-    <StatsSection title={title}>
-      <RankedBars
-        rows={rows.map((row) => ({
-          key: row.name,
-          label: name(row.name),
-          value: row.plays,
-          detail: tr("stats.plays", { count: row.plays }),
-        }))}
-      />
-    </StatsSection>
+    <Show when={props.rows.length > 0}>
+      <StatsSection title={props.title}>
+        <RankedBars
+          rows={props.rows.map((row) => ({
+            key: row.name,
+            label: props.name(row.name),
+            value: row.plays,
+            detail: tr("stats.plays", { count: row.plays }),
+          }))}
+        />
+      </StatsSection>
+    </Show>
   )
 }
 
 /** What transcoding needed: its encoders, and the codecs it converted. */
-export function TranscodingSections({ stats }: { stats: ServerStats }) {
-  const { transcoding } = stats
+export function TranscodingSections(props: { stats: ServerStats }) {
   return (
     <>
       <CodecSection
         title={tr("stats.server.encoders")}
-        rows={transcoding.encoders}
+        rows={props.stats.transcoding.encoders}
         name={encoderName}
       />
       <CodecSection
         title={tr("stats.server.videoFrom")}
-        rows={transcoding.videoCodecs}
+        rows={props.stats.transcoding.videoCodecs}
         name={videoCodecName}
       />
       <CodecSection
         title={tr("stats.server.audioFrom")}
-        rows={transcoding.audioCodecs}
+        rows={props.stats.transcoding.audioCodecs}
         name={(codec) => audioFormatName(codec)}
       />
     </>
   )
 }
 
-export function Viewers({ stats }: { stats: ServerStats }) {
-  if (stats.users.length === 0) return null
+export function Viewers(props: { stats: ServerStats }) {
   return (
-    <StatsSection title={tr("stats.server.viewers")}>
-      <RankedBars
-        rows={stats.users.map((entry) => ({
-          key: entry.user.id,
-          label: (
-            <Link
-              to="/profiles/$username"
-              params={{ username: entry.user.username }}
-              className="inline-flex max-w-full items-center gap-2 underline-offset-2 hover:underline"
-            >
-              <UserAvatar
-                user={entry.user}
-                className="text-10px size-5 shrink-0"
-              />
-              <span className="truncate">
-                {entry.user.displayName ?? entry.user.username}
-              </span>
-            </Link>
-          ),
-          value: entry.watchSeconds,
-          detail: formatWatchTime(entry.watchSeconds),
-        }))}
-      />
-    </StatsSection>
+    <Show when={props.stats.users.length > 0}>
+      <StatsSection title={tr("stats.server.viewers")}>
+        <RankedBars
+          rows={props.stats.users.map((entry) => ({
+            key: entry.user.id,
+            label: (
+              <Link
+                to="/profiles/$username"
+                params={{ username: entry.user.username }}
+                class="inline-flex max-w-full items-center gap-2 underline-offset-2 hover:underline"
+              >
+                <UserAvatar
+                  user={entry.user}
+                  class="text-10px size-5 shrink-0"
+                />
+                <span class="truncate">
+                  {entry.user.displayName ?? entry.user.username}
+                </span>
+              </Link>
+            ),
+            value: entry.watchSeconds,
+            detail: formatWatchTime(entry.watchSeconds),
+          }))}
+        />
+      </StatsSection>
+    </Show>
   )
 }
 
-export function Clients({ stats }: { stats: ServerStats }) {
-  if (stats.clients.length === 0) return null
+export function Clients(props: { stats: ServerStats }) {
   return (
-    <StatsSection title={tr("stats.server.clients")}>
-      <RankedBars
-        rows={stats.clients.map((client) => ({
-          key: client.name,
-          label: client.name,
-          value: client.plays,
-          detail: tr("stats.plays", { count: client.plays }),
-        }))}
-      />
-    </StatsSection>
+    <Show when={props.stats.clients.length > 0}>
+      <StatsSection title={tr("stats.server.clients")}>
+        <RankedBars
+          rows={props.stats.clients.map((client) => ({
+            key: client.name,
+            label: client.name,
+            value: client.plays,
+            detail: tr("stats.plays", { count: client.plays }),
+          }))}
+        />
+      </StatsSection>
+    </Show>
   )
 }

@@ -1,10 +1,4 @@
-import {
-  type RefObject,
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useRef,
-} from "react"
+import { onSettled } from "solid-js"
 
 import type { PlayerStore } from "@/stores/player"
 
@@ -35,85 +29,79 @@ const MAX_TICK_MS = 15_000
  * stall, seek, or error. Time updates add the time since the last one.
  */
 export function usePlayedTime() {
-  const played = useRef(0)
-  const since = useRef<number | null>(null)
-  return useMemo(() => {
-    const tick = (keepGoing: boolean) => {
-      const now = performance.now()
-      if (since.current !== null) {
-        played.current += Math.min(now - since.current, MAX_TICK_MS) / 1000
-      }
-      since.current = keepGoing ? now : null
-    }
-    const update = () => {
-      if (since.current !== null) tick(true)
-    }
-    return {
-      /** Seconds played so far, counting up to now. */
-      read: () => {
-        update()
-        return played.current
-      },
-      start: () => tick(true),
-      stop: () => tick(false),
-      update,
-    }
-  }, [])
+  let played = 0
+  let since: number | null = null
+  const tick = (keepGoing: boolean) => {
+    const now = performance.now()
+    if (since !== null) played += Math.min(now - since, MAX_TICK_MS) / 1000
+    since = keepGoing ? now : null
+  }
+  const update = () => {
+    if (since !== null) tick(true)
+  }
+  return {
+    /** Seconds played so far, counting up to now. */
+    read: () => {
+      update()
+      return played
+    },
+    start: () => tick(true),
+    stop: () => tick(false),
+    update,
+  }
 }
 
 type PlayedTime = ReturnType<typeof usePlayedTime>
 
-/** Progress for `onProgress`. The returned function sends one now. */
+/**
+ * Progress for `onProgress`, on a timer, less often while paused and not
+ * after the end, as the page goes away, and once more when the player
+ * closes. The returned function sends one now.
+ */
 export function useProgressReport(
-  video: RefObject<HTMLVideoElement | null>,
+  video: () => HTMLVideoElement | undefined,
   store: PlayerStore,
   playedTime: PlayedTime,
-  onProgress: ((report: ProgressReport) => void) | undefined,
+  onProgress: (report: ProgressReport) => void,
   position: () => number,
   lengthOf: () => number,
 ) {
-  const sentAt = useRef(0)
+  let sentAt = 0
   const report = (leaving = false, ended = false, closed = false) => {
-    // Unmounting detaches the video before this runs; use the time it last
-    // showed.
-    const at = video.current ? position() : store.getState().time
+    const el = video()
+    // The player closing may have let go of the video's source already, so
+    // that report uses the time the video last showed.
+    const at = closed && !leaving ? store.getState().time : position()
     if (at <= 0) return
     const length = lengthOf() || undefined
-    sentAt.current = performance.now()
-    onProgress?.({
+    sentAt = performance.now()
+    onProgress({
       positionSeconds: ended && length ? length : at,
       durationSeconds: length,
       sessionId: store.getState().sessionId,
       playedSeconds: playedTime.read(),
-      paused: video.current?.paused ?? true,
+      paused: el?.paused ?? true,
       closed,
       leaving,
     })
   }
-  // The timer and the page's events report with the latest props.
-  const reportLatest = useEffectEvent(report)
 
-  // Report on a timer, less often while paused and not after the end, as
-  // the page goes away, and once more when the player closes.
-  useEffect(() => {
+  onSettled(() => {
     const timer = window.setInterval(() => {
-      const el = video.current
+      const el = video()
       if (!el || el.ended) return
-      if (
-        !el.paused ||
-        performance.now() - sentAt.current >= PAUSED_REPORT_EVERY_MS
-      ) {
-        reportLatest()
+      if (!el.paused || performance.now() - sentAt >= PAUSED_REPORT_EVERY_MS) {
+        report()
       }
     }, REPORT_EVERY_MS)
-    const onPageHide = () => reportLatest(true, false, true)
+    const onPageHide = () => report(true, false, true)
     window.addEventListener("pagehide", onPageHide)
     return () => {
       window.clearInterval(timer)
       window.removeEventListener("pagehide", onPageHide)
-      reportLatest(false, false, true)
+      report(false, false, true)
     }
-  }, [])
+  })
 
   return report
 }

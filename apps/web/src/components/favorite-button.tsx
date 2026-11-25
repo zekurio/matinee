@@ -1,79 +1,38 @@
 import type { MediaItem, Season, TitleSummary } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { toast } from "@matinee/ui/components/sonner"
 import { cn } from "@matinee/ui/lib/utils"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { HeartIcon } from "lucide-react"
+import { useMutation, useQueryClient } from "@tanstack/solid-query"
+import { Heart } from "lucide"
+import { Show } from "solid-js"
 
+import type { Toggle } from "@/components/card-actions"
 import { tr } from "@/i18n"
-import { client, errorMessage, orpc } from "@/lib/rpc"
-import { invalidateViewerState, type Toggle } from "@/lib/viewer-state"
+import { Button } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+import { toast } from "@/kit/toast"
+import { client, errorMessage } from "@/lib/rpc"
+import { invalidateViewerState } from "@/lib/viewer-state"
+
+export const titleActionButton =
+  "border-foreground/10 bg-foreground/10 hover:bg-foreground/20 aria-expanded:bg-foreground/20 text-foreground backdrop-blur max-sm:size-11"
+
+function favoriteFailed(error: Error) {
+  toast.error(tr("media.favoriteFailed"), {
+    description: errorMessage(error),
+  })
+}
 
 /**
- * Mark a title as a favorite or not. The title page shows the change before
- * the server answers, and goes back if the call fails. The mutation stays
- * pending until the refetch after it lands.
+ * Mark a title as a favorite or not. The mutation stays pending until the
+ * refetch after it lands.
  */
 function useSetFavorite() {
   const queryClient = useQueryClient()
-  return useMutation({
+  return useMutation(() => ({
     mutationFn: (input: { titleId: string; favorite: boolean }) =>
       client.favorites.set(input),
-    onMutate: async ({ titleId, favorite }) => {
-      const queryKey = orpc.titles.get.queryKey({ input: { id: titleId } })
-      await queryClient.cancelQueries({ queryKey })
-      const previous = queryClient.getQueryData(queryKey)
-      if (previous)
-        queryClient.setQueryData(queryKey, { ...previous, favorite })
-      return { queryKey, previous }
-    },
-    onError: (error, _input, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(context.queryKey, context.previous)
-      }
-      toast.error(tr("media.favoriteFailed"), {
-        description: errorMessage(error),
-      })
-    },
+    onError: favoriteFailed,
     onSettled: () => invalidateViewerState(queryClient),
-  })
-}
-
-/**
- * Mark a file, such as an episode, as a favorite or not. The mutation stays
- * pending until the refetch after it lands.
- */
-function useSetItemFavorite() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (input: { itemId: string; favorite: boolean }) =>
-      client.favorites.setItem(input),
-    onError: (error) =>
-      toast.error(tr("media.favoriteFailed"), {
-        description: errorMessage(error),
-      }),
-    onSettled: () => invalidateViewerState(queryClient),
-  })
-}
-
-/**
- * Mark a season as a favorite or not. The mutation stays pending until the
- * refetch after it lands.
- */
-function useSetSeasonFavorite() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (input: {
-      titleId: string
-      season: number
-      favorite: boolean
-    }) => client.favorites.setSeason(input),
-    onError: (error) =>
-      toast.error(tr("media.favoriteFailed"), {
-        description: errorMessage(error),
-      }),
-    onSettled: () => invalidateViewerState(queryClient),
-  })
+  }))
 }
 
 /**
@@ -81,13 +40,18 @@ function useSetSeasonFavorite() {
  * once, and stays until the refetched title says the same or the call fails.
  */
 export function useTitleFavorite(
-  title: Pick<TitleSummary, "id" | "favorite">,
+  title: () => Pick<TitleSummary, "id" | "favorite">,
 ): Toggle {
   const set = useSetFavorite()
-  const on = set.isPending ? set.variables.favorite : title.favorite
+  const on = () =>
+    (set.isPending && !set.failureCount
+      ? set.variables?.favorite
+      : undefined) ?? title().favorite
   return {
     on,
-    toggle: () => set.mutate({ titleId: title.id, favorite: !on }),
+    toggle: () => {
+      if (!set.isPending) set.mutate({ titleId: title().id, favorite: !on() })
+    },
   }
 }
 
@@ -95,126 +59,123 @@ export function useTitleFavorite(
  * As {@link useTitleFavorite}, for a file. A movie is a favorite through its
  * title, so a movie's file flips the movie.
  */
-export function useItemFavorite(item: MediaItem): Toggle {
+export function useItemFavorite(item: () => MediaItem): Toggle {
+  const queryClient = useQueryClient()
+  const movie = () => (item().title?.kind === "movie" ? item().title : null)
   const setTitle = useSetFavorite()
-  const setItem = useSetItemFavorite()
-  const movie = item.title?.kind === "movie" ? item.title : null
-  if (movie) {
-    const on = setTitle.isPending ? setTitle.variables.favorite : movie.favorite
-    return {
-      on,
-      toggle: () => setTitle.mutate({ titleId: movie.id, favorite: !on }),
+  const setItem = useMutation(() => ({
+    mutationFn: (input: { itemId: string; favorite: boolean }) =>
+      client.favorites.setItem(input),
+    onError: favoriteFailed,
+    onSettled: () => invalidateViewerState(queryClient),
+  }))
+  const on = () => {
+    const title = movie()
+    if (title) {
+      return (
+        (setTitle.isPending ? setTitle.variables?.favorite : undefined) ??
+        title.favorite
+      )
     }
+    return (
+      (setItem.isPending ? setItem.variables?.favorite : undefined) ??
+      item().favorite
+    )
   }
-  const on = setItem.isPending ? setItem.variables.favorite : item.favorite
   return {
     on,
-    toggle: () => setItem.mutate({ itemId: item.id, favorite: !on }),
+    toggle: () => {
+      const title = movie()
+      if (title) setTitle.mutate({ titleId: title.id, favorite: !on() })
+      else setItem.mutate({ itemId: item().id, favorite: !on() })
+    },
   }
 }
 
 /**
- * As {@link useTitleFavorite}, for a season. Null for the files without a
- * season number, which aren't a season to mark.
+ * As {@link useTitleFavorite}, for a season. The files without a season
+ * number aren't a season to mark, so their callers pass none on.
  */
 export function useSeasonFavorite(
-  title: Pick<TitleSummary, "id">,
-  season: Season,
-): Toggle | null {
-  const set = useSetSeasonFavorite()
-  const { number } = season
-  if (number === null) return null
-  const on = set.isPending ? set.variables.favorite : season.favorite
+  title: () => Pick<TitleSummary, "id">,
+  season: () => Season,
+): Toggle {
+  const queryClient = useQueryClient()
+  const set = useMutation(() => ({
+    mutationFn: (input: {
+      titleId: string
+      season: number
+      favorite: boolean
+    }) => client.favorites.setSeason(input),
+    onError: favoriteFailed,
+    onSettled: () => invalidateViewerState(queryClient),
+  }))
+  const on = () =>
+    (set.isPending ? set.variables?.favorite : undefined) ?? season().favorite
   return {
     on,
-    toggle: () =>
-      set.mutate({ titleId: title.id, season: number, favorite: !on }),
+    toggle: () => {
+      const number = season().number
+      if (number === null) return
+      set.mutate({ titleId: title().id, season: number, favorite: !on() })
+    },
   }
-}
-
-/**
- * A heart, filled while `on`. The fill is always rose, clear while off:
- * `fill-current` would fill at once with the color the stroke is still
- * fading from, so the heart flashed white before turning red.
- */
-export function FavoriteHeart({
-  on,
-  className,
-}: {
-  on: boolean
-  className?: string
-}) {
-  return (
-    <HeartIcon
-      className={cn(
-        "fill-rose-400/0 transition-[fill,color,scale] duration-200 motion-reduce:transition-none",
-        on && "scale-110 fill-rose-400 text-rose-400",
-        className,
-      )}
-    />
-  )
 }
 
 /** The heart beside Play. */
-function HeartButton({
-  on,
-  toggle,
-  className,
-}: Toggle & { className?: string }) {
+function HeartButton(props: { favorite: Toggle; class?: string }) {
+  const label = () =>
+    tr(props.favorite.on() ? "media.removeFavorite" : "media.addFavorite")
   return (
     <Button
       variant="secondary"
       size="icon-lg"
-      aria-pressed={on}
-      aria-label={on ? tr("media.removeFavorite") : tr("media.addFavorite")}
-      title={on ? tr("media.removeFavorite") : tr("media.addFavorite")}
-      onClick={toggle}
-      className={cn(
-        "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11",
-        className,
-      )}
+      aria-pressed={props.favorite.on() ? "true" : "false"}
+      aria-label={label()}
+      title={label()}
+      onClick={() => props.favorite.toggle()}
+      class={cn(titleActionButton, props.class)}
     >
-      <FavoriteHeart on={on} />
+      <Icon
+        icon={Heart}
+        class={[
+          "transition-[fill,color,scale] duration-200 motion-reduce:transition-none",
+          props.favorite.on()
+            ? "scale-110 fill-rose-400 text-rose-400"
+            : "fill-rose-400/0",
+        ]}
+      />
     </Button>
   )
 }
 
 /** The heart beside a title's Play. Filled while the title is a favorite. */
-export function FavoriteButton({
-  title,
-  className,
-}: {
+export function FavoriteButton(props: {
   title: Pick<TitleSummary, "id" | "favorite">
-  className?: string
 }) {
-  return <HeartButton {...useTitleFavorite(title)} className={className} />
+  return <HeartButton favorite={useTitleFavorite(() => props.title)} />
 }
 
 /** The heart beside an episode's Play. Filled while it's a favorite. */
-export function ItemFavoriteButton({
-  item,
-  className,
-}: {
-  item: MediaItem
-  className?: string
-}) {
-  return <HeartButton {...useItemFavorite(item)} className={className} />
+export function ItemFavoriteButton(props: { item: MediaItem }) {
+  return <HeartButton favorite={useItemFavorite(() => props.item)} />
 }
 
 /**
  * The heart beside a season's Play. Filled while it's a favorite. None for
  * the files without a season number.
  */
-export function SeasonFavoriteButton({
-  title,
-  season,
-  className,
-}: {
+export function SeasonFavoriteButton(props: {
   title: Pick<TitleSummary, "id">
   season: Season
-  className?: string
 }) {
-  const favorite = useSeasonFavorite(title, season)
-  if (!favorite) return null
-  return <HeartButton {...favorite} className={className} />
+  const favorite = useSeasonFavorite(
+    () => props.title,
+    () => props.season,
+  )
+  return (
+    <Show when={props.season.number !== null}>
+      <HeartButton favorite={favorite} />
+    </Show>
+  )
 }

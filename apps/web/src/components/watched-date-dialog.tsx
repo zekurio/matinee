@@ -1,45 +1,30 @@
-import { Dialog, DialogContent } from "@matinee/ui/components/dialog"
-import { Spinner } from "@matinee/ui/components/spinner"
-import { lazy, Suspense, useRef } from "react"
+import { Dialog, DialogContent } from "@/kit/dialog"
 
-// The calendar and the form library are heavy and rarely needed.
-const WatchedDateForm = lazy(() =>
-  import("./watched-date-form").then((module) => ({
-    default: module.WatchedDateForm,
-  })),
-)
+import { WatchedDateForm } from "./watched-date-form"
 
-/** Asks when the user watched, for "Other date" in `WatchedButton`. */
-export function WatchedDateDialog({
-  open,
-  onOpenChange,
-  onPick,
-}: {
+/** Asks when the user watched, for "Other date" in the watched menus. */
+export function WatchedDateDialog(props: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onPick: (watchedAt: Date) => void
 }) {
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  let trigger: HTMLButtonElement | undefined
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        initialFocus={triggerRef}
-        className="gap-5 p-6 sm:max-w-sm"
+        initialFocus={() => trigger}
+        class="gap-5 p-6 sm:max-w-sm"
       >
         {/* The dialog unmounts its content when closed, so each opening
             starts again from today. */}
-        <Suspense
-          fallback={<Spinner className="mx-auto my-16 size-6 opacity-60" />}
-        >
-          <WatchedDateForm
-            triggerRef={triggerRef}
-            onPick={(watchedAt) => {
-              onPick(watchedAt)
-              onOpenChange(false)
-            }}
-          />
-        </Suspense>
+        <WatchedDateForm
+          triggerRef={(element) => (trigger = element)}
+          onPick={(watchedAt) => {
+            props.onPick(watchedAt)
+            props.onOpenChange(false)
+          }}
+        />
       </DialogContent>
     </Dialog>
   )

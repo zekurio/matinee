@@ -1,19 +1,18 @@
 import type { Favorites, Profile } from "@matinee/contracts"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
-import { HeartIcon, LockIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import type { JSX } from "@solidjs/web"
+import { useQuery } from "@tanstack/solid-query"
+import { createFileRoute } from "@tanstack/solid-router"
+import { Heart, Lock } from "lucide"
+import { For, Match, Repeat, Show, Switch } from "solid-js"
 
-import {
-  EpisodeCard,
-  PosterCard,
-  SeasonPosterCard,
-} from "@/components/media-item"
+import { pageGutter } from "@/components/app-shell"
+import { FavoriteCard } from "@/components/favorites"
+import { EpisodeCard, PosterCard } from "@/components/media-item"
 import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
 import { StatsEmpty } from "@/components/stats/stat-blocks"
 import { tr } from "@/i18n"
+import { Skeleton } from "@/kit/skeleton"
 import { reloadOnEnter } from "@/lib/route-loading"
 import { errorMessage, orpc } from "@/lib/rpc"
 
@@ -48,135 +47,163 @@ function displayName(profile: Profile): string {
  * seasons, episodes, then movies.
  */
 function FavoritesPage() {
-  const { username } = Route.useParams()
-  const profile = useQuery(profileOptions(username))
-  const favorites = useQuery(favoritesOptions(username))
-  const name = profile.data ? displayName(profile.data) : null
-  useDocumentTitle(
-    name ? `${tr("profile.favorites")} · ${name}` : tr("profile.favorites"),
-  )
+  const params = Route.useParams()
+  const profile = useQuery(() => profileOptions(params().username))
+  const favorites = useQuery(() => favoritesOptions(params().username))
+  const name = () => (profile.isSuccess ? displayName(profile.data) : null)
+  useDocumentTitle(() => {
+    const shown = name()
+    return shown
+      ? `${tr("profile.favorites")} · ${shown}`
+      : tr("profile.favorites")
+  })
 
   return (
-    <div>
+    <div class={[pageGutter, "sm:pt-8"]}>
       <PageHeader title={tr("profile.favorites")} />
-      {favorites.isPending ? (
-        <FavoritesSkeleton />
-      ) : favorites.isError ? (
-        <div className="py-24 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            {tr("profile.favorites.loadFailed")}
-          </h2>
-          <p className="text-muted-foreground mt-2 text-sm">
-            {errorMessage(favorites.error)}
-          </p>
-        </div>
-      ) : favorites.data === null ? (
-        <StatsEmpty
-          icon={LockIcon}
-          title={tr("profile.favorites.hidden", { name: name ?? username })}
-        />
-      ) : (
-        <FavoriteRows
-          favorites={favorites.data}
-          empty={
-            profile.data?.self ? (
-              <StatsEmpty
-                icon={HeartIcon}
-                title={tr("profile.noFavorites")}
-                description={tr("profile.noFavoritesHint")}
-              />
-            ) : (
-              <StatsEmpty
-                icon={HeartIcon}
-                title={tr("profile.favorites.otherEmpty", {
-                  name: name ?? username,
-                })}
-              />
-            )
-          }
-        />
-      )}
+      <Switch>
+        <Match when={favorites.isPending}>
+          <FavoritesSkeleton />
+        </Match>
+        <Match when={favorites.isError}>
+          <div class="py-24 text-center">
+            <h2 class="text-2xl font-semibold tracking-tight">
+              {tr("profile.favorites.loadFailed")}
+            </h2>
+            <p class="text-muted-foreground mt-2 text-sm">
+              {errorMessage(favorites.error)}
+            </p>
+          </div>
+        </Match>
+        <Match when={favorites.isSuccess && favorites.data === null}>
+          <StatsEmpty
+            icon={Lock}
+            title={tr("profile.favorites.hidden", {
+              name: name() ?? params().username,
+            })}
+          />
+        </Match>
+        <Match when={favorites.isSuccess && favorites.data}>
+          {(data) => (
+            <FavoriteRows
+              favorites={data()}
+              empty={
+                <Show
+                  when={profile.isSuccess && profile.data.self}
+                  fallback={
+                    <StatsEmpty
+                      icon={Heart}
+                      title={tr("profile.favorites.otherEmpty", {
+                        name: name() ?? params().username,
+                      })}
+                    />
+                  }
+                >
+                  <StatsEmpty
+                    icon={Heart}
+                    title={tr("profile.noFavorites")}
+                    description={tr("profile.noFavoritesHint")}
+                  />
+                </Show>
+              }
+            />
+          )}
+        </Match>
+      </Switch>
     </div>
   )
 }
 
 /** A row for each kind with any favorites, or `empty` when none has. */
-function FavoriteRows({
-  favorites,
-  empty,
-}: {
-  favorites: Favorites
-  empty: ReactNode
-}) {
-  const { shows, seasons, episodes, movies } = favorites
-  if (
-    shows.length === 0 &&
-    seasons.length === 0 &&
-    episodes.length === 0 &&
-    movies.length === 0
-  ) {
-    return empty
-  }
+function FavoriteRows(props: { favorites: Favorites; empty: JSX.Element }) {
+  const none = () =>
+    props.favorites.shows.length === 0 &&
+    props.favorites.seasons.length === 0 &&
+    props.favorites.episodes.length === 0 &&
+    props.favorites.movies.length === 0
   return (
-    <div className="flex flex-col gap-10">
-      {shows.length > 0 && (
-        <Rail title={tr("profile.favorites.shows")}>
-          {shows.map((title) => (
-            <RailItem key={title.id} artwork="poster">
-              <PosterCard title={title} />
-            </RailItem>
-          ))}
-        </Rail>
-      )}
-      {seasons.length > 0 && (
-        <Rail title={tr("profile.favorites.seasons")}>
-          {seasons.map(({ title, season }) => (
-            <RailItem key={`${title.id}/${season.number}`} artwork="poster">
-              <SeasonPosterCard title={title} season={season} />
-            </RailItem>
-          ))}
-        </Rail>
-      )}
-      {episodes.length > 0 && (
-        <Rail title={tr("profile.favorites.episodes")}>
-          {episodes.map((item) => (
-            <RailItem key={item.id}>
-              <EpisodeCard item={item} />
-            </RailItem>
-          ))}
-        </Rail>
-      )}
-      {movies.length > 0 && (
-        <Rail title={tr("profile.favorites.movies")}>
-          {movies.map((title) => (
-            <RailItem key={title.id} artwork="poster">
-              <PosterCard title={title} />
-            </RailItem>
-          ))}
-        </Rail>
-      )}
-    </div>
+    <Show when={!none()} fallback={props.empty}>
+      <div class="flex flex-col gap-10">
+        <Show when={props.favorites.shows.length > 0}>
+          <Rail title={tr("profile.favorites.shows")}>
+            <For each={props.favorites.shows} keyed={(title) => title.id}>
+              {(title) => (
+                <RailItem artwork="poster">
+                  <PosterCard title={title()} />
+                </RailItem>
+              )}
+            </For>
+          </Rail>
+        </Show>
+        <Show when={props.favorites.seasons.length > 0}>
+          <Rail title={tr("profile.favorites.seasons")}>
+            <For
+              each={props.favorites.seasons}
+              keyed={(entry) => `${entry.title.id}/${entry.season.number}`}
+            >
+              {(entry) => (
+                <RailItem artwork="poster">
+                  <FavoriteCard
+                    favorite={{
+                      kind: "showSeason",
+                      title: entry().title,
+                      season: entry().season,
+                    }}
+                  />
+                </RailItem>
+              )}
+            </For>
+          </Rail>
+        </Show>
+        <Show when={props.favorites.episodes.length > 0}>
+          <Rail title={tr("profile.favorites.episodes")}>
+            <For each={props.favorites.episodes} keyed={(item) => item.id}>
+              {(item) => (
+                <RailItem>
+                  <EpisodeCard item={item()} />
+                </RailItem>
+              )}
+            </For>
+          </Rail>
+        </Show>
+        <Show when={props.favorites.movies.length > 0}>
+          <Rail title={tr("profile.favorites.movies")}>
+            <For each={props.favorites.movies} keyed={(title) => title.id}>
+              {(title) => (
+                <RailItem artwork="poster">
+                  <PosterCard title={title()} />
+                </RailItem>
+              )}
+            </For>
+          </Rail>
+        </Show>
+      </div>
+    </Show>
   )
 }
 
 /** Two rows of posters on their way. */
 function FavoritesSkeleton() {
   return (
-    <div className="flex flex-col gap-10">
-      {Array.from({ length: 2 }, (_, row) => (
-        <section key={row}>
-          <Skeleton className="mb-3 h-7 w-32" />
-          <ul className="flex gap-3 overflow-hidden sm:gap-4">
-            {Array.from({ length: 8 }, (_, i) => (
-              <RailItem key={i} artwork="poster">
-                <Skeleton className="aspect-[2/3] rounded-md" />
-                <Skeleton className="mt-2.5 h-3.5 w-3/4" />
-                <Skeleton className="mt-2 h-3 w-1/3" />
-              </RailItem>
-            ))}
-          </ul>
-        </section>
-      ))}
+    <div class="flex flex-col gap-10">
+      <Repeat count={2}>
+        {() => (
+          <section>
+            <Skeleton class="mb-3 h-7 w-32" />
+            <ul class="flex gap-3 overflow-hidden sm:gap-4">
+              <Repeat count={8}>
+                {() => (
+                  <RailItem artwork="poster">
+                    <Skeleton class="aspect-[2/3] rounded-md" />
+                    <Skeleton class="mt-2.5 h-3.5 w-3/4" />
+                    <Skeleton class="mt-2 h-3 w-1/3" />
+                  </RailItem>
+                )}
+              </Repeat>
+            </ul>
+          </section>
+        )}
+      </Repeat>
     </div>
   )
 }

@@ -1,4 +1,8 @@
 import type { AdminUser } from "@matinee/contracts"
+import type { JSX } from "@solidjs/web"
+import { Show } from "solid-js"
+
+import { tr } from "@/i18n"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -7,28 +11,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@matinee/ui/components/alert-dialog"
-import { Button } from "@matinee/ui/components/button"
-import { Spinner } from "@matinee/ui/components/spinner"
-import type { ReactNode } from "react"
-
-import { tr } from "@/i18n"
+} from "@/kit/alert-dialog"
+import { Button } from "@/kit/button"
+import { Spinner } from "@/kit/spinner"
 import type { UserAction } from "@/stores/users-panel"
 
 /** Asks before an action on an account. A failure gets a toast. */
-export function ConfirmDialog({
-  open,
-  title,
-  description,
-  confirmLabel,
-  destructive = false,
-  pending,
-  onConfirm,
-  onClose,
-}: {
+export function ConfirmDialog(props: {
   open: boolean
   title: string
-  description: ReactNode
+  description: JSX.Element
   confirmLabel: string
   destructive?: boolean
   pending: boolean
@@ -37,25 +29,29 @@ export function ConfirmDialog({
 }) {
   return (
     <AlertDialog
-      open={open}
-      onOpenChange={(next) => !next && !pending && onClose()}
+      open={props.open}
+      onOpenChange={(next) => {
+        if (!next && !props.pending) props.onClose()
+      }}
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle>{props.title}</AlertDialogTitle>
+          <AlertDialogDescription>{props.description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>
+          <AlertDialogCancel disabled={props.pending}>
             {tr("users.dialog.cancel")}
           </AlertDialogCancel>
           <Button
-            variant={destructive ? "destructive" : "default"}
-            disabled={pending}
-            onClick={onConfirm}
+            variant={props.destructive ? "destructive" : "default"}
+            disabled={props.pending}
+            onClick={() => props.onConfirm()}
           >
-            {pending && <Spinner />}
-            {confirmLabel}
+            <Show when={props.pending}>
+              <Spinner />
+            </Show>
+            {props.confirmLabel}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,10 +1,11 @@
 import type { ServerStats, StatsRange } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { CalendarDaysIcon, SparklesIcon, UsersIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import type { JSX } from "@solidjs/web"
+import { keepPreviousData, useQuery } from "@tanstack/solid-query"
+import { CalendarDays, Sparkles, Users } from "lucide"
+import { Match, Show, Switch } from "solid-js"
 
 import { tr } from "@/i18n"
+import { Button } from "@/kit/button"
 import { formatCount } from "@/lib/format"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { browserTimeZone, rangePhrase } from "@/lib/stats"
@@ -32,75 +33,87 @@ type RangeProps = {
 /**
  * Everyone's statistics for the range, once they load and have plays.
  * Activity and Playback share the query, so switching between them is
- * instant.
+ * instant. The children get the statistics as an accessor, so a new range
+ * updates what they drew rather than drawing it again.
  */
-function WithServerStats({
-  range,
-  onRange,
-  children,
-}: RangeProps & { children: (stats: ServerStats) => ReactNode }) {
-  const stats = useQuery({
+function WithServerStats(
+  props: RangeProps & { children: (stats: () => ServerStats) => JSX.Element },
+) {
+  const stats = useQuery(() => ({
     ...orpc.stats.server.queryOptions({
-      input: { range, timeZone: TIME_ZONE },
+      input: { range: props.range, timeZone: TIME_ZONE },
     }),
     placeholderData: keepPreviousData,
-  })
-  if (stats.isPending) return <WatchStatsSkeleton />
-  if (!stats.data) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        {errorMessage(stats.error)}
-      </p>
-    )
-  }
-  if (hasPlays(stats.data)) return children(stats.data)
-  return <NoPlays range={range} onRange={onRange} />
+  }))
+  return (
+    <Switch
+      fallback={
+        <p class="text-muted-foreground text-sm">{errorMessage(stats.error)}</p>
+      }
+    >
+      <Match when={stats.isPending}>
+        <WatchStatsSkeleton />
+      </Match>
+      <Match when={stats.isSuccess && stats.data}>
+        {(data) => (
+          <Show
+            when={hasPlays(data())}
+            fallback={<NoPlays range={props.range} onRange={props.onRange} />}
+          >
+            {props.children(data)}
+          </Show>
+        )}
+      </Match>
+    </Switch>
+  )
 }
 
 /** No plays in the range: the first-run state for all time, else a nudge. */
-function NoPlays({ range, onRange }: RangeProps) {
-  if (range === "all") {
-    return <StatsEmpty icon={SparklesIcon} title={tr("stats.server.empty")} />
-  }
+function NoPlays(props: RangeProps) {
   return (
-    <StatsEmpty
-      compact
-      icon={CalendarDaysIcon}
-      title={tr("stats.server.noPlays", { period: rangePhrase(range) })}
-      action={
-        <Button variant="outline" onClick={() => onRange("all")}>
-          {tr("stats.showAllTime")}
-        </Button>
-      }
-    />
+    <Show
+      when={props.range !== "all"}
+      fallback={<StatsEmpty icon={Sparkles} title={tr("stats.server.empty")} />}
+    >
+      <StatsEmpty
+        compact
+        icon={CalendarDays}
+        title={tr("stats.server.noPlays", { period: rangePhrase(props.range) })}
+        action={
+          <Button variant="outline" onClick={() => props.onRange("all")}>
+            {tr("stats.showAllTime")}
+          </Button>
+        }
+      />
+    </Show>
   )
 }
 
 /** Who is watching now, how much everyone watched, and what. */
 export function ActivityView(props: RangeProps) {
   return (
-    <div className="flex flex-col gap-10">
+    <div class="flex flex-col gap-10">
       <WatchingNow />
-      <WithServerStats {...props}>
+      <WithServerStats range={props.range} onRange={props.onRange}>
         {(stats) => (
-          <div className="flex flex-col gap-4">
+          <div class="flex flex-col gap-4">
             <WatchOverview
-              stats={stats}
+              stats={stats()}
               figures={[
                 {
-                  label: tr("stats.figure.people", { count: stats.viewers }),
-                  value: formatCount(stats.viewers),
-                  icon: UsersIcon,
+                  label: tr("stats.figure.people", { count: stats().viewers }),
+                  value: formatCount(stats().viewers),
+                  icon: Users,
                 },
-                ...watchFigures(stats),
+                ...watchFigures(stats()),
               ]}
             />
-            <div className={statsGrid}>
-              <TopTitlesSection stats={stats} />
-              <GenresSection stats={stats} />
-              <div className="flex flex-col gap-4">
-                <Viewers stats={stats} />
-                <ActivitySection stats={stats} />
+            <div class={statsGrid}>
+              <TopTitlesSection stats={stats()} />
+              <GenresSection stats={stats()} />
+              <div class="flex flex-col gap-4">
+                <Viewers stats={stats()} />
+                <ActivitySection stats={stats()} />
               </div>
             </div>
           </div>
@@ -113,25 +126,26 @@ export function ActivityView(props: RangeProps) {
 /** How the server played what people watched, and what it converted. */
 export function PlaybackView(props: RangeProps) {
   return (
-    <WithServerStats {...props}>
-      {(stats) => {
-        const { transcoding } = stats
-        const converted =
-          transcoding.videoTranscodes > 0 || transcoding.audioConversions > 0
-        return (
-          <div className={statsGrid}>
-            <Methods methods={stats.methods} />
-            <Clients stats={stats} />
-            {converted ? (
-              <TranscodingSections stats={stats} />
-            ) : (
-              <p className="text-muted-foreground text-13px">
+    <WithServerStats range={props.range} onRange={props.onRange}>
+      {(stats) => (
+        <div class={statsGrid}>
+          <Methods methods={stats().methods} />
+          <Clients stats={stats()} />
+          <Show
+            when={
+              stats().transcoding.videoTranscodes > 0 ||
+              stats().transcoding.audioConversions > 0
+            }
+            fallback={
+              <p class="text-muted-foreground text-13px">
                 {tr("stats.server.nothingTranscoded")}
               </p>
-            )}
-          </div>
-        )
-      }}
+            }
+          >
+            <TranscodingSections stats={stats()} />
+          </Show>
+        </div>
+      )}
     </WithServerStats>
   )
 }

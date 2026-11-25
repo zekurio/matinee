@@ -1,34 +1,28 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@matinee/ui/components/tooltip"
-import type { ComponentProps, ReactElement } from "react"
+import { type ComponentProps, omit } from "solid-js"
+
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/kit/tooltip"
 
 /**
  * A button's tooltip with its key in it, as the search button has. Props
- * a trigger passes, as a popover's does, go through to the button.
+ * a trigger passes, as a popover's does, go through to the button, which
+ * `render` draws with the props it's handed.
  */
-export function KeyTip({
-  label,
-  keys,
-  children,
-  ...props
-}: Omit<ComponentProps<typeof TooltipTrigger>, "render" | "children"> & {
-  label: string
-  keys: string
-  children: ReactElement
-}) {
+export function KeyTip(
+  props: ComponentProps<typeof TooltipTrigger> & {
+    label: string
+    keys: string
+  },
+) {
   return (
     <Tooltip>
-      <TooltipTrigger {...props} render={children} />
+      <TooltipTrigger {...omit(props, "label", "keys")} />
       <TooltipContent side="bottom" sideOffset={6}>
-        {label}
+        {props.label}
         <kbd
           data-slot="kbd"
-          className="bg-background/15 text-11px px-1 font-sans leading-4"
+          class="bg-background/15 text-11px px-1 font-sans leading-4"
         >
-          {keys}
+          {props.keys}
         </kbd>
       </TooltipContent>
     </Tooltip>

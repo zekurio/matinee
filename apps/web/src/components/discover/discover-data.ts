@@ -1,12 +1,14 @@
 import type { DiscoverRail } from "@matinee/contracts"
 import type { t } from "@matinee/contracts/schema"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/solid-query"
 
 import { refKey } from "@/components/catalog/catalog-data"
+import {
+  type BrowseSearch,
+  searchFor,
+} from "@/components/discover/browse-params"
 import { tr } from "@/i18n"
 import { orpc } from "@/lib/rpc"
-
-import { type BrowseSearch, searchFor } from "./browse-params"
 
 /*
  * Discover's rows: which ones this viewer gets, as the server lists them,
@@ -26,11 +28,13 @@ export function railsOptions() {
 }
 
 /**
- * Whether this viewer gets Discover. False while it's still unknown, so
- * a way in never shows and then vanishes.
+ * Whether this viewer gets Discover. False while it's still unknown, so a
+ * way in never shows and then vanishes. Reads `isSuccess` first, so it
+ * never waits on the query and never holds a boundary.
  */
-export function useDiscoverEnabled(): boolean {
-  return useQuery(railsOptions()).data?.enabled ?? false
+export function useDiscoverEnabled(): () => boolean {
+  const rails = useQuery(() => railsOptions())
+  return () => rails.isSuccess && rails.data.enabled
 }
 
 /** A row's cards, which the row on Discover shows. */
@@ -48,13 +52,14 @@ export function railName(rail: Pick<Rail, "id" | "seed">): string {
   return tr(`discover.rail.${rail.id}`)
 }
 
-/** Tells rows apart, as a React key: there can be several "Because you watched". */
-export function railKey(rail: Rail): string {
+/** Tells rows apart: there can be several "Because you watched". */
+export function railKey(rail: Pick<Rail, "id" | "seed">): string {
   return rail.seed ? `${rail.id}:${refKey(rail.seed.ref)}` : rail.id
 }
 
 /** Where a row's heading leads: its browse, of the first kind it holds. Nowhere without one. */
-export function railLink({ browse }: Rail) {
+export function railLink(rail: Pick<Rail, "browse">) {
+  const browse = rail.browse
   if (!browse) return null
   return {
     to: browse.kinds[0] === "show" ? "/discover/shows" : "/discover/movies",

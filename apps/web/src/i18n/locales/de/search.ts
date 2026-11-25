@@ -25,6 +25,8 @@ export default {
   "search.page.documentTitle": "„{query}“",
   "search.page.intro":
     "Finde Filme, Serien, Besetzung und Crew, Genres, Studios und Profile.",
+  "search.page.emptyHint":
+    "Gib oben etwas ein, um deine Mediathek, Personen, Genres und Studios zu durchsuchen.",
   "search.page.heading": "Ergebnisse für „{query}“",
   "search.page.noMatch": "Nichts passt zu „{query}“",
   "search.page.noMatchHint":

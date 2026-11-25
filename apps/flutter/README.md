@@ -190,14 +190,14 @@ it to the kit.
 Never edit or format these by hand. `pnpm verify` fails while any is out
 of date.
 
-| Command               | Writes                                                | From                                         |
-| --------------------- | ----------------------------------------------------- | -------------------------------------------- |
-| `pnpm api:dart`       | `lib/api/contract_*.dart`                             | the OpenAPI document                         |
-| `pnpm themes:dart`    | `lib/kit/theme_presets.g.dart`                        | `packages/ui`                                |
-| `pnpm icons:dart`     | `lib/kit/lucide.g.dart`                               | lucide-react, listed in `scripts/lucide.mjs` |
-| `pnpm logo:dart`      | `lib/kit/logo.g.dart`                                 | `brand/logo-*.svg`                           |
-| `pnpm strings:dart`   | shared ARB entries, `lib/l10n/server_messages.g.dart` | the web's catalogs                           |
-| `just flutter pigeon` | `lib/platform/*.g.dart`, the Kotlin and Swift sides   | `pigeons/*.dart`                             |
+| Command               | Writes                                                | From                                   |
+| --------------------- | ----------------------------------------------------- | -------------------------------------- |
+| `pnpm api:dart`       | `lib/api/contract_*.dart`                             | the OpenAPI document                   |
+| `pnpm themes:dart`    | `lib/kit/theme_presets.g.dart`                        | `packages/ui`                          |
+| `pnpm icons:dart`     | `lib/kit/lucide.g.dart`                               | lucide, listed in `scripts/lucide.mjs` |
+| `pnpm logo:dart`      | `lib/kit/logo.g.dart`                                 | `brand/logo-*.svg`                     |
+| `pnpm strings:dart`   | shared ARB entries, `lib/l10n/server_messages.g.dart` | the web's catalogs                     |
+| `just flutter pigeon` | `lib/platform/*.g.dart`, the Kotlin and Swift sides   | `pigeons/*.dart`                       |
 
 ### Strings
 

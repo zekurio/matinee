@@ -4,15 +4,15 @@ import type {
   HardwareCapability,
   TranscodingCapabilities,
 } from "@matinee/contracts"
-import { useSelector } from "@tanstack/react-form"
-import type { ReactNode } from "react"
+import type { JSX } from "@solidjs/web"
+import { For, Show } from "solid-js"
 
 import { tr, translateKnown } from "@/i18n"
-import { useFieldContext, withForm } from "@/lib/form"
+import type { Form } from "@/lib/form"
 
-import { InputField, SwitchField, typeOnly } from "./setting-controls"
+import { type FieldName, InputField, SwitchField } from "./setting-controls"
 import { SettingNote } from "./settings-panel"
-import { draftForm, type NumberField, numberRow } from "./transcoding-draft"
+import { type Draft, type NumberField, numberRow } from "./transcoding-draft"
 
 /** "Intel Quick Sync", "None (software)". */
 export function accelerationLabel(acceleration: HardwareAcceleration): string {
@@ -49,11 +49,13 @@ export function hardwareOf(
 }
 
 /** Why a check didn't run here, for under its switch; nothing when it did. */
-export function checkNote(check: CapabilityCheck | undefined): ReactNode {
+export function checkNote(
+  check: CapabilityCheck | undefined,
+): JSX.Element | undefined {
   if (!check || check.status === "ok") return undefined
   const detail = firstLine(check)
   return (
-    <span className="text-destructive">
+    <span class="text-destructive">
       {check.status === "missing"
         ? tr("transcoding.check.missing")
         : detail
@@ -68,39 +70,44 @@ export function checkNote(check: CapabilityCheck | undefined): ReactNode {
  * Without it the switch can only be turned off, and `unavailable` says why
  * under it.
  */
-export function CapabilitySwitchField({
-  unavailable,
-  available,
-  ...row
-}: {
+export function CapabilitySwitchField<Values extends object>(props: {
+  form: Form<Values>
+  name: FieldName<Values, boolean>
   title: string
-  unavailable?: ReactNode
+  unavailable?: JSX.Element
   available: boolean
 }) {
-  const field = useFieldContext<boolean>()
-  const checked = useSelector(field.store, (state) => state.value)
+  const checked = () => props.form.values()[props.name] === true
   return (
     <SwitchField
-      {...row}
-      disabled={!available && !checked}
+      form={props.form}
+      name={props.name}
+      title={props.title}
+      disabled={!props.available && !checked()}
       footer={
-        !available && unavailable ? (
-          <SettingNote>{unavailable}</SettingNote>
-        ) : undefined
+        <Show when={!props.available && props.unavailable}>
+          <SettingNote>{props.unavailable}</SettingNote>
+        </Show>
       }
     />
   )
 }
 
-/** The number fields' rows in order, each named and described by its field. */
-export const NumberRows = withForm({
-  ...draftForm,
-  props: typeOnly<{ fields: readonly NumberField[] }>(),
-  render: function Render({ form, fields }) {
-    return fields.map((key) => (
-      <form.AppField key={key} name={key}>
-        {() => <InputField inputMode="decimal" {...numberRow(key)} />}
-      </form.AppField>
-    ))
-  },
-})
+/** The number fields' rows in order, each named by its field. */
+export function NumberRows(props: {
+  form: Form<Draft>
+  fields: readonly NumberField[]
+}) {
+  return (
+    <For each={props.fields}>
+      {(key) => (
+        <InputField
+          form={props.form}
+          name={key}
+          inputmode="decimal"
+          title={numberRow(key).title}
+        />
+      )}
+    </For>
+  )
+}

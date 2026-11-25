@@ -1,5 +1,5 @@
 import { ARTWORK_WIDTHS, artworkPath } from "@matinee/contracts/paths"
-import { type RefObject, useEffect, useEffectEvent } from "react"
+import { createEffect, createMemo, onSettled } from "solid-js"
 
 /** What the system's media controls say is playing. */
 export type NowPlaying = {
@@ -15,20 +15,20 @@ export type NowPlaying = {
 const ART_SIZES = ["thumb", "small", "medium"] as const
 
 export type MediaSessionActions = {
-  nowPlaying: NowPlaying
+  nowPlaying: () => NowPlaying
   /** Plays or pauses, whichever `paused` asks for. */
   setPaused: (paused: boolean) => void
   skip: (by: number) => void
-  skipBackSeconds: number
-  skipForwardSeconds: number
+  skipBackSeconds: () => number
+  skipForwardSeconds: () => number
   seek: (to: number) => void
   /** Where the file is, which a stream's own clock doesn't say. */
   position: () => number
   duration: () => number
   /** Starts the episode before this one, when there is one. */
-  previous: (() => void) | null
+  previous: () => (() => void) | null
   /** Starts the next episode, when there is one. */
-  next: (() => void) | null
+  next: () => (() => void) | null
 }
 
 const VIDEO_EVENTS = [
@@ -40,6 +40,14 @@ const VIDEO_EVENTS = [
   "loadedmetadata",
 ] as const
 
+const HANDLED = [
+  "play",
+  "pause",
+  "seekbackward",
+  "seekforward",
+  "seekto",
+] as const
+
 /**
  * Tells the browser what plays, so the system's media controls, the lock
  * screen, and media keys show the title and its art in place of the tab's
@@ -47,27 +55,35 @@ const VIDEO_EVENTS = [
  * starts its clock where it was cut, so the position is said outright.
  */
 export function useMediaSession(
-  video: RefObject<HTMLVideoElement | null>,
-  {
-    nowPlaying,
-    setPaused,
-    skip,
-    skipBackSeconds,
-    skipForwardSeconds,
-    seek,
-    position,
-    duration,
-    previous,
-    next,
-  }: MediaSessionActions,
+  video: () => HTMLVideoElement | undefined,
+  actions: MediaSessionActions,
 ) {
-  const { title, artist, album } = nowPlaying
-  const artId = nowPlaying.art?.id ?? null
-  // Posters are two wide to three high when the server hasn't measured.
-  const aspectRatio = nowPlaying.art?.aspectRatio ?? 2 / 3
-  useEffect(() => {
-    if (!("mediaSession" in navigator)) return
-    navigator.mediaSession.metadata = new MediaMetadata({
+  if (!("mediaSession" in navigator)) return
+  const session = navigator.mediaSession
+
+  const metadata = createMemo(
+    () => {
+      const { title, artist, album, art } = actions.nowPlaying()
+      return {
+        title,
+        artist,
+        album,
+        artId: art?.id ?? null,
+        // Posters are two wide to three high when the server hasn't measured.
+        aspectRatio: art?.aspectRatio ?? 2 / 3,
+      }
+    },
+    {
+      equals: (a, b) =>
+        a.title === b.title &&
+        a.artist === b.artist &&
+        a.album === b.album &&
+        a.artId === b.artId &&
+        a.aspectRatio === b.aspectRatio,
+    },
+  )
+  createEffect(metadata, ({ title, artist, album, artId, aspectRatio }) => {
+    session.metadata = new MediaMetadata({
       title,
       artist,
       album,
@@ -81,102 +97,88 @@ export function useMediaSession(
             })),
     })
     return () => {
-      navigator.mediaSession.metadata = null
+      session.metadata = null
     }
-  }, [title, artist, album, artId, aspectRatio])
+  })
 
-  // Each button runs the actions from the latest render.
-  const act = useEffectEvent((details: MediaSessionActionDetails) => {
-    const actions = new Map<MediaSessionAction, () => void>([
-      ["play", () => setPaused(false)],
-      ["pause", () => setPaused(true)],
-      ["seekbackward", () => skip(-skipBackSeconds)],
-      ["seekforward", () => skip(skipForwardSeconds)],
+  // Each button runs the actions as they are when it's pressed.
+  const act = (details: MediaSessionActionDetails) => {
+    const handlers = new Map<MediaSessionAction, () => void>([
+      ["play", () => actions.setPaused(false)],
+      ["pause", () => actions.setPaused(true)],
+      ["seekbackward", () => actions.skip(-actions.skipBackSeconds())],
+      ["seekforward", () => actions.skip(actions.skipForwardSeconds())],
       [
         "seekto",
         () => {
-          if (details.seekTime != null) seek(details.seekTime)
+          if (details.seekTime != null) actions.seek(details.seekTime)
         },
       ],
     ])
-    actions.get(details.action)?.()
-  })
-  useEffect(() => {
-    if (!("mediaSession" in navigator)) return
-    const session = navigator.mediaSession
-    const handled = [
-      "play",
-      "pause",
-      "seekbackward",
-      "seekforward",
-      "seekto",
-    ] as const
-    for (const action of handled) {
+    handlers.get(details.action)?.()
+  }
+
+  const sync = () => {
+    const el = video()
+    if (!el) return
+    session.playbackState = el.paused ? "paused" : "playing"
+    const length = actions.duration()
+    if (!Number.isFinite(length) || length <= 0) return
+    try {
+      session.setPositionState({
+        duration: length,
+        position: Math.min(Math.max(0, actions.position()), length),
+        playbackRate: el.playbackRate || 1,
+      })
+    } catch {}
+  }
+
+  onSettled(() => {
+    for (const action of HANDLED) {
       // A browser that doesn't know an action throws when it's set.
       try {
         session.setActionHandler(action, act)
       } catch {}
     }
+    const el = video()
+    if (el) for (const event of VIDEO_EVENTS) el.addEventListener(event, sync)
+    sync()
     return () => {
-      for (const action of handled) {
+      for (const action of HANDLED) {
         try {
           session.setActionHandler(action, null)
         } catch {}
       }
-    }
-  }, [])
-
-  useTrackAction("previoustrack", previous)
-  useTrackAction("nexttrack", next)
-
-  const sync = useEffectEvent(() => {
-    const el = video.current
-    if (!el) return
-    const session = navigator.mediaSession
-    session.playbackState = el.paused ? "paused" : "playing"
-    const length = duration()
-    if (!Number.isFinite(length) || length <= 0) return
-    try {
-      session.setPositionState({
-        duration: length,
-        position: Math.min(Math.max(0, position()), length),
-        playbackRate: el.playbackRate || 1,
-      })
-    } catch {}
-  })
-  useEffect(() => {
-    const el = video.current
-    if (!el || !("mediaSession" in navigator)) return
-    const listener = () => sync()
-    for (const event of VIDEO_EVENTS) el.addEventListener(event, listener)
-    listener()
-    return () => {
-      for (const event of VIDEO_EVENTS) el.removeEventListener(event, listener)
-      navigator.mediaSession.playbackState = "none"
+      if (el) {
+        for (const event of VIDEO_EVENTS) el.removeEventListener(event, sync)
+      }
+      session.playbackState = "none"
       try {
-        navigator.mediaSession.setPositionState()
+        session.setPositionState()
       } catch {}
     }
-  }, [video])
+  })
+
+  trackAction("previoustrack", actions.previous)
+  trackAction("nexttrack", actions.next)
 }
 
 /** Sets a handler for `action` while `run` is there, so the button shows only then. */
-function useTrackAction(
+function trackAction(
   action: "previoustrack" | "nexttrack",
-  run: (() => void) | null,
+  run: () => (() => void) | null,
 ) {
-  const has = run !== null
-  const handler = useEffectEvent(() => run?.())
-  useEffect(() => {
-    if (!("mediaSession" in navigator) || !has) return
+  const has = createMemo(() => run() !== null)
+  createEffect(has, (present) => {
+    if (!present) return
     const session = navigator.mediaSession
     try {
-      session.setActionHandler(action, handler)
+      session.setActionHandler(action, () => run()?.())
     } catch {}
     return () => {
       try {
         session.setActionHandler(action, null)
       } catch {}
     }
-  }, [action, has])
+  })
 }

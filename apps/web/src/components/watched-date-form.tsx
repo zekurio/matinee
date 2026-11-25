@@ -1,146 +1,132 @@
-import { Button } from "@matinee/ui/components/button"
-import { Calendar } from "@matinee/ui/components/calendar"
-import {
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@matinee/ui/components/dialog"
-import { Field, FieldLabel } from "@matinee/ui/components/field"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@matinee/ui/components/popover"
-import { CalendarIcon, CheckIcon, ChevronDownIcon } from "lucide-react"
-import { type RefObject, useId, useRef, useState } from "react"
+import { CalendarDays, Check, ChevronDown } from "lucide"
+import { createSignal, createUniqueId } from "solid-js"
 
 import { tr } from "@/i18n"
-import { useAppForm } from "@/lib/form"
+import { buttonVariants } from "@/kit/button"
+import { Calendar } from "@/kit/calendar"
+import { DialogFooter, DialogHeader, DialogTitle } from "@/kit/dialog"
+import { Field, FieldLabel } from "@/kit/field"
+import { Icon } from "@/kit/icon"
+import { Popover, PopoverContent, PopoverTrigger } from "@/kit/popover"
+import { createForm } from "@/lib/form"
+import { SubmitButton } from "@/lib/form-fields"
 import { formatDate } from "@/lib/format"
 
-/*
- * The form of `WatchedDateDialog`, apart so its calendar and form code
- * load when the dialog first opens, not with every card.
- */
+/** A local day as the calendar writes it, like `"2026-10-16"`. */
+function isoDay(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+/** The local midnight of a calendar day. */
+function dayDate(day: string): Date {
+  const [year = 0, month = 1, date = 1] = day.split("-").map(Number)
+  return new Date(year, month - 1, date)
+}
 
 /**
  * When on `day` to say the user watched: noon, as the server does for a
  * release date, so the play lands on that day in nearly every zone. Today
  * is now, since noon may not have come yet.
  */
-function watchedAtOn(day: Date): Date {
+function watchedAtOn(day: string): Date {
   const now = new Date()
-  const noon = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12)
+  const noon = dayDate(day)
+  noon.setHours(12)
   return noon > now ? now : noon
 }
 
-export function WatchedDateForm({
-  triggerRef,
-  onPick,
-}: {
-  triggerRef: RefObject<HTMLButtonElement | null>
+/** The form of `WatchedDateDialog`: a day, then Mark watched. */
+export function WatchedDateForm(props: {
+  /** The day button, which the dialog focuses when it opens. */
+  triggerRef?: (element: HTMLButtonElement) => void
   onPick: (watchedAt: Date) => void
 }) {
-  const [today] = useState(() => new Date())
-  const form = useAppForm({
+  const today = isoDay(new Date())
+  const form = createForm({
     defaultValues: { day: today },
-    onSubmit: ({ value }) => onPick(watchedAtOn(value.day)),
+    onSubmit: (values) => props.onPick(watchedAtOn(values.day)),
   })
   return (
     <form
-      className="flex flex-col gap-5"
+      class="flex flex-col gap-5"
       onSubmit={(event) => {
         event.preventDefault()
-        void form.handleSubmit()
+        void form.submit()
       }}
     >
       <DialogHeader>
-        <DialogTitle className="text-lg leading-7 font-semibold">
+        <DialogTitle class="text-lg leading-7 font-semibold">
           {tr("media.watchedDate.title")}
         </DialogTitle>
       </DialogHeader>
-      <form.Field name="day">
-        {(field) => (
-          <DayField
-            triggerRef={triggerRef}
-            today={today}
-            value={field.state.value}
-            onChange={field.handleChange}
-          />
-        )}
-      </form.Field>
-      <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
-        <form.AppForm>
-          <form.SubmitButton icon={<CheckIcon />}>
-            {tr("media.markWatched")}
-          </form.SubmitButton>
-        </form.AppForm>
+      <DayField
+        triggerRef={props.triggerRef}
+        today={today}
+        value={form.values().day}
+        onChange={(day) => form.set("day", day)}
+      />
+      <DialogFooter showCancelButton class="-mx-6 -mb-6 px-6 py-4">
+        <SubmitButton form={form} icon={<Icon icon={Check} />}>
+          {tr("media.markWatched")}
+        </SubmitButton>
       </DialogFooter>
     </form>
   )
 }
 
 /** A button showing the day, which opens a calendar up to `today`. */
-function DayField({
-  triggerRef,
-  today,
-  value,
-  onChange,
-}: {
-  triggerRef: RefObject<HTMLButtonElement | null>
-  today: Date
-  value: Date
-  onChange: (day: Date) => void
+function DayField(props: {
+  triggerRef?: (element: HTMLButtonElement) => void
+  today: string
+  value: string
+  onChange: (day: string) => void
 }) {
-  const [open, setOpen] = useState(false)
-  const popupRef = useRef<HTMLDivElement>(null)
-  const labelId = useId()
-  const valueId = useId()
+  const [open, setOpen] = createSignal(false)
+  const labelId = createUniqueId()
+  const valueId = createUniqueId()
+  // As far back as the dropdown calendar goes: a century.
+  const earliest = () => {
+    const date = dayDate(props.today)
+    date.setFullYear(date.getFullYear() - 100)
+    return isoDay(date)
+  }
   return (
     <Field>
       <FieldLabel id={labelId}>{tr("media.watchedDate.date")}</FieldLabel>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open()} onOpenChange={setOpen}>
         <PopoverTrigger
-          ref={triggerRef}
+          ref={(element) => props.triggerRef?.(element)}
           aria-labelledby={`${labelId} ${valueId}`}
-          render={
-            <Button
-              type="button"
-              variant="outline"
-              className="justify-start font-normal"
-            />
-          }
+          class={buttonVariants({
+            variant: "outline",
+            className: "justify-start font-normal",
+          })}
         >
-          <CalendarIcon className="text-muted-foreground" />
-          <span id={valueId}>{formatDate(value)}</span>
-          <ChevronDownIcon className="text-muted-foreground ml-auto" />
+          <Icon icon={CalendarDays} class="text-muted-foreground" />
+          <span id={valueId}>{formatDate(dayDate(props.value))}</span>
+          <Icon icon={ChevronDown} class="text-muted-foreground ml-auto" />
         </PopoverTrigger>
         <PopoverContent
-          ref={popupRef}
           align="start"
-          className="w-(--anchor-width) p-0"
+          class="w-(--anchor-width) p-0"
           // Keyboard users start on the picked day, to move with the arrows.
-          initialFocus={(type) =>
-            type !== "keyboard" ||
-            (popupRef.current?.querySelector<HTMLElement>(
-              "[data-selected-single=true]",
-            ) ??
-              true)
-          }
+          initialFocus='[data-slot="calendar-day"][tabindex="0"]'
         >
           <Calendar
-            className="w-full"
-            mode="single"
-            required
-            selected={value}
-            defaultMonth={value}
-            onSelect={(day) => {
-              onChange(day)
+            class="w-full"
+            value={props.value}
+            defaultMonth={props.value.slice(0, 7)}
+            onValueChange={(day) => {
+              // A single-date calendar gives one day, or null once cleared.
+              if (day === null || Array.isArray(day)) return
+              props.onChange(day)
               setOpen(false)
             }}
             captionLayout="dropdown"
-            endMonth={today}
-            disabled={{ after: today }}
+            min={earliest()}
+            max={props.today}
           />
         </PopoverContent>
       </Popover>

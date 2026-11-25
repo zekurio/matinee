@@ -1,12 +1,11 @@
 import {
   NO_TITLE_FILTERS,
   type TitleFilters,
+  type TitleList,
   type TitleScope,
 } from "@matinee/contracts"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
-
-import { tr } from "@/i18n"
-import { orpc } from "@/lib/rpc"
+import { useQuery } from "@tanstack/solid-query"
+import { createMemo } from "solid-js"
 
 import {
   asksFilters,
@@ -18,7 +17,9 @@ import {
   TITLE_ORDERS,
   type TitleListSearch,
   type TitleOrder,
-} from "./title-filter-params"
+} from "@/components/library/title-filter-params"
+import { tr } from "@/i18n"
+import { orpc } from "@/lib/rpc"
 
 const PAGE_SIZE = 60
 
@@ -33,15 +34,12 @@ export type TitleListInput = {
   order: TitleOrder
 }
 
-function pages<T extends { items: unknown[]; total: number }>() {
-  return {
-    initialPageParam: 0,
-    getNextPageParam: (last: T, all: T[]) => {
-      const loaded = all.reduce((n, page) => n + page.items.length, 0)
-      return loaded < last.total ? loaded : undefined
-    },
-    placeholderData: keepPreviousData,
-  }
+const pages = {
+  initialPageParam: 0,
+  getNextPageParam: (last: TitleList, all: TitleList[]) => {
+    const loaded = all.reduce((n, page) => n + page.items.length, 0)
+    return last.items.length > 0 && loaded < last.total ? loaded : undefined
+  },
 }
 
 /** A library's titles; shared by the route's preload and the grid. */
@@ -55,7 +53,7 @@ export function libraryTitlesOptions(libraryId: string, list: TitleListInput) {
       limit: PAGE_SIZE,
       offset,
     }),
-    ...pages(),
+    ...pages,
   })
 }
 
@@ -76,7 +74,7 @@ export function browsedTitlesOptions(
       limit: PAGE_SIZE,
       offset,
     }),
-    ...pages(),
+    ...pages,
   })
 }
 
@@ -99,40 +97,63 @@ export function preloadInput(search: TitleListSearch): TitleListInput | null {
  * for the choices (`ready`), so the list is asked for once.
  */
 export function useTitleFilters(
-  search: TitleListSearch,
+  search: () => TitleListSearch,
   update: (patch: Partial<TitleListSearch>) => void,
-  scope: TitleScope,
+  scope: () => TitleScope,
 ) {
-  const options = useQuery(titleFilterOptionsQuery(scope))
-  // Without the choices, as when they fail to load, the list goes
-  // unfiltered rather than waiting for good.
-  const ready =
-    options.data !== undefined || options.isError || !asksFilters(search)
-  const filters = filtersFrom(search, options.data)
-  const asked = orderFrom(search)
-  // A sort with nothing to order by, like score where no title has one.
-  const order =
-    options.data && !options.data.sorts.includes(asked.sort)
-      ? orderFrom({})
-      : asked
-  const offered = options.data?.sorts
-  const sorts = TITLE_ORDERS.filter(
-    (choice) => !offered || offered.includes(choice.sort),
-  ).map((choice) => ({
-    value: `${choice.sort}:${choice.order}`,
-    label: tr(choice.label),
-  }))
+  const query = useQuery(() => titleFilterOptionsQuery(scope()))
+  const options = () => (query.isSuccess ? query.data : undefined)
+  // If facets fail to load, the list can still show its unfiltered titles.
+  const ready = () => query.isSuccess || query.isError || !asksFilters(search())
+  // A URL without filters keeps the one shared empty filter, so changing
+  // the sort leaves everything that reads the filters alone.
+  const filters = createMemo(() =>
+    asksFilters(search()) ? filtersFrom(search(), options()) : NO_TITLE_FILTERS,
+  )
+  const offered = () => options()?.sorts
+  const order = createMemo(
+    () => {
+      const asked = orderFrom(search())
+      return offered()?.includes(asked.sort) === false ? orderFrom({}) : asked
+    },
+    {
+      equals: (before, after) =>
+        before.sort === after.sort && before.order === after.order,
+    },
+  )
+  const sorts = createMemo(
+    () =>
+      TITLE_ORDERS.filter(
+        (choice) => offered()?.includes(choice.sort) !== false,
+      ).map((choice) => ({
+        value: `${choice.sort}:${choice.order}`,
+        label: tr(choice.label),
+      })),
+    // When the choices arrive with the same list, the menu keeps its own.
+    {
+      equals: (before, after) =>
+        before.length === after.length &&
+        before.every((choice, at) => {
+          const other = after[at]
+          return (
+            other !== undefined &&
+            choice.value === other.value &&
+            choice.label === other.label
+          )
+        }),
+    },
+  )
   return {
-    options: options.data,
+    options,
+    optionsPending: () => query.isPending,
     ready,
     filters,
     order,
     change: (patch: Partial<TitleFilters>) =>
-      update(filterSearch({ ...filters, ...patch })),
+      update(filterSearch({ ...filters(), ...patch })),
     clear: () => update(NO_LIST_SEARCH),
-    /** The sort select's choices and value, as `sort:order` text. */
     sorts,
-    sort: `${order.sort}:${order.order}`,
+    sort: () => `${order().sort}:${order().order}`,
     setSort: (value: string) => {
       const choice = TITLE_ORDERS.find(
         (each) => `${each.sort}:${each.order}` === value,

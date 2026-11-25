@@ -1,213 +1,133 @@
-import { Button } from "@matinee/ui/components/button"
+import { ArrowUpDown } from "lucide"
+import { createMemo, For, Show } from "solid-js"
+
+import { tr } from "@/i18n"
+import { buttonVariants } from "@/kit/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
+} from "@/kit/dropdown-menu"
+import { Icon } from "@/kit/icon"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@matinee/ui/components/select"
-import { ArrowUpDownIcon, ListFilterIcon } from "lucide-react"
-import type { ComponentProps, ReactNode } from "react"
+} from "@/kit/select"
 
-import { usePhone } from "@/components/sheet-menu"
-import { tr } from "@/i18n"
+// The sort trigger's look doesn't depend on its label, so it is worked out
+// once at module load rather than on each mount.
+const sortTriggerClass = buttonVariants({
+  variant: "ghost",
+  size: "icon",
+  class: "data-popup-open:bg-foreground/10 [@media(pointer:coarse)]:size-12",
+})
 
-/** Sort and filters, given to both layouts. */
-export type ListControlsProps = {
-  sorts: { value: string; label: string }[]
-  sort: string
-  setSort: (value: string) => void
-  /**
-   * The Filter button and its panel; `compact` is the icon phones have
-   * room for. Only the layout that shows renders it, so one panel opens.
-   */
-  filter?: (compact: boolean) => ReactNode
-}
-
-/** Filter and sort beside the title, from `sm` up. */
-export function HeaderControls(props: ListControlsProps) {
-  const phone = usePhone()
-  return (
-    <>
-      {!phone && props.filter?.(false)}
-      <SortSelect
-        options={props.sorts}
-        value={props.sort}
-        onChange={props.setSort}
-      />
-    </>
-  )
-}
-
-/** Phones: filters and the sort at the end of the title's row. */
-export function PhoneControls(props: ListControlsProps) {
-  const phone = usePhone()
-  return (
-    <>
-      {phone && props.filter?.(true)}
-      <SortMenu
-        options={props.sorts}
-        value={props.sort}
-        onChange={props.setSort}
-      />
-    </>
-  )
-}
-
-/**
- * The button that opens a list's filters, with how many are on: "Filter"
- * and a count from `sm` up, and on phones (`compact`) an icon with the
- * count at its corner. Give it as a trigger's `render`, with
- * {@link FilterButtonFace} inside.
- */
-export function FilterButton({
-  compact = false,
-  active,
-  ...props
-}: ComponentProps<typeof Button> & { compact?: boolean; active: number }) {
-  return compact ? (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label={
-        active > 0
-          ? tr("library.filtersOn", { count: active })
-          : tr("library.filters")
-      }
-      className="data-popup-open:bg-foreground/10 relative [@media(pointer:coarse)]:size-11"
-      {...props}
-    />
-  ) : (
-    <Button
-      variant="outline"
-      className="data-popup-open:border-ring h-10 font-normal md:h-9"
-      {...props}
-    />
-  )
-}
-
-/** What {@link FilterButton} shows: the icon, the word, and the count. */
-export function FilterButtonFace({
-  compact = false,
-  active,
-}: {
-  compact?: boolean
-  active: number
+export function SortMenu(props: {
+  options: { value: string; label: string }[]
+  value: string
+  onChange: (value: string) => void
 }) {
-  return (
-    <>
-      <ListFilterIcon className={compact ? "size-5" : undefined} />
-      {!compact && tr("library.filter")}
-      {active > 0 &&
-        (compact ? (
-          <span
-            aria-hidden
-            className="bg-primary text-primary-foreground text-10px absolute top-0.5 right-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 leading-4 font-semibold tabular-nums"
-          >
-            {active}
-          </span>
-        ) : (
-          <span className="bg-foreground text-background rounded-full px-1.5 text-xs leading-5 tabular-nums">
-            {active}
-          </span>
-        ))}
-    </>
+  const label = createMemo(
+    () => props.options.find((option) => option.value === props.value)?.label,
   )
-}
-
-/** The sort as an icon button with a menu, for phones. */
-export function SortMenu<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: T; label: string }[]
-  value: T
-  onChange: (value: T) => void
-}) {
-  const current = options.find((option) => option.value === value)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={
-              current
-                ? tr("library.sortCurrent", { sort: current.label })
-                : tr("library.sort")
-            }
-            className="data-popup-open:bg-foreground/10 [@media(pointer:coarse)]:size-11"
-          />
-        }
+        aria-label={tr("library.sortCurrent", { sort: label() ?? "" })}
+        class={sortTriggerClass}
       >
-        <ArrowUpDownIcon className="size-5" />
+        <Icon
+          icon={ArrowUpDown}
+          class="size-5 [@media(pointer:coarse)]:size-6"
+        />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-48">
+      <DropdownMenuContent align="end" class="w-max min-w-48">
         <DropdownMenuRadioGroup
           aria-label={tr("library.sortBy")}
-          value={value}
-          onValueChange={(next) => {
-            const option = options.find((o) => o.value === next)
-            if (option) onChange(option.value)
-          }}
+          value={props.value}
+          onValueChange={(value) => props.onChange(value)}
         >
-          {options.map((option) => (
-            <DropdownMenuRadioItem
-              key={option.value}
-              value={option.value}
-              closeOnClick
-              className="[@media(pointer:coarse)]:min-h-11"
-            >
-              {option.label}
-            </DropdownMenuRadioItem>
-          ))}
+          <For each={props.options} keyed={(option) => option.value}>
+            {(option) => (
+              <DropdownMenuRadioItem
+                value={option().value}
+                closeOnSelect
+                class="[@media(pointer:coarse)]:min-h-11"
+              >
+                {option().label}
+              </DropdownMenuRadioItem>
+            )}
+          </For>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
 
-/** The sort as a select with "Sort:" before it, from `sm` up. */
-export function SortSelect<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
+/** The sort as a select with its words in place, from `sm` up. */
+export function SortSelect<T extends string>(props: {
   options: { value: T; label: string }[]
   value: T
   onChange: (value: T) => void
 }) {
+  const label = () =>
+    props.options.find((option) => option.value === props.value)?.label
   return (
     <Select
-      items={options}
-      value={value}
-      onValueChange={(next) => next && onChange(next)}
+      value={props.value}
+      onValueChange={(next) => {
+        const choice = props.options.find((option) => option.value === next)
+        if (choice) props.onChange(choice.value)
+      }}
     >
       <SelectTrigger
         aria-label={tr("library.sort")}
-        className="min-w-44 shrink-0 justify-between gap-1"
+        class="min-w-44 shrink-0 justify-between gap-1"
       >
-        <span className="text-muted-foreground">
-          {tr("library.sortPrefix")}
-        </span>
-        <SelectValue />
+        <span class="text-muted-foreground">{tr("library.sortPrefix")}</span>
+        <SelectValue>{label()}</SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
+        <For each={props.options} keyed={(option) => option.value}>
+          {(option) => (
+            <SelectItem value={option().value} label={option().label}>
+              {option().label}
+            </SelectItem>
+          )}
+        </For>
       </SelectContent>
     </Select>
+  )
+}
+
+export function FilterButtonFace(props: {
+  active: number
+  compact?: boolean
+  /** The count as a badge, for a trigger that isn't itself a filled chip. */
+  badge?: boolean
+}) {
+  return (
+    <>
+      <Show when={!props.compact}>{tr("library.filter")}</Show>
+      <Show when={props.active > 0}>
+        <span
+          aria-hidden="true"
+          class={
+            props.compact
+              ? "bg-primary text-primary-foreground text-11px absolute top-1.5 right-1 grid h-4 min-w-4 place-items-center rounded-full px-1 leading-4 font-semibold tabular-nums"
+              : props.badge
+                ? "bg-foreground text-background rounded-full px-1.5 text-xs leading-5 tabular-nums"
+                : "text-background/70 tabular-nums"
+          }
+        >
+          {props.active}
+        </span>
+      </Show>
+    </>
   )
 }

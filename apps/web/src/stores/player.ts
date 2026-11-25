@@ -5,18 +5,18 @@ import type {
   PlaybackQuality,
   PlaybackStart,
 } from "@matinee/contracts"
-import type { LucideIcon } from "lucide-react"
-import { createContext, useContext } from "react"
-import { useStore } from "zustand"
-import { createStore, type StoreApi } from "zustand/vanilla"
+import { type Accessor, createContext, useContext } from "solid-js"
 
 import type {
   PlaybackPicks,
   PlaybackSource,
 } from "@/components/playback-source"
+import type { IconNode } from "@/kit/icon"
+
+import { createPlainStore, type PlainStore } from "./plain-store"
 
 /** A note over the picture, like the volume after a key press. */
-type Flash = { id: number; Icon: LucideIcon | null; text: string }
+type Flash = { id: number; icon: IconNode | null; text: string }
 
 /** What a player starts with: the first answer and the saved preferences. */
 export type PlayerStart = {
@@ -77,8 +77,6 @@ export type PlayerState = PlayerStart & {
   // Subtitles.
   /** The last track picked in this file, which C brings back. */
   pickedSubtitle: string | null
-  /** The shown track's WebVTT as an object URL, once it has arrived. */
-  subtitleUrl: { trackId: string; url: string } | null
   /**
    * Milliseconds the viewer moved the subtitles by in this file, later
    * when positive. Burned-in subtitles can't move.
@@ -107,7 +105,7 @@ export type PlayerState = PlayerStart & {
    * nothing, so a menu opened as another closes stays open.
    */
   setMenuOpen: (menu: string, open: boolean) => void
-  showFlash: (Icon: LucideIcon | null, text: string) => void
+  showFlash: (icon: IconNode | null, text: string) => void
   hideFlash: () => void
   /** Takes an answer, with the source to load when it needs a new one. */
   setPlan: (plan: PlaybackStart, source?: PlaybackSource) => void
@@ -122,20 +120,25 @@ export type PlayerState = PlayerStart & {
   setSkipped: (segment: MediaSegment | null) => void
   /** The last track the viewer turned on, for C. */
   setPickedSubtitle: (trackId: string) => void
-  setSubtitleUrl: (url: { trackId: string; url: string } | null) => void
   setSubtitleDelay: (ms: number) => void
   setStatsOpen: (open: boolean) => void
+  /** What this browser plays, less what failed to draw here. */
+  setDevice: (device: PlaybackDevice) => void
 }
 
-export type PlayerStore = StoreApi<PlayerState>
+export type PlayerStore = PlainStore<PlayerState> & {
+  /** The state the player started with. */
+  initial: PlayerState
+}
 
 /**
  * State for one player, made when it mounts: what the controls, menus, and
- * playback hooks share. The player remounts for another file, which starts
- * a fresh store.
+ * playback code share. The player mounts again for another file, which
+ * starts a fresh store. Its fields are signals, so `timeupdate` only reaches
+ * what reads the time.
  */
 export function createPlayerStore(start: PlayerStart): PlayerStore {
-  return createStore<PlayerState>()((set, get) => ({
+  const store: PlainStore<PlayerState> = createPlainStore<PlayerState>({
     ...start,
     playing: false,
     ended: false,
@@ -153,7 +156,6 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
     pending: null,
     skipped: null,
     pickedSubtitle: null,
-    subtitleUrl: null,
     subtitleDelay: 0,
     statsOpen: false,
 
@@ -168,19 +170,14 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
     setSpeed: (speed) => set({ speed }),
     setScrub: (scrub) => set({ scrub }),
     commitScrub: (time) => set({ time, scrub: null }),
-    // Every pointer move wakes the controls; only a change tells anyone.
-    setIdle: (idle) => {
-      if (get().idle !== idle) set({ idle })
-    },
+    setIdle: (idle) => set({ idle }),
     setFocused: (focused) => set({ focused }),
-    setMenuOpen: (menu, open) =>
-      set((state) => ({
-        openMenu: open ? menu : state.openMenu === menu ? null : state.openMenu,
-      })),
-    showFlash: (Icon, text) =>
-      set((state) => ({
-        flash: { id: (state.flash?.id ?? 0) + 1, Icon, text },
-      })),
+    setMenuOpen: (menu, open) => {
+      const current = store.getState().openMenu
+      set({ openMenu: open ? menu : current === menu ? null : current })
+    },
+    showFlash: (icon, text) =>
+      set({ flash: { id: (store.getState().flash?.id ?? 0) + 1, icon, text } }),
     hideFlash: () => set({ flash: null }),
     setPlan: (plan, source) =>
       set(
@@ -189,23 +186,25 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
           : { plan, quality: plan.quality },
       ),
     setSource: (source) => set({ source }),
-    pick: (change) =>
-      set((state) => ({ picks: { ...state.picks, ...change } })),
+    pick: (change) => set({ picks: { ...store.getState().picks, ...change } }),
     restore: (picks, failed) => set({ picks, failed }),
-    addFailed: (method) =>
-      set((state) =>
-        state.failed.includes(method)
-          ? {}
-          : { failed: [...state.failed, method] },
-      ),
+    addFailed: (method) => {
+      const { failed } = store.getState()
+      if (!failed.includes(method)) set({ failed: [...failed, method] })
+    },
     setQuality: (quality) => set({ quality }),
     setPending: (pending) => set({ pending }),
     setSkipped: (skipped) => set({ skipped }),
     setPickedSubtitle: (pickedSubtitle) => set({ pickedSubtitle }),
-    setSubtitleUrl: (subtitleUrl) => set({ subtitleUrl }),
     setSubtitleDelay: (subtitleDelay) => set({ subtitleDelay }),
     setStatsOpen: (statsOpen) => set({ statsOpen }),
-  }))
+    setDevice: (device) => set({ device }),
+  })
+  // Each action makes the latest state, as `getState()` reads it.
+  function set(change: Partial<PlayerState>) {
+    store.setState(change)
+  }
+  return { ...store, initial: store.getState() }
 }
 
 /**
@@ -253,17 +252,17 @@ export function selectNow(state: PlayerState): number {
   return state.pending ?? state.time
 }
 
-export const PlayerStoreContext = createContext<PlayerStore | null>(null)
+export const PlayerStoreContext = createContext<PlayerStore>()
 
-/** The player's store, for reading it in callbacks. */
+/** The player's store, for reading it in handlers. */
 export function usePlayerStoreApi(): PlayerStore {
-  const store = useContext(PlayerStoreContext)
-  if (!store) throw new Error("usePlayerStore needs a player around it")
-  return store
+  return useContext(PlayerStoreContext)
 }
 
+/** A slice of the player's state, as a read that tracks the fields it uses. */
 export function usePlayerStore<Slice>(
-  selector: (state: PlayerState) => Slice,
-): Slice {
-  return useStore(usePlayerStoreApi(), selector)
+  select: (state: PlayerState) => Slice,
+): Accessor<Slice> {
+  const { view } = usePlayerStoreApi()
+  return () => select(view)
 }

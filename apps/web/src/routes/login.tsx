@@ -4,7 +4,8 @@ import {
   OIDC_LINK_QUERY_KEY,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/solid-router"
+import { Show } from "solid-js"
 
 import { AuthScreen } from "@/components/auth-screen"
 import { PublicLoginBackdrop } from "@/components/login-backdrop"
@@ -18,7 +19,11 @@ import { useAuthErrorToast } from "@/lib/use-auth-error-toast"
 const LoginSearch = t.object({
   redirect: t.string().optional().catch(undefined),
   [AUTH_ERROR_QUERY_KEY]: t.string().optional().catch(undefined),
-  [OIDC_LINK_QUERY_KEY]: t.string().optional().catch(undefined),
+  // The callback sends link=1, which the router parses as a number.
+  [OIDC_LINK_QUERY_KEY]: t
+    .union([t.string(), t.literal(1)])
+    .optional()
+    .catch(undefined),
 })
 
 /**
@@ -58,41 +63,44 @@ export const Route = createFileRoute("/login")({
 })
 
 function LoginPage() {
-  const { config, pendingLink } = Route.useRouteContext()
+  const context = Route.useRouteContext()
   const search = Route.useSearch()
-  const target = safeRedirect(search.redirect)
-  if (pendingLink) return <OidcLinkPage link={pendingLink} redirect={target} />
+  const target = () => safeRedirect(search().redirect)
   return (
-    <SignInPage
-      config={config}
-      target={target}
-      authError={search[AUTH_ERROR_QUERY_KEY]}
-    />
+    <Show
+      when={context().pendingLink}
+      fallback={
+        <SignInPage
+          config={context().config}
+          target={target()}
+          authError={search()[AUTH_ERROR_QUERY_KEY]}
+        />
+      }
+    >
+      {(link) => <OidcLinkPage link={link()} redirect={target()} />}
+    </Show>
   )
 }
 
-function SignInPage({
-  config,
-  target,
-  authError,
-}: {
+function SignInPage(props: {
   config: AuthConfig
   target: string
   authError: string | undefined
 }) {
   useAuthErrorToast(
-    authError,
-    config.passkeys
-      ? tr("auth.signIn.errorHint")
-      : tr("auth.signIn.errorHintSso"),
+    () => props.authError,
+    () =>
+      props.config.passkeys
+        ? tr("auth.signIn.errorHint")
+        : tr("auth.signIn.errorHintSso"),
   )
 
   return (
     <AuthScreen
       title={tr("auth.signIn.title")}
-      backdrop={<PublicLoginBackdrop settings={config.loginBackdrop} />}
+      backdrop={<PublicLoginBackdrop settings={props.config.loginBackdrop} />}
     >
-      <SignInForm config={config} target={target} />
+      <SignInForm config={props.config} target={props.target} />
     </AuthScreen>
   )
 }

@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/solid-router"
 
 import { QueuePage } from "@/components/requests/queue-page"
 import { RequestSearch } from "@/components/requests/request-filter"

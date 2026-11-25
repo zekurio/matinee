@@ -5,8 +5,8 @@ import {
   TRANSCODE_VIDEO_CODECS,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { create } from "zustand"
-import { type PersistStorage, persist } from "zustand/middleware"
+
+import { createPlainStore, type PlainStore, storeHook } from "./plain-store"
 
 const PLAYER_KEY = "matinee.player"
 
@@ -52,42 +52,54 @@ const DEFAULTS: PlayerPreferences = {
   autoplayNext: true,
 }
 
-/**
- * localStorage holding the bare value, as the player stored it before these
- * stores, rather than persist's `{ state, version }` wrapper. Each store's
- * `merge` parses what comes back.
- */
-function bareStorage<Value>(): PersistStorage<Value> {
-  return {
-    getItem: (name) => {
-      try {
-        const stored = window.localStorage.getItem(name)
-        return stored === null ? null : { state: JSON.parse(stored) }
-      } catch {
-        return null
-      }
-    },
-    setItem: (name, { state }) => {
-      try {
-        window.localStorage.setItem(name, JSON.stringify(state))
-      } catch {
-        // Storage is off or full. The choice still holds for this file.
-      }
-    },
-    removeItem: (name) => {
-      try {
-        window.localStorage.removeItem(name)
-      } catch {
-        // Storage is off; there is nothing to remove.
-      }
-    },
-  }
-}
-
 type PlayerPreferencesState = PlayerPreferences & {
   setQuality: (quality: PlaybackQuality) => void
   setVolume: (volume: number, muted: boolean) => void
   setDevicePlayback: (change: Partial<DevicePlayback>) => void
+}
+
+/** The bare value in localStorage, as earlier versions kept it. */
+function load(): PlayerPreferences {
+  try {
+    const stored = window.localStorage.getItem(PLAYER_KEY)
+    if (stored === null) return DEFAULTS
+    const parsed = PlayerPreferences.safeParse(JSON.parse(stored))
+    return parsed.success ? parsed.data : DEFAULTS
+  } catch {
+    return DEFAULTS
+  }
+}
+
+function save(state: PlayerPreferences) {
+  const kept: PlayerPreferences = {
+    quality: state.quality,
+    volume: state.volume,
+    muted: state.muted,
+    videoCodec: state.videoCodec,
+    audioCodec: state.audioCodec,
+    convertAudio: state.convertAudio,
+    autoplayNext: state.autoplayNext,
+  }
+  try {
+    window.localStorage.setItem(PLAYER_KEY, JSON.stringify(kept))
+  } catch {
+    // Storage is off or full. The choice still holds for this file.
+  }
+}
+
+const store: PlainStore<PlayerPreferencesState> =
+  createPlainStore<PlayerPreferencesState>({
+    ...load(),
+    setQuality: (quality: PlaybackQuality) => change({ quality }),
+    setVolume: (volume: number, muted: boolean) => change({ volume, muted }),
+    setDevicePlayback: (next: Partial<DevicePlayback>) => change(next),
+  })
+
+// Every write is saved, an empty one too, which drops keys the store no
+// longer keeps.
+function change(next: Partial<PlayerPreferences>) {
+  store.setState(next)
+  save(store.getState())
 }
 
 /**
@@ -97,45 +109,9 @@ type PlayerPreferencesState = PlayerPreferences & {
  * change; the settings panel edits the rest. How far skips go follows the
  * account, in `PlaybackPreferences`.
  */
-export const usePlayerPreferencesStore = create<PlayerPreferencesState>()(
-  persist(
-    (set) => ({
-      ...DEFAULTS,
-      setQuality: (quality) => set({ quality }),
-      setVolume: (volume, muted) => set({ volume, muted }),
-      setDevicePlayback: (change) => set(change),
-    }),
-    {
-      name: PLAYER_KEY,
-      storage: bareStorage(),
-      partialize: ({
-        quality,
-        volume,
-        muted,
-        videoCodec,
-        audioCodec,
-        convertAudio,
-        autoplayNext,
-      }) => ({
-        quality,
-        volume,
-        muted,
-        videoCodec,
-        audioCodec,
-        convertAudio,
-        autoplayNext,
-      }),
-      merge: (stored, current) => {
-        const parsed = PlayerPreferences.safeParse(stored)
-        return { ...current, ...(parsed.success ? parsed.data : DEFAULTS) }
-      },
-    },
-  ),
-)
+export const usePlayerPreferencesStore = storeHook(store)
 
 // A change made in another tab applies here too.
 window.addEventListener("storage", (event) => {
-  if (event.key === null || event.key === PLAYER_KEY) {
-    void usePlayerPreferencesStore.persist.rehydrate()
-  }
+  if (event.key === null || event.key === PLAYER_KEY) store.setState(load())
 })

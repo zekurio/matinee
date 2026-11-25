@@ -9,13 +9,13 @@ import {
   SUBTITLE_MODES,
   videoCodecName,
 } from "@matinee/contracts"
-import { toast } from "@matinee/ui/components/sonner"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import type { ReactNode } from "react"
-import { useShallow } from "zustand/shallow"
+import type { JSX } from "@solidjs/web"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { For, Show } from "solid-js"
 
 import { formatBitrate } from "@/components/player-format"
 import { tr } from "@/i18n"
+import { toast } from "@/kit/toast"
 import { browserAudioCodecs, OPTIONAL_PASSTHROUGH } from "@/lib/audio-support"
 import { deviceLanguage, languageName } from "@/lib/languages"
 import {
@@ -49,13 +49,13 @@ const UNSET = ""
  * Only what this browser and the server both support is offered.
  */
 export function PlaybackPanel() {
-  const options = useQuery(orpc.playback.options.queryOptions()).data
+  const options = useQuery(() => orpc.playback.options.queryOptions())
   return (
     <SettingsSections>
-      <LanguagesSection options={options} />
+      <LanguagesSection options={options.data} />
       <SkipsSection />
       <ShowsSection />
-      <DeviceSection options={options} />
+      <DeviceSection options={options.data} />
       <PassthroughSection />
     </SettingsSections>
   )
@@ -83,13 +83,8 @@ function audioLabel(value: string): string {
   return languageName(value)
 }
 
-function LanguagesSection({
-  options,
-}: {
-  options: PlaybackOptions | undefined
-}) {
+function LanguagesSection(props: { options: PlaybackOptions | undefined }) {
   const preferences = usePlaybackPreferences()
-  const mode = preferences.subtitleMode
   const device = languageName(deviceLanguage())
 
   return (
@@ -97,11 +92,11 @@ function LanguagesSection({
       <SettingRows>
         <SelectRow
           title={tr("playback.audio.title")}
-          value={preferences.audioLanguage ?? UNSET}
+          value={preferences().audioLanguage ?? UNSET}
           options={languageOptions(
             [UNSET, ORIGINAL_LANGUAGE],
-            options?.audioLanguages,
-            preferences.audioLanguage,
+            props.options?.audioLanguages,
+            preferences().audioLanguage,
           )}
           labelOf={audioLabel}
           onChange={(value) =>
@@ -112,21 +107,21 @@ function LanguagesSection({
         />
         <SelectRow
           title={tr("playback.subtitles.title")}
-          value={mode}
+          value={preferences().subtitleMode}
           options={SUBTITLE_MODES}
           labelOf={(value) => tr(`playback.subtitles.mode.${value}.label`)}
           onChange={(subtitleMode) =>
             updatePlaybackPreferences({ subtitleMode })
           }
         />
-        {mode !== "off" && (
+        <Show when={preferences().subtitleMode !== "off"}>
           <SelectRow
             title={tr("playback.subtitles.language")}
-            value={preferences.subtitleLanguage ?? UNSET}
+            value={preferences().subtitleLanguage ?? UNSET}
             options={languageOptions(
               [UNSET],
-              options?.subtitleLanguages,
-              preferences.subtitleLanguage,
+              props.options?.subtitleLanguages,
+              preferences().subtitleLanguage,
             )}
             labelOf={(tag) =>
               tag === UNSET
@@ -139,17 +134,17 @@ function LanguagesSection({
               })
             }
           />
-        )}
+        </Show>
         <SwitchRow
           title={tr("playback.audio.remember")}
-          checked={preferences.rememberAudio}
+          checked={preferences().rememberAudio}
           onChange={(rememberAudio) =>
             updatePlaybackPreferences({ rememberAudio })
           }
         />
         <SwitchRow
           title={tr("playback.subtitles.remember")}
-          checked={preferences.rememberSubtitles}
+          checked={preferences().rememberSubtitles}
           onChange={(rememberSubtitles) =>
             updatePlaybackPreferences({ rememberSubtitles })
           }
@@ -168,7 +163,7 @@ function skipOptions(current: number): string[] {
 
 /** How far the skip buttons and keys go each way, which the account syncs. */
 function SkipsSection() {
-  const { skipBackSeconds, skipForwardSeconds } = usePlaybackPreferences()
+  const preferences = usePlaybackPreferences()
   const labelOf = (value: string) =>
     tr("playback.skip.seconds", { count: Number(value) })
   return (
@@ -176,8 +171,8 @@ function SkipsSection() {
       <SettingRows>
         <SelectRow
           title={tr("playback.skip.back")}
-          value={String(skipBackSeconds)}
-          options={skipOptions(skipBackSeconds)}
+          value={String(preferences().skipBackSeconds)}
+          options={skipOptions(preferences().skipBackSeconds)}
           labelOf={labelOf}
           onChange={(value) =>
             updatePlaybackPreferences({ skipBackSeconds: Number(value) })
@@ -185,8 +180,8 @@ function SkipsSection() {
         />
         <SelectRow
           title={tr("playback.skip.forward")}
-          value={String(skipForwardSeconds)}
-          options={skipOptions(skipForwardSeconds)}
+          value={String(preferences().skipForwardSeconds)}
+          options={skipOptions(preferences().skipForwardSeconds)}
           labelOf={labelOf}
           onChange={(value) =>
             updatePlaybackPreferences({ skipForwardSeconds: Number(value) })
@@ -202,9 +197,9 @@ function SkipsSection() {
  * syncs and the server applies. Everything listed loads again after it.
  */
 function ShowsSection() {
-  const session = useQuery(orpc.auth.session.queryOptions())
+  const session = useQuery(() => orpc.auth.session.queryOptions())
   const queryClient = useQueryClient()
-  const update = useMutation({
+  const update = useMutation(() => ({
     mutationFn: (showSpecials: boolean) =>
       client.account.library.setPreferences({ showSpecials }),
     onSuccess: async (saved) => {
@@ -215,17 +210,18 @@ function ShowsSection() {
       toast.error(tr("playback.specials.failed"), {
         description: errorMessage(error),
       }),
-  })
+  }))
   // The switch moves at once; a failure puts it back.
-  const checked = update.isPending
-    ? update.variables
-    : (session.data?.user?.library.showSpecials ?? true)
+  const checked = () =>
+    update.isPending && update.variables !== undefined
+      ? update.variables
+      : (session.data?.user?.library.showSpecials ?? true)
   return (
     <SettingsSubsection id="shows" title={tr("playback.shows.title")}>
       <SettingRows>
         <SwitchRow
           title={tr("playback.specials.title")}
-          checked={checked}
+          checked={checked()}
           onChange={(value) => update.mutate(value)}
         />
       </SettingRows>
@@ -244,136 +240,138 @@ function qualityLabel(id: PlaybackQuality): string {
 }
 
 /** A row whose setting has a single possible value here, shown as text. */
-function FixedRow({
-  title,
-  footer,
-  value,
-}: {
+function FixedRow(props: {
   title: string
-  footer?: ReactNode
+  footer?: JSX.Element
   value: string
 }) {
   return (
-    <SettingRow title={title} layout="split" footer={footer}>
+    <SettingRow title={props.title} layout="split" footer={props.footer}>
       {(ids) => (
         <span
           id={ids.controlId}
-          className="text-muted-foreground text-sm @lg:ml-auto"
+          class="text-muted-foreground text-sm @lg:ml-auto"
         >
-          {value}
+          {props.value}
         </span>
       )}
     </SettingRow>
   )
 }
 
-function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
-  const device = usePlayerPreferencesStore(
-    useShallow((state) => ({
-      quality: state.quality,
-      videoCodec: state.videoCodec,
-      audioCodec: state.audioCodec,
-      autoplayNext: state.autoplayNext,
-      setDevicePlayback: state.setDevicePlayback,
-    })),
-  )
+function DeviceSection(props: { options: PlaybackOptions | undefined }) {
+  const device = usePlayerPreferencesStore((state) => state)
+  const setDevicePlayback =
+    usePlayerPreferencesStore.getState().setDevicePlayback
   // What both ends have, best first. Until the server answers, what this
   // browser plays.
-  const videoCodecs = browserVideoCodecs().filter(
-    (codec) => !options || options.videoCodecs.includes(codec),
-  )
-  const audioCodecs = browserAudioCodecs().flatMap((codec) =>
-    (codec === "opus" || codec === "aac") &&
-    (!options || options.audioCodecs.includes(codec))
-      ? [codec]
-      : [],
-  )
-  const autoVideo = videoCodecs[0] ?? "h264"
-  const autoAudio = audioCodecs[0] ?? "aac"
-  const videoChoices: VideoCodecChoice[] = ["auto", ...videoCodecs]
-  const audioChoices: AudioCodecChoice[] = ["auto", ...audioCodecs]
+  const videoCodecs = () =>
+    browserVideoCodecs().filter(
+      (codec) => !props.options || props.options.videoCodecs.includes(codec),
+    )
+  const audioCodecs = () =>
+    browserAudioCodecs().flatMap((codec) =>
+      (codec === "opus" || codec === "aac") &&
+      (!props.options || props.options.audioCodecs.includes(codec))
+        ? [codec]
+        : [],
+    )
+  const autoVideo = () => videoCodecs()[0] ?? "h264"
+  const autoAudio = () => audioCodecs()[0] ?? "aac"
+  const videoChoices = (): VideoCodecChoice[] => ["auto", ...videoCodecs()]
+  const audioChoices = (): AudioCodecChoice[] => ["auto", ...audioCodecs()]
   // The qualities this account may stream. Until the server answers, all.
-  const qualities: PlaybackQuality[] = options
-    ? ["original", ...options.qualities.map((preset) => preset.id)]
-    : [...PLAYBACK_QUALITY_IDS]
-  const limitNote =
-    options && options.maxBitrate !== null ? (
+  const qualities = (): PlaybackQuality[] =>
+    props.options
+      ? ["original", ...props.options.qualities.map((preset) => preset.id)]
+      : [...PLAYBACK_QUALITY_IDS]
+  const limitNote = () => {
+    const maxBitrate = props.options?.maxBitrate ?? null
+    return maxBitrate !== null ? (
       <SettingNote>
-        {tr("playback.quality.limit", {
-          rate: formatBitrate(options.maxBitrate),
-        })}
+        {tr("playback.quality.limit", { rate: formatBitrate(maxBitrate) })}
       </SettingNote>
     ) : undefined
+  }
 
   return (
     <SettingsSubsection id="device" title={tr("playback.device.title")}>
       <SettingRows>
-        {qualities.length > 1 ? (
+        <Show
+          when={qualities().length > 1}
+          fallback={
+            <FixedRow
+              title={tr("playback.quality.title")}
+              footer={limitNote()}
+              value={qualityLabel("original")}
+            />
+          }
+        >
           <SelectRow
             title={tr("playback.quality.title")}
-            footer={limitNote}
+            footer={limitNote()}
             value={
-              qualities.includes(device.quality) ? device.quality : "original"
+              qualities().includes(device().quality)
+                ? device().quality
+                : "original"
             }
-            options={qualities}
+            options={qualities()}
             labelOf={qualityLabel}
-            onChange={(quality) => device.setDevicePlayback({ quality })}
+            onChange={(quality) => setDevicePlayback({ quality })}
           />
-        ) : (
-          <FixedRow
-            title={tr("playback.quality.title")}
-            footer={limitNote}
-            value={qualityLabel("original")}
-          />
-        )}
-        {videoCodecs.length > 1 ? (
+        </Show>
+        <Show
+          when={videoCodecs().length > 1}
+          fallback={
+            <FixedRow title={tr("playback.videoCodec.title")} value="H.264" />
+          }
+        >
           <SelectRow
             title={tr("playback.videoCodec.title")}
             value={
-              videoChoices.includes(device.videoCodec)
-                ? device.videoCodec
+              videoChoices().includes(device().videoCodec)
+                ? device().videoCodec
                 : "auto"
             }
-            options={videoChoices}
+            options={videoChoices()}
             labelOf={(codec) =>
               codec === "auto"
                 ? tr("playback.codec.automatic", {
-                    codec: videoCodecName(autoVideo),
+                    codec: videoCodecName(autoVideo()),
                   })
                 : videoCodecName(codec)
             }
-            onChange={(videoCodec) => device.setDevicePlayback({ videoCodec })}
+            onChange={(videoCodec) => setDevicePlayback({ videoCodec })}
           />
-        ) : (
-          <FixedRow title={tr("playback.videoCodec.title")} value="H.264" />
-        )}
-        {audioCodecs.length > 1 ? (
+        </Show>
+        <Show
+          when={audioCodecs().length > 1}
+          fallback={
+            <FixedRow title={tr("playback.audioCodec.title")} value="AAC" />
+          }
+        >
           <SelectRow
             title={tr("playback.audioCodec.title")}
             value={
-              audioChoices.includes(device.audioCodec)
-                ? device.audioCodec
+              audioChoices().includes(device().audioCodec)
+                ? device().audioCodec
                 : "auto"
             }
-            options={audioChoices}
+            options={audioChoices()}
             labelOf={(codec) =>
               codec === "auto"
                 ? tr("playback.codec.automatic", {
-                    codec: audioFormatName(autoAudio),
+                    codec: audioFormatName(autoAudio()),
                   })
                 : audioFormatName(codec)
             }
-            onChange={(audioCodec) => device.setDevicePlayback({ audioCodec })}
+            onChange={(audioCodec) => setDevicePlayback({ audioCodec })}
           />
-        ) : (
-          <FixedRow title={tr("playback.audioCodec.title")} value="AAC" />
-        )}
+        </Show>
         <SwitchRow
           title={tr("playback.autoplay.title")}
-          checked={device.autoplayNext}
-          onChange={(autoplayNext) =>
-            device.setDevicePlayback({ autoplayNext })
-          }
+          checked={device().autoplayNext}
+          onChange={(autoplayNext) => setDevicePlayback({ autoplayNext })}
         />
       </SettingRows>
     </SettingsSubsection>
@@ -382,38 +380,37 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
 
 /** A switch per format this browser plays that the server could convert. */
 function PassthroughSection() {
-  const { convertAudio, setDevicePlayback } = usePlayerPreferencesStore(
-    useShallow((state) => ({
-      convertAudio: state.convertAudio,
-      setDevicePlayback: state.setDevicePlayback,
-    })),
-  )
+  const convertAudio = usePlayerPreferencesStore((state) => state.convertAudio)
+  const setDevicePlayback =
+    usePlayerPreferencesStore.getState().setDevicePlayback
   const codecs = browserAudioCodecs().filter((codec) =>
     OPTIONAL_PASSTHROUGH.includes(codec),
   )
-  if (codecs.length === 0) return null
 
   return (
-    <SettingsSubsection
-      id="passthrough"
-      title={tr("playback.passthrough.title")}
-    >
-      <SettingRows>
-        {codecs.map((codec) => (
-          <SwitchRow
-            key={codec}
-            title={audioFormatName(codec)}
-            checked={!convertAudio.includes(codec)}
-            onChange={(on) =>
-              setDevicePlayback({
-                convertAudio: on
-                  ? convertAudio.filter((entry) => entry !== codec)
-                  : [...convertAudio, codec],
-              })
-            }
-          />
-        ))}
-      </SettingRows>
-    </SettingsSubsection>
+    <Show when={codecs.length > 0}>
+      <SettingsSubsection
+        id="passthrough"
+        title={tr("playback.passthrough.title")}
+      >
+        <SettingRows>
+          <For each={codecs}>
+            {(codec) => (
+              <SwitchRow
+                title={audioFormatName(codec)}
+                checked={!convertAudio().includes(codec)}
+                onChange={(on) =>
+                  setDevicePlayback({
+                    convertAudio: on
+                      ? convertAudio().filter((entry) => entry !== codec)
+                      : [...convertAudio(), codec],
+                  })
+                }
+              />
+            )}
+          </For>
+        </SettingRows>
+      </SettingsSubsection>
+    </Show>
   )
 }

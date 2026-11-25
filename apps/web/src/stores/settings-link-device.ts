@@ -1,20 +1,17 @@
-import { createStore } from "zustand/vanilla"
-
-type LinkDeviceState = {
-  open: boolean
-  code: string | null
-  start: () => void
-  close: () => void
-  setCode: (code: string | null) => void
-}
+import { createSignal } from "solid-js"
 
 /** A separate sign-in flow for each link-device button. */
 export function createSettingsLinkDeviceStore() {
-  return createStore<LinkDeviceState>()((set) => ({
-    open: false,
-    code: null,
-    start: () => set({ open: true, code: null }),
-    close: () => set({ open: false }),
-    setCode: (code) => set({ code }),
-  }))
+  const [open, setOpen] = createSignal(false)
+  const [code, setCode] = createSignal<string | null>(null)
+  return {
+    open,
+    code,
+    start: () => {
+      setOpen(true)
+      setCode(null)
+    },
+    close: () => setOpen(false),
+    setCode: (next: string | null) => setCode(next),
+  }
 }

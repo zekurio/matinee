@@ -1,222 +1,206 @@
 import type { Artwork, Credit, CreditKind, Title } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
-import { Link, linkOptions } from "@tanstack/react-router"
-import { Fragment, type ReactNode } from "react"
+import { Link } from "@tanstack/solid-router"
+import { createMemo, For, Show } from "solid-js"
 
+import { textLink } from "@/components/media-item"
+import { Picture, tone } from "@/components/picture"
+import { Rail } from "@/components/rail"
 import { perLocale, tr } from "@/i18n"
 import { art } from "@/lib/media"
 
-import { Picture, textLink, tone } from "./media-item"
-import { Rail, RailItem } from "./rail"
-
-// The hero names a few; the rest would crowd it.
-const MAX_NAMES = 3
-
-/** `Hayao Miyazaki` → `HM`, for a portrait that didn't load. */
-function initials(name: string): string {
-  const words = name.split(/\s+/).filter(Boolean)
-  const letters = [words[0], words.length > 1 ? words.at(-1) : undefined]
-    .map((word) => (word ? Array.from(word)[0] : ""))
-    .join("")
-  return letters.toUpperCase()
-}
+const crewKinds = ["creator", "director", "writer"] satisfies CreditKind[]
+const maxNames = 3
+const conjunctionList = perLocale(
+  (locale) => new Intl.ListFormat(locale, { type: "conjunction" }),
+)
+export const unitList = perLocale(
+  (locale) => new Intl.ListFormat(locale, { type: "unit", style: "short" }),
+)
 
 /** What someone is credited as, like `Director`, or `Directors` for more. */
 export function creditLabel(kind: CreditKind, count = 1): string {
   return tr(`people.credit.${kind}`, { count })
 }
 
-/** "A, B, and C", for names in running text. */
-const conjunctionList = perLocale(
-  (locale) => new Intl.ListFormat(locale, { type: "conjunction" }),
-)
-
-/** "A, B, C", for a list of tags or labels. */
-export const unitList = perLocale(
-  (locale) => new Intl.ListFormat(locale, { type: "unit", style: "short" }),
-)
-
-/**
- * Elements listed the way the language lists things, with its own commas
- * and "and": `format` comes from {@link conjunctionList} or {@link unitList}.
- */
-export function listNodes(
-  format: Intl.ListFormat,
-  nodes: readonly ReactNode[],
-): ReactNode {
-  const parts = format.formatToParts(nodes.map((_, index) => String(index)))
-  return parts.map((part, index) => (
-    <Fragment key={index}>
-      {part.type === "element" ? nodes[Number(part.value)] : part.value}
-    </Fragment>
-  ))
-}
-
-type Fact = { kind: "person" | "studio"; name: string; tmdbId?: string | null }
-
-/** A person's page: by name, and by their TMDB id where a credit has it. */
-export function personLink(name: string, tmdbId?: string | null) {
-  return linkOptions({
-    to: "/people/$name",
-    params: { name },
-    search: { tmdb: tmdbId ? Number(tmdbId) : undefined },
-  })
-}
-
-/** A name in the facts, linking to the person's or the studio's page. */
-function FactLink({ fact }: { fact: Fact }) {
-  const className = cn(textLink, "hover:text-foreground")
-  return fact.kind === "studio" ? (
-    <Link
-      to="/studios/$studio"
-      params={{ studio: fact.name }}
-      className={className}
-    >
-      {fact.name}
-    </Link>
-  ) : (
-    <Link {...personLink(fact.name, fact.tmdbId)} className={className}>
-      {fact.name}
+function PersonLink(props: { name: string }) {
+  return (
+    <Link to="/people/$name" params={{ name: props.name }} class={textLink}>
+      {props.name}
     </Link>
   )
 }
 
-/**
- * Who made the title and where, as label and names in one wrapping line:
- * creators, directors, writers, then studios. Each name opens its page.
- */
-export function CrewFacts({
-  title,
-  className,
-}: {
-  /** A library title, or a catalog title's details. */
+export function CrewFacts(props: {
   title: Pick<Title, "credits" | "studios">
-  className?: string
 }) {
-  const kinds = ["creator", "director", "writer"] satisfies CreditKind[]
-  const groups: { label: string; facts: Fact[] }[] = kinds
-    .map((kind) => {
-      const people = title.credits.filter((c) => c.kind === kind)
-      return {
-        label: creditLabel(kind, people.length),
-        facts: people.map((person): Fact => ({
-          kind: "person",
-          name: person.name,
-          tmdbId: person.tmdbId,
-        })),
-      }
-    })
-    .filter((group) => group.facts.length > 0)
-  const studios = title.studios.slice(0, 2)
-  if (studios.length > 0) {
-    groups.push({
-      label: tr("people.studio", { count: studios.length }),
-      facts: studios.map((name): Fact => ({ kind: "studio", name })),
-    })
-  }
-  if (groups.length === 0) return null
+  const groups = createMemo(() =>
+    crewKinds
+      .map((kind) => ({
+        kind,
+        names: props.title.credits
+          .filter((person) => person.kind === kind)
+          .map((person) => person.name),
+      }))
+      .filter((group) => group.names.length > 0),
+  )
+  const studios = createMemo(() => props.title.studios.slice(0, 2))
   return (
-    <dl
-      className={cn(
-        "flex max-w-4xl flex-wrap gap-x-6 gap-y-1 text-sm",
-        className,
-      )}
-    >
-      {groups.map((group) => (
-        <div key={group.label} className="flex min-w-0 gap-2">
-          <dt className="text-muted-foreground shrink-0">{group.label}</dt>
-          <dd className="text-foreground/85 min-w-0">
-            {listNodes(conjunctionList(), [
-              ...group.facts
-                .slice(0, MAX_NAMES)
-                .map((fact) => <FactLink key={fact.name} fact={fact} />),
-              ...(group.facts.length > MAX_NAMES
-                ? [
-                    <span key="more" className="text-muted-foreground">
-                      {tr("people.more", {
-                        count: group.facts.length - MAX_NAMES,
-                      })}
-                    </span>,
-                  ]
-                : []),
-            ])}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <Show when={groups().length || studios().length}>
+      <dl class="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+        <For each={groups()} keyed={(group) => group.kind}>
+          {(group) => (
+            <div class="flex min-w-0 gap-2">
+              <dt class="text-muted-foreground shrink-0">
+                {tr(`people.credit.${group().kind}`, {
+                  count: group().names.length,
+                })}
+              </dt>
+              <dd class="text-foreground/85 min-w-0">
+                <CrewNames names={group().names} />
+              </dd>
+            </div>
+          )}
+        </For>
+        <Show when={studios().length}>
+          <div class="flex min-w-0 gap-2">
+            <dt class="text-muted-foreground shrink-0">
+              {tr("people.studio", { count: studios().length })}
+            </dt>
+            <dd class="text-foreground/85">
+              {conjunctionList().format(studios())}
+            </dd>
+          </div>
+        </Show>
+      </dl>
+    </Show>
   )
 }
 
-/** The actors, in billing order, as a row of round portraits. */
-export function CastRail({ credits }: { credits: Credit[] }) {
-  const cast = credits.filter((c) => c.kind === "actor")
-  if (cast.length === 0) return null
+function CrewNames(props: { names: string[] }) {
+  const parts = createMemo(() => {
+    const count = props.names.length
+    const shown = props.names.slice(0, maxNames)
+    if (count > maxNames)
+      shown.push(tr("people.more", { count: count - maxNames }))
+    return conjunctionList().formatToParts(shown)
+  })
   return (
-    <Rail title={tr("people.cast")}>
-      {cast.map((person, i) => (
-        // The same actor can play two parts.
-        <RailItem key={`${i}:${person.name}`} artwork="person">
-          <PersonCard
-            name={person.name}
-            photo={person.photo}
-            detail={person.role}
-            tmdbId={person.tmdbId}
-          />
-        </RailItem>
-      ))}
-    </Rail>
+    <For each={parts()} keyed={false}>
+      {(part, index) => (
+        <Show
+          when={part().type === "element" && index < maxNames * 2 - 1}
+          fallback={part().value}
+        >
+          <PersonLink name={part().value} />
+        </Show>
+      )}
+    </For>
+  )
+}
+
+function initials(name: string) {
+  const words = name.split(/\s+/).filter(Boolean)
+  return [words[0], words.length > 1 ? words.at(-1) : undefined]
+    .map((word) => (word ? Array.from(word)[0] : ""))
+    .join("")
+    .toUpperCase()
+}
+
+export function CastRail(props: { credits: Credit[] }) {
+  const cast = createMemo(() =>
+    props.credits.filter((credit) => credit.kind === "actor"),
+  )
+  return (
+    <Show when={cast().length}>
+      <Rail title={tr("people.cast")}>
+        <For each={cast()} keyed={false}>
+          {(person) => (
+            <li class="w-[28%] shrink-0 snap-start sm:w-28 lg:w-32">
+              <Link
+                to="/people/$name"
+                params={{ name: person().name }}
+                class="group focus-visible:ring-ring focus-visible:ring-offset-background block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              >
+                <figure class="text-center">
+                  <span
+                    class={[
+                      "group-hover:border-foreground/25 relative grid aspect-square place-items-center overflow-hidden rounded-full border text-xl",
+                      tone(person().name),
+                    ]}
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="text-muted-foreground font-medium"
+                    >
+                      {initials(person().name)}
+                    </span>
+                    <Show when={art(person().photo, "small")}>
+                      {(photo) => (
+                        <Picture sources={[photo()]} class="object-[50%_20%]" />
+                      )}
+                    </Show>
+                  </span>
+                  <figcaption class="mt-2.5 px-1">
+                    <span class="line-clamp-2 text-sm font-medium text-balance">
+                      {person().name}
+                    </span>
+                    <Show when={person().role}>
+                      <span class="text-muted-foreground text-13px mt-0.5 line-clamp-2 text-balance">
+                        {person().role}
+                      </span>
+                    </Show>
+                  </figcaption>
+                </figure>
+              </Link>
+            </li>
+          )}
+        </For>
+      </Rail>
+    </Show>
   )
 }
 
 /**
  * A round portrait, or the person's initials on their tone while it loads
- * or when there's none. `className` sets the size and the initials' type.
+ * or when there's none. `class` sets the size and the initials' type.
  */
-export function PersonPortrait({
-  name,
-  photo,
-  eager = false,
-  className,
-}: {
+export function PersonPortrait(props: {
   name: string
   photo: Artwork | null
   eager?: boolean
-  className?: string
+  class?: string
 }) {
-  const source = art(photo)
   return (
     <span
-      className={cn(
+      class={cn(
         "relative grid aspect-square shrink-0 place-items-center overflow-hidden rounded-full border shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]",
-        tone(name),
-        className,
+        tone(props.name),
+        props.class,
       )}
     >
       <span
-        aria-hidden
-        className="text-muted-foreground font-medium tracking-wide"
+        aria-hidden="true"
+        class="text-muted-foreground font-medium tracking-wide"
       >
-        {initials(name)}
+        {initials(props.name)}
       </span>
       {/* Headshots are portrait; keep the face, not the chest, in the circle. */}
-      {source && (
-        <Picture
-          sources={[source]}
-          eager={eager}
-          className="object-[50%_20%]"
-        />
-      )}
+      <Show when={art(props.photo)}>
+        {(source) => (
+          <Picture
+            sources={[source()]}
+            eager={props.eager}
+            class="object-[50%_20%]"
+          />
+        )}
+      </Show>
     </span>
   )
 }
 
 /** Someone's portrait and name, opening their page. */
-export function PersonCard({
-  name,
-  photo,
-  detail,
-  tmdbId,
-}: {
+export function PersonCard(props: {
   name: string
   photo: Artwork | null
   /** A line under the name, like the character. */
@@ -225,24 +209,26 @@ export function PersonCard({
 }) {
   return (
     <Link
-      {...personLink(name, tmdbId)}
-      className="group focus-visible:ring-ring focus-visible:ring-offset-background block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+      to="/people/$name"
+      params={{ name: props.name }}
+      search={{ tmdb: props.tmdbId ? Number(props.tmdbId) : undefined }}
+      class="group focus-visible:ring-ring focus-visible:ring-offset-background block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
     >
-      <figure className="flex flex-col items-center text-center">
+      <figure class="flex flex-col items-center text-center">
         <PersonPortrait
-          name={name}
-          photo={photo}
-          className="group-hover:border-foreground/25 w-full text-xl"
+          name={props.name}
+          photo={props.photo}
+          class="group-hover:border-foreground/25 w-full text-xl"
         />
-        <figcaption className="mt-2.5 w-full px-1">
-          <span className="line-clamp-2 text-sm leading-5 font-medium text-balance">
-            {name}
+        <figcaption class="mt-2.5 w-full px-1">
+          <span class="line-clamp-2 text-sm leading-5 font-medium text-balance">
+            {props.name}
           </span>
-          {detail && (
-            <span className="text-muted-foreground text-13px mt-0.5 line-clamp-2 leading-[1.125rem] text-balance">
-              {detail}
+          <Show when={props.detail}>
+            <span class="text-muted-foreground text-13px mt-0.5 line-clamp-2 leading-[1.125rem] text-balance">
+              {props.detail}
             </span>
-          )}
+          </Show>
         </figcaption>
       </figure>
     </Link>

@@ -1,5 +1,5 @@
 import { t } from "@matinee/contracts/schema"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/solid-router"
 
 import { LibraryPage } from "@/components/library/library-page"
 import { titleListSearch } from "@/components/library/title-filter-params"

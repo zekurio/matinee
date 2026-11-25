@@ -3,7 +3,7 @@ import type { ThemeState } from "@matinee/ui/lib/theme"
 import { browserLocale, LOCALES, nativeName, tr } from "@/i18n"
 import { languageName } from "@/lib/languages"
 import { useThemeState } from "@/lib/theme-state"
-import { AUTO_LANGUAGE, useLanguageStore } from "@/stores/language"
+import { AUTO_LANGUAGE, language, setLanguage } from "@/stores/language"
 
 import { ColorSchemePicker } from "./color-scheme-picker"
 import { SelectRow } from "./setting-controls"
@@ -23,7 +23,7 @@ export function AppearancePanel() {
   return (
     <SettingsSections>
       <LanguageSection />
-      <ColorSchemeSection theme={theme} />
+      <ColorSchemeSection theme={theme()} />
     </SettingsSections>
   )
 }
@@ -48,14 +48,12 @@ function languageLabel(option: string): string {
 }
 
 function LanguageSection() {
-  const language = useLanguageStore((state) => state.language)
-  const setLanguage = useLanguageStore((state) => state.setLanguage)
   return (
     <SettingsSubsection id="language" title={tr("appearance.language")}>
       <SettingRows>
         <SelectRow
           title={tr("appearance.language.title")}
-          value={LOCALES.includes(language) ? language : AUTO_LANGUAGE}
+          value={LOCALES.includes(language()) ? language() : AUTO_LANGUAGE}
           options={LANGUAGE_OPTIONS}
           labelOf={languageLabel}
           onChange={setLanguage}
@@ -65,10 +63,10 @@ function LanguageSection() {
   )
 }
 
-function ColorSchemeSection({ theme }: { theme: ThemeState }) {
+function ColorSchemeSection(props: { theme: ThemeState }) {
   return (
     <SettingsSubsection id="color-scheme" title={tr("appearance.colorScheme")}>
-      <ColorSchemePicker theme={theme} />
+      <ColorSchemePicker theme={props.theme} />
     </SettingsSubsection>
   )
 }

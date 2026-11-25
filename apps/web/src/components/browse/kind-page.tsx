@@ -1,46 +1,18 @@
-import type { Library, TitleKind } from "@matinee/contracts"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
-import { cn } from "@matinee/ui/lib/utils"
-import {
-  type QueryClient,
-  useInfiniteQuery,
-  useQuery,
-} from "@tanstack/react-query"
-import { ChevronDownIcon } from "lucide-react"
-import { useState } from "react"
+import type { Library, TitleKind, TitleScope } from "@matinee/contracts"
+import { type QueryClient, useQuery } from "@tanstack/solid-query"
+import { createMemo, Show } from "solid-js"
 
-import {
-  EmptyList,
-  PosterGridSkeleton,
-  ShowMore,
-} from "@/components/library/library-states"
-import {
-  HeaderControls,
-  type ListControlsProps,
-  PhoneControls,
-} from "@/components/library/list-controls"
-import { TitleFilterPanel } from "@/components/library/title-filter-panel"
-import {
-  cardDetail,
-  titleFilterCount,
-} from "@/components/library/title-filter-params"
+import { TitleGrid } from "@/components/library/title-grid"
 import {
   browsedTitlesOptions,
   preloadInput,
   titleFilterOptionsQuery,
   useTitleFilters,
 } from "@/components/library/title-queries"
-import { PosterCard, posterGrid } from "@/components/media-item"
-import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { tr } from "@/i18n"
 import type { KindSearch } from "@/lib/browse-search"
-import { errorMessage, orpc } from "@/lib/rpc"
+import { orpc } from "@/lib/rpc"
+import { isPhone } from "@/lib/viewport"
 
 /** The kind of library that holds each kind of title. */
 export const libraryKind = {
@@ -89,212 +61,71 @@ export function kindPageLoader(
     )
 }
 
-/**
- * Every movie or every show, across the libraries, as a poster grid. With
- * more than one library, a menu in the subtitle narrows it to one.
- */
-export function KindPage({
-  kind,
-  search,
-  update,
-}: {
+type KindPageProps = {
   kind: TitleKind
   search: KindSearch
-  /** Writes some of the page's search params. */
   update: (patch: KindSearch) => void
-}) {
-  const title = tr(`shell.${libraryKind[kind]}`)
-  useDocumentTitle(title)
-  const libraries = useQuery(orpc.libraries.list.queryOptions())
-  const ofKind = (libraries.data ?? []).filter(
-    (library) => library.kind === libraryKind[kind],
+}
+
+export function KindPage(props: KindPageProps) {
+  const libraries = useQuery(() => orpc.libraries.list.queryOptions())
+  const libraryId = createMemo(() =>
+    pickedLibrary(
+      props.search,
+      libraries.isSuccess ? libraries.data : undefined,
+      props.kind,
+    ),
   )
-  const libraryId = pickedLibrary(search, libraries.data, kind)
-  const list = useTitleFilters(
-    search,
-    update,
-    libraryId ? { libraryId } : { kind },
+  const ofKind = createMemo(() =>
+    (libraries.isSuccess ? libraries.data : []).filter(
+      (library) => library.kind === libraryKind[props.kind],
+    ),
   )
-  const [panelOpen, setPanelOpen] = useState(false)
-  const titles = useInfiniteQuery({
-    ...browsedTitlesOptions({
-      kind,
-      libraryId,
-      filters: list.filters,
-      order: list.order,
-    }),
-    enabled: list.ready,
+  const scope = createMemo(() => {
+    const id = libraryId()
+    return id ? { libraryId: id } : { kind: props.kind }
   })
 
-  const rows = titles.data?.pages.flatMap((page) => page.items) ?? []
-  const total = titles.data?.pages[0]?.total
-  const options = list.options
-  const filtered = titleFilterCount(list.filters) > 0
-  const words = libraryKind[kind]
-  const picker = ofKind.length > 1
-  const count =
-    total === undefined ? undefined : tr("browse.titleCount", { count: total })
-  const controls: ListControlsProps = {
-    sorts: list.sorts,
-    sort: list.sort,
-    setSort: list.setSort,
-    filter: options
-      ? (compact) => (
-          <TitleFilterPanel
-            kind={kind}
-            options={options}
-            filters={list.filters}
-            change={list.change}
-            open={panelOpen}
-            onOpenChange={setPanelOpen}
-            compact={compact}
-          />
-        )
-      : undefined,
-  }
-
   return (
-    <div>
-      <PageHeader
-        title={title}
-        description={
-          picker ? (
-            <>
-              <LibraryMenu
-                libraries={ofKind}
-                value={libraryId}
-                onChange={(next) => update({ library: next })}
-              />
-              {count && (
-                <>
-                  <span aria-hidden className="mx-1.5">
-                    ·
-                  </span>
-                  {count}
-                </>
-              )}
-            </>
-          ) : (
-            count
-          )
-        }
-        actions={<HeaderControls {...controls} />}
-        phoneActions={<PhoneControls {...controls} />}
-      />
-
-      {titles.isPending ? (
-        <PosterGridSkeleton />
-      ) : titles.isError ? (
-        <p className="text-muted-foreground text-sm">
-          {errorMessage(titles.error)}
-        </p>
-      ) : rows.length === 0 ? (
-        <EmptyList
-          title={
-            filtered
-              ? tr(`library.noFilterMatch.${words}`)
-              : tr(`library.none.${words}`)
-          }
-          scanning={ofKind.some((library) => library.scanning)}
-          clear={
-            filtered
-              ? { label: tr("library.clearFilters"), onClick: list.clear }
-              : undefined
-          }
-        />
-      ) : (
-        <>
-          <ul
-            aria-busy={titles.isPlaceholderData}
-            className={cn(
-              posterGrid,
-              "transition-opacity duration-200 motion-reduce:transition-none",
-              titles.isPlaceholderData && "opacity-50",
-            )}
-          >
-            {rows.map((row) => (
-              <li key={row.id}>
-                <PosterCard
-                  title={row}
-                  detail={cardDetail(row, list.order.sort)}
-                />
-              </li>
-            ))}
-          </ul>
-          {titles.hasNextPage && (
-            <ShowMore
-              fetching={titles.isFetchingNextPage}
-              failed={titles.isFetchNextPageError}
-              onClick={() => void titles.fetchNextPage()}
-              className="mt-8"
-            />
-          )}
-        </>
+    <Show when={scope()} keyed>
+      {(current) => (
+        <KindTitles {...props} scope={current} libraries={ofKind()} />
       )}
-    </div>
+    </Show>
   )
 }
 
-/** The value the menu's radio group uses for every library at once. */
-const ALL = ""
+function KindTitles(
+  props: KindPageProps & { scope: TitleScope; libraries: Library[] },
+) {
+  const list = useTitleFilters(
+    () => props.search,
+    (patch) => props.update(patch),
+    () => props.scope,
+  )
+  const request = () =>
+    browsedTitlesOptions({
+      kind: props.kind,
+      libraryId: props.scope.libraryId,
+      filters: list.filters(),
+      order: list.order(),
+    })
 
-/**
- * Every library of the kind, or one of them, as a menu behind the chosen
- * one's name. It sits in the header's subtitle so it takes no room of its
- * own.
- */
-function LibraryMenu({
-  libraries,
-  value,
-  onChange,
-}: {
-  libraries: Library[]
-  value: string | undefined
-  onChange: (libraryId: string | undefined) => void
-}) {
-  const current = libraries.find((library) => library.id === value)
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          "text-foreground/85 hover:text-foreground focus-visible:ring-ring data-popup-open:text-foreground relative -mx-1 inline-flex max-w-full cursor-default items-center gap-0.5 rounded-md px-1 align-bottom font-medium outline-none select-none focus-visible:ring-2",
-          // A taller hit area on touch screens, without moving the text.
-          "[@media(pointer:coarse)]:after:absolute [@media(pointer:coarse)]:after:-inset-y-3 [@media(pointer:coarse)]:after:inset-x-0",
-        )}
-      >
-        <span className="truncate">
-          {current?.name ?? tr("browse.library.all")}
-        </span>
-        <ChevronDownIcon aria-hidden className="size-3.5 shrink-0" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-auto min-w-48">
-        <DropdownMenuRadioGroup
-          aria-label={tr("browse.library")}
-          value={value ?? ALL}
-          onValueChange={(next) => {
-            const library = libraries.find((l) => l.id === next)
-            onChange(library?.id)
-          }}
-        >
-          <DropdownMenuRadioItem
-            value={ALL}
-            closeOnClick
-            className="[@media(pointer:coarse)]:min-h-11"
-          >
-            {tr("browse.library.all")}
-          </DropdownMenuRadioItem>
-          {libraries.map((library) => (
-            <DropdownMenuRadioItem
-              key={library.id}
-              value={library.id}
-              closeOnClick
-              className="[@media(pointer:coarse)]:min-h-11"
-            >
-              {library.name}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <TitleGrid
+      // A phone tab is Media, as in the Flutter app; wider screens keep the
+      // rail's own Movies and Shows names.
+      name={
+        isPhone() ? tr("shell.media") : tr(`shell.${libraryKind[props.kind]}`)
+      }
+      kind={props.kind}
+      tab={isPhone()}
+      scanning={props.libraries.some((library) => library.scanning)}
+      list={list}
+      request={request()}
+      libraries={props.libraries}
+      libraryId={props.scope.libraryId}
+      onLibraryChange={(library) => props.update({ library })}
+    />
   )
 }

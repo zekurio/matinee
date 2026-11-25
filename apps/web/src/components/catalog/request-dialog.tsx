@@ -1,18 +1,18 @@
 import type { CatalogRef } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { Checkbox } from "@matinee/ui/components/checkbox"
+import { cn } from "@matinee/ui/lib/utils"
+import { createMemo, createSignal, For, Show, untrack } from "solid-js"
+
+import { Picture, tone } from "@/components/picture"
+import { tr } from "@/i18n"
+import { Button } from "@/kit/button"
+import { Checkbox } from "@/kit/checkbox"
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@matinee/ui/components/dialog"
-import { cn } from "@matinee/ui/lib/utils"
-import { useState } from "react"
-
-import { Picture, tone } from "@/components/media-item"
-import { tr } from "@/i18n"
+} from "@/kit/dialog"
 import { art, present, seasonName } from "@/lib/media"
 
 import { type CatalogSeasonEntry, refKey } from "./catalog-data"
@@ -26,15 +26,7 @@ import { asks, seasonDetail, stateWord } from "./words"
  * asked for; a new one is asked for once it airs. Where it lands is the
  * server's call, as in Seerr: an admin moves a request from the queue.
  */
-export function RequestDialog({
-  open,
-  onOpenChange,
-  titleRef,
-  name,
-  seasons,
-  first,
-  libraryId,
-}: {
+export function RequestDialog(props: {
   open: boolean
   onOpenChange: (open: boolean) => void
   titleRef: CatalogRef
@@ -45,37 +37,34 @@ export function RequestDialog({
   first: boolean
   libraryId?: string
 }) {
+  // Another library's provider can number the seasons differently, so a
+  // new pick starts again from the server's.
+  const library = createMemo(() => ({ id: props.libraryId }))
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="flex max-h-[calc(100dvh-2rem)] flex-col gap-5 p-6 sm:max-w-md"
+        class="flex max-h-[calc(100dvh-2rem)] flex-col gap-5 p-6 sm:max-w-md"
       >
-        {/* Another library's provider can number the seasons differently,
-            so a new pick starts again from the server's. */}
-        <RequestForm
-          key={libraryId ?? ""}
-          titleRef={titleRef}
-          name={name}
-          seasons={seasons}
-          first={first}
-          libraryId={libraryId}
-          onDone={() => onOpenChange(false)}
-        />
+        <Show when={library()} keyed>
+          {(current) => (
+            <RequestForm
+              titleRef={props.titleRef}
+              name={props.name}
+              seasons={props.seasons}
+              first={props.first}
+              libraryId={current.id}
+              onDone={() => props.onOpenChange(false)}
+            />
+          )}
+        </Show>
       </DialogContent>
     </Dialog>
   )
 }
 
 /** Mounts with the dialog, so each opening starts from the server's pick. */
-function RequestForm({
-  titleRef,
-  name,
-  seasons,
-  first,
-  libraryId,
-  onDone,
-}: {
+function RequestForm(props: {
   titleRef: CatalogRef
   name: string
   seasons: CatalogSeasonEntry[]
@@ -84,14 +73,18 @@ function RequestForm({
   onDone: () => void
 }) {
   const ask = useAsk()
-  const show = titleRef.kind === "show"
-  const [picked, setPicked] = useState(
-    () =>
-      new Set(
-        seasons
-          .filter((season) => season.selected && asks(season.availability))
-          .map((season) => season.number),
-      ),
+  const show = () => props.titleRef.kind === "show"
+  // The server's pick as the form opens; a live update to a season's
+  // state after that doesn't undo what the viewer ticked.
+  const [picked, setPicked] = createSignal(
+    untrack(
+      () =>
+        new Set(
+          props.seasons
+            .filter((season) => season.selected && asks(season.availability))
+            .map((season) => season.number),
+        ),
+    ),
   )
   const toggle = (number: number, on: boolean) =>
     setPicked((prev) => {
@@ -101,92 +94,105 @@ function RequestForm({
       return next
     })
 
-  const chosen = seasons
-    .filter((season) => picked.has(season.number))
-    .map((season) => season.number)
-  const nothing = show && chosen.length === 0
+  const chosen = createMemo(() =>
+    props.seasons
+      .filter((season) => picked().has(season.number))
+      .map((season) => season.number),
+  )
+  const nothing = () => show() && chosen().length === 0
 
+  // The dialog closes once the ask is in; a failure keeps it open, with
+  // the toast `useAsk` shows.
   const submit = () =>
-    ask.mutate(
-      {
-        ref: titleRef,
-        name,
-        libraryId,
-        scope: show ? { seasons: chosen } : undefined,
-        undo: first,
-      },
-      { onSuccess: onDone },
-    )
+    void ask
+      .mutate({
+        ref: props.titleRef,
+        name: props.name,
+        libraryId: props.libraryId,
+        scope: show() ? { seasons: chosen() } : undefined,
+        undo: props.first,
+      })
+      .then(
+        () => props.onDone(),
+        () => undefined,
+      )
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="pr-8 text-lg leading-7 font-semibold">
-          {tr("ask.dialog.title", { name })}
+        <DialogTitle class="pr-8 text-lg leading-7 font-semibold">
+          {tr("ask.dialog.title", { name: props.name })}
         </DialogTitle>
       </DialogHeader>
 
-      {show && (
-        <div className="-mx-6 flex min-h-0 flex-col border-y">
+      <Show when={show()}>
+        <div class="-mx-6 flex min-h-0 flex-col border-y">
           <ul
             aria-label={tr("ask.chooser.seasons")}
-            className="flex min-h-0 flex-col overflow-y-auto overscroll-contain px-4 py-2"
+            class="flex min-h-0 flex-col overflow-y-auto overscroll-contain px-4 py-2"
           >
-            {seasons.map((season) => {
-              const open = asks(season.availability)
-              const id = `${refKey(titleRef)}-season-${season.number}`
-              return (
-                <li key={season.number}>
-                  <label
-                    htmlFor={open ? id : undefined}
-                    className={cn(
-                      "flex min-h-12 items-center gap-3 rounded-lg px-2 py-1.5",
-                      open && "hover:bg-foreground/[0.06] cursor-pointer",
-                    )}
-                  >
-                    {open ? (
-                      <Checkbox
-                        id={id}
-                        checked={picked.has(season.number)}
-                        onCheckedChange={(on) => toggle(season.number, on)}
-                      />
-                    ) : (
-                      <span aria-hidden className="w-[18px] shrink-0" />
-                    )}
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "relative block aspect-[2/3] w-7 shrink-0 overflow-hidden rounded-sm border",
-                        tone(`${refKey(titleRef)}:${season.number}`),
+            <For each={props.seasons}>
+              {(season) => {
+                const open = () => asks(season.availability)
+                const id = `${refKey(props.titleRef)}-season-${season.number}`
+                return (
+                  <li>
+                    <label
+                      for={open() ? id : undefined}
+                      class={cn(
+                        "flex min-h-12 items-center gap-3 rounded-lg px-2 py-1.5",
+                        open() && "hover:bg-foreground/[0.06] cursor-pointer",
                       )}
                     >
-                      <Picture sources={present(art(season.poster))} />
-                    </span>
-                    <span
-                      className={cn(
-                        "min-w-0 flex-1 truncate font-medium",
-                        !open && "text-muted-foreground",
-                      )}
-                    >
-                      {seasonName(season.number)}
-                    </span>
-                    <span className="text-muted-foreground text-13px shrink-0 tabular-nums">
-                      {open
-                        ? seasonDetail(season)
-                        : (stateWord(season.availability) ??
-                          tr("ask.chooser.unavailable"))}
-                    </span>
-                  </label>
-                </li>
-              )
-            })}
+                      <Show
+                        when={open()}
+                        fallback={
+                          <span aria-hidden="true" class="w-[18px] shrink-0" />
+                        }
+                      >
+                        <Checkbox
+                          id={id}
+                          checked={picked().has(season.number)}
+                          onCheckedChange={(on) =>
+                            toggle(season.number, on === true)
+                          }
+                        />
+                      </Show>
+                      <span
+                        aria-hidden="true"
+                        class={cn(
+                          "relative block aspect-[2/3] w-7 shrink-0 overflow-hidden rounded-sm border",
+                          tone(`${refKey(props.titleRef)}:${season.number}`),
+                        )}
+                      >
+                        <Picture sources={present(art(season.poster))} />
+                      </span>
+                      <span
+                        class={cn(
+                          "min-w-0 flex-1 truncate font-medium",
+                          !open() && "text-muted-foreground",
+                        )}
+                      >
+                        {seasonName(season.number)}
+                      </span>
+                      <span class="text-muted-foreground text-13px shrink-0 tabular-nums">
+                        {open()
+                          ? seasonDetail(season)
+                          : (stateWord(season.availability) ??
+                            tr("ask.chooser.unavailable"))}
+                      </span>
+                    </label>
+                  </li>
+                )
+              }}
+            </For>
           </ul>
         </div>
-      )}
+      </Show>
 
-      <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
-        <Button disabled={nothing || ask.isPending} onClick={submit}>
-          {show ? submitLabel(chosen) : tr("ask.ask")}
+      <DialogFooter showCancelButton class="-mx-6 -mb-6 px-6 py-4">
+        <Button disabled={nothing() || ask.isPending} onClick={submit}>
+          {show() ? submitLabel(chosen()) : tr("ask.ask")}
         </Button>
       </DialogFooter>
     </>

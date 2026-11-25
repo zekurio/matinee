@@ -4,33 +4,29 @@ import {
   type OidcSettings,
   OidcSettingsInput,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { Input } from "@matinee/ui/components/input"
-import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
-import { useSelector } from "@tanstack/react-form"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { Check, ChevronDown, Copy, Trash2, Undo2 } from "lucide"
 import {
-  CheckIcon,
-  ChevronDownIcon,
-  CopyIcon,
-  Trash2Icon,
-  Undo2Icon,
-} from "lucide-react"
-import { useState } from "react"
+  createEffect,
+  createMemo,
+  createSignal,
+  Show,
+  snapshot,
+  untrack,
+} from "solid-js"
 
 import { type MessageKey, tr, translateKnown } from "@/i18n"
-import { useAppForm, withForm } from "@/lib/form"
+import { Button } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+import { Input } from "@/kit/input"
+import { Skeleton } from "@/kit/skeleton"
+import { createForm, type Form } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { ShownError } from "@/lib/shown-error"
 import { useActionFeedback } from "@/lib/use-action-feedback"
 
-import {
-  InputField,
-  SettingWarning,
-  SwitchField,
-  typeOnly,
-} from "./setting-controls"
+import { InputField, SettingWarning, SwitchField } from "./setting-controls"
 import {
   SettingNote,
   SettingRow,
@@ -150,447 +146,411 @@ const sameDraft = (a: Draft, b: Draft) => {
 }
 
 export function AuthPanel() {
-  const settings = useQuery(orpc.admin.auth.get.queryOptions())
+  const settings = useQuery(() => orpc.admin.auth.get.queryOptions())
 
   return (
     <SettingsSections>
-      {settings.isPending ? (
-        <Skeleton className="h-96 rounded-xl" />
-      ) : settings.isError ? (
-        <p className="text-muted-foreground text-sm">
-          {tr("oidc.loadFailed", { error: errorMessage(settings.error) })}
-        </p>
-      ) : (
-        <OidcForm settings={settings.data} />
-      )}
+      <Show
+        when={settings.isSuccess ? settings.data : undefined}
+        fallback={
+          <Show
+            when={settings.isError}
+            fallback={<Skeleton class="h-96 rounded-xl" />}
+          >
+            <p class="text-muted-foreground text-sm">
+              {tr("oidc.loadFailed", { error: errorMessage(settings.error) })}
+            </p>
+          </Show>
+        }
+      >
+        {(data) => <OidcForm settings={data()} />}
+      </Show>
     </SettingsSections>
   )
 }
 
-function OidcForm({ settings }: { settings: AdminAuthSettings }) {
+function OidcForm(props: { settings: AdminAuthSettings }) {
   const queryClient = useQueryClient()
-  const initial = draftFrom(settings)
-  const save = useMutation({
+  const initial = createMemo(() => draftFrom(props.settings))
+  const save = useMutation(() => ({
     mutationFn: (input: AuthSettingsInput) => client.admin.auth.update(input),
+  }))
+  // Seeded once; the effect below brings later saved settings in.
+  const form = createForm<Draft>({
+    defaultValues: untrack(initial),
+    onSubmit: () => {},
   })
   // Until the first edit, the form follows the saved settings, so a refetch
   // shows through.
-  const form = useAppForm({
-    defaultValues: initial,
-    onSubmit: async ({ value, formApi }) => {
-      const parsed = inputFrom(value)
-      if (!parsed.success) throw inputError(parsed.error.issues[0])
-      const next = await save.mutateAsync({
-        passkeys: {
-          enabled: value.passkeys,
-          allowSignUp: value.passkeySignUp,
-        },
-        oidc: parsed.data,
-      })
-      queryClient.setQueryData(orpc.admin.auth.get.queryKey(), next)
-      formApi.reset(draftFrom(next))
-      // The sign-in page and the account section read the public config.
-      await queryClient.invalidateQueries({ queryKey: orpc.auth.key() })
+  createEffect(
+    () => initial(),
+    (draft) => {
+      if (!form.dirty()) form.reset(draft)
     },
-  })
-  // Edits only: for a render after a refetch, an untouched form still holds
-  // the old values.
-  const dirty = useSelector(
-    form.store,
-    (state) => state.isTouched && !sameDraft(state.values, initial),
+    { defer: true },
   )
+  const dirty = () => !sameDraft(form.values(), initial())
+
+  const send = async () => {
+    const value = snapshot(form.values())
+    const parsed = inputFrom(value)
+    if (!parsed.success) throw inputError(parsed.error.issues[0])
+    const next = await save.mutate({
+      passkeys: {
+        enabled: value.passkeys,
+        allowSignUp: value.passkeySignUp,
+      },
+      oidc: parsed.data,
+    })
+    queryClient.setQueryData(orpc.admin.auth.get.queryKey(), next)
+    form.reset(draftFrom(next))
+    // The sign-in page and the account section read the public config.
+    await queryClient.invalidateQueries({ queryKey: orpc.auth.key() })
+  }
 
   return (
-    <form className="contents" onSubmit={(event) => event.preventDefault()}>
-      <PasskeysSection form={form} settings={settings} />
-      <SingleSignOnSection form={form} settings={settings} />
-      <ProviderAccessSection form={form} defaults={settings.defaults} />
-      <AdvancedSection form={form} defaults={settings.defaults} />
+    <form class="contents" onSubmit={(event) => event.preventDefault()}>
+      <PasskeysSection form={form} settings={props.settings} />
+      <SingleSignOnSection form={form} settings={props.settings} />
+      <ProviderAccessSection form={form} defaults={props.settings.defaults} />
+      <AdvancedSection form={form} defaults={props.settings.defaults} />
       <SettingsSaveBar
-        dirty={dirty}
+        dirty={dirty()}
         onReset={() => form.reset()}
-        onSave={() => form.handleSubmit()}
+        onSave={send}
       />
     </form>
   )
 }
 
-const PasskeysSection = withForm({
-  defaultValues: typeOnly<Draft>(),
-  props: typeOnly<{ settings: AdminAuthSettings }>(),
-  render: function Render({ form, settings }) {
-    const passkeysOn = useSelector(form.store, (state) => state.values.passkeys)
-    return (
-      <SettingsSubsection id="passkeys" title={tr("oidc.passkeys.title")}>
-        <SettingRows>
-          <form.AppField name="passkeys">
-            {(field) => (
-              <SwitchField
-                title={tr("oidc.enabled")}
-                footer={
-                  settings.passkeys.enabled &&
-                  !field.state.value &&
-                  settings.unlinkedUsers > 0 ? (
-                    <SettingWarning>
-                      {tr("oidc.passkeys.unlinked", {
-                        count: settings.unlinkedUsers,
-                        provider: settings.oidc.displayName,
-                      })}
-                    </SettingWarning>
-                  ) : null
-                }
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="passkeySignUp">
-            {() => (
-              <SwitchField
-                title={tr("oidc.passkeys.allowSignUp")}
-                disabled={!passkeysOn}
-                footer={
-                  <SettingNote>
-                    {tr("oidc.passkeys.allowSignUpHint")}
-                  </SettingNote>
-                }
-              />
-            )}
-          </form.AppField>
-        </SettingRows>
-      </SettingsSubsection>
-    )
-  },
-})
+type SectionProps = { form: Form<Draft>; settings: AdminAuthSettings }
 
-const SingleSignOnSection = withForm({
-  defaultValues: typeOnly<Draft>(),
-  props: typeOnly<{ settings: AdminAuthSettings }>(),
-  render: function Render({ form, settings }) {
-    const { defaults } = settings
+function PasskeysSection(props: SectionProps) {
+  return (
+    <SettingsSubsection id="passkeys" title={tr("oidc.passkeys.title")}>
+      <SettingRows>
+        <SwitchField
+          form={props.form}
+          name="passkeys"
+          title={tr("oidc.enabled")}
+          footer={
+            <Show
+              when={
+                props.settings.passkeys.enabled &&
+                !props.form.values().passkeys &&
+                props.settings.unlinkedUsers > 0
+              }
+            >
+              <SettingWarning>
+                {tr("oidc.passkeys.unlinked", {
+                  count: props.settings.unlinkedUsers,
+                  provider: props.settings.oidc.displayName,
+                })}
+              </SettingWarning>
+            </Show>
+          }
+        />
+        <SwitchField
+          form={props.form}
+          name="passkeySignUp"
+          title={tr("oidc.passkeys.allowSignUp")}
+          disabled={!props.form.values().passkeys}
+          footer={
+            <SettingNote>{tr("oidc.passkeys.allowSignUpHint")}</SettingNote>
+          }
+        />
+      </SettingRows>
+    </SettingsSubsection>
+  )
+}
 
-    return (
-      <SettingsSubsection id="single-sign-on" title={tr("oidc.title")}>
-        <SettingRows>
-          <form.AppField name="enabled">
-            {(field) => (
-              <SwitchField
-                title={tr("oidc.enabled")}
-                footer={
-                  settings.active &&
-                  !field.state.value &&
-                  settings.ssoOnlyUsers > 0 ? (
-                    <SettingWarning>
-                      {tr("oidc.ssoOnly", {
-                        count: settings.ssoOnlyUsers,
-                        provider: settings.oidc.displayName,
-                      })}
-                    </SettingWarning>
-                  ) : null
-                }
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="allowSignUp">
-            {() => <SwitchField title={tr("oidc.allowSignUp")} />}
-          </form.AppField>
-          <form.AppField name="displayName">
-            {() => (
-              <InputField
-                title={tr("oidc.field.displayName")}
-                maxLength={64}
-                placeholder={defaults.displayName}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="issuerUrl">
-            {() => (
-              <InputField
-                title={tr("oidc.field.issuerUrl")}
-                footer={
-                  <SettingNote>
-                    {defaults.issuerUrl
-                      ? tr("oidc.issuerUrl.override")
-                      : tr("oidc.issuerUrl.description")}
-                  </SettingNote>
-                }
-                layout="stack"
-                type="url"
-                inputMode="url"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={defaults.issuerUrl}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="clientId">
-            {() => (
-              <InputField
-                title={tr("oidc.field.clientId")}
-                layout="stack"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={defaults.clientId}
-              />
-            )}
-          </form.AppField>
-          <ClientSecretRow form={form} settings={settings} />
-          <CallbackRow url={settings.callbackUrl} />
-        </SettingRows>
-      </SettingsSubsection>
-    )
-  },
-})
+function SingleSignOnSection(props: SectionProps) {
+  const defaults = () => props.settings.defaults
+  return (
+    <SettingsSubsection id="single-sign-on" title={tr("oidc.title")}>
+      <SettingRows>
+        <SwitchField
+          form={props.form}
+          name="enabled"
+          title={tr("oidc.enabled")}
+          footer={
+            <Show
+              when={
+                props.settings.active &&
+                !props.form.values().enabled &&
+                props.settings.ssoOnlyUsers > 0
+              }
+            >
+              <SettingWarning>
+                {tr("oidc.ssoOnly", {
+                  count: props.settings.ssoOnlyUsers,
+                  provider: props.settings.oidc.displayName,
+                })}
+              </SettingWarning>
+            </Show>
+          }
+        />
+        <SwitchField
+          form={props.form}
+          name="allowSignUp"
+          title={tr("oidc.allowSignUp")}
+        />
+        <InputField
+          form={props.form}
+          name="displayName"
+          title={tr("oidc.field.displayName")}
+          maxlength={64}
+          placeholder={defaults().displayName}
+        />
+        <InputField
+          form={props.form}
+          name="issuerUrl"
+          title={tr("oidc.field.issuerUrl")}
+          footer={
+            <SettingNote>
+              {defaults().issuerUrl
+                ? tr("oidc.issuerUrl.override")
+                : tr("oidc.issuerUrl.description")}
+            </SettingNote>
+          }
+          layout="stack"
+          type="url"
+          inputmode="url"
+          autocomplete="off"
+          spellcheck={false}
+          placeholder={defaults().issuerUrl}
+        />
+        <InputField
+          form={props.form}
+          name="clientId"
+          title={tr("oidc.field.clientId")}
+          layout="stack"
+          autocomplete="off"
+          spellcheck={false}
+          placeholder={defaults().clientId}
+        />
+        <ClientSecretRow form={props.form} settings={props.settings} />
+        <CallbackRow url={props.settings.callbackUrl} />
+      </SettingRows>
+    </SettingsSubsection>
+  )
+}
 
 /**
  * What the provider's claims say about an account's access, and whether a
  * refusal from the provider signs the account out.
  */
-const ProviderAccessSection = withForm({
-  defaultValues: typeOnly<Draft>(),
-  props: typeOnly<{ defaults: OidcSettings }>(),
-  render: function Render({ form, defaults }) {
-    return (
-      <SettingsSubsection
-        id="single-sign-on-access"
-        title={tr("oidc.access.title")}
-      >
+function ProviderAccessSection(props: {
+  form: Form<Draft>
+  defaults: OidcSettings
+}) {
+  return (
+    <SettingsSubsection
+      id="single-sign-on-access"
+      title={tr("oidc.access.title")}
+    >
+      <SettingRows>
+        <InputField
+          form={props.form}
+          name="groupsClaim"
+          title={tr("oidc.field.groupsClaim")}
+          footer={
+            <SettingNote>{tr("oidc.groupsClaim.description")}</SettingNote>
+          }
+          autocomplete="off"
+          spellcheck={false}
+          placeholder={props.defaults.groupsClaim || tr("oidc.claim.off")}
+        />
+        <InputField
+          form={props.form}
+          name="policyClaim"
+          title={tr("oidc.field.policyClaim")}
+          footer={
+            <SettingNote>{tr("oidc.policyClaim.description")}</SettingNote>
+          }
+          autocomplete="off"
+          spellcheck={false}
+          placeholder={props.defaults.policyClaim || tr("oidc.claim.off")}
+        />
+        <SwitchField
+          form={props.form}
+          name="signOutRefused"
+          title={tr("oidc.signOutRefused")}
+          footer={
+            <SettingNote>{tr("oidc.signOutRefused.description")}</SettingNote>
+          }
+        />
+      </SettingRows>
+    </SettingsSubsection>
+  )
+}
+
+function AdvancedSection(props: { form: Form<Draft>; defaults: OidcSettings }) {
+  const [advanced, setAdvanced] = createSignal(false)
+
+  return (
+    <SettingsSubsection
+      id="single-sign-on-advanced"
+      title={tr("oidc.advanced")}
+      action={
+        <Button
+          type="button"
+          variant="outline"
+          aria-expanded={advanced() ? "true" : "false"}
+          aria-controls="oidc-advanced"
+          onClick={() => setAdvanced(!advanced())}
+        >
+          {advanced() ? tr("oidc.advanced.hide") : tr("oidc.advanced.show")}
+          <Icon
+            icon={ChevronDown}
+            class={[
+              "transition-transform motion-reduce:transition-none",
+              { "rotate-180": advanced() },
+            ]}
+          />
+        </Button>
+      }
+    >
+      <div id="oidc-advanced" hidden={!advanced()}>
         <SettingRows>
-          <form.AppField name="groupsClaim">
-            {() => (
-              <InputField
-                title={tr("oidc.field.groupsClaim")}
-                footer={
-                  <SettingNote>
-                    {tr("oidc.groupsClaim.description")}
-                  </SettingNote>
-                }
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={defaults.groupsClaim || tr("oidc.claim.off")}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="policyClaim">
-            {() => (
-              <InputField
-                title={tr("oidc.field.policyClaim")}
-                footer={
-                  <SettingNote>
-                    {tr("oidc.policyClaim.description")}
-                  </SettingNote>
-                }
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={defaults.policyClaim || tr("oidc.claim.off")}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="signOutRefused">
-            {() => (
-              <SwitchField
-                title={tr("oidc.signOutRefused")}
-                footer={
-                  <SettingNote>
-                    {tr("oidc.signOutRefused.description")}
-                  </SettingNote>
-                }
-              />
-            )}
-          </form.AppField>
+          <InputField
+            form={props.form}
+            name="scopes"
+            title={tr("oidc.field.scopes")}
+            autocomplete="off"
+            spellcheck={false}
+            placeholder={props.defaults.scopes}
+          />
+          <InputField
+            form={props.form}
+            name="usernameClaim"
+            title={tr("oidc.field.usernameClaim")}
+            autocomplete="off"
+            spellcheck={false}
+            placeholder={props.defaults.usernameClaim}
+          />
+          <InputField
+            form={props.form}
+            name="nameClaim"
+            title={tr("oidc.field.nameClaim")}
+            autocomplete="off"
+            spellcheck={false}
+            placeholder={props.defaults.nameClaim}
+          />
+          <InputField
+            form={props.form}
+            name="roleClaim"
+            title={tr("oidc.field.roleClaim")}
+            autocomplete="off"
+            spellcheck={false}
+            placeholder={props.defaults.roleClaim}
+          />
         </SettingRows>
-      </SettingsSubsection>
-    )
-  },
-})
+      </div>
+    </SettingsSubsection>
+  )
+}
 
-const AdvancedSection = withForm({
-  defaultValues: typeOnly<Draft>(),
-  props: typeOnly<{ defaults: OidcSettings }>(),
-  render: function Render({ form, defaults }) {
-    const [advanced, setAdvanced] = useState(false)
-
-    return (
-      <SettingsSubsection
-        id="single-sign-on-advanced"
-        title={tr("oidc.advanced")}
-        action={
-          <Button
-            type="button"
-            variant="outline"
-            aria-expanded={advanced}
-            aria-controls="oidc-advanced"
-            onClick={() => setAdvanced(!advanced)}
-          >
-            {advanced ? tr("oidc.advanced.hide") : tr("oidc.advanced.show")}
-            <ChevronDownIcon
-              className={cn(
-                "transition-transform motion-reduce:transition-none",
-                advanced && "rotate-180",
-              )}
-            />
-          </Button>
-        }
-      >
-        <div id="oidc-advanced" hidden={!advanced}>
-          <SettingRows>
-            <form.AppField name="scopes">
-              {() => (
-                <InputField
-                  title={tr("oidc.field.scopes")}
-                  autoComplete="off"
-                  spellCheck={false}
-                  placeholder={defaults.scopes}
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="usernameClaim">
-              {() => (
-                <InputField
-                  title={tr("oidc.field.usernameClaim")}
-                  autoComplete="off"
-                  spellCheck={false}
-                  placeholder={defaults.usernameClaim}
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="nameClaim">
-              {() => (
-                <InputField
-                  title={tr("oidc.field.nameClaim")}
-                  autoComplete="off"
-                  spellCheck={false}
-                  placeholder={defaults.nameClaim}
-                />
-              )}
-            </form.AppField>
-            <form.AppField name="roleClaim">
-              {() => (
-                <InputField
-                  title={tr("oidc.field.roleClaim")}
-                  autoComplete="off"
-                  spellCheck={false}
-                  placeholder={defaults.roleClaim}
-                />
-              )}
-            </form.AppField>
-          </SettingRows>
-        </div>
-      </SettingsSubsection>
-    )
-  },
-})
-
-const ClientSecretRow = withForm({
-  defaultValues: typeOnly<Draft>(),
-  props: typeOnly<{ settings: AdminAuthSettings }>(),
-  render: function Render({ form, settings }) {
-    const dropSecret = useSelector(
-      form.store,
-      (state) => state.values.dropSecret,
-    )
-    const typed = useSelector(
-      form.store,
-      (state) => state.values.clientSecret !== "",
-    )
-    const { source, environment } = settings.clientSecret
-    const savedHere = source === "saved" && !dropSecret
+function ClientSecretRow(props: SectionProps) {
+  const dropSecret = () => props.form.values().dropSecret
+  const typed = () => props.form.values().clientSecret !== ""
+  const source = () => props.settings.clientSecret.source
+  const environment = () => props.settings.clientSecret.environment
+  const placeholder = () => {
+    const savedHere = source() === "saved" && !dropSecret()
     const fromEnvironment =
-      source === "environment" || (dropSecret && environment)
-    const placeholder = savedHere
+      source() === "environment" || (dropSecret() && environment())
+    return savedHere
       ? tr("oidc.clientSecret.saved")
       : fromEnvironment
         ? tr("oidc.clientSecret.fromEnvironment")
         : tr("oidc.clientSecret.none")
-    // Remove the saved secret, or take the removal back. Typing a new one
-    // replaces it anyway, so the button waits for an empty field.
-    const removable = source === "saved" && !typed
-    const removeLabel = dropSecret
+  }
+  // Remove the saved secret, or take the removal back. Typing a new one
+  // replaces it anyway, so the button waits for an empty field.
+  const removable = () => source() === "saved" && !typed()
+  const removeLabel = () =>
+    dropSecret()
       ? tr("oidc.clientSecret.keep")
-      : environment
+      : environment()
         ? tr("oidc.clientSecret.useEnvironment")
         : tr("oidc.clientSecret.remove")
 
-    return (
-      <SettingRow
-        title={tr("oidc.field.clientSecret")}
-        layout="stack"
-        footer={
-          dropSecret ? (
-            <SettingNote>
-              {environment
-                ? tr("oidc.clientSecret.environmentApplies")
-                : tr("oidc.clientSecret.removed")}
-            </SettingNote>
-          ) : undefined
-        }
-      >
-        {(ids) => (
-          <form.Field name="clientSecret">
-            {(field) => (
-              <div className="relative w-full">
-                <Input
-                  id={ids.controlId}
-                  type="password"
-                  autoComplete="new-password"
-                  spellCheck={false}
-                  value={field.state.value}
-                  placeholder={placeholder}
-                  className={cn(removable && "pr-11")}
-                  onChange={(event) => {
-                    field.handleChange(event.target.value)
-                    if (event.target.value) {
-                      form.setFieldValue("dropSecret", false)
-                    }
-                  }}
-                />
-                {removable && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={removeLabel}
-                    title={removeLabel}
-                    className={cn(
-                      "absolute top-1/2 right-1 -translate-y-1/2",
-                      !dropSecret && "text-destructive hover:text-destructive",
-                    )}
-                    onClick={() =>
-                      form.setFieldValue("dropSecret", !dropSecret)
-                    }
-                  >
-                    {dropSecret ? <Undo2Icon /> : <Trash2Icon />}
-                  </Button>
-                )}
-              </div>
-            )}
-          </form.Field>
-        )}
-      </SettingRow>
-    )
-  },
-})
+  return (
+    <SettingRow
+      title={tr("oidc.field.clientSecret")}
+      layout="stack"
+      footer={
+        <Show when={dropSecret()}>
+          <SettingNote>
+            {environment()
+              ? tr("oidc.clientSecret.environmentApplies")
+              : tr("oidc.clientSecret.removed")}
+          </SettingNote>
+        </Show>
+      }
+    >
+      {(ids) => (
+        <div class="relative w-full">
+          <Input
+            id={ids.controlId}
+            type="password"
+            autocomplete="new-password"
+            spellcheck={false}
+            value={props.form.values().clientSecret}
+            placeholder={placeholder()}
+            class={cn(removable() && "pr-11")}
+            onValueChange={(value) => {
+              props.form.set("clientSecret", value)
+              if (value) props.form.set("dropSecret", false)
+            }}
+          />
+          <Show when={removable()}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={removeLabel()}
+              title={removeLabel()}
+              class={cn(
+                "absolute top-1/2 right-1 -translate-y-1/2",
+                !dropSecret() && "text-destructive hover:text-destructive",
+              )}
+              onClick={() => props.form.set("dropSecret", !dropSecret())}
+            >
+              <Icon icon={dropSecret() ? Undo2 : Trash2} />
+            </Button>
+          </Show>
+        </div>
+      )}
+    </SettingRow>
+  )
+}
 
-function CallbackRow({ url }: { url: string }) {
+function CallbackRow(props: { url: string }) {
   const { feedback, run } = useActionFeedback({ successDuration: 1500 })
-  const copied = feedback.state === "success"
+  const copied = () => feedback().state === "success"
   return (
     <SettingRow title={tr("oidc.redirectUri")} layout="stack">
       {(ids) => (
         <>
           <Input
             id={ids.controlId}
-            readOnly
-            value={url}
-            className="text-13px font-mono"
+            readonly
+            value={props.url}
+            class="text-13px font-mono"
             onFocus={(event) => event.currentTarget.select()}
           />
           <Button
             type="button"
             variant="outline"
-            className="shrink-0"
-            onClick={() => void run(() => navigator.clipboard.writeText(url))}
+            class="shrink-0"
+            onClick={() =>
+              void run(() => navigator.clipboard.writeText(props.url))
+            }
           >
-            {copied ? <CheckIcon /> : <CopyIcon />}
-            {copied ? tr("oidc.copied") : tr("oidc.copy")}
+            <Icon icon={copied() ? Check : Copy} />
+            {copied() ? tr("oidc.copied") : tr("oidc.copy")}
           </Button>
         </>
       )}

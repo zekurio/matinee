@@ -1,4 +1,5 @@
 import type { Title } from "@matinee/contracts"
+import { Show } from "solid-js"
 
 import { PosterBadge } from "@/components/catalog/catalog-card"
 import type { CatalogSeasonEntry } from "@/components/catalog/catalog-data"
@@ -27,62 +28,66 @@ const frame =
  * until it's requested. For an admin with a request for it to answer,
  * Add and Decline, and the badge says who requested it.
  */
-export function RestOfSeasonCard({
-  title,
-  gaps,
-  season,
-}: {
+export function RestOfSeasonCard(props: {
   title: Title
   gaps: ShowGaps
   season: CatalogSeasonEntry
 }) {
   const ask = useAsk()
-  const { availability } = season
-  const waiting = useWaitingRequest(availability)
-  const more = availability.episodesAired - availability.episodesHere
-  const name = tr("title.rest.name", {
-    name: tr("title.seasonOf", {
-      show: title.name,
-      season: seasonName(season.number),
-    }),
-  })
+  const waiting = useWaitingRequest(() => props.season.availability)
+  const more = () =>
+    props.season.availability.episodesAired -
+    props.season.availability.episodesHere
+  const tip = () => {
+    const request = waiting()
+    return request ? requestedTip(request.item) : null
+  }
+  const name = () =>
+    tr("title.rest.name", {
+      name: tr("title.seasonOf", {
+        show: props.title.name,
+        season: seasonName(props.season.number),
+      }),
+    })
   return (
     <div>
-      <div className={frame}>
-        <span className="flex max-w-full flex-col items-center gap-2 px-3">
-          <PosterBadge
-            availability={availability}
-            tip={waiting && requestedTip(waiting.item)}
-          />
-          {waiting && !waiting.answered ? (
-            <AdminAnswer
-              item={waiting.item}
-              look="plain"
-              className="max-w-full"
-            />
-          ) : (
-            <PosterActionButton
-              availability={availability}
-              name={name}
-              size="sm"
-              label={tr("title.rest.ask")}
-              busy={ask.isPending}
-              look="plain"
-              className="w-auto"
-              onRequest={() =>
-                ask.mutate({
-                  ref: gaps.ref,
-                  name,
-                  libraryId: gaps.libraryId,
-                  scope: { seasons: [season.number] },
-                  undo: gaps.first,
-                })
-              }
-            />
-          )}
+      <div class={frame}>
+        <span class="flex max-w-full flex-col items-center gap-2 px-3">
+          <PosterBadge availability={props.season.availability} tip={tip()} />
+          <Show
+            when={!waiting()?.answered && waiting()}
+            fallback={
+              <PosterActionButton
+                availability={props.season.availability}
+                name={name()}
+                size="sm"
+                label={tr("title.rest.ask")}
+                busy={ask.isPending}
+                look="plain"
+                class="w-auto"
+                onRequest={() =>
+                  ask.mutate({
+                    ref: props.gaps.ref,
+                    name: name(),
+                    libraryId: props.gaps.libraryId,
+                    scope: { seasons: [props.season.number] },
+                    undo: props.gaps.first,
+                  })
+                }
+              />
+            }
+          >
+            {(request) => (
+              <AdminAnswer
+                item={request().item}
+                look="plain"
+                class="max-w-full"
+              />
+            )}
+          </Show>
         </span>
       </div>
-      <CardText primary={tr("title.rest.more", { count: more })} />
+      <CardText primary={tr("title.rest.more", { count: more() })} />
     </div>
   )
 }

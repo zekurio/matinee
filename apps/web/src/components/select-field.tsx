@@ -1,52 +1,51 @@
-import { Field, FieldLabel } from "@matinee/ui/components/field"
+import type { JSX } from "@solidjs/web"
+import { For } from "solid-js"
+
+import { Field, FieldLabel } from "@/kit/field"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@matinee/ui/components/select"
-import { useSelector } from "@tanstack/react-form"
-import type { ReactNode } from "react"
+} from "@/kit/select"
+import type { Form } from "@/lib/form"
 
-import { useFieldContext } from "@/lib/form"
-
-/**
- * A labelled select bound to its form field. Render it inside
- * `form.AppField`; the field's value is one of `items`.
- */
-export function SelectField({
-  id,
-  label,
-  items,
-  disabled,
-}: {
+/** A labelled select bound to `name` in `form`, whose value is one of `items`. */
+export function SelectField<
+  Values extends object,
+  Name extends keyof Values,
+>(props: {
+  form: Form<Values>
+  name: Name
   id: string
-  label: ReactNode
-  items: ReadonlyArray<{ value: string; label: string }>
+  label: JSX.Element
+  items: ReadonlyArray<{ value: Values[Name] & string; label: string }>
   disabled?: boolean
 }) {
-  const field = useFieldContext<string>()
-  const value = useSelector(field.store, (state) => state.value)
-
   return (
     <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Select
-        items={items}
-        value={value}
-        disabled={disabled}
-        onValueChange={(next) => next && field.handleChange(next)}
+      <FieldLabel for={props.id}>{props.label}</FieldLabel>
+      <Select<Values[Name] & string>
+        items={[...props.items]}
+        // SAFETY: the field holds one of the items' values, all strings.
+        value={props.form.values()[props.name] as Values[Name] & string}
+        disabled={props.disabled}
+        onValueChange={(next) => {
+          if (next !== null) props.form.set(props.name, next)
+        }}
       >
-        <SelectTrigger id={id} className="w-full">
+        <SelectTrigger id={props.id} class="w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {items.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
+          <For each={props.items}>
+            {(option) => (
+              <SelectItem<Values[Name] & string> value={option.value}>
+                {option.label}
+              </SelectItem>
+            )}
+          </For>
         </SelectContent>
       </Select>
     </Field>

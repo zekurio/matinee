@@ -1,10 +1,15 @@
+import { cn } from "@matinee/ui/lib/utils"
+import { Check, Minus, Plus } from "lucide"
+import { For, Show } from "solid-js"
+
+import { tr } from "@/i18n"
 import {
   Drawer,
   DrawerContent,
   DrawerHandle,
   DrawerTitle,
   DrawerTrigger,
-} from "@matinee/ui/components/drawer"
+} from "@/kit/drawer"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -18,13 +23,9 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
-import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
-import { cn } from "@matinee/ui/lib/utils"
-import { CheckIcon, MinusIcon, PlusIcon } from "lucide-react"
-import type { ReactNode, RefObject } from "react"
-
-import { tr } from "@/i18n"
+} from "@/kit/dropdown-menu"
+import { Icon, type IconNode } from "@/kit/icon"
+import { mediaQuery } from "@/lib/viewport"
 
 export type MenuChoice = {
   id: string
@@ -89,158 +90,178 @@ const menuIconClass = "size-8 shrink-0 justify-center rounded-full p-0"
 const valueClass =
   "h-8 min-w-16 justify-center rounded-full px-2 font-medium tabular-nums"
 
-function Detail({ children }: { children?: string }) {
-  if (!children) return null
+/** Keeps the menu open after an item runs. */
+function stayOpen(run: () => void) {
+  return (event: Event) => {
+    event.preventDefault()
+    run()
+  }
+}
+
+function Detail(props: { children?: string }) {
   return (
-    <span className="text-foreground/70 ml-auto pl-4 text-xs font-medium tabular-nums">
-      {children}
-    </span>
+    <Show when={props.children}>
+      <span class="text-foreground/70 ml-auto pl-4 text-xs font-medium tabular-nums">
+        {props.children}
+      </span>
+    </Show>
   )
 }
 
 /** The menu's {@link MenuAdjust} row. */
-function AdjustRow({ adjust }: { adjust: MenuAdjust }) {
-  const { decrease, increase, reset } = adjust
+function AdjustRow(props: { adjust: MenuAdjust }) {
   return (
     <DropdownMenuGroup
-      aria-label={adjust.title}
-      className="flex items-center gap-1 py-0.5 pr-1 pl-2"
+      aria-label={props.adjust.title}
+      class="flex items-center gap-1 py-0.5 pr-1 pl-2"
     >
-      <span className="min-w-0 flex-1 truncate pr-3 text-sm">
-        {adjust.title}
+      <span class="min-w-0 flex-1 truncate pr-3 text-sm">
+        {props.adjust.title}
       </span>
-      {adjust.disabledNote ? (
-        <span className="text-muted-foreground py-1.5 pr-1 text-sm">
-          {adjust.disabledNote}
-        </span>
-      ) : (
-        <>
-          <DropdownMenuItem
-            aria-label={decrease.label}
-            title={decrease.title ?? decrease.label}
-            closeOnClick={false}
-            onClick={decrease.onSelect}
-            className={menuIconClass}
-          >
-            <MinusIcon />
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            aria-label={reset.label}
-            title={reset.title ?? reset.label}
-            disabled={adjust.atStart}
-            closeOnClick={false}
-            onClick={reset.onSelect}
-            className={cn(
-              valueClass,
-              adjust.atStart &&
-                "text-muted-foreground data-disabled:opacity-100",
-            )}
-          >
-            {adjust.value}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            aria-label={increase.label}
-            title={increase.title ?? increase.label}
-            closeOnClick={false}
-            onClick={increase.onSelect}
-            className={menuIconClass}
-          >
-            <PlusIcon />
-          </DropdownMenuItem>
-          <span aria-live="polite" className="sr-only">
-            {adjust.value}
+      <Show
+        when={props.adjust.disabledNote}
+        fallback={
+          <>
+            <DropdownMenuItem
+              aria-label={props.adjust.decrease.label}
+              title={props.adjust.decrease.title ?? props.adjust.decrease.label}
+              closeOnSelect={false}
+              onSelect={stayOpen(() => props.adjust.decrease.onSelect())}
+              class={menuIconClass}
+            >
+              <Icon icon={Minus} />
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              aria-label={props.adjust.reset.label}
+              title={props.adjust.reset.title ?? props.adjust.reset.label}
+              disabled={props.adjust.atStart}
+              closeOnSelect={false}
+              onSelect={stayOpen(() => props.adjust.reset.onSelect())}
+              class={cn(
+                valueClass,
+                props.adjust.atStart &&
+                  "text-muted-foreground data-disabled:opacity-100",
+              )}
+            >
+              {props.adjust.value}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              aria-label={props.adjust.increase.label}
+              title={props.adjust.increase.title ?? props.adjust.increase.label}
+              closeOnSelect={false}
+              onSelect={stayOpen(() => props.adjust.increase.onSelect())}
+              class={menuIconClass}
+            >
+              <Icon icon={Plus} />
+            </DropdownMenuItem>
+            <span aria-live="polite" class="sr-only">
+              {props.adjust.value}
+            </span>
+          </>
+        }
+      >
+        {(note) => (
+          <span class="text-muted-foreground py-1.5 pr-1 text-sm">
+            {note()}
           </span>
-        </>
-      )}
+        )}
+      </Show>
     </DropdownMenuGroup>
   )
 }
 
 /** The bottom sheet's {@link AdjustRow}, a size up for fingers. */
-function SheetAdjustRow({ adjust }: { adjust: MenuAdjust }) {
-  const { decrease, increase, reset } = adjust
+function SheetAdjustRow(props: { adjust: MenuAdjust }) {
   return (
     <div
       role="group"
-      aria-label={adjust.title}
-      className="mt-2 flex min-h-12 items-center gap-1 border-t pt-2 pl-3"
+      aria-label={props.adjust.title}
+      class="mt-2 flex min-h-12 items-center gap-1 border-t pt-2 pl-3"
     >
-      <span className="min-w-0 flex-1 truncate pr-3 text-sm">
-        {adjust.title}
+      <span class="min-w-0 flex-1 truncate pr-3 text-sm">
+        {props.adjust.title}
       </span>
-      {adjust.disabledNote ? (
-        <span className="text-muted-foreground pr-3 text-sm">
-          {adjust.disabledNote}
-        </span>
-      ) : (
-        <>
-          <button
-            type="button"
-            aria-label={decrease.label}
-            className={sheetIconClass}
-            onClick={decrease.onSelect}
-          >
-            <MinusIcon className="size-5" />
-          </button>
-          <button
-            type="button"
-            aria-label={reset.label}
-            disabled={adjust.atStart}
-            className={cn(
-              sheetIconClass,
-              "w-auto min-w-18 px-2 text-sm font-medium tabular-nums disabled:opacity-100",
-              adjust.atStart && "text-muted-foreground",
-            )}
-            onClick={reset.onSelect}
-          >
-            {adjust.value}
-          </button>
-          <button
-            type="button"
-            aria-label={increase.label}
-            className={sheetIconClass}
-            onClick={increase.onSelect}
-          >
-            <PlusIcon className="size-5" />
-          </button>
-          <span aria-live="polite" className="sr-only">
-            {adjust.value}
-          </span>
-        </>
-      )}
+      <Show
+        when={props.adjust.disabledNote}
+        fallback={
+          <>
+            <button
+              type="button"
+              aria-label={props.adjust.decrease.label}
+              class={sheetIconClass}
+              onClick={() => props.adjust.decrease.onSelect()}
+            >
+              <Icon icon={Minus} class="size-5" />
+            </button>
+            <button
+              type="button"
+              aria-label={props.adjust.reset.label}
+              disabled={props.adjust.atStart}
+              class={cn(
+                sheetIconClass,
+                "w-auto min-w-18 px-2 text-sm font-medium tabular-nums disabled:opacity-100",
+                props.adjust.atStart && "text-muted-foreground",
+              )}
+              onClick={() => props.adjust.reset.onSelect()}
+            >
+              {props.adjust.value}
+            </button>
+            <button
+              type="button"
+              aria-label={props.adjust.increase.label}
+              class={sheetIconClass}
+              onClick={() => props.adjust.increase.onSelect()}
+            >
+              <Icon icon={Plus} class="size-5" />
+            </button>
+            <span aria-live="polite" class="sr-only">
+              {props.adjust.value}
+            </span>
+          </>
+        }
+      >
+        {(note) => (
+          <span class="text-muted-foreground pr-3 text-sm">{note()}</span>
+        )}
+      </Show>
     </div>
   )
 }
 
-function RadioItems({ section }: { section: MenuSection }) {
-  if (section.choices.length === 0) {
-    return (
-      <DropdownMenuItem disabled>
-        {section.empty ?? tr("player.menu.none")}
-      </DropdownMenuItem>
-    )
-  }
+function RadioItems(props: { section: MenuSection }) {
   return (
-    // The button or submenu that opened it names it, so it has no heading.
-    <DropdownMenuRadioGroup
-      aria-label={section.title}
-      value={section.value}
-      onValueChange={section.onSelect}
+    <Show
+      when={props.section.choices.length > 0}
+      fallback={
+        <DropdownMenuItem disabled>
+          {props.section.empty ?? tr("player.menu.none")}
+        </DropdownMenuItem>
+      }
     >
-      {section.choices.map((choice) => (
-        <DropdownMenuRadioItem
-          key={choice.id}
-          value={choice.id}
-          disabled={choice.disabled}
-          closeOnClick
-        >
-          <span className="min-w-0 truncate">{choice.label}</span>
-          <Detail>{choice.detail}</Detail>
-        </DropdownMenuRadioItem>
-      ))}
-    </DropdownMenuRadioGroup>
+      {/* The button or submenu that opened it names it, so it has no heading. */}
+      <DropdownMenuRadioGroup
+        aria-label={props.section.title}
+        value={props.section.value}
+        onValueChange={(value: string) => props.section.onSelect(value)}
+      >
+        <For each={props.section.choices} keyed={(choice) => choice.id}>
+          {(choice) => (
+            <DropdownMenuRadioItem
+              value={choice().id}
+              disabled={choice().disabled}
+              closeOnSelect
+            >
+              <span class="min-w-0 truncate">{choice().label}</span>
+              <Detail>{choice().detail}</Detail>
+            </DropdownMenuRadioItem>
+          )}
+        </For>
+      </DropdownMenuRadioGroup>
+    </Show>
   )
 }
+
+const coarsePointer = mediaQuery("(pointer: coarse)")
 
 /**
  * A button in the player's control bar that opens lists of choices: a
@@ -251,23 +272,11 @@ function RadioItems({ section }: { section: MenuSection }) {
  * last, with buttons that leave the menu open. The player keeps which menu
  * is open, so its controls stay up meanwhile.
  */
-export function PlayerMenu({
-  label,
-  shortcut,
-  icon,
-  active = false,
-  sections,
-  adjust,
-  toggles = [],
-  open,
-  onOpenChange,
-  container,
-  triggerClassName,
-}: {
+export function PlayerMenu(props: {
   label: string
   /** The key that does the same, for the tooltip. */
   shortcut?: string
-  icon: ReactNode
+  icon: IconNode
   /** Underlines the icon, as for subtitles that are on. */
   active?: boolean
   sections: MenuSection[]
@@ -277,166 +286,200 @@ export function PlayerMenu({
   open: boolean
   onOpenChange: (open: boolean) => void
   /** The player, which may be the full-screen element. */
-  container: RefObject<HTMLDivElement | null>
-  triggerClassName: string
+  container: () => HTMLElement | undefined
+  triggerClass: string
 }) {
-  const sheet = useMediaQuery("(pointer: coarse)")
-
-  const trigger = (
-    <button
-      type="button"
-      aria-label={label}
-      title={
-        shortcut ? tr("player.menu.withKey", { label, key: shortcut }) : label
-      }
-      className={cn(triggerClassName, "relative")}
-    >
-      {icon}
-      {active && (
+  const title = () =>
+    props.shortcut
+      ? tr("player.menu.withKey", { label: props.label, key: props.shortcut })
+      : props.label
+  const face = () => (
+    <>
+      <Icon icon={props.icon} />
+      <Show when={props.active}>
         <span
-          aria-hidden
-          className="bg-primary absolute bottom-1.5 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full"
+          aria-hidden="true"
+          class="bg-primary absolute bottom-2 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full"
         />
-      )}
-    </button>
+      </Show>
+    </>
   )
+  const toggles = () => props.toggles ?? []
 
-  if (sheet) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerTrigger render={trigger} />
-        <DrawerContent container={container}>
+  return (
+    <Show
+      when={coarsePointer()}
+      fallback={
+        <DropdownMenu
+          open={props.open}
+          onOpenChange={(open: boolean) => props.onOpenChange(open)}
+        >
+          <DropdownMenuTrigger
+            aria-label={props.label}
+            title={title()}
+            class={cn(props.triggerClass, "relative")}
+          >
+            {face()}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="top"
+            align="end"
+            sideOffset={8}
+            portalContainer={props.container()}
+            // Wide enough for the longest label and its detail.
+            class="w-max max-w-(--available-width) min-w-60"
+          >
+            <Show
+              when={props.sections.length === 1 && props.sections[0]}
+              fallback={
+                <For each={props.sections} keyed={(section) => section.title}>
+                  {(section) => (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        {/* Takes the free space, so the current pick sits
+                            next to the chevron rather than splitting the gap
+                            with it. */}
+                        <span class="min-w-0 flex-1 truncate">
+                          {section().title}
+                        </span>
+                        <span class="text-foreground/70 pl-6 text-xs font-medium">
+                          {section().choices.find(
+                            (choice) => choice.id === section().value,
+                          )?.label ?? ""}
+                        </span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent
+                        side="left"
+                        portalContainer={props.container()}
+                        class="w-max max-w-(--available-width) min-w-52"
+                      >
+                        <RadioItems section={section()} />
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  )}
+                </For>
+              }
+            >
+              {(single) => <RadioItems section={single()} />}
+            </Show>
+            <Show when={props.adjust}>
+              {(adjust) => (
+                <>
+                  <DropdownMenuSeparator />
+                  <AdjustRow adjust={adjust()} />
+                </>
+              )}
+            </Show>
+            <Show when={toggles().length > 0}>
+              <DropdownMenuSeparator />
+              <For each={toggles()} keyed={(toggle) => toggle.label}>
+                {(toggle) => (
+                  <DropdownMenuCheckboxItem
+                    checked={toggle().checked}
+                    onCheckedChange={(checked: boolean) =>
+                      toggle().onChange(checked)
+                    }
+                    closeOnSelect
+                  >
+                    {toggle().label}
+                  </DropdownMenuCheckboxItem>
+                )}
+              </For>
+            </Show>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      }
+    >
+      <Drawer
+        open={props.open}
+        onOpenChange={(open: boolean) => props.onOpenChange(open)}
+      >
+        <DrawerTrigger
+          aria-label={props.label}
+          title={title()}
+          class={cn(props.triggerClass, "relative")}
+        >
+          {face()}
+        </DrawerTrigger>
+        <DrawerContent container={props.container()}>
           <DrawerHandle />
           {/* Names the sheet for screen readers; the button showed it. */}
-          <DrawerTitle className="sr-only">{label}</DrawerTitle>
-          <div className="min-h-0 overflow-y-auto px-2 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {sections.map((section, at) => (
-              <div
-                key={section.title}
-                role="radiogroup"
-                aria-label={section.title}
-                // A rule between lists in place of headings.
-                className={cn(at > 0 && "mt-2 border-t pt-2")}
-              >
-                {section.choices.length === 0 && (
-                  <p className="text-muted-foreground px-3 py-3 text-sm">
-                    {section.empty ?? tr("player.menu.none")}
-                  </p>
-                )}
-                {section.choices.map((choice) => (
-                  <button
-                    key={choice.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={choice.id === section.value}
-                    disabled={choice.disabled}
-                    className={sheetRowClass}
-                    onClick={() => {
-                      section.onSelect(choice.id)
-                      onOpenChange(false)
-                    }}
-                  >
-                    <span className="min-w-0 truncate">{choice.label}</span>
-                    <Detail>{choice.detail}</Detail>
-                    {choice.id === section.value && (
-                      <CheckIcon
-                        className={cn(
-                          "size-4 shrink-0",
-                          choice.detail ? "ml-3" : "ml-auto",
-                        )}
-                      />
+          <DrawerTitle class="sr-only">{props.label}</DrawerTitle>
+          <div class="min-h-0 overflow-y-auto px-2 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <For each={props.sections} keyed={(section) => section.title}>
+              {(section, at) => (
+                <div
+                  role="radiogroup"
+                  aria-label={section().title}
+                  // A rule between lists in place of headings.
+                  class={at() > 0 ? "mt-2 border-t pt-2" : undefined}
+                >
+                  <Show when={section().choices.length === 0}>
+                    <p class="text-muted-foreground px-3 py-3 text-sm">
+                      {section().empty ?? tr("player.menu.none")}
+                    </p>
+                  </Show>
+                  <For each={section().choices} keyed={(choice) => choice.id}>
+                    {(choice) => (
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={
+                          choice().id === section().value ? "true" : "false"
+                        }
+                        disabled={choice().disabled}
+                        class={sheetRowClass}
+                        onClick={() => {
+                          section().onSelect(choice().id)
+                          props.onOpenChange(false)
+                        }}
+                      >
+                        <span class="min-w-0 truncate">{choice().label}</span>
+                        <Detail>{choice().detail}</Detail>
+                        <Show when={choice().id === section().value}>
+                          <Icon
+                            icon={Check}
+                            class={[
+                              "size-4 shrink-0",
+                              choice().detail ? "ml-3" : "ml-auto",
+                            ]}
+                          />
+                        </Show>
+                      </button>
                     )}
-                  </button>
-                ))}
+                  </For>
+                </div>
+              )}
+            </For>
+            <Show when={props.adjust}>
+              {(adjust) => <SheetAdjustRow adjust={adjust()} />}
+            </Show>
+            <Show when={toggles().length > 0}>
+              <div class="mt-2 border-t pt-2">
+                <For each={toggles()} keyed={(toggle) => toggle.label}>
+                  {(toggle) => (
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={toggle().checked ? "true" : "false"}
+                      class={sheetRowClass}
+                      onClick={() => {
+                        toggle().onChange(!toggle().checked)
+                        props.onOpenChange(false)
+                      }}
+                    >
+                      <span class="min-w-0 truncate">{toggle().label}</span>
+                      <Show when={toggle().checked}>
+                        <Icon icon={Check} class="ml-auto size-4 shrink-0" />
+                      </Show>
+                    </button>
+                  )}
+                </For>
               </div>
-            ))}
-            {adjust && <SheetAdjustRow adjust={adjust} />}
-            {toggles.length > 0 && (
-              <div className="mt-2 border-t pt-2">
-                {toggles.map((toggle) => (
-                  <button
-                    key={toggle.label}
-                    type="button"
-                    role="switch"
-                    aria-checked={toggle.checked}
-                    className={sheetRowClass}
-                    onClick={() => {
-                      toggle.onChange(!toggle.checked)
-                      onOpenChange(false)
-                    }}
-                  >
-                    <span className="min-w-0 truncate">{toggle.label}</span>
-                    {toggle.checked && (
-                      <CheckIcon className="ml-auto size-4 shrink-0" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
+            </Show>
           </div>
         </DrawerContent>
       </Drawer>
-    )
-  }
-
-  const single = sections.length === 1 ? sections[0] : undefined
-  return (
-    <DropdownMenu open={open} onOpenChange={onOpenChange}>
-      <DropdownMenuTrigger render={trigger} />
-      <DropdownMenuContent
-        side="top"
-        align="end"
-        sideOffset={8}
-        portalContainer={container}
-        // Wide enough for the longest label and its detail.
-        className="w-max max-w-(--available-width) min-w-60"
-      >
-        {single ? (
-          <RadioItems section={single} />
-        ) : (
-          sections.map((section) => (
-            <DropdownMenuSub key={section.title}>
-              <DropdownMenuSubTrigger>
-                {/* Takes the free space, so the current pick sits next to
-                    the chevron rather than splitting the gap with it. */}
-                <span className="min-w-0 flex-1 truncate">{section.title}</span>
-                <span className="text-foreground/70 pl-6 text-xs font-medium">
-                  {section.choices.find((choice) => choice.id === section.value)
-                    ?.label ?? ""}
-                </span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent
-                side="left"
-                portalContainer={container}
-                className="w-max max-w-(--available-width) min-w-52"
-              >
-                <RadioItems section={section} />
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          ))
-        )}
-        {adjust && (
-          <>
-            <DropdownMenuSeparator />
-            <AdjustRow adjust={adjust} />
-          </>
-        )}
-        {toggles.length > 0 && (
-          <>
-            <DropdownMenuSeparator />
-            {toggles.map((toggle) => (
-              <DropdownMenuCheckboxItem
-                key={toggle.label}
-                checked={toggle.checked}
-                onCheckedChange={toggle.onChange}
-                closeOnClick
-              >
-                {toggle.label}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    </Show>
   )
 }

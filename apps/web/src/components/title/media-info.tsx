@@ -1,14 +1,10 @@
 import type { MediaItem } from "@matinee/contracts"
-import { cn } from "@matinee/ui/lib/utils"
-import { useQuery } from "@tanstack/react-query"
-import {
-  AudioLinesIcon,
-  CaptionsIcon,
-  FilmIcon,
-  type LucideIcon,
-} from "lucide-react"
+import { useQuery } from "@tanstack/solid-query"
+import { AudioLines, Captions, Film } from "lucide"
+import { createMemo, For, Show } from "solid-js"
 
 import { perLocale, tr } from "@/i18n"
+import { Icon, type IconNode } from "@/kit/icon"
 import { baseLanguage, languageName } from "@/lib/languages"
 import { channelLayout } from "@/lib/media"
 import { orpc } from "@/lib/rpc"
@@ -33,7 +29,7 @@ function languageList(tags: (string | null)[]): string | null {
   return names.length > 0 ? unitList().format(names) : null
 }
 
-type InfoLine = { Icon: LucideIcon; label: string; text: string }
+type InfoLine = { icon: IconNode; label: string; text: string }
 
 /**
  * The picture, the audio's languages with the main track's layout, and
@@ -49,14 +45,14 @@ function infoLines(
   const { video } = probe
   return [
     {
-      Icon: FilmIcon,
+      icon: Film,
       label: tr("media.info.video"),
       text: [video?.resolution, video?.format, video?.dynamicRange]
         .filter(Boolean)
         .join(" · "),
     },
     {
-      Icon: AudioLinesIcon,
+      icon: AudioLines,
       label: tr("media.info.audio"),
       text: [
         languageList(audio) ??
@@ -69,7 +65,7 @@ function infoLines(
         .join(" · "),
     },
     {
-      Icon: CaptionsIcon,
+      icon: Captions,
       label: tr("media.info.subtitles"),
       text:
         languageList(subtitles) ??
@@ -86,94 +82,80 @@ function probeAudio(probe: NonNullable<MediaItem["probe"]>) {
     .map((stream) => stream.language)
 }
 
-/**
- * What a file holds in one quiet line, for a row in a list: the picture,
- * the audio's languages and layout, and the subtitles' languages, each
- * after its icon. From the probe alone, so a list asks the server nothing
- * more; subtitle files beside the video show on the file's own page.
- */
-export function MediaInfoLine({ item }: { item: MediaItem }) {
-  const probe = item.probe
-  if (!probe) return null
-  const lines = infoLines(
-    probe,
-    probeAudio(probe),
-    probe.subtitles.map((stream) => stream.language),
-  )
-  if (lines.length === 0) return null
+/** Track lists include external subtitles. The probe fills in while they load. */
+export function MediaInfo(props: { item: MediaItem }) {
+  const id = createMemo(() => props.item.id)
+  const enabled = createMemo(() => props.item.probe !== null)
+  const audio = useQuery(() => ({
+    ...orpc.media.audio.queryOptions({ input: { id: id() } }),
+    enabled: enabled(),
+  }))
+  const subtitles = useQuery(() => ({
+    ...orpc.media.subtitles.queryOptions({ input: { id: id() } }),
+    enabled: enabled(),
+  }))
+  const lines = createMemo(() => {
+    const probe = props.item.probe
+    if (!probe) return []
+    return infoLines(
+      probe,
+      (audio.isSuccess ? audio.data : undefined)
+        ?.toSorted((a, b) => Number(b.primary) - Number(a.primary))
+        .map((track) => track.language) ?? probeAudio(probe),
+      (subtitles.isSuccess ? subtitles.data : undefined)?.tracks.map(
+        (track) => track.language,
+      ) ?? probe.subtitles.map((stream) => stream.language),
+    )
+  })
   return (
-    <span className="text-muted-foreground/70 flex min-w-0 items-center gap-x-3 overflow-hidden text-xs leading-5 whitespace-nowrap">
-      {lines.map(({ Icon, label, text }, at) => (
-        <span
-          key={label}
-          className={cn(
-            "inline-flex items-center gap-1",
-            // The last part gives way first, then the one before it.
-            at === 0 ? "shrink-0" : "min-w-0",
+    <Show when={lines().length}>
+      <dl class="flex max-w-2xl flex-wrap gap-x-5 gap-y-1 text-sm">
+        <For each={lines()} keyed={(line) => line.label}>
+          {(line) => (
+            <div class="flex min-w-0 items-center gap-2">
+              <dt class="text-muted-foreground shrink-0">
+                <Icon icon={line().icon} class="size-4" />
+                <span class="sr-only">{line().label}</span>
+              </dt>
+              <dd class="text-foreground/80 min-w-0 truncate">{line().text}</dd>
+            </div>
           )}
-        >
-          <Icon aria-hidden className="size-3.5 shrink-0" />
-          <span className="sr-only">{label}</span>
-          <span className="truncate">{text}</span>
-        </span>
-      ))}
-    </span>
+        </For>
+      </dl>
+    </Show>
   )
 }
 
-/**
- * What a file holds in one row: the picture, the audio's languages with
- * the main track's layout, and the subtitles' languages, each after its
- * icon. A part that doesn't fit goes to the next line. The languages come
- * from the server's track lists, which include subtitle files beside the
- * video; until they load, from what the probe found in the file. Nothing
- * until the server has probed it.
- */
-export function MediaInfo({
-  item,
-  className,
-}: {
-  item: MediaItem
-  className?: string
-}) {
-  const probe = item.probe
-  const input = { input: { id: item.id } }
-  const audioTracks = useQuery({
-    ...orpc.media.audio.queryOptions(input),
-    enabled: probe !== null,
+/** A compact readout for Next up. It uses the probe already on the item. */
+export function MediaInfoLine(props: { item: MediaItem }) {
+  const lines = createMemo(() => {
+    const probe = props.item.probe
+    return probe
+      ? infoLines(
+          probe,
+          probeAudio(probe),
+          probe.subtitles.map((stream) => stream.language),
+        )
+      : []
   })
-  const subtitleTracks = useQuery({
-    ...orpc.media.subtitles.queryOptions(input),
-    enabled: probe !== null,
-  })
-  if (!probe) return null
-
-  const lines = infoLines(
-    probe,
-    audioTracks.data
-      ?.toSorted((a, b) => Number(b.primary) - Number(a.primary))
-      .map((track) => track.language) ?? probeAudio(probe),
-    subtitleTracks.data?.tracks.map((track) => track.language) ??
-      probe.subtitles.map((stream) => stream.language),
-  )
-  if (lines.length === 0) return null
-
   return (
-    <dl
-      className={cn(
-        "flex max-w-2xl flex-wrap gap-x-5 gap-y-1 text-sm",
-        className,
-      )}
-    >
-      {lines.map(({ Icon, label, text }) => (
-        <div key={label} className="flex min-w-0 items-center gap-2">
-          <dt className="text-muted-foreground shrink-0">
-            <Icon aria-hidden className="size-4" />
-            <span className="sr-only">{label}</span>
-          </dt>
-          <dd className="text-foreground/80 min-w-0 truncate">{text}</dd>
-        </div>
-      ))}
-    </dl>
+    <Show when={lines().length}>
+      <span class="text-muted-foreground/70 flex min-w-0 items-center gap-x-3 overflow-hidden text-xs leading-5 whitespace-nowrap">
+        <For each={lines()} keyed={(line) => line.label}>
+          {(line, index) => (
+            <span
+              class={[
+                "inline-flex items-center gap-1",
+                index() === 0 ? "shrink-0" : "min-w-0",
+              ]}
+            >
+              <Icon icon={line().icon} class="size-3.5 shrink-0" />
+              <span class="sr-only">{line().label}</span>
+              <span class="truncate">{line().text}</span>
+            </span>
+          )}
+        </For>
+      </span>
+    </Show>
   )
 }

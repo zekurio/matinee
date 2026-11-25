@@ -1,5 +1,5 @@
 import { cn } from "@matinee/ui/lib/utils"
-import { useState } from "react"
+import { createMemo, createSignal, onSettled, Show } from "solid-js"
 
 import type { ImageSource } from "@/lib/media"
 
@@ -16,7 +16,7 @@ const TONES = [
 export function tone(key: string): string {
   let hash = 0
   for (const char of key) hash = (hash * 31 + char.charCodeAt(0)) | 0
-  return TONES[Math.abs(hash) % TONES.length] ?? TONES[0]!
+  return TONES[Math.abs(hash) % TONES.length] ?? TONES[0] ?? ""
 }
 
 // Images this page has shown already. One that mounts again, like a
@@ -24,25 +24,9 @@ export function tone(key: string): string {
 // fading in a second time.
 const shown = new Set<string>()
 
-/**
- * The first of `sources` that loads, faded in over its blurred placeholder
- * while it loads, or over whatever sits beneath it when it has none.
- * Nothing when every source fails. The image is opaque over the
- * placeholder, so dim a picture from a wrapper, not through `className`.
- */
-export function Picture(props: PictureProps) {
-  // New sources start over, without an effect and a flash of the old image.
-  return (
-    <PictureSources
-      key={props.sources.map((source) => source.src).join("|")}
-      {...props}
-    />
-  )
-}
-
 type PictureProps = {
   sources: ImageSource[]
-  className?: string
+  class?: string
   eager?: boolean
   /**
    * How wide the image shows, for picking from the sources' sizes. Lazy
@@ -52,55 +36,93 @@ type PictureProps = {
   sizes?: string
 }
 
-function PictureSources({
-  sources,
-  className,
-  eager = false,
-  sizes,
-}: PictureProps) {
-  const [current, setState] = useState(() => {
-    const first = sources[0]?.src
-    return { index: 0, ready: first !== undefined && shown.has(first) }
-  })
-  const source = sources[current.index]
-  if (!source) return null
-  const fill = "absolute inset-0 size-full object-cover"
+/**
+ * The first of `sources` that loads, faded in over its blurred placeholder
+ * while it loads, or over whatever sits beneath it when it has none.
+ * Nothing when every source fails. The image is opaque over the
+ * placeholder, so dim a picture from a wrapper, not through `class`.
+ */
+export function Picture(props: PictureProps) {
+  // New sources start over, with no flash of the old image.
+  const key = createMemo(() =>
+    props.sources.map((source) => source.src).join("|"),
+  )
   return (
-    <>
-      {source.placeholder && (
-        <Blurhash
-          placeholder={source.placeholder}
-          className={cn(fill, className)}
-        />
+    <Show when={key()} keyed>
+      {(_key) => <PictureSources {...props} />}
+    </Show>
+  )
+}
+
+function PictureSources(props: PictureProps) {
+  const [index, setIndex] = createSignal(0)
+  const source = () => props.sources[index()]
+  // Shown at once when this page showed it before; follows the source as
+  // a failed one gives way to the next.
+  const [ready, setReady] = createSignal(() => {
+    const src = source()?.src
+    return src !== undefined && shown.has(src)
+  })
+  // An image this page has shown is still in the browser's memory and
+  // draws at once, so it mounts without the placeholder under it.
+  const seen = createMemo(() => shown.has(source()?.src ?? ""))
+  const fill = "absolute inset-0 size-full object-cover"
+  let image: HTMLImageElement | undefined
+  // A lazy image with `sizes="auto"` picks a file again when it leaves the
+  // page, at the window's width, and fetches the largest one for nothing. A
+  // windowed grid takes a row of them out with every row it scrolls by.
+  onSettled(() => () => {
+    queueMicrotask(() => {
+      if (!image || image.isConnected) return
+      image.removeAttribute("srcset")
+      image.removeAttribute("src")
+    })
+  })
+  return (
+    <Show when={source()}>
+      {(current) => (
+        <>
+          <Show when={!seen() && current().placeholder}>
+            {(placeholder) => (
+              <Blurhash
+                placeholder={placeholder()}
+                class={cn(fill, props.class)}
+              />
+            )}
+          </Show>
+          {/* `src` goes last. Solid sets attributes in this order, and an
+              image starts loading the moment it has a `src`: before
+              `loading="lazy"` that's every image on the page at once, and
+              before `srcset` it's the wrong file. */}
+          <img
+            ref={(element) => (image = element)}
+            alt=""
+            loading={props.eager ? "eager" : "lazy"}
+            decoding="async"
+            draggable={false}
+            // A browser without `auto` reads the next entry, which picks
+            // the size cards had before there was a choice.
+            sizes={
+              current().srcSet
+                ? (props.sizes ?? (props.eager ? "100vw" : "auto, 300px"))
+                : undefined
+            }
+            srcset={current().srcSet}
+            src={current().src}
+            onLoad={() => {
+              shown.add(current().src)
+              setReady(true)
+            }}
+            onError={() => setIndex((at) => at + 1)}
+            class={cn(
+              fill,
+              "transition-opacity duration-300 motion-reduce:transition-none",
+              ready() ? "opacity-100" : "opacity-0",
+              props.class,
+            )}
+          />
+        </>
       )}
-      <img
-        key={source.src}
-        src={source.src}
-        srcSet={source.srcSet}
-        // A browser without `auto` reads the next entry, which picks the
-        // size cards had before there was a choice.
-        sizes={
-          source.srcSet
-            ? (sizes ?? (eager ? "100vw" : "auto, 300px"))
-            : undefined
-        }
-        alt=""
-        loading={eager ? "eager" : "lazy"}
-        decoding="async"
-        onLoad={() => {
-          shown.add(source.src)
-          setState({ ...current, ready: true })
-        }}
-        onError={() =>
-          setState({ ...current, index: current.index + 1, ready: false })
-        }
-        className={cn(
-          fill,
-          "transition-opacity duration-300 motion-reduce:transition-none",
-          current.ready ? "opacity-100" : "opacity-0",
-          className,
-        )}
-      />
-    </>
+    </Show>
   )
 }

@@ -4,34 +4,31 @@ import type {
   TitleSummary,
   WatchedAt,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
+import { cn } from "@matinee/ui/lib/utils"
+import {
+  type QueryClient,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/solid-query"
+import { Calendar, CalendarClock, CalendarOff, Check, Clock } from "lucide"
+import { createSignal, Show } from "solid-js"
+
+import type { WatchedState } from "@/components/card-actions"
+import { titleActionButton } from "@/components/favorite-button"
+import { WatchedDateDialog } from "@/components/watched-date-dialog"
+import { tr } from "@/i18n"
+import { Button, buttonVariants } from "@/kit/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
-import { toast } from "@matinee/ui/components/sonner"
-import { cn } from "@matinee/ui/lib/utils"
-import {
-  type QueryClient,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query"
-import {
-  CalendarClockIcon,
-  CalendarIcon,
-  CalendarOffIcon,
-  CheckIcon,
-  ClockIcon,
-} from "lucide-react"
-import { useState } from "react"
-
-import { WatchedDateDialog } from "@/components/watched-date-dialog"
-import { tr } from "@/i18n"
+} from "@/kit/dropdown-menu"
+import { Icon } from "@/kit/icon"
+import { toast } from "@/kit/toast"
 import { client, errorMessage, orpc } from "@/lib/rpc"
-import { invalidateViewerState, type WatchedState } from "@/lib/viewer-state"
+import { invalidateViewerState } from "@/lib/viewer-state"
 
 /** The item as it looks once marked. */
 function withWatched(item: MediaItem, watched: boolean): MediaItem {
@@ -82,60 +79,36 @@ async function patchLists(
 }
 
 /** Says a mark didn't go through. */
-function markFailed(error: Error, { watched }: { watched: boolean }) {
+function markFailed(error: Error, input: { watched: boolean }) {
   toast.error(
-    watched ? tr("media.markWatchedFailed") : tr("media.markUnwatchedFailed"),
+    tr(input.watched ? "media.markWatchedFailed" : "media.markUnwatchedFailed"),
     { description: errorMessage(error) },
   )
 }
 
-/**
- * Mark one file watched or unwatched. The mutation stays pending until the
- * refetch after it lands.
- */
-function useSetWatched() {
+export function useTitleWatched(
+  title: () => Pick<TitleSummary, "id" | "watched">,
+) {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({
-      item,
-      watched,
-      watchedAt,
-    }: {
-      item: MediaItem
-      watched: boolean
-      /** As in `playback.setWatched`: when, now if unset. */
-      watchedAt?: WatchedAt
-    }) => client.playback.setWatched({ itemId: item.id, watched, watchedAt }),
-    onMutate: ({ item, watched }) =>
-      patchLists(queryClient, (other) => other.id === item.id, watched),
-    onError: markFailed,
-    onSettled: () => invalidateViewerState(queryClient),
-  })
-}
-
-/** Mark a title's files watched or unwatched, or one season's. */
-function useSetTitleWatched() {
-  const queryClient = useQueryClient()
-  return useMutation({
+  const set = useMutation(() => ({
     mutationFn: (input: {
       titleId: string
-      /** As in `titles.items`: null is the files without a season. */
-      season?: number | null
       watched: boolean
-      /** As in `playback.setWatched`: when, now if unset. */
       watchedAt?: WatchedAt
     }) => client.playback.setTitleWatched(input),
-    onMutate: ({ titleId, season, watched }) =>
-      patchLists(
-        queryClient,
-        (item) =>
-          item.title?.id === titleId &&
-          (season === undefined || item.seasonNumber === season),
-        watched,
-      ),
     onError: markFailed,
     onSettled: () => invalidateViewerState(queryClient),
-  })
+  }))
+  const pending = () =>
+    set.isPending && !set.failureCount ? set.variables?.watched : undefined
+  return {
+    pending,
+    on: () => pending() ?? title().watched,
+    mark: (watched: boolean, watchedAt?: WatchedAt) => {
+      if (!set.isPending)
+        set.mutate({ titleId: title().id, watched, watchedAt })
+    },
+  }
 }
 
 /**
@@ -143,28 +116,36 @@ function useSetTitleWatched() {
  * time, or unwatched, which also clears the resume point. A change shows
  * at once.
  */
-export function useItemWatched(item: MediaItem): WatchedState {
-  const set = useSetWatched()
-  const on = set.isPending
-    ? set.variables.watched
-    : (item.progress?.completed ?? false)
+export function useItemWatched(item: () => MediaItem): WatchedState {
+  const queryClient = useQueryClient()
+  const set = useMutation(() => ({
+    mutationFn: (input: {
+      item: MediaItem
+      watched: boolean
+      /** As in `playback.setWatched`: when, now if unset. */
+      watchedAt?: WatchedAt
+    }) =>
+      client.playback.setWatched({
+        itemId: input.item.id,
+        watched: input.watched,
+        watchedAt: input.watchedAt,
+      }),
+    onMutate: (input) =>
+      patchLists(
+        queryClient,
+        (other) => other.id === input.item.id,
+        input.watched,
+      ),
+    onError: markFailed,
+    onSettled: () => invalidateViewerState(queryClient),
+  }))
   return {
-    on,
-    mark: (watched, watchedAt) => set.mutate({ item, watched, watchedAt }),
-  }
-}
-
-/**
- * As {@link useItemWatched}, for every file of a title. Unwatched clears
- * the title's resume points too.
- */
-export function useTitleWatched(title: TitleSummary): WatchedState {
-  const set = useSetTitleWatched()
-  const on = set.isPending ? set.variables.watched : title.watched
-  return {
-    on,
+    on: () =>
+      (set.isPending ? set.variables?.watched : undefined) ??
+      item().progress?.completed ??
+      false,
     mark: (watched, watchedAt) =>
-      set.mutate({ titleId: title.id, watched, watchedAt }),
+      set.mutate({ item: item(), watched, watchedAt }),
   }
 }
 
@@ -173,20 +154,42 @@ export function useTitleWatched(title: TitleSummary): WatchedState {
  * loaded, change before the counts do.
  */
 export function useSeasonWatched(
-  title: TitleSummary,
-  season: Season,
-  items: MediaItem[] | undefined,
+  title: () => Pick<TitleSummary, "id">,
+  season: () => Season,
+  items: () => MediaItem[] | undefined,
 ): WatchedState {
-  const set = useSetTitleWatched()
-  const counted = items
-    ? items.every((item) => item.progress?.completed === true)
-    : season.watchedCount >= season.itemCount
+  const queryClient = useQueryClient()
+  const set = useMutation(() => ({
+    mutationFn: (input: {
+      titleId: string
+      /** As in `titles.items`: null is the files without a season. */
+      season: number | null
+      watched: boolean
+      watchedAt?: WatchedAt
+    }) => client.playback.setTitleWatched(input),
+    onMutate: (input) =>
+      patchLists(
+        queryClient,
+        (item) =>
+          item.title?.id === input.titleId &&
+          item.seasonNumber === input.season,
+        input.watched,
+      ),
+    onError: markFailed,
+    onSettled: () => invalidateViewerState(queryClient),
+  }))
+  const counted = () => {
+    const files = items()
+    return files
+      ? files.every((item) => item.progress?.completed === true)
+      : season().watchedCount >= season().itemCount
+  }
   return {
-    on: set.isPending ? set.variables.watched : counted,
+    on: () => (set.isPending ? set.variables?.watched : undefined) ?? counted(),
     mark: (watched, watchedAt) =>
       set.mutate({
-        titleId: title.id,
-        season: season.number,
+        titleId: title().id,
+        season: season().number,
         watched,
         watchedAt,
       }),
@@ -198,10 +201,7 @@ export function useSeasonWatched(
  * on a date they pick in a `WatchedDateDialog`, which the menu's owner
  * renders, or some time they don't remember, which counts in no chart.
  */
-export function WatchedAtItems({
-  onSelect,
-  onPickDate,
-}: {
+export function WatchedAtItems(props: {
   /** `watchedAt` as in `playback.setWatched`; unset is now. */
   onSelect: (watchedAt?: WatchedAt) => void
   /** "Other date" was picked. */
@@ -209,84 +209,82 @@ export function WatchedAtItems({
 }) {
   return (
     <>
-      <DropdownMenuItem onClick={() => onSelect()}>
-        <ClockIcon />
+      <DropdownMenuItem onSelect={() => props.onSelect()}>
+        <Icon icon={Clock} />
         {tr("media.watchedAt.now")}
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => onSelect("released")}>
-        <CalendarIcon />
+      <DropdownMenuItem onSelect={() => props.onSelect("released")}>
+        <Icon icon={Calendar} />
         {tr("media.watchedAt.released")}
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={onPickDate}>
-        <CalendarClockIcon />
+      <DropdownMenuItem onSelect={() => props.onPickDate()}>
+        <Icon icon={CalendarClock} />
         {tr("media.watchedAt.other")}
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => onSelect("unknown")}>
-        <CalendarOffIcon />
+      <DropdownMenuItem onSelect={() => props.onSelect("unknown")}>
+        <Icon icon={CalendarOff} />
         {tr("media.watchedAt.unknown")}
       </DropdownMenuItem>
     </>
   )
 }
 
-// Round, beside Play, like the heart.
-const pageButton =
-  "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11"
-
 /**
- * The tick beside Play on a movie's, show's, or episode's page, as on its
- * card: unwatched, it asks when the user watched; watched, it marks
- * unwatched at once. The tick draws a step larger than the heart beside
- * it, whose glyph fills more of its box.
+ * The tick beside Play on a movie's, show's, season's, or episode's page:
+ * unwatched, it asks when the user watched; watched, it marks unwatched at
+ * once.
  */
-export function WatchedButton({ watched }: { watched: WatchedState }) {
-  const [picking, setPicking] = useState(false)
-  if (watched.on) {
-    return (
-      <Button
-        variant="secondary"
-        size="icon-lg"
-        aria-pressed
-        aria-label={tr("media.markUnwatched")}
-        title={tr("media.markUnwatched")}
-        onClick={() => watched.mark(false)}
-        className={cn(pageButton, "text-primary hover:text-primary")}
-      >
-        <CheckIcon className="size-5" strokeWidth={3} />
-      </Button>
-    )
-  }
+export function WatchedButton(props: { watched: WatchedState }) {
+  // Null until "Other date" is first picked: the date dialog costs a
+  // popup's setup on every page open, so it mounts when first needed.
+  const [picking, setPicking] = createSignal<boolean | null>(null)
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="secondary"
-              size="icon-lg"
-              aria-pressed={false}
+      <Show
+        when={props.watched.on()}
+        fallback={
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-pressed="false"
               aria-label={tr("media.markWatched")}
               title={tr("media.markWatched")}
-              className={pageButton}
-            />
-          }
+              class={cn(
+                buttonVariants({ variant: "secondary", size: "icon-lg" }),
+                titleActionButton,
+              )}
+            >
+              <Icon icon={Check} class="size-5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent sideOffset={6} class="min-w-44">
+              <DropdownMenuGroup aria-label={tr("media.markWatched")}>
+                <WatchedAtItems
+                  onSelect={(watchedAt) => props.watched.mark(true, watchedAt)}
+                  onPickDate={() => setPicking(true)}
+                />
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="icon-lg"
+          aria-pressed="true"
+          aria-label={tr("media.markUnwatched")}
+          title={tr("media.markUnwatched")}
+          onClick={() => props.watched.mark(false)}
+          class={cn(titleActionButton, "text-primary")}
         >
-          <CheckIcon className="size-5" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" sideOffset={6} className="min-w-44">
-          <DropdownMenuGroup aria-label={tr("media.markWatched")}>
-            <WatchedAtItems
-              onSelect={(watchedAt) => watched.mark(true, watchedAt)}
-              onPickDate={() => setPicking(true)}
-            />
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <WatchedDateDialog
-        open={picking}
-        onOpenChange={setPicking}
-        onPick={(watchedAt) => watched.mark(true, watchedAt)}
-      />
+          <Icon icon={Check} class="size-5" />
+        </Button>
+      </Show>
+      <Show when={picking() !== null}>
+        <WatchedDateDialog
+          open={picking() ?? false}
+          onOpenChange={setPicking}
+          onPick={(watchedAt) => props.watched.mark(true, watchedAt)}
+        />
+      </Show>
     </>
   )
 }

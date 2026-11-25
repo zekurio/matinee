@@ -1,16 +1,11 @@
 import type { PlaybackQuality } from "@matinee/contracts"
-import { type RefObject, useEffect } from "react"
-import { useShallow } from "zustand/shallow"
+import { onSettled } from "solid-js"
 
-import {
-  selectAudio as selectAudioOf,
-  usePlayerStore,
-  usePlayerStoreApi,
-} from "@/stores/player"
+import { canSeekTo, hasPlayed } from "@/components/playback-source"
+import { selectAudio as selectAudioOf, type PlayerStore } from "@/stores/player"
 import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
 import { dismissPlaybackNotices, lostNotice } from "./playback-notices"
-import { canSeekTo, hasPlayed } from "./playback-source"
 import {
   type PlaybackCore,
   playbackClock,
@@ -20,7 +15,8 @@ import {
 } from "./use-playback-source"
 
 export type PlaybackOptions = {
-  video: RefObject<HTMLVideoElement | null>
+  video: () => HTMLVideoElement | undefined
+  store: PlayerStore
   /** Nothing this browser can play is left. */
   onUnplayable: () => void
   /** A source failed and the server couldn't say what plays instead. */
@@ -36,14 +32,13 @@ export type PlaybackOptions = {
  * again with its method among the failed ones, and the server falls back.
  *
  * The answer, the source, and the viewer's picks live in the player's
- * store, so the functions here read it when they run and work from any
- * render.
+ * store, so the functions here read it when they run. What renders reads
+ * the accessors.
  */
 export function usePlayback(options: PlaybackOptions) {
-  const { video } = options
-  const store = usePlayerStoreApi()
+  const { video, store } = options
   // The player's toasts are about this playback, so they go when it does.
-  useEffect(() => () => dismissPlaybackNotices(), [])
+  onSettled(() => () => dismissPlaybackNotices())
   const refs = useSourceRefs(store)
   const core: PlaybackCore = {
     video,
@@ -52,13 +47,7 @@ export function usePlayback(options: PlaybackOptions) {
     onUnplayable: options.onUnplayable,
     onFailed: options.onFailed,
   }
-  const { source, plan, quality } = usePlayerStore(
-    useShallow((state) => ({
-      source: state.source,
-      plan: state.plan,
-      quality: state.quality,
-    })),
-  )
+  const { view } = store
   const clock = playbackClock(core)
   const starters = sourceStarters(core)
   const { onLoaded, onBuffered, onTimeUpdate, heldStill, setPlayOnLoad } =
@@ -73,15 +62,19 @@ export function usePlayback(options: PlaybackOptions) {
 
   return {
     // The playlist goes to hls.js or the browser; the video gets no src.
-    src: source.hls ? undefined : source.url,
-    hls: source.hls
-      ? { url: source.url, start: source.start, attempt: source.attempt }
-      : null,
-    source,
-    plan,
-    offset: source.offset,
-    tracks: plan.audioTracks,
-    quality,
+    src: () => (view.source.hls ? undefined : view.source.url),
+    hls: () =>
+      view.source.hls
+        ? {
+            url: view.source.url,
+            start: view.source.start,
+            attempt: view.source.attempt,
+          }
+        : null,
+    plan: () => view.plan,
+    offset: () => view.source.offset,
+    tracks: () => view.plan.audioTracks,
+    quality: () => view.quality,
     position: clock.position,
     now: clock.now,
     duration: clock.duration,
@@ -98,6 +91,8 @@ export function usePlayback(options: PlaybackOptions) {
   }
 }
 
+export type Playback = ReturnType<typeof usePlayback>
+
 function seeker(
   { video, store, refs }: PlaybackCore,
   { duration }: ReturnType<typeof playbackClock>,
@@ -105,7 +100,7 @@ function seeker(
   begin: () => void,
 ) {
   return (to: number) => {
-    const el = video.current
+    const el = video()
     if (!el) return
     const target = Math.max(0, Math.min(duration() || to, to))
     // An answer on its way would start where the viewer was, so ask again.
@@ -185,7 +180,7 @@ function loadEvents({ video, store, refs }: PlaybackCore) {
    * all it will send, it goes as far as it can.
    */
   const begin = () => {
-    const el = video.current
+    const el = video()
     // Nothing on its way, or it hasn't loaded yet.
     if (!el || startsAt.current === null) return
     if (el.readyState < HTMLMediaElement.HAVE_METADATA) return
@@ -215,7 +210,7 @@ function loadEvents({ video, store, refs }: PlaybackCore) {
 
   /** For the video's `timeupdate`: notes the methods that play. */
   const onTimeUpdate = () => {
-    const el = video.current
+    const el = video()
     const { method } = store.getState().source
     if (el && !played.current.has(method) && hasPlayed(el)) {
       played.current.add(method)
@@ -252,7 +247,7 @@ function errorFallback(
   const { played, playOnLoad, startsAt, handled } = refs
 
   return (reported?: number) => {
-    const code = reported ?? video.current?.error?.code
+    const code = reported ?? video()?.error?.code
     if (code === undefined || code === MediaError.MEDIA_ERR_ABORTED) return
     const state = store.getState()
     const { source, plan } = state

@@ -1,13 +1,13 @@
 import type { CatalogBrowsePage } from "@matinee/contracts"
 import type { t } from "@matinee/contracts/schema"
+import { createMemo, Show } from "solid-js"
 
 import { CatalogCard } from "@/components/catalog/catalog-card"
 import { type LiveEntry, liveEntry } from "@/components/catalog/catalog-data"
+import type { Browse } from "@/components/discover/browse-params"
 import { PosterCard } from "@/components/media-item"
 import { tr } from "@/i18n"
 import { formatDate, formatScore, parseDay } from "@/lib/format"
-
-import type { Browse } from "./browse-params"
 
 /*
  * A card of a browse, which Discover's rows show too: the library's own
@@ -45,32 +45,38 @@ export function cardDetail(
  * A title the viewer can watch is the library's card, with Play. The
  * rest are catalog cards with what the stream says now.
  */
-export function BrowseCard({
-  item,
-  live,
-  detail,
-  dismiss,
-}: {
+export function BrowseCard(props: {
   item: BrowseEntry
   live: LiveEntry[] | undefined
   detail: string | undefined
   /** "Not interested", for a recommendation. */
   dismiss?: () => void
 }) {
-  const availability =
-    liveEntry(live, item.ref)?.availability ?? item.availability
-  if (
-    item.title &&
-    availability.state === "here" &&
-    availability.libraryTitleId === item.title.id
+  const availability = createMemo(
+    () => liveEntry(props.live, props.item.ref)?.availability,
   )
-    return <PosterCard title={item.title} detail={detail} />
+  const watchable = () => {
+    const title = props.item.title
+    const current = availability() ?? props.item.availability
+    return title &&
+      current.state === "here" &&
+      current.libraryTitleId === title.id
+      ? title
+      : undefined
+  }
   return (
-    <CatalogCard
-      title={item}
-      availability={availability}
-      detail={detail}
-      dismiss={dismiss}
-    />
+    <Show
+      when={watchable()}
+      fallback={
+        <CatalogCard
+          title={props.item}
+          availability={availability()}
+          detail={props.detail}
+          dismiss={props.dismiss}
+        />
+      }
+    >
+      {(title) => <PosterCard title={title()} detail={props.detail} />}
+    </Show>
   )
 }

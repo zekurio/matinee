@@ -3,12 +3,12 @@ import {
   type LoginBackdrop as LoginBackdropSettings,
   type LoginBackdropTile,
 } from "@matinee/contracts"
-import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
-import { useQuery } from "@tanstack/react-query"
-import { type CSSProperties, useMemo } from "react"
+import { useQuery } from "@tanstack/solid-query"
+import { createMemo, For, Show } from "solid-js"
 
 import { orpc } from "@/lib/rpc"
+import { reducedMotion } from "@/lib/viewport"
 
 /*
  * The wall behind the login form, after alloy's: rows of artwork that drift
@@ -78,47 +78,42 @@ function buildRows(tiles: readonly LoginBackdropTile[]): LoginBackdropTile[][] {
   })
 }
 
-function Row({
-  tiles,
-  duration,
-  reverse,
-  paused,
-}: {
+function Row(props: {
   tiles: LoginBackdropTile[]
   duration: number
   reverse: boolean
-  paused: boolean
 }) {
   // Two copies, so moving by half lands on the same picture.
-  const both = [...tiles, ...tiles]
+  const both = createMemo(() => [...props.tiles, ...props.tiles])
   return (
-    <div className="flex h-[clamp(88px,16cqh,200px)] shrink-0">
+    <div class="flex h-[clamp(88px,16cqh,200px)] shrink-0">
       <div
-        className="flex h-full w-max gap-3 pr-3 will-change-transform"
+        class="flex h-full w-max gap-3 pr-3 will-change-transform"
         style={{
-          animation: `login-backdrop-drift ${duration}s linear infinite`,
-          animationDirection: reverse ? "reverse" : "normal",
-          animationPlayState: paused ? "paused" : "running",
+          animation: `login-backdrop-drift ${props.duration}s linear infinite`,
+          "animation-direction": props.reverse ? "reverse" : "normal",
+          "animation-play-state": reducedMotion() ? "paused" : "running",
         }}
       >
-        {both.map((tile, index) => (
-          <div
-            key={index}
-            className={cn(
-              "bg-foreground/5 h-full shrink-0 overflow-hidden rounded-lg",
-              tile.kind === "poster" ? "aspect-[2/3]" : "aspect-video",
-            )}
-          >
-            <img
-              src={artworkPath(tile.artwork.id, "small")}
-              alt=""
-              aria-hidden
-              draggable={false}
-              decoding="async"
-              className="size-full object-cover"
-            />
-          </div>
-        ))}
+        <For each={both()} keyed={false}>
+          {(tile) => (
+            <div
+              class={cn(
+                "bg-foreground/5 h-full shrink-0 overflow-hidden rounded-lg",
+                tile().kind === "poster" ? "aspect-[2/3]" : "aspect-video",
+              )}
+            >
+              <img
+                src={artworkPath(tile().artwork.id, "small")}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                decoding="async"
+                class="size-full object-cover"
+              />
+            </div>
+          )}
+        </For>
       </div>
     </div>
   )
@@ -128,66 +123,71 @@ function Row({
  * The backdrop for `settings` with `tiles`, filling the nearest positioned
  * parent. Nothing while it's off or there's nothing to show.
  */
-export function LoginBackdrop({
-  settings,
-  tiles,
-}: {
+export function LoginBackdrop(props: {
   settings: LoginBackdropSettings
   tiles: readonly LoginBackdropTile[]
 }) {
-  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
-  const rows = useMemo(() => buildRows(tiles), [tiles])
-  if (!settings.enabled || tiles.length === 0) return null
-
-  const strength = 1 - settings.fade / 100
-  const style = {
-    "--login-backdrop-strength": strength,
-    "--login-backdrop-light-strength": strength * LIGHT_STRENGTH,
-    transform: `translate(-50%, -50%) rotate(${SLOPE_DEGREES}deg)`,
-    filter: settings.blur > 0 ? `blur(${settings.blur}px)` : undefined,
-  } satisfies CSSProperties & Record<`--${string}`, number>
+  const rows = createMemo(() => buildRows(props.tiles))
+  const strength = () => 1 - props.settings.fade / 100
 
   return (
-    <div
-      aria-hidden
-      className="bg-background [container-type:size] pointer-events-none absolute inset-0 overflow-hidden"
-    >
+    <Show when={props.settings.enabled && props.tiles.length > 0}>
       <div
-        className="absolute top-1/2 left-1/2 flex h-[170%] w-[170%] flex-col justify-center gap-3 opacity-(--login-backdrop-strength) [:root.light_&]:opacity-(--login-backdrop-light-strength)"
-        style={style}
+        aria-hidden="true"
+        class="bg-background [container-type:size] pointer-events-none absolute inset-0 overflow-hidden"
       >
-        {rows.map((row, index) => (
-          <Row
-            key={index}
-            tiles={row}
-            duration={DURATIONS[index % DURATIONS.length] ?? DURATIONS[0]}
-            reverse={index % 2 === 1}
-            paused={reducedMotion}
-          />
-        ))}
+        <div
+          class="absolute top-1/2 left-1/2 flex h-[170%] w-[170%] flex-col justify-center gap-3 opacity-(--login-backdrop-strength) [:root.light_&]:opacity-(--login-backdrop-light-strength)"
+          style={{
+            "--login-backdrop-strength": String(strength()),
+            "--login-backdrop-light-strength": String(
+              strength() * LIGHT_STRENGTH,
+            ),
+            transform: `translate(-50%, -50%) rotate(${SLOPE_DEGREES}deg)`,
+            filter:
+              props.settings.blur > 0
+                ? `blur(${props.settings.blur}px)`
+                : undefined,
+          }}
+        >
+          <For each={rows()} keyed={false}>
+            {(row, index) => (
+              <Row
+                tiles={row()}
+                duration={DURATIONS[index % DURATIONS.length] ?? DURATIONS[0]}
+                reverse={index % 2 === 1}
+              />
+            )}
+          </For>
+        </div>
+        <style>{`
+          @keyframes login-backdrop-drift {
+            from { transform: translateX(0) }
+            to { transform: translateX(-50%) }
+          }
+        `}</style>
       </div>
-      <style>{`
-        @keyframes login-backdrop-drift {
-          from { transform: translateX(0) }
-          to { transform: translateX(-50%) }
-        }
-      `}</style>
-    </div>
+    </Show>
   )
 }
 
+const NO_TILES: readonly LoginBackdropTile[] = []
+
 /** The backdrop the login page shows, with a fresh pick of artwork. */
-export function PublicLoginBackdrop({
-  settings,
-}: {
+export function PublicLoginBackdrop(props: {
   settings: LoginBackdropSettings
 }) {
-  const tiles = useQuery({
+  const tiles = useQuery(() => ({
     ...orpc.auth.loginBackdrop.queryOptions(),
-    enabled: settings.enabled,
+    enabled: props.settings.enabled,
     // One pick per visit; a new one would reshuffle the wall under the form.
     staleTime: Infinity,
     refetchOnWindowFocus: false,
-  })
-  return <LoginBackdrop settings={settings} tiles={tiles.data?.tiles ?? []} />
+  }))
+  return (
+    <LoginBackdrop
+      settings={props.settings}
+      tiles={tiles.isSuccess ? (tiles.data?.tiles ?? NO_TILES) : NO_TILES}
+    />
+  )
 }

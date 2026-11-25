@@ -3,6 +3,7 @@ import type source from "../en/party"
 
 export default {
   "party.title": "Watch-Party",
+  "party.inParty": "Du bist in dieser Watch-Party",
   "party.start": "Watch-Party starten",
   "party.startFailed": "Die Watch-Party konnte nicht gestartet werden",
   "party.inviteCopied": "Einladungslink kopiert",

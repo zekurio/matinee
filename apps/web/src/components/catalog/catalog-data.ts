@@ -13,12 +13,14 @@ import type {
 } from "@matinee/contracts"
 import type { t } from "@matinee/contracts/schema"
 import {
+  hashKey,
   type InfiniteData,
   type QueryClient,
   skipToken,
-  useQuery,
-} from "@tanstack/react-query"
+} from "@tanstack/solid-query"
+import { createMemo } from "solid-js"
 
+import { useFollowedQuery } from "@/components/requests/request-queue"
 import { liveQuery, orpc } from "@/lib/rpc"
 
 /*
@@ -50,7 +52,7 @@ export function sameRef(a: CatalogRef, b: CatalogRef): boolean {
   )
 }
 
-/** A stable string for a reference, for React keys and card tones. */
+/** A stable string for list keys and card tones. */
 export function refKey(ref: CatalogRef): string {
   return `${ref.kind}:${ref.provider}:${ref.providerId}`
 }
@@ -96,17 +98,29 @@ export function catalogSearchOptions(query: string) {
 /**
  * Availability for the titles on screen, as the server streams it: a new
  * snapshot whenever something about one of them changes, and the current
- * one on every reconnect. Look a title up with {@link liveEntry}.
+ * one on every reconnect. Look a title up with {@link liveEntry}. An
+ * accessor for the latest snapshot.
  */
-export function useLiveAvailability(titles: Input[]) {
-  const live = useQuery({
+export function useLiveAvailability(titles: () => Input[]) {
+  // The same titles in a new array keep the stream that's open.
+  const input = createMemo(() => titles().slice(0, 100), {
+    equals: (before, after) => hashKey(before) === hashKey(after),
+  })
+  // Followed through its observer: Solid Query reads `data` as pending
+  // while a stream is open, so a new set of titles abandoned the last.
+  const live = useFollowedQuery(() => ({
     ...orpc.requests.live.experimental_liveOptions({
-      input: { titles: titles.slice(0, 100) },
+      input: { titles: input() },
     }),
     ...liveQuery,
-    enabled: titles.length > 0,
-  })
-  return live.data
+    enabled: input().length > 0,
+  }))
+  return () => {
+    const current = live()
+    return current && (current.isSuccess || current.isRefetchError)
+      ? current.data
+      : undefined
+  }
 }
 
 export function liveEntry(

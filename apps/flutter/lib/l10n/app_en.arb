@@ -4662,24 +4662,6 @@
   "@webCommonSaveBarUnsaved": {
     "description": "strings_web_common.xml"
   },
-  "webDiscoverBrowseFloorList": "Only titles with at least {p1} votes, so the list isn't filled with ones hardly anyone has seen.",
-  "@webDiscoverBrowseFloorList": {
-    "description": "strings_web_discover.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
-  "webDiscoverBrowseFloorScore": "Only titles with at least {p1} votes, so a handful of votes can't top the list.",
-  "@webDiscoverBrowseFloorScore": {
-    "description": "strings_web_discover.xml",
-    "placeholders": {
-      "p1": {
-        "type": "String"
-      }
-    }
-  },
   "webDiscoverBrowseForYouHint": "They come from what you watch. Play a few things and look again tomorrow.",
   "@webDiscoverBrowseForYouHint": {
     "description": "strings_web_discover.xml"
@@ -4706,10 +4688,6 @@
   },
   "webDiscoverBrowseOnly": "Only",
   "@webDiscoverBrowseOnly": {
-    "description": "strings_web_discover.xml"
-  },
-  "webDiscoverBrowseOnlyHint": "Coming soon looks three months ahead.",
-  "@webDiscoverBrowseOnlyHint": {
     "description": "strings_web_discover.xml"
   },
   "webDiscoverBrowseRecommended": "Recommended for you",
@@ -5011,18 +4989,6 @@
   },
   "webFiltersRuntime": "Runtime",
   "@webFiltersRuntime": {
-    "description": "strings_web_filters.xml"
-  },
-  "webFiltersRuntimeHintBoth": "How long the movie or an episode is",
-  "@webFiltersRuntimeHintBoth": {
-    "description": "strings_web_filters.xml"
-  },
-  "webFiltersRuntimeHintMovie": "How long the movie is",
-  "@webFiltersRuntimeHintMovie": {
-    "description": "strings_web_filters.xml"
-  },
-  "webFiltersRuntimeHintShow": "How long an episode is",
-  "@webFiltersRuntimeHintShow": {
     "description": "strings_web_filters.xml"
   },
   "webFiltersScore": "User score",

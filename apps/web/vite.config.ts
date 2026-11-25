@@ -1,11 +1,12 @@
 import { readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
 import { brotliCompress, constants, gzip } from "node:zlib"
 
+import solid from "@solidjs/vite-plugin"
 import tailwindcss from "@tailwindcss/vite"
 import { tanstackRouter } from "@tanstack/router-plugin/vite"
-import react from "@vitejs/plugin-react"
 import { defineConfig, loadEnv, type Plugin } from "vite"
 
 const EAGER_ROUTES = new Set<string>([
@@ -68,6 +69,8 @@ function preloadLocale(): Plugin {
     transformIndexHtml: {
       order: "post",
       handler(html, ctx) {
+        // The TV document has words of its own.
+        if (ctx.path.startsWith("/tv/")) return html
         const files = new Map<string, string>()
         for (const output of Object.values(ctx.bundle ?? {})) {
           if (output.type !== "chunk") continue
@@ -114,12 +117,67 @@ function preloadLocale(): Plugin {
   }
 }
 
+/**
+ * Serves `/tv` as `/tv/`, whose own document holds the TV UI. The route
+ * is a document of its own, so the desktop app's root font size and
+ * theme don't follow it, and the TV one doesn't follow the desktop app.
+ */
+function tvPath(): Plugin {
+  return {
+    name: "matinee:tv-path",
+    configureServer(server) {
+      server.middlewares.use((request, _response, next) => {
+        if (request.url === "/tv" || request.url?.startsWith("/tv?")) {
+          request.url = `/tv/${request.url.slice(3)}`
+        }
+        next()
+      })
+    },
+  }
+}
+
+/**
+ * Asks for the text face from the page's head. The first render waits for
+ * it (`main.tsx`), and asked for only once the app's code has run, it
+ * arrives after that code is done.
+ */
+function preloadTextFace(): Plugin {
+  return {
+    name: "matinee:preload-text-face",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(_html, { bundle }) {
+        const face = Object.keys(bundle ?? {}).find((name) =>
+          /\/red-hat-text-latin-wght-normal-[\w-]+\.woff2$/.test(name),
+        )
+        if (!face) return
+        return [
+          {
+            tag: "link",
+            attrs: {
+              rel: "preload",
+              as: "font",
+              type: "font/woff2",
+              href: `/${face}`,
+              crossorigin: "",
+            },
+            injectTo: "head",
+          },
+        ]
+      },
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "")
   const server = env.VITE_SERVER_URL || "http://localhost:8420"
   return {
     clearScreen: false,
-    resolve: { tsconfigPaths: true },
+    // A core entry the app imports must be the copy `@ui-sdk/solid` loads.
+    // The TV package is source, compiled with this app's Solid plugin.
+    optimizeDeps: { exclude: ["@matinee/tv", "@ui-sdk/core"] },
     server: {
       port: 5173,
       strictPort: true,
@@ -129,29 +187,40 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       rolldownOptions: {
+        // The desktop app, and the TV UI at /tv/, in one build.
+        input: {
+          main: fileURLToPath(new URL("./index.html", import.meta.url)),
+          tv: fileURLToPath(new URL("./tv/index.html", import.meta.url)),
+        },
+        // A contract module only builds schemas, so one whose exports the
+        // page never uses can be left out. Without this, one import from
+        // the package's index builds every schema before the first screen.
+        treeshake: {
+          moduleSideEffects: [
+            { test: /\/packages\/contracts\/src\//, sideEffects: false },
+          ],
+        },
         output: {
           // Folds chunks under 16 kB, mostly icons and route stubs, into
-          // the chunks that use them. That costs a few duplicate kilobytes
-          // in pages loaded later, and takes the app's first load from 70
-          // requests to 15, which matters on HTTP/1.1 with real latency.
+          // the chunks that use them, which takes the first load from many
+          // requests to few, and that matters on HTTP/1.1 with latency.
           codeSplitting: { experimentalInlineCommonChunks: { maxSize: 16384 } },
         },
       },
     },
     plugins: [
+      tvPath(),
       tanstackRouter({
-        target: "react",
+        target: "solid",
         autoCodeSplitting: true,
         codeSplittingOptions: {
-          // The layout every signed-in page sits in, and Home, where most
-          // visits start, come with the app instead of after the session
-          // check, which would add a round trip before the first paint.
           splitBehavior: ({ routeId }) =>
             EAGER_ROUTES.has(routeId) ? [] : undefined,
         },
       }),
-      react(),
+      solid(),
       tailwindcss(),
+      preloadTextFace(),
       preloadLocale(),
       precompress(),
     ],

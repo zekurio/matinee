@@ -1,20 +1,22 @@
 import { cn } from "@matinee/ui/lib/utils"
-import { type ReactNode, useEffect } from "react"
+import type { JSX } from "@solidjs/web"
+import { createEffect, Show } from "solid-js"
 
-import { BackButton, usePhoneTab } from "./phone-nav"
+import { isPhone } from "@/lib/viewport"
+
+import { BackButton, CoverTabs, usePhoneTab } from "./phone-nav"
 
 /**
  * Names the browser tab after the page while it's open. Until there's a
  * name, and after the page closes, the tab says just matinee.
  */
-export function useDocumentTitle(name: string | null | undefined) {
-  // The tab's title lives in the document, outside React.
-  useEffect(() => {
-    if (name) document.title = `${name} · matinee`
+export function useDocumentTitle(name: () => string | null | undefined) {
+  createEffect(name, (current) => {
+    if (current) document.title = `${current} · matinee`
     return () => {
       document.title = "matinee"
     }
-  }, [name])
+  })
 }
 
 /**
@@ -26,72 +28,76 @@ export const belowHeader = "mb-4 max-sm:mb-2 md:mb-6"
 
 /**
  * A page's name and controls. On phones it's the bar at the top of the
- * page, as the Android app has it: Back, unless the page is a tab's first,
- * then the name and `phoneActions`. It stays put while the page scrolls.
+ * page, as the Flutter app has it: on a tab's first page the name under
+ * the shell's header band; on a page opened from a tab, Back, the name and
+ * `phoneActions` in place of the band. It stays put while the page scrolls.
  */
-export function PageHeader({
-  title,
-  description,
-  actions,
-  phoneActions,
-  className,
-}: {
+export function PageHeader(props: {
   title: string
-  description?: ReactNode
+  description?: JSX.Element
   /**
    * Controls beside the title from `sm` up. Phones don't show them; pages
    * give phones theirs in `phoneActions`.
    */
-  actions?: ReactNode
+  actions?: JSX.Element
   /** Controls at the end of the bar on phones only. */
-  phoneActions?: ReactNode
-  className?: string
+  phoneActions?: JSX.Element
+  class?: string
 }) {
-  const back = usePhoneTab() === null
+  const tab = usePhoneTab()
+  const back = () => tab() === null
   return (
     <header
-      className={cn(
+      class={cn(
         "flex items-end justify-between gap-4",
         belowHeader,
         // The page's column pads its sides; the bar spans the screen.
-        "max-sm:bg-background max-sm:sticky max-sm:top-0 max-sm:z-20 max-sm:-mx-4 max-sm:mb-2 max-sm:block max-sm:pt-[env(safe-area-inset-top)]",
-        className,
+        "max-sm:bg-background max-sm:sticky max-sm:z-20 max-sm:-mx-4 max-sm:mb-2 max-sm:block",
+        back()
+          ? "max-sm:top-0 max-sm:pt-[env(safe-area-inset-top)]"
+          : "max-sm:top-[calc(env(safe-area-inset-top)+4rem)]",
+        props.class,
       )}
     >
-      <div className="min-w-0 flex-1">
+      <Show when={back() && isPhone()}>
+        <CoverTabs />
+      </Show>
+      <div class="min-w-0 flex-1">
         <div
-          className={cn(
+          class={cn(
             "flex items-center gap-2",
             "max-sm:h-16 max-sm:gap-1 max-sm:pr-1",
-            back ? "max-sm:pl-1" : "max-sm:pl-4",
+            back() ? "max-sm:pl-1" : "max-sm:pl-4",
           )}
         >
-          {back && <BackButton className="sm:hidden" />}
+          <Show when={back()}>
+            <BackButton class="sm:hidden" />
+          </Show>
           <h1
-            title={title}
-            className={cn(
-              "line-clamp-2 min-w-0 text-26px leading-8 font-semibold tracking-tight text-balance break-words md:text-32px md:leading-10",
+            title={props.title}
+            class={cn(
+              "text-26px md:text-32px line-clamp-2 min-w-0 leading-8 font-semibold tracking-tight text-balance break-words md:leading-10",
               "max-sm:line-clamp-1 max-sm:flex-1 max-sm:pl-1 max-sm:text-xl max-sm:leading-7",
-              !back && "max-sm:pl-0",
+              !back() && "max-sm:pl-0",
             )}
           >
-            {title}
+            {props.title}
           </h1>
-          {phoneActions && (
-            <div className="ml-auto flex shrink-0 items-center gap-1 sm:hidden">
-              {phoneActions}
+          <Show when={props.phoneActions}>
+            <div class="ml-auto flex shrink-0 items-center gap-1 sm:hidden">
+              {props.phoneActions}
             </div>
-          )}
+          </Show>
         </div>
-        {description && (
-          <p className="text-muted-foreground max-sm:text-13px mt-1 text-sm max-sm:-mt-2 max-sm:truncate max-sm:px-4 max-sm:pb-2">
-            {description}
+        <Show when={props.description}>
+          <p class="text-muted-foreground max-sm:text-13px mt-1 text-sm max-sm:-mt-2 max-sm:truncate max-sm:px-4 max-sm:pb-2">
+            {props.description}
           </p>
-        )}
+        </Show>
       </div>
-      {actions && (
-        <div className="flex items-center gap-2 max-sm:hidden">{actions}</div>
-      )}
+      <Show when={props.actions}>
+        <div class="flex items-center gap-2 max-sm:hidden">{props.actions}</div>
+      </Show>
     </header>
   )
 }

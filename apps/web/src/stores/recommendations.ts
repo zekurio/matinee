@@ -1,10 +1,10 @@
 import type { CatalogRef } from "@matinee/contracts"
-import { toast } from "@matinee/ui/components/sonner"
-import type { QueryClient } from "@tanstack/react-query"
-import { create } from "zustand"
+import type { QueryClient } from "@tanstack/solid-query"
+import { createSignal } from "solid-js"
 
 import { refKey } from "@/components/catalog/catalog-data"
 import { tr } from "@/i18n"
+import { toast } from "@/kit/toast"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 type DismissedState = {
@@ -25,42 +25,49 @@ function refresh(queryClient: QueryClient) {
   void queryClient.invalidateQueries({ queryKey: orpc.discover.key() })
 }
 
-/** The titles hidden from the viewer's recommendations on this page. */
-export const useDismissedStore = create<DismissedState>()((set, get) => {
-  const show = (key: string) => {
-    const hidden = new Set(get().hidden)
-    hidden.delete(key)
-    set({ hidden })
-  }
-  const send = (ref: CatalogRef, dismissed: boolean) =>
-    client.recommendations.dismiss({ ref, dismissed })
-  return {
-    hidden: new Set(),
-    dismiss: (queryClient, ref, name) => {
-      const key = refKey(ref)
-      set({ hidden: new Set(get().hidden).add(key) })
-      send(ref, true).then(
-        () => {
-          refresh(queryClient)
-          toast.success(tr("discover.dismissed", { name }), {
-            action: {
-              label: tr("discover.undo"),
-              onClick: () => {
-                show(key)
-                void send(ref, false)
-                  .catch((cause: unknown) => toast.error(errorMessage(cause)))
-                  .finally(() => refresh(queryClient))
-              },
-            },
-          })
+const [hidden, setHidden] = createSignal<ReadonlySet<string>>(new Set())
+
+function show(key: string) {
+  setHidden((previous) => {
+    const next = new Set(previous)
+    next.delete(key)
+    return next
+  })
+}
+
+const send = (ref: CatalogRef, dismissed: boolean) =>
+  client.recommendations.dismiss({ ref, dismissed })
+
+const dismiss: DismissedState["dismiss"] = (queryClient, ref, name) => {
+  const key = refKey(ref)
+  setHidden((previous) => new Set(previous).add(key))
+  send(ref, true).then(
+    () => {
+      refresh(queryClient)
+      toast.success(tr("discover.dismissed", { name }), {
+        action: {
+          label: tr("discover.undo"),
+          onClick: () => {
+            show(key)
+            void send(ref, false)
+              .catch((cause: unknown) => toast.error(errorMessage(cause)))
+              .finally(() => refresh(queryClient))
+          },
         },
-        (cause: unknown) => {
-          show(key)
-          toast.error(tr("discover.dismissFailed", { name }), {
-            description: errorMessage(cause),
-          })
-        },
-      )
+      })
     },
-  }
-})
+    (cause: unknown) => {
+      show(key)
+      toast.error(tr("discover.dismissFailed", { name }), {
+        description: errorMessage(cause),
+      })
+    },
+  )
+}
+
+/** A shared store. Calling it with a selector returns an accessor. */
+export function useDismissedStore<Value>(
+  select: (state: DismissedState) => Value,
+) {
+  return () => select({ hidden: hidden(), dismiss })
+}

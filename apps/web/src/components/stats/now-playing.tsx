@@ -3,17 +3,26 @@ import {
   type NowPlaying,
   videoCodecName,
 } from "@matinee/contracts"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { cn } from "@matinee/ui/lib/utils"
-import { useQuery } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
-import { FilmIcon, PauseIcon, TvMinimalPlayIcon } from "lucide-react"
-import { useEffect, useState } from "react"
+import { Link } from "@tanstack/solid-router"
+import { Film, Pause, TvMinimalPlay } from "lucide"
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  Match,
+  Show,
+  Switch,
+} from "solid-js"
 
-import { ItemLink, Picture, tone } from "@/components/media-item"
+import { ItemLink } from "@/components/media-item"
+import { Picture, tone } from "@/components/picture"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
+import { Icon } from "@/kit/icon"
+import { Skeleton } from "@/kit/skeleton"
 import { formatSpan, formatWatchTime } from "@/lib/format"
+import { liveData, useLiveQuery } from "@/lib/live-query"
 import { art, channelLayout, itemLabel } from "@/lib/media"
 import { errorMessage, liveQuery, orpc } from "@/lib/rpc"
 import {
@@ -34,14 +43,14 @@ const MAX_ESTIMATE_S = 30
 const rowsGrid = "grid gap-x-10 gap-y-4 md:grid-cols-2 2xl:grid-cols-3"
 
 /** The current time, every second while `running`. */
-function useNow(running: boolean): number {
-  const [now, setNow] = useState(Date.now)
-  useEffect(() => {
-    if (!running) return
+function useNow(running: () => boolean): () => number {
+  const [now, setNow] = createSignal(Date.now())
+  createEffect(running, (on) => {
+    if (!on) return
     setNow(Date.now())
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
-  }, [running])
+  })
   return now
 }
 
@@ -50,17 +59,21 @@ function useNow(running: boolean): number {
  * playing rows count on from the player's last report.
  */
 export function WatchingNow() {
-  const live = useQuery({
+  const live = useLiveQuery(() => ({
     ...orpc.stats.live.experimental_liveOptions(),
     ...liveQuery,
-  })
-  const data = live.data
-  const count = data?.sessions.length ?? 0
-  const now = useNow(data?.sessions.some((session) => !session.paused) ?? false)
+  }))
+  const sessions = () => liveData(live())?.sessions
+  const count = () => sessions()?.length ?? 0
+  const running = createMemo(
+    () => sessions()?.some((session) => !session.paused) ?? false,
+  )
+  const now = useNow(running)
   /** Where a session is now, from its report and the time since. */
   const estimate = (session: NowPlaying): number => {
     if (session.paused) return session.positionSeconds
-    const since = session.reportAgeSeconds + (now - live.dataUpdatedAt) / 1000
+    const since =
+      session.reportAgeSeconds + (now() - (live()?.dataUpdatedAt ?? 0)) / 1000
     return (
       session.positionSeconds + Math.min(Math.max(0, since), MAX_ESTIMATE_S)
     )
@@ -68,41 +81,57 @@ export function WatchingNow() {
   return (
     <section aria-label={tr("stats.live.title")}>
       <SectionHeading title={tr("stats.live.title")}>
-        {count > 0 && (
-          <span className="text-muted-foreground text-sm tabular-nums">
-            {tr("stats.live.streams", { count })}
+        <Show when={count() > 0}>
+          <span class="text-muted-foreground text-sm tabular-nums">
+            {tr("stats.live.streams", { count: count() })}
           </span>
-        )}
+        </Show>
       </SectionHeading>
-      {!data ? (
-        live.isError ? (
-          <p className="text-muted-foreground text-sm">
-            {errorMessage(live.error)}
-          </p>
-        ) : (
-          <div className={rowsGrid}>
-            <Skeleton className="h-[4.5rem] rounded-md" />
-            <Skeleton className="h-[4.5rem] rounded-md max-md:hidden" />
+      <Switch
+        fallback={
+          <div class={rowsGrid}>
+            <Skeleton class="h-[4.5rem] rounded-md" />
+            <Skeleton class="h-[4.5rem] rounded-md max-md:hidden" />
           </div>
-        )
-      ) : count === 0 ? (
-        <StatsEmpty
-          compact
-          icon={TvMinimalPlayIcon}
-          title={tr("stats.live.empty")}
-          description={tr("stats.live.emptyHint")}
-        />
-      ) : (
-        <ul className={rowsGrid}>
-          {data.sessions.map((session) => (
-            <NowPlayingRow
-              key={`${session.user.id}:${session.startedAt.getTime()}`}
-              session={session}
-              position={estimate(session)}
-            />
-          ))}
-        </ul>
-      )}
+        }
+      >
+        <Match when={sessions()}>
+          {(list) => (
+            <Show
+              when={list().length > 0}
+              fallback={
+                <StatsEmpty
+                  compact
+                  icon={TvMinimalPlay}
+                  title={tr("stats.live.empty")}
+                  description={tr("stats.live.emptyHint")}
+                />
+              }
+            >
+              <ul class={rowsGrid}>
+                <For
+                  each={list()}
+                  keyed={(session) =>
+                    `${session.user.id}:${session.startedAt.getTime()}`
+                  }
+                >
+                  {(session) => (
+                    <NowPlayingRow
+                      session={session()}
+                      position={estimate(session())}
+                    />
+                  )}
+                </For>
+              </ul>
+            </Show>
+          )}
+        </Match>
+        <Match when={live()?.isError}>
+          <p class="text-muted-foreground text-sm">
+            {errorMessage(live()?.error)}
+          </p>
+        </Match>
+      </Switch>
     </section>
   )
 }
@@ -205,39 +234,43 @@ function audioLine(session: NowPlaying): StreamLine | null {
   }
 }
 
-function StreamRow({ line }: { line: StreamLine }) {
+function StreamRow(props: { line: StreamLine }) {
   return (
-    <p className="flex min-w-0 items-baseline gap-2 text-xs leading-5">
-      <span className="text-muted-foreground w-9 shrink-0">
-        {tr(`stats.live.stream.${line.kind}`)}
+    <p class="flex min-w-0 items-baseline gap-2 text-xs leading-5">
+      <span class="text-muted-foreground w-9 shrink-0">
+        {tr(`stats.live.stream.${props.line.kind}`)}
       </span>
       <span
-        className={cn(
+        class={[
           "w-[4.5rem] shrink-0 font-medium",
-          HANDLING_TONES.get(line.handling),
-        )}
+          HANDLING_TONES.get(props.line.handling),
+        ]}
       >
-        {tr(`stats.live.handling.${line.handling}`)}
+        {tr(`stats.live.handling.${props.line.handling}`)}
       </span>
       <span
-        className="min-w-0 truncate"
-        title={[line.from, line.to, line.how].filter(Boolean).join(" ")}
+        class="min-w-0 truncate"
+        title={[props.line.from, props.line.to, props.line.how]
+          .filter(Boolean)
+          .join(" ")}
       >
-        <span className={line.to ? "text-muted-foreground" : undefined}>
-          {line.from}
+        <span class={props.line.to ? "text-muted-foreground" : undefined}>
+          {props.line.from}
         </span>
-        {line.to && (
-          <>
-            <span aria-hidden className="text-muted-foreground">
-              {" → "}
-            </span>
-            <span className="sr-only">{` ${tr("stats.live.to")} `}</span>
-            {line.to}
-          </>
-        )}
-        {line.how && (
-          <span className="text-muted-foreground">{` · ${line.how}`}</span>
-        )}
+        <Show when={props.line.to}>
+          {(to) => (
+            <>
+              <span aria-hidden="true" class="text-muted-foreground">
+                {" → "}
+              </span>
+              <span class="sr-only">{` ${tr("stats.live.to")} `}</span>
+              {to()}
+            </>
+          )}
+        </Show>
+        <Show when={props.line.how}>
+          {(how) => <span class="text-muted-foreground">{` · ${how()}`}</span>}
+        </Show>
       </span>
     </p>
   )
@@ -253,95 +286,125 @@ function liveTime(seconds: number): string {
     : formatWatchTime(seconds)
 }
 
-function NowPlayingRow({
-  session,
-  position: estimated,
-}: {
+/*
+ * The clock ticks each second, which moves only the time left and the
+ * bar. What the row says about the file follows the session, which
+ * changes only with the server's updates.
+ */
+function NowPlayingRow(props: {
   session: NowPlaying
   /** Seconds into the file, estimated for now. */
   position: number
 }) {
-  const { item, user } = session
-  const label = item ? itemLabel(item) : null
-  const poster = art(item?.title?.images.poster ?? null)
-  const duration = item?.durationSeconds ?? item?.probe?.format.durationSeconds
-  const position = duration ? Math.min(estimated, duration) : estimated
-  const share = duration ? position / duration : 0
-  const title = label ? (label.code ? label.title : label.show) : null
-  const subtitle = label?.code ? `${label.showName} · ${label.code}` : null
-  const lines = [videoLine(session), audioLine(session)].filter(
-    (line) => line !== null,
-  )
+  const item = () => props.session.item
+  const user = () => props.session.user
+  const facts = createMemo(() => {
+    const session = props.session
+    const label = session.item ? itemLabel(session.item) : null
+    return {
+      poster: art(session.item?.title?.images.poster ?? null),
+      duration:
+        session.item?.durationSeconds ??
+        session.item?.probe?.format.durationSeconds,
+      title: label ? (label.code ? label.title : label.show) : null,
+      subtitle: label?.code ? `${label.showName} · ${label.code}` : null,
+      lines: [videoLine(session), audioLine(session)].filter(
+        (line) => line !== null,
+      ),
+    }
+  })
+  const position = () => {
+    const duration = facts().duration
+    return duration ? Math.min(props.position, duration) : props.position
+  }
+  const timeLeft = () => {
+    const duration = facts().duration
+    return duration
+      ? tr("stats.live.left", {
+          time: liveTime(Math.max(0, duration - position())),
+        })
+      : liveTime(position())
+  }
+  const share = () => {
+    const duration = facts().duration
+    return duration ? position() / duration : 0
+  }
 
   return (
-    <li className="flex min-w-0 gap-3">
+    <li class="flex min-w-0 gap-3">
       <span
-        className={cn(
+        class={[
           "relative grid h-24 w-16 shrink-0 place-items-center overflow-hidden rounded-md border",
-          tone(item?.title?.id ?? user.id),
-        )}
+          tone(item()?.title?.id ?? user().id),
+        ]}
       >
-        <FilmIcon aria-hidden className="text-muted-foreground/40 size-4" />
-        {poster && <Picture sources={[poster]} />}
-        {session.paused && (
-          <span className="absolute inset-0 grid place-items-center bg-black/55">
-            <PauseIcon aria-hidden className="size-5 fill-current text-white" />
+        <Icon icon={Film} class="text-muted-foreground/40 size-4" />
+        <Show when={facts().poster}>
+          {(poster) => <Picture sources={[poster()]} />}
+        </Show>
+        <Show when={props.session.paused}>
+          <span class="absolute inset-0 grid place-items-center bg-black/55">
+            <Icon icon={Pause} fill="currentColor" class="size-5 text-white" />
           </span>
-        )}
+        </Show>
       </span>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex min-w-0 items-baseline gap-3">
-          <p className="min-w-0 flex-1 truncate text-sm leading-5 font-medium">
-            {item && title ? (
-              <ItemLink
-                item={item}
-                className="underline-offset-2 hover:underline"
-              >
-                {title}
-              </ItemLink>
-            ) : (
-              tr("stats.live.gone")
-            )}
+      <div class="flex min-w-0 flex-1 flex-col">
+        <div class="flex min-w-0 items-baseline gap-3">
+          <p class="min-w-0 flex-1 truncate text-sm leading-5 font-medium">
+            <Show
+              when={item() && facts().title ? item() : undefined}
+              fallback={tr("stats.live.gone")}
+            >
+              {(current) => (
+                <ItemLink
+                  item={current()}
+                  class="underline-offset-2 hover:underline"
+                >
+                  {facts().title}
+                </ItemLink>
+              )}
+            </Show>
           </p>
-          <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-            {session.paused ? (
-              <span className="font-medium text-amber-400">
-                {tr("stats.live.paused")}
-              </span>
-            ) : duration ? (
-              tr("stats.live.left", {
-                time: liveTime(Math.max(0, duration - position)),
-              })
-            ) : (
-              liveTime(position)
-            )}
+          <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
+            <Show
+              when={!props.session.paused}
+              fallback={
+                <span class="font-medium text-amber-400">
+                  {tr("stats.live.paused")}
+                </span>
+              }
+            >
+              {timeLeft()}
+            </Show>
           </span>
         </div>
-        <p className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs leading-5">
-          <UserAvatar user={user} className="text-9px size-4 shrink-0" />
+        <p class="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs leading-5">
+          <UserAvatar user={user()} class="text-9px size-4 shrink-0" />
           <Link
             to="/profiles/$username"
-            params={{ username: user.username }}
-            className="shrink-0 underline-offset-2 hover:underline"
+            params={{ username: user().username }}
+            class="shrink-0 underline-offset-2 hover:underline"
           >
-            {user.displayName ?? user.username}
+            {user().displayName ?? user().username}
           </Link>
-          {[subtitle, session.client].filter(Boolean).map((part) => (
-            <span key={part} className="truncate">{`· ${part}`}</span>
-          ))}
+          <For each={[facts().subtitle, props.session.client].filter(Boolean)}>
+            {(part) => <span class="truncate">{`· ${part}`}</span>}
+          </For>
         </p>
         <span
-          aria-hidden
-          className="bg-foreground/15 my-1.5 block h-1 overflow-hidden rounded-full"
+          aria-hidden="true"
+          class="bg-foreground/15 my-1.5 block h-1 overflow-hidden rounded-full"
         >
+          {/* Slid in from the left rather than widened, so a tick moves
+              the bar without laying the row out again. */}
           <span
-            className="bg-primary block h-full rounded-full transition-[width] duration-1000 ease-linear motion-reduce:transition-none"
-            style={{ width: `${share * 100}%` }}
+            class="bg-primary block h-full rounded-full transition-[translate] duration-1000 ease-linear motion-reduce:transition-none"
+            style={{ translate: `${(share() - 1) * 100}% 0` }}
           />
         </span>
-        {lines.map((line) => (
-          <StreamRow key={line.kind} line={line} />
-        ))}
+        <For each={facts().lines} keyed={(line) => line.kind}>
+          {(line) => <StreamRow line={line()} />}
+        </For>
       </div>
     </li>
   )

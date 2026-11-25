@@ -1,9 +1,6 @@
-import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
-import { cn } from "@matinee/ui/lib/utils"
-import { type PointerEvent, useEffect, useRef, useState } from "react"
-import { useStore } from "zustand"
-import { useShallow } from "zustand/shallow"
+import { onSettled, Show } from "solid-js"
 
+import { mediaQuery } from "@/lib/viewport"
 import { createScrollbarStore } from "@/stores/shell-scrollbar"
 
 // Keep in sync with the globals.css query that hides the native scrollbar.
@@ -31,44 +28,37 @@ function geometry() {
  * the real thing. Keyboard and wheel scrolling stay native.
  */
 export function PageScrollbar() {
-  const mouse = useMediaQuery(MOUSE_QUERY)
-  return mouse ? <OverlayScrollbar /> : null
+  return (
+    <Show when={mediaQuery(MOUSE_QUERY)()}>
+      <OverlayScrollbar />
+    </Show>
+  )
 }
 
 function OverlayScrollbar() {
-  const thumb = useRef<HTMLDivElement>(null)
-  const drag = useRef<{ y: number; scroll: number } | null>(null)
-  const [store] = useState(createScrollbarStore)
-  const { scrollable, scrolling, dragging } = useStore(
-    store,
-    useShallow((state) => ({
-      scrollable: state.scrollable,
-      scrolling: state.scrolling,
-      dragging: state.dragging,
-    })),
-  )
-  const { setScrollable, scrolled, setDragging, stop } = store.getState()
+  let thumb: HTMLDivElement | undefined
+  let drag: { y: number; scroll: number } | null = null
+  const store = createScrollbarStore()
 
   // Follows the window's scroll position and the page's height.
-  useEffect(() => {
+  onSettled(() => {
     let frame = 0
     // Writes the thumb's style directly, so scrolling doesn't re-render.
     const paint = () => {
       frame = 0
       const { size, travel, maxScroll } = geometry()
-      setScrollable(maxScroll > 1)
-      const el = thumb.current
-      if (!el) return
+      store.setScrollable(maxScroll > 1)
+      if (!thumb) return
       const offset = maxScroll > 0 ? (window.scrollY / maxScroll) * travel : 0
-      el.style.height = `${size}px`
-      el.style.transform = `translateY(${Math.min(travel, Math.max(0, offset))}px)`
+      thumb.style.height = `${size}px`
+      thumb.style.transform = `translateY(${Math.min(travel, Math.max(0, offset))}px)`
     }
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(paint)
     }
     const onScroll = () => {
       schedule()
-      scrolled()
+      store.scrolled()
     }
     paint()
     // The body grows and shrinks with the page's content.
@@ -78,23 +68,25 @@ function OverlayScrollbar() {
     window.addEventListener("resize", schedule)
     return () => {
       cancelAnimationFrame(frame)
-      stop()
+      store.stop()
       observer.disconnect()
       window.removeEventListener("scroll", onScroll)
       window.removeEventListener("resize", schedule)
     }
-  }, [setScrollable, scrolled, stop])
+  })
 
-  const startDrag = (event: PointerEvent<HTMLDivElement>) => {
+  const startDrag = (
+    event: PointerEvent & { currentTarget: HTMLDivElement },
+  ) => {
     if (event.button !== 0) return
     event.preventDefault()
     event.stopPropagation()
     event.currentTarget.setPointerCapture(event.pointerId)
-    drag.current = { y: event.clientY, scroll: window.scrollY }
-    setDragging(true)
+    drag = { y: event.clientY, scroll: window.scrollY }
+    store.setDragging(true)
   }
-  const moveDrag = (event: PointerEvent<HTMLDivElement>) => {
-    const start = drag.current
+  const moveDrag = (event: PointerEvent) => {
+    const start = drag
     if (!start) return
     const { travel, maxScroll } = geometry()
     if (travel <= 0) return
@@ -102,14 +94,13 @@ function OverlayScrollbar() {
     window.scrollTo({ top, behavior: "instant" })
   }
   const endDrag = () => {
-    drag.current = null
-    setDragging(false)
+    drag = null
+    store.setDragging(false)
   }
   // A click on the track pages toward the pointer, like a native scrollbar.
-  const pageToward = (event: PointerEvent<HTMLDivElement>) => {
-    const el = thumb.current
-    if (event.button !== 0 || !el) return
-    const { top } = el.getBoundingClientRect()
+  const pageToward = (event: PointerEvent) => {
+    if (event.button !== 0 || !thumb) return
+    const { top } = thumb.getBoundingClientRect()
     const direction = event.clientY < top ? -1 : 1
     window.scrollBy({
       top: direction * window.innerHeight * 0.9,
@@ -119,27 +110,27 @@ function OverlayScrollbar() {
 
   return (
     <div
-      aria-hidden
+      aria-hidden="true"
       onPointerDown={pageToward}
-      className={cn(
+      class={[
         "group/scrollbar fixed inset-y-0 right-0 z-40 w-3",
-        !scrollable && "pointer-events-none invisible",
-      )}
+        { "pointer-events-none invisible": !store.scrollable() },
+      ]}
     >
       <div
-        ref={thumb}
+        ref={(element) => (thumb = element)}
         onPointerDown={startDrag}
         onPointerMove={moveDrag}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        style={{ top: INSET }}
-        className={cn(
+        style={{ top: `${INSET}px` }}
+        class={[
           "bg-foreground/25 hover:bg-foreground/40 absolute right-0.5 w-1.5 rounded-full transition-[opacity,width,background-color] duration-200 group-hover/scrollbar:w-2 motion-reduce:transition-none",
-          dragging && "bg-foreground/40 w-2",
-          scrolling || dragging
+          { "bg-foreground/40 w-2": store.dragging() },
+          store.scrolling() || store.dragging()
             ? "opacity-100"
             : "opacity-0 group-hover/scrollbar:opacity-100",
-        )}
+        ]}
       />
     </div>
   )

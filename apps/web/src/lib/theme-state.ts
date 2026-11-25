@@ -3,9 +3,15 @@ import {
   subscribeTheme,
   type ThemeState,
 } from "@matinee/ui/lib/theme"
-import { useSyncExternalStore } from "react"
+import { type Accessor, createSignal } from "solid-js"
 
-/** The live theme, re-rendering whenever it changes. */
-export function useThemeState(): ThemeState {
-  return useSyncExternalStore(subscribeTheme, getThemeState, getThemeState)
+const [themeState, setThemeState] = createSignal<ThemeState>(getThemeState())
+subscribeTheme(() => setThemeState(getThemeState()))
+
+/**
+ * The live theme. `main.tsx` starts the theme engine; this only follows it,
+ * with one listener for the whole app.
+ */
+export function useThemeState(): Accessor<ThemeState> {
+  return themeState
 }

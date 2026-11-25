@@ -1,253 +1,174 @@
 import type { MediaItem, Season, Title } from "@matinee/contracts"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { cn } from "@matinee/ui/lib/utils"
-import { useQuery } from "@tanstack/react-query"
-import { type ReactNode, useDeferredValue, useState } from "react"
-
-import { ActionsMenu } from "@/components/actions-menu"
-import { CardActions, CardScrim } from "@/components/card-actions"
-import { useItemFavorite } from "@/components/favorite-button"
+import { useQuery } from "@tanstack/solid-query"
 import {
-  EpisodeCard,
+  type ComponentProps,
+  createMemo,
+  Errored,
+  For,
+  Loading,
+  Repeat,
+  Show,
+} from "solid-js"
+
+import { CardScrim } from "@/components/card-actions"
+import {
   ItemLink,
-  StreamLine,
   textLink,
   Thumb,
   ThumbPlayButton,
-  UnwatchBadge,
+  WatchedBadge,
 } from "@/components/media-item"
 import { Rail, RailItem } from "@/components/rail"
-import { useItemWatched } from "@/components/watched-menu"
 import { tr } from "@/i18n"
-import { formatDate, formatRuntime } from "@/lib/format"
+import { Skeleton } from "@/kit/skeleton"
 import {
   episodeCode,
   itemLabel,
   landscapeSources,
   progressRatio,
+  seasonName,
   timeLeft,
 } from "@/lib/media"
 import { errorMessage } from "@/lib/rpc"
 
-import { RestOfSeasonCard } from "./rest-of-season"
-import { seasonNext } from "./seasons"
-import { useShowGaps } from "./show-gaps"
 import { seasonItemsOptions } from "./title-queries"
 
-/** A season's episodes on the show's own page, for a show with one season. */
-export function ShowEpisodes({
-  title,
-  season,
-}: {
+export function ShowEpisodes(props: {
   title: Title
   season: Season
+  watched: boolean | undefined
 }) {
-  const items = useQuery(seasonItemsOptions(title.id, season.number))
+  const season = createMemo(() => ({ number: props.season.number }), {
+    equals: (a, b) => a.number === b.number,
+  })
+  const heading = () =>
+    props.title.seasons.length > 1
+      ? seasonName(props.season.number)
+      : tr("title.episodes")
   return (
-    <SeasonEpisodes
-      title={title}
-      season={season.number}
-      items={items.data}
-      error={items.isError ? errorMessage(items.error) : null}
-    />
+    <div id="title-episodes">
+      <Show when={season()} keyed>
+        {(season) => (
+          <Errored fallback={episodesQueryError}>
+            <Loading
+              fallback={
+                <EpisodesSkeleton
+                  heading={heading()}
+                  count={props.season.itemCount}
+                />
+              }
+            >
+              <EpisodeList
+                titleId={props.title.id}
+                season={season.number}
+                heading={heading()}
+                watched={props.watched}
+              />
+            </Loading>
+          </Errored>
+        )}
+      </Show>
+    </div>
   )
 }
 
-/**
- * A season's episodes as a row of stills, or skeletons while they load. A
- * still or a name opens the episode's page, and the round button on the
- * still plays it.
- */
-export function SeasonEpisodes({
-  title,
-  season,
-  items,
-  error,
-}: {
-  title: Title
-  /** Its number, null for the files without one. */
+function EpisodeList(props: {
+  titleId: string
   season: number | null
-  items: MediaItem[] | undefined
-  /** Why they didn't load. */
-  error: string | null
+  heading: string
+  watched: boolean | undefined
 }) {
-  // When they arrive, a long season is a lot to render, so it renders in
-  // the background, in slices, and the page answers input meanwhile. The
-  // skeletons stay until it's done. Already loaded, they render at once.
-  const shown = useDeferredValue(items)
-  const gaps = useShowGaps(title)
-  const partial = gaps?.partial.find((entry) => entry.number === season)
-  if (error !== null) {
-    return (
-      <section aria-labelledby="episodes-heading">
-        <h2
-          id="episodes-heading"
-          className="mb-3 text-xl font-semibold tracking-tight"
-        >
-          {tr("title.episodes")}
-        </h2>
-        <p className="text-muted-foreground text-sm">
-          {tr("title.episodes.error", { error })}
-        </p>
-      </section>
-    )
-  }
-  if (shown === undefined) {
-    return (
-      <Rail title={tr("title.episodes")}>
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <RailItem key={i}>
-            <Skeleton className="aspect-video rounded-md" />
-            <Skeleton className="mt-2.5 h-3.5 w-2/3" />
-            <Skeleton className="mt-2 h-3 w-1/3" />
+  const titleId = createMemo(() => props.titleId)
+  const items = useQuery(() => seasonItemsOptions(titleId(), props.season))
+  return (
+    <Rail title={props.heading}>
+      <For each={items.data} keyed={(item) => item.id}>
+        {(item) => (
+          <RailItem>
+            <SeasonEpisode item={item()} watched={props.watched} />
           </RailItem>
-        ))}
-      </Rail>
-    )
-  }
-  return (
-    <EpisodesRail
-      items={shown}
-      start={seasonNext(title, shown)}
-      rest={
-        gaps &&
-        partial && (
-          <RestOfSeasonCard title={title} gaps={gaps} season={partial} />
-        )
-      }
-    />
-  )
-}
-
-/** The loaded row, which starts on `start`. */
-function EpisodesRail({
-  items,
-  start,
-  rest,
-}: {
-  items: MediaItem[]
-  start: MediaItem | undefined
-  /** After the episodes, for those that aren't here. */
-  rest?: ReactNode
-}) {
-  // Kept from the first render: marking an episode watched moves Play on,
-  // and the row shouldn't scroll away under the pointer.
-  const [startIndex] = useState(() =>
-    Math.max(
-      0,
-      items.findIndex((item) => item.id === start?.id),
-    ),
-  )
-  return (
-    <Rail title={tr("title.episodes")} startIndex={startIndex}>
-      {items.map((item) => (
-        <RailItem key={item.id}>
-          <EpisodeCard item={item} showName={false} />
-        </RailItem>
-      ))}
-      {rest && <RailItem>{rest}</RailItem>}
+        )}
+      </For>
     </Rail>
   )
 }
 
-/**
- * The episode up next on a show's page: a big still, its number and name,
- * air date and runtime, and what happens in it. The still and the name
- * open the episode's page, and the round button on the still plays it.
- * The icons in the still's corner mark it watched or a favorite.
- */
-export function EpisodeRow({ item }: { item: MediaItem }) {
-  const label = itemLabel(item)
-  const code = episodeCode(item)
-  const name = code
-    ? tr("title.episodes.codedName", { code, name: label.title })
-    : label.title
-  const watched = useItemWatched(item)
-  const favorite = useItemFavorite(item)
-  const runtime = formatRuntime(
-    item.episode?.runtimeMinutes ??
-      (item.durationSeconds ? Math.round(item.durationSeconds / 60) : null),
-  )
-  const facts = [
-    item.episode?.airDate
-      ? formatDate(new Date(`${item.episode.airDate}T12:00:00`))
-      : null,
-    item.progress && !watched.on ? timeLeft(item) : runtime,
-  ].filter(Boolean)
-  const overview = item.episode?.overview
+/** The show's own episode cards can give its name's space to the episode. */
+function SeasonEpisode(props: {
+  item: MediaItem
+  watched: boolean | undefined
+}) {
+  const label = () => itemLabel(props.item)
+  const detail = () =>
+    [
+      episodeCode(props.item),
+      props.watched === undefined ? timeLeft(props.item) : null,
+    ]
+      .filter(Boolean)
+      .join(" · ")
   return (
-    <div className="grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-2">
-      <div className="group/card relative w-48 sm:w-64 lg:w-72">
-        <ItemLink item={item} hidden className="block rounded-md">
+    <div class="group/card">
+      <div class="relative">
+        <ItemLink item={props.item} hidden class="block rounded-md">
           <Thumb
-            sources={landscapeSources(item, "large")}
-            toneKey={label.showKey}
-            progress={progressRatio(item)}
-            watched={watched.on}
-            badge={false}
-            play={false}
-            className="w-full"
+            sources={landscapeSources(props.item)}
+            toneKey={label().showKey}
+            progress={
+              props.watched === undefined ? progressRatio(props.item) : null
+            }
+            class="w-full"
           >
             <CardScrim />
           </Thumb>
         </ItemLink>
-        <UnwatchBadge
-          name={name}
-          watched={watched}
-          touch
-          className="absolute top-1.5 right-1.5"
-        />
-        <ThumbPlayButton item={item} label={name} />
-        {/* The progress bar fades while these show. Touch screens always
-            show them. */}
-        <CardActions
-          name={name}
-          watched={watched}
-          favorite={favorite}
-          menu={
-            <ActionsMenu target={{ kind: "item", item, name }} look="card" />
-          }
-          touch
-          className="absolute right-1 bottom-1.5 [@media(pointer:coarse)]:bottom-3"
-        />
+        <Show when={props.watched ?? props.item.progress?.completed}>
+          <WatchedBadge class="pointer-events-none absolute top-1.5 right-1.5" />
+        </Show>
+        <ThumbPlayButton item={props.item} label={label().title} />
       </div>
-      <div className="min-w-0 py-0.5">
-        <p className="flex items-baseline gap-2">
-          {code && (
-            <span className="text-muted-foreground shrink-0 text-sm tabular-nums">
-              {code}
-            </span>
-          )}
-          <ItemLink
-            item={item}
-            label={label.title}
-            className={cn(
-              textLink,
-              "line-clamp-2 text-sm leading-5 sm:text-15px",
-              label.untitled ? "font-normal" : "font-medium",
-            )}
-          >
-            {label.title}
-          </ItemLink>
-        </p>
-        {facts.length > 0 && (
-          <p className="text-muted-foreground text-13px mt-0.5 leading-5 tabular-nums">
-            {facts.join(" · ")}
-          </p>
-        )}
-        <StreamLine item={item} />
-        {overview && (
-          <p className="text-muted-foreground mt-1.5 line-clamp-3 max-w-[72ch] text-sm leading-5 max-sm:hidden">
-            {overview}
-          </p>
-        )}
-      </div>
-      {overview && (
-        // Phones put the description under the still, across the row.
-        <p className="text-muted-foreground text-13px col-span-2 line-clamp-3 leading-5 sm:hidden">
-          {overview}
-        </p>
-      )}
+      <ItemLink
+        item={props.item}
+        class={`${textLink} mt-2 block truncate text-sm leading-5 font-medium`}
+        label={label().title}
+      >
+        {label().title}
+      </ItemLink>
+      <Show when={detail()}>
+        <span class="text-muted-foreground text-13px block truncate leading-5">
+          {detail()}
+        </span>
+      </Show>
     </div>
+  )
+}
+
+function EpisodesSkeleton(props: { heading: string; count: number }) {
+  return (
+    <Rail title={props.heading}>
+      <Repeat count={Math.min(props.count, 6)}>
+        {() => (
+          <RailItem>
+            <Skeleton class="aspect-video" />
+            <Skeleton class="mt-2 h-5 w-2/3" />
+            <Skeleton class="mt-1 h-4 w-1/3" />
+          </RailItem>
+        )}
+      </Repeat>
+    </Rail>
+  )
+}
+
+const episodesQueryError: ComponentProps<typeof Errored>["fallback"] = (
+  cause,
+) => {
+  return (
+    <section>
+      <h2 class="mb-3 text-xl font-semibold tracking-tight">
+        {tr("title.episodes")}
+      </h2>
+      <p class="text-muted-foreground text-sm">
+        {tr("title.episodes.error", { error: errorMessage(cause()) })}
+      </p>
+    </section>
   )
 }

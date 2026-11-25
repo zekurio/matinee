@@ -1,304 +1,197 @@
-import type {
-  Artwork,
-  MediaItem,
-  Title,
-  TitleSummary,
-  Trailer,
-} from "@matinee/contracts"
-import { buttonVariants } from "@matinee/ui/components/button"
-import { cn } from "@matinee/ui/lib/utils"
-import { Link, useRouterState } from "@tanstack/react-router"
-import { ClapperboardIcon, PlayIcon, StarIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import type { MediaItem, Title } from "@matinee/contracts"
+import { Link } from "@tanstack/solid-router"
+import { Play, Star } from "lucide"
+import { createMemo, For, Show } from "solid-js"
 
 import { ActionsMenu } from "@/components/actions-menu"
-import { pageBleed, pageColumn } from "@/components/app-shell"
-import { CrewFacts, listNodes, unitList } from "@/components/credits"
+import { CrewFacts, unitList } from "@/components/credits"
 import { FavoriteButton } from "@/components/favorite-button"
-import { Picture, textLink, tone } from "@/components/media-item"
-import { MediaInfo } from "@/components/title/media-info"
-import { useTitleWatched, WatchedButton } from "@/components/watched-menu"
-import { getLocale, perLocale, tr } from "@/i18n"
-import { formatRuntime } from "@/lib/format"
-import { art, type ImageSource, mediaFlags, timeLeft } from "@/lib/media"
+import { PosterArt, textLink } from "@/components/media-item"
+import { Picture, tone } from "@/components/picture"
+import { type useTitleWatched, WatchedButton } from "@/components/watched-menu"
+import { tr } from "@/i18n"
+import { buttonVariants } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+import { formatRuntime, formatScore } from "@/lib/format"
+import { art, frame, mediaFlags, present, timeLeft } from "@/lib/media"
 
 import { HeaderOverview } from "./header-overview"
+import { MediaInfo } from "./media-info"
 import { MatchNote } from "./title-menu"
 
-// A rating out of ten, with one decimal: "7.5".
-export const ratings = perLocale(
-  (locale) =>
-    new Intl.NumberFormat(locale, {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    }),
-)
+export const headingTop =
+  "pt-[max(10rem,30vh)] sm:pt-[max(4rem,calc(min(46vh,420px)-150px))]"
+export const headingPoster =
+  "hidden w-36 shrink-0 self-start sm:block lg:w-[180px]"
 
-/**
- * The top of the page: the backdrop across the window, the poster, and the
- * title's name, facts, description, and Play.
- */
-/** The tick beside Play, for every file of the title. */
-function TitleWatchedButton({ title }: { title: Title }) {
-  return <WatchedButton watched={useTitleWatched(title)} />
-}
-
-export function TitleHeader({ title }: { title: Title }) {
-  const runtime =
-    title.kind === "movie"
-      ? formatRuntime(
-          title.runtimeMinutes ??
-            (title.next?.durationSeconds
-              ? Math.round(title.next.durationSeconds / 60)
-              : null),
-        )
-      : null
-  const numbered = title.seasons.filter(
-    (s) => s.number !== null && s.number > 0,
+export function TitleHeader(props: {
+  title: Title
+  watched: ReturnType<typeof useTitleWatched>
+}) {
+  const sources = createMemo(() =>
+    present(
+      art(props.title.images.backdrop, "large"),
+      props.title.next ? frame(props.title.next.id, "large") : null,
+    ),
   )
-  const facts = [
-    title.year ? String(title.year) : null,
-    runtime,
-    title.kind === "show"
-      ? numbered.length > 1
-        ? tr("title.seasonCount", { count: numbered.length })
-        : tr("title.episodeCount", { count: title.itemCount })
-      : null,
-    title.kind === "show" && title.status
-      ? tr(`metadata.status.${title.status}`)
-      : null,
-  ].filter(Boolean)
-  // Just arrived from its catalog page: what's new fades in, while the
-  // backdrop, poster, and name stay where they were.
-  const arrived = useRouterState({
-    select: (state) => state.location.state.arrived === true,
-  })
-  const gained = arrived
-    ? "animate-in fade-in-0 duration-200 motion-reduce:animate-none"
-    : undefined
-  // A show's episodes can differ, so only a movie's file speaks for the title.
-  const flags =
-    title.kind === "movie" && title.next ? mediaFlags(title.next) : []
-
+  const movie = () => props.title.kind === "movie" && props.title.next
   return (
-    <section className={pageBleed} aria-labelledby="title-name">
-      <HeaderBackdrop title={title} />
+    <section aria-labelledby="title-name" class="isolate">
+      <div
+        aria-hidden="true"
+        data-title-backdrop={sources().length ? "" : undefined}
+        class={[
+          "absolute inset-x-0 top-0 -z-10 h-[min(46vh,420px)] overflow-hidden",
+          tone(props.title.id),
+        ]}
+      >
+        <Picture sources={sources()} eager class="object-top" />
+        <div class="from-background/95 via-background/50 max-sm:from-background/70 max-sm:via-background/25 absolute inset-0 bg-linear-to-r to-transparent" />
+        <div class="from-background via-background/70 absolute inset-0 bg-linear-to-t via-40% to-transparent" />
+      </div>
 
-      {/* Phones leave the poster out, for the name to have the width, and
-          start lower, for more of the backdrop. Seasons keep theirs. */}
-      <div className={cn(headerColumn, "max-sm:pt-[max(10rem,30vh)]")}>
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-stretch sm:gap-8">
-          <HeaderPoster
-            name={title.name}
-            toneKey={title.id}
-            poster={art(title.images.poster)}
-            className="max-sm:hidden"
+      <div class={["flex items-end gap-4 sm:gap-6", headingTop]}>
+        <div class={headingPoster}>
+          <PosterArt
+            name={props.title.name}
+            toneKey={props.title.id}
+            poster={art(props.title.images.poster)}
           />
-
-          {/* As tall as the poster, so the name lines up with its top and
-              the buttons with its bottom. Phones stack its two parts. */}
-          <div className="contents sm:flex sm:min-w-0 sm:flex-1 sm:flex-col">
-            <div className="min-w-0">
-              <TitleName title={title} />
-
-              <div className="text-foreground/80 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-                {facts.length > 0 && <span>{facts.join(" · ")}</span>}
-                {title.contentRating && (
-                  <span className="border-foreground/25 rounded border px-1.5 text-xs leading-5">
-                    {title.contentRating}
-                  </span>
-                )}
-                {title.rating !== null && (
-                  <span className="inline-flex items-center gap-1 tabular-nums">
-                    <StarIcon
-                      aria-hidden
-                      className="size-3.5 fill-current text-amber-300"
-                    />
-                    <span className="sr-only">
-                      {tr("title.rating", {
-                        rating: ratings().format(title.rating),
-                      })}
-                    </span>
-                    <span aria-hidden>{ratings().format(title.rating)}</span>
-                  </span>
-                )}
-                {flags.map((flag) => (
-                  <span
-                    key={flag}
-                    className="bg-foreground/10 text-foreground/90 rounded px-1.5 text-xs leading-5 font-medium"
-                  >
-                    {flag}
-                  </span>
-                ))}
-              </div>
-              {title.genres.length > 0 && (
-                <p className="text-muted-foreground mt-1 text-sm">
-                  {listNodes(
-                    unitList(),
-                    title.genres.slice(0, 4).map((genre) => (
-                      <Link
-                        key={genre}
-                        to="/genres/$genre"
-                        params={{ genre }}
-                        className={cn(textLink, "hover:text-foreground")}
-                      >
-                        {genre}
-                      </Link>
-                    )),
-                  )}
-                </p>
-              )}
-            </div>
-
-            <div className="col-span-2 min-w-0 sm:flex sm:flex-1 sm:flex-col">
-              <HeaderOverview
-                name={title.name}
-                tagline={title.tagline}
-                overview={title.overview}
-                className="sm:mt-4"
-              />
-              <CrewFacts title={title} className={cn("mt-4", gained)} />
-              {/* A movie's file. A show's differ by episode. */}
-              {title.kind === "movie" && title.next && (
-                <MediaInfo item={title.next} className={cn("mt-4", gained)} />
-              )}
-
-              <div className={cn("sm:mt-auto", gained)}>
-                <div className="flex items-center gap-2 pt-6">
-                  <PlayButton item={title.next} />
-                  <TrailerButton trailers={title.trailers} />
-                  {title.itemCount > 0 && <TitleWatchedButton title={title} />}
-                  <FavoriteButton title={title} />
-                  <ActionsMenu
-                    target={{ kind: "title", title, file: title.next }}
-                    look="page"
-                  />
-                </div>
-                <MatchNote title={title} />
-              </div>
-            </div>
-          </div>
         </div>
+        <div class="min-w-0 pb-1">
+          <h1
+            id="title-name"
+            class="max-sm:text-30px text-2xl leading-[1.1] font-semibold tracking-tight text-balance max-sm:line-clamp-3 max-sm:leading-9 max-sm:font-bold sm:text-4xl lg:text-5xl"
+          >
+            {props.title.name}
+          </h1>
+          <Show
+            when={
+              props.title.originalName &&
+              props.title.originalName !== props.title.name
+            }
+          >
+            <p class="text-muted-foreground mt-1 text-sm max-sm:text-base">
+              {props.title.originalName}
+            </p>
+          </Show>
+          <TitleFacts title={props.title} />
+        </div>
+      </div>
+
+      <div class="mt-4 flex max-w-4xl flex-col gap-4">
+        <HeaderOverview
+          tagline={props.title.tagline}
+          overview={props.title.overview}
+        />
+        <CrewFacts title={props.title} />
+        <Show when={movie()}>{(item) => <MediaInfo item={item()} />}</Show>
+        <div class="mt-1 flex items-center gap-2.5">
+          <Show when={props.title.next}>
+            {(item) => <PlayButton item={item()} />}
+          </Show>
+          <Show when={props.title.itemCount > 0}>
+            <WatchedButton watched={props.watched} />
+          </Show>
+          <FavoriteButton title={props.title} />
+          <ActionsMenu
+            target={{
+              kind: "title",
+              title: props.title,
+              file: props.title.next,
+            }}
+            look="page"
+          />
+        </div>
+        <MatchNote title={props.title} />
       </div>
     </section>
   )
 }
 
-/**
- * The title's backdrop across the top of the window, fading into the
- * page. Without one, its poster, blurred, keeps the page from going flat.
- */
-export function HeaderBackdrop({
-  title,
-  poster = title.images.poster,
-}: {
-  /** A library title, or anything with a tone key and images like one. */
-  title: Pick<TitleSummary, "id"> & {
-    images: Pick<TitleSummary["images"], "backdrop" | "poster">
-  }
-  /** Blurred in when the title has no backdrop. */
-  poster?: Artwork | null
-}) {
-  const backdrop = art(title.images.backdrop, "large")
-  const blurred = art(poster)
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        "absolute inset-x-0 top-0 h-[min(46vh,420px)] overflow-hidden sm:h-[min(54vh,520px)]",
-        tone(title.id),
-      )}
-    >
-      {backdrop ? (
-        <Picture sources={[backdrop]} eager className="object-top" />
-      ) : (
-        blurred && (
-          <div className="absolute inset-0 opacity-50">
-            <Picture sources={[blurred]} eager className="scale-110 blur-2xl" />
-          </div>
-        )
-      )}
-      {/* Shaded as Home's banner is, so Details opens on the same picture. */}
-      <div className="from-background/95 via-background/60 absolute inset-0 bg-gradient-to-r to-transparent" />
-      <div className="from-background via-background/40 absolute inset-0 bg-gradient-to-t via-35% to-transparent" />
-    </div>
+function TitleFacts(props: { title: Title }) {
+  const facts = createMemo(() => {
+    const title = props.title
+    const numbered = title.seasons.filter(
+      (season) => season.number !== null && season.number > 0,
+    )
+    const seconds = title.next?.durationSeconds
+    return [
+      title.year,
+      title.kind === "movie"
+        ? formatRuntime(
+            title.runtimeMinutes ?? (seconds ? Math.round(seconds / 60) : null),
+          )
+        : numbered.length > 1
+          ? tr("title.seasonCount", { count: numbered.length })
+          : tr("title.episodeCount", { count: title.itemCount }),
+      title.kind === "show" && title.status
+        ? tr(`metadata.status.${title.status}`)
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · ")
+  })
+  const flags = createMemo(() =>
+    props.title.kind === "movie" && props.title.next
+      ? mediaFlags(props.title.next)
+      : [],
   )
-}
-
-// High enough that two rows (seasons, cast) make the first screen too.
-export const headerColumn = cn(
-  pageColumn,
-  "relative pt-[max(7rem,20vh)] sm:pt-[max(8rem,14vh)]",
-)
-
-// A season's: on phones, a small poster beside the name and facts, and the
-// rest under both, full width. From `sm` up: the poster beside it all.
-export const headerRow =
-  "grid grid-cols-[6rem_minmax(0,1fr)] items-end gap-x-4 gap-y-5 sm:flex sm:items-stretch sm:gap-8"
-
-/**
- * The poster beside a header's details, always 2:3. It sets the header's
- * height; the details fit beside it. Shows the name until the poster
- * loads, or when there's none.
- */
-export function HeaderPoster({
-  name,
-  toneKey,
-  poster,
-  className,
-  children,
-}: {
-  name: string
-  toneKey: string
-  poster: ImageSource | null
-  className?: string
-  /** What lies over the poster, like a catalog title's state and action. */
-  children?: ReactNode
-}) {
-  return (
-    <div
-      className={cn(
-        "relative grid aspect-[2/3] w-24 shrink-0 place-items-center overflow-hidden rounded-lg border p-2 text-center shadow-2xl shadow-black/60 sm:w-48 sm:self-start sm:p-3 lg:w-56 2xl:w-64",
-        tone(toneKey),
-        className,
-      )}
-    >
-      <span
-        aria-hidden
-        className="text-foreground/70 line-clamp-5 text-xs font-medium text-balance sm:text-sm"
-      >
-        {name}
-      </span>
-      {poster && (
-        <Picture
-          sources={[poster]}
-          eager
-          sizes="(min-width: 1536px) 256px, (min-width: 1024px) 224px, (min-width: 640px) 192px, 96px"
-        />
-      )}
-      {children}
-    </div>
+  const rating = () =>
+    props.title.rating === null ? null : formatScore(props.title.rating)
+  const genres = createMemo(() =>
+    unitList().formatToParts(props.title.genres.slice(0, 4)),
   )
-}
-
-/**
- * The name and the original name. Text rather than the logo: a tall logo
- * pushed everything around.
- */
-function TitleName({ title }: { title: Title }) {
   return (
     <>
-      <h1
-        id="title-name"
-        className="-mt-1 text-2xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl"
-      >
-        {title.name}
-      </h1>
-      {title.originalName && (
-        <p className="text-muted-foreground mt-1 text-sm">
-          {title.originalName}
+      <div class="text-foreground/80 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+        <Show when={facts()}>
+          <span>{facts()}</span>
+        </Show>
+        <Show when={props.title.contentRating}>
+          <span class="border-foreground/25 rounded border px-1.5 text-xs leading-5">
+            {props.title.contentRating}
+          </span>
+        </Show>
+        <Show when={rating()}>
+          {(score) => (
+            <span class="inline-flex items-center gap-1 tabular-nums">
+              <Icon
+                icon={Star}
+                class="size-3.5 fill-current text-amber-500 dark:text-amber-300"
+              />
+              <span class="sr-only">
+                {tr("title.rating", { rating: score() })}
+              </span>
+              <span aria-hidden="true">{score()}</span>
+            </span>
+          )}
+        </Show>
+        <For each={flags()}>
+          {(flag) => (
+            <span class="bg-foreground/10 text-foreground/90 rounded px-1.5 text-xs leading-5 font-medium">
+              {flag}
+            </span>
+          )}
+        </For>
+      </div>
+      <Show when={genres().length}>
+        <p class="text-muted-foreground mt-1.5 text-sm">
+          <For each={genres()} keyed={false}>
+            {(part) => (
+              <Show when={part().type === "element"} fallback={part().value}>
+                <Link
+                  to="/genres/$genre"
+                  params={{ genre: part().value }}
+                  class={textLink}
+                >
+                  {part().value}
+                </Link>
+              </Show>
+            )}
+          </For>
         </p>
-      )}
+      </Show>
     </>
   )
 }
@@ -307,60 +200,26 @@ function TitleName({ title }: { title: Title }) {
  * Resume what's in progress, with the time left, or play the next or
  * first file. Fills the row on phones.
  */
-export function PlayButton({ item }: { item: MediaItem | null | undefined }) {
-  if (!item) return null
-  const resume = item.progress && !item.progress.completed
-  const left = resume ? timeLeft(item) : null
+export function PlayButton(props: { item: MediaItem }) {
+  const resume = () => props.item.progress && !props.item.progress.completed
   return (
     <Link
       to="/watch/$itemId"
-      params={{ itemId: item.id }}
-      className={buttonVariants({
+      params={{ itemId: props.item.id }}
+      class={buttonVariants({
         size: "lg",
-        className: "min-w-0 max-sm:h-11 max-sm:flex-1",
+        className: "min-w-0 max-sm:flex-1 sm:min-w-40",
       })}
     >
-      <PlayIcon className="fill-current" />
-      {resume ? tr("title.resume") : tr("title.play")}
-      {left && (
-        <span className="truncate font-normal tabular-nums opacity-70">
-          {left}
-        </span>
-      )}
+      <Icon icon={Play} fill="currentColor" />
+      {tr(resume() ? "title.resume" : "title.play")}
+      <Show when={resume() && timeLeft(props.item)}>
+        {(left) => (
+          <span class="truncate font-normal tabular-nums opacity-70">
+            {left()}
+          </span>
+        )}
+      </Show>
     </Link>
-  )
-}
-
-function baseLanguage(tag: string): string {
-  return tag.split("-")[0]?.toLowerCase() ?? tag
-}
-
-/**
- * The title's first trailer in the interface's language, else the
- * server's first, on YouTube in a new tab. Just the icon on phones, where
- * Play takes the row.
- */
-export function TrailerButton({ trailers }: { trailers: Trailer[] }) {
-  const language = baseLanguage(getLocale())
-  const trailer =
-    trailers.find((t) => t.language && baseLanguage(t.language) === language) ??
-    trailers[0]
-  if (!trailer) return null
-  return (
-    <a
-      href={trailer.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={tr("title.trailerHint")}
-      className={buttonVariants({
-        variant: "secondary",
-        size: "lg",
-        className:
-          "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11 max-sm:rounded-full max-sm:px-0",
-      })}
-    >
-      <ClapperboardIcon className="max-sm:size-5" />
-      <span className="max-sm:sr-only">{tr("title.trailer")}</span>
-    </a>
   )
 }

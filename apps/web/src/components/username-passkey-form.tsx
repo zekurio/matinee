@@ -1,54 +1,43 @@
 import { Username } from "@matinee/contracts"
-import { KeyRoundIcon } from "lucide-react"
+import { KeyRound } from "lucide"
 
 import { tr } from "@/i18n"
-import { useAppForm } from "@/lib/form"
+import { Icon } from "@/kit/icon"
+import { createForm } from "@/lib/form"
+import { SubmitButton, TextField } from "@/lib/form-fields"
 
-import { forgetEmptyBlur } from "./username-field"
-
-/**
- * Pick a username, then create the passkey that signs in to it. The caller
- * toasts a failed sign-up.
- */
-export function UsernamePasskeyForm({
-  submitLabel,
-  pending,
-  onSubmit,
-}: {
+/** Pick a username, then create the passkey that signs in to it. */
+export function UsernamePasskeyForm(props: {
   submitLabel: string
-  pending: boolean
-  onSubmit: (username: string) => void
+  onSubmit: (username: string) => void | Promise<void>
 }) {
-  const form = useAppForm({
+  const form = createForm({
     defaultValues: { username: "" },
-    onSubmit: ({ value }) => onSubmit(Username.parse(value.username)),
+    checks: { username: Username },
+    onSubmit: ({ username }) => props.onSubmit(Username.parse(username)),
   })
 
   return (
     <form
-      className="flex flex-col gap-4"
+      class="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault()
-        void form.handleSubmit()
+        void form.submit()
       }}
     >
-      <form.AppField name="username" validators={{ onChange: Username }}>
-        {(field) => (
-          <field.TextField
-            label={tr("auth.username")}
-            description={tr("auth.usernameHint")}
-            autoComplete="username webauthn"
-            autoCapitalize="none"
-            spellCheck={false}
-            onBlur={() => forgetEmptyBlur(field)}
-          />
-        )}
-      </form.AppField>
-      <form.AppForm>
-        <form.SubmitButton size="lg" pending={pending} icon={<KeyRoundIcon />}>
-          {submitLabel}
-        </form.SubmitButton>
-      </form.AppForm>
+      <TextField
+        form={form}
+        name="username"
+        label={tr("auth.username")}
+        description={tr("auth.usernameHint")}
+        autocomplete="username webauthn"
+        autocapitalize="none"
+        spellcheck={false}
+        revealEmptyOnBlur={false}
+      />
+      <SubmitButton form={form} size="lg" icon={<Icon icon={KeyRound} />}>
+        {props.submitLabel}
+      </SubmitButton>
     </form>
   )
 }

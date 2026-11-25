@@ -484,7 +484,6 @@ void _showFilters(
           ],
         ),
         child: _FilterPanel(
-          kind: kind,
           options: options,
           choices: value,
           onChange: (filters) => changeChoices(choices, filters),
@@ -499,13 +498,11 @@ FilterRange _span(CatalogRange range) =>
 
 class _FilterPanel extends ConsumerWidget {
   const _FilterPanel({
-    required this.kind,
     required this.options,
     required this.choices,
     required this.onChange,
   });
 
-  final String kind;
   final CatalogBrowseOptions options;
   final BrowseChoices choices;
   final ValueChanged<CatalogFilters> onChange;
@@ -514,11 +511,6 @@ class _FilterPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final filters = choices.filters;
-    final sort = choices.sort;
-    final floor = ref.watch(
-      browsePagesProvider(BrowseKey(kind, filters, sort))
-          .select((pages) => pages.voteFloor),
-    );
     final ratings = options.ratings;
     final languages = options.languages;
     final language = languages
@@ -532,7 +524,6 @@ class _FilterPanel extends ConsumerWidget {
         children: [
           FilterSection(
             title: l.webDiscoverBrowseOnly,
-            hint: l.webDiscoverBrowseOnlyHint,
             child: MultiSelect(
               choices: [
                 MultiSelectChoice(
@@ -635,12 +626,6 @@ class _FilterPanel extends ConsumerWidget {
                 if (options.votes.isNotEmpty)
                   OptionRow(
                     label: l.webDiscoverBrowseVotes,
-                    hint: floor == null
-                        ? null
-                        : sort == CatalogSort.scoreHigh ||
-                              sort == CatalogSort.scoreLow
-                        ? l.webDiscoverBrowseFloorScore(formatCount(floor, l))
-                        : l.webDiscoverBrowseFloorList(formatCount(floor, l)),
                     value: switch (filters.votesMin) {
                       final votes? => l.webDiscoverBrowseVotesStep(
                         formatCount(votes, l),
@@ -726,9 +711,6 @@ class _FilterPanel extends ConsumerWidget {
             ),
           RangeField(
             title: l.webFiltersRuntime,
-            hint: kind == TitleKind.show
-                ? l.webFiltersRuntimeHintShow
-                : l.webFiltersRuntimeHintMovie,
             range: _span(options.runtime),
             low: filters.runtimeMin?.toDouble(),
             high: filters.runtimeMax?.toDouble(),

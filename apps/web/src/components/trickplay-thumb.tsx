@@ -1,5 +1,6 @@
 import type { Trickplay } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
+import { createMemo } from "solid-js"
 
 /** A file's trickplay images and where their tiles load from. */
 export type TrickplayTiles = {
@@ -20,34 +21,33 @@ function cellPosition(cell: number, cells: number): string {
  * position, so it fills whatever width the class gives it. Black until the
  * tile loads.
  */
-export function TrickplayThumb({
-  tiles,
-  time,
-  className,
-}: {
+export function TrickplayThumb(props: {
   tiles: TrickplayTiles
   time: number
-  className?: string
+  class?: string
 }) {
-  const { images } = tiles
-  const index = Math.min(
-    images.count - 1,
-    Math.max(0, Math.round(time / images.intervalSeconds)),
-  )
-  const perTile = images.columns * images.rows
-  const cell = index % perTile
-  const column = cell % images.columns
-  const row = Math.floor(cell / images.columns)
+  const style = createMemo(() => {
+    const { images } = props.tiles
+    const index = Math.min(
+      images.count - 1,
+      Math.max(0, Math.round(props.time / images.intervalSeconds)),
+    )
+    const perTile = images.columns * images.rows
+    const cell = index % perTile
+    const column = cell % images.columns
+    const row = Math.floor(cell / images.columns)
+    return {
+      "aspect-ratio": `${images.width} / ${images.height}`,
+      "background-image": `url("${props.tiles.src(Math.floor(index / perTile))}")`,
+      "background-size": `${images.columns * 100}% ${images.rows * 100}%`,
+      "background-position": `${cellPosition(column, images.columns)} ${cellPosition(row, images.rows)}`,
+    }
+  })
   return (
     <span
-      aria-hidden
-      className={cn("block bg-black bg-no-repeat", className)}
-      style={{
-        aspectRatio: `${images.width} / ${images.height}`,
-        backgroundImage: `url("${tiles.src(Math.floor(index / perTile))}")`,
-        backgroundSize: `${images.columns * 100}% ${images.rows * 100}%`,
-        backgroundPosition: `${cellPosition(column, images.columns)} ${cellPosition(row, images.rows)}`,
-      }}
+      aria-hidden="true"
+      class={cn("block bg-black bg-no-repeat", props.class)}
+      style={style()}
     />
   )
 }

@@ -1,16 +1,17 @@
 import { type AdminNetworkSettings, NetworkSettings } from "@matinee/contracts"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { Textarea } from "@matinee/ui/components/textarea"
-import { useSelector } from "@tanstack/react-form"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import type { ReactNode } from "react"
+import type { JSX } from "@solidjs/web"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { Match, Show, Switch } from "solid-js"
 
-import { perLocale, tr } from "@/i18n"
-import { firstError, useAppForm, useFieldContext } from "@/lib/form"
+import { perLocale, tr, translateKnown } from "@/i18n"
+import { Skeleton } from "@/kit/skeleton"
+import { Textarea } from "@/kit/textarea"
+import type { Form } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { ShownError } from "@/lib/shown-error"
 
 import { InputField, SettingWarning } from "./setting-controls"
+import { createDraftForm } from "./settings-draft"
 import {
   SettingNote,
   SettingRow,
@@ -54,60 +55,63 @@ function entries(text: string): string[] {
   return text.split(/[\s,]+/).filter((entry) => entry !== "")
 }
 
-function sameDraft(a: Draft, b: Draft): boolean {
-  return JSON.stringify(a) === JSON.stringify(b)
-}
-
 export function NetworkPanel() {
-  const settings = useQuery(orpc.admin.network.get.queryOptions())
+  const settings = useQuery(() => orpc.admin.network.get.queryOptions())
 
   return (
     <SettingsSections>
-      {settings.isPending ? (
-        <Skeleton className="h-72 rounded-xl" />
-      ) : settings.isError ? (
-        <p className="text-muted-foreground text-sm">
-          {tr("network.loadFailed", { error: errorMessage(settings.error) })}
-        </p>
-      ) : (
-        <NetworkForm saved={settings.data} />
-      )}
+      <Switch>
+        <Match when={settings.isPending}>
+          <Skeleton class="h-72 rounded-xl" />
+        </Match>
+        <Match when={settings.isError}>
+          <p class="text-muted-foreground text-sm">
+            {tr("network.loadFailed", { error: errorMessage(settings.error) })}
+          </p>
+        </Match>
+        <Match when={settings.isSuccess && settings.data}>
+          {(saved) => <NetworkForm saved={saved()} />}
+        </Match>
+      </Switch>
     </SettingsSections>
   )
 }
 
 /** A list of addresses and ranges, typed a line each. */
-function RangesField({ title, footer }: { title: string; footer: ReactNode }) {
-  const field = useFieldContext<string>()
-  const value = useSelector(field.store, (state) => state.value)
+function RangesField(props: {
+  form: Form<Draft>
+  name: "localNetworks" | "trustedProxies"
+  title: string
+  footer: JSX.Element
+}) {
+  const value = () => props.form.values()[props.name]
   return (
-    <SettingRow title={title} layout="stack" footer={footer}>
+    <SettingRow title={props.title} layout="stack" footer={props.footer}>
       {(ids) => (
         <Textarea
           id={ids.controlId}
-          value={value}
-          rows={Math.max(3, value.split("\n").length)}
-          spellCheck={false}
-          autoCapitalize="none"
-          autoComplete="off"
-          className="text-13px font-mono"
-          onChange={(event) => field.handleChange(event.target.value)}
+          value={value()}
+          rows={Math.max(3, value().split("\n").length)}
+          spellcheck={false}
+          autocapitalize="none"
+          autocomplete="off"
+          class="text-13px font-mono"
+          onValueChange={(next) => props.form.set(props.name, next)}
         />
       )}
     </SettingRow>
   )
 }
 
-function NetworkForm({ saved }: { saved: AdminNetworkSettings }) {
+function NetworkForm(props: { saved: AdminNetworkSettings }) {
   const queryClient = useQueryClient()
-  const initial = draftFrom(saved.settings)
-  const save = useMutation({
+  const save = useMutation(() => ({
     mutationFn: (input: NetworkSettings) => client.admin.network.update(input),
-  })
+  }))
   // Until the first edit, the form follows the saved settings.
-  const form = useAppForm({
-    defaultValues: initial,
-    onSubmit: async ({ value, formApi }) => {
+  const form = createDraftForm<Draft>({
+    initial: () => draftFrom(props.saved.settings),
+    onSubmit: async (value) => {
       const speed = value.uploadMbit.trim()
       const parsed = NetworkSettings.safeParse({
         localNetworks: entries(value.localNetworks),
@@ -118,57 +122,66 @@ function NetworkForm({ saved }: { saved: AdminNetworkSettings }) {
             : Math.round(Number(speed.replace(",", ".")) * MBIT),
       })
       if (!parsed.success) {
+        const message = parsed.error.issues.find(
+          (issue) => issue.message,
+        )?.message
         throw new ShownError(
-          firstError(parsed.error.issues) ?? tr("network.checkFields"),
+          message === undefined
+            ? tr("network.checkFields")
+            : translateKnown(message),
         )
       }
-      const next = await save.mutateAsync(parsed.data)
+      const next = await save.mutate(parsed.data)
       queryClient.setQueryData(orpc.admin.network.get.queryKey(), next)
-      formApi.reset(draftFrom(next.settings))
+      form.reset()
     },
   })
-  const dirty = useSelector(
-    form.store,
-    (state) => state.isTouched && !sameDraft(state.values, initial),
-  )
-  const { address, local, unheededProxy } = saved.connection
+  const connection = () => props.saved.connection
 
   return (
-    <form className="contents" onSubmit={(event) => event.preventDefault()}>
+    <form class="contents" onSubmit={(event) => event.preventDefault()}>
       <SettingsSubsection id="network" title={tr("network.title")}>
         {/* How the settings as saved see this very browser, which is the
             quickest way to tell whether they're right. */}
         <SettingNote>
-          {address === null
-            ? tr("network.connection.unknown")
-            : local
-              ? tr("network.connection.local", { address })
-              : tr("network.connection.remote", { address })}
+          <Show
+            when={connection().address}
+            fallback={tr("network.connection.unknown")}
+          >
+            {(address) => (
+              <Show
+                when={connection().local}
+                fallback={tr("network.connection.remote", {
+                  address: address(),
+                })}
+              >
+                {tr("network.connection.local", { address: address() })}
+              </Show>
+            )}
+          </Show>
         </SettingNote>
-        {unheededProxy && address !== null && (
-          <SettingWarning>
-            {tr("network.unheededProxy", { address })}
-          </SettingWarning>
-        )}
+        <Show when={connection().unheededProxy && connection().address}>
+          {(address) => (
+            <SettingWarning>
+              {tr("network.unheededProxy", { address: address() })}
+            </SettingWarning>
+          )}
+        </Show>
         <SettingRows>
-          <form.AppField name="localNetworks">
-            {() => (
-              <RangesField
-                title={tr("network.localNetworks")}
-                footer={<SettingNote>{tr("network.ranges.note")}</SettingNote>}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="trustedProxies">
-            {() => (
-              <RangesField
-                title={tr("network.trustedProxies")}
-                footer={
-                  <SettingNote>{tr("network.trustedProxies.note")}</SettingNote>
-                }
-              />
-            )}
-          </form.AppField>
+          <RangesField
+            form={form}
+            name="localNetworks"
+            title={tr("network.localNetworks")}
+            footer={<SettingNote>{tr("network.ranges.note")}</SettingNote>}
+          />
+          <RangesField
+            form={form}
+            name="trustedProxies"
+            title={tr("network.trustedProxies")}
+            footer={
+              <SettingNote>{tr("network.trustedProxies.note")}</SettingNote>
+            }
+          />
         </SettingRows>
       </SettingsSubsection>
       <SettingsSubsection
@@ -176,24 +189,22 @@ function NetworkForm({ saved }: { saved: AdminNetworkSettings }) {
         title={tr("network.upload.title")}
       >
         <SettingRows>
-          <form.AppField name="uploadMbit">
-            {() => (
-              <InputField
-                title={tr("network.upload")}
-                footer={<SettingNote>{tr("network.upload.note")}</SettingNote>}
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder={tr("network.upload.placeholder")}
-                className="@lg:w-40"
-              />
-            )}
-          </form.AppField>
+          <InputField
+            form={form}
+            name="uploadMbit"
+            title={tr("network.upload")}
+            footer={<SettingNote>{tr("network.upload.note")}</SettingNote>}
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder={tr("network.upload.placeholder")}
+            class="@lg:w-40"
+          />
         </SettingRows>
       </SettingsSubsection>
       <SettingsSaveBar
-        dirty={dirty}
+        dirty={form.dirty()}
         onReset={() => form.reset()}
-        onSave={() => form.handleSubmit()}
+        onSave={() => form.submit()}
       />
     </form>
   )

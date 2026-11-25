@@ -1,10 +1,10 @@
 # Matinee
 
-Self-hosted media server: Hono + oRPC server, React web client, Postgres.
+Self-hosted media server: Hono + oRPC server, Solid web client, Postgres.
 README.md introduces the project, and CONTRIBUTING.md sets up the dev
 shell. Each app's README has the rest: `apps/server/README.md` for
 hosting, NixOS included, configuration, auth, and how the server behaves,
-`apps/web/README.md` for translations, `apps/flutter/README.md` for the
+`apps/web/README.md` for the web app and its translations, `apps/flutter/README.md` for the
 app for phones, tablets, and TVs, `apps/tizen/README.md` for the Samsung
 TV app.
 
@@ -13,15 +13,17 @@ TV app.
 - `packages/contracts`: the oRPC contract and its TypeBox schemas, written
   with the zod-like `t` builder from `@matinee/contracts/schema`
   (`src/schema.ts`, from alloy). A `t` schema is also a Standard Schema, so
-  oRPC, TanStack Router's `validateSearch`, and TanStack Form take it as is.
+  oRPC, TanStack Router's `validateSearch`, and the web app's forms take it
+  as is.
   Defaults are `$default(...)`, since `default` is the JSON Schema keyword.
   Every API change starts here, including the REST method and path each
   procedure gets under `/api/v1`. `paths.ts` lists the plain HTTP routes
   (streams, artwork, OIDC).
 - `packages/client`: `createMatineeClient()`, the typed client for all apps.
 - `packages/db`: Drizzle schema (`src/schema/`, one file per domain) and migrations.
-- `packages/ui`: shadcn components (Base UI, `base-nova` style) and
-  `globals.css` with the theme tokens.
+- `packages/ui`: `globals.css` with the theme tokens, and the
+  framework-free helpers in `src/lib` (themes, colors, `cn`, `uiText`)
+  that the web app and the Flutter generators read.
 - `apps/server`: Hono app (`src/app.ts`), RPC procedures (`src/rpc`), auth
   (`src/auth`), scanner and title grouping (`src/library`), metadata
   providers and refresh (`src/metadata`), streaming and artwork (`src/media`),
@@ -29,8 +31,11 @@ TV app.
   streams (`src/realtime`), watch parties, which live in memory
   (`src/party`).
 - `apps/server/src/access`: account policies, viewers, and the shared library visibility filters.
-- `apps/web`: Vite React app. File routes live in `src/routes`;
-  `src/routeTree.gen.ts` is generated.
+- `apps/web`: the web app, on Solid 2.0, ui-sdk, and Vite, with a desktop
+  layout that follows the Flutter app. Its components live in `src/kit`,
+  file routes in `src/routes`, and `src/routeTree.gen.ts` is generated.
+  Its `/tv/` document serves the shared TV UI below. See its README
+  before writing Solid code.
 - `brand/`: the logo, the wordmark, and the app icons, with the
   scripts that draw the wordmark and render their PNGs, the web app's
   favicon, and `apps/web/src/components/logo.gen.ts`. See `brand/README.md`.
@@ -48,18 +53,25 @@ TV app.
   `pnpm logo:dart`.
   `pnpm strings:dart` copies shared web messages into the ARBs and
   generates the server message lookup. `pnpm verify` checks all five.
-  Screens build from `lib/kit`, its port of `packages/ui`; only
+  Screens build from `lib/kit`, its port of the web app's kit; only
   the kit and `lib/app.dart` import Material or Cupertino, and
   `test/kit_boundary_test.dart` holds that. Strings live in ARB files in
   `lib/l10n`. Build it with `just flutter build` and check it with
   `just flutter check`; see its README.
-- `apps/tizen`: the Samsung TV app, a Preact web app packaged as a `.wgt`
-  with the Flutter app's TV screens and Samsung's AVPlay for video. It
-  runs from file paths on Chromium 56 and up, so it imports only types
-  from `@matinee/contracts`, plus `@matinee/contracts/paths`, and the
-  server answers CORS for `Origin: file://`. Its shared words come from
-  the Flutter app's ARB files through `pnpm --filter @matinee/tizen
-  strings`; `pnpm verify` checks them. Nobody has run it on a TV yet.
+- `packages/tv`: the TV UI shared by the Samsung package and the Solid
+  web app's `/tv/`: Solid 2 screens, the remote's focus and navigation,
+  the session, the API reads, the i18n, and the player controller. A host
+  supplies a `Platform` (AVPlay or the browser's player, keys, screen
+  saver, and device details), so no Samsung API or desktop component is
+  imported into the wrong entry. Its words come from the Flutter app's
+  ARB files through `pnpm --filter @matinee/tv strings`; `pnpm verify`
+  checks them.
+- `apps/tizen`: the thin Samsung package around `packages/tv`: Samsung's
+  AVPlay engine and platform (keys, lifecycle, model, screen saver), the
+  file-origin server setup, the legacy polyfills and Vite build, and the
+  `.wgt` packaging. It runs from file paths on Chromium 56 and up, and
+  the server answers CORS for `Origin: file://`. Nobody has run it on a
+  TV yet; see `apps/tizen/README.md`.
 - `tools/release`: the scripts behind `just tag` and
   `.github/workflows/release.yml`, in `.mjs` on Node's own modules, since
   the workflow runs them before any install. Workflow steps and `just`
@@ -74,7 +86,10 @@ TV app.
 - Use Node 24 and pnpm 11, not npm, Yarn, or Bun. `nix develop` provides
   both plus a repo-local Postgres.
 - Run `pnpm verify` before finishing a change. CI runs the same checks plus
-  `pnpm audit` and the web build.
+  `pnpm audit` and the web build. The TV package's `strings` check is
+  `pnpm --filter @matinee/tv strings --check`. `apps/tizen` builds with
+  `NODE_ENV=production` so the dev shell's `NODE_ENV` doesn't bundle
+  Solid's development runtime.
 - Lint is type-aware oxlint plus the anti-slop rules in `tools/oxlint`
   (borrowed from alloy). In practice:
   - Parse untrusted values (search params, JSON columns, provider payloads,
@@ -97,8 +112,6 @@ TV app.
   `pnpm db:generate --name watch_progress`. Never edit a migration after it
   ships in a release; add a new one. Unreleased migrations may be consolidated
   before the next release.
-- Add shadcn components from `packages/ui`:
-  `pnpm dlx shadcn@latest add <name>`. The CLI's output is ours to edit.
 
 ## Release
 
@@ -128,16 +141,16 @@ TV app.
 
 ## Web app
 
-- Forms use TanStack Form through `useAppForm` from `src/lib/form.tsx`.
-  Fields validate with the contract's `t` schemas.
+- Forms use `createForm` from `src/lib/form.ts`. Fields validate with the
+  contract's `t` schemas.
 - State that belongs together, or that several components share, lives in
-  a zustand store in `src/stores/`. A store for something that can mount
-  twice at once is per instance. Server data stays in TanStack Query, and
-  URL state in search params.
-- An effect only syncs with something outside React: the DOM, the media
+  signals or a store in `src/stores/`, with `persisted()` for
+  `localStorage`. A store for something that can mount twice at once is
+  per instance. Server data stays in TanStack Query, and URL state in
+  search params.
+- An effect only syncs with something outside Solid: the DOM, the media
   element, hls.js, timers, storage, subscriptions. Compute derived values
-  in render, reset on a prop change with `key`, and do an event's work in
-  its handler.
+  in a memo or a plain function, and do an event's work in its handler.
 - Font sizes come from the theme (`text-xs`, `text-13px`, `text-sm`, ...),
   each with a line height of even whole pixels, which keeps text centered
   on the icons beside it. Lint rejects an arbitrary `text-[13px]`; add a
@@ -148,7 +161,7 @@ TV app.
   Translations).
   Use `trRich` when a placeholder holds an element, a `plural(...)`
   message for a count, and `Intl.ListFormat` through `perLocale` for a
-  list. A component in `packages/ui` reads `uiText()` instead. Call `tr`
+  list. A component in `src/kit` reads `uiText()` instead. Call `tr`
   while rendering, never at module scope. A language switch remounts the
   app so every call runs again, but a value built at import keeps its old
   language. Format dates and numbers with `lib/format.ts`, or with
@@ -181,8 +194,11 @@ TV app.
   stream ends on `streamSignal`, which also caps its length so the
   session gets checked again.
 - The web app reads one with
-  `useQuery({ ...orpc.x.experimental_liveOptions(), ...liveQuery })`
-  (`liveQuery` from `src/lib/rpc.ts`), which reconnects. A stream from
+  `useLiveQuery(() => ({ ...orpc.x.experimental_liveOptions(), ...liveQuery }))`
+  (`useLiveQuery` from `src/lib/live-query.ts`, `liveQuery` from
+  `src/lib/rpc.ts`), which reconnects. Not `useQuery`: Solid Query holds
+  new data until a fetch settles, and a stream's fetch stays open, so it
+  would show the first answer only. A stream from
   `follow` starts with the current state, so nothing is lost while it
   reconnects. A stream of events needs its own way to catch up.
 

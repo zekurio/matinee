@@ -1,8 +1,10 @@
-import { Button } from "@matinee/ui/components/button"
-import { XIcon } from "lucide-react"
+import { X } from "lucide"
+import { Show } from "solid-js"
 
 import type { AskedItem } from "@/components/asked/asked"
 import { tr } from "@/i18n"
+import { Button } from "@/kit/button"
+import { Icon } from "@/kit/icon"
 import { useRequestActionsStore } from "@/stores/request-actions"
 
 import { RequestCard, RequestStateBadge, requestProgress } from "./request-card"
@@ -14,53 +16,48 @@ import { ownDetail } from "./request-lines"
  * server allows it. Cancel holds the call for
  * Undo as the queue's answers do.
  */
-export function OwnRequest({
-  item,
-  size = "rail",
-}: {
-  item: AskedItem
-  size?: "rail" | "wide"
-}) {
-  const hold = useRequestActionsStore((state) => state.hold)
-  const availability = item.season ?? item.availability
-  const cancellable =
-    item.availability.action === "cancel" || availability.action === "cancel"
+export function OwnRequest(props: { item: AskedItem; size?: "rail" | "wide" }) {
+  const cancellable = () =>
+    props.item.availability.action === "cancel" ||
+    (props.item.season ?? props.item.availability).action === "cancel"
   return (
     <RequestCard
-      item={item}
-      size={size}
+      item={props.item}
+      size={props.size ?? "rail"}
       state={
         <RequestStateBadge
-          state={item.state}
-          progress={requestProgress(item)}
-          detail={ownDetail(item)}
+          state={props.item.state}
+          progress={requestProgress(props.item)}
+          detail={ownDetail(props.item)}
         />
       }
       actions={
-        cancellable && (
+        <Show when={cancellable()}>
           <Button
             variant="ghost"
             size="sm"
-            aria-label={tr("requests.cancelNamed", { name: item.title.name })}
+            aria-label={tr("requests.cancelNamed", {
+              name: props.item.title.name,
+            })}
             onClick={() =>
-              hold({
+              useRequestActionsStore.getState().hold({
                 kind: "cancel",
-                ids: [item.id],
-                names: [item.title.name],
+                ids: [props.item.id],
+                names: [props.item.title.name],
               })
             }
-            className="hover:bg-foreground/10 text-foreground/85 hover:text-foreground -ml-1 px-2 [@media(pointer:coarse)]:h-10"
+            class="hover:bg-foreground/10 text-foreground/85 hover:text-foreground -ml-1 px-2 [@media(pointer:coarse)]:h-10"
           >
             {/* Where the card is too narrow for both, the time keeps
                 its words and Cancel drops its mark. */}
-            <XIcon
-              aria-hidden
-              strokeWidth={2.5}
-              className="@max-[14rem]/card:hidden"
+            <Icon
+              icon={X}
+              stroke-width={2.5}
+              class="@max-[14rem]/card:hidden"
             />
             {tr("requests.cancel")}
           </Button>
-        )
+        </Show>
       }
     />
   )

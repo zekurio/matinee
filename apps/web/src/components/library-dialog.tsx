@@ -7,34 +7,29 @@ import {
   type MetadataProvider,
   type MetadataProviderId,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { Dialog } from "@matinee/ui/components/dialog"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@matinee/ui/components/field"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { Folder, FolderPlus, X } from "lucide"
+import { createMemo, createSignal, For, Show } from "solid-js"
+
+import { getLocale, tr, translateKnown } from "@/i18n"
+import { Button } from "@/kit/button"
+import { Dialog } from "@/kit/dialog"
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/kit/field"
+import { Icon } from "@/kit/icon"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@matinee/ui/components/select"
-import { toast } from "@matinee/ui/components/sonner"
-import { useSelector } from "@tanstack/react-form"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { FolderIcon, FolderPlusIcon, XIcon } from "lucide-react"
-import { useState } from "react"
-
-import { getLocale, tr, translateKnown } from "@/i18n"
-import { firstError, useAppForm } from "@/lib/form"
+} from "@/kit/select"
+import { toast } from "@/kit/toast"
+import { createForm } from "@/lib/form"
+import { SubmitButton, TextField } from "@/lib/form-fields"
 import { baseLanguage, languageName } from "@/lib/languages"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { FolderPicker } from "./folder-browser"
-import { SelectField } from "./select-field"
 import {
   FormColumn,
   FormColumns,
@@ -44,6 +39,7 @@ import {
   FormDialogForm,
   FormDialogHeader,
 } from "./settings/form-dialog"
+import { RichSelectItem } from "./settings/select-item-content"
 
 type ProviderChoice = MetadataProviderId | "none"
 
@@ -61,7 +57,7 @@ function initialValues(library: Library | undefined): LibraryValues {
   return {
     name: library?.name ?? "",
     kind: library?.kind ?? "movies",
-    paths: library?.paths ?? [],
+    paths: library ? [...library.paths] : [],
     provider: library ? (library.metadataProvider ?? "none") : null,
     language: library?.metadataLanguage ?? null,
   }
@@ -98,345 +94,346 @@ function parentFolder(path: string): string {
   return parent || "/"
 }
 
-export function LibraryDialog({
-  library,
-  open,
-  onOpenChange,
-}: {
+export function LibraryDialog(props: {
   library?: Library
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  // The form starts from the library once, so another library builds another.
+  const editing = createMemo(() => ({ library: props.library }))
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={props.open} onOpenChange={(open) => props.onOpenChange(open)}>
       <FormDialogContent width="lg">
-        <LibraryForm library={library} onDone={() => onOpenChange(false)} />
+        <Show when={editing()} keyed>
+          {(entry) => (
+            <LibraryForm
+              library={entry.library}
+              onDone={() => props.onOpenChange(false)}
+            />
+          )}
+        </Show>
       </FormDialogContent>
     </Dialog>
   )
 }
 
-function LibraryForm({
-  library,
-  onDone,
-}: {
-  library?: Library
-  onDone: () => void
-}) {
+function LibraryForm(props: { library?: Library; onDone: () => void }) {
   const queryClient = useQueryClient()
-  const libraries = useQuery(orpc.libraries.list.queryOptions())
-  const providers = useQuery(orpc.metadata.providers.queryOptions())
-  const languages = useQuery(orpc.metadata.languages.queryOptions())
+  const libraries = useQuery(() => orpc.libraries.list.queryOptions())
+  const providers = useQuery(() => orpc.metadata.providers.queryOptions())
+  const languages = useQuery(() => orpc.metadata.languages.queryOptions())
+  const providerList = () => (providers.isSuccess ? providers.data : [])
+  const choices = () => (languages.isSuccess ? languages.data : [])
 
-  const save = useMutation({
-    mutationFn: (input: LibraryInput) =>
-      library
-        ? client.libraries.update({ ...input, id: library.id })
-        : client.libraries.create(input),
-    // The dialog closing and the library list (which shows the new scan) are
-    // the confirmation.
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: orpc.libraries.key() })
-      onDone()
-    },
-    onError: (error) => toast.error(errorMessage(error)),
+  // The callbacks run outside tracking, so the options read the library.
+  const save = useMutation(() => {
+    const id = props.library?.id
+    const done = props.onDone
+    return {
+      mutationFn: (input: LibraryInput) =>
+        id
+          ? client.libraries.update({ ...input, id })
+          : client.libraries.create(input),
+      // The dialog closing and the library list (which shows the new scan) are
+      // the confirmation.
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: orpc.libraries.key() })
+        done()
+      },
+      onError: (error: Error) => toast.error(errorMessage(error)),
+    }
   })
 
   /** What the form saves, with the provider it shows when none was picked. */
   const toInput = (value: LibraryValues) => {
     const provider =
-      value.provider ?? defaultProvider(value.kind, providers.data ?? [])
+      value.provider ?? defaultProvider(value.kind, providerList())
     return {
       name: value.name,
       kind: value.kind,
       paths: value.paths,
       metadataProvider: provider === "none" ? null : provider,
-      metadataLanguage: value.language ?? startLanguage(languages.data ?? []),
+      metadataLanguage: value.language ?? startLanguage(choices()),
     }
   }
 
-  const form = useAppForm({
-    defaultValues: initialValues(library),
-    validators: {
+  const form = createForm<LibraryValues>({
+    defaultValues: initialValues(props.library),
+    onSubmit: (value) => {
       // One message for the whole form, in a toast.
-      onSubmit: ({ value }) => {
-        const parsed = LibraryInput.safeParse(toInput(value))
-        if (parsed.success) return undefined
-        return {
-          message:
-            firstError(parsed.error.issues) ??
-            tr("libraries.dialog.checkFields"),
-        }
-      },
-    },
-    onSubmit: ({ value }) => save.mutate(LibraryInput.parse(toInput(value))),
-    onSubmitInvalid: ({ formApi }) => {
-      // Field errors show under their fields.
-      const message = firstError(formApi.state.errors)
-      if (message) toast.error(message)
+      const parsed = LibraryInput.safeParse(toInput(value))
+      if (!parsed.success) {
+        const message = parsed.error.issues.find(
+          (issue) => issue.message,
+        )?.message
+        toast.error(
+          message === undefined
+            ? tr("libraries.dialog.checkFields")
+            : translateKnown(message),
+        )
+        return
+      }
+      save.mutate(parsed.data)
     },
   })
+  const values = () => form.values()
 
-  const kind = useSelector(form.store, (state) => state.values.kind)
-  const providerChoice = useSelector(
-    form.store,
-    (state) => state.values.provider,
-  )
-  const languageChoice = useSelector(
-    form.store,
-    (state) => state.values.language,
-  )
-  const choices = languages.data ?? []
-  const language = languageChoice ?? startLanguage(choices)
-
-  const provider = providerChoice ?? defaultProvider(kind, providers.data ?? [])
-  const providerInfo = providers.data?.find((p) => p.id === provider)
-  const providerItems = [
+  const language = () => values().language ?? startLanguage(choices())
+  const provider = () =>
+    values().provider ?? defaultProvider(values().kind, providerList())
+  const providerInfo = () => providerList().find((p) => p.id === provider())
+  const providerItems = () => [
     { value: "none", label: tr("libraries.dialog.noProvider") },
-    ...(providers.data ?? []).map((p) => ({ value: p.id, label: p.name })),
+    ...providerList().map((p) => ({ value: p.id, label: p.name })),
   ]
   const kinds = LIBRARY_KINDS.map((value) => ({
     value,
     label: tr(`libraries.dialog.kind.${value}`),
   }))
   // A library saved with a language the server no longer offers keeps it.
-  const languageItems = (
-    choices.some((choice) => choice.code === language) || !language
-      ? choices
-      : [...choices, { code: language, nameTag: language }]
-  ).map((choice) => ({
-    value: choice.code,
-    label: languageName(choice.nameTag),
-  }))
+  const languageItems = () => {
+    const current = language()
+    const list =
+      choices().some((choice) => choice.code === current) || !current
+        ? choices()
+        : [...choices(), { code: current, nameTag: current }]
+    return list.map((choice) => ({
+      value: choice.code,
+      label: languageName(choice.nameTag),
+    }))
+  }
   // Media usually sits beside the folders other libraries already use.
-  const known = library?.paths[0] ?? libraries.data?.[0]?.paths[0]
-  const startFolder = known ? parentFolder(known) : undefined
+  const startFolder = () => {
+    const known =
+      props.library?.paths[0] ??
+      (libraries.isSuccess ? libraries.data[0]?.paths[0] : undefined)
+    return known ? parentFolder(known) : undefined
+  }
+  const pickFrom = () => {
+    const last = values().paths.at(-1)
+    // Beside the folder added last, when there is one.
+    return last ? parentFolder(last) : startFolder()
+  }
 
-  const [picking, setPicking] = useState(false)
+  const [picking, setPicking] = createSignal(false)
 
   return (
-    <form.AppForm>
-      <FormDialogForm onSubmit={() => void form.handleSubmit()}>
-        <FormDialogHeader
-          title={
-            library
-              ? tr("libraries.dialog.editTitle")
-              : tr("libraries.dialog.addTitle")
-          }
-        />
+    <FormDialogForm onSubmit={() => void form.submit()}>
+      <FormDialogHeader
+        title={
+          props.library
+            ? tr("libraries.dialog.editTitle")
+            : tr("libraries.dialog.addTitle")
+        }
+      />
 
-        <FormDialogBody>
-          <FormColumns>
-            <FormColumn>
-              <FieldGroup>
-                <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-                  <form.AppField name="name">
-                    {(field) => (
-                      <field.TextField
-                        id="library-name"
-                        label={tr("libraries.dialog.name")}
-                        placeholder={tr("libraries.dialog.namePlaceholder")}
-                      />
-                    )}
-                  </form.AppField>
-                  <form.AppField name="kind">
-                    {() => (
-                      <SelectField
-                        id="library-type"
-                        label={tr("libraries.dialog.type")}
-                        items={kinds}
-                      />
-                    )}
-                  </form.AppField>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-                  <form.Field name="provider">
-                    {(field) => (
-                      <Field>
-                        <FieldLabel htmlFor="library-provider">
-                          {tr("libraries.dialog.metadata")}
-                        </FieldLabel>
-                        <Select
-                          items={providerItems}
-                          value={provider}
-                          onValueChange={(value) =>
-                            value && field.handleChange(value)
-                          }
-                        >
-                          <SelectTrigger
-                            id="library-provider"
-                            className="w-full"
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">
-                              {tr("libraries.dialog.noProvider")}
-                            </SelectItem>
-                            {providers.data?.map((p) => (
-                              <SelectItem
-                                key={p.id}
-                                value={p.id}
-                                disabled={!p.configured}
-                              >
-                                {p.name}
-                                {!p.configured && (
-                                  <span className="text-muted-foreground">
-                                    {tr("libraries.dialog.needsKey")}
-                                  </span>
-                                )}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                    )}
-                  </form.Field>
-                  <form.Field name="language">
-                    {(field) => (
-                      <Field>
-                        <FieldLabel htmlFor="library-language">
-                          {tr("libraries.dialog.language")}
-                        </FieldLabel>
-                        <Select
-                          items={languageItems}
-                          value={language}
-                          disabled={provider === "none" || !language}
-                          onValueChange={(value) =>
-                            value && field.handleChange(value)
-                          }
-                        >
-                          <SelectTrigger
-                            id="library-language"
-                            className="w-full"
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {languageItems.map((item) => (
-                              <SelectItem key={item.value} value={item.value}>
-                                {item.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                    )}
-                  </form.Field>
-                  <FieldDescription className="-mt-2 sm:col-span-2">
-                    {provider === "none"
-                      ? tr("libraries.dialog.noProviderHint")
-                      : providerInfo &&
-                        translateKnown(providerInfo.description)}
-                  </FieldDescription>
-                </div>
-              </FieldGroup>
-            </FormColumn>
-
-            <FormColumn>
-              <form.Field name="paths">
-                {(field) => {
-                  const paths = field.state.value
-                  const last = paths.at(-1)
-                  return (
-                    <>
-                      <Field>
-                        <div className="flex items-baseline justify-between">
-                          <FieldLabel>
-                            {tr("libraries.dialog.folders")}
-                          </FieldLabel>
-                          {paths.length > 0 && (
-                            <span className="text-muted-foreground text-xs tabular-nums">
-                              {tr("libraries.dialog.selected", {
-                                count: paths.length,
-                              })}
-                            </span>
-                          )}
-                        </div>
-                        {paths.length > 0 ? (
-                          <ul className="flex flex-col gap-1">
-                            {paths.map((path) => (
-                              <li
-                                key={path}
-                                className="bg-muted/60 flex h-9 items-center gap-2.5 rounded-md pr-1 pl-2.5"
-                              >
-                                <FolderIcon className="text-muted-foreground size-4 shrink-0" />
-                                <span
-                                  className="text-13px min-w-0 flex-1 truncate font-mono"
-                                  title={path}
-                                >
-                                  {path}
-                                </span>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  aria-label={tr(
-                                    "libraries.dialog.removeFolder",
-                                    {
-                                      path,
-                                    },
-                                  )}
-                                  onClick={() =>
-                                    field.handleChange(
-                                      paths.filter((p) => p !== path),
-                                    )
-                                  }
-                                >
-                                  <XIcon />
-                                </Button>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-muted-foreground text-sm">
-                            {tr("libraries.dialog.noFolders")}
-                          </p>
+      <FormDialogBody>
+        <FormColumns>
+          <FormColumn>
+            <FieldGroup>
+              <div class="grid gap-4 sm:grid-cols-[1fr_10rem]">
+                <TextField
+                  form={form}
+                  name="name"
+                  id="library-name"
+                  label={tr("libraries.dialog.name")}
+                  placeholder={tr("libraries.dialog.namePlaceholder")}
+                />
+                <Field>
+                  <FieldLabel for="library-type">
+                    {tr("libraries.dialog.type")}
+                  </FieldLabel>
+                  <Select<LibraryKind>
+                    items={kinds}
+                    value={values().kind}
+                    onValueChange={(next) => {
+                      if (next) form.set("kind", next)
+                    }}
+                  >
+                    <SelectTrigger id="library-type" class="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <For each={kinds}>
+                        {(option) => (
+                          <SelectItem<LibraryKind> value={option.value}>
+                            {option.label}
+                          </SelectItem>
                         )}
+                      </For>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-[1fr_10rem]">
+                <Field>
+                  <FieldLabel for="library-provider">
+                    {tr("libraries.dialog.metadata")}
+                  </FieldLabel>
+                  <Select
+                    items={providerItems()}
+                    value={provider()}
+                    onValueChange={(next) => {
+                      const picked =
+                        next === "none"
+                          ? "none"
+                          : providerList().find((p) => p.id === next)?.id
+                      if (picked) form.set("provider", picked)
+                    }}
+                  >
+                    <SelectTrigger id="library-provider" class="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        {tr("libraries.dialog.noProvider")}
+                      </SelectItem>
+                      <For each={providerList()}>
+                        {(p) => (
+                          <RichSelectItem
+                            value={p.id}
+                            label={p.name}
+                            disabled={!p.configured}
+                          >
+                            <>
+                              {p.name}
+                              <Show when={!p.configured}>
+                                <span class="text-muted-foreground">
+                                  {tr("libraries.dialog.needsKey")}
+                                </span>
+                              </Show>
+                            </>
+                          </RichSelectItem>
+                        )}
+                      </For>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field>
+                  <FieldLabel for="library-language">
+                    {tr("libraries.dialog.language")}
+                  </FieldLabel>
+                  <Select
+                    items={languageItems()}
+                    value={language()}
+                    disabled={provider() === "none" || !language()}
+                    onValueChange={(next) => {
+                      if (next) form.set("language", next)
+                    }}
+                  >
+                    <SelectTrigger id="library-language" class="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <For each={languageItems()}>
+                        {(item) => (
+                          <SelectItem value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        )}
+                      </For>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <FieldDescription class="-mt-2 sm:col-span-2">
+                  {provider() === "none"
+                    ? tr("libraries.dialog.noProviderHint")
+                    : providerInfo() &&
+                      translateKnown(providerInfo()?.description ?? "")}
+                </FieldDescription>
+              </div>
+            </FieldGroup>
+          </FormColumn>
+
+          <FormColumn>
+            <Field>
+              <div class="flex items-baseline justify-between">
+                <FieldLabel>{tr("libraries.dialog.folders")}</FieldLabel>
+                <Show when={values().paths.length > 0}>
+                  <span class="text-muted-foreground text-xs tabular-nums">
+                    {tr("libraries.dialog.selected", {
+                      count: values().paths.length,
+                    })}
+                  </span>
+                </Show>
+              </div>
+              <Show
+                when={values().paths.length > 0}
+                fallback={
+                  <p class="text-muted-foreground text-sm">
+                    {tr("libraries.dialog.noFolders")}
+                  </p>
+                }
+              >
+                <ul class="flex flex-col gap-1">
+                  <For each={values().paths}>
+                    {(path) => (
+                      <li class="bg-muted/60 flex h-9 items-center gap-2.5 rounded-md pr-1 pl-2.5">
+                        <Icon
+                          icon={Folder}
+                          class="text-muted-foreground size-4 shrink-0"
+                        />
+                        <span
+                          class="text-13px min-w-0 flex-1 truncate font-mono"
+                          title={path}
+                        >
+                          {path}
+                        </span>
                         <Button
                           type="button"
-                          variant="outline"
-                          className="self-start"
-                          onClick={() => setPicking(true)}
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={tr("libraries.dialog.removeFolder", {
+                            path,
+                          })}
+                          onClick={() =>
+                            form.set(
+                              "paths",
+                              values().paths.filter((p) => p !== path),
+                            )
+                          }
                         >
-                          <FolderPlusIcon />
-                          {tr("libraries.dialog.addFolder")}
+                          <Icon icon={X} />
                         </Button>
-                      </Field>
+                      </li>
+                    )}
+                  </For>
+                </ul>
+              </Show>
+              <Button
+                type="button"
+                variant="outline"
+                class="self-start"
+                onClick={() => setPicking(true)}
+              >
+                <Icon icon={FolderPlus} />
+                {tr("libraries.dialog.addFolder")}
+              </Button>
+            </Field>
 
-                      <FolderPicker
-                        open={picking}
-                        onOpenChange={setPicking}
-                        // Beside the folder added last, when there is one.
-                        initialPath={last ? parentFolder(last) : startFolder}
-                        picked={paths}
-                        onPick={(path) => field.handleChange([...paths, path])}
-                      />
-                    </>
-                  )
-                }}
-              </form.Field>
-            </FormColumn>
-          </FormColumns>
-        </FormDialogBody>
+            <FolderPicker
+              open={picking()}
+              onOpenChange={setPicking}
+              initialPath={pickFrom()}
+              picked={[...values().paths]}
+              onPick={(path) => form.set("paths", [...values().paths, path])}
+            />
+          </FormColumn>
+        </FormColumns>
+      </FormDialogBody>
 
-        <FormDialogFooter>
-          <form.Subscribe
-            selector={(state) =>
-              !state.values.name.trim() || state.values.paths.length === 0
-            }
-          >
-            {(incomplete) => (
-              <form.SubmitButton disabled={incomplete} pending={save.isPending}>
-                {library
-                  ? tr("libraries.dialog.save")
-                  : tr("libraries.dialog.add")}
-              </form.SubmitButton>
-            )}
-          </form.Subscribe>
-        </FormDialogFooter>
-      </FormDialogForm>
-    </form.AppForm>
+      <FormDialogFooter>
+        <SubmitButton
+          form={form}
+          disabled={!values().name.trim() || values().paths.length === 0}
+          pending={save.isPending}
+        >
+          {props.library
+            ? tr("libraries.dialog.save")
+            : tr("libraries.dialog.add")}
+        </SubmitButton>
+      </FormDialogFooter>
+    </FormDialogForm>
   )
 }

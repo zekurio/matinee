@@ -1,5 +1,6 @@
-import { toast } from "@matinee/ui/components/sonner"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { createSignal, onSettled } from "solid-js"
+
+import { toast } from "@/kit/toast"
 
 import { errorMessage } from "./rpc"
 
@@ -7,52 +8,45 @@ export type ActionFeedback =
   | { state: "idle" | "pending" | "success" }
   | { state: "error"; message: string }
 
-/**
- * How an action went, for the button that started it to show. Success
- * clears itself after a moment. An error stays until the next run or a
- * reset, and its message goes to a toast: under `failed` when given, as
- * the toast's title otherwise.
- */
-export function useActionFeedback({
-  successDuration = 1400,
-  failed,
-}: { successDuration?: number; failed?: string } = {}) {
-  const [feedback, setFeedback] = useState<ActionFeedback>({ state: "idle" })
-  const resetTimer = useRef<number | null>(null)
+/** Feedback is an accessor. Call this once per action button under a component owner. */
+export function useActionFeedback(
+  options: { successDuration?: number; failed?: string } = {},
+) {
+  const [feedback, setFeedback] = createSignal<ActionFeedback>({
+    state: "idle",
+  })
+  let timer: number | undefined
+  let disposed = false
 
-  const clearTimer = useCallback(() => {
-    if (resetTimer.current !== null) window.clearTimeout(resetTimer.current)
-    resetTimer.current = null
-  }, [])
+  onSettled(() => () => {
+    disposed = true
+    window.clearTimeout(timer)
+  })
 
-  const reset = useCallback(() => {
-    clearTimer()
+  const reset = () => {
+    window.clearTimeout(timer)
     setFeedback({ state: "idle" })
-  }, [clearTimer])
+  }
 
-  // Drops the success timer when the button's owner unmounts.
-  useEffect(() => clearTimer, [clearTimer])
-
-  /** Resolves true when the action succeeded. Never rejects. */
-  const run = useCallback(
-    async (action: () => void | Promise<void>): Promise<boolean> => {
-      clearTimer()
-      setFeedback({ state: "pending" })
-      try {
-        await action()
+  /** Resolves true when the action succeeded. */
+  const run = async (action: () => void | Promise<void>): Promise<boolean> => {
+    window.clearTimeout(timer)
+    setFeedback({ state: "pending" })
+    try {
+      await action()
+      if (!disposed) {
         setFeedback({ state: "success" })
-        resetTimer.current = window.setTimeout(reset, successDuration)
-        return true
-      } catch (cause) {
-        const message = errorMessage(cause)
-        setFeedback({ state: "error", message })
-        if (failed === undefined) toast.error(message)
-        else toast.error(failed, { description: message })
-        return false
+        timer = window.setTimeout(reset, options.successDuration ?? 1400)
       }
-    },
-    [clearTimer, reset, successDuration, failed],
-  )
+      return true
+    } catch (cause) {
+      const message = errorMessage(cause)
+      if (!disposed) setFeedback({ state: "error", message })
+      if (options.failed === undefined) toast.error(message)
+      else toast.error(options.failed, { description: message })
+      return false
+    }
+  }
 
   return { feedback, reset, run }
 }

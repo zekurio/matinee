@@ -1,12 +1,9 @@
 import type { AdminTranscodingSettings } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import { Spinner } from "@matinee/ui/components/spinner"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
-import { ArrowLeftIcon } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import type { JSX } from "@solidjs/web"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query"
+import { useNavigate } from "@tanstack/solid-router"
+import { ArrowLeft } from "lucide"
+import { createSignal, Match, Show, Switch } from "solid-js"
 
 import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
@@ -19,6 +16,11 @@ import {
 } from "@/components/settings/transcoding-hardware"
 import { useTranscodingForm } from "@/components/settings/transcoding-panel"
 import { tr } from "@/i18n"
+import { Button } from "@/kit/button"
+import { Icon } from "@/kit/icon"
+import { Skeleton } from "@/kit/skeleton"
+import { Spinner } from "@/kit/spinner"
+import { toast } from "@/kit/toast"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { useActionFeedback } from "@/lib/use-action-feedback"
 
@@ -31,52 +33,59 @@ type StepProps = {
   onNext: () => void
 }
 
-export function SetupSteps({ steps }: { steps: SetupStep[] }) {
-  const [index, setIndex] = useState(0)
-  const step = steps[index] ?? "done"
-  const props: StepProps = {
-    eyebrow: tr("auth.setup.step", {
-      current: index + 1,
-      total: steps.length,
-    }),
-    onBack: index > 0 ? () => setIndex(index - 1) : undefined,
-    onNext: () => setIndex(Math.min(index + 1, steps.length - 1)),
-  }
-  switch (step) {
-    case "transcoding":
-      return <TranscodingStep {...props} />
-    case "libraries":
-      return <LibrariesStep {...props} />
-    case "done":
-      return <DoneStep {...props} />
-  }
+export function SetupSteps(props: { steps: SetupStep[] }) {
+  const [index, setIndex] = createSignal(0)
+  const step = () => props.steps[index()] ?? "done"
+  const eyebrow = () =>
+    tr("auth.setup.step", { current: index() + 1, total: props.steps.length })
+  const onBack = () =>
+    index() > 0 ? () => setIndex((current) => current - 1) : undefined
+  const onNext = () =>
+    setIndex((current) => Math.min(current + 1, props.steps.length - 1))
+
+  return (
+    <Switch>
+      <Match when={step() === "transcoding"}>
+        <TranscodingStep
+          eyebrow={eyebrow()}
+          onBack={onBack()}
+          onNext={onNext}
+        />
+      </Match>
+      <Match when={step() === "libraries"}>
+        <LibrariesStep eyebrow={eyebrow()} onBack={onBack()} onNext={onNext} />
+      </Match>
+      <Match when={step() === "done"}>
+        <DoneStep eyebrow={eyebrow()} onBack={onBack()} onNext={onNext} />
+      </Match>
+    </Switch>
+  )
 }
 
 /** Back on the left, the way forward on the right. */
-function StepActions({
-  onBack,
-  children,
-}: {
+function StepActions(props: {
   onBack: (() => void) | undefined
-  children: ReactNode
+  children: JSX.Element
 }) {
   return (
-    <div className="mt-10 flex items-center justify-between gap-3">
+    <div class="mt-10 flex items-center justify-between gap-3">
       <div>
-        {onBack && (
-          <Button variant="ghost" onClick={onBack}>
-            <ArrowLeftIcon />
-            {tr("auth.setup.back")}
-          </Button>
-        )}
+        <Show when={props.onBack}>
+          {(back) => (
+            <Button variant="ghost" onClick={() => back()()}>
+              <Icon icon={ArrowLeft} />
+              {tr("auth.setup.back")}
+            </Button>
+          )}
+        </Show>
       </div>
-      <div className="flex items-center gap-2">{children}</div>
+      <div class="flex items-center gap-2">{props.children}</div>
     </div>
   )
 }
 
 function TranscodingStep(props: StepProps) {
-  const settings = useQuery(orpc.admin.transcoding.get.queryOptions())
+  const settings = useQuery(() => orpc.admin.transcoding.get.queryOptions())
   return (
     <AuthScreen
       wide
@@ -84,18 +93,26 @@ function TranscodingStep(props: StepProps) {
       title={tr("auth.setup.transcoding.title")}
       description={tr("auth.setup.transcoding.description")}
     >
-      {settings.data ? (
-        <TranscodingForm settings={settings.data} {...props} />
-      ) : settings.isError ? (
-        <>
+      <Switch fallback={<Skeleton class="h-96 rounded-xl" />}>
+        <Match when={settings.data}>
+          {(data) => (
+            <TranscodingForm
+              settings={data()}
+              eyebrow={props.eyebrow}
+              onBack={props.onBack}
+              onNext={props.onNext}
+            />
+          )}
+        </Match>
+        <Match when={settings.isError}>
           <FormAlert message={errorMessage(settings.error)} />
           <StepActions onBack={props.onBack}>
-            <Button onClick={props.onNext}>{tr("auth.setup.skip")}</Button>
+            <Button onClick={() => props.onNext()}>
+              {tr("auth.setup.skip")}
+            </Button>
           </StepActions>
-        </>
-      ) : (
-        <Skeleton className="h-96 rounded-xl" />
-      )}
+        </Match>
+      </Switch>
     </AuthScreen>
   )
 }
@@ -105,17 +122,17 @@ function TranscodingStep(props: StepProps) {
  * ffmpeg found, the GPU to use, and what it decodes. The rest keeps
  * Jellyfin's defaults.
  */
-function TranscodingForm({
-  settings,
-  onBack,
-  onNext,
-}: StepProps & { settings: AdminTranscodingSettings }) {
-  const { form, detect, dirty, hardware } = useTranscodingForm(settings)
+function TranscodingForm(
+  props: StepProps & { settings: AdminTranscodingSettings },
+) {
+  const { form, detect, dirty, hardware } = useTranscodingForm(
+    () => props.settings,
+  )
   const { feedback, run } = useActionFeedback()
-  const pending = feedback.state === "pending"
+  const pending = () => feedback().state === "pending"
   const next = async () => {
     // Untouched, the defaults stay as they are and nothing needs saving.
-    if (await run(() => (dirty ? form.handleSubmit() : undefined))) onNext()
+    if (await run(() => (dirty() ? form.submit() : undefined))) props.onNext()
   }
 
   return (
@@ -127,19 +144,25 @@ function TranscodingForm({
     >
       <SettingsSections>
         <FfmpegSection
-          capabilities={settings.capabilities}
+          capabilities={props.settings.capabilities}
           detecting={detect.isPending}
-          onDetect={() => detect.mutate()}
+          onDetect={() => void detect.mutate()}
         />
-        <HardwareSection form={form} settings={settings} hardware={hardware} />
-        <HardwareDecodingSection form={form} settings={settings} />
+        <HardwareSection
+          form={form}
+          settings={props.settings}
+          hardware={hardware()}
+        />
+        <HardwareDecodingSection form={form} settings={props.settings} />
       </SettingsSections>
-      <StepActions onBack={onBack}>
-        <Button type="button" variant="ghost" onClick={onNext}>
+      <StepActions onBack={props.onBack}>
+        <Button type="button" variant="ghost" onClick={() => props.onNext()}>
           {tr("auth.setup.skip")}
         </Button>
-        <Button type="submit" disabled={pending}>
-          {pending && <Spinner />}
+        <Button type="submit" disabled={pending()}>
+          <Show when={pending()}>
+            <Spinner />
+          </Show>
           {tr("auth.setup.continue")}
         </Button>
       </StepActions>
@@ -147,26 +170,28 @@ function TranscodingForm({
   )
 }
 
-function LibrariesStep({ eyebrow, onBack, onNext }: StepProps) {
+function LibrariesStep(props: StepProps) {
   return (
     <AuthScreen
       wide
-      eyebrow={eyebrow}
+      eyebrow={props.eyebrow}
       title={tr("auth.setup.libraries.title")}
       description={tr("auth.setup.libraries.description")}
     >
       <LibrariesPanel />
-      <StepActions onBack={onBack}>
-        <Button onClick={onNext}>{tr("auth.setup.continue")}</Button>
+      <StepActions onBack={props.onBack}>
+        <Button onClick={() => props.onNext()}>
+          {tr("auth.setup.continue")}
+        </Button>
       </StepActions>
     </AuthScreen>
   )
 }
 
-function DoneStep({ eyebrow, onBack }: StepProps) {
+function DoneStep(props: StepProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const finish = useMutation({
+  const finish = useMutation(() => ({
     mutationFn: () => client.admin.setup.complete(),
     onSuccess: async () => {
       queryClient.setQueryData(orpc.auth.config.queryKey(), (config) =>
@@ -175,16 +200,21 @@ function DoneStep({ eyebrow, onBack }: StepProps) {
       await navigate({ to: "/" })
     },
     onError: (error) => toast.error(errorMessage(error)),
-  })
+  }))
   return (
     <AuthScreen
-      eyebrow={eyebrow}
+      eyebrow={props.eyebrow}
       title={tr("auth.setup.done.title")}
       description={tr("auth.setup.done.description")}
     >
-      <StepActions onBack={onBack}>
-        <Button disabled={finish.isPending} onClick={() => finish.mutate()}>
-          {finish.isPending && <Spinner />}
+      <StepActions onBack={props.onBack}>
+        <Button
+          disabled={finish.isPending}
+          onClick={() => void finish.mutate()}
+        >
+          <Show when={finish.isPending}>
+            <Spinner />
+          </Show>
           {tr("auth.setup.finish")}
         </Button>
       </StepActions>

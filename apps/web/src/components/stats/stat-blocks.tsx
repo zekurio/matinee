@@ -1,3 +1,9 @@
+import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
+import { Lock } from "lucide"
+import { createUniqueId, For, Show } from "solid-js"
+
+import { perLocale, tr } from "@/i18n"
 import {
   Empty,
   EmptyContent,
@@ -5,12 +11,8 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@matinee/ui/components/empty"
-import { cn } from "@matinee/ui/lib/utils"
-import { LockIcon, type LucideIcon } from "lucide-react"
-import { type ReactNode, useId } from "react"
-
-import { perLocale, tr } from "@/i18n"
+} from "@/kit/empty"
+import { Icon, type IconNode } from "@/kit/icon"
 
 /** Columns for a page's blocks of statistics. */
 // One grid for every row of a page's cards, so their edges line up, and
@@ -25,50 +27,45 @@ export const statsCard = "bg-card rounded-xl border"
  * A titled block of statistics: a card, its name at the top over a line
  * across it, so the first row reads as a row and not part of the heading.
  */
-export function StatsSection({
-  title,
-  action,
-  className,
-  children,
-}: {
+export function StatsSection(props: {
   title: string
-  action?: ReactNode
-  className?: string
-  children: ReactNode
+  action?: JSX.Element
+  class?: string
+  children: JSX.Element
 }) {
-  const id = useId()
+  const id = createUniqueId()
   return (
     <section
       aria-labelledby={id}
-      className={cn(statsCard, "flex min-w-0 flex-col gap-4 p-4", className)}
+      class={cn(statsCard, "flex min-w-0 flex-col gap-4 p-4", props.class)}
     >
-      <div className="-mx-4 flex min-h-6 flex-wrap items-baseline gap-x-2 gap-y-1 border-b px-4 pb-3">
-        <h2 id={id} className="text-15px leading-6 font-semibold">
-          {title}
+      <div class="-mx-4 flex min-h-6 flex-wrap items-baseline gap-x-2 gap-y-1 border-b px-4 pb-3">
+        <h2 id={id} class="text-15px leading-6 font-semibold">
+          {props.title}
         </h2>
-        {action && <div className="ml-auto">{action}</div>}
+        <Show when={props.action}>
+          {(action) => <div class="ml-auto">{action()}</div>}
+        </Show>
       </div>
-      {children}
+      {props.children}
     </section>
   )
 }
 
 /** A page section's heading, the size of Home's rows. */
-export function SectionHeading({
-  title,
-  children,
-  action,
-}: {
+export function SectionHeading(props: {
   title: string
   /** Inline after the title, like a count or a privacy note. */
-  children?: ReactNode
-  action?: ReactNode
+  children?: JSX.Element
+  action?: JSX.Element
 }) {
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-2">
-      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
-      {children}
-      {action && <div className="ml-auto max-w-full">{action}</div>}
+    <div class="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-2">
+      <h2 class="text-xl font-semibold tracking-tight">{props.title}</h2>
+      {props.children}
+      <Show when={props.action}>
+        {(action) => <div class="ml-auto max-w-full">{action()}</div>}
+      </Show>
     </div>
   )
 }
@@ -78,9 +75,9 @@ export function PrivateNote() {
   return (
     <span
       title={tr("stats.private.hint")}
-      className="text-muted-foreground bg-foreground/[0.06] inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
+      class="text-muted-foreground bg-foreground/[0.06] inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
     >
-      <LockIcon aria-hidden className="size-3" />
+      <Icon icon={Lock} class="size-3" />
       {tr("stats.private.note")}
     </span>
   )
@@ -89,7 +86,7 @@ export function PrivateNote() {
 export type StatFigure = {
   label: string
   value: string
-  icon: LucideIcon
+  icon: IconNode
   /** A line under the label, like "8 on the GPU". */
   detail?: string
 }
@@ -99,38 +96,37 @@ export type StatFigure = {
  * icon, what the figure counts, and the figure at the end, so it reads as
  * a sentence rather than a wall of numbers.
  */
-export function StatFigures({
-  figures,
-  className,
-}: {
-  figures: StatFigure[]
-  className?: string
-}) {
+export function StatFigures(props: { figures: StatFigure[]; class?: string }) {
   return (
-    <ul className={cn(statsCard, "divide-y self-start", className)}>
-      {figures.map(({ label, value, icon: Icon, detail }) => (
-        <li key={label} className="flex min-w-0 items-center gap-3.5 px-4 py-3">
-          <Icon aria-hidden className="text-muted-foreground size-5 shrink-0" />
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-15px truncate leading-6">{label}</span>
-            {detail && (
-              <span className="text-muted-foreground truncate text-xs">
-                {detail}
-              </span>
-            )}
-          </span>
-          <span className="text-15px shrink-0 leading-6 font-semibold tabular-nums">
-            {value}
-          </span>
-        </li>
-      ))}
+    <ul class={cn(statsCard, "divide-y self-start", props.class)}>
+      <For each={props.figures} keyed={(figure) => figure.label}>
+        {(figure) => (
+          <li class="flex min-w-0 items-center gap-3.5 px-4 py-3">
+            <Icon
+              icon={figure().icon}
+              class="text-muted-foreground size-5 shrink-0"
+            />
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="text-15px truncate leading-6">{figure().label}</span>
+              <Show when={figure().detail}>
+                <span class="text-muted-foreground truncate text-xs">
+                  {figure().detail}
+                </span>
+              </Show>
+            </span>
+            <span class="text-15px shrink-0 leading-6 font-semibold tabular-nums">
+              {figure().value}
+            </span>
+          </li>
+        )}
+      </For>
     </ul>
   )
 }
 
 export type RankedRow = {
   key: string
-  label: ReactNode
+  label: JSX.Element
   value: number
   /** The row's figure, at its end: "4h 10m", "12 plays", "1.2 TB". */
   detail: string
@@ -163,33 +159,26 @@ export const statsRows = "-mx-4 -mt-4 -mb-4 flex flex-col divide-y"
  * figure at the end. No bars or percents: a list cut to its top rows, or
  * of things that overlap like genres, has no whole to measure them by.
  */
-export function RankedBars({
-  rows,
-  className,
-}: {
-  rows: RankedRow[]
-  className?: string
-}) {
+export function RankedBars(props: { rows: RankedRow[]; class?: string }) {
   return (
-    <ul className={cn(statsRows, className)}>
-      {rows.map((row) => (
-        <li
-          key={row.key}
-          className="flex items-center justify-between gap-4 px-4 py-3"
-        >
-          <span className="flex min-w-0 flex-col">
-            <span className="text-15px truncate leading-6">{row.label}</span>
-            {row.note && (
-              <span className="text-muted-foreground truncate text-sm tabular-nums">
-                {row.note}
-              </span>
-            )}
-          </span>
-          <span className="text-15px shrink-0 leading-6 font-semibold tabular-nums">
-            {row.detail}
-          </span>
-        </li>
-      ))}
+    <ul class={cn(statsRows, props.class)}>
+      <For each={props.rows} keyed={(row) => row.key}>
+        {(row) => (
+          <li class="flex items-center justify-between gap-4 px-4 py-3">
+            <span class="flex min-w-0 flex-col">
+              <span class="text-15px truncate leading-6">{row().label}</span>
+              <Show when={row().note}>
+                <span class="text-muted-foreground truncate text-sm tabular-nums">
+                  {row().note}
+                </span>
+              </Show>
+            </span>
+            <span class="text-15px shrink-0 leading-6 font-semibold tabular-nums">
+              {row().detail}
+            </span>
+          </li>
+        )}
+      </For>
     </ul>
   )
 }
@@ -198,37 +187,36 @@ export function RankedBars({
  * Nothing to show yet: an icon, what will appear, and a way on, like the
  * library page's empty state. `compact` for a part of a page.
  */
-export function StatsEmpty({
-  icon: Icon,
-  title,
-  description,
-  action,
-  compact = false,
-  className,
-}: {
-  icon: LucideIcon
+export function StatsEmpty(props: {
+  icon: IconNode
   title: string
-  description?: ReactNode
-  action?: ReactNode
+  description?: JSX.Element
+  action?: JSX.Element
   compact?: boolean
-  className?: string
+  class?: string
 }) {
   return (
-    <Empty className={cn(compact ? "py-8" : "py-14", className)}>
+    <Empty class={cn(props.compact ? "py-8" : "py-14", props.class)}>
       <EmptyHeader>
-        <EmptyMedia variant="icon" className="mb-3 size-9 [&_svg]:size-5">
-          <Icon aria-hidden />
+        <EmptyMedia variant="icon" class="mb-3 size-9 [&_svg]:size-5">
+          <Icon icon={props.icon} />
         </EmptyMedia>
         <EmptyTitle
           role="heading"
           aria-level={3}
-          className="text-base font-semibold"
+          class="text-base font-semibold"
         >
-          {title}
+          {props.title}
         </EmptyTitle>
-        {description && <EmptyDescription>{description}</EmptyDescription>}
+        <Show when={props.description}>
+          {(description) => (
+            <EmptyDescription>{description()}</EmptyDescription>
+          )}
+        </Show>
       </EmptyHeader>
-      {action && <EmptyContent>{action}</EmptyContent>}
+      <Show when={props.action}>
+        {(action) => <EmptyContent>{action()}</EmptyContent>}
+      </Show>
     </Empty>
   )
 }

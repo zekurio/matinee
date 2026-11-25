@@ -1,5 +1,5 @@
 import type { MetadataProvider } from "@matinee/contracts"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/solid-query"
 
 import { orpc } from "@/lib/rpc"
 
@@ -8,21 +8,24 @@ import { orpc } from "@/lib/rpc"
  * while that's still loading, or with `enabled` off, as for a card a user
  * who isn't an admin sees.
  */
+// Returns an accessor.
 export function useLibraryProvider(
-  libraryId: string,
-  enabled = true,
-): MetadataProvider | null | undefined {
-  const library = useQuery({
-    ...orpc.libraries.get.queryOptions({ input: { id: libraryId } }),
-    enabled,
-  })
-  const providers = useQuery({
+  libraryId: () => string,
+  enabled: () => boolean = () => true,
+): () => MetadataProvider | null | undefined {
+  const library = useQuery(() => ({
+    ...orpc.libraries.get.queryOptions({ input: { id: libraryId() } }),
+    enabled: enabled(),
+  }))
+  const providers = useQuery(() => ({
     ...orpc.metadata.providers.queryOptions(),
-    enabled,
-  })
-  if (!library.data) return undefined
-  const id = library.data.metadataProvider
-  if (!id) return null
-  if (!providers.data) return undefined
-  return providers.data.find((p) => p.id === id) ?? null
+    enabled: enabled(),
+  }))
+  return () => {
+    if (!library.isSuccess) return undefined
+    const id = library.data.metadataProvider
+    if (!id) return null
+    if (!providers.isSuccess) return undefined
+    return providers.data.find((provider) => provider.id === id) ?? null
+  }
 }

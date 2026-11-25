@@ -1,4 +1,5 @@
-import type { QueryClient } from "@tanstack/react-query"
+import type { QueryClient } from "@tanstack/solid-query"
+import { createEffect } from "solid-js"
 
 import { orpc } from "./rpc"
 
@@ -21,6 +22,20 @@ export const homeQueries = {
   /** A library's latest, for its shelf. */
   shelf: (libraryId: string) =>
     orpc.media.shelf.queryOptions({ input: { libraryId, limit: SHELF } }),
+}
+
+/**
+ * A query's `enabled` for Home, which the shell keeps while other pages
+ * show: off while `showing` is false, so nothing refetches out of sight.
+ * Home's loader refetches what went stale on the way back. It reads a
+ * copy, since query-core asks from inside solid-query's effects.
+ */
+export function enabledWhile(showing: () => boolean) {
+  let now = true
+  createEffect(showing, (value) => {
+    now = value
+  })
+  return () => now
 }
 
 /**

@@ -1,7 +1,10 @@
 import type { MediaItem, Party, PartyPlayback } from "@matinee/contracts"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/solid-query"
+import { createMemo } from "solid-js"
 
-import { itemLabel } from "./media"
+import { itemLabel } from "@/lib/media"
+
+import { liveData, useLiveQuery } from "./live-query"
 import { liveQuery, orpc, queryClient } from "./rpc"
 
 /*
@@ -52,19 +55,32 @@ function serverOffset(serverNow: Date, receivedAt: number): number {
   return Math.max(...offsets.values())
 }
 
-/** The viewer's party, and how far the server's clock is ahead of ours. */
+/** party and offsetMs are accessors for the viewer's party and server clock offset. */
 export function useParty() {
-  const asked = useQuery(orpc.party.get.queryOptions())
-  const member = asked.data != null
-  const live = useQuery(liveParty(member))
-  // The stream's state is the newer one, and null from it means the
-  // party is over.
-  const latest = member && live.data !== undefined ? live : asked
-  const party: Party | null = (member && latest.data) || null
-  return {
-    party,
-    offsetMs: party ? serverOffset(party.now, latest.dataUpdatedAt) : 0,
-  }
+  const asked = useQuery(() => orpc.party.get.queryOptions())
+  const member = createMemo(() => readPartyData(asked) != null)
+  const live = useLiveQuery(() => liveParty(member()))
+  const streamed = () => (member() ? liveData(live()) : undefined)
+  const party = () =>
+    member() ? (streamed() ?? readPartyData(asked) ?? null) : null
+  const offsetMs = createMemo(() => {
+    const current = party()
+    if (!current) return 0
+    const at =
+      streamed() !== undefined
+        ? (live()?.dataUpdatedAt ?? 0)
+        : asked.dataUpdatedAt
+    return serverOffset(current.now, at)
+  })
+  return { party, offsetMs }
+}
+
+function readPartyData<Data>(query: {
+  isSuccess: boolean
+  isRefetchError: boolean
+  data: Data
+}): Data | undefined {
+  return query.isSuccess || query.isRefetchError ? query.data : undefined
 }
 
 export type PartyRole = "owner" | "member"
@@ -77,17 +93,22 @@ function roleOf(party: Party | null): PartyRole | "none" {
 /**
  * Whether the viewer is in a party, and as what. For the many places
  * that only offer a party action: it changes when the role does, not
- * each time the party moves.
+ * each time the party moves. Returns an accessor, with null outside a party.
  */
-export function usePartyRole(): PartyRole | null {
-  const asked = useQuery({
+export function usePartyRole() {
+  const asked = useQuery(() => ({
     ...orpc.party.get.queryOptions(),
     select: roleOf,
+  }))
+  const member = createMemo(() => {
+    const role = readPartyData(asked)
+    return role !== undefined && role !== "none"
   })
-  const member = asked.data !== undefined && asked.data !== "none"
-  const live = useQuery({ ...liveParty(member), select: roleOf })
-  const role = member ? (live.data ?? asked.data) : "none"
-  return role === "none" ? null : role
+  const live = useLiveQuery(() => ({ ...liveParty(member()), select: roleOf }))
+  return createMemo<PartyRole | null>(() => {
+    const role = member() ? (liveData(live()) ?? readPartyData(asked)) : "none"
+    return role === "none" ? null : (role ?? null)
+  })
 }
 
 /** Where a party is in its file now, in seconds. */
