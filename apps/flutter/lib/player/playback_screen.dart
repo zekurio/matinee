@@ -12,6 +12,9 @@ import '../kit/kit.dart';
 import '../l10n/app_localizations.dart';
 import '../media/actions.dart' show MediaChanges, mediaChangesProvider;
 import '../media/format.dart';
+import '../party/party_controller.dart';
+import '../party/party_state.dart';
+import '../party/party_watch.dart';
 import '../platform/player.g.dart' as wire;
 import '../router.dart';
 import 'playback_device.dart';
@@ -65,12 +68,44 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
   late final int _owner;
   late final Future<void> Function(int, bool) _fullscreen;
 
+  /// The party watched this file when the player opened, so the player
+  /// follows it to whatever the party moves on to.
+  late bool _inStep;
+
   @override
   void initState() {
     super.initState();
     _owner = ++_lastOwner;
     _fullscreen = ref.read(playbackFullscreenProvider);
     unawaited(_window(true));
+    _inStep = ref.read(partyProvider).value?.party?.item?.id == widget.itemId;
+  }
+
+  /// The party went on to another file, and a player that was with it goes
+  /// along, to where the party is in it by now.
+  void _partyMoved(PartySnapshot? snapshot) {
+    if (!mounted || snapshot == null) return;
+    final party = snapshot.party;
+    final item = party?.item;
+    if (party == null || item == null) return;
+    if (item.id == widget.itemId) {
+      _inStep = true;
+      return;
+    }
+    if (!_inStep) return;
+    _inStep = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // The party may have moved on again before this frame.
+      final latest = ref.read(partyProvider).value;
+      final target = latest?.party?.item ?? item;
+      if (target.id == widget.itemId) return;
+      final playback = latest?.party?.playback;
+      final start = playback == null
+          ? 0.0
+          : partyPosition(playback, latest!.offsetMs);
+      context.replace(Routes.play(target.id), extra: start);
+    });
   }
 
   @override
@@ -89,6 +124,7 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(partyProvider, (_, next) => _partyMoved(next.value));
     final api = ref.watch(apiProvider);
     final engineState = ref.watch(playerEngineProvider);
     final engine = engineState.value ?? PlayerEngine.mpv;
@@ -133,6 +169,25 @@ class _PlaybackScreenState extends ConsumerState<PlaybackScreen> {
           codecs: codecs?.value,
           itemId: widget.itemId,
           startAt: widget.startAt,
+          partyWatch: PartyWatch(
+            itemId: widget.itemId,
+            snapshot: () =>
+                ref.read(partyProvider).value ?? const PartySnapshot.empty(),
+            control:
+                ({required bool playing, required double positionSeconds}) =>
+                    ref
+                        .read(partyProvider.notifier)
+                        .control(
+                          itemId: widget.itemId,
+                          playing: playing,
+                          positionSeconds: positionSeconds,
+                        ),
+            report: (report) => ref.read(partyProvider.notifier).status(report),
+            next: () => ref.read(partyProvider.notifier).next(widget.itemId),
+            play: (positionSeconds) => ref
+                .read(partyProvider.notifier)
+                .play(widget.itemId, positionSeconds: positionSeconds),
+          ),
         ),
         builder: (session) => PlaybackControls(
           session: session,
@@ -159,6 +214,7 @@ PlaybackSession createPlaybackSession(
   required wire.CodecCapabilitiesMessage? codecs,
   required String itemId,
   double? startAt,
+  PartyWatch? partyWatch,
 }) {
   final prefs = ref.read(playerPrefsProvider).value ?? const PlayerPrefs();
   final profile = playbackDevice(
@@ -181,6 +237,7 @@ PlaybackSession createPlaybackSession(
     preferences: user.playback ?? defaultPlaybackPreferences,
     startAt: startAt,
     quality: prefs.quality,
+    partyWatch: partyWatch,
   );
 }
 
@@ -377,6 +434,14 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
 
   PlayerSitting get _session => widget.session;
 
+  /// The party watches this very file, so this player follows it.
+  bool get _inParty {
+    final session = _session;
+    if (session is! PlaybackSession || session.partyWatch == null) return false;
+    final party = ref.read(partyProvider).value?.party;
+    return party != null && party.item?.id == session.itemId;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -387,6 +452,11 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
       onPlay: (item) => unawaited(_next(item)),
     );
     _speed = PlayerSpeed(_session);
+    // A party goes on to its own queue, so its player leaves the next
+    // episode to it.
+    ref.listenManual(partyProvider, (_, _) {
+      if (_inParty) _countdown.stop();
+    });
     _fill = prefs.fillScreen;
     if (_fill) unawaited(_applyFit());
     _levels = ref.read(playbackLevelsProvider);
@@ -411,6 +481,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     _session.addListener(_updated);
     _playing = _session.playback.status.playing;
     _speed.follow();
+    if (_inParty) _countdown.stop();
     if (_playing) _resetHide();
     _syncSegment();
     _syncAuto();
@@ -444,7 +515,11 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
         }
         _resetHide();
       }
-      _countdown.sync(_session, leaving: _leaving);
+      if (_inParty) {
+        _countdown.stop();
+      } else {
+        _countdown.sync(_session, leaving: _leaving);
+      }
       _syncSegment();
     });
     _syncAuto();
@@ -744,6 +819,10 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     final prefs = ref.watch(playerPrefsProvider).value ?? const PlayerPrefs();
     final look = subtitleLook(ref, prefs);
     final small = _small;
+    final partySnapshot = ref.watch(partyProvider).value;
+    final party = partySnapshot?.party;
+    final selfId = partySnapshot?.selfId ?? '';
+    final inParty = _inParty;
 
     // Locked, system Back only shows the unlock button, as a touch does,
     // so a pocket or a stray palm doesn't leave the video. Home still
@@ -860,7 +939,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
             if (item != null)
               PlayerFade(
                 visible: controls && error == null,
-                child: _controls(l, item, enabled, loading, prefs),
+                child: _controls(l, item, enabled, loading, prefs, inParty),
               ),
             // Over the controls' scrim, in the play button's empty place, so
             // the scrim can't dim the spinner and its line on a light frame.
@@ -885,6 +964,18 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
                   child: _failure(l, error),
                 ),
               ),
+            // The party paused for someone, so the picture says who.
+            if (inParty &&
+                party != null &&
+                party.waitingFor.isNotEmpty &&
+                error == null &&
+                !small)
+              PlayerNote(
+                title: party.waitingFor.contains(selfId)
+                    ? l.webPartyFlashWaitingForYou
+                    : l.webPartyFlashWaiting(_waitingNames(party, selfId)),
+                margin: const EdgeInsets.fromLTRB(24, 96, 24, 0),
+              ),
             // The small window shows the video and its captions, and nothing
             // that wants a touch.
             if (error == null && !_leaving && !small)
@@ -900,7 +991,9 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
                         enabled: enabled,
                       ),
                     ),
-                  if (_session.ended || !_countdown.hidden)
+                  // A party goes on to its own queue, so its player leaves
+                  // the next episode to it.
+                  if (!inParty && (_session.ended || !_countdown.hidden))
                     if (_session.next case final item?)
                       _upNext(l, item, enabled),
                 ],
@@ -938,6 +1031,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     bool enabled,
     bool loading,
     PlayerPrefs prefs,
+    bool inParty,
   ) {
     final names = itemNames(item, l);
     final code = item.label.code;
@@ -999,11 +1093,13 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
             state: subtitle?.label ?? l.playerSubtitlesOff,
             onPressed: enabled ? () => _openMenu(PlayerMenu.subtitles) : null,
           ),
-        PlayerMenuButton(
-          icon: Lucide.gauge,
-          label: l.playerSpeed,
-          onPressed: enabled ? () => _openMenu(PlayerMenu.speed) : null,
-        ),
+        // A party plays at normal speed, so its player offers no speed.
+        if (!inParty)
+          PlayerMenuButton(
+            icon: Lucide.gauge,
+            label: l.playerSpeed,
+            onPressed: enabled ? () => _openMenu(PlayerMenu.speed) : null,
+          ),
         // A download plays as it is.
         if (offersQuality(_session))
           PlayerMenuButton(
@@ -1055,6 +1151,18 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
     );
   }
 
+  /// The members whose players the party waits for, except the viewer.
+  String _waitingNames(Party party, String selfId) {
+    final names = <String>[];
+    for (final id in party.waitingFor) {
+      if (id == selfId) continue;
+      for (final member in party.members) {
+        if (member.user.id == id) names.add(member.user.name);
+      }
+    }
+    return names.join(', ');
+  }
+
   Widget _seekBar(AppLocalizations l, bool enabled) {
     final length = _session.duration;
     final at = (_scrubbing ?? _session.position).clamp(0.0, length);
@@ -1080,6 +1188,7 @@ class _PlaybackControlsState extends ConsumerState<PlaybackControls> {
       onScrub: seekable
           ? (value) {
               final starting = _scrubbing == null;
+              _session.holdParty(const Duration(seconds: 2));
               setState(() => _scrubbing = value);
               if (starting) _resetHide();
             }

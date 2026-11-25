@@ -319,6 +319,13 @@ gives. A file's menu adds it to the queue, or proposes it to the owner.
 `lib/party` follows the party's live stream while the app is signed in,
 since the server takes a member with no stream open for a minute as gone.
 
+The player follows the party's file. It plays, pauses, jumps, and nudges
+its rate to stay with the party, reports what it plays so the party can
+wait for it, and goes along when the party moves on. The viewer's play,
+pause, and seek go to the party, and the next episode is left to the
+party's queue. `lib/party/party_sync.dart` holds the thresholds, and
+`test/party/party_sync_test.dart` pins them.
+
 Not there yet:
 
 - A TV's screens and player don't show or follow a party.

@@ -1984,5 +1984,7 @@
   "webPartyHealthBuffering": "Lädt nach",
   "webPartyHealthPaused": "Pausiert",
   "webPartyHealthAway": "Nicht im Player",
-  "webPartyHealthHint": "Kommt der Player von jemandem nicht mit, pausiert die Party und läuft weiter, sobald er aufgeholt hat."
+  "webPartyHealthHint": "Kommt der Player von jemandem nicht mit, pausiert die Party und läuft weiter, sobald er aufgeholt hat.",
+  "webPartyFlashWaiting": "Die Party wartet auf {p1}",
+  "webPartyFlashWaitingForYou": "Die Party wartet, bis das hier geladen ist"
 }

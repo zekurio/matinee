@@ -10240,5 +10240,18 @@
   "webPartyHealthHint": "When someone's player can't keep up, the party pauses and plays on once it has caught up.",
   "@webPartyHealthHint": {
     "description": "party.health.hint"
+  },
+  "webPartyFlashWaiting": "Waiting for {p1} to catch up",
+  "@webPartyFlashWaiting": {
+    "description": "party.flash.waiting",
+    "placeholders": {
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "webPartyFlashWaitingForYou": "The party waits while this loads",
+  "@webPartyFlashWaitingForYou": {
+    "description": "party.flash.waitingForYou"
   }
 }
