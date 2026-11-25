@@ -307,6 +307,10 @@ class _Card extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: _radius,
+        // The art and its shades are clipped together, not each on its own,
+        // so the art's edge pixels don't show through the shade as a line
+        // along the card's bottom.
+        clipBehavior: Clip.antiAliasWithSaveLayer,
         child: Stack(
           fit: StackFit.expand,
           children: [
