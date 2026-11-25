@@ -3,13 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/app_colors.dart';
 import 'core/apple_tv.dart';
 import 'core/back_claim.dart';
 import 'core/device.dart';
-import 'core/server_accents.dart';
 import 'core/toasts.dart';
-import 'kit/accent.dart';
-import 'kit/material_you.dart';
 import 'kit/theme.dart';
 import 'kit/theme_store.dart';
 import 'kit/toast.dart';
@@ -30,20 +28,7 @@ class MatineeApp extends ConsumerWidget {
     final preferences =
         ref.watch(themeStoreProvider).value ?? defaultThemePreferences;
     final device = ref.watch(deviceProvider);
-    // The wallpaper's colors instead of Matinee's, where Material You is on:
-    // the server's accents and the preset stay out of the way then.
-    final wallpaper = preferences.materialYou && !device.isTv
-        ? ref.watch(materialYouProvider).value
-        : null;
-    // The server's accents, or the Branding page's before they're saved,
-    // over the preset's own, as the web paints them.
-    final accents = wallpaper == null
-        ? ref.watch(accentPreviewProvider) ?? ref.watch(serverAccentsProvider)
-        : null;
-    final light =
-        wallpaper?.light ?? accented(preferences.preset.light, accents?.light);
-    final dark =
-        wallpaper?.dark ?? accented(preferences.preset.dark, accents?.dark);
+    final (:light, :dark) = ref.watch(appColorsProvider);
     final remote = ref.watch(appleTvRemoteProvider);
     return MaterialApp.router(
       routerConfig: ref.watch(routerProvider),

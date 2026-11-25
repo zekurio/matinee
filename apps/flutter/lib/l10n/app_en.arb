@@ -819,14 +819,6 @@
   "@appearanceMaterialYouHint": {
     "description": "Appearance: what Material You does, under its switch"
   },
-  "appearancePreset": "Theme",
-  "@appearancePreset": {
-    "description": "Appearance: the section picking the color preset"
-  },
-  "appearancePresetMatinee": "Matinee",
-  "@appearancePresetMatinee": {
-    "description": "Appearance: the name of the default color preset"
-  },
   "askedLoadFailed": "Couldn't load your requests",
   "@askedLoadFailed": {
     "description": "strings_loading.xml"
