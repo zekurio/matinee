@@ -1,7 +1,4 @@
-// Copyright (C) edde746 and Plezy contributors.
 // SPDX-License-Identifier: GPL-3.0-only
-// The volume slider and the brightness kept per screen are adapted from
-// Plezy's AppDelegate.swift.
 import AVFoundation
 import Flutter
 import MediaPlayer

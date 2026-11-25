@@ -1,6 +1,4 @@
-// Copyright (C) edde746 and Plezy contributors.
 // SPDX-License-Identifier: GPL-3.0-only
-// MediaCodec output and surface handoff are adapted from Plezy.
 package io.github.zekurio.matinee.player
 
 import android.content.BroadcastReceiver

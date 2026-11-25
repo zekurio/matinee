@@ -1,4 +1,3 @@
-// Copyright (C) edde746 and Plezy contributors for the Flutter view setup.
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.zekurio.matinee
 

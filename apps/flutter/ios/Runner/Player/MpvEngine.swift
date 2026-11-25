@@ -1,7 +1,4 @@
-// Copyright (C) edde746 and Plezy contributors.
 // SPDX-License-Identifier: GPL-3.0-only
-// The avfoundation output, its options, and the event loop are adapted from
-// Plezy's MpvPlayerCoreBase.swift.
 import AVFoundation
 import Foundation
 import Libmpv

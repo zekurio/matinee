@@ -1,7 +1,4 @@
-// Copyright (C) edde746 and Plezy contributors.
 // SPDX-License-Identifier: GPL-3.0-only
-// Taking the remote's Play/Pause before the engine does is adapted from
-// Plezy's tvos/Runner/AppDelegate.swift.
 import Flutter
 import UIKit
 
