@@ -270,6 +270,9 @@ importers:
       '@matinee/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@matinee/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@solidjs/web':
         specifier: 2.0.3
         version: 2.0.3(solid-js@2.0.3)

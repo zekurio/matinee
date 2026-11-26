@@ -13,6 +13,7 @@ import {
 import { forgetPictures } from "../api/images"
 import { Actions } from "../app/actions"
 import { Chrome, ChromeContext } from "../app/chrome"
+import { keepRoutes, keptRoutes } from "../app/history"
 import { type Entry, Navigator, type Route } from "../app/navigator"
 import { AppContext, type AppScope, PageContext, Toasts } from "../app/scope"
 import { nameOf, session } from "../auth/session"
@@ -275,9 +276,13 @@ export function SignedInApp(props: {
   user: User
   pages: (entry: Entry) => JSX.Element
 }) {
-  // A new sign-in starts the pages, and what they keep, afresh.
+  // A new sign-in starts the pages, and what they keep, afresh, but a
+  // reload comes back to the pages it left.
+  const signedIn = session.state
+  const account =
+    signedIn.kind === "signedIn" ? `${signedIn.user.id} ${signedIn.server}` : ""
   const scope = {
-    nav: new Navigator(),
+    nav: new Navigator(keptRoutes(account)),
     viewer: new Viewer(),
     toasts: new Toasts(),
     actions: new Actions(),
@@ -334,6 +339,7 @@ export function SignedInApp(props: {
   let root: HTMLDivElement | undefined
 
   onSettled(() => forgetPictures)
+  onSettled(() => keepRoutes(scope.nav, account))
   // A browser's game controller works the remote's keys. Start plays and
   // pauses on the player, and opens the focused item's menu elsewhere.
   onSettled(() => startGamepads(() => (playing() ? "playPause" : "menu")))

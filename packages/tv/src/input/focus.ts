@@ -371,6 +371,10 @@ function record(leaf: HTMLElement) {
     node = container
     container = containerOf(node)
   }
+  // A leaf right in the trap, in no group, as a chart on the profile: it's
+  // still where focus was, for coming back from the drawer.
+  if (first)
+    memory.last = { group: "", leaf: leaf.getAttribute("data-f") ?? "" }
 }
 
 function asElement(node: Element): HTMLElement {
@@ -414,7 +418,8 @@ export function focusOn(
       : (childrenOf(target)
           .map((child) => resolve(child, null, null))
           .find((found) => found !== null) ?? null)
-  if (!leaf || !isShown(leaf)) return false
+  // Nothing under `data-foff` takes focus, as a panel sliding shut.
+  if (!leaf || !isShown(leaf) || leaf.closest("[data-foff]")) return false
   // Engines before Chromium 64 scroll what they focus into view whatever
   // they're told, so everything around it is put back where it was.
   const scrollers = ancestorsOf(leaf)
@@ -440,6 +445,13 @@ export function findLeaf(
   group: string,
   leaf: string,
 ): HTMLElement | null {
+  // No group: a leaf right in `root`.
+  if (group === "") {
+    return (
+      childrenOf(root).find((child) => child.getAttribute("data-f") === leaf) ??
+      null
+    )
+  }
   for (const container of root.querySelectorAll(GROUP)) {
     if (container.getAttribute("data-fg") !== group) continue
     const found = childrenOf(container).find(

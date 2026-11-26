@@ -179,6 +179,39 @@ function pressDown(key: RemoteKey, press: KeyPress) {
   }
 }
 
+/** An arrow's key code, as a keyboard sends it. */
+const ARROW_CODES = new Map<RemoteKey, number>([
+  ["left", 37],
+  ["up", 38],
+  ["right", 39],
+  ["down", 40],
+])
+
+/** The keydowns sent for a source without a keyboard, which the app's own listener lets pass. */
+const sent = new WeakSet<Event>()
+
+/**
+ * Hands an arrow to the focused thing as a keyboard's keydown first, so
+ * what takes the arrows itself, like a day to step or a chart's mark,
+ * hears a game controller's as it hears the keyboard's. True when it
+ * took the arrow.
+ */
+function offerArrow(key: RemoteKey, press: KeyPress): boolean {
+  const code = ARROW_CODES.get(key)
+  const target = focused()
+  if (code === undefined || !target) return false
+  const event = new KeyboardEvent("keydown", {
+    bubbles: true,
+    cancelable: true,
+    repeat: press.repeat,
+  })
+  // The constructor can't set the legacy code, which the handlers read.
+  Object.defineProperty(event, "keyCode", { get: () => code })
+  sent.add(event)
+  target.dispatchEvent(event)
+  return event.defaultPrevented
+}
+
 /**
  * Runs a key as the remote's would, for a source without a keyboard
  * event, like a game controller. `press.repeat` is a held key repeating.
@@ -189,12 +222,13 @@ export function pressRemoteKey(
   press: KeyPress,
 ) {
   if (tapped(key, phase, press)) return
-  if (phase === "down") pressDown(key, press)
-  else if (key === "select") onSelectUp()
+  if (phase === "down") {
+    if (!offerArrow(key, press)) pressDown(key, press)
+  } else if (key === "select") onSelectUp()
 }
 
 function onKeyDown(event: KeyboardEvent) {
-  if (event.defaultPrevented) return
+  if (event.defaultPrevented || sent.has(event)) return
   const key = remoteKey(event)
   if (!key) return
   event.preventDefault()
@@ -215,6 +249,7 @@ export function startNavigation() {
   document.addEventListener(
     "keydown",
     (event) => {
+      if (sent.has(event)) return
       const key = remoteKey(event)
       if (key && tapped(key, "down", pressOf(event))) {
         event.preventDefault()

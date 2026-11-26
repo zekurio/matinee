@@ -49,7 +49,19 @@ function sameRoute(a: Route, b: Route): boolean {
 
 export class Navigator extends Observable {
   private ids = 0
-  stack: Entry[] = [this.entry({ page: "home" })]
+  stack: Entry[]
+
+  /** `routes` are the pages to start on, Home first, as a reload kept them. */
+  constructor(routes: readonly Route[] = [{ page: "home" }]) {
+    super()
+    const [first, ...rest] = routes
+    this.stack = [
+      this.entry(first?.page === "home" ? first : { page: "home" }),
+      ...(first?.page === "home" ? rest : routes).map((route) =>
+        this.entry(route),
+      ),
+    ]
+  }
 
   private entry(route: Route): Entry {
     this.ids += 1

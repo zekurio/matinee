@@ -10,7 +10,11 @@
  *   inside something marked `data-scroll-home` takes the page back to its
  *   top instead, as a page's header does.
  * - `grid`: down a grid by whole rows, so none is ever cut off at the top.
- * - `near`: up or down, only as far as it takes to show the leaf.
+ * - `near`: up or down, only as far as it takes to show the leaf, and
+ *   back to the top for a leaf in `data-scroll-home`, as `pin` does. A
+ *   leaf inside something marked `data-scroll-head` brings that to the
+ *   top instead, by `data-scroll-start`, as a section's heading brings
+ *   in the section under it.
  *
  * Lengths in the attributes are in the design's units, as everywhere in
  * the styles: see the font size on `html` in kit.css.
@@ -119,7 +123,16 @@ function revealNear(
   leaf: HTMLElement,
   instant: boolean,
 ) {
+  if (leaf.closest("[data-scroll-home]")) {
+    scrollAxis(scroller, "y", 0, instant)
+    return
+  }
   const start = lengthOf(scroller, "data-scroll-start")
+  const head = leaf.closest<HTMLElement>("[data-scroll-head]")
+  if (head && scroller.contains(head)) {
+    scrollAxis(scroller, "y", placeIn(scroller, head).top - start, instant)
+    return
+  }
   const end = lengthOf(scroller, "data-scroll-end")
   const place = placeIn(scroller, leaf)
   const shown = headed(scroller, "y")

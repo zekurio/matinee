@@ -61,11 +61,28 @@ function DayField(props: {
         props.onStep(event.keyCode === 37 ? -1 : 1)
       }}
     >
-      <Icon icon={ChevronLeft} size={20} class="arrow" />
+      {/* The arrows step it by the pointer too. */}
+      <span
+        class="arrow center"
+        onClick={(event) => {
+          event.stopPropagation()
+          props.onStep(-1)
+        }}
+      >
+        <Icon icon={ChevronLeft} size={20} />
+      </span>
       <span class="t-facts words" style={{ "text-align": "center" }}>
         {props.value}
       </span>
-      <Icon icon={ChevronRight} size={20} class="arrow" />
+      <span
+        class="arrow center"
+        onClick={(event) => {
+          event.stopPropagation()
+          props.onStep(1)
+        }}
+      >
+        <Icon icon={ChevronRight} size={20} />
+      </span>
     </Tap>
   )
 }
@@ -325,8 +342,10 @@ export function ActionsPanel() {
     const current = view()
     return current?.kind === "day" ? current.ask : null
   }
-  const today = new Date()
+  // No later than now, as it is when stepped: an app left open for days
+  // would otherwise stop at the day it started.
   const step = (change: (date: Date) => void) => {
+    const today = new Date()
     const next = new Date(day())
     change(next)
     setDay(next > today ? today : next)

@@ -441,6 +441,33 @@ const MENU_NAMES = {
   settings: "playerMenuSettings",
 } satisfies Record<Menu, StringKey>
 
+/** Whether two menus read the same: the same rows, the same marks. */
+function sameEntries(
+  previous: readonly MenuEntry[],
+  next: readonly MenuEntry[],
+): boolean {
+  return (
+    previous.length === next.length &&
+    previous.every((entry, index) => {
+      const other = next[index]
+      if (!other || other.kind !== entry.kind || other.key !== entry.key) {
+        return false
+      }
+      if (entry.kind !== "choice" || other.kind !== "choice") {
+        return entry.kind === "choice" || other.kind === "choice"
+          ? false
+          : entry.text === other.text
+      }
+      return (
+        entry.title === other.title &&
+        (entry.detail ?? null) === (other.detail ?? null) &&
+        entry.selected === other.selected &&
+        (entry.disabled ?? false) === (other.disabled ?? false)
+      )
+    })
+  )
+}
+
 /** A menu as the TV's right-edge panel, over the dimmed picture, focus on the current choice. */
 function MenuPanel(props: {
   open: Menu | null
@@ -456,14 +483,23 @@ function MenuPanel(props: {
     },
   )
   const menu = () => props.open ?? last()
-  const entries = () => {
-    const current = menu()
-    return current ? menuEntries(current, props.controller) : []
-  }
-  const picked = () =>
-    entries().find(
-      (entry) => entry.kind === "choice" && entry.selected && !entry.disabled,
-    )
+  // The controller changes with every tick of the position, and the
+  // entries with it, so they're kept until one reads differently: drawn
+  // again each tick, the rows would flicker and focus would go back to
+  // the current choice before an arrow could move it.
+  const entries = createMemo(
+    () => {
+      const current = menu()
+      return current ? menuEntries(current, props.controller) : []
+    },
+    { equals: sameEntries },
+  )
+  const picked = createMemo(
+    () =>
+      entries().find(
+        (entry) => entry.kind === "choice" && entry.selected && !entry.disabled,
+      )?.key,
+  )
   return (
     <SidePanel
       open={props.open !== null}
@@ -472,7 +508,7 @@ function MenuPanel(props: {
         return current ? tr(MENU_NAMES[current]) : null
       })()}
       onBack={props.onDismiss}
-      initial={picked()?.key}
+      initial={picked()}
       focusKey={menu() ?? undefined}
     >
       <For each={entries()}>

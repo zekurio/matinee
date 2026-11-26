@@ -505,9 +505,11 @@ html.pointer-resting * {
 .search-top .field {
   height: 56rem;
 }
+/* 150 under the top margin, as the Flutter TV gives it: the heading, the
+   focused one's line, and two lines of its overview. */
 .favorites-head {
   flex: none;
-  height: 150rem;
+  height: 183rem;
   padding: 33rem var(--page-end) 0 var(--page-start);
 }
 
@@ -523,6 +525,9 @@ html.pointer-resting * {
   background: rgba(var(--fg-rgb), 0.07);
 }
 .day-field .arrow {
+  /* Room around the chevron for a pointer to hit. */
+  margin: -8rem;
+  padding: 8rem;
   opacity: 0;
 }
 .day-field:focus .arrow {
@@ -578,7 +583,7 @@ html.pointer-resting * {
   left: 16rem;
 }
 
-/* The profile: who they are, what they watched last, and their statistics. */
+/* The profile: who they are, their favorites, their statistics, and what they watched last. */
 .profile-rows {
   padding: 35rem 0 120rem;
 }
@@ -599,24 +604,41 @@ html.pointer-resting * {
 .profile-head > * + * {
   margin-left: 24rem;
 }
+.profile-who {
+  min-width: 0;
+}
+
+.profile-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 6rem;
+}
+.profile-facts > * {
+  margin-right: 18rem;
+}
+.profile-fact {
+  display: inline-flex;
+  align-items: center;
+}
+.profile-fact > svg {
+  margin-right: 5rem;
+}
 
 .profile-actions,
 .profile-ranges {
   display: flex;
-  padding-left: var(--page-start);
 }
 
 .profile-actions {
   margin-top: 32rem;
+  padding-left: var(--page-start);
 }
 .profile-actions > * + * {
   margin-left: 16rem;
 }
-.profile-ranges {
-  margin-top: 18rem;
-}
 .profile-ranges > * + * {
-  margin-left: 12rem;
+  margin-left: 10rem;
 }
 
 .see-all {
@@ -631,20 +653,136 @@ html.pointer-resting * {
   margin-bottom: 8rem;
 }
 
-.totals {
+/* The statistics' heading, with the ranges at its end, as the web's. */
+.stats-heading {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42rem;
+  margin: 0 var(--page-end) 14rem var(--page-start);
 }
-.totals > * + * {
-  margin-left: 48rem;
+.stats-heading > * + * {
+  margin-left: 24rem;
 }
 
-/* A chart is one focus stop; its mark shows where focus is, so it has no ring. */
+.stats-body {
+  margin: 0 var(--page-end) 0 var(--page-start);
+}
+.stats-body > * + * {
+  margin-top: 16rem;
+}
+
+/* A card of statistics, the web's: a rim, rounded, a step off the page. */
+.stats-card {
+  display: block;
+  padding: 12rem;
+  border: 1rem solid var(--border);
+  border-radius: 16rem;
+  background: rgba(var(--fg-rgb), 0.04);
+}
+.stats-head {
+  margin: 0 -12rem 8rem;
+  padding: 2rem 16rem 12rem;
+  border-bottom: 1rem solid var(--border);
+  font-weight: 600;
+}
+
+/* The watch time beside the totals, then the rest in two columns. */
+.stats-overview,
+.stats-columns {
+  display: flex;
+}
+.stats-columns {
+  align-items: flex-start;
+}
+.stats-overview > * + *,
+.stats-columns > * + * {
+  margin-left: 16rem;
+}
+.stats-watch {
+  flex: 1;
+  min-width: 0;
+  padding: 16rem 20rem;
+}
+.stats-column {
+  flex: 1;
+  min-width: 0;
+}
+.stats-column > * + * {
+  margin-top: 16rem;
+}
+
+.stats-figures {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 280rem;
+  padding: 0;
+}
+.stats-figure {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-height: 48rem;
+  padding: 0 16rem;
+}
+.stats-figure + .stats-figure {
+  border-top: 1rem solid var(--border);
+}
+.stats-figure > * + * {
+  margin-left: 14rem;
+}
+.stats-figure .lead {
+  flex: none;
+  opacity: 0.6;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+.strong {
+  flex: none;
+  font-weight: 600;
+}
+
+/* A row in a card: the most watched titles, the genres. */
+.item.stat-row {
+  min-height: 46rem;
+  padding: 6rem 12rem;
+  border-radius: 10rem;
+}
+.item.stat-row > * + * {
+  margin-left: 12rem;
+}
+.stat-rank {
+  flex: none;
+  width: 18rem;
+  font-weight: 600;
+  text-align: center;
+}
+.stat-rank.dim {
+  opacity: 0.6;
+}
+.stat-thumb {
+  position: relative;
+  flex: none;
+  width: 26rem;
+  height: 39rem;
+  overflow: hidden;
+  border-radius: 4rem;
+}
+
+/* A chart is one focus stop; its mark shows where focus is, and its rim lights. */
 .chart {
   outline: none;
 }
+.chart.stats-card:focus {
+  border-color: rgba(var(--fg-rgb), 0.6);
+}
 .chart-row {
   display: flex;
-  margin-top: 20rem;
+  margin-top: 16rem;
 }
 
 .chart-bars {
@@ -687,18 +825,18 @@ html.pointer-resting * {
 .chart-scale {
   position: relative;
   flex: none;
-  width: 88rem;
+  width: 76rem;
 }
 .chart-scale > span {
   position: absolute;
-  left: 14rem;
+  left: 12rem;
   white-space: nowrap;
 }
 
 .chart-ends {
   display: flex;
   justify-content: space-between;
-  margin: 8rem 88rem 0 0;
+  margin: 8rem 76rem 0 0;
 }
 
 .heat-row {
@@ -706,22 +844,22 @@ html.pointer-resting * {
   align-items: center;
 }
 .heat-row + .heat-row {
-  margin-top: 4rem;
+  margin-top: 3rem;
 }
 .heat-day {
   flex: none;
-  width: 64rem;
+  width: 44rem;
 }
 
 .heat-cell {
   flex: 1;
-  height: 24rem;
-  border-radius: 4rem;
+  height: 17rem;
+  border-radius: 3rem;
   background: rgba(var(--fg-rgb), 0.06);
 }
 
 .heat-cell + .heat-cell {
-  margin-left: 4rem;
+  margin-left: 3rem;
 }
 .heat-cell.marked {
   background: var(--fg);
@@ -734,22 +872,30 @@ html.pointer-resting * {
   white-space: nowrap;
 }
 
-/* A leaderboard's card, and a place on it. */
-.board {
+/* A board in the standing, and a place on it. */
+.ctl.board {
   display: block;
-  flex: none;
-  width: 300rem;
-  padding: 16rem 14rem;
-  border-radius: 16rem;
-  background: rgba(var(--fg-rgb), 0.07);
+  width: 100%;
+  padding: 8rem 8rem 10rem;
+  border-radius: 12rem;
+  background: transparent;
+}
+.ctl.board:focus {
+  background: var(--fg);
+  transform: scale(1.02);
+}
+.board + .board {
+  margin-top: 4rem;
 }
 
 .board-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 0 8rem 6rem;
+  padding: 0 0 6rem 6rem;
   opacity: 0.7;
+}
+.board-head > svg {
+  margin-left: 2rem;
 }
 
 .place {
@@ -761,10 +907,10 @@ html.pointer-resting * {
 }
 
 .place.small {
-  height: 40rem;
+  height: 36rem;
 }
 .place.small + .place.small {
-  margin-top: 4rem;
+  margin-top: 2rem;
 }
 .place > * + * {
   margin-left: 12rem;
@@ -785,8 +931,8 @@ html.pointer-resting * {
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 28rem;
-  height: 28rem;
+  width: 26rem;
+  height: 26rem;
   border-radius: 50%;
   opacity: 0.7;
 }

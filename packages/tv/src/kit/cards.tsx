@@ -1,11 +1,13 @@
 import type { Artwork } from "@matinee/contracts"
 import { artworkPath } from "@matinee/contracts/paths"
 import type { JSX } from "@solidjs/web"
+import { Check } from "lucide"
 import { Show, createEffect, createSignal } from "solid-js"
 
 import { usePicture } from "../api/images"
+import { tr } from "../i18n"
 import { type ImageSource, initials } from "../model/format"
-import { cx, Tap, type TapProps } from "./base"
+import { cx, Icon, Tap, type TapProps } from "./base"
 
 /*
  * The gradients that stand in for missing art: the surfaces, a step
@@ -18,7 +20,7 @@ const TONES = [
   ["#333336", "#222225"],
 ] as const
 
-function toneOf(key: string): string {
+export function toneOf(key: string): string {
   let hash = 0
   for (let index = 0; index < key.length; index += 1) {
     hash = (hash * 31 + key.charCodeAt(index)) | 0
@@ -99,9 +101,20 @@ export function ArtCard(
   )
 }
 
-/** The accent's dot on something watched. */
+/**
+ * The round check on something watched, in the accent: the web's and the
+ * Flutter app's `WatchedBadge`, at the Flutter TV's 26 across.
+ */
 export function WatchedMark() {
-  return <i class="watched-mark" />
+  return (
+    <span
+      class="watched-mark center"
+      role="img"
+      aria-label={tr("mediaWatched")}
+    >
+      <Icon icon={Check} size={16} />
+    </span>
+  )
 }
 
 /** How far into a file the person is: the accent on a dark track. */
