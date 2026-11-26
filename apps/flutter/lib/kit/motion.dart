@@ -99,27 +99,192 @@ abstract final class TvMotion {
 /// what went wrong. While [value] stays, [child] changes in place, however
 /// its widgets change. The first state shows without a fade, so a page
 /// whose data is already there opens as it is.
-class FadeSwitcher extends StatelessWidget {
+///
+/// A new state may build over several frames before it shows: something in
+/// it takes a [FadeSwitcher.hold], and until it lets go the state before
+/// stays as it was, and the new one is laid out under it but not painted.
+class FadeSwitcher extends StatefulWidget {
   const FadeSwitcher({super.key, required this.value, required this.child});
 
   final Object? value;
   final Widget child;
 
+  /// Keeps the state [context] is in from fading in until the callback
+  /// returned is called, for a page that builds what it shows over several
+  /// frames. Null when nothing would wait: [context] isn't a state on its
+  /// way in, or there's no state before it to show meanwhile.
+  static VoidCallback? hold(BuildContext context) {
+    final entry = context
+        .getInheritedWidgetOfExactType<_SwitcherEntryScope>()
+        ?.entry;
+    if (entry == null || !entry.waiting) return null;
+    entry.holds++;
+    var released = false;
+    return () {
+      if (released) return;
+      released = true;
+      entry.holds--;
+      entry.maybeStart();
+    };
+  }
+
+  @override
+  State<FadeSwitcher> createState() => _FadeSwitcherState();
+}
+
+/// One state in a [FadeSwitcher], fading in or out, or shown.
+class _SwitcherEntry {
+  _SwitcherEntry({
+    required this.serial,
+    required this.value,
+    required this.child,
+    required this.controller,
+    required this.waiting,
+    required this.onStart,
+  }) : opacity = CurvedAnimation(
+         parent: controller,
+         curve: KitMotion.easing,
+         reverseCurve: KitMotion.exitEasing,
+       );
+
+  final int serial;
+  final Object? value;
+  Widget child;
+  final AnimationController controller;
+  final CurvedAnimation opacity;
+  final VoidCallback onStart;
+
+  /// Whether it waits to fade in, for its first frame to say whether it's
+  /// held, and then for its holds.
+  bool waiting;
+  int holds = 0;
+
+  /// Fades it in, once its first frame is built and nothing holds it.
+  void maybeStart() {
+    if (!waiting || holds > 0) return;
+    waiting = false;
+    onStart();
+  }
+
+  void dispose() {
+    opacity.dispose();
+    controller.dispose();
+  }
+}
+
+class _FadeSwitcherState extends State<FadeSwitcher>
+    with TickerProviderStateMixin {
+  final _entries = <_SwitcherEntry>[];
+  var _serial = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _entries.add(_entry(widget.child, value: 1, waiting: false));
+  }
+
+  _SwitcherEntry _entry(
+    Widget child, {
+    required double value,
+    required bool waiting,
+  }) {
+    late final _SwitcherEntry entry;
+    entry = _SwitcherEntry(
+      serial: _serial++,
+      value: widget.value,
+      child: child,
+      controller: AnimationController(
+        vsync: this,
+        duration: KitMotion.enter,
+        reverseDuration: KitMotion.exit,
+        value: value,
+      ),
+      waiting: waiting,
+      onStart: () => _start(entry),
+    );
+    return entry;
+  }
+
+  @override
+  void didUpdateWidget(FadeSwitcher old) {
+    super.didUpdateWidget(old);
+    final current = _entries.last;
+    if (widget.value == current.value) {
+      current.child = widget.child;
+      return;
+    }
+    // A state that never showed goes without a fade.
+    if (current.waiting) {
+      _entries.removeLast();
+      current.dispose();
+    }
+    final entry = _entry(widget.child, value: 0, waiting: true);
+    _entries.add(entry);
+    // Its first frame builds it, and whatever in it holds it says so.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) entry.maybeStart();
+    });
+  }
+
+  /// Fades [entry] in, and every state before it out.
+  void _start(_SwitcherEntry entry) {
+    if (!mounted || !_entries.contains(entry)) return;
+    setState(() {});
+    for (final other in _entries) {
+      if (other == entry) continue;
+      other.controller.reverse().whenCompleteOrCancel(() {
+        if (!mounted || !other.controller.isDismissed) return;
+        setState(() => _entries.remove(other));
+        other.dispose();
+      });
+    }
+    entry.controller.forward();
+  }
+
+  @override
+  void dispose() {
+    for (final entry in _entries) {
+      entry.dispose();
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final child = KeyedSubtree(key: ValueKey(value), child: this.child);
-    if (MediaQuery.disableAnimationsOf(context)) return child;
-    return AnimatedSwitcher(
-      duration: KitMotion.enter,
-      reverseDuration: KitMotion.exit,
-      switchInCurve: KitMotion.easing,
-      switchOutCurve: KitMotion.exitEasing,
-      // The incoming child on top, each laid out as if it were alone.
-      layoutBuilder: (current, previous) =>
-          Stack(fit: StackFit.passthrough, children: [...previous, ?current]),
-      child: child,
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return KeyedSubtree(key: ValueKey(widget.value), child: widget.child);
+    }
+    // The newest on top, each laid out as if it were alone.
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        for (final entry in _entries)
+          KeyedSubtree(
+            key: ValueKey(entry.serial),
+            child: _SwitcherEntryScope(
+              entry: entry,
+              child: IgnorePointer(
+                ignoring: entry.waiting,
+                child: FadeTransition(
+                  opacity: entry.opacity,
+                  child: entry.child,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
+}
+
+/// Lets what a [FadeSwitcher] brings in find its entry, to hold it.
+class _SwitcherEntryScope extends InheritedWidget {
+  const _SwitcherEntryScope({required this.entry, required super.child});
+
+  final _SwitcherEntry entry;
+
+  @override
+  bool updateShouldNotify(_SwitcherEntryScope old) => false;
 }
 
 /// Tabs in one place, [index] the one in view. When [index] changes, the

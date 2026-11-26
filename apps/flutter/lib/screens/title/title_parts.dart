@@ -188,6 +188,11 @@ class PageState extends StatelessWidget {
 /// The page scrolling under its buttons, the sections [gap] apart. Once
 /// it scrolls, a [TopVeil] comes in behind the buttons and the status
 /// bar, so the text going under them doesn't show through.
+///
+/// Coming in over a spinner, it builds a section a frame, the first in
+/// view first, holding the spinner's [FadeSwitcher] until every section
+/// in view is built: building the page in one frame takes more than a
+/// frame at 120 Hz has, and the page fading in over another stutters.
 class TitleScaffold extends StatefulWidget {
   const TitleScaffold({
     super.key,
@@ -211,11 +216,49 @@ class _TitleScaffoldState extends State<TitleScaffold> {
   /// page has scrolled [TopVeil.travel].
   final _veil = ValueNotifier<double>(0);
 
+  /// How many sections the list has while they're built one a frame, or
+  /// null once it has them all.
+  int? _staged;
+
+  /// The last section the list built, to tell when the next would be out
+  /// of its reach.
+  int _lastBuilt = -1;
+
+  /// Lets the page fade in once its sections are built.
+  VoidCallback? _release;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_staged != null || _release != null) return;
+    _release = FadeSwitcher.hold(context);
+    if (_release != null) {
+      _staged = 1;
+      _afterFrame();
+    }
+  }
+
   @override
   void dispose() {
+    _release?.call();
     _veil.dispose();
     super.dispose();
   }
+
+  void _afterFrame() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    final staged = _staged;
+    if (!mounted || staged == null) return;
+    // The section added last frame was out of the list's reach, and so are
+    // all after it; or they're all in.
+    final done = _lastBuilt < staged - 1 || staged >= widget.sections.length;
+    setState(() => _staged = done ? null : staged + 1);
+    if (done) {
+      _release?.call();
+      _release = null;
+    } else {
+      _afterFrame();
+    }
+  });
 
   bool _scrolled(ScrollNotification notification) {
     if (notification.depth == 0) {
@@ -239,10 +282,16 @@ class _TitleScaffoldState extends State<TitleScaffold> {
                 padding: EdgeInsets.only(
                   bottom: 32 + MediaQuery.paddingOf(context).bottom,
                 ),
-                itemCount: widget.sections.length,
+                itemCount: math.min(
+                  _staged ?? widget.sections.length,
+                  widget.sections.length,
+                ),
                 separatorBuilder: (context, index) =>
                     SizedBox(height: widget.gap),
-                itemBuilder: (context, index) => widget.sections[index],
+                itemBuilder: (context, index) {
+                  if (index > _lastBuilt) _lastBuilt = index;
+                  return widget.sections[index];
+                },
               ),
             ),
           ),
