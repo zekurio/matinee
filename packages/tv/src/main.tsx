@@ -2,6 +2,7 @@ import type { User } from "@matinee/contracts"
 import { render } from "@solidjs/web"
 import { Show, onSettled } from "solid-js"
 
+import { useServerAccent } from "./app/accent"
 import { session } from "./auth/session"
 import { startNavigation } from "./input/navigation"
 import { startFullscreenOnGesture, startPointerIdle } from "./input/tv-mode"
@@ -20,6 +21,7 @@ function Root() {
   const observed = useObserved(session)
   const state = () => observed().state
   onSettled(() => session.start())
+  useServerAccent(state)
 
   // The signed-in app stays mounted while the same account is on the same
   // server, so a preference saved in Settings doesn't throw away the

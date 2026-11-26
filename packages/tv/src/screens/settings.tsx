@@ -284,33 +284,31 @@ function PlaybackRows(props: { open: Open }) {
           save({ ...playback(), skipForwardSeconds: Number(seconds) })
         }
       />
-      {codecs().length > 1 && (
-        <>
-          <ListHeading text={tr("playbackTranscodingTitle")} top={28} />
-          <PickRow
-            fid="videoCodec"
-            title={tr("playbackVideoCodecTitle")}
-            options={[
-              {
-                key: AUTOMATIC,
-                label: tr("playbackCodecAutomatic", encodeCodecName("h264")),
-              },
-              ...codecs().map((codec) => ({
-                key: codec,
-                label: encodeCodecName(codec),
-              })),
-            ]}
-            current={
-              codecs().includes(prefs().value.videoCodec)
-                ? prefs().value.videoCodec
-                : AUTOMATIC
-            }
-            open={props.open}
-            onPick={(videoCodec) => playerPrefs.set({ videoCodec })}
-          />
-          <RowNote text={tr("tvSettingsTranscodingNote")} />
-        </>
-      )}
+      <Show when={codecs().length > 1}>
+        <ListHeading text={tr("playbackTranscodingTitle")} top={28} />
+        <PickRow
+          fid="videoCodec"
+          title={tr("playbackVideoCodecTitle")}
+          options={[
+            {
+              key: AUTOMATIC,
+              label: tr("playbackCodecAutomatic", encodeCodecName("h264")),
+            },
+            ...codecs().map((codec) => ({
+              key: codec,
+              label: encodeCodecName(codec),
+            })),
+          ]}
+          current={
+            codecs().includes(prefs().value.videoCodec)
+              ? prefs().value.videoCodec
+              : AUTOMATIC
+          }
+          open={props.open}
+          onPick={(videoCodec) => playerPrefs.set({ videoCodec })}
+        />
+        <RowNote text={tr("tvSettingsTranscodingNote")} />
+      </Show>
     </>
   )
 }
@@ -471,8 +469,10 @@ function LanguageRows(props: { open: Open }) {
           })
         }
       />
-      {/* With subtitles off, which language they'd be in doesn't matter. */}
-      {playback().subtitleMode !== "off" && (
+      {/* With subtitles off, which language they'd be in doesn't matter.
+          A Show, so the row isn't drawn afresh, and loses focus, whenever
+          the account changes. */}
+      <Show when={playback().subtitleMode !== "off"}>
         <PickRow
           fid="subtitleLanguage"
           title={tr("playbackSubtitlesLanguage")}
@@ -495,7 +495,7 @@ function LanguageRows(props: { open: Open }) {
             })
           }
         />
-      )}
+      </Show>
       <SwitchRow
         fid="remember"
         title={tr("playbackSubtitlesRemember")}

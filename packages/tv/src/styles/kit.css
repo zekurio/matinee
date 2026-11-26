@@ -622,10 +622,12 @@ img {
   position: absolute;
   top: 8rem;
   right: 8rem;
-  width: 12rem;
-  height: 12rem;
+  width: 26rem;
+  height: 26rem;
   border-radius: 50%;
   background: var(--accent);
+  color: var(--accent-fg);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.3);
 }
 
 .badge {

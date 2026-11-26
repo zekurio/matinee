@@ -1,11 +1,21 @@
 import type {
+  Favorite,
   LeaderboardBoard,
   LeaderboardEntry,
   MediaItem,
   StatsRange,
   WatchStats,
 } from "@matinee/contracts"
-import { ChevronRight, Clock, LogOut } from "lucide"
+import {
+  ChevronRight,
+  Clock,
+  Film,
+  Heart,
+  Play,
+  Shield,
+  Tv,
+  TvMinimalPlay,
+} from "lucide"
 import { For, Show, createEffect, createSignal } from "solid-js"
 
 import { useHideClock } from "../app/chrome"
@@ -16,14 +26,24 @@ import { locale, plural, tr } from "../i18n"
 import { remoteKey } from "../input/keys"
 import { cx, Icon, Spinner, Tap } from "../kit/base"
 import { Button, Chip } from "../kit/buttons"
-import { ArtCard, Avatar, LandscapeCard, PosterCard, Row } from "../kit/cards"
+import {
+  ArtCard,
+  Avatar,
+  CaptionedPoster,
+  LandscapeCard,
+  Picture,
+  Row,
+  toneOf,
+} from "../kit/cards"
 import { SidePanel } from "../kit/panel"
 import {
   art,
   episodeCode,
   itemLabel,
   landscape,
+  present,
   progressRatio,
+  seasonName,
 } from "../model/format"
 import {
   type BoardStanding,
@@ -41,6 +61,7 @@ import {
   timeZone,
   weekdayName,
 } from "../model/stats"
+import type { Viewer } from "../model/viewer"
 import { GRID, PosterGrid } from "./grid"
 import { Message } from "./parts"
 
@@ -79,10 +100,18 @@ function WatchedCard(props: { item: MediaItem; onFocus?: () => void }) {
 }
 
 /** A line, and one under it, where a section has nothing to show. */
-function Notice(props: { title: string; detail?: string | null }) {
+function Notice(props: {
+  title: string
+  detail?: string | null
+  /** Under a row's title, a line in the body's size rather than another title. */
+  quiet?: boolean
+}) {
   return (
-    <div class="profile-inset">
-      <div class="t-title">{props.title}</div>
+    <div
+      class="profile-inset"
+      style={props.quiet ? { "margin-top": "12rem" } : undefined}
+    >
+      <div class={props.quiet ? "t-facts" : "t-title"}>{props.title}</div>
       {props.detail && (
         <div class="t-body muted" style={{ "margin-top": "4rem" }}>
           {props.detail}
@@ -100,17 +129,143 @@ function LoadingRow() {
   )
 }
 
+/** Whether `favorite` is still one, so a favorite taken off here goes at once. */
+function stillFavorite(viewer: Viewer, favorite: Favorite): boolean {
+  switch (favorite.kind) {
+    case "movie":
+    case "show":
+      return viewer.isFavorite(favorite.title)
+    case "showSeason":
+      return viewer.isSeasonFavorite(favorite.title, favorite.season)
+    case "episode":
+      return viewer.isItemFavorite(favorite.item)
+  }
+}
+
+/** A favorite's name in the row, as the web's `favoriteKey`. */
+function favoriteKey(favorite: Favorite): string {
+  switch (favorite.kind) {
+    case "movie":
+    case "show":
+      return `title/${favorite.title.id}`
+    case "showSeason":
+      return `season/${favorite.title.id}/${favorite.season.number}`
+    case "episode":
+      return `episode/${favorite.item.id}`
+  }
+}
+
+/**
+ * A favorite of any kind as a poster, so the row that mixes them lines
+ * up, as the web's: a movie or a show with its year, a season on its own
+ * poster, or an episode on its show's. An episode filed under no title
+ * has no poster to stand on and shows nothing.
+ */
+function FavoriteCard(props: { favorite: Favorite }) {
+  const { nav, viewer, actions } = useApp()
+  const card = () => {
+    const favorite = props.favorite
+    const fid = favoriteKey(favorite)
+    switch (favorite.kind) {
+      case "movie":
+      case "show": {
+        const title = favorite.title
+        return (
+          <CaptionedPoster
+            fid={fid}
+            name={title.name}
+            poster={art(title.images.poster)}
+            detail={title.year === null ? null : String(title.year)}
+            watched={viewer.isWatched(title)}
+            onPress={() => nav.title(title.id)}
+            onMenu={() => actions.open({ kind: "title", title })}
+          />
+        )
+      }
+      case "showSeason": {
+        const { title, season } = favorite
+        return (
+          <CaptionedPoster
+            fid={fid}
+            name={title.name}
+            poster={art(season.poster ?? title.images.poster)}
+            detail={seasonName(season.number)}
+            watched={
+              season.itemCount > 0 && season.watchedCount >= season.itemCount
+            }
+            onPress={() => nav.season(title.id, season.number)}
+            onMenu={() => actions.open({ kind: "season", title, season })}
+          />
+        )
+      }
+      case "episode": {
+        const item = favorite.item
+        const title = item.title
+        if (!title) return null
+        const label = itemLabel(item)
+        const code = episodeCode(item)
+        return (
+          <CaptionedPoster
+            fid={fid}
+            name={label.showName}
+            poster={art(title.images.poster)}
+            detail={
+              code ? tr("mediaCodeTitle", code, label.title) : label.title
+            }
+            watched={viewer.isItemWatched(item)}
+            onPress={() => nav.item(item)}
+            onMenu={() => actions.open({ kind: "item", item })}
+          />
+        )
+      }
+    }
+  }
+  return <>{card()}</>
+}
+
+/** The card at a row's end that opens the whole list. */
+function SeeAll(props: {
+  aspect: "poster" | "landscape"
+  onPress: () => void
+}) {
+  return (
+    <div class={props.aspect === "poster" ? "card-poster" : "card-landscape"}>
+      <ArtCard
+        fid="seeAll"
+        toneKey="seeAll"
+        aspect={props.aspect}
+        label={tr("tvProfileSeeAll")}
+        onPress={props.onPress}
+      >
+        <div class="see-all t-label">
+          <Icon icon={props.aspect === "poster" ? Heart : Clock} size={28} />
+          {tr("tvProfileSeeAll")}
+        </div>
+      </ArtCard>
+    </div>
+  )
+}
+
 /*
- * The profile's two charts. Each is one focus stop, so the page scrolls
- * to it and passes it with one press. Focused, the arrows move a mark
- * across its bars or squares, and the line above the chart reads out the
- * one marked. The mark is the text color, as a focused control fills with
- * it; an arrow past the chart's edge leaves it.
+ * The statistics, laid out as the web's profile has them: the watch time
+ * as a card beside the totals, then cards for the most watched titles,
+ * the genres, where the person stands on the leaderboard, and when they
+ * watch, in two columns. The two charts are one focus stop each, so the
+ * page passes them with one press. Focused, the arrows move a mark across
+ * their bars or squares, and the line above reads out the one marked. The
+ * mark is the text color, as a focused control fills with it; an arrow
+ * past the chart's edge leaves it.
  */
 
-/** How tall the watch-time bars can grow, and how wide their part of the page is. */
-const BARS_HEIGHT = 180
-const BARS_WIDTH = 760
+/** How tall the watch-time bars grow. */
+const BARS_HEIGHT = 132
+/** About how wide the bars run, which sets the gaps between them. */
+const BARS_WIDTH = 400
+
+/** A card's name, over a line across it, as the web's sections have it. */
+function CardHead(props: { title: string }) {
+  return <div class="stats-head t-facts one-line">{props.title}</div>
+}
 
 /**
  * The range's watch time: the total, large, over watch time per day,
@@ -135,15 +290,16 @@ function WatchTimeChart(props: { stats: WatchStats }) {
   const top = () =>
     scaleTop(Math.max(0, ...buckets().map((bucket) => bucket.watchSeconds)))
   // All time can hold hundreds of months, so the bars thin out to lines
-  // rather than leave the chart.
-  const slot = () => BARS_WIDTH / Math.max(1, buckets().length)
-  const gap = () => Math.min(slot() * 0.25, 8)
+  // rather than leave the chart. Each takes its share of the width.
+  const count = () => Math.max(1, buckets().length)
+  const share = () => 100 / count()
+  const gap = () => Math.min((BARS_WIDTH / count()) * 0.25, 8)
   const first = () => buckets()[0]
   const last = () => buckets().at(-1)
   return (
     <Tap
       fid="watchTime"
-      class="chart profile-inset"
+      class="chart stats-card stats-watch"
       role="group"
       label={tr("statsWatchTime")}
       onFocus={() => setFocused(true)}
@@ -157,7 +313,7 @@ function WatchTimeChart(props: { stats: WatchStats }) {
         setPicked(next)
       }}
     >
-      <div class="t-facts muted one-line">
+      <div class="t-label muted one-line">
         {shown()
           ? `${bucketName(shown()!.start, props.stats.unit)}  ·  ${plural("statsPlayCount", shown()!.plays)}`
           : `${tr("statsWatchTime")}  ·  ${rangeName(props.stats.range)}`}
@@ -175,8 +331,8 @@ function WatchTimeChart(props: { stats: WatchStats }) {
               <i
                 class="chart-slot"
                 style={{
-                  left: `${picked() * slot()}rem`,
-                  width: `${slot()}rem`,
+                  left: `${picked() * share()}%`,
+                  width: `${share()}%`,
                 }}
               />
             )}
@@ -189,10 +345,10 @@ function WatchTimeChart(props: { stats: WatchStats }) {
                       shown() && (index() === picked() ? "marked" : "dimmed"),
                     )}
                     style={{
-                      left: `${index() * slot() + gap() / 2}rem`,
-                      width: `${slot() - gap()}rem`,
+                      left: `calc(${index() * share()}% + ${gap() / 2}rem)`,
+                      width: `calc(${share()}% - ${gap()}rem)`,
                       height: `${Math.max(3, (bucket.watchSeconds / top()) * BARS_HEIGHT)}rem`,
-                      "border-radius": `${Math.min(4, (slot() - gap()) / 2)}rem`,
+                      "border-radius": `${Math.max(0, Math.min(4, (BARS_WIDTH / count() - gap()) / 2))}rem`,
                     }}
                   />
                 )
@@ -218,6 +374,121 @@ function WatchTimeChart(props: { stats: WatchStats }) {
   )
 }
 
+/**
+ * Plays and what was finished as a card of rows beside the watch time,
+ * as the web lists them: an icon, what the figure counts, and the figure.
+ */
+function Figures(props: { stats: WatchStats }) {
+  const figures = () => [
+    { icon: Play, label: tr("statsPlays"), value: props.stats.totals.plays },
+    {
+      icon: Film,
+      label: tr("statsMoviesFinished"),
+      value: props.stats.totals.movies,
+    },
+    {
+      icon: Tv,
+      label: tr("statsEpisodesFinished"),
+      value: props.stats.totals.episodes,
+    },
+    {
+      icon: TvMinimalPlay,
+      label: tr("statsShowsWatched"),
+      value: props.stats.totals.shows,
+    },
+  ]
+  return (
+    <div class="stats-card stats-figures">
+      <For each={figures()}>
+        {(figure) => (
+          <div class="stats-figure">
+            <Icon icon={figure.icon} size={20} class="lead" />
+            <span class="t-facts one-line grow">{figure.label}</span>
+            <span class="t-facts strong">
+              {figure.value.toLocaleString(locale)}
+            </span>
+          </div>
+        )}
+      </For>
+    </div>
+  )
+}
+
+/**
+ * The most watched titles, ranked, each with a small poster, how often it
+ * was played, and its watch time at the end. Select opens the title.
+ */
+function TopTitles(props: { stats: WatchStats }) {
+  const { nav, actions } = useApp()
+  return (
+    <div class="stats-card">
+      <CardHead title={tr("statsTop")} />
+      <div data-fg="top" data-fk="col">
+        <For each={props.stats.titles}>
+          {(entry, index) => (
+            <Tap
+              fid={entry.title.id}
+              class="ctl item quiet stat-row"
+              label={entry.title.name}
+              onPress={() => nav.title(entry.title.id)}
+              onMenu={() => actions.open({ kind: "title", title: entry.title })}
+            >
+              {/* The first three stand out, as on the web. */}
+              <span class={cx("stat-rank t-label", index() >= 3 && "dim")}>
+                {index() + 1}
+              </span>
+              <span
+                class="stat-thumb"
+                style={{ background: toneOf(entry.title.name) }}
+              >
+                <Picture sources={present(art(entry.title.images.poster))} />
+              </span>
+              <div class="words">
+                <div class="t-facts one-line">{entry.title.name}</div>
+                <div class="sub t-caption one-line">
+                  {plural("statsPlayCount", entry.plays)}
+                </div>
+              </div>
+              <span class="t-facts strong">
+                {formatWatchTime(entry.watchSeconds)}
+              </span>
+            </Tap>
+          )}
+        </For>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Watch time per genre, a row each. A title can have several genres, so
+ * their times add up to more than the whole. Select browses the genre.
+ */
+function Genres(props: { stats: WatchStats }) {
+  const { nav } = useApp()
+  return (
+    <div class="stats-card">
+      <CardHead title={tr("statsGenres")} />
+      <div data-fg="genres" data-fk="col">
+        <For each={props.stats.genres}>
+          {(genre) => (
+            <Tap
+              fid={genre.name}
+              class="ctl item quiet stat-row"
+              onPress={() => nav.push({ page: "browse", genre: genre.name })}
+            >
+              <div class="words t-facts one-line">{genre.name}</div>
+              <span class="t-facts strong">
+                {formatWatchTime(genre.watchSeconds)}
+              </span>
+            </Tap>
+          )}
+        </For>
+      </div>
+    </div>
+  )
+}
+
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7]
 const HOURS = [...Array(24).keys()]
 
@@ -238,10 +509,10 @@ function ViewingTimes(props: { stats: WatchStats }) {
   const [day, setDay] = createSignal(peak().weekday)
   const [hour, setHour] = createSignal(peak().hour)
   createEffect(
-    () => props.stats,
-    () => {
-      setDay(peak().weekday)
-      setHour(peak().hour)
+    () => peak(),
+    (cell) => {
+      setDay(cell.weekday)
+      setHour(cell.hour)
     },
   )
   const seconds = () =>
@@ -255,7 +526,7 @@ function ViewingTimes(props: { stats: WatchStats }) {
   return (
     <Tap
       fid="viewingTimes"
-      class="chart profile-inset"
+      class="chart stats-card"
       role="group"
       label={tr("statsHeatmapTitle")}
       onFocus={() => setFocused(true)}
@@ -273,10 +544,10 @@ function ViewingTimes(props: { stats: WatchStats }) {
         setDay(toDay)
       }}
     >
-      <div class="t-title one-line">{tr("statsHeatmapTitle")}</div>
+      <CardHead title={tr("statsHeatmapTitle")} />
       <div
-        class={cx("t-facts one-line", !focused() && "muted")}
-        style={{ margin: "4rem 0 16rem" }}
+        class={cx("t-label one-line", !focused() && "muted")}
+        style={{ margin: "0 0 12rem" }}
       >
         {focused()
           ? `${tr(
@@ -324,10 +595,10 @@ function ViewingTimes(props: { stats: WatchStats }) {
           </div>
         )}
       </For>
-      {/* The hours under the squares, every three. */}
+      {/* The hours under the squares, every six, as the web marks them. */}
       <div class="heat-row heat-hours t-caption muted">
         <span class="heat-day" />
-        <For each={HOURS.filter((cell) => cell % 3 === 0)}>
+        <For each={HOURS.filter((cell) => cell % 6 === 0)}>
           {(cell) => <span>{hourName(cell)}</span>}
         </For>
       </div>
@@ -337,7 +608,8 @@ function ViewingTimes(props: { stats: WatchStats }) {
 
 /**
  * A place: the rank, the podium's in the accent, the person, and the
- * value. `small` is a board's card, where the user's own place is lit.
+ * value. `small` is a board's in the standing, where the user's own place
+ * is lit.
  */
 function Place(props: {
   place: LeaderboardEntry
@@ -364,7 +636,7 @@ function Place(props: {
       <Avatar
         name={name()}
         url={props.place.user.avatarUrl}
-        size={props.small ? 28 : 36}
+        size={props.small ? 26 : 36}
       />
       <span class="place-name one-line">
         {props.place.self ? tr("statsNameYou", name()) : name()}
@@ -375,10 +647,10 @@ function Place(props: {
 }
 
 /**
- * Where the user stands on each board, a card per board with their place
- * between the people just above and below them. Select opens the board
- * whole in a panel. The last range's boards stay while the next one's
- * load, so the row doesn't drop out from under focus.
+ * Where the user stands on each board, as a card of boards, each with
+ * their place between the people just above and below them. Select opens
+ * the board whole in a panel. The last range's boards stay while the next
+ * one's load, so the card doesn't drop out from under focus.
  */
 function Standing(props: {
   range: StatsRange
@@ -393,28 +665,25 @@ function Standing(props: {
     if (value) last = standingsOf(value)
     return last
   }
-  // The cards are as tall as the one with the most places, so the row reads as one.
-  const places = () =>
-    Math.max(...standings().map((standing) => standing.places.length))
   return (
     <Show when={standings().length > 0}>
-      <Row title={tr("statsStandingTitle")} name="standing">
-        <For each={standings()}>
-          {(standing) => (
-            <Tap
-              fid={standing.board.metric}
-              class="ctl board"
-              onPress={() => props.onOpen(standing.board)}
-            >
-              <div class="board-head t-label">
-                <span class="one-line">
-                  {metricName(standing.board.metric)}
-                </span>
-                <Icon icon={ChevronRight} size={18} />
-              </div>
-              <div
-                style={{ height: `${places() * 40 + (places() - 1) * 4}rem` }}
+      <div class="stats-card">
+        <CardHead title={tr("statsStandingTitle")} />
+        <div data-fg="standing" data-fk="col">
+          <For each={standings()}>
+            {(standing) => (
+              <Tap
+                fid={standing.board.metric}
+                class="ctl board"
+                label={metricName(standing.board.metric)}
+                onPress={() => props.onOpen(standing.board)}
               >
+                <div class="board-head t-label">
+                  <span class="one-line">
+                    {metricName(standing.board.metric)}
+                  </span>
+                  <Icon icon={ChevronRight} size={16} />
+                </div>
                 <For each={standing.places}>
                   {(place) => (
                     <Place
@@ -424,11 +693,11 @@ function Standing(props: {
                     />
                   )}
                 </For>
-              </div>
-            </Tap>
-          )}
-        </For>
-      </Row>
+              </Tap>
+            )}
+          </For>
+        </div>
+      </div>
     </Show>
   )
 }
@@ -479,38 +748,16 @@ function BoardPanel(props: {
   )
 }
 
-/** Plays and what was finished, as large figures across. The watch time is the chart's, above. */
-function Totals(props: { stats: WatchStats }) {
-  const figures = (): [number, string][] => [
-    [props.stats.totals.plays, tr("statsPlays")],
-    [props.stats.totals.movies, tr("statsMoviesFinished")],
-    [props.stats.totals.episodes, tr("statsEpisodesFinished")],
-    [props.stats.totals.shows, tr("statsShowsWatched")],
-  ]
-  return (
-    <div class="profile-inset totals">
-      <For each={figures()}>
-        {([value, label]) => (
-          <div>
-            <div class="t-display one-line">{value.toLocaleString(locale)}</div>
-            <div class="t-label muted one-line">{label}</div>
-          </div>
-        )}
-      </For>
-    </div>
-  )
-}
-
 /**
- * The signed-in person on a TV, from the drawer's top entry: who they
- * are, Sign out, what they watched last as a row of cards, then their
- * statistics for a range: watch time over the range as bars, the other
- * totals as large figures, their most watched titles, their genres, where
- * they stand on the leaderboard, and when in the week they watch. A
- * leaderboard board opens whole in the right-edge panel.
+ * The signed-in person on a TV, from the drawer's top entry, laid out as
+ * the web's profile: who they are, their favorites as a
+ * row of posters, their statistics for a range, and what they watched
+ * last as a row of stills. A leaderboard board opens whole in the
+ * right-edge panel. The web's requests row has no place here, since the
+ * TV can't ask for titles.
  */
 export function ProfilePage() {
-  const { user, nav } = useApp()
+  const { user, nav, viewer } = useApp()
   const api = session.api
   const profile = useLoader("profile", () =>
     api.profiles.get({ username: user.username }),
@@ -548,15 +795,12 @@ export function ProfilePage() {
     const loaded = profile().value
     return loaded ? joinedMonth(loaded.user.createdAt) : null
   }
-  const facts = () =>
-    [
-      user.displayName ? `@${user.username}` : null,
-      joined() ? tr("profileJoined", joined() ?? "") : null,
-      user.role === "admin" ? tr("profileAdmin") : null,
-    ].filter(Boolean)
-  const recent = () => profile().value?.recent ?? []
-  // The first card they watched, rather than Sign out, once the profile shows whether there is one.
-  const first = () => recent()[0]?.item.id
+  const loaded = () => profile().value
+  const favorites = () =>
+    (loaded()?.favorites ?? []).filter((favorite) =>
+      stillFavorite(viewer, favorite),
+    )
+  const recent = () => loaded()?.recent ?? []
   const loading = () => profile().state.kind === "loading"
 
   return (
@@ -564,36 +808,42 @@ export function ProfilePage() {
       class="page fill"
       start={() => {
         if (loading()) return null
-        return first() ? ["recent", first() ?? ""] : ["actions", "signOut"]
+        const favorite = favorites()[0]
+        if (favorite) return ["favorites", favoriteKey(favorite)]
+        // Without favorites, the first thing the statistics show, once they do.
+        return shown() === null && stats().state.kind === "loading"
+          ? null
+          : undefined
       }}
     >
       <div
         class={cx("detail-list fill", scrolled() && "scrolled")}
-        data-scroll="pin"
-        data-scroll-pivot="96"
+        data-scroll="near"
+        data-scroll-start="64"
+        data-scroll-end="48"
         onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 4)}
       >
         <div class="profile-rows">
-          <div data-scroll-home="">
+          <div>
             <div class="profile-head">
               <Avatar name={name} url={user.avatarUrl} size={96} />
-              <div>
+              <div class="profile-who">
                 <div class="t-display one-line">{name}</div>
-                {facts().length > 0 && (
-                  <div class="t-facts muted" style={{ "margin-top": "6rem" }}>
-                    {facts().join("  ·  ")}
-                  </div>
-                )}
+                {/* The username under a display name, the role, and when
+                    they joined, as the web lists them. */}
+                <div class="profile-facts t-facts muted">
+                  {user.displayName && <span>@{user.username}</span>}
+                  {user.role === "admin" && (
+                    <span class="profile-fact">
+                      <Icon icon={Shield} size={16} />
+                      {tr("profileAdmin")}
+                    </span>
+                  )}
+                  <Show when={joined()}>
+                    {(month) => <span>{tr("profileJoined", month())}</span>}
+                  </Show>
+                </div>
               </div>
-            </div>
-            {/* Sign out. Settings is in the drawer. */}
-            <div class="profile-actions" data-fg="actions" data-fk="row">
-              <Button
-                fid="signOut"
-                label={tr("shellSignOut")}
-                icon={LogOut}
-                onPress={() => session.signOut()}
-              />
             </div>
           </div>
           <Show when={loading()}>
@@ -610,134 +860,156 @@ export function ProfilePage() {
               />
             )}
           </Show>
+          {/* The header takes no focus, so the row under it takes the page
+              back to the top, the header with it. */}
+          <Show when={loaded()}>
+            <Show
+              when={favorites().length > 0}
+              fallback={
+                <div>
+                  <div class="row-title t-title one-line">
+                    {tr("favoritesTitle")}
+                  </div>
+                  <Notice
+                    title={tr("favoritesEmpty")}
+                    detail={tr("tvFavoritesEmptyHint")}
+                    quiet
+                  />
+                </div>
+              }
+            >
+              <div data-scroll-home="">
+                <Row title={tr("favoritesTitle")} name="favorites">
+                  <For each={favorites()}>
+                    {(favorite) => <FavoriteCard favorite={favorite} />}
+                  </For>
+                  <SeeAll
+                    aspect="poster"
+                    onPress={() => nav.push({ page: "favorites" })}
+                  />
+                </Row>
+              </div>
+            </Show>
+          </Show>
+          <div>
+            {/* The ranges bring the whole section in, not just their row. */}
+            <div
+              class="stats-heading"
+              data-scroll-head=""
+              data-scroll-home={favorites().length > 0 ? undefined : ""}
+            >
+              <div class="t-title one-line">{tr("profileStatistics")}</div>
+              {/* The ranges as pills, the one picked marked; Select picks another. */}
+              {!neverWatched() && (
+                <div class="profile-ranges" data-fg="ranges" data-fk="row">
+                  <For each={RANGES}>
+                    {(candidate) => (
+                      <Chip
+                        fid={candidate}
+                        label={rangeName(candidate)}
+                        selected={candidate === range()}
+                        onPress={() => setKept(candidate)}
+                      />
+                    )}
+                  </For>
+                </div>
+              )}
+            </div>
+            <Show
+              when={shown()}
+              fallback={
+                <Show
+                  when={stats().state.kind === "failed" ? stats().state : null}
+                  keyed
+                  fallback={<LoadingRow />}
+                >
+                  {(state) => (
+                    <Notice
+                      title={tr("profileStatsFailed")}
+                      detail={state.kind === "failed" ? state.message : null}
+                    />
+                  )}
+                </Show>
+              }
+            >
+              {(current) => (
+                <Show
+                  when={!neverWatched()}
+                  fallback={
+                    <Notice
+                      title={tr("profileSelfEmpty")}
+                      detail={tr("profileSelfEmptyHint")}
+                    />
+                  }
+                >
+                  <Show
+                    when={current().totals.plays > 0}
+                    fallback={
+                      <div>
+                        <Notice
+                          title={tr(
+                            "profileNothingWatched",
+                            rangePhrase(range()),
+                          )}
+                        />
+                        <div
+                          class="profile-actions"
+                          data-fg="allTime"
+                          data-fk="row"
+                          style={{ "margin-top": "16rem" }}
+                        >
+                          <Button
+                            fid="allTime"
+                            label={tr("profileShowAllTime")}
+                            onPress={() => setKept("all")}
+                          />
+                        </div>
+                      </div>
+                    }
+                  >
+                    <div class="stats-body">
+                      <div class="stats-overview">
+                        <WatchTimeChart stats={current()} />
+                        <Figures stats={current()} />
+                      </div>
+                      <div class="stats-columns">
+                        <div class="stats-column">
+                          <Show when={current().titles.length > 0}>
+                            <TopTitles stats={current()} />
+                          </Show>
+                          <Show when={current().genres.length > 0}>
+                            <Genres stats={current()} />
+                          </Show>
+                        </div>
+                        <div class="stats-column">
+                          <Standing
+                            range={range()}
+                            onOpen={(picked) => {
+                              setBoard(picked)
+                              setBoardOpen(true)
+                            }}
+                          />
+                          <Show when={current().activity.length > 0}>
+                            <ViewingTimes stats={current()} />
+                          </Show>
+                        </div>
+                      </div>
+                    </div>
+                  </Show>
+                </Show>
+              )}
+            </Show>
+          </div>
           <Show when={recent().length > 0}>
             <Row title={tr("profileRecent")} name="recent">
               <For each={recent()}>
                 {(entry) => <WatchedCard item={entry.item} />}
               </For>
-              <div class="card-landscape">
-                <ArtCard
-                  fid="seeAll"
-                  toneKey="seeAll"
-                  aspect="landscape"
-                  label={tr("tvProfileSeeAll")}
-                  onPress={() => nav.push({ page: "recent" })}
-                >
-                  <div class="see-all t-label">
-                    <Icon icon={Clock} size={28} />
-                    {tr("tvProfileSeeAll")}
-                  </div>
-                </ArtCard>
-              </div>
+              <SeeAll
+                aspect="landscape"
+                onPress={() => nav.push({ page: "recent" })}
+              />
             </Row>
-          </Show>
-          <div>
-            <div class="t-headline profile-inset">
-              {tr("profileStatistics")}
-            </div>
-            {/* The ranges as pills, the one picked marked; Select picks another. */}
-            {!neverWatched() && (
-              <div class="profile-ranges" data-fg="ranges" data-fk="row">
-                <For each={RANGES}>
-                  {(candidate) => (
-                    <Chip
-                      fid={candidate}
-                      label={rangeName(candidate)}
-                      selected={candidate === range()}
-                      onPress={() => setKept(candidate)}
-                    />
-                  )}
-                </For>
-              </div>
-            )}
-          </div>
-          <Show
-            when={shown()}
-            fallback={
-              <Show
-                when={stats().state.kind === "failed" ? stats().state : null}
-                keyed
-                fallback={<LoadingRow />}
-              >
-                {(state) => (
-                  <Notice
-                    title={state.kind === "failed" ? state.message : ""}
-                  />
-                )}
-              </Show>
-            }
-          >
-            {(current) => (
-              <Show
-                when={!neverWatched()}
-                fallback={
-                  <Notice
-                    title={tr("profileSelfEmpty")}
-                    detail={tr("profileSelfEmptyHint")}
-                  />
-                }
-              >
-                <Show
-                  when={current().totals.plays > 0}
-                  fallback={
-                    <Notice
-                      title={tr("profileNothingWatched", rangePhrase(range()))}
-                    />
-                  }
-                >
-                  <WatchTimeChart stats={current()} />
-                  <Totals stats={current()} />
-                  <Show when={current().titles.length > 0}>
-                    <Row title={tr("statsTop")} name="top">
-                      <For each={current().titles}>
-                        {(entry) => (
-                          <div class="card-poster">
-                            <PosterCard
-                              fid={entry.title.id}
-                              name={entry.title.name}
-                              poster={art(entry.title.images.poster)}
-                              onPress={() => nav.title(entry.title.id)}
-                            />
-                            <div class="card-caption t-label one-line">
-                              {entry.title.name}
-                            </div>
-                            <div class="t-caption muted one-line">
-                              {formatWatchTime(entry.watchSeconds)}
-                            </div>
-                          </div>
-                        )}
-                      </For>
-                    </Row>
-                  </Show>
-                  <Show when={current().genres.length > 0}>
-                    <Row title={tr("statsGenres")} name="genres" buttons>
-                      <For each={current().genres}>
-                        {(genre) => (
-                          <Button
-                            fid={genre.name}
-                            label={genre.name}
-                            detail={formatWatchTime(genre.watchSeconds)}
-                            onPress={() =>
-                              nav.push({ page: "browse", genre: genre.name })
-                            }
-                          />
-                        )}
-                      </For>
-                    </Row>
-                  </Show>
-                  <Standing
-                    range={range()}
-                    onOpen={(picked) => {
-                      setBoard(picked)
-                      setBoardOpen(true)
-                    }}
-                  />
-                  <Show when={current().activity.length > 0}>
-                    <ViewingTimes stats={current()} />
-                  </Show>
-                </Show>
-              </Show>
-            )}
           </Show>
         </div>
       </div>

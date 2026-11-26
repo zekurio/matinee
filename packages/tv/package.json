@@ -17,6 +17,7 @@
     "@fontsource-variable/red-hat-text": "5.3.0",
     "@matinee/client": "workspace:*",
     "@matinee/contracts": "workspace:*",
+    "@matinee/ui": "workspace:*",
     "@solidjs/web": "2.0.3",
     "lucide": "1.69.0",
     "qrcode-generator": "2.0.4",

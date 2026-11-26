@@ -9,7 +9,7 @@ import {
 } from "solid-js"
 
 import { ChromeContext } from "../app/chrome"
-import { focused, focusOn } from "../input/focus"
+import { findLeaf, focused, focusOn } from "../input/focus"
 import { refocus, useBack, useRefocus } from "../input/navigation"
 import { cx, Spinner } from "./base"
 import { ListItem, ListValue } from "./buttons"
@@ -42,6 +42,9 @@ export function SidePanel(props: {
 }) {
   let list: HTMLDivElement | undefined
   let opener: HTMLElement | null = null
+  // Where the opener sat, by its page, its group, and its name, to find
+  // it again if it was drawn afresh while the panel was open.
+  let openerPlace: { trap: Element; group: string; leaf: string } | null = null
   const chrome = useContext(ChromeContext)
   // Once opened, what it showed stays drawn while it slides away and after.
   const [shown, setShown] = createSignal(false)
@@ -76,6 +79,13 @@ export function SidePanel(props: {
       if (!open) return
       setShown(true)
       opener = focused()
+      const trap = opener?.closest("[data-ft]")
+      const group = opener?.parentElement?.closest("[data-fg]")
+      const leaf = opener?.getAttribute("data-f")
+      openerPlace =
+        trap && group && leaf
+          ? { trap, group: group.getAttribute("data-fg") ?? "", leaf }
+          : null
     },
   )
 
@@ -117,15 +127,22 @@ export function SidePanel(props: {
       wasOpen = false
       if (back !== false) {
         if (back) back()
-        else if (!focusOn(opener)) refocus()
+        else if (!focusOn(opener) && !focusOn(redrawnOpener())) refocus()
       }
       opener = null
+      openerPlace = null
     },
   )
 
   onSettled(() => {
     if (props.open) setShown(true)
   })
+
+  /** The opener as drawn again, in its place, when the first one is gone. */
+  function redrawnOpener(): HTMLElement | null {
+    const place = openerPlace
+    return place ? findLeaf(place.trap, place.group, place.leaf) : null
+  }
 
   return (
     <>
