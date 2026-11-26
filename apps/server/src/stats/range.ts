@@ -17,8 +17,8 @@ const RANGE_DAYS = new Map<StatsRange, number>([
   ["365d", 365],
 ])
 
-// "All time" switches to longer buckets past these spans, in days, and
-// spans at least the shortest.
+// "All time" and a year start at the first day with data and switch to
+// longer buckets past these spans, in days. They span at least the shortest.
 const MIN_DAYS = 7
 const DAILY_UP_TO = 92
 const WEEKLY_UP_TO = 731
@@ -125,26 +125,29 @@ function nextBucket(start: string, unit: StatsUnit): string {
 }
 
 function unitFor(range: StatsRange, spanDays: number): StatsUnit {
-  if (range === "365d") return "week"
-  if (range !== "all") return "day"
+  if (range !== "all" && range !== "365d") return "day"
   if (spanDays <= DAILY_UP_TO) return "day"
   return spanDays <= WEEKLY_UP_TO ? "week" : "month"
 }
 
 /**
  * The bucket length and every bucket's first day, from the range's first
- * day through today. `first` is the earliest day with data, which only
- * all time needs; it shows at least a week, so a short history isn't a few
- * wide bars. Days are YYYY-MM-DD.
+ * day through today. `first` is the earliest day with data, where all time
+ * and a year start, so a year that began a month ago isn't mostly empty
+ * weeks. They show at least a week, so a short history isn't a few wide
+ * bars. Days are YYYY-MM-DD.
  */
 export function planBuckets(range: StatsRange, today: string, first: string) {
   const days = RANGE_DAYS.get(range)
   const weekAgo = addDays(today, -(MIN_DAYS - 1))
-  const from = days
-    ? addDays(today, -(days - 1))
-    : first < weekAgo
-      ? first
-      : weekAgo
+  const rangeStart = days ? addDays(today, -(days - 1)) : undefined
+  const earliest = first < weekAgo ? first : weekAgo
+  const from =
+    rangeStart === undefined
+      ? earliest
+      : range === "365d" && earliest > rangeStart
+        ? earliest
+        : rangeStart
   const spanDays =
     (dayDate(today).getTime() - dayDate(from).getTime()) / 86_400_000 + 1
   const unit = unitFor(range, spanDays)
