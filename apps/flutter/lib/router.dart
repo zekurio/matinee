@@ -360,20 +360,7 @@ GoRoute _authRoute(String path, Widget screen) => GoRoute(
 /// of a place takes another's: a sign-in step for the next, or the app for
 /// the sign-in once the session is there.
 Page<void> _fadePage(GoRouterState state, Widget child) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      name: state.name ?? state.path,
-      transitionDuration: KitMotion.enter,
-      reverseTransitionDuration: KitMotion.exit,
-      transitionsBuilder: (context, animation, secondary, child) =>
-          MediaQuery.disableAnimationsOf(context)
-          ? child
-          : FadeTransition(
-              opacity: animation.drive(CurveTween(curve: KitMotion.easing)),
-              child: child,
-            ),
-      child: child,
-    );
+    FadePage(key: state.pageKey, name: state.name ?? state.path, child: child);
 
 /// The tabs, each with its own stack, and the pages that open over them. Pages
 /// open over the tabs, on the root navigator: a title page fills the screen
