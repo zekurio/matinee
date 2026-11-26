@@ -72,8 +72,8 @@ To time frames on a device, build a profile APK with
 `flutter build apk --profile --dart-define=MATINEE_FRAME_STATS=true`, install
 it, and follow `adb logcat -s flutter`. Each second in which frames were
 drawn prints a `frame-stats` line: the display's budget, the 50th, 90th, and
-longest build and raster times, and how many frames went over the budget. A
-normal build leaves the logger out.
+longest build and raster times, how many frames went over the budget, and how
+many display refreshes the run skipped. A normal build leaves the logger out.
 
 ### iOS
 
