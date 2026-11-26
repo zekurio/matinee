@@ -98,7 +98,9 @@ export function usePhoneDestinations(): () => Destination[] {
  * The rail shows the icon alone, on a rounded square where the tabs have
  * the wide pill, which is a shape for an icon with a word under it. It has
  * no tile behind it: the open destination takes the accent color, and a
- * pointer over another brightens that glyph alone. A word under each icon
+ * pointer over another brightens that glyph alone. Nothing on it moves or
+ * fades: a press doesn't shrink it, and its color changes at once, since a
+ * fade would stall halfway while the next page builds. A word under each icon
  * had to fit 80 pixels in every language, and "Einstellungen" doesn't. Its
  * label is the kit's tooltip beside the icon and the link's name for a
  * screen reader.
@@ -122,7 +124,7 @@ const destinationIcon =
 
 /** The rail's glyph: a color change alone, with the accent marking the page. */
 const railIcon =
-  "relative size-6 text-muted-foreground transition-colors duration-200 group-hover/tab:text-foreground group-data-[status=active]/tab:text-primary motion-reduce:transition-none"
+  "relative size-6 text-muted-foreground group-hover/tab:text-foreground group-data-[status=active]/tab:text-primary"
 
 export function DestinationFace(props: {
   icon: IconNode
@@ -133,8 +135,10 @@ export function DestinationFace(props: {
     <>
       <span
         class={[
-          "relative grid place-items-center transition-transform duration-200 group-active/tab:scale-[0.92] motion-reduce:transition-none",
-          props.rail ? "size-10" : "h-8 w-16",
+          "relative grid place-items-center",
+          props.rail
+            ? "size-10"
+            : "h-8 w-16 transition-transform duration-200 group-active/tab:scale-[0.92] motion-reduce:transition-none",
         ]}
       >
         <Show when={!props.rail}>
