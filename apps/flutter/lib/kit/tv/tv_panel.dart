@@ -57,10 +57,10 @@ class TvPanelRoute<T> extends PopupRoute<T> {
   String? get barrierLabel => title ?? 'panel';
 
   @override
-  Duration get transitionDuration => KitMotion.move;
+  Duration get transitionDuration => TvMotion.move;
 
   @override
-  Duration get reverseTransitionDuration => KitMotion.exit;
+  Duration get reverseTransitionDuration => TvMotion.exit;
 
   @override
   TickerFuture didPush() {
@@ -97,8 +97,8 @@ class TvPanelRoute<T> extends PopupRoute<T> {
   ) {
     final slide = CurvedAnimation(
       parent: animation,
-      curve: KitMotion.easing,
-      reverseCurve: KitMotion.exitEasing,
+      curve: TvMotion.easing,
+      reverseCurve: TvMotion.exitEasing,
     );
     return Stack(
       fit: StackFit.expand,

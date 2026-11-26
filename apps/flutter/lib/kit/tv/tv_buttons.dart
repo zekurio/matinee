@@ -139,8 +139,8 @@ class TvIconButton extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: AnimatedSize(
-            duration: focused ? KitMotion.enter : KitMotion.exit,
-            curve: focused ? KitMotion.easing : KitMotion.exitEasing,
+            duration: focused ? TvMotion.enter : TvMotion.exit,
+            curve: focused ? TvMotion.easing : TvMotion.exitEasing,
             alignment: AlignmentDirectional.centerStart,
             child: Row(
               mainAxisSize: MainAxisSize.min,

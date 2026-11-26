@@ -530,8 +530,8 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AnimatedSwitcher(
-    duration: KitMotion.enter,
-    reverseDuration: KitMotion.exit,
+    duration: TvMotion.enter,
+    reverseDuration: TvMotion.exit,
     layoutBuilder: (current, previous) =>
         Stack(alignment: Alignment.topLeft, children: [...previous, ?current]),
     child: item == null

@@ -1,8 +1,21 @@
 import 'package:flutter/widgets.dart';
 
-/// How everything in the app moves, phone, tablet, TV, and player alike:
-/// the web's timings and curves. A part that animates takes its time and
-/// curve from here, through [of] where the system can ask for less motion.
+/// How the touch screens move, on phones and tablets, and the player: after
+/// Material 3's durations and Compose's FastOutSlowIn, as Findroid, a stock
+/// Material 3 app, moves. A part that animates takes its time and curve
+/// from here, through [of] where the system can ask for less motion. The
+/// TV screens move as the web does, with [TvMotion].
+///
+/// These differ from the web's on purpose. The web's curve,
+/// cubic-bezier(0.22, 1, 0.36, 1), covers three quarters of its way in the
+/// first quarter of its time, so on a phone a 280 ms move read as over in
+/// about 70 ms, and a 120 ms color change as a flash. FastOutSlowIn starts
+/// gently and reaches nine tenths at two thirds of its time, so every value
+/// here gives at least about 100 ms of change a person can see. Material's
+/// springs aren't used: its standard spatial spring (damping 0.9, stiffness
+/// 700) is nine tenths there in about 130 ms, nearly as sudden as the web's
+/// curve, and Flutter's implicit animations, which most of these drive,
+/// would keep none of a spring's velocity when retargeted.
 ///
 /// Pages that open over others move as the theme says: on Android they
 /// fade (`page_motion.dart`), on iOS they take Cupertino's slide. Tabs fade
@@ -13,11 +26,41 @@ abstract final class KitMotion {
   /// `tween(300)`.
   static const page = Duration(milliseconds: 300);
 
-  /// The page fade's curve, Compose's FastOutSlowIn, cubic-bezier(0.4, 0,
-  /// 0.2, 1), which `tween` takes by default: it starts gently, so the fade
-  /// is seen from its first frames, and lands softly.
-  static const pageEasing = Cubic(.4, 0, .2, 1);
+  /// The page fade's curve, Compose's FastOutSlowIn, which `tween` takes by
+  /// default.
+  static const pageEasing = easing;
 
+  /// FastOutSlowIn, cubic-bezier(0.4, 0, 0.2, 1), for what arrives, moves,
+  /// or changes: it starts gently, so the change is seen from its first
+  /// frames, and lands softly.
+  static const easing = Cubic(.4, 0, .2, 1);
+
+  /// FastOutLinearIn, cubic-bezier(0.4, 0, 1, 1), for things on their way
+  /// out; the web's ease-in is the same curve.
+  static const exitEasing = Cubic(.4, 0, 1, 1);
+
+  /// A sheet, a panel, or a scroll travelling: Material's medium 2.
+  static const move = Duration(milliseconds: 300);
+
+  /// Something appearing, or one state fading into the next: medium 1.
+  static const enter = Duration(milliseconds: 250);
+
+  /// The same going away, quicker: short 4.
+  static const exit = Duration(milliseconds: 200);
+
+  /// A color or a selection changing: short 4, so the change spans about a
+  /// tenth of a second rather than being done before it's seen.
+  static const color = Duration(milliseconds: 200);
+
+  /// [duration], or none when the system asks for less motion.
+  static Duration of(BuildContext context, Duration duration) =>
+      MediaQuery.disableAnimationsOf(context) ? Duration.zero : duration;
+}
+
+/// How the TV screens move, driven by a remote: the web's timings and
+/// curves, as the whole app moved before the touch screens took
+/// [KitMotion]'s. Nobody asked for the TV's to change.
+abstract final class TvMotion {
   /// The web's cubic-bezier(0.22, 1, 0.36, 1): off at once, then a long,
   /// soft landing. For what arrives or moves.
   static const easing = Cubic(.22, 1, .36, 1);
@@ -25,7 +68,7 @@ abstract final class KitMotion {
   /// The web's ease-in, for things on their way out.
   static const exitEasing = Cubic(.4, 0, 1, 1);
 
-  /// A sheet, a panel, or a scroll travelling.
+  /// A panel, a row, or a list travelling.
   static const move = Duration(milliseconds: 280);
 
   /// Something appearing, or one state fading into the next.
@@ -36,10 +79,6 @@ abstract final class KitMotion {
 
   /// A color or a selection changing.
   static const color = Duration(milliseconds: 120);
-
-  /// [duration], or none when the system asks for less motion.
-  static Duration of(BuildContext context, Duration duration) =>
-      MediaQuery.disableAnimationsOf(context) ? Duration.zero : duration;
 }
 
 /// Fades from what it showed to [child] whenever [value], the state

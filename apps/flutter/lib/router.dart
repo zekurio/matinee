@@ -808,19 +808,19 @@ GoRoute _tv(
   routes: routes,
   pageBuilder: (context, state) => CustomTransitionPage<void>(
     key: state.pageKey,
-    transitionDuration: KitMotion.enter + KitMotion.exit,
-    reverseTransitionDuration: KitMotion.enter + KitMotion.exit,
+    transitionDuration: TvMotion.enter + TvMotion.exit,
+    reverseTransitionDuration: TvMotion.enter + TvMotion.exit,
     transitionsBuilder: (context, animation, secondary, child) =>
         FadeTransition(
           opacity: CurvedAnimation(
             parent: animation,
-            curve: const Interval(.4, 1, curve: KitMotion.easing),
+            curve: const Interval(.4, 1, curve: TvMotion.easing),
           ),
           child: FadeTransition(
             opacity: Tween<double>(begin: 1, end: 0).animate(
               CurvedAnimation(
                 parent: secondary,
-                curve: const Interval(0, .4, curve: KitMotion.exitEasing),
+                curve: const Interval(0, .4, curve: TvMotion.exitEasing),
               ),
             ),
             child: child,

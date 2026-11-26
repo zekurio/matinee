@@ -1142,8 +1142,8 @@ Future<void> showTvText(
 }) => Navigator.of(context, rootNavigator: true).push(
   PageRouteBuilder<void>(
     opaque: true,
-    transitionDuration: KitMotion.enter,
-    reverseTransitionDuration: KitMotion.exit,
+    transitionDuration: TvMotion.enter,
+    reverseTransitionDuration: TvMotion.exit,
     pageBuilder: (context, animation, secondary) =>
         _TextViewer(title: title, text: text, fromEnd: fromEnd),
     transitionsBuilder: (context, animation, secondary, child) =>
@@ -1208,8 +1208,8 @@ class _TextViewerState extends State<_TextViewer> {
       unawaited(
         position.animateTo(
           (position.pixels + step).clamp(0, position.maxScrollExtent),
-          duration: KitMotion.move,
-          curve: KitMotion.easing,
+          duration: TvMotion.move,
+          curve: TvMotion.easing,
         ),
       );
     }
