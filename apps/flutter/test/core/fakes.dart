@@ -150,6 +150,9 @@ final class FakeBackend {
   /// Hosts that answer, and any other doesn't exist.
   final hosts = <String>{};
 
+  /// The accents a host's admin picked, where one did.
+  final accents = <String, Map<String, String?>>{};
+
   /// Hosts that speak http only: https gets no answer.
   final httpOnly = <String>{};
 
@@ -186,7 +189,7 @@ final class FakeBackend {
     final path = request.url.path;
     switch (path) {
       case '/api/v1/auth/config':
-        return jsonResponse(configJson);
+        return jsonResponse({...configJson, 'themeAccents': ?accents[host]});
       case '/api/v1/auth/session':
         final gate = holdSession;
         if (gate != null) {

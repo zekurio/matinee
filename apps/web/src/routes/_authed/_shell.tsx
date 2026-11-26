@@ -10,7 +10,6 @@ import { createMemo, lazy, Loading, Show } from "solid-js"
 import { AppShell } from "@/components/app-shell"
 import { Home } from "@/components/home"
 import { SETTINGS_OVERVIEW, useSettingsLocation } from "@/lib/settings"
-import { ServerThemeAccents } from "@/lib/theme-sync"
 
 // Every settings panel is in here, and most visits never open one.
 const SettingsDialog = lazy(() =>
@@ -67,7 +66,6 @@ function Shell() {
 
   return (
     <AppShell user={context().user}>
-      <ServerThemeAccents />
       <Outlet />
       {onHome() ? home() : undefined}
       <Show when={settingsLoaded()}>
