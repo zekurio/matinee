@@ -45,7 +45,7 @@ export default defineMessages("settings", {
   "settings.section.requests.description":
     "Connections, and what fills each library",
   "settings.section.requests.keywords":
-    "Asks, Connections, Radarr, Sonarr, By hand, API key, Fill from, Quality, Save to, Root folder, Quality profile, Anime, Series type",
+    "Asks, Connections, Radarr, Sonarr, API key, Fill from, Quality, Save to, Root folder, Quality profile, Anime, Series type",
   "settings.section.authentication.label": "Authentication",
   "settings.section.authentication.description": "Passkeys and single sign-on",
   "settings.section.authentication.keywords":

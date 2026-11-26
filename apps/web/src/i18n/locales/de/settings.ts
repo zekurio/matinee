@@ -44,7 +44,7 @@ export default {
   "settings.section.requests.description":
     "Verbindungen und was jede Mediathek befüllt",
   "settings.section.requests.keywords":
-    "Wünsche, Verbindungen, Radarr, Sonarr, Von Hand, API-Schlüssel, Befüllen über, Qualität, Speichern in, Stammordner, Qualitätsprofil, Anime, Serientyp",
+    "Wünsche, Verbindungen, Radarr, Sonarr, API-Schlüssel, Befüllen über, Qualität, Speichern in, Stammordner, Qualitätsprofil, Anime, Serientyp",
   "settings.section.authentication.label": "Authentifizierung",
   "settings.section.authentication.description": "Passkeys und Single Sign-on",
   "settings.section.authentication.keywords":

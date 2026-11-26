@@ -9,7 +9,7 @@ export default {
   "connections.retry": "Erneut versuchen",
   "connections.empty.title": "Noch keine Verbindungen",
   "connections.empty.description":
-    "Füge Radarr, Sonarr oder Von Hand hinzu und mach sie zum Standard für Filme oder Serien.",
+    "Füge Radarr oder Sonarr hinzu und mach sie zum Standard für Filme oder Serien.",
   "connections.testing": "Wird getestet…",
   "connections.connected": "Verbunden",
   "connections.testFailed.detail": "Test fehlgeschlagen. {error}",
@@ -123,6 +123,6 @@ export default {
 
   "connections.libraries.title": "Was jede Mediathek befüllt",
   "connections.libraries.filledBy": "Befüllt über {connections}",
-  "connections.libraries.unfilled": "Nichts befüllt sie",
+  "connections.libraries.unfilled": "Anfragen warten auf einen Scan",
   "connections.libraries.noProvider": "Kein Metadatenanbieter",
 } satisfies TranslationOf<typeof source>

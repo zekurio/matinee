@@ -107,7 +107,7 @@ function PersonContent() {
             <Link
               to="/"
               class={buttonVariants({
-                variant: "secondary",
+                variant: "outline",
                 className: "mt-6",
               })}
             >

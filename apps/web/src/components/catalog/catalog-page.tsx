@@ -170,7 +170,7 @@ function CatalogLoadError(props: { message: string }) {
       <p class="text-muted-foreground mt-2 text-sm">{props.message}</p>
       <Link
         to="/"
-        class={buttonVariants({ variant: "secondary", className: "mt-6" })}
+        class={buttonVariants({ variant: "outline", className: "mt-6" })}
       >
         {tr("title.backHome")}
       </Link>

@@ -16,7 +16,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/solid-query"
-import { CloudOff, RotateCw, SearchX, Sparkles } from "lucide"
+import { CloudOff, RefreshCw, SearchX, Sparkles } from "lucide"
 import {
   createEffect,
   createMemo,
@@ -138,7 +138,7 @@ export function BrowsePage(props: {
           description={tr("discover.failedHint")}
         >
           <Button variant="outline" onClick={() => void options.refetch()}>
-            <Icon icon={RotateCw} />
+            <Icon icon={RefreshCw} />
             {tr("discover.retry")}
           </Button>
         </DiscoverEmpty>

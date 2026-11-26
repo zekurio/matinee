@@ -1,4 +1,5 @@
 import type { MediaItem, Season, TitleSummary } from "@matinee/contracts"
+import { createSignal } from "solid-js"
 
 import { session } from "../auth/session"
 import { Observable } from "../lib/observable"
@@ -79,7 +80,16 @@ export class Viewer extends Observable {
   /** Moves when pages should fetch again. */
   version = 0
 
-  private readonly redraw = () => this.changed()
+  /**
+   * Read by every `is…` below, so a page that shows a mark draws it again
+   * when it changes. Pages read the viewer straight from `useApp`, and a
+   * favorite, unlike a watched mark, doesn't move `version` to refetch.
+   */
+  private readonly marks = createSignal(0, { equals: false })
+  private readonly redraw = () => {
+    this.marks[1](0)
+    this.changed()
+  }
   private readonly bump = () => this.touch()
   private readonly titleFavorites = new Marks(this.redraw, this.bump)
   private readonly itemFavorites = new Marks(this.redraw, this.bump)
@@ -99,11 +109,13 @@ export class Viewer extends Observable {
   }
 
   isFavorite(title: TitleSummary): boolean {
+    this.marks[0]()
     return this.titleFavorites.get(title.id) ?? title.favorite
   }
 
   /** A movie is a favorite through its title, an episode by itself. */
   isItemFavorite(item: MediaItem): boolean {
+    this.marks[0]()
     const title = item.title
     if (title?.kind === "movie") return this.isFavorite(title)
     return this.itemFavorites.get(item.id) ?? item.favorite
@@ -111,6 +123,7 @@ export class Viewer extends Observable {
 
   /** The files without a season number aren't a season to mark, so they never are. */
   isSeasonFavorite(title: TitleSummary, season: Season): boolean {
+    this.marks[0]()
     if (season.number === null) return false
     return (
       this.seasonFavorites.get(`${title.id}/${season.number}`) ??
@@ -119,10 +132,12 @@ export class Viewer extends Observable {
   }
 
   isWatched(title: TitleSummary): boolean {
+    this.marks[0]()
     return this.titleWatched.get(title.id) ?? title.watched
   }
 
   isItemWatched(item: MediaItem): boolean {
+    this.marks[0]()
     return this.itemWatched.get(item.id) ?? item.progress?.completed ?? false
   }
 

@@ -15,6 +15,9 @@ import { readStored, writeStored } from "../lib/storage"
  * always dark, so it takes the dark one, fitted to the dark background as
  * the web fits it. A server with none keeps Matinee's own, in kit.css.
  *
+ * It is the accent of the server on screen: the one in use, or the one
+ * whose sign-in shows while it's being added.
+ *
  * Each server's last answer is kept on the TV, so its color shows at once
  * on the next start and stays while the server can't be reached. The
  * server is asked again whenever the one in use changes or is reached.
@@ -48,36 +51,31 @@ function keep(server: string, accents: ThemeAccents) {
   wear(accents.dark)
 }
 
-/** Wears the accent of the server in use, from the app's root. */
+/** Wears the accent of the server on screen, from the app's root. */
 export function useServerAccent(state: () => AuthState) {
-  // The server in use and whether it answered, so the accent isn't asked
+  // The server on screen and whether it answered, so the accent isn't asked
   // for again on every change to the session.
   const reached = createMemo(
     () => {
       const current = state()
       if (current.kind === "noServer") return null
-      return {
-        server: current.server,
-        kind: current.kind,
-        adding: current.kind === "signedOut" && current.adding,
-      }
+      return { server: current.server, kind: current.kind }
     },
-    {
-      equals: (a, b) =>
-        a?.server === b?.server &&
-        a?.kind === b?.kind &&
-        a?.adding === b?.adding,
-    },
+    { equals: (a, b) => a?.server === b?.server && a?.kind === b?.kind },
   )
   let asked = 0
   createEffect(reached, (current) => {
     const mine = ++asked
-    // A server being added isn't the one in use yet: its color waits for the sign-in.
-    if (current === null || current.adding) return
+    // With no server on screen, as while picking one, the accent is Matinee's own.
+    if (current === null) {
+      wear(null)
+      return
+    }
     const { server } = current
     wear(stored(server))
     if (current.kind === "signedOut") {
-      // Its sign-in screen has the answer already.
+      // Its sign-in screen has the answer already, and wears it: the
+      // screen is that server's, one being added as much as the one in use.
       const now = session.state
       if (now.kind === "signedOut") keep(server, now.config.themeAccents)
       return

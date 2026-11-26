@@ -127,10 +127,10 @@ export default {
   "requests.done.declinedUndated": "Abgelehnt",
   "requests.done.gaveUpUndated": "Aufgegeben",
 
-  "requests.empty.setup.title": "Noch befüllt nichts deine Mediatheken",
+  "requests.empty.setup.title": "Noch keine Anfragen",
   "requests.empty.setup.description":
-    "Füge eine Verbindung hinzu und wähle die Mediatheken, die sie befüllt.",
-  "requests.empty.setup.action": "Anfragen einrichten",
+    "Angenommene Anfragen warten, bis ihre Datei bei einem Scan der Mediathek auftaucht. Füge Radarr oder Sonarr hinzu, um sie stattdessen holen zu lassen.",
+  "requests.empty.setup.action": "Verbindung hinzufügen",
   "requests.empty.none": "Noch keine Anfragen",
   "requests.empty.noneHint":
     "Wenn jemand einen Film oder eine Serie anfragt, erscheint das hier.",

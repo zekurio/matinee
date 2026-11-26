@@ -1,4 +1,5 @@
 import { cn } from "@matinee/ui/lib/utils"
+import type { JSX } from "@solidjs/web"
 import { createMemo, createSignal, onSettled, Show } from "solid-js"
 
 import type { ImageSource } from "@/lib/media"
@@ -19,9 +20,9 @@ export function tone(key: string): string {
   return TONES[Math.abs(hash) % TONES.length] ?? TONES[0] ?? ""
 }
 
-// Images this page has shown already. One that mounts again, like a
-// poster when its card or page becomes another, shows at once rather than
-// fading in a second time.
+// Images this page has shown already. One that loads again, like a
+// poster when its card or page becomes another, comes from the browser's
+// cache and shows at once rather than fading in a second time.
 const shown = new Set<string>()
 
 type PictureProps = {
@@ -34,12 +35,17 @@ type PictureProps = {
    * window unless told otherwise.
    */
   sizes?: string
+  /**
+   * What shows when there's no picture: no sources, or every one failed.
+   * Not while one loads, which shows the placeholder or what's beneath.
+   */
+  fallback?: JSX.Element
 }
 
 /**
  * The first of `sources` that loads, faded in over its blurred placeholder
  * while it loads, or over whatever sits beneath it when it has none.
- * Nothing when every source fails. The image is opaque over the
+ * `fallback` when every source fails. The image is opaque over the
  * placeholder, so dim a picture from a wrapper, not through `class`.
  */
 export function Picture(props: PictureProps) {
@@ -48,7 +54,7 @@ export function Picture(props: PictureProps) {
     props.sources.map((source) => source.src).join("|"),
   )
   return (
-    <Show when={key()} keyed>
+    <Show when={key()} keyed fallback={props.fallback}>
       {(_key) => <PictureSources {...props} />}
     </Show>
   )
@@ -57,32 +63,36 @@ export function Picture(props: PictureProps) {
 function PictureSources(props: PictureProps) {
   const [index, setIndex] = createSignal(0)
   const source = () => props.sources[index()]
-  // Shown at once when this page showed it before; follows the source as
-  // a failed one gives way to the next.
-  const [ready, setReady] = createSignal(() => {
-    const src = source()?.src
-    return src !== undefined && shown.has(src)
-  })
-  // An image this page has shown is still in the browser's memory and
-  // draws at once, so it mounts without the placeholder under it.
-  const seen = createMemo(() => shown.has(source()?.src ?? ""))
+  const [ready, setReady] = createSignal(false)
+  // Drawn without waiting, so it skips the fade and the placeholder.
+  const [instant, setInstant] = createSignal(false)
   const fill = "absolute inset-0 size-full object-cover"
   let image: HTMLImageElement | undefined
-  // A lazy image with `sizes="auto"` picks a file again when it leaves the
-  // page, at the window's width, and fetches the largest one for nothing. A
-  // windowed grid takes a row of them out with every row it scrolls by.
-  onSettled(() => () => {
-    queueMicrotask(() => {
-      if (!image || image.isConnected) return
-      image.removeAttribute("srcset")
-      image.removeAttribute("src")
-    })
+  onSettled(() => {
+    // An image the browser holds decoded draws as it mounts. Anything else
+    // stays hidden until it loads: Chrome draws a broken-image icon in the
+    // corner of one still on its way, `alt=""` or not, and a URL this page
+    // showed before can be gone from memory, or another size in `srcset`.
+    if (image?.complete && image.naturalWidth > 0) {
+      setInstant(true)
+      setReady(true)
+    }
+    // A lazy image with `sizes="auto"` picks a file again when it leaves
+    // the page, at the window's width, and fetches the largest one for
+    // nothing. A windowed grid takes a row of them out with every row it
+    // scrolls by.
+    return () =>
+      queueMicrotask(() => {
+        if (!image || image.isConnected) return
+        image.removeAttribute("srcset")
+        image.removeAttribute("src")
+      })
   })
   return (
-    <Show when={source()}>
+    <Show when={source()} fallback={props.fallback}>
       {(current) => (
         <>
-          <Show when={!seen() && current().placeholder}>
+          <Show when={!instant() && current().placeholder}>
             {(placeholder) => (
               <Blurhash
                 placeholder={placeholder()}
@@ -110,13 +120,19 @@ function PictureSources(props: PictureProps) {
             srcset={current().srcSet}
             src={current().src}
             onLoad={() => {
-              shown.add(current().src)
+              const src = current().src
+              if (shown.has(src)) setInstant(true)
+              shown.add(src)
               setReady(true)
             }}
-            onError={() => setIndex((at) => at + 1)}
+            onError={() => {
+              setReady(false)
+              setIndex((at) => at + 1)
+            }}
             class={cn(
               fill,
-              "transition-opacity duration-300 motion-reduce:transition-none",
+              !instant() &&
+                "transition-opacity duration-300 motion-reduce:transition-none",
               ready() ? "opacity-100" : "opacity-0",
               props.class,
             )}

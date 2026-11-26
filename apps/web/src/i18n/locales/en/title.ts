@@ -26,6 +26,9 @@ export default defineMessages("title", {
   // score.tsx: what a screen reader says for a score's star and number,
   // like "Rated 7.8", wherever a title, season, or episode shows one.
   "title.rating": "Rated {rating}",
+  // title-header.tsx: the labels in the table of details.
+  "title.details.genres": plural({ one: "Genre", other: "Genres" }),
+  "title.details.released": "Released",
   // title-header.tsx: the button beside Play, which opens YouTube.
   "title.trailer": "Trailer",
   "title.trailerHint": "Watch the trailer on YouTube",

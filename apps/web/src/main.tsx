@@ -13,6 +13,7 @@ import { createRouter, RouterProvider } from "@tanstack/solid-router"
 import { LocaleBoundary } from "@/i18n/solid"
 import { prefetchHome } from "@/lib/home-queries"
 import { orpc, queryClient, sessionLost } from "@/lib/rpc"
+import { followServerThemeAccents } from "@/lib/theme-sync"
 import { syncUiText } from "@/lib/ui-text"
 import { warmUiSdk } from "@/lib/warm-styles"
 import { applyLanguage } from "@/stores/language"
@@ -25,6 +26,7 @@ import { routeTree } from "./routeTree.gen"
 if (location.pathname === "/" && isTvMode()) location.replace("/tv/")
 
 initTheme()
+followServerThemeAccents(queryClient)
 syncUiText()
 // The text face loads only once text needs it, and until it's in, text
 // shows in a wider fallback, so everything shifts when it swaps in. Asking

@@ -59,7 +59,7 @@ export function DeclinePopover(props: {
       <AnswerForm
         first={first}
         giveUp={props.giveUp ?? false}
-        // A by-hand connection holds nothing to keep.
+        // A connection that reports nothing back holds nothing to keep.
         connection={
           props.item.connection?.reportsProgress
             ? props.item.connection.name

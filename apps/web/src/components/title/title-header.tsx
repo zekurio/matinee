@@ -4,9 +4,8 @@ import { Play } from "lucide"
 import { createMemo, For, Show } from "solid-js"
 
 import { ActionsMenu } from "@/components/actions-menu"
-import { CrewFacts, unitList } from "@/components/credits"
 import { FavoriteButton } from "@/components/favorite-button"
-import { PosterArt, textLink } from "@/components/media-item"
+import { PosterArt } from "@/components/media-item"
 import { Picture, tone } from "@/components/picture"
 import { type useTitleWatched, WatchedButton } from "@/components/watched-menu"
 import { tr } from "@/i18n"
@@ -18,12 +17,29 @@ import { art, frame, mediaFlags, present, timeLeft } from "@/lib/media"
 import { HeaderOverview } from "./header-overview"
 import { MediaInfo } from "./media-info"
 import { Score } from "./score"
+import { TitleDetails } from "./title-details"
 import { MatchNote } from "./title-menu"
 
 export const headingTop =
   "pt-[max(10rem,30vh)] sm:pt-[max(4rem,calc(min(46vh,420px)-150px))]"
 export const headingPoster =
   "hidden w-36 shrink-0 self-start sm:block lg:w-[180px]"
+/**
+ * A library title's poster, larger than the catalog's, beside everything
+ * else on the page as Jellyfin has it. Its column starts lower, so the
+ * name sits at the foot of the backdrop.
+ */
+export const titlePoster =
+  "hidden w-44 shrink-0 self-start sm:block lg:w-60 xl:w-72"
+export const titleColumnTop = "sm:pt-24 lg:pt-28"
+/**
+ * A library title's backdrop: 16:9 on phones, so the details start
+ * nearer the top, and the name just inside its foot.
+ */
+export const titleBackdrop =
+  "aspect-video sm:aspect-auto sm:h-[min(46vh,420px)]"
+export const titleTop =
+  "pt-[calc(56.25vw-2rem)] sm:pt-[max(4rem,calc(min(46vh,420px)-150px))]"
 
 export function TitleHeader(props: {
   title: Title
@@ -42,7 +58,8 @@ export function TitleHeader(props: {
         aria-hidden="true"
         data-title-backdrop={sources().length ? "" : undefined}
         class={[
-          "absolute inset-x-0 top-0 -z-10 h-[min(46vh,420px)] overflow-hidden",
+          "absolute inset-x-0 top-0 -z-10 overflow-hidden",
+          titleBackdrop,
           tone(props.title.id),
         ]}
       >
@@ -51,15 +68,15 @@ export function TitleHeader(props: {
         <div class="from-background via-background/70 absolute inset-0 bg-linear-to-t via-40% to-transparent" />
       </div>
 
-      <div class={["flex items-end gap-4 sm:gap-6", headingTop]}>
-        <div class={headingPoster}>
+      <div class={["flex gap-6 lg:gap-10", titleTop]}>
+        <div class={titlePoster}>
           <PosterArt
             name={props.title.name}
             toneKey={props.title.id}
             poster={art(props.title.images.poster)}
           />
         </div>
-        <div class="min-w-0 pb-1">
+        <div class={["min-w-0 flex-1", titleColumnTop]}>
           <h1
             id="title-name"
             class="max-sm:text-30px text-2xl leading-[1.1] font-semibold tracking-tight text-balance max-sm:line-clamp-3 max-sm:leading-9 max-sm:font-bold sm:text-4xl lg:text-5xl"
@@ -77,34 +94,41 @@ export function TitleHeader(props: {
             </p>
           </Show>
           <TitleFacts title={props.title} />
+          <div class="mt-5 flex items-center gap-2.5">
+            <Show when={props.title.next}>
+              {(item) => <PlayButton item={item()} />}
+            </Show>
+            <Show when={props.title.itemCount > 0}>
+              <WatchedButton watched={props.watched} />
+            </Show>
+            <FavoriteButton title={props.title} />
+            <ActionsMenu
+              target={{
+                kind: "title",
+                title: props.title,
+                file: props.title.next,
+              }}
+              look="page"
+            />
+          </div>
+          <div class="mt-6 flex max-w-6xl flex-col gap-5">
+            <Show when={movie()}>{(item) => <MediaInfo item={item()} />}</Show>
+            {/* Side by side once there's room, the details beside the overview. */}
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:gap-10">
+              <div class="min-w-0 xl:flex-1">
+                <HeaderOverview
+                  tagline={props.title.tagline}
+                  overview={props.title.overview}
+                  lines={6}
+                />
+              </div>
+              <div class="xl:w-80 xl:shrink-0 2xl:w-96">
+                <TitleDetails title={props.title} />
+              </div>
+            </div>
+            <MatchNote title={props.title} />
+          </div>
         </div>
-      </div>
-
-      <div class="mt-4 flex max-w-4xl flex-col gap-4">
-        <HeaderOverview
-          tagline={props.title.tagline}
-          overview={props.title.overview}
-        />
-        <CrewFacts title={props.title} />
-        <Show when={movie()}>{(item) => <MediaInfo item={item()} />}</Show>
-        <div class="mt-1 flex items-center gap-2.5">
-          <Show when={props.title.next}>
-            {(item) => <PlayButton item={item()} />}
-          </Show>
-          <Show when={props.title.itemCount > 0}>
-            <WatchedButton watched={props.watched} />
-          </Show>
-          <FavoriteButton title={props.title} />
-          <ActionsMenu
-            target={{
-              kind: "title",
-              title: props.title,
-              file: props.title.next,
-            }}
-            look="page"
-          />
-        </div>
-        <MatchNote title={props.title} />
       </div>
     </section>
   )
@@ -138,47 +162,25 @@ function TitleFacts(props: { title: Title }) {
       ? mediaFlags(props.title.next)
       : [],
   )
-  const genres = createMemo(() =>
-    unitList().formatToParts(props.title.genres.slice(0, 4)),
-  )
   return (
-    <>
-      <div class="text-foreground/80 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-        <Show when={facts()}>
-          <span>{facts()}</span>
-        </Show>
-        <Show when={props.title.contentRating}>
-          <span class="border-foreground/25 rounded border px-1.5 text-xs leading-5">
-            {props.title.contentRating}
-          </span>
-        </Show>
-        <Score score={props.title.rating} />
-        <For each={flags()}>
-          {(flag) => (
-            <span class="bg-foreground/10 text-foreground/90 rounded px-1.5 text-xs leading-5 font-medium">
-              {flag}
-            </span>
-          )}
-        </For>
-      </div>
-      <Show when={genres().length}>
-        <p class="text-muted-foreground mt-1.5 text-sm">
-          <For each={genres()} keyed={false}>
-            {(part) => (
-              <Show when={part().type === "element"} fallback={part().value}>
-                <Link
-                  to="/genres/$genre"
-                  params={{ genre: part().value }}
-                  class={textLink}
-                >
-                  {part().value}
-                </Link>
-              </Show>
-            )}
-          </For>
-        </p>
+    <div class="text-foreground/80 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+      <Show when={facts()}>
+        <span>{facts()}</span>
       </Show>
-    </>
+      <Show when={props.title.contentRating}>
+        <span class="border-foreground/25 rounded border px-1.5 text-xs leading-5">
+          {props.title.contentRating}
+        </span>
+      </Show>
+      <Score score={props.title.rating} />
+      <For each={flags()}>
+        {(flag) => (
+          <span class="bg-foreground/10 text-foreground/90 rounded px-1.5 text-xs leading-5 font-medium">
+            {flag}
+          </span>
+        )}
+      </For>
+    </div>
   )
 }
 

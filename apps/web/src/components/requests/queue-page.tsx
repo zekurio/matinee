@@ -15,14 +15,7 @@ import {
   useNavigate,
   useRouteContext,
 } from "@tanstack/solid-router"
-import {
-  Cable,
-  CheckCheck,
-  Filter,
-  Inbox,
-  RefreshCw,
-  TriangleAlert,
-} from "lucide"
+import { Cable, CheckCheck, Filter, Inbox, RefreshCw } from "lucide"
 import {
   createEffect,
   createMemo,
@@ -442,20 +435,6 @@ export function QueuePage() {
         }
         class="mb-5 md:mb-6"
       />
-
-      <Show when={noConnection() && visible().length > 0}>
-        <p class="text-muted-foreground text-13px mb-4 flex items-center gap-1.5">
-          <Icon icon={TriangleAlert} class="text-warning size-3.5 shrink-0" />
-          {tr("requests.empty.setup.title")}
-          <button
-            type="button"
-            class="text-foreground focus-visible:ring-ring ml-1 rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2"
-            onClick={() => openSettings("requests")}
-          >
-            {tr("requests.empty.setup.action")}
-          </button>
-        </p>
-      </Show>
 
       <div
         ref={(element) => {

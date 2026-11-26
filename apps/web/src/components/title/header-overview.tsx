@@ -11,7 +11,10 @@ import { tr } from "@/i18n"
 export function HeaderOverview(props: {
   tagline: string | null
   overview: string | null
+  /** How many lines show before More. */
+  lines?: number
 }) {
+  const lines = () => props.lines ?? 3
   const id = createUniqueId()
   const [open, setOpen] = createSignal(false)
   const [overflows, setOverflows] = createSignal(false)
@@ -19,22 +22,25 @@ export function HeaderOverview(props: {
   const content = createMemo(
     () => `${props.tagline ?? ""}\n${props.overview ?? ""}`,
   )
-  createEffect(content, () => {
-    const text = paragraph
-    if (!text) return
-    const measure = () => {
-      const line = Number.parseFloat(getComputedStyle(text).lineHeight)
-      setOverflows(text.scrollHeight > line * 3 + 1)
-    }
-    const resize = new ResizeObserver(measure)
-    resize.observe(text)
-    document.fonts.addEventListener("loadingdone", measure)
-    measure()
-    return () => {
-      resize.disconnect()
-      document.fonts.removeEventListener("loadingdone", measure)
-    }
-  })
+  createEffect(
+    () => ({ content: content(), lines: lines() }),
+    ({ lines: shown }) => {
+      const text = paragraph
+      if (!text) return
+      const measure = () => {
+        const line = Number.parseFloat(getComputedStyle(text).lineHeight)
+        setOverflows(text.scrollHeight > line * shown + 1)
+      }
+      const resize = new ResizeObserver(measure)
+      resize.observe(text)
+      document.fonts.addEventListener("loadingdone", measure)
+      measure()
+      return () => {
+        resize.disconnect()
+        document.fonts.removeEventListener("loadingdone", measure)
+      }
+    },
+  )
 
   return (
     <Show when={props.overview || props.tagline}>
@@ -42,9 +48,10 @@ export function HeaderOverview(props: {
         <p
           ref={(element) => (paragraph = element)}
           id={id}
+          style={{ "--lines": lines() }}
           class={[
             "text-foreground/85 sm:text-15px text-sm leading-6 whitespace-pre-line",
-            { "line-clamp-3": !open() },
+            { "line-clamp-(--lines)": !open() },
           ]}
         >
           <Show when={props.tagline}>

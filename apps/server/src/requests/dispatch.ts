@@ -77,6 +77,26 @@ export const dispatch = defineQueue({
     const row = loaded?.row
     if (!row || row.status !== "approved" || row.fulfilmentState !== "queued")
       return
+    // With no connection to send it through, an accepted request waits
+    // for its file to turn up in a library scan.
+    if (!row.connectionId) {
+      await db
+        .update(request)
+        .set({
+          sentAt: new Date(),
+          fulfilmentState: "sent",
+          fulfilmentError: null,
+        })
+        .where(
+          and(
+            eq(request.id, id),
+            sql`${request.updatedAt} = ${loaded.version}::timestamptz`,
+            eq(request.fulfilmentState, "queued"),
+          ),
+        )
+      events.publish("requests", undefined)
+      return
+    }
     try {
       const sending = await sendingFor(row)
       if (!sending || !row.options)
