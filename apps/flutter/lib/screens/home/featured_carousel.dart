@@ -38,6 +38,34 @@ class _FeaturedCarouselViewState extends State<FeaturedCarouselView> {
 
   int get _count => widget.slides.length;
 
+  /// What [_neededHeight] measured last, and for what. Home's tickers
+  /// stopping and starting rebuild the row, as when it's covered by a page
+  /// or left for another tab and back, and measuring every name again
+  /// costs that frame more than a millisecond.
+  ({Object key, double height})? _measured;
+
+  double _measuredHeight(
+    double width,
+    double base,
+    TextStyle nameStyle,
+    int lines,
+    TextScaler scaler,
+  ) {
+    final key = (widget.slides, width, base, nameStyle, lines, scaler);
+    final measured = _measured;
+    if (measured != null && measured.key == key) return measured.height;
+    final height = _neededHeight(
+      widget.slides,
+      width,
+      base,
+      nameStyle,
+      lines,
+      scaler,
+    );
+    _measured = (key: key, height: height);
+    return height;
+  }
+
   @override
   void dispose() {
     _advance?.cancel();
@@ -108,7 +136,7 @@ class _FeaturedCarouselViewState extends State<FeaturedCarouselView> {
         final lines = scaler.scale(10) >= 15 ? 3 : 2;
         final height = math.max(
           base,
-          _neededHeight(widget.slides, width, base, nameStyle, lines, scaler),
+          _measuredHeight(width, base, nameStyle, lines, scaler),
         );
         final stride = width + CardMetrics.gutter;
         final pager = _pagerFor(row == 0 ? 1 : stride / row);
