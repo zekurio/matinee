@@ -446,7 +446,7 @@ function ConnectionForm(props: {
       />
 
       <FormDialogBody>
-        <FormColumns count={3}>
+        <FormColumns count={third().length > 0 ? 3 : 2}>
           <FormColumn tall>
             <FormSection>
               <FieldGroup>

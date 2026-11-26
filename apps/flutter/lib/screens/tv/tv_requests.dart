@@ -83,7 +83,7 @@ Future<bool> showTvDecline(
         ? l.webRequestsGiveUpTitle(item.title.name)
         : l.webRequestsDeclineTitle(item.title.name),
     description: giveUp
-        // A by-hand connection holds nothing to keep.
+        // A connection that reports nothing back holds nothing to keep.
         ? keeps != null && keeps.reportsProgress
               ? l.webRequestsGiveUpKeeps(keeps.name)
               : l.webRequestsGiveUpTurnsUp

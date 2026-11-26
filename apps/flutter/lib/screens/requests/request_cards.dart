@@ -646,7 +646,9 @@ String? queueProgress(AdminRequestItem item, AppLocalizations l) {
   if (item.fulfilmentState == FulfilmentState.queued) {
     return l.webRequestsProgressQueued;
   }
-  if (item.connection?.reportsProgress == false) {
+  // With no connection, or one that doesn't report back, it waits for
+  // the file to turn up in a scan.
+  if (item.connection?.reportsProgress != true) {
     return l.webRequestsProgressByHand;
   }
   return l.webRequestsProgressSent;

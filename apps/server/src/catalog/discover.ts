@@ -18,7 +18,6 @@ import {
   impressions,
 } from "../recommendations/read"
 import { destinations } from "../requests/destinations"
-import { loadRouting } from "../requests/fulfilment/connections"
 import { page, query } from "./browse"
 import { browseProvider } from "./cache"
 import { askable, catalogCards } from "./cards"
@@ -185,17 +184,15 @@ export async function prepareDiscover({
   signal,
 }: { signal?: AbortSignal } = {}): Promise<void> {
   if (!env.MATINEE_TMDB_API_KEY) return
-  const routing = await loadRouting()
   // ACCESS: no viewer; only each library's kind and language are read, to
   // fill the shared cache. Pages still filter by what a viewer sees.
   const rows = await db.select().from(library)
   for (const kind of ["movie", "show"] as const) {
-    const reached = routing.reached(kind)
     const languages = new Set(
       rows
         .filter(
           (row) =>
-            reached.has(row.id) &&
+            row.metadataProvider !== null &&
             (row.kind === "movies") === (kind === "movie"),
         )
         .map((row) => row.metadataLanguage),

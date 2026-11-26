@@ -74,7 +74,6 @@ export default {
     "In {library} gibt es schon eine Anfrage für diesen Titel. Lass diese hier, wo sie ist, oder lehne sie ab.",
   "server.fulfilment.keyFile":
     "Die Schlüsseldatei der Verbindung kann nicht gelesen werden. Prüfe Pfad und Berechtigungen.",
-  "server.fulfilment.source.manual": "Von Hand",
   "server.fulfilment.field.baseUrl": "Basis-URL",
   "server.fulfilment.field.qualityProfile": "Qualitätsprofil",
   "server.fulfilment.field.rootFolder": "Stammordner",
@@ -89,8 +88,6 @@ export default {
   "server.fulfilment.field.externalUrl": "Externe URL",
   "server.fulfilment.field.search": "Automatisch suchen",
   "server.fulfilment.field.tagRequests": "Anfragen taggen",
-  "server.fulfilment.field.filmsFolder": "Ordner für Filme",
-  "server.fulfilment.field.showsFolder": "Ordner für Serien",
   "server.fulfilment.availability.announced": "Angekündigt",
   "server.fulfilment.availability.inCinemas": "Im Kino",
   "server.fulfilment.availability.released": "Veröffentlicht",

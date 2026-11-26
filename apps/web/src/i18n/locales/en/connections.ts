@@ -8,7 +8,7 @@ export default defineMessages("connections", {
   "connections.retry": "Try again",
   "connections.empty.title": "No connections yet",
   "connections.empty.description":
-    "Add Radarr, Sonarr, or By hand, and make it the default for films or shows.",
+    "Add Radarr or Sonarr, and make it the default for films or shows.",
   "connections.testing": "Testing…",
   "connections.connected": "Connected",
   "connections.testFailed.detail": "Test failed. {error}",
@@ -129,6 +129,6 @@ export default defineMessages("connections", {
   // Which connection fills each library.
   "connections.libraries.title": "What fills each library",
   "connections.libraries.filledBy": "Filled by {connections}",
-  "connections.libraries.unfilled": "Nothing fills it",
+  "connections.libraries.unfilled": "Requests wait for a scan",
   "connections.libraries.noProvider": "No metadata provider",
 })

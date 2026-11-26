@@ -78,7 +78,6 @@ export default defineMessages("server", {
 
   "server.fulfilment.keyFile":
     "Cannot read the connection key file. Check its path and permissions.",
-  "server.fulfilment.source.manual": "By hand",
   "server.fulfilment.field.baseUrl": "Base URL",
   "server.fulfilment.field.qualityProfile": "Quality profile",
   "server.fulfilment.field.rootFolder": "Root folder",
@@ -93,8 +92,6 @@ export default defineMessages("server", {
   "server.fulfilment.field.externalUrl": "External URL",
   "server.fulfilment.field.search": "Automatic search",
   "server.fulfilment.field.tagRequests": "Tag requests",
-  "server.fulfilment.field.filmsFolder": "Films folder",
-  "server.fulfilment.field.showsFolder": "Shows folder",
   "server.fulfilment.availability.announced": "Announced",
   "server.fulfilment.availability.inCinemas": "In cinemas",
   "server.fulfilment.availability.released": "Released",
