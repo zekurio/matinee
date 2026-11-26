@@ -1,7 +1,9 @@
 # Matinee web
 
-The browser client: Solid 2, ui-sdk, Vite, and TanStack Router and Query,
-with a desktop layout that follows the Flutter app. It talks to the server
+The browser client: Solid 2, ui-sdk, Vite, and TanStack Router and Query.
+It's the reference for how each screen looks and behaves, at desktop and
+phone width, and the Flutter app ports its changes (see Clients in the
+root `AGENTS.md`). It talks to the server
 only through `packages/client` and the routes in
 `packages/contracts/src/paths.ts`. The server serves the build, so there's
 nothing to deploy separately.
