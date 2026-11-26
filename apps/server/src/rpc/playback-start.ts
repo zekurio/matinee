@@ -5,8 +5,6 @@ import {
   DEFAULT_PLAYBACK_PREFERENCES,
   PLAYBACK_UNPLAYABLE,
   PLAYBACK_RESTRICTED,
-  PLAYBACK_BUSY,
-  type PlaybackBusyData,
   PlaybackPreferences,
   type PlaybackRestrictedData,
   type PlaybackRestriction,
@@ -24,7 +22,7 @@ import { currentProbe } from "../media/probe"
 import { playerSegments } from "../media/segments"
 import { listSubtitles } from "../media/subtitles"
 import { rememberedTracks } from "../media/track-picks"
-import { otherLiveSessions } from "../stats/sessions"
+import { otherLiveSessions, streamsBusy } from "../stats/live"
 import { encodableAudioCodecs } from "../transcode/audio"
 import { currentTranscoding } from "../transcode/capabilities"
 import { encodableVideoCodecs } from "../transcode/pipeline"
@@ -103,12 +101,7 @@ export const startPlayback = authed.playback.start.handler(
     const limit = context.user.access.maxStreams
     if (limit !== null) {
       const playing = await otherLiveSessions(context.user.id, input.sessionId)
-      if (playing >= limit)
-        throw new ORPCError(PLAYBACK_BUSY, {
-          status: 429,
-          message: `Your account is playing on ${playing} ${playing === 1 ? "device" : "devices"}, the most it may. Stop one to watch here.`,
-          data: { playing } satisfies PlaybackBusyData,
-        })
+      if (playing >= limit) throw streamsBusy({ playing })
     }
     const info = await stat(item.path).catch(() => null)
     const probe = info?.isFile() ? await currentProbe(item, info) : null

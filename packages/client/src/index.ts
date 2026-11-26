@@ -58,7 +58,8 @@ type InputOf<
  * it, so its call is lost. This fetches at once, in the same task, with
  * `keepalive`, which outlives the page. Only for small inputs of plain
  * JSON: a keepalive request carries at most 64 KB, and the serializer's
- * dates and the like are left out.
+ * dates and the like are left out. And only for a call that may arrive
+ * twice, as a closing report may.
  */
 export type MatineeLastCall = <
   G extends keyof MatineeClient,
@@ -73,13 +74,23 @@ export function createMatineeLastCall(
   options: Pick<MatineeClientOptions, "baseUrl" | "token"> = {},
 ): MatineeLastCall {
   return (group, procedure, input) => {
-    void fetch(`${originOf(options)}${RPC_PATH}/${group}/${procedure}`, {
+    const origin = originOf(options)
+    const url = `${origin}${RPC_PATH}/${group}/${procedure}`
+    const request = {
       method: "POST",
       headers: { "content-type": "application/json", ...authHeaders(options) },
       credentials: "same-origin",
       body: JSON.stringify({ json: input }),
-      keepalive: true,
-    }).catch(() => {})
+    } satisfies RequestInit
+    void fetch(url, { ...request, keepalive: true }).catch(() => {})
+    // A call to another origin needs a preflight, and Chromium before 81,
+    // which TVs from 2019 and 2020 run, turns down a keepalive request
+    // that needs one. So that call goes out once more without it, which
+    // arrives when the engine lets it finish. The procedures this is for
+    // take the same call twice.
+    if (origin !== globalThis.location?.origin) {
+      void fetch(url, request).catch(() => {})
+    }
   }
 }
 

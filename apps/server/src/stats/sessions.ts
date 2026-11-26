@@ -1,10 +1,16 @@
-import type { PlaybackMethod, PlaybackQuality } from "@matinee/contracts"
+import type {
+  PlaybackBusyData,
+  PlaybackMethod,
+  PlaybackQuality,
+} from "@matinee/contracts"
 import { type MediaItemRow, playbackSession, title } from "@matinee/db"
-import { and, count, eq, gt, isNull, ne, or, type SQL, sql } from "drizzle-orm"
+import { and, eq, isNull, ne, type SQL, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { events } from "../realtime/events"
 import { queueRecommendations } from "../recommendations/enqueue"
+import { mayGoLive, otherLiveSessions } from "./live"
+import { presenceOpen } from "./presence"
 
 /*
  * Playback sessions, for statistics. The player names a session with a
@@ -12,66 +18,6 @@ import { queueRecommendations } from "../recommendations/enqueue"
  * whichever arrives first creates the row. Ids are only trusted for the
  * user and file that created them.
  */
-
-// Playing reports arrive every ten seconds, paused ones every thirty.
-// Hidden tabs may slow their timers to once a minute.
-const LIVE_SECONDS = 45
-const PAUSED_LIVE_SECONDS = 120
-/**
- * How long a session stays live after its player's last presence
- * connection drops, for the player to open a new one: when the server
- * ends the stream, after a network blip, or across a reload.
- */
-export const LEFT_GRACE_SECONDS = 10
-
-/**
- * Shared by watching now and the account's stream limit. Ended offline
- * plays stay out, and so do sessions whose player left, by its presence
- * connection, more than `LEFT_GRACE_SECONDS` ago.
- */
-export function liveSessions(): SQL | undefined {
-  return and(
-    isNull(playbackSession.endedAt),
-    or(
-      isNull(playbackSession.leftAt),
-      gt(
-        playbackSession.leftAt,
-        sql`now() - make_interval(secs => ${LEFT_GRACE_SECONDS})`,
-      ),
-    ),
-    or(
-      gt(
-        playbackSession.updatedAt,
-        sql`now() - make_interval(secs => ${LIVE_SECONDS})`,
-      ),
-      and(
-        eq(playbackSession.paused, true),
-        gt(
-          playbackSession.updatedAt,
-          sql`now() - make_interval(secs => ${PAUSED_LIVE_SECONDS})`,
-        ),
-      ),
-    ),
-  )
-}
-
-/** Other sittings playing now, so changing this sitting's tracks never takes a place. */
-export async function otherLiveSessions(
-  userId: string,
-  sessionId: string,
-): Promise<number> {
-  const [row] = await db
-    .select({ total: count() })
-    .from(playbackSession)
-    .where(
-      and(
-        liveSessions(),
-        eq(playbackSession.userId, userId),
-        ne(playbackSession.id, sessionId),
-      ),
-    )
-  return row?.total ?? 0
-}
 
 // A report adds at most the time since the session began, plus this. The
 // first report comes after about ten seconds of play.
@@ -159,6 +105,37 @@ function sameOwner(owner: SessionOwner): SQL | undefined {
 const inserted = sql<boolean>`xmax = 0`
 
 /**
+ * `leftAt` after a report or a stream, a sign the player is there. With
+ * one of its presence connections open, it's cleared. Without one, a
+ * session whose connection dropped gets `LEFT_GRACE_SECONDS` from now
+ * rather than being taken for there for good: its player may be gone a
+ * moment later, and nothing else would mark it again. A player that never
+ * opened a connection keeps null, and goes by its reports.
+ */
+function leftAtOnSign(owner: SessionOwner): SQL | null {
+  if (presenceOpen(owner.userId, owner.id)) return null
+  return sql`case when ${playbackSession.leftAt} is null then null else now() end`
+}
+
+/**
+ * Why a guarded write to the session changed nothing: the account plays
+ * on as many devices as it may. Null when the row is another user's or
+ * file's, which a write never touches, or a place came free meanwhile.
+ */
+async function refusal(
+  owner: SessionOwner,
+  limit: number,
+): Promise<PlaybackBusyData | null> {
+  const [mine] = await db
+    .select({ id: playbackSession.id })
+    .from(playbackSession)
+    .where(and(eq(playbackSession.id, owner.id), sameOwner(owner)))
+  if (!mine) return null
+  const playing = await otherLiveSessions(owner.userId, owner.id)
+  return playing >= limit ? { playing } : null
+}
+
+/**
  * End the sessions a client left open on a file when it starts another
  * there, as a reload does. The page that went away may never have sent
  * its closing report, and would show as watching until it timed out. A
@@ -179,13 +156,25 @@ async function endLeftBehind(owner: SessionOwner): Promise<void> {
     )
 }
 
-/** Record a progress report in its session. */
+/**
+ * Record a progress report in its session. A session that doesn't play
+ * now, as after a closing report or once its player left, comes back
+ * with a report only while the account is under its stream `limit`;
+ * otherwise nothing changes and this returns why. A session that plays
+ * now is never refused, and pays nothing for the check. Neither is a
+ * closing report, which only ends it. A session's first report creates
+ * it unchecked: `playback.start` let it in.
+ */
 export async function recordReport(
   owner: SessionOwner,
   report: SessionReport,
-): Promise<void> {
+  limit: number | null,
+): Promise<PlaybackBusyData | null> {
   const now = new Date()
   const endedAt = report.closed ? now : null
+  const guard = report.closed
+    ? undefined
+    : mayGoLive(owner.userId, owner.id, limit)
   const [row] = await db
     .insert(playbackSession)
     .values({
@@ -206,18 +195,18 @@ export async function recordReport(
         completed: sql`${playbackSession.completed} or ${report.completed}`,
         paused: report.paused,
         endedAt,
-        // A report means the player is there, even when its presence
-        // connection can't stay open.
-        leftAt: null,
+        leftAt: leftAtOnSign(owner),
         updatedAt: now,
         ...ownerColumns,
       },
-      setWhere: sameOwner(owner),
+      setWhere: and(sameOwner(owner), guard),
     })
     .returning({ inserted })
-  if (row?.inserted) await endLeftBehind(owner)
+  if (!row) return guard && limit !== null ? refusal(owner, limit) : null
+  if (row.inserted) await endLeftBehind(owner)
   if (report.closed || report.completed) queueRecommendations(owner.userId)
   events.publish("playback", undefined)
+  return null
 }
 
 /** A play a player had offline, as `playback.offline` takes it. */
@@ -274,7 +263,43 @@ function methodRank(method: SQL): SQL {
   return sql`case ${method} when 'transcode' then 2 when 'remux' then 1 else 0 end`
 }
 
-/** Record that the server started a stream for the session. */
+/**
+ * A stream is about to start for the session: count it as playing, as a
+ * report would, before the server does the work. Refused, with why, like
+ * `recordReport`, when the session doesn't play now and the account is
+ * at its stream `limit`. A session that plays now always gets its stream.
+ * A new session is created unchecked: `playback.start` let it in.
+ */
+export async function admitStream(
+  owner: SessionOwner,
+  limit: number | null,
+): Promise<PlaybackBusyData | null> {
+  const guard = mayGoLive(owner.userId, owner.id, limit)
+  const [row] = await db
+    .insert(playbackSession)
+    .values(await startValues(owner))
+    .onConflictDoUpdate({
+      target: playbackSession.id,
+      set: {
+        endedAt: null,
+        leftAt: leftAtOnSign(owner),
+        updatedAt: new Date(),
+        ...ownerColumns,
+      },
+      setWhere: and(sameOwner(owner), guard),
+    })
+    .returning({ inserted })
+  if (!row) return guard && limit !== null ? refusal(owner, limit) : null
+  if (row.inserted) await endLeftBehind(owner)
+  events.publish("playback", undefined)
+  return null
+}
+
+/**
+ * Record what the server does for a stream `admitStream` let through.
+ * The session's liveness is `admitStream`'s; this only fills in the plan,
+ * and creates the row should that have failed.
+ */
 export async function recordStream(
   owner: SessionOwner,
   plan: StreamPlan,
@@ -296,9 +321,6 @@ export async function recordStream(
         toneMapper: sql`coalesce(excluded.tone_mapper, ${playbackSession.toneMapper})`,
         audioEncoder: sql`coalesce(excluded.audio_encoder, ${playbackSession.audioEncoder})`,
         quality: sql`excluded.quality`,
-        endedAt: null,
-        leftAt: null,
-        updatedAt: new Date(),
         ...ownerColumns,
       },
       setWhere: sameOwner(owner),

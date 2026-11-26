@@ -78,6 +78,14 @@ export const playbackContract = oc.tag("Playback").router({
    * it in `mediaPlaybackPath()` too. `playedSeconds` is the time it has
    * spent playing in the session so far, without pauses and buffering;
    * the server never counts more than the time since the session began.
+   *
+   * A session that dropped out, after a closing report or once its
+   * player left, comes back with its next report, unless the account's
+   * other devices take every one of its streams then. That report fails
+   * with `PLAYBACK_BUSY`, as `playback.start` does, and the session stays
+   * out; where the person got to is kept all the same. Stop playing and
+   * show the refusal; `playback.start` again is the retry. A session that
+   * plays now is never refused, and neither is a closing report.
    */
   report: post("/media/{itemId}/progress", "watchState.update")
     .input(
@@ -89,7 +97,10 @@ export const playbackContract = oc.tag("Playback").router({
         playedSeconds: t.number().min(0).optional(),
         /** Playback is paused, so the session shows as paused for a while. */
         paused: t.boolean().optional(),
-        /** The player closed. Another report reopens the session. */
+        /**
+         * The player closed. Another report reopens the session, within
+         * the account's stream limit.
+         */
         closed: t.boolean().optional(),
       }),
     )
@@ -141,12 +152,16 @@ export const playbackContract = oc.tag("Playback").router({
    * comments. When the session's last connection drops, the server takes
    * the player for gone: the session leaves `stats.live` and frees its
    * place in the account's streams `graceSeconds` later, without waiting
-   * for its reports to stop, unless a connection for it opens again or it
-   * reports first. The server ends the stream every few minutes; open a
-   * new one at once. When it drops, open one again within `graceSeconds`.
-   * A player that can't keep one open still plays: its reports keep the
+   * for its reports to stop, unless a connection for it opens again. A
+   * report or a stream while none is open gives it `graceSeconds` more
+   * from then. The server ends the stream every few minutes; open a new
+   * one at once. When it drops, open one again within `graceSeconds`. A
+   * player that never keeps one open still plays: its reports keep the
    * session going as they did, so send one when the connection fails.
    * Opening one creates no session, and another user's id changes nothing.
+   * Nor does one for a session that dropped out while the account's other
+   * devices take every one of its streams: it opens all the same, and the
+   * session's next report is refused, as `report` says.
    *
    * A stream has to be a GET, and this one writes: whether the player is
    * there. A link from another site can open one only for a session id

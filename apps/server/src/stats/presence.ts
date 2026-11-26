@@ -5,15 +5,20 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm"
 import { db } from "../db"
 import { log } from "../log"
 import { events, shuttingDown, streamSignal } from "../realtime/events"
-import { LEFT_GRACE_SECONDS } from "./sessions"
+import { LEFT_GRACE_SECONDS, mayGoLive } from "./live"
 
 /*
  * Players hold a `playback.presence` stream open while they show a
  * session. When the last one for a session closes, `leftAt` takes the
  * time, and the session stops counting as live `LEFT_GRACE_SECONDS`
- * later; one that opens again clears it. The count is per user and
- * session, so an old connection that closes after its replacement opened
- * changes nothing, and another user's id never touches the row.
+ * later; one that opens again clears it, unless the session dropped out
+ * already and the account plays on as many devices as it may: then the
+ * mark stays, and the session's next report is refused. A report or a
+ * stream while none is open moves the mark to its time (see
+ * `presenceOpen`). The count is per user and session, so an old
+ * connection that closes after its replacement opened changes nothing,
+ * and another user's id never touches the row. It lives in memory: after
+ * a restart, players open their connections again.
  */
 
 type Presence = {
@@ -24,8 +29,22 @@ type Presence = {
 
 const presences = new Map<string, Presence>()
 
-/** Write whether the player is there, by the connections open when it runs. */
-function sync(key: string, entry: Presence, userId: string, sessionId: string) {
+/** Whether a presence connection for `userId`'s session `sessionId` is open. */
+export function presenceOpen(userId: string, sessionId: string): boolean {
+  return (presences.get(`${userId}:${sessionId}`)?.open ?? 0) > 0
+}
+
+/**
+ * Write whether the player is there, by the connections open when it
+ * runs. Coming back takes a place under the stream `limit`.
+ */
+function sync(
+  key: string,
+  entry: Presence,
+  userId: string,
+  sessionId: string,
+  limit: number | null,
+) {
   const write = async () => {
     // Shutdown ends every stream at once, and no player left. One that
     // doesn't come back after the restart goes by its reports.
@@ -40,7 +59,10 @@ function sync(key: string, entry: Presence, userId: string, sessionId: string) {
           eq(playbackSession.userId, userId),
           // Leaving keeps the first drop's time.
           here
-            ? isNotNull(playbackSession.leftAt)
+            ? and(
+                isNotNull(playbackSession.leftAt),
+                mayGoLive(userId, sessionId, limit),
+              )
             : isNull(playbackSession.leftAt),
         ),
       )
@@ -58,10 +80,14 @@ function sync(key: string, entry: Presence, userId: string, sessionId: string) {
   })
 }
 
-/** Hold `userId`'s session `sessionId` as there until the stream ends. */
+/**
+ * Hold `userId`'s session `sessionId` as there until the stream ends,
+ * within the account's stream `limit`.
+ */
 export async function* holdPresence(
   userId: string,
   sessionId: string,
+  limit: number | null,
   request: AbortSignal | undefined,
 ): AsyncGenerator<PlaybackPresence, void, void> {
   const signal = streamSignal(request)
@@ -72,7 +98,7 @@ export async function* holdPresence(
     presences.set(key, entry)
   }
   entry.open++
-  if (entry.open === 1) sync(key, entry, userId, sessionId)
+  if (entry.open === 1) sync(key, entry, userId, sessionId, limit)
   let stop: (() => void) | undefined
   try {
     yield { graceSeconds: LEFT_GRACE_SECONDS }
@@ -84,6 +110,6 @@ export async function* holdPresence(
   } finally {
     if (stop) signal.removeEventListener("abort", stop)
     entry.open--
-    if (entry.open === 0) sync(key, entry, userId, sessionId)
+    if (entry.open === 0) sync(key, entry, userId, sessionId, limit)
   }
 }

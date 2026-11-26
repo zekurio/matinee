@@ -43,6 +43,7 @@ import { rememberedTracks, savePick } from "../media/track-picks"
 import { markUnwatched, markWatched } from "../media/watched"
 import { events } from "../realtime/events"
 import { follow } from "../realtime/follow"
+import { streamsBusy } from "../stats/live"
 import { holdPresence } from "../stats/presence"
 import { sessionStream } from "../stats/queries"
 import { recordOfflinePlay, recordReport } from "../stats/sessions"
@@ -66,6 +67,27 @@ function resumeThreshold(duration: number | null): number {
   return duration
     ? Math.min(RESUME_MIN_SECONDS, duration * 0.1)
     : RESUME_MIN_SECONDS
+}
+
+/** Where the user got to in the file, for "continue watching". */
+async function saveProgress(
+  userId: string,
+  mediaItemId: string,
+  positionSeconds: number,
+  completed: boolean,
+): Promise<void> {
+  await db
+    .insert(watchProgress)
+    .values({ userId, mediaItemId, positionSeconds, completed })
+    .onConflictDoUpdate({
+      target: [watchProgress.userId, watchProgress.mediaItemId],
+      set: {
+        positionSeconds,
+        // Rewatching part of a finished file keeps it watched.
+        completed: sql`${watchProgress.completed} or excluded.completed`,
+        updatedAt: new Date(),
+      },
+    })
 }
 
 // Files without numbers sort after the numbered ones.
@@ -98,43 +120,35 @@ export const playback = {
       duration !== null && input.positionSeconds / duration >= WATCHED_RATIO
 
     if (input.sessionId && input.closed) releaseSession(input.sessionId)
-    if (input.sessionId && input.playedSeconds !== undefined) {
-      await recordReport(
-        {
-          id: input.sessionId,
-          userId: context.user.id,
-          item,
-          client: context.user.clientName,
-          authSessionId: context.user.credential.id,
-        },
-        {
-          positionSeconds: input.positionSeconds,
-          playedSeconds: input.playedSeconds,
-          completed,
-          paused: input.paused ?? false,
-          closed: input.closed ?? false,
-        },
-      )
-    }
-    if (!completed && input.positionSeconds < resumeThreshold(duration)) return
-
-    await db
-      .insert(watchProgress)
-      .values({
-        userId: context.user.id,
-        mediaItemId: item.id,
-        positionSeconds: input.positionSeconds,
+    // A session refused its place still keeps where the person got to.
+    const refused =
+      input.sessionId && input.playedSeconds !== undefined
+        ? await recordReport(
+            {
+              id: input.sessionId,
+              userId: context.user.id,
+              item,
+              client: context.user.clientName,
+              authSessionId: context.user.credential.id,
+            },
+            {
+              positionSeconds: input.positionSeconds,
+              playedSeconds: input.playedSeconds,
+              completed,
+              paused: input.paused ?? false,
+              closed: input.closed ?? false,
+            },
+            context.user.access.maxStreams,
+          )
+        : null
+    if (completed || input.positionSeconds >= resumeThreshold(duration))
+      await saveProgress(
+        context.user.id,
+        item.id,
+        input.positionSeconds,
         completed,
-      })
-      .onConflictDoUpdate({
-        target: [watchProgress.userId, watchProgress.mediaItemId],
-        set: {
-          positionSeconds: input.positionSeconds,
-          // Rewatching part of a finished file keeps it watched.
-          completed: sql`${watchProgress.completed} or excluded.completed`,
-          updatedAt: new Date(),
-        },
-      })
+      )
+    if (refused) throw streamsBusy(refused)
   }),
 
   tracks: authed.playback.tracks.handler(async ({ context, input }) => {
@@ -152,7 +166,12 @@ export const playback = {
   ),
 
   presence: authed.playback.presence.handler(({ context, input, signal }) =>
-    holdPresence(context.user.id, input.sessionId, signal),
+    holdPresence(
+      context.user.id,
+      input.sessionId,
+      context.user.access.maxStreams,
+      signal,
+    ),
   ),
 
   pickTracks: authed.playback.pickTracks.handler(async ({ context, input }) => {

@@ -327,7 +327,9 @@ export type PlaybackRestrictedData = t.infer<typeof PlaybackRestrictedData>
  * The code `playback.start` fails with, as HTTP 429, while the account
  * plays on as many devices as it may. The error's data is a
  * `PlaybackBusyData`. A player shows the message and stops. Stopping
- * playback elsewhere frees a place.
+ * playback elsewhere frees a place. `playback.report` and the streams of
+ * `mediaPlaybackPath` and `mediaHlsPath` fail with it too, for a session
+ * that dropped out and would come back past the limit.
  */
 export const PLAYBACK_BUSY = "TOO_MANY_STREAMS"
 

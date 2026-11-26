@@ -59,7 +59,12 @@ export function mediaStreamPath(id: string): string {
  * which is also what it gets without the list.
  *
  * `session` is the id the player reports progress with, so statistics
- * know what the server converted for that session.
+ * know what the server converted for that session. A stream for a session
+ * that dropped out brings it back, as a report does, and fails the same
+ * way: 429, with `playback.start`'s `PLAYBACK_BUSY` error as JSON, while
+ * the account's other devices take every one of its streams. A player
+ * that takes it for a failed source and asks `playback.start` again gets
+ * the refusal there.
  */
 export function mediaPlaybackPath(
   id: string,
@@ -94,7 +99,8 @@ export function mediaPlaybackPath(
  * and take the same codecs, share one encode, and a segment once
  * encoded is served from disk again. `start` is where the player begins,
  * so the server starts encoding there. `audioCodecs`, `videoCodecs`, and
- * `session` work as in `mediaPlaybackPath`.
+ * `session` work as in `mediaPlaybackPath`, the 429 too; the playlist
+ * checks it, the segments don't.
  *
  * `subtitle` burns a picture-based subtitle track into the video: the id
  * of a track from `media.subtitles` whose `delivery` is `pgs` or

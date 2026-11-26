@@ -205,8 +205,9 @@ export const playbackSession = pgTable(
     /**
      * When the player's last `playback.presence` connection dropped. The
      * session stops counting as live a little after, unless a connection
-     * opens again, a report comes, or a stream starts, which clear it.
-     * Null for players that never open one, which go by reports alone.
+     * opens again, which clears it. A report or a stream while none is
+     * open moves it to then. Null for players that never open one, which
+     * go by reports alone.
      */
     leftAt: timestamp({ withTimezone: true }),
   },
