@@ -88,12 +88,15 @@ type Episode = {
   overview?: string
   air_date?: string | null
   runtime?: number | null
+  vote_average?: number
+  vote_count?: number
   still_path?: string | null
 }
 export type SeasonResult = {
   season_number: number
   overview?: string
   poster_path?: string | null
+  vote_average?: number
   episodes?: Episode[]
 }
 

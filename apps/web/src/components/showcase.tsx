@@ -1,7 +1,7 @@
 import type { FeaturedTitle } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/solid-router"
-import { ChevronLeft, ChevronRight, Play, Star } from "lucide"
+import { ChevronLeft, ChevronRight, Play } from "lucide"
 import {
   createEffect,
   createMemo,
@@ -15,7 +15,6 @@ import { tr } from "@/i18n"
 import { buttonVariants } from "@/kit/button"
 import { Icon } from "@/kit/icon"
 import { Skeleton } from "@/kit/skeleton"
-import { formatScore } from "@/lib/format"
 import {
   art,
   episodeCode,
@@ -43,6 +42,7 @@ import { pageVisible, reducedMotion, viewport } from "@/lib/viewport"
 
 import { pageGutter } from "./app-shell"
 import { Picture, tone } from "./picture"
+import { Score } from "./title/score"
 
 /*
  * Home's featured titles from `sm` up, the Flutter tablet's showcase
@@ -517,19 +517,7 @@ function SlideWords(props: {
               </span>
             )}
           </Show>
-          <Show when={title().rating}>
-            {(rating) => (
-              <span class="inline-flex items-center gap-1 tabular-nums">
-                <Icon
-                  icon={Star}
-                  fill="currentColor"
-                  aria-label={tr("media.hero.rated")}
-                  class="size-3.5 text-amber-300"
-                />
-                {formatScore(rating())}
-              </span>
-            )}
-          </Show>
+          <Score score={title().rating} />
         </div>
       </Show>
       <Show when={genres().length > 0}>

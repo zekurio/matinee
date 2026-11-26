@@ -134,6 +134,13 @@
       "when": 1795726799458,
       "tag": "0018_drop_manual_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795730770614,
+      "tag": "0019_season_episode_ratings",
+      "breakpoints": true
     }
   ]
 }

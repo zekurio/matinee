@@ -687,9 +687,10 @@ const _aboutHeight = 100.0;
 
 /// A season's page on a TV: the show's name, the season, or tabs for every
 /// season of a show with more than one, how many episodes it has and are
-/// watched, and Play with the marks. Below, its episodes in a row, with what
-/// the focused one is about above them. Focus starts on the episode Play would
-/// start. [season] null is the files without a season number.
+/// watched, its score, and Play with the marks. Below, its episodes in a
+/// row, with what the focused one is about above them, its score with its
+/// facts. Focus starts on the episode Play would start. [season] null is
+/// the files without a season number.
 class TvSeasonScreen extends ConsumerStatefulWidget {
   const TvSeasonScreen({
     super.key,
@@ -815,14 +816,12 @@ class _TvSeasonScreenState extends ConsumerState<TvSeasonScreen>
                     ),
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      [
+                    child: TvFacts(
+                      facts: [
                         l.mediaEpisodeCount(season.itemCount),
                         l.titleSeasonWatchedCount(season.watchedCount),
-                      ].join('  ·  '),
-                      style: TvType.facts.style(
-                        color: colors.foreground.withValues(alpha: .85),
-                      ),
+                      ],
+                      rating: season.rating,
                     ),
                   ),
                   _buttons(
@@ -997,8 +996,8 @@ class _TvSeasonScreenState extends ConsumerState<TvSeasonScreen>
   }
 }
 
-/// An episode's number and name, facts, and the start of its overview,
-/// above the season's row. [left] adds the time left in it.
+/// An episode's number and name, facts and score, and the start of its
+/// overview, above the season's row. [left] adds the time left in it.
 class _EpisodeAbout extends StatelessWidget {
   const _EpisodeAbout({required this.item, required this.left});
 
@@ -1029,11 +1028,12 @@ class _EpisodeAbout extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TvType.title.style(color: colors.foreground),
           ),
-          if (facts.isNotEmpty)
-            Text(
-              facts.join('  ·  '),
-              maxLines: 1,
-              style: TvType.caption.style(color: colors.mutedForeground),
+          if (facts.isNotEmpty || item.episode?.rating != null)
+            TvFacts(
+              facts: facts,
+              rating: item.episode?.rating,
+              style: TvType.caption,
+              color: colors.mutedForeground,
             ),
           if (item.episode?.overview case final overview?)
             Padding(
@@ -1180,6 +1180,8 @@ class _TvEpisodeScreenState extends ConsumerState<TvEpisodeScreen>
           child: TvFacts(
             facts: episodeFacts(item, l),
             contentRating: item.title?.contentRating,
+            // The episode's own score, never its show's.
+            rating: item.episode?.rating,
           ),
         ),
         _aboutRow(

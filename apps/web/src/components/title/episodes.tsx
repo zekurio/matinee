@@ -12,6 +12,7 @@ import {
 
 import { CardScrim } from "@/components/card-actions"
 import {
+  EpisodeDetail,
   ItemLink,
   textLink,
   Thumb,
@@ -133,11 +134,10 @@ function SeasonEpisode(props: {
       >
         {label().title}
       </ItemLink>
-      <Show when={detail()}>
-        <span class="text-muted-foreground text-13px block truncate leading-5">
-          {detail()}
-        </span>
-      </Show>
+      <EpisodeDetail
+        detail={detail()}
+        score={props.item.episode?.rating ?? null}
+      />
     </div>
   )
 }

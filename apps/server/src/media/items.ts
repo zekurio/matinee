@@ -265,6 +265,7 @@ function toItem(row: MediaItemRow, details: ItemDetails): MediaItem {
           overview: info.overview,
           airDate: info.airDate,
           runtimeMinutes: info.runtimeMinutes,
+          rating: info.rating,
           still: toArtwork(info.stillId, details.art),
         }
       : null,

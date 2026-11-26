@@ -45,7 +45,6 @@ export default {
   "media.hero.showSlide": "Folie {index} zeigen",
   "media.hero.previous": "Vorherige Folie",
   "media.hero.next": "Nächste Folie",
-  "media.hero.rated": "Bewertung",
   "media.hero.genres": "Genres",
   "media.hero.play": "Abspielen",
   "media.hero.details": "Details",

@@ -23,7 +23,8 @@ export default defineMessages("title", {
   // title-page.tsx
   "title.loadError": "Couldn't load this title",
 
-  // title-header.tsx: the facts under the name.
+  // score.tsx: what a screen reader says for a score's star and number,
+  // like "Rated 7.8", wherever a title, season, or episode shows one.
   "title.rating": "Rated {rating}",
   // title-header.tsx: the labels in the table of details.
   "title.details.genres": plural({ one: "Genre", other: "Genres" }),

@@ -18,7 +18,7 @@ import {
   languages,
   Languages,
 } from "../metadata/tmdb/browse"
-import { titleFacts } from "../metadata/tmdb/details"
+import { titleFacts, titleScores } from "../metadata/tmdb/details"
 import {
   collection,
   Collection,
@@ -349,6 +349,35 @@ export function factsProvider(kind: CatalogRef["kind"], id: string) {
     CACHE_HOURS.details,
     (body) => Facts.parse(body),
     () => titleFacts(kind, id),
+  )
+}
+
+export const Scores = t.object({
+  rating: t.number().nullable(),
+  seasons: t.array(
+    t.object({ number: t.number(), rating: t.number().nullable() }),
+  ),
+  episodes: t.array(
+    t.object({
+      season: t.number(),
+      episode: t.number(),
+      airDate: text,
+      rating: t.number().nullable(),
+    }),
+  ),
+})
+
+/**
+ * TMDB's community scores for a title it knows by `id`, kept as long as
+ * details. A title read from TheTVDB fills what its provider leaves empty
+ * from these.
+ */
+export function scoresProvider(kind: CatalogRef["kind"], id: string) {
+  return cached(
+    JSON.stringify(["tmdb", "scores", kind, id]),
+    CACHE_HOURS.details,
+    (body) => Scores.parse(body),
+    () => titleScores(kind, id),
   )
 }
 

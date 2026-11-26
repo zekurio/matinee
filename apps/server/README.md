@@ -202,6 +202,11 @@ After a scan, the server refreshes new titles, titles with new files,
 unmatched titles older than a day, and titles 30 days old. ffprobe reads
 new and changed files in the background.
 
+A title's community score out of 10 is TMDB's, from `vote_average`, and
+its seasons and episodes have one too. TheTVDB has none, so a library on
+it takes its scores from TMDB when `MATINEE_TMDB_API_KEY` is set, matching
+episodes by number and air date.
+
 Artwork goes to `$MATINEE_DATA_DIR/artwork`, about 150 KB an image, so a
 few GB for 1,000 titles. Resized WebP copies are made on first request.
 Clients use `artworkPath()` or `artworkSrcSet()`. An image's id is a hash
@@ -225,7 +230,8 @@ choices only from titles the viewer can see there. A title's age rating
 comes from the country of its library's language, or the US, and the
 order of ratings from TMDB, so the age filter needs
 `MATINEE_TMDB_API_KEY`. Unrated titles fail an age limit. TheTVDB has no
-community score, so its titles fail a score bound.
+community score of its own, so without `MATINEE_TMDB_API_KEY` its titles
+fail a score bound.
 
 ### Jobs
 

@@ -155,7 +155,8 @@ class ShelfCard extends StatelessWidget {
 /// the episode's picture, the show's name, then the episode and the time left.
 /// It opens the episode's page, or a movie's; Play, where a mouse or focus
 /// shows it, starts the file. On a show's own pages [showName] is false, and
-/// the episode's name leads instead. A long press opens its menu.
+/// the episode's name leads instead, with its score after its facts. A long
+/// press opens its menu.
 class EpisodeCard extends StatelessWidget {
   const EpisodeCard({super.key, required this.item, this.showName = true});
 
@@ -182,9 +183,14 @@ class EpisodeCard extends StatelessWidget {
       ?formatDay(item.episode?.airDate, l),
       ?(left ?? formatRuntime(runtimeMinutes(item), l)),
     ].join(' · ');
+    // On the show's own pages, the episode's score after its facts.
+    final rating = showName ? null : item.episode?.rating;
+    final score = rating == null ? null : formatRating(rating, l);
     return WideCard(
       name: showName ? names.showName : ownName,
       detail: showName ? detail : (ownDetail.isEmpty ? null : ownDetail),
+      score: score,
+      scoreLabel: score == null ? null : l.webFiltersCardScoreSpoken(score),
       toneKey: names.showName,
       untitled: !showName && names.untitled,
       art: Picture(landscapeSources(item)),
