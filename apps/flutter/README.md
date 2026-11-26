@@ -66,6 +66,15 @@ host's GPU (`-gpu host`) is the reverse: Vulkan crashes on the first
 artwork it decodes, and OpenGL ES works. Build for that one with
 `MATINEE_IMPELLER_BACKEND=opengles flutter build apk --debug`.
 
+### Frame timings
+
+To time frames on a device, build a profile APK with
+`flutter build apk --profile --dart-define=MATINEE_FRAME_STATS=true`, install
+it, and follow `adb logcat -s flutter`. Each second in which frames were
+drawn prints a `frame-stats` line: the display's budget, the 50th, 90th, and
+longest build and raster times, and how many frames went over the budget. A
+normal build leaves the logger out.
+
 ### iOS
 
 The flake's Flutter shell is Linux-only, so the iOS build needs a Mac with
