@@ -72,7 +72,7 @@ export function LibrariesPanel() {
     can(context().user, "library.create") && can(context().user, "folder.read")
   const addButton = () => (
     <Show when={mayAdd()}>
-      <Button onClick={() => store.edit()}>
+      <Button variant="outline" onClick={() => store.edit()}>
         <Icon icon={Plus} />
         {tr("libraries.add")}
       </Button>

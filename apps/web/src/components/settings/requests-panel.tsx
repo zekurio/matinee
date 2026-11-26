@@ -99,7 +99,7 @@ export function RequestsPanel() {
   }
 
   const addButton = () => (
-    <Button onClick={() => edit()} disabled={!sourceList()}>
+    <Button variant="outline" onClick={() => edit()} disabled={!sourceList()}>
       <Icon icon={Plus} />
       {tr("connections.add")}
     </Button>
