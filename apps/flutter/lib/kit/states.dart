@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'button.dart';
 import 'icon.dart';
+import 'motion.dart';
 import 'spinner.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -34,18 +35,53 @@ class SkeletonBox extends StatelessWidget {
 }
 
 /// A page's spinner while it has nothing to show yet, in the middle of
-/// what it's given.
-class LoadingState extends StatelessWidget {
+/// what it's given, shown once the wait runs long, as the web's pending
+/// pages are: nothing for the first 400 milliseconds, by when most reads
+/// are back, so a quick page doesn't flash a spinner, then the spinner
+/// fades in. A screen reader hears it at once.
+class LoadingState extends StatefulWidget {
   const LoadingState({super.key, required this.label});
 
   final String label;
 
   @override
+  State<LoadingState> createState() => _LoadingStateState();
+}
+
+class _LoadingStateState extends State<LoadingState>
+    with SingleTickerProviderStateMixin {
+  static const _wait = Duration(milliseconds: 400);
+
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: _wait + KitMotion.enter,
+  )..forward();
+  late final _opacity = CurvedAnimation(
+    parent: _controller,
+    curve: Interval(
+      _wait.inMilliseconds / (_wait + KitMotion.enter).inMilliseconds,
+      1,
+      curve: KitMotion.easing,
+    ),
+  );
+
+  @override
+  void dispose() {
+    _opacity.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => Center(
-    child: Spinner(
-      size: 32,
-      color: MatineeTheme.of(context).accent,
-      label: label,
+    child: FadeTransition(
+      opacity: _opacity,
+      alwaysIncludeSemantics: true,
+      child: Spinner(
+        size: 32,
+        color: MatineeTheme.of(context).accent,
+        label: widget.label,
+      ),
     ),
   );
 }

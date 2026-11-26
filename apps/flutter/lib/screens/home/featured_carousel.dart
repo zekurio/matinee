@@ -310,8 +310,11 @@ class _FeaturedCard extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: _radius,
+          // One clip for the picture and its shade, so the picture's edge
+          // doesn't show through the shade as a line.
+          clipBehavior: Clip.antiAliasWithSaveLayer,
           child: Tone(
-            toneKey: name,
+            toneKey: slide.title.id,
             child: Stack(
               fit: StackFit.expand,
               children: [

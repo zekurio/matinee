@@ -7,6 +7,8 @@ import '../kit/kit.dart';
 /// An account's picture in a circle [size] across: the picture at [url] when
 /// the account has one, else, and while no server is in use or the picture
 /// can't load, [fallback], or the name's first letter on the secondary fill.
+/// A hairline of the text colour rings it, as the web's, so a dark picture
+/// keeps its edge on a dark page.
 class Avatar extends ConsumerWidget {
   const Avatar({
     super.key,
@@ -31,19 +33,28 @@ class Avatar extends ConsumerWidget {
     final address = url == null || api == null ? null : api.paths.server(url);
     // Only the server gets the session, never another host.
     final ours = address != null && address.origin == api?.paths.base.origin;
-    return SizedBox.square(
-      dimension: size,
-      child: address == null
-          ? placeholder
-          : ClipOval(
-              child: Image.network(
-                address.toString(),
-                headers: ours ? ref.watch(playerHeadersProvider) : null,
-                fit: BoxFit.cover,
-                semanticLabel: name,
-                errorBuilder: (context, error, stack) => placeholder,
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: MatineeTheme.of(context).foreground.withValues(alpha: .1),
+        ),
+      ),
+      child: SizedBox.square(
+        dimension: size,
+        child: address == null
+            ? placeholder
+            : ClipOval(
+                child: Image.network(
+                  address.toString(),
+                  headers: ours ? ref.watch(playerHeadersProvider) : null,
+                  fit: BoxFit.cover,
+                  semanticLabel: name,
+                  errorBuilder: (context, error, stack) => placeholder,
+                ),
               ),
-            ),
+      ),
     );
   }
 }
@@ -77,7 +88,7 @@ class _Initial extends StatelessWidget {
                 fontSize: size * .4,
                 height: 1,
                 fontWeight: FontWeight.w700,
-                color: colors.mutedForeground,
+                color: colors.foreground,
               ),
             ),
           ),

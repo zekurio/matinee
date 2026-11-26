@@ -59,6 +59,9 @@ class TitleCard extends StatelessWidget {
     final art = poster ?? title.images.poster;
     return PosterCard(
       name: title.name,
+      // The title's own, as the web's cards, its page, and its seasons
+      // share it.
+      toneKey: title.id,
       detail: detail,
       detailIcon: detailIcon,
       detailLabel: detailLabel,

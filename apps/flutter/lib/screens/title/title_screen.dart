@@ -89,7 +89,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> with PendingMarks {
             if (backdrop != null) ArtSource(backdrop),
             if (play != null) FrameSource(play.id),
           ],
-          toneKey: title.name,
+          toneKey: title.id,
           top: wide ? headingTop(context) : phoneHeadingTop(context),
           // Phones leave the poster out, for the name to have the width.
           child: TitleHeading(

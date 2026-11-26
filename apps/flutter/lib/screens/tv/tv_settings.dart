@@ -74,13 +74,17 @@ enum TvSettingsCategory {
   }
 }
 
-/// The categories' column, its highlight starting where every TV page's content
-/// does, clear of the rail's focus ring. Wide enough for the longest German
-/// name, with little room after it.
-const _categoryWidth = 224.0;
+/// Where the page starts across, as the web's: a category's highlight a row's
+/// inset before every TV page's content, so the title and the categories'
+/// icons line up with the other pages' at [TvPage.start].
+const _pageStart = TvPage.start - TvListItems.inset;
 
-/// Between the categories' highlight and the rows' highlight.
-const _categoryGap = 32.0;
+/// The categories' column, the web's 260.
+const _categoryWidth = 260.0;
+
+/// Between the categories' highlight and the rows' highlight, the web's 36
+/// and the 12 it keeps beside the rows for a focused one's growth.
+const _categoryGap = 48.0;
 
 /// Where rows start under the top, clear of the clock.
 const _rowsTop = Overscan.vertical + 60;
@@ -178,7 +182,7 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
       },
       child: Padding(
         padding: const EdgeInsetsDirectional.only(
-          start: TvPage.start,
+          start: _pageStart,
           end: TvPage.end,
         ),
         child: Row(
@@ -267,8 +271,6 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
                               Overscan.vertical + 24,
                               constraints.maxHeight / 2,
                             ),
-                            // A focused row grows, and stays inside the edge.
-                            end: TvListItems.focusRoom,
                           ),
                           children: switch (_selected) {
                             TvSettingsCategory.playback => [

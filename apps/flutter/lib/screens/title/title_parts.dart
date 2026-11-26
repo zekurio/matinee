@@ -390,9 +390,17 @@ class Backdrop extends StatelessWidget {
 
 /// A poster at a heading's side: 180 wide on a tablet, 112 on a phone.
 class HeadingPoster extends StatelessWidget {
-  const HeadingPoster({super.key, required this.name, required this.art});
+  const HeadingPoster({
+    super.key,
+    required this.name,
+    required this.toneKey,
+    required this.art,
+  });
 
   final String name;
+
+  /// What picks its tone while it has no picture: the title's id.
+  final String toneKey;
   final Artwork? art;
 
   @override
@@ -401,7 +409,7 @@ class HeadingPoster extends StatelessWidget {
     return SizedBox(
       width: isWide(context) ? 180 : 112,
       child: ArtFrame(
-        toneKey: name,
+        toneKey: toneKey,
         aspectRatio: CardMetrics.poster,
         children: [
           if (art != null) Picture([ArtSource(art)]),
@@ -904,7 +912,12 @@ class TitleHeading extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         spacing: 16,
         children: [
-          if (poster) HeadingPoster(name: title.name, art: title.images.poster),
+          if (poster)
+            HeadingPoster(
+              name: title.name,
+              toneKey: title.id,
+              art: title.images.poster,
+            ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 4),
@@ -1196,7 +1209,7 @@ class SeasonCard extends StatelessWidget {
     final art = season.poster ?? title.images.poster;
     return PosterCard(
       name: name,
-      toneKey: title.name,
+      toneKey: title.id,
       detail: switch (partial) {
         final partial? => partialLine(partial, l),
         null => l.mediaEpisodeCount(season.itemCount),
