@@ -9,7 +9,25 @@ Page<void> kitPage({
   required LocalKey key,
   required String? name,
   required Widget child,
-}) => MaterialPage<void>(key: key, name: name, child: child);
+}) => MaterialPage<void>(
+  key: key,
+  name: name,
+  child: NoHeroes(child: child),
+);
+
+/// A page's content, which no hero flies from or to. The app has no
+/// heroes, but each navigator has a hero controller, go_router's own,
+/// which on every push and pop walks every element of both pages looking
+/// for them, the tabs' shell with all its tabs included. A disabled
+/// [HeroMode] ends the walk where it starts.
+class NoHeroes extends StatelessWidget {
+  const NoHeroes({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => HeroMode(enabled: false, child: child);
+}
 
 /// A page that fades in over what was there, over [KitMotion.enter], and out
 /// over [KitMotion.exit]: one state of a place taking another's, like a
@@ -88,7 +106,11 @@ class _FadeRoute extends PageRoute<void> {
     BuildContext context,
     Animation<double> animation,
     Animation<double> secondaryAnimation,
-  ) => Semantics(scopesRoute: true, explicitChildNodes: true, child: _page.child);
+  ) => Semantics(
+    scopesRoute: true,
+    explicitChildNodes: true,
+    child: NoHeroes(child: _page.child),
+  );
 
   @override
   Widget buildTransitions(

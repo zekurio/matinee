@@ -8,6 +8,7 @@ import 'package:matinee/kit/tokens.dart';
 const _width = 800.0;
 const _below = Key('below');
 const _above = Key('above');
+const _art = Key('art');
 
 /// Counts how often its dependencies changed, as a screen in the tabs would
 /// rebuild for it.
@@ -50,8 +51,20 @@ class _PagesState extends State<_Pages> {
 
   void show({required bool open}) => setState(() => this.open = open);
 
+  // As go_router gives each of its navigators.
+  final _heroes = HeroController();
+
   @override
-  Widget build(BuildContext context) => Navigator(
+  void dispose() {
+    _heroes.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      HeroControllerScope(controller: _heroes, child: _navigator());
+
+  Widget _navigator() => Navigator(
     pages: [
       widget.below(const _Probe()),
       if (open) widget.above(const SizedBox.expand(key: _above)),
@@ -151,6 +164,49 @@ void main() {
     await tester.pump(KitMotion.page ~/ 2);
     expect(_x(tester, _below), lessThan(0));
     expect(_Probe.changes, greaterThan(1));
+  });
+
+  testWidgets('no hero flies between pages', (tester) async {
+    const tag = 'poster';
+    final pages = await _app(
+      tester,
+      (child) => _fade(
+        Stack(
+          children: [
+            child,
+            const Hero(
+              tag: tag,
+              child: SizedBox(key: _art, width: 10),
+            ),
+          ],
+        ),
+      ),
+      above: (child) => _kit(
+        Stack(
+          children: [
+            child,
+            const Align(
+              alignment: Alignment.bottomRight,
+              child: Hero(
+                tag: tag,
+                child: SizedBox(key: _art, width: 10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    pages.show(open: true);
+    await tester.pump();
+    await tester.pump(KitMotion.move ~/ 2);
+    // A flight would hide both and show one in the overlay, out of the
+    // pages.
+    expect(find.byKey(_art), findsNWidgets(2));
+    expect(
+      find.ancestor(of: find.byKey(_art), matching: find.byType(NoHeroes)),
+      findsNWidgets(2),
+    );
+    await tester.pumpAndSettle();
   });
 
   testWidgets('it fades in', (tester) async {
