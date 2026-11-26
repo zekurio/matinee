@@ -13,26 +13,51 @@ import { isDirection, type RemoteKey, remoteKey } from "./keys"
 /** How long Select is held before it's a long press. */
 const LONG_PRESS_MS = 500
 
-type KeyPhase = "down" | "up"
+export type KeyPhase = "down" | "up"
+
+/**
+ * A press's own facts, which a keyboard event and a game controller both
+ * give: whether it's a held key repeating, and when it happened, on the
+ * clock `performance.now()` reads.
+ */
+export type KeyPress = {
+  repeat: boolean
+  timeStamp: number
+}
 
 /** Takes a key before anything else does. True when it used the key. */
 export type KeyTap = (
   key: RemoteKey,
   phase: KeyPhase,
-  event: KeyboardEvent,
+  press: KeyPress,
 ) => boolean
 
+function pressOf(event: KeyboardEvent): KeyPress {
+  return { repeat: event.repeat, timeStamp: event.timeStamp }
+}
+
 const taps: KeyTap[] = []
-const backs: (() => void)[] = []
-const fallbacks: (() => void)[] = []
+
+type BackEntry = {
+  onBack: () => void
+  enabled: () => boolean
+}
+
+type RefocusEntry = {
+  restore: () => void
+  enabled: () => boolean
+}
+
+const backs: BackEntry[] = []
+const fallbacks: RefocusEntry[] = []
 
 /**
  * Hears every key before the focused thing does, while `enabled`, as the
  * player does for the media keys. The newest one hears it first.
  */
 export function useKeyTap(tap: KeyTap, enabled: () => boolean = () => true) {
-  const entry: KeyTap = (key, phase, event) =>
-    enabled() ? tap(key, phase, event) : false
+  const entry: KeyTap = (key, phase, press) =>
+    enabled() ? tap(key, phase, press) : false
   onSettled(() => {
     taps.push(entry)
     return () => {
@@ -46,9 +71,7 @@ export function useBack(
   onBack: () => void,
   enabled: () => boolean = () => true,
 ) {
-  const entry = () => {
-    if (enabled()) onBack()
-  }
+  const entry: BackEntry = { onBack, enabled }
   onSettled(() => {
     backs.push(entry)
     return () => {
@@ -65,9 +88,7 @@ export function useRefocus(
   restore: () => void,
   enabled: () => boolean = () => true,
 ) {
-  const entry = () => {
-    if (enabled()) restore()
-  }
+  const entry: RefocusEntry = { restore, enabled }
   onSettled(() => {
     fallbacks.push(entry)
     return () => {
@@ -76,14 +97,28 @@ export function useRefocus(
   })
 }
 
-/** Asks whoever restores focus to do so now. */
+/** Asks the newest place taking it to restore focus now. */
 export function refocus() {
-  fallbacks.at(-1)?.()
+  for (let index = fallbacks.length - 1; index >= 0; index -= 1) {
+    const entry = fallbacks[index]
+    if (!entry || !entry.enabled()) continue
+    entry.restore()
+    return
+  }
 }
 
-/** Runs Back as the remote's key would. */
+/**
+ * Runs Back as the remote's key would: the newest handler that's taking
+ * it. A panel that's closed, or a page that's left, lets it pass to the
+ * one under it.
+ */
 export function goBack() {
-  backs.at(-1)?.()
+  for (let index = backs.length - 1; index >= 0; index -= 1) {
+    const entry = backs[index]
+    if (!entry || !entry.enabled()) continue
+    entry.onBack()
+    return
+  }
 }
 
 let pressed: { target: HTMLElement; timer: number; long: boolean } | null = null
@@ -98,20 +133,20 @@ function askForMenu(target: HTMLElement) {
   target.dispatchEvent(new CustomEvent("longpress", { bubbles: true }))
 }
 
-function onSelectDown(event: KeyboardEvent) {
-  if (event.repeat) return
+function onSelectDown(press: KeyPress) {
+  if (press.repeat) return
   const target = focused()
   if (!target) return
   release()
-  const press = {
+  const hold = {
     target,
     long: false,
     timer: window.setTimeout(() => {
-      press.long = true
+      hold.long = true
       askForMenu(target)
     }, LONG_PRESS_MS),
   }
-  pressed = press
+  pressed = hold
 }
 
 function onSelectUp() {
@@ -122,11 +157,40 @@ function onSelectUp() {
   press.target.click()
 }
 
-function tapped(key: RemoteKey, phase: KeyPhase, event: KeyboardEvent) {
+function tapped(key: RemoteKey, phase: KeyPhase, press: KeyPress) {
   for (let index = taps.length - 1; index >= 0; index -= 1) {
-    if (taps[index]?.(key, phase, event)) return true
+    if (taps[index]?.(key, phase, press)) return true
   }
   return false
+}
+
+/** What a key does when no tap took it first, as a keyboard's keydown. */
+function pressDown(key: RemoteKey, press: KeyPress) {
+  if (!focused() && key !== "back") {
+    refocus()
+    return
+  }
+  if (isDirection(key)) moveFocus(key)
+  else if (key === "select") onSelectDown(press)
+  else if (key === "back") goBack()
+  else if (key === "menu") {
+    const target = focused()
+    if (target) askForMenu(target)
+  }
+}
+
+/**
+ * Runs a key as the remote's would, for a source without a keyboard
+ * event, like a game controller. `press.repeat` is a held key repeating.
+ */
+export function pressRemoteKey(
+  key: RemoteKey,
+  phase: KeyPhase,
+  press: KeyPress,
+) {
+  if (tapped(key, phase, press)) return
+  if (phase === "down") pressDown(key, press)
+  else if (key === "select") onSelectUp()
 }
 
 function onKeyDown(event: KeyboardEvent) {
@@ -134,17 +198,7 @@ function onKeyDown(event: KeyboardEvent) {
   const key = remoteKey(event)
   if (!key) return
   event.preventDefault()
-  if (!focused() && key !== "back") {
-    refocus()
-    return
-  }
-  if (isDirection(key)) moveFocus(key)
-  else if (key === "select") onSelectDown(event)
-  else if (key === "back") goBack()
-  else if (key === "menu") {
-    const target = focused()
-    if (target) askForMenu(target)
-  }
+  pressDown(key, pressOf(event))
 }
 
 function onKeyUp(event: KeyboardEvent) {
@@ -162,7 +216,7 @@ export function startNavigation() {
     "keydown",
     (event) => {
       const key = remoteKey(event)
-      if (key && tapped(key, "down", event)) {
+      if (key && tapped(key, "down", pressOf(event))) {
         event.preventDefault()
         event.stopPropagation()
       }
@@ -173,7 +227,7 @@ export function startNavigation() {
     "keyup",
     (event) => {
       const key = remoteKey(event)
-      if (key && tapped(key, "up", event)) {
+      if (key && tapped(key, "up", pressOf(event))) {
         event.preventDefault()
         event.stopPropagation()
       }

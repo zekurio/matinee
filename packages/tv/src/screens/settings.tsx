@@ -11,6 +11,8 @@ import {
   type IconNode,
   Info,
   LogOut,
+  Maximize,
+  Minimize,
   Monitor,
   RefreshCw,
   Server,
@@ -20,7 +22,15 @@ import {
   UserRound,
   X,
 } from "lucide"
-import { For, Show, Switch, Match, createEffect, createSignal } from "solid-js"
+import {
+  For,
+  Show,
+  Switch,
+  Match,
+  createEffect,
+  createSignal,
+  onSettled,
+} from "solid-js"
 
 import { Page } from "../app/page"
 import { useApp, useKept, useLoader } from "../app/scope"
@@ -67,8 +77,21 @@ const CATEGORIES: readonly Category[] = [
   { key: "languages", icon: AudioLines, title: "playbackLanguagesTitle" },
   { key: "devices", icon: Monitor, title: "tvSettingsDevices" },
   { key: "account", icon: UserRound, title: "tvSettingsAccount" },
+  // The couch PC's: TV mode and the browser's fullscreen, which a TV has
+  // no settings for.
+  { key: "computer", icon: Monitor, title: "settingsThisComputer" },
   { key: "about", icon: Info, title: "aboutTitle" },
 ]
+
+/** The categories this host has settings for. */
+function categories(): readonly Category[] {
+  return CATEGORIES.filter(
+    (category) =>
+      category.key !== "computer" ||
+      platform().toggleFullscreen !== undefined ||
+      platform().leaveTvMode !== undefined,
+  )
+}
 
 /** A row's panel: a choice among options, opened from the row named `from`. */
 type Picker = {
@@ -705,6 +728,53 @@ function AboutRows() {
 }
 
 /**
+ * The couch PC's own settings: TV mode's switch, the one the desktop app's
+ * account menu and Appearance settings show, here on, and the browser's
+ * fullscreen. A TV has no desktop app and fills its screen, so it has
+ * neither row.
+ */
+function ComputerRows() {
+  const [fullscreen, setFullscreen] = createSignal(
+    Boolean(document.fullscreenElement),
+  )
+  onSettled(() => {
+    const update = () => setFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener("fullscreenchange", update)
+    return () => document.removeEventListener("fullscreenchange", update)
+  })
+  const toggle = platform().toggleFullscreen
+  const leave = platform().leaveTvMode
+  return (
+    <>
+      {leave && (
+        <SwitchRow
+          fid="tvMode"
+          title={tr("settingsTvMode")}
+          description={tr("tizen_settings_tv_mode_description")}
+          checked
+          onChange={(on) => {
+            if (!on) leave()
+          }}
+        />
+      )}
+      {toggle && (
+        <ListItem
+          fid="fullscreen"
+          title={tr(
+            fullscreen()
+              ? "tizen_settings_fullscreen_exit"
+              : "tizen_settings_fullscreen",
+          )}
+          icon={fullscreen() ? Minimize : Maximize}
+          quiet
+          onPress={() => toggle()}
+        />
+      )}
+    </>
+  )
+}
+
+/**
  * Settings on a TV. Focusing a category shows its rows; Right, Select, or
  * a click goes into them, Left or Back comes out to the category again.
  * Choices open in a panel at the right edge, switches flip in place.
@@ -712,7 +782,7 @@ function AboutRows() {
 export function SettingsPage(props: { category?: string }) {
   const [selected, setSelected] = useKept(
     "category",
-    CATEGORIES.some((category) => category.key === props.category)
+    categories().some((category) => category.key === props.category)
       ? (props.category ?? "playback")
       : "playback",
   )
@@ -759,6 +829,8 @@ export function SettingsPage(props: { category?: string }) {
         )
       case "account":
         return <AccountRows onServers={() => setServers(true)} />
+      case "computer":
+        return <ComputerRows />
       case "about":
         return <AboutRows />
       default:
@@ -773,7 +845,7 @@ export function SettingsPage(props: { category?: string }) {
           {tr("shellSettings")}
         </div>
         <div class="settings-list" data-fg="categories" data-fk="col">
-          <For each={CATEGORIES}>
+          <For each={categories()}>
             {(category) => (
               <ListItem
                 fid={category.key}

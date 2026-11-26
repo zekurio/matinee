@@ -34,6 +34,12 @@ Tizen package loaded by file path asks for the server's address instead.
 The browser's video element plays; Samsung's AVPlay, the remote's media
 keys, and the `.wgt` stay in `apps/tizen`.
 
+On a couch PC the TV UI is TV mode, a switch in the account menu and in
+Settings → Appearance. `stores/tv-mode.ts` keeps the flag it shares with
+the TV document, and the desktop app's root goes to `/tv/` while it's on.
+The TV's Settings → This computer and its sign-in screen show the same
+switch, and turning it off there opens the desktop app.
+
 ## Layout
 
 - `src/routes`: file routes. Don't edit the generated `src/routeTree.gen.ts`.

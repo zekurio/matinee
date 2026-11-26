@@ -19,11 +19,12 @@ import { tr } from "../i18n"
 import { focusOn } from "../input/focus"
 import { useBack } from "../input/navigation"
 import { Spinner } from "../kit/base"
-import { ListItem } from "../kit/buttons"
+import { ListItem, ListSwitch } from "../kit/buttons"
 import { Field } from "../kit/fields"
 import { QrCode } from "../kit/misc"
 import { SidePanel } from "../kit/panel"
 import { useObserved } from "../lib/observable"
+import { platform } from "../platform/runtime"
 import { Logo, LogoMark } from "./brand"
 
 /**
@@ -58,6 +59,26 @@ function AuthFrame(props: {
       </div>
       <div class="auth-right">{props.children}</div>
     </Page>
+  )
+}
+
+/**
+ * TV mode's switch, on, in a browser: turning it off opens the desktop
+ * app, whose own sign-in takes a passkey or single sign-on where this one
+ * needs another device. A TV has no desktop app, so it has no row.
+ */
+function TvModeRow() {
+  const leave = platform().leaveTvMode
+  return (
+    leave && (
+      <ListItem
+        fid="tvMode"
+        title={tr("settingsTvMode")}
+        quiet
+        trailing={<ListSwitch checked />}
+        onPress={() => leave()}
+      />
+    )
   )
 }
 
@@ -398,6 +419,7 @@ export function SignIn(props: {
                   onPress={() => setSwitching(true)}
                 />
               )}
+              <TvModeRow />
             </div>
           </div>
         }

@@ -888,7 +888,7 @@ function Controls(props: {
     setMenu(which)
   }
 
-  useKeyTap((key, phase, event) => {
+  useKeyTap((key, phase, keyPress) => {
     const down = phase === "down"
     if (down) setTouched((count) => count + 1)
     if (!down && swallow === key) {
@@ -930,8 +930,8 @@ function Controls(props: {
     if (direction !== 0 && (seeking === key || !visible() || onSeekBar)) {
       if (down) {
         seeking = key
-        press(direction, event.repeat, event.timeStamp)
-        if (event.repeat && !controls()) {
+        press(direction, keyPress.repeat, keyPress.timeStamp)
+        if (keyPress.repeat && !controls()) {
           focusSeek = true
           setControls(true)
         }

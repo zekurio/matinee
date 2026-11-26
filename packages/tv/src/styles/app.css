@@ -1,6 +1,13 @@
 @import "./kit.css";
 @import "./player.css";
 
+/* The pointer rests: a browser showing the TV UI hides it, as a TV has none,
+   and its next movement brings it back. */
+html.pointer-resting,
+html.pointer-resting * {
+  cursor: none;
+}
+
 /* Before signing in: the logo top left, a heading on the left, rows on the right. */
 .auth {
   display: flex;

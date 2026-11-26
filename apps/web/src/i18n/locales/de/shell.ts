@@ -21,6 +21,7 @@ export default {
   "shell.openProfile": "Profil öffnen: {name}",
   "shell.profile": "Profil",
   "shell.statistics": "Statistiken",
+  "shell.tvMode": "TV-Modus",
   "shell.settings": "Einstellungen",
   "shell.signOut": "Abmelden",
   "shell.skipToContent": "Zum Inhalt springen",

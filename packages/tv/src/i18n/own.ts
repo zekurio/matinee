@@ -1,5 +1,5 @@
 /*
- * The words only a Samsung TV needs, which the Flutter app has none for.
+ * The words only the TV UI needs, which the Flutter app has none for.
  * Their keys start with `tizen_`. Everything else comes from the Flutter
  * app's ARB files; see scripts/strings.mjs.
  */
@@ -19,6 +19,10 @@ export const OWN_STRINGS = {
     tizen_settings_fill: "Fill the screen",
     tizen_settings_fill_description:
       "Stretches a picture that isn't the screen's shape, instead of bars beside it.",
+    tizen_settings_fullscreen: "Fullscreen",
+    tizen_settings_fullscreen_exit: "Exit fullscreen",
+    tizen_settings_tv_mode_description:
+      "This browser opens Matinee in the TV layout. Turn it off for the desktop app.",
   },
   de: {
     tizen_this_tv: "Dieser Fernseher",
@@ -34,6 +38,10 @@ export const OWN_STRINGS = {
     tizen_settings_fill: "Bildschirm füllen",
     tizen_settings_fill_description:
       "Streckt ein Bild, das nicht die Form des Bildschirms hat, statt Balken daneben zu zeigen.",
+    tizen_settings_fullscreen: "Vollbild",
+    tizen_settings_fullscreen_exit: "Vollbild beenden",
+    tizen_settings_tv_mode_description:
+      "Dieser Browser öffnet Matinee in der TV-Ansicht. Ausschalten für die Desktop-App.",
   },
 } as const
 

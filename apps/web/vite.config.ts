@@ -177,7 +177,11 @@ export default defineConfig(({ mode }) => {
     clearScreen: false,
     // A core entry the app imports must be the copy `@ui-sdk/solid` loads.
     // The TV package is source, compiled with this app's Solid plugin.
-    optimizeDeps: { exclude: ["@matinee/tv", "@ui-sdk/core"] },
+    optimizeDeps: {
+      exclude: ["@matinee/tv", "@matinee/tv/tv-mode", "@ui-sdk/core"],
+    },
+    // `@/` in imports is `src/`, as tsconfig.json maps it.
+    resolve: { tsconfigPaths: true },
     server: {
       port: 5173,
       strictPort: true,

@@ -3268,6 +3268,10 @@
   "@settingsAdminUsers": {
     "description": "strings.xml"
   },
+  "settingsTvMode": "TV mode",
+  "@settingsTvMode": {
+    "description": "Settings: the switch that shows the TV's screens in a browser or on a computer"
+  },
   "settingsOfflineMode": "Offline mode",
   "@settingsOfflineMode": {
     "description": "strings.xml"
@@ -3287,6 +3291,10 @@
   "settingsServer": "Server",
   "@settingsServer": {
     "description": "strings.xml"
+  },
+  "settingsThisComputer": "This computer",
+  "@settingsThisComputer": {
+    "description": "Settings: the TV UI's section for the computer or browser it runs on"
   },
   "settingsSubtitlesBackground": "Background",
   "@settingsSubtitlesBackground": {

@@ -4,6 +4,7 @@ import { Show, onSettled } from "solid-js"
 
 import { session } from "./auth/session"
 import { startNavigation } from "./input/navigation"
+import { startFullscreenOnGesture, startPointerIdle } from "./input/tv-mode"
 import { useObserved } from "./lib/observable"
 import { platform, setPlatform, type Platform } from "./platform/runtime"
 import { Connect, Connecting, SignIn, Unreachable } from "./screens/auth"
@@ -85,5 +86,7 @@ export function mountTv(root: HTMLElement, host?: Platform): void {
   if (host) setPlatform(host)
   platform().registerRemoteKeys()
   startNavigation()
+  startFullscreenOnGesture()
+  startPointerIdle()
   render(() => <Root />, root)
 }

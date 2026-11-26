@@ -24,6 +24,8 @@ export default defineMessages("shell", {
   "shell.openProfile": "Open profile: {name}",
   "shell.profile": "Profile",
   "shell.statistics": "Statistics",
+  // Opens the TV UI on this browser, for a computer on the sofa.
+  "shell.tvMode": "TV mode",
   "shell.settings": "Settings",
   "shell.signOut": "Sign out",
   "shell.skipToContent": "Skip to content",

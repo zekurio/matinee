@@ -2,6 +2,7 @@ import type { DevicePlatform } from "@matinee/contracts"
 
 import type { Engine, EngineListener } from "../player/engine"
 import { VideoEngine } from "../player/engine"
+import { setTvMode } from "./tv-mode"
 
 /**
  * What differs between the TV UI's hosts: the Solid web app, where the
@@ -38,6 +39,16 @@ export type Platform = {
   createEngine(host: HTMLElement, listener: EngineListener): Engine
   /** The server a page at a web address came from, or null in a packaged app. */
   defaultServer(): string | null
+  /**
+   * A browser's Fullscreen API, which a page can only ask for from a
+   * gesture. Absent on a TV, which fills its screen already.
+   */
+  toggleFullscreen?(): void
+  /**
+   * Turns TV mode off and opens the desktop app. Absent on a TV, which
+   * has no desktop app to go back to.
+   */
+  leaveTvMode?(): void
 }
 
 /** What the browser's system calls itself, for the server's sessions list. */
@@ -70,6 +81,25 @@ export const browserPlatform: Platform = {
     window.location.protocol === "https:"
       ? window.location.origin
       : null,
+  toggleFullscreen: () => {
+    try {
+      if (document.fullscreenElement) {
+        void document.exitFullscreen().catch(() => {
+          // A browser that refuses leaves the page as it is.
+        })
+      } else {
+        void document.documentElement.requestFullscreen().catch(() => {
+          // A browser that refuses leaves the page as it is.
+        })
+      }
+    } catch {
+      // A browser without the Fullscreen API keeps the page as it is.
+    }
+  },
+  leaveTvMode: () => {
+    setTvMode(false)
+    window.location.assign("/")
+  },
 }
 
 let active: Platform = browserPlatform
