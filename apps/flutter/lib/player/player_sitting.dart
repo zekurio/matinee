@@ -92,6 +92,9 @@ abstract interface class PlayerSitting implements Listenable {
   Future<void> skip(int seconds);
   Future<void> seek(double seconds);
   Future<void> skipSegment(MediaSegment segment);
+
+  /// Holds a followed party still while the viewer drags the seek bar.
+  void holdParty(Duration duration);
   Future<void> pickAudio(AudioTrack track);
   Future<void> pickSubtitle(SubtitleTrack? track);
   Future<void> retry();
@@ -114,4 +117,7 @@ mixin NoServerExtras on ChangeNotifier implements PlayerSitting {
 
   @override
   Future<void> skipSegment(MediaSegment segment) async {}
+
+  @override
+  void holdParty(Duration duration) {}
 }

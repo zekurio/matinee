@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,8 @@ import '../../media/actions.dart' show mediaChangesProvider;
 import '../../query/failure_view.dart';
 import '../../query/refresh.dart';
 import '../../router.dart';
+import '../party/party_screen.dart' show PartyEntryRow;
+import '../settings/settings_rows.dart';
 import '../shell/offline_note.dart';
 import '../statistics/statistics_screen.dart' show statisticsPermissions;
 import 'profile_data.dart';
@@ -38,6 +42,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context.go(Routes.home);
     }
   }
+
+  /// The watch party, over the profile.
+  void _openParty() => unawaited(context.push(Routes.party));
 
   /// Back on the tab, favorites and statistics may have moved on.
   void _returned(String username) {
@@ -127,6 +134,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final recent = loaded.recent ?? const <WatchedEntry>[];
     return [
       header,
+      if (can(user, Permission.partyRead))
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
+          child: Panel(rows: [PartyEntryRow(onPressed: _openParty)]),
+        ),
       ProfileFavoritesRail(
         favorites: loaded.favorites ?? const <Favorite>[],
         onSeeAll: () => context.push(Routes.favorites),

@@ -7,6 +7,7 @@ import 'core/app_colors.dart';
 import 'core/apple_tv.dart';
 import 'core/back_claim.dart';
 import 'core/device.dart';
+import 'core/session.dart';
 import 'core/toasts.dart';
 import 'kit/theme.dart';
 import 'kit/theme_store.dart';
@@ -16,6 +17,7 @@ import 'kit/tv/tv_metrics.dart';
 
 import 'l10n/app_localizations.dart';
 import 'launcher/watch_next.dart';
+import 'party/party_controller.dart';
 import 'router.dart';
 
 /// The app: one widget tree for phones, tablets, and TVs. Which screens a
@@ -30,6 +32,12 @@ class MatineeApp extends ConsumerWidget {
     final device = ref.watch(deviceProvider);
     final (:light, :dark) = ref.watch(appColorsProvider);
     final remote = ref.watch(appleTvRemoteProvider);
+    // The party is followed while signed in: the server takes a member
+    // with no stream open for a minute as gone. Listening keeps it alive
+    // without rebuilding the app on each change.
+    if (ref.watch(authStateProvider) is SignedIn) {
+      ref.listen(partyProvider, (_, _) {});
+    }
     return MaterialApp.router(
       routerConfig: ref.watch(routerProvider),
       // Menu on the Siri Remote arrives as Escape, and is Back.

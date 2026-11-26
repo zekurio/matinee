@@ -17,6 +17,7 @@ import 'screens/home/home_screen.dart';
 import 'screens/library/library_screen.dart';
 import 'screens/metadata/identify_screen.dart';
 import 'screens/metadata/images_screen.dart';
+import 'screens/party/party_screen.dart';
 import 'screens/person/person_screen.dart';
 import 'screens/profile/lists_screens.dart';
 import 'screens/profile/profile_screen.dart';
@@ -84,6 +85,12 @@ abstract final class Routes {
   static const explore = '/explore';
   static const profile = '/profile';
   static const statistics = '/statistics';
+
+  /// The watch party, from the profile.
+  static const party = '/party';
+
+  /// What an invite link leads to, asked about before joining.
+  static String partyInvite(String partyId) => '/party/$partyId';
 
   /// The old links to one kind: Media, started on it.
   static const shows = '/shows';
@@ -437,6 +444,17 @@ List<RouteBase> _handsetRoutes() => [
     path: Routes.statistics,
     parentNavigatorKey: _rootKey,
     builder: (context, state) => const StatisticsScreen(),
+  ),
+  PushedRoute(
+    path: Routes.party,
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) => const PartyScreen(),
+  ),
+  PushedRoute(
+    path: '/party/:partyId',
+    parentNavigatorKey: _rootKey,
+    builder: (context, state) =>
+        PartyScreen(inviteId: state.pathParameters['partyId']!),
   ),
   PushedRoute(
     path: Routes.favorites,

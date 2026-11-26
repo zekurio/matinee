@@ -8,6 +8,8 @@ import 'package:http/http.dart' as http;
 
 import '../api/matinee_api.dart';
 import '../core/address.dart';
+import '../party/party_sync.dart';
+import '../party/party_watch.dart';
 import '../platform/player.g.dart' as wire;
 import 'playback_report.dart';
 import 'player.dart';
@@ -20,7 +22,8 @@ typedef _Picks = ({int? audio, SubtitlePick? subtitle, String? quality});
 
 /// One sitting with a file. Only the server selects the source and tracks.
 /// Here, positions stay on the file's clock until a command reaches an engine.
-class PlaybackSession extends ChangeNotifier implements PlayerSitting {
+class PlaybackSession extends ChangeNotifier
+    implements PlayerSitting, PartySyncHost {
   PlaybackSession({
     required this.itemId,
     required this.api,
@@ -29,6 +32,7 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
     required this.player,
     required this.device,
     required this.preferences,
+    this.partyWatch,
     this.startAt,
     this.diagnostics,
     String? quality,
@@ -51,6 +55,10 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
   final PlaybackDevice device;
   final PlaybackPreferences preferences;
   final double? startAt;
+
+  /// The party this player follows, when the viewer is in one.
+  final PartyWatch? partyWatch;
+  PartyFollower? _party;
 
   /// The report Settings shows of this sitting: codes and formats, never
   /// names or addresses.
@@ -211,6 +219,10 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
   Future<void> start() {
     _lastTick = _elapsed();
     _lastReport = _lastTick;
+    final watch = partyWatch;
+    if (watch != null) {
+      _party = PartyFollower(watch: watch, host: this);
+    }
     _listener = player.states.listen(_updatePlayback);
     _diagnosed = player.diagnostics.listen((message) {
       if (message.error case final error?) {
@@ -221,6 +233,7 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
     _timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
       _countPlayed();
       _watchStall();
+      _party?.tick();
       final interval = Duration(seconds: playback.status.playing ? 10 : 30);
       if (_elapsed() - _lastReport >= interval) _report();
     });
@@ -429,6 +442,7 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
       tracks: tracks,
       autoplay: autoplay,
     );
+    if (!_closed) _party?.sourceOpened(answer.position);
   }
 
   SourceTracks _tracks(PlaybackStart answer, double offset) {
@@ -564,6 +578,7 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
       _engineError = null;
       _fallback(next);
     }
+    _party?.onPlayback();
     notifyListeners();
   }
 
@@ -652,16 +667,21 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
   Future<void> togglePlay() async {
     if (_closed || !_opened || busy || error != null) return;
     if (ended) {
-      await seek(0);
-      if (!_closed && error == null) await _command(player.play);
+      await _move(0);
+      if (!_closed && error == null) {
+        final played = await _command(player.play);
+        if (played) {
+          _party?.viewerPlayed(playing: true, positionSeconds: position);
+        }
+      }
       return;
     }
     if (_closed || error != null) return;
     // What the viewer asked for, so a press while it stalls pauses.
-    if (playback.status.wantsPlay && !ended) {
-      await _command(player.pause);
-    } else {
-      await _command(player.play);
+    final playing = playback.status.wantsPlay;
+    final changed = await _command(playing ? player.pause : player.play);
+    if (changed) {
+      _party?.viewerPlayed(playing: !playing, positionSeconds: position);
     }
   }
 
@@ -669,18 +689,23 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
   Future<void> skip(int seconds) => seek(position + seconds);
 
   @override
-  Future<void> seek(double seconds) {
-    if (!_canChange) return Future<void>.value();
+  Future<void> seek(double seconds) async {
+    if (!_canChange) return;
     _skipped = null;
-    return _move(seconds);
+    await _move(seconds);
+    if (!_closed && error == null) _party?.viewerSought(position);
   }
 
   @override
-  Future<void> skipSegment(MediaSegment segment) {
-    if (!_canChange) return Future<void>.value();
+  Future<void> skipSegment(MediaSegment segment) async {
+    if (!_canChange) return;
     _skipped = (segment.kind, segment.start, segment.end);
-    return _move(segment.end);
+    await _move(segment.end);
+    if (!_closed && error == null) _party?.viewerSought(position);
   }
+
+  @override
+  void holdParty(Duration duration) => _party?.hold(duration);
 
   Future<void> _move(double seconds) async {
     final answer = plan!;
@@ -860,6 +885,42 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
 
   @override
   Future<void> close() => _closing ??= _close();
+
+  @override
+  Future<void> playFromParty() async {
+    if (!_opened || _closed || _sourceFailed) return;
+    await _command(player.play);
+  }
+
+  @override
+  Future<void> pauseFromParty() async {
+    if (!_opened || _closed || _sourceFailed) return;
+    await _command(player.pause);
+  }
+
+  @override
+  Future<void> seekFromParty(double seconds) async {
+    if (!_opened || _closed || plan == null) return;
+    await _move(seconds);
+  }
+
+  @override
+  Future<void> setRateFromParty(double rate) async {
+    if (!_opened || _closed) return;
+    await _command(() => player.setRate(rate));
+  }
+
+  @override
+  String? get method => plan?.method;
+
+  @override
+  String? get quality => plan?.quality;
+
+  @override
+  bool get hls => plan?.hls ?? false;
+
+  @override
+  bool get canFollow => _canChange;
 
   Future<void> _close() async {
     _closed = true;
