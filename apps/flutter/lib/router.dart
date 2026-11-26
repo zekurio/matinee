@@ -319,7 +319,8 @@ List<RouteBase> _authRoutes({required bool tv}) => [
 
 /// A page a phone or tablet opens over another, from [builder]: it slides
 /// in as the theme says, Cupertino's slide with the swipe back from the
-/// edge on iOS, and on Android the theme's transition with predictive Back.
+/// edge on iOS, and on Android the kit's, which covers the page below and
+/// uncovers it again.
 ///
 /// Not left to go_router's `builder`: since 18 it picks the page by finding
 /// `material_ui`'s `MaterialApp`, doesn't see this app's, and gives every

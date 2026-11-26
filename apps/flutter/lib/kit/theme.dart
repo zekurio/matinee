@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
+import 'page_motion.dart';
 import 'tokens.dart';
 
 /// Matinee's web color roles, available in any route through Flutter's Theme.
@@ -57,13 +58,13 @@ class MatineeTheme extends ThemeExtension<MatineeTheme> {
         error: colors.danger,
       ),
       splashFactory: NoSplash.splashFactory,
-      // A page opening over another moves the platform's way, named here
-      // rather than left to Flutter's defaults, which have changed before:
-      // Android's slide and fade, which follows a predictive Back as it's
-      // dragged, and iOS's slide with the swipe back from the edge.
+      // A page opening over another, named here rather than left to
+      // Flutter's defaults, which have changed before: on Android the kit's
+      // cover and uncover, on iOS Cupertino's slide with the swipe back from
+      // the edge.
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+          TargetPlatform.android: KitPageTransitionsBuilder(),
           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         },
       ),

@@ -4,9 +4,10 @@ import 'package:flutter/widgets.dart';
 /// the web's timings and curves. A part that animates takes its time and
 /// curve from here, through [of] where the system can ask for less motion.
 ///
-/// Pages that open over others move the platform's way, from the theme.
-/// What changes in place, a tab for another, a spinner for what it waited
-/// on, a placeholder for its picture, fades.
+/// Pages that open over others move as the theme says: on Android they
+/// cover and uncover (`page_motion.dart`), on iOS they take
+/// Cupertino's slide. What changes in place, a tab for another, a spinner
+/// for what it waited on, a placeholder for its picture, fades.
 abstract final class KitMotion {
   /// The web's cubic-bezier(0.22, 1, 0.36, 1): off at once, then a long,
   /// soft landing. For what arrives or moves.

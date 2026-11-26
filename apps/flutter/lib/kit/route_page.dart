@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// A page that slides in the platform's way, from the theme: on iOS
-/// Cupertino's slide, which brings the swipe back from the screen's edge.
+/// A page that opens over another as the theme says: on Android the kit's
+/// cover and uncover (`page_motion.dart`), on iOS Cupertino's
+/// slide, which brings the swipe back from the screen's edge.
 Page<void> kitPage({
   required LocalKey key,
   required String? name,
