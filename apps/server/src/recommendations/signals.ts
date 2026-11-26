@@ -10,7 +10,7 @@ import {
   userTitleSignal,
   type TitleRow,
 } from "@matinee/db"
-import { and, eq, desc } from "drizzle-orm"
+import { and, eq, desc, isNull } from "drizzle-orm"
 
 import type { Viewer } from "../access/viewer"
 import { visibleTitles } from "../access/visible"
@@ -23,12 +23,32 @@ import { keyOf } from "./features"
  * How much a viewer likes each title they played, from their sessions
  * and favorites. A sitting counts the share of the file it covered, a
  * marked one 0.6, and each fades by half every 90 days. A film tops out
- * at 1, plus half for each rewatch up to two; a show grows with the log
- * of the episodes watched, so a long one doesn't drown the rest. A
- * favorite adds 1, a favorite season or episode 0.3. A film left before
- * 15% for three days, or a show left in its first episode for two weeks,
- * counts against what it's about.
+ * at 1, plus half for each rewatch up to two, fading from the last time
+ * it was watched; a show grows with the log of the episodes watched, so
+ * a long one doesn't drown the rest. A favorite adds 1, a favorite season
+ * or episode 0.3. A film left before 15% for three days, or a show left
+ * in its first episode for two weeks, counts against what it's about.
+ *
+ * A title that left the library has no sessions to count any more: they
+ * lose their title with it. Its signal stays as it last was and fades at
+ * the same rate.
  */
+
+/** Rows written per statement, to stay under Postgres's parameter limit. */
+const INSERT_BATCH = 1000
+
+/** How many days halve what a sitting counts. */
+const HALF_LIFE_DAYS = 90
+
+/** What is left after `days` of what a sitting counted. */
+function faded(days: number) {
+  return Math.pow(0.5, Math.max(0, days) / HALF_LIFE_DAYS)
+}
+
+/** Whole and part days from `date` to now. */
+function daysSince(date: Date) {
+  return (Date.now() - date.getTime()) / 86400000
+}
 
 /** A library title's TMDB id: its own, from its external ids, or looked up at TMDB. */
 export async function tmdbId(row: TitleRow) {
@@ -42,8 +62,9 @@ export async function tmdbId(row: TitleRow) {
 }
 /**
  * Replaces the viewer's `user_title_signal` rows and returns them, with
- * the newest session the rebuild saw. Only titles the viewer can still
- * see count.
+ * the newest session the rebuild saw. Of the titles in a library, only
+ * those the viewer can still see count. The rows of titles no library
+ * holds any more are kept, faded since they were last written.
  */
 export async function rebuildSignals(viewer: Viewer) {
   const [latest] = await db
@@ -73,8 +94,8 @@ export async function rebuildSignals(viewer: Viewer) {
       userId: string
       kind: TitleKind
       tmdbId: string
-      titleId: string
-      name: string
+      titleId: string | null
+      name: string | null
       score: number
       watchedSeconds: number
       plays: number
@@ -124,11 +145,8 @@ export async function rebuildSignals(viewer: Viewer) {
     const fraction = s.marked
       ? 0.6
       : Math.min(1, s.watchedSeconds / Math.max(1, runtime))
-    const age =
-      s.precision === "none"
-        ? 365
-        : Math.max(0, (Date.now() - s.startedAt.getTime()) / 86400000)
-    value.sum += fraction * Math.pow(0.5, age / 90)
+    const age = s.precision === "none" ? 365 : daysSince(s.startedAt)
+    value.sum += fraction * faded(age)
     value.best = Math.max(value.best, fraction)
     value.watchedSeconds += s.watchedSeconds
     value.plays++
@@ -138,13 +156,11 @@ export async function rebuildSignals(viewer: Viewer) {
     if (s.watchedSeconds > 0 && s.mediaItemId) value.episodes.add(s.mediaItemId)
   }
   for (const value of signals.values()) {
-    const age = value.lastWatchedAt
-      ? (Date.now() - value.lastWatchedAt.getTime()) / 86400000
-      : 0
+    const age = value.lastWatchedAt ? daysSince(value.lastWatchedAt) : 0
     value.score =
       value.kind === "movie"
         ? Math.min(value.sum, 1) +
-          0.5 * Math.min(Math.max(0, value.completions - 1), 2)
+          0.5 * Math.min(Math.max(0, value.completions - 1), 2) * faded(age)
         : Math.log2(1 + value.sum)
     if (
       value.kind === "movie" &&
@@ -186,15 +202,38 @@ export async function rebuildSignals(viewer: Viewer) {
       const value = await entry(row.title)
       if (value) value.score += weight
     }
+  const now = new Date()
   const values = [...signals.values()].map(
-    ({ sum: _sum, best: _best, episodes: _episodes, name: _name, ...value }) =>
-      value,
+    ({ sum: _sum, best: _best, episodes: _episodes, ...value }) => ({
+      ...value,
+      updatedAt: now,
+    }),
   )
   await db.transaction(async (tx) => {
+    // A title that went takes its row's `titleId` with it, which is how
+    // its row is told from one of a title the viewer just can't see any
+    // more. One that came back has sessions again, and those speak for it.
+    const gone = await tx
+      .select()
+      .from(userTitleSignal)
+      .where(
+        and(
+          eq(userTitleSignal.userId, viewer.id),
+          isNull(userTitleSignal.titleId),
+        ),
+      )
+    for (const row of gone)
+      if (!signals.has(keyOf(row)))
+        values.push({
+          ...row,
+          score: row.score * faded(daysSince(row.updatedAt)),
+          updatedAt: now,
+        })
     await tx
       .delete(userTitleSignal)
       .where(eq(userTitleSignal.userId, viewer.id))
-    if (values.length) await tx.insert(userTitleSignal).values(values)
+    for (let i = 0; i < values.length; i += INSERT_BATCH)
+      await tx.insert(userTitleSignal).values(values.slice(i, i + INSERT_BATCH))
   })
-  return { signals: [...signals.values()], signalsAt }
+  return { signals: values, signalsAt }
 }

@@ -81,7 +81,10 @@ export const titleFeatures = pgTable(
 /**
  * How much a user likes a title, from their watch time, finished plays,
  * rewatches and favorites, fading with time. Abandoned titles score
- * below zero. Rebuilt by the scoring job from `playback_session`.
+ * below zero. Rebuilt by the scoring job from `playback_session`, for
+ * the titles still in a library. A row whose title has gone stays as it
+ * was and fades on, so a title watched and then deleted still counts
+ * toward the viewer's taste and isn't recommended to them again.
  */
 export const userTitleSignal = pgTable(
   "user_title_signal",
@@ -93,6 +96,11 @@ export const userTitleSignal = pgTable(
     tmdbId: text().notNull(),
     /** The library title the latest play was of, if it's still there. */
     titleId: uuid().references(() => title.id, { onDelete: "set null" }),
+    /**
+     * Its name in that library, for "Because you watched" once the title
+     * has gone. Null for a row whose title went before names were kept.
+     */
+    name: text(),
     score: doublePrecision().notNull(),
     watchedSeconds: doublePrecision().notNull().default(0),
     /** Sittings, finished or not, marked ones included. */

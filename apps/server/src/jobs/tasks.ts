@@ -21,8 +21,9 @@ import { makeMissingTrickplay, sweepTrickplay } from "../media/trickplay"
 import { refreshMetadata } from "../metadata/refresh"
 import { events } from "../realtime/events"
 import { queueStaleRecommendations } from "../recommendations/compute"
+import { forgetOldImpressions } from "../recommendations/read"
 import { arrivals } from "../requests/arrival"
-import { dispatchQueued } from "../requests/dispatch"
+import { dispatchQueued, retryUnreachable } from "../requests/dispatch"
 import { pollProgress } from "../requests/poll"
 import type { TaskDefinition } from "./scheduler"
 
@@ -113,7 +114,10 @@ const recommendTitles: TaskDefinition = {
   queue: "recommendations",
   startupDelayMs: 5 * MINUTE_MS,
   intervalMs: 6 * HOUR_MS,
-  run: () => queueStaleRecommendations(),
+  run: async () => {
+    await forgetOldImpressions()
+    await queueStaleRecommendations()
+  },
 }
 
 const fetchArtwork: TaskDefinition = {
@@ -206,7 +210,7 @@ const forgetBrowsed: TaskDefinition = {
   id: "forget-browsed-pages",
   name: "Forget browsed catalog pages",
   description:
-    "Delete pages of the filtered catalog that nobody opened for a week.",
+    "Delete pages of the filtered catalog and search results that nobody opened for a week.",
   queue: null,
   startupDelayMs: 5 * MINUTE_MS,
   intervalMs: 24 * HOUR_MS,
@@ -229,11 +233,15 @@ export const TASKS: TaskDefinition[] = [
   {
     id: "dispatch-requests",
     name: "Send requests",
-    description: "Find accepted requests waiting to be sent.",
+    description:
+      "Find accepted requests waiting to be sent, and send again the ones whose connection was out of reach once it answers.",
     queue: "request-dispatch",
     startupDelayMs: 0,
     intervalMs: MINUTE_MS,
-    run: dispatchQueued,
+    run: async () => {
+      await retryUnreachable()
+      await dispatchQueued()
+    },
   },
   {
     id: "poll-requests",

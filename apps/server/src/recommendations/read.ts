@@ -16,7 +16,7 @@ import {
   userTitleSignal,
   type RecommendationRow,
 } from "@matinee/db"
-import { and, desc, eq, isNull, notExists } from "drizzle-orm"
+import { and, desc, eq, isNull, lt, notExists } from "drizzle-orm"
 
 import type { Viewer } from "../access/viewer"
 import { visibleTitles } from "../access/visible"
@@ -39,6 +39,12 @@ import { toSummaries } from "../media/items"
 const FOR_YOU = 20
 const BECAUSE_ROWS = 2
 const BECAUSE_MIN = 5
+/**
+ * How long a logged impression stays. Long enough to set a season of
+ * them beside what people played and asked for, and no row is read
+ * older than that.
+ */
+const IMPRESSION_DAYS = 180
 
 type Rail = t.infer<typeof DiscoverRail>
 
@@ -166,6 +172,17 @@ export function impressions(
     .onConflictDoNothing()
     .catch((cause) =>
       log.error("Cannot record recommendation impressions", cause),
+    )
+}
+/** Deletes impressions logged more than `IMPRESSION_DAYS` ago. */
+export async function forgetOldImpressions() {
+  await db
+    .delete(recommendationImpression)
+    .where(
+      lt(
+        recommendationImpression.shownAt,
+        new Date(Date.now() - IMPRESSION_DAYS * 86400000),
+      ),
     )
 }
 /** Home's rows, of titles in libraries the viewer can see. */

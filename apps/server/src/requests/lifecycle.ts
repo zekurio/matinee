@@ -135,6 +135,14 @@ export async function ask(
   const { detail, plan } = await routedDetails(viewer, input)
   const destination = detail.destinations.find((row) => row.selected)
   if (!destination) unavailable()
+  // A client offers no button for a film that's here, but the server
+  // decides: asking for one would spend the viewer's quota and have the
+  // connection search for a film it has. A show that's here can still
+  // lack seasons.
+  if (detail.ref.kind === "movie" && detail.availability.state === "here")
+    throw new ORPCError("CONFLICT", {
+      message: "This film is already here, so there's nothing to request.",
+    })
   // Provider payload, never client input, supplies external ids and artwork.
   const library = (await destinations(viewer, input.ref.kind)).find(
     (row) => row.id === destination.id,

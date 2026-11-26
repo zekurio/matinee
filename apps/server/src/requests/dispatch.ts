@@ -18,7 +18,12 @@ import { sources } from "../metadata/sources"
 import { ProviderError } from "../metadata/types"
 import { events } from "../realtime/events"
 import { ExternalIds } from "./availability"
-import { sendingFor } from "./fulfilment/connections"
+import {
+  connectionById,
+  getSource,
+  resolveConnection,
+  sendingFor,
+} from "./fulfilment/connections"
 import { UNREACHABLE } from "./fulfilment/types"
 
 /**
@@ -209,6 +214,47 @@ export const dispatch = defineQueue({
     }
   },
 })
+
+/**
+ * Queues again the accepted requests whose delivery ended on a
+ * connection that didn't answer, once it answers. A delivery gives up
+ * after half a minute, which a restart or an update of the connection's
+ * server outlasts, and nobody should have to press Retry on each request
+ * for that. Each such connection is asked once, and its requests stay
+ * failed while it's still out, so they don't hold the queue up.
+ */
+export async function retryUnreachable() {
+  const stranded = and(
+    eq(request.status, "approved"),
+    eq(request.fulfilmentState, "failed"),
+    eq(request.fulfilmentError, UNREACHABLE),
+  )
+  const rows = await db
+    .selectDistinct({ connectionId: request.connectionId })
+    .from(request)
+    .where(stranded)
+  for (const { connectionId } of rows) {
+    if (!connectionId) continue
+    try {
+      const connection = await connectionById(connectionId)
+      await getSource(connection.source).test(resolveConnection(connection))
+    } catch {
+      // Still out, or set up wrong. Its requests wait for the next look.
+      continue
+    }
+    const queued = await db
+      .update(request)
+      .set({
+        fulfilmentState: "queued",
+        fulfilmentError: null,
+        updatedAt: new Date(),
+      })
+      .where(and(stranded, eq(request.connectionId, connectionId)))
+      .returning({ id: request.id })
+    // The subscriber in `tasks.ts` sends what is queued.
+    if (queued.length) events.publish("requests", undefined)
+  }
+}
 
 export async function dispatchQueued() {
   const rows = await db

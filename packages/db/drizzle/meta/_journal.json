@@ -148,6 +148,13 @@
       "when": 1795732534275,
       "tag": "0020_playback_presence",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795773487100,
+      "tag": "0021_signal_names",
+      "breakpoints": true
     }
   ]
 }

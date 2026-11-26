@@ -17,13 +17,14 @@
     "db:generate": "pnpm --filter @matinee/db db:generate",
     "db:migrate": "pnpm --filter @matinee/db db:migrate",
     "db:studio": "pnpm --filter @matinee/db db:studio",
+    "test": "pnpm --filter @matinee/server test",
     "themes:dart": "node apps/flutter/scripts/themes.mjs",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
     "typecheck": "pnpm -r --parallel typecheck && pnpm typecheck:oxlint",
     "typecheck:oxlint": "tsc -p tools/oxlint",
-    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:dart --check && pnpm themes:dart --check && pnpm icons:dart --check && pnpm logo:dart --check && pnpm strings:dart --check && pnpm --filter @matinee/tv strings --check"
+    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm test && pnpm api:dart --check && pnpm themes:dart --check && pnpm icons:dart --check && pnpm logo:dart --check && pnpm strings:dart --check && pnpm --filter @matinee/tv strings --check"
   },
   "devDependencies": {
     "@oxlint/plugins": "1.91.0",

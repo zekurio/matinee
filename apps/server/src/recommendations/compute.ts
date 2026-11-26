@@ -16,19 +16,33 @@ import { events } from "../realtime/events"
 import { availability } from "../requests/availability"
 import { candidatesFor } from "./candidates"
 import { featuresFor, keyOf } from "./features"
-import { ALGORITHM, scoreCandidates } from "./score"
+import {
+  ALGORITHM,
+  diversify,
+  rankCandidates,
+  type Candidate,
+  type Ranked,
+} from "./score"
 import { rebuildSignals } from "./signals"
 
 /*
  * The scoring job, one viewer at a time: rebuild their signals from watch
  * time and favorites, gather candidates, fetch what's missing of their
- * features, rank them, and store the best hundred on the server and the
- * best hundred to ask for. Reads only take the stored rows, so Home and
- * Discover never wait on TMDB for recommendations.
+ * features, rank them, and store a list of each sort a viewer sees
+ * apart: the best hundred on the server, and the best hundred films and
+ * the best hundred shows to ask for. Reads only take the stored rows, so
+ * Home and Discover never wait on TMDB for recommendations.
  */
 
-/** How many of each kind of row a viewer keeps: on the server, and to ask for. */
+/** How long each stored list is: the titles on the server, and each kind's to ask for. */
 const KEPT = 100
+/**
+ * How many of a kind's best titles to ask for have their state read
+ * before the list is picked, so the ones here or declined leave it and
+ * still leave enough to pick from.
+ */
+const ASKED = 400
+const KINDS = ["movie", "show"] satisfies Candidate["kind"][]
 
 export const recommendations = defineQueue({
   id: "recommendations",
@@ -67,41 +81,52 @@ export const recommendations = defineQueue({
     const others = new Map<string, number>()
     for (const row of otherRows)
       others.set(keyOf(row), (others.get(keyOf(row)) ?? 0) + row.score)
-    const ranked = scoreCandidates(
+    const ranked = rankCandidates(
       candidates,
       signals,
       features,
       new Set([...signals, ...dismissed].map(keyOf)),
       others,
     )
-    const requestable = ranked.filter((r) => !r.titleId)
-    const states = await availability(
-      viewer,
-      requestable.map((r) => ({
-        ref: { provider: "tmdb", kind: r.kind, providerId: r.tmdbId },
-        externalIds: { tmdb: r.tmdbId },
-        releaseDate: r.releaseDate,
-      })),
-    )
-    const allowed = new Set(
-      requestable
-        .filter((_, i) => {
-          const state = states[i]?.availability.state
-          return state && state !== "here" && state !== "unavailable"
-        })
-        .map(keyOf),
-    )
-    let local = 0
-    let remote = 0
-    const values = ranked
-      .filter((r) =>
-        r.titleId ? local++ < KEPT : allowed.has(keyOf(r)) && remote++ < KEPT,
+    const lists: Ranked[][] = [
+      diversify(
+        ranked.filter((r) => r.titleId),
+        KEPT,
+      ),
+    ]
+    for (const kind of KINDS) {
+      const asked = ranked
+        .filter((r) => !r.titleId && r.kind === kind)
+        .slice(0, ASKED)
+      const states = await availability(
+        viewer,
+        asked.map((r) => ({
+          ref: { provider: "tmdb", kind: r.kind, providerId: r.tmdbId },
+          externalIds: { tmdb: r.tmdbId },
+          releaseDate: r.releaseDate,
+        })),
       )
-      .map(({ seeds: _seeds, diversity: _diversity, ...row }) => ({
+      lists.push(
+        diversify(
+          asked.filter((_, i) => {
+            const state = states[i]?.availability.state
+            return state && state !== "here" && state !== "unavailable"
+          }),
+          KEPT,
+        ),
+      )
+    }
+    // A stored score is a title's place in its list, the best highest, so
+    // lists read together fall in turn. The score that ranked it rides
+    // along below the point, to tell what a place was worth.
+    const values = lists.flatMap((list) =>
+      list.map(({ seeds: _seeds, diversity: _diversity, ...row }, index) => ({
         ...row,
+        score: KEPT - index + row.score / 1000,
         userId,
         algorithm: ALGORITHM,
-      }))
+      })),
+    )
     const run = {
       userId,
       signalsAt,

@@ -1,7 +1,7 @@
 import { t } from "@matinee/contracts/schema"
 import { ORPCError } from "@orpc/server"
 
-import { call, list } from "../arr/client"
+import { call, list, remember } from "../arr/client"
 import {
   destination,
   field,
@@ -68,6 +68,21 @@ const title = t.object({
     .array(t.object({ seasonNumber: t.number(), monitored: t.boolean() }))
     .optional(),
 })
+
+const episode = t.object({
+  seasonNumber: t.number(),
+  hasFile: t.boolean(),
+  airDateUtc: t.string().optional(),
+})
+
+/**
+ * How long a progress poll goes on a show's record and its episodes
+ * before reading them again. An episode list runs to hundreds of entries
+ * for a long show.
+ */
+const RECORD_MS = 5 * 60_000
+const titleRecords = remember<t.infer<typeof title> | null>(RECORD_MS)
+const episodeLists = remember<t.infer<typeof episode>[]>(RECORD_MS)
 
 const queue = t.object({
   totalRecords: t.number(),
@@ -317,38 +332,34 @@ export const adapter = {
   },
   link: (connection, ref) => link(connection, ref, "series"),
   async progress(connection, sent) {
-    const records = await queueRecords(connection)
+    const queued = await queueRecords(connection)
     return Promise.all(
       sent.map(async (item) => {
         const id = t.object({ id: t.number() }).parse(item.ref).id
-        const current = await call(
-          connection,
-          `series/${id}`,
-          title,
-          "GET",
-          undefined,
-          true,
+        const current = await titleRecords(connection, `series/${id}`, () =>
+          call(connection, `series/${id}`, title, "GET", undefined, true),
         )
-        const forTitle = records.filter((value) => value.seriesId === id)
+        const forTitle = queued.filter((value) => value.seriesId === id)
         const requested = t
           .object({ seasons: t.array(t.number()).optional() })
           .parse(item.ref)
+        // The whole list is kept, and read for the seasons asked for now,
+        // so a season added since is in it.
         const episodes = current
-          ? (await list(connection, `episode?seriesId=${id}`))
-              .map((value) =>
-                t
-                  .object({
-                    seasonNumber: t.number(),
-                    hasFile: t.boolean(),
-                    airDateUtc: t.string().optional(),
-                  })
-                  .parse(value),
+          ? (
+              await episodeLists(
+                connection,
+                `episode?seriesId=${id}`,
+                async () =>
+                  (await list(connection, `episode?seriesId=${id}`)).map(
+                    (value) => episode.parse(value),
+                  ),
               )
-              .filter(
-                (value) =>
-                  !value.hasFile &&
-                  requested.seasons?.includes(value.seasonNumber),
-              )
+            ).filter(
+              (value) =>
+                !value.hasFile &&
+                requested.seasons?.includes(value.seasonNumber),
+            )
           : []
         const summarize = (season: number | null) => {
           const active = forTitle.filter(

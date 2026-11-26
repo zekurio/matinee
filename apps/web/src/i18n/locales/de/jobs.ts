@@ -4,7 +4,7 @@ import type source from "../en/jobs"
 export default {
   "jobs.task.dispatch-requests.name": "Anfragen senden",
   "jobs.task.dispatch-requests.description":
-    "Angenommene Anfragen zum Senden finden.",
+    "Angenommene Anfragen zum Senden finden und die erneut senden, deren Verbindung nicht erreichbar war, sobald sie wieder antwortet.",
   "jobs.task.poll-requests.name": "Fortschritt der Anfragen lesen",
   "jobs.task.poll-requests.description":
     "Aktive Anfragen einmal je Verbindung prüfen.",
@@ -140,7 +140,7 @@ export default {
     "Löscht, was Nutzer bei Dateien hatten, die vor 90 Tagen verschwunden und nicht zurückgekommen sind, etwa eine Veröffentlichung, die nicht ersetzt wurde.",
   "jobs.task.forget-browsed-pages.name": "Gefilterte Katalogseiten vergessen",
   "jobs.task.forget-browsed-pages.description":
-    "Löscht Seiten des gefilterten Katalogs, die eine Woche lang niemand geöffnet hat.",
+    "Löscht Seiten des gefilterten Katalogs und Suchergebnisse, die eine Woche lang niemand geöffnet hat.",
 
   "jobs.task.sync-oidc-accounts.name": "Anbieterkonten synchronisieren",
   "jobs.task.sync-oidc-accounts.description":
