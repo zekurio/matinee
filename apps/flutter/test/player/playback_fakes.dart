@@ -155,6 +155,15 @@ class FakePlaybackApi {
   final picks = <PlaybackPickTracksInput>[];
   final subtitleRequests = <Uri>[];
 
+  /// The presence streams asked for. A server from before presence answers
+  /// 404, which is the default.
+  var presenceRequests = 0;
+  var presence = () => http.Response(
+    jsonEncode({'code': 'NOT_FOUND', 'message': 'Not found'}),
+    404,
+    headers: {'Content-Type': 'application/json'},
+  );
+
   final options = const PlaybackOptions(
     qualities: [
       PlaybackQualityPreset(
@@ -201,6 +210,10 @@ class FakePlaybackApi {
         200,
         headers: {'Content-Type': 'text/event-stream'},
       );
+    }
+    if (path == '/api/v1/playback/sessions/$sittingId/presence') {
+      presenceRequests++;
+      return presence();
     }
     if (path == '/caption') {
       subtitleRequests.add(request.url);

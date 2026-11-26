@@ -30,13 +30,7 @@ import {
   startQuery,
   startQueryKey,
 } from "@/lib/playback-start"
-import {
-  client,
-  errorMessage,
-  keepaliveClient,
-  liveQuery,
-  orpc,
-} from "@/lib/rpc"
+import { client, errorMessage, lastCall, liveQuery, orpc } from "@/lib/rpc"
 
 const WatchSearch = t.object({
   /**
@@ -59,7 +53,7 @@ export const Route = createFileRoute("/_authed/watch/$itemId")({
 
 /**
  * Send a progress report. A page that is closing can't wait for the RPC
- * client, so that last report goes out as a keepalive request instead.
+ * client, so that last report goes out with `lastCall` instead.
  */
 function sendProgress(itemId: string, report: ProgressReport) {
   const input = {
@@ -71,8 +65,8 @@ function sendProgress(itemId: string, report: ProgressReport) {
     paused: report.paused,
     closed: report.closed,
   }
-  const sender = report.leaving ? keepaliveClient : client
-  void sender.playback.report(input).catch(() => {})
+  if (report.leaving) lastCall("playback", "report", input)
+  else void client.playback.report(input).catch(() => {})
 }
 
 function Watch() {

@@ -53,6 +53,7 @@ import { usePartyStatus } from "./use-party-status"
 import { type PartyLink, usePartySync } from "./use-party-sync"
 import { usePlayback } from "./use-playback"
 import { usePlayerKeys } from "./use-player-keys"
+import { usePresence } from "./use-presence"
 import {
   type ProgressReport,
   usePlayedTime,
@@ -123,6 +124,9 @@ export function VideoPlayer(props: VideoPlayerProps) {
     volume: saved.volume,
     muted: saved.muted,
   })
+  // The server takes this playback for gone when its presence stream drops,
+  // so the player holds one open for as long as it shows the session.
+  usePresence(sessionId)
   // What the server does for the first answer, said once it plays.
   onSettled(() => playbackNotice(plan, null))
   return (

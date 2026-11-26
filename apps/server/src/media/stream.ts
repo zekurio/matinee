@@ -18,8 +18,10 @@ import { can, readViewer } from "../access/viewer"
 import { itemFor } from "../access/visible"
 import type { SessionUser } from "../auth/session"
 import { log } from "../log"
+import { streamsBusy } from "../stats/live"
 import {
   addEncodeSeconds,
+  admitStream,
   recordStream,
   type SessionOwner,
   trackStream,
@@ -189,6 +191,27 @@ const PlayQuery = t.object({
  */
 const playerStreams = new Map<string, AbortController>()
 
+/**
+ * Count the session as playing before its stream starts, or the 429 that
+ * refuses it, with `playback.start`'s `PLAYBACK_BUSY` error as its body,
+ * when it had dropped out and the account plays on as many devices as it
+ * may. Statistics failing never stops playback.
+ */
+async function refusedStream(
+  owner: SessionOwner,
+  limit: number | null,
+): Promise<Response | null> {
+  const refused = await admitStream(owner, limit).catch((cause: unknown) => {
+    log.warn("Couldn't record a stream in its session", cause)
+    return null
+  })
+  if (!refused) return null
+  return Response.json(streamsBusy(refused).toJSON(), {
+    status: 429,
+    headers: { "Cache-Control": "no-store" },
+  })
+}
+
 /** One audio track, the video copied or encoded; see `mediaPlaybackPath`. */
 streamRoutes.get("/:id/play", async (c) => {
   const viewer = await readViewer(c, "media.play")
@@ -207,6 +230,19 @@ streamRoutes.get("/:id/play", async (c) => {
   )
     return c.body(null, 403)
   const sessionId = query.data.session ?? null
+  const owner: SessionOwner | null = sessionId
+    ? {
+        id: sessionId,
+        userId: viewer.id,
+        item,
+        client: viewer.clientName,
+        authSessionId: viewer.credential.id,
+      }
+    : null
+  const refused = owner
+    ? await refusedStream(owner, viewer.access.maxStreams)
+    : null
+  if (refused) return refused
   const streamKey = sessionId ? `${viewer.id}:${sessionId}` : null
   const replaced = new AbortController()
   if (streamKey) {
@@ -229,15 +265,6 @@ streamRoutes.get("/:id/play", async (c) => {
   }
 
   const untrack = trackStream(sessionId)
-  const owner: SessionOwner | null = sessionId
-    ? {
-        id: sessionId,
-        userId: viewer.id,
-        item,
-        client: viewer.clientName,
-        authSessionId: viewer.credential.id,
-      }
-    : null
   const { plan } = opened
   const encodes = plan.method === "transcode" || plan.audioConverted
   // Statistics never hold up or break playback.
@@ -337,8 +364,12 @@ streamRoutes.get("/:id/hls/main.m3u8", async (c) => {
   if (request === "missing") return c.body(null, 404)
   const spec = await encodeSpec(item, request)
   if (!spec) return c.body(null, 500)
-  const job = await openJob(spec)
   const watcher = watcherFor(viewer, item, query.data.session)
+  const refused = watcher.owner
+    ? await refusedStream(watcher.owner, viewer.access.maxStreams)
+    : null
+  if (refused) return refused
+  const job = await openJob(spec)
   startWatching(job, query.data.start, watcher)
   if (watcher.owner) {
     void recordStream(watcher.owner, spec.plan).catch((cause: unknown) =>

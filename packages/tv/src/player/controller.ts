@@ -12,10 +12,10 @@ import type {
 } from "@matinee/contracts"
 
 import { isServerError } from "../api/errors"
-import { followStream } from "../api/events"
+import { followStream, type StreamHandle, StreamRefused } from "../api/events"
 import { session } from "../auth/session"
-import { tr } from "../i18n"
-import { isRecord, textAt } from "../lib/decode"
+import { plural, tr } from "../i18n"
+import { isRecord, numberAt, textAt } from "../lib/decode"
 import { Observable } from "../lib/observable"
 import { platform } from "../platform/runtime"
 import { CueTrack } from "./cues"
@@ -109,6 +109,12 @@ export function refusalOf(cause: unknown): Refusal | null {
 export function refusalMessage(cause: unknown): string {
   if (!isServerError(cause)) return session.describe(cause)
   const data = isRecord(cause.data) ? cause.data : undefined
+  if (cause.code === BUSY) {
+    const playing = numberAt(data, "playing")
+    return playing === undefined
+      ? tr("playerBusyGeneric")
+      : plural("playerBusyDetail", playing)
+  }
   switch (textAt(data, "reason")) {
     case "bitrate-original":
       return tr("playerRestrictedOriginal")
@@ -124,9 +130,7 @@ export function refusalMessage(cause: unknown): string {
       break
   }
   if (cause.message) return cause.message
-  return tr(
-    cause.code === BUSY ? "playerBusyGeneric" : "playerRestrictedGeneric",
-  )
+  return tr("playerRestrictedGeneric")
 }
 
 /** A UUID for a sitting with a file, which reports and streams carry. */
@@ -247,6 +251,11 @@ export class PlayerController extends Observable {
   private skipped: MediaSegment | null = null
   private timer = 0
   private released = false
+  /** The presence connection that's open, to stop it when the player closes. */
+  private presence: StreamHandle | null = null
+  private presenceTimer = 0
+  /** Ends the wait between presence attempts, so `release` doesn't wait it out. */
+  private presenceWake: (() => void) | null = null
 
   constructor(
     private readonly opening: Opening,
@@ -339,6 +348,7 @@ export class PlayerController extends Observable {
     this.engine.play()
     this.timer = window.setInterval(() => this.tick(), 250)
     void this.loadTrickplay()
+    void this.holdPresence()
   }
 
   /** The engine's state moved: follow it. */
@@ -550,6 +560,73 @@ export class PlayerController extends Observable {
     } catch {
       // The seek bar does without previews.
     }
+  }
+
+  /**
+   * Holds a `playback.presence` stream open while the player shows the
+   * session, so the server knows the TV is still there and frees the
+   * session's place among the account's streams once the connection
+   * drops and doesn't come back. The server ends each stream after a few
+   * minutes, so one that ends opens another at once; one that fails
+   * waits a little and tries again. The player plays on without it.
+   */
+  private async holdPresence() {
+    let delay = 0
+    while (!this.released) {
+      const handle: StreamHandle = {}
+      this.presence = handle
+      let opened = false
+      try {
+        await followStream(
+          session.url(
+            `/api/v1/playback/sessions/${encodeURIComponent(this.opening.sessionId)}/presence`,
+          ),
+          session.token,
+          () => {
+            // The one event gives the time the server waits for this
+            // connection to come back; nothing else comes, so stay open.
+            opened = true
+            delay = 0
+            return false
+          },
+          handle,
+        )
+        if (this.released) return
+        // The server ends a stream after a few minutes: hold another at
+        // once. One that ended without its event never opened, so it
+        // waits like a failed one.
+        if (!opened) {
+          delay = delay === 0 ? 1000 : Math.min(delay * 2, 5000)
+          await this.pausePresence(delay)
+        }
+      } catch (cause) {
+        if (this.released) return
+        // The server turned it down, as one from before presence does:
+        // asking again won't help, and the reports carry the session.
+        if (cause instanceof StreamRefused && cause.status < 500) return
+        // A report tells the server the player is still here while the
+        // connection is down.
+        if (opened) this.report()
+        delay = delay === 0 ? 1000 : Math.min(delay * 2, 5000)
+        await this.pausePresence(delay)
+      } finally {
+        if (this.presence === handle) this.presence = null
+      }
+    }
+  }
+
+  /** Waits between presence attempts, until `release` ends it. */
+  private pausePresence(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const wake = () => {
+        window.clearTimeout(this.presenceTimer)
+        this.presenceTimer = 0
+        this.presenceWake = null
+        resolve()
+      }
+      this.presenceWake = wake
+      this.presenceTimer = window.setTimeout(wake, ms)
+    })
   }
 
   /**
@@ -858,32 +935,47 @@ export class PlayerController extends Observable {
 
   /** Tell the server where the viewer is; on play, pause, seek, close, and every so often. */
   report(closed = false) {
-    if (!this.source) return
+    const input = this.reportInput(closed)
+    if (!input) return
+    void session.api.playback.report(input).catch(() => {
+      // The next report says where the viewer is by then.
+    })
+  }
+
+  /**
+   * The page is going away, as a browser tab that closes: the closing
+   * report, sent so it outlives the page. Without it the session would
+   * hold one of the account's streams until it timed out. A page that
+   * comes back from the back-forward cache reopens it with its next one.
+   */
+  reportLeaving() {
+    const input = this.reportInput(true)
+    if (input) session.lastCall("playback", "report", input)
+  }
+
+  private reportInput(closed: boolean) {
+    if (!this.source) return null
     this.lastReport = Date.now()
     const length =
       this.item.durationSeconds ?? (this.duration > 0 ? this.duration : null)
-    void session.api.playback
-      .report({
-        itemId: this.item.id,
-        positionSeconds: Math.max(
-          0,
-          this.ended && length ? length : this.now(),
-        ),
-        durationSeconds: length && length > 0 ? length : undefined,
-        sessionId: this.opening.sessionId,
-        playedSeconds: Math.max(0, this.playedSeconds),
-        paused: !this.engine.playing(),
-        closed: closed || undefined,
-      })
-      .catch(() => {
-        // The next report says where the viewer is by then.
-      })
+    return {
+      itemId: this.item.id,
+      positionSeconds: Math.max(0, this.ended && length ? length : this.now()),
+      durationSeconds: length && length > 0 ? length : undefined,
+      sessionId: this.opening.sessionId,
+      playedSeconds: Math.max(0, this.playedSeconds),
+      paused: !this.engine.playing(),
+      closed: closed || undefined,
+    }
   }
 
   release() {
     if (this.released) return
     this.report(true)
     this.released = true
+    this.presence?.stop?.()
+    this.presence = null
+    this.presenceWake?.()
     window.clearInterval(this.timer)
     this.engine.destroy()
   }
