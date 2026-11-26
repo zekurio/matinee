@@ -87,6 +87,11 @@ function rating(average?: number, count?: number): number | null {
   return average && count ? Math.round(average * 10) / 10 : null
 }
 
+/** Seasons carry no vote count, so any score above zero counts as one. */
+function seasonRating(average?: number): number | null {
+  return average && average > 0 ? Math.round(average * 10) / 10 : null
+}
+
 // In this order: a teaser comes after the trailers in its language.
 const VIDEO_TYPES = ["Trailer", "Teaser"]
 
@@ -165,6 +170,30 @@ export async function movieDetails(id: string, language: string) {
   } satisfies TitleDetails
 }
 
+/**
+ * Each season's episodes, by number, in as few calls as
+ * `append_to_response` allows. `language` null asks for none.
+ */
+async function seasonBatches(
+  path: string,
+  numbers: number[],
+  language: string | null,
+): Promise<Map<number, SeasonResult>> {
+  const seasons = new Map<number, SeasonResult>()
+  for (let i = 0; i < numbers.length; i += SEASONS_PER_REQUEST) {
+    const batch = numbers.slice(i, i + SEASONS_PER_REQUEST)
+    const data = await request<Record<string, SeasonResult | undefined>>(path, {
+      language: language ?? undefined,
+      append_to_response: batch.map((n) => `season/${n}`).join(","),
+    })
+    for (const n of batch) {
+      const season = data[`season/${n}`]
+      if (season) seasons.set(n, season)
+    }
+  }
+  return seasons
+}
+
 /** The show's seasons and their episodes. */
 async function showSeasons(path: string, language: string, show: Show) {
   // Episodes come per season. Batch the seasons into as few calls as
@@ -172,31 +201,24 @@ async function showSeasons(path: string, language: string, show: Show) {
   const numbers = (show.seasons ?? []).map((season) => season.season_number)
   const seasons: SeasonDetails[] = []
   const episodes: EpisodeDetails[] = []
-  for (let i = 0; i < numbers.length; i += SEASONS_PER_REQUEST) {
-    const batch = numbers.slice(i, i + SEASONS_PER_REQUEST)
-    const data = await request<Record<string, SeasonResult | undefined>>(path, {
-      language,
-      append_to_response: batch.map((n) => `season/${n}`).join(","),
+  for (const [number, season] of await seasonBatches(path, numbers, language)) {
+    seasons.push({
+      number,
+      overview: text(season.overview),
+      poster: image(season.poster_path, "w780"),
+      rating: seasonRating(season.vote_average),
     })
-    for (const n of batch) {
-      const season = data[`season/${n}`]
-      if (!season) continue
-      seasons.push({
-        number: n,
-        overview: text(season.overview),
-        poster: image(season.poster_path, "w780"),
+    for (const episode of season.episodes ?? []) {
+      episodes.push({
+        season: episode.season_number,
+        episode: episode.episode_number,
+        name: text(episode.name),
+        overview: text(episode.overview),
+        airDate: isoDate(episode.air_date),
+        runtimeMinutes: episode.runtime || null,
+        rating: rating(episode.vote_average, episode.vote_count),
+        still: image(episode.still_path, "original"),
       })
-      for (const episode of season.episodes ?? []) {
-        episodes.push({
-          season: episode.season_number,
-          episode: episode.episode_number,
-          name: text(episode.name),
-          overview: text(episode.overview),
-          airDate: isoDate(episode.air_date),
-          runtimeMinutes: episode.runtime || null,
-          still: image(episode.still_path, "original"),
-        })
-      }
     }
   }
   return { seasons, episodes }
@@ -251,4 +273,55 @@ export async function showDetails(id: string, language: string) {
     seasons,
     episodes,
   } satisfies TitleDetails
+}
+
+/** Community scores at TMDB for a title known there by `id`. */
+export type Scores = {
+  rating: number | null
+  seasons: { number: number; rating: number | null }[]
+  episodes: {
+    season: number
+    episode: number
+    airDate: string | null
+    rating: number | null
+  }[]
+}
+
+/**
+ * A title's community score at TMDB, with each season's and each
+ * episode's. Language doesn't matter for scores, so none is asked for.
+ */
+export async function titleScores(
+  kind: "movie" | "show",
+  id: string,
+): Promise<Scores> {
+  if (kind === "movie") {
+    const movie = await request<Movie>(`/movie/${encodeURIComponent(id)}`, {})
+    return {
+      rating: rating(movie.vote_average, movie.vote_count),
+      seasons: [],
+      episodes: [],
+    }
+  }
+  const path = `/tv/${encodeURIComponent(id)}`
+  const show = await request<Show>(path, {})
+  const numbers = (show.seasons ?? []).map((season) => season.season_number)
+  const seasons: Scores["seasons"] = []
+  const episodes: Scores["episodes"] = []
+  for (const [number, season] of await seasonBatches(path, numbers, null)) {
+    seasons.push({ number, rating: seasonRating(season.vote_average) })
+    for (const episode of season.episodes ?? []) {
+      episodes.push({
+        season: episode.season_number,
+        episode: episode.episode_number,
+        airDate: isoDate(episode.air_date),
+        rating: rating(episode.vote_average, episode.vote_count),
+      })
+    }
+  }
+  return {
+    rating: rating(show.vote_average, show.vote_count),
+    seasons,
+    episodes,
+  }
 }

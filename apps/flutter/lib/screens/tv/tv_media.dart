@@ -82,7 +82,11 @@ FocusedItem itemInfo(MediaItem item, AppLocalizations l) {
     subtitle: code == null ? null : l.mediaCodeTitle(code, names.title),
     facts: [?names.year, ?formatRuntime(runtimeMinutes(item), l), ?left],
     contentRating: item.title?.contentRating,
-    rating: item.title?.rating,
+    // A movie's score is its title's; an episode's is its own, never its
+    // show's.
+    rating: item.title?.kind == TitleKind.movie
+        ? item.title?.rating
+        : item.episode?.rating,
     overview: item.episode?.overview ?? item.title?.overview,
     backdrop: _backdropOf(item, item.title?.images.backdrop),
   );
@@ -136,7 +140,8 @@ FocusedItem seasonInfo(TitleSummary title, Season season, AppLocalizations l) =>
       name: l.titleSeasonOf(title.name, seasonName(season.number, l)),
       facts: [l.mediaEpisodeCount(season.itemCount)],
       contentRating: title.contentRating,
-      rating: title.rating,
+      // The season's own score, never its show's.
+      rating: season.rating,
       overview: season.overview ?? title.overview,
       backdrop: titleBackdrop(title),
     );
@@ -151,6 +156,7 @@ class TvFacts extends StatelessWidget {
     this.rating,
     this.style = TvType.facts,
     this.alpha = .85,
+    this.color,
     this.flags = const [],
   });
 
@@ -160,6 +166,9 @@ class TvFacts extends StatelessWidget {
   final TvType style;
   final double alpha;
 
+  /// The words' color, else the foreground at [alpha].
+  final Color? color;
+
   /// Short marks after the rest, like 4K or HDR, each in a box.
   final List<String> flags;
 
@@ -167,7 +176,7 @@ class TvFacts extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     final l = AppLocalizations.of(context);
-    final color = colors.foreground.withValues(alpha: alpha);
+    final color = this.color ?? colors.foreground.withValues(alpha: alpha);
     Widget boxed(String text) => DecoratedBox(
       decoration: BoxDecoration(
         border: Border.all(color: colors.foreground.withValues(alpha: .4)),
@@ -207,10 +216,7 @@ class TvFacts extends StatelessWidget {
                 color: const Color(0xFFFCD34D),
                 label: l.mediaHeroRated,
               ),
-              Text(
-                formatRating(score, l),
-                style: TvType.facts.style(color: color),
-              ),
+              Text(formatRating(score, l), style: style.style(color: color)),
             ],
           ),
         for (final flag in flags) boxed(flag),

@@ -38,6 +38,7 @@ import { errorMessage, orpc } from "@/lib/rpc"
 import { HeaderOverview } from "./header-overview"
 import { railStart } from "./rail-start"
 import { RestOfSeasonCard } from "./rest-of-season"
+import { Score } from "./score"
 import { useShowGaps } from "./show-gaps"
 import { PlayButton } from "./title-header"
 import { TitleSkeleton } from "./title-page"
@@ -308,6 +309,7 @@ function SeasonHeader(props: {
                     {props.title.contentRating}
                   </span>
                 </Show>
+                <Score score={props.season.rating} />
               </div>
             </div>
 

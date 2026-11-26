@@ -14,6 +14,7 @@ import { Picture, tone } from "@/components/picture"
 import { Rail, RailItem } from "@/components/rail"
 import { MediaInfo } from "@/components/title/media-info"
 import { railStart } from "@/components/title/rail-start"
+import { Score } from "@/components/title/score"
 import { headingLink } from "@/components/title/season-page"
 import { seasonParams } from "@/components/title/seasons"
 import {
@@ -294,6 +295,8 @@ function EpisodeHeader(props: { item: MediaItem }) {
                   {props.item.title?.contentRating}
                 </span>
               </Show>
+              {/* The episode's own score, never its show's. */}
+              <Score score={props.item.episode?.rating ?? null} />
             </div>
 
             <Show when={props.item.episode?.overview}>

@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/solid-query"
 import { getRouteApi, Link, useNavigate } from "@tanstack/solid-router"
-import { Clapperboard, Star } from "lucide"
+import { Clapperboard } from "lucide"
 import {
   createEffect,
   createMemo,
@@ -29,10 +29,11 @@ import {
   useWaitingRequest,
 } from "@/components/requests/admin-answer"
 import { HeaderOverview } from "@/components/title/header-overview"
+import { Score } from "@/components/title/score"
 import { headingPoster, headingTop } from "@/components/title/title-header"
 import { TitleSkeleton } from "@/components/title/title-page"
 import { titleOptions } from "@/components/title/title-queries"
-import { getLocale, perLocale, tr } from "@/i18n"
+import { getLocale, tr } from "@/i18n"
 import { buttonVariants } from "@/kit/button"
 import { Icon } from "@/kit/icon"
 import { art, present } from "@/lib/media"
@@ -64,14 +65,6 @@ declare module "@tanstack/solid-router" {
 }
 
 const route = getRouteApi("/_authed/_shell/catalog/$kind/$provider/$providerId")
-
-const ratings = perLocale(
-  (locale) =>
-    new Intl.NumberFormat(locale, {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    }),
-)
 
 /**
  * A title's details, read through its observer so a change of library
@@ -262,8 +255,6 @@ function CatalogDetailPage(props: {
   const backdrop = createMemo(() =>
     present(art(props.detail.backdrop, "large")),
   )
-  const rating = () =>
-    props.detail.rating === null ? null : ratings().format(props.detail.rating)
 
   return (
     <div class="flex flex-col gap-6 sm:gap-8">
@@ -314,20 +305,7 @@ function CatalogDetailPage(props: {
                   {props.detail.contentRating}
                 </span>
               </Show>
-              <Show when={rating()}>
-                {(score) => (
-                  <span class="inline-flex items-center gap-1 tabular-nums">
-                    <Icon
-                      icon={Star}
-                      class="size-3.5 fill-current text-amber-500 dark:text-amber-300"
-                    />
-                    <span class="sr-only">
-                      {tr("title.rating", { rating: score() })}
-                    </span>
-                    <span aria-hidden="true">{score()}</span>
-                  </span>
-                )}
-              </Show>
+              <Score score={props.detail.rating} />
             </div>
             {/* Plain text: genre pages list the library's titles. */}
             <Show when={props.detail.genres.length > 0}>

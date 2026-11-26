@@ -1,6 +1,6 @@
 import type { MediaItem, Title } from "@matinee/contracts"
 import { Link } from "@tanstack/solid-router"
-import { Play, Star } from "lucide"
+import { Play } from "lucide"
 import { createMemo, For, Show } from "solid-js"
 
 import { ActionsMenu } from "@/components/actions-menu"
@@ -12,11 +12,12 @@ import { type useTitleWatched, WatchedButton } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { buttonVariants } from "@/kit/button"
 import { Icon } from "@/kit/icon"
-import { formatRuntime, formatScore } from "@/lib/format"
+import { formatRuntime } from "@/lib/format"
 import { art, frame, mediaFlags, present, timeLeft } from "@/lib/media"
 
 import { HeaderOverview } from "./header-overview"
 import { MediaInfo } from "./media-info"
+import { Score } from "./score"
 import { MatchNote } from "./title-menu"
 
 export const headingTop =
@@ -137,8 +138,6 @@ function TitleFacts(props: { title: Title }) {
       ? mediaFlags(props.title.next)
       : [],
   )
-  const rating = () =>
-    props.title.rating === null ? null : formatScore(props.title.rating)
   const genres = createMemo(() =>
     unitList().formatToParts(props.title.genres.slice(0, 4)),
   )
@@ -153,20 +152,7 @@ function TitleFacts(props: { title: Title }) {
             {props.title.contentRating}
           </span>
         </Show>
-        <Show when={rating()}>
-          {(score) => (
-            <span class="inline-flex items-center gap-1 tabular-nums">
-              <Icon
-                icon={Star}
-                class="size-3.5 fill-current text-amber-500 dark:text-amber-300"
-              />
-              <span class="sr-only">
-                {tr("title.rating", { rating: score() })}
-              </span>
-              <span aria-hidden="true">{score()}</span>
-            </span>
-          )}
-        </Show>
+        <Score score={props.title.rating} />
         <For each={flags()}>
           {(flag) => (
             <span class="bg-foreground/10 text-foreground/90 rounded px-1.5 text-xs leading-5 font-medium">

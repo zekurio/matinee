@@ -89,6 +89,11 @@ export const EpisodeInfo = t.object({
   /** YYYY-MM-DD. */
   airDate: t.string().nullable(),
   runtimeMinutes: t.number().int().nullable(),
+  /**
+   * Community rating out of 10, as `TitleSummary.rating`. TMDB's, also for
+   * a show read from TheTVDB, which has none of its own.
+   */
+  rating: t.number().nullable(),
   /** A frame the provider picked. */
   still: Artwork.nullable(),
 })
@@ -189,6 +194,11 @@ export const Season = t.object({
   name: t.string(),
   overview: t.string().nullable(),
   poster: Artwork.nullable(),
+  /**
+   * Community rating out of 10, as `TitleSummary.rating`. Null for the
+   * files without a season number.
+   */
+  rating: t.number().nullable(),
   itemCount: t.number().int(),
   /** Files the signed-in user finished. */
   watchedCount: t.number().int(),

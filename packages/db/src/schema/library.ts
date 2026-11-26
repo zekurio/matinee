@@ -194,6 +194,8 @@ export const season = pgTable(
       .references(() => title.id, { onDelete: "cascade" }),
     number: integer().notNull(),
     overview: text(),
+    /** Community rating out of 10, as the title's. */
+    rating: doublePrecision(),
     posterId: artworkRef(),
     /** An admin picked the poster, so a refresh keeps it. */
     posterChosen: boolean().notNull().default(false),
@@ -219,6 +221,8 @@ export const episode = pgTable(
     overview: text(),
     airDate: date({ mode: "string" }),
     runtimeMinutes: integer(),
+    /** Community rating out of 10, as the title's. */
+    rating: doublePrecision(),
     stillId: artworkRef(),
     /** An admin picked the still, so a refresh keeps it. */
     stillChosen: boolean().notNull().default(false),

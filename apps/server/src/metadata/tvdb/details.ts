@@ -102,6 +102,8 @@ function seriesSeasons(series: Series, lang: string): Promise<SeasonDetails[]> {
         number: season.number,
         overview: await seasonOverview(season, lang),
         poster: absolute(season.image),
+        // TVDB's score counts favourites; it isn't a rating.
+        rating: null,
       })),
   )
 }
@@ -185,6 +187,8 @@ export async function seriesDetails(id: string, language: string) {
       overview: text(episode.overview),
       airDate: isoDate(episode.aired),
       runtimeMinutes: episode.runtime || null,
+      // TVDB's score counts favourites; it isn't a rating.
+      rating: null,
       still: absolute(episode.image),
     })),
   } satisfies TitleDetails

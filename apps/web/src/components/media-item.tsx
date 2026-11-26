@@ -31,6 +31,7 @@ import {
   useSeasonFavorite,
   useTitleFavorite,
 } from "@/components/favorite-button"
+import { Score } from "@/components/title/score"
 import { seasonParams } from "@/components/title/seasons"
 import {
   useItemWatched,
@@ -759,9 +760,10 @@ function CardProgress(props: { progress: number | null }) {
 
 /**
  * An episode in its season's row: the still, the episode's name, then
- * "Episode 4 · 24m" or the time left. The still and the name open the
- * episode's page, the round button on the still plays it, and the icons in
- * its corner mark it watched or a favorite, with its "⋯" menu.
+ * "Episode 4 · 24m" or the time left, and its score. The still and the
+ * name open the episode's page, the round button on the still plays it,
+ * and the icons in its corner mark it watched or a favorite, with its "⋯"
+ * menu.
  */
 export function SeasonEpisodeCard(props: { item: MediaItem }) {
   const label = () => itemLabel(props.item)
@@ -821,7 +823,10 @@ export function SeasonEpisodeCard(props: { item: MediaItem }) {
   )
 }
 
-/** The episode's name, then "Episode 4 · 24m" or the time left. */
+/**
+ * The episode's name, then "Episode 4 · 24m" or the time left, and its
+ * score.
+ */
 function EpisodeText(props: { item: MediaItem }) {
   const label = () => itemLabel(props.item)
   const detail = () => {
@@ -859,12 +864,29 @@ function EpisodeText(props: { item: MediaItem }) {
           {label().title}
         </ItemLink>
       </span>
-      <Show when={detail()}>
-        <span class="text-muted-foreground text-13px block truncate leading-5 tabular-nums">
-          {detail()}
-        </span>
-      </Show>
+      <EpisodeDetail
+        detail={detail()}
+        score={props.item.episode?.rating ?? null}
+      />
     </>
+  )
+}
+
+/**
+ * The muted line under an episode's name on a card: what it says, like
+ * "Episode 4 · 24m", then the episode's score by its star, which stays
+ * whole while the words give way.
+ */
+export function EpisodeDetail(props: { detail: string; score: number | null }) {
+  return (
+    <Show when={props.detail || props.score !== null}>
+      <span class="text-muted-foreground text-13px flex min-w-0 items-center gap-2 leading-5 tabular-nums">
+        <Show when={props.detail}>
+          <span class="truncate">{props.detail}</span>
+        </Show>
+        <Score score={props.score} small class="shrink-0" />
+      </span>
+    </Show>
   )
 }
 
