@@ -89,8 +89,6 @@ export default defineMessages("account", {
 
   // API tokens, for services that call the API as the account.
   "account.apiTokens.title": "API tokens",
-  "account.apiTokens.description":
-    "A service or an app sends one as Authorization: Bearer to call the API as you, within what your account may do. Tokens don't expire. Revoke one when it's no longer needed.",
   "account.apiTokens.empty": "No API tokens yet.",
   // In place of the empty list, when no group lets the account make one.
   "account.apiTokens.notAllowed": "Your account may not create API tokens.",

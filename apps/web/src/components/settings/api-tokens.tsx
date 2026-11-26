@@ -107,7 +107,6 @@ function ApiTokens() {
         </Show>
       }
     >
-      <SettingNote>{tr("account.apiTokens.description")}</SettingNote>
       {/* Says why there is no create button, with tokens or without. */}
       <Show when={!mayCreate()}>
         <SettingNote>{tr("account.apiTokens.notAllowed")}</SettingNote>

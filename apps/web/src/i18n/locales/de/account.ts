@@ -85,8 +85,6 @@ export default {
   "account.sessions.active": "Aktiv {time}",
 
   "account.apiTokens.title": "API-Tokens",
-  "account.apiTokens.description":
-    "Ein Dienst oder eine App sendet ein Token als Authorization: Bearer, um die API als du aufzurufen, im Rahmen dessen, was dein Konto darf. Tokens laufen nicht ab. Widerrufe eines, sobald es nicht mehr gebraucht wird.",
   "account.apiTokens.empty": "Noch keine API-Tokens.",
   "account.apiTokens.notAllowed": "Dein Konto darf keine API-Tokens erstellen.",
   "account.apiTokens.loadFailed":
