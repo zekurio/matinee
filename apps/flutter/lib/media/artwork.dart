@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:crypto/crypto.dart';
@@ -144,13 +145,33 @@ final artworkLoaderProvider = Provider<ArtworkLoader>(
 );
 
 /// A picture from the server, as Flutter's image cache keeps it: one per
-/// URL, however it's loaded.
+/// URL and decode size, however it's loaded. Without a [box] it decodes
+/// whole, as a trickplay sheet needs.
 @immutable
 final class ArtworkImage extends ImageProvider<ArtworkImage> {
-  const ArtworkImage(this.url, this.loader);
+  const ArtworkImage(
+    this.url,
+    this.loader, {
+    this.box,
+    this.fit = BoxFit.cover,
+  });
+
+  /// Decoded no larger than [fit] in a box [pixels] in device pixels needs,
+  /// with the box rounded up by [decodeBox] so a box that changes size a
+  /// little keeps its decode.
+  ArtworkImage.sized(
+    Uri url,
+    ArtworkLoader loader,
+    Size pixels, {
+    BoxFit fit = BoxFit.cover,
+  }) : this(url, loader, box: decodeBox(pixels), fit: fit);
 
   final Uri url;
   final ArtworkLoader loader;
+
+  /// The box it shows in, in device pixels, already rounded by [decodeBox].
+  final Size? box;
+  final BoxFit fit;
 
   @override
   Future<ArtworkImage> obtainKey(ImageConfiguration configuration) =>
@@ -172,7 +193,23 @@ final class ArtworkImage extends ImageProvider<ArtworkImage> {
   ) async {
     try {
       final bytes = await key.loader.load(key.url);
-      return await decode(await ui.ImmutableBuffer.fromUint8List(bytes));
+      final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+      final box = key.box;
+      if (box == null) return await decode(buffer);
+      return await decode(
+        buffer,
+        getTargetSize: (width, height) {
+          final size = decodeSize(
+            Size(width.toDouble(), height.toDouble()),
+            box,
+            key.fit,
+          );
+          // Only the width, so the codec keeps the picture's own shape.
+          return size == null
+              ? const ui.TargetImageSize()
+              : ui.TargetImageSize(width: size.width.round());
+        },
+      );
     } on Object {
       // As NetworkImage does: a failure isn't kept, so the next time the
       // picture shows it's asked for again, as a frame that's made by then.
@@ -182,10 +219,51 @@ final class ArtworkImage extends ImageProvider<ArtworkImage> {
   }
 
   @override
-  bool operator ==(Object other) => other is ArtworkImage && other.url == url;
+  bool operator ==(Object other) =>
+      other is ArtworkImage &&
+      other.url == url &&
+      other.box == box &&
+      other.fit == fit;
 
   @override
-  int get hashCode => url.hashCode;
+  int get hashCode => Object.hash(url, box, fit);
+}
+
+/// [pixels] rounded up in steps of an eighth of the power of two below
+/// each side: 573 by 860 to 576 by 896. Each doubling has eight steps, so
+/// a box that grows or shrinks decodes again a few times, not every frame,
+/// and each side decodes at most an eighth more than it shows.
+Size decodeBox(Size pixels) {
+  double up(double side) {
+    if (side <= 64) return 64;
+    final step = math.pow(2, (math.log(side) / math.ln2).floor()) / 8;
+    return (side / step).ceil() * step;
+  }
+
+  return Size(up(pixels.width), up(pixels.height));
+}
+
+/// The size to decode a picture [intrinsic] pixels big at, to [fit] it in
+/// [box]: for a cover, large enough that both sides fill the box. Null to
+/// decode it whole, when it would need as many pixels or more, or so
+/// nearly as many that a resize isn't worth it. Never larger than it is.
+Size? decodeSize(Size intrinsic, Size box, BoxFit fit) {
+  if (intrinsic.isEmpty) return null;
+  final across = box.width / intrinsic.width;
+  final down = box.height / intrinsic.height;
+  final scale = switch (fit) {
+    BoxFit.cover || BoxFit.fill => math.max(across, down),
+    BoxFit.contain || BoxFit.scaleDown => math.min(across, down),
+    BoxFit.fitWidth => across,
+    BoxFit.fitHeight => down,
+    BoxFit.none => 1.0,
+  };
+  // Past nine tenths of each side, the saving is under a fifth of the pixels.
+  if (scale >= .9) return null;
+  return Size(
+    (intrinsic.width * scale).ceilToDouble(),
+    (intrinsic.height * scale).ceilToDouble(),
+  );
 }
 
 /// Where a picture comes from. Each picks its URL for how many pixels wide
@@ -322,6 +400,9 @@ class _PictureState extends ConsumerState<Picture> {
             ? constraints.maxWidth
             : constraints.maxHeight * 16 / 9;
         final pixels = width * dpr;
+        final box = constraints.hasBoundedWidth && constraints.hasBoundedHeight
+            ? Size(pixels, constraints.maxHeight * dpr)
+            : null;
         return Stack(
           fit: StackFit.expand,
           children: [
@@ -335,10 +416,17 @@ class _PictureState extends ConsumerState<Picture> {
             if (api != null && loader != null && index < sources.length)
               Image(
                 key: ValueKey(index),
-                image: ArtworkImage(
-                  sources[index].url(api.paths, pixels),
-                  loader,
-                ),
+                image: box == null
+                    ? ArtworkImage(
+                        sources[index].url(api.paths, pixels),
+                        loader,
+                      )
+                    : ArtworkImage.sized(
+                        sources[index].url(api.paths, pixels),
+                        loader,
+                        box,
+                        fit: widget.fit,
+                      ),
                 fit: widget.fit,
                 alignment: widget.alignment,
                 excludeFromSemantics: true,
