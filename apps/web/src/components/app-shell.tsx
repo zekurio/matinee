@@ -219,7 +219,10 @@ function TopBar(props: { user: User }) {
         )}
       >
         <span class="group-focus-visible/logo:ring-ring grid size-11 place-items-center rounded-full transition-transform duration-200 group-focus-visible/logo:ring-2 group-active/logo:scale-[0.92] motion-reduce:transition-none">
-          <LogoMark class="size-7" />
+          {/* The sunset fills about 84% of its box across, so a box of 38
+              draws it 32 wide: the avatar's size, which sits mirrored at
+              the bar's other end, 32 from the edge to its middle. */}
+          <LogoMark class="size-9.5" />
         </span>
       </Link>
       <div class="bg-background supports-backdrop-filter:bg-background/85 [@media(prefers-reduced-transparency:reduce)]:bg-background grid min-w-0 flex-1 grid-cols-[1fr_minmax(0,30rem)_1fr] items-center gap-3 px-3 supports-backdrop-filter:backdrop-blur-xl">
