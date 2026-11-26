@@ -25,6 +25,19 @@ void main() {
     expect(tester.getSize(_tab('Home')).height, 80);
   });
 
+  // The bar keeps what it measured for the next build; a bar with other
+  // labels, or at another text size, must measure again.
+  testWidgets('labels show again once they fit again', (tester) async {
+    await _pumpTabs(tester, ['Home', 'Media']);
+    expect(find.text('Media'), findsOneWidget);
+    await _pumpTabs(tester, ['Home', 'Media'], textScale: 6);
+    expect(find.byType(Text), findsNothing);
+    await _pumpTabs(tester, ['Home', 'Media']);
+    expect(find.text('Media'), findsOneWidget);
+    await _pumpTabs(tester, ['Home', 'A name no tab on a phone has room for']);
+    expect(find.byType(Text), findsNothing);
+  });
+
   testWidgets('four tabs fit the narrowest phone at the largest text', (
     tester,
   ) async {

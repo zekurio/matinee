@@ -96,12 +96,25 @@ class TabBar extends StatelessWidget {
   /// one doesn't, as on a small phone, with large text, or in a longer
   /// language, every tab shows only its icon, so they stay alike; screen
   /// readers still read the names.
+  ///
+  /// The answer is kept for the next build, since the router builds the
+  /// shell, and this bar, on every navigation, and measuring the labels
+  /// again each time costs a page's first frame half a millisecond.
   bool _labelsFit(BuildContext context, double width) {
     final style = DefaultTextStyle.of(context).style
         .merge(KitText.xs.style(weight: FontWeight.w500));
     final scaler = MediaQuery.textScalerOf(context);
     final direction = Directionality.of(context);
-    return items.every((item) {
+    final key = (
+      labels: items.map((item) => item.label).join('\u0000'),
+      style: style,
+      scaler: scaler,
+      direction: direction,
+      width: width,
+    );
+    final last = _lastFit;
+    if (last != null && last.key == key) return last.fits;
+    final fits = items.every((item) {
       final painter = TextPainter(
         text: TextSpan(text: item.label, style: style),
         textScaler: scaler,
@@ -112,8 +125,24 @@ class TabBar extends StatelessWidget {
       painter.dispose();
       return fits;
     });
+    _lastFit = (key: key, fits: fits);
+    return fits;
   }
 }
+
+/// What [TabBar._labelsFit] measured last, and for what.
+({
+  ({
+    String labels,
+    TextStyle style,
+    TextScaler scaler,
+    TextDirection direction,
+    double width,
+  })
+  key,
+  bool fits,
+})?
+_lastFit;
 
 class _Tab extends StatelessWidget {
   const _Tab({
