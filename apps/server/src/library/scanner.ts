@@ -10,6 +10,7 @@ import { prepareMissingSubtitles } from "../media/subtitles"
 import { queueTrickplay } from "../media/trickplay"
 import { queueRefresh } from "../metadata/refresh"
 import { libraryChanged } from "../requests/arrival"
+import { reattachWatchState } from "./detached"
 import {
   BATCH_SIZE,
   dateFiles,
@@ -216,6 +217,16 @@ async function runScan(
   await updateSidecars(lib.name, libraryId, targets, state, signal)
   if (regroupAll) await assignTitles(libraryId, lib.kind)
   else if (touched.size > 0) await assignTitles(libraryId, lib.kind, touched)
+  // A new file of a title that already matched, like an upgrade, takes
+  // back what users had on the one it replaced. New titles do on match.
+  const reattached = await reattachWatchState(
+    eq(mediaItem.libraryId, libraryId),
+  )
+  if (reattached > 0) {
+    log.info(
+      `Library ${lib.name}: watch state of ${reattached} removed files carried over to new ones`,
+    )
+  }
   libraryChanged(libraryId)
   if (!request.targets) {
     await db

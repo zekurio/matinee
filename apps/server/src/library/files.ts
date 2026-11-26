@@ -3,6 +3,7 @@ import { and, eq, inArray, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { titleFromFilename } from "../media/title"
+import { detachWatchState } from "./detached"
 import { matchMoves } from "./moves"
 import { below, type Folder } from "./plan"
 import { isInside, type Targets } from "./targets"
@@ -236,15 +237,19 @@ export async function settle(
   // yet, so the next scan regroups everything.
   if (gone.length > 0 && signal.aborted) return false
   for (let i = 0; i < gone.length; i += BATCH_SIZE) {
-    await db.delete(mediaItem).where(
-      and(
-        eq(mediaItem.libraryId, libraryId),
-        inArray(
-          mediaItem.id,
-          gone.slice(i, i + BATCH_SIZE).map((row) => row.id),
-        ),
+    const batch = and(
+      eq(mediaItem.libraryId, libraryId),
+      inArray(
+        mediaItem.id,
+        gone.slice(i, i + BATCH_SIZE).map((row) => row.id),
       ),
     )
+    if (!batch) continue
+    // What users had on them waits for a file that replaces them.
+    await db.transaction(async (tx) => {
+      await detachWatchState(tx, batch)
+      await tx.delete(mediaItem).where(batch)
+    })
   }
   counts.gone = gone.length
   for (const row of gone) touched.add(topLevelKey(row.relativePath))

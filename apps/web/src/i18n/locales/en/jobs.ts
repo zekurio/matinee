@@ -137,6 +137,10 @@ export default defineMessages("jobs", {
   "jobs.task.clean-sessions.name": "Delete expired sessions",
   "jobs.task.clean-sessions.description":
     "Remove sign-ins that expired from the database.",
+  "jobs.task.forget-detached-watch-state.name":
+    "Forget watch state of removed files",
+  "jobs.task.forget-detached-watch-state.description":
+    "Delete what users had on files that went 90 days ago and never came back, such as a release that wasn't replaced.",
   "jobs.task.forget-browsed-pages.name": "Forget browsed catalog pages",
   "jobs.task.forget-browsed-pages.description":
     "Delete pages of the filtered catalog that nobody opened for a week.",

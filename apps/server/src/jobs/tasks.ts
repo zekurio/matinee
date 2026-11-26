@@ -8,6 +8,7 @@ import { CACHE_HOURS, forgetBrowsedPages } from "../catalog/cache"
 import { prepareDiscover } from "../catalog/discover"
 import { db } from "../db"
 import { env } from "../env"
+import { DETACHED_DAYS, forgetDetachedWatchState } from "../library/detached"
 import { scans } from "../library/scanner"
 import { log } from "../log"
 import { prefetchArtwork } from "../media/artwork"
@@ -191,6 +192,16 @@ const cleanSessions: TaskDefinition = {
   },
 }
 
+const forgetDetached: TaskDefinition = {
+  id: "forget-detached-watch-state",
+  name: "Forget watch state of removed files",
+  description: `Delete what users had on files that went ${DETACHED_DAYS} days ago and never came back, such as a release that wasn't replaced.`,
+  queue: null,
+  startupDelayMs: 10 * MINUTE_MS,
+  intervalMs: 24 * HOUR_MS,
+  run: forgetDetachedWatchState,
+}
+
 const forgetBrowsed: TaskDefinition = {
   id: "forget-browsed-pages",
   name: "Forget browsed catalog pages",
@@ -255,6 +266,7 @@ export const TASKS: TaskDefinition[] = [
   findSegments,
   cleanTranscodes,
   cleanSessions,
+  forgetDetached,
   forgetBrowsed,
   syncProviderAccounts,
 ]

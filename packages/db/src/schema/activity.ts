@@ -235,5 +235,42 @@ export const playbackSession = pgTable(
   ],
 )
 
+/**
+ * What a user had on a file that went, kept by what the file was rather
+ * than where it was, as Jellyfin does. A file that comes later with a key
+ * in common, like a Blu-ray in place of a WEB-DL, takes it back: the
+ * progress, the favorite, and the plays. A movie's keys are its title's
+ * match and the ids it has at other sites, like `tmdb:603` and
+ * `imdb:tt0133093`; an episode's add its numbers, like `tvdb:81189/1x3`.
+ * A file without a match has none, and nothing is kept for it. Rows
+ * older than the `forget-detached-watch-state` task's window go.
+ */
+export const detachedWatchState = pgTable(
+  "detached_watch_state",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    keys: text().array().notNull(),
+    /** Null when the user had no progress, only a favorite or plays. */
+    positionSeconds: doublePrecision(),
+    completed: boolean().notNull().default(false),
+    /** When the progress last changed, to pick between rows. */
+    progressAt: timestamp({ withTimezone: true }),
+    favorite: boolean().notNull().default(false),
+    /** The file's plays, which point at no file until it comes back. */
+    sessionIds: uuid()
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
+    detachedAt: createdAt(),
+  },
+  (t) => [
+    index("detached_watch_state_keys_idx").using("gin", t.keys),
+    index("detached_watch_state_detached_idx").on(t.detachedAt),
+  ],
+)
+
 export type WatchProgressRow = typeof watchProgress.$inferSelect
 export type PlaybackSessionRow = typeof playbackSession.$inferSelect

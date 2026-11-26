@@ -6901,6 +6901,7 @@ abstract final class TaskId {
   static const findSegments = 'find-segments';
   static const cleanTranscodes = 'clean-transcodes';
   static const cleanSessions = 'clean-sessions';
+  static const forgetDetachedWatchState = 'forget-detached-watch-state';
   static const forgetBrowsedPages = 'forget-browsed-pages';
   static const syncOidcAccounts = 'sync-oidc-accounts';
 
@@ -6919,6 +6920,7 @@ abstract final class TaskId {
     findSegments,
     cleanTranscodes,
     cleanSessions,
+    forgetDetachedWatchState,
     forgetBrowsedPages,
     syncOidcAccounts,
   ];

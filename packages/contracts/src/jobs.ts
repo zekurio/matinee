@@ -94,6 +94,7 @@ export const TASK_IDS = [
   "find-segments",
   "clean-transcodes",
   "clean-sessions",
+  "forget-detached-watch-state",
   "forget-browsed-pages",
   "sync-oidc-accounts",
 ] as const
