@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 import 'cards.dart';
+import 'staggered.dart';
 
 /// Cards in rows across the page, as a sliver: [columns] says how many fit the
 /// width the grid has (the screens pick it by width class), and each card is as
@@ -66,9 +67,11 @@ class CardGrid extends StatelessWidget {
       grid = SliverGrid.builder(
         gridDelegate: _CardGridDelegate(columns, aspectRatio, scaler),
         itemCount: itemCount,
-        itemBuilder: (context, index) => Align(
-          alignment: Alignment.topCenter,
-          child: itemBuilder(context, index),
+        itemBuilder: (context, index) => Staggered(
+          builder: (context) => Align(
+            alignment: Alignment.topCenter,
+            child: itemBuilder(context, index),
+          ),
         ),
       );
     }

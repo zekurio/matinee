@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../kit/staggered.dart';
+
 /// One window of drawn frames, summed up as a `frame-stats` line.
 ///
 /// The arithmetic is free of Flutter bindings so a test can feed it plain
@@ -16,6 +18,7 @@ final class FrameStats {
     required List<int> vsyncMicros,
     required int? previousVsyncMicros,
     required double budgetMs,
+    this.emptyCards = 0,
   }) : _build = _milliseconds(build),
        _raster = _milliseconds(raster),
        _total = _milliseconds(total),
@@ -33,6 +36,9 @@ final class FrameStats {
   final List<double> _vsyncOverhead;
   final int _missed;
   final double _budget;
+
+  /// Cards a frame showed before they were built ([Staggered.shownEmpty]).
+  final int emptyCards;
 
   /// The line `adb logcat` shows, with times in milliseconds to one decimal
   /// place.
@@ -53,7 +59,8 @@ final class FrameStats {
         'slow_total=${_slow(_total)} '
         'missed=$_missed '
         'vsync_p90=${vsync.p90.toStringAsFixed(1)} '
-        'vsync_max=${vsync.max.toStringAsFixed(1)}';
+        'vsync_max=${vsync.max.toStringAsFixed(1)} '
+        'empty=$emptyCards';
   }
 
   /// How many of [values] went over the frame budget.
@@ -101,9 +108,13 @@ const _idleMicros = 100 * Duration.microsecondsPerMillisecond;
 /// Collects the scheduler's frame timings and prints one [FrameStats] line
 /// for each window of about a second in which frames were drawn.
 final class FrameTimingLog {
-  FrameTimingLog({required this.budgetMs});
+  FrameTimingLog({required this.budgetMs, this.emptyCards});
 
   final double budgetMs;
+
+  /// A running count of cards shown before they were built.
+  final int Function()? emptyCards;
+  int _emptyBefore = 0;
 
   final List<Duration> _build = [];
   final List<Duration> _raster = [];
@@ -132,6 +143,7 @@ final class FrameTimingLog {
         timings.last.timestampInMicroseconds(FramePhase.vsyncStart) -
         _startMicros!;
     if (elapsed < Duration.microsecondsPerSecond) return;
+    final empty = emptyCards?.call() ?? 0;
     debugPrint(
       FrameStats(
         build: _build,
@@ -141,8 +153,10 @@ final class FrameTimingLog {
         vsyncMicros: _vsyncMicros,
         previousVsyncMicros: _previousVsyncMicros,
         budgetMs: budgetMs,
+        emptyCards: empty - _emptyBefore,
       ).line,
     );
+    _emptyBefore = empty;
     _previousVsyncMicros = _vsyncMicros.last;
     _build.clear();
     _raster.clear();
@@ -157,7 +171,10 @@ final class FrameTimingLog {
 /// `--dart-define=MATINEE_FRAME_STATS=true`, and does nothing otherwise.
 void startFrameStats() {
   if (!const bool.fromEnvironment('MATINEE_FRAME_STATS')) return;
-  final log = FrameTimingLog(budgetMs: frameBudgetMs(_displayRefreshRate()));
+  final log = FrameTimingLog(
+    budgetMs: frameBudgetMs(_displayRefreshRate()),
+    emptyCards: () => Staggered.shownEmpty,
+  );
   SchedulerBinding.instance.addTimingsCallback(log.add);
 }
 

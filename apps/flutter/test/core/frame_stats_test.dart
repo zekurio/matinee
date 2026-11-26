@@ -19,7 +19,7 @@ void main() {
       'build_p50=3.0 build_p90=5.0 build_max=5.0 '
       'raster_p50=2.0 raster_p90=9.0 raster_max=9.0 '
       'slow_build=0 slow_raster=1 slow_total=3 '
-      'missed=1 vsync_p90=1.0 vsync_max=6.0',
+      'missed=1 vsync_p90=1.0 vsync_max=6.0 empty=0',
     );
   });
 

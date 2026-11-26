@@ -27,6 +27,7 @@ export 'search_pill.dart';
 export 'sheet.dart';
 export 'slider.dart';
 export 'spinner.dart';
+export 'staggered.dart';
 export 'states.dart';
 export 'switch.dart';
 export 'tab_bar.dart';
