@@ -10,6 +10,7 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/artwork.dart';
 import '../../media/blurhash.dart';
+import '../../media/still_image.dart';
 import '../../router.dart';
 import 'home_layout.dart';
 
@@ -401,11 +402,7 @@ class _FeaturedCard extends StatelessWidget {
     final posterHeight = height - FeaturedCarousel.posterInset * 2;
     return [
       if (hash != null)
-        Image(
-          image: BlurHashImage(hash),
-          fit: BoxFit.cover,
-          excludeFromSemantics: true,
-        )
+        StillImage(image: BlurHashImage(hash), fit: BoxFit.cover)
       else
         ImageFiltered(
           imageFilter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),

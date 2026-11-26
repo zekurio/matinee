@@ -16,6 +16,7 @@ import '../api/matinee_api.dart';
 import '../core/session.dart';
 import '../kit/motion.dart';
 import 'blurhash.dart';
+import 'still_image.dart';
 
 /// Where artwork stays between runs. The server's artwork URLs never change
 /// their picture (contracts' `artworkPath`), so a copy is good for good.
@@ -407,14 +408,13 @@ class _PictureState extends ConsumerState<Picture> {
           fit: StackFit.expand,
           children: [
             if (hash != null)
-              Image(
+              StillImage(
                 image: BlurHashImage(hash),
                 fit: BoxFit.cover,
-                excludeFromSemantics: true,
                 errorBuilder: (context, error, stack) => const SizedBox(),
               ),
             if (api != null && loader != null && index < sources.length)
-              Image(
+              StillImage(
                 key: ValueKey(index),
                 image: box == null
                     ? ArtworkImage(
@@ -429,7 +429,6 @@ class _PictureState extends ConsumerState<Picture> {
                       ),
                 fit: widget.fit,
                 alignment: widget.alignment,
-                excludeFromSemantics: true,
                 gaplessPlayback: true,
                 frameBuilder: (context, child, frame, synchronous) => _Arrival(
                   arrived: synchronous || frame != null,
