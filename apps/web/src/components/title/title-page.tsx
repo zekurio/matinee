@@ -15,7 +15,13 @@ import { errorMessage } from "@/lib/rpc"
 import { ShowEpisodes } from "./episodes"
 import { NextUp } from "./next-up"
 import { SeasonsRail } from "./seasons-rail"
-import { headingPoster, headingTop, TitleHeader } from "./title-header"
+import {
+  TitleHeader,
+  titleBackdrop,
+  titleColumnTop,
+  titlePoster,
+  titleTop,
+} from "./title-header"
 import { initialSeason, seasonItemsOptions, useTitle } from "./title-queries"
 
 export function TitlePage(props: { titleId: string }) {
@@ -116,23 +122,25 @@ function ShowSections(props: { title: Title; watched: boolean | undefined }) {
 export function TitleSkeleton() {
   return (
     <div role="status" aria-label={tr("ui.loading")}>
-      <Skeleton class="absolute inset-x-0 top-0 h-[min(46vh,420px)] rounded-none [mask-image:linear-gradient(black,transparent)]" />
-      <div class={["relative flex items-end gap-4 sm:gap-6", headingTop]}>
-        <Skeleton class={[headingPoster, "aspect-[2/3]"].join(" ")} />
-        <div class="w-full max-w-xl pb-1">
+      <Skeleton
+        class={[
+          "absolute inset-x-0 top-0 rounded-none [mask-image:linear-gradient(black,transparent)]",
+          titleBackdrop,
+        ].join(" ")}
+      />
+      <div class={["relative flex gap-6 lg:gap-10", titleTop]}>
+        <Skeleton class={[titlePoster, "aspect-[2/3]"].join(" ")} />
+        <div class={["w-full max-w-xl", titleColumnTop].join(" ")}>
           <Skeleton class="h-8 w-2/3 sm:h-12" />
           <Skeleton class="mt-3 h-5 w-1/3" />
-          <Skeleton class="mt-1.5 h-5 w-1/2" />
-        </div>
-      </div>
-      <div class="relative mt-4 max-w-xl">
-        <Skeleton class="h-[4.5rem] w-full" />
-        <Skeleton class="mt-4 h-5 w-2/3" />
-        <Skeleton class="mt-4 h-5 w-3/4" />
-        <div class="mt-5 flex items-center gap-2">
-          <Skeleton class="h-11 flex-1 sm:h-10 sm:w-40 sm:flex-none" />
-          <Skeleton class="size-11 rounded-full sm:size-10" />
-          <Skeleton class="size-11 rounded-full sm:size-10" />
+          <div class="mt-5 flex items-center gap-2">
+            <Skeleton class="h-11 flex-1 sm:h-10 sm:w-40 sm:flex-none" />
+            <Skeleton class="size-11 rounded-full sm:size-10" />
+            <Skeleton class="size-11 rounded-full sm:size-10" />
+          </div>
+          <Skeleton class="mt-6 h-[4.5rem] w-full" />
+          <Skeleton class="mt-5 h-5 w-2/3" />
+          <Skeleton class="mt-2 h-5 w-1/2" />
         </div>
       </div>
     </div>
