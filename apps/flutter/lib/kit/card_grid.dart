@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 import 'cards.dart';
+import 'list_motion.dart';
 import 'staggered.dart';
 
 /// Cards in rows across the page, as a sliver: [columns] says how many fit the
@@ -19,6 +20,7 @@ class CardGrid extends StatelessWidget {
     required this.aspectRatio,
     required this.itemCount,
     required this.itemBuilder,
+    this.itemId,
     this.fitRows = false,
   });
 
@@ -26,6 +28,11 @@ class CardGrid extends StatelessWidget {
   final double aspectRatio;
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
+
+  /// What each card shows, as an id, for a grid whose cards can change: a
+  /// filter, a sort, or an item gone. With it the cards move to their new
+  /// places ([ListMotion]); without, they change where they are.
+  final Object Function(int index)? itemId;
 
   /// Whether a row takes the height of its tallest card rather than every
   /// row the same. It lays each row out whole, so keep it for lists whose
@@ -38,7 +45,10 @@ class CardGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
-    final Widget grid;
+    final itemId = this.itemId;
+    Widget item(BuildContext context, int index, Widget card) =>
+        itemId == null ? card : ListItemMotion(id: itemId(index), child: card);
+    Widget grid;
     if (fitRows) {
       grid = SliverWidthBuilder(
         builder: (width) {
@@ -54,7 +64,11 @@ class CardGrid extends StatelessWidget {
                   for (var column = 0; column < count; column++)
                     Expanded(
                       child: row * count + column < itemCount
-                          ? itemBuilder(context, row * count + column)
+                          ? item(
+                              context,
+                              row * count + column,
+                              itemBuilder(context, row * count + column),
+                            )
                           : const SizedBox.shrink(),
                     ),
                 ],
@@ -67,12 +81,22 @@ class CardGrid extends StatelessWidget {
       grid = SliverGrid.builder(
         gridDelegate: _CardGridDelegate(columns, aspectRatio, scaler),
         itemCount: itemCount,
-        itemBuilder: (context, index) => Staggered(
-          builder: (context) => Align(
-            alignment: Alignment.topCenter,
-            child: itemBuilder(context, index),
+        itemBuilder: (context, index) => item(
+          context,
+          index,
+          Staggered(
+            builder: (context) => Align(
+              alignment: Alignment.topCenter,
+              child: itemBuilder(context, index),
+            ),
           ),
         ),
+      );
+    }
+    if (itemId != null) {
+      grid = ListMotion(
+        ids: [for (var i = 0; i < itemCount; i++) itemId(i)],
+        child: grid,
       );
     }
     return SliverPadding(

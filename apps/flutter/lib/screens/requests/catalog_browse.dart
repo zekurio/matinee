@@ -401,6 +401,7 @@ class _BrowseGridState extends ConsumerState<_BrowseGrid> {
                 columns: posterColumns,
                 aspectRatio: CardMetrics.poster,
                 itemCount: shown.length,
+                itemId: (index) => refKey(shown[index].ref),
                 itemBuilder: (context, index) {
                   if (index >= shown.length - _nearEnd && pages.error == null) {
                     _more(key);

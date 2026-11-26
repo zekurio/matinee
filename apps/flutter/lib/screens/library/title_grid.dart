@@ -110,6 +110,7 @@ class _TitleGridState extends ConsumerState<TitleGrid> {
             columns: posterColumns,
             aspectRatio: CardMetrics.poster,
             itemCount: items.length,
+            itemId: (index) => items[index].id,
             itemBuilder: (context, index) {
               if (!dimmed && index >= items.length - TitleGrid._nearEnd) {
                 _more();
