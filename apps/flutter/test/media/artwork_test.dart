@@ -59,6 +59,19 @@ void main() {
     expect(decodeBlurHash('!!!!!!!', 4, 3), isNull);
   });
 
+  test('the worker decodes as the UI thread would, junk to nothing', () async {
+    const hash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+    final decoder = BlurHashDecoder.instance;
+    final results = await Future.wait([
+      decoder.decode(hash, 32, 32),
+      decoder.decode('LEHV6nWB', 32, 32),
+      decoder.decode(hash, 4, 3),
+    ]);
+    expect(results[0], decodeBlurHash(hash, 32, 32));
+    expect(results[1], isNull);
+    expect(results[2], decodeBlurHash(hash, 4, 3));
+  });
+
   test('a box rounds up in eighths of the power of two under each side', () {
     expect(decodeBox(const Size(573, 860)), const Size(576, 896));
     expect(decodeBox(const Size(391, 586)), const Size(416, 640));
