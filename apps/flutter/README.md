@@ -199,6 +199,23 @@ text editing that the kit then draws itself. `test/kit_boundary_test.dart`
 fails on any other import. If a screen needs a widget the kit lacks, add
 it to the kit.
 
+### Motion
+
+The touch screens don't move as the web does, which the root
+`AGENTS.md` allows where a platform needs it. `KitMotion` in
+`lib/kit/motion.dart` holds their timings, after Material 3's durations
+and Compose's FastOutSlowIn curve, so the app moves like Findroid, a stock
+Material 3 Jellyfin client. The web's curve, cubic-bezier(0.22, 1, 0.36, 1),
+covers three quarters of its way in the first quarter of its time. On a
+phone a 280 ms move read as over in about 70 ms, and a color change as a
+flash. On Android a page fades in over the one it covers in 300 ms, and
+out the same way going back, the back gesture included. Tabs fade the same
+way. iOS keeps Cupertino's slide. A press fades in at once and out
+slowly, a grid's cards glide to their new places when a filter or sort
+changes it, and what opens or closes grows or fades rather than
+appearing. The TV screens keep the web's timings, as `TvMotion`, since a
+remote moves them and nobody asked for those to change.
+
 ### Generated code
 
 Never edit or format these by hand. `pnpm verify` fails while any is out
