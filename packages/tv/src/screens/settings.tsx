@@ -4,10 +4,12 @@ import type {
   PlaybackPreferences,
   Session as AccountSession,
 } from "@matinee/contracts"
+import { audioFormatName, videoCodecName } from "@matinee/contracts/codecs"
 import type { JSX } from "@solidjs/web"
 import {
   AudioLines,
   Captions,
+  Computer,
   type IconNode,
   Info,
   LogOut,
@@ -52,7 +54,7 @@ import {
 } from "../model/format"
 import { platform } from "../platform/runtime"
 import { ORIGINAL_QUALITY } from "../player/controller"
-import { encodeVideoChoices } from "../player/device"
+import { encodeVideoChoices, playbackDevice } from "../player/device"
 import {
   AUTOMATIC,
   playerPrefs,
@@ -79,7 +81,7 @@ const CATEGORIES: readonly Category[] = [
   { key: "account", icon: UserRound, title: "tvSettingsAccount" },
   // The couch PC's: TV mode and the browser's fullscreen, which a TV has
   // no settings for.
-  { key: "computer", icon: Monitor, title: "settingsThisComputer" },
+  { key: "computer", icon: Computer, title: "settingsThisComputer" },
   { key: "about", icon: Info, title: "aboutTitle" },
 ]
 
@@ -693,37 +695,78 @@ function engineVersion(): string {
   return /Chrom(?:e|ium)\/([\d.]+)/.exec(navigator.userAgent)?.[1] ?? "?"
 }
 
-/** The app and the TV it runs on, for telling what a problem happened on. */
+/**
+ * The app and what it runs on, for telling what a problem happened on. A
+ * browser has no model, so it has no row for one, and its system is the
+ * one the browser says it runs on.
+ */
 function AboutRows() {
-  const rows = (): [string, string][] => [
-    ["Matinee", platform().appVersion() ?? "dev"],
-    [tr("tizen_about_model"), platform().model ?? "?"],
-    [
-      tr("tizen_about_system"),
-      platform().tizenVersion === null
-        ? "?"
-        : `Tizen ${platform().tizenVersion}`,
-    ],
-    [tr("tizen_about_engine"), `Chromium ${engineVersion()}`],
-    [
-      tr("tizen_about_player"),
-      tr(
-        platform().hasNativePlayer ? "tizen_player_tv" : "tizen_player_browser",
-      ),
-    ],
-  ]
+  const system = () => {
+    const tizen = platform().tizenVersion
+    if (tizen !== null) return `Tizen ${tizen}`
+    const kind = platform().devicePlatform
+    return PLATFORM_NAMES.get(kind) ?? kind
+  }
+  const rows = (): [string, string][] => {
+    const model = platform().model
+    return [
+      ["Matinee", platform().appVersion() ?? "dev"],
+      ...(model === null
+        ? []
+        : [[tr("tizen_about_model"), model] satisfies [string, string]]),
+      [tr("tizen_about_system"), system()],
+      [tr("tizen_about_engine"), `Chromium ${engineVersion()}`],
+      [
+        tr("tizen_about_player"),
+        tr(
+          platform().hasNativePlayer
+            ? "tizen_player_tv"
+            : "tizen_player_browser",
+        ),
+      ],
+    ]
+  }
+  // What the player decodes, as this app tells the server: what plays as
+  // it is, where everything else is converted first.
+  const decodes = () => {
+    const device = playbackDevice()
+    const names = (list: string[]) => [...new Set(list)].join(", ")
+    return [
+      [
+        tr("mediaInfoVideo"),
+        names(device.video.map((decoder) => videoCodecName(decoder.codec))),
+      ],
+      [
+        tr("mediaInfoAudio"),
+        names(device.audio.map((codec) => audioFormatName(codec))),
+      ],
+    ] satisfies [string, string][]
+  }
   return (
-    <For each={rows()}>
-      {([title, value]) => (
-        <ListItem
-          fid={title}
-          title={title}
-          quiet
-          trailing={<ListValue value={value} chevron={false} />}
-          onPress={() => {}}
-        />
-      )}
-    </For>
+    <>
+      <For each={rows()}>
+        {([title, value]) => (
+          <ListItem
+            fid={title}
+            title={title}
+            quiet
+            trailing={<ListValue value={value} chevron={false} />}
+            onPress={() => {}}
+          />
+        )}
+      </For>
+      <For each={decodes()}>
+        {([title, list]) => (
+          <ListItem
+            fid={title}
+            title={title}
+            subtitle={list}
+            quiet
+            onPress={() => {}}
+          />
+        )}
+      </For>
+    </>
   )
 }
 

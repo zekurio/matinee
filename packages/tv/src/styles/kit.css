@@ -99,8 +99,12 @@
 }
 
 html {
-  /* One unit of the design, which is 960 wide. */
+  /* One unit of the design, which is 960 by 540. A window of another
+     shape, as a browser's under its toolbar, fits the design's short side
+     and lets the long one run on. Chromium 56 has no min() and keeps the
+     first line, which is the same on a 16:9 TV. */
   font-size: calc(100vw / 960);
+  font-size: min(calc(100vw / 960), calc(100vh / 540));
   height: 100%;
 }
 
@@ -357,18 +361,20 @@ img {
   white-space: nowrap;
 }
 
+/* Its width opens to the words' own, which IconButton measures, with
+   one timing both ways, so a row whose focus moves along doesn't lurch. */
 .icon-btn .label {
   max-width: 0;
   opacity: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
   transition:
-    max-width var(--exit) var(--ease-out),
+    max-width var(--enter) var(--ease),
     opacity var(--exit) var(--ease-out),
-    margin var(--exit) var(--ease-out);
+    margin var(--enter) var(--ease);
 }
 
 .icon-btn:focus .label {
-  max-width: 400rem;
   opacity: 1;
   margin-left: 10rem;
   margin-right: 4rem;
@@ -439,13 +445,15 @@ img {
 .item > * + * {
   margin-left: 16rem;
 }
+/* Faded by its opacity, not a see-through color, which would stroke
+   twice where the icon's lines cross. */
 .item .lead {
-  color: rgba(var(--fg-rgb), 0.7);
+  opacity: 0.7;
 }
 .item:focus .lead,
 .item.selected .lead,
 .item.destructive .lead {
-  color: inherit;
+  opacity: 1;
 }
 .item .words {
   flex: 1;

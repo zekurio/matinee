@@ -245,7 +245,6 @@ function Drawer(props: {
     >
       <div class="drawer-entries" data-fg="drawer" data-fk="col">
         {draw(profile())}
-        <span class="drawer-gap" />
         <For each={entries()}>{(entry) => draw(entry)}</For>
         <span class="drawer-space" />
         {draw(settings())}

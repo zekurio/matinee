@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -14,6 +15,15 @@ const EAGER_ROUTES = new Set<string>([
   "/_authed/_shell",
   "/_authed/_shell/",
 ])
+
+/** The version every part of Matinee has, from the root package.json. */
+function matineeVersion(): string {
+  const root = readFileSync(
+    fileURLToPath(new URL("../../package.json", import.meta.url)),
+    "utf8",
+  )
+  return /"version": "([^"]*)"/.exec(root)?.[1] ?? "dev"
+}
 
 const brotli = promisify(brotliCompress)
 const gz = promisify(gzip)
@@ -175,6 +185,7 @@ export default defineConfig(({ mode }) => {
   const server = env.VITE_SERVER_URL || "http://localhost:8420"
   return {
     clearScreen: false,
+    define: { __MATINEE_VERSION__: JSON.stringify(matineeVersion()) },
     // A core entry the app imports must be the copy `@ui-sdk/solid` loads.
     // The TV package is source, compiled with this app's Solid plugin.
     optimizeDeps: {

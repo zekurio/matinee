@@ -178,14 +178,27 @@ html.pointer-resting * {
   height: 48rem;
   border-radius: 24rem;
   background: transparent;
-  color: rgba(var(--fg-rgb), 0.45);
+  color: var(--fg);
   overflow: hidden;
 }
 
 .drawer-entry:focus {
   transform: scale(1.02);
 }
-.drawer.open .drawer-entry {
+/* An icon fades by its opacity, not by a see-through color, which would
+   stroke twice where its lines cross and show a brighter knot there. */
+.drawer-icon {
+  opacity: 0.45;
+  transition: opacity var(--color) var(--ease);
+}
+.drawer.open .drawer-icon {
+  opacity: 0.8;
+}
+.drawer-entry.current .drawer-icon,
+.drawer .drawer-entry:focus .drawer-icon {
+  opacity: 1;
+}
+.drawer.open .drawer-entry:not(.current):not(:focus) .drawer-label {
   color: rgba(var(--fg-rgb), 0.8);
 }
 .drawer-entry.current {
@@ -218,10 +231,6 @@ html.pointer-resting * {
   transition: opacity var(--enter) var(--ease) 60ms;
 }
 
-.drawer-gap {
-  flex: none;
-  height: 12rem;
-}
 .drawer-space {
   flex: 1;
 }
@@ -531,6 +540,14 @@ html.pointer-resting * {
   width: 260rem;
   padding-top: 35rem;
 }
+/* Seven categories, a little shorter than other rows, so the last ends
+   above the drawer's Settings at the foot: 35 + 32 + 28 + 7 × 46 + 6 × 6
+   is 453, and Settings starts at 465. The rows beside them take the same
+   height and spacing, so each lines up with a category. */
+.settings-categories .item,
+.settings-rows .item {
+  min-height: 46rem;
+}
 .settings-list > * + * {
   margin-top: 6rem;
 }
@@ -538,14 +555,11 @@ html.pointer-resting * {
 .settings-rows {
   flex: 1;
   min-width: 0;
-  margin: 87rem -12rem 0 36rem;
+  /* The first row level with the first category: 35 + 32 + 28 is 95. */
+  margin: 91rem -12rem 0 36rem;
   /* Room around the rows for the focused one, which grows a little. */
   padding: 4rem 12rem 51rem;
   overflow: hidden;
-}
-
-.settings-rows .settings-list > * + * {
-  margin-top: 4rem;
 }
 
 /* A line of subtitles over a stand-in for a frame, drawn as the player draws them. */
