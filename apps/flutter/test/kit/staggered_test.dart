@@ -86,4 +86,69 @@ void main() {
     await tester.pumpAndSettle();
     expect(built, containsAll({12, 13}));
   });
+
+  testWidgets('a part waits a turn of its own, only in a staggered card', (
+    tester,
+  ) async {
+    final parts = <int>{};
+    final built = <int>{};
+    Widget card(int index) => Column(
+      children: [
+        Text('$index'),
+        StaggeredPart(
+          child: Builder(
+            builder: (context) {
+              parts.add(index);
+              return const SizedBox(height: 10);
+            },
+          ),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 200,
+            height: 400,
+            child: ListView.builder(
+              itemExtent: 100,
+              itemCount: 100,
+              itemBuilder: (context, index) => Staggered(
+                builder: (context) {
+                  built.add(index);
+                  return card(index);
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(parts, {0, 1, 2, 3, 4, 5, 6});
+    final gesture = await tester.startGesture(const Offset(100, 200));
+    await gesture.moveBy(const Offset(0, -40));
+    await tester.pump();
+    built.clear();
+    parts.clear();
+
+    // 7 comes into the cache extent: the card, then its part.
+    await gesture.moveBy(const Offset(0, -100));
+    await tester.pump();
+    expect(built, {7});
+    expect(parts, isEmpty);
+    await tester.pump();
+    expect(parts, {7});
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    // Outside a staggered card, a part is its child at once.
+    parts.clear();
+    await tester.pumpWidget(
+      Directionality(textDirection: TextDirection.ltr, child: card(0)),
+    );
+    expect(parts, {0});
+  });
 }

@@ -8,7 +8,8 @@ import 'package:flutter/widgets.dart';
 /// frame it enters, so a grid's new row is two cards in one frame, and two
 /// cards cost more than a frame at 120 Hz has. During a scroll the cards
 /// that come in take turns, one a frame, nearest the screen first, each
-/// holding an empty box until then. They enter the cache extent before
+/// holding an empty box until then; a [StaggeredPart] in one, as its
+/// picture, takes a turn of its own. They enter the cache extent before
 /// they show, so the box isn't seen: a card about to come into view builds
 /// at once, however many that makes in the frame. When nothing scrolls, as
 /// when a list first shows, every card builds at once.
@@ -20,16 +21,76 @@ class Staggered extends StatefulWidget {
 
   final WidgetBuilder builder;
 
-  /// How many cards were still empty in a frame that showed them, for the
-  /// frame timing log: a fling that outran the turns.
+  /// How many cards or parts were still empty in a frame that showed
+  /// them, for the frame timing log: a fling that outran the turns.
   static int get shownEmpty => _Turns.instance.shownEmpty;
 
   @override
   State<Staggered> createState() => _StaggeredState();
 }
 
-class _StaggeredState extends State<Staggered> {
+class _StaggeredState extends State<Staggered> with _Waiting {
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready && !_mayBuild(context)) return const SizedBox.shrink();
+    return _StaggeredScope(child: widget.builder(context));
+  }
+}
+
+/// A costly part of a card, like its picture or its words, that takes a
+/// turn of its own when the card is in a [Staggered], showing
+/// [placeholder] until then. Anywhere else it's [child] at once.
+class StaggeredPart extends StatefulWidget {
+  const StaggeredPart({
+    super.key,
+    required this.child,
+    this.placeholder = const SizedBox.shrink(),
+  });
+
+  final Widget child;
+
+  /// What holds its place, as big as [child] will be.
+  final Widget placeholder;
+
+  @override
+  State<StaggeredPart> createState() => _StaggeredPartState();
+}
+
+class _StaggeredPartState extends State<StaggeredPart> with _Waiting {
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready) {
+      final staggered =
+          context.getInheritedWidgetOfExactType<_StaggeredScope>() != null;
+      if (!staggered) {
+        _ready = true;
+      } else if (!_mayBuild(context)) {
+        return widget.placeholder;
+      }
+    }
+    return widget.child;
+  }
+}
+
+/// Marks what a [Staggered] built, for the [StaggeredPart]s in it.
+class _StaggeredScope extends InheritedWidget {
+  const _StaggeredScope({required super.child});
+
+  @override
+  bool updateShouldNotify(_StaggeredScope oldWidget) => false;
+}
+
+/// A card or part waiting for its turn.
+mixin _Waiting<T extends StatefulWidget> on State<T> {
   bool _ready = false;
+
+  /// Whether it builds in this frame, waiting for a turn when not.
+  bool _mayBuild(BuildContext context) {
+    final turns = _Turns.instance;
+    if (!_scrolling(context) || turns.take()) return _ready = true;
+    turns.wait(this);
+    return false;
+  }
 
   @override
   void dispose() {
@@ -68,20 +129,6 @@ class _StaggeredState extends State<Staggered> {
     box.getTransformTo(null),
     Offset.zero & box.size,
   );
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_ready) {
-      final turns = _Turns.instance;
-      if (!_scrolling(context) || turns.take()) {
-        _ready = true;
-      } else {
-        turns.wait(this);
-        return const SizedBox.shrink();
-      }
-    }
-    return widget.builder(context);
-  }
 }
 
 /// Whether a list [context] is in scrolls.
@@ -116,7 +163,7 @@ final class _Turns {
 
   static final instance = _Turns._();
 
-  final waiting = <_StaggeredState>{};
+  final waiting = <_Waiting<StatefulWidget>>{};
   int shownEmpty = 0;
 
   bool _taken = false;
@@ -133,7 +180,7 @@ final class _Turns {
     return true;
   }
 
-  void wait(_StaggeredState card) {
+  void wait(_Waiting<StatefulWidget> card) {
     waiting.add(card);
     _schedule();
   }
@@ -149,8 +196,8 @@ final class _Turns {
     _taken = false;
     if (waiting.isEmpty) return;
     final leads = <ScrollPosition, double>{};
-    final due = <_StaggeredState>[];
-    _StaggeredState? nearest;
+    final due = <_Waiting<StatefulWidget>>[];
+    _Waiting<StatefulWidget>? nearest;
     var nearestDistance = double.infinity;
     for (final card in waiting) {
       _measure(card, at, leads);
@@ -176,7 +223,7 @@ final class _Turns {
   /// How far each list [card] is in may move by the frame after next, from
   /// how far it moved since the frame before this one, at [at].
   void _measure(
-    _StaggeredState card,
+    _Waiting<StatefulWidget> card,
     Duration at,
     Map<ScrollPosition, double> leads,
   ) {
