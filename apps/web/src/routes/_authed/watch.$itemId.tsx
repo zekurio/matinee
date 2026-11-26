@@ -370,7 +370,7 @@ function WatchFailed(props: {
           </p>
           <Link
             to="/"
-            class={buttonVariants({ variant: "secondary", class: "mt-6" })}
+            class={buttonVariants({ variant: "outline", class: "mt-6" })}
           >
             {tr("player.backHome")}
           </Link>

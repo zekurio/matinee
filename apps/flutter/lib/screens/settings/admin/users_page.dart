@@ -735,7 +735,7 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
       title: l.webUsersInvitesCreate,
       actions: [
         MatineeButton(
-          look: ButtonLook.outline,
+          look: ButtonLook.ghost,
           onPressed: () => Navigator.pop(context),
           child: Text(l.webUsersDialogCancel),
         ),
