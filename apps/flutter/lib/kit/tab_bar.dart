@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 
 import 'glass.dart';
@@ -15,6 +16,16 @@ class TabBarItem {
   final Object id;
   final String icon;
   final String label;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TabBarItem &&
+      other.id == id &&
+      other.icon == icon &&
+      other.label == label;
+
+  @override
+  int get hashCode => Object.hash(id, icon, label);
 }
 
 /// Share one state between pages to retain the selected tab across navigation.
@@ -26,7 +37,13 @@ class TabBarState extends ValueNotifier<Object?> {
 
 final _blur = ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20);
 
-class TabBar extends StatelessWidget {
+/// The tabs along the bottom of a phone's screen.
+///
+/// The router builds the shell, and with it this bar, on every navigation,
+/// opening a page or going back included. While its tabs, its state, and
+/// what it depends on stay the same, the bar keeps what it built, so none
+/// of it builds again in that frame.
+class TabBar extends StatefulWidget {
   const TabBar({
     super.key,
     required this.items,
@@ -39,7 +56,34 @@ class TabBar extends StatelessWidget {
   final ValueChanged<Object>? onSelected;
 
   @override
-  Widget build(BuildContext context) {
+  State<TabBar> createState() => _TabBarState();
+}
+
+class _TabBarState extends State<TabBar> {
+  Widget? _built;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _built = null;
+  }
+
+  @override
+  void didUpdateWidget(TabBar old) {
+    super.didUpdateWidget(old);
+    if (widget.state != old.state || !listEquals(widget.items, old.items)) {
+      _built = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => _built ??= _build(context);
+
+  List<TabBarItem> get items => widget.items;
+
+  TabBarState get state => widget.state;
+
+  Widget _build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     return Semantics(
       container: true,
@@ -75,7 +119,8 @@ class TabBar extends StatelessWidget {
                                 showLabel: labels,
                                 onPressed: () {
                                   state.select(item.id);
-                                  onSelected?.call(item.id);
+                                  // The bar's latest, as what it built stays.
+                                  widget.onSelected?.call(item.id);
                                 },
                               ),
                             ),
@@ -130,7 +175,7 @@ class TabBar extends StatelessWidget {
   }
 }
 
-/// What [TabBar._labelsFit] measured last, and for what.
+/// What [_TabBarState._labelsFit] measured last, and for what.
 ({
   ({
     String labels,

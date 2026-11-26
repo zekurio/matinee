@@ -38,6 +38,45 @@ void main() {
     expect(find.byType(Text), findsNothing);
   });
 
+  // The router builds the shell on every navigation, and the bar's tabs
+  // built again each time, in a page's first frame.
+  testWidgets('built again with the same tabs, the bar keeps its own', (
+    tester,
+  ) async {
+    final state = TabBarState('Home');
+    addTearDown(state.dispose);
+    var second = 'Media';
+    late StateSetter rebuild;
+    await tester.pumpWidget(
+      _app(
+        SizedBox(
+          width: 400,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              // New items each time, as the shell makes them.
+              return TabBar(
+                items: [
+                  for (final label in ['Home', second])
+                    TabBarItem(id: label, icon: Lucide.house, label: label),
+                ],
+                state: state,
+                onSelected: (_) {},
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    final before = tester.widget(_tab('Media'));
+    rebuild(() {});
+    await tester.pump();
+    expect(identical(tester.widget(_tab('Media')), before), isTrue);
+    rebuild(() => second = 'Library');
+    await tester.pump();
+    expect(_tab('Library'), findsOneWidget);
+  });
+
   testWidgets('four tabs fit the narrowest phone at the largest text', (
     tester,
   ) async {
