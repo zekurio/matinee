@@ -35,7 +35,7 @@ class RadioRow extends StatelessWidget {
       inMutuallyExclusiveGroup: true,
       label: [label, ?detail].join(', '),
       shape: KitRadius.control,
-      builder: (context, state) => DecoratedBox(
+      builder: (context, state) => PressFill(
         decoration: BoxDecoration(
           borderRadius: KitRadius.control,
           color: colors.foreground.withValues(

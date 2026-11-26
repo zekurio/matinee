@@ -601,7 +601,7 @@ class _Row extends StatelessWidget {
       onPressed: onPressed,
       label: label,
       shape: CardMetrics.radius,
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: state == PressState.pressed || state == PressState.hovered
             ? colors.foreground.withValues(alpha: .04)
             : const Color(0x00000000),

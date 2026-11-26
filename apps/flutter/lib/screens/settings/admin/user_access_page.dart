@@ -723,7 +723,7 @@ class _GroupRow extends StatelessWidget {
       onPressed: change == null ? null : () => change(!checked),
       label: name,
       checked: checked,
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .06,
         ),

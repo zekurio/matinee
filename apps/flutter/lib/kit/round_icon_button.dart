@@ -70,7 +70,7 @@ class RoundIconButton extends StatelessWidget {
             };
             return SizedBox.square(
               dimension: size,
-              child: DecoratedBox(
+              child: PressFill(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Color.alphaBlend(

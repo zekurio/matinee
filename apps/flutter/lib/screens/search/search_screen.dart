@@ -311,7 +311,7 @@ class _DownloadHitRow extends StatelessWidget {
       onPressed: onPressed,
       label: [hit.name, ?detail].join(', '),
       shape: KitRadius.control,
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .04,
         ),

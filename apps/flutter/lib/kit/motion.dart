@@ -52,6 +52,19 @@ abstract final class KitMotion {
   /// tenth of a second rather than being done before it's seen.
   static const color = Duration(milliseconds: 200);
 
+  /// A press showing, as a finger comes down: quick, and on
+  /// [pressEasing], so it answers at once. A tap shows pressed at least this
+  /// long, however short it was.
+  static const press = Duration(milliseconds: 100);
+
+  /// LinearOutSlowIn, cubic-bezier(0, 0, 0.2, 1): under way from the first
+  /// frame, for a press.
+  static const pressEasing = Cubic(0, 0, .2, 1);
+
+  /// A press letting go: slower, on [easing], so the press fades out where
+  /// a person sees it, as Material's state layer does.
+  static const release = Duration(milliseconds: 300);
+
   /// [duration], or none when the system asks for less motion.
   static Duration of(BuildContext context, Duration duration) =>
       MediaQuery.disableAnimationsOf(context) ? Duration.zero : duration;

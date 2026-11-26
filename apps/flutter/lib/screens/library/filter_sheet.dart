@@ -645,7 +645,7 @@ class _PickRow extends StatelessWidget {
       label: [label, ?count].join(', '),
       checked: selected,
       shape: KitRadius.control,
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .06,
         ),

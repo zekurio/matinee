@@ -323,8 +323,11 @@ class _FeaturedCard extends StatelessWidget {
                   _PosterArt(art: final poster) => _poster(poster),
                 },
                 const DecoratedBox(decoration: BoxDecoration(gradient: _shade)),
-                if (state == PressState.pressed)
-                  ColoredBox(color: colors.foreground.withValues(alpha: .1)),
+                PressFill(
+                  color: colors.foreground.withValues(
+                    alpha: state == PressState.pressed ? .1 : 0,
+                  ),
+                ),
                 Positioned(
                   left: FeaturedCarousel.padding,
                   bottom: FeaturedCarousel.padding,

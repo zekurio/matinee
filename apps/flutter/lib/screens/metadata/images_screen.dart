@@ -604,7 +604,7 @@ class SlotCard extends StatelessWidget {
       label: [_slotName(slot, l), state].join(', '),
       checked: onPressed == null ? null : selected,
       shape: KitRadius.control,
-      builder: (context, press) => DecoratedBox(
+      builder: (context, press) => PressFill(
         decoration: BoxDecoration(
           borderRadius: KitRadius.control,
           border: Border.all(color: picked ? colors.accent : colors.border),
@@ -728,10 +728,11 @@ class ImageChoice extends StatelessWidget {
                             ArtSource(image.preview),
                           ], fit: logo ? BoxFit.contain : BoxFit.cover),
                         ),
-                        if (state != PressState.idle)
-                          ColoredBox(
-                            color: colors.foreground.withValues(alpha: .08),
+                        PressFill(
+                          color: colors.foreground.withValues(
+                            alpha: state != PressState.idle ? .08 : 0,
                           ),
+                        ),
                         if (inUse)
                           PositionedDirectional(
                             top: 6,

@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 
 import 'icon.dart';
-import 'motion.dart';
 import 'press_indication.dart';
 import 'staggered.dart';
 import 'theme.dart';
@@ -301,7 +300,9 @@ class CardText extends StatelessWidget {
   }
 }
 
-/// What a press looks like over a card's art: the foreground washed over it.
+/// What a press looks like over a card's art: the foreground washed over it,
+/// as a translucent fill rather than an opacity, so a card fading it paints
+/// no layer of its own.
 class _PressWash extends StatelessWidget {
   const _PressWash(this.state);
 
@@ -309,16 +310,16 @@ class _PressWash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final opacity = switch (state) {
+    final alpha = switch (state) {
       PressState.pressed => .1,
       PressState.hovered => .06,
       _ => 0.0,
     };
     return IgnorePointer(
-      child: AnimatedOpacity(
-        opacity: opacity,
-        duration: KitMotion.of(context, KitMotion.color),
-        child: ColoredBox(color: MatineeTheme.of(context).foreground),
+      child: SizedBox.expand(
+        child: PressFill(
+          color: MatineeTheme.of(context).foreground.withValues(alpha: alpha),
+        ),
       ),
     );
   }
@@ -589,7 +590,7 @@ class PlayGlyph extends StatelessWidget {
     onPressed: onPressed,
     label: label,
     shape: KitRadius.pill,
-    builder: (context, state) => Container(
+    builder: (context, state) => PressFill(
       width: size,
       height: size,
       alignment: Alignment.center,

@@ -108,7 +108,7 @@ class ItemTopBar extends StatelessWidget {
                   onPressed: onParent,
                   label: parent,
                   shape: KitRadius.pill,
-                  builder: (context, state) => Container(
+                  builder: (context, state) => PressFill(
                     height: 44,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
@@ -1172,7 +1172,7 @@ class _FileChoice extends StatelessWidget {
       selected: selected,
       inMutuallyExclusiveGroup: true,
       shape: KitRadius.control,
-      builder: (context, state) => DecoratedBox(
+      builder: (context, state) => PressFill(
         decoration: BoxDecoration(
           borderRadius: KitRadius.control,
           color: state == PressState.idle

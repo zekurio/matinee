@@ -196,7 +196,7 @@ class SheetItem extends StatelessWidget {
       onPressed: onPressed,
       label: label,
       shape: KitRadius.control,
-      builder: (context, state) => DecoratedBox(
+      builder: (context, state) => PressFill(
         decoration: BoxDecoration(
           borderRadius: KitRadius.control,
           color: colors.foreground.withValues(

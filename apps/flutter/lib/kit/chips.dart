@@ -59,7 +59,7 @@ class _Chip extends StatelessWidget {
         final text = KitText.px13.style(weight: FontWeight.w500);
         return Opacity(
           opacity: onPressed == null ? .5 : 1,
-          child: Container(
+          child: PressFill(
             constraints: const BoxConstraints(minHeight: 40),
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(

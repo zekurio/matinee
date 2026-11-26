@@ -108,7 +108,7 @@ class _Choice extends StatelessWidget {
       checked: selected,
       inMutuallyExclusiveGroup: true,
       shape: KitRadius.panel,
-      builder: (context, state) => DecoratedBox(
+      builder: (context, state) => PressFill(
         decoration: BoxDecoration(
           color: selected
               ? colors.accentSoft

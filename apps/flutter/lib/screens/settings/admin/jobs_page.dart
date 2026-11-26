@@ -355,7 +355,7 @@ class _QueueRow extends StatelessWidget {
     return PressIndication(
       onPressed: onPressed,
       label: l.webJobsQueueActions(queueName(l, queue)),
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .06,
         ),

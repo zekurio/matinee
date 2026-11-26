@@ -137,7 +137,7 @@ class _ToastAction extends StatelessWidget {
     return PressIndication(
       onPressed: onPressed,
       shape: shape,
-      builder: (context, state) => Container(
+      builder: (context, state) => PressFill(
         constraints: const BoxConstraints(minHeight: 28),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(

@@ -228,7 +228,7 @@ class _PanelRow extends StatelessWidget {
       selected: choice.selected,
       checked: choice.selected,
       inMutuallyExclusiveGroup: true,
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: switch (state) {
             PressState.pressed => .12,

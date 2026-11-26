@@ -383,7 +383,7 @@ class _LibraryEditorState extends ConsumerState<_LibraryEditor> {
                     PressIndication(
                       onPressed: () => unawaited(_pickFolder()),
                       label: l.webLibrariesDialogAddFolder,
-                      builder: (context, state) => ColoredBox(
+                      builder: (context, state) => PressFill(
                         color: colors.foreground.withValues(
                           alpha: state == PressState.idle ? 0 : .06,
                         ),
@@ -673,7 +673,7 @@ class _FolderRow extends StatelessWidget {
     return PressIndication(
       onPressed: onOpen,
       label: label,
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .06,
         ),
