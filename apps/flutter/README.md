@@ -284,7 +284,19 @@ returns a stream that starts partway in. When a source fails it asks again
 without the methods that failed. mpv gets its media through a loopback
 relay, `playback_relay.dart`, so no credentials or signed URLs reach it.
 The TV player uses the same session with its own controls and one key
-handler. With Match frame rate on, it switches the screen to a refresh
+handler.
+
+While it shows a session, `PlaybackSession` holds `playback.presence`
+open through `PresenceHold` (`playback_presence.dart`), so the server
+frees the account's stream as soon as the player goes, rather than when
+its reports stop. It opens another at once when the server ends one,
+retries after 1, 2, 4, then 5 seconds when one fails, and stops for the
+session when the server turns it down, as one from before presence does
+with a 404. With the app out of sight, outside the small window, and
+nothing playing, the player counts as gone: it sends a closing report,
+lets presence go, and sends no reports. Playing again, from the system's
+controls or back in the app, opens the session again with the next
+report. With Match frame rate on, it switches the screen to a refresh
 rate that plays the video's frame rate evenly.
 
 A downloaded file plays through `OfflinePlaybackSession`, which has no

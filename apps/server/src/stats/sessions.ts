@@ -17,11 +17,28 @@ import { queueRecommendations } from "../recommendations/enqueue"
 // Hidden tabs may slow their timers to once a minute.
 const LIVE_SECONDS = 45
 const PAUSED_LIVE_SECONDS = 120
+/**
+ * How long a session stays live after its player's last presence
+ * connection drops, for the player to open a new one: when the server
+ * ends the stream, after a network blip, or across a reload.
+ */
+export const LEFT_GRACE_SECONDS = 10
 
-/** Shared by watching now and the account's stream limit. Ended offline plays stay out. */
+/**
+ * Shared by watching now and the account's stream limit. Ended offline
+ * plays stay out, and so do sessions whose player left, by its presence
+ * connection, more than `LEFT_GRACE_SECONDS` ago.
+ */
 export function liveSessions(): SQL | undefined {
   return and(
     isNull(playbackSession.endedAt),
+    or(
+      isNull(playbackSession.leftAt),
+      gt(
+        playbackSession.leftAt,
+        sql`now() - make_interval(secs => ${LEFT_GRACE_SECONDS})`,
+      ),
+    ),
     or(
       gt(
         playbackSession.updatedAt,
@@ -189,6 +206,9 @@ export async function recordReport(
         completed: sql`${playbackSession.completed} or ${report.completed}`,
         paused: report.paused,
         endedAt,
+        // A report means the player is there, even when its presence
+        // connection can't stay open.
+        leftAt: null,
         updatedAt: now,
         ...ownerColumns,
       },
@@ -277,6 +297,7 @@ export async function recordStream(
         audioEncoder: sql`coalesce(excluded.audio_encoder, ${playbackSession.audioEncoder})`,
         quality: sql`excluded.quality`,
         endedAt: null,
+        leftAt: null,
         updatedAt: new Date(),
         ...ownerColumns,
       },

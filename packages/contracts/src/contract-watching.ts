@@ -15,6 +15,7 @@ import {
   Leaderboard,
   LibraryStats,
   LiveActivity,
+  PlaybackPresence,
   Profile,
   ProfileName,
   ServerStats,
@@ -67,8 +68,10 @@ export const playbackContract = oc.tag("Playback").router({
   /**
    * Players call this every ten seconds while playing, every thirty while
    * paused, and at once on play, pause, seek, and close. A session drops
-   * out of `stats.live` 45 seconds after its last report, or two minutes
-   * when paused. Positions near the end mark the file watched.
+   * out of `stats.live`, and stops taking one of the account's streams,
+   * 45 seconds after its last report, or two minutes when paused, or
+   * sooner when its `presence` connection drops and doesn't come back.
+   * Positions near the end mark the file watched.
    *
    * Statistics count a report only with `sessionId` and `playedSeconds`.
    * The player makes the id, a UUID per sitting with the file, and sends
@@ -132,6 +135,28 @@ export const playbackContract = oc.tag("Playback").router({
   stream: get("/playback/sessions/{sessionId}/stream", "media.play")
     .input(t.object({ sessionId: t.uuid() }))
     .output(eventIterator(SessionStream.nullable())),
+  /**
+   * A connection a player holds open for as long as it shows the session,
+   * the id in `mediaPlaybackPath()`, paused or not, until it closes. It sends one event when it opens, then only keep-alive
+   * comments. When the session's last connection drops, the server takes
+   * the player for gone: the session leaves `stats.live` and frees its
+   * place in the account's streams `graceSeconds` later, without waiting
+   * for its reports to stop, unless a connection for it opens again or it
+   * reports first. The server ends the stream every few minutes; open a
+   * new one at once. When it drops, open one again within `graceSeconds`.
+   * A player that can't keep one open still plays: its reports keep the
+   * session going as they did, so send one when the connection fails.
+   * Opening one creates no session, and another user's id changes nothing.
+   *
+   * A stream has to be a GET, and this one writes: whether the player is
+   * there. A link from another site can open one only for a session id
+   * it knows, a UUID the player made, and all it does is keep that
+   * session of the person's own counting for as long as the page stays
+   * open.
+   */
+  presence: get("/playback/sessions/{sessionId}/presence", "media.play")
+    .input(t.object({ sessionId: t.uuid() }))
+    .output(eventIterator(PlaybackPresence)),
   pickTracks: put("/media/{itemId}/tracks", "media.play")
     .input(
       t.object({

@@ -315,6 +315,16 @@ export const SessionStream = t.object({
 })
 export type SessionStream = t.infer<typeof SessionStream>
 
+/**
+ * What `playback.presence` sends once its connection is open: how long
+ * the session still counts as playing after the connection drops, the
+ * time a player has to open a new one.
+ */
+export const PlaybackPresence = t.object({
+  graceSeconds: t.number().int().positive(),
+})
+export type PlaybackPresence = t.infer<typeof PlaybackPresence>
+
 export const LiveActivity = t.object({
   sessions: t.array(NowPlaying),
   /** ffmpeg processes playing right now, for any session. */

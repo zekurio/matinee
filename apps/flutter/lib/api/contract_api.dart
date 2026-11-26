@@ -1488,6 +1488,17 @@ final class PlaybackApi {
     ], (value) => readNullable(value, SessionStream.fromJson));
   }
 
+  /// The account needs the `media.play` permission, and so does an API token.
+  /// `GET /playback/sessions/{sessionId}/presence`
+  Stream<PlaybackPresence> presence(String sessionId) {
+    return _transport.events('GET', [
+      'playback',
+      'sessions',
+      sessionId,
+      'presence',
+    ], PlaybackPresence.fromJson);
+  }
+
   /// The account needs the `watchState.update` permission, and so does an API token.
   /// `POST /playback/offline`
   Future<void> offline({required List<PlaybackOfflineInputPlay> plays}) {

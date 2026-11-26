@@ -515,6 +515,67 @@ void main() {
     playback.dispose();
   });
 
+  // A paused player sent to the background, then killed or frozen, held
+  // the account's only stream until its reports timed out.
+  testWidgets('away with nothing playing closes the session until it plays '
+      'or shows again', (tester) async {
+    final clock = tester.binding.clock;
+    final started = clock.now();
+    final playback = backend.session(
+      FakePlayer(),
+      elapsed: () => clock.now().difference(started),
+    );
+    await playback.start();
+    await tester.pump();
+    expect(backend.reports.last.paused, isFalse);
+
+    // Playing on in the background, as with the system's controls.
+    playback.setAway(true);
+    await tester.pump(const Duration(seconds: 10));
+    expect(backend.reports.last.closed, isNull);
+    expect(backend.reports.last.paused, isFalse);
+
+    await playback.togglePlay();
+    await tester.pump();
+    expect(backend.reports.last.closed, isTrue);
+    final resting = backend.reports.length;
+    await tester.pump(const Duration(minutes: 2));
+    expect(backend.reports, hasLength(resting), reason: 'no paused reports');
+
+    playback.setAway(false);
+    await tester.pump();
+    expect(backend.reports, hasLength(resting + 1));
+    expect(backend.reports.last.closed, isNull);
+    expect(backend.reports.last.paused, isTrue);
+
+    playback.setAway(true);
+    await tester.pump();
+    expect(backend.reports.last.closed, isTrue);
+    await playback.togglePlay();
+    await tester.pump();
+    expect(backend.reports.last.closed, isNull);
+    expect(backend.reports.last.paused, isFalse);
+
+    await playback.close();
+    playback.dispose();
+  });
+
+  test('asks a server from before presence once, and never again', () async {
+    await session.start();
+    await flush();
+    expect(backend.presenceRequests, 1);
+    session.setAway(true);
+    await session.togglePlay();
+    await flush();
+    session.setAway(false);
+    await flush();
+    await session.togglePlay();
+    await flush();
+    expect(backend.presenceRequests, 1);
+    expect(session.error, isNull);
+    expect(session.notice, isNull);
+  });
+
   test(
     'does not send native authorization to a URL on another origin',
     () async {

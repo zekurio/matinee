@@ -739,8 +739,11 @@ function Playback(props: { data: Extract<PlayerData, { kind: "ready" }> }) {
       else playing.resume()
     }
     document.addEventListener("visibilitychange", onVisibility)
+    const onPageHide = () => playing.reportLeaving()
+    window.addEventListener("pagehide", onPageHide)
     return () => {
       document.removeEventListener("visibilitychange", onVisibility)
+      window.removeEventListener("pagehide", onPageHide)
       playing.release()
       // What was watched moved: pages fetch again.
       viewer.touch()

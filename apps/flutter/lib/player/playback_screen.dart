@@ -275,20 +275,40 @@ class PlaybackHost extends StatefulWidget {
 class _PlaybackHostState extends State<PlaybackHost> {
   late final PlaybackSession _session;
   late final MediaChanges _changes;
+  late final PictureInPicture _pip;
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
-    _changes = ProviderScope.containerOf(
-      context,
-      listen: false,
-    ).read(mediaChangesProvider.notifier);
+    final container = ProviderScope.containerOf(context, listen: false);
+    _changes = container.read(mediaChangesProvider.notifier);
+    _pip = container.read(pictureInPictureProvider);
     _session = widget.create();
     unawaited(_session.start());
+    _pip.active.addListener(_syncAway);
+    _lifecycle = AppLifecycleListener(onStateChange: (_) => _syncAway());
+    _syncAway();
+  }
+
+  /// Out of sight means hidden, in the background, or gone, and not in the
+  /// small window. Inactive still shows: the notification shade over it,
+  /// Android's small window, iOS's app switcher.
+  void _syncAway() {
+    final state = WidgetsBinding.instance.lifecycleState;
+    final hidden = switch (state) {
+      AppLifecycleState.hidden ||
+      AppLifecycleState.paused ||
+      AppLifecycleState.detached => true,
+      AppLifecycleState.resumed || AppLifecycleState.inactive || null => false,
+    };
+    _session.setAway(hidden && !_pip.active.value);
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
+    _pip.active.removeListener(_syncAway);
     // What was watched moved on: the pages under the player fetch again once
     // the server has the last position.
     unawaited(_session.close().whenComplete(_changes.changed));

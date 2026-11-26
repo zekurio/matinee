@@ -43,6 +43,7 @@ import { rememberedTracks, savePick } from "../media/track-picks"
 import { markUnwatched, markWatched } from "../media/watched"
 import { events } from "../realtime/events"
 import { follow } from "../realtime/follow"
+import { holdPresence } from "../stats/presence"
 import { sessionStream } from "../stats/queries"
 import { recordOfflinePlay, recordReport } from "../stats/sessions"
 import { authed, notFound } from "./base"
@@ -148,6 +149,10 @@ export const playback = {
       load: () => sessionStream(context.user.id, input.sessionId),
       signal,
     }),
+  ),
+
+  presence: authed.playback.presence.handler(({ context, input, signal }) =>
+    holdPresence(context.user.id, input.sessionId, signal),
   ),
 
   pickTracks: authed.playback.pickTracks.handler(async ({ context, input }) => {

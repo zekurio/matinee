@@ -9,22 +9,53 @@ import { type Json, parseJson } from "../lib/decode"
  */
 
 /**
+ * Where a caller stops a stream it holds open. `followStream` sets `stop`
+ * before it asks the server, so a stop asked for while the answer is on
+ * its way is taken as soon as the reader exists.
+ */
+export type StreamHandle = { stop?: () => void }
+
+/** The server answered a stream's request with an error, `status`. */
+export class StreamRefused extends Error {
+  constructor(readonly status: number) {
+    super(`HTTP ${status}`)
+  }
+}
+
+/**
  * Follows the stream at `url`, calling `onValue` with each value, until
- * it ends or `onValue` says to stop by returning true. Rejects when the
- * server can't be reached or turns the request down.
+ * it ends, `onValue` says to stop by returning true, or `handle.stop` is
+ * called. Rejects when the server can't be reached or turns the request
+ * down.
  */
 export async function followStream(
   url: string,
   token: string | null,
   onValue: (value: Json) => boolean,
+  handle?: StreamHandle,
 ): Promise<void> {
+  let stopped = false
+  let cancel: (() => void) | null = null
+  if (handle) {
+    handle.stop = () => {
+      stopped = true
+      if (cancel) cancel()
+    }
+  }
   const headers = new Headers({ accept: "text/event-stream" })
   if (token) headers.set("authorization", `Bearer ${token}`)
   const response = await fetch(url, { headers })
   if (!response.ok || !response.body) {
-    throw new Error(`HTTP ${response.status}`)
+    throw new StreamRefused(response.status)
   }
   const reader = response.body.getReader()
+  cancel = () => {
+    void reader.cancel().catch(() => {})
+  }
+  if (stopped) {
+    cancel()
+    return
+  }
   const decoder = new TextDecoder()
   let pending = ""
   while (true) {

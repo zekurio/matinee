@@ -57,6 +57,11 @@ export function streamSignal(request: AbortSignal | undefined): AbortSignal {
   ])
 }
 
+/** The server is shutting down, which ends every stream at once. */
+export function shuttingDown(): boolean {
+  return closing.signal.aborted
+}
+
 /** End every stream, for shutdown. */
 export function stopStreams(): void {
   closing.abort()

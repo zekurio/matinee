@@ -127,6 +127,13 @@
       "when": 1795711877924,
       "tag": "0017_detached_watch_state",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795728430585,
+      "tag": "0018_playback_presence",
+      "breakpoints": true
     }
   ]
 }

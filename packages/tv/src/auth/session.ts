@@ -1,4 +1,9 @@
-import { createMatineeClient, type MatineeClient } from "@matinee/client"
+import {
+  createMatineeClient,
+  createMatineeLastCall,
+  type MatineeClient,
+  type MatineeLastCall,
+} from "@matinee/client"
 import type { AuthConfig, User } from "@matinee/contracts"
 
 import { describeFailure, isServerError, isSignedOut } from "../api/errors"
@@ -151,6 +156,16 @@ export class Session extends Observable {
   get api(): MatineeClient {
     if (!this.origin) throw new Error("not connected")
     return this.clientFor(this.origin)
+  }
+
+  /** A call to the server in use as the page closes, which outlives it. */
+  get lastCall(): MatineeLastCall {
+    const origin = this.origin
+    if (!origin) throw new Error("not connected")
+    return createMatineeLastCall({
+      baseUrl: origin,
+      token: () => this.saved(origin)?.token,
+    })
   }
 
   /** The API to sign in at: a server being added, or the one in use. */

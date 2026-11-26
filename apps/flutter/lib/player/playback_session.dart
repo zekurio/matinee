@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../api/matinee_api.dart';
 import '../core/address.dart';
 import '../platform/player.g.dart' as wire;
+import 'playback_presence.dart';
 import 'playback_report.dart';
 import 'player.dart';
 import 'player_sitting.dart';
@@ -107,6 +108,23 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
   Future<void>? _sending;
   PlaybackReportInput? _queuedReport;
   Future<void> _savingPicks = Future<void>.value();
+
+  /// The app is out of sight, not in the small window.
+  bool _away = false;
+
+  /// Away with nothing playing: the player counts as gone. It sent a
+  /// closing report and holds no presence, and the next report, once it
+  /// plays or shows again, opens the session again.
+  bool _resting = false;
+
+  /// Tells the server the player is there for as long as it shows the
+  /// session; see `playback.presence`.
+  late final PresenceHold _presence = PresenceHold(
+    () => api.playback.presence(sessionId),
+    onLost: () {
+      if (!_closed) _report();
+    },
+  );
 
   @override
   double get duration => max(
@@ -222,8 +240,9 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
       _countPlayed();
       _watchStall();
       final interval = Duration(seconds: playback.status.playing ? 10 : 30);
-      if (_elapsed() - _lastReport >= interval) _report();
+      if (!_resting && _elapsed() - _lastReport >= interval) _report();
     });
+    _syncRest();
     unawaited(_readOptions());
     _readTrickplay();
     return _ask(at: startAt, forceReload: true, reason: AttemptReason.start);
@@ -555,6 +574,7 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
         (ended && (previous.phase != PlaybackPhase.ended || moved))) {
       _report();
     }
+    _syncRest();
     if (next.phase == PlaybackPhase.ready &&
         previous.phase != PlaybackPhase.ready) {
       diagnostics?.playing();
@@ -822,8 +842,30 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
     notifyListeners();
   }
 
+  /// Whether the app is out of sight: in the background, behind the lock
+  /// screen, or gone, and not in the small window. Away with nothing
+  /// playing, the player counts as gone until it plays or shows again; away
+  /// and playing, as background audio does, it stays.
+  void setAway(bool away) {
+    if (_closed || away == _away) return;
+    _away = away;
+    _syncRest();
+  }
+
+  void _syncRest() {
+    if (_closed) return;
+    final resting = _away && !playback.status.wantsPlay;
+    _presence.hold = !resting;
+    if (resting == _resting) return;
+    _resting = resting;
+    // A closing report while it rests, and one that opens the session again
+    // after.
+    _report();
+  }
+
   void _report({bool closed = false}) {
     if (!_opened) return;
+    final closing = closed || _resting;
     _lastReport = _elapsed();
     final length = duration;
     _queuedReport = PlaybackReportInput(
@@ -831,8 +873,8 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
       durationSeconds: length > 0 ? length : null,
       sessionId: sessionId,
       playedSeconds: _playedSeconds,
-      paused: closed || !playback.status.playing,
-      closed: closed ? true : null,
+      paused: closing || !playback.status.playing,
+      closed: closing ? true : null,
     );
     _sending ??= Future<void>.microtask(_sendReports);
   }
@@ -863,6 +905,7 @@ class PlaybackSession extends ChangeNotifier implements PlayerSitting {
 
   Future<void> _close() async {
     _closed = true;
+    _presence.close();
     _timer?.cancel();
     unawaited(_listener?.cancel());
     unawaited(_diagnosed?.cancel());

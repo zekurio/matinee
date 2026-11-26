@@ -1,4 +1,8 @@
-import { createMatineeClient, ORPCError } from "@matinee/client"
+import {
+  createMatineeClient,
+  createMatineeLastCall,
+  ORPCError,
+} from "@matinee/client"
 import { createTanstackQueryUtils } from "@orpc/tanstack-query"
 import {
   type FetchStatus,
@@ -45,8 +49,10 @@ export const client = createMatineeClient({ fetch: preloadedFetch })
 
 /**
  * The same client, with requests the browser finishes after the page
- * closes, for a call made as it closes. Only for small bodies: a
- * keepalive request carries at most 64 KB.
+ * closes, for a call whose answer matters, made while the page may be
+ * closing. Its fetch waits for the client, which a page that closes now
+ * never gets to; `lastCall` doesn't. Only for small bodies: a keepalive
+ * request carries at most 64 KB.
  */
 export const keepaliveClient = createMatineeClient({
   fetch: async (request) =>
@@ -59,6 +65,9 @@ export const keepaliveClient = createMatineeClient({
       keepalive: true,
     }),
 })
+
+/** A call made as the page closes, which the browser finishes after it. */
+export const lastCall = createMatineeLastCall()
 export const orpc = createTanstackQueryUtils(client)
 
 /** Called when the server says the session is gone. Set by the router. */
@@ -71,7 +80,7 @@ function onError(error: Error) {
 }
 
 /** The server turned the request down, so asking again won't help. */
-function refused(error: Error | null): boolean {
+export function refused(error: Error | null): boolean {
   return error instanceof ORPCError && error.status < 500
 }
 

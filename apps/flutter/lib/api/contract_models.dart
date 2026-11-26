@@ -9250,6 +9250,19 @@ final class SessionStream {
   };
 }
 
+final class PlaybackPresence {
+  const PlaybackPresence({required this.graceSeconds});
+
+  factory PlaybackPresence.fromJson(Object? json) {
+    final fields = json as JsonMap;
+    return PlaybackPresence(graceSeconds: fields['graceSeconds'] as int);
+  }
+
+  final int graceSeconds;
+
+  JsonMap toJson() => {'graceSeconds': graceSeconds};
+}
+
 final class ShelfAdditions {
   const ShelfAdditions({
     required this.count,

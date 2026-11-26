@@ -1,0 +1,1 @@
+ALTER TABLE "playback_session" ADD COLUMN "left_at" timestamp with time zone;
