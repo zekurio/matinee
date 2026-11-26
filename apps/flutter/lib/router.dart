@@ -375,12 +375,7 @@ List<RouteBase> _handsetRoutes() => [
     branches: [
       StatefulShellBranch(
         routes: [
-          GoRoute(
-            path: Routes.home,
-            builder: (context, state) => HomeScreen(
-              links: [if (_hasPlayerLab) ('Player lab', Routes.playerLab)],
-            ),
-          ),
+          GoRoute(path: Routes.home, builder: (context, state) => _home),
         ],
       ),
       StatefulShellBranch(
@@ -661,6 +656,13 @@ bool get _hasPlayer =>
     defaultTargetPlatform == TargetPlatform.iOS;
 
 bool get _hasPlayerLab => kDebugMode && _hasPlayer;
+
+/// One Home for every build of the tabs: go_router builds each tab's page
+/// again on every navigation, and a new Home built all of itself again in
+/// the first frame of a page opening or going back, or of a tab.
+final _home = HomeScreen(
+  links: [if (_hasPlayerLab) ('Player lab', Routes.playerLab)],
+);
 
 /// The TV's pages, under its drawer: the phone's paths, TV screens. The pages
 /// from the drawer sit over Home, so Back goes there; the rest open over
